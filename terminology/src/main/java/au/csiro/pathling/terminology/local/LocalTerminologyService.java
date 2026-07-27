@@ -591,9 +591,11 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
    * Selects the display term for a concept from a language preference, falling back to the stored
    * display.
    *
-   * <p>For SNOMED CT a dialect is resolved to a language reference set and the term it marks as the
-   * concept's preferred synonym is taken; for a FHIR code system, which carries no reference set to
-   * resolve, a matching-language designation is taken instead.
+   * <p>The request may name a weighted list of dialects rather than one, in which case they are
+   * tried in descending order of weight and the first that yields a term answers. For SNOMED CT a
+   * dialect is resolved to a language reference set and the term it marks as the concept's
+   * preferred synonym is taken; for a FHIR code system, which carries no reference set to resolve,
+   * a matching-language designation is taken instead.
    */
   @Nullable
   private String selectDisplay(
@@ -601,8 +603,8 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
       @Nonnull final CodeSystemIndexes indexes,
       final int dense,
       @Nullable final String acceptLanguage) {
-    if (acceptLanguage != null && !acceptLanguage.isBlank()) {
-      final String preferred = displayForTag(systemUrl, indexes, dense, acceptLanguage);
+    for (final String tag : LanguagePreference.parse(acceptLanguage)) {
+      final String preferred = displayForTag(systemUrl, indexes, dense, tag);
       if (preferred != null) {
         return preferred;
       }

@@ -259,6 +259,54 @@ class LocalTerminologyServiceLookupTest {
     assertEquals(Rf2Mini.DIVERGENT_US_PANCREAS, ((Coding) findingSites.get(0)).getDisplay());
   }
 
+  // --- Weighted language preferences (User Story 3). ---
+
+  @Test
+  void takesTheTermOfTheHighestWeightedDialectTheStoreCanSatisfy() {
+    assertEquals(
+        Rf2Mini.DIVERGENT_GB_PANCREAS,
+        display(snomed(Rf2Mini.PANCREAS_STRUCTURE), "en-GB;q=0.9,en-US;q=0.5"));
+    assertEquals(
+        Rf2Mini.DIVERGENT_US_PANCREAS,
+        display(snomed(Rf2Mini.PANCREAS_STRUCTURE), "en-GB;q=0.5,en-US;q=0.9"));
+  }
+
+  @Test
+  void fallsToTheNextDialectInWeightOrderThatTheStoreCanSatisfy() {
+    // The Spanish reference set is not in this release, so the lower-weighted GB English answers
+    // rather than the stored display.
+    assertEquals(
+        Rf2Mini.DIVERGENT_GB_PANCREAS,
+        display(snomed(Rf2Mini.PANCREAS_STRUCTURE), "es;q=0.9,en-GB;q=0.5"));
+  }
+
+  @Test
+  void neverUsesADialectGivenZeroWeight() {
+    // Even as the only dialect the store could satisfy, a zero-weighted one is not used.
+    assertEquals(
+        Rf2Mini.DIVERGENT_US_PANCREAS, display(snomed(Rf2Mini.PANCREAS_STRUCTURE), "en-GB;q=0"));
+    assertEquals(
+        Rf2Mini.DIVERGENT_US_PANCREAS,
+        display(snomed(Rf2Mini.PANCREAS_STRUCTURE), "en-GB;q=0,es;q=0.5"));
+  }
+
+  @Test
+  void triesDialectsOfEqualWeightInTheOrderTheyWereWritten() {
+    assertEquals(
+        Rf2Mini.DIVERGENT_GB_PANCREAS, display(snomed(Rf2Mini.PANCREAS_STRUCTURE), "en-GB,en-US"));
+    assertEquals(
+        Rf2Mini.DIVERGENT_US_PANCREAS, display(snomed(Rf2Mini.PANCREAS_STRUCTURE), "en-US,en-GB"));
+  }
+
+  @Test
+  void readsAWildcardOrAnUnreadableListAsNoPreference() {
+    assertEquals(Rf2Mini.DIVERGENT_US_PANCREAS, display(snomed(Rf2Mini.PANCREAS_STRUCTURE), "*"));
+    assertEquals(
+        Rf2Mini.DIVERGENT_US_PANCREAS,
+        display(snomed(Rf2Mini.PANCREAS_STRUCTURE), "en-GB;q=notanumber"));
+    assertEquals(Rf2Mini.DIVERGENT_US_PANCREAS, display(snomed(Rf2Mini.PANCREAS_STRUCTURE), ";;;"));
+  }
+
   @Test
   void resolvesInactiveConceptDisplay() {
     // Inactive concepts remain resolvable for lookup.
