@@ -72,6 +72,9 @@ export type {
   UseSqlQueryRunResult,
 } from "./useSqlQueryRun";
 
+// Authentication.
+export { useLogin } from "./useLogin";
+
 // Other operations.
 export { useClipboard } from "./useClipboard";
 export { useDownloadFile } from "./useDownloadFile";

@@ -36,7 +36,7 @@ import { clearReturnUrl, completeAuth, getReturnUrl } from "../services/auth";
  */
 export function Callback() {
   const navigate = useNavigate();
-  const { setClient, setError } = useAuth();
+  const { setClient } = useAuth();
   const [localError, setLocalError] = useState<string | null>(null);
 
   // Track whether callback has been processed to prevent double-execution.
@@ -55,14 +55,12 @@ export function Callback() {
         clearReturnUrl();
         navigate(returnUrl, { replace: true });
       } catch (err) {
-        const message = err instanceof Error ? err.message : "Authentication failed";
-        setLocalError(message);
-        setError(message);
+        setLocalError(err instanceof Error ? err.message : "Authentication failed");
       }
     }
 
     handleCallback();
-  }, [navigate, setClient, setError]);
+  }, [navigate, setClient]);
 
   if (localError) {
     return (
