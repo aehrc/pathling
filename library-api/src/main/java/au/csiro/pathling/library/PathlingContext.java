@@ -641,7 +641,9 @@ public class PathlingContext {
         options == null || options.getDenseIdOrder() == null
             ? DenseIdOrder.CODE_ORDER
             : options.getDenseIdOrder();
-    new SnomedRf2Importer(spark, storagePath).importFrom(source, editionUri, denseIdOrder);
+    final String defaultDialect = options == null ? null : options.getDefaultDialect();
+    new SnomedRf2Importer(spark, storagePath)
+        .importFrom(source, editionUri, denseIdOrder, defaultDialect);
     return this;
   }
 

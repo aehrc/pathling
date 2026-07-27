@@ -53,6 +53,7 @@ import static org.apache.spark.sql.functions.coalesce;
 import static org.apache.spark.sql.functions.col;
 import static org.apache.spark.sql.functions.collect_list;
 import static org.apache.spark.sql.functions.count;
+import static org.apache.spark.sql.functions.length;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.map_from_entries;
 import static org.apache.spark.sql.functions.min;
@@ -75,6 +76,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -190,12 +192,32 @@ public class SnomedRf2Importer {
       @Nonnull final String source,
       @Nullable final String editionUriOverride,
       @Nonnull final DenseIdOrder denseIdOrder) {
+    importFrom(source, editionUriOverride, denseIdOrder, null);
+  }
+
+  /**
+   * Imports an RF2 snapshot release, naming the dialect whose preferred synonyms become each
+   * concept's stored display.
+   *
+   * @param source the release directory or archive, on any Hadoop-accessible filesystem
+   * @param editionUriOverride an explicit edition/version URI, or null to detect it
+   * @param denseIdOrder the rule for assigning dense identifiers
+   * @param defaultDialect a recognised dialect tag, a private-use dialect extension tag, or a
+   *     language reference set identifier, or null to derive the choice from the release
+   * @throws TerminologyImportException if the source is not a valid RF2 snapshot release, or the
+   *     default dialect can be neither honoured nor derived
+   */
+  public void importFrom(
+      @Nonnull final String source,
+      @Nullable final String editionUriOverride,
+      @Nonnull final DenseIdOrder denseIdOrder,
+      @Nullable final String defaultDialect) {
     // A zip archive is extracted to a temporary directory first, since the file discovery and Spark
     // readers operate on the extracted release layout. A plain directory is read in place.
     final java.nio.file.Path extracted = isZipArchive(source) ? extractArchive(source) : null;
     try {
       final String releaseRoot = extracted != null ? extracted.toString() : source;
-      importFromRelease(releaseRoot, source, editionUriOverride, denseIdOrder);
+      importFromRelease(releaseRoot, source, editionUriOverride, denseIdOrder, defaultDialect);
     } finally {
       if (extracted != null) {
         deleteRecursively(extracted);
@@ -210,12 +232,15 @@ public class SnomedRf2Importer {
    * @param source the original source path, recorded in the manifest for provenance
    * @param editionUriOverride an explicit edition/version URI, or null to detect it
    * @param denseIdOrder the rule for assigning dense identifiers
+   * @param defaultDialect the dialect whose preferred synonyms become each concept's display, or
+   *     null to derive the choice from the release
    */
   private void importFromRelease(
       @Nonnull final String releaseRoot,
       @Nonnull final String source,
       @Nullable final String editionUriOverride,
-      @Nonnull final DenseIdOrder denseIdOrder) {
+      @Nonnull final DenseIdOrder denseIdOrder,
+      @Nullable final String defaultDialect) {
     final Rf2Files files = locateFiles(releaseRoot);
 
     log.info("Reading concepts from {}", files.concept);
@@ -253,9 +278,11 @@ public class SnomedRf2Importer {
 
     final Dataset<Row> denseByCode = concepts.select(COLUMN_CODE, COLUMN_DENSE_ID);
 
-    // Descriptions and the display term.
+    // Descriptions and the display term. The default dialect is chosen here, before anything is
+    // written, so that a release the choice cannot be made for leaves the store untouched.
     final Descriptions descriptions =
-        readDescriptions(files, concepts, denseByCode, systemVersionId);
+        readDescriptions(
+            files, concepts, denseByCode, systemVersionId, defaultDialect, parsed.edition);
     final Dataset<Row> conceptTable =
         buildConceptTable(concepts, descriptions.display, systemVersionId);
 
@@ -758,8 +785,13 @@ public class SnomedRf2Importer {
       @Nonnull final Rf2Files files,
       @Nonnull final Dataset<Row> concepts,
       @Nonnull final Dataset<Row> denseByCode,
-      @Nonnull final String systemVersionId) {
+      @Nonnull final String systemVersionId,
+      @Nullable final String requestedDialect,
+      @Nullable final String editionModule) {
     if (files.descriptions.isEmpty()) {
+      // A release with no descriptions holds no term to prefer, so the choice is made over an empty
+      // set of candidates: nothing to derive, and a named dialect is refused.
+      DefaultDialect.choose(requestedDialect, editionModule, Map.of());
       final Dataset<Row> emptyTable = emptyDescriptionTable();
       final Dataset<Row> emptyDisplay =
           concepts
@@ -850,35 +882,137 @@ public class SnomedRf2Importer {
                 lit(SNOMED_URI).alias(COLUMN_TYPE_SYSTEM),
                 col(COLUMN_ACCEPTABILITY));
 
-    // Preferred synonym per concept, with the FSN and code as fallbacks for the display.
-    final Dataset<Row> preferredDescriptionIds =
-        langActive.filter(col(ACCEPTABILITY_ID).equalTo(PREFERRED)).select("descId").distinct();
-    final Dataset<Row> preferredSynonym =
-        descRaw
-            .filter(col("typeId").equalTo(SYNONYM_TYPE))
-            .join(
-                preferredDescriptionIds,
-                descRaw.col("id").equalTo(preferredDescriptionIds.col("descId")))
-            .groupBy(col("conceptId").alias(COLUMN_CODE))
-            .agg(min(COLUMN_TERM).alias("preferredTerm"));
-    final Dataset<Row> fsn =
-        descRaw
-            .filter(col("typeId").equalTo(FSN_TYPE))
-            .groupBy(col("conceptId").alias(COLUMN_CODE))
-            .agg(min(COLUMN_TERM).alias("fsnTerm"));
-    final Dataset<Row> display =
-        concepts
-            .select(COLUMN_CODE)
-            .join(preferredSynonym, "code", "left_outer")
-            .join(fsn, "code", "left_outer")
-            .select(
-                col(COLUMN_CODE),
-                coalesce(col("preferredTerm"), col("fsnTerm"), col(COLUMN_CODE))
-                    .alias(COLUMN_DISPLAY));
+    // The dialect whose preferred synonyms become each concept's display. This is settled before
+    // the
+    // display column is built, and therefore before any table is written.
+    final String defaultRefset =
+        DefaultDialect.choose(
+            requestedDialect, editionModule, languageReferenceSets(langActive, descRaw));
+    final Dataset<Row> display = buildDisplay(concepts, descRaw, langActive, defaultRefset);
 
     final List<Dataset<Row>> cached = new ArrayList<>(descriptionFiles);
     cached.add(langActive);
     return new Descriptions(table, display, cached, resolutions);
+  }
+
+  /**
+   * Collects the language reference sets a release holds, with the fully specified name it gives
+   * each. A reference set is held by a release exactly when its identifier appears on an active
+   * language reference set row; the name comes from the release's own description content, so no
+   * further file needs to be read and no release metadata format has to be understood.
+   *
+   * @param langActive the active language reference set rows
+   * @param descRaw the active description rows
+   * @return the reference set identifiers, each mapped to its name or to null where the release
+   *     gives none
+   */
+  @Nonnull
+  private static Map<String, String> languageReferenceSets(
+      @Nonnull final Dataset<Row> langActive, @Nonnull final Dataset<Row> descRaw) {
+    final Dataset<Row> held = langActive.select(col("refsetId")).distinct();
+    final Dataset<Row> names =
+        descRaw
+            .filter(col("typeId").equalTo(FSN_TYPE))
+            .groupBy(col("conceptId"))
+            .agg(min(COLUMN_TERM).alias("fsnTerm"));
+    final Map<String, String> byName = new LinkedHashMap<>();
+    for (final Row row :
+        held.join(names, held.col("refsetId").equalTo(names.col("conceptId")), "left_outer")
+            .select(col("refsetId"), col("fsnTerm"))
+            .collectAsList()) {
+      byName.put(row.getString(0), row.getString(1));
+    }
+    return byName;
+  }
+
+  /**
+   * Builds the per-concept display term, as the first of: the preferred synonym of the chosen
+   * default language reference set; the preferred synonym of the lowest-numbered other language
+   * reference set; the fully specified name preferred in the default reference set; the
+   * alphabetically first fully specified name; and the concept code.
+   *
+   * <p>Every step resolves to a single term deterministically. Where a step still offers several
+   * candidates - which RF2 should not produce, but a data error does - the alphabetically first is
+   * taken, so that two imports of the same release agree.
+   *
+   * @param concepts the concept dictionary
+   * @param descRaw the active description rows
+   * @param langActive the active language reference set rows
+   * @param defaultRefset the chosen default language reference set, or null where the release holds
+   *     none
+   * @return one row per concept, holding its code and display
+   */
+  @Nonnull
+  private static Dataset<Row> buildDisplay(
+      @Nonnull final Dataset<Row> concepts,
+      @Nonnull final Dataset<Row> descRaw,
+      @Nonnull final Dataset<Row> langActive,
+      @Nullable final String defaultRefset) {
+    // No reference set identifier is empty, so an absent default matches nothing as the default and
+    // leaves every reference set to be considered as an "other" one. That needs no separate branch.
+    final String defaultOrNone = defaultRefset == null ? "" : defaultRefset;
+
+    // Each description a language reference set marks as preferred, with the reference set that
+    // marks it so.
+    final Dataset<Row> preferred =
+        langActive
+            .filter(col(ACCEPTABILITY_ID).equalTo(PREFERRED))
+            .select(col("descId"), col("refsetId"));
+    final Dataset<Row> byType =
+        descRaw.join(preferred, descRaw.col("id").equalTo(preferred.col("descId")));
+    final Dataset<Row> preferredSynonyms =
+        byType
+            .filter(col("typeId").equalTo(SYNONYM_TYPE))
+            .select(col("conceptId").alias(COLUMN_CODE), col("refsetId"), col(COLUMN_TERM));
+
+    // The preferred synonym of the default reference set.
+    final Dataset<Row> defaultSynonym =
+        preferredSynonyms
+            .filter(col("refsetId").equalTo(defaultOrNone))
+            .groupBy(COLUMN_CODE)
+            .agg(min(COLUMN_TERM).alias("defaultTerm"));
+
+    // The preferred synonym of the lowest-numbered other reference set. Identifiers are digit
+    // strings without leading zeros, so ordering by length and then as text orders them by value;
+    // aggregating the whole struct takes the term belonging to the winning reference set.
+    final Dataset<Row> otherSynonym =
+        preferredSynonyms
+            .filter(col("refsetId").notEqual(defaultOrNone))
+            .groupBy(COLUMN_CODE)
+            .agg(
+                min(struct(
+                        length(col("refsetId")).alias("digits"), col("refsetId"), col(COLUMN_TERM)))
+                    .alias("lowest"))
+            .select(col(COLUMN_CODE), col("lowest").getField(COLUMN_TERM).alias("otherTerm"));
+
+    // The fully specified name, preferred in the default reference set where it is ranked there.
+    final Dataset<Row> preferredFsn =
+        byType
+            .filter(col("typeId").equalTo(FSN_TYPE))
+            .filter(col("refsetId").equalTo(defaultOrNone))
+            .groupBy(col("conceptId").alias(COLUMN_CODE))
+            .agg(min(COLUMN_TERM).alias("preferredFsnTerm"));
+    final Dataset<Row> anyFsn =
+        descRaw
+            .filter(col("typeId").equalTo(FSN_TYPE))
+            .groupBy(col("conceptId").alias(COLUMN_CODE))
+            .agg(min(COLUMN_TERM).alias("fsnTerm"));
+
+    return concepts
+        .select(COLUMN_CODE)
+        .join(defaultSynonym, "code", "left_outer")
+        .join(otherSynonym, "code", "left_outer")
+        .join(preferredFsn, "code", "left_outer")
+        .join(anyFsn, "code", "left_outer")
+        .select(
+            col(COLUMN_CODE),
+            coalesce(
+                    col("defaultTerm"),
+                    col("otherTerm"),
+                    col("preferredFsnTerm"),
+                    col("fsnTerm"),
+                    col(COLUMN_CODE))
+                .alias(COLUMN_DISPLAY));
   }
 
   @Nonnull

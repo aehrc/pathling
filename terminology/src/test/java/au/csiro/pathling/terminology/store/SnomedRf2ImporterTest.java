@@ -121,9 +121,12 @@ class SnomedRf2ImporterTest {
   /**
    * The number of Spark jobs one import of the base release into a fresh store runs. Measured three
    * times on the importer as it stood before the per-file resolution reporting was added, and
-   * asserted exactly so that any additional pass over an RF2 file fails the build.
+   * asserted exactly so that any additional pass over an RF2 file fails the build. It rose from 79
+   * to 88 when the display column gained the dialect fallback chain, which adds aggregations over
+   * the already-cached description rows and one collection of the release's language reference
+   * sets.
    */
-  private static final int BASELINE_SPARK_JOBS = 79;
+  private static final int BASELINE_SPARK_JOBS = 88;
 
   /** The per-file resolution line specified in {@code contracts/import-diagnostics.md}. */
   private static final Pattern RESOLUTION_LINE =
@@ -306,7 +309,11 @@ class SnomedRf2ImporterTest {
   void appliesTheEditionUriOverride(@TempDir final Path storeDir) {
     final String store = storeDir.resolve("store").toString();
     final String override = "http://snomed.info/sct/32506021000036107/version/20240101";
-    new SnomedRf2Importer(spark, store).importFrom(Rf2Mini.baseRelease().toString(), override);
+    // The override makes this a national edition, which no rule can choose a default dialect for,
+    // so
+    // one is named. That is orthogonal to what this test is about.
+    new SnomedRf2Importer(spark, store)
+        .importFrom(Rf2Mini.baseRelease().toString(), override, DenseIdOrder.CODE_ORDER, "en-US");
 
     final TerminologyStoreReader overrideReader = TerminologyStoreReader.open(store, Map.of());
     final Map<String, String> codeSystem = new HashMap<>();
@@ -344,9 +351,12 @@ class SnomedRf2ImporterTest {
           {mappingModule, MODEL_MODULE}
         });
 
-    // Act: import with detection (no override).
+    // Act: import with detection (no override). The detected edition is a derived one, which no
+    // rule
+    // can choose a default dialect for, so one is named.
     final String store = work.resolve("store").toString();
-    new SnomedRf2Importer(spark, store).importFrom(release.toString(), null);
+    new SnomedRf2Importer(spark, store)
+        .importFrom(release.toString(), null, DenseIdOrder.CODE_ORDER, "en-US");
 
     // Assert: the edition is the derived module at the top of the dependency graph.
     final TerminologyStoreReader derivedReader = TerminologyStoreReader.open(store, Map.of());
