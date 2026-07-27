@@ -32,49 +32,71 @@ import { ErrorCallout } from "../error/ErrorCallout";
 /**
  * Dialog prompting the user to re-authenticate after session expiry.
  *
- * The dialog stays open while an authorisation attempt is under way, and stays
- * open when that attempt fails, so the user sees the outcome where they asked
- * for it. The login control is therefore a plain button rather than an
- * `AlertDialog.Action`, which would close the dialog on activation.
+ * The body is a separate component because the dialog primitive unmounts its
+ * content when closed. Holding the login attempt's state there means each
+ * expiry starts with a clean slate, rather than presenting the previous
+ * attempt's failure as though it described the new one.
  *
  * @returns The session expired dialog component.
  */
 export function SessionExpiredDialog() {
   const { sessionExpired, setSessionExpired } = useAuth();
-  const { login, isPending, error } = useLogin();
-
-  const handleDismiss = () => {
-    setSessionExpired(false);
-  };
 
   return (
     <AlertDialog.Root open={sessionExpired} onOpenChange={setSessionExpired}>
       <AlertDialog.Content maxWidth="450px">
-        <AlertDialog.Title>Session expired</AlertDialog.Title>
-        <AlertDialog.Description size="2">
-          Your session has expired. Please log in again to continue working.
-        </AlertDialog.Description>
-        {error && (
-          <Box mt="3">
-            <ErrorCallout message={error} size="1" />
-          </Box>
-        )}
-        <Flex gap="3" mt="4" justify="end">
-          <AlertDialog.Cancel>
-            <Button variant="soft" color="gray" disabled={isPending} onClick={handleDismiss}>
-              Dismiss
-            </Button>
-          </AlertDialog.Cancel>
-          {/* The spinner replaces the icon rather than the whole label, so the
-              button still says what it does while the attempt is under way. */}
-          <Button disabled={isPending} onClick={() => void login()}>
-            <Spinner loading={isPending}>
-              <LockClosedIcon />
-            </Spinner>
-            Log in
-          </Button>
-        </Flex>
+        <SessionExpiredDialogBody onDismiss={() => setSessionExpired(false)} />
       </AlertDialog.Content>
     </AlertDialog.Root>
+  );
+}
+
+interface SessionExpiredDialogBodyProps {
+  /** Closes the dialog without initiating authorisation. */
+  onDismiss: () => void;
+}
+
+/**
+ * The dialog's content and actions.
+ *
+ * The dialog stays open while an authorisation attempt is under way, and stays
+ * open when that attempt fails, so the user sees the outcome where they asked
+ * for it. The login control is therefore a plain button rather than an
+ * `AlertDialog.Action`, which would close the dialog on activation.
+ *
+ * @param props - The component props.
+ * @param props.onDismiss - Closes the dialog without initiating authorisation.
+ * @returns The dialog body.
+ */
+function SessionExpiredDialogBody({ onDismiss }: Readonly<SessionExpiredDialogBodyProps>) {
+  const { login, isPending, error } = useLogin();
+
+  return (
+    <>
+      <AlertDialog.Title>Session expired</AlertDialog.Title>
+      <AlertDialog.Description size="2">
+        Your session has expired. Please log in again to continue working.
+      </AlertDialog.Description>
+      {error && (
+        <Box mt="3">
+          <ErrorCallout message={error} size="1" />
+        </Box>
+      )}
+      <Flex gap="3" mt="4" justify="end">
+        <AlertDialog.Cancel>
+          <Button variant="soft" color="gray" disabled={isPending} onClick={onDismiss}>
+            Dismiss
+          </Button>
+        </AlertDialog.Cancel>
+        {/* The spinner replaces the icon rather than the whole label, so the
+            button still says what it does while the attempt is under way. */}
+        <Button disabled={isPending} onClick={() => void login()}>
+          <Spinner loading={isPending}>
+            <LockClosedIcon />
+          </Spinner>
+          Log in
+        </Button>
+      </Flex>
+    </>
   );
 }

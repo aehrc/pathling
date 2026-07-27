@@ -245,5 +245,31 @@ describe("SessionExpiredDialog", () => {
       expect(loginButton).toBeEnabled();
       expect(dismissButton).toBeEnabled();
     });
+
+    // A failed attempt belongs to the expiry that prompted it. Raising the
+    // dialog again must not present the previous attempt's failure as though
+    // it described the new one.
+    it("shows no stale error when the dialog is raised a second time", async () => {
+      const user = userEvent.setup();
+      mockSessionExpired = true;
+      mockInitiateAuth.mockRejectedValue(new Error("Login failed"));
+
+      const { rerender } = render(<SessionExpiredDialog />);
+
+      await user.click(screen.getByRole("button", { name: /log in/i }));
+      expect(await screen.findByRole("alert")).toHaveTextContent("Login failed");
+
+      // The user dismisses the dialog.
+      mockSessionExpired = false;
+      rerender(<SessionExpiredDialog />);
+      expect(screen.queryByText("Session expired")).not.toBeInTheDocument();
+
+      // A later expiry raises it again, with no attempt yet made.
+      mockSessionExpired = true;
+      rerender(<SessionExpiredDialog />);
+
+      expect(screen.getByText("Session expired")).toBeInTheDocument();
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    });
   });
 });
