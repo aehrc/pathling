@@ -403,8 +403,11 @@ test.describe("Import page", () => {
           .fill("s3a://invalid/data.ndjson");
         await page.getByRole("button", { name: "Start import" }).click();
 
-        // Verify error message is displayed.
-        await expect(page.getByText("Invalid source URL")).toBeVisible();
+        // Verify error message is displayed. A notification carries the same
+        // text, so match the first occurrence, which is the card.
+        await expect(
+          page.getByText("Invalid source URL").first(),
+        ).toBeVisible();
       });
     });
 
@@ -924,8 +927,9 @@ test.describe("Import page", () => {
         .fill("s3a://test/data.ndjson");
       await page.getByRole("button", { name: "Start import" }).click();
 
-      // Wait for error message to appear.
-      await expect(page.getByText("Import failed")).toBeVisible({
+      // Wait for error message to appear. A notification carries the same
+      // text, so match the first occurrence, which is the card.
+      await expect(page.getByText("Import failed").first()).toBeVisible({
         timeout: 10000,
       });
 
@@ -953,8 +957,9 @@ test.describe("Import page", () => {
         .fill("s3a://test/data.ndjson");
       await page.getByRole("button", { name: "Start import" }).click();
 
-      // Wait for error message and close button.
-      await expect(page.getByText("Import failed")).toBeVisible({
+      // Wait for error message and close button. A notification carries the
+      // same text, so match the first occurrence, which is the card.
+      await expect(page.getByText("Import failed").first()).toBeVisible({
         timeout: 10000,
       });
       await expect(page.getByRole("button", { name: "Close" })).toBeVisible();

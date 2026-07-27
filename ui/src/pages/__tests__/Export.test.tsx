@@ -42,6 +42,10 @@ vi.mock("../../components/auth/CapabilityGuard", () => ({
     children(undefined),
 }));
 
+vi.mock("../../hooks", () => ({
+  buildSearchParamMap: () => undefined,
+}));
+
 // Mock the form so a single click starts an export.
 vi.mock("../../components/export/ExportForm", () => ({
   ExportForm: ({ onSubmit }: { onSubmit: (request: ExportRequest) => void }) => (
