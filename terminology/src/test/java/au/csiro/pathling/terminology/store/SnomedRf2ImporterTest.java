@@ -452,7 +452,7 @@ class SnomedRf2ImporterTest {
 
     assertEquals(
         Map.of(
-            DESCRIPTION_FILE, "401 of 401",
+            DESCRIPTION_FILE, "404 of 404",
             RELATIONSHIP_FILE, "199 of 203",
             SIMPLE_REFSET_FILE, "3 of 3",
             ASSOCIATION_REFSET_FILE, "1 of 1"),
@@ -522,7 +522,7 @@ class SnomedRf2ImporterTest {
     final Map<String, String> reported = resolutionCounts(events);
     assertEquals("0 of 3", reported.get(SIMPLE_REFSET_FILE));
     assertEquals("0 of 1", reported.get(ASSOCIATION_REFSET_FILE));
-    assertResolvedBelowInput(reported, DESCRIPTION_FILE, 401);
+    assertResolvedBelowInput(reported, DESCRIPTION_FILE, 404);
     assertResolvedBelowInput(reported, RELATIONSHIP_FILE, 203);
   }
 
@@ -547,7 +547,7 @@ class SnomedRf2ImporterTest {
                 .importFrom(release.toString(), null));
 
     // The two added rows are inactive, so the input figure does not grow beyond the base release's.
-    assertEquals("401 of 401", resolutionCounts(events).get(DESCRIPTION_FILE));
+    assertEquals("404 of 404", resolutionCounts(events).get(DESCRIPTION_FILE));
   }
 
   @Test
@@ -566,10 +566,10 @@ class SnomedRf2ImporterTest {
             new SnomedRf2Importer(spark, work.resolve("store").toString())
                 .importFrom(release.toString(), null));
 
-    // The 401 active rows are split across the two files, each reported on its own line.
+    // The 404 active rows are split across the two files, each reported on its own line.
     final Map<String, String> reported = resolutionCounts(events);
-    assertEquals("200 of 200", reported.get(DESCRIPTION_FILE));
-    assertEquals("201 of 201", reported.get(secondDescriptionFile));
+    assertEquals("202 of 202", reported.get(DESCRIPTION_FILE));
+    assertEquals("202 of 202", reported.get(secondDescriptionFile));
   }
 
   @Test

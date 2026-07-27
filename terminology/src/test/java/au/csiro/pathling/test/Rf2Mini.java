@@ -46,6 +46,13 @@ public final class Rf2Mini {
   public static final String VERSION_20240601 =
       "http://snomed.info/sct/900000000000207008/version/20240601";
 
+  /**
+   * The detected edition/version URI of the national release, whose module is not the International
+   * core module and which holds three language reference sets.
+   */
+  public static final String VERSION_NATIONAL_20240601 =
+      "http://snomed.info/sct/1999007/version/20240601";
+
   /** The number of concepts in the base release. */
   public static final int CONCEPT_COUNT_20230601 = 200;
 
@@ -74,6 +81,28 @@ public final class Rf2Mini {
   public static final String SAME_AS_REFSET = "900000000000527005";
   public static final String CORE_MODULE = "900000000000207008";
 
+  // The language reference sets of the fixture, and the module of its national release.
+  public static final String US_ENGLISH_REFSET = "900000000000509007";
+  public static final String GB_ENGLISH_REFSET = "900000000000508004";
+
+  /** The synthetic extension language reference set held only by the national release. */
+  public static final String NATIONAL_ENGLISH_REFSET = "1999011";
+
+  /** The synthetic module of the national release. */
+  public static final String NATIONAL_MODULE = "1999007";
+
+  /**
+   * The three concepts whose GB English and US English preferred synonyms differ, paired with the
+   * two terms. Every other concept in the fixture has one term that both reference sets prefer.
+   */
+  public static final String DIVERGENT_US_ENDOCRINE = "Endocrine system structure";
+
+  public static final String DIVERGENT_GB_ENDOCRINE = "Structure of endocrine system";
+  public static final String DIVERGENT_US_PANCREAS = "Pancreatic structure";
+  public static final String DIVERGENT_GB_PANCREAS = "Structure of pancreas";
+  public static final String DIVERGENT_US_DEGENERATION = "Degeneration";
+  public static final String DIVERGENT_GB_DEGENERATION = "Degenerative change";
+
   /**
    * Resolves the absolute filesystem path to a release directory of the fixture on the test
    * classpath.
@@ -99,5 +128,16 @@ public final class Rf2Mini {
   @Nonnull
   public static Path baseRelease() {
     return releasePath("international-20230601");
+  }
+
+  /**
+   * Resolves the absolute filesystem path to the national release, which holds three language
+   * reference sets in a module other than the International core.
+   *
+   * @return the absolute path to the national release directory
+   */
+  @Nonnull
+  public static Path nationalRelease() {
+    return releasePath("national-20240601");
   }
 }
