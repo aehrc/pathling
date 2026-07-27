@@ -108,8 +108,8 @@ public final class DialectResolver {
   /**
    * Reads the language reference set identifier out of a private-use dialect extension tag, which
    * carries it in hyphen-separated chunks of eight characters (for example {@code
-   * en-x-sctlang-90000000-00050800-4} for {@code 900000000000508004}). This is the exact inverse of
-   * the form we emit as the language of a {@code preferredForLanguage} designation.
+   * en-x-sctlang-90000000-00005080-04} for {@code 900000000000508004}). This is the exact inverse
+   * of the form we emit as the language of a {@code preferredForLanguage} designation.
    *
    * @param normalised the lower-cased tag
    * @return the reference set identifier, or empty if the tag is not an extension tag or is
