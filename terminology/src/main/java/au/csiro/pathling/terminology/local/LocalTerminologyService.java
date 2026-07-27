@@ -102,6 +102,7 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
   private ValueSetResolver valueSetResolver;
   private ExpansionCache expansionCache;
   private ConceptMapIndex conceptMapIndex;
+  private DialectResolver dialectResolver;
 
   /**
    * Creates a local terminology service.
@@ -587,9 +588,12 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
   }
 
   /**
-   * Selects the display term for a concept in the requested language, falling back to the stored
-   * default display. SNOMED CT uses the language reference set's preferred synonym; FHIR code
-   * systems use a matching-language designation.
+   * Selects the display term for a concept from a language preference, falling back to the stored
+   * display.
+   *
+   * <p>For SNOMED CT a dialect is resolved to a language reference set and the term it marks as the
+   * concept's preferred synonym is taken; for a FHIR code system, which carries no reference set to
+   * resolve, a matching-language designation is taken instead.
    */
   @Nullable
   private String selectDisplay(
@@ -598,10 +602,7 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
       final int dense,
       @Nullable final String acceptLanguage) {
     if (acceptLanguage != null && !acceptLanguage.isBlank()) {
-      final String preferred =
-          SNOMED_URI.equals(systemUrl)
-              ? preferredSynonym(indexes, dense, acceptLanguage)
-              : fhirDisplayForLanguage(indexes, dense, acceptLanguage);
+      final String preferred = displayForTag(systemUrl, indexes, dense, acceptLanguage);
       if (preferred != null) {
         return preferred;
       }
@@ -609,20 +610,46 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
     return indexes.dictionary().display(dense);
   }
 
-  /** Finds the preferred synonym of a SNOMED concept in the given language, or null if none. */
+  /**
+   * Selects the display term for one dialect, or null where that dialect yields none.
+   *
+   * @param systemUrl the code system being queried
+   * @param indexes the indexes of the code system version being queried
+   * @param dense the dense identifier of the concept
+   * @param tag the requested language tag
+   * @return the term, or null
+   */
   @Nullable
-  private String preferredSynonym(
-      @Nonnull final CodeSystemIndexes indexes, final int dense, @Nonnull final String language) {
-    final String primary = primaryLanguageTag(language);
+  private String displayForTag(
+      @Nonnull final String systemUrl,
+      @Nonnull final CodeSystemIndexes indexes,
+      final int dense,
+      @Nonnull final String tag) {
+    return SNOMED_URI.equals(systemUrl)
+        ? dialectResolver
+            .resolve(tag)
+            .map(refsetId -> preferredSynonym(indexes, dense, refsetId))
+            .orElse(null)
+        : fhirDisplayForLanguage(indexes, dense, tag);
+  }
+
+  /**
+   * Finds the synonym that a language reference set marks as a SNOMED concept's preferred term, or
+   * null where it marks none.
+   *
+   * @param indexes the indexes of the code system version being queried
+   * @param dense the dense identifier of the concept
+   * @param refsetId the identifier of the language reference set to select by
+   * @return the preferred term, or null
+   */
+  @Nullable
+  private static String preferredSynonym(
+      @Nonnull final CodeSystemIndexes indexes, final int dense, @Nonnull final String refsetId) {
     for (final Description description : indexes.descriptions().descriptionsOf(dense)) {
-      final boolean languageMatches =
-          description.getLanguage() != null
-              && primary.equals(primaryLanguageTag(description.getLanguage()));
-      final boolean isPreferredSynonym =
-          SYNONYM_TYPE.equals(description.getTypeCode())
-              && description.getAcceptability() != null
-              && description.getAcceptability().containsValue(PREFERRED_ACCEPTABILITY);
-      if (languageMatches && isPreferredSynonym) {
+      final Map<String, String> acceptability = description.getAcceptability();
+      if (SYNONYM_TYPE.equals(description.getTypeCode())
+          && acceptability != null
+          && PREFERRED_ACCEPTABILITY.equals(acceptability.get(refsetId))) {
         return description.getTerm();
       }
     }
@@ -708,6 +735,7 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
     valueSetResolver = null;
     expansionCache = null;
     conceptMapIndex = null;
+    dialectResolver = null;
     initialised = false;
   }
 
@@ -740,6 +768,7 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
               ValueSetStore.load(reader, versionResolver));
       expansionCache = new ExpansionCache(local.getExpansionCacheSize());
       conceptMapIndex = ConceptMapIndex.load(reader);
+      dialectResolver = new DialectResolver(local.getDialectAliases());
       initialised = true;
     }
   }
