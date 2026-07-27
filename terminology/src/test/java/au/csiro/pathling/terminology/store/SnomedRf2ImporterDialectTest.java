@@ -25,6 +25,10 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import au.csiro.pathling.config.LocalTerminologyConfiguration;
+import au.csiro.pathling.config.TerminologyConfiguration;
+import au.csiro.pathling.config.TerminologyMode;
+import au.csiro.pathling.terminology.local.LocalTerminologyService;
 import au.csiro.pathling.test.Rf2Mini;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
@@ -42,6 +46,7 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.stream.Stream;
 import org.apache.spark.sql.SparkSession;
+import org.hl7.fhir.r4.model.Coding;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -295,6 +300,38 @@ class SnomedRf2ImporterDialectTest {
     assertEquals("A duplicate preferred term", first.get(Rf2Mini.PANCREAS_STRUCTURE));
   }
 
+  // --- Independence from how the store was built (User Story 4). ---
+
+  @Test
+  void answersIdenticallyWhateverOrderTheReleasesRowsWereLaidOutIn() {
+    // The defect this closes is that a result could depend on the order the store's rows happened
+    // to
+    // be read in. Two stores are built from the same content, one from a copy whose description and
+    // language rows have been reversed, and every display and designation list is compared.
+    final Path shuffled = releaseWithReversedDescriptionAndLanguageRows();
+    final String asWritten = importInto("order-as-written", Rf2Mini.baseRelease(), null);
+    final String reversed = importInto("order-reversed", shuffled, null);
+
+    try (final LocalTerminologyService first = serviceOver(asWritten);
+        final LocalTerminologyService second = serviceOver(reversed)) {
+      final Map<String, String> displays = displaysOf(asWritten);
+      assertEquals(displays, displaysOf(reversed), "The stored displays differ between the two");
+      for (final String code : displays.keySet()) {
+        final Coding coding = new Coding().setSystem(Rf2Mini.SNOMED_URI).setCode(code);
+        for (final String language : new String[] {null, "en-GB", "en-US"}) {
+          assertEquals(
+              first.lookup(coding, "display", language),
+              second.lookup(coding, "display", language),
+              "The display of " + code + " for " + language + " differs between the two");
+        }
+        assertEquals(
+            first.lookup(coding, "designation", null),
+            second.lookup(coding, "designation", null),
+            "The designations of " + code + " differ between the two");
+      }
+    }
+  }
+
   // --- Helpers. ---
 
   /** Imports a release into a named store beneath the shared temporary directory. */
@@ -480,6 +517,38 @@ class SnomedRf2ImporterDialectTest {
     } catch (final IOException e) {
       throw new UncheckedIOException(e);
     }
+  }
+
+  /**
+   * Copies the base release with the data rows of its description and language reference set files
+   * reversed. The content is identical; only the order it is laid out in differs, which is exactly
+   * what no result may depend on.
+   */
+  @Nonnull
+  private static Path releaseWithReversedDescriptionAndLanguageRows() {
+    final Path release = copyOfBaseRelease("reversed");
+    rewriteDescriptionFile(release, SnomedRf2ImporterDialectTest::reversed);
+    rewriteLanguageFile(release, SnomedRf2ImporterDialectTest::reversed);
+    return release;
+  }
+
+  /** Returns the rows in the opposite order. */
+  @Nonnull
+  private static List<String> reversed(@Nonnull final List<String> rows) {
+    final List<String> backwards = new ArrayList<>(rows);
+    java.util.Collections.reverse(backwards);
+    return backwards;
+  }
+
+  /** Builds a service reading a store, for comparing what two stores answer. */
+  @Nonnull
+  private static LocalTerminologyService serviceOver(@Nonnull final String storagePath) {
+    return new LocalTerminologyService(
+        TerminologyConfiguration.builder()
+            .mode(TerminologyMode.LOCAL)
+            .local(LocalTerminologyConfiguration.builder().storagePath(storagePath).build())
+            .build(),
+        Map.of());
   }
 
   /** Captures the informational log of the dialect choice made during {@code action}. */

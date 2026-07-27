@@ -307,6 +307,38 @@ class LocalTerminologyServiceLookupTest {
     assertEquals(Rf2Mini.DIVERGENT_US_PANCREAS, display(snomed(Rf2Mini.PANCREAS_STRUCTURE), ";;;"));
   }
 
+  // --- Determinism of designations (User Story 4). ---
+
+  @Test
+  void returnsAnIdenticalDesignationListOnEveryCall() {
+    // The list a caller sees is a sequence, so repeating the request must reproduce it exactly
+    // rather
+    // than merely returning the same set.
+    assertEquals(
+        designations(snomed(Rf2Mini.TYPE2_DIABETES)), designations(snomed(Rf2Mini.TYPE2_DIABETES)));
+    assertEquals(designations(snomed(Rf2Mini.DIABETES)), designations(snomed(Rf2Mini.DIABETES)));
+  }
+
+  @Test
+  void ordersTheDesignationsOfATermPreferredInSeveralReferenceSetsByReferenceSetIdentifier() {
+    // "Diabetes mellitus" is the preferred synonym in both of the fixture's language reference
+    // sets,
+    // so it yields one preferredForLanguage designation per reference set. Which comes first is
+    // otherwise decided by the order of a map, so it is fixed by reference set identifier: GB
+    // English
+    // (900000000000508004) before US English (900000000000509007).
+    final List<String> dialectLanguages =
+        designations(snomed(Rf2Mini.DIABETES)).stream()
+            .filter(d -> d.getUse() != null && PREFERRED_FOR_LANGUAGE.equals(d.getUse().getCode()))
+            .filter(d -> "Diabetes mellitus".equals(d.getValue()))
+            .map(Designation::getLanguage)
+            .filter(language -> language != null && language.contains("sctlang"))
+            .toList();
+    assertEquals(
+        List.of("en-x-sctlang-90000000-00005080-04", "en-x-sctlang-90000000-00005090-07"),
+        dialectLanguages);
+  }
+
   @Test
   void resolvesInactiveConceptDisplay() {
     // Inactive concepts remain resolvable for lookup.

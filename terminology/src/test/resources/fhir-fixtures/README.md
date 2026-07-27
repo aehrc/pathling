@@ -10,16 +10,16 @@ is derived from any real code system.
 `json/` holds the individual resources, used by the single-file and
 directory-import tests:
 
-| File                                  | Resource                                    | Exercises                                                                        |
-| ------------------------------------- | ------------------------------------------- | -------------------------------------------------------------------------------- |
-| `codesystem-animal-species.json`      | CodeSystem `.../animal-species` v1.0.0      | Nested (`is-a`) hierarchy, `integer`/`code`/`boolean` properties, a designation. |
-| `valueset-mammals-enumerated.json`    | ValueSet                                    | Enumerated concepts.                                                             |
-| `valueset-mammals-isa.json`           | ValueSet                                    | `is-a` filter.                                                                   |
-| `valueset-animals-except-whale.json`  | ValueSet                                    | `is-a` include with a `concept` exclude.                                         |
-| `valueset-land-dwellers.json`         | ValueSet                                    | Property (`=`) filter on a declared property.                                    |
-| `valueset-nested-mammals.json`        | ValueSet                                    | Nested `valueSet` reference.                                                     |
-| `valueset-expansion-only.json`        | ValueSet                                    | Expansion with no compose.                                                       |
-| `conceptmap-species-to-category.json` | ConceptMap `.../species-to-category` v1.0.0 | Forward, reverse, and equivalence-filtered translation.                          |
+| File                                  | Resource                                    | Exercises                                                                                          |
+| ------------------------------------- | ------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `codesystem-animal-species.json`      | CodeSystem `.../animal-species` v1.0.0      | Nested (`is-a`) hierarchy, `integer`/`code`/`boolean` properties, designations in three languages. |
+| `valueset-mammals-enumerated.json`    | ValueSet                                    | Enumerated concepts.                                                                               |
+| `valueset-mammals-isa.json`           | ValueSet                                    | `is-a` filter.                                                                                     |
+| `valueset-animals-except-whale.json`  | ValueSet                                    | `is-a` include with a `concept` exclude.                                                           |
+| `valueset-land-dwellers.json`         | ValueSet                                    | Property (`=`) filter on a declared property.                                                      |
+| `valueset-nested-mammals.json`        | ValueSet                                    | Nested `valueSet` reference.                                                                       |
+| `valueset-expansion-only.json`        | ValueSet                                    | Expansion with no compose.                                                                         |
+| `conceptmap-species-to-category.json` | ConceptMap `.../species-to-category` v1.0.0 | Forward, reverse, and equivalence-filtered translation.                                            |
 
 `package/animals.tgz` is a FHIR NPM package (a `package/` directory with a
 `package.json` and a subset of the resources above) used by the package-import
@@ -34,13 +34,31 @@ hierarchy:
 organism
 └── animal
     ├── mammal
-    │   ├── dog      legs=4, habitat=land, endangered=false (synonym "Canine")
+    │   ├── dog      legs=4, habitat=land, endangered=false (four designations, below)
     │   ├── cat      legs=4, habitat=land
     │   └── whale    legs=0, habitat=water, endangered=true
     └── bird
         ├── sparrow  legs=2, habitat=land
         └── penguin  legs=2, habitat=water
 ```
+
+## Designations of `dog`
+
+`dog` is the only concept carrying designations, and it carries four so that
+language matching has something to distinguish. Its `display` element remains
+`Dog`, which is what a request naming no language returns.
+
+| Language | Use       | Value          |
+| -------- | --------- | -------------- |
+| `en`     | `synonym` | `Canine`       |
+| `en`     | `display` | `Domestic dog` |
+| `en-GB`  | `synonym` | `Hound`        |
+| `de`     | `display` | `Hund`         |
+
+A request for `en-GB` matches that tag exactly and returns `Hound`. A request
+for another English dialect, such as `en-AU`, matches only on the primary
+subtag, and so returns the generic English designation whose use is `display`:
+`Domestic dog`.
 
 ## Regenerating the package
 

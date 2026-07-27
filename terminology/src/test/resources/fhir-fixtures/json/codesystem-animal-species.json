@@ -52,6 +52,22 @@
                         "code": "display"
                       },
                       "value": "Hund"
+                    },
+                    {
+                      "language": "en",
+                      "use": {
+                        "system": "http://terminology.hl7.org/CodeSystem/designation-usage",
+                        "code": "display"
+                      },
+                      "value": "Domestic dog"
+                    },
+                    {
+                      "language": "en-GB",
+                      "use": {
+                        "system": "http://terminology.hl7.org/CodeSystem/designation-usage",
+                        "code": "synonym"
+                      },
+                      "value": "Hound"
                     }
                   ],
                   "property": [

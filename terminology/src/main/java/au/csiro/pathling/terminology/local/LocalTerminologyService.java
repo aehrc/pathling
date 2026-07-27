@@ -491,7 +491,11 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
         // A description outside every language reference set carries no use.
         addDesignation(result, seen, null, description.getLanguage(), description.getTerm());
       } else {
-        for (final Map.Entry<String, String> entry : acceptability.entrySet()) {
+        // The acceptability map is iterated in ascending reference set identifier order, because
+        // map
+        // order is an implementation detail and a description preferred in several reference sets
+        // yields one designation for each.
+        for (final Map.Entry<String, String> entry : byReferenceSetIdentifier(acceptability)) {
           final boolean preferredSynonym =
               SYNONYM_TYPE.equals(description.getTypeCode())
                   && PREFERRED_ACCEPTABILITY.equals(entry.getValue());
@@ -525,6 +529,24 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
             display);
       }
     }
+  }
+
+  /**
+   * Returns the entries of an acceptability map in ascending reference set identifier order.
+   * Identifiers are digit strings without leading zeros, so ordering by length and then as text
+   * orders them by value.
+   *
+   * @param acceptability the acceptability of a description within each language reference set
+   * @return the entries, in ascending reference set identifier order
+   */
+  @Nonnull
+  private static List<Map.Entry<String, String>> byReferenceSetIdentifier(
+      @Nonnull final Map<String, String> acceptability) {
+    return acceptability.entrySet().stream()
+        .sorted(
+            Comparator.comparingInt((Map.Entry<String, String> entry) -> entry.getKey().length())
+                .thenComparing(Map.Entry::getKey))
+        .toList();
   }
 
   /** Adds a designation to the result unless an identical one has already been added. */
@@ -660,27 +682,55 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
 
   /**
    * Finds the display term of a FHIR CodeSystem concept in the given language from its
-   * designations, preferring a designation whose use is {@code display} over any other
-   * matching-language designation. Returns null when no designation matches the language.
+   * designations.
+   *
+   * <p>A FHIR CodeSystem carries plain BCP-47 designation languages with no reference set to
+   * resolve, so an exact tag match is the only way {@code en-GB} and {@code en-US} can be told
+   * apart there. A designation whose language equals the request exactly, without regard to case,
+   * is therefore preferred over one matching only on the primary subtag; within each of those, one
+   * whose use is {@code display} is preferred. Returns null when no designation matches the
+   * language at all.
    */
   @Nullable
-  private String fhirDisplayForLanguage(
+  private static String fhirDisplayForLanguage(
       @Nonnull final CodeSystemIndexes indexes, final int dense, @Nonnull final String language) {
     final String primary = primaryLanguageTag(language);
-    String match = null;
+    String exactDisplay = null;
+    String exactAny = null;
+    String primaryDisplay = null;
+    String primaryAny = null;
     for (final Description description : indexes.descriptions().descriptionsOf(dense)) {
-      if (description.getLanguage() == null
-          || !primary.equals(primaryLanguageTag(description.getLanguage()))) {
+      if (description.getLanguage() == null) {
         continue;
       }
-      if (DISPLAY_DESIGNATION_USE.equals(description.getTypeCode())) {
-        return description.getTerm();
+      final boolean exact = description.getLanguage().equalsIgnoreCase(language);
+      if (!exact && !primary.equals(primaryLanguageTag(description.getLanguage()))) {
+        continue;
       }
-      if (match == null) {
-        match = description.getTerm();
+      final boolean isDisplay = DISPLAY_DESIGNATION_USE.equals(description.getTypeCode());
+      // The description list is ordered by content, so the first match at each level is stable.
+      if (exact && isDisplay) {
+        exactDisplay = exactDisplay == null ? description.getTerm() : exactDisplay;
+      } else if (exact) {
+        exactAny = exactAny == null ? description.getTerm() : exactAny;
+      } else if (isDisplay) {
+        primaryDisplay = primaryDisplay == null ? description.getTerm() : primaryDisplay;
+      } else {
+        primaryAny = primaryAny == null ? description.getTerm() : primaryAny;
       }
     }
-    return match;
+    return firstNonNull(exactDisplay, exactAny, primaryDisplay, primaryAny);
+  }
+
+  /** Returns the first of its arguments that is not null, or null if they all are. */
+  @Nullable
+  private static String firstNonNull(@Nullable final String... candidates) {
+    for (final String candidate : candidates) {
+      if (candidate != null) {
+        return candidate;
+      }
+    }
+    return null;
   }
 
   @Nonnull
