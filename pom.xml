@@ -1006,7 +1006,7 @@
                   <exclude>**/src/license/**</exclude>
                   <exclude>**/target/**</exclude>
                   <exclude>**/node_modules/**</exclude>
-                  <exclude>**/.venv/**</exclude>
+                  <exclude>**/.venv*/**</exclude>
                   <exclude>**/spark-warehouse/**</exclude>
                   <exclude>**/metastore_db/**</exclude>
                   <exclude>**/.ipynb_checkpoints/**</exclude>

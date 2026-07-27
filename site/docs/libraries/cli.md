@@ -194,15 +194,15 @@ The Pathling public functions are also pre-imported, so no
 coding functions (`to_coding`, `to_snomed_coding`, `to_loinc_coding`,
 `member_of`, `translate`, `subsumes`, and so on), the argument helper types
 (`Coding`, `PropertyType`, `Equivalence`), and the API types (`PathlingContext`,
-`DataSource`, and the rest). See the
-[Python API reference](https://pathling.csiro.au/docs/python/pathling.html) for
-the full list. The terminology
-display function is bound under both its natural name `display` and the alias
-`tx_display`. The name `pathling` is bound to the package module itself, so a
-bare `import pathling` is a harmless no-op that leaves `pc` intact. Any
-pre-imported name is only a default: assigning or defining the same name in your
-own code takes precedence, and an explicit `from pathling import ...` continues
-to work unchanged.
+`DataSource`, and the rest). The pre-imported names are exactly the
+[public functions and types listed in the Python API
+reference](https://pathling.csiro.au/docs/python/pathling.html#module-pathling).
+The terminology display function is bound under both its natural name `display`
+and the alias `tx_display`. The name `pathling` is bound to the package module
+itself, so a bare `import pathling` is a harmless no-op that leaves `pc` intact.
+Any pre-imported name is only a default: assigning or defining the same name in
+your own code takes precedence, and an explicit `from pathling import ...`
+continues to work unchanged.
 
 ```bash
 # Run a script file.
