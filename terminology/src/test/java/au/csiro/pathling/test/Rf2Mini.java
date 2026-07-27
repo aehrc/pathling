@@ -74,6 +74,13 @@ public final class Rf2Mini {
   public static final String SIMPLE_REFSET = "1199008";
   public static final String GESTATIONAL_SUBTYPE = "1200006";
 
+  // Filler concepts that the SAME AS association reference set also relates to TYPE2_DIABETES, so
+  // that reverse translation has several results and their order is observable. Named in ascending
+  // code order, which is not the order their rows are written in.
+  public static final String ASSOCIATED_FILLER_1 = "1099005";
+  public static final String ASSOCIATED_FILLER_2 = "1139006";
+  public static final String ASSOCIATED_FILLER_3 = "1159005";
+
   // Metadata codes.
   public static final String IS_A = "116680003";
   public static final String FINDING_SITE = "363698007";

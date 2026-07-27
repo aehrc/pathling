@@ -39,6 +39,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
@@ -216,7 +217,16 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
     return queryString.startsWith("fhir_cm=") ? queryString.substring("fhir_cm=".length()) : null;
   }
 
-  /** Translates through a SNOMED association reference set, forward or reversed. */
+  /**
+   * Translates through a SNOMED association reference set, forward or reversed.
+   *
+   * <p>The reversed direction returns its matches ordered by concept code. The association map is
+   * iterated in the store's physical row order, which is an implementation detail that follows from
+   * the join strategy the importer's optimiser happened to choose, so emitting in that order would
+   * let how the store was written show through in a result a caller can see. This is the same rule
+   * as {@link #byConceptCode}. The forward direction returns at most one match, because a concept
+   * has at most one association target, so there is nothing there to order.
+   */
   @Nonnull
   private List<Translation> translateSnomedAssociation(
       @Nonnull final String conceptMapUrl,
@@ -245,6 +255,7 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
           translations.add(snomedTranslation(dictionary.code(entry.getKey())));
         }
       }
+      translations.sort(Comparator.comparing(translation -> translation.getConcept().getCode()));
     } else {
       final Integer dense = dictionary.denseId(coding.getCode());
       if (dense != null && associations.containsKey(dense)) {
@@ -448,7 +459,15 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
     };
   }
 
-  /** Adds each defining-relationship attribute of the concept as a Coding-valued property. */
+  /**
+   * Adds each defining-relationship attribute of the concept as a Coding-valued property.
+   *
+   * <p>The attribute types are visited in ascending code order. The relationship index holds them
+   * in a hash map, and two codes that share a bucket iterate in the order they were inserted, which
+   * is the order their rows were read from the store, so visiting them as the index presents them
+   * would let the store's physical layout show through in a result a caller can see. This is the
+   * same rule as {@link #byConceptCode}, which already orders the targets within each type.
+   */
   private void addAttributeProperties(
       @Nonnull final String systemUrl,
       @Nonnull final CodeSystemIndexes indexes,
@@ -458,7 +477,7 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
     final RelationshipIndex relationships = indexes.relationships();
     final ConceptDictionary dictionary = indexes.dictionary();
     final RoaringBitmap source = RoaringBitmap.bitmapOf(dense);
-    for (final String type : relationships.typeCodes()) {
+    for (final String type : new TreeSet<>(relationships.typeCodes())) {
       if (!wants(propertyCode, type)) {
         continue;
       }

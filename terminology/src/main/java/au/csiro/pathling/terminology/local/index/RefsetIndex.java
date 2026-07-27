@@ -26,7 +26,6 @@ import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.REFSET_
 import au.csiro.pathling.terminology.store.TerminologyStoreReader;
 import jakarta.annotation.Nonnull;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import org.roaringbitmap.RoaringBitmap;
 
@@ -72,7 +71,7 @@ public final class RefsetIndex {
           final String target = row.getString(COLUMN_TARGET_CODE);
           if (target != null) {
             associationTargets
-                .computeIfAbsent(refset, k -> new LinkedHashMap<>())
+                .computeIfAbsent(refset, k -> new HashMap<>())
                 .put(referenced, target);
           }
         });
@@ -93,7 +92,11 @@ public final class RefsetIndex {
 
   /**
    * Returns the association targets of a reference set as a map from referenced concept dense
-   * identifier to the target code, preserving insertion order.
+   * identifier to the target code.
+   *
+   * <p>The iteration order of the map is unspecified. A caller that turns these entries into a
+   * result it hands back must impose its own order, because the order rows were read in is a
+   * property of how the store happened to be written rather than of the reference set.
    *
    * @param refsetCode the reference set identifier
    * @return the association target map, empty if the reference set has no targets

@@ -86,6 +86,10 @@ public final class RelationshipIndex {
   /**
    * Returns the attribute types present in this version.
    *
+   * <p>The iteration order of the set is unspecified. A caller that turns these codes into a result
+   * it hands back must impose its own order, because the order rows were read in is a property of
+   * how the store happened to be written rather than of the code system.
+   *
    * @return the set of attribute type codes
    */
   @Nonnull
