@@ -21,27 +21,38 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
 import au.csiro.pathling.config.ServerConfiguration;
-import au.csiro.pathling.config.SqlQueryConfiguration;
+import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.test.SpringBootUnitTest;
+import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.catalyst.expressions.Literal;
+import org.apache.spark.sql.catalyst.plans.logical.GlobalLimit;
+import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
+import scala.jdk.javaapi.CollectionConverters;
 
 /**
- * Tests for {@link SqlQueryExecutor}. Two concerns are covered:
+ * Tests for {@link SqlQueryExecutor}. Three concerns are covered:
  *
  * <ul>
- *   <li>The row-cap clamp logic in {@link SqlQueryExecutor#effectiveLimit(Integer, String)}, which
- *       verifies that the server-configured cap is always honoured and that a caller-supplied
- *       {@code _limit} can only narrow, never widen, the result set.
+ *   <li>Row limiting: the caller's {@code _limit} is applied when they supply one, and no limit at
+ *       all is imposed when they do not. A server-side cap used to truncate every result, which
+ *       silently truncated every {@code $sqlquery-export} at one million rows (spec 041 US1, US4).
+ *   <li>Spark job groups: execution runs under whatever job group the caller established, which is
+ *       how an asynchronous job's stages are attributed to it and how a cancellation of that job
+ *       reaches the query in flight (spec 041 US3).
  *   <li>That a {@code DESCRIBE <label>} statement flows through the same validate → execute →
  *       {@code validateAnalyzed} sequence the executor uses and yields the engine's describe rows.
  *       This exercises the analysed-mode carve-out end to end in the JVM, since the executor calls
@@ -56,9 +67,15 @@ class SqlQueryExecutorTest {
 
   private static final String VIEW_NAME = "patients";
 
+  /** SQL that needs no dependencies, so it can run against an empty dependency graph. */
+  private static final String SELF_CONTAINED_SQL =
+      "SELECT * FROM (VALUES (1, 'alice'), (2, 'bob'), (3, 'carol')) AS t(id, name)";
+
   @Autowired private SqlValidator sqlValidator;
 
   @Autowired private SparkSession sparkSession;
+
+  @Autowired private FhirContext fhirContext;
 
   // -------------------------------------------------------------------------
   // DESCRIBE <label> flows through the executor's validate/execute/analyse
@@ -150,46 +167,118 @@ class SqlQueryExecutorTest {
   }
 
   // -------------------------------------------------------------------------
-  // Row-cap clamp logic.
+  // Row limiting: the caller's _limit is the only limit that is ever applied.
   // -------------------------------------------------------------------------
 
   @Test
-  void appliesServerCapWhenCallerHasNoLimit() {
-    final SqlQueryExecutor executor = newExecutor(2);
-    assertThat(executor.effectiveLimit(null, REQUEST_ID)).isEqualTo(2);
+  void imposesNoRowLimitWhenCallerSuppliesNone() {
+    // A caller that supplies no _limit must receive the complete result, so nothing may add a limit
+    // node to the plan handed to the consumer. This is what previously truncated every
+    // $sqlquery-export at the configured server cap.
+    final LogicalPlan consumedPlan = executeAndCapturePlan(SELF_CONTAINED_SQL, null);
+
+    assertThat(findLimitValue(consumedPlan)).isNull();
   }
 
   @Test
-  void appliesCallerLimitWhenLowerThanCap() {
-    final SqlQueryExecutor executor = newExecutor(1000);
-    assertThat(executor.effectiveLimit(5, REQUEST_ID)).isEqualTo(5);
+  void appliesTheCallerLimitWhenSupplied() {
+    // The caller's _limit remains the means of bounding a synchronous response, so it must appear
+    // in the plan with exactly the value that was asked for.
+    final LogicalPlan consumedPlan = executeAndCapturePlan(SELF_CONTAINED_SQL, 2);
+
+    assertThat(findLimitValue(consumedPlan)).isEqualTo(2);
   }
+
+  // -------------------------------------------------------------------------
+  // Spark job group: execution runs under whatever group the caller established.
+  // -------------------------------------------------------------------------
 
   @Test
-  void appliesServerCapWhenCallerLimitExceedsIt() {
-    final SqlQueryExecutor executor = newExecutor(10);
-    assertThat(executor.effectiveLimit(1_000_000, REQUEST_ID)).isEqualTo(10);
+  void preservesTheAmbientSparkJobGroup() {
+    // The asynchronous machinery sets a job group named for the job before calling the executor.
+    // Stage attribution and cancellation both key off spark.jobGroup.id, so the executor must
+    // neither replace that group nor clear it, either during or after execution.
+    final String ambientJobGroup = "job-" + REQUEST_ID;
+    sparkSession.sparkContext().setJobGroup(ambientJobGroup, "ambient", true);
+    try {
+      final AtomicReference<String> groupInsideConsumer = new AtomicReference<>();
+      newExecutor()
+          .execute(
+              request(SELF_CONTAINED_SQL, null),
+              new ResolvedDependencyGraph(List.of(), Map.of(), Map.of()),
+              mock(DataSource.class),
+              REQUEST_ID,
+              dataset -> groupInsideConsumer.set(currentJobGroup()));
+
+      assertThat(groupInsideConsumer.get()).isEqualTo(ambientJobGroup);
+      assertThat(currentJobGroup()).isEqualTo(ambientJobGroup);
+    } finally {
+      sparkSession.sparkContext().clearJobGroup();
+    }
   }
 
-  @Test
-  void clampsConfiguredCapToIntegerMaxValue() {
-    // A "disable the cap" value larger than Integer.MAX_VALUE must clamp down so it can be passed
-    // to Spark's Dataset.limit(int) API.
-    final SqlQueryExecutor executor = newExecutor(Long.MAX_VALUE);
-    assertThat(executor.effectiveLimit(null, REQUEST_ID)).isEqualTo(Integer.MAX_VALUE);
-  }
+  // -------------------------------------------------------------------------
+  // Helpers
+  // -------------------------------------------------------------------------
 
+  /** Executes the given SQL through a real executor and returns the plan the consumer received. */
   @Nonnull
-  private static SqlQueryExecutor newExecutor(final long maxRows) {
-    final SqlQueryConfiguration sqlQueryConfig = new SqlQueryConfiguration();
-    sqlQueryConfig.setMaxRows(maxRows);
-    final ServerConfiguration serverConfiguration = new ServerConfiguration();
-    serverConfiguration.setSqlQuery(sqlQueryConfig);
+  private LogicalPlan executeAndCapturePlan(
+      @Nonnull final String sql, @Nullable final Integer limit) {
+    final AtomicReference<LogicalPlan> consumedPlan = new AtomicReference<>();
+    newExecutor()
+        .execute(
+            request(sql, limit),
+            new ResolvedDependencyGraph(List.of(), Map.of(), Map.of()),
+            mock(DataSource.class),
+            REQUEST_ID,
+            dataset -> consumedPlan.set(dataset.queryExecution().analyzed()));
+    return Objects.requireNonNull(consumedPlan.get());
+  }
+
+  /**
+   * Returns the value of the first {@link GlobalLimit} node found in the plan, or null when the
+   * plan carries no limit at all. {@code Dataset.limit(n)} is the only thing that introduces one
+   * here, since none of the test SQL expresses a limit of its own.
+   */
+  @Nullable
+  private static Integer findLimitValue(@Nonnull final LogicalPlan plan) {
+    if (plan instanceof final GlobalLimit globalLimit
+        && globalLimit.limitExpr() instanceof final Literal literal) {
+      return (Integer) literal.value();
+    }
+    for (final LogicalPlan child : CollectionConverters.asJava(plan.children())) {
+      final Integer found = findLimitValue(child);
+      if (found != null) {
+        return found;
+      }
+    }
+    return null;
+  }
+
+  /** Returns the job group currently set on the Spark context, or null when none is set. */
+  @Nullable
+  private String currentJobGroup() {
+    return sparkSession.sparkContext().getLocalProperty("spark.jobGroup.id");
+  }
+
+  /** Builds a request over self-contained SQL with no dependencies. */
+  @Nonnull
+  private static SqlQueryRequest request(@Nonnull final String sql, @Nullable final Integer limit) {
+    return new SqlQueryRequest(
+        new ParsedSqlQuery(sql, List.of(), List.of(), SqlLibraryParser.SQL_QUERY_TYPE_CODE),
+        SqlQueryOutputFormat.NDJSON,
+        /* includeHeader= */ true,
+        limit,
+        Map.of());
+  }
+
+  /** Builds an executor over the real Spark session, view registration service and validator. */
+  @Nonnull
+  private SqlQueryExecutor newExecutor() {
     return new SqlQueryExecutor(
-        mock(SparkSession.class),
-        mock(ViewRegistrationService.class),
-        mock(SqlValidator.class),
-        serverConfiguration,
-        mock(SqlQueryWatchdog.class));
+        sparkSession,
+        new ViewRegistrationService(sparkSession, fhirContext, new ServerConfiguration()),
+        sqlValidator);
   }
 }

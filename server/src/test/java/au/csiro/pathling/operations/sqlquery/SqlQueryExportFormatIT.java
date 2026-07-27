@@ -92,8 +92,7 @@ class SqlQueryExportFormatIT extends AbstractSqlQueryExportIT {
     addSimpleParam(body, "header", "valueBoolean", Boolean.FALSE);
 
     final Map<String, Object> manifest = exportToCompletion(systemLevelUri(), body);
-    final String content =
-        download(partValue(paramsByName(manifest, "output").get(0), "location", "valueUri"));
+    final String content = downloadAll(paramsByName(manifest, "output").get(0));
     assertThat(content).doesNotContain("id,family_name");
     assertThat(content).contains("Smith");
   }
@@ -156,8 +155,7 @@ class SqlQueryExportFormatIT extends AbstractSqlQueryExportIT {
     addParam(body, referencePart("patient", "Patient/p1"));
 
     final Map<String, Object> manifest = exportToCompletion(systemLevelUri(), body);
-    final String content =
-        download(partValue(paramsByName(manifest, "output").get(0), "location", "valueUri"));
+    final String content = downloadAll(paramsByName(manifest, "output").get(0));
     assertThat(content).contains("\"id\":\"p1\"");
     assertThat(content).doesNotContain("\"id\":\"p2\"").doesNotContain("\"id\":\"p3\"");
   }
@@ -170,8 +168,7 @@ class SqlQueryExportFormatIT extends AbstractSqlQueryExportIT {
     addParam(body, referencePart("group", "Group/" + SqlQueryExportTestConfiguration.GROUP_ID));
 
     final Map<String, Object> manifest = exportToCompletion(systemLevelUri(), body);
-    final String content =
-        download(partValue(paramsByName(manifest, "output").get(0), "location", "valueUri"));
+    final String content = downloadAll(paramsByName(manifest, "output").get(0));
     assertThat(content).contains("\"id\":\"p1\"");
     assertThat(content).doesNotContain("\"id\":\"p2\"").doesNotContain("\"id\":\"p3\"");
   }
@@ -184,8 +181,7 @@ class SqlQueryExportFormatIT extends AbstractSqlQueryExportIT {
     addSimpleParam(body, "_since", "valueInstant", "2023-01-01T00:00:00.000Z");
 
     final Map<String, Object> manifest = exportToCompletion(systemLevelUri(), body);
-    final String content =
-        download(partValue(paramsByName(manifest, "output").get(0), "location", "valueUri"));
+    final String content = downloadAll(paramsByName(manifest, "output").get(0));
     assertThat(content).doesNotContain("\"id\":\"p1\"");
     assertThat(content).contains("\"id\":\"p2\"").contains("\"id\":\"p3\"");
   }

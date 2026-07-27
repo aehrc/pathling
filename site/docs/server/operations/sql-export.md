@@ -241,14 +241,3 @@ valid for at least 24 hours after completion and support repeat retrieval.
 The operation is enabled by default and can be disabled with the
 `pathling.operations.sqlQueryExportEnabled` configuration setting (see
 [Configuration](../configuration.md)).
-
-The same server-configured resource limits that apply to
-[$sqlquery-run](./sql-run) are also applied to each query in an export:
-
-- `pathling.sqlQuery.maxRows` (default `1000000`) - the maximum number of rows
-  that a single query may return.
-- `pathling.sqlQuery.timeoutSeconds` (default `60`) - the maximum wall-clock
-  time, in seconds, that a single query may run before its Spark job group is
-  cancelled.
-- `pathling.sqlQuery.maxDependencyDepth` (default `10`) - the maximum nesting
-  depth of the SQLView dependency graph resolved for a single query.
