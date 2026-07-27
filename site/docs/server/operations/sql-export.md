@@ -205,6 +205,12 @@ There is one `output` per query, each with a `name` part and one or more
 | CSV     | `csv`           | `text/csv`                       | Comma-separated values. Use `header=false` to exclude headers. |
 | Parquet | `parquet`       | `application/vnd.apache.parquet` | Apache Parquet columnar format. Efficient for large datasets.  |
 
+The `json` and `fhir` formats are not supported for export, even though the
+synchronous [run SQL query](sql-run.md) operation accepts both. The supported
+set is declared in the `documentation` of the operation entry in the
+[CapabilityStatement](https://hl7.org/fhir/R4/capabilitystatement.html), so a
+client can discover the constraint without first receiving a `400`.
+
 ## Multiple queries
 
 Include several `query` parameters to export several result sets in one

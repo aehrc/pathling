@@ -127,6 +127,17 @@ public class ConformanceProvider
       "http://sql-on-fhir.org/OperationDefinition/$sqlquery-export";
 
   /**
+   * Both export operations are parameterised by {@link
+   * au.csiro.pathling.operations.view.ViewExportFormat}, which supports a narrower set of output
+   * formats than the spec canonical they declare. Stating the supported set here lets a client
+   * reading the CapabilityStatement discover the constraint, rather than discovering it as a 400.
+   */
+  private static final String EXPORT_FORMAT_DOCUMENTATION =
+      "Supported `_format` values: `ndjson` (the default), `csv` and `parquet`. The `json` and"
+          + " `fhir` formats are not supported for export; a request for either is rejected with a"
+          + " 400.";
+
+  /**
    * Base system-level operations whose Pathling-authored OperationDefinition resources are served.
    * The SQL on FHIR run/export operations are intentionally excluded: they declare the spec
    * canonical and Pathling does not serve an OperationDefinition for them.
@@ -532,7 +543,8 @@ public class ConformanceProvider
         operations,
         VIEWDEFINITION_EXPORT_OPERATION,
         ops.isViewDefinitionExportEnabled(),
-        SOF_VIEWDEFINITION_EXPORT_CANONICAL);
+        SOF_VIEWDEFINITION_EXPORT_CANONICAL,
+        EXPORT_FORMAT_DOCUMENTATION);
 
     // Add SQL query run operation, declaring the SQL on FHIR spec canonical.
     addOperationIfEnabled(
@@ -544,7 +556,8 @@ public class ConformanceProvider
         operations,
         SQLQUERY_EXPORT_OPERATION,
         ops.isSqlQueryExportEnabled(),
-        SOF_SQLQUERY_EXPORT_CANONICAL);
+        SOF_SQLQUERY_EXPORT_CANONICAL,
+        EXPORT_FORMAT_DOCUMENTATION);
 
     // Add bulk submit operations if configured and enabled.
     if (configuration.getBulkSubmit() != null && ops.isBulkSubmitEnabled()) {
@@ -567,10 +580,23 @@ public class ConformanceProvider
       final String name,
       final boolean enabled,
       final String definitionUri) {
+    addOperationIfEnabled(operations, name, enabled, definitionUri, null);
+  }
+
+  private void addOperationIfEnabled(
+      final List<CapabilityStatementRestResourceOperationComponent> operations,
+      final String name,
+      final boolean enabled,
+      final String definitionUri,
+      @Nullable final String documentation) {
     if (enabled) {
-      operations.add(
+      final CapabilityStatementRestResourceOperationComponent operation =
           new CapabilityStatementRestResourceOperationComponent(
-              new StringType(name), new CanonicalType(definitionUri)));
+              new StringType(name), new CanonicalType(definitionUri));
+      if (documentation != null) {
+        operation.setDocumentation(documentation);
+      }
+      operations.add(operation);
     }
   }
 

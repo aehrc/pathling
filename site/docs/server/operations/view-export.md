@@ -195,6 +195,12 @@ part per file.
 | CSV     | `csv`           | `text/csv`                       | Comma-separated values. Use `header=false` to exclude headers. |
 | Parquet | `parquet`       | `application/vnd.apache.parquet` | Apache Parquet columnar format. Efficient for large datasets.  |
 
+The `json` format is not supported for export, even though the synchronous
+[run view](view-run.md) operation accepts it. The supported set is declared in
+the `documentation` of the operation entry in the
+[CapabilityStatement](https://hl7.org/fhir/R4/capabilitystatement.html), so a
+client can discover the constraint without first receiving a `400`.
+
 Parquet cannot represent a column whose type is unresolved (Spark `NullType`,
 displayed as "VOID"), such as a column that resolves to an empty collection. If
 a view's result contains such a column and Parquet output is requested, the

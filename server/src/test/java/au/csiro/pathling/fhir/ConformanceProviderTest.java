@@ -303,6 +303,74 @@ class ConformanceProviderTest {
         .isEqualTo("http://sql-on-fhir.org/OperationDefinition/$sqlquery-export");
   }
 
+  // -------------------------------------------------------------------------
+  // Export output format declaration
+  // -------------------------------------------------------------------------
+
+  /**
+   * The export operations accept a narrower set of output formats than the spec canonical they
+   * declare. The supported set is stated in the operation documentation so that a client reading
+   * the CapabilityStatement discovers the constraint, rather than discovering it as a 400.
+   */
+  @Test
+  void viewDefinitionExportDocumentsSupportedFormats() {
+    final CapabilityStatement capabilityStatement =
+        conformanceProvider.getServerConformance(null, null);
+    final String documentation =
+        systemOperationDocumentation(capabilityStatement, "viewdefinition-export");
+
+    assertThat(documentation)
+        .as("The viewdefinition-export operation should document its supported formats")
+        .isNotNull()
+        .contains("ndjson")
+        .contains("csv")
+        .contains("parquet")
+        .contains("json")
+        .contains("fhir");
+  }
+
+  @Test
+  void sqlQueryExportDocumentsSupportedFormats() {
+    final CapabilityStatement capabilityStatement =
+        conformanceProvider.getServerConformance(null, null);
+    final String documentation =
+        systemOperationDocumentation(capabilityStatement, "sqlquery-export");
+
+    assertThat(documentation)
+        .as("The sqlquery-export operation should document its supported formats")
+        .isNotNull()
+        .contains("ndjson")
+        .contains("csv")
+        .contains("parquet")
+        .contains("json")
+        .contains("fhir");
+  }
+
+  /**
+   * The documentation is scoped to the operations that actually narrow the format set. The run
+   * operations impose no such constraint, so they carry no documentation.
+   */
+  @Test
+  void runOperationsDeclareNoFormatDocumentation() {
+    final CapabilityStatement capabilityStatement =
+        conformanceProvider.getServerConformance(null, null);
+
+    assertThat(systemOperationDocumentation(capabilityStatement, "viewdefinition-run")).isNull();
+    assertThat(systemOperationDocumentation(capabilityStatement, "sqlquery-run")).isNull();
+  }
+
+  /** Adding documentation must not disturb the declared spec canonicals. */
+  @Test
+  void exportDocumentationDoesNotDisplaceSpecCanonicals() {
+    final CapabilityStatement capabilityStatement =
+        conformanceProvider.getServerConformance(null, null);
+
+    assertThat(systemOperationDefinition(capabilityStatement, "viewdefinition-export"))
+        .isEqualTo("http://sql-on-fhir.org/OperationDefinition/$viewdefinition-export");
+    assertThat(systemOperationDefinition(capabilityStatement, "sqlquery-export"))
+        .isEqualTo("http://sql-on-fhir.org/OperationDefinition/$sqlquery-export");
+  }
+
   @Test
   void sqlQueryExportNotDeclaredWhenDisabled() {
     final ConformanceProvider provider =
@@ -689,6 +757,16 @@ class ConformanceProviderTest {
         .filter(o -> operationName.equals(o.getName()))
         .map(CapabilityStatementRestResourceOperationComponent::getDefinition)
         .findFirst()
+        .orElse(null);
+  }
+
+  /** Returns the declared {@code documentation} for a system-level operation, or null. */
+  private String systemOperationDocumentation(
+      final CapabilityStatement capabilityStatement, final String operationName) {
+    return capabilityStatement.getRest().getFirst().getOperation().stream()
+        .filter(o -> operationName.equals(o.getName()))
+        .findFirst()
+        .map(CapabilityStatementRestResourceOperationComponent::getDocumentation)
         .orElse(null);
   }
 
