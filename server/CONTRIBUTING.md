@@ -25,6 +25,22 @@ To install the required dependencies:
 mvn clean install -pl library-runtime -am
 ```
 
+### Building the core from a server release branch
+
+Run that command from a checkout of the core release branch that the server's
+`pathling.version` points at, not from a `release/server/*` branch. The server
+branch carries its own copy of the root `pom.xml`, and because the two branches
+are versioned independently it drifts behind the core release branch. Building
+`library-runtime` from the server branch can therefore produce an artifact whose
+bundled dependencies are older than the ones the server source expects, and the
+server then fails to compile with a missing symbol from a transitive dependency.
+
+CI does not see this, because it resolves the `SNAPSHOT` published from the core
+release branch. Locally the problem is also sticky: the bad build installs itself
+into `~/.m2` under the same coordinates, so it silently replaces the artifact
+resolved from CI and affects every other checkout on the machine until it is
+rebuilt from the right branch.
+
 ## Docker image
 
 The server includes a `docker` profile for building and deploying Docker images.
