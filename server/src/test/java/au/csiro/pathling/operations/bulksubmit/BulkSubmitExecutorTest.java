@@ -188,6 +188,10 @@ class BulkSubmitExecutorTest {
     final Job<?> registeredJob = jobCaptor.getValue();
     assertThat(registeredJob).isNotNull();
     assertThat(registeredJob.getOwnerId()).isEqualTo(Optional.empty());
+    // The job is registered as already terminated. Its work is not run by the asynchronous request
+    // machinery, so no thread will ever signal termination for it, and a deletion request has to
+    // handle the clean-up itself rather than defer it to a signal that never arrives.
+    assertThat(registeredJob.isTerminated()).isTrue();
   }
 
   @Test

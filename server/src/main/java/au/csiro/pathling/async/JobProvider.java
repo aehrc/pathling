@@ -24,6 +24,7 @@ import static java.util.Objects.requireNonNull;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.errors.AccessDeniedError;
 import au.csiro.pathling.errors.ErrorHandlingInterceptor;
+import au.csiro.pathling.errors.ErrorReportingInterceptor;
 import au.csiro.pathling.errors.ResourceNotFoundError;
 import au.csiro.pathling.io.JobDirectoryFileSystem;
 import au.csiro.pathling.security.PathlingAuthority;
@@ -40,8 +41,7 @@ import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
+import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.instance.model.api.IBaseOperationOutcome;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.OperationOutcome;
@@ -74,6 +74,7 @@ public class JobProvider {
 
   @Nonnull private final JobRegistry jobRegistry;
   @Nonnull private final JobDirectoryFileSystem jobDirectoryFileSystem;
+  @Nonnull private final SparkSession spark;
 
   /**
    * Creates a new JobProvider.
@@ -82,14 +83,17 @@ public class JobProvider {
    * @param jobRegistry the {@link JobRegistry} used to keep track of running jobs
    * @param jobDirectoryFileSystem the {@link JobDirectoryFileSystem} used to resolve and delete
    *     per-job directories on the warehouse file system
+   * @param spark the {@link SparkSession} used to cancel the Spark work belonging to a deleted job
    */
   public JobProvider(
       @Nonnull final ServerConfiguration configuration,
       @Nonnull final JobRegistry jobRegistry,
-      @Nonnull final JobDirectoryFileSystem jobDirectoryFileSystem) {
+      @Nonnull final JobDirectoryFileSystem jobDirectoryFileSystem,
+      @Nonnull final SparkSession spark) {
     this.configuration = configuration;
     this.jobRegistry = jobRegistry;
     this.jobDirectoryFileSystem = jobDirectoryFileSystem;
+    this.spark = spark;
   }
 
   /**
@@ -174,7 +178,8 @@ public class JobProvider {
   private void handleJobDeleteRequest(final Job<?> job) {
     /*
     Two possible situations:
-      - The initial kick-off request is still ongoing -> cancel it and delete the partial files
+      - The initial kick-off request is still ongoing -> cancel it and let the job's own thread
+        remove the partial files as it exits
       - The initial kick-off request is complete (and the client may have already downloaded the
         files)
         -> interpret delete request from client as "do no longer need them". Depending on the
@@ -188,45 +193,78 @@ public class JobProvider {
     if (job.isMarkedAsDeleted()) {
       throw new ResourceNotFoundException("Already deleted this job.");
     }
-    job.setMarkedAsDeleted(true);
+    // Whichever party is last owns the removal of the job's output directory: this request if the
+    // work has already stopped, otherwise the job's own thread as it exits. Removing it here while
+    // tasks are still writing into it would leave output behind that nothing ever cleans up.
+    final boolean removeFilesNow = job.markDeletedAndClaim();
     if (!job.getResult().isDone()) {
       job.getResult().cancel(false);
-      // Currently, only the files up until "now" will be deleted. Anything that is created between
-      // the cancel request and the job actually being cancelled by spark will remain on the disk
+      // Signal Spark directly. Cancelling the future does not interrupt the thread running the job,
+      // and the stage-event checks in SparkJobListener only reach Spark at the next stage boundary,
+      // which for a job inside a single long write stage is not until that stage finishes on its
+      // own. Those checks remain as a backstop.
+      spark.sparkContext().cancelJobGroup(job.getId());
     }
-    try {
-      deleteJobFiles(job.getId());
-    } catch (final IOException e) {
-      throw new InternalErrorException("Failed to delete files associated with the job.", e);
-    } finally {
-      final boolean removed = jobRegistry.remove(job);
-      if (removed) {
-        log.debug("Removed job {} from registry.", job.getId());
-      } else {
-        log.warn(
-            "Failed to remove job {} from registry. This might in wrong caching results.",
-            job.getId());
-      }
+    final boolean removalFailed = removeFilesNow && !tryDeleteJobFiles(job.getId());
+    final boolean removed = jobRegistry.remove(job);
+    if (removed) {
+      log.debug("Removed job {} from registry.", job.getId());
+    } else {
+      log.warn(
+          "Failed to remove job {} from registry. This might in wrong caching results.",
+          job.getId());
     }
     throw new ProcessingNotCompletedException(
-        "The job and its resources will be deleted.", buildDeletionOutcome());
+        "The job and its resources will be deleted.", buildDeletionOutcome(removalFailed));
   }
 
   /**
-   * Deletes the files associated with a job from the file system.
+   * Deletes the files associated with a job from the file system. Deleting a directory that does
+   * not exist is a normal outcome and is not reported as a failure.
    *
    * @param jobId the ID of the job whose files should be deleted
-   * @throws IOException if file deletion fails
+   * @throws IOException if the directory exists but could not be deleted
    */
   public void deleteJobFiles(final String jobId) throws IOException {
-    final FileSystem fs = jobDirectoryFileSystem.getFileSystem();
-    final Path jobDirToDel = jobDirectoryFileSystem.jobDirectory(jobId);
-    log.debug("Deleting dir {}", jobDirToDel);
-    final boolean deleted = fs.delete(jobDirToDel, true);
-    if (!deleted) {
-      log.warn("Failed to delete dir {}", jobDirToDel);
+    log.debug("Deleting job directory for job {}", jobId);
+    jobDirectoryFileSystem.deleteJobDirectory(jobId);
+    log.debug("Deleted job directory for job {}", jobId);
+  }
+
+  /**
+   * Removes the files associated with a job, reporting a failure rather than propagating it. By the
+   * time this runs the job has been cancelled, so there is nothing the client can usefully retry.
+   *
+   * @param jobId the ID of the job whose files should be removed
+   * @return true if the removal succeeded, false if it failed
+   */
+  private boolean tryDeleteJobFiles(@Nonnull final String jobId) {
+    try {
+      deleteJobFiles(jobId);
+      return true;
+    } catch (final IOException e) {
+      reportFileRemovalFailure(jobId, e);
+      return false;
     }
-    log.debug("Deleted dir {}", jobDirToDel);
+  }
+
+  /**
+   * Records a failure to remove a job's output directory, in the server log and in error reporting.
+   * The operator is the only party who can act on it: the files are orphaned in the warehouse and
+   * need manual attention.
+   *
+   * <p>Shared with {@link AsyncAspect}, which performs the same removal from the job's own thread
+   * and has no response left to report the failure on.
+   *
+   * @param jobId the ID of the job whose files could not be removed
+   * @param cause the failure encountered while removing them
+   */
+  public static void reportFileRemovalFailure(
+      @Nonnull final String jobId, @Nonnull final Throwable cause) {
+    log.error("Failed to remove the output directory of job {}.", jobId, cause);
+    ErrorReportingInterceptor.reportExceptionToSentry(
+        new InternalErrorException(
+            "Failed to remove the output directory of job %s.".formatted(jobId), cause));
   }
 
   private IBaseResource handleJobGetRequest(
@@ -381,13 +419,29 @@ public class JobProvider {
     }
   }
 
-  private static IBaseOperationOutcome buildDeletionOutcome() {
+  /**
+   * Builds the outcome returned when a job is deleted. The informational issue comes first and is
+   * unchanged, so a client reading only the first issue sees what it always has.
+   *
+   * @param removalFailed whether the job's output directory could not be removed
+   * @return the outcome to attach to the acceptance
+   */
+  @Nonnull
+  private static IBaseOperationOutcome buildDeletionOutcome(final boolean removalFailed) {
     final OperationOutcome operationOutcome = new OperationOutcome();
     operationOutcome
         .addIssue()
         .setCode(IssueType.INFORMATIONAL)
         .setSeverity(IssueSeverity.INFORMATION)
         .setDiagnostics("The job and its resources will be deleted.");
+    if (removalFailed) {
+      operationOutcome
+          .addIssue()
+          .setCode(IssueType.INCOMPLETE)
+          .setSeverity(IssueSeverity.WARNING)
+          .setDiagnostics(
+              "The job's stored files could not be removed and may require manual clean-up.");
+    }
     return operationOutcome;
   }
 

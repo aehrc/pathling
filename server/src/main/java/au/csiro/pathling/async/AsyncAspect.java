@@ -29,7 +29,9 @@ import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.util.Arrays;
 import java.util.List;
@@ -189,6 +191,11 @@ public class AsyncAspect {
               final Future<IBaseResource> result =
                   executor.submit(
                       () -> {
+                        // Resolve the job once, up front. See removeFilesIfOwned for why the
+                        // clean-up on the way out cannot look it up again, and for what an empty
+                        // result here means.
+                        final Job<?> currentJob = jobRegistry.get(jobId);
+                        boolean failed = false;
                         try {
                           diagnosticContext.configureScope(true);
                           SecurityContextHolder.getContext().setAuthentication(authentication);
@@ -198,13 +205,13 @@ public class AsyncAspect {
                           // access it without
                           // needing to look it up from the servlet request (which may have been
                           // recycled).
-                          final Job<?> currentJob = jobRegistry.get(jobId);
                           if (currentJob != null) {
                             AsyncJobContext.setCurrentJob(currentJob);
                           }
 
                           return (IBaseResource) joinPoint.proceed();
                         } catch (final Throwable e) {
+                          failed = true;
                           // Unwrap the actual exception from the aspect proxy wrapper, if needed.
                           final Throwable actualEx = unwrapFromProxy(e);
 
@@ -223,14 +230,12 @@ public class AsyncAspect {
                                 ErrorReportingInterceptor.getReportableError(convertedError)
                                     .getMessage());
                           }
-                          // Any (partial) files may be deleted if an unexpected error was thrown
-                          // during the processing
-                          jobProvider.deleteJobFiles(jobId);
                           throw new IllegalStateException(
                               "Problem processing request asynchronously", actualEx);
                         } finally {
                           AsyncJobContext.clear();
                           cleanUpAfterJob(spark, jobId);
+                          removeFilesIfOwned(jobId, currentJob, failed);
                         }
                       });
               final Optional<String> ownerId = getCurrentUserId(authentication);
@@ -295,6 +300,48 @@ public class AsyncAspect {
                     new IllegalArgumentException(
                         "Method annotated with @AsyncSupported must include a ServletRequestDetails"
                             + " parameter"));
+  }
+
+  /**
+   * Removes the job's output directory if the job's own thread owns the removal, as it unwinds.
+   *
+   * <p>That thread is the last party to touch the output, so it owns the removal whenever a client
+   * has already asked for the job to be deleted. A job that failed also removes its own partial
+   * output, whether or not a client asked for it to be deleted.
+   *
+   * <p>The job is passed in rather than looked up, because by this point a {@code DELETE} may
+   * already have removed it from the registry, and a lookup would then find nothing and skip a
+   * removal that is owed.
+   *
+   * <p>A job that was already absent when the task started owns its removal too. The task resolves
+   * the job as its first statement, and {@link JobRegistry#getOrCreate} holds the same monitor as
+   * {@link JobRegistry#get} until the registration completes, so the lookup cannot observe the gap
+   * before registration. The only way it can come back empty is a {@code DELETE} that removed the
+   * job in the narrow window between the task entering its body and that first statement running.
+   * Such a request cannot have taken the claim, because the work had not terminated when it asked,
+   * and it is the only thing in the server that removes a job from the registry. Removing an absent
+   * directory is a no-op, so nothing is lost if that reasoning is ever widened.
+   *
+   * <p>Nothing is thrown from here, because this runs in a {@code finally} block where an
+   * incidental exception would replace the job's own.
+   *
+   * @param jobId the identifier of the job that has just finished
+   * @param job the job, or null if it was not in the registry when the task started
+   * @param failed whether the job's work threw
+   */
+  private void removeFilesIfOwned(
+      @Nonnull final String jobId, @Nullable final Job<?> job, final boolean failed) {
+    // markTerminatedAndClaim is what records that the job's thread has finished, so it has to be
+    // evaluated before any short-circuiting on the failure flag.
+    final boolean claimedDeletion = job == null || job.markTerminatedAndClaim();
+    if (!claimedDeletion && !failed) {
+      return;
+    }
+    try {
+      jobProvider.deleteJobFiles(jobId);
+    } catch (final IOException | RuntimeException e) {
+      JobProvider.reportFileRemovalFailure(jobId, e);
+    }
   }
 
   private void cleanUpAfterJob(@Nonnull final SparkSession spark, @Nonnull final String requestId) {
