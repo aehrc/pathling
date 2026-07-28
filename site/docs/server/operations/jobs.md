@@ -66,6 +66,28 @@ The `url` of each job can be used to poll its status (`GET`) or to cancel it
 (`DELETE`), exactly as with the `Content-Location` returned when the job was
 started.
 
+## Cancellation
+
+A `DELETE` is acknowledged immediately with `202 Accepted`. The server does not
+wait for the work to stop before responding, and the job disappears from the
+list straight away; a repeated `DELETE` returns `404 Not Found`.
+
+The work belonging to the job is cancelled as part of handling the request, so
+abandoning a job stops the query rather than leaving it running until the stage
+it happens to be in has finished.
+
+Any output the job had written is removed once the work has actually stopped,
+rather than at the moment of the request. For a job that had already finished,
+that means the output is gone by the time the response is returned. For a job
+that was still running, the removal happens when the work unwinds, which is
+what keeps partial output from being left behind by tasks that were still
+writing when the request arrived.
+
+If the output cannot be removed, the response is still `202 Accepted` and
+carries an additional warning issue saying that the job's stored files could not
+be removed and may require manual clean-up. The failure is also recorded in the
+server log, so an operator can find the affected directory.
+
 ## Ownership
 
 When [authorisation](../authorization) is enabled, the caller must hold the

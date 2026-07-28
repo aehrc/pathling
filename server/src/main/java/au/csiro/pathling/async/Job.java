@@ -232,7 +232,7 @@ public class Job<T> {
    *
    * <p>Called at registration time for jobs whose work is not run by the asynchronous request
    * machinery. No thread will ever signal termination for such a job, so marking it terminated up
-   * front is what allows a deletion request to perform its own cleanup rather than deferring it to
+   * front is what allows a deletion request to perform its own clean-up rather than deferring it to
    * a thread that never arrives.
    */
   public synchronized void markTerminated() {

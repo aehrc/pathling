@@ -191,9 +191,9 @@ public class AsyncAspect {
               final Future<IBaseResource> result =
                   executor.submit(
                       () -> {
-                        // Resolve the job once, up front. See resolveJobAtStart for why the
-                        // clean-up below cannot look it up again.
-                        final Job<?> currentJob = resolveJobAtStart(jobId);
+                        // Resolve the job once, up front. See removeFilesIfOwned for why the
+                        // clean-up on the way out cannot look it up again.
+                        final Job<?> currentJob = jobRegistry.get(jobId);
                         boolean failed = false;
                         try {
                           diagnosticContext.configureScope(true);
@@ -302,29 +302,18 @@ public class AsyncAspect {
   }
 
   /**
-   * Resolves the job that the submitted task is about to run, at the point the task starts.
-   *
-   * <p>By the time the task unwinds, a {@code DELETE} may already have removed the job from the
-   * registry, so the clean-up on the way out cannot look it up again and has to use what is
-   * resolved here. Resolving it here is safe even though the task is submitted from inside {@link
-   * JobRegistry#getOrCreate}: that method and {@link JobRegistry#get} are both synchronized, so
-   * this lookup blocks until the registration completes, and no {@code DELETE} can precede it
-   * because the client does not learn the job identifier until the kick-off response is returned.
-   *
-   * @param jobId the identifier of the job being run
-   * @return the job, or null if it is not in the registry
-   */
-  @Nullable
-  private Job<?> resolveJobAtStart(@Nonnull final String jobId) {
-    return jobRegistry.get(jobId);
-  }
-
-  /**
    * Removes the job's output directory if the job's own thread owns the removal, as it unwinds.
    *
    * <p>That thread is the last party to touch the output, so it owns the removal whenever a client
    * has already asked for the job to be deleted. A job that failed also removes its own partial
    * output, whether or not a client asked for it to be deleted.
+   *
+   * <p>The job is passed in rather than looked up, because by this point a {@code DELETE} may
+   * already have removed it from the registry. Resolving it when the task starts is safe even
+   * though the task is submitted from inside {@link JobRegistry#getOrCreate}: that method and
+   * {@link JobRegistry#get} are both synchronized, so the lookup blocks until the registration
+   * completes, and no {@code DELETE} can precede it because the client does not learn the job
+   * identifier until the kick-off response is returned.
    *
    * <p>Nothing is thrown from here, because this runs in a {@code finally} block where an
    * incidental exception would replace the job's own.
