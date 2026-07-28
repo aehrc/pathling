@@ -48,15 +48,22 @@ vi.mock("../../../contexts/ToastContext", () => ({
   useToast: () => ({ showToast: mockShowToast }),
 }));
 
+// Captures the options the wrapper passes to the export hook, so a test can
+// prove no failure callback is wired into it.
+let capturedExportOptions: { onError?: (error: Error) => void } | undefined = undefined;
+
 vi.mock("../../../hooks", () => ({
-  useSqlQueryExport: () => ({
-    startWith: mockStartWith,
-    cancel: mockCancel,
-    status: mockStatus,
-    result: mockResult,
-    error: mockError,
-    progress: mockProgress,
-  }),
+  useSqlQueryExport: (options?: { onError?: (error: Error) => void }) => {
+    capturedExportOptions = options;
+    return {
+      startWith: mockStartWith,
+      cancel: mockCancel,
+      status: mockStatus,
+      result: mockResult,
+      error: mockError,
+      progress: mockProgress,
+    };
+  },
   useDownloadFile: (onError?: (error: Error) => void) => {
     reportDownloadFailure = onError;
     return vi.fn();
@@ -117,6 +124,7 @@ describe("SqlQueryExportCardWrapper", () => {
     mockProgress = undefined;
     lastExportJobCardProps = null;
     reportDownloadFailure = undefined;
+    capturedExportOptions = undefined;
   });
 
   afterEach(() => {
@@ -240,7 +248,11 @@ describe("SqlQueryExportCardWrapper", () => {
       mockError = new Error("SQL query export failed: 500 - Internal error");
 
       renderWrapper();
+      // Driving whatever callback the wrapper wired in, so that a reinstated
+      // notification fails this test rather than passing unnoticed.
+      capturedExportOptions?.onError?.(mockError);
 
+      expect(capturedExportOptions?.onError).toBeUndefined();
       expect(lastExportJobCardProps?.job.error).toBe(mockError);
       expect(mockShowToast).not.toHaveBeenCalled();
     });

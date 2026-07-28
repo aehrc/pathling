@@ -54,18 +54,25 @@ vi.mock("../../../contexts/ToastContext", () => ({
   useToast: () => ({ showToast: mockShowToast }),
 }));
 
+// Captures the options the wrapper passes to the export hook, so a test can
+// prove no failure callback is wired into it.
+let capturedExportOptions: { onError?: (error: Error) => void } | undefined = undefined;
+
 // Mock useViewExport hook.
 vi.mock("../../../hooks", () => ({
-  useViewExport: () => ({
-    startWith: mockStartWith,
-    cancel: mockCancel,
-    deleteJob: mockDeleteJob,
-    status: mockStatus,
-    result: mockResult,
-    error: mockError,
-    progress: mockProgress,
-    request: mockRequest,
-  }),
+  useViewExport: (options?: { onError?: (error: Error) => void }) => {
+    capturedExportOptions = options;
+    return {
+      startWith: mockStartWith,
+      cancel: mockCancel,
+      deleteJob: mockDeleteJob,
+      status: mockStatus,
+      result: mockResult,
+      error: mockError,
+      progress: mockProgress,
+      request: mockRequest,
+    };
+  },
   useDownloadFile: (onError?: (error: Error) => void) => {
     reportDownloadFailure = onError;
     return vi.fn();
@@ -145,6 +152,7 @@ describe("ViewExportCardWrapper", () => {
     mockRequest = { format: "csv" };
     lastViewExportCardProps = null;
     reportDownloadFailure = undefined;
+    capturedExportOptions = undefined;
   });
 
   afterEach(() => {
@@ -284,6 +292,24 @@ describe("ViewExportCardWrapper", () => {
         "Download failed",
         "Download failed: 403 - Forbidden",
       );
+    });
+  });
+
+  // The export job's own failure is displayed by the card it is given to, so it
+  // must not also be announced as a notification (FR-001, FR-002).
+  describe("Export job failure", () => {
+    it("hands the failure to the card and raises no notification", () => {
+      mockStatus = "error";
+      mockError = new Error("View export failed: 500 - Internal error");
+
+      renderWrapper();
+      // Driving whatever callback the wrapper wired in, so that a reinstated
+      // notification fails this test rather than passing unnoticed.
+      capturedExportOptions?.onError?.(mockError);
+
+      expect(capturedExportOptions?.onError).toBeUndefined();
+      expect(lastViewExportCardProps?.job.error).toBe(mockError);
+      expect(mockShowToast).not.toHaveBeenCalled();
     });
   });
 });
