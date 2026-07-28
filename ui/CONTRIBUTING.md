@@ -93,6 +93,14 @@ bun run test:e2e:headed
   React primitives.
 - Use role-based selectors (`getByRole`, `getByText`) in E2E tests.
 - Mock network requests using `page.route()` in Playwright tests.
+- **Never use a fixed sleep in an E2E test.** `page.waitForTimeout()` is
+  rejected by linting, at error severity, for every test under `e2e/`. Wait on a
+  condition instead. Where the point of the test is that recurring work does
+  _not_ happen, and so there is no condition to wait for, install Playwright's
+  clock with `page.clock.install()` before navigating and advance it with
+  `page.clock.runFor()`. A test that proves a negative this way needs a positive
+  control alongside it, or it can pass without proving anything - see the
+  control in `e2e/jobs.spec.ts` for the pattern.
 
 ## Coding conventions
 
@@ -238,3 +246,8 @@ Run the following after making code changes to ensure quality:
 - `bun run lint:duplication`
 - `bun run test:coverage`
 - `bun run test:e2e`
+
+Continuous integration runs all five, along with the `bun run format:check`
+described above, so a coverage or duplication threshold breached locally will
+also fail the build. Running them before opening a pull request is the faster
+way to find out.

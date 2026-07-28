@@ -1,3 +1,8 @@
+# Runs the Admin UI quality checks documented in ui/CONTRIBUTING.md. Called by
+# both test.yml and pre-release.yml.
+#
+# Author: John Grimes
+
 name: Test UI
 
 on:
