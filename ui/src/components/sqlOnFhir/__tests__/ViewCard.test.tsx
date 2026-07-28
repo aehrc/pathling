@@ -211,7 +211,23 @@ describe("ViewCard", () => {
 
       render(<ViewCard job={job} onError={defaultOnError} onClose={defaultOnClose} />);
 
-      expect(screen.getByText("View run failed: View execution failed")).toBeInTheDocument();
+      expect(screen.getByText("View execution failed")).toBeInTheDocument();
+    });
+
+    // The failure message already names the operation, so the card must not
+    // name it again (FR-007).
+    it("adds no prefix of its own to the failure message", () => {
+      mockStatus = "error";
+      // This is the shape the API layer produces for a failed run.
+      mockError = new Error("View run failed: 500 - Query failed");
+      const job = createJob();
+
+      render(<ViewCard job={job} onError={defaultOnError} onClose={defaultOnClose} />);
+
+      expect(screen.getByText("View run failed: 500 - Query failed")).toBeInTheDocument();
+      expect(
+        screen.queryByText("View run failed: View run failed: 500 - Query failed"),
+      ).not.toBeInTheDocument();
     });
 
     it("reports error to parent when execution fails", async () => {

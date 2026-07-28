@@ -217,7 +217,7 @@ export function ViewCard({ job, onError, onClose }: Readonly<ViewCardProps>) {
 
         {error && (
           <Text size="2" color="red">
-            View run failed: {error.message}
+            {error.message}
           </Text>
         )}
 
