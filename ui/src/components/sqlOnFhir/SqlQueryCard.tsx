@@ -60,7 +60,6 @@ interface SqlQueryExportEntry {
 interface SqlQueryCardProps {
   /** The SQL query job describing the request. */
   job: SqlQueryJob;
-  /** Callback for surfacing errors to the parent (e.g. for global auth handling). */
   /** Optional callback to remove the card once it has terminated. */
   onClose?: () => void;
 }
