@@ -27,6 +27,7 @@ import { Box, Button, Card, Flex, Progress, Text } from "@radix-ui/themes";
 import { useEffect, useRef, useState } from "react";
 
 import { OperationOutcomeDisplay } from "../../components/error/OperationOutcomeDisplay";
+import { useToast } from "../../contexts/ToastContext";
 import { useBulkExport, useDownloadFile } from "../../hooks";
 import { getExportOutputFiles, serialiseTypeFilters } from "../../types/export";
 import { formatDateTime } from "../../utils";
@@ -37,7 +38,6 @@ import type { ExportRequest } from "../../types/export";
 interface ExportCardProps {
   request: ExportRequest;
   createdAt: Date;
-  onError: (message: string) => void;
   onClose?: () => void;
 }
 
@@ -77,12 +77,14 @@ function getFilenameFromUrl(url: string): string {
  * @param props - Component props.
  * @param props.request - The export request configuration.
  * @param props.createdAt - The timestamp when the export was created.
- * @param props.onError - Callback for error handling (e.g., auth errors).
  * @param props.onClose - Optional callback to close/remove the card.
  * @returns The rendered export card component.
  */
-export function ExportCard({ request, createdAt, onError, onClose }: Readonly<ExportCardProps>) {
-  const handleDownloadFile = useDownloadFile((err) => onError(err.message));
+export function ExportCard({ request, createdAt, onClose }: Readonly<ExportCardProps>) {
+  const { showToast } = useToast();
+  // A failed download is the one failure this card cannot display, because the
+  // card is describing a job that succeeded, so it is notified instead.
+  const handleDownloadFile = useDownloadFile((err) => showToast("Download failed", err.message));
   const hasStartedRef = useRef(false);
   const [isDeleting, setIsDeleting] = useState(false);
 

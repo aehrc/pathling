@@ -25,6 +25,7 @@
 import { useEffect, useRef } from "react";
 
 import { ViewExportCard } from "./ViewExportCard";
+import { useToast } from "../../contexts/ToastContext";
 import { useDownloadFile, useViewExport } from "../../hooks";
 
 import type { ViewDefinition } from "../../api";
@@ -62,8 +63,11 @@ export function ViewExportCardWrapper({
   onClose,
   onError,
 }: Readonly<ViewExportCardWrapperProps>) {
+  const { showToast } = useToast();
   const hasStartedRef = useRef(false);
-  const handleDownloadError = useDownloadFile((err) => onError(err.message));
+  // A failed download is the one failure this card cannot display, because the
+  // card is describing a job that succeeded, so it is notified instead.
+  const handleDownload = useDownloadFile((err) => showToast("Download failed", err.message));
 
   const viewExport = useViewExport({
     onError: (err) => onError(err.message),
@@ -109,7 +113,7 @@ export function ViewExportCardWrapper({
     <ViewExportCard
       job={exportJob}
       onCancel={cancel}
-      onDownload={handleDownloadError}
+      onDownload={handleDownload}
       onClose={onClose}
       onDelete={deleteJob}
     />

@@ -26,6 +26,7 @@
 import { useEffect, useRef } from "react";
 
 import { ExportJobCard } from "./ExportJobCard";
+import { useToast } from "../../contexts/ToastContext";
 import { parseSqlQueryExportManifest, useDownloadFile, useSqlQueryExport } from "../../hooks";
 
 import type { JobStatus } from "../../types/job";
@@ -102,8 +103,11 @@ export function SqlQueryExportCardWrapper({
   onClose,
   onError,
 }: Readonly<SqlQueryExportCardWrapperProps>) {
+  const { showToast } = useToast();
   const hasStartedRef = useRef(false);
-  const handleDownload = useDownloadFile((err) => onError(err.message));
+  // A failed download is the one failure this card cannot display, because the
+  // card is describing a job that succeeded, so it is notified instead.
+  const handleDownload = useDownloadFile((err) => showToast("Download failed", err.message));
 
   const { startWith, cancel, status, result, error, progress } = useSqlQueryExport({
     onError: (err) => onError(err.message),
