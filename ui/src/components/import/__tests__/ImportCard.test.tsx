@@ -29,10 +29,12 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { render, screen, waitFor } from "../../../test/testUtils";
+import { OperationOutcomeError } from "../../../types/errors";
 import { ImportCard } from "../ImportCard";
 
 import type { ImportJob, ImportRequest } from "../../../types/import";
 import type { ImportPnpRequest } from "../../../types/importPnp";
+import type { OperationOutcome } from "fhir/r4";
 
 // A failure the card displays must not also be announced, so the toast is
 // mocked to prove it is never called.
@@ -325,7 +327,7 @@ describe("ImportCard", () => {
 
       render(<ImportCard job={job} onClose={defaultOnClose} />);
 
-      // OperationOutcomeDisplay shows severity badge and message separately.
+      // The callout shows the severity badge and the text separately.
       expect(screen.getByText("Error")).toBeInTheDocument();
       expect(screen.getByText("Import failed")).toBeInTheDocument();
     });
@@ -341,6 +343,25 @@ describe("ImportCard", () => {
 
       expect(screen.getByText("Connection timeout")).toBeInTheDocument();
       expect(mockShowToast).not.toHaveBeenCalled();
+    });
+
+    // FR-005 and FR-006: the failure is rendered by the shared callout, so it
+    // looks like every other failure and is announced to assistive technology.
+    it("displays the failure in the shared callout, announced as an alert", () => {
+      mockStandardStatus = "error";
+      const outcome: OperationOutcome = {
+        resourceType: "OperationOutcome",
+        issue: [
+          { severity: "error", code: "processing", diagnostics: "Cannot write to existing path" },
+        ],
+      };
+      mockStandardError = new OperationOutcomeError(outcome, 400, "Import kick-off");
+      const job = createStandardJob();
+
+      const { container } = render(<ImportCard job={job} onClose={defaultOnClose} />);
+
+      expect(screen.getByRole("alert")).toHaveTextContent("Cannot write to existing path");
+      expect(container.querySelector(".rt-CalloutIcon svg")).toBeInTheDocument();
     });
 
     it("shows Close button when import has error", () => {

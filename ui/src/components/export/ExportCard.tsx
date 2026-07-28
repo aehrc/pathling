@@ -26,7 +26,8 @@ import { Cross2Icon, DownloadIcon, ReloadIcon, TrashIcon } from "@radix-ui/react
 import { Box, Button, Card, Flex, Progress, Text } from "@radix-ui/themes";
 import { useEffect, useRef, useState } from "react";
 
-import { OperationOutcomeDisplay } from "../../components/error/OperationOutcomeDisplay";
+import { ErrorCallout } from "../../components/error/ErrorCallout";
+import { toDisplayIssues } from "../../components/error/errorPresentation";
 import { useToast } from "../../contexts/ToastContext";
 import { useBulkExport, useDownloadFile } from "../../hooks";
 import { getExportOutputFiles, serialiseTypeFilters } from "../../types/export";
@@ -204,7 +205,7 @@ export function ExportCard({ request, createdAt, onClose }: Readonly<ExportCardP
           </Flex>
         )}
 
-        {error && <OperationOutcomeDisplay error={error} />}
+        {error && <ErrorCallout issues={toDisplayIssues(error)} />}
 
         {status === "cancelled" && (
           <Text size="2" color="gray">

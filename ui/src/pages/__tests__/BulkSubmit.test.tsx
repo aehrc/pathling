@@ -23,7 +23,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { render } from "../../test/testUtils";
+import { render, screen } from "../../test/testUtils";
 import { BulkSubmit } from "../BulkSubmit";
 
 import type { ReactNode } from "react";
@@ -79,6 +79,19 @@ describe("BulkSubmit page", () => {
 
     expect(optionsWereCaptured).toBe(true);
     expect(capturedOptions?.onError).toBeUndefined();
+    expect(mockShowToast).not.toHaveBeenCalled();
+  });
+
+  // FR-001, FR-005 and FR-006: the failure is displayed in the card, through the
+  // shared callout, and is announced as an alert.
+  it("displays a monitoring failure in the shared callout without a notification", () => {
+    mockStatus = "error";
+    mockError = new Error("Submission status request failed");
+
+    const { container } = render(<BulkSubmit />);
+
+    expect(screen.getByRole("alert")).toHaveTextContent("Submission status request failed");
+    expect(container.querySelector(".rt-CalloutIcon svg")).toBeInTheDocument();
     expect(mockShowToast).not.toHaveBeenCalled();
   });
 });

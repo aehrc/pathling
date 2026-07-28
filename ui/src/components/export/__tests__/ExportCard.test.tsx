@@ -25,9 +25,11 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { OperationOutcomeError } from "../../../types/errors";
 import { ExportCard } from "../ExportCard";
 
 import type { ExportRequest } from "../../../types/export";
+import type { OperationOutcome } from "fhir/r4";
 
 // Define mock functions at module level.
 const mockStartWith = vi.fn();
@@ -320,6 +322,30 @@ describe("ExportCard", () => {
 
       expect(screen.getByText("Export failed: 500 - Internal error")).toBeInTheDocument();
       expect(mockShowToast).not.toHaveBeenCalled();
+    });
+
+    // FR-005 and FR-006: the failure is rendered by the shared callout, so it
+    // looks like every other failure and is announced to assistive technology.
+    it("displays the failure in the shared callout, announced as an alert", () => {
+      mockStatus = "error";
+      const outcome: OperationOutcome = {
+        resourceType: "OperationOutcome",
+        issue: [
+          { severity: "error", code: "processing", diagnostics: "Export path is not writable" },
+        ],
+      };
+      mockError = new OperationOutcomeError(outcome, 400, "Export");
+
+      const { container } = render(
+        <ExportCard
+          request={defaultRequest}
+          createdAt={defaultCreatedAt}
+          onClose={defaultOnClose}
+        />,
+      );
+
+      expect(screen.getByRole("alert")).toHaveTextContent("Export path is not writable");
+      expect(container.querySelector(".rt-CalloutIcon svg")).toBeInTheDocument();
     });
   });
 });

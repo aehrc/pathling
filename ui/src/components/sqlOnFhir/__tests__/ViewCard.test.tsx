@@ -29,9 +29,11 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { render, screen, waitFor } from "../../../test/testUtils";
+import { OperationOutcomeError } from "../../../types/errors";
 import { ViewCard } from "../ViewCard";
 
 import type { ViewJob } from "../../../types/viewJob";
+import type { OperationOutcome } from "fhir/r4";
 
 // A failure the card displays must not also be announced, so the toast is
 // mocked to prove it is never called.
@@ -247,6 +249,36 @@ describe("ViewCard", () => {
 
       expect(screen.getByText("Execution error")).toBeInTheDocument();
       expect(mockShowToast).not.toHaveBeenCalled();
+    });
+
+    // FR-005 and FR-006: the failure is rendered by the shared callout rather
+    // than the bare red line of text it used to be, so it is announced.
+    it("displays the failure in the shared callout, announced as an alert", () => {
+      mockStatus = "error";
+      mockError = new Error("Execution error");
+      const job = createJob();
+
+      const { container } = render(<ViewCard job={job} onClose={defaultOnClose} />);
+
+      expect(screen.getByRole("alert")).toHaveTextContent("Execution error");
+      expect(container.querySelector(".rt-CalloutIcon svg")).toBeInTheDocument();
+    });
+
+    // FR-009: the outcome's diagnostics are preferred over the flattened
+    // message, which would otherwise repeat the operation's name.
+    it("shows the outcome diagnostics with no prefix added by the card", () => {
+      mockStatus = "error";
+      const outcome: OperationOutcome = {
+        resourceType: "OperationOutcome",
+        issue: [{ severity: "error", code: "processing", diagnostics: "Unknown column: bad.path" }],
+      };
+      mockError = new OperationOutcomeError(outcome, 400, "View run");
+      const job = createJob();
+
+      render(<ViewCard job={job} onClose={defaultOnClose} />);
+
+      expect(screen.getByRole("alert")).toHaveTextContent("Unknown column: bad.path");
+      expect(screen.getByRole("alert")).not.toHaveTextContent("View run failed");
     });
 
     it("displays no rows message when result is empty", () => {

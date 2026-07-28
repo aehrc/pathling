@@ -459,9 +459,9 @@ test.describe("SQL on FHIR page", () => {
       await page.getByRole("option", { name: "Patient Demographics" }).click();
       await page.getByRole("button", { name: "Execute" }).click();
 
-      // Verify error message is displayed in the card, which is now the only
-      // place a job failure is reported.
-      await expect(page.getByText(/View run failed/)).toBeVisible();
+      // The card shows the outcome's diagnostics, with no prefix of its own, and
+      // is now the only place a job failure is reported.
+      await expect(page.getByText("Invalid view definition")).toBeVisible();
     });
 
     test("displays the 422 message for an invalid custom view definition", async ({
@@ -1125,7 +1125,7 @@ test.describe("SQL on FHIR page", () => {
       await page.getByRole("button", { name: "Execute" }).click();
 
       // Wait for the failure to appear in the card.
-      await expect(page.getByText(/View run failed/)).toBeVisible({
+      await expect(page.getByText("Query failed")).toBeVisible({
         timeout: 10000,
       });
 
@@ -1153,7 +1153,7 @@ test.describe("SQL on FHIR page", () => {
       await page.getByRole("button", { name: "Execute" }).click();
 
       // Wait for error and close button.
-      await expect(page.getByText(/View run failed/)).toBeVisible({
+      await expect(page.getByText("Query failed")).toBeVisible({
         timeout: 10000,
       });
       await expect(page.getByRole("button", { name: "Close" })).toBeVisible();
@@ -1163,7 +1163,7 @@ test.describe("SQL on FHIR page", () => {
 
       // Verify the query card is removed, along with the failure it displayed.
       await expect(page.getByRole("button", { name: "Close" })).toBeHidden();
-      await expect(page.getByText(/View run failed/)).toBeHidden();
+      await expect(page.getByText("Query failed")).toBeHidden();
     });
   });
 });

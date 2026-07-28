@@ -44,9 +44,9 @@ import { ExportControls } from "./ExportControls";
 import { SqlPreview } from "./SqlPreview";
 import { SqlQueryExportCardWrapper } from "./SqlQueryExportCardWrapper";
 import { useSqlQueryRun } from "../../hooks";
-import { OperationOutcomeError } from "../../types/errors";
 import { formatDateTime } from "../../utils";
 import { ErrorCallout } from "../error/ErrorCallout";
+import { toDisplayIssues } from "../error/errorPresentation";
 
 import type { SqlQueryExportFormat, SqlQueryJob, SqlQueryResult } from "../../types/sqlQuery";
 
@@ -282,28 +282,15 @@ interface SqlQueryErrorBodyProps {
  * @returns The error body.
  */
 function SqlQueryErrorBody({ sql, error }: Readonly<SqlQueryErrorBodyProps>) {
-  const message =
-    error instanceof OperationOutcomeError ? extractOutcomeText(error) : error.message;
   return (
     <Flex direction="column" gap="2">
       <Text size="1" color="gray">
         Submitted SQL:
       </Text>
       <SqlPreview sql={sql || "(empty)"} ariaLabel="Submitted SQL" />
-      <ErrorCallout message={message} size="1" />
+      <ErrorCallout issues={toDisplayIssues(error)} size="1" />
     </Flex>
   );
-}
-
-/**
- * Extracts the most useful display text from an OperationOutcome.
- *
- * @param error - The OperationOutcome error to render.
- * @returns The first available diagnostic or details text.
- */
-function extractOutcomeText(error: OperationOutcomeError): string {
-  const issue = error.operationOutcome.issue?.[0];
-  return issue?.diagnostics ?? issue?.details?.text ?? "Server returned an error.";
 }
 
 /**

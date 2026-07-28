@@ -34,6 +34,8 @@ import { config } from "../../config";
 import { useAuth } from "../../contexts/AuthContext";
 import { useViewRun } from "../../hooks";
 import { formatDateTime } from "../../utils";
+import { ErrorCallout } from "../error/ErrorCallout";
+import { toDisplayIssues } from "../error/errorPresentation";
 
 import type { ViewDefinition } from "../../api";
 import type { ViewExportOutputFormat } from "../../hooks";
@@ -206,11 +208,7 @@ export function ViewCard({ job, onClose }: Readonly<ViewCardProps>) {
           </Flex>
         )}
 
-        {error && (
-          <Text size="2" color="red">
-            {error.message}
-          </Text>
-        )}
+        {error && <ErrorCallout issues={toDisplayIssues(error)} size="1" />}
 
         {isComplete && result && result.rows.length === 0 && (
           <Text size="2" color="gray">

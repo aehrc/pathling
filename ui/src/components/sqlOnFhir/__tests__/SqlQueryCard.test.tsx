@@ -33,6 +33,7 @@ import { OperationOutcomeError } from "../../../types/errors";
 import { SqlQueryCard } from "../SqlQueryCard";
 
 import type { SqlQueryJob, SqlQueryResult } from "../../../types/sqlQuery";
+import type { OperationOutcome } from "fhir/r4";
 
 // A failure the card displays must not also be announced, so the toast is
 // mocked to prove it is never called.
@@ -263,6 +264,40 @@ describe("SqlQueryCard", () => {
     render(<SqlQueryCard job={createJob()} onClose={onClose} />);
     expect(screen.getByRole("alert")).toHaveTextContent(/network error/i);
     expect(mockShowToast).not.toHaveBeenCalled();
+  });
+
+  // FR-009: the outcome diagnostics are still preferred now that the shared
+  // derivation has replaced the card's own extraction helper.
+  it("prefers the outcome diagnostics over the flattened message", () => {
+    mockStatus = "error";
+    const outcome: OperationOutcome = {
+      resourceType: "OperationOutcome",
+      issue: [{ severity: "error", code: "processing", diagnostics: "Unknown column: bad_column" }],
+    };
+    mockError = new OperationOutcomeError(outcome, 400, "SQL query");
+    render(<SqlQueryCard job={createJob()} onClose={onClose} />);
+    expect(screen.getByRole("alert")).toHaveTextContent("Unknown column: bad_column");
+    expect(screen.getByRole("alert")).not.toHaveTextContent("SQL query failed");
+  });
+
+  // FR-008: an outcome carrying several issues shows each one, with its own
+  // severity, rather than only the first.
+  it("shows every issue of a multi-issue outcome with its severity", () => {
+    mockStatus = "error";
+    const outcome: OperationOutcome = {
+      resourceType: "OperationOutcome",
+      issue: [
+        { severity: "error", code: "processing", diagnostics: "Unknown column: bad_column" },
+        { severity: "warning", code: "informational", diagnostics: "Result set was truncated" },
+      ],
+    };
+    mockError = new OperationOutcomeError(outcome, 400, "SQL query");
+    render(<SqlQueryCard job={createJob()} onClose={onClose} />);
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveTextContent("Unknown column: bad_column");
+    expect(alert).toHaveTextContent("Result set was truncated");
+    expect(screen.getByText("Error")).toBeInTheDocument();
+    expect(screen.getByText("Warning")).toBeInTheDocument();
   });
 
   // The close button only appears once the request has terminated.

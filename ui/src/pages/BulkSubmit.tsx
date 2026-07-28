@@ -26,7 +26,8 @@ import { Box, Button, Card, Flex, Text } from "@radix-ui/themes";
 
 import { CapabilityGuard } from "../components/auth/CapabilityGuard";
 import { BulkSubmitMonitorForm } from "../components/bulkSubmit/BulkSubmitMonitorForm";
-import { OperationOutcomeDisplay } from "../components/error/OperationOutcomeDisplay";
+import { ErrorCallout } from "../components/error/ErrorCallout";
+import { toDisplayIssues } from "../components/error/errorPresentation";
 import { JobProgressIndicator } from "../components/JobProgressIndicator";
 import { useBulkSubmit } from "../hooks";
 
@@ -93,7 +94,9 @@ export function BulkSubmit() {
                     />
                   )}
 
-                  {isError && monitor.error && <OperationOutcomeDisplay error={monitor.error} />}
+                  {isError && monitor.error && (
+                    <ErrorCallout issues={toDisplayIssues(monitor.error)} />
+                  )}
 
                   {isCancelled && (
                     <Text size="2" color="orange">

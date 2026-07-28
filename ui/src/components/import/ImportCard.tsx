@@ -26,7 +26,8 @@ import { Cross2Icon } from "@radix-ui/react-icons";
 import { Box, Button, Card, Flex, Text } from "@radix-ui/themes";
 import { useEffect, useRef } from "react";
 
-import { OperationOutcomeDisplay } from "../../components/error/OperationOutcomeDisplay";
+import { ErrorCallout } from "../../components/error/ErrorCallout";
+import { toDisplayIssues } from "../../components/error/errorPresentation";
 import { useImport, useImportPnp } from "../../hooks";
 import { formatDateTime } from "../../utils";
 import { JobProgressIndicator } from "../JobProgressIndicator";
@@ -156,7 +157,7 @@ export function ImportCard({ job, onClose }: Readonly<ImportCardProps>) {
 
         {isRunning && <JobProgressIndicator progress={progress} pendingLabel="Processing..." />}
 
-        {error && <OperationOutcomeDisplay error={error} />}
+        {error && <ErrorCallout issues={toDisplayIssues(error)} />}
 
         {status === "cancelled" && (
           <Text size="2" color="gray">
