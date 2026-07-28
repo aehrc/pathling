@@ -181,6 +181,11 @@ public class BulkSubmitExecutor {
       // Create and register the Job.
       final Optional<String> ownerId = Optional.ofNullable(submission.ownerId());
       final Job<Object> job = new Job<>(jobId, "bulk-submit-manifest", resultFuture, ownerId);
+      // This job's work is not run by the asynchronous request machinery, so no thread will ever
+      // signal its termination. Marking it terminated up front is what lets a deletion request
+      // clean
+      // up itself, rather than deferring to a signal that never arrives.
+      job.markTerminated();
       jobRegistry.register(job);
 
       // Store the job ID in the manifest job.

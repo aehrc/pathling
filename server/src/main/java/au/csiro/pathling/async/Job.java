@@ -23,6 +23,7 @@ import java.time.Instant;
 import java.util.Optional;
 import java.util.concurrent.Future;
 import java.util.function.Consumer;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
@@ -75,8 +76,27 @@ public class Job<T> {
   /** A consumer that modifies the HTTP response for this job, such as adding headers. */
   @Setter private Consumer<HttpServletResponse> responseModification;
 
-  /** Indicates whether this job has been marked for deletion. */
-  @Setter private boolean markedAsDeleted;
+  /**
+   * Indicates whether a client has asked for this job to be deleted. Guarded by this instance's
+   * monitor and only ever set through {@link #markDeletedAndClaim()}.
+   */
+  @Getter(AccessLevel.NONE)
+  private boolean markedAsDeleted;
+
+  /**
+   * Indicates whether the thread executing this job's work has finished unwinding. This is not the
+   * same as the job's future being done: cancelling a future whose task has already started reports
+   * the future as done immediately, while the work carries on. Guarded by this instance's monitor.
+   */
+  @Getter(AccessLevel.NONE)
+  private boolean terminated;
+
+  /**
+   * Indicates whether some party has taken responsibility for removing this job's output directory.
+   * Once set it never clears. Guarded by this instance's monitor.
+   */
+  @Getter(AccessLevel.NONE)
+  private boolean deletionClaimed;
 
   /**
    * The asynchronous wire contract this job follows. Under {@link
@@ -156,5 +176,84 @@ public class Job<T> {
    */
   public boolean isCancelled() {
     return result.isCancelled();
+  }
+
+  /**
+   * Checks whether a client has asked for this job to be deleted.
+   *
+   * @return true if the job has been marked for deletion, false otherwise
+   */
+  public synchronized boolean isMarkedAsDeleted() {
+    return markedAsDeleted;
+  }
+
+  /**
+   * Checks whether the thread executing this job's work has finished unwinding.
+   *
+   * @return true if the work has terminated, false otherwise
+   */
+  public synchronized boolean isTerminated() {
+    return terminated;
+  }
+
+  /**
+   * Records that a client has asked for this job to be deleted, and determines whether the caller
+   * owns the removal of the job's output directory.
+   *
+   * <p>Called by the request handling the deletion. A {@code true} return obliges the caller to
+   * remove the directory; a {@code false} return means the job's own thread has not finished yet
+   * and will perform the removal as it exits.
+   *
+   * @return true if the caller has taken responsibility for removing the job's output directory
+   */
+  public synchronized boolean markDeletedAndClaim() {
+    markedAsDeleted = true;
+    return terminated && claim();
+  }
+
+  /**
+   * Records that the thread executing this job's work has finished unwinding, and determines
+   * whether that thread owns the removal of the job's output directory.
+   *
+   * <p>Called by the job's own thread as it exits. A {@code true} return obliges the caller to
+   * remove the directory; a {@code false} return means either that no client has asked for the job
+   * to be deleted, or that the request handling the deletion has already removed it.
+   *
+   * @return true if the caller has taken responsibility for removing the job's output directory
+   */
+  public synchronized boolean markTerminatedAndClaim() {
+    markTerminated();
+    return markedAsDeleted && claim();
+  }
+
+  /**
+   * Records that the thread executing this job's work has finished unwinding, without contending
+   * for the removal of the job's output directory.
+   *
+   * <p>Called at registration time for jobs whose work is not run by the asynchronous request
+   * machinery. No thread will ever signal termination for such a job, so marking it terminated up
+   * front is what allows a deletion request to perform its own cleanup rather than deferring it to
+   * a thread that never arrives.
+   */
+  public synchronized void markTerminated() {
+    terminated = true;
+  }
+
+  /**
+   * Takes the single-use claim on removing this job's output directory, if it is still free.
+   *
+   * <p>Both entry points call this from inside the instance monitor, so their bodies are totally
+   * ordered. Whichever runs second observes the flag written by the first, which is what guarantees
+   * that at least one party claims once both have been called; this flag is what guarantees that at
+   * most one does.
+   *
+   * @return true if the claim was free and has now been taken by the caller
+   */
+  private synchronized boolean claim() {
+    if (deletionClaimed) {
+      return false;
+    }
+    deletionClaimed = true;
+    return true;
   }
 }
