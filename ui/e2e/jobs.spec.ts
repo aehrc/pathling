@@ -213,6 +213,10 @@ test.describe("Jobs page", () => {
   test("shows only the login prompt when logged out, and issues no requests", async ({
     page,
   }) => {
+    // The clock is installed before any navigation, so that the page's timers
+    // are under the test's control from the outset.
+    await page.clock.install();
+
     await mockMetadata(page, mockCapabilityStatementWithAuth);
 
     let jobsRequests = 0;
@@ -228,12 +232,48 @@ test.describe("Jobs page", () => {
     ).toBeVisible();
     await expect(page.getByRole("alertdialog")).toBeHidden();
 
-    // Wait past the slow refresh interval to confirm nothing polls behind the
-    // prompt.
-    await page.waitForTimeout(11000);
+    // Advance the clock well past the slow refresh interval to confirm nothing
+    // polls behind the prompt.
+    await page.clock.runFor(30000);
 
     expect(jobsRequests).toBe(0);
     await expect(page.getByRole("alertdialog")).toBeHidden();
+  });
+
+  // Guards the two assertions that no job list request is issued - the one
+  // above, and its counterpart in auth.spec.ts - against passing vacuously.
+  // Both rely on advancing a fake clock past the refresh interval, so if
+  // installing that clock were to suppress polling rather than drive it, they
+  // would hold for the wrong reason. The count must rise across two successive
+  // advances, which the flushing of a single pending timer would not satisfy.
+  test("keeps polling as the fake clock advances past the refresh interval", async ({
+    page,
+  }) => {
+    await page.clock.install();
+
+    let jobsRequests = 0;
+    await page.route("**/$jobs*", async (route) => {
+      jobsRequests += 1;
+      await route.fulfill({
+        status: 200,
+        contentType: "application/fhir+json",
+        body: jobsBody([exportJob("job-1", "completed")]),
+      });
+    });
+
+    await page.goto("/admin/jobs");
+    await expect(
+      page.getByRole("cell", { name: "export", exact: true }),
+    ).toBeVisible();
+
+    const afterLoad = jobsRequests;
+
+    await page.clock.runFor(30000);
+    await expect.poll(() => jobsRequests).toBeGreaterThan(afterLoad);
+    const afterFirstAdvance = jobsRequests;
+
+    await page.clock.runFor(30000);
+    await expect.poll(() => jobsRequests).toBeGreaterThan(afterFirstAdvance);
   });
 
   test("removes a finished job without confirmation", async ({ page }) => {

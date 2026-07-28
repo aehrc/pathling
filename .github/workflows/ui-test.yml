@@ -1,3 +1,8 @@
+# Runs the Admin UI quality checks documented in ui/CONTRIBUTING.md. Called by
+# both test.yml and pre-release.yml.
+#
+# Author: John Grimes
+
 name: Test UI
 
 on:
@@ -27,11 +32,14 @@ jobs:
       - name: Lint
         run: bun run lint
 
+      - name: Check duplication
+        run: bun run lint:duplication
+
       - name: Build
         run: bun run build
 
-      - name: Run unit tests
-        run: bun run test:run
+      - name: Run unit tests with coverage
+        run: bun run test:coverage
 
       - name: Install Playwright browsers
         # The pinned version must be kept in step with @playwright/test in

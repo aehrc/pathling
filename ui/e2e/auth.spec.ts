@@ -266,6 +266,10 @@ test.describe("Authentication", () => {
     test("raises the expiry dialog again after re-authenticating", async ({
       page,
     }) => {
+      // The clock is installed before authenticating, since that navigates, and
+      // the page's timers must be under the test's control from the outset.
+      await page.clock.install();
+
       await setupAuthRequiredMocks(page);
       await page.route("**/$jobs*", async (route) => {
         await route.fulfill({ status: 401, body: "" });
@@ -289,7 +293,9 @@ test.describe("Authentication", () => {
         jobsAfterExpiry += 1;
         await route.fulfill({ status: 401, body: "" });
       });
-      await page.waitForTimeout(11000);
+      // Advancing well past the refresh interval leaves the count at zero, so
+      // the page has genuinely stopped polling rather than merely not polled yet.
+      await page.clock.runFor(30000);
       expect(jobsAfterExpiry).toBe(0);
 
       // Re-authenticate, and let a further request fail.
