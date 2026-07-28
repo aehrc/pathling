@@ -205,9 +205,7 @@ public class JobProvider {
       // own. Those checks remain as a backstop.
       spark.sparkContext().cancelJobGroup(job.getId());
     }
-    if (removeFilesNow) {
-      tryDeleteJobFiles(job.getId());
-    }
+    final boolean removalFailed = removeFilesNow && !tryDeleteJobFiles(job.getId());
     final boolean removed = jobRegistry.remove(job);
     if (removed) {
       log.debug("Removed job {} from registry.", job.getId());
@@ -217,7 +215,7 @@ public class JobProvider {
           job.getId());
     }
     throw new ProcessingNotCompletedException(
-        "The job and its resources will be deleted.", buildDeletionOutcome());
+        "The job and its resources will be deleted.", buildDeletionOutcome(removalFailed));
   }
 
   /**
@@ -238,12 +236,15 @@ public class JobProvider {
    * time this runs the job has been cancelled, so there is nothing the client can usefully retry.
    *
    * @param jobId the ID of the job whose files should be removed
+   * @return true if the removal succeeded, false if it failed
    */
-  private void tryDeleteJobFiles(@Nonnull final String jobId) {
+  private boolean tryDeleteJobFiles(@Nonnull final String jobId) {
     try {
       deleteJobFiles(jobId);
+      return true;
     } catch (final IOException e) {
       reportFileRemovalFailure(jobId, e);
+      return false;
     }
   }
 
@@ -418,13 +419,29 @@ public class JobProvider {
     }
   }
 
-  private static IBaseOperationOutcome buildDeletionOutcome() {
+  /**
+   * Builds the outcome returned when a job is deleted. The informational issue comes first and is
+   * unchanged, so a client reading only the first issue sees what it always has.
+   *
+   * @param removalFailed whether the job's output directory could not be removed
+   * @return the outcome to attach to the acceptance
+   */
+  @Nonnull
+  private static IBaseOperationOutcome buildDeletionOutcome(final boolean removalFailed) {
     final OperationOutcome operationOutcome = new OperationOutcome();
     operationOutcome
         .addIssue()
         .setCode(IssueType.INFORMATIONAL)
         .setSeverity(IssueSeverity.INFORMATION)
         .setDiagnostics("The job and its resources will be deleted.");
+    if (removalFailed) {
+      operationOutcome
+          .addIssue()
+          .setCode(IssueType.INCOMPLETE)
+          .setSeverity(IssueSeverity.WARNING)
+          .setDiagnostics(
+              "The job's stored files could not be removed and may require manual clean-up.");
+    }
     return operationOutcome;
   }
 

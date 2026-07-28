@@ -20,6 +20,7 @@ package au.csiro.pathling.async;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -454,6 +455,80 @@ class JobProviderTest {
    *
    * @return the registered job
    */
+  // -- Deleting a job: reporting a failed removal --
+
+  @Test
+  void failedRemovalStillAcceptsTheDeletionAndWarnsAboutTheFiles() throws Exception {
+    // By this point the job has been cancelled and removed from the registry, so the client's
+    // request succeeded; reporting a server error would misdescribe it and cannot be usefully
+    // retried, since a retry returns 404 and the client cannot repair the warehouse. The response
+    // says so instead.
+    final JobProvider provider = providerWithFailingRemoval();
+    final Job<IBaseResource> job = registerRunningJob();
+    assertThat(job.markTerminatedAndClaim()).isFalse();
+
+    assertThatThrownBy(() -> provider.deleteJob(job.getId()))
+        .isInstanceOf(ProcessingNotCompletedException.class)
+        .isNotInstanceOf(InternalErrorException.class)
+        .satisfies(
+            thrown -> {
+              assertThat(informationalDiagnostics(thrown))
+                  .containsExactly("The job and its resources will be deleted.");
+              assertThat(diagnosticsOfSeverity(thrown, IssueSeverity.WARNING))
+                  .singleElement()
+                  .satisfies(
+                      diagnostics ->
+                          assertThat(diagnostics)
+                              .contains("stored files")
+                              .contains("manual clean-up"));
+              // The informational issue stays first, so existing clients reading only the first
+              // issue see what they always have.
+              assertThat(issues(thrown).get(0).getSeverity()).isEqualTo(IssueSeverity.INFORMATION);
+            });
+  }
+
+  @Test
+  void failedRemovalIsLoggedAtErrorLevel() throws Exception {
+    // The operator is the only party who can act on it: the files are orphaned in the warehouse.
+    final JobProvider provider = providerWithFailingRemoval();
+    final Job<IBaseResource> job = registerRunningJob();
+    assertThat(job.markTerminatedAndClaim()).isFalse();
+
+    final ListAppender<ILoggingEvent> appender = attachJobProviderAppender();
+    try {
+      assertThatThrownBy(() -> provider.deleteJob(job.getId()))
+          .isInstanceOf(ProcessingNotCompletedException.class);
+    } finally {
+      detachJobProviderAppender(appender);
+    }
+
+    assertThat(appender.list)
+        .anySatisfy(
+            event -> {
+              assertThat(event.getLevel()).isEqualTo(Level.ERROR);
+              assertThat(event.getFormattedMessage()).contains("Failed to remove the output");
+            });
+  }
+
+  /**
+   * Creates a provider whose warehouse rejects the removal of a job's output directory.
+   *
+   * @return a provider that cannot remove job files
+   * @throws IOException never; declared because the stubbed method does
+   */
+  @Nonnull
+  private JobProvider providerWithFailingRemoval() throws IOException {
+    final JobDirectoryFileSystem failing = mock(JobDirectoryFileSystem.class);
+    doThrow(new IOException("the warehouse is unavailable"))
+        .when(failing)
+        .deleteJobDirectory(anyString());
+    final ServerConfiguration config = mock(ServerConfiguration.class);
+    final AuthorizationConfiguration authConfig = mock(AuthorizationConfiguration.class);
+    when(config.getAuth()).thenReturn(authConfig);
+    when(authConfig.isEnabled()).thenReturn(false);
+    return new JobProvider(config, jobRegistry, failing, mockSpark());
+  }
+
   /**
    * Creates a Spark session whose context records job-group cancellation, and remembers the context
    * so that tests can assert against it.
@@ -499,8 +574,22 @@ class JobProviderTest {
    */
   @Nonnull
   private static List<String> informationalDiagnostics(@Nonnull final Throwable thrown) {
+    return diagnosticsOfSeverity(thrown, IssueSeverity.INFORMATION);
+  }
+
+  /**
+   * Extracts the diagnostics of the issues of a given severity carried by a thrown server
+   * exception.
+   *
+   * @param thrown the exception to inspect
+   * @param severity the severity to select
+   * @return the diagnostics of each matching issue, in order
+   */
+  @Nonnull
+  private static List<String> diagnosticsOfSeverity(
+      @Nonnull final Throwable thrown, @Nonnull final IssueSeverity severity) {
     return issues(thrown).stream()
-        .filter(issue -> issue.getSeverity() == IssueSeverity.INFORMATION)
+        .filter(issue -> issue.getSeverity() == severity)
         .map(OperationOutcomeIssueComponent::getDiagnostics)
         .toList();
   }
