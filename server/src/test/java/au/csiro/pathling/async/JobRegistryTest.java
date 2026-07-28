@@ -110,6 +110,21 @@ class JobRegistryTest {
   }
 
   @Test
+  void removesJobRegisteredWithoutATag() {
+    // Jobs registered outside the asynchronous request machinery, such as bulk submit manifest
+    // jobs, have no entry in the tag map. Their absence from it is the normal state and must not be
+    // mistaken for an inconsistency, or deleting such a job fails with a server error.
+    final Job<IBaseResource> job =
+        new Job<>("job-1", "bulk-submit-manifest", MOCK_FUTURE, Optional.empty());
+    registry.register(job);
+
+    assertThat(registry.remove(job)).isTrue();
+
+    assertThat(registry.get("job-1")).isNull();
+    assertThat(registry.allJobs()).isEmpty();
+  }
+
+  @Test
   void snapshotIsASafeCopy() {
     final Job<?> firstJob =
         registry.getOrCreate(
