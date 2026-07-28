@@ -88,7 +88,6 @@ vi.mock("../ExportJobCard", () => ({
 
 describe("SqlQueryExportCardWrapper", () => {
   const defaultOnClose = vi.fn();
-  const defaultOnError = vi.fn();
   const storedSource: SqlQueryRequest = { mode: "stored", libraryId: "library-1" };
 
   /**
@@ -106,7 +105,6 @@ describe("SqlQueryExportCardWrapper", () => {
         format="csv"
         createdAt={new Date("2024-01-15T10:00:00Z")}
         onClose={defaultOnClose}
-        onError={defaultOnError}
       />,
     );
   }
@@ -176,7 +174,6 @@ describe("SqlQueryExportCardWrapper", () => {
           format="csv"
           createdAt={new Date("2024-01-15T10:00:00Z")}
           onClose={defaultOnClose}
-          onError={defaultOnError}
         />,
       );
 
@@ -232,6 +229,20 @@ describe("SqlQueryExportCardWrapper", () => {
         "Download failed",
         "Download failed: 403 - Forbidden",
       );
+    });
+  });
+
+  // The export job's own failure is displayed by the card it is given to, so it
+  // must not also be announced as a notification (FR-001, FR-002).
+  describe("Export job failure", () => {
+    it("hands the failure to the card and raises no notification", () => {
+      mockStatus = "error";
+      mockError = new Error("SQL query export failed: 500 - Internal error");
+
+      renderWrapper();
+
+      expect(lastExportJobCardProps?.job.error).toBe(mockError);
+      expect(mockShowToast).not.toHaveBeenCalled();
     });
   });
 });

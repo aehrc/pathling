@@ -391,10 +391,10 @@ test.describe("SQL on FHIR page - SQL query mode", () => {
       .fill("Patient/pat-1");
     await page.getByRole("button", { name: /^execute$/i }).click();
 
-    // The failure is shown in the result card. A notification carries the same
-    // text, so match the first occurrence, which is the card.
+    // The failure is shown in the result card, which is now the only place a job
+    // failure is reported.
     await expect(
-      page.getByText(/sql contains a disallowed operation/i).first(),
+      page.getByText(/sql contains a disallowed operation/i),
     ).toBeVisible();
   });
 });

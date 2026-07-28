@@ -104,7 +104,6 @@ vi.mock("../ViewExportCard", () => ({
 
 describe("ViewExportCardWrapper", () => {
   const defaultOnClose = vi.fn();
-  const defaultOnError = vi.fn();
 
   const defaultViewDefinition: ViewDefinition = {
     resourceType: "ViewDefinition",
@@ -133,7 +132,6 @@ describe("ViewExportCardWrapper", () => {
         format={overrides.format ?? "csv"}
         createdAt={new Date("2024-01-15T10:00:00Z")}
         onClose={defaultOnClose}
-        onError={defaultOnError}
       />,
     );
   }
@@ -177,7 +175,6 @@ describe("ViewExportCardWrapper", () => {
           format="csv"
           createdAt={new Date("2024-01-15T10:00:00Z")}
           onClose={defaultOnClose}
-          onError={defaultOnError}
         />,
       );
 

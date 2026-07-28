@@ -36,7 +36,6 @@ import type { ImportPnpRequest } from "../../types/importPnp";
 
 interface ImportCardProps {
   job: ImportJob;
-  onError: (message: string) => void;
   onClose?: () => void;
 }
 
@@ -76,11 +75,10 @@ function getImportSubtitle(job: ImportJob): string {
  *
  * @param props - Component props.
  * @param props.job - The import job configuration.
- * @param props.onError - Callback for error handling (e.g., auth errors).
  * @param props.onClose - Optional callback to close/remove the card.
  * @returns The rendered import card component.
  */
-export function ImportCard({ job, onError, onClose }: Readonly<ImportCardProps>) {
+export function ImportCard({ job, onClose }: Readonly<ImportCardProps>) {
   const hasStartedRef = useRef(false);
 
   // Use the appropriate hook based on job type.
@@ -126,13 +124,6 @@ export function ImportCard({ job, onError, onClose }: Readonly<ImportCardProps>)
       }
     }
   }, [job, standardImport, pnpImport]);
-
-  // Report errors to parent.
-  useEffect(() => {
-    if (error) {
-      onError(error.message);
-    }
-  }, [error, onError]);
 
   return (
     <Card>

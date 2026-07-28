@@ -34,6 +34,13 @@ import { SqlQueryCard } from "../SqlQueryCard";
 
 import type { SqlQueryJob, SqlQueryResult } from "../../../types/sqlQuery";
 
+// A failure the card displays must not also be announced, so the toast is
+// mocked to prove it is never called.
+const mockShowToast = vi.fn();
+vi.mock("../../../contexts/ToastContext", () => ({
+  useToast: () => ({ showToast: mockShowToast }),
+}));
+
 const mockExecute = vi.fn();
 let mockStatus: "idle" | "pending" | "success" | "error" = "idle";
 let mockResult: SqlQueryResult | undefined;
@@ -109,7 +116,6 @@ function createJob(overrides: Partial<SqlQueryJob> = {}): SqlQueryJob {
 }
 
 describe("SqlQueryCard", () => {
-  const onError = vi.fn();
   const onClose = vi.fn();
 
   beforeEach(() => {
@@ -127,7 +133,7 @@ describe("SqlQueryCard", () => {
   // so the user knows the request is in flight.
   it("shows a spinner and pending message while the request is in flight", () => {
     mockStatus = "pending";
-    render(<SqlQueryCard job={createJob()} onError={onError} onClose={onClose} />);
+    render(<SqlQueryCard job={createJob()} onClose={onClose} />);
     expect(screen.getByText(/executing sql query/i)).toBeInTheDocument();
   });
 
@@ -136,7 +142,7 @@ describe("SqlQueryCard", () => {
   it("renders a table for a successful tabular result", () => {
     mockStatus = "success";
     mockResult = TABULAR_RESULT;
-    render(<SqlQueryCard job={createJob()} onError={onError} onClose={onClose} />);
+    render(<SqlQueryCard job={createJob()} onClose={onClose} />);
     expect(screen.getByText(/2 rows/i)).toBeInTheDocument();
     expect(screen.getByText("patient_id")).toBeInTheDocument();
     expect(screen.getByText("given_name")).toBeInTheDocument();
@@ -150,13 +156,7 @@ describe("SqlQueryCard", () => {
   it("echoes the submitted SQL beneath a successful result", () => {
     mockStatus = "success";
     mockResult = TABULAR_RESULT;
-    render(
-      <SqlQueryCard
-        job={createJob({ sql: "SELECT * FROM patients" })}
-        onError={onError}
-        onClose={onClose}
-      />,
-    );
+    render(<SqlQueryCard job={createJob({ sql: "SELECT * FROM patients" })} onClose={onClose} />);
     expect(screen.getByRole("textbox", { name: /submitted sql/i })).toHaveValue(
       "SELECT * FROM patients",
     );
@@ -173,7 +173,7 @@ describe("SqlQueryCard", () => {
         given_name: `Name ${i + 1}`,
       })),
     };
-    render(<SqlQueryCard job={createJob()} onError={onError} onClose={onClose} />);
+    render(<SqlQueryCard job={createJob()} onClose={onClose} />);
     expect(screen.getByText(/10 rows/i)).toBeInTheDocument();
     expect(screen.getByText("pat-10")).toBeInTheDocument();
     expect(screen.queryByText("pat-11")).not.toBeInTheDocument();
@@ -184,7 +184,7 @@ describe("SqlQueryCard", () => {
   it("renders export controls once the run returns rows", () => {
     mockStatus = "success";
     mockResult = TABULAR_RESULT;
-    render(<SqlQueryCard job={createJob()} onError={onError} onClose={onClose} />);
+    render(<SqlQueryCard job={createJob()} onClose={onClose} />);
     expect(screen.getByText(/export full result set/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^export$/i })).toBeInTheDocument();
   });
@@ -197,7 +197,7 @@ describe("SqlQueryCard", () => {
       ...TABULAR_RESULT,
       rows: [],
     };
-    render(<SqlQueryCard job={createJob()} onError={onError} onClose={onClose} />);
+    render(<SqlQueryCard job={createJob()} onClose={onClose} />);
     expect(screen.getByText(/no rows returned/i)).toBeInTheDocument();
   });
 
@@ -211,7 +211,6 @@ describe("SqlQueryCard", () => {
         job={createJob({
           request: { ...createJob().request, format: "parquet" },
         })}
-        onError={onError}
         onClose={onClose}
       />,
     );
@@ -239,13 +238,7 @@ describe("SqlQueryCard", () => {
       400,
       "SQL query run",
     );
-    render(
-      <SqlQueryCard
-        job={createJob({ sql: "DROP TABLE conditions" })}
-        onError={onError}
-        onClose={onClose}
-      />,
-    );
+    render(<SqlQueryCard job={createJob({ sql: "DROP TABLE conditions" })} onClose={onClose} />);
     // The shared error presentation announces every error as an alert.
     expect(screen.getByRole("alert")).toHaveTextContent(/sql contains a disallowed operation/i);
     // The submitted SQL is echoed in the read-only preview area.
@@ -258,14 +251,24 @@ describe("SqlQueryCard", () => {
   it("renders a generic error message when the error is not an OperationOutcome", () => {
     mockStatus = "error";
     mockError = new Error("Network error");
-    render(<SqlQueryCard job={createJob()} onError={onError} onClose={onClose} />);
+    render(<SqlQueryCard job={createJob()} onClose={onClose} />);
     expect(screen.getByRole("alert")).toHaveTextContent(/network error/i);
+  });
+
+  // FR-001 and FR-002: the card displays the failure, so nothing else announces
+  // it.
+  it("displays the failure without raising a notification", () => {
+    mockStatus = "error";
+    mockError = new Error("Network error");
+    render(<SqlQueryCard job={createJob()} onClose={onClose} />);
+    expect(screen.getByRole("alert")).toHaveTextContent(/network error/i);
+    expect(mockShowToast).not.toHaveBeenCalled();
   });
 
   // The close button only appears once the request has terminated.
   it("hides the close button while the request is pending", () => {
     mockStatus = "pending";
-    render(<SqlQueryCard job={createJob()} onError={onError} onClose={onClose} />);
+    render(<SqlQueryCard job={createJob()} onClose={onClose} />);
     expect(screen.queryByRole("button", { name: /close result/i })).not.toBeInTheDocument();
   });
 
@@ -275,7 +278,7 @@ describe("SqlQueryCard", () => {
     mockStatus = "success";
     mockResult = TABULAR_RESULT;
     const user = userEvent.setup();
-    render(<SqlQueryCard job={createJob()} onError={onError} onClose={onClose} />);
+    render(<SqlQueryCard job={createJob()} onClose={onClose} />);
     await user.click(screen.getByRole("button", { name: /close result/i }));
     expect(onClose).toHaveBeenCalled();
   });

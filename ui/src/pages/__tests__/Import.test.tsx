@@ -56,11 +56,9 @@ vi.mock("../../components/import/ImportPnpForm", () => ({
   ImportPnpForm: () => <div data-testid="import-pnp-form" />,
 }));
 
-// Mock the card so a single click drives its error callback.
+// Mock the card, which now displays its own failures.
 vi.mock("../../components/import/ImportCard", () => ({
-  ImportCard: ({ onError }: { onError: (message: string) => void }) => (
-    <button onClick={() => onError("Import job failed: invalid NDJSON")}>Fail import</button>
-  ),
+  ImportCard: () => <div>Import card</div>,
 }));
 
 describe("Import page", () => {
@@ -72,18 +70,16 @@ describe("Import page", () => {
     vi.restoreAllMocks();
   });
 
-  // FR-017: an import job failure must produce a visible message.
-  it("reports an import failure to the user", async () => {
+  // FR-012: the page neither displays nor originates an import failure, so it
+  // no longer carries a failure-reporting callback.
+  it("starts an import without wiring a failure callback into the card", async () => {
     const user = userEvent.setup();
 
     render(<Import />);
 
     await user.click(screen.getByRole("button", { name: "Start import" }));
-    await user.click(screen.getByRole("button", { name: "Fail import" }));
 
-    expect(mockShowToast).toHaveBeenCalledWith(
-      "Import failed",
-      "Import job failed: invalid NDJSON",
-    );
+    expect(screen.getByText("Import card")).toBeInTheDocument();
+    expect(mockShowToast).not.toHaveBeenCalled();
   });
 });

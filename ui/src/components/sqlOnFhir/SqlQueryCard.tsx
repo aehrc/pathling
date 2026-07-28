@@ -61,7 +61,6 @@ interface SqlQueryCardProps {
   /** The SQL query job describing the request. */
   job: SqlQueryJob;
   /** Callback for surfacing errors to the parent (e.g. for global auth handling). */
-  onError: (message: string) => void;
   /** Optional callback to remove the card once it has terminated. */
   onClose?: () => void;
 }
@@ -71,11 +70,10 @@ interface SqlQueryCardProps {
  *
  * @param props - The component props.
  * @param props.job - The SQL query job describing the request.
- * @param props.onError - Callback for surfacing errors to the parent.
  * @param props.onClose - Optional callback to remove the card once it has terminated.
  * @returns The card.
  */
-export function SqlQueryCard({ job, onError, onClose }: Readonly<SqlQueryCardProps>) {
+export function SqlQueryCard({ job, onClose }: Readonly<SqlQueryCardProps>) {
   const { execute, status, result, error } = useSqlQueryRun();
   const [exports, setExports] = useState<SqlQueryExportEntry[]>([]);
 
@@ -98,13 +96,6 @@ export function SqlQueryCard({ job, onError, onClose }: Readonly<SqlQueryCardPro
       execute(job.request);
     }
   }, [status, execute, job]);
-
-  // Surface errors to the parent for global handling.
-  useEffect(() => {
-    if (error) {
-      onError(error.message);
-    }
-  }, [error, onError]);
 
   /**
    * Starts an export of this query's result in the chosen format, reusing the run's query source.
@@ -191,7 +182,6 @@ export function SqlQueryCard({ job, onError, onClose }: Readonly<SqlQueryCardPro
                   format={entry.format}
                   createdAt={entry.createdAt}
                   onClose={() => handleCloseExport(entry.id)}
-                  onError={onError}
                 />
               ))}
             </Flex>
