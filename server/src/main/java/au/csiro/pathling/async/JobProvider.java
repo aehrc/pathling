@@ -41,6 +41,7 @@ import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.instance.model.api.IBaseOperationOutcome;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.OperationOutcome;
@@ -73,6 +74,7 @@ public class JobProvider {
 
   @Nonnull private final JobRegistry jobRegistry;
   @Nonnull private final JobDirectoryFileSystem jobDirectoryFileSystem;
+  @Nonnull private final SparkSession spark;
 
   /**
    * Creates a new JobProvider.
@@ -81,14 +83,17 @@ public class JobProvider {
    * @param jobRegistry the {@link JobRegistry} used to keep track of running jobs
    * @param jobDirectoryFileSystem the {@link JobDirectoryFileSystem} used to resolve and delete
    *     per-job directories on the warehouse file system
+   * @param spark the {@link SparkSession} used to cancel the Spark work belonging to a deleted job
    */
   public JobProvider(
       @Nonnull final ServerConfiguration configuration,
       @Nonnull final JobRegistry jobRegistry,
-      @Nonnull final JobDirectoryFileSystem jobDirectoryFileSystem) {
+      @Nonnull final JobDirectoryFileSystem jobDirectoryFileSystem,
+      @Nonnull final SparkSession spark) {
     this.configuration = configuration;
     this.jobRegistry = jobRegistry;
     this.jobDirectoryFileSystem = jobDirectoryFileSystem;
+    this.spark = spark;
   }
 
   /**
@@ -194,6 +199,11 @@ public class JobProvider {
     final boolean removeFilesNow = job.markDeletedAndClaim();
     if (!job.getResult().isDone()) {
       job.getResult().cancel(false);
+      // Signal Spark directly. Cancelling the future does not interrupt the thread running the job,
+      // and the stage-event checks in SparkJobListener only reach Spark at the next stage boundary,
+      // which for a job inside a single long write stage is not until that stage finishes on its
+      // own. Those checks remain as a backstop.
+      spark.sparkContext().cancelJobGroup(job.getId());
     }
     if (removeFilesNow) {
       tryDeleteJobFiles(job.getId());

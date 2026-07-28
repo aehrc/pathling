@@ -19,7 +19,10 @@ package au.csiro.pathling.async;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.config.AsyncConfiguration;
@@ -45,6 +48,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.spark.SparkContext;
+import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.OperationOutcome;
 import org.hl7.fhir.r4.model.OperationOutcome.IssueSeverity;
@@ -70,6 +75,7 @@ class JobProviderTest {
 
   private JobRegistry jobRegistry;
   private JobProvider jobProvider;
+  private SparkContext sparkContext;
   private MockHttpServletRequest request;
   private MockHttpServletResponse response;
 
@@ -90,7 +96,7 @@ class JobProviderTest {
 
     final JobDirectoryFileSystem jobDirectoryFileSystem =
         new JobDirectoryFileSystem(tempDir.toUri(), new Configuration());
-    jobProvider = new JobProvider(config, jobRegistry, jobDirectoryFileSystem);
+    jobProvider = new JobProvider(config, jobRegistry, jobDirectoryFileSystem, mockSpark());
     request = new MockHttpServletRequest();
     request.setMethod("GET");
     // Set the servlet path to match the FHIR server mount point.
@@ -324,7 +330,8 @@ class JobProviderTest {
     final JobDirectoryFileSystem jobDirectoryFileSystem =
         new JobDirectoryFileSystem(tempDir.toUri(), hadoopConfig);
     final ServerConfiguration config = mock(ServerConfiguration.class);
-    final JobProvider provider = new JobProvider(config, jobRegistry, jobDirectoryFileSystem);
+    final JobProvider provider =
+        new JobProvider(config, jobRegistry, jobDirectoryFileSystem, mockSpark());
 
     final Path jobsDir = tempDir.resolve("jobs").resolve(JOB_ID);
     Files.createDirectories(jobsDir);
@@ -371,6 +378,40 @@ class JobProviderTest {
     assertThat(appender.list).noneMatch(JobProviderTest::isProblem);
   }
 
+  // -- Deleting a job: cancelling the Spark work --
+
+  @Test
+  void deletingRunningJobCancelsItsSparkJobGroup() {
+    // Nothing on the delete path used to touch Spark, so the work carried on until the server next
+    // happened to observe a stage boundary for it. Signalling Spark here is what makes abandoning a
+    // job actually stop it, and therefore what makes the deferred clean-up prompt.
+    final Job<IBaseResource> job = registerRunningJob();
+
+    assertThatThrownBy(() -> jobProvider.deleteJob(job.getId()))
+        .isInstanceOf(ProcessingNotCompletedException.class);
+
+    verify(sparkContext).cancelJobGroup(job.getId());
+  }
+
+  @Test
+  void deletingFinishedJobAttemptsNoSparkCancellation() {
+    // There is no work left to cancel, so the delete path leaves Spark alone.
+    final Job<IBaseResource> job =
+        jobRegistry.getOrCreate(
+            new Job.JobTag() {},
+            id ->
+                new Job<>(
+                    id,
+                    "export",
+                    CompletableFuture.completedFuture(new Parameters()),
+                    Optional.empty()));
+
+    assertThatThrownBy(() -> jobProvider.deleteJob(job.getId()))
+        .isInstanceOf(ProcessingNotCompletedException.class);
+
+    verify(sparkContext, never()).cancelJobGroup(anyString());
+  }
+
   // -- Deleting a job: who removes the output directory --
 
   @Test
@@ -413,6 +454,20 @@ class JobProviderTest {
    *
    * @return the registered job
    */
+  /**
+   * Creates a Spark session whose context records job-group cancellation, and remembers the context
+   * so that tests can assert against it.
+   *
+   * @return a mock Spark session
+   */
+  @Nonnull
+  private SparkSession mockSpark() {
+    sparkContext = mock(SparkContext.class);
+    final SparkSession spark = mock(SparkSession.class);
+    when(spark.sparkContext()).thenReturn(sparkContext);
+    return spark;
+  }
+
   @Nonnull
   private Job<IBaseResource> registerRunningJob() {
     return jobRegistry.getOrCreate(

@@ -34,6 +34,8 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.spark.SparkContext;
+import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -81,7 +83,8 @@ class JobProviderSecurityTest {
     final JobDirectoryFileSystem jobDirectoryFileSystem =
         new JobDirectoryFileSystem(tempDir.toUri(), new Configuration());
 
-    jobProvider = new JobProvider(serverConfiguration, jobRegistry, jobDirectoryFileSystem);
+    jobProvider =
+        new JobProvider(serverConfiguration, jobRegistry, jobDirectoryFileSystem, mockSpark());
 
     request = new MockHttpServletRequest();
     response = new MockHttpServletResponse();
@@ -174,7 +177,7 @@ class JobProviderSecurityTest {
     final JobDirectoryFileSystem fileSystem =
         new JobDirectoryFileSystem(tempDir.toUri(), new Configuration());
     final JobProvider authDisabledProvider =
-        new JobProvider(authDisabledConfiguration, jobRegistry, fileSystem);
+        new JobProvider(authDisabledConfiguration, jobRegistry, fileSystem, mockSpark());
 
     final String jobId = registerTaggedJob(OWNER_USER);
     SecurityContextHolder.clearContext();
@@ -197,6 +200,19 @@ class JobProviderSecurityTest {
             new Job.JobTag() {},
             id -> new Job<>(id, "export", new CompletableFuture<>(), Optional.of(owner)));
     return job.getId();
+  }
+
+  /**
+   * Creates a Spark session whose context accepts job-group cancellation, which the delete path
+   * calls to stop the work belonging to the job.
+   *
+   * @return a mock Spark session
+   */
+  @Nonnull
+  private static SparkSession mockSpark() {
+    final SparkSession spark = mock(SparkSession.class);
+    when(spark.sparkContext()).thenReturn(mock(SparkContext.class));
+    return spark;
   }
 
   private void setAuthenticatedUser(
