@@ -211,6 +211,10 @@ test.describe("Authentication", () => {
     test("shows the failure in the session expiry dialog and keeps it open", async ({
       page,
     }) => {
+      // The clock is installed before authenticating, since that navigates, and
+      // the page's timers must be under the test's control from the outset.
+      await page.clock.install();
+
       await setupAuthRequiredMocks(page);
 
       // The first job list request succeeds; every later one reports that the
@@ -232,9 +236,14 @@ test.describe("Authentication", () => {
       await authenticate(page, "/jobs");
       await expect(page.getByText("No jobs to show")).toBeVisible();
 
-      // The poll fails, raising the expiry dialog.
+      // Advancing well past the refresh interval drives the next poll, which
+      // fails and so raises the expiry dialog. Driving the clock rather than
+      // waiting out the interval keeps the test off the ten second floor that
+      // the real interval would otherwise impose.
+      await page.clock.runFor(30000);
+
       const dialog = page.getByRole("alertdialog");
-      await expect(dialog).toBeVisible({ timeout: 15000 });
+      await expect(dialog).toBeVisible();
 
       await breakAuthorisationDiscovery(page);
       await dialog.getByRole("button", { name: /log in/i }).click();
