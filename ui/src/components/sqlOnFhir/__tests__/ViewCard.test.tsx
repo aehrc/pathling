@@ -48,14 +48,22 @@ let mockStatus: "idle" | "pending" | "success" | "error" = "idle";
 let mockResult: { columns: string[]; rows: Record<string, unknown>[] } | undefined = undefined;
 let mockError: Error | undefined = undefined;
 
+// Captures the options the card passes to its data hook, so a test can prove no
+// failure callback is wired into it.
+type HookOptions = { onError?: (error: Error) => void } | undefined;
+let capturedOptions: HookOptions = undefined;
+
 // Mock useViewRun hook.
 vi.mock("../../../hooks", () => ({
-  useViewRun: () => ({
-    execute: mockExecute,
-    status: mockStatus,
-    result: mockResult,
-    error: mockError,
-  }),
+  useViewRun: (options?: { onError?: (error: Error) => void }) => {
+    capturedOptions = options;
+    return {
+      execute: mockExecute,
+      status: mockStatus,
+      result: mockResult,
+      error: mockError,
+    };
+  },
 }));
 
 // Mock useAuth hook.
@@ -112,6 +120,7 @@ describe("ViewCard", () => {
     mockStatus = "idle";
     mockResult = undefined;
     mockError = undefined;
+    capturedOptions = undefined;
   });
 
   afterEach(() => {
@@ -246,8 +255,12 @@ describe("ViewCard", () => {
       const job = createJob();
 
       render(<ViewCard job={job} onClose={defaultOnClose} />);
+      // Driving whatever callback the card wired in, so that a reinstated
+      // notification fails this test rather than passing unnoticed.
+      capturedOptions?.onError?.(mockError);
 
       expect(screen.getByText("Execution error")).toBeInTheDocument();
+      expect(capturedOptions?.onError).toBeUndefined();
       expect(mockShowToast).not.toHaveBeenCalled();
     });
 

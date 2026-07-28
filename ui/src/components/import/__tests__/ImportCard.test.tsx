@@ -57,22 +57,34 @@ let mockPnpStatus: string = "idle";
 let mockPnpError: Error | undefined = undefined;
 let mockPnpProgress: number | undefined = undefined;
 
+// Captures the options the card passes to its data hook, so a test can prove no
+// failure callback is wired into it.
+type HookOptions = { onError?: (error: Error) => void } | undefined;
+let capturedOptions: HookOptions = undefined;
+let capturedPnpOptions: HookOptions = undefined;
+
 // Mock useImport hook.
 vi.mock("../../../hooks", () => ({
-  useImport: () => ({
-    startWith: mockStandardStartWith,
-    cancel: mockStandardCancel,
-    status: mockStandardStatus,
-    error: mockStandardError,
-    progress: mockStandardProgress,
-  }),
-  useImportPnp: () => ({
-    startWith: mockPnpStartWith,
-    cancel: mockPnpCancel,
-    status: mockPnpStatus,
-    error: mockPnpError,
-    progress: mockPnpProgress,
-  }),
+  useImport: (options?: { onError?: (error: Error) => void }) => {
+    capturedOptions = options;
+    return {
+      startWith: mockStandardStartWith,
+      cancel: mockStandardCancel,
+      status: mockStandardStatus,
+      error: mockStandardError,
+      progress: mockStandardProgress,
+    };
+  },
+  useImportPnp: (options?: { onError?: (error: Error) => void }) => {
+    capturedPnpOptions = options;
+    return {
+      startWith: mockPnpStartWith,
+      cancel: mockPnpCancel,
+      status: mockPnpStatus,
+      error: mockPnpError,
+      progress: mockPnpProgress,
+    };
+  },
 }));
 
 // Mock formatDateTime utility.
@@ -340,8 +352,14 @@ describe("ImportCard", () => {
       const job = createStandardJob();
 
       render(<ImportCard job={job} onClose={defaultOnClose} />);
+      // Driving whatever callback the card wired in, so that a reinstated
+      // notification fails this test rather than passing unnoticed.
+      capturedOptions?.onError?.(mockStandardError);
+      capturedPnpOptions?.onError?.(mockStandardError);
 
       expect(screen.getByText("Connection timeout")).toBeInTheDocument();
+      expect(capturedOptions?.onError).toBeUndefined();
+      expect(capturedPnpOptions?.onError).toBeUndefined();
       expect(mockShowToast).not.toHaveBeenCalled();
     });
 

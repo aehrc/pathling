@@ -47,13 +47,21 @@ let mockStatus: "idle" | "pending" | "success" | "error" = "idle";
 let mockResult: SqlQueryResult | undefined;
 let mockError: Error | undefined;
 
+// Captures the options the card passes to its data hook, so a test can prove no
+// failure callback is wired into it.
+type HookOptions = { onError?: (error: Error) => void } | undefined;
+let capturedOptions: HookOptions = undefined;
+
 vi.mock("../../../hooks", () => ({
-  useSqlQueryRun: () => ({
-    execute: mockExecute,
-    status: mockStatus,
-    result: mockResult,
-    error: mockError,
-  }),
+  useSqlQueryRun: (options?: { onError?: (error: Error) => void }) => {
+    capturedOptions = options;
+    return {
+      execute: mockExecute,
+      status: mockStatus,
+      result: mockResult,
+      error: mockError,
+    };
+  },
   // The submitted-SQL preview composes useClipboard; the card itself does not
   // exercise it, so a no-op stub suffices here.
   useClipboard: () => vi.fn(),
@@ -124,6 +132,7 @@ describe("SqlQueryCard", () => {
     mockStatus = "idle";
     mockResult = undefined;
     mockError = undefined;
+    capturedOptions = undefined;
   });
 
   afterEach(() => {
@@ -262,7 +271,11 @@ describe("SqlQueryCard", () => {
     mockStatus = "error";
     mockError = new Error("Network error");
     render(<SqlQueryCard job={createJob()} onClose={onClose} />);
+    // Driving whatever callback the card wired in, so that a reinstated
+    // notification fails this test rather than passing unnoticed.
+    capturedOptions?.onError?.(mockError);
     expect(screen.getByRole("alert")).toHaveTextContent(/network error/i);
+    expect(capturedOptions?.onError).toBeUndefined();
     expect(mockShowToast).not.toHaveBeenCalled();
   });
 

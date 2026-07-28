@@ -55,20 +55,28 @@ vi.mock("../../../contexts/ToastContext", () => ({
   useToast: () => ({ showToast: mockShowToast }),
 }));
 
+// Captures the options the card passes to its data hook, so a test can prove no
+// failure callback is wired into it.
+type HookOptions = { onError?: (error: Error) => void } | undefined;
+let capturedOptions: HookOptions = undefined;
+
 // Mock useBulkExport hook with factory function.
 vi.mock("../../../hooks", () => ({
-  useBulkExport: () => ({
-    startWith: mockStartWith,
-    cancel: mockCancel,
-    deleteJob: mockDeleteJob,
-    download: mockDownload,
-    reset: mockReset,
-    status: mockStatus,
-    result: mockResult,
-    error: mockError,
-    progress: undefined,
-    request: undefined,
-  }),
+  useBulkExport: (options?: { onError?: (error: Error) => void }) => {
+    capturedOptions = options;
+    return {
+      startWith: mockStartWith,
+      cancel: mockCancel,
+      deleteJob: mockDeleteJob,
+      download: mockDownload,
+      reset: mockReset,
+      status: mockStatus,
+      result: mockResult,
+      error: mockError,
+      progress: undefined,
+      request: undefined,
+    };
+  },
   useDownloadFile: (onError?: (error: Error) => void) => {
     reportDownloadFailure = onError;
     return mockDownloadFile;
@@ -104,6 +112,7 @@ describe("ExportCard", () => {
     mockResult = undefined;
     mockError = undefined;
     reportDownloadFailure = undefined;
+    capturedOptions = undefined;
   });
 
   afterEach(() => {
@@ -320,7 +329,12 @@ describe("ExportCard", () => {
         />,
       );
 
+      // Driving whatever callback the card wired in, so that a reinstated
+      // notification fails this test rather than passing unnoticed.
+      capturedOptions?.onError?.(mockError);
+
       expect(screen.getByText("Export failed: 500 - Internal error")).toBeInTheDocument();
+      expect(capturedOptions?.onError).toBeUndefined();
       expect(mockShowToast).not.toHaveBeenCalled();
     });
 
