@@ -23,12 +23,13 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { render } from "../../test/testUtils";
+import { render, screen } from "../../test/testUtils";
 import { BulkSubmit } from "../BulkSubmit";
 
 import type { ReactNode } from "react";
 
-// Mock the toast context, which is where failures must be reported.
+// Mock the toast context, so that the test can prove a displayed failure is not
+// also announced.
 const mockShowToast = vi.fn();
 vi.mock("../../contexts/ToastContext", () => ({
   useToast: () => ({ showToast: mockShowToast }),
@@ -45,34 +46,52 @@ vi.mock("../../components/bulkSubmit/BulkSubmitMonitorForm", () => ({
 }));
 
 // Capture the options the page passes to the monitoring hook, so the test can
-// drive its error callback directly.
-let capturedOnError: ((error: Error) => void) | undefined;
+// prove no failure callback is wired into it, and control the state it reports.
+let capturedOptions: { onError?: (error: Error) => void } | undefined;
+let optionsWereCaptured = false;
+let mockStatus = "idle";
+let mockError: Error | undefined = undefined;
 vi.mock("../../hooks", () => ({
-  useBulkSubmit: (options: { onError?: (error: Error) => void }) => {
-    capturedOnError = options.onError;
-    return { status: "idle" };
+  useBulkSubmit: (options?: { onError?: (error: Error) => void }) => {
+    capturedOptions = options;
+    optionsWereCaptured = true;
+    return { status: mockStatus, error: mockError };
   },
 }));
 
 describe("BulkSubmit page", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    capturedOnError = undefined;
+    capturedOptions = undefined;
+    optionsWereCaptured = false;
+    mockStatus = "idle";
+    mockError = undefined;
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  // FR-016: a bulk submit failure must produce a visible message.
-  it("reports a bulk submit failure to the user", () => {
+  // FR-002 and FR-012: the monitor card displays the failure, so the page wires
+  // no failure callback into the hook and nothing is announced.
+  it("wires no failure callback into the monitoring hook", () => {
     render(<BulkSubmit />);
 
-    capturedOnError?.(new Error("Submission status request failed"));
+    expect(optionsWereCaptured).toBe(true);
+    expect(capturedOptions?.onError).toBeUndefined();
+    expect(mockShowToast).not.toHaveBeenCalled();
+  });
 
-    expect(mockShowToast).toHaveBeenCalledWith(
-      "Bulk submit failed",
-      "Submission status request failed",
-    );
+  // FR-001, FR-005 and FR-006: the failure is displayed in the card, through the
+  // shared callout, and is announced as an alert.
+  it("displays a monitoring failure in the shared callout without a notification", () => {
+    mockStatus = "error";
+    mockError = new Error("Submission status request failed");
+
+    const { container } = render(<BulkSubmit />);
+
+    expect(screen.getByRole("alert")).toHaveTextContent("Submission status request failed");
+    expect(container.querySelector(".rt-CalloutIcon svg")).toBeInTheDocument();
+    expect(mockShowToast).not.toHaveBeenCalled();
   });
 });

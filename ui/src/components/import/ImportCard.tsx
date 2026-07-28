@@ -26,7 +26,8 @@ import { Cross2Icon } from "@radix-ui/react-icons";
 import { Box, Button, Card, Flex, Text } from "@radix-ui/themes";
 import { useEffect, useRef } from "react";
 
-import { OperationOutcomeDisplay } from "../../components/error/OperationOutcomeDisplay";
+import { ErrorCallout } from "../../components/error/ErrorCallout";
+import { toDisplayIssues } from "../../components/error/errorPresentation";
 import { useImport, useImportPnp } from "../../hooks";
 import { formatDateTime } from "../../utils";
 import { JobProgressIndicator } from "../JobProgressIndicator";
@@ -36,7 +37,6 @@ import type { ImportPnpRequest } from "../../types/importPnp";
 
 interface ImportCardProps {
   job: ImportJob;
-  onError: (message: string) => void;
   onClose?: () => void;
 }
 
@@ -76,11 +76,10 @@ function getImportSubtitle(job: ImportJob): string {
  *
  * @param props - Component props.
  * @param props.job - The import job configuration.
- * @param props.onError - Callback for error handling (e.g., auth errors).
  * @param props.onClose - Optional callback to close/remove the card.
  * @returns The rendered import card component.
  */
-export function ImportCard({ job, onError, onClose }: Readonly<ImportCardProps>) {
+export function ImportCard({ job, onClose }: Readonly<ImportCardProps>) {
   const hasStartedRef = useRef(false);
 
   // Use the appropriate hook based on job type.
@@ -127,13 +126,6 @@ export function ImportCard({ job, onError, onClose }: Readonly<ImportCardProps>)
     }
   }, [job, standardImport, pnpImport]);
 
-  // Report errors to parent.
-  useEffect(() => {
-    if (error) {
-      onError(error.message);
-    }
-  }, [error, onError]);
-
   return (
     <Card>
       <Flex direction="column" gap="3">
@@ -165,7 +157,7 @@ export function ImportCard({ job, onError, onClose }: Readonly<ImportCardProps>)
 
         {isRunning && <JobProgressIndicator progress={progress} pendingLabel="Processing..." />}
 
-        {error && <OperationOutcomeDisplay error={error} />}
+        {error && <ErrorCallout issues={toDisplayIssues(error)} />}
 
         {status === "cancelled" && (
           <Text size="2" color="gray">

@@ -53,11 +53,9 @@ vi.mock("../../components/export/ExportForm", () => ({
   ),
 }));
 
-// Mock the card so a single click drives its error callback.
+// Mock the card, which now owns whatever reporting its own failures need.
 vi.mock("../../components/export/ExportCard", () => ({
-  ExportCard: ({ onError }: { onError: (message: string) => void }) => (
-    <button onClick={() => onError("Download failed: connection reset")}>Fail export</button>
-  ),
+  ExportCard: () => <div>Export card</div>,
 }));
 
 describe("Export page", () => {
@@ -69,19 +67,17 @@ describe("Export page", () => {
     vi.restoreAllMocks();
   });
 
-  // FR-015: the export card's error callback is the only channel for a failed
-  // file download, so it must reach the user.
-  it("reports an export failure to the user", async () => {
+  // FR-012: the page neither displays nor originates an export failure, so it
+  // no longer carries a failure-reporting callback. The card owns the download
+  // notification and displays the job's own failure itself.
+  it("starts an export without wiring a failure callback into the card", async () => {
     const user = userEvent.setup();
 
     render(<Export />);
 
     await user.click(screen.getByRole("button", { name: "Start export" }));
-    await user.click(screen.getByRole("button", { name: "Fail export" }));
 
-    expect(mockShowToast).toHaveBeenCalledWith(
-      "Export failed",
-      "Download failed: connection reset",
-    );
+    expect(screen.getByText("Export card")).toBeInTheDocument();
+    expect(mockShowToast).not.toHaveBeenCalled();
   });
 });

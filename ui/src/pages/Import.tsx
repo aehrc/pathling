@@ -22,13 +22,12 @@
  */
 
 import { Box, Flex, Tabs } from "@radix-ui/themes";
-import { useCallback, useState } from "react";
+import { useState } from "react";
 
 import { CapabilityGuard } from "../components/auth/CapabilityGuard";
 import { ImportCard } from "../components/import/ImportCard";
 import { ImportForm } from "../components/import/ImportForm";
 import { ImportPnpForm } from "../components/import/ImportPnpForm";
-import { useToast } from "../contexts/ToastContext";
 import { buildSearchParamMap } from "../hooks";
 
 import type { ImportJob, ImportRequest } from "../types/import";
@@ -42,15 +41,6 @@ import type { ImportPnpRequest } from "../types/importPnp";
 export function Import() {
   // Track all import jobs.
   const [imports, setImports] = useState<ImportJob[]>([]);
-
-  const { showToast } = useToast();
-
-  // The card reports a failure from an effect keyed on this callback, so it
-  // must keep a stable identity or each notification would trigger another.
-  const handleImportError = useCallback(
-    (message: string) => showToast("Import failed", message),
-    [showToast],
-  );
 
   /**
    * Handles submission of a standard import.
@@ -129,12 +119,7 @@ export function Import() {
 
             <Flex direction="column" gap="3" mt="4" style={{ flex: 1 }}>
               {imports.map((job) => (
-                <ImportCard
-                  key={job.id}
-                  job={job}
-                  onError={handleImportError}
-                  onClose={() => handleCloseImport(job.id)}
-                />
+                <ImportCard key={job.id} job={job} onClose={() => handleCloseImport(job.id)} />
               ))}
             </Flex>
           </Flex>

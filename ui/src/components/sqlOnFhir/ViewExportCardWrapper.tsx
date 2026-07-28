@@ -25,6 +25,7 @@
 import { useEffect, useRef } from "react";
 
 import { ViewExportCard } from "./ViewExportCard";
+import { useToast } from "../../contexts/ToastContext";
 import { useDownloadFile, useViewExport } from "../../hooks";
 
 import type { ViewDefinition } from "../../api";
@@ -38,7 +39,6 @@ interface ViewExportCardWrapperProps {
   format: ViewExportOutputFormat;
   createdAt: Date;
   onClose: () => void;
-  onError: (message: string) => void;
 }
 
 /**
@@ -51,7 +51,6 @@ interface ViewExportCardWrapperProps {
  * @param props.format - The output format for the export.
  * @param props.createdAt - The timestamp when the export was created.
  * @param props.onClose - Callback to remove this export card.
- * @param props.onError - Callback for error handling.
  * @returns The rendered export card wrapper component.
  */
 export function ViewExportCardWrapper({
@@ -60,14 +59,14 @@ export function ViewExportCardWrapper({
   format,
   createdAt,
   onClose,
-  onError,
 }: Readonly<ViewExportCardWrapperProps>) {
+  const { showToast } = useToast();
   const hasStartedRef = useRef(false);
-  const handleDownloadError = useDownloadFile((err) => onError(err.message));
+  // A failed download is the one failure this card cannot display, because the
+  // card is describing a job that succeeded, so it is notified instead.
+  const handleDownload = useDownloadFile((err) => showToast("Download failed", err.message));
 
-  const viewExport = useViewExport({
-    onError: (err) => onError(err.message),
-  });
+  const viewExport = useViewExport();
 
   const { startWith, cancel, deleteJob, status, result, error, progress, request } = viewExport;
 
@@ -109,7 +108,7 @@ export function ViewExportCardWrapper({
     <ViewExportCard
       job={exportJob}
       onCancel={cancel}
-      onDownload={handleDownloadError}
+      onDownload={handleDownload}
       onClose={onClose}
       onDelete={deleteJob}
     />

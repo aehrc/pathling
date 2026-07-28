@@ -84,4 +84,102 @@ describe("ErrorCallout", () => {
     // The Radix exclamation triangle renders as an inline SVG within the callout.
     expect(container.querySelector(".rt-CalloutIcon svg")).toBeInTheDocument();
   });
+
+  // The issues form is what every job surface uses, so that a structured
+  // failure keeps its per-issue severity (FR-005, FR-008).
+  describe("issues form", () => {
+    it("renders one row per issue with its severity label and text", () => {
+      render(
+        <ErrorCallout
+          issues={[
+            { severity: "error", text: "First problem" },
+            { severity: "warning", text: "Second problem" },
+            { severity: "information", text: "Third note" },
+          ]}
+        />,
+      );
+
+      expect(screen.getByText("Error")).toBeInTheDocument();
+      expect(screen.getByText("First problem")).toBeInTheDocument();
+      expect(screen.getByText("Warning")).toBeInTheDocument();
+      expect(screen.getByText("Second problem")).toBeInTheDocument();
+      expect(screen.getByText("Info")).toBeInTheDocument();
+      expect(screen.getByText("Third note")).toBeInTheDocument();
+    });
+
+    // A fatal issue keeps a label of its own rather than reading as an error.
+    it("labels a fatal issue as fatal", () => {
+      render(<ErrorCallout issues={[{ severity: "fatal", text: "Unrecoverable" }]} />);
+
+      expect(screen.getByText("Fatal")).toBeInTheDocument();
+      expect(screen.getByText("Unrecoverable")).toBeInTheDocument();
+    });
+
+    // A lesser severity stays visually distinguishable from an error, which is
+    // the point of carrying the severity through at all (FR-008).
+    it("colours each row by its severity", () => {
+      render(
+        <ErrorCallout
+          issues={[
+            { severity: "error", text: "An error" },
+            { severity: "warning", text: "A warning" },
+            { severity: "information", text: "A note" },
+          ]}
+        />,
+      );
+
+      expect(screen.getByText("Error").closest("[data-accent-color]")).toHaveAttribute(
+        "data-accent-color",
+        "red",
+      );
+      expect(screen.getByText("Warning").closest("[data-accent-color]")).toHaveAttribute(
+        "data-accent-color",
+        "orange",
+      );
+      expect(screen.getByText("Info").closest("[data-accent-color]")).toHaveAttribute(
+        "data-accent-color",
+        "blue",
+      );
+    });
+
+    // A single issue renders as one badged row, so that it looks the same as the
+    // first row of a multi-issue failure.
+    it("renders a single issue as one badged row", () => {
+      render(<ErrorCallout issues={[{ severity: "error", text: "Only problem" }]} />);
+
+      expect(screen.getByText("Error")).toBeInTheDocument();
+      expect(screen.getByText("Only problem")).toBeInTheDocument();
+    });
+
+    // The issues form is announced just as the message form is (FR-006).
+    it("is announced as an alert", () => {
+      render(<ErrorCallout issues={[{ severity: "error", text: "Import failed." }]} />);
+
+      expect(screen.getByRole("alert")).toHaveTextContent("Import failed.");
+    });
+
+    // The warning icon is what makes the two forms look like one presentation.
+    it("renders the warning icon", () => {
+      const { container } = render(
+        <ErrorCallout issues={[{ severity: "error", text: "Import failed." }]} />,
+      );
+
+      expect(container.querySelector(".rt-CalloutIcon svg")).toBeInTheDocument();
+    });
+
+    // The title and children slots keep their meaning in the issues form.
+    it("renders the title above the issues and children below them", () => {
+      render(
+        <ErrorCallout title="Import failed" issues={[{ severity: "error", text: "Bad path" }]}>
+          <Button>Retry</Button>
+        </ErrorCallout>,
+      );
+
+      const title = screen.getByText("Import failed");
+      const text = screen.getByText("Bad path");
+      const action = screen.getByRole("button", { name: "Retry" });
+      expect(title.compareDocumentPosition(text)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+      expect(text.compareDocumentPosition(action)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    });
+  });
 });

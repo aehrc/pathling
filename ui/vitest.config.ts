@@ -22,6 +22,10 @@ export default defineConfig({
     include: ["src/**/*.test.{ts,tsx}"],
     environment: "jsdom",
     setupFiles: ["./src/test/setup.ts"],
+    // The form tests drive long sequences of typing through userEvent, which
+    // takes a few seconds each once coverage instrumentation is in play. The
+    // 5s default left too little headroom and they timed out intermittently.
+    testTimeout: 15_000,
     coverage: {
       provider: "v8",
       reporter: ["text", "html", "lcov"],

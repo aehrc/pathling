@@ -26,6 +26,7 @@
 import { useEffect, useRef } from "react";
 
 import { ExportJobCard } from "./ExportJobCard";
+import { useToast } from "../../contexts/ToastContext";
 import { parseSqlQueryExportManifest, useDownloadFile, useSqlQueryExport } from "../../hooks";
 
 import type { JobStatus } from "../../types/job";
@@ -43,7 +44,6 @@ interface SqlQueryExportCardWrapperProps {
   format: SqlQueryExportFormat;
   createdAt: Date;
   onClose: () => void;
-  onError: (message: string) => void;
 }
 
 /**
@@ -92,7 +92,6 @@ function toJobStatus(status: string): JobStatus {
  * @param props.format - The output format for the export.
  * @param props.createdAt - The timestamp when the export was created.
  * @param props.onClose - Callback to remove this export card.
- * @param props.onError - Callback for error handling.
  * @returns The rendered export card.
  */
 export function SqlQueryExportCardWrapper({
@@ -100,14 +99,14 @@ export function SqlQueryExportCardWrapper({
   format,
   createdAt,
   onClose,
-  onError,
 }: Readonly<SqlQueryExportCardWrapperProps>) {
+  const { showToast } = useToast();
   const hasStartedRef = useRef(false);
-  const handleDownload = useDownloadFile((err) => onError(err.message));
+  // A failed download is the one failure this card cannot display, because the
+  // card is describing a job that succeeded, so it is notified instead.
+  const handleDownload = useDownloadFile((err) => showToast("Download failed", err.message));
 
-  const { startWith, cancel, status, result, error, progress } = useSqlQueryExport({
-    onError: (err) => onError(err.message),
-  });
+  const { startWith, cancel, status, result, error, progress } = useSqlQueryExport();
 
   // Start the export on mount.
   useEffect(() => {

@@ -71,16 +71,12 @@ vi.mock("../../components/sqlOnFhir/SqlOnFhirForm", () => ({
   ),
 }));
 
-// Mock the cards so single clicks drive their error callbacks.
+// Mock the cards, which now display their own failures.
 vi.mock("../../components/sqlOnFhir/ViewCard", () => ({
-  ViewCard: ({ onError }: { onError: (message: string) => void }) => (
-    <button onClick={() => onError("View run failed: unknown column")}>Fail view</button>
-  ),
+  ViewCard: () => <div>View card</div>,
 }));
 vi.mock("../../components/sqlOnFhir/SqlQueryCard", () => ({
-  SqlQueryCard: ({ onError }: { onError: (message: string) => void }) => (
-    <button onClick={() => onError("SQL query failed: syntax error")}>Fail query</button>
-  ),
+  SqlQueryCard: () => <div>SQL query card</div>,
 }));
 
 describe("SqlOnFhir page", () => {
@@ -92,32 +88,27 @@ describe("SqlOnFhir page", () => {
     vi.restoreAllMocks();
   });
 
-  // FR-017: a SQL on FHIR job failure must produce a visible message.
-  it("reports a view definition failure to the user", async () => {
+  // FR-012: the page neither displays nor originates these failures, so it no
+  // longer carries a failure-reporting callback for either card.
+  it("runs a view without wiring a failure callback into the card", async () => {
     const user = userEvent.setup();
 
     render(<SqlOnFhir />);
 
     await user.click(screen.getByRole("button", { name: "Run view" }));
-    await user.click(screen.getByRole("button", { name: "Fail view" }));
 
-    expect(mockShowToast).toHaveBeenCalledWith(
-      "View execution failed",
-      "View run failed: unknown column",
-    );
+    expect(screen.getByText("View card")).toBeInTheDocument();
+    expect(mockShowToast).not.toHaveBeenCalled();
   });
 
-  it("reports a SQL query failure to the user", async () => {
+  it("runs a SQL query without wiring a failure callback into the card", async () => {
     const user = userEvent.setup();
 
     render(<SqlOnFhir />);
 
     await user.click(screen.getByRole("button", { name: "Run query" }));
-    await user.click(screen.getByRole("button", { name: "Fail query" }));
 
-    expect(mockShowToast).toHaveBeenCalledWith(
-      "SQL query failed",
-      "SQL query failed: syntax error",
-    );
+    expect(screen.getByText("SQL query card")).toBeInTheDocument();
+    expect(mockShowToast).not.toHaveBeenCalled();
   });
 });

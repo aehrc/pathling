@@ -139,13 +139,24 @@ than duplicating the status, progress, cancel, and download presentation.
 Every error message shown as a callout uses the shared
 `components/error/ErrorCallout.tsx`. It always renders the warning icon and
 always carries `role="alert"`, so errors look and behave the same wherever they
-appear. It takes a `message`, an optional bold `title`, optional `size` and
-`mt`, and children for recovery actions such as a retry button. Do not build a
-red `Callout.Root` directly.
+appear. Its body takes one of two mutually exclusive forms: a `message` string,
+or an `issues` list of `DisplayIssue` values, which renders one badged row per
+issue so that a failure carrying several issues keeps each one's severity. Build
+the issues form with `toDisplayIssues` from
+`components/error/errorPresentation.ts`, which derives the rows from a failure -
+preferring an OperationOutcome's diagnostics over the flattened message, and
+falling back to a fixed sentence when a failure carries nothing usable. Both
+forms also take an optional bold `title`, optional `size` and `mt`, and children
+for recovery actions such as a retry button. Do not build a red `Callout.Root`
+directly.
 
-A transient failure from an operation, such as an export or import job failing,
-is reported with `showToast` from the toast context rather than with a callout.
-Never pass an error callback into state that nothing renders.
+A failure is reported exactly once. A surface that displays a failure does not
+also notify: an operation's failure belongs in the card for that operation, where
+it stays until the card is closed. A notification is raised only where no surface
+can display the failure, which is a failed file download - the card is describing
+a job that succeeded, so the download site calls `showToast` itself with a title
+naming the download. Do not add a failure-reporting callback to a component that
+neither displays nor originates the failure.
 
 ### Naming
 

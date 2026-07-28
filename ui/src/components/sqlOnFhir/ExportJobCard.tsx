@@ -29,7 +29,8 @@ import { Cross2Icon, DownloadIcon, TrashIcon } from "@radix-ui/react-icons";
 import { Badge, Box, Button, Card, Flex, Text } from "@radix-ui/themes";
 import { useState } from "react";
 
-import { OperationOutcomeDisplay } from "../../components/error/OperationOutcomeDisplay";
+import { ErrorCallout } from "../../components/error/ErrorCallout";
+import { toDisplayIssues } from "../../components/error/errorPresentation";
 import { formatDateTime } from "../../utils";
 import { JobProgressIndicator } from "../JobProgressIndicator";
 
@@ -193,7 +194,9 @@ export function ExportJobCard({
           <JobProgressIndicator progress={job.progress} pendingLabel="Exporting..." size="1" />
         )}
 
-        {job.status === "failed" && job.error && <OperationOutcomeDisplay error={job.error} />}
+        {job.status === "failed" && job.error && (
+          <ErrorCallout issues={toDisplayIssues(job.error)} size="1" />
+        )}
 
         {job.status === "completed" &&
           job.manifest &&

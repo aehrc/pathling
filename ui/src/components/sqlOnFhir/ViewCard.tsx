@@ -34,6 +34,8 @@ import { config } from "../../config";
 import { useAuth } from "../../contexts/AuthContext";
 import { useViewRun } from "../../hooks";
 import { formatDateTime } from "../../utils";
+import { ErrorCallout } from "../error/ErrorCallout";
+import { toDisplayIssues } from "../error/errorPresentation";
 
 import type { ViewDefinition } from "../../api";
 import type { ViewExportOutputFormat } from "../../hooks";
@@ -41,7 +43,6 @@ import type { ViewJob } from "../../types/viewJob";
 
 interface ViewCardProps {
   job: ViewJob;
-  onError: (message: string) => void;
   onClose?: () => void;
 }
 
@@ -90,11 +91,10 @@ function formatCellValue(value: unknown): string {
  *
  * @param props - Component props.
  * @param props.job - The view job configuration.
- * @param props.onError - Callback for error handling (e.g., auth errors).
  * @param props.onClose - Optional callback to close/remove the card.
  * @returns The rendered view card component.
  */
-export function ViewCard({ job, onError, onClose }: Readonly<ViewCardProps>) {
+export function ViewCard({ job, onClose }: Readonly<ViewCardProps>) {
   const { fhirBaseUrl } = config;
   const { client } = useAuth();
   const accessToken = client?.state.tokenResponse?.access_token;
@@ -130,13 +130,6 @@ export function ViewCard({ job, onError, onClose }: Readonly<ViewCardProps>) {
       });
     }
   }, [status, job, execute]);
-
-  // Report errors to parent.
-  useEffect(() => {
-    if (error) {
-      onError(error.message);
-    }
-  }, [error, onError]);
 
   // Handle export by creating a new export instance.
   const handleExport = useCallback(
@@ -215,11 +208,7 @@ export function ViewCard({ job, onError, onClose }: Readonly<ViewCardProps>) {
           </Flex>
         )}
 
-        {error && (
-          <Text size="2" color="red">
-            View run failed: {error.message}
-          </Text>
-        )}
+        {error && <ErrorCallout issues={toDisplayIssues(error)} size="1" />}
 
         {isComplete && result && result.rows.length === 0 && (
           <Text size="2" color="gray">
@@ -272,7 +261,6 @@ export function ViewCard({ job, onError, onClose }: Readonly<ViewCardProps>) {
                   format={exportInstance.format}
                   createdAt={exportInstance.createdAt}
                   onClose={() => handleCloseExport(exportInstance.id)}
-                  onError={onError}
                 />
               ))}
           </>

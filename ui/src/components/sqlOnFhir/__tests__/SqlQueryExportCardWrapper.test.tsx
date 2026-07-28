@@ -16,11 +16,8 @@
  */
 
 /**
- * Tests for the ViewExportCardWrapper component.
- *
- * This test suite verifies that the ViewExportCardWrapper correctly manages
- * the export lifecycle, starts exports on mount, and passes the correct props
- * to the ViewExportCard component.
+ * Tests for the SqlQueryExportCardWrapper component, which manages a SQL query
+ * export job and reports its outcome.
  *
  * @author John Grimes
  */
@@ -28,20 +25,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { render, screen, waitFor } from "../../../test/testUtils";
-import { ViewExportCardWrapper } from "../ViewExportCardWrapper";
+import { SqlQueryExportCardWrapper } from "../SqlQueryExportCardWrapper";
 
-import type { ViewDefinition } from "../../../api";
-import type { ViewExportOutputFormat } from "../../../hooks";
+import type { SqlQueryLibrary, SqlQueryRequest } from "../../../types/sqlQuery";
 
-// Define mock functions at module level.
+// The state of the export job the wrapper is managing.
 const mockStartWith = vi.fn();
 const mockCancel = vi.fn();
-const mockDeleteJob = vi.fn();
 let mockStatus: string = "idle";
 let mockResult: object | null = null;
 let mockError: Error | null = null;
 let mockProgress: number | undefined = undefined;
-let mockRequest: { format: string } | undefined = undefined;
 
 // Captures the failure handler the wrapper gives the download hook, so that a
 // download failure can be reported to it as the hook would report it.
@@ -58,85 +52,64 @@ vi.mock("../../../contexts/ToastContext", () => ({
 // prove no failure callback is wired into it.
 let capturedExportOptions: { onError?: (error: Error) => void } | undefined = undefined;
 
-// Mock useViewExport hook.
 vi.mock("../../../hooks", () => ({
-  useViewExport: (options?: { onError?: (error: Error) => void }) => {
+  useSqlQueryExport: (options?: { onError?: (error: Error) => void }) => {
     capturedExportOptions = options;
     return {
       startWith: mockStartWith,
       cancel: mockCancel,
-      deleteJob: mockDeleteJob,
       status: mockStatus,
       result: mockResult,
       error: mockError,
       progress: mockProgress,
-      request: mockRequest,
     };
   },
   useDownloadFile: (onError?: (error: Error) => void) => {
     reportDownloadFailure = onError;
     return vi.fn();
   },
+  parseSqlQueryExportManifest: () => [],
 }));
 
-// Track props passed to ViewExportCard.
-interface ViewExportCardMockProps {
-  job: {
-    id: string;
-    status: string;
-    progress: number | null;
-    error: Error | null;
-    request: { format: string };
-  };
+// The presentational card is mocked so that its props can be inspected.
+interface ExportJobCardMockProps {
+  job: { status: string; progress: number | null; error: Error | null; format: string };
   onCancel: () => void;
-  onDownload: () => void;
+  onDownload: (url: string, filename: string) => void;
   onClose: () => void;
-  onDelete: () => void;
 }
 
-let lastViewExportCardProps: ViewExportCardMockProps | null = null;
+let lastExportJobCardProps: ExportJobCardMockProps | null = null;
 
-// Mock ViewExportCard to capture props.
-vi.mock("../ViewExportCard", () => ({
-  ViewExportCard: (props: ViewExportCardMockProps) => {
-    lastViewExportCardProps = props;
+vi.mock("../ExportJobCard", () => ({
+  ExportJobCard: (props: ExportJobCardMockProps) => {
+    lastExportJobCardProps = props;
     return (
-      <div data-testid="view-export-card">
+      <div data-testid="export-job-card">
         <span data-testid="export-status">{props.job.status}</span>
-        <span data-testid="export-format">{props.job.request.format}</span>
+        <span data-testid="export-format">{props.job.format}</span>
       </div>
     );
   },
 }));
 
-describe("ViewExportCardWrapper", () => {
+describe("SqlQueryExportCardWrapper", () => {
   const defaultOnClose = vi.fn();
-
-  const defaultViewDefinition: ViewDefinition = {
-    resourceType: "ViewDefinition",
-    name: "test-view",
-    resource: "Patient",
-    status: "active",
-    select: [],
-  };
+  const storedSource: SqlQueryRequest = { mode: "stored", libraryId: "library-1" };
 
   /**
    * Renders the wrapper with the default props, overriding only what a test
    * cares about.
    *
    * @param overrides - The props to override.
-   * @param overrides.id - The export instance identifier.
-   * @param overrides.format - The export output format.
+   * @param overrides.source - The query source the export is derived from.
    * @returns The render result.
    */
-  function renderWrapper(
-    overrides: { id?: string; format?: ViewExportOutputFormat } = {},
-  ): ReturnType<typeof render> {
+  function renderWrapper(overrides: { source?: SqlQueryRequest } = {}): ReturnType<typeof render> {
     return render(
-      <ViewExportCardWrapper
-        id={overrides.id ?? "export-1"}
-        viewDefinition={defaultViewDefinition}
-        format={overrides.format ?? "csv"}
+      <SqlQueryExportCardWrapper
+        source={overrides.source ?? storedSource}
+        format="csv"
         createdAt={new Date("2024-01-15T10:00:00Z")}
         onClose={defaultOnClose}
       />,
@@ -149,8 +122,7 @@ describe("ViewExportCardWrapper", () => {
     mockResult = null;
     mockError = null;
     mockProgress = undefined;
-    mockRequest = { format: "csv" };
-    lastViewExportCardProps = null;
+    lastExportJobCardProps = null;
     reportDownloadFailure = undefined;
     capturedExportOptions = undefined;
   });
@@ -160,26 +132,53 @@ describe("ViewExportCardWrapper", () => {
   });
 
   describe("Initialisation", () => {
-    it("starts export on mount", async () => {
+    // A stored query is exported by reference to its library.
+    it("starts the export from a stored query on mount", async () => {
       renderWrapper();
 
       await waitFor(() => {
         expect(mockStartWith).toHaveBeenCalledWith({
-          views: [{ viewDefinition: defaultViewDefinition }],
+          mode: "stored",
+          libraryId: "library-1",
           format: "csv",
           header: true,
         });
       });
     });
 
-    it("only starts export once even if re-rendered", async () => {
+    // An inline query carries its library with it.
+    it("starts the export from an inline query on mount", async () => {
+      const library: SqlQueryLibrary = {
+        resourceType: "Library",
+        status: "active",
+        type: {
+          coding: [
+            {
+              system: "http://hl7.org/fhir/uv/sql-on-fhir/CodeSystem/library-type",
+              code: "sql-query",
+            },
+          ],
+        },
+        content: [{ contentType: "application/sql", data: "U0VMRUNUIDE=" }],
+      };
+      renderWrapper({ source: { mode: "inline", library } });
+
+      await waitFor(() => {
+        expect(mockStartWith).toHaveBeenCalledWith({
+          mode: "inline",
+          library,
+          format: "csv",
+          header: true,
+        });
+      });
+    });
+
+    it("starts the export only once when re-rendered", async () => {
       const { rerender } = renderWrapper();
 
-      // Rerender with same props.
       rerender(
-        <ViewExportCardWrapper
-          id="export-1"
-          viewDefinition={defaultViewDefinition}
+        <SqlQueryExportCardWrapper
+          source={storedSource}
           format="csv"
           createdAt={new Date("2024-01-15T10:00:00Z")}
           onClose={defaultOnClose}
@@ -187,26 +186,14 @@ describe("ViewExportCardWrapper", () => {
       );
 
       await waitFor(() => {
-        // Should only be called once.
         expect(mockStartWith).toHaveBeenCalledTimes(1);
-      });
-    });
-
-    it("starts export with different formats", async () => {
-      renderWrapper({ format: "ndjson" });
-
-      await waitFor(() => {
-        expect(mockStartWith).toHaveBeenCalledWith({
-          views: [{ viewDefinition: defaultViewDefinition }],
-          format: "ndjson",
-          header: true,
-        });
       });
     });
   });
 
   describe("Status mapping", () => {
     it.each([
+      ["idle", "pending"],
       ["pending", "in_progress"],
       ["in-progress", "in_progress"],
       ["complete", "completed"],
@@ -214,12 +201,6 @@ describe("ViewExportCardWrapper", () => {
       ["cancelled", "cancelled"],
     ])("maps %s status to %s", (status, expected) => {
       mockStatus = status;
-      if (status === "complete") {
-        mockResult = { parameter: [] };
-      }
-      if (status === "error") {
-        mockError = new Error("Export failed");
-      }
 
       renderWrapper();
 
@@ -227,54 +208,19 @@ describe("ViewExportCardWrapper", () => {
     });
   });
 
-  describe("Props passed to ViewExportCard", () => {
-    it("passes correct id to ViewExportCard", () => {
-      renderWrapper({ id: "my-unique-export-id" });
-
-      expect(lastViewExportCardProps?.job.id).toBe("my-unique-export-id");
-    });
-
-    it("passes progress to ViewExportCard", () => {
-      mockStatus = "in-progress";
-      mockProgress = 45;
-
-      renderWrapper();
-
-      expect(lastViewExportCardProps?.job.progress).toBe(45);
-    });
-
-    it("passes format from request to ViewExportCard", () => {
-      mockRequest = { format: "parquet" };
-
-      renderWrapper({ format: "parquet" });
-
-      expect(screen.getByTestId("export-format")).toHaveTextContent("parquet");
-    });
-
-    it("passes cancel function to ViewExportCard", () => {
-      renderWrapper();
-
-      expect(lastViewExportCardProps?.onCancel).toBe(mockCancel);
-    });
-
-    it("passes delete function to ViewExportCard", () => {
-      renderWrapper();
-
-      expect(lastViewExportCardProps?.onDelete).toBe(mockDeleteJob);
-    });
-
-    it("passes onClose to ViewExportCard", () => {
-      renderWrapper();
-
-      expect(lastViewExportCardProps?.onClose).toBe(defaultOnClose);
-    });
-  });
-
   describe("Rendering", () => {
-    it("renders ViewExportCard", () => {
+    it("renders the shared export job card with the chosen format", () => {
       renderWrapper();
 
-      expect(screen.getByTestId("view-export-card")).toBeInTheDocument();
+      expect(screen.getByTestId("export-job-card")).toBeInTheDocument();
+      expect(screen.getByTestId("export-format")).toHaveTextContent("csv");
+    });
+
+    it("passes the cancel and close callbacks to the card", () => {
+      renderWrapper();
+
+      expect(lastExportJobCardProps?.onCancel).toBe(mockCancel);
+      expect(lastExportJobCardProps?.onClose).toBe(defaultOnClose);
     });
   });
 
@@ -283,7 +229,6 @@ describe("ViewExportCardWrapper", () => {
   describe("Download failure", () => {
     it("raises a notification naming the download", () => {
       mockStatus = "complete";
-      mockResult = { parameter: [] };
 
       renderWrapper();
       reportDownloadFailure?.(new Error("Download failed: 403 - Forbidden"));
@@ -300,7 +245,7 @@ describe("ViewExportCardWrapper", () => {
   describe("Export job failure", () => {
     it("hands the failure to the card and raises no notification", () => {
       mockStatus = "error";
-      mockError = new Error("View export failed: 500 - Internal error");
+      mockError = new Error("SQL query export failed: 500 - Internal error");
 
       renderWrapper();
       // Driving whatever callback the wrapper wired in, so that a reinstated
@@ -308,7 +253,7 @@ describe("ViewExportCardWrapper", () => {
       capturedExportOptions?.onError?.(mockError);
 
       expect(capturedExportOptions?.onError).toBeUndefined();
-      expect(lastViewExportCardProps?.job.error).toBe(mockError);
+      expect(lastExportJobCardProps?.job.error).toBe(mockError);
       expect(mockShowToast).not.toHaveBeenCalled();
     });
   });

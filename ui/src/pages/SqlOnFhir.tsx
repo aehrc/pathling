@@ -23,14 +23,13 @@
  */
 
 import { Box, Flex, Heading } from "@radix-ui/themes";
-import { useCallback, useState } from "react";
+import { useState } from "react";
 
 import { CapabilityGuard } from "../components/auth/CapabilityGuard";
 import { SqlOnFhirForm } from "../components/sqlOnFhir/SqlOnFhirForm";
 import { SqlQueryCard } from "../components/sqlOnFhir/SqlQueryCard";
 import { extractRequestSql } from "../components/sqlOnFhir/sqlQueryFormHelpers";
 import { ViewCard } from "../components/sqlOnFhir/ViewCard";
-import { useToast } from "../contexts/ToastContext";
 import { useSaveSqlQueryLibrary, useSaveViewDefinition } from "../hooks";
 
 import type { SqlOnFhirMode } from "../components/sqlOnFhir/SqlOnFhirForm";
@@ -55,19 +54,6 @@ export function SqlOnFhir() {
   // Track all view query jobs and SQL query jobs as a single timeline so
   // they can be sorted by createdAt regardless of source.
   const [pageJobs, setPageJobs] = useState<PageJob[]>([]);
-
-  const { showToast } = useToast();
-
-  // The cards report a failure from an effect keyed on this callback, so it
-  // must keep a stable identity or each notification would trigger another.
-  const handleViewError = useCallback(
-    (message: string) => showToast("View execution failed", message),
-    [showToast],
-  );
-  const handleSqlQueryError = useCallback(
-    (message: string) => showToast("SQL query failed", message),
-    [showToast],
-  );
 
   // Mutations: ViewDefinition save and SQL query Library save.
   const { mutateAsync: saveViewDefinition, isPending: isSavingViewDefinition } =
@@ -148,14 +134,12 @@ export function SqlOnFhir() {
                   <ViewCard
                     key={entry.job.id}
                     job={entry.job as ViewJob}
-                    onError={handleViewError}
                     onClose={() => handleCloseJob(entry.job.id)}
                   />
                 ) : (
                   <SqlQueryCard
                     key={entry.job.id}
                     job={entry.job as SqlQueryJob}
-                    onError={handleSqlQueryError}
                     onClose={() => handleCloseJob(entry.job.id)}
                   />
                 ),
