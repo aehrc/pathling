@@ -192,7 +192,8 @@ public class AsyncAspect {
                   executor.submit(
                       () -> {
                         // Resolve the job once, up front. See removeFilesIfOwned for why the
-                        // clean-up on the way out cannot look it up again.
+                        // clean-up on the way out cannot look it up again, and for what an empty
+                        // result here means.
                         final Job<?> currentJob = jobRegistry.get(jobId);
                         boolean failed = false;
                         try {
@@ -309,11 +310,17 @@ public class AsyncAspect {
    * output, whether or not a client asked for it to be deleted.
    *
    * <p>The job is passed in rather than looked up, because by this point a {@code DELETE} may
-   * already have removed it from the registry. Resolving it when the task starts is safe even
-   * though the task is submitted from inside {@link JobRegistry#getOrCreate}: that method and
-   * {@link JobRegistry#get} are both synchronized, so the lookup blocks until the registration
-   * completes, and no {@code DELETE} can precede it because the client does not learn the job
-   * identifier until the kick-off response is returned.
+   * already have removed it from the registry, and a lookup would then find nothing and skip a
+   * removal that is owed.
+   *
+   * <p>A job that was already absent when the task started owns its removal too. The task resolves
+   * the job as its first statement, and {@link JobRegistry#getOrCreate} holds the same monitor as
+   * {@link JobRegistry#get} until the registration completes, so the lookup cannot observe the gap
+   * before registration. The only way it can come back empty is a {@code DELETE} that removed the
+   * job in the narrow window between the task entering its body and that first statement running.
+   * Such a request cannot have taken the claim, because the work had not terminated when it asked,
+   * and it is the only thing in the server that removes a job from the registry. Removing an absent
+   * directory is a no-op, so nothing is lost if that reasoning is ever widened.
    *
    * <p>Nothing is thrown from here, because this runs in a {@code finally} block where an
    * incidental exception would replace the job's own.
@@ -326,7 +333,7 @@ public class AsyncAspect {
       @Nonnull final String jobId, @Nullable final Job<?> job, final boolean failed) {
     // markTerminatedAndClaim is what records that the job's thread has finished, so it has to be
     // evaluated before any short-circuiting on the failure flag.
-    final boolean claimedDeletion = job != null && job.markTerminatedAndClaim();
+    final boolean claimedDeletion = job == null || job.markTerminatedAndClaim();
     if (!claimedDeletion && !failed) {
       return;
     }

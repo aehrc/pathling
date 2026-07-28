@@ -355,10 +355,9 @@ class AsyncAspectTest {
 
   @Test
   void removalUsesTheCapturedJobRatherThanTheRegistry() throws Throwable {
-    // The delete request lands while the work is running, so by the time the task unwinds the job
-    // is
-    // no longer in the registry. A lookup at that point would find nothing and skip the removal, so
-    // the task must use the reference it captured when it started.
+    // The delete request lands while the work is running, so the job has left the registry by the
+    // time the task unwinds. A lookup at that point would find nothing and skip the removal, so the
+    // task must use the reference it captured when it started.
     final Callable<IBaseResource> task = captureSubmittedTask();
     final String jobId = assertExecutedAsync();
     final Job<?> job = jobRegistry.get(jobId);
@@ -376,6 +375,25 @@ class AsyncAspectTest {
     task.call();
 
     assertNull(jobRegistry.get(jobId));
+    verify(jobProvider).deleteJobFiles(jobId);
+  }
+
+  @Test
+  void removalHappensWhenTheJobWasAlreadyGoneWhenTheTaskStarted() throws Throwable {
+    // A delete request can land in the narrow window between the task entering its body and its
+    // first statement resolving the job, leaving the task with nothing. That request cannot have
+    // taken the claim, because the work had not terminated when it asked, so this thread still owns
+    // the removal. Skipping it here would orphan the output directory permanently.
+    final Callable<IBaseResource> task = captureSubmittedTask();
+    final String jobId = assertExecutedAsync();
+    final Job<?> job = jobRegistry.get(jobId);
+    assertNotNull(job);
+    assertFalse(job.markDeletedAndClaim());
+    assertTrue(jobRegistry.remove(job));
+    assertNull(jobRegistry.get(jobId));
+
+    task.call();
+
     verify(jobProvider).deleteJobFiles(jobId);
   }
 

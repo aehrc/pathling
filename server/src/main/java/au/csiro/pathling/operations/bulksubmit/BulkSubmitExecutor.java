@@ -182,9 +182,8 @@ public class BulkSubmitExecutor {
       final Optional<String> ownerId = Optional.ofNullable(submission.ownerId());
       final Job<Object> job = new Job<>(jobId, "bulk-submit-manifest", resultFuture, ownerId);
       // This job's work is not run by the asynchronous request machinery, so no thread will ever
-      // signal its termination. Marking it terminated up front is what lets a deletion request
-      // clean
-      // up itself, rather than deferring to a signal that never arrives.
+      // signal its termination. Marking it terminated up front is what lets a deletion request do
+      // its own clean-up, rather than defer it to a signal that never arrives.
       job.markTerminated();
       jobRegistry.register(job);
 

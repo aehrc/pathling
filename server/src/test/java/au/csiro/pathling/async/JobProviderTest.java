@@ -449,12 +449,6 @@ class JobProviderTest {
     assertThat(Files.exists(jobsDir)).isFalse();
   }
 
-  /**
-   * Registers a running job through the tag-based factory, so it is present in both the id and tag
-   * maps and can be removed by the delete path exactly as a real asynchronous job would be.
-   *
-   * @return the registered job
-   */
   // -- Deleting a job: reporting a failed removal --
 
   @Test
@@ -543,6 +537,12 @@ class JobProviderTest {
     return spark;
   }
 
+  /**
+   * Registers a running job through the tag-based factory, so it is present in both the id and tag
+   * maps and can be removed by the delete path exactly as a real asynchronous job would be.
+   *
+   * @return the registered job
+   */
   @Nonnull
   private Job<IBaseResource> registerRunningJob() {
     return jobRegistry.getOrCreate(
