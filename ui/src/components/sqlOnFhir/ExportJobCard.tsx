@@ -159,7 +159,7 @@ export function ExportJobCard({
             </Text>
           </Box>
           {isActive && (
-            <Button size="1" variant="ghost" color="red" onClick={onCancel}>
+            <Button size="1" variant="soft" color="red" onClick={onCancel}>
               <Cross2Icon />
               Cancel
             </Button>
