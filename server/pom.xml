@@ -775,6 +775,10 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-failsafe-plugin</artifactId>
+            <!-- The system test settings belong to this execution alone. Declaring them on the
+                 plugin would also apply them to the default execution inherited from the main
+                 build, pointing it at the main classes directory and the SystemTest group, which
+                 silently reduces the integration test suite to nothing. -->
             <executions>
               <execution>
                 <id>system-test</id>
@@ -782,32 +786,34 @@
                   <goal>integration-test</goal>
                   <goal>verify</goal>
                 </goals>
+                <configuration>
+                  <classesDirectory>${project.build.outputDirectory}</classesDirectory>
+                  <includes combine.children="override">
+                    <include>**/*.java</include>
+                  </includes>
+                  <groups>SystemTest</groups>
+                  <systemPropertyVariables>
+                    <pathling.systemTest.version>${git.commit.id}</pathling.systemTest.version>
+                    <pathling.systemTest.auth.issuer>
+                      https://auth.ontoserver.csiro.au/auth/realms/aehrc
+                    </pathling.systemTest.auth.issuer>
+                    <pathling.systemTest.auth.clientId>
+                      pathling-test
+                    </pathling.systemTest.auth.clientId>
+                    <pathling.systemTest.auth.requestedScope>
+                      openid user/*.*
+                    </pathling.systemTest.auth.requestedScope>
+                    <pathling.systemTest.terminology.serverUrl>
+                      https://tx.ontoserver.csiro.au/fhir
+                    </pathling.systemTest.terminology.serverUrl>
+                    <pathling.systemTest.dockerRepository>
+                      ${pathling.fhirServerDockerRepo}
+                    </pathling.systemTest.dockerRepository>
+                    <spring.profiles.active>system-test</spring.profiles.active>
+                  </systemPropertyVariables>
+                </configuration>
               </execution>
             </executions>
-            <configuration>
-              <classesDirectory>${project.build.outputDirectory}</classesDirectory>
-              <includes>
-                <include>**/*.java</include>
-              </includes>
-              <groups>SystemTest</groups>
-              <systemPropertyVariables>
-                <pathling.systemTest.version>${git.commit.id}</pathling.systemTest.version>
-                <pathling.systemTest.auth.issuer>
-                  https://auth.ontoserver.csiro.au/auth/realms/aehrc
-                </pathling.systemTest.auth.issuer>
-                <pathling.systemTest.auth.clientId>pathling-test</pathling.systemTest.auth.clientId>
-                <pathling.systemTest.auth.requestedScope>
-                  openid user/*.*
-                </pathling.systemTest.auth.requestedScope>
-                <pathling.systemTest.terminology.serverUrl>
-                  https://tx.ontoserver.csiro.au/fhir
-                </pathling.systemTest.terminology.serverUrl>
-                <pathling.systemTest.dockerRepository>
-                  ${pathling.fhirServerDockerRepo}
-                </pathling.systemTest.dockerRepository>
-                <spring.profiles.active>system-test</spring.profiles.active>
-              </systemPropertyVariables>
-            </configuration>
           </plugin>
           <plugin>
             <groupId>com.google.cloud.tools</groupId>
@@ -904,6 +910,10 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-failsafe-plugin</artifactId>
+            <!-- The system test settings belong to this execution alone. Declaring them on the
+                 plugin would also apply them to the default execution inherited from the main
+                 build, pointing it at the main classes directory and the SystemTest group, which
+                 silently reduces the integration test suite to nothing. -->
             <executions>
               <execution>
                 <id>system-test</id>
@@ -911,32 +921,34 @@
                   <goal>integration-test</goal>
                   <goal>verify</goal>
                 </goals>
+                <configuration>
+                  <classesDirectory>${project.build.outputDirectory}</classesDirectory>
+                  <includes combine.children="override">
+                    <include>**/*.java</include>
+                  </includes>
+                  <groups>SystemTest</groups>
+                  <systemPropertyVariables>
+                    <pathling.systemTest.version>${git.commit.id}</pathling.systemTest.version>
+                    <pathling.systemTest.auth.issuer>
+                      https://auth.ontoserver.csiro.au/auth/realms/aehrc
+                    </pathling.systemTest.auth.issuer>
+                    <pathling.systemTest.auth.clientId>
+                      pathling-test
+                    </pathling.systemTest.auth.clientId>
+                    <pathling.systemTest.auth.requestedScope>
+                      openid user/*.*
+                    </pathling.systemTest.auth.requestedScope>
+                    <pathling.systemTest.terminology.serverUrl>
+                      https://tx.ontoserver.csiro.au/fhir
+                    </pathling.systemTest.terminology.serverUrl>
+                    <pathling.systemTest.dockerRepository>
+                      ${pathling.fhirServerDockerRepo}
+                    </pathling.systemTest.dockerRepository>
+                    <spring.profiles.active>system-test</spring.profiles.active>
+                  </systemPropertyVariables>
+                </configuration>
               </execution>
             </executions>
-            <configuration>
-              <classesDirectory>${project.build.outputDirectory}</classesDirectory>
-              <includes>
-                <include>**/*.java</include>
-              </includes>
-              <groups>SystemTest</groups>
-              <systemPropertyVariables>
-                <pathling.systemTest.version>${git.commit.id}</pathling.systemTest.version>
-                <pathling.systemTest.auth.issuer>
-                  https://auth.ontoserver.csiro.au/auth/realms/aehrc
-                </pathling.systemTest.auth.issuer>
-                <pathling.systemTest.auth.clientId>pathling-test</pathling.systemTest.auth.clientId>
-                <pathling.systemTest.auth.requestedScope>
-                  openid user/*.*
-                </pathling.systemTest.auth.requestedScope>
-                <pathling.systemTest.terminology.serverUrl>
-                  https://tx.ontoserver.csiro.au/fhir
-                </pathling.systemTest.terminology.serverUrl>
-                <pathling.systemTest.dockerRepository>
-                  ${pathling.fhirServerDockerRepo}
-                </pathling.systemTest.dockerRepository>
-                <spring.profiles.active>system-test</spring.profiles.active>
-              </systemPropertyVariables>
-            </configuration>
           </plugin>
           <plugin>
             <groupId>com.google.cloud.tools</groupId>
