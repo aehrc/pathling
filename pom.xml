@@ -94,7 +94,7 @@
     <pathling.derbyVersion>10.16.1.1</pathling.derbyVersion>
     <!-- Java Object Layout, used by the benchmark module to measure retained heap. -->
     <pathling.jolVersion>0.17</pathling.jolVersion>
-    <pathling.bulkExportVersion>1.0.5-SNAPSHOT</pathling.bulkExportVersion>
+    <pathling.bulkExportVersion>1.1.0</pathling.bulkExportVersion>
     <pathling.fhirAuthVersion>1.0.0</pathling.fhirAuthVersion>
     <!-- Spark brings in a Netty version with published vulnerabilities, so the whole family is
          pinned to a patched release. -->
