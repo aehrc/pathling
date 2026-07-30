@@ -54,7 +54,7 @@
     <pathling.fhirServerDockerTag>latest</pathling.fhirServerDockerTag>
     <pathling.dockerBaseImage>amazoncorretto:21</pathling.dockerBaseImage>
     <pathling.awsSdkVersion>2.40.3</pathling.awsSdkVersion>
-    <pathling.bulkExportVersion>1.0.5-SNAPSHOT</pathling.bulkExportVersion>
+    <pathling.bulkExportVersion>1.1.0</pathling.bulkExportVersion>
     <pathling.fhirAuthVersion>1.0.0</pathling.fhirAuthVersion>
 
     <!-- The JVM module options required to run Pathling on Spark with Java 21.
