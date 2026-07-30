@@ -666,6 +666,11 @@ class ImportPnpOperationIT {
    * Tests that a manifest with a poisoned type field containing path traversal sequences causes the
    * $import-pnp job to fail with an error, and that no file can be retrieved via the
    * /jobs/{jobId}/{filename} endpoint.
+   *
+   * <p>From fhir-bulk-java 1.1.0 onwards the manifest is validated as it enters the library, so the
+   * poisoned type is rejected before any download is attempted. The executor's own check that a
+   * downloaded file resolves inside the download directory remains as a second line of defence, and
+   * is covered directly by {@code ImportPnpExecutorTest}.
    */
   @Test
   void testPoisonedManifestTypeFailsJobAndBlocksExfiltration() throws IOException {
@@ -748,7 +753,7 @@ class ImportPnpOperationIT {
                     .value(
                         diagnostics ->
                             assertThat(diagnostics.toString())
-                                .contains("outside the download directory")));
+                                .contains("is not a valid FHIR resource type name")));
 
     // Verify that the exfiltration request returns 404.
     webTestClient
