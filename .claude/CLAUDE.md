@@ -109,14 +109,6 @@ The FHIR search API specification is documented in `.claude/skills/fhir-search-s
 - Understanding chaining, reverse chaining (_has), and includes (_include, _revinclude)
 - Handling composite search parameters
 
-### FHIR Search Implementation Design
-
-The design document for the FHIR Search API implementation is at `.claude/fhir-search-design.md`. This document covers:
-- Architecture and component responsibilities
-- Testing strategy (unit tests for matchers vs integration tests)
-- Key design decisions (date range matching, modifier handling, `:not` semantics)
-- Supported parameter types and modifiers
-
 ### FHIR Search Parameters Registry
 
 The formal search parameters registry is available at `.claude/skills/fhir-search-spec/references/search-parameters.json`. This is a FHIR Bundle containing all standard SearchParameter definitions. Use this to:

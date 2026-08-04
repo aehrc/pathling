@@ -54,7 +54,3 @@ Consult these sources when:
 - Understanding chaining, reverse chaining (`_has`), and includes (`_include`, `_revinclude`)
 - Handling composite search parameters
 - Looking up a parameter's definition, type, or FHIRPath expression for a given resource type
-
-For the Pathling server's own FHIR Search API design (architecture, class responsibilities, testing
-strategy), see `.claude/fhir-search-design.md` instead — that document describes the implementation,
-not the specification.
