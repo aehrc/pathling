@@ -322,8 +322,6 @@ return system.filter(UcumUnit.UCUM_SYSTEM_URI::equals);
 
 ## Implementing New FHIRPath Features
 
-**For detailed checklist and template, see:** `.claude/artifacts/fhirpath-implementation-guide/`
-
 ### Implementation Process
 
 #### 1. Specification Review and Clarification
