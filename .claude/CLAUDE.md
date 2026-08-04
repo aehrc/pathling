@@ -76,7 +76,7 @@ library-runtime (shaded uber-jar of library-api)
 
 ### FHIRPath Specification
 
-The complete FHIRPath specification is available at `.claude/specs/FHIRPath.md`. This document should be consulted when:
+The complete FHIRPath specification is available at `.claude/skills/fhirpath-spec/references/FHIRPath.md`. This document should be consulted when:
 - Implementing FHIRPath operators and functions
 - Resolving questions about FHIRPath semantics and behavior
 - Verifying correct interpretation of the FHIRPath type system
@@ -84,7 +84,7 @@ The complete FHIRPath specification is available at `.claude/specs/FHIRPath.md`.
 
 ### FHIR-Specific FHIRPath Binding
 
-The FHIR-specific extensions and bindings for FHIRPath are documented in `.claude/specs/FHIR_FHIRpath.md`. This document should be consulted when:
+The FHIR-specific extensions and bindings for FHIRPath are documented in `.claude/skills/fhirpath-spec/references/FHIR_FHIRpath.md`. This document should be consulted when:
 - Understanding how FHIRPath works with FHIR resources and data types
 - Implementing FHIR-specific functions (e.g., `getValue()`, `hasValue()`, `resolve()`, `extension()`)
 - Handling FHIR primitive type conversions and mappings to FHIRPath types
@@ -94,14 +94,14 @@ The FHIR-specific extensions and bindings for FHIRPath are documented in `.claud
 
 ### DSL Testing Strategy
 
-The input domain partitioning strategy for FHIRPath DSL tests is documented in `.claude/specs/DSL_Testing_Strategy.md`. Consult this when:
+The input domain partitioning strategy for FHIRPath DSL tests is documented in `.claude/skills/fhirpath-test-designer/references/DSL_Testing_Strategy.md`. Consult this when:
 - Designing test cases for new FHIRPath functions or operators
 - Creating test matrices in OpenSpec change specs
 - Understanding which input dimensions to test and why
 
 ### FHIR Search Specification
 
-The FHIR search API specification is documented in `.claude/specs/FHIR_search.md`. This document should be consulted when:
+The FHIR search API specification is documented in `.claude/skills/fhir-search-spec/references/FHIR_search.md`. This document should be consulted when:
 - Understanding FHIR RESTful search operations
 - Implementing search parameter types (string, token, reference, date, quantity, etc.)
 - Working with search prefixes (eq, ne, gt, lt, ge, le, sa, eb, ap) for ordered types
@@ -119,7 +119,7 @@ The design document for the FHIR Search API implementation is at `.claude/fhir-s
 
 ### FHIR Search Parameters Registry
 
-The formal search parameters registry is available at `.claude/specs/search-parameters.json`. This is a FHIR Bundle containing all standard SearchParameter definitions. Use this to:
+The formal search parameters registry is available at `.claude/skills/fhir-search-spec/references/search-parameters.json`. This is a FHIR Bundle containing all standard SearchParameter definitions. Use this to:
 - Look up search parameter definitions by resource type
 - Find the FHIRPath expression for a search parameter
 - Determine the type (string, token, reference, etc.) of a search parameter
@@ -128,15 +128,15 @@ The formal search parameters registry is available at `.claude/specs/search-para
 **Querying the registry with jq:**
 ```bash
 # Find all string search parameters for Patient
-cat .claude/specs/search-parameters.json | jq '.entry[].resource | select(.base[]? == "Patient" and .type == "string") | {code, expression, description}'
+cat .claude/skills/fhir-search-spec/references/search-parameters.json | jq '.entry[].resource | select(.base[]? == "Patient" and .type == "string") | {code, expression, description}'
 
 # Find a specific search parameter by code
-cat .claude/specs/search-parameters.json | jq '.entry[].resource | select(.code == "name") | {code, base, type, expression}'
+cat .claude/skills/fhir-search-spec/references/search-parameters.json | jq '.entry[].resource | select(.code == "name") | {code, base, type, expression}'
 ```
 
 ### Searching Large Specification Files
 
-**IMPORTANT:** The specification files `.claude/specs/FHIRPath.md` and `.claude/specs/FHIR_FHIRpath.md` are very large (hundreds of KB) and should NOT be loaded entirely into LLM context.
+**IMPORTANT:** The specification files `.claude/skills/fhirpath-spec/references/FHIRPath.md` and `.claude/skills/fhirpath-spec/references/FHIR_FHIRpath.md` are very large (hundreds of KB) and should NOT be loaded entirely into LLM context.
 
 **Use grep or similar search tools to locate relevant sections:**
 - Use the `Grep` tool to search for specific terms, concepts, or patterns
@@ -147,7 +147,7 @@ cat .claude/specs/search-parameters.json | jq '.entry[].resource | select(.code 
 **Example:**
 
 To find information about the 'where' operator in FHIRPath:
-1. Use Grep: pattern="where" path=".claude/specs/FHIRPath.md"
+1. Use Grep: pattern="where" path=".claude/skills/fhirpath-spec/references/FHIRPath.md"
 2. Identify line numbers from grep results
 3. Use Read to load just that section with content
 
@@ -327,8 +327,8 @@ return system.filter(UcumUnit.UCUM_SYSTEM_URI::equals);
 #### 1. Specification Review and Clarification
 
 **Review FHIRPath Specifications:**
-- Search `.claude/specs/FHIRPath.md` for relevant sections using Grep
-- Search `.claude/specs/FHIR_FHIRpath.md` for FHIR-specific bindings
+- Search `.claude/skills/fhirpath-spec/references/FHIRPath.md` for relevant sections using Grep
+- Search `.claude/skills/fhirpath-spec/references/FHIR_FHIRpath.md` for FHIR-specific bindings
 - Read specific sections with Read tool (use offset/limit for large files)
 
 **Clarify Ambiguities:**
