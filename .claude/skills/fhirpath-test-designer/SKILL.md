@@ -1,229 +1,241 @@
 ---
 name: fhirpath-test-designer
 description: >
-  Design and generate comprehensive FHIRPath test suites using input domain partitioning. Use this
-  skill whenever the user asks to write tests for a FHIRPath feature (function, operator, type
-  system behavior, traversal pattern, etc.), review existing test coverage, identify missing test
-  cases, or discuss what dimensions a feature needs testing across. Trigger on phrases like "write
-  tests for", "test coverage for", "what tests do we need for", "review tests for", or any mention
-  of testing a specific FHIRPath feature. Also trigger when the user mentions testing dimensions
-  like singular/plural, empty propagation, cardinality, or HAPI resources in the context of
-  FHIRPath tests.
+  Design and generate comprehensive FHIRPath test suites using input domain partitioning and
+  Pathling's DSL test framework. Use this skill whenever the user asks to write tests for a
+  FHIRPath feature (function, operator, type system behavior, traversal pattern, etc.), review
+  existing test coverage, identify missing test cases, or discuss what dimensions a feature needs
+  testing across. Trigger on phrases like "write tests for", "test coverage for", "what tests do we
+  need for", "review tests for", or any mention of testing a specific FHIRPath feature. Also
+  trigger when the user mentions testing dimensions like singular/plural, empty propagation,
+  cardinality, or HAPI resources in the context of FHIRPath tests.
 ---
 
 # FHIRPath Test Designer
 
-You design and generate comprehensive FHIRPath test suites by combining specification research, input domain partitioning, and the project's fluent DSL. Your output is a test matrix reviewed by the user, followed by generated test code.
+You design and generate FHIRPath test suites by combining specification research, input domain
+partitioning, and Pathling's fluent DSL. Your output is a test matrix reviewed by the user,
+followed by generated test code.
+
+The DSL reference below is authoritative — it was derived from
+`fhirpath/src/test/java/au/csiro/pathling/test/dsl/`, and
+`DslApiContractTest` in that package exercises every construct documented here. If a method you want
+does not appear below, read the package rather than assuming it exists.
+
+`references/DSL_Testing_Strategy.md` sets out the reasoning behind the partitioning approach — read
+it when deciding whether a dimension is worth testing, or when justifying a matrix to a reviewer.
 
 ## Workflow
 
-There are three phases. Complete each one before moving to the next, and present findings to the user for review between phases.
+Three phases. Present findings to the user between phases.
 
-### Phase 1: Spec Research
+### Phase 1: Spec research
 
-Before writing any tests, build a complete understanding of the feature under test. **Use the `fhirpath-spec` skill** for all specification lookups — it knows how to search the spec files, check FHIR bindings, and consult reference implementations.
+Use the `fhirpath-spec` skill for all specification lookups. Gather:
 
-Invoke the skill to gather:
-- **Signature** and **description** from the spec
-- **Input/output types** and **collection behavior**
-- **All spec examples** — these become mandatory test cases
-- **Edge cases** called out in the spec (nulls, empty propagation, boundary conditions)
-- **FHIR-specific considerations** (choice types, type operators, extensions, etc.)
-- **Ambiguities** — where the spec is unclear and reference implementations diverge
+- Signature and description
+- Input/output types and collection behaviour
+- All spec examples — these become mandatory test cases
+- Edge cases the spec calls out (empty propagation, boundary conditions, error conditions)
+- FHIR-specific considerations (choice types, primitive wrappers, extensions)
+- Ambiguities where the spec is unclear or reference implementations diverge
 
-Present the findings to the user. Flag any ambiguities or issues for resolution before proceeding to Phase 2.
+Flag ambiguities for resolution before Phase 2. Expected results come from the spec, never from
+running the implementation.
 
-### Phase 2: Test Matrix Design
+### Phase 2: Test matrix design
 
-Apply **input domain partitioning** to systematically identify test cases. The question driving test design is:
+Apply input domain partitioning. The driving question:
 
 > What inputs can this function receive, and what does the spec say should happen for each?
 
-#### Test Dimensions
-
-For each function, systematically consider these dimensions and determine which are relevant based on the function's signature and spec:
-
 | Dimension | Partitions | When relevant |
 |---|---|---|
-| **Core semantics** | Spec examples, basic behavior | Always |
-| **Emptiness** | `{}` literal, absent field, computed empty (`where(false)`) | Always for functions that accept collections |
-| **Cardinality** | Singular (0..1) vs non-singular (0..*) | When function operates on resource fields — singular fields are scalar columns in Spark, non-singular are array columns. Test both to catch representation bugs. |
-| **Element type** | Primitive, complex/backbone, choice type | When function accepts general Element input |
-| **Nesting** | Flat fields, nested fields, deeply nested | When function involves traversal |
-| **HAPI resource** | Real FHIR resource via `withSubject(IBaseResource)` | When the function involves resource traversal, choice types, FHIR type conversions, or element access patterns that differ between the map-based builder and real FHIR encoding |
+| **Core semantics** | Spec examples, basic behaviour | Always |
+| **Emptiness** | `{}` literal, typed-empty field (`stringEmpty`), computed empty (`where(false)`) | Always, for anything accepting collections |
+| **Cardinality** | Singular value vs array | Whenever the function reads model fields — see below |
+| **Element type** | Primitive, complex/backbone, choice type | When the function accepts general `Element` input |
+| **Nesting** | Flat, nested, deeply nested | When the function involves traversal |
+| **FHIR encoding** | Real resource via `withResource` | When behaviour depends on genuine FHIR encoding — see below |
 
-**The cardinality dimension deserves special attention.** In the SQL layer, singular FHIR elements (0..1) are represented as scalar columns while non-singular elements (0..*) are represented as array columns. A function that works correctly on a scalar column may fail on an array column or vice versa. When a function operates on resource fields, include at least one test with a singular field (e.g., `Patient.gender`) and one with a non-singular field (e.g., `Patient.name`).
+**Cardinality deserves special attention.** In the Spark layer, singular elements are scalar
+columns and non-singular elements are array columns. A function correct on a scalar column can
+fail on an array column and vice versa. Include at least one singular field (`.string("s", "v")`)
+and one array field (`.stringArray("a", "x", "y")`) whenever the function reads model fields.
 
-**When to require HAPI resource tests:** Some features cannot be adequately tested with the inline `ResourceDataBuilder` because the map-based representation doesn't capture the full FHIR encoding. Use `withSubject(IBaseResource)` when testing:
-- Choice types (`value[x]`) — the HAPI serialization produces the polymorphic structure
-- FHIR primitive type behavior (e.g., date comparison with `@` literals, code → string conversion)
-- Extensions — URL-based access patterns
-- `getValue()` / `hasValue()` — rely on FHIR primitive wrapper structure
-- Any feature where the Spark schema from real FHIR JSON differs from the simplified map schema
+**When to require a real FHIR resource (`withResource`)** — the map-based builder produces a
+synthetic resource whose type is always `Test`, so it cannot express:
 
-#### Building the Test Matrix
+- Real resource types and resource-prefixed paths (`Patient.name.given`)
+- Choice types (`value[x]`) as HAPI actually serialises them
+- Reference resolution (`resolve()`) and contained resources
+- Extensions and FHIR primitive-wrapper behaviour (`getValue()`, `hasValue()`)
+- Anything where the Spark schema from real FHIR JSON differs from the map schema
 
-Present a markdown table like this:
+Otherwise prefer `withSubject` — it is faster to read and write.
+
+Present a matrix and wait for review:
 
 ```markdown
-## Test Matrix for `functionName()`
+## Test matrix for `functionName()`
 
 | # | Test case | Dimension | Expression | Expected | Subject |
 |---|-----------|-----------|------------|----------|---------|
-| 1 | Basic usage | Core semantics | `'hello'.fn()` | `'HELLO'` | literal |
-| 2 | Spec example | Core semantics | `'abc'.fn()` | `'ABC'` | literal |
-| 3 | Empty literal | Emptiness | `{}.fn()` | `{}` | literal |
-| 4 | Singular field | Cardinality: 0..1 | `gender.fn()` | `'MALE'` | HAPI Patient |
-| 5 | Non-singular field | Cardinality: 0..* | `name.family.fn()` | `['SMITH','DOE']` | HAPI Patient |
-| 6 | Absent field | Emptiness: absent | `deceased.fn()` | `{}` | HAPI Patient |
-| 7 | Choice type | Element type | `value.ofType(string).fn()` | ... | HAPI Observation |
+| 1 | Spec example | Core semantics | `'abc'.fn()` | `'ABC'` | literal |
+| 2 | Empty literal | Emptiness | `{}.fn()` | `{}` | literal |
+| 3 | Typed-empty field | Emptiness | `emptyString.fn()` | `{}` | subject |
+| 4 | Singular field | Cardinality | `singleString.fn()` | `'V'` | subject |
+| 5 | Array field | Cardinality | `stringArray.fn()` | `['X','Y']` | subject |
+| 6 | Choice type | Element type | `Observation.value.ofType(string).fn()` | ... | resource |
 ```
 
-The **Subject** column indicates whether the test uses:
-- `literal` — inline FHIRPath expression only
-- `inline` — `withSubject("ResourceType", sb -> ...)` map-based builder
-- `HAPI Patient/Observation/etc.` — `withSubject(new Patient()...)` real FHIR resource
+Rules:
+- Vary one dimension at a time; hold the others constant
+- Combination tests only where the spec implies dimensions interact
+- Do not combinatorially explode independent dimensions
+- Flag any case whose expected result is uncertain
 
-**Rules for the matrix:**
-- One test per dimension where possible — vary one dimension while holding others constant
-- Combination tests only where the spec implies interaction between dimensions
-- Do NOT combinatorially explode independent dimensions
-- Expected results come from the spec, not from running the implementation
-- Flag any test case where the expected result is uncertain
+### Phase 3: Code generation
 
-Present the matrix to the user and wait for their review before generating code.
+## DSL reference
 
-### Phase 3: Code Generation
+**Location and naming.** Tests live in `fhirpath/src/test/java/au/csiro/pathling/fhirpath/dsl/`,
+named `<Capability>DslTest.java` — by capability (`StringFunctionsDslTest`), never by issue
+number. Extend `FhirPathDslTestBase`. Every file needs the CSIRO Apache-2.0 copyright header;
+copy it from a sibling test.
 
-Generate the test class using the project's fluent DSL.
-
-#### DSL Reference
-
-**Test base class:** Extend `FhirPathTestBase` (provides `builder()` and SparkSession lifecycle).
-
-**Builder methods:**
-```java
-// Grouping
-builder().group("Group name")
-
-// Assertions (all support optional description and optional context)
-.testEquals(expected, "expression")
-.testEquals(expected, "expression", "description")
-.testEquals(expected, "expression", context("contextExpr"))
-.testEquals(expected, "expression", context("contextExpr"), "description")
-.testTrue("expression")
-.testFalse("expression")
-.testEmpty("expression")
-.testError(ExceptionClass.class, "expression", "description")
-
-// Collection results
-.testEquals(List.of(1, 2, 3), "(1 ; 2 ; 3).fn()")
-
-// Inline resource subjects (map-based)
-.withSubject("Patient", sb -> sb
-    .string("id", "patient-1")
-    .integer("age", 30)
-    .stringArray("given", "John", "Jane")
-    .element("name", n -> n.string("family", "Smith"))
-    .elementArray("name",
-        n -> n.string("family", "Smith"),
-        n -> n.string("family", "Doe"))
-)
-
-// HAPI FHIR resource subjects
-.withSubject(createPatient())  // IBaseResource
-```
-
-**ResourceDataBuilder methods:**
-- Primitives: `string()`, `integer()`, `decimal()`, `bool()`
-- Arrays: `stringArray()`, `integerArray()`, `decimalArray()`, `boolArray()`
-- Complex: `element()` (single), `elementArray()` (multiple)
-
-**Note:** The strategy document mentions `stringEmpty()`, `elementEmpty()`, `choice()`, and `extension()` builder methods, but these do **not exist yet** in `ResourceDataBuilder`. For testing absent fields and choice types, use HAPI resources with `withSubject(IBaseResource)`. For testing empty input, use `{}` in the FHIRPath expression or `where(false)` to produce computed empty.
-
-#### Code Style and Test Organization
-
-Test classes cover a **class of related functions** (e.g., `StringFunctionsTest`, `CollectionFunctionsTest`), not a single function. Within that class, each function gets **one `@TestFactory` method** that covers all dimensions for that function using groups to organize them. Do not split a function's tests across multiple methods — groups within a single method handle the structure.
+**One `@FhirPathTest` method per function**, using `group()` to organise dimensions within it.
 
 ```java
-package com.example.fhirpath;
+package au.csiro.pathling.fhirpath.dsl;
 
-import com.example.fhirpath.test.FhirPathTestBase;
+import au.csiro.pathling.test.dsl.FhirPathDslTestBase;
+import au.csiro.pathling.test.dsl.FhirPathTest;
 import java.util.List;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.DynamicTest;
-import org.junit.jupiter.api.TestFactory;
 
-/**
- * Tests for FHIRPath string functions: startsWith(), endsWith(), contains(), etc.
- *
- * <p>Based on FHIRPath specification section 5.7 (String Manipulation).
- *
- * <p>Covers:
- * <ul>
- *   <li>... (list functions and key dimensions)
- * </ul>
- */
-public class StringFunctionsTest extends FhirPathTestBase {
+public class StringFunctionsDslTest extends FhirPathDslTestBase {
 
-  @TestFactory
-  Stream<DynamicTest> testStartsWith() {
+  @FhirPathTest
+  public Stream<DynamicTest> testUpper() {
     return builder()
-        .group("startsWith() spec examples")
-        .testTrue("'abcdefg'.startsWith('abc')")
-        .testFalse("'abcdefg'.startsWith('xyz')")
-
-        .group("startsWith() empty prefix")
-        .testTrue("'abcdefg'.startsWith('')", "Empty prefix always returns true")
-
-        .group("startsWith() empty propagation")
-        .testEmpty("{}.startsWith('abc')", "Empty input returns empty")
-        .testEmpty("'abc'.startsWith({})", "Empty argument returns empty")
-
-        .group("startsWith() on resource fields")
-        .withSubject("Patient", p -> p.string("id", "patient-1"))
-        .testTrue("id.startsWith('pat')", "Singular field (0..1)")
+        .withSubject(
+            sb ->
+                sb.stringEmpty("emptyString")
+                    .string("singleString", "test")
+                    .stringArray("stringArray", "one", "two"))
+        .group("upper() spec examples")
+        .testEquals("ABCDEFG", "'abcdefg'.upper()", "Lowercase input is uppercased")
+        .group("upper() empty propagation")
+        .testEmpty("{}.upper()", "Empty literal returns empty")
+        .testEmpty("emptyString.upper()", "Typed-empty field returns empty")
+        .group("upper() cardinality")
+        .testEquals("TEST", "singleString.upper()", "Singular field")
+        .testEquals(List.of("ONE", "TWO"), "stringArray.upper()", "Array field")
         .build();
   }
-
-  // ... one @TestFactory per function
 }
 ```
 
-**Naming:** Test classes are named by capability (`StringFunctionsTest`, `WhereAndFilteringTest`), never by stage or issue number.
+### Subject methods
 
-**HAPI resource helper methods:** When tests need HAPI resources, define `private static` factory methods at the top of the class:
+| Method | Notes |
+|---|---|
+| `withSubject(sb -> ...)` | Map-based synthetic resource. Fields are accessed **bare** — `stringArray.first()`, no resource-type prefix |
+| `withSubject(Map<String, Object>)` | Pre-built model map |
+| `withResource(IBaseResource)` | Real HAPI resource. Expressions are normally **resource-prefixed** — `Patient.name.given` |
 
-```java
-private static Patient createPatient() {
-    final Patient patient = new Patient();
-    patient.setId("patient-1");
-    patient.setActive(true);
-    // ...
-    return patient;
-}
+### Assertions — a description is mandatory on every one
+
+| Method | Signature |
+|---|---|
+| `testEquals` | `(Object expected, String expression, String description)` |
+| `testTrue` | `(String expression, String description)` |
+| `testFalse` | `(String expression, String description)` |
+| `testEmpty` | `(String expression, String description)` |
+| `testError` | `(String expression, String description)` — any error |
+| `testError` | `(String errorMessage, String expression, String description)` — specific message |
+| `group` | `(String groupName)` — prefixes subsequent descriptions as `group - description` |
+| `test` | `(String description, tc -> tc.expression(...).expectResult(...))` — low-level escape hatch |
+| `build` | Terminates the chain, returns `Stream<DynamicTest>` |
+
+There are **no** overloads without a description. `testEquals(expected, expression)` does not
+compile.
+
+### Model builder methods (`FhirPathModelBuilder`)
+
+Each type has a value form, an empty form, and an array form:
+
+| Type | Value | Empty | Array |
+|---|---|---|---|
+| String | `string(n, v)` | `stringEmpty(n)` | `stringArray(n, ...)` |
+| Integer | `integer(n, v)` | `integerEmpty(n)` | `integerArray(n, ...)` |
+| Decimal | `decimal(n, v)` | `decimalEmpty(n)` | `decimalArray(n, ...)` |
+| Boolean | `bool(n, v)` | `boolEmpty(n)` | `boolArray(n, ...)` |
+| Date | `date(n, v)` | `dateEmpty(n)` | `dateArray(n, ...)` |
+| DateTime | `dateTime(n, v)` | `dateTimeEmpty(n)` | `dateTimeArray(n, ...)` |
+| Time | `time(n, v)` | `timeEmpty(n)` | `timeArray(n, ...)` |
+| Coding | `coding(n, v)` | `codingEmpty(n)` | `codingArray(n, ...)` |
+| Quantity | `quantity(n, v)` | `quantityEmpty(n)` | `quantityArray(n, ...)` |
+| Complex | `element(n, b -> ...)` | `elementEmpty(n)` | `elementArray(n, b1, b2, ...)` |
+
+Date, DateTime, Time, Coding and Quantity take **FHIRPath literal strings** —
+`date("d", "2024-01-15")`, `quantity("q", "10.5 'mg'")`, `coding("c", "http://loinc.org|1234-5")`.
+
+Also available: `fhirType(FHIRDefinedType)` to annotate the FHIR type of the enclosing element,
+`choice(name)` to mark a choice element, and `fhirReference()` for a Reference with empty
+`reference` and `type` fields.
+
+For `type()` assertions, import `au.csiro.pathling.test.dsl.TypeInfoExpectation.toTypeInfo` and
+compare against `toTypeInfo("System.Integer(System.Any)")` or `toTypeInfo("FHIR.Patient(FHIR.Resource)")`.
+
+## Gotchas
+
+These are the ways generated tests actually break:
+
+1. **One subject per method.** `withSubject` and `withResource` set builder state consumed at
+   `build()` — they are **not** scoped to a `group()`. Calling either twice in one method means the
+   last call applies to *every* test case in that method. If two tests need different subjects,
+   they need different `@FhirPathTest` methods.
+2. **`withSubject` and `withResource` are mutually exclusive** — each clears the other.
+3. **The map-based subject's resource type is always `Test`.** Resource-prefixed expressions like
+   `Patient.name` will not resolve. Use `withResource` for those.
+4. **`testError` takes a message string, not an exception class.** `testError(SomeException.class, ...)`
+   does not compile.
+5. **There is no `context(...)` argument.** The DSL hardcodes the test case's context to null. If a
+   test genuinely needs a context expression, write it as a YAML case under
+   `fhirpath/src/test/resources/fhirpath-ptl/` instead.
+6. **A single-element `List.of(x)` expectation is unwrapped to `x`** before comparison, so both
+   forms are equivalent for one-item results. Use the bare value for readability.
+7. **Typed-empty vs absent are different.** `stringEmpty("f")` creates field `f` with a typed null;
+   omitting the field entirely means the path does not resolve. Test the dimension the spec cares
+   about.
+8. **`group()` persists** until the next `group()` call.
+
+## Running the tests
+
+```bash
+mvn test -pl fhirpath -Dtest=StringFunctionsDslTest              # one class
+mvn test -pl fhirpath -Dtest='StringFunctionsDslTest#testUpper'  # one method
+mvn spotless:apply -pl fhirpath                                  # format
 ```
 
-**Descriptions:** Include when the expression + group don't fully explain what's being tested. Omit when they're self-evident.
+## Reviewing existing tests
 
-## Reviewing Existing Tests
+1. Run Phase 1 for the function under test.
+2. Build the matrix as if writing from scratch.
+3. Compare against the existing tests and report:
+   - **Missing dimensions** — matrix rows with no corresponding test
+   - **Incorrect expectations** — assertions that contradict the spec
+   - **Redundant tests** — several tests covering one dimension without adding value
+   - **Missing FHIR-encoding coverage** — features needing `withResource` that only use `withSubject`
 
-When asked to review an existing test class:
+## What not to test
 
-1. Run Phase 1 (spec research) for the function under test
-2. Build the test matrix (Phase 2) as if writing from scratch
-3. Compare the matrix against existing tests:
-   - **Missing dimensions** — dimensions from the matrix with no corresponding test
-   - **Incorrect expectations** — test expectations that don't match the spec
-   - **Redundant tests** — multiple tests covering the same dimension without adding value
-   - **Missing HAPI tests** — features that need real FHIR resources but only use inline builder
-4. Present a gap analysis with specific recommendations
-
-## What NOT to Test
-
-- Unicode/emoji handling (unless spec explicitly defines it)
-- Large input sizes (trust SparkSQL)
-- Multiple variations of the same condition
-- Performance characteristics
+- Unicode/emoji handling unless the spec defines it
+- Large inputs or performance characteristics
+- Multiple variations of an identical condition
 - Exhaustive type combinations beyond what the spec defines
-- Cross-cutting infrastructure concerns (empty propagation, type encoding) that are tested once at the infrastructure level — unless the function has unique behavior for these cases
+- Cross-cutting infrastructure (empty propagation at the column level, type encoding) already
+  covered once at the infrastructure level — unless this function behaves unusually
