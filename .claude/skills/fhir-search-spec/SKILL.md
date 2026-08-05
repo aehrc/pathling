@@ -34,12 +34,16 @@ answers grounded in the local specification and registry files.
 2. **Read** the relevant section using offset/limit based on the grep results, with generous
    surrounding context (±30 lines) since examples and edge cases often sit near the definition.
 
-For the registry, query it with `jq` rather than reading the whole file:
+For the registry, query it with `jq` rather than reading the whole file. A shell command resolves
+paths against the working directory, not this skill's directory, so give the full path from the
+repository root:
 
 ```bash
+REGISTRY=.claude/skills/fhir-search-spec/references/search-parameters.json
+
 # Find all string search parameters for Patient
-cat references/search-parameters.json | jq '.entry[].resource | select(.base[]? == "Patient" and .type == "string") | {code, expression, description}'
+jq '.entry[].resource | select(.base[]? == "Patient" and .type == "string") | {code, expression, description}' "$REGISTRY"
 
 # Find a specific search parameter by code
-cat references/search-parameters.json | jq '.entry[].resource | select(.code == "name") | {code, base, type, expression}'
+jq '.entry[].resource | select(.code == "name") | {code, base, type, expression}' "$REGISTRY"
 ```

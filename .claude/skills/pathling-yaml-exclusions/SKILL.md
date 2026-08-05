@@ -86,17 +86,20 @@ of cases shares a shape, and remember they are unanchored: `"toQuantity"` also m
 
 ### Fields that do not work
 
-Three fields are parsed but never applied. Do not rely on them, and do not add new uses:
+Two fields are parsed but never applied. Do not rely on them, and do not add new uses:
 
 - **`glob` on an exclude block** — documented as scoping a block to certain test files, but never
   read. **Every block applies to every case file.** A rule you believe is scoped to one corpus
   file will silently mask matching cases everywhere.
 - **`desc` on a rule** — declared as a matcher but never converted to a predicate. Use `any`,
   which already matches descriptions.
-- **`disabled: true`** — works, and suppresses the rule entirely (the case runs unexcluded).
 
 Separately, the system property `au.csiro.pathling.test.yaml.exclusionsOnly` is read and logged
 but never applied — it does not filter anything. Ignore it.
+
+`disabled: true` on a rule, by contrast, does work: it suppresses the rule entirely, so the cases
+it was masking run unexcluded. See §3 below for using it, and the `disabledExclusions` property,
+to test whether a rule is still earning its place.
 
 ## Type taxonomy
 

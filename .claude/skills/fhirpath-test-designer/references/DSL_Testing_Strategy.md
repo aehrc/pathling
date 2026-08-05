@@ -33,7 +33,7 @@ For any FHIRPath function, systematically consider these dimensions:
 
 | Dimension | Partitions | Source |
 |---|---|---|
-| Emptiness | `{}` literal, typed-empty field, absent element, computed empty (e.g. `where(false)`) | FHIR + FHIRPath |
+| Emptiness | `{}` literal, typed-empty field, computed empty (e.g. `where(false)`), and — distinctly — an absent element, whose path does not resolve at all | FHIR + FHIRPath |
 | Element type | Primitive, complex/backbone, choice type, Extension | FHIR type system |
 | Cardinality | 0..1 (singular) vs 0..* (non-singular) | FHIR element definitions |
 | Nesting | Flat, nested, recursive (if applicable) | FHIR resource structure |
@@ -83,7 +83,7 @@ include a test matrix in the spec artifact as part of the acceptance criteria:
 |---------------------|-----------------------|-----------------------|----------|
 | Basic usage         | Core semantics        | `items.fn()`          | [a,b,c]  |
 | Empty literal       | Emptiness: literal    | `{}.fn()`             | {}       |
-| Absent field        | Emptiness: absent     | `absent.fn()`         | {}       |
+| Typed-empty field   | Emptiness: typed null | `emptyItems.fn()`     | {}       |
 | Computed empty      | Emptiness: computed   | `items.where(false).fn()` | {}   |
 | Singular primitive  | Cardinality: 0..1     | `fn(gender)`          | 'male'   |
 | Non-singular complex| Cardinality: 0..*     | `fn(name)`            | [n1,n2]  |
@@ -101,8 +101,9 @@ The test builder supports all partitions through its API:
 | Dimension | Builder support |
 |---|---|
 | `{}` literal | Used directly in FHIRPath expression: `{}.fn()` |
-| Typed-empty field | `sb.stringEmpty("field")`, `sb.integerEmpty("field")`, etc. |
-| Absent element | `sb.elementEmpty("field")` |
+| Typed-empty primitive | `sb.stringEmpty("field")`, `sb.integerEmpty("field")`, etc. — the field is **present**, carrying a typed null |
+| Empty complex element | `sb.elementEmpty("field")` — the field is **present**, carrying a null value. This is not an absent field |
+| Absent element | No builder support: omit the field entirely. The path then does not resolve, which is a different condition from returning empty — see gotcha 7 in `SKILL.md` |
 | Computed empty | Use filtering expressions: `field.where(false)` |
 | Singular primitive | `sb.string("field", "value")` |
 | Non-singular primitive | `sb.stringArray("field", "a", "b")` |

@@ -10,7 +10,7 @@ description: >
   "pin a reference implementation", "configure the version of X to use", or when a skill needs a
   stable local copy of an external GitHub repository.
 argument-hint: <ensure|configure> <org/repo> [--version <ref>] [--unattended]
-allowed-tools: Bash
+allowed-tools: Bash, AskUserQuestion
 ---
 
 # Cache a GitHub repo locally, pinned to a version

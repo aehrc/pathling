@@ -30,6 +30,11 @@ git diff $BASE_SHA..HEAD
 Read the linked issue and the governing spec section before judging behaviour. Use the
 `fhirpath-spec` skill for spec lookups — the spec decides, not intuition.
 
+When this rubric is being applied inside a dispatched subagent — the usual case, and what the
+paragraph above recommends — there is no user to answer a question, so pass `--unattended` to
+`fhirpath-spec`. Without it, a missing reference-implementation pin leaves that skill waiting on an
+answer that cannot arrive.
+
 ## Rubric
 
 Work through these in order. The first five are where FHIRPath implementations actually go wrong.

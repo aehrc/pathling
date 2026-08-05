@@ -20,6 +20,7 @@ package au.csiro.pathling.test.dsl;
 import static au.csiro.pathling.test.dsl.TypeInfoExpectation.toTypeInfo;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Stream;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Patient;
@@ -36,6 +37,10 @@ import org.junit.jupiter.api.DynamicTest;
  *
  * <p>When adding a method to {@link FhirPathModelBuilder} or {@link FhirPathTestBuilder}, add it
  * here too.
+ *
+ * <p>One method is deliberately not exercised: {@link FhirPathTestBuilder#test(String)} builds a
+ * case with no expression and no expectation, so it cannot be run. It is undocumented for that
+ * reason, and is the only public builder method this test does not cover.
  */
 public class DslApiContractTest extends FhirPathDslTestBase {
 
@@ -86,11 +91,28 @@ public class DslApiContractTest extends FhirPathDslTestBase {
         .testFalse("singleBool.not()", "testFalse")
         .testEmpty("emptyString", "testEmpty")
         .testError("singleString + 1", "testError with any error")
+        .testError(
+            "Math operator (+) requires the left operand to be singular.",
+            "integerArray + 1",
+            "testError with a specific message")
         .group("low-level escape hatch")
         .test("test() with an explicit case builder", tc -> tc.expression("1 + 1").expectResult(2))
         .test("test() expecting any error", tc -> tc.expression("'a' + 1").expectError())
         .group("type info expectations")
         .testEquals(toTypeInfo("System.Integer(System.Any)"), "(1).type()", "toTypeInfo")
+        .build();
+  }
+
+  @FhirPathTest
+  public Stream<DynamicTest> probeMapSubject() {
+    final Map<String, Object> model =
+        new FhirPathModelBuilder().string("preBuiltString", "value").build();
+
+    return builder()
+        .withSubject(model)
+        .group("withSubject(Map)")
+        .testEquals(
+            "value", "preBuiltString", "Pre-built model map, via FhirPathModelBuilder.build()")
         .build();
   }
 

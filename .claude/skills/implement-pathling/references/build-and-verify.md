@@ -24,13 +24,19 @@ mvn test -pl fhirpath -Dtest=YamlFhirPathTest                     # Pathling cor
 mvn test -pl fhirpath                                             # the module
 ```
 
-## Two gotchas that bite here
+## Three gotchas that bite here
 
-Both are recorded in `.claude/CLAUDE.md`; they matter at this step specifically.
+All are recorded in `.claude/CLAUDE.md`; they matter at this step specifically.
 
 - **Stale upstream modules produce nonsense errors.** `cannot access java.util.List` and similar
   from `-pl fhirpath` mean `utilities`, `encoders`, or `terminology` are stale, not that the code
-  is broken. Rebuild them with `-am`.
+  is broken. Rebuild them with `-am`. If `-am` alone does not clear it — `Unresolved compilation
+  problem: log cannot be resolved` at runtime, for instance — add `clean`.
+
+- **The last rung needs the `sql-on-fhir` submodule.** `mvn test -pl fhirpath` runs
+  `FhirViewShareableComplianceTest`, which reads the corpus from the `sql-on-fhir/` submodule, so it
+  needs `git submodule update --init` first. This bites under `--worktree` in particular:
+  `git worktree add` does not populate submodules, so a fresh worktree always starts without it.
 
 - **The exclusion baseline polices itself.** Excluded conformance cases are still executed and
   asserted to fail in the recorded way. `Excluded test passed when expected outcome was error` is

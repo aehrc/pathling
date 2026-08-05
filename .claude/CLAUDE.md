@@ -23,7 +23,10 @@ Build:
 - **Format before compiling.** `spotless:check` runs ahead of compilation, so an unformatted file
   fails the build as an error, not a warning. `mvn spotless:apply -pl <module>`.
 - **`cannot access java.util.List`** and similar nonsense errors from `-pl <module>` mean the
-  upstream modules are stale, not that the code is broken. Rebuild them with `-am`.
+  upstream modules are stale, not that the code is broken. Rebuild them with `-am`. An IDE build
+  running against the same tree can leave worse behind: classes compiled without Lombok, which pass
+  `-am` and then fail at runtime with `Unresolved compilation problem: log cannot be resolved`. That
+  one needs `clean`.
 - **`sql-on-fhir/` is a git submodule.** It needs `git submodule update --init` before the
   SQL-on-FHIR compliance tests can run.
 - **Python and R pick up Java changes only after the Ivy cache is cleared** — both `cache` and
@@ -37,9 +40,10 @@ Tests:
   asserted to fail in the recorded way. After implementing a feature, `Excluded test passed when
   expected outcome was error` is the expected, correct signal that an exclusion is now obsolete —
   not a test failure to work around. See the `pathling-yaml-exclusions` skill.
-- **Three fields in the exclusion config do nothing**: an exclude block's `glob` (so every block
-  applies to every case file), a rule's `desc` matcher, and the `exclusionsOnly` system property.
-  Do not rely on them.
+- **Two exclusion-config fields and one system property do nothing**: an exclude block's `glob` (so
+  every block applies to every case file), a rule's `desc` matcher, and the `exclusionsOnly` system
+  property. Do not rely on them. A rule's `disabled` flag, and the `disabledExclusions` property,
+  do work.
 
 ## FHIRPath work
 

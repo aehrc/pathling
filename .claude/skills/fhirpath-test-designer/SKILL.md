@@ -188,6 +188,9 @@ Each type has a value form, an empty form, and an array form:
 | Quantity | `quantity(n, v)` | `quantityEmpty(n)` | `quantityArray(n, ...)` |
 | Complex | `element(n, b -> ...)` | `elementEmpty(n)` | `elementArray(n, b1, b2, ...)` |
 
+`elementEmpty(n)` creates field `n` carrying a null value — the field is present. It is **not** an
+absent field; no builder method produces one (see gotcha 7).
+
 Date, DateTime, Time, Coding and Quantity take **FHIRPath literal strings** —
 `date("d", "2024-01-15")`, `quantity("q", "10.5 'mg'")`, `coding("c", "http://loinc.org|1234-5")`.
 
@@ -216,9 +219,11 @@ These are the ways generated tests actually break:
    `fhirpath/src/test/resources/fhirpath-ptl/` instead.
 6. **A single-element `List.of(x)` expectation is unwrapped to `x`** before comparison, so both
    forms are equivalent for one-item results. Use the bare value for readability.
-7. **Typed-empty vs absent are different.** `stringEmpty("f")` creates field `f` with a typed null;
-   omitting the field entirely means the path does not resolve. Test the dimension the spec cares
-   about.
+7. **Typed-empty, null-valued and absent are three different things.** `stringEmpty("f")` creates
+   field `f` with a typed null. `elementEmpty("f")` creates field `f` with a plain null. Omitting
+   the field entirely means the path does not resolve, which is a different condition again — and
+   no builder method produces it, so an "absent field" row in a matrix has to be written by leaving
+   the field out. Test the dimension the spec cares about, and say which one you meant.
 8. **`group()` persists** until the next `group()` call.
 
 ## Running the tests

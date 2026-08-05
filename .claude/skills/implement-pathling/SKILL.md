@@ -23,7 +23,8 @@ Repository: `aehrc/pathling`, default branch `main`.
   skill runs inside a dispatched subagent, which cannot ask anything. Thread it through to every
   skill this one delegates to (`fhirpath-spec` and transitively `cache-github-repo`; and
   `fhirpath-test-designer`, whose matrix-review gate this governs) — they cannot tell on their own
-  that no one is available to answer a question.
+  that no one is available to answer a question. The Step 10 reviewer is a subagent regardless of
+  this flag, so it always gets it; see Step 10.
 
 This skill **stops at the PR**. It does not merge, and does not wait for CI.
 
@@ -248,6 +249,11 @@ corrections onto it.
 Dispatch a reviewer in a fresh context using the `pathling-fhirpath-review` rubric, giving it the
 range `$(git merge-base origin/main HEAD)..HEAD`. A reviewer that has not seen the reasoning behind
 the change grades the result on its own terms.
+
+The reviewer is a dispatched subagent, so it has no user of its own **whether or not this run is
+`--unattended`**. Always tell it to pass `--unattended` to any skill it delegates to — it consults
+`fhirpath-spec`, which would otherwise try to ask a question about the reference-implementation pin
+that nobody can answer.
 
 Triage what comes back:
 
