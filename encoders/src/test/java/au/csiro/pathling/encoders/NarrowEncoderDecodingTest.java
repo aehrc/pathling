@@ -22,16 +22,27 @@
  */
 package au.csiro.pathling.encoders;
 
+import static au.csiro.pathling.encoders.utils.SchemaMisalignment.conformTo;
+import static au.csiro.pathling.encoders.utils.SchemaMisalignment.mapElementStruct;
 import static au.csiro.pathling.encoders.utils.SchemaMisalignment.narrowEncoders;
 import static au.csiro.pathling.encoders.utils.SchemaMisalignment.wideEncoders;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import org.apache.spark.SparkRuntimeException;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.types.DataType;
+import org.apache.spark.sql.types.DataTypes;
+import org.apache.spark.sql.types.StructField;
+import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.r4.model.Extension;
 import org.hl7.fhir.r4.model.Patient;
 import org.hl7.fhir.r4.model.Period;
@@ -104,11 +115,16 @@ class NarrowEncoderDecodingTest {
   }
 
   /**
-   * An extension whose only value is of an excluded type is absent from the decoded resource,
-   * rather than present with a wrong value (US2.2).
+   * An extension whose only value is of an excluded type carries no value in the decoded resource,
+   * rather than a value read out of another field (US2.2, FR-002).
+   *
+   * <p>The stored value field has no counterpart in the narrow encoder's schema, so there is
+   * nothing for the encoder to put the value into. What it can represent of that extension is its
+   * url, and that is what it returns. Before the fix the same read produced a value taken from the
+   * neighbouring field, or brought the process down.
    */
   @Test
-  void extensionOfAnExcludedTypeIsAbsentRatherThanWrong() {
+  void extensionOfAnExcludedTypeCarriesNoValue() {
     // Arrange: the same widely-encoded Patient, whose Period extension the narrow encoder cannot
     // represent at all.
     final Dataset<Row> widelyEncoded = widePatient();
@@ -116,12 +132,82 @@ class NarrowEncoderDecodingTest {
     // Act.
     final Patient decoded = widelyEncoded.as(narrowEncoders().of(Patient.class)).head();
 
-    // Assert: the extension is either absent, or present with no value; what it must not be is
-    // present carrying a value read out of another field.
+    // Assert: the extension is present under its own url, and carries no value.
     final Extension periodExtension = decoded.getExtensionByUrl(PERIOD_EXTENSION_URL);
-    if (periodExtension != null) {
-      assertNull(periodExtension.getValue());
-    }
+    assertNotNull(periodExtension);
+    assertNull(periodExtension.getValue());
+    // Assert: and it did not take the neighbouring extension's value.
+    assertEquals(
+        "the written value",
+        ((StringType) decoded.getExtensionByUrl(STRING_EXTENSION_URL).getValue()).getValue());
+  }
+
+  /**
+   * A dataset encoded with the narrow encoder decodes with the wide encoder, presenting the fields
+   * the data does not carry as absent (US2.3, FR-003).
+   *
+   * <p>This is the direction an un-migrated table is read in after the open types are widened. The
+   * wide encoder asks for {@code valuePeriod} and {@code valueQuantity}, for which the narrow table
+   * has no column at all, so the encoder has to treat them as absent rather than failing to resolve
+   * them.
+   */
+  @Test
+  void narrowlyEncodedDataDecodesAbsentFieldsAsAbsent() {
+    // Arrange: encode with the narrow encoder, which emits no valuePeriod or valueQuantity field.
+    final Patient patient = new Patient();
+    patient.setId("narrow-patient");
+    patient.addExtension(new Extension(STRING_EXTENSION_URL, new StringType("the written value")));
+    final Dataset<Row> narrowlyEncoded =
+        spark.createDataset(List.of(patient), narrowEncoders().of(Patient.class)).toDF();
+
+    // Act: decode with the wide encoder.
+    final Patient decoded = narrowlyEncoded.as(wideEncoders().of(Patient.class)).head();
+
+    // Assert: the extension that was written is intact, and the fields the data does not carry are
+    // simply not there.
+    assertEquals(1, decoded.getExtension().size());
+    assertEquals(
+        "the written value",
+        ((StringType) decoded.getExtensionByUrl(STRING_EXTENSION_URL).getValue()).getValue());
+    assertNull(decoded.getExtensionByUrl(PERIOD_EXTENSION_URL));
+  }
+
+  /**
+   * A stored field that shares a name with the encoder's but not its type fails, rather than being
+   * misread (the name-and-type mismatch edge case).
+   *
+   * <p>Reconciling a type difference is out of scope: only a difference in name and order is in
+   * scope, and a type difference has to be loud.
+   */
+  @Test
+  void fieldSharingANameButNotATypeFails() {
+    // Arrange: present the extension's integer value field as a string.
+    final Dataset<Row> widelyEncoded = widePatient();
+    final Dataset<Row> retyped =
+        conformTo(
+            widelyEncoded,
+            mapElementStruct(
+                widelyEncoded.schema(),
+                ExtensionSupport.EXTENSIONS_FIELD_NAME(),
+                struct -> retypeField(struct, "valueInteger", DataTypes.StringType)));
+
+    // Act and assert: decoding fails rather than returning a misread value.
+    final SparkRuntimeException failure =
+        assertThrows(
+            SparkRuntimeException.class, () -> retyped.as(wideEncoders().of(Patient.class)).head());
+    assertTrue(failure.getMessage().contains("EXPRESSION_DECODING_FAILED"));
+  }
+
+  private static StructType retypeField(
+      final StructType struct, final String name, final DataType dataType) {
+    return new StructType(
+        Arrays.stream(struct.fields())
+            .map(
+                field ->
+                    field.name().equals(name)
+                        ? new StructField(name, dataType, field.nullable(), field.metadata())
+                        : field)
+            .toArray(StructField[]::new));
   }
 
   /** Returns a Patient carrying a string extension and a Period extension, encoded widely. */
