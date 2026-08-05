@@ -30,12 +30,15 @@ import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.google.common.util.concurrent.UncheckedExecutionException;
+import jakarta.annotation.Nonnull;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.UndeclaredThrowableException;
 import org.apache.spark.SparkException;
 import org.apache.spark.SparkRuntimeException;
+import org.apache.spark.sql.delta.DeltaAnalysisException;
 import org.hl7.fhir.r4.model.OperationOutcome;
 import org.junit.jupiter.api.Test;
+import scala.Option;
 
 /**
  * Unit tests for {@link ErrorHandlingInterceptor}.
@@ -282,5 +285,152 @@ class ErrorHandlingInterceptorTest {
 
     assertThat(result).isInstanceOf(InvalidRequestException.class);
     assertThat(result.getStatusCode()).isEqualTo(400);
+  }
+
+  // ---- Delta schema mismatch translation (FR-001, FR-002, FR-003) ----
+
+  // A Delta schema mismatch where the source carries fields the table lacks must be translated into
+  // an actionable message naming the missing field paths and the remedy for that direction, rather
+  // than falling through to the generic "Unexpected error occurred" (FR-001).
+  @Test
+  void convertsDeltaSchemaMismatchWithMissingFieldsToActionableDiagnostics() {
+    final Throwable e = schemaMismatch("struct<path:string,forEach:string>", "struct<path:string>");
+
+    final BaseServerResponseException result = ErrorHandlingInterceptor.convertError(e);
+
+    assertThat(result.getStatusCode()).isEqualTo(500);
+    final String diagnostics = diagnosticsOf(result);
+    assertThat(diagnostics)
+        .contains("forEach")
+        .contains("schemaAutoMerge")
+        .doesNotContain("Unexpected error occurred");
+  }
+
+  // The resource type is not carried by the Delta exception, so it is supplied by the caller that
+  // knows it. When supplied it must appear in the diagnostics (FR-001).
+  @Test
+  void namesTheResourceTypeWhenItIsKnown() {
+    final Throwable e = schemaMismatch("struct<path:string,forEach:string>", "struct<path:string>");
+
+    final BaseServerResponseException result =
+        ErrorHandlingInterceptor.convertError(e, "ViewDefinition");
+
+    assertThat(diagnosticsOf(result)).contains("ViewDefinition").contains("forEach");
+  }
+
+  // A Delta schema mismatch where the table carries fields the encoder does not emit must name
+  // those paths and point at the encoding configuration rather than at schemaAutoMerge, because
+  // that direction is not migratable (FR-001).
+  @Test
+  void convertsDeltaSchemaMismatchWithExcessFieldsToActionableDiagnostics() {
+    final Throwable e =
+        schemaMismatch("struct<url:string>", "struct<url:string,valuePeriod:string>");
+
+    final BaseServerResponseException result = ErrorHandlingInterceptor.convertError(e, "Patient");
+
+    final String diagnostics = diagnosticsOf(result);
+    assertThat(diagnostics)
+        .contains("Patient")
+        .contains("valuePeriod")
+        .contains("openTypes")
+        .doesNotContain("Unexpected error occurred");
+  }
+
+  // Where the two schemas differ in both directions at once, both sets of paths are reported and
+  // the message distinguishes them.
+  @Test
+  void reportsBothDirectionsWhenTheyDifferAtOnce() {
+    final Throwable e =
+        schemaMismatch(
+            "struct<url:string,forEach:string>", "struct<url:string,valuePeriod:string>");
+
+    final BaseServerResponseException result = ErrorHandlingInterceptor.convertError(e, "Patient");
+
+    final String diagnostics = diagnosticsOf(result);
+    assertThat(diagnostics).contains("forEach").contains("valuePeriod");
+  }
+
+  // The translated message must not leak the raw exception text, which embeds the full struct
+  // definitions of both schemas, nor any warehouse path (FR-002, SC-003).
+  @Test
+  void translatedDiagnosticsExposeNoStructDefinitionOrWarehousePath() {
+    final Throwable e = schemaMismatch("struct<path:string,forEach:string>", "struct<path:string>");
+
+    final BaseServerResponseException result = ErrorHandlingInterceptor.convertError(e, "Patient");
+
+    final String diagnostics = diagnosticsOf(result);
+    assertThat(diagnostics)
+        .doesNotContain("struct<")
+        .doesNotContain("Cannot cast")
+        .doesNotContain("DELTA_UPDATE_SCHEMA_MISMATCH_EXPRESSION")
+        .doesNotContain("file:/")
+        .doesNotContain(".parquet");
+  }
+
+  // A Delta exception carrying the recognised condition but no usable field detail must still
+  // produce a message naming the type and the condition, rather than the generic message.
+  @Test
+  void convertsDeltaSchemaMismatchWithoutFieldDetail() {
+    final Throwable e = schemaMismatch("not a parseable type", "also not parseable");
+
+    final BaseServerResponseException result = ErrorHandlingInterceptor.convertError(e, "Patient");
+
+    assertThat(result.getStatusCode()).isEqualTo(500);
+    final String diagnostics = diagnosticsOf(result);
+    assertThat(diagnostics)
+        .contains("Patient")
+        .contains("cannot be reconciled")
+        .doesNotContain("Unexpected error occurred");
+  }
+
+  // The translation is on the error path, so it applies to an exception surfaced from a read as
+  // readily as one from a write, including when Spark has wrapped it.
+  @Test
+  void translatesDeltaSchemaMismatchWrappedInSparkException() {
+    final Throwable cause =
+        schemaMismatch("struct<path:string,forEach:string>", "struct<path:string>");
+    final SparkException e = new SparkException("Job aborted", cause);
+
+    final BaseServerResponseException result = ErrorHandlingInterceptor.convertError(e, "Patient");
+
+    assertThat(diagnosticsOf(result)).contains("forEach").contains("Patient");
+  }
+
+  // A Delta exception carrying a different condition is not a schema mismatch, so it must continue
+  // to yield the existing generic message with no internal detail added (FR-003).
+  @Test
+  void otherDeltaConditionsStillYieldTheGenericMessage() {
+    final Throwable e =
+        new DeltaAnalysisException(
+            "DELTA_FAILED_TO_MERGE_FIELDS",
+            new String[] {"a", "b"},
+            Option.empty(),
+            Option.empty());
+
+    final BaseServerResponseException result = ErrorHandlingInterceptor.convertError(e, "Patient");
+
+    assertThat(result).isInstanceOf(InternalErrorException.class);
+    assertThat(result.getStatusCode()).isEqualTo(500);
+    assertThat(result.getMessage()).isEqualTo("Unexpected error occurred");
+  }
+
+  /** Builds the Delta exception raised when a MERGE cannot cast the source struct to the target. */
+  @Nonnull
+  private static Throwable schemaMismatch(
+      @Nonnull final String fromCatalog, @Nonnull final String toCatalog) {
+    return new DeltaAnalysisException(
+        "DELTA_UPDATE_SCHEMA_MISMATCH_EXPRESSION",
+        new String[] {fromCatalog, toCatalog},
+        Option.empty(),
+        Option.empty());
+  }
+
+  /** Extracts the single OperationOutcome issue's diagnostics from a converted exception. */
+  @Nonnull
+  private static String diagnosticsOf(@Nonnull final BaseServerResponseException result) {
+    assertThat(result.getOperationOutcome()).isInstanceOf(OperationOutcome.class);
+    final OperationOutcome outcome = (OperationOutcome) result.getOperationOutcome();
+    assertThat(outcome.getIssue()).hasSize(1);
+    return outcome.getIssueFirstRep().getDiagnostics();
   }
 }
