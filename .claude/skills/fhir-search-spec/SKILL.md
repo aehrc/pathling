@@ -43,14 +43,3 @@ cat references/search-parameters.json | jq '.entry[].resource | select(.base[]? 
 # Find a specific search parameter by code
 cat references/search-parameters.json | jq '.entry[].resource | select(.code == "name") | {code, base, type, expression}'
 ```
-
-## When implementing or reviewing FHIR search behaviour
-
-Consult these sources when:
-- Understanding FHIR RESTful search operations
-- Implementing search parameter types (string, token, reference, date, quantity, etc.)
-- Working with search prefixes (`eq`, `ne`, `gt`, `lt`, `ge`, `le`, `sa`, `eb`, `ap`) for ordered types
-- Implementing search modifiers (`:exact`, `:contains`, `:missing`, `:text`, `:above`, `:below`, `:not`, etc.)
-- Understanding chaining, reverse chaining (`_has`), and includes (`_include`, `_revinclude`)
-- Handling composite search parameters
-- Looking up a parameter's definition, type, or FHIRPath expression for a given resource type

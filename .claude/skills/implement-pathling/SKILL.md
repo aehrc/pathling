@@ -18,10 +18,12 @@ Repository: `aehrc/pathling`, default branch `main`.
 
 - `--worktree` — work in an isolated worktree at `.worktrees/<issue-number>`. Use when several
   issues are in flight at once.
-- `--unattended` — no user is available. Every gate becomes an abort. **Required** when this skill
-  runs inside a dispatched subagent, which cannot ask anything. Thread it through to every skill this
-  one delegates to (`fhirpath-spec`, and transitively `cache-github-repo`) — they cannot tell on
-  their own that no one is available to answer a question.
+- `--unattended` — no user is available. Every gate becomes an abort, except the test-matrix review
+  (see table below), which proceeds and reports instead. **Required** when this skill runs inside a
+  dispatched subagent, which cannot ask anything. Thread it through to every skill this one delegates
+  to (`fhirpath-spec` and transitively `cache-github-repo`; and `fhirpath-test-designer`, whose
+  matrix-review gate this governs) — they cannot tell on their own that no one is available to
+  answer a question.
 
 This skill **stops at the PR**. It does not merge, and does not wait for CI.
 
@@ -44,6 +46,7 @@ Gate behaviour by mode:
 |---|---|---|
 | Spec ambiguity (Step 3) | Present findings, wait | **Abort** with the ambiguity report |
 | Design (Step 4) | Draft an OpenSpec change, wait | **Abort** with the drafted change in place |
+| Test matrix review (Step 6) | Present matrix, wait for review | Proceed with the matrix as designed; list any case flagged uncertain in the return value |
 | Review triage (Step 11) | Ask about findings needing judgment | Leave unapplied, list them in the return value |
 
 "Abort" means: stop, leave the branch and commits in place, and return a report naming the gate and
@@ -201,9 +204,9 @@ maps to a SQL-on-FHIR profile feature — check sibling functions rather than gu
 
 ## Step 6 — Design and write the tests
 
-Use the `fhirpath-test-designer` skill. It owns the dimension matrix and the DSL surface, including
-the constraints that bite: descriptions are mandatory on every assertion, and there is **one subject
-per `@FhirPathTest` method**.
+Use the `fhirpath-test-designer` skill, passing `--unattended` through if this run has it. It owns
+the dimension matrix and the DSL surface, including the constraints that bite: descriptions are
+mandatory on every assertion, and there is **one subject per `@FhirPathTest` method**.
 
 Test classes live in `fhirpath/src/test/java/au/csiro/pathling/fhirpath/dsl/`, named by capability
 (`StringFunctionsDslTest`), never by issue number. Prefer adding a method to the existing class for
@@ -250,7 +253,8 @@ already clean.
 ## Step 9 — Commit
 
 Follow CONTRIBUTING.md: a type prefix, a short summary of the objective, and a body explaining why
-rather than restating the diff.
+rather than restating the diff. The `Co-Authored-By` trailer must name the model actually running
+this skill (e.g. `Claude Sonnet 5`, `Claude Opus 5`) — never hardcode a specific tier.
 
 ```bash
 git add <specific files>
@@ -259,7 +263,7 @@ feat: Support <capability> (#<N>)
 
 <why this was needed and what it enables, a few sentences>
 
-Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Co-Authored-By: <this model's own name> <noreply@anthropic.com>
 EOF
 )"
 ```
@@ -314,7 +318,7 @@ fix: Address review findings for #<N>
 
 <what changed and why>
 
-Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Co-Authored-By: <this model's own name> <noreply@anthropic.com>
 EOF
 )"
 ```
@@ -326,7 +330,8 @@ Return:
 - the PR number and URL
 - the tests added and their result
 - exclusion changes, or an explicit note that none matched
-- any gate that fired and what it needs
+- any gate that fired and what it needs, including test-matrix cases the test designer flagged as
+  uncertain when run `--unattended`
 - review findings left unapplied, with the reason
 
 Then stop. Merging is the user's decision.
@@ -339,7 +344,4 @@ Then stop. Merging is the user's decision.
 - **Bound the exploration.** Read the closest existing implementation and its tests, then start.
 - **The spec decides.** Not intuition, and not the current implementation's behaviour.
 - **Existing tests are correct** unless the spec clearly contradicts them.
-- **Format before compiling.** `spotless:check` gates the build.
-- **The design gate is about paths, not difficulty.** A small change to the evaluation context still
-  gates; a large but purely additive set of provider methods does not.
 - **Report evidence.** Name the command and its result, rather than asserting that things pass.

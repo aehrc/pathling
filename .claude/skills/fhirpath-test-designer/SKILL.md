@@ -29,6 +29,12 @@ it when deciding whether a dimension is worth testing, or when justifying a matr
 
 Three phases. Present findings to the user between phases.
 
+Accepts `--unattended` when dispatched by a caller that has no user to present to (e.g.
+`implement-pathling --unattended`). Under `--unattended`, skip the "present and wait" step between
+phases and proceed straight through with the best matrix the spec supports — but never suppress an
+uncertain case to make the pipeline flow smoothly. Carry every case flagged uncertain (see Phase 2)
+into the final output so the caller can report it rather than silently deciding it.
+
 ### Phase 1: Spec research
 
 Use the `fhirpath-spec` skill for all specification lookups. Gather:
@@ -40,8 +46,9 @@ Use the `fhirpath-spec` skill for all specification lookups. Gather:
 - FHIR-specific considerations (choice types, primitive wrappers, extensions)
 - Ambiguities where the spec is unclear or reference implementations diverge
 
-Flag ambiguities for resolution before Phase 2. Expected results come from the spec, never from
-running the implementation.
+Flag ambiguities for resolution before Phase 2 — interactively, or, under `--unattended`, as an
+uncertain case carried into the matrix rather than resolved silently. Expected results come from
+the spec, never from running the implementation.
 
 ### Phase 2: Test matrix design
 
@@ -74,7 +81,8 @@ synthetic resource whose type is always `Test`, so it cannot express:
 
 Otherwise prefer `withSubject` — it is faster to read and write.
 
-Present a matrix and wait for review:
+Present a matrix and wait for review. Under `--unattended`, produce the same matrix but proceed
+straight to Phase 3 without waiting:
 
 ```markdown
 ## Test matrix for `functionName()`
