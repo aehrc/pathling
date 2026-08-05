@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.util;
 
+import au.csiro.pathling.config.EncodingConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import jakarta.annotation.Nonnull;
 import java.util.HashSet;
@@ -33,11 +34,17 @@ import org.hl7.fhir.instance.model.api.IBaseResource;
  * so that a Delta table can be seeded at one encoder's schema and then written to or read by the
  * other.
  *
- * <p>The wide encoder adds {@code Period} and {@code Quantity} to the standard open types, which
- * gives the extension element struct the additional {@code valuePeriod} and {@code valueQuantity}
- * fields. A table seeded with the wide encoder is therefore wider than the narrow encoder's schema
- * in exactly the way a warehouse is when {@code pathling.encoding.openTypes} has been narrowed
- * against populated data, which is the state reported in issue #2697.
+ * <p>The pair is derived from the encoders under test rather than from a fixed configuration. The
+ * wide encoder is the one supplied; the narrow encoder is the same configuration with {@code
+ * Period} and {@code Quantity} removed from its open types, which drops the corresponding {@code
+ * valuePeriod} and {@code valueQuantity} fields from the extension element struct. Deriving the
+ * pair this way matters because the encoding configuration differs between the server's shipped
+ * defaults and the test profile, so a hardcoded pair would describe neither reliably.
+ *
+ * <p>A table seeded with the wide encoder is therefore wider than the narrow encoder's schema in
+ * exactly the way a warehouse is when {@code pathling.encoding.openTypes} has been narrowed against
+ * populated data, which is the state reported in issue #2697. The difference is purely narrowing:
+ * the narrow schema introduces nothing the wide one lacks.
  *
  * <p>This is the counterpart of {@link DeltaSchemaFixtures}, which produces the opposite direction
  * by rewriting a committed schema on disk to remove fields.
@@ -46,23 +53,8 @@ import org.hl7.fhir.instance.model.api.IBaseResource;
  */
 public final class FhirEncoderFixtures {
 
-  /** The open types added by the wide encoder, on top of the standard set. */
-  public static final Set<String> ADDITIONAL_OPEN_TYPES = Set.of("Period", "Quantity");
-
-  /**
-   * The nesting level both encoders are built with, matching the default of {@code
-   * pathling.encoding.maxNestingLevel}. The encoder builder's own default is 0, so this must be set
-   * explicitly for the fixture to describe the same schema the server does.
-   */
-  private static final int MAX_NESTING_LEVEL = 3;
-
-  /**
-   * Both encoders are built with extensions enabled, matching the default of {@code
-   * pathling.encoding.enableExtensions}. This is what makes the open types observable at all: the
-   * open-type value fields live inside the {@code _extension} element, so with extensions disabled
-   * the two encoders would produce identical schemas.
-   */
-  private static final boolean ENABLE_EXTENSIONS = true;
+  /** The open types the narrow encoder drops relative to the encoders it is derived from. */
+  public static final Set<String> NARROWED_OPEN_TYPES = Set.of("Period", "Quantity");
 
   /**
    * The roots of the field subtrees that exist only in the wide encoder's schema. A narrow server
@@ -75,37 +67,28 @@ public final class FhirEncoderFixtures {
   private FhirEncoderFixtures() {}
 
   /**
-   * Returns encoders configured with the standard open types plus {@code Period} and {@code
-   * Quantity}. Every other setting matches the server's defaults, so the schema differs from {@link
-   * #narrowEncoders()} only in the extension value fields.
+   * Returns encoders matching the given ones except that {@code Period} and {@code Quantity} are
+   * removed from the open types. Every other setting is carried across unchanged, so the resulting
+   * schema differs only in the extension value fields.
    *
-   * @return the wide encoders
+   * @param encoders the encoders to narrow, typically the ones the application context provides
+   * @return the narrowed encoders
+   * @throws IllegalArgumentException if the given encoders carry neither of the narrowed open
+   *     types, in which case narrowing would produce no difference and the fixture would prove
+   *     nothing
    */
   @Nonnull
-  public static FhirEncoders wideEncoders() {
-    final Set<String> openTypes = new HashSet<>(FhirEncoders.STANDARD_OPEN_TYPES);
-    openTypes.addAll(ADDITIONAL_OPEN_TYPES);
-    return encoders(openTypes);
-  }
-
-  /**
-   * Returns encoders configured with the standard open types, which is the server's shipped
-   * default.
-   *
-   * @return the narrow encoders
-   */
-  @Nonnull
-  public static FhirEncoders narrowEncoders() {
-    return encoders(FhirEncoders.STANDARD_OPEN_TYPES);
-  }
-
-  /** Builds encoders for the given open types, with every other setting at the server's default. */
-  @Nonnull
-  private static FhirEncoders encoders(@Nonnull final Set<String> openTypes) {
+  public static FhirEncoders narrow(@Nonnull final FhirEncoders encoders) {
+    final EncodingConfiguration configuration = encoders.getConfiguration();
+    final Set<String> openTypes = new HashSet<>(configuration.getOpenTypes());
+    if (!openTypes.removeAll(NARROWED_OPEN_TYPES)) {
+      throw new IllegalArgumentException(
+          "The encoders to narrow must carry at least one of " + NARROWED_OPEN_TYPES);
+    }
     return FhirEncoders.forR4()
         .withOpenTypes(openTypes)
-        .withMaxNestingLevel(MAX_NESTING_LEVEL)
-        .withExtensionsEnabled(ENABLE_EXTENSIONS)
+        .withMaxNestingLevel(configuration.getMaxNestingLevel())
+        .withExtensionsEnabled(configuration.isEnableExtensions())
         .getOrCreate();
   }
 
