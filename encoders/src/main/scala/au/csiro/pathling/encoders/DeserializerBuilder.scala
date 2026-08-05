@@ -137,11 +137,18 @@ private[encoders] sealed class DeserializerBuilderProcessor(val path: Option[Exp
     }
 
     assert(path.isDefined, "We expect a non-empty path here")
-    val elementType: DataType = getSqlDatatypeFor(elementDefinition)
+    // The element type must come from the data rather than from the encoder's own schema.
+    // MapObjects binds its lambda variable to whatever type it is given, so supplying the
+    // encoder's type pins every field access inside the lambda to the encoder's field positions
+    // and then applies them to rows of a different shape - reading at the wrong offsets whenever
+    // the stored order differs, which is what a mergeSchema migration or a change of open types
+    // produces. UnresolvedMapObjects defers the type to the analyser, which takes it from the
+    // resolved input and rewrites the nested UnresolvedExtractValue nodes by name using the
+    // session resolver.
+    // The analyser applies the element mapper after the traversal has finished, so the nesting
+    // levels it needs have to be carried across with it.
     val array = Invoke(
-      MapObjects(elementMapper,
-        path.get,
-        elementType),
+      UnresolvedMapObjects(EncodingContext.deferring(elementMapper), path.get),
       "array",
       ObjectType(classOf[Array[Any]]))
     arrayExpression(array)
