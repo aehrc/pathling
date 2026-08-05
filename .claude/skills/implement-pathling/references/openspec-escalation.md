@@ -37,7 +37,7 @@ suits this: use it to produce the proposal, then the design, then hold.
    Steps 5–7 of the `implement-pathling` skill against the same work — that is two drivers on one
    change.
 6. When implementation is complete, resume `implement-pathling` at **Step 8** (exclusion sweep), and
-   carry on through commit, PR, and review as normal.
+   carry on through commit, review, and PR as normal.
 7. Archive the change once the work lands (`openspec-archive-change`).
 
 Under `--unattended`, abort after step 3. The gate never self-approves.
