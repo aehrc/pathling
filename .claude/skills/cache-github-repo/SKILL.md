@@ -57,10 +57,13 @@ dispatched subagent or an unattended pipeline has no one to answer it.
 1. Resolve the project root (`git rev-parse --show-toplevel`, or `$PWD` if not inside a git repo) and
    read `.claude/repo-cache.yaml` there. Look up `<org/repo>`.
 2. **Entry missing:**
-   - `--unattended` passed → fail immediately. Report: `"<org/repo> has no configured version — run
-     '/cache-github-repo configure <org/repo>' first"` and stop. Do not guess a version, do not
-     attempt to ask.
-   - Otherwise → run the `configure` steps below for this repo, then continue.
+   - `--unattended` literally passed as an argument to this invocation → fail immediately. Report:
+     `"<org/repo> has no configured version — run '/cache-github-repo configure <org/repo>' first"` and
+     stop. Do not guess a version, do not attempt to ask.
+   - Otherwise → run the `configure` steps below for this repo, then continue. This includes when the
+     current session has some general "auto mode"/"operate autonomously" disposition — that governs
+     tool-permission friction, not whether a human can answer a question, and does not satisfy the
+     `--unattended` condition above. Only the literal flag does.
 3. **Entry present** → let `VERSION` be the recorded value. Compute
    `CACHE_DIR=~/.cache/claude-skills/github-repo-cache/<org>/<repo>/<version>`.
    - `$CACHE_DIR/.git` exists → already cached. Report `$CACHE_DIR` and stop.
@@ -72,12 +75,14 @@ The explicit, user-invoked path — and also what `ensure` falls into automatica
 the entry is missing.
 
 1. If `--version <ref>` was given, use it as `VERSION` and skip to step 3.
-2. Otherwise, find the candidates and ask the user to choose:
+2. Otherwise, find the candidates:
    ```bash
    git ls-remote --tags --sort=-v:refname "https://github.com/<org>/<repo>.git" | head -5
    ```
-   Present the most recent tag as "latest stable" and `main` as the alternative. If the network call
-   fails, say so and ask the user to supply a ref directly instead of guessing.
+   Present the most recent tag as "latest stable" and `main` as the alternative. You MUST NOT pick one
+   and write the config yourself, even under an "auto mode"/"proceed autonomously" disposition — wait
+   for the user's choice (e.g. via `AskUserQuestion`) first. If the network call fails, say so and ask
+   the user to supply a ref directly instead of guessing.
 
    Whichever is chosen, **resolve it to a concrete, immutable reference before recording it**:
    - A tag → record the tag name; it is already immutable.

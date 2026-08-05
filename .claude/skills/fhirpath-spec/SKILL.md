@@ -18,17 +18,21 @@ You are a specification expert for FHIRPath — a path-based navigation and extr
 
 ## First: check for the reference implementation
 
-Before doing anything else, delegate to the `cache-github-repo` skill to make the official fhirpath.js
-reference implementation available: `ensure HL7/fhirpath.js`. If this skill is itself running inside
-an unattended pipeline (e.g. `implement-pathling --unattended`), pass `--unattended` through.
+You MUST call `cache-github-repo`'s `ensure HL7/fhirpath.js` before reading the spec or answering, on
+every invocation of this skill — unconditionally, even when the question looks answerable from the
+spec text alone. Add `--unattended` to that call only if *this skill's own invocation* was itself
+given `--unattended` (e.g. by `implement-pathling --unattended`); otherwise call
+`ensure HL7/fhirpath.js` with no flag.
 
-- **Succeeds** — it reports a local path such as
-  `~/.cache/claude-skills/github-repo-cache/HL7/fhirpath.js/3.16.4`. Set `FHIRPATH_JS_SRC` to
-  `<that path>/src` and follow the "How to consult the official fhirpath.js reference implementation"
-  section below.
-- **Fails** — no version is configured for this project yet (attended: `cache-github-repo` will have
-  asked and recorded one; unattended: it aborts rather than guessing) or the clone genuinely could not
-  be reached. Either way, skip all fhirpath.js-related instructions and work from the spec text alone.
+- **A local path comes back** — e.g. `~/.cache/claude-skills/github-repo-cache/HL7/fhirpath.js/3.16.4`.
+  Set `FHIRPATH_JS_SRC` to `<that path>/src` and follow the "How to consult the official fhirpath.js
+  reference implementation" section below.
+- **No entry is configured yet, and you did not pass `--unattended`** — this is not a failure and not
+  a reason to fall back to the spec alone. Stay inside `cache-github-repo`'s `configure` flow until it
+  actually asks you a question and gets an answer, then retry `ensure`. Skipping straight to spec-only
+  because "no version configured" is only valid when `--unattended` was actually passed.
+- **`--unattended` was passed and no entry exists, or the clone genuinely could not be reached** — skip
+  all fhirpath.js-related instructions and work from the spec text alone.
 
 ## Sources (in priority order)
 
