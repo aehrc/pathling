@@ -44,6 +44,7 @@ Gate behaviour by mode:
 
 | Gate | Interactive | `--unattended` |
 |---|---|---|
+| Branch already exists (Step 2) | Report what exists, wait for the user to choose resume/rename/delete | **Abort** with a report of what exists |
 | Spec ambiguity (Step 3) | Present findings, wait | **Abort** with the ambiguity report |
 | Design (Step 4) | Draft an OpenSpec change, wait | **Abort** with the drafted change in place |
 | Test matrix review (Step 6) | Present matrix, wait for review | Proceed with the matrix as designed; list any case flagged uncertain in the return value |
@@ -80,9 +81,9 @@ git switch -c issue/<N> origin/main
 Branch off `origin/main` rather than a local `main`: it guarantees a fresh base and works inside a
 linked worktree.
 
-**If the branch already exists, stop and report it.** The repo carries a dozen stale local
-branches; silently reusing one builds on the wrong base. Report what exists and let the user decide
-whether to resume, rename, or delete it.
+**If the branch already exists, this is a gate (see Step 0 table).** The repo carries a dozen stale
+local branches; silently reusing one builds on the wrong base. Report what exists; interactively,
+let the user decide whether to resume, rename, or delete it.
 
 With `--worktree`, create the worktree and branch together:
 
@@ -150,53 +151,13 @@ Everything a later feature inherits belongs behind the gate.
 
 ### What the gate does: escalate to OpenSpec
 
-A framework change is the case where a written design earns its ceremony. Ordinary features never
-touch OpenSpec.
-
-The `spec-driven` schema's artifacts are dependency-gated, not linear:
-
-```
-proposal → { design, specs } → tasks
-```
-
-`design` and `specs` each unblock once `proposal` exists; `tasks` needs both.
-
-**Before approval — draft the design artifacts only:**
-
-```bash
-openspec new change "<kebab-name>"
-openspec status --change "<kebab-name>"
-openspec instructions proposal --change "<kebab-name>"
-```
-
-1. Write `proposal.md` — what the change is, why a within-framework solution does not work, and the
-   alternatives rejected.
-2. Write `design.md` — the blast radius, which layers change, what existing behaviour is affected.
-   It unblocks as soon as the proposal exists.
-3. **Stop. Write no implementation code and no `tasks.md`.** Present the proposal and design.
-
-The `openspec-continue-change` skill creates exactly one artifact per invocation and stops, which
-suits this: use it to produce the proposal, then the design, then hold.
-
-**After approval — hand implementation over:**
-
-4. Create `specs` and then `tasks` (`openspec-continue-change` again, once per artifact).
-5. Implementation runs through `openspec-apply-change`, which works from `tasks.md`. It is a
-   **driver**, not a helper: once it takes over, it owns the implementation loop. Do not also run
-   Steps 5–7 of this skill against the same work — that is two drivers on one change.
-6. When implementation is complete, resume this skill at **Step 8** (exclusion sweep), and carry on
-   through commit, PR, and review as normal.
-7. Archive the change once the work lands (`openspec-archive-change`).
-
-Under `--unattended`, abort after step 3. The gate never self-approves.
-
-> Worked example: issue #2389 (`$index`) threads a new variable through expression-parameter
-> evaluation. It touches evaluation context, so it gates. Issues like #2380 (string functions) and
-> #2385 (existence functions) are registry-slot work and do not.
+When gated, stop implementation and follow `openspec-escalation.md` — it covers the
+proposal/design/specs/tasks handoff, the `--unattended` abort point, and a worked example
+distinguishing gated from non-gated issues.
 
 ## Step 5 — Implement
 
-Write the implementation and its tests together.
+Write the implementation. Tests are designed and written separately, in Step 6.
 
 Javadoc on a new function follows the existing providers: a description, `@param`, `@return`, and an
 `@see` link to the governing spec section. Add `@SqlOnFhirConformance(Profile.…)` where the function
@@ -231,12 +192,10 @@ mvn test -pl fhirpath -Dtest=YamlFhirPathTest                     # Pathling cor
 mvn test -pl fhirpath                                             # the module
 ```
 
-Two things to recognise in the output:
-
-- **`Excluded test passed when expected outcome was error`** — a feature you implemented made an
-  excluded case pass. Expected, and it is the signal for Step 8.
-- **Errors like `cannot access java.util.List`** — the upstream modules are stale, not a real
-  compile error. Rebuild them: `mvn -o test-compile -pl fhirpath -am`.
+Both build gotchas from `.claude/CLAUDE.md` (stale upstream modules, the exclusion baseline policing
+itself) apply here. The second is specifically the signal for Step 8: an
+`Excluded test passed when expected outcome was error` here means a feature you implemented made an
+excluded case pass.
 
 If a test failure is ambiguous, check the spec before assuming the test is wrong. Existing tests are
 correct unless the spec clearly contradicts them.
@@ -340,8 +299,5 @@ Then stop. Merging is the user's decision.
 
 ## Reminders
 
-- **Write code, not plans.** If the issue already describes the work, implement it.
-- **Bound the exploration.** Read the closest existing implementation and its tests, then start.
 - **The spec decides.** Not intuition, and not the current implementation's behaviour.
-- **Existing tests are correct** unless the spec clearly contradicts them.
 - **Report evidence.** Name the command and its result, rather than asserting that things pass.
