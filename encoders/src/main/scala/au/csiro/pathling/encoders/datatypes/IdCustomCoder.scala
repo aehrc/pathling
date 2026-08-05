@@ -58,6 +58,10 @@ case class IdCustomCoder(elementName: String) extends CustomCoder {
     val deserializerExp = if (!isCollection) {
       toVersionedId(addToPath(versionedName))
     } else {
+      // This MapObjects keeps its explicit element type, unlike the one in DeserializerBuilder.
+      // It maps over a collection of strings rather than of structs, so there are no fields whose
+      // order or presence could differ between the encoder's schema and the data's, and nothing to
+      // resolve by name.
       val array = Invoke(
         MapObjects(toVersionedId,
           addToPath(versionedName),
