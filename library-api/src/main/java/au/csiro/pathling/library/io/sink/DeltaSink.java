@@ -35,6 +35,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.function.UnaryOperator;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -210,22 +211,7 @@ final class DeltaSink implements DataSink {
   @Nonnull
   private static Dataset<Row> conformToTarget(
       @Nonnull final Dataset<Row> dataset, @Nonnull final StructType target) {
-    final StructType source = dataset.schema();
-    final Column[] columns =
-        Arrays.stream(target.fields())
-            .map(
-                field -> {
-                  final StructField sourceField = fieldOrNull(source, field.name());
-                  return (sourceField == null
-                          ? lit(null).cast(field.dataType())
-                          : conformColumn(
-                              dataset.col(sourceField.name()),
-                              sourceField.dataType(),
-                              field.dataType()))
-                      .alias(field.name());
-                })
-            .toArray(Column[]::new);
-    return dataset.select(columns);
+    return dataset.select(conformFields(dataset::col, dataset.schema(), target));
   }
 
   /** Projects a column onto a target type, resolving struct fields by name at every depth. */
@@ -240,23 +226,10 @@ final class DeltaSink implements DataSink {
     }
     if (sourceType instanceof final StructType source
         && targetType instanceof final StructType target) {
-      final Column[] fields =
-          Arrays.stream(target.fields())
-              .map(
-                  field -> {
-                    final StructField sourceField = fieldOrNull(source, field.name());
-                    return (sourceField == null
-                            ? lit(null).cast(field.dataType())
-                            : conformColumn(
-                                column.getField(sourceField.name()),
-                                sourceField.dataType(),
-                                field.dataType()))
-                        .alias(field.name());
-                  })
-              .toArray(Column[]::new);
       // A struct built field by field is never null, so the null case has to be restored
       // explicitly, or an absent nested struct would be written as one full of nulls.
-      return when(column.isNull(), lit(null).cast(target)).otherwise(struct(fields));
+      return when(column.isNull(), lit(null).cast(target))
+          .otherwise(struct(conformFields(column::getField, source, target)));
     }
     if (sourceType instanceof final ArrayType source
         && targetType instanceof final ArrayType target) {
@@ -268,6 +241,36 @@ final class DeltaSink implements DataSink {
           column, (key, value) -> conformColumn(value, source.valueType(), target.valueType()));
     }
     return column;
+  }
+
+  /**
+   * Builds one column per target field, taking it from the source by name where the source has it,
+   * and supplying a typed null where it does not.
+   *
+   * @param fieldAccessor how to reach a named field of the source, which differs between the top
+   *     level of a dataset and a nested struct
+   * @param source the schema the columns are being taken from
+   * @param target the schema the columns are being presented under
+   * @return the projected columns, in the target's field order
+   */
+  @Nonnull
+  private static Column[] conformFields(
+      @Nonnull final Function<String, Column> fieldAccessor,
+      @Nonnull final StructType source,
+      @Nonnull final StructType target) {
+    return Arrays.stream(target.fields())
+        .map(
+            field -> {
+              final StructField sourceField = fieldOrNull(source, field.name());
+              return (sourceField == null
+                      ? lit(null).cast(field.dataType())
+                      : conformColumn(
+                          fieldAccessor.apply(sourceField.name()),
+                          sourceField.dataType(),
+                          field.dataType()))
+                  .alias(field.name());
+            })
+        .toArray(Column[]::new);
   }
 
   /** Returns the named field of the struct, or null if it has none. */
