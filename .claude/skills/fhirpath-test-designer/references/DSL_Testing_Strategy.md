@@ -109,5 +109,5 @@ The test builder supports all partitions through its API:
 | Complex element | `sb.element("field", e -> e.string(...))` |
 | Complex array | `sb.elementArray("field", e -> ..., e -> ...)` |
 | Choice type | `sb.element("field", e -> e.choice("value").string(...))` |
-| Extension | `sb.extension("url", e -> e.string("value", "x"))` — extensions use a special representation with URL-based access |
+| Extension | No map-based builder support — extensions are accessed by URL and serialised as HAPI does, which the synthetic subject cannot express. Use `withResource` with a real resource carrying the extension |
 | Real FHIR resource | `builder().withResource(new Patient()...)` |
