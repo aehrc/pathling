@@ -273,7 +273,14 @@ final class DeltaSink implements DataSink {
         .toArray(Column[]::new);
   }
 
-  /** Returns the named field of the struct, or null if it has none. */
+  /**
+   * Returns the named field of the struct, or null if it has none.
+   *
+   * <p>Matched on the exact name rather than through the session's resolver, unlike the decode
+   * side. A difference of case alone therefore reads as a difference of field, so the merge is left
+   * to whatever Delta would have done with it rather than being quietly conformed - which is the
+   * conservative reading, since the two names may well have been meant to be different.
+   */
   @Nullable
   private static StructField fieldOrNull(
       @Nonnull final StructType struct, @Nonnull final String name) {

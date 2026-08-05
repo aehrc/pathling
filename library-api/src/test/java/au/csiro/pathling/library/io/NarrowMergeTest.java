@@ -34,6 +34,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.commons.io.FileUtils;
+import org.apache.spark.sql.AnalysisException;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -192,15 +193,19 @@ class NarrowMergeTest {
         "overwrite");
     final StructType before = storedSchema(warehouse);
 
-    // Act and assert: merging a widely-encoded source is refused.
-    assertThrows(
-        Exception.class,
-        () ->
-            write(
-                wideContext,
-                ExtensionContexts.encodeWide(spark, sourcePatients()),
-                warehouse,
-                "merge"));
+    // Act and assert: merging a widely-encoded source is refused, for the same reason it is today.
+    final AnalysisException failure =
+        assertThrows(
+            AnalysisException.class,
+            () ->
+                write(
+                    wideContext,
+                    ExtensionContexts.encodeWide(spark, sourcePatients()),
+                    warehouse,
+                    "merge"));
+    assertTrue(
+        failure.getMessage().contains("DELTA_UPDATE_SCHEMA_MISMATCH_EXPRESSION"),
+        "expected the merge to fail on the struct mismatch, but got: " + failure.getMessage());
 
     // Assert: the target was left alone, and in particular was not widened.
     assertEquals(2, gendersById(warehouse).size());
@@ -252,8 +257,14 @@ class NarrowMergeTest {
             .drop("gender")
             .withColumn("unexpected", lit(1));
 
-    // Act and assert.
-    assertThrows(Exception.class, () -> write(wideContext, mixedSource, warehouse, "merge"));
+    // Act and assert: refused, for the same reason it is today - the column the source lacks cannot
+    // be resolved in the update clause.
+    final AnalysisException failure =
+        assertThrows(
+            AnalysisException.class, () -> write(wideContext, mixedSource, warehouse, "merge"));
+    assertTrue(
+        failure.getMessage().contains("DELTA_MERGE_UNRESOLVED_EXPRESSION"),
+        "expected the merge to fail on the unresolved column, but got: " + failure.getMessage());
 
     // Assert: the target was left alone, and in particular was not widened.
     assertEquals(2, gendersById(warehouse).size());
