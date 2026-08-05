@@ -62,6 +62,7 @@ Use these skills rather than duplicating their content here:
 |---|---|
 | `implement-pathling` | Driving a FHIRPath issue to a PR (`/implement-pathling <issue>`) |
 | `fhirpath-spec` | The FHIRPath spec and its FHIR bindings — the ground truth on semantics |
+| `cache-github-repo` | Pin and locally cache a GitHub repo, e.g. the fhirpath.js reference implementation `fhirpath-spec` consults |
 | `fhirpath` | Quick reference for writing expressions; defers to `fhirpath-spec` on semantics |
 | `fhirpath-test-designer` | Test matrices and the DSL test surface |
 | `pathling-yaml-exclusions` | The conformance exclusion baselines |

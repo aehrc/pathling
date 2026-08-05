@@ -19,7 +19,9 @@ Repository: `aehrc/pathling`, default branch `main`.
 - `--worktree` — work in an isolated worktree at `.worktrees/<issue-number>`. Use when several
   issues are in flight at once.
 - `--unattended` — no user is available. Every gate becomes an abort. **Required** when this skill
-  runs inside a dispatched subagent, which cannot ask anything.
+  runs inside a dispatched subagent, which cannot ask anything. Thread it through to every skill this
+  one delegates to (`fhirpath-spec`, and transitively `cache-github-repo`) — they cannot tell on
+  their own that no one is available to answer a question.
 
 This skill **stops at the PR**. It does not merge, and does not wait for CI.
 

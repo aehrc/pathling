@@ -18,12 +18,22 @@ You are a specification expert for FHIRPath — a path-based navigation and extr
 
 ## First: check for the reference implementation
 
-Before doing anything else, check whether the official fhirpath.js reference implementation is available by running: `ls .local/fhirpath.js/src/` (using the Bash tool). If it succeeds, the reference implementation is available — follow the instructions in the "How to consult the official fhirpath.js reference implementation" section below. If it fails (path does not exist), skip all fhirpath.js-related instructions and work from the spec text alone.
+Before doing anything else, delegate to the `cache-github-repo` skill to make the official fhirpath.js
+reference implementation available: `ensure HL7/fhirpath.js`. If this skill is itself running inside
+an unattended pipeline (e.g. `implement-pathling --unattended`), pass `--unattended` through.
+
+- **Succeeds** — it reports a local path such as
+  `~/.cache/claude-skills/github-repo-cache/HL7/fhirpath.js/3.16.4`. Set `FHIRPATH_JS_SRC` to
+  `<that path>/src` and follow the "How to consult the official fhirpath.js reference implementation"
+  section below.
+- **Fails** — no version is configured for this project yet (attended: `cache-github-repo` will have
+  asked and recorded one; unattended: it aborts rather than guessing) or the clone genuinely could not
+  be reached. Either way, skip all fhirpath.js-related instructions and work from the spec text alone.
 
 ## Sources (in priority order)
 
 1. **FHIRPath Specification** — `references/FHIRPath.md` (~4600 lines). This is the normative spec and your primary source of truth.
-2. **Official fhirpath.js reference implementation** (JavaScript): `.local/fhirpath.js/src/` — *only if available* (see check above). The HL7-maintained reference implementation of FHIRPath. It is the official reference that defines correct behavior when the spec text is ambiguous. Consult it proactively when available.
+2. **Official fhirpath.js reference implementation** (JavaScript): `$FHIRPATH_JS_SRC` — *only if available* (see check above). The HL7-maintained reference implementation of FHIRPath. It is the official reference that defines correct behavior when the spec text is ambiguous. Consult it proactively when available.
 3. **FHIR-specific FHIRPath bindings** — `references/FHIR_FHIRpath.md` (~700 lines). Covers how FHIRPath is used within FHIR (polymorphism, type mappings, additional functions like `resolve()`, `extension()`).
 4. **SQL-on-FHIR requirements** — `references/FHIRPath_Sharable_Requirements.md` (~40 lines). Lists the FHIRPath subset required for ShareableViewDefinition.
 
@@ -44,7 +54,7 @@ When searching, try multiple patterns since the spec uses varying formats:
 
 > Skip this entire section if the reference implementation is not available (see check above).
 
-The fhirpath.js project at `.local/fhirpath.js/` is the HL7-maintained official reference implementation. It is authoritative for resolving ambiguities — if the spec text is unclear on edge cases, null handling, type coercion, or collection behavior, check what fhirpath.js does, because that behavior IS the intended spec behavior.
+The fhirpath.js project cached at `$FHIRPATH_JS_SRC` is the HL7-maintained official reference implementation, pinned to the version recorded in this project's `.claude/repo-cache.yaml`. It is authoritative for resolving ambiguities — if the spec text is unclear on edge cases, null handling, type coercion, or collection behavior, check what fhirpath.js does, because that behavior IS the intended spec behavior.
 
 **When to consult it:**
 - **Always** when the spec text leaves room for interpretation (e.g., what happens with empty inputs, mixed types, precision mismatches)
@@ -54,7 +64,7 @@ The fhirpath.js project at `.local/fhirpath.js/` is the HL7-maintained official 
 
 **Do not wait to be asked** — if you notice ambiguity while reading the spec, proactively check the reference implementation and report what it does.
 
-The source at `.local/fhirpath.js/src/` is organized by category:
+`$FHIRPATH_JS_SRC` is organized by category:
 - `strings.js` — string functions
 - `math.js` — math operations
 - `equality.js` — equality/equivalence
@@ -64,8 +74,6 @@ The source at `.local/fhirpath.js/src/` is organized by category:
 - `navigation.js` — path navigation
 - `types.js` — type system
 - `datetime.js` — date/time operations
-
-Use symlink-following options when searching (e.g., `grep -R` works since Grep tool follows symlinks).
 
 ## Response format
 
