@@ -571,7 +571,7 @@ test.describe("SQL on FHIR page", () => {
       await expect(page.getByRole("cell", { name: "Smith" })).toBeVisible();
 
       // Click export button.
-      await page.getByRole("button", { name: "Export" }).click();
+      await page.getByRole("button", { name: /^Export$/ }).click();
 
       // Verify export completed and output file is listed.
       await expect(page.getByText("Completed")).toBeVisible();
@@ -672,7 +672,7 @@ test.describe("SQL on FHIR page", () => {
       await expect(page.getByRole("cell", { name: "Smith" })).toBeVisible();
 
       // Click export button.
-      await page.getByRole("button", { name: "Export" }).click();
+      await page.getByRole("button", { name: /^Export$/ }).click();
 
       // Wait for export to complete.
       await expect(page.getByText("Completed")).toBeVisible();
@@ -879,9 +879,9 @@ test.describe("SQL on FHIR page", () => {
       await expect(page.getByRole("cell", { name: "Smith" })).toBeVisible();
 
       // Click export button twice.
-      await page.getByRole("button", { name: "Export" }).click();
+      await page.getByRole("button", { name: /^Export$/ }).click();
       await expect(page.getByText("Completed").first()).toBeVisible();
-      await page.getByRole("button", { name: "Export" }).click();
+      await page.getByRole("button", { name: /^Export$/ }).click();
 
       // Verify two export cards are visible.
       await expect(page.getByText("Completed")).toHaveCount(2);
@@ -899,11 +899,11 @@ test.describe("SQL on FHIR page", () => {
       await expect(page.getByRole("cell", { name: "Smith" })).toBeVisible();
 
       // Start first export and wait for completion.
-      await page.getByRole("button", { name: "Export" }).click();
+      await page.getByRole("button", { name: /^Export$/ }).click();
       await expect(page.getByText("Completed").first()).toBeVisible();
 
       // Start second export.
-      await page.getByRole("button", { name: "Export" }).click();
+      await page.getByRole("button", { name: /^Export$/ }).click();
       await expect(page.getByText("Completed")).toHaveCount(2);
 
       // Get the timestamps of the two export cards.
@@ -925,7 +925,7 @@ test.describe("SQL on FHIR page", () => {
       await page.getByRole("button", { name: "Execute" }).click();
       await expect(page.getByRole("cell", { name: "Smith" })).toBeVisible();
 
-      await page.getByRole("button", { name: "Export" }).click();
+      await page.getByRole("button", { name: /^Export$/ }).click();
       await expect(page.getByText("Completed")).toBeVisible();
 
       // Verify close button is visible on export card (should have 2 Close buttons:
@@ -944,7 +944,7 @@ test.describe("SQL on FHIR page", () => {
       await page.getByRole("button", { name: "Execute" }).click();
       await expect(page.getByRole("cell", { name: "Smith" })).toBeVisible();
 
-      await page.getByRole("button", { name: "Export" }).click();
+      await page.getByRole("button", { name: /^Export$/ }).click();
       await expect(page.getByText("Completed")).toBeVisible();
 
       // Click close button on export card (the second Close button).
@@ -967,7 +967,7 @@ test.describe("SQL on FHIR page", () => {
       await page.getByRole("button", { name: "Execute" }).click();
       await expect(page.getByRole("cell", { name: "Smith" })).toBeVisible();
 
-      await page.getByRole("button", { name: "Export" }).click();
+      await page.getByRole("button", { name: /^Export$/ }).click();
 
       // Wait for export to start (Cancel button visible).
       await expect(page.getByRole("button", { name: "Cancel" })).toBeVisible();
@@ -1029,7 +1029,7 @@ test.describe("SQL on FHIR page", () => {
       await page.getByRole("button", { name: "Execute" }).click();
       await expect(page.getByRole("cell", { name: "Smith" })).toBeVisible();
 
-      await page.getByRole("button", { name: "Export" }).click();
+      await page.getByRole("button", { name: /^Export$/ }).click();
 
       // Verify error is shown and close button is visible.
       await expect(page.getByText("Failed", { exact: true })).toBeVisible();
@@ -1049,7 +1049,7 @@ test.describe("SQL on FHIR page", () => {
       await page.getByRole("button", { name: "Execute" }).click();
       await expect(page.getByRole("cell", { name: "Smith" })).toBeVisible();
 
-      await page.getByRole("button", { name: "Export" }).click();
+      await page.getByRole("button", { name: /^Export$/ }).click();
       await expect(page.getByText("Completed")).toBeVisible();
 
       // Click close button on query card (the first Close button).
