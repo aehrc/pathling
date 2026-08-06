@@ -374,14 +374,94 @@ public class ViewExecutionHelper {
   }
 
   /**
-   * Parses the ViewDefinition resource into a FhirView object.
+   * Executes a parsed view against an already-built data source and streams the result, leaving the
+   * caller to decide the format, the filtering and the data supply.
    *
-   * <p>This method serialises the HAPI resource back to JSON, then parses it with Gson into the
-   * FhirView class. This approach avoids duplicating the FhirView class hierarchy as HAPI resource
-   * components.
+   * <p>{@code $sql-run} makes those decisions itself, because they follow rules that depend on the
+   * subject kind, so it drives the evaluation engine through this method rather than through {@link
+   * #executeView}.
+   *
+   * @param view the parsed view to execute
+   * @param dataSource the data source to project, already filtered
+   * @param outputFormat the output format to emit
+   * @param includeHeader whether to include a header row in CSV output
+   * @param limit the maximum number of rows to return, applied after evaluation
+   * @param response the HTTP response to stream to
+   * @throws UnprocessableEntityException (422) if the view is semantically invalid
+   * @throws InvalidRequestException (400) if the view uses an unsupported expression, or the result
+   *     cannot be streamed
+   */
+  @SuppressWarnings("java:S107")
+  public void streamView(
+      @Nonnull final FhirView view,
+      @Nonnull final DataSource dataSource,
+      @Nonnull final ViewOutputFormat outputFormat,
+      final boolean includeHeader,
+      @Nullable final IntegerType limit,
+      @Nonnull final HttpServletResponse response) {
+
+    checkProjectedResourceReadAuthority(view);
+
+    response.setContentType(outputFormat.getContentType());
+    response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+    response.setStatus(HttpServletResponse.SC_OK);
+
+    try {
+      final OutputStream outputStream = response.getOutputStream();
+
+      // For CSV with header, write the header immediately to minimise time to first byte.
+      if (outputFormat == ViewOutputFormat.CSV && includeHeader) {
+        streamingHelper.writeCsvHeader(
+            outputStream, view.getAllColumns().map(Column::getName).toList());
+        outputStream.flush();
+      }
+
+      executeAndStreamResults(view, dataSource, limit, outputFormat, outputStream);
+      outputStream.flush();
+    } catch (final IOException e) {
+      log.error("Error streaming view results", e);
+      throw new InvalidRequestException("Error streaming results: " + e.getMessage());
+    }
+  }
+
+  /**
+   * Builds a data source from inline FHIR resources supplied with the request, used in place of
+   * server data.
+   *
+   * @param inlineResources the serialised resources, each a resource or a Bundle to unwrap
+   * @return a data source over the supplied resources
+   * @throws InvalidRequestException (400) if a supplied resource cannot be parsed
    */
   @Nonnull
-  private FhirView parseViewDefinition(@Nonnull final IBaseResource viewResource) {
+  public DataSource inlineDataSource(@Nonnull final List<String> inlineResources) {
+    return new ObjectDataSource(sparkSession, fhirEncoders, parseInlineResources(inlineResources));
+  }
+
+  /**
+   * Enforces the per-projected-resource-type READ check for a parsed view, when authorisation is
+   * enabled.
+   *
+   * @param view the parsed view whose subject resource type is checked
+   */
+  public void checkProjectedResourceReadAuthority(@Nonnull final FhirView view) {
+    if (serverConfiguration.getAuth().isEnabled()) {
+      SecurityAspect.checkHasAuthority(
+          PathlingAuthority.resourceAccess(AccessType.READ, view.getResource()));
+    }
+  }
+
+  /**
+   * Parses a ViewDefinition resource into a {@link FhirView}.
+   *
+   * <p>The HAPI resource is serialised back to JSON and parsed with Gson, which avoids duplicating
+   * the FhirView class hierarchy as HAPI resource components.
+   *
+   * @param viewResource the ViewDefinition resource to parse
+   * @return the parsed view
+   * @throws InvalidRequestException (400) if the resource is not a well-formed ViewDefinition
+   */
+  @Nonnull
+  public FhirView parseViewDefinition(@Nonnull final IBaseResource viewResource) {
     try {
       // Serialise the HAPI resource back to JSON.
       final String viewJson = fhirContext.newJsonParser().encodeResourceToString(viewResource);
