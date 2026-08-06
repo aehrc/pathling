@@ -83,11 +83,17 @@ public class ReadProvider implements IResourceProvider {
   /**
    * Implements the FHIR read operation.
    *
+   * <p>Requires the {@code pathling:read-resource} operation authority, checked by the security
+   * aspect before method entry, in addition to read data authority for the resource type, checked
+   * inline below. The operation authority is deliberately named apart from the {@code
+   * pathling:read} data authority, so that a subject can be granted instance read on one resource
+   * type without being granted read access to every type.
+   *
    * @param id the ID of the resource to read
    * @return the resource with the specified ID
    */
   @Read
-  @OperationAccess("read")
+  @OperationAccess("read-resource")
   @SuppressWarnings("UnusedReturnValue")
   public IBaseResource read(@Nullable @IdParam final IdType id) {
     checkUserInput(id != null && !id.isEmpty(), "ID must be supplied");

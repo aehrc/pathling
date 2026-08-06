@@ -40,7 +40,10 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 
 /**
- * Security tests for {@link ReadProvider} verifying per-resource read authority enforcement.
+ * Security tests for {@link ReadProvider} verifying per-resource read authority enforcement. The
+ * provider is constructed directly here, so only the inline data authority check applies; the
+ * operation authority check that also guards the interaction is covered by {@code
+ * SecurityEnabledReadOperationTest}.
  *
  * @author John Grimes
  */
@@ -85,7 +88,7 @@ class ReadProviderAuthTest {
   @Test
   void readSucceedsWithCorrectResourceAuthority() {
     authConfig.setEnabled(true);
-    setSecurityContext("pathling:read", "pathling:read:Patient");
+    setSecurityContext("pathling:read:Patient");
     when(readExecutor.read("Patient", "patient-1")).thenReturn(new Patient());
     assertThat(readProvider.read(new IdType("Patient/patient-1"))).isNotNull();
   }
