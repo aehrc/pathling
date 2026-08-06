@@ -49,6 +49,9 @@ import java.security.Key;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Primary;
 import org.springframework.http.HttpHeaders;
@@ -61,6 +64,7 @@ import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
 import org.springframework.security.oauth2.core.OAuth2TokenValidator;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtDecoderProviderConfigurationUtilsProxy;
 import org.springframework.security.oauth2.jwt.JwtIssuerValidator;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.stereotype.Component;
@@ -75,19 +79,34 @@ import org.springframework.web.client.RestTemplate;
 @Component
 @ConditionalOnProperty(prefix = "pathling", name = "auth.enabled", havingValue = "true")
 @Primary
+@Slf4j
 public class PathlingJwtDecoderBuilder implements JWTClaimsSetAwareJWSKeySelector<SecurityContext> {
 
   @Nonnull private final OidcConfiguration oidcConfiguration;
 
-  @Nonnull private final RestOperations restOperations = new RestTemplate();
+  @Nonnull private final RestOperations restOperations;
 
   /**
    * Creates a new PathlingJwtDecoderBuilder.
    *
    * @param oidcConfiguration configuration used to instantiate the builder
    */
+  @Autowired
   public PathlingJwtDecoderBuilder(@Nonnull final OidcConfiguration oidcConfiguration) {
+    this(oidcConfiguration, new RestTemplate());
+  }
+
+  /**
+   * Creates a new PathlingJwtDecoderBuilder with an explicit HTTP client, for use in tests.
+   *
+   * @param oidcConfiguration configuration used to instantiate the builder
+   * @param restOperations the HTTP client used to retrieve the JWKS
+   */
+  PathlingJwtDecoderBuilder(
+      @Nonnull final OidcConfiguration oidcConfiguration,
+      @Nonnull final RestOperations restOperations) {
     this.oidcConfiguration = oidcConfiguration;
+    this.restOperations = restOperations;
   }
 
   /**
@@ -129,11 +148,35 @@ public class PathlingJwtDecoderBuilder implements JWTClaimsSetAwareJWSKeySelecto
       @SuppressWarnings("deprecation")
       final JWKSource<SecurityContext> jwkSource =
           new RemoteJWKSet<>(URI.create(jwksUri).toURL(), new JwksRetriever(restOperations));
+      final Set<JWSAlgorithm> acceptedAlgorithms = resolveAcceptedAlgorithms(jwkSource);
+      log.debug("Accepted JWS signing algorithms: {}", acceptedAlgorithms);
       final JWSKeySelector<SecurityContext> keySelector =
-          new JWSVerificationKeySelector<>(JWSAlgorithm.RS256, jwkSource);
+          new JWSVerificationKeySelector<>(acceptedAlgorithms, jwkSource);
       return keySelector.selectJWSKeys(header, context);
     } catch (final IOException e) {
       throw new KeySourceException("Failed to retrieve keys from " + jwksUri, e);
+    }
+  }
+
+  /**
+   * Resolves the set of JWS signing algorithms that will be accepted within a token header. The
+   * accepted set is derived from the keys published by the issuer.
+   *
+   * @param jwkSource the source of the issuer's published keys
+   * @return the accepted algorithms
+   * @throws KeySourceException if the algorithms could not be derived from the published keys
+   */
+  @Nonnull
+  private Set<JWSAlgorithm> resolveAcceptedAlgorithms(
+      @Nonnull final JWKSource<SecurityContext> jwkSource) throws KeySourceException {
+    try {
+      return JwtDecoderProviderConfigurationUtilsProxy.getJwsAlgorithms(jwkSource);
+    } catch (final IllegalStateException | IllegalArgumentException e) {
+      // The Spring utility wraps key retrieval failures in an IllegalStateException, and signals an
+      // empty key set with an IllegalArgumentException. Both are token verification failures rather
+      // than server errors, so they are reported as such to preserve the 401 failure mode.
+      throw new KeySourceException(
+          "Failed to derive accepted signing algorithms from the published keys", e);
     }
   }
 
