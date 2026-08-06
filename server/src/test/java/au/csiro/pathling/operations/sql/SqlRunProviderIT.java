@@ -46,6 +46,8 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.ResourceAccessMode;
 import org.junit.jupiter.api.parallel.ResourceLock;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
@@ -263,6 +265,41 @@ class SqlRunProviderIT {
     final String body = postOk(GSON.toJson(parameters), SqlRunFormat.FHIR);
 
     assertThat(body).contains("Parameters").contains("family_name").contains("Smith");
+  }
+
+  // ------------------------------------------------------------------------
+  // Parameters that cannot be expressed in a query string.
+  // ------------------------------------------------------------------------
+
+  // A resource-carrying parameter has no query-string form, so a GET naming one is refused by the
+  // operation itself. Asserted at the wire, because that is the layer where the refusal has to
+  // happen: the framework's own binding would otherwise answer first, with a different status.
+  @ParameterizedTest
+  @ValueSource(strings = {"subjectResource", "parameters", "context", "resource"})
+  void rejectsAResourceCarryingParameterOverGet(final String parameterName) {
+    final byte[] body =
+        webTestClient
+            .get()
+            .uri(
+                "http://localhost:"
+                    + port
+                    + PATH
+                    + "?subjectReference=ViewDefinition/"
+                    + SqlRunTestConfiguration.PATIENT_VIEW_ID
+                    + "&"
+                    + parameterName
+                    + "=x")
+            .header("Accept", "application/fhir+json")
+            .exchange()
+            .expectStatus()
+            .isBadRequest()
+            .expectBody()
+            .returnResult()
+            .getResponseBodyContent();
+
+    assertThat(new String(body == null ? new byte[0] : body, StandardCharsets.UTF_8))
+        .contains("\"code\":\"invalid\"")
+        .contains(parameterName);
   }
 
   @Test
