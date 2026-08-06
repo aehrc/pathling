@@ -106,6 +106,24 @@ class SqlExportProviderIT extends AbstractAsyncExportIT {
     assertThat(johnsonsContent).contains("Johnson").doesNotContain("Smith");
   }
 
+  // An inline query whose table source the server does not hold, satisfied by a job-wide context
+  // entry. Without this the query fails as an undeclared table (aehrc/pathling#2663).
+  @Test
+  void exportsAnInlineQueryAgainstAnInlineContextEntry() throws InterruptedException {
+    final Map<String, Object> body =
+        parameters(
+            subject(nameOf("ad_hoc"), resourcePart("subjectResource", inlineQueryOverAdHocView())),
+            resourcePart("context", adHocView()));
+
+    final Map<String, Object> manifest = exportToCompletion(systemLevelUri(), body);
+
+    assertThat(findParamValue(manifest, "status", "valueCode")).isEqualTo("completed");
+    final List<Map<String, Object>> outputs = paramsByName(manifest, "output");
+    assertThat(outputs).hasSize(1);
+    final String content = downloadAll(outputNamed(outputs, "ad_hoc"));
+    assertThat(content).contains("Smith").contains("Johnson").contains("Williams");
+  }
+
   @Test
   void writesTheRequestedFormat() throws InterruptedException {
     final Map<String, Object> body = mixedJob(null);
@@ -317,6 +335,64 @@ class SqlExportProviderIT extends AbstractAsyncExportIT {
       addParam(body, simpleParam("clientTrackingId", "valueString", clientTrackingId));
     }
     return body;
+  }
+
+  /** A ViewDefinition the server does not hold, supplied as a context entry. */
+  @Nonnull
+  private Map<String, Object> adHocView() {
+    return Map.of(
+        "resourceType",
+        "ViewDefinition",
+        "url",
+        "https://pathling.csiro.au/test/ViewDefinition/ExportAdHoc",
+        "name",
+        "export_ad_hoc",
+        "status",
+        "active",
+        "resource",
+        "Patient",
+        "select",
+        List.of(
+            Map.of(
+                "column",
+                List.of(
+                    Map.of("name", "id", "path", "id"),
+                    Map.of("name", "family_name", "path", "name.first().family")))));
+  }
+
+  /** An inline SQLQuery whose only table source is the ad-hoc view above. */
+  @Nonnull
+  private Map<String, Object> inlineQueryOverAdHocView() {
+    final String sql =
+        java.util.Base64.getEncoder()
+            .encodeToString(
+                "SELECT id, family_name FROM adh ORDER BY id"
+                    .getBytes(java.nio.charset.StandardCharsets.UTF_8));
+    return Map.of(
+        "resourceType",
+        "Library",
+        "status",
+        "active",
+        "type",
+        Map.of(
+            "coding",
+            List.of(
+                Map.of(
+                    "system",
+                    au.csiro.pathling.operations.sqlquery.SqlLibraryParser.LIBRARY_TYPE_SYSTEM,
+                    "code",
+                    au.csiro.pathling.operations.sqlquery.SqlLibraryParser.SQL_QUERY_TYPE_CODE))),
+        "relatedArtifact",
+        List.of(
+            Map.of(
+                "type",
+                "depends-on",
+                "label",
+                "adh",
+                "resource",
+                "https://pathling.csiro.au/test/ViewDefinition/ExportAdHoc")),
+        "content",
+        List.of(Map.of("contentType", "application/sql", "data", sql)));
   }
 
   @Nonnull
