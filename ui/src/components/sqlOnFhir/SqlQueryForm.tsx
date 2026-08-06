@@ -16,7 +16,7 @@
  */
 
 /**
- * Form for executing the SQL on FHIR `$sqlquery-run` operation.
+ * Form for executing the SQL on FHIR `$sql-run` operation.
  *
  * Hosts a stored/inline tab pair, runtime bindings and output controls,
  * then dispatches Execute and Save actions through the supplied

@@ -19,31 +19,22 @@ package au.csiro.pathling.operations.sqlquery;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
-import au.csiro.pathling.config.AuthorizationConfiguration;
-import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.ViewDefinitionResource;
 import au.csiro.pathling.encoders.ViewDefinitionResource.ColumnComponent;
 import au.csiro.pathling.encoders.ViewDefinitionResource.SelectComponent;
-import au.csiro.pathling.library.io.source.QueryableDataSource;
+import au.csiro.pathling.operations.sql.ContextArtefactParser;
+import au.csiro.pathling.operations.sql.FhirViewValidator;
 import au.csiro.pathling.operations.sql.SuppliedArtefact;
 import au.csiro.pathling.operations.sql.SuppliedArtefacts;
-import au.csiro.pathling.operations.view.ViewExecutionHelper;
-import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
-import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import jakarta.annotation.Nonnull;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import org.hl7.fhir.r4.model.CodeType;
-import org.hl7.fhir.r4.model.Parameters;
-import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
 import org.hl7.fhir.r4.model.StringType;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
@@ -51,7 +42,7 @@ import org.junit.jupiter.api.Test;
  * Tests for the resolution of request-supplied views against canonical dependency references: a
  * supplied view is matched to a reference by its {@code url} (by {@link SuppliedArtefacts}), while
  * a supplied view that carries no {@code url} is rejected at parse time (by {@link
- * SqlQueryExportRequestParser}).
+ * ContextArtefactParser}).
  *
  * @author John Grimes
  */
@@ -90,61 +81,22 @@ class RequestViewResolutionTest {
   }
 
   // ---------------------------------------------------------------------------
-  // Url-less supplied-view rejection (SqlQueryExportRequestParser).
+  // Url-less supplied-artefact rejection (ContextArtefactParser).
   // ---------------------------------------------------------------------------
 
   @Nested
   class SuppliedViewValidation {
 
-    private ViewExecutionHelper viewExecutionHelper;
-    private SqlQueryExportRequestParser parser;
-
-    @BeforeEach
-    void setUp() {
-      viewExecutionHelper = mock(ViewExecutionHelper.class);
-      final ServerConfiguration serverConfiguration = new ServerConfiguration();
-      final AuthorizationConfiguration auth = new AuthorizationConfiguration();
-      auth.setEnabled(false);
-      serverConfiguration.setAuth(auth);
-      parser =
-          new SqlQueryExportRequestParser(
-              mock(SqlQueryPipeline.class),
-              mock(LibraryReferenceResolver.class),
-              viewExecutionHelper,
-              FhirContext.forR4Cached(),
-              serverConfiguration,
-              mock(QueryableDataSource.class));
-    }
-
     @Test
     void rejectsASuppliedViewWithoutAUrl() {
-      // The resolved view has no url, so it can never satisfy a canonical reference.
-      when(viewExecutionHelper.resolveViewInput(any(), any()))
-          .thenReturn(viewDefinitionWithoutUrl());
-      final Parameters body = parametersWithInlineView();
+      // A supplied view is matched to a dependency by its url, so one without a url can never
+      // satisfy anything and is rejected rather than silently ignored.
+      final FhirViewValidator viewValidator = mock(FhirViewValidator.class);
+      final ContextArtefactParser parser = new ContextArtefactParser(viewValidator);
 
-      assertThatThrownBy(
-              () ->
-                  parser.parse(requestDetails(body), null, null, null, null, Set.of(), null, null))
+      assertThatThrownBy(() -> parser.parse(List.of(viewDefinitionWithoutUrl())))
           .isInstanceOf(InvalidRequestException.class)
           .hasMessageContaining("url");
-    }
-
-    @Nonnull
-    private Parameters parametersWithInlineView() {
-      final Parameters parameters = new Parameters();
-      final ParametersParameterComponent view = parameters.addParameter().setName("view");
-      view.addPart().setName("viewResource").setResource(viewDefinitionWithoutUrl());
-      return parameters;
-    }
-
-    @Nonnull
-    private ServletRequestDetails requestDetails(@Nonnull final Parameters body) {
-      final ServletRequestDetails requestDetails = mock(ServletRequestDetails.class);
-      when(requestDetails.getResource()).thenReturn(body);
-      when(requestDetails.getCompleteUrl()).thenReturn("http://localhost/fhir/$sqlquery-export");
-      when(requestDetails.getFhirServerBase()).thenReturn("http://localhost/fhir");
-      return requestDetails;
     }
   }
 

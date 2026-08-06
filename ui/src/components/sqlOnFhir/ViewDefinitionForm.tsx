@@ -16,7 +16,7 @@
  */
 
 /**
- * Form for executing ViewDefinitions via `$viewdefinition-run`.
+ * Form for executing ViewDefinitions via `$sql-run`.
  *
  * Hosted by `SqlOnFhirForm` alongside `SqlQueryForm`.
  *

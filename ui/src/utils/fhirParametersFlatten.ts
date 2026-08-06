@@ -16,7 +16,7 @@
  */
 
 /**
- * Flattens the FHIR-format response from the `$sqlquery-run` operation
+ * Flattens the FHIR-format response from the `$sql-run` operation
  * (`_format=fhir`) into a tabular `{columns, rows}` shape.
  *
  * The operation emits a `Parameters` resource with one repeating `row`
@@ -34,7 +34,7 @@ import type {
 } from "fhir/r4";
 
 /**
- * Result of flattening a FHIR-format `$sqlquery-run` response.
+ * Result of flattening a FHIR-format `$sql-run` response.
  */
 export interface FlattenedFhirResult {
   /** Column names in first-seen order. */

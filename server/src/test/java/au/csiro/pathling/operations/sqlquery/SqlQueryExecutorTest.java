@@ -49,7 +49,7 @@ import scala.jdk.javaapi.CollectionConverters;
  * <ul>
  *   <li>Row limiting: the caller's {@code _limit} is applied when they supply one, and no limit at
  *       all is imposed when they do not. A server-side cap used to truncate every result, which
- *       silently truncated every {@code $sqlquery-export} at one million rows (spec 041 US1, US4).
+ *       silently truncated every {@code $sql-export} at one million rows (spec 041 US1, US4).
  *   <li>Spark job groups: execution runs under whatever job group the caller established, which is
  *       how an asynchronous job's stages are attributed to it and how a cancellation of that job
  *       reaches the query in flight (spec 041 US3).
@@ -174,7 +174,7 @@ class SqlQueryExecutorTest {
   void imposesNoRowLimitWhenCallerSuppliesNone() {
     // A caller that supplies no _limit must receive the complete result, so nothing may add a limit
     // node to the plan handed to the consumer. This is what previously truncated every
-    // $sqlquery-export at the configured server cap.
+    // $sql-export at the configured server cap.
     final LogicalPlan consumedPlan = executeAndCapturePlan(SELF_CONTAINED_SQL, null);
 
     assertThat(findLimitValue(consumedPlan)).isNull();

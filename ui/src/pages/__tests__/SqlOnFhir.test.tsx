@@ -158,7 +158,7 @@ describe("SqlOnFhir page", () => {
     render(<SqlOnFhir />);
     await user.click(screen.getByRole("button", { name: "Add view" }));
     await user.click(screen.getByRole("button", { name: "Add query" }));
-    await user.click(screen.getByRole("button", { name: "Export set", exact: true }));
+    await user.click(screen.getByRole("button", { name: /^Export set$/ }));
 
     expect(screen.getByText("Export job card")).toBeInTheDocument();
     expect(lastExportSubjects?.map((subject) => subject.name)).toEqual([

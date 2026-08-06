@@ -239,6 +239,7 @@ public class SqlExportRequestParser {
 
     if (subject.getKind() == SubjectKind.VIEW_DEFINITION) {
       final FhirView view = viewValidator.parse(subject.getResource(), SUBJECT_EXPRESSION);
+      viewValidator.checkProjectedResourceReadAuthority(view);
       viewValidator.validateSemantically(view, SUBJECT_EXPRESSION);
       return SubjectInput.ofView(name, view);
     }

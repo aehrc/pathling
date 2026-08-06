@@ -47,9 +47,6 @@ import au.csiro.pathling.operations.sql.SqlExportProvider;
 import au.csiro.pathling.operations.sql.SqlRunProvider;
 import au.csiro.pathling.operations.update.BatchProvider;
 import au.csiro.pathling.operations.update.UpdateProviderFactory;
-import au.csiro.pathling.operations.view.ViewDefinitionExportProvider;
-import au.csiro.pathling.operations.view.ViewDefinitionInstanceRunProvider;
-import au.csiro.pathling.operations.view.ViewDefinitionRunProvider;
 import au.csiro.pathling.read.ReadProviderFactory;
 import au.csiro.pathling.search.SearchProviderFactory;
 import au.csiro.pathling.security.OidcConfiguration;
@@ -172,29 +169,6 @@ public class FhirServer extends RestfulServer {
 
   @Nonnull private final transient BatchProvider batchProvider;
 
-  @Nonnull private final transient ViewDefinitionRunProvider viewDefinitionRunProvider;
-
-  @Nonnull
-  private final transient ViewDefinitionInstanceRunProvider viewDefinitionInstanceRunProvider;
-
-  @Nonnull private final transient ViewDefinitionExportProvider viewDefinitionExportProvider;
-
-  @Nonnull
-  private final transient au.csiro.pathling.operations.sqlquery.SqlQueryRunProvider
-      sqlQueryRunProvider;
-
-  @Nonnull
-  private final transient au.csiro.pathling.operations.sqlquery.SqlQueryInstanceRunProvider
-      sqlQueryInstanceRunProvider;
-
-  @Nonnull
-  private final transient au.csiro.pathling.operations.sqlquery.SqlQueryExportProvider
-      sqlQueryExportProvider;
-
-  @Nonnull
-  private final transient au.csiro.pathling.operations.sqlquery.SqlQueryInstanceExportProvider
-      sqlQueryInstanceExportProvider;
-
   @Nonnull private final transient SqlRunProvider sqlRunProvider;
 
   @Nonnull private final transient SqlExportProvider sqlExportProvider;
@@ -226,14 +200,6 @@ public class FhirServer extends RestfulServer {
    * @param deleteProviderFactory the delete provider factory
    * @param readProviderFactory the read provider factory
    * @param batchProvider the batch provider
-   * @param viewDefinitionRunProvider the view definition run provider
-   * @param viewDefinitionInstanceRunProvider the view definition instance run provider
-   * @param viewDefinitionExportProvider the view definition export provider
-   * @param sqlQueryRunProvider the SQL query run provider
-   * @param sqlQueryInstanceRunProvider the SQL query instance run provider
-   * @param sqlQueryExportProvider the system-level SQL query export provider
-   * @param sqlQueryInstanceExportProvider the type-level and instance-level SQL query export
-   *     provider
    * @param sqlRunProvider the system-level $sql-run provider
    */
   @SuppressWarnings("java:S107")
@@ -262,18 +228,6 @@ public class FhirServer extends RestfulServer {
       @Nonnull final DeleteProviderFactory deleteProviderFactory,
       @Nonnull final ReadProviderFactory readProviderFactory,
       @Nonnull final BatchProvider batchProvider,
-      @Nonnull final ViewDefinitionRunProvider viewDefinitionRunProvider,
-      @Nonnull final ViewDefinitionInstanceRunProvider viewDefinitionInstanceRunProvider,
-      @Nonnull final ViewDefinitionExportProvider viewDefinitionExportProvider,
-      @Nonnull final au.csiro.pathling.operations.sqlquery.SqlQueryRunProvider sqlQueryRunProvider,
-      @Nonnull
-          final au.csiro.pathling.operations.sqlquery.SqlQueryInstanceRunProvider
-              sqlQueryInstanceRunProvider,
-      @Nonnull
-          final au.csiro.pathling.operations.sqlquery.SqlQueryExportProvider sqlQueryExportProvider,
-      @Nonnull
-          final au.csiro.pathling.operations.sqlquery.SqlQueryInstanceExportProvider
-              sqlQueryInstanceExportProvider,
       @Nonnull final SqlRunProvider sqlRunProvider,
       @Nonnull final SqlExportProvider sqlExportProvider) {
     // Pass the FhirContext to the RestfulServer superclass to ensure custom types like
@@ -302,13 +256,6 @@ public class FhirServer extends RestfulServer {
     this.deleteProviderFactory = deleteProviderFactory;
     this.readProviderFactory = readProviderFactory;
     this.batchProvider = batchProvider;
-    this.viewDefinitionRunProvider = viewDefinitionRunProvider;
-    this.viewDefinitionInstanceRunProvider = viewDefinitionInstanceRunProvider;
-    this.viewDefinitionExportProvider = viewDefinitionExportProvider;
-    this.sqlQueryRunProvider = sqlQueryRunProvider;
-    this.sqlQueryInstanceRunProvider = sqlQueryInstanceRunProvider;
-    this.sqlQueryExportProvider = sqlQueryExportProvider;
-    this.sqlQueryInstanceExportProvider = sqlQueryInstanceExportProvider;
     this.sqlRunProvider = sqlRunProvider;
     this.sqlExportProvider = sqlExportProvider;
   }
@@ -413,33 +360,6 @@ public class FhirServer extends RestfulServer {
       // Register batch provider.
       if (ops.isBatchEnabled()) {
         registerProvider(batchProvider);
-      }
-
-      // Register view definition run provider.
-      if (ops.isViewDefinitionRunEnabled()) {
-        registerProvider(viewDefinitionRunProvider);
-      }
-
-      // Register view definition instance run provider.
-      if (ops.isViewDefinitionInstanceRunEnabled()) {
-        registerProvider(viewDefinitionInstanceRunProvider);
-      }
-
-      // Register view definition export provider.
-      if (ops.isViewDefinitionExportEnabled()) {
-        registerProvider(viewDefinitionExportProvider);
-      }
-
-      // Register SQL query run providers.
-      if (ops.isSqlQueryRunEnabled()) {
-        registerProvider(sqlQueryRunProvider);
-        registerProvider(sqlQueryInstanceRunProvider);
-      }
-
-      // Register the SQL query export providers (system, type, and instance levels).
-      if (ops.isSqlQueryExportEnabled()) {
-        registerProvider(sqlQueryExportProvider);
-        registerProvider(sqlQueryInstanceExportProvider);
       }
 
       // Register the SQL on FHIR data operations.

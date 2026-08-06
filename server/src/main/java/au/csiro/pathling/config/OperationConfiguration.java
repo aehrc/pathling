@@ -61,21 +61,6 @@ public class OperationConfiguration {
   /** Enables $import-pnp operation. */
   private boolean importPnpEnabled = true;
 
-  /** Enables system-level $viewdefinition-run operation. */
-  private boolean viewDefinitionRunEnabled = true;
-
-  /** Enables instance-level $run operation on ViewDefinition. */
-  private boolean viewDefinitionInstanceRunEnabled = true;
-
-  /** Enables $viewdefinition-export operation. */
-  private boolean viewDefinitionExportEnabled = true;
-
-  /** Enables $sqlquery-run operation. */
-  private boolean sqlQueryRunEnabled = true;
-
-  /** Enables $sqlquery-export operation. */
-  private boolean sqlQueryExportEnabled = true;
-
   /** Enables the system-level SQL on FHIR $sql-run operation. */
   private boolean sqlRunEnabled = true;
 
@@ -94,11 +79,6 @@ public class OperationConfiguration {
    * @return true if any export operation that relies on the {@code $result} endpoint is enabled
    */
   public boolean isAnyExportEnabled() {
-    return exportEnabled
-        || patientExportEnabled
-        || groupExportEnabled
-        || viewDefinitionExportEnabled
-        || sqlQueryExportEnabled
-        || sqlExportEnabled;
+    return exportEnabled || patientExportEnabled || groupExportEnabled || sqlExportEnabled;
   }
 }

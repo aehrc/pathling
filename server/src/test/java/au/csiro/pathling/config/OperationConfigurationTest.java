@@ -45,9 +45,6 @@ class OperationConfigurationTest {
     assertThat(config.isGroupExportEnabled()).isTrue();
     assertThat(config.isImportEnabled()).isTrue();
     assertThat(config.isImportPnpEnabled()).isTrue();
-    assertThat(config.isViewDefinitionRunEnabled()).isTrue();
-    assertThat(config.isViewDefinitionInstanceRunEnabled()).isTrue();
-    assertThat(config.isViewDefinitionExportEnabled()).isTrue();
     assertThat(config.isSqlRunEnabled()).isTrue();
     assertThat(config.isSqlExportEnabled()).isTrue();
     assertThat(config.isBulkSubmitEnabled()).isTrue();
@@ -73,8 +70,6 @@ class OperationConfigurationTest {
     config.setExportEnabled(false);
     config.setPatientExportEnabled(false);
     config.setGroupExportEnabled(false);
-    config.setViewDefinitionExportEnabled(false);
-    config.setSqlQueryExportEnabled(false);
 
     assertThat(config.isSqlExportEnabled()).isTrue();
     assertThat(config.isAnyExportEnabled()).isTrue();
@@ -121,8 +116,6 @@ class OperationConfigurationTest {
     config.setExportEnabled(false);
     config.setPatientExportEnabled(false);
     config.setGroupExportEnabled(false);
-    config.setViewDefinitionExportEnabled(false);
-    config.setSqlQueryExportEnabled(false);
     config.setSqlExportEnabled(false);
 
     // Then: isAnyExportEnabled should return false.
@@ -135,12 +128,12 @@ class OperationConfigurationTest {
     final OperationConfiguration config = new OperationConfiguration();
     config.setCreateEnabled(false);
     config.setImportEnabled(false);
-    config.setViewDefinitionRunEnabled(false);
+    config.setSqlRunEnabled(false);
 
     // Then: Only the disabled operations should be false.
     assertThat(config.isCreateEnabled()).isFalse();
     assertThat(config.isImportEnabled()).isFalse();
-    assertThat(config.isViewDefinitionRunEnabled()).isFalse();
+    assertThat(config.isSqlRunEnabled()).isFalse();
 
     // And: Other operations should remain enabled.
     assertThat(config.isReadEnabled()).isTrue();

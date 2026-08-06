@@ -206,7 +206,7 @@ export function findSourceByUrl(
 }
 
 /**
- * Reads the body of a `$sqlquery-run` response and assembles it into a
+ * Reads the body of a `$sql-run` response and assembles it into a
  * format-aware result.
  *
  * Tabular formats (`csv`, `ndjson`, `json`, `fhir`) are parsed into a

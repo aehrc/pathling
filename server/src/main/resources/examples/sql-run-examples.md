@@ -1,8 +1,8 @@
-# $sqlquery-run Operation Examples
+# $sql-run Operation Examples
 
-These examples demonstrate the `$sqlquery-run` operation alongside the
-existing `$viewdefinition-run` operation. They use a small synthetic dataset
-of Patients and Conditions.
+These examples demonstrate the `$sql-run` operation over each kind of subject:
+a ViewDefinition, and a SQLQuery Library. They use a small synthetic dataset of
+Patients and Conditions.
 
 ## Prerequisites
 
@@ -109,9 +109,9 @@ curl -s -X POST "http://localhost:8080/fhir/ViewDefinition" \
   }'
 ```
 
-Note the IDs returned in the responses. The instance-level `$viewdefinition-run`
-examples below use those logical IDs, so replace `<PATIENT_VD_ID>` and
-`<CONDITION_VD_ID>` with them. The `$sqlquery-run` examples reference the views
+Note the IDs returned in the responses. The stored-view examples below use
+those logical IDs, so replace `<PATIENT_VD_ID>` and `<CONDITION_VD_ID>` with
+them. The SQL query examples reference the views
 by their **canonical URL** instead, so replace `<PATIENT_VD_URL>` and
 `<CONDITION_VD_URL>` with the `url` values set above
 (`https://example.org/ViewDefinition/patients` and
@@ -123,12 +123,12 @@ curl -s "http://localhost:8080/fhir/ViewDefinition?_count=10" \
   -H "Accept: application/fhir+json" | python3 -m json.tool
 ```
 
-## 2. $viewdefinition-run Examples
+## 2. ViewDefinition Subject Examples
 
-### Instance-level $run on a stored ViewDefinition
+### Running a stored ViewDefinition over GET
 
 ```bash
-curl -s "http://localhost:8080/fhir/ViewDefinition/<PATIENT_VD_ID>/\$run" \
+curl -s "http://localhost:8080/fhir/\$sql-run?subjectReference=ViewDefinition/<PATIENT_VD_ID>" \
   -H "Accept: application/x-ndjson"
 ```
 
@@ -145,7 +145,7 @@ Expected output (NDJSON):
 ### Stored Condition ViewDefinition as CSV
 
 ```bash
-curl -s "http://localhost:8080/fhir/ViewDefinition/<CONDITION_VD_ID>/\$run?_format=csv"
+curl -s "http://localhost:8080/fhir/\$sql-run?subjectReference=ViewDefinition/<CONDITION_VD_ID>&_format=csv"
 ```
 
 Expected output:
@@ -163,14 +163,14 @@ cnd-6,Patient/pat-5,195967001,Asthma,2019-04-10
 ### Inline ViewDefinition with inline resources (no stored data needed)
 
 ```bash
-curl -s -X POST "http://localhost:8080/fhir/\$viewdefinition-run" \
+curl -s -X POST "http://localhost:8080/fhir/\$sql-run" \
   -H "Content-Type: application/fhir+json" \
   -H "Accept: application/x-ndjson" \
   -d '{
     "resourceType": "Parameters",
     "parameter": [
       {
-        "name": "viewResource",
+        "name": "subjectResource",
         "resource": {
           "resourceType": "ViewDefinition",
           "name": "patient_demographics",
@@ -205,9 +205,9 @@ curl -s -X POST "http://localhost:8080/fhir/\$viewdefinition-run" \
   }'
 ```
 
-## 3. $sqlquery-run Examples
+## 3. SQL Query Subject Examples
 
-The `$sqlquery-run` operation takes a Library resource conforming to the
+A SQL query subject is a Library resource conforming to the
 SQLQuery profile. The Library contains Base64-encoded SQL in its `content`,
 and references stored ViewDefinitions (or SQLViews) via `relatedArtifact`. The
 `label` on each artifact becomes the table name used in the SQL.
@@ -224,42 +224,42 @@ with a 404.
 
 ### Resolving the Library by reference
 
-Instead of passing the Library inline as `queryResource`, you can supply a
-`queryReference` pointing at a stored Library. Either form (relative literal
-or canonical) is accepted; exactly one of `queryResource` and `queryReference`
+Instead of passing the Library inline as `subjectResource`, you can supply a
+`subjectReference` pointing at a stored Library. Exactly one of
+`subjectCanonical`, `subjectReference` and `subjectResource`
 must be present.
 
 Relative literal reference (`Library/<id>`):
 
 ```bash
-curl -s -X POST "http://localhost:8080/fhir/\$sqlquery-run?_format=csv" \
+curl -s -X POST "http://localhost:8080/fhir/\$sql-run?_format=csv" \
   -H "Content-Type: application/fhir+json" \
   -d '{
     "resourceType": "Parameters",
     "parameter": [{
-      "name": "queryReference",
+      "name": "subjectReference",
       "valueReference": {"reference": "Library/<LIBRARY_ID>"}
     }]
   }'
 ```
 
-Canonical reference (`[url]` or `[url]|[version]`, matched against
-`Library.url` and `Library.version`):
+Canonical URL (`[url]` or `[url]|[version]`, matched against `Library.url` and
+`Library.version`):
 
 ```bash
-curl -s -X POST "http://localhost:8080/fhir/\$sqlquery-run?_format=csv" \
+curl -s -X POST "http://localhost:8080/fhir/\$sql-run?_format=csv" \
   -H "Content-Type: application/fhir+json" \
   -d '{
     "resourceType": "Parameters",
     "parameter": [{
-      "name": "queryReference",
-      "valueReference": {"reference": "https://example.org/Library/patients-with-conditions|1.0"}
+      "name": "subjectCanonical",
+      "valueCanonical": "https://example.org/Library/patients-with-conditions|1.0"
     }]
   }'
 ```
 
-If no Library matches, the server responds with 404. If neither (or both) of
-`queryResource` and `queryReference` are supplied, the server responds with 400.
+If nothing matches, the server responds with 404. If no naming form is
+supplied, or more than one, it responds with 400.
 
 ### JOIN patients with conditions
 
@@ -277,12 +277,12 @@ ORDER BY p.family_name, c.onset_date
 SQL="SELECT p.given_name, p.family_name, p.gender, p.birth_date, c.condition_name, c.onset_date FROM patients p JOIN conditions c ON concat('Patient/', p.patient_id) = c.patient_ref ORDER BY p.family_name, c.onset_date"
 SQL_B64=$(echo -n "$SQL" | base64 | tr -d '\n')
 
-curl -s -X POST "http://localhost:8080/fhir/\$sqlquery-run?_format=csv" \
+curl -s -X POST "http://localhost:8080/fhir/\$sql-run?_format=csv" \
   -H "Content-Type: application/fhir+json" \
   -d "{
     \"resourceType\": \"Parameters\",
     \"parameter\": [{
-      \"name\": \"queryResource\",
+      \"name\": \"subjectResource\",
       \"resource\": {
         \"resourceType\": \"Library\",
         \"status\": \"active\",
@@ -327,12 +327,12 @@ ORDER BY patient_count DESC
 SQL="SELECT c.condition_name, count(*) AS patient_count FROM conditions c GROUP BY c.condition_name ORDER BY patient_count DESC"
 SQL_B64=$(echo -n "$SQL" | base64 | tr -d '\n')
 
-curl -s -X POST "http://localhost:8080/fhir/\$sqlquery-run?_format=csv" \
+curl -s -X POST "http://localhost:8080/fhir/\$sql-run?_format=csv" \
   -H "Content-Type: application/fhir+json" \
   -d "{
     \"resourceType\": \"Parameters\",
     \"parameter\": [{
-      \"name\": \"queryResource\",
+      \"name\": \"subjectResource\",
       \"resource\": {
         \"resourceType\": \"Library\",
         \"status\": \"active\",
@@ -375,12 +375,12 @@ ORDER BY condition_count DESC
 SQL="SELECT p.given_name, p.family_name, count(*) AS condition_count FROM patients p JOIN conditions c ON concat('Patient/', p.patient_id) = c.patient_ref GROUP BY p.given_name, p.family_name ORDER BY condition_count DESC"
 SQL_B64=$(echo -n "$SQL" | base64 | tr -d '\n')
 
-curl -s -X POST "http://localhost:8080/fhir/\$sqlquery-run?_format=csv" \
+curl -s -X POST "http://localhost:8080/fhir/\$sql-run?_format=csv" \
   -H "Content-Type: application/fhir+json" \
   -d "{
     \"resourceType\": \"Parameters\",
     \"parameter\": [{
-      \"name\": \"queryResource\",
+      \"name\": \"subjectResource\",
       \"resource\": {
         \"resourceType\": \"Library\",
         \"status\": \"active\",
@@ -433,12 +433,12 @@ ORDER BY age_group, c.condition_name
 SQL="SELECT CASE WHEN floor(datediff(current_date(), p.birth_date) / 365.25) < 30 THEN '0-29' WHEN floor(datediff(current_date(), p.birth_date) / 365.25) < 50 THEN '30-49' WHEN floor(datediff(current_date(), p.birth_date) / 365.25) < 70 THEN '50-69' ELSE '70+' END AS age_group, c.condition_name, count(DISTINCT p.patient_id) AS patient_count FROM patients p JOIN conditions c ON concat('Patient/', p.patient_id) = c.patient_ref GROUP BY age_group, c.condition_name ORDER BY age_group, c.condition_name"
 SQL_B64=$(echo -n "$SQL" | base64 | tr -d '\n')
 
-curl -s -X POST "http://localhost:8080/fhir/\$sqlquery-run?_format=csv" \
+curl -s -X POST "http://localhost:8080/fhir/\$sql-run?_format=csv" \
   -H "Content-Type: application/fhir+json" \
   -d "{
     \"resourceType\": \"Parameters\",
     \"parameter\": [{
-      \"name\": \"queryResource\",
+      \"name\": \"subjectResource\",
       \"resource\": {
         \"resourceType\": \"Library\",
         \"status\": \"active\",
@@ -462,13 +462,13 @@ curl -s -X POST "http://localhost:8080/fhir/\$sqlquery-run?_format=csv" \
 SQL="SELECT patient_id, given_name, family_name FROM patients LIMIT 3"
 SQL_B64=$(echo -n "$SQL" | base64 | tr -d '\n')
 
-curl -s -X POST "http://localhost:8080/fhir/\$sqlquery-run" \
+curl -s -X POST "http://localhost:8080/fhir/\$sql-run" \
   -H "Content-Type: application/fhir+json" \
   -H "Accept: application/x-ndjson" \
   -d "{
     \"resourceType\": \"Parameters\",
     \"parameter\": [{
-      \"name\": \"queryResource\",
+      \"name\": \"subjectResource\",
       \"resource\": {
         \"resourceType\": \"Library\",
         \"status\": \"active\",
@@ -491,12 +491,12 @@ curl -s -X POST "http://localhost:8080/fhir/\$sqlquery-run" \
 SQL="SELECT condition_name, onset_date FROM conditions ORDER BY onset_date"
 SQL_B64=$(echo -n "$SQL" | base64 | tr -d '\n')
 
-curl -s -X POST "http://localhost:8080/fhir/\$sqlquery-run?_format=json" \
+curl -s -X POST "http://localhost:8080/fhir/\$sql-run?_format=json" \
   -H "Content-Type: application/fhir+json" \
   -d "{
     \"resourceType\": \"Parameters\",
     \"parameter\": [{
-      \"name\": \"queryResource\",
+      \"name\": \"subjectResource\",
       \"resource\": {
         \"resourceType\": \"Library\",
         \"status\": \"active\",
@@ -519,12 +519,12 @@ curl -s -X POST "http://localhost:8080/fhir/\$sqlquery-run?_format=json" \
 SQL="DROP TABLE conditions"
 SQL_B64=$(echo -n "$SQL" | base64 | tr -d '\n')
 
-curl -s -X POST "http://localhost:8080/fhir/\$sqlquery-run" \
+curl -s -X POST "http://localhost:8080/fhir/\$sql-run" \
   -H "Content-Type: application/fhir+json" \
   -d "{
     \"resourceType\": \"Parameters\",
     \"parameter\": [{
-      \"name\": \"queryResource\",
+      \"name\": \"subjectResource\",
       \"resource\": {
         \"resourceType\": \"Library\",
         \"status\": \"active\",

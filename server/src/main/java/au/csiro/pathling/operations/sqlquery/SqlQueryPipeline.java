@@ -38,8 +38,8 @@ import org.springframework.stereotype.Component;
  * parameters, and optional request-supplied views, it parses the query, resolves its ViewDefinition
  * table sources, statically validates the SQL, and executes it against Spark.
  *
- * <p>Both the synchronous {@code $sqlquery-run} operation (which streams the single result) and the
- * asynchronous {@code $sqlquery-export} operation (which writes each result to files) call this
+ * <p>Both the synchronous {@code $sql-run} operation (which streams the single result) and the
+ * asynchronous {@code $sql-export} operation (which writes each result to files) call this
  * pipeline, so the parsing, view resolution, validation, and execution semantics are identical
  * across the two. Only the terminal step (stream-to-response vs. write-to-files) differs and is
  * supplied by the caller as a {@link Consumer} of the result dataset.

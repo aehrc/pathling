@@ -50,7 +50,7 @@ class JobTest {
   void recordsNonNullStartTimeAtCreation() {
     final Instant before = Instant.now();
     final Future<IBaseResource> result = CompletableFuture.completedFuture(new Parameters());
-    final Job<Object> job = new Job<>("job-1", "viewdefinition-export", result, Optional.empty());
+    final Job<Object> job = new Job<>("job-1", "sql-export", result, Optional.empty());
     final Instant after = Instant.now();
 
     // The job records a creation timestamp that falls within the window in which it was created.

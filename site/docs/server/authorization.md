@@ -71,8 +71,8 @@ graph TB
 | `pathling:batch`                 | Provides access to the batch operation.                                         |
 | `pathling:bulk-submit`           | Provides access to the bulk submit operation.                                   |
 | `pathling:export`                | Provides access to the export operation.                                        |
-| `pathling:view-run`              | Provides access to the $viewdefinition-run operation.                           |
-| `pathling:view-export`           | Provides access to the $viewdefinition-export operation.                        |
+| `pathling:sql-run`               | Provides access to the $sql-run operation.                                      |
+| `pathling:sql-export`            | Provides access to the $sql-export operation.                                   |
 | `pathling:jobs`                  | Provides access to the [jobs](operations/jobs) list operation.                  |
 
 In order to enable access to an operation, an operation authority (e.g.
@@ -86,10 +86,11 @@ resources must be present within the token.
 The import, delete, batch, and bulk submit operations require `write` authority
 for all resource types that are referenced within the request.
 
-The view operations (`view-run` and `view-export`) require `read` authority for
-the resource type specified in the ViewDefinition's `resource` element. For
-example, a ViewDefinition targeting `Patient` resources requires
-`pathling:read:Patient` authority in addition to the operation authority.
+The SQL on FHIR data operations (`sql-run` and `sql-export`) require `read`
+authority for the resource type a ViewDefinition subject projects, named in its
+`resource` element. For example, a ViewDefinition targeting `Patient` resources
+requires `pathling:read:Patient` authority in addition to the operation
+authority.
 
 ### Job ownership
 
@@ -101,21 +102,23 @@ caller to be the job's owner and to hold the authority for the operation that
 started the job. A request to cancel a job owned by a different subject is
 refused with an access-denied error and the job is left unaffected.
 
-### Reading view definitions and queries from storage
+### Reading subjects and dependencies from storage
 
 Resolving a metadata resource from server storage requires `read` authority on
 that resource type, in addition to the per-projected-resource checks above:
 
 - Resolving a `ViewDefinition` from storage requires `pathling:read:ViewDefinition`.
-  This applies to a `view-run` or `view-export` `viewReference`, and to a
-  `ViewDefinition` referenced as a dependency of a SQL query.
-- Resolving a `SQLView` (a `Library`) from storage requires `pathling:read:Library`.
-  This applies to a `$sqlquery-run` or `$sqlquery-export` `queryReference` or
-  instance-level Library, and to a `SQLView` referenced as a dependency.
+  This applies to a `subjectCanonical` or `subjectReference` that names one, and
+  to a `ViewDefinition` referenced as a dependency of a SQL subject.
+- Resolving a `SQLQuery` or `SQLView` (both `Library` resources) from storage
+  requires `pathling:read:Library`. This applies to a `subjectCanonical` or
+  `subjectReference` that names one, and to a `SQLView` referenced as a
+  dependency.
 
-A resource supplied inline in the request body (an inline `viewResource` or
-`queryResource`) is not read from storage and is therefore not subject to these
-metadata read checks, though the per-projected-resource read checks still apply.
+A resource supplied inline in the request body - a `subjectResource` or a
+`context` entry - is not read from storage and is therefore not subject to
+these metadata read checks, though the per-projected-resource read checks still
+apply.
 
 ## SMART configuration
 

@@ -29,8 +29,8 @@ import org.springframework.stereotype.Component;
 /**
  * Builds the filtered data source for an asynchronous export: applies the {@code _since}
  * (updated-since) filter and the patient-compartment filter derived from the {@code patient} and
- * {@code group} parameters. Shared by both {@code $viewdefinition-export} and {@code
- * $sqlquery-export} so the two operations scope exported rows identically.
+ * {@code group} parameters. Shared by both {@code $sql-export} and {@code $sql-export} so the two
+ * operations scope exported rows identically.
  *
  * @author John Grimes
  */

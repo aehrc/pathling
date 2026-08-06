@@ -20,6 +20,9 @@ package au.csiro.pathling.operations.sql;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
+import au.csiro.pathling.security.PathlingAuthority;
+import au.csiro.pathling.security.ResourceAccess.AccessType;
+import au.csiro.pathling.security.SecurityAspect;
 import au.csiro.pathling.views.FhirView;
 import au.csiro.pathling.views.FhirViewExecutor;
 import au.csiro.pathling.views.ViewDefinitionGson;
@@ -118,6 +121,22 @@ public class FhirViewValidator {
           expression,
           "A '%s' ViewDefinition uses an unsupported expression: %s"
               .formatted(expression, e.getMessage()));
+    }
+  }
+
+  /**
+   * Enforces the READ check for the resource type a view projects, when authorisation is enabled.
+   *
+   * <p>Running a view is a way of reading the resources it projects, so a caller who may not read
+   * that type may not project it either.
+   *
+   * @param view the parsed view
+   * @throws au.csiro.pathling.errors.AccessDeniedError if the caller lacks the read authority
+   */
+  public void checkProjectedResourceReadAuthority(@Nonnull final FhirView view) {
+    if (serverConfiguration.getAuth().isEnabled()) {
+      SecurityAspect.checkHasAuthority(
+          PathlingAuthority.resourceAccess(AccessType.READ, view.getResource()));
     }
   }
 }

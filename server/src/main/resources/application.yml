@@ -82,10 +82,6 @@ pathling:
     groupExportEnabled: true
     importEnabled: true
     importPnpEnabled: true
-    viewDefinitionRunEnabled: true
-    viewDefinitionInstanceRunEnabled: true
-    viewDefinitionExportEnabled: true
-    sqlQueryExportEnabled: true
     sqlRunEnabled: true
     sqlExportEnabled: true
     bulkSubmitEnabled: true

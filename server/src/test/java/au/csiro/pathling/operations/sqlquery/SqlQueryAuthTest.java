@@ -162,7 +162,7 @@ class SqlQueryAuthTest {
   void inlineSuppliedViewRequiresNoMetadataRead() {
     // A request-supplied (inline) view is not read from storage, so resolving it needs no metadata
     // READ - even with no authorities granted.
-    setSecurityContext("pathling:sqlquery-run");
+    setSecurityContext("pathling:sql-run");
     final FhirView supplied =
         FhirView.ofResource("Patient")
             .select(FhirView.columns(FhirView.column("id", "id")))
@@ -183,7 +183,7 @@ class SqlQueryAuthTest {
 
     // The top-level by-reference resolution goes through LibraryReferenceResolver, which enforces
     // the Library metadata READ.
-    setSecurityContext("pathling:sqlquery-run");
+    setSecurityContext("pathling:sql-run");
     assertThatThrownBy(() -> libraryReferenceResolver.resolve(new Reference("Library/base")))
         .isInstanceOf(AccessDeniedError.class)
         .hasMessageContaining("Library");

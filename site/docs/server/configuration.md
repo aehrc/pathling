@@ -170,23 +170,17 @@ error response and is excluded from the CapabilityStatement.
   [$import](./operations/import) operation.
 - `pathling.operations.importPnpEnabled` - (default: `true`) Enables the
   [$import-pnp](./operations/import-pnp) operation.
-- `pathling.operations.viewDefinitionRunEnabled` - (default: `true`) Enables the
-  system-level [$viewdefinition-run](./operations/view-run) operation.
-- `pathling.operations.viewDefinitionInstanceRunEnabled` - (default: `true`)
-  Enables the instance-level [$run](./operations/view-run) operation on
-  ViewDefinition resources.
-- `pathling.operations.viewDefinitionExportEnabled` - (default: `true`) Enables
-  the [$viewdefinition-export](./operations/view-export) operation.
-- `pathling.operations.sqlQueryExportEnabled` - (default: `true`) Enables the
-  system, type, and instance-level
-  [$sqlquery-export](./operations/sql-export) operation.
+- `pathling.operations.sqlRunEnabled` - (default: `true`) Enables the
+  [$sql-run](./operations/sql-run) operation.
+- `pathling.operations.sqlExportEnabled` - (default: `true`) Enables the
+  [$sql-export](./operations/sql-export) operation.
 - `pathling.operations.bulkSubmitEnabled` - (default: `true`) Enables the
   [$bulk-submit](./operations/bulk-submit) operation.
 
 ### SQL query
 
 This setting bounds the resolution of a query's dependency graph, for both
-`$sqlquery-run` and `$sqlquery-export`.
+`$sql-run` and `$sql-export`.
 
 - `pathling.sqlQuery.maxDependencyDepth` - (default: `10`) The maximum nesting
   depth of the SQLView dependency graph resolved for a single query. The

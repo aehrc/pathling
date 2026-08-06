@@ -40,10 +40,9 @@ import org.springframework.stereotype.Component;
 
 /**
  * Writes asynchronous-export result datasets to files under the per-job directory in the warehouse,
- * and serves the per-job directory and unique-naming helpers. Shared by both {@code
- * $viewdefinition-export} and {@code $sqlquery-export} so that the two operations write their
- * outputs identically (the same directory layout, partition renaming, and CSV unsupported-type
- * handling).
+ * and serves the per-job directory and unique-naming helpers. Shared by both {@code $sql-export} so
+ * that the two operations write their outputs identically (the same directory layout, partition
+ * renaming, and CSV unsupported-type handling).
  *
  * @author John Grimes
  */

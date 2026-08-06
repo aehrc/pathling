@@ -32,8 +32,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
- * Orchestrates the {@code $sqlquery-run} operation by selecting the query Library, running it
- * through the shared {@link SqlQueryPipeline}, and streaming the single result.
+ * Orchestrates the {@code $sql-run} operation by selecting the query Library, running it through
+ * the shared {@link SqlQueryPipeline}, and streaming the single result.
  *
  * @author John Grimes
  */
@@ -85,8 +85,8 @@ public class SqlQueryExecutionHelper {
   }
 
   /**
-   * Executes a {@code $sqlquery-run} request and streams results to the HTTP response. Exactly one
-   * of {@code queryResource} and {@code queryReference} must be provided.
+   * Executes a {@code $sql-run} request and streams results to the HTTP response. Exactly one of
+   * {@code queryResource} and {@code queryReference} must be provided.
    *
    * @param queryResource the inline SQLQuery Library resource, if supplied
    * @param queryReference reference to a stored SQLQuery Library, if supplied

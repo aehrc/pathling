@@ -57,7 +57,7 @@ import org.springframework.test.web.reactive.server.EntityExchangeResult;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
 /**
- * End-to-end integration test for the {@code $sqlquery-run} operation against stored SQLView {@code
+ * End-to-end integration test for the {@code $sql-run} operation against stored SQLView {@code
  * Library} resources. Drives the full pipeline - dependency resolution, graph materialisation, and
  * result streaming - for a SQLQuery that composes a SQLView (US1) and for nested and cyclic graphs
  * (US2).
@@ -180,14 +180,14 @@ class SqlViewRunProviderIT {
   }
 
   @Test
-  void runsStoredSqlViewAtInstanceLevel() {
-    // A stored SQLView supplied as the top-level resource of the instance-level operation executes
-    // as a parameter-less query and returns its rows.
+  void runsStoredSqlViewByReferenceOverGet() {
+    // A stored SQLView is an admissible subject in its own right, and a stored subject with no
+    // bindings can be named entirely in a query string.
     final String body =
         getOk(
-            "/fhir/Library/"
+            "/fhir/$sql-run?subjectReference=Library/"
                 + SqlViewTestConfiguration.ACTIVE_PATIENTS_ID
-                + "/$sqlquery-run?_format=ndjson");
+                + "&_format=ndjson");
 
     final String[] lines = body.trim().split("\n");
     assertThat(lines).hasSize(3);
@@ -195,12 +195,12 @@ class SqlViewRunProviderIT {
   }
 
   @Test
-  void runsSqlViewByQueryReferenceAtSystemLevel() {
-    // A SQLView supplied as a top-level queryReference at the system level executes and returns its
-    // rows.
+  void runsSqlViewBySubjectReferenceOverPost() {
+    // The same SQLView named by subjectReference in a POST body executes identically.
     final String body =
         postOk(
-            queryReferenceParametersJson("Library/" + SqlViewTestConfiguration.ACTIVE_PATIENTS_ID));
+            subjectReferenceParametersJson(
+                "Library/" + SqlViewTestConfiguration.ACTIVE_PATIENTS_ID));
 
     final String[] lines = body.trim().split("\n");
     assertThat(lines).hasSize(3);
@@ -238,7 +238,7 @@ class SqlViewRunProviderIT {
     final EntityExchangeResult<byte[]> result =
         webTestClient
             .post()
-            .uri("http://localhost:" + port + "/fhir/$sqlquery-run")
+            .uri("http://localhost:" + port + "/fhir/$sql-run")
             .header("Content-Type", "application/fhir+json")
             .header("Accept", SqlQueryOutputFormat.NDJSON.getContentType())
             .bodyValue(body)
@@ -268,15 +268,15 @@ class SqlViewRunProviderIT {
   }
 
   @Nonnull
-  private String queryReferenceParametersJson(@Nonnull final String reference) {
+  private String subjectReferenceParametersJson(@Nonnull final String reference) {
     final Map<String, Object> parameters = new LinkedHashMap<>();
     parameters.put("resourceType", "Parameters");
     final List<Map<String, Object>> parameterList = new ArrayList<>();
 
-    final Map<String, Object> queryReferenceParam = new LinkedHashMap<>();
-    queryReferenceParam.put("name", "queryReference");
-    queryReferenceParam.put("valueReference", Map.of("reference", reference));
-    parameterList.add(queryReferenceParam);
+    final Map<String, Object> subjectReferenceParam = new LinkedHashMap<>();
+    subjectReferenceParam.put("name", "subjectReference");
+    subjectReferenceParam.put("valueReference", Map.of("reference", reference));
+    parameterList.add(subjectReferenceParam);
 
     final Map<String, Object> formatParam = new LinkedHashMap<>();
     formatParam.put("name", "_format");
@@ -292,7 +292,7 @@ class SqlViewRunProviderIT {
     final EntityExchangeResult<byte[]> result =
         webTestClient
             .post()
-            .uri("http://localhost:" + port + "/fhir/$sqlquery-run")
+            .uri("http://localhost:" + port + "/fhir/$sql-run")
             .header("Content-Type", "application/fhir+json")
             .header("Accept", SqlQueryOutputFormat.NDJSON.getContentType())
             .bodyValue(body)
@@ -336,7 +336,7 @@ class SqlViewRunProviderIT {
     final List<Map<String, Object>> parameterList = new ArrayList<>();
 
     final Map<String, Object> queryResourceParam = new LinkedHashMap<>();
-    queryResourceParam.put("name", "queryResource");
+    queryResourceParam.put("name", "subjectResource");
     queryResourceParam.put("resource", GSON.fromJson(libraryJson, Map.class));
     parameterList.add(queryResourceParam);
 
