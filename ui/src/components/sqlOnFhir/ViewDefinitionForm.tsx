@@ -23,7 +23,7 @@
  * @author John Grimes
  */
 
-import { CopyIcon, PlayIcon, UploadIcon } from "@radix-ui/react-icons";
+import { CopyIcon, PlayIcon, PlusIcon, UploadIcon } from "@radix-ui/react-icons";
 import {
   Box,
   Button,
@@ -51,6 +51,8 @@ import type { ViewRunRequest } from "../../types/viewJob";
 
 interface ViewDefinitionFormProps {
   onExecute: (request: ViewRunRequest) => void;
+  /** Callback when the current view is added to the export set. */
+  onAddToExportSet?: (request: ViewRunRequest) => void;
   onSaveToServer: (json: string) => Promise<CreateViewDefinitionResult>;
   isExecuting: boolean;
   isSaving: boolean;
@@ -76,6 +78,7 @@ const EXAMPLE_VIEW_DEFINITION = `{
  *
  * @param root0 - The component props.
  * @param root0.onExecute - Callback when view is executed.
+ * @param root0.onAddToExportSet - Callback when the view is added to the export set.
  * @param root0.onSaveToServer - Callback to save view definition to server.
  * @param root0.isExecuting - Whether execution is in progress.
  * @param root0.isSaving - Whether save is in progress.
@@ -84,6 +87,7 @@ const EXAMPLE_VIEW_DEFINITION = `{
  */
 export function ViewDefinitionForm({
   onExecute,
+  onAddToExportSet,
   onSaveToServer,
   isExecuting,
   isSaving,
@@ -97,17 +101,33 @@ export function ViewDefinitionForm({
   const { data: viewDefinitions, isLoading: isLoadingViewDefinitions } = useViewDefinitions();
   const copyToClipboard = useClipboard();
 
-  const handleExecute = () => {
+  /**
+   * Builds the request the form currently describes, or undefined when it
+   * describes nothing runnable.
+   *
+   * @returns The request, or undefined.
+   */
+  const buildRequest = (): ViewRunRequest | undefined => {
     if (activeTab === "stored" && selectedViewDefinitionId) {
-      onExecute({
-        mode: "stored",
-        viewDefinitionId: selectedViewDefinitionId,
-      });
-    } else if (activeTab === "custom" && customJson.trim()) {
-      onExecute({
-        mode: "inline",
-        viewDefinitionJson: customJson,
-      });
+      return { mode: "stored", viewDefinitionId: selectedViewDefinitionId };
+    }
+    if (activeTab === "custom" && customJson.trim()) {
+      return { mode: "inline", viewDefinitionJson: customJson };
+    }
+    return undefined;
+  };
+
+  const handleExecute = () => {
+    const request = buildRequest();
+    if (request) {
+      onExecute(request);
+    }
+  };
+
+  const handleAddToExportSet = () => {
+    const request = buildRequest();
+    if (request) {
+      onAddToExportSet?.(request);
     }
   };
 
@@ -245,6 +265,17 @@ export function ViewDefinitionForm({
             <PlayIcon />
             {isExecuting ? "Executing..." : "Execute"}
           </Button>
+          {onAddToExportSet && (
+            <Button
+              size="3"
+              variant="soft"
+              onClick={handleAddToExportSet}
+              disabled={disabled || !canExecute}
+            >
+              <PlusIcon />
+              Add to export set
+            </Button>
+          )}
           {activeTab === "custom" && (
             <Button
               size="3"

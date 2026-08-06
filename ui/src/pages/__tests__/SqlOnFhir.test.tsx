@@ -16,7 +16,8 @@
  */
 
 /**
- * Tests for the SQL on FHIR page, covering the reporting of job failures.
+ * Tests for the SQL on FHIR page: the reporting of job failures, and the
+ * export set the page composes and hands to one export job.
  *
  * @author John Grimes
  */
@@ -51,14 +52,19 @@ vi.mock("../../components/sqlOnFhir/sqlQueryFormHelpers", () => ({
   extractRequestSql: () => "SELECT 1",
 }));
 
-// Mock the form so single clicks start each kind of job.
+// Mock the form so single clicks start each kind of job, and add each kind of
+// subject to the export set.
 vi.mock("../../components/sqlOnFhir/SqlOnFhirForm", () => ({
   SqlOnFhirForm: ({
     onExecuteViewDefinition,
     onExecuteSqlQuery,
+    onAddViewToExportSet,
+    onAddQueryToExportSet,
   }: {
     onExecuteViewDefinition: (request: ViewRunRequest) => void;
     onExecuteSqlQuery: (request: SqlQueryRequest) => void;
+    onAddViewToExportSet: (request: ViewRunRequest) => void;
+    onAddQueryToExportSet: (request: SqlQueryRequest) => void;
   }) => (
     <>
       <button onClick={() => onExecuteViewDefinition({ mode: "inline" } as ViewRunRequest)}>
@@ -67,8 +73,25 @@ vi.mock("../../components/sqlOnFhir/SqlOnFhirForm", () => ({
       <button onClick={() => onExecuteSqlQuery({ mode: "inline" } as SqlQueryRequest)}>
         Run query
       </button>
+      <button
+        onClick={() => onAddViewToExportSet({ mode: "stored", viewDefinitionId: "demographics" })}
+      >
+        Add view
+      </button>
+      <button onClick={() => onAddQueryToExportSet({ mode: "stored", libraryId: "bp-summary" })}>
+        Add query
+      </button>
     </>
   ),
+}));
+
+// The export card is mocked so the subjects the page composed can be read back.
+let lastExportSubjects: Array<{ name?: string }> | undefined;
+vi.mock("../../components/sqlOnFhir/SqlExportCardWrapper", () => ({
+  SqlExportCardWrapper: ({ subjects }: { subjects: Array<{ name?: string }> }) => {
+    lastExportSubjects = subjects;
+    return <div>Export job card</div>;
+  },
 }));
 
 // Mock the cards, which now display their own failures.
@@ -82,6 +105,7 @@ vi.mock("../../components/sqlOnFhir/SqlQueryCard", () => ({
 describe("SqlOnFhir page", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    lastExportSubjects = undefined;
   });
 
   afterEach(() => {
@@ -110,5 +134,46 @@ describe("SqlOnFhir page", () => {
 
     expect(screen.getByText("SQL query card")).toBeInTheDocument();
     expect(mockShowToast).not.toHaveBeenCalled();
+  });
+
+  // The set is hidden until something is in it, then carries one entry per
+  // captured subject.
+  it("shows the export set once a subject is captured", async () => {
+    const user = userEvent.setup();
+
+    render(<SqlOnFhir />);
+    expect(screen.queryByText(/export set \(/i)).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Add view" }));
+    await user.click(screen.getByRole("button", { name: "Add query" }));
+
+    expect(screen.getByText("Export set (2)")).toBeInTheDocument();
+  });
+
+  // Exporting the set starts one job carrying every entry, named as the panel
+  // shows them.
+  it("exports the whole set as one job", async () => {
+    const user = userEvent.setup();
+
+    render(<SqlOnFhir />);
+    await user.click(screen.getByRole("button", { name: "Add view" }));
+    await user.click(screen.getByRole("button", { name: "Add query" }));
+    await user.click(screen.getByRole("button", { name: "Export set", exact: true }));
+
+    expect(screen.getByText("Export job card")).toBeInTheDocument();
+    expect(lastExportSubjects?.map((subject) => subject.name)).toEqual([
+      "demographics",
+      "bp-summary",
+    ]);
+  });
+
+  it("clears the set", async () => {
+    const user = userEvent.setup();
+
+    render(<SqlOnFhir />);
+    await user.click(screen.getByRole("button", { name: "Add view" }));
+    await user.click(screen.getByRole("button", { name: /clear all/i }));
+
+    expect(screen.queryByText(/export set \(/i)).not.toBeInTheDocument();
   });
 });

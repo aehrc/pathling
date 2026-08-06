@@ -25,7 +25,7 @@
  * @author John Grimes
  */
 
-import { PlayIcon, UploadIcon } from "@radix-ui/react-icons";
+import { PlayIcon, PlusIcon, UploadIcon } from "@radix-ui/react-icons";
 import { Box, Button, Card, Flex, Heading, Tabs } from "@radix-ui/themes";
 import { useState } from "react";
 
@@ -60,6 +60,8 @@ type LibrarySource = "stored" | "inline";
 interface SqlQueryFormProps {
   /** Callback fired when the user clicks Execute. */
   onExecute: (request: SqlQueryRequest) => void;
+  /** Callback fired when the user adds the current query to the export set. */
+  onAddToExportSet?: (request: SqlQueryRequest) => void;
   /** Callback fired to save an inline Library to the server. */
   onSaveToServer: (library: SqlQueryLibrary) => Promise<SaveSqlQueryLibraryResult>;
   /** Whether a query is currently executing. */
@@ -75,6 +77,7 @@ interface SqlQueryFormProps {
  *
  * @param props - The component props.
  * @param props.onExecute - Callback fired when the user clicks Execute.
+ * @param props.onAddToExportSet - Callback fired when the user adds the current query to the export set.
  * @param props.onSaveToServer - Callback fired to save an inline Library to the server.
  * @param props.isExecuting - Whether a query is currently executing.
  * @param props.isSaving - Whether a save is currently in progress.
@@ -83,6 +86,7 @@ interface SqlQueryFormProps {
  */
 export function SqlQueryForm({
   onExecute,
+  onAddToExportSet,
   onSaveToServer,
   isExecuting,
   isSaving,
@@ -147,10 +151,16 @@ export function SqlQueryForm({
     };
   };
 
-  const handleExecute = () => {
+  /**
+   * Builds the request the form currently describes, or undefined when it
+   * describes nothing runnable.
+   *
+   * @returns The request, or undefined.
+   */
+  const buildRequest = (): SqlQueryRequest | undefined => {
     if (source === "stored") {
-      if (!selectedLibraryId) return;
-      const request: SqlQueryRequest = {
+      if (!selectedLibraryId) return undefined;
+      return {
         mode: "stored",
         libraryId: selectedLibraryId,
         // Carry the resolved SQL for display only; the server receives just
@@ -158,17 +168,27 @@ export function SqlQueryForm({
         sql: activeStoredLibrary?.sql,
         ...baseRequestOptions(),
       };
-      onExecute(request);
-      return;
     }
-    if (!canExecuteInlineForm(inlineInput)) return;
-    const library = buildInlineSqlQueryLibrary(inlineInput);
-    const request: SqlQueryRequest = {
+    if (!canExecuteInlineForm(inlineInput)) return undefined;
+    return {
       mode: "inline",
-      library,
+      library: buildInlineSqlQueryLibrary(inlineInput),
       ...baseRequestOptions(),
     };
-    onExecute(request);
+  };
+
+  const handleExecute = () => {
+    const request = buildRequest();
+    if (request) {
+      onExecute(request);
+    }
+  };
+
+  const handleAddToExportSet = () => {
+    const request = buildRequest();
+    if (request) {
+      onAddToExportSet?.(request);
+    }
   };
 
   const handleSaveToServer = async () => {
@@ -279,6 +299,12 @@ export function SqlQueryForm({
             <PlayIcon />
             {isExecuting ? "Executing..." : "Execute"}
           </Button>
+          {onAddToExportSet && (
+            <Button size="3" variant="soft" onClick={handleAddToExportSet} disabled={!canExecute}>
+              <PlusIcon />
+              Add to export set
+            </Button>
+          )}
           {source === "inline" && (
             <Button
               size="3"
