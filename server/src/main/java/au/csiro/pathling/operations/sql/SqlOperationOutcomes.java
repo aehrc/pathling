@@ -40,8 +40,33 @@ import org.hl7.fhir.r4.model.OperationOutcome.OperationOutcomeIssueComponent;
  */
 public final class SqlOperationOutcomes {
 
+  /** The {@code expression} value naming the runtime bindings in error outcomes. */
+  public static final String PARAMETERS_EXPRESSION = "parameters";
+
   private SqlOperationOutcomes() {
     // Utility class.
+  }
+
+  /**
+   * Relabels a preparation failure onto the {@code parameters} part.
+   *
+   * <p>A 400 raised while preparing a subject that supplied bindings is, in practice, always about
+   * those bindings: the structural failures of the artefact itself surface as 404 or 422. The
+   * shared SQL machinery predates this feature's error contract and raises them with no outcome of
+   * its own, so one is supplied here rather than letting a bare message reach the client.
+   *
+   * @param exception the failure raised while preparing the subject
+   * @return the same exception when it already carries an outcome, otherwise one naming {@code
+   *     parameters}
+   */
+  @Nonnull
+  public static InvalidRequestException asBindingFailure(
+      @Nonnull final InvalidRequestException exception) {
+    if (exception.getOperationOutcome() != null) {
+      return exception;
+    }
+    return SqlOperationError.badRequest(
+        IssueType.INVALID, PARAMETERS_EXPRESSION, exception.getMessage());
   }
 
   /**

@@ -119,6 +119,58 @@ class SqlExportProviderIT extends AbstractAsyncExportIT {
     assertThat(content).contains("id,family_name");
   }
 
+  // The plain-JSON manifest is what a client that sends no Accept header receives, and it must
+  // name every file the FHIR form names: a location it omits is a file nothing can reach.
+  @Test
+  void thePlainJsonManifestNamesEveryFileTheFhirFormDoes() throws InterruptedException {
+    final String resultLocation = resultLocationOf(systemLevelUri(), mixedJob(null));
+
+    final Map<String, Object> fhirManifest =
+        parse(
+            webTestClient
+                .get()
+                .uri(resultLocation)
+                .header("Accept", "application/fhir+json")
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody()
+                .returnResult()
+                .getResponseBodyContent());
+    final Map<String, Integer> fhirCounts = new java.util.LinkedHashMap<>();
+    for (final Map<String, Object> output : paramsByName(fhirManifest, "output")) {
+      fhirCounts.put(
+          partValue(output, "name", "valueString"),
+          partValues(output, "location", "valueUri").size());
+    }
+    assertThat(fhirCounts).hasSize(2);
+
+    final Map<String, Object> plainManifest =
+        parse(
+            webTestClient
+                .get()
+                .uri(resultLocation)
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody()
+                .returnResult()
+                .getResponseBodyContent());
+
+    @SuppressWarnings("unchecked")
+    final List<Map<String, Object>> plainOutputs =
+        (List<Map<String, Object>>) plainManifest.get("output");
+    assertThat(plainOutputs).hasSize(2);
+    for (final Map<String, Object> output : plainOutputs) {
+      final String name = (String) output.get("name");
+      final Object location = output.get("location");
+      final int count = location instanceof final List<?> list ? list.size() : 1;
+      assertThat(count)
+          .as("The plain-JSON manifest must name every file of output '%s'", name)
+          .isEqualTo(fhirCounts.get(name));
+    }
+  }
+
   @Test
   void listsTheJobUnderTheSqlExportOperation() throws InterruptedException {
     exportToCompletion(systemLevelUri(), mixedJob(null));

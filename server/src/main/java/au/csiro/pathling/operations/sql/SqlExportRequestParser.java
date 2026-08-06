@@ -248,11 +248,7 @@ public class SqlExportRequestParser {
         subject.getKind(), name, prepare(subject, bindings, supplied, nodesByKey));
   }
 
-  /**
-   * Prepares a SQL subject, relabelling a binding failure onto the {@code parameters} part. A 400
-   * raised while preparing a subject that supplied bindings is, in practice, always about those
-   * bindings: the structural failures of the artefact itself surface as 404 or 422.
-   */
+  /** Prepares a SQL subject, relabelling a binding failure onto the {@code parameters} part. */
   @Nonnull
   private PreparedSqlQuery prepare(
       @Nonnull final ResolvedSubject subject,
@@ -266,10 +262,7 @@ public class SqlExportRequestParser {
       pipeline.validateStatically(prepared);
       return prepared;
     } catch (final InvalidRequestException e) {
-      if (bindings == null || e.getOperationOutcome() != null) {
-        throw e;
-      }
-      throw SqlOperationError.badRequest(IssueType.INVALID, PARAMETERS_PART, e.getMessage());
+      throw bindings == null ? e : SqlOperationOutcomes.asBindingFailure(e);
     }
   }
 

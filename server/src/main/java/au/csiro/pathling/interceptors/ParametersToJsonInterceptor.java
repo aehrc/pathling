@@ -141,31 +141,38 @@ public class ParametersToJsonInterceptor {
   @Nonnull
   private String parametersToJson(@Nonnull final Parameters parameters) throws IOException {
     final ObjectNode json = mapper.createObjectNode();
+    writeGrouped(json, parameters.getParameter());
+    return mapper.writeValueAsString(json);
+  }
 
-    // Group parameters by name to handle repeated parameters as arrays.
+  /**
+   * Writes a list of parameters or parts into a JSON object, rendering a repeated name as an array.
+   *
+   * <p>The same rule applies at every level. A repeated name is how FHIR expresses a list, so
+   * collapsing one to its last occurrence would silently drop the rest - an export manifest whose
+   * output spans several files names each one with a repeated {@code location}.
+   *
+   * @param target the JSON object to write into
+   * @param params the parameters or parts to write, in order
+   */
+  private void writeGrouped(
+      @Nonnull final ObjectNode target, @Nonnull final List<ParametersParameterComponent> params) {
     final Map<String, List<ParametersParameterComponent>> grouped = new LinkedHashMap<>();
-    for (final ParametersParameterComponent param : parameters.getParameter()) {
+    for (final ParametersParameterComponent param : params) {
       grouped.computeIfAbsent(param.getName(), k -> new java.util.ArrayList<>()).add(param);
     }
 
-    // Process each group of parameters.
     for (final Map.Entry<String, List<ParametersParameterComponent>> entry : grouped.entrySet()) {
-      final String name = entry.getKey();
-      final List<ParametersParameterComponent> params = entry.getValue();
-
-      if (params.size() == 1) {
-        // Single parameter - add as direct value or object.
-        addParameterValue(json, name, params.get(0));
+      final List<ParametersParameterComponent> group = entry.getValue();
+      if (group.size() == 1) {
+        addParameterValue(target, entry.getKey(), group.get(0));
       } else {
-        // Multiple parameters with same name - create array.
-        final ArrayNode array = json.putArray(name);
-        for (final ParametersParameterComponent param : params) {
+        final ArrayNode array = target.putArray(entry.getKey());
+        for (final ParametersParameterComponent param : group) {
           addParameterToArray(array, param);
         }
       }
     }
-
-    return mapper.writeValueAsString(json);
   }
 
   /**
@@ -214,9 +221,7 @@ public class ParametersToJsonInterceptor {
   @Nonnull
   private ObjectNode partsToObject(@Nonnull final List<ParametersParameterComponent> parts) {
     final ObjectNode obj = mapper.createObjectNode();
-    for (final ParametersParameterComponent part : parts) {
-      addParameterValue(obj, part.getName(), part);
-    }
+    writeGrouped(obj, parts);
     return obj;
   }
 

@@ -251,15 +251,22 @@ public class SqlRunProvider {
       @Nonnull final ServletRequestDetails requestDetails,
       @Nonnull final HttpServletResponse response) {
 
-    final PreparedSqlQuery prepared =
-        pipeline.prepare(
-            subject.asLibrary(),
-            outputFormat.getCode(),
-            null,
-            new BooleanType(header),
-            limit,
-            parameters,
-            supplied);
+    final PreparedSqlQuery prepared;
+    try {
+      prepared =
+          pipeline.prepare(
+              subject.asLibrary(),
+              outputFormat.getCode(),
+              null,
+              new BooleanType(header),
+              limit,
+              parameters,
+              supplied);
+    } catch (final InvalidRequestException e) {
+      // A 400 raised while preparing a subject that supplied bindings is about those bindings, and
+      // is relabelled onto the part at fault - the same rule the export applies at kick-off.
+      throw parameters == null ? e : SqlOperationOutcomes.asBindingFailure(e);
+    }
     // Unmatched entries are detected only once the whole graph has been traversed, since an entry
     // may be reached through another supplied entry.
     supplied.checkAllMatched();

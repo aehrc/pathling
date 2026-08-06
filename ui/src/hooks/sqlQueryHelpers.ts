@@ -214,7 +214,7 @@ export function findSourceByUrl(
  * the UI can offer a verbatim download. Parquet is not parsed; the body
  * is returned as a Blob only.
  *
- * @param response - The fetch Response from `sqlQueryRun`.
+ * @param response - The fetch Response from `sqlRun` or `sqlRunStored`.
  * @param format - The output format requested with the request.
  * @returns The parsed and/or downloadable result.
  *

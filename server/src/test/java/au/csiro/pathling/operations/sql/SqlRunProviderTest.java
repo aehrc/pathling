@@ -131,6 +131,66 @@ class SqlRunProviderTest {
     assertIssue(exception, IssueType.INVALID, "parameters");
   }
 
+  // A binding the subject does not declare is a client mistake about the bindings, so the outcome
+  // names the part at fault rather than reaching the client as a bare message.
+  @Test
+  void reportsAnUndeclaredBindingAgainstTheParametersPart() {
+    stubSubject(SubjectKind.SQL_QUERY);
+    when(pipeline.prepare(any(), any(), any(), any(), any(), any(), any()))
+        .thenThrow(
+            new InvalidRequestException(
+                "Parameter 'nosuch' is not declared in the SQLQuery Library's parameter list"));
+
+    final BaseServerResponseException exception =
+        catchServerException(() -> run(builder().parameters(new Parameters())));
+
+    assertThat(exception.getStatusCode()).isEqualTo(400);
+    assertIssue(exception, IssueType.INVALID, "parameters");
+  }
+
+  // A value that cannot be coerced to its declared type is the same kind of mistake.
+  @Test
+  void reportsAMistypedBindingAgainstTheParametersPart() {
+    stubSubject(SubjectKind.SQL_QUERY);
+    when(pipeline.prepare(any(), any(), any(), any(), any(), any(), any()))
+        .thenThrow(new InvalidRequestException("Parameter 'count' expects an integer"));
+
+    final BaseServerResponseException exception =
+        catchServerException(() -> run(builder().parameters(new Parameters())));
+
+    assertIssue(exception, IssueType.INVALID, "parameters");
+  }
+
+  // Relabelling is scoped to a request that actually supplied bindings; a failure raised with no
+  // bindings in play is about something else and must reach the client unchanged.
+  @Test
+  void leavesAFailureUnlabelledWhenNoBindingsWereSupplied() {
+    stubSubject(SubjectKind.SQL_QUERY);
+    when(pipeline.prepare(any(), any(), any(), any(), any(), any(), any()))
+        .thenThrow(new InvalidRequestException("Cycle detected in the dependency graph"));
+
+    final BaseServerResponseException exception = catchServerException(() -> run(builder()));
+
+    assertThat(exception.getOperationOutcome()).isNull();
+    assertThat(exception).hasMessageContaining("Cycle detected");
+  }
+
+  // A failure that already carries its own outcome keeps it, so a dependency 404 raised during
+  // preparation is not mislabelled as a binding problem.
+  @Test
+  void preservesAnOutcomeAFailureAlreadyCarries() {
+    stubSubject(SubjectKind.SQL_QUERY);
+    when(pipeline.prepare(any(), any(), any(), any(), any(), any(), any()))
+        .thenThrow(
+            SqlOperationError.badRequest(
+                IssueType.NOTSUPPORTED, "subject", "The SQL uses an unsupported construct."));
+
+    final BaseServerResponseException exception =
+        catchServerException(() -> run(builder().parameters(new Parameters())));
+
+    assertIssue(exception, IssueType.NOTSUPPORTED, "subject");
+  }
+
   // `resource` supplies data for a view to project; a SQL subject reads through its declared
   // dependencies, so supplying it is a 400 naming the parameter.
   @ParameterizedTest
