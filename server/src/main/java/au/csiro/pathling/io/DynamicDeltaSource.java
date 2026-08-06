@@ -71,6 +71,8 @@ public class DynamicDeltaSource extends DriftGuardedSource {
   /**
    * Constructs a new DynamicDeltaSource with no drifted types.
    *
+   * @param context the Pathling context, used to construct derived sources and to check whether a
+   *     listed table directory names a supported resource type
    * @param delegate the underlying QueryableDataSource to delegate to
    * @param spark the Spark session for Delta table operations
    * @param databasePath the path to the Delta database
@@ -78,17 +80,20 @@ public class DynamicDeltaSource extends DriftGuardedSource {
    * @param storageConfiguration the storage configuration
    */
   public DynamicDeltaSource(
+      @Nonnull final PathlingContext context,
       @Nonnull final QueryableDataSource delegate,
       @Nonnull final SparkSession spark,
       @Nonnull final String databasePath,
       @Nonnull final FhirEncoders fhirEncoders,
       @Nonnull final StorageConfiguration storageConfiguration) {
-    this(delegate, spark, databasePath, fhirEncoders, storageConfiguration, Set.of());
+    this(context, delegate, spark, databasePath, fhirEncoders, storageConfiguration, Set.of());
   }
 
   /**
    * Constructs a new DynamicDeltaSource.
    *
+   * @param context the Pathling context, used to construct derived sources and to check whether a
+   *     listed table directory names a supported resource type
    * @param delegate the underlying QueryableDataSource to delegate to
    * @param spark the Spark session for Delta table operations
    * @param databasePath the path to the Delta database
@@ -96,14 +101,16 @@ public class DynamicDeltaSource extends DriftGuardedSource {
    * @param storageConfiguration the storage configuration
    * @param driftedTypes the resource types left drifted and unmigrated at startup
    */
+  @SuppressWarnings("java:S107")
   public DynamicDeltaSource(
+      @Nonnull final PathlingContext context,
       @Nonnull final QueryableDataSource delegate,
       @Nonnull final SparkSession spark,
       @Nonnull final String databasePath,
       @Nonnull final FhirEncoders fhirEncoders,
       @Nonnull final StorageConfiguration storageConfiguration,
       @Nonnull final Set<String> driftedTypes) {
-    super(delegate, concurrentCopyOf(driftedTypes));
+    super(context, delegate, concurrentCopyOf(driftedTypes));
     this.spark = spark;
     this.databasePath = databasePath;
     this.fhirEncoders = fhirEncoders;
@@ -215,11 +222,10 @@ public class DynamicDeltaSource extends DriftGuardedSource {
    * single-snapshot guarantee requires. Pinning reads only each table's Delta log, so no data is
    * copied and reads stay lazy.
    *
-   * @param context the Pathling context used to hold the pinned datasets
    * @return a snapshot source pinned at the current instant
    */
   @Nonnull
-  public SnapshotDeltaSource snapshot(@Nonnull final PathlingContext context) {
+  public SnapshotDeltaSource snapshot() {
     final Map<String, Dataset<Row>> pinnedDatasets = new HashMap<>();
     final Map<String, Long> pinnedVersions = new HashMap<>();
 

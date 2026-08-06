@@ -18,6 +18,7 @@
 package au.csiro.pathling.io;
 
 import au.csiro.pathling.io.source.DataSource;
+import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.sink.DataSinkBuilder;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.library.query.FhirViewQuery;
@@ -46,6 +47,9 @@ import org.apache.spark.sql.Row;
  */
 public class DriftGuardedSource implements QueryableDataSource {
 
+  /** The Pathling context, used to construct sources derived from this one. */
+  @Nonnull protected final PathlingContext context;
+
   /** The underlying QueryableDataSource that guarded operations delegate to. */
   @Nonnull protected final QueryableDataSource delegate;
 
@@ -55,12 +59,16 @@ public class DriftGuardedSource implements QueryableDataSource {
   /**
    * Constructs a new DriftGuardedSource.
    *
+   * @param context the Pathling context, used to construct derived sources
    * @param delegate the underlying QueryableDataSource to delegate to
    * @param driftedTypes the resource types whose tables are drifted and unmigrated; held by
    *     reference so that mutations are reflected in guard decisions
    */
   public DriftGuardedSource(
-      @Nonnull final QueryableDataSource delegate, @Nonnull final Set<String> driftedTypes) {
+      @Nonnull final PathlingContext context,
+      @Nonnull final QueryableDataSource delegate,
+      @Nonnull final Set<String> driftedTypes) {
+    this.context = context;
     this.delegate = delegate;
     this.driftedTypes = driftedTypes;
   }
@@ -104,7 +112,7 @@ public class DriftGuardedSource implements QueryableDataSource {
   @Nonnull
   public QueryableDataSource map(
       @Nonnull final BiFunction<String, Dataset<Row>, Dataset<Row>> operator) {
-    return new DriftGuardedSource(delegate.map(operator), driftedTypes);
+    return new DriftGuardedSource(context, delegate.map(operator), driftedTypes);
   }
 
   @Override
@@ -112,7 +120,7 @@ public class DriftGuardedSource implements QueryableDataSource {
   public QueryableDataSource filterByResourceType(
       @Nonnull final Predicate<String> resourceTypePredicate) {
     return new DriftGuardedSource(
-        delegate.filterByResourceType(resourceTypePredicate), driftedTypes);
+        context, delegate.filterByResourceType(resourceTypePredicate), driftedTypes);
   }
 
   @Override
@@ -120,7 +128,7 @@ public class DriftGuardedSource implements QueryableDataSource {
   public DataSource cache() {
     final DataSource cached = delegate.cache();
     return cached instanceof final QueryableDataSource queryable
-        ? new DriftGuardedSource(queryable, driftedTypes)
+        ? new DriftGuardedSource(context, queryable, driftedTypes)
         : cached;
   }
 

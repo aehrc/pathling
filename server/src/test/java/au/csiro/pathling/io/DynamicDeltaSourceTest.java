@@ -292,7 +292,13 @@ class DynamicDeltaSourceTest {
     storageConfiguration.setCacheDatasets(cacheDatasets);
     final QueryableDataSource baseSource = pathlingContext.read().delta(databasePath);
     return new DynamicDeltaSource(
-        baseSource, sparkSession, databasePath, fhirEncoders, storageConfiguration, driftedTypes);
+        pathlingContext,
+        baseSource,
+        sparkSession,
+        databasePath,
+        fhirEncoders,
+        storageConfiguration,
+        driftedTypes);
   }
 
   /** Writes a single-row Patient Delta table whose schema has only the given string columns. */
