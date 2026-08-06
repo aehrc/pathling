@@ -26,6 +26,8 @@ import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 /**
  * Unit tests for {@link AuthorizationConfiguration} validation.
@@ -108,6 +110,73 @@ class AuthorizationConfigurationTest {
 
     // Should have two violations: missing S256 and has plain.
     assertThat(violations).hasSize(2);
+  }
+
+  // -------------------------------------------------------------------------
+  // Token signing algorithm validation tests
+  // -------------------------------------------------------------------------
+
+  @ParameterizedTest
+  @ValueSource(strings = {"HS256", "HS384", "HS512", "none", "RS999", "rs256", ""})
+  void rejectsNonAsymmetricTokenSigningAlgorithm(final String algorithm) {
+    // Verification runs against a public JWKS, so only asymmetric algorithm names are usable.
+    final AuthorizationConfiguration config = new AuthorizationConfiguration();
+    config.setTokenSigningAlgorithms(List.of(algorithm));
+
+    final Set<ConstraintViolation<AuthorizationConfiguration>> violations =
+        validator.validate(config);
+
+    assertThat(violations).hasSize(1);
+    final ConstraintViolation<AuthorizationConfiguration> violation = violations.iterator().next();
+    assertThat(violation.getPropertyPath()).hasToString("tokenSigningAlgorithms[0].<list element>");
+    assertThat(violation.getInvalidValue()).isEqualTo(algorithm);
+    assertThat(violation.getMessage())
+        .isEqualTo(
+            "tokenSigningAlgorithms must contain only asymmetric JWS algorithms: RS256, RS384, "
+                + "RS512, PS256, PS384, PS512, ES256, ES256K, ES384, ES512, EdDSA");
+  }
+
+  @ParameterizedTest
+  @ValueSource(
+      strings = {
+        "RS256", "RS384", "RS512", "PS256", "PS384", "PS512", "ES256", "ES256K", "ES384", "ES512",
+        "EdDSA"
+      })
+  void acceptsAsymmetricTokenSigningAlgorithm(final String algorithm) {
+    // Every asymmetric JWS algorithm name is accepted.
+    final AuthorizationConfiguration config = new AuthorizationConfiguration();
+    config.setTokenSigningAlgorithms(List.of(algorithm));
+
+    final Set<ConstraintViolation<AuthorizationConfiguration>> violations =
+        validator.validate(config);
+
+    assertThat(violations).isEmpty();
+  }
+
+  @Test
+  void reportsTheIndexOfEachOffendingAlgorithm() {
+    // The violation must identify which element of the list was rejected.
+    final AuthorizationConfiguration config = new AuthorizationConfiguration();
+    config.setTokenSigningAlgorithms(List.of("RS256", "HS256"));
+
+    final Set<ConstraintViolation<AuthorizationConfiguration>> violations =
+        validator.validate(config);
+
+    assertThat(violations).hasSize(1);
+    assertThat(violations.iterator().next().getPropertyPath())
+        .hasToString("tokenSigningAlgorithms[1].<list element>");
+  }
+
+  @Test
+  void acceptsEmptyTokenSigningAlgorithms() {
+    // An empty list is valid, and means the algorithms are derived from the issuer's JWKS.
+    final AuthorizationConfiguration config = new AuthorizationConfiguration();
+    config.setTokenSigningAlgorithms(List.of());
+
+    final Set<ConstraintViolation<AuthorizationConfiguration>> violations =
+        validator.validate(config);
+
+    assertThat(violations).isEmpty();
   }
 
   // -------------------------------------------------------------------------
