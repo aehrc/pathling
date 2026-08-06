@@ -48,7 +48,36 @@ class OperationConfigurationTest {
     assertThat(config.isViewDefinitionRunEnabled()).isTrue();
     assertThat(config.isViewDefinitionInstanceRunEnabled()).isTrue();
     assertThat(config.isViewDefinitionExportEnabled()).isTrue();
+    assertThat(config.isSqlRunEnabled()).isTrue();
+    assertThat(config.isSqlExportEnabled()).isTrue();
     assertThat(config.isBulkSubmitEnabled()).isTrue();
+  }
+
+  // The two SQL on FHIR operations are gated independently, so one can be offered without the
+  // other.
+  @Test
+  void sqlOperationsCanBeDisabledIndependently() {
+    final OperationConfiguration config = new OperationConfiguration();
+
+    config.setSqlRunEnabled(false);
+
+    assertThat(config.isSqlRunEnabled()).isFalse();
+    assertThat(config.isSqlExportEnabled()).isTrue();
+  }
+
+  // $sql-export writes downloadable files served by $result, so enabling it alone must keep the
+  // $result endpoint available.
+  @Test
+  void isAnyExportEnabledReturnsTrueWhenOnlySqlExportEnabled() {
+    final OperationConfiguration config = new OperationConfiguration();
+    config.setExportEnabled(false);
+    config.setPatientExportEnabled(false);
+    config.setGroupExportEnabled(false);
+    config.setViewDefinitionExportEnabled(false);
+    config.setSqlQueryExportEnabled(false);
+
+    assertThat(config.isSqlExportEnabled()).isTrue();
+    assertThat(config.isAnyExportEnabled()).isTrue();
   }
 
   @Test
@@ -94,6 +123,7 @@ class OperationConfigurationTest {
     config.setGroupExportEnabled(false);
     config.setViewDefinitionExportEnabled(false);
     config.setSqlQueryExportEnabled(false);
+    config.setSqlExportEnabled(false);
 
     // Then: isAnyExportEnabled should return false.
     assertThat(config.isAnyExportEnabled()).isFalse();

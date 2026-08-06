@@ -86,6 +86,8 @@ pathling:
     viewDefinitionInstanceRunEnabled: true
     viewDefinitionExportEnabled: true
     sqlQueryExportEnabled: true
+    sqlRunEnabled: true
+    sqlExportEnabled: true
     bulkSubmitEnabled: true
 
   auth:
