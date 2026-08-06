@@ -56,14 +56,6 @@ public final class FhirEncoderFixtures {
   /** The open types the narrow encoder drops relative to the encoders it is derived from. */
   public static final Set<String> NARROWED_OPEN_TYPES = Set.of("Period", "Quantity");
 
-  /**
-   * The roots of the field subtrees that exist only in the wide encoder's schema. A narrow server
-   * sees these, and every path beneath them, as excess when it reads a table written by a wide one,
-   * so these are the paths its messages are expected to name.
-   */
-  public static final Set<String> WIDE_ONLY_FIELD_PATH_ROOTS =
-      Set.of("_extension.valuePeriod", "_extension.valueQuantity");
-
   private FhirEncoderFixtures() {}
 
   /**

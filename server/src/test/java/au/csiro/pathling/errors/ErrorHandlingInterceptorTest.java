@@ -414,6 +414,25 @@ class ErrorHandlingInterceptorTest {
     assertThat(result.getMessage()).isEqualTo("Unexpected error occurred");
   }
 
+  // A struct can carry hundreds of fields, and a response body is not the place to enumerate them
+  // all. The rendered list is bounded and the remainder summarised by a count, so a wide struct
+  // cannot produce an unbounded message (FR-002).
+  @Test
+  void boundsTheNumberOfFieldPathsReported() {
+    final StringBuilder wide = new StringBuilder("struct<kept:string");
+    for (int i = 0; i < 25; i++) {
+      wide.append(",field").append(i).append(":string");
+    }
+    final Throwable e = schemaMismatch(wide.append(">").toString(), "struct<kept:string>");
+
+    final BaseServerResponseException result = ErrorHandlingInterceptor.convertError(e, "Patient");
+
+    final String diagnostics = diagnosticsOf(result);
+    // Ten paths are named and the remaining fifteen are counted, not listed. The names are reported
+    // in lexicographic order, so field9 falls outside the reported ten.
+    assertThat(diagnostics).contains("and 15 more").contains("field0").doesNotContain("field9");
+  }
+
   /** Builds the Delta exception raised when a MERGE cannot cast the source struct to the target. */
   @Nonnull
   private static Throwable schemaMismatch(
