@@ -150,10 +150,41 @@ excludeSet:
       - title: Support for null values within FHIR elements
         type: wontfix
         outcome: failure
+        comment: |
+          allTrue()/allFalse()/anyTrue()/anyFalse() are implemented via
+          ColumnRepresentation.allTrue()/allFalse()/anyTrue()/anyFalse() (min/max-based), which
+          treats a null array element as absent rather than raising an error, consistent with how
+          this same limitation is already handled for empty()/exists()/not() above.
         any:
           - "** null is not empty"
           - "** exists for null should return true"
           - "** error for collection that is not a singleton"
+          - "** allTrue for null values in the collection raise an error"
+          - "** anyTrue for null values in the collection raise an error"
+          - "** allFalse for null values in the collection raise an error"
+          - "** anyFalse for null values in the collection raise an error"
+      - title: "isDistinct() on primitive elements with extensions but no value"
+        type: feature
+        outcome: failure
+        id: "#437"
+        comment: |
+          Patient.name.given[3] is a primitive element with extensions but no value. isDistinct()
+          reports the combined collection as distinct (true) because Pathling does not recognise
+          given[3] as a distinct existing element, the same underlying #437 limitation already
+          excluded for combine()/union() with count() below.
+        any:
+          - "(Patient.name.given[0]).combine(Patient.name.given[3]).isDistinct()"
+      - title: "Indefinite calendar duration equality in distinct() deduplication"
+        type: wontfix
+        outcome: failure
+        comment: |
+          Pathling treats indefinite calendar durations (year, month) as non-comparable, so
+          distinct() does not deduplicate (1 year).combine(12 months) to '1 year' the way the
+          reference implementation does. Same underlying limitation as the "Indefinite calendar
+          duration union deduplication" exclusion for the `|`/combine() operators below, and for
+          repeat() in the filtering and projection exclusions.
+        any:
+          - "** should use year-to-month conversion factor (https://hl7.org/fhirpath/#equals)"
   - title: Filtering and projection exclusions
     glob: "fhirpath-js/cases/5.2_filtering_and_projection.yaml"
     exclude:
