@@ -25,12 +25,12 @@ import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.config.AuthorizationConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
-import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.ViewDefinitionResource;
 import au.csiro.pathling.encoders.ViewDefinitionResource.ColumnComponent;
 import au.csiro.pathling.encoders.ViewDefinitionResource.SelectComponent;
-import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
+import au.csiro.pathling.operations.sql.SuppliedArtefact;
+import au.csiro.pathling.operations.sql.SuppliedArtefacts;
 import au.csiro.pathling.operations.view.ViewExecutionHelper;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
@@ -49,9 +49,9 @@ import org.junit.jupiter.api.Test;
 
 /**
  * Tests for the resolution of request-supplied views against canonical dependency references: a
- * supplied view is matched to a reference by its {@code url} and preferred over storage (resolved
- * by {@link ViewResolver}), while a supplied view that carries no {@code url} is rejected at parse
- * time (by {@link SqlQueryExportRequestParser}).
+ * supplied view is matched to a reference by its {@code url} (by {@link SuppliedArtefacts}), while
+ * a supplied view that carries no {@code url} is rejected at parse time (by {@link
+ * SqlQueryExportRequestParser}).
  *
  * @author John Grimes
  */
@@ -66,47 +66,26 @@ class RequestViewResolutionTest {
   @Nested
   class SuppliedViewMatching {
 
-    private ViewResolver resolver;
-
-    @BeforeEach
-    void setUp() {
-      final ServerConfiguration serverConfiguration = new ServerConfiguration();
-      final AuthorizationConfiguration auth = new AuthorizationConfiguration();
-      auth.setEnabled(false);
-      serverConfiguration.setAuth(auth);
-      resolver =
-          new ViewResolver(
-              mock(DataSource.class),
-              mock(FhirEncoders.class),
-              serverConfiguration,
-              FhirContext.forR4Cached());
-    }
-
     @Test
-    void suppliedViewIsMatchedByUrlAndPreferredOverStorage() {
+    void suppliedViewIsMatchedByUrl() {
       final var supplied =
           au.csiro.pathling.views.FhirView.ofResource("Patient")
               .select(
                   au.csiro.pathling.views.FhirView.columns(
                       au.csiro.pathling.views.FhirView.column("id", "id")))
               .build();
+      final SuppliedArtefacts artefacts = SuppliedArtefacts.ofViews(Map.of(PATIENTS_URL, supplied));
 
-      final Optional<ResolvedViewDefinition> resolved =
-          resolver.resolveSuppliedView(
-              new ViewArtifactReference("patients", PATIENTS_URL), Map.of(PATIENTS_URL, supplied));
+      final Optional<SuppliedArtefact> matched = artefacts.match(PATIENTS_URL, null);
 
-      assertThat(resolved).isPresent();
-      assertThat(resolved.get().getView()).isSameAs(supplied);
-      assertThat(resolved.get().getCanonicalKey()).isEqualTo(PATIENTS_URL);
+      assertThat(matched).isPresent();
+      assertThat(matched.get().getView()).isSameAs(supplied);
+      assertThat(matched.get().getUrl()).isEqualTo(PATIENTS_URL);
     }
 
     @Test
-    void resolvesNoSuppliedViewWhenNoneMatchesTheUrl() {
-      final Optional<ResolvedViewDefinition> resolved =
-          resolver.resolveSuppliedView(
-              new ViewArtifactReference("patients", PATIENTS_URL), Map.of());
-
-      assertThat(resolved).isEmpty();
+    void matchesNoSuppliedViewWhenNoneCarriesTheUrl() {
+      assertThat(SuppliedArtefacts.empty().match(PATIENTS_URL, null)).isEmpty();
     }
   }
 

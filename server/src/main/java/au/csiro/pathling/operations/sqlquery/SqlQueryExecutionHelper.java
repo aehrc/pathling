@@ -18,11 +18,11 @@
 package au.csiro.pathling.operations.sqlquery;
 
 import au.csiro.pathling.library.io.source.QueryableDataSource;
+import au.csiro.pathling.operations.sql.SuppliedArtefacts;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import jakarta.servlet.http.HttpServletResponse;
-import java.util.Map;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.IntegerType;
@@ -117,7 +117,14 @@ public class SqlQueryExecutionHelper {
     final IBaseResource library = selectLibrary(queryResource, queryReference);
 
     final PreparedSqlQuery prepared =
-        pipeline.prepare(library, format, acceptHeader, includeHeader, limit, parameters, Map.of());
+        pipeline.prepare(
+            library,
+            format,
+            acceptHeader,
+            includeHeader,
+            limit,
+            parameters,
+            SuppliedArtefacts.empty());
 
     pipeline.execute(
         prepared,

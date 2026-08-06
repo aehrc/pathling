@@ -21,6 +21,7 @@ import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.ViewDefinitionResource;
 import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
+import au.csiro.pathling.operations.sql.SuppliedArtefacts;
 import au.csiro.pathling.operations.view.ViewExecutionHelper;
 import au.csiro.pathling.operations.view.ViewExportFormat;
 import au.csiro.pathling.security.PathlingAuthority;
@@ -193,7 +194,8 @@ public class SqlQueryExportRequestParser {
       @Nullable final Parameters parameters,
       @Nonnull final Map<String, FhirView> suppliedViews) {
     final PreparedSqlQuery prepared =
-        pipeline.prepare(library, null, null, null, null, parameters, suppliedViews);
+        pipeline.prepare(
+            library, null, null, null, null, parameters, SuppliedArtefacts.ofViews(suppliedViews));
     pipeline.validateStatically(prepared);
     return new QueryInput(name, libraryName(library), prepared);
   }
