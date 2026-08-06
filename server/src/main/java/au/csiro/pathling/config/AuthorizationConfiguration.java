@@ -77,6 +77,12 @@ public class AuthorizationConfiguration {
   @Nonnull private List<String> codeChallengeMethodsSupported = Collections.singletonList("S256");
 
   /**
+   * The JWS signing algorithms accepted within incoming bearer tokens. When empty, the accepted
+   * algorithms are derived from the keys published in the issuer's JWKS.
+   */
+  @Nonnull private List<String> tokenSigningAlgorithms = Collections.emptyList();
+
+  /**
    * Returns the configured issuer.
    *
    * @return the issuer, or empty if not configured
@@ -124,6 +130,17 @@ public class AuthorizationConfiguration {
   @Nonnull
   public List<String> getCodeChallengeMethodsSupported() {
     return codeChallengeMethodsSupported;
+  }
+
+  /**
+   * Returns the configured token signing algorithms.
+   *
+   * @return the list of accepted JWS signing algorithms, empty if they are to be derived from the
+   *     issuer's JWKS
+   */
+  @Nonnull
+  public List<String> getTokenSigningAlgorithms() {
+    return tokenSigningAlgorithms;
   }
 
   /**

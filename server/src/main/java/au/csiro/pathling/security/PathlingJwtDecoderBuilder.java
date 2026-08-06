@@ -50,6 +50,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -87,26 +88,41 @@ public class PathlingJwtDecoderBuilder implements JWTClaimsSetAwareJWSKeySelecto
   @Nonnull private final RestOperations restOperations;
 
   /**
+   * The JWS signing algorithms that the operator has pinned, or empty when the accepted algorithms
+   * are to be derived from the issuer's JWKS.
+   */
+  @Nonnull private final Set<JWSAlgorithm> configuredAlgorithms;
+
+  /**
    * Creates a new PathlingJwtDecoderBuilder.
    *
    * @param oidcConfiguration configuration used to instantiate the builder
+   * @param serverConfiguration configuration supplying any pinned signing algorithms
    */
   @Autowired
-  public PathlingJwtDecoderBuilder(@Nonnull final OidcConfiguration oidcConfiguration) {
-    this(oidcConfiguration, new RestTemplate());
+  public PathlingJwtDecoderBuilder(
+      @Nonnull final OidcConfiguration oidcConfiguration,
+      @Nonnull final ServerConfiguration serverConfiguration) {
+    this(oidcConfiguration, serverConfiguration, new RestTemplate());
   }
 
   /**
    * Creates a new PathlingJwtDecoderBuilder with an explicit HTTP client, for use in tests.
    *
    * @param oidcConfiguration configuration used to instantiate the builder
+   * @param serverConfiguration configuration supplying any pinned signing algorithms
    * @param restOperations the HTTP client used to retrieve the JWKS
    */
   PathlingJwtDecoderBuilder(
       @Nonnull final OidcConfiguration oidcConfiguration,
+      @Nonnull final ServerConfiguration serverConfiguration,
       @Nonnull final RestOperations restOperations) {
     this.oidcConfiguration = oidcConfiguration;
     this.restOperations = restOperations;
+    this.configuredAlgorithms =
+        serverConfiguration.getAuth().getTokenSigningAlgorithms().stream()
+            .map(JWSAlgorithm::parse)
+            .collect(Collectors.toUnmodifiableSet());
   }
 
   /**
@@ -159,8 +175,9 @@ public class PathlingJwtDecoderBuilder implements JWTClaimsSetAwareJWSKeySelecto
   }
 
   /**
-   * Resolves the set of JWS signing algorithms that will be accepted within a token header. The
-   * accepted set is derived from the keys published by the issuer.
+   * Resolves the set of JWS signing algorithms that will be accepted within a token header. Any
+   * algorithms pinned by configuration are used as-is; otherwise the accepted set is derived from
+   * the keys published by the issuer.
    *
    * @param jwkSource the source of the issuer's published keys
    * @return the accepted algorithms
@@ -169,6 +186,9 @@ public class PathlingJwtDecoderBuilder implements JWTClaimsSetAwareJWSKeySelecto
   @Nonnull
   private Set<JWSAlgorithm> resolveAcceptedAlgorithms(
       @Nonnull final JWKSource<SecurityContext> jwkSource) throws KeySourceException {
+    if (!configuredAlgorithms.isEmpty()) {
+      return configuredAlgorithms;
+    }
     try {
       return JwtDecoderProviderConfigurationUtilsProxy.getJwsAlgorithms(jwkSource);
     } catch (final IllegalStateException | IllegalArgumentException e) {

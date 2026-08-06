@@ -45,6 +45,7 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtException;
 
 /**
  * Tests for {@link PathlingJwtDecoderBuilder} covering auth configuration validation, decoder
@@ -62,7 +63,7 @@ class PathlingJwtDecoderBuilderTest {
     // Create an OidcConfiguration with a test JWKS URI.
     final OidcConfiguration oidcConfig =
         new OidcConfiguration(Map.of("jwks_uri", "http://localhost/.well-known/jwks.json"));
-    builder = new PathlingJwtDecoderBuilder(oidcConfig);
+    builder = new PathlingJwtDecoderBuilder(oidcConfig, configuration(List.of()));
   }
 
   // -- getAuthConfiguration --
@@ -212,19 +213,117 @@ class PathlingJwtDecoderBuilderTest {
     assertThat(jwt.getSubject()).isEqualTo("test-subject");
   }
 
+  // -- selectKeys: algorithms pinned by configuration --
+
+  @Test
+  void configuredAlgorithmsExcludeOthersPublishedByTheJwks() throws Exception {
+    // Pinning RS256 must reject ES384 even though the JWKS publishes a matching EC key.
+    final RSAKey rsaKey = generateRsaKey("rsa-1", JWSAlgorithm.RS256);
+    final ECKey ecKey = generateEcKey("ec-1", JWSAlgorithm.ES384);
+    final PathlingJwtDecoderBuilder decoderBuilder = builderFor(List.of("RS256"), rsaKey, ecKey);
+
+    final List<? extends Key> keys =
+        decoderBuilder.selectKeys(header(JWSAlgorithm.ES384, "ec-1"), claims(), null);
+
+    assertThat(keys).isEmpty();
+  }
+
+  @Test
+  void configuredAlgorithmsAcceptListedAlgorithm() throws Exception {
+    // Pinning RS256 must continue to accept RS256 tokens.
+    final RSAKey rsaKey = generateRsaKey("rsa-1", JWSAlgorithm.RS256);
+    final ECKey ecKey = generateEcKey("ec-1", JWSAlgorithm.ES384);
+    final PathlingJwtDecoderBuilder decoderBuilder = builderFor(List.of("RS256"), rsaKey, ecKey);
+
+    final List<? extends Key> keys =
+        decoderBuilder.selectKeys(header(JWSAlgorithm.RS256, "rsa-1"), claims(), null);
+
+    assertThat(keys).hasSize(1);
+    assertThat(keys.get(0)).isInstanceOf(RSAPublicKey.class);
+  }
+
+  @Test
+  void configuredEcAlgorithmSelectsMatchingKey() throws Exception {
+    // Pinning ES384 accepts an ES384 token backed by a published EC key.
+    final ECKey key = generateEcKey("ec-1", JWSAlgorithm.ES384);
+    final PathlingJwtDecoderBuilder decoderBuilder = builderFor(List.of("ES384"), key);
+
+    final List<? extends Key> keys =
+        decoderBuilder.selectKeys(header(JWSAlgorithm.ES384, "ec-1"), claims(), null);
+
+    assertThat(keys).hasSize(1);
+    assertThat(keys.get(0)).isInstanceOf(ECPublicKey.class);
+  }
+
+  @Test
+  void emptyConfiguredAlgorithmsFallBackToDerivation() throws Exception {
+    // An explicitly empty list behaves identically to the property being unset.
+    final ECKey key = generateEcKey("ec-1", JWSAlgorithm.ES384);
+    final PathlingJwtDecoderBuilder decoderBuilder = builderFor(List.of(), key);
+
+    final List<? extends Key> keys =
+        decoderBuilder.selectKeys(header(JWSAlgorithm.ES384, "ec-1"), claims(), null);
+
+    assertThat(keys).hasSize(1);
+  }
+
+  @Test
+  void decoderRejectsTokenSignedWithUnpinnedAlgorithm() throws Exception {
+    // End-to-end: a validly signed ES384 token is rejected when only RS256 is pinned.
+    final RSAKey rsaKey = generateRsaKey("rsa-1", JWSAlgorithm.RS256);
+    final ECKey ecKey = generateEcKey("ec-1", JWSAlgorithm.ES384);
+    final PathlingJwtDecoderBuilder decoderBuilder = builderFor(List.of("RS256"), rsaKey, ecKey);
+    final JwtDecoder decoder = decoderBuilder.build(authEnabledConfiguration());
+    final String token = signToken(ecKey, JWSAlgorithm.ES384);
+
+    assertThrows(JwtException.class, () -> decoder.decode(token));
+  }
+
   // -- Helpers --
 
   /**
-   * Builds a decoder builder whose JWKS endpoint publishes the supplied keys.
+   * Builds a decoder builder whose JWKS endpoint publishes the supplied keys, with no pinned
+   * algorithms.
    *
    * @param keys the keys to publish
    * @return the builder
    */
   @Nonnull
   private static PathlingJwtDecoderBuilder builderFor(@Nonnull final JWK... keys) {
+    return builderFor(List.of(), keys);
+  }
+
+  /**
+   * Builds a decoder builder whose JWKS endpoint publishes the supplied keys, with the supplied
+   * pinned algorithms.
+   *
+   * @param algorithms the value of the tokenSigningAlgorithms property
+   * @param keys the keys to publish
+   * @return the builder
+   */
+  @Nonnull
+  private static PathlingJwtDecoderBuilder builderFor(
+      @Nonnull final List<String> algorithms, @Nonnull final JWK... keys) {
     final OidcConfiguration oidcConfig =
         new OidcConfiguration(Map.of("jwks_uri", JwsTestFixtures.JWKS_URI));
-    return new PathlingJwtDecoderBuilder(oidcConfig, mockJwksTransport(jwksBody(keys)));
+    return new PathlingJwtDecoderBuilder(
+        oidcConfig, configuration(algorithms), mockJwksTransport(jwksBody(keys)));
+  }
+
+  /**
+   * Builds a server configuration with auth enabled and the supplied pinned algorithms.
+   *
+   * @param algorithms the value of the tokenSigningAlgorithms property
+   * @return the configuration
+   */
+  @Nonnull
+  private static ServerConfiguration configuration(@Nonnull final List<String> algorithms) {
+    final ServerConfiguration config = new ServerConfiguration();
+    final AuthorizationConfiguration authConfig = new AuthorizationConfiguration();
+    authConfig.setEnabled(true);
+    authConfig.setTokenSigningAlgorithms(algorithms);
+    config.setAuth(authConfig);
+    return config;
   }
 
   /**
@@ -235,12 +334,9 @@ class PathlingJwtDecoderBuilderTest {
    */
   @Nonnull
   private static ServerConfiguration authEnabledConfiguration() {
-    final ServerConfiguration config = new ServerConfiguration();
-    final AuthorizationConfiguration authConfig = new AuthorizationConfiguration();
-    authConfig.setEnabled(true);
-    authConfig.setIssuer("http://issuer.example.com");
-    authConfig.setAudience("http://audience.example.com");
-    config.setAuth(authConfig);
+    final ServerConfiguration config = configuration(List.of());
+    config.getAuth().setIssuer("http://issuer.example.com");
+    config.getAuth().setAudience("http://audience.example.com");
     return config;
   }
 }
