@@ -70,3 +70,11 @@ EOF
 ```
 
 Keep the body short. Report what was verified and how, not a narrative of the work.
+
+When Step 0 resolved `<base>` to something other than `origin/main` (a `--base` override), add
+`--base <branch>` to the `gh pr create` command above, where `<branch>` is `<base>` with any
+`origin/` prefix stripped (for example `fix/local_claude`, not `origin/fix/local_claude`). Without
+it, `gh pr create` defaults to the repository's default branch (`main`) regardless of what ref the
+branch was actually built from, and the opened PR's diff would include every commit unique to the
+override base — not just this issue's work. Retarget with `gh pr edit --base main` once that
+override base has merged into `main`, at which point the diff collapses to just the feature commits.

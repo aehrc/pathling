@@ -13,10 +13,10 @@ Drives a FHIRPath issue from `gh issue view` to an open PR. It produces working 
 Repository: `aehrc/pathling`, default branch `main`.
 
 ```
-/implement-pathling <issue-number> [--worktree] [--unattended]
+/implement-pathling <issue-number> [--worktree] [--unattended] [--base <ref>]
 ```
 
-- `--worktree` — work in an isolated worktree at `.worktrees/<issue-number>`. Use when several
+- `--worktree` — work in an isolated worktree at `.worktrees/issue/<issue-number>`. Use when several
   issues are in flight at once.
 - `--unattended` — no user is available. Every gate becomes an abort, except the test-matrix review
   and review triage (see table below), which proceed and report instead. **Required** when this
@@ -25,6 +25,13 @@ Repository: `aehrc/pathling`, default branch `main`.
   `fhirpath-test-designer`, whose matrix-review gate this governs) — they cannot tell on their own
   that no one is available to answer a question. The Step 10 reviewer is a subagent regardless of
   this flag, so it always gets it; see Step 10.
+- `--base <ref>` — branch off `<ref>` in Step 2 instead of `origin/main`, and use it as the
+  merge-base in Step 10 and the PR target branch in Step 11 (see `references/commit-and-pr.md`).
+  Defaults to `origin/main`, matching CONTRIBUTING.md's convention that an issue branch is "created
+  from and targeting `main`" — real issue work should not need this flag. It exists specifically to
+  test unmerged changes to this skill's own tooling (this file, `fhirpath-spec`,
+  `fhirpath-test-designer`, `pathling-yaml-exclusions`, `pathling-fhirpath-review`, etc.) against a
+  real issue before they land on `main`. It is not a general-purpose base picker for ordinary use.
 
 This skill **stops at the PR**. It does not merge, and does not wait for CI.
 
@@ -49,6 +56,9 @@ one, in which case do not create another:
 [ "$(git rev-parse --git-dir)" != "$(git rev-parse --git-common-dir)" ] && echo "already in worktree"
 ```
 
+Resolve `<base>` to the `--base` value, or `origin/main` if `--base` was not given. Steps 2, 10, and
+11 use this resolved value everywhere `<base>` appears below.
+
 Gate behaviour by mode:
 
 | Gate | Interactive | `--unattended` |
@@ -64,7 +74,8 @@ Gate behaviour by mode:
 the decision needed. Do not guess past a gate.
 
 Print, for example:
-`Mode: worktree=.worktrees/2385, unattended=false — will stop after the PR is opened.`
+`Mode: worktree=.worktrees/issue/2385, unattended=false, base=origin/main — will stop after the PR
+is opened.`
 
 ## Step 1 — Read the issue and confirm it is actionable
 
@@ -114,11 +125,14 @@ Pathling's convention (CONTRIBUTING.md) is `issue/<number>` — no slug.
 
 ```bash
 git fetch origin
-git switch -c issue/<N> origin/main
+git switch -c issue/<N> <base>
 ```
 
-Branch off `origin/main` rather than a local `main`: it guarantees a fresh base and works inside a
-linked worktree.
+Branches off `origin/main` by default — not a local `main` — because that guarantees a fresh base
+and works inside a linked worktree, matching CONTRIBUTING.md's convention that an issue branch is
+"created from and targeting `main`". Real issue work should rely on that default. `--base` overrides
+it only to test unmerged changes to this skill's own tooling on a real issue before that work lands
+on `main` — see the flag description above.
 
 **If the branch already exists, this is a gate (see Step 0 table).** The repo carries a dozen stale
 local branches; silently reusing one builds on the wrong base. Report what exists; interactively,
@@ -127,8 +141,8 @@ let the user decide whether to resume, rename, or delete it.
 With `--worktree`, create the worktree and branch together:
 
 ```bash
-git worktree add .worktrees/<N> -b issue/<N> origin/main
-cd .worktrees/<N>
+git worktree add .worktrees/issue/<N> -b issue/<N> <base>
+cd .worktrees/issue/<N>
 ```
 
 ## Step 3 — Research the specification
@@ -247,8 +261,9 @@ PR opens in the state it is meant to be judged in — rather than opening a PR a
 corrections onto it.
 
 Dispatch a reviewer in a fresh context using the `pathling-fhirpath-review` rubric, giving it the
-range `$(git merge-base origin/main HEAD)..HEAD`. A reviewer that has not seen the reasoning behind
-the change grades the result on its own terms.
+range `$(git merge-base <base> HEAD)..HEAD`, where `<base>` is the ref resolved in Step 0 —
+`origin/main` unless `--base` overrode it. A reviewer that has not seen the reasoning behind the
+change grades the result on its own terms.
 
 The reviewer is a dispatched subagent, so it has no user of its own **whether or not this run is
 `--unattended`**. Always tell it to pass `--unattended` to any skill it delegates to — it consults
