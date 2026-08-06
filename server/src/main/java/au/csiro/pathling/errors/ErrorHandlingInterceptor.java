@@ -20,6 +20,7 @@ package au.csiro.pathling.errors;
 import static java.util.Objects.requireNonNull;
 import static org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE;
 
+import au.csiro.pathling.io.SchemaDrift;
 import au.csiro.pathling.io.SchemaDriftError;
 import ca.uhn.fhir.interceptor.api.Hook;
 import ca.uhn.fhir.interceptor.api.Interceptor;
@@ -40,8 +41,12 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.UndeclaredThrowableException;
+import java.util.Collections;
 import org.apache.spark.SparkException;
 import org.apache.spark.SparkRuntimeException;
+import org.apache.spark.sql.delta.DeltaAnalysisException;
+import org.apache.spark.sql.types.DataType;
+import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.r4.model.OperationOutcome;
 import org.hl7.fhir.r4.model.OperationOutcome.IssueSeverity;
 import org.hl7.fhir.r4.model.OperationOutcome.IssueType;
@@ -54,6 +59,15 @@ import org.hl7.fhir.r4.model.OperationOutcome.OperationOutcomeIssueComponent;
  */
 @Interceptor
 public class ErrorHandlingInterceptor {
+
+  /**
+   * The Delta condition raised when a MERGE cannot cast the source struct to the target struct
+   * because their fields do not correspond. This is the condition a stored table produces when its
+   * schema and this server's encoders disagree in a way Delta will not reconcile, in either
+   * direction.
+   */
+  private static final String DELTA_SCHEMA_MISMATCH_CONDITION =
+      "DELTA_UPDATE_SCHEMA_MISMATCH_EXPRESSION";
 
   /**
    * HAPI hook to convert errors and exceptions to BaseServerResponseException.
@@ -74,7 +88,8 @@ public class ErrorHandlingInterceptor {
       @Nullable final HttpServletRequest request,
       @Nullable final HttpServletResponse response) {
 
-    return convertError(throwable);
+    return convertError(
+        throwable, requestDetails == null ? null : requestDetails.getResourceName());
   }
 
   /**
@@ -84,9 +99,26 @@ public class ErrorHandlingInterceptor {
    * @return a HAPI {@link BaseServerResponseException} that will deliver an appropriate response to
    *     a user of the FHIR API
    */
-  @SuppressWarnings("java:S3776") // Complexity is acceptable for centralised exception handling.
   @Nonnull
   public static BaseServerResponseException convertError(@Nonnull final Throwable error) {
+    return convertError(error, null);
+  }
+
+  /**
+   * Converts an error into a HAPI BaseServerResponseException, naming the resource type in those
+   * messages that describe a problem with a particular type's stored data.
+   *
+   * @param error an error that could be raised during processing
+   * @param resourceType the resource type the request concerns, or null where it is not known. A
+   *     Delta schema-mismatch exception does not carry it, so it is supplied by the caller that
+   *     does know it.
+   * @return a HAPI {@link BaseServerResponseException} that will deliver an appropriate response to
+   *     a user of the FHIR API
+   */
+  @SuppressWarnings("java:S3776") // Complexity is acceptable for centralised exception handling.
+  @Nonnull
+  public static BaseServerResponseException convertError(
+      @Nonnull final Throwable error, @Nullable final String resourceType) {
     try {
       throw error;
 
@@ -105,7 +137,7 @@ public class ErrorHandlingInterceptor {
       // (see: ca.uhn.fhir.rest.server.method.BaseMethodBinding.invokeServerMethod )
       @Nullable final Throwable cause = e.getCause();
       if (cause != null) {
-        return convertError(cause);
+        return convertError(cause, resourceType);
       } else {
         return internalServerError(e);
       }
@@ -153,12 +185,64 @@ public class ErrorHandlingInterceptor {
       // Other SparkRuntimeExceptions might wrap a cause we can convert.
       @Nullable final Throwable cause = e.getCause();
       if (cause != null) {
-        return convertError(cause);
+        return convertError(cause, resourceType);
       }
       return internalServerError(e);
+    } catch (final DeltaAnalysisException e) {
+      // A stored table that cannot be reconciled with this server's encoders is a deployment state,
+      // not a request defect, but the raw Delta message embeds both struct definitions in full and
+      // so cannot be returned. Translate the one condition that describes it and let every other
+      // Delta condition fall through to the generic message.
+      if (!DELTA_SCHEMA_MISMATCH_CONDITION.equals(e.getCondition())) {
+        return internalServerError(e);
+      }
+      return buildException(
+          HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
+          requireNonNull(describeSchemaMismatch(e, resourceType).getMessage()),
+          IssueType.PROCESSING);
     } catch (final Throwable e) { // NO-SONAR we really want to catch everything here
       // Anything else is unexpected and triggers a 500.
       return internalServerError(e);
+    }
+  }
+
+  /**
+   * Describes a Delta schema-mismatch condition in terms of the resource type, the direction of the
+   * disagreement and the field paths involved.
+   *
+   * <p>The exception's two message parameters are the catalog strings of the source and target
+   * structs, in that order. Parsing them back into schemas lets the same comparison that reports
+   * drift elsewhere derive the field paths, so no exception text reaches the message. The paths are
+   * relative to the struct Delta was casting, which is the element that actually differs.
+   *
+   * <p>A parameter that cannot be parsed - a shape this Delta version does not produce today, but
+   * nothing guarantees that - leaves both directions empty, and the resulting message names the
+   * condition without field detail rather than failing.
+   */
+  @Nonnull
+  private static SchemaDriftError describeSchemaMismatch(
+      @Nonnull final DeltaAnalysisException error, @Nullable final String resourceType) {
+    final String[] parameters = error.getMessageParametersArray();
+    @Nullable final StructType source = parameters.length > 0 ? parseStruct(parameters[0]) : null;
+    @Nullable final StructType target = parameters.length > 1 ? parseStruct(parameters[1]) : null;
+    if (source == null || target == null) {
+      return new SchemaDriftError(resourceType, Collections.emptySet(), Collections.emptySet());
+    }
+    return new SchemaDriftError(
+        resourceType,
+        SchemaDrift.missingFieldPaths(source, target),
+        SchemaDrift.excessFieldPaths(source, target));
+  }
+
+  /** Parses a struct's catalog string back into a schema, returning null if it is not one. */
+  @Nullable
+  private static StructType parseStruct(@Nonnull final String catalogString) {
+    try {
+      return DataType.fromDDL(catalogString) instanceof final StructType struct ? struct : null;
+    } catch (final Exception e) {
+      // The parameter was not a parseable type; the caller falls back to a message without field
+      // detail.
+      return null;
     }
   }
 
