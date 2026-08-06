@@ -18,16 +18,26 @@
 package au.csiro.pathling.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.springframework.boot.context.properties.bind.BindException;
+import org.springframework.boot.context.properties.bind.BindHandler;
+import org.springframework.boot.context.properties.bind.Bindable;
+import org.springframework.boot.context.properties.bind.Binder;
+import org.springframework.boot.context.properties.bind.validation.BindValidationException;
+import org.springframework.boot.context.properties.bind.validation.ValidationBindHandler;
+import org.springframework.boot.context.properties.source.MapConfigurationPropertySource;
+import org.springframework.validation.beanvalidation.SpringValidatorAdapter;
 
 /**
  * Unit tests for {@link AuthorizationConfiguration} validation.
@@ -165,6 +175,51 @@ class AuthorizationConfigurationTest {
     assertThat(violations).hasSize(1);
     assertThat(violations.iterator().next().getPropertyPath())
         .hasToString("tokenSigningAlgorithms[1].<list element>");
+  }
+
+  @Test
+  void bindingFailsForNonAsymmetricTokenSigningAlgorithm() {
+    // Binding is the mechanism Spring Boot uses to populate configuration properties at startup, so
+    // a rejected value here is what prevents the server from starting.
+    final MapConfigurationPropertySource source =
+        new MapConfigurationPropertySource(
+            Map.of(
+                "pathling.auth.enabled", "true",
+                "pathling.auth.tokenSigningAlgorithms[0]", "HS256"));
+    final BindHandler handler =
+        new ValidationBindHandler(
+            new SpringValidatorAdapter(Validation.buildDefaultValidatorFactory().getValidator()));
+
+    assertThatThrownBy(
+            () ->
+                new Binder(source)
+                    .bind("pathling.auth", Bindable.of(AuthorizationConfiguration.class), handler))
+        .isInstanceOf(BindException.class)
+        .rootCause()
+        .isInstanceOf(BindValidationException.class)
+        .hasMessageContaining("tokenSigningAlgorithms[0]")
+        .hasMessageContaining("HS256")
+        .hasMessageContaining("asymmetric JWS algorithms");
+  }
+
+  @Test
+  void bindingSucceedsForAsymmetricTokenSigningAlgorithm() {
+    // The same binding path accepts a valid asymmetric algorithm name.
+    final MapConfigurationPropertySource source =
+        new MapConfigurationPropertySource(
+            Map.of(
+                "pathling.auth.enabled", "true",
+                "pathling.auth.tokenSigningAlgorithms[0]", "ES384"));
+    final BindHandler handler =
+        new ValidationBindHandler(
+            new SpringValidatorAdapter(Validation.buildDefaultValidatorFactory().getValidator()));
+
+    final AuthorizationConfiguration bound =
+        new Binder(source)
+            .bind("pathling.auth", Bindable.of(AuthorizationConfiguration.class), handler)
+            .get();
+
+    assertThat(bound.getTokenSigningAlgorithms()).containsExactly("ES384");
   }
 
   @Test

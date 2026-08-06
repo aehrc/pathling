@@ -459,6 +459,18 @@ spark:
 - `pathling.auth.codeChallengeMethodsSupported` - (default: `S256`) A list of
   PKCE code challenge methods supported. Must include `S256` and must not
   include `plain` as per the SMART specification.
+- `pathling.auth.tokenSigningAlgorithms` - (default: empty) A list of the
+  [JWS signing algorithms](https://datatracker.ietf.org/doc/html/rfc7518#section-3.1)
+  accepted within incoming bearer tokens. When empty, the accepted algorithms
+  are derived from the keys published in the issuer's JWKS: a key's `alg` value
+  is used when present, otherwise the algorithms implied by its key type. This
+  derivation happens at token verification time, so key rotation at the identity
+  provider takes effect without a restart. When one or more values are
+  configured, only tokens whose header algorithm is in that list are accepted,
+  regardless of what the JWKS publishes. Tokens are verified against a public
+  JWKS, so only the asymmetric algorithm names `RS256`, `RS384`, `RS512`,
+  `PS256`, `PS384`, `PS512`, `ES256`, `ES256K`, `ES384`, `ES512` and `EdDSA` are
+  permitted; any other value fails validation at startup.
 
 ### Admin UI
 

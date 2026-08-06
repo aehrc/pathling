@@ -31,6 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import au.csiro.pathling.config.AuthorizationConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
 import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.KeySourceException;
 import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.RSAKey;
@@ -211,6 +212,17 @@ class PathlingJwtDecoderBuilderTest {
     final Jwt jwt = decoder.decode(signToken(key, JWSAlgorithm.RS256));
 
     assertThat(jwt.getSubject()).isEqualTo("test-subject");
+  }
+
+  @Test
+  void reportsEmptyJwksAsAKeySourceFailure() {
+    // A JWKS with no usable keys must fail as a key source problem, so that the request is
+    // rejected with a 401 rather than reported as a server error.
+    final PathlingJwtDecoderBuilder decoderBuilder = builderFor();
+
+    assertThrows(
+        KeySourceException.class,
+        () -> decoderBuilder.selectKeys(header(JWSAlgorithm.RS256, "rsa-1"), claims(), null));
   }
 
   // -- selectKeys: algorithms pinned by configuration --
