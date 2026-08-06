@@ -72,6 +72,7 @@ other, and only the root `pathling` authority implies both.
 | `pathling:import`                | Provides access to the import operation.                                        |
 | `pathling:import-pnp`            | Provides access to the ping and pull import operation.                          |
 | `pathling:search`                | Provides access to the search operation.                                        |
+| `pathling:create`                | Provides access to the create operation.                                        |
 | `pathling:update`                | Provides access to the update operation.                                        |
 | `pathling:delete`                | Provides access to the delete operation.                                        |
 | `pathling:batch`                 | Provides access to the batch operation.                                         |
@@ -79,6 +80,8 @@ other, and only the root `pathling` authority implies both.
 | `pathling:export`                | Provides access to the export operation.                                        |
 | `pathling:view-run`              | Provides access to the $viewdefinition-run operation.                           |
 | `pathling:view-export`           | Provides access to the $viewdefinition-export operation.                        |
+| `pathling:sqlquery-run`          | Provides access to the $sqlquery-run operation.                                 |
+| `pathling:sqlquery-export`       | Provides access to the $sqlquery-export operation.                              |
 | `pathling:jobs`                  | Provides access to the [jobs](operations/jobs) list operation.                  |
 
 In order to enable access to an operation, an operation authority (e.g.
