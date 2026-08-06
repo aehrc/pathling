@@ -52,6 +52,7 @@ import org.hl7.fhir.r4.model.OperationOutcome;
 import org.hl7.fhir.r4.model.OperationOutcome.IssueType;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.Reference;
+import org.hl7.fhir.r4.model.Resource;
 import org.hl7.fhir.r4.model.StringType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -410,9 +411,6 @@ class SqlRunProviderTest {
     provider.run(
         request.subjectCanonical,
         request.subjectReference,
-        request.subjectResource,
-        request.parameters,
-        request.context,
         request.inlineResources,
         request.format,
         null,
@@ -488,6 +486,10 @@ class SqlRunProviderTest {
       return this;
     }
 
+    /**
+     * Builds the request details, carrying the resource-valued parameters in the body as the
+     * provider now reads them.
+     */
     @Nonnull
     ServletRequestDetails requestDetails() {
       final ServletRequestDetails details = mock(ServletRequestDetails.class);
@@ -497,7 +499,26 @@ class SqlRunProviderTest {
       when(details.getRequestType()).thenReturn(method);
       when(details.getParameters()).thenReturn(queryParameters);
       when(details.getRequestId()).thenReturn("req-1");
+      when(details.getResource()).thenReturn(body());
       return details;
+    }
+
+    /** Builds the Parameters body carrying whichever resource-valued parameters were set. */
+    @Nonnull
+    private Parameters body() {
+      final Parameters body = new Parameters();
+      if (subjectResource != null) {
+        body.addParameter().setName("subjectResource").setResource((Resource) subjectResource);
+      }
+      if (parameters != null) {
+        body.addParameter().setName("parameters").setResource(parameters);
+      }
+      if (context != null) {
+        for (final IBaseResource entry : context) {
+          body.addParameter().setName("context").setResource((Resource) entry);
+        }
+      }
+      return body;
     }
   }
 

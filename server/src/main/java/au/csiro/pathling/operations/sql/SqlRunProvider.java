@@ -133,9 +133,6 @@ public class SqlRunProvider {
    *
    * @param subjectCanonical the subject's canonical URL, honouring a {@code |version} pin
    * @param subjectReference a relative reference to a stored subject
-   * @param subjectResource an inline subject
-   * @param parameters runtime parameter bindings, for SQL subjects only
-   * @param context inline supporting artefacts for dependencies the server cannot resolve
    * @param inlineResources FHIR resources to project instead of server data, for ViewDefinition
    *     subjects only
    * @param format the output format, taking precedence over the Accept header
@@ -154,10 +151,6 @@ public class SqlRunProvider {
   public void run(
       @Nullable @OperationParam(name = "subjectCanonical") final String subjectCanonical,
       @Nullable @OperationParam(name = "subjectReference") final Reference subjectReference,
-      @Nullable @OperationParam(name = "subjectResource") final IBaseResource subjectResource,
-      @Nullable @OperationParam(name = "parameters") final Parameters parameters,
-      @Nullable @OperationParam(name = "context", max = OperationParam.MAX_UNLIMITED)
-          final List<IBaseResource> context,
       @Nullable @OperationParam(name = "resource", max = OperationParam.MAX_UNLIMITED)
           final List<String> inlineResources,
       @Nullable @OperationParam(name = "_format") final String format,
@@ -178,6 +171,14 @@ public class SqlRunProvider {
 
     rejectResourceParametersOverGet(requestDetails);
     rejectSource(source);
+
+    // The resource-carrying parameters are read from the raw body rather than bound by HAPI, so
+    // that supplying one over GET is answered by the rejection above rather than by HAPI's own
+    // refusal to bind a non-primitive from a query string.
+    final IBaseResource subjectResource = bodyResource(requestDetails, "subjectResource");
+    final Parameters parameters =
+        bodyResource(requestDetails, "parameters") instanceof final Parameters bound ? bound : null;
+    final List<IBaseResource> context = bodyResources(requestDetails, "context");
 
     // Filters are resolved first and their issues carried, so that a request with both an
     // unresolvable subject and an unresolvable filter reports both problems in one outcome.
@@ -326,8 +327,32 @@ public class SqlRunProvider {
   }
 
   /**
-   * Rejects a resource-carrying parameter supplied over GET. HAPI cannot bind such a parameter from
-   * a query string, so without this check it would be silently dropped.
+   * Returns the single resource carried by a named part of the request body, or null when the body
+   * carries none.
+   */
+  @Nullable
+  private static IBaseResource bodyResource(
+      @Nonnull final ServletRequestDetails requestDetails, @Nonnull final String name) {
+    final List<IBaseResource> resources = bodyResources(requestDetails, name);
+    return resources.isEmpty() ? null : resources.get(0);
+  }
+
+  /** Returns every resource carried by a named part of the request body, in order. */
+  @Nonnull
+  private static List<IBaseResource> bodyResources(
+      @Nonnull final ServletRequestDetails requestDetails, @Nonnull final String name) {
+    if (!(requestDetails.getResource() instanceof final Parameters body)) {
+      return List.of();
+    }
+    return body.getParameter().stream()
+        .filter(part -> name.equals(part.getName()) && part.getResource() != null)
+        .map(part -> (IBaseResource) part.getResource())
+        .toList();
+  }
+
+  /**
+   * Rejects a resource-carrying parameter supplied over GET. Such a parameter cannot be expressed
+   * in a query string, so without this check it would be silently dropped.
    */
   private static void rejectResourceParametersOverGet(
       @Nonnull final ServletRequestDetails requestDetails) {

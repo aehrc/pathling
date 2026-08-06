@@ -203,9 +203,6 @@ class SecurityEnabledSqlRunTest extends SecurityTest {
     provider.run(
         null,
         null,
-        viewResource,
-        null,
-        null,
         List.of(resourceJson),
         null,
         null,
