@@ -28,7 +28,11 @@ import java.util.Optional;
 import lombok.Data;
 import lombok.ToString;
 
-/** Represents configuration specific to authorisation. */
+/**
+ * Represents configuration specific to authorisation.
+ *
+ * @author John Grimes
+ */
 @Data
 @ToString(doNotUseGetters = true)
 public class AuthorizationConfiguration {

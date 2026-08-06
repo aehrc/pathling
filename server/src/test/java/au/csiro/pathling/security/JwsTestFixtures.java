@@ -40,6 +40,7 @@ import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
@@ -70,7 +71,7 @@ final class JwsTestFixtures {
    * @throws JOSEException if key generation fails
    */
   @Nonnull
-  static RSAKey generateRsaKey(@Nonnull final String keyId, final JWSAlgorithm algorithm)
+  static RSAKey generateRsaKey(@Nonnull final String keyId, @Nullable final JWSAlgorithm algorithm)
       throws JOSEException {
     final JWKGenerator<RSAKey> generator =
         new RSAKeyGenerator(2048).keyID(keyId).keyUse(KeyUse.SIGNATURE);
@@ -89,7 +90,7 @@ final class JwsTestFixtures {
    * @throws JOSEException if key generation fails
    */
   @Nonnull
-  static ECKey generateEcKey(@Nonnull final String keyId, final JWSAlgorithm algorithm)
+  static ECKey generateEcKey(@Nonnull final String keyId, @Nullable final JWSAlgorithm algorithm)
       throws JOSEException {
     final JWKGenerator<ECKey> generator =
         new ECKeyGenerator(Curve.P_384).keyID(keyId).keyUse(KeyUse.SIGNATURE);
@@ -145,7 +146,7 @@ final class JwsTestFixtures {
    * @return the header
    */
   @Nonnull
-  static JWSHeader header(@Nonnull final JWSAlgorithm algorithm, final String keyId) {
+  static JWSHeader header(@Nonnull final JWSAlgorithm algorithm, @Nullable final String keyId) {
     final JWSHeader.Builder builder = new JWSHeader.Builder(algorithm);
     if (keyId != null) {
       builder.keyID(keyId);
