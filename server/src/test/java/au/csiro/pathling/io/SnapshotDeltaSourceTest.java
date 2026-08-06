@@ -109,6 +109,24 @@ class SnapshotDeltaSourceTest {
     assertThat(filtered.read("Patient").count()).isEqualTo(2);
   }
 
+  // A snapshot's empty-dataset fallback for a type with no table at the pinned instant has to
+  // survive derivation too, or an $sql-export narrowed by patient would fail on a view that
+  // references such a type instead of yielding no rows for it (FR-005).
+  @Test
+  void derivedSourceKeepsTheEmptyDatasetFallback(@TempDir final Path tempDir) {
+    final String databasePath = tempDir.toAbsolutePath().toString();
+    writeTable(databasePath, "Patient", 1);
+    final SnapshotDeltaSource snapshot = newLiveSource(databasePath).snapshot();
+
+    final QueryableDataSource derived =
+        snapshot.map((resourceType, dataset) -> dataset).filterByResourceType(resourceType -> true);
+
+    // ImmunizationEvaluation had no table at the pinned instant.
+    final Dataset<Row> result = derived.read("ImmunizationEvaluation");
+    assertThat(result.count()).isZero();
+    assertThat(result.schema().fieldNames()).contains("id", "status");
+  }
+
   // Every table is pinned at the same instant, so a write to a second type after snapshot creation
   // is equally invisible.
   @Test
