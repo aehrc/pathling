@@ -16,9 +16,12 @@
  */
 
 /**
- * Wrapper component that manages a single SQL query export job lifecycle. Starts the export on
- * mount, reusing the synchronous run's query source, and renders the reusable {@link ExportJobCard}
- * with the current state.
+ * Wrapper that manages one `$sql-export` job lifecycle, starting it on mount
+ * and rendering the shared {@link ExportJobCard} with the current state.
+ *
+ * One wrapper serves every export flow, because one job carries any mixture
+ * of subjects: a single view exported from a result card and a whole export
+ * set differ only in how many subjects they name.
  *
  * @author John Grimes
  */
@@ -26,40 +29,32 @@
 import { useEffect, useRef } from "react";
 
 import { ExportJobCard } from "./ExportJobCard";
+import { parseSqlExportManifest } from "../../api";
 import { useToast } from "../../contexts/ToastContext";
-import { parseSqlQueryExportManifest, useDownloadFile, useSqlQueryExport } from "../../hooks";
+import { useDownloadFile, useSqlExport } from "../../hooks";
 
+import type { SqlExportEntry } from "../../api";
 import type { JobStatus } from "../../types/job";
-import type {
-  SqlQueryExportFormat,
-  SqlQueryExportManifest,
-  SqlQueryExportRequest,
-  SqlQueryRequest,
-} from "../../types/sqlQuery";
+import type { SqlExportFormat, SqlExportManifest } from "../../types/sqlExport";
 import type { Parameters } from "fhir/r4";
 
-interface SqlQueryExportCardWrapperProps {
-  /** The synchronous run's query source, reused for the export. */
-  source: SqlQueryRequest;
-  format: SqlQueryExportFormat;
+interface SqlExportCardWrapperProps {
+  /** The subjects to export, one output each. */
+  subjects: SqlExportEntry[];
+  /** Output format. */
+  format: SqlExportFormat;
+  /** Whether CSV output carries a header row. */
+  header?: boolean;
+  /** Patient ids restricting the data every subject reads. */
+  patientIds?: string[];
+  /** Group ids restricting the data every subject reads. */
+  groupIds?: string[];
+  /** Restricts to resources updated at or after this instant. */
+  since?: string;
+  /** Wall-clock submission time, shown on the card. */
   createdAt: Date;
+  /** Removes this card. */
   onClose: () => void;
-}
-
-/**
- * Derives the export request from the synchronous run's query source and the chosen format.
- *
- * @param source - The synchronous run's request (stored or inline).
- * @param format - The chosen export format.
- * @returns The export request.
- */
-function toExportRequest(
-  source: SqlQueryRequest,
-  format: SqlQueryExportFormat,
-): SqlQueryExportRequest {
-  return source.mode === "stored"
-    ? { mode: "stored", libraryId: source.libraryId, format, header: true }
-    : { mode: "inline", library: source.library, format, header: true };
 }
 
 /**
@@ -85,36 +80,43 @@ function toJobStatus(status: string): JobStatus {
 }
 
 /**
- * Manages a SQL query export job lifecycle, starting it on mount.
+ * Manages a `$sql-export` job lifecycle, starting it on mount.
  *
  * @param props - Component props.
- * @param props.source - The synchronous run's query source, reused for the export.
- * @param props.format - The output format for the export.
- * @param props.createdAt - The timestamp when the export was created.
- * @param props.onClose - Callback to remove this export card.
+ * @param props.subjects - The subjects to export.
+ * @param props.format - The output format.
+ * @param props.header - Whether CSV output carries a header row.
+ * @param props.patientIds - Patient ids restricting the data read.
+ * @param props.groupIds - Group ids restricting the data read.
+ * @param props.since - Restricts to resources updated at or after this instant.
+ * @param props.createdAt - The timestamp when the export was requested.
+ * @param props.onClose - Callback to remove this card.
  * @returns The rendered export card.
  */
-export function SqlQueryExportCardWrapper({
-  source,
+export function SqlExportCardWrapper({
+  subjects,
   format,
+  header = true,
+  patientIds,
+  groupIds,
+  since,
   createdAt,
   onClose,
-}: Readonly<SqlQueryExportCardWrapperProps>) {
+}: Readonly<SqlExportCardWrapperProps>) {
   const { showToast } = useToast();
   const hasStartedRef = useRef(false);
   // A failed download is the one failure this card cannot display, because the
   // card is describing a job that succeeded, so it is notified instead.
   const handleDownload = useDownloadFile((err) => showToast("Download failed", err.message));
 
-  const { startWith, cancel, status, result, error, progress } = useSqlQueryExport();
+  const { startWith, cancel, status, result, error, progress } = useSqlExport();
 
-  // Start the export on mount.
   useEffect(() => {
     if (!hasStartedRef.current) {
       hasStartedRef.current = true;
-      startWith(toExportRequest(source, format));
+      startWith({ subjects, format, header, patientIds, groupIds, since });
     }
-  }, [source, format, startWith]);
+  }, [subjects, format, header, patientIds, groupIds, since, startWith]);
 
   return (
     <ExportJobCard
@@ -123,10 +125,10 @@ export function SqlQueryExportCardWrapper({
         progress: progress ?? null,
         error: error ?? null,
         format,
-        manifest: (result as SqlQueryExportManifest | null) ?? null,
+        manifest: (result as SqlExportManifest | null) ?? null,
         createdAt,
       }}
-      getOutputs={(manifest: Parameters) => parseSqlQueryExportManifest(manifest)}
+      getOutputs={(manifest: Parameters) => parseSqlExportManifest(manifest)}
       onCancel={cancel}
       onDownload={handleDownload}
       onClose={onClose}

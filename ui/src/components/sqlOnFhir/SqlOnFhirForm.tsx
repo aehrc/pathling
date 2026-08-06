@@ -28,13 +28,13 @@ import { Box, Tabs } from "@radix-ui/themes";
 import { SqlQueryForm } from "./SqlQueryForm";
 import { ViewDefinitionForm } from "./ViewDefinitionForm";
 
-import type { ViewRunRequest } from "../../hooks";
 import type { CreateViewDefinitionResult } from "../../types/sqlOnFhir";
 import type {
   SaveSqlQueryLibraryResult,
   SqlQueryLibrary,
   SqlQueryRequest,
 } from "../../types/sqlQuery";
+import type { ViewRunRequest } from "../../types/viewJob";
 
 /**
  * Mode of the SQL on FHIR page form.

@@ -15,18 +15,16 @@
  * limitations under the License.
  */
 
-import type { ResourceType } from "./rest";
-
 /**
- * The ViewDefinition resource shape used by the UI. Only the slots the UI
- * reads or writes are typed.
+ * Type definitions for the `$sql-export` UI flow.
+ *
+ * @author John Grimes
  */
-export interface ViewDefinition {
-  resourceType: "ViewDefinition";
-  name?: string;
-  url?: string;
-  resource: ResourceType;
-  status: string;
-  select: unknown[];
-  where?: unknown[];
-}
+
+import type { Parameters } from "fhir/r4";
+
+/** Output formats the `$sql-export` operation can write. */
+export type SqlExportFormat = "ndjson" | "csv" | "parquet";
+
+/** The completion manifest, a FHIR Parameters resource. */
+export type SqlExportManifest = Parameters;

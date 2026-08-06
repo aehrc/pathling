@@ -31,6 +31,7 @@ import {
   parseNdjsonResponse,
 } from "../utils";
 
+import type { SubjectSource } from "../api";
 import type {
   SourceOption,
   SqlQueryBinaryResult,
@@ -39,10 +40,12 @@ import type {
   SqlQueryOutputFormat,
   SqlQueryParameterType,
   SqlQueryRelatedArtifact,
+  SqlQueryRequest,
   SqlQueryResult,
+  SqlQueryRuntimeBindings,
   SqlQueryTabularResult,
 } from "../types/sqlQuery";
-import type { Bundle, Library } from "fhir/r4";
+import type { Bundle, Library, Parameters, ParametersParameter } from "fhir/r4";
 
 /**
  * Allowed FHIR primitive types for declared SQL parameters in the UI.
@@ -328,4 +331,100 @@ function tabularContentType(
     case "fhir":
       return "application/fhir+json";
   }
+}
+
+/**
+ * Builds the nested `parameters` Parameters resource carrying runtime
+ * bindings, or returns `undefined` when there is nothing to send.
+ *
+ * A binding whose value cannot be coerced to its declared type is omitted;
+ * the form layer is responsible for blocking submission in that case.
+ *
+ * @param bindings - Runtime values keyed by declared parameter name.
+ * @param parameterTypes - Declared FHIR primitive types keyed by name.
+ * @returns The bindings resource, or `undefined` when no binding has a value.
+ *
+ * @example
+ * buildBindingsResource({ family: "Smith" }, { family: "string" });
+ * // { resourceType: "Parameters", parameter: [{ name: "family", valueString: "Smith" }] }
+ */
+export function buildBindingsResource(
+  bindings: SqlQueryRuntimeBindings | undefined,
+  parameterTypes: Record<string, SqlQueryParameterType> | undefined,
+): Parameters | undefined {
+  if (!bindings) {
+    return undefined;
+  }
+
+  const entries: ParametersParameter[] = [];
+  for (const [name, rawValue] of Object.entries(bindings)) {
+    if (rawValue === undefined || rawValue === null || rawValue === "") {
+      continue;
+    }
+    const part = bindingToPart(
+      name,
+      rawValue,
+      parameterTypes?.[name] ?? "string",
+    );
+    if (part) {
+      entries.push(part);
+    }
+  }
+  if (entries.length === 0) {
+    return undefined;
+  }
+  return { resourceType: "Parameters", parameter: entries };
+}
+
+/**
+ * Maps a single runtime binding to a typed Parameters part.
+ *
+ * @param name - The parameter name.
+ * @param rawValue - The string captured from the form input.
+ * @param type - The declared FHIR primitive type.
+ * @returns The part with the matching `value[x]` slot, or `undefined` when the
+ *   value cannot be parsed.
+ */
+function bindingToPart(
+  name: string,
+  rawValue: string,
+  type: SqlQueryParameterType,
+): ParametersParameter | undefined {
+  switch (type) {
+    case "string":
+      return { name, valueString: rawValue };
+    case "code":
+      return { name, valueCode: rawValue };
+    case "integer": {
+      const parsed = Number.parseInt(rawValue, 10);
+      return Number.isNaN(parsed) ? undefined : { name, valueInteger: parsed };
+    }
+    case "decimal": {
+      const parsed = Number.parseFloat(rawValue);
+      return Number.isNaN(parsed) ? undefined : { name, valueDecimal: parsed };
+    }
+    case "boolean":
+      return { name, valueBoolean: rawValue === "true" };
+    case "date":
+      return { name, valueDate: rawValue };
+    case "dateTime":
+      return { name, valueDateTime: rawValue };
+  }
+}
+
+/**
+ * Derives the wire subject form from a SQL query request: a stored Library is
+ * named by a typed reference, an inline one is sent whole.
+ *
+ * @param request - The form-level SQL query request.
+ * @returns The subject source to send.
+ *
+ * @example
+ * toSubjectSource({ mode: "stored", libraryId: "bp" });
+ * // { kind: "reference", reference: "Library/bp" }
+ */
+export function toSubjectSource(request: SqlQueryRequest): SubjectSource {
+  return request.mode === "stored"
+    ? { kind: "reference", reference: `Library/${request.libraryId}` }
+    : { kind: "resource", resource: request.library };
 }

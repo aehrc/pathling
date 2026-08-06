@@ -33,8 +33,8 @@ import { ViewCard } from "../components/sqlOnFhir/ViewCard";
 import { useSaveSqlQueryLibrary, useSaveViewDefinition } from "../hooks";
 
 import type { SqlOnFhirMode } from "../components/sqlOnFhir/SqlOnFhirForm";
-import type { ViewRunRequest } from "../hooks";
 import type { SqlQueryJob, SqlQueryRequest } from "../types/sqlQuery";
+import type { ViewRunRequest } from "../types/viewJob";
 import type { ViewJob } from "../types/viewJob";
 
 interface PageJob {

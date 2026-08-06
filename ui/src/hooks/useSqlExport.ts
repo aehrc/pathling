@@ -15,14 +15,22 @@
  * limitations under the License.
  */
 
+/**
+ * Hook for the asynchronous `$sql-export` operation: kick-off, polling,
+ * cancellation and download. One job carries any mixture of subjects, so this
+ * hook serves both the single-subject export from a result card and the mixed
+ * export set.
+ *
+ * @author John Grimes
+ */
+
 import { useCallback, useRef } from "react";
 
 import {
-  viewExportKickOff,
-  viewExportDownload,
-  jobStatus,
   jobCancel,
-  extractJobIdFromUrl,
+  jobStatus,
+  sqlExportDownload,
+  sqlExportKickOff,
 } from "../api";
 import { config } from "../config";
 import { useAsyncJob } from "./useAsyncJob";
@@ -30,59 +38,52 @@ import { useAsyncJobCallbacks } from "./useAsyncJobCallbacks";
 import { useAuth } from "../contexts/AuthContext";
 
 import type { AsyncJobOptions, UseAsyncJobResult } from "./useAsyncJob";
-import type { ViewDefinition } from "../api";
-import type { ViewExportManifest } from "../types/viewExport";
+import type { SqlExportEntry, SqlExportFormat } from "../api";
+import type { Parameters } from "fhir/r4";
 
 /**
- * Output format for asynchronous view export operations.
+ * An `$sql-export` kick-off request: the subjects to export plus the job-wide
+ * output settings and filters.
  */
-export type ViewExportOutputFormat = "ndjson" | "csv" | "parquet";
-
-/**
- * Request parameters for view export operations.
- */
-export interface ViewExportRequest {
-  /** Views to export. */
-  views: Array<{
-    viewDefinition: ViewDefinition;
-    name?: string;
-  }>;
+export interface SqlExportRequest {
+  /** The subjects to export, one output each. */
+  subjects: SqlExportEntry[];
   /** Output format. */
-  format?: ViewExportOutputFormat;
-  /** Whether to include header row (CSV only). */
+  format: SqlExportFormat;
+  /** Whether CSV output carries a header row. */
   header?: boolean;
+  /** Patient ids restricting the data every subject reads. */
+  patientIds?: string[];
+  /** Group ids restricting the data every subject reads. */
+  groupIds?: string[];
+  /** Restricts to resources updated at or after this instant. */
+  since?: string;
 }
 
-/**
- * Options for useViewExport hook (callbacks only).
- */
-export type UseViewExportOptions = AsyncJobOptions;
+/** The completion manifest, a FHIR Parameters resource. */
+export type SqlExportManifest = Parameters;
 
-/**
- * Result of useViewExport hook.
- */
-export interface UseViewExportResult extends UseAsyncJobResult<
-  ViewExportRequest,
-  ViewExportManifest
+/** Options for {@link useSqlExport} (callbacks only). */
+export type UseSqlExportOptions = AsyncJobOptions;
+
+/** Result of {@link useSqlExport}. */
+export interface UseSqlExportResult extends UseAsyncJobResult<
+  SqlExportRequest,
+  SqlExportManifest
 > {
-  /** Function to download a file from the manifest. */
-  download: (fileName: string) => Promise<ReadableStream>;
+  /** Downloads an output file by its manifest location URL. */
+  download: (location: string) => Promise<ReadableStream>;
 }
 
 /**
- * Execute a view export operation with polling.
- */
-export type UseViewExportFn = (
-  options?: UseViewExportOptions,
-) => UseViewExportResult;
-
-/**
- * Execute a view export operation with polling.
+ * Runs an `$sql-export` job with polling.
  *
- * @param options - Optional callbacks for progress, completion, and error events.
- * @returns Hook result with status, result, and control functions including startWith.
+ * @param options - Optional callbacks for progress, completion and error.
+ * @returns Hook result with status, manifest, control functions and download.
  */
-export const useViewExport: UseViewExportFn = (options) => {
+export function useSqlExport(
+  options?: UseSqlExportOptions,
+): UseSqlExportResult {
   const { fhirBaseUrl } = config;
   const { client } = useAuth();
   const accessToken = client?.state.tokenResponse?.access_token;
@@ -91,12 +92,15 @@ export const useViewExport: UseViewExportFn = (options) => {
   const callbacks = useAsyncJobCallbacks(options);
 
   const buildOptions = useCallback(
-    (request: ViewExportRequest) => ({
+    (request: SqlExportRequest) => ({
       kickOff: () =>
-        viewExportKickOff(fhirBaseUrl!, {
-          views: request.views,
+        sqlExportKickOff(fhirBaseUrl!, {
+          subjects: request.subjects,
           format: request.format,
           header: request.header,
+          patientIds: request.patientIds,
+          groupIds: request.groupIds,
+          since: request.since,
           accessToken,
         }),
       getJobId: (result: { pollingUrl: string }) => {
@@ -107,7 +111,7 @@ export const useViewExport: UseViewExportFn = (options) => {
         jobStatus(fhirBaseUrl!, { pollingUrl, accessToken }),
       isComplete: (status: { status: string }) => status.status === "complete",
       getResult: (status: { result?: unknown }) =>
-        status.result as UseViewExportResult["result"],
+        status.result as SqlExportManifest,
       cancel: (pollingUrl: string) =>
         jobCancel(fhirBaseUrl!, { pollingUrl, accessToken }),
       pollingInterval: 3000,
@@ -118,17 +122,9 @@ export const useViewExport: UseViewExportFn = (options) => {
   const job = useAsyncJob(buildOptions, callbacks);
 
   const download = useCallback(
-    async (fileName: string) => {
-      if (!pollingUrlRef.current) throw new Error("No polling URL available");
-      const jobId = extractJobIdFromUrl(pollingUrlRef.current);
-      return viewExportDownload(fhirBaseUrl!, {
-        jobId,
-        fileName,
-        accessToken,
-      });
-    },
-    [fhirBaseUrl, accessToken],
+    (location: string) => sqlExportDownload({ location, accessToken }),
+    [accessToken],
   );
 
   return { ...job, download };
-};
+}

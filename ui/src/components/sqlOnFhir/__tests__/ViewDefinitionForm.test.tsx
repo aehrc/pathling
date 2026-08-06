@@ -33,8 +33,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "../../../test/testUtils";
 import { ViewDefinitionForm } from "../ViewDefinitionForm";
 
-import type { ViewRunRequest } from "../../../hooks";
 import type { CreateViewDefinitionResult } from "../../../types/sqlOnFhir";
+import type { ViewRunRequest } from "../../../types/viewJob";
 
 // Mock the hooks.
 const mockUseViewDefinitions = vi.fn();

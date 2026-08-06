@@ -19,7 +19,7 @@
  * Result card for a single SQL query execution.
  *
  * Mirrors the lifecycle pattern of `ViewCard`: each card mounts, kicks off
- * its own `$sqlquery-run` request via `useSqlQueryRun`, and renders the
+ * its own `$sql-run` request via `useSqlRun`, and renders the
  * format-appropriate result body when complete.
  *
  * @author John Grimes
@@ -41,19 +41,21 @@ import {
 import { useEffect, useState } from "react";
 
 import { ExportControls } from "./ExportControls";
+import { SqlExportCardWrapper } from "./SqlExportCardWrapper";
 import { SqlPreview } from "./SqlPreview";
-import { SqlQueryExportCardWrapper } from "./SqlQueryExportCardWrapper";
-import { useSqlQueryRun } from "../../hooks";
+import { useSqlRun } from "../../hooks";
+import { buildBindingsResource, toSubjectSource } from "../../hooks/sqlQueryHelpers";
 import { formatDateTime } from "../../utils";
 import { ErrorCallout } from "../error/ErrorCallout";
 import { toDisplayIssues } from "../error/errorPresentation";
 
-import type { SqlQueryExportFormat, SqlQueryJob, SqlQueryResult } from "../../types/sqlQuery";
+import type { SqlExportFormat } from "../../types/sqlExport";
+import type { SqlQueryJob, SqlQueryResult } from "../../types/sqlQuery";
 
 /** An in-progress or completed export spawned from this result card. */
 interface SqlQueryExportEntry {
   id: string;
-  format: SqlQueryExportFormat;
+  format: SqlExportFormat;
   createdAt: Date;
 }
 
@@ -73,7 +75,7 @@ interface SqlQueryCardProps {
  * @returns The card.
  */
 export function SqlQueryCard({ job, onClose }: Readonly<SqlQueryCardProps>) {
-  const { execute, status, result, error } = useSqlQueryRun();
+  const { execute, status, result, error } = useSqlRun();
   const [exports, setExports] = useState<SqlQueryExportEntry[]>([]);
 
   const isRunning = status === "pending";
@@ -92,7 +94,14 @@ export function SqlQueryCard({ job, onClose }: Readonly<SqlQueryCardProps>) {
   // Strict Mode's double-render of the mount.
   useEffect(() => {
     if (status === "idle") {
-      execute(job.request);
+      execute({
+        subject: toSubjectSource(job.request),
+        format: job.request.format,
+        limit: job.request.limit,
+        header: job.request.header,
+        bindings: job.request.bindings,
+        parameterTypes: job.request.parameterTypes,
+      });
     }
   }, [status, execute, job]);
 
@@ -101,7 +110,7 @@ export function SqlQueryCard({ job, onClose }: Readonly<SqlQueryCardProps>) {
    *
    * @param format - The chosen export format.
    */
-  function handleExport(format: SqlQueryExportFormat) {
+  function handleExport(format: SqlExportFormat) {
     setExports((current) => [
       ...current,
       { id: crypto.randomUUID(), format, createdAt: new Date() },
@@ -175,9 +184,17 @@ export function SqlQueryCard({ job, onClose }: Readonly<SqlQueryCardProps>) {
                 <ExportControls onExport={handleExport} />
               </Flex>
               {exports.map((entry) => (
-                <SqlQueryExportCardWrapper
+                <SqlExportCardWrapper
                   key={entry.id}
-                  source={job.request}
+                  subjects={[
+                    {
+                      subject: toSubjectSource(job.request),
+                      parameters: buildBindingsResource(
+                        job.request.bindings,
+                        job.request.parameterTypes,
+                      ),
+                    },
+                  ]}
                   format={entry.format}
                   createdAt={entry.createdAt}
                   onClose={() => handleCloseExport(entry.id)}

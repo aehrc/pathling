@@ -27,8 +27,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "../../test/testUtils";
 import { SqlOnFhir } from "../SqlOnFhir";
 
-import type { ViewRunRequest } from "../../hooks";
 import type { SqlQueryRequest } from "../../types/sqlQuery";
+import type { ViewRunRequest } from "../../types/viewJob";
 import type { ReactNode } from "react";
 
 // Mock the toast context, which is where failures must be reported.

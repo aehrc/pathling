@@ -46,8 +46,8 @@ import { ErrorCallout } from "../error/ErrorCallout";
 import { FieldGuidance } from "../FieldGuidance";
 import { FieldLabel } from "../FieldLabel";
 
-import type { ViewRunRequest } from "../../hooks";
 import type { CreateViewDefinitionResult } from "../../types/sqlOnFhir";
+import type { ViewRunRequest } from "../../types/viewJob";
 
 interface ViewDefinitionFormProps {
   onExecute: (request: ViewRunRequest) => void;

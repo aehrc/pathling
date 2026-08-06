@@ -102,12 +102,9 @@ async function mockViewRun(
   const contentType =
     status === 200 ? "application/x-ndjson" : "application/fhir+json";
 
-  await page.route(/\/ViewDefinition\/[^/]+\/\$run/, async (route) => {
-    if (delayMs) await new Promise((resolve) => setTimeout(resolve, delayMs));
-    await route.fulfill({ status, contentType, body: bodyStr });
-  });
-
-  await page.route("**/ViewDefinition/$run", async (route) => {
+  // Both the GET form (a stored view) and the POST form (an inline view) hit
+  // the one system-level endpoint.
+  await page.route(/\/\$sql-run/, async (route) => {
     if (delayMs) await new Promise((resolve) => setTimeout(resolve, delayMs));
     await route.fulfill({ status, contentType, body: bodyStr });
   });
@@ -519,8 +516,8 @@ test.describe("SQL on FHIR page", () => {
         });
       });
 
-      // Mock the export kick-off endpoint using regex to match $viewdefinition-export.
-      await page.route(/\/\$viewdefinition-export/, async (route) => {
+      // Mock the export kick-off endpoint using regex to match $sql-export.
+      await page.route(/\/\$sql-export/, async (route) => {
         await route.fulfill({
           status: 202,
           headers: {
@@ -598,7 +595,7 @@ test.describe("SQL on FHIR page", () => {
       });
 
       // Mock the export kick-off endpoint.
-      await page.route(/\/\$viewdefinition-export/, async (route) => {
+      await page.route(/\/\$sql-export/, async (route) => {
         await route.fulfill({
           status: 202,
           headers: {
@@ -819,7 +816,7 @@ test.describe("SQL on FHIR page", () => {
 
       // Mock the export kick-off endpoint.
       let exportCounter = 0;
-      await page.route(/\/\$viewdefinition-export/, async (route) => {
+      await page.route(/\/\$sql-export/, async (route) => {
         exportCounter++;
         await route.fulfill({
           status: 202,
@@ -997,7 +994,7 @@ test.describe("SQL on FHIR page", () => {
       });
 
       // Mock export kick-off to succeed.
-      await page.route(/\/\$viewdefinition-export/, async (route) => {
+      await page.route(/\/\$sql-export/, async (route) => {
         await route.fulfill({
           status: 202,
           headers: {
