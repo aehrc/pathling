@@ -21,7 +21,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import au.csiro.pathling.errors.AccessDeniedError;
-import au.csiro.pathling.read.ReadExecutor;
 import au.csiro.pathling.read.ReadProvider;
 import au.csiro.pathling.read.ReadProviderFactory;
 import au.csiro.pathling.util.FhirServerTestConfiguration;
@@ -57,7 +56,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 @MockitoBean(types = OidcConfiguration.class)
 @MockitoBean(types = JwtDecoder.class)
 @MockitoBean(types = JwtAuthenticationConverter.class)
-@Import({FhirServerTestConfiguration.class, ReadExecutor.class, ReadProviderFactory.class})
+@Import({FhirServerTestConfiguration.class, ReadProviderFactory.class})
 class SecurityEnabledReadOperationTest extends SecurityTest {
 
   private static final String ERROR_MSG_TEMPLATE = "Missing authority: 'pathling:%s'";

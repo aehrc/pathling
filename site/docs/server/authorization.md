@@ -54,12 +54,12 @@ graph TB
     write --> write-type
 ```
 
+→ includes
+
 Note that `pathling:read-resource`, which gates the read interaction, is an
 operation authority and so belongs to the `pathling:[operation]` family above.
 It is distinct from the `pathling:read` data authority: neither implies the
 other, and only the root `pathling` authority implies both.
-
-→ includes
 
 | Authority                        | Description                                                                     |
 | -------------------------------- | ------------------------------------------------------------------------------- |
