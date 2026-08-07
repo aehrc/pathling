@@ -28,7 +28,9 @@ import au.csiro.pathling.library.io.source.DatasetSource;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.util.FhirServerTestConfiguration;
+import au.csiro.pathling.util.LogCapture;
 import au.csiro.pathling.views.FhirView;
+import ch.qos.logback.classic.Level;
 import jakarta.annotation.Nonnull;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -321,8 +323,19 @@ class DynamicDeltaSourceTest {
             storageConfiguration,
             Set.of());
 
-    assertThatNoException().isThrownBy(source::getResourceTypes);
-    assertThat(source.getResourceTypes()).containsExactly("Patient");
+    try (final LogCapture logCapture = LogCapture.forClass(DynamicDeltaSource.class)) {
+      assertThatNoException().isThrownBy(source::getResourceTypes);
+      assertThat(source.getResourceTypes()).containsExactly("Patient");
+
+      // The fallback must be accompanied by a warning naming the failed listing.
+      assertThat(logCapture.events())
+          .anySatisfy(
+              event -> {
+                assertThat(event.getLevel()).isEqualTo(Level.WARN);
+                assertThat(event.getFormattedMessage())
+                    .contains("Failed to list the database directory");
+              });
+    }
   }
 
   // Verifies that a snapshot pins and serves a table that exists in the warehouse but has never
