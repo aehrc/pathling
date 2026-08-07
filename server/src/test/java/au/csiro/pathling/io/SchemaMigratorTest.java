@@ -23,6 +23,7 @@ import static org.assertj.core.api.Assertions.assertThatNoException;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.ViewDefinitionResource;
 import au.csiro.pathling.test.SpringBootUnitTest;
+import au.csiro.pathling.util.FhirEncoderFixtures;
 import au.csiro.pathling.util.FhirServerTestConfiguration;
 import au.csiro.pathling.util.LogCapture;
 import ch.qos.logback.classic.Level;
@@ -223,12 +224,141 @@ class SchemaMigratorTest {
     }
   }
 
+  // ---- reporting the excess direction at startup (FR-005, SC-002) ----
+
+  // Verifies that a table carrying fields the encoder does not emit is reported at startup, naming
+  // the type and those paths, at a level reflecting that the condition is tolerated rather than
+  // fatal. The type is not added to the drifted set and no migration is attempted, because the
+  // columns cannot be reconstructed (US2 scenario 2).
+  @Test
+  void excessFieldsTableIsReportedAtStartup(@TempDir final Path tempDir) {
+    final String databasePath = tempDir.toAbsolutePath().toString();
+    seedWideOpenTypesPatientTable(databasePath);
+    final long versionBefore = latestTableVersion(databasePath, "Patient");
+
+    try (final LogCapture logCapture = LogCapture.forClass(SchemaMigrator.class)) {
+      final Set<String> drifted = newMigrator(databasePath, true, narrowEncoders()).migrate();
+
+      assertThat(drifted).isEmpty();
+      assertThat(latestTableVersion(databasePath, "Patient")).isEqualTo(versionBefore);
+      assertThat(logCapture.events())
+          .anySatisfy(
+              event -> {
+                assertThat(event.getLevel()).isEqualTo(Level.INFO);
+                assertThat(event.getFormattedMessage())
+                    .contains("Patient")
+                    .contains("_extension.valuePeriod")
+                    .contains("_extension.valueQuantity");
+              });
+    }
+  }
+
+  // Verifies that the excess direction is reported regardless of the schemaAutoMerge flag, since
+  // the
+  // flag governs the migratable direction only.
+  @Test
+  void excessFieldsTableIsReportedWithFlagDisabled(@TempDir final Path tempDir) {
+    final String databasePath = tempDir.toAbsolutePath().toString();
+    seedWideOpenTypesPatientTable(databasePath);
+
+    try (final LogCapture logCapture = LogCapture.forClass(SchemaMigrator.class)) {
+      assertThat(newMigrator(databasePath, false, narrowEncoders()).migrate()).isEmpty();
+
+      assertThat(logCapture.events())
+          .anySatisfy(
+              event ->
+                  assertThat(event.getFormattedMessage())
+                      .contains("Patient")
+                      .contains("_extension.valuePeriod"));
+    }
+  }
+
+  // Verifies that a table differing in both directions at once produces both messages,
+  // distinguishably: the missing direction is migrated and logged as such, and the excess direction
+  // is reported separately (US2 edge case, FR-005).
+  @Test
+  void tableDifferingInBothDirectionsProducesBothMessages(@TempDir final Path tempDir) {
+    final String databasePath = tempDir.toAbsolutePath().toString();
+    // The ambient encoder's open types produce the excess direction against a narrowed migrator;
+    // dropping gender produces the missing direction.
+    FhirEncoderFixtures.encodeResources(sparkSession, fhirEncoders, "Patient", List.of(patient()))
+        .drop("gender")
+        .write()
+        .format("delta")
+        .mode(SaveMode.ErrorIfExists)
+        .save(databasePath + "/Patient.parquet");
+
+    try (final LogCapture logCapture = LogCapture.forClass(SchemaMigrator.class)) {
+      newMigrator(databasePath, true, narrowEncoders()).migrate();
+
+      // The missing direction is migrated, and says so, naming the field it added.
+      assertThat(logCapture.events())
+          .anySatisfy(
+              event -> {
+                assertThat(event.getLevel()).isEqualTo(Level.INFO);
+                assertThat(event.getFormattedMessage()).contains("Patient").contains("gender");
+              });
+      // The excess direction is reported separately, naming its own paths and not gender.
+      assertThat(logCapture.events())
+          .anySatisfy(
+              event ->
+                  assertThat(event.getFormattedMessage())
+                      .contains("Patient")
+                      .contains("_extension.valuePeriod")
+                      .doesNotContain("gender"));
+    }
+  }
+
+  // Verifies that a warehouse whose tables all reconcile produces neither message (US2 scenario 3).
+  @Test
+  void reconcilingTableProducesNoMessage(@TempDir final Path tempDir) {
+    final String databasePath = tempDir.toAbsolutePath().toString();
+    seedCurrentSchemaViewDefinitionTable(databasePath);
+
+    try (final LogCapture logCapture = LogCapture.forClass(SchemaMigrator.class)) {
+      assertThat(newMigrator(databasePath, true).migrate()).isEmpty();
+
+      assertThat(logCapture.events())
+          .noneSatisfy(
+              event ->
+                  assertThat(event.getFormattedMessage())
+                      .containsAnyOf("missing fields", "does not emit", "Migrated schema"));
+    }
+  }
+
+  // Verifies that startup succeeds against any warehouse state, including one holding a table of
+  // each difference direction alongside entries that cannot be inspected at all (US2 scenario 4,
+  // FR-005).
+  @Test
+  void startupSucceedsForEveryWarehouseState(@TempDir final Path tempDir) throws IOException {
+    final String databasePath = tempDir.toAbsolutePath().toString();
+    seedOldSchemaViewDefinitionTable(databasePath);
+    seedWideOpenTypesPatientTable(databasePath);
+    Files.createDirectory(tempDir.resolve("Empty.parquet"));
+
+    assertThatNoException()
+        .isThrownBy(() -> newMigrator(databasePath, true, narrowEncoders()).migrate());
+  }
+
   // ---- helpers ----
 
   @Nonnull
   private SchemaMigrator newMigrator(
       @Nonnull final String databasePath, final boolean schemaAutoMerge) {
-    return new SchemaMigrator(sparkSession, fhirEncoders, databasePath, schemaAutoMerge);
+    return newMigrator(databasePath, schemaAutoMerge, fhirEncoders);
+  }
+
+  /**
+   * Builds a migrator running against nominated encoders rather than the ambient ones, so that a
+   * test can put the running encoder behind or ahead of a table's schema without depending on the
+   * encoding configuration the test profile happens to use.
+   */
+  @Nonnull
+  private SchemaMigrator newMigrator(
+      @Nonnull final String databasePath,
+      final boolean schemaAutoMerge,
+      @Nonnull final FhirEncoders encoders) {
+    return new SchemaMigrator(sparkSession, encoders, databasePath, schemaAutoMerge);
   }
 
   /**
@@ -249,16 +379,43 @@ class SchemaMigratorTest {
    * dropped, simulating a table written by an older encoder version.
    */
   private void seedOldSchemaPatientTable(@Nonnull final String databasePath) {
-    final Patient patient = new Patient();
-    patient.setId("test-patient");
     sparkSession
-        .createDataset(List.of(patient), fhirEncoders.of("Patient"))
+        .createDataset(List.of(patient()), fhirEncoders.of("Patient"))
         .toDF()
         .drop("gender")
         .write()
         .format("delta")
         .mode(SaveMode.ErrorIfExists)
         .save(databasePath + "/Patient.parquet");
+  }
+
+  /**
+   * Writes a Patient Delta table at the ambient encoder's schema. Paired with a migrator built on
+   * {@link #narrowEncoders()}, this simulates a warehouse written before {@code
+   * pathling.encoding.openTypes} was narrowed: the table carries extension value fields the running
+   * encoder no longer emits.
+   */
+  private void seedWideOpenTypesPatientTable(@Nonnull final String databasePath) {
+    FhirEncoderFixtures.seedTable(
+        sparkSession,
+        fhirEncoders,
+        "Patient",
+        List.of(patient()),
+        databasePath + "/Patient.parquet");
+  }
+
+  /** The ambient encoders with Period and Quantity dropped from their open types. */
+  @Nonnull
+  private FhirEncoders narrowEncoders() {
+    return FhirEncoderFixtures.narrow(fhirEncoders);
+  }
+
+  /** A minimal Patient, sufficient to give the encoder something to write. */
+  @Nonnull
+  private static Patient patient() {
+    final Patient patient = new Patient();
+    patient.setId("test-patient");
+    return patient;
   }
 
   /** Sets the writability of a directory, used to provoke migration write failures. */
