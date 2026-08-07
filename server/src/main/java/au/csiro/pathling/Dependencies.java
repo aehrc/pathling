@@ -100,6 +100,7 @@ public class Dependencies {
             .migrate();
     final QueryableDataSource baseSource = pathlingContext.read().delta(databaseLocation);
     return new DynamicDeltaSource(
+        pathlingContext,
         baseSource,
         pathlingContext.getSpark(),
         databaseLocation,

@@ -32,7 +32,6 @@ import static org.mockito.Mockito.when;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.io.DynamicDeltaSource;
 import au.csiro.pathling.io.SnapshotDeltaSource;
-import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.operations.export.ExportDataSourceBuilder;
 import au.csiro.pathling.operations.export.ExportFileWriter;
@@ -84,7 +83,7 @@ class SqlExportExecutorTest {
     fileWriter = mock(ExportFileWriter.class);
     filteredSource = mock(QueryableDataSource.class);
 
-    when(deltaLake.snapshot(any())).thenReturn(snapshot);
+    when(deltaLake.snapshot()).thenReturn(snapshot);
     when(dataSourceBuilder.build(any(), any(), any())).thenReturn(filteredSource);
     when(fileWriter.createJobDirectory(any())).thenReturn(new Path("/tmp/" + JOB_ID));
     when(fileWriter.writeNdjson(any(), any(), any())).thenReturn(List.of("file.ndjson"));
@@ -105,7 +104,6 @@ class SqlExportExecutorTest {
         new SqlExportExecutor(
             pipeline,
             deltaLake,
-            mock(PathlingContext.class),
             mock(FhirContext.class),
             mock(ServerConfiguration.class, org.mockito.Answers.RETURNS_DEEP_STUBS),
             dataSourceBuilder,
@@ -143,7 +141,7 @@ class SqlExportExecutorTest {
   void readsEverySubjectThroughOneSnapshotCapturedAtStart() {
     executor.execute(request(sqlSubject("first"), sqlSubject("second")), JOB_ID);
 
-    verify(deltaLake, times(1)).snapshot(any());
+    verify(deltaLake, times(1)).snapshot();
 
     final ArgumentCaptor<QueryableDataSource> base =
         ArgumentCaptor.forClass(QueryableDataSource.class);
@@ -163,7 +161,6 @@ class SqlExportExecutorTest {
         new SqlExportExecutor(
             pipeline,
             plainSource,
-            mock(PathlingContext.class),
             mock(FhirContext.class),
             mock(ServerConfiguration.class, org.mockito.Answers.RETURNS_DEEP_STUBS),
             dataSourceBuilder,

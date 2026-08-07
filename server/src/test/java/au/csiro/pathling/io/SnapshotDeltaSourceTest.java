@@ -69,7 +69,7 @@ class SnapshotDeltaSourceTest {
     final String databasePath = tempDir.toAbsolutePath().toString();
     writeTable(databasePath, "Patient", 2);
     final DynamicDeltaSource live = newLiveSource(databasePath);
-    final SnapshotDeltaSource snapshot = live.snapshot(pathlingContext);
+    final SnapshotDeltaSource snapshot = live.snapshot();
     assertThat(snapshot.read("Patient").count()).isEqualTo(2);
 
     // A concurrent writer appends two more rows, advancing the table's Delta version.
@@ -86,7 +86,7 @@ class SnapshotDeltaSourceTest {
   void repeatedReadsWithinSnapshotAreConsistent(@TempDir final Path tempDir) {
     final String databasePath = tempDir.toAbsolutePath().toString();
     writeTable(databasePath, "Patient", 3);
-    final SnapshotDeltaSource snapshot = newLiveSource(databasePath).snapshot(pathlingContext);
+    final SnapshotDeltaSource snapshot = newLiveSource(databasePath).snapshot();
 
     final long first = snapshot.read("Patient").count();
     appendToTable(databasePath, "Patient", 5);
@@ -101,12 +101,30 @@ class SnapshotDeltaSourceTest {
   void derivedSourcePreservesPinnedVersion(@TempDir final Path tempDir) {
     final String databasePath = tempDir.toAbsolutePath().toString();
     writeTable(databasePath, "Patient", 2);
-    final SnapshotDeltaSource snapshot = newLiveSource(databasePath).snapshot(pathlingContext);
+    final SnapshotDeltaSource snapshot = newLiveSource(databasePath).snapshot();
     final QueryableDataSource filtered = snapshot.map((resourceType, dataset) -> dataset);
 
     appendToTable(databasePath, "Patient", 3);
 
     assertThat(filtered.read("Patient").count()).isEqualTo(2);
+  }
+
+  // A snapshot's empty-dataset fallback for a type with no table at the pinned instant has to
+  // survive derivation too, or an $sql-export narrowed by patient would fail on a view that
+  // references such a type instead of yielding no rows for it (FR-005).
+  @Test
+  void derivedSourceKeepsTheEmptyDatasetFallback(@TempDir final Path tempDir) {
+    final String databasePath = tempDir.toAbsolutePath().toString();
+    writeTable(databasePath, "Patient", 1);
+    final SnapshotDeltaSource snapshot = newLiveSource(databasePath).snapshot();
+
+    final QueryableDataSource derived =
+        snapshot.map((resourceType, dataset) -> dataset).filterByResourceType(resourceType -> true);
+
+    // ImmunizationEvaluation had no table at the pinned instant.
+    final Dataset<Row> result = derived.read("ImmunizationEvaluation");
+    assertThat(result.count()).isZero();
+    assertThat(result.schema().fieldNames()).contains("id", "status");
   }
 
   // Every table is pinned at the same instant, so a write to a second type after snapshot creation
@@ -116,7 +134,7 @@ class SnapshotDeltaSourceTest {
     final String databasePath = tempDir.toAbsolutePath().toString();
     writeTable(databasePath, "Patient", 1);
     writeTable(databasePath, "Observation", 1);
-    final SnapshotDeltaSource snapshot = newLiveSource(databasePath).snapshot(pathlingContext);
+    final SnapshotDeltaSource snapshot = newLiveSource(databasePath).snapshot();
 
     appendToTable(databasePath, "Patient", 4);
     appendToTable(databasePath, "Observation", 7);
@@ -132,7 +150,7 @@ class SnapshotDeltaSourceTest {
   void typesCreatedAfterSnapshotAreInvisible(@TempDir final Path tempDir) {
     final String databasePath = tempDir.toAbsolutePath().toString();
     writeTable(databasePath, "Patient", 1);
-    final SnapshotDeltaSource snapshot = newLiveSource(databasePath).snapshot(pathlingContext);
+    final SnapshotDeltaSource snapshot = newLiveSource(databasePath).snapshot();
 
     writeTable(databasePath, "Condition", 3);
 
@@ -152,7 +170,7 @@ class SnapshotDeltaSourceTest {
     assertThat(cached.storageLevel()).isEqualTo(StorageLevel.MEMORY_AND_DISK());
 
     try {
-      final SnapshotDeltaSource snapshot = live.snapshot(pathlingContext);
+      final SnapshotDeltaSource snapshot = live.snapshot();
 
       assertThat(snapshot.read("Patient").storageLevel()).isEqualTo(StorageLevel.NONE());
       assertThat(snapshot.read("Patient").count()).isEqualTo(2);
@@ -169,7 +187,7 @@ class SnapshotDeltaSourceTest {
     writeTable(databasePath, "Patient", 1);
     final DynamicDeltaSource live = newLiveSource(databasePath, false, Set.of("Patient"));
 
-    final SnapshotDeltaSource snapshot = live.snapshot(pathlingContext);
+    final SnapshotDeltaSource snapshot = live.snapshot();
 
     assertThatThrownBy(() -> snapshot.read("Patient"))
         .isInstanceOf(SchemaDriftError.class)
@@ -192,7 +210,13 @@ class SnapshotDeltaSourceTest {
     storageConfiguration.setCacheDatasets(cacheDatasets);
     final QueryableDataSource baseSource = pathlingContext.read().delta(databasePath);
     return new DynamicDeltaSource(
-        baseSource, sparkSession, databasePath, fhirEncoders, storageConfiguration, driftedTypes);
+        pathlingContext,
+        baseSource,
+        sparkSession,
+        databasePath,
+        fhirEncoders,
+        storageConfiguration,
+        driftedTypes);
   }
 
   /** Writes a new single-column Delta table with the given number of rows. */

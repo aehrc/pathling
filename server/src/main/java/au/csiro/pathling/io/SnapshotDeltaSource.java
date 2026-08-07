@@ -59,6 +59,7 @@ public class SnapshotDeltaSource extends DriftGuardedSource {
   /**
    * Constructs a new SnapshotDeltaSource over datasets already pinned to their captured versions.
    *
+   * @param context the Pathling context, used to construct derived sources
    * @param pinned a source holding one {@code versionAsOf} dataset per resource type
    * @param spark the Spark session, used to build empty datasets for unpinned types
    * @param fhirEncoders the FHIR encoders, used to build empty datasets for unpinned types
@@ -67,12 +68,13 @@ public class SnapshotDeltaSource extends DriftGuardedSource {
    *     reference so the guard tracks the live source's current state
    */
   SnapshotDeltaSource(
+      @Nonnull final PathlingContext context,
       @Nonnull final QueryableDataSource pinned,
       @Nonnull final SparkSession spark,
       @Nonnull final FhirEncoders fhirEncoders,
       @Nonnull final Map<String, Long> pinnedVersions,
       @Nonnull final Set<String> driftedTypes) {
-    super(pinned, driftedTypes);
+    super(context, pinned, driftedTypes);
     this.spark = spark;
     this.fhirEncoders = fhirEncoders;
     this.pinnedVersions = Map.copyOf(pinnedVersions);
@@ -123,6 +125,7 @@ public class SnapshotDeltaSource extends DriftGuardedSource {
       @Nonnull final Set<String> driftedTypes) {
     final DatasetSource pinned = new DatasetSource(context);
     pinnedDatasets.forEach(pinned::dataset);
-    return new SnapshotDeltaSource(pinned, spark, fhirEncoders, pinnedVersions, driftedTypes);
+    return new SnapshotDeltaSource(
+        context, pinned, spark, fhirEncoders, pinnedVersions, driftedTypes);
   }
 }

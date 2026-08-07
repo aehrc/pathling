@@ -19,7 +19,6 @@ package au.csiro.pathling.operations.sql;
 
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.io.DynamicDeltaSource;
-import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.operations.ParquetSchemaValidator;
 import au.csiro.pathling.operations.export.ExportDataSourceBuilder;
@@ -63,8 +62,6 @@ public class SqlExportExecutor {
 
   @Nonnull private final QueryableDataSource deltaLake;
 
-  @Nonnull private final PathlingContext pathlingContext;
-
   @Nonnull private final FhirContext fhirContext;
 
   @Nonnull private final ServerConfiguration serverConfiguration;
@@ -78,7 +75,6 @@ public class SqlExportExecutor {
    *
    * @param pipeline the SQL evaluation engine
    * @param deltaLake the server's data source, snapshotted at execution start
-   * @param pathlingContext the Pathling context, used to hold the snapshot's pinned datasets
    * @param fhirContext the FHIR context, used to build view query plans
    * @param serverConfiguration the server configuration, consulted for the query configuration
    * @param dataSourceBuilder applies the job's filters to the snapshot
@@ -89,14 +85,12 @@ public class SqlExportExecutor {
   public SqlExportExecutor(
       @Nonnull final SqlQueryPipeline pipeline,
       @Nonnull final QueryableDataSource deltaLake,
-      @Nonnull final PathlingContext pathlingContext,
       @Nonnull final FhirContext fhirContext,
       @Nonnull final ServerConfiguration serverConfiguration,
       @Nonnull final ExportDataSourceBuilder dataSourceBuilder,
       @Nonnull final ExportFileWriter fileWriter) {
     this.pipeline = pipeline;
     this.deltaLake = deltaLake;
-    this.pathlingContext = pathlingContext;
     this.fhirContext = fhirContext;
     this.serverConfiguration = serverConfiguration;
     this.dataSourceBuilder = dataSourceBuilder;
@@ -139,7 +133,7 @@ public class SqlExportExecutor {
   @Nonnull
   private QueryableDataSource snapshot() {
     if (deltaLake instanceof final DynamicDeltaSource dynamic) {
-      return dynamic.snapshot(pathlingContext);
+      return dynamic.snapshot();
     }
     log.debug("Data source {} cannot be pinned; reading it live", deltaLake.getClass().getName());
     return deltaLake;
