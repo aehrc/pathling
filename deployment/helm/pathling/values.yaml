@@ -11,12 +11,13 @@ pathling:
   deployment:
     strategy: Recreate
     imagePullPolicy: Always
-  volumes: [ ]
-  volumeMounts: [ ]
+  volumes: []
+  volumeMounts: []
   serviceAccount: ~
-  imagePullSecrets: [ ]
-  tolerations: [ ]
+  imagePullSecrets: []
+  tolerations: []
   affinity: ~
   securityContext: ~
-  config: { }
-  secretConfig: { }
+  config: {}
+  secretConfig: {}
+  trustedCertificates: []

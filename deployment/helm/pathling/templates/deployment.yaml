@@ -1,3 +1,4 @@
+{{- $truststoreEnabled := gt (len .Values.pathling.trustedCertificates) 0 }}
 kind: Deployment
 apiVersion: apps/v1
 metadata:
@@ -11,6 +12,38 @@ spec:
       labels:
         app: pathling-server
     spec:
+      {{- if $truststoreEnabled }}
+      # The server verifies TLS connections (e.g. to the OIDC issuer) against
+      # the JVM default truststore, which cannot be extended in place. This
+      # init container copies the default cacerts from the server image and
+      # imports each configured certificate, producing a merged truststore
+      # that the server JVM is pointed at via javax.net.ssl.trustStore.
+      initContainers:
+        - name: merge-truststore
+          image: {{ .Values.pathling.image | quote }}
+          imagePullPolicy: {{ .Values.pathling.deployment.imagePullPolicy }}
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -e
+              java_bin="$(readlink -f "$(command -v java)")"
+              java_home="${java_bin%/bin/java}"
+              cp "${java_home}/lib/security/cacerts" /truststore/cacerts
+              chmod u+w /truststore/cacerts
+              for certificate in /certificates/*.pem; do
+                keytool -importcert -noprompt \
+                  -keystore /truststore/cacerts -storepass changeit \
+                  -alias "$(basename "${certificate}" .pem)" \
+                  -file "${certificate}"
+              done
+          volumeMounts:
+            - name: trusted-certificates
+              mountPath: /certificates
+              readOnly: true
+            - name: truststore
+              mountPath: /truststore
+      {{- end }}
       containers:
         - name: pathling-server
           image: {{ .Values.pathling.image | quote }}
@@ -42,11 +75,15 @@ spec:
               port: 8081
             periodSeconds: 5
             failureThreshold: 3
-          volumeMounts: {{ toJson .Values.pathling.volumeMounts }}
-          {{- if gt (add (len .Values.pathling.config) (len .Values.pathling.secretConfig)) 0 }}
+          {{- $volumeMounts := .Values.pathling.volumeMounts }}
+          {{- if $truststoreEnabled }}
+          {{- $volumeMounts = append $volumeMounts (dict "name" "truststore" "mountPath" "/truststore" "readOnly" true) }}
+          {{- end }}
+          volumeMounts: {{ toJson $volumeMounts }}
+          {{- if gt (add (len .Values.pathling.config) (len .Values.pathling.secretConfig) (len .Values.pathling.trustedCertificates)) 0 }}
           env:
             - name: JAVA_TOOL_OPTIONS
-              value: {{ printf "-Xmx%s  --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED %s" .Values.pathling.resources.maxHeapSize .Values.pathling.additionalJavaOptions }}
+              value: {{ printf "-Xmx%s  --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED %s%s" .Values.pathling.resources.maxHeapSize .Values.pathling.additionalJavaOptions (ternary " -Djavax.net.ssl.trustStore=/truststore/cacerts -Djavax.net.ssl.trustStorePassword=changeit" "" $truststoreEnabled) }}
             - name: spark.driver.host
               value: pathling-driver
             - name: spark.driver.port
@@ -75,7 +112,12 @@ spec:
                   key: {{ $configKey }}
             {{- end }}
           {{- end }}
-      volumes: {{ toJson .Values.pathling.volumes }}
+      {{- $volumes := .Values.pathling.volumes }}
+      {{- if $truststoreEnabled }}
+      {{- $volumes = append $volumes (dict "name" "trusted-certificates" "configMap" (dict "name" "pathling-trusted-certificates")) }}
+      {{- $volumes = append $volumes (dict "name" "truststore" "emptyDir" (dict)) }}
+      {{- end }}
+      volumes: {{ toJson $volumes }}
       serviceAccountName: {{ .Values.pathling.serviceAccount }}
       imagePullSecrets: {{ toJson .Values.pathling.imagePullSecrets }}
       tolerations: {{ toJson .Values.pathling.tolerations }}

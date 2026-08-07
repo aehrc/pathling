@@ -1,0 +1,22 @@
+{{- if gt (len .Values.pathling.trustedCertificates) 0 }}
+{{- /* Each entry may contain one certificate or a concatenated bundle.
+Split every entry into individual certificates so that keytool, which
+only imports the first certificate in a file, sees one per file. */}}
+{{- $certificates := list }}
+{{- range .Values.pathling.trustedCertificates }}
+{{- $found := regexFindAll "(?s)-----BEGIN CERTIFICATE-----.*?-----END CERTIFICATE-----" . -1 }}
+{{- if eq (len $found) 0 }}
+{{- fail "Each pathling.trustedCertificates entry must contain at least one PEM certificate." }}
+{{- end }}
+{{- $certificates = concat $certificates $found }}
+{{- end }}
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: pathling-trusted-certificates
+data:
+  {{- range $index, $certificate := $certificates }}
+  ca-{{ $index }}.pem: |
+{{ $certificate | indent 4 }}
+  {{- end }}
+{{- end }}
