@@ -207,6 +207,15 @@ This setting bounds the resolution of a query's dependency graph, for both
   profiles. In general, you will get the best query performance by encoding your
   data with the shortest possible list.
 
+    Shortening this list against a warehouse that already holds data, or pointing
+    a server at a warehouse written by a deployment with a longer list, leaves
+    stored columns that the running encoder no longer emits. Those columns are
+    preserved: they are not dropped from the table, and writes to the affected
+    resource types succeed with the columns written as null on the new rows. Reads
+    return what the running encoder can represent, so the values in those columns
+    are not visible until the original list is restored. Each affected table is
+    named in the log at startup, along with the field paths involved.
+
 ### Storage
 
 - `pathling.storage.warehouseUrl` - (default: `file:///usr/share/warehouse`) The
@@ -244,6 +253,15 @@ This setting bounds the resolution of a query's dependency graph, for both
   runtime schema evolution is only visible to the replica that performed it;
   other replicas require a restart, although redeploys (which replace all
   replicas and re-run startup migration) are self-correcting.
+
+    Where a stored table and the running encoders cannot be reconciled at all, the
+    request fails with an error that describes the condition rather than a generic
+    one. The message names the resource type, which direction the two schemas
+    differ in, the field paths involved, and the remedy - enabling this setting
+    where the table is behind the encoders, or restoring the encoding
+    configuration the table was written with where it is ahead of them. It
+    deliberately excludes the underlying schema definitions and warehouse paths,
+    so the full detail remains in the server log alone.
 
 Pathling will automatically detect AWS authentication details within the
 environment and use them to access S3 buckets. It uses a chain of authentication
@@ -453,6 +471,18 @@ spark:
 - `pathling.auth.codeChallengeMethodsSupported` - (default: `S256`) A list of
   PKCE code challenge methods supported. Must include `S256` and must not
   include `plain` as per the SMART specification.
+- `pathling.auth.tokenSigningAlgorithms` - (default: empty) A list of the
+  [JWS signing algorithms](https://datatracker.ietf.org/doc/html/rfc7518#section-3.1)
+  accepted within incoming bearer tokens. When empty, the accepted algorithms
+  are derived from the keys published in the issuer's JWKS: a key's `alg` value
+  is used when present, otherwise the algorithms implied by its key type. This
+  derivation happens at token verification time, so key rotation at the identity
+  provider takes effect without a restart. When one or more values are
+  configured, only tokens whose header algorithm is in that list are accepted,
+  regardless of what the JWKS publishes. Tokens are verified against a public
+  JWKS, so only the asymmetric algorithm names `RS256`, `RS384`, `RS512`,
+  `PS256`, `PS384`, `PS512`, `ES256`, `ES256K`, `ES384`, `ES512` and `EdDSA` are
+  permitted; any other value fails validation at startup.
 
 ### Admin UI
 
