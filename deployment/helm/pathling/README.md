@@ -65,6 +65,7 @@ their default values.
 | `pathling.securityContext`            | `~`                             | [Security context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/) for the pod                                                                  |
 | `pathling.config`                     | `{ }`                           | A map of [configuration values](/server/configuration) to pass to Pathling                                                                                                  |
 | `pathling.secretConfig`               | `{ }`                           | A map of secret configuration values to pass to Pathling, these values will be stored using [Kubernetes secrets](https://kubernetes.io/docs/concepts/configuration/secret/) |
+| `pathling.trustedCertificates`        | `[ ]`                           | A list of additional CA certificates (in PEM format) to be trusted by the server JVM, e.g. a private CA that issues the certificate of an OIDC issuer                       |
 
 ## Example configuration
 

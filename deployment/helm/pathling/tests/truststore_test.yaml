@@ -1,0 +1,166 @@
+# Tests for the trusted certificates (custom truststore) feature of the chart.
+#
+# Author: John Grimes
+suite: trusted certificates truststore
+templates:
+  - deployment.yaml
+  - trusted-certificates-configmap.yaml
+tests:
+  - it: renders no truststore machinery when trustedCertificates is empty
+    template: deployment.yaml
+    set:
+      pathling.config:
+        pathling.implementationDescription: Test
+    asserts:
+      # No init container is added in the default configuration.
+      - notExists:
+          path: spec.template.spec.initContainers
+      # The JVM options do not reference a custom truststore.
+      - notMatchRegex:
+          path: spec.template.spec.containers[0].env[0].value
+          pattern: javax\.net\.ssl\.trustStore
+      # No truststore volumes are added; the default remains an empty list.
+      - equal:
+          path: spec.template.spec.volumes
+          value: []
+
+  - it: renders no ConfigMap when trustedCertificates is empty
+    template: trusted-certificates-configmap.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders a ConfigMap containing each certificate when trustedCertificates is set
+    template: trusted-certificates-configmap.yaml
+    set:
+      pathling.trustedCertificates:
+        - |
+          -----BEGIN CERTIFICATE-----
+          FIRSTCERT
+          -----END CERTIFICATE-----
+        - |
+          -----BEGIN CERTIFICATE-----
+          SECONDCERT
+          -----END CERTIFICATE-----
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: ConfigMap
+      - equal:
+          path: metadata.name
+          value: pathling-trusted-certificates
+      - matchRegex:
+          path: data["ca-0.pem"]
+          pattern: FIRSTCERT
+      - matchRegex:
+          path: data["ca-1.pem"]
+          pattern: SECONDCERT
+
+  - it: adds an init container that merges the certificates into a copy of the default cacerts
+    template: deployment.yaml
+    set:
+      pathling.image: ghcr.io/aehrc/pathling:testtag
+      pathling.trustedCertificates:
+        - dummy-cert
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[0].name
+          value: merge-truststore
+      # The init container uses the same image as the server, so keytool and
+      # the default cacerts match the JVM that will use the merged store.
+      - equal:
+          path: spec.template.spec.initContainers[0].image
+          value: ghcr.io/aehrc/pathling:testtag
+      - contains:
+          path: spec.template.spec.initContainers[0].volumeMounts
+          content:
+            name: trusted-certificates
+            mountPath: /certificates
+            readOnly: true
+      - contains:
+          path: spec.template.spec.initContainers[0].volumeMounts
+          content:
+            name: truststore
+            mountPath: /truststore
+      - matchRegex:
+          path: spec.template.spec.initContainers[0].command[2]
+          pattern: keytool -importcert
+
+  - it: mounts the merged truststore into the server container
+    template: deployment.yaml
+    set:
+      pathling.trustedCertificates:
+        - dummy-cert
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: truststore
+            mountPath: /truststore
+            readOnly: true
+
+  - it: adds the truststore volumes alongside user-specified volumes
+    template: deployment.yaml
+    set:
+      pathling.trustedCertificates:
+        - dummy-cert
+      pathling.volumes:
+        - name: staging
+          emptyDir: {}
+      pathling.volumeMounts:
+        - name: staging
+          mountPath: /usr/share/staging
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: staging
+            emptyDir: {}
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: trusted-certificates
+            configMap:
+              name: pathling-trusted-certificates
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: truststore
+            emptyDir: {}
+      # User-specified volume mounts are preserved on the server container.
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: staging
+            mountPath: /usr/share/staging
+
+  - it: points the JVM at the merged truststore via JAVA_TOOL_OPTIONS
+    template: deployment.yaml
+    set:
+      pathling.trustedCertificates:
+        - dummy-cert
+      pathling.config:
+        pathling.implementationDescription: Test
+    asserts:
+      - matchRegex:
+          path: spec.template.spec.containers[0].env[0].value
+          pattern: -Djavax\.net\.ssl\.trustStore=/truststore/cacerts
+      - matchRegex:
+          path: spec.template.spec.containers[0].env[0].value
+          pattern: -Djavax\.net\.ssl\.trustStorePassword=changeit
+
+  - it: renders the env block when only trustedCertificates is set
+    template: deployment.yaml
+    set:
+      pathling.trustedCertificates:
+        - dummy-cert
+    asserts:
+      # Even with no config or secretConfig, the truststore JVM option must
+      # still reach the server, so the env block is rendered.
+      - equal:
+          path: spec.template.spec.containers[0].env[0].name
+          value: JAVA_TOOL_OPTIONS
+      - matchRegex:
+          path: spec.template.spec.containers[0].env[0].value
+          pattern: -Djavax\.net\.ssl\.trustStore=/truststore/cacerts
