@@ -27,6 +27,7 @@ import au.csiro.pathling.io.DynamicDeltaSource;
 import au.csiro.pathling.io.SchemaDrift;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
+import io.delta.tables.DeltaMergeBuilder;
 import io.delta.tables.DeltaTable;
 import jakarta.annotation.Nonnull;
 import java.util.Collections;
@@ -39,6 +40,7 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SaveMode;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.springframework.beans.factory.annotation.Value;
@@ -237,21 +239,56 @@ public class UpdateExecutor {
       log.info("Evolved schema of {} table, added fields: {}", resourceCode, missingFields);
     }
 
-    // Perform a merge operation on the existing table.
-    table
-        .as("original")
-        .merge(updates.as("updates"), "original.id = updates.id")
-        .whenMatched()
-        .updateAll()
-        .whenNotMatched()
-        .insertAll()
-        .execute();
+    // Perform a merge operation on the existing table, tolerating a table that is wider than the
+    // encoder output.
+    DeltaMergeBuilder merge =
+        table
+            .as("original")
+            .merge(updates.as("updates"), "original.id = updates.id")
+            .whenMatched()
+            .updateAll()
+            .whenNotMatched()
+            .insertAll();
+    if (isPurelyNarrowing(updates, table)) {
+      merge = merge.withSchemaEvolution();
+    }
+    merge.execute();
 
     // After a schema-evolving write, refresh the dataset served for this resource type so that
     // all in-process consumers observe the evolved schema without a server restart.
     if (schemaEvolved && dataSource instanceof final DynamicDeltaSource dynamicDataSource) {
       dynamicDataSource.refresh(resourceCode);
     }
+  }
+
+  /**
+   * Returns true if the table carries field paths the encoder output lacks, and the encoder output
+   * carries none the table lacks.
+   *
+   * <p>Delta refuses to cast a source struct onto a target struct with a different field count
+   * unless schema evolution is enabled on the merge, so a table wider than the running encoder
+   * cannot be merged into at all without it. Enabling it makes Delta null-fill the fields the
+   * source cannot supply, which is what is wanted: the stored-only columns are preserved and
+   * written as null.
+   *
+   * <p>The same flag also lets the target schema grow to admit source fields the target lacks,
+   * which is emphatically not wanted here - that direction belongs to {@code
+   * pathling.storage.schemaAutoMerge}, settled above by the warmup write. Requiring the difference
+   * to be purely narrowing is what keeps the two apart: where a table differs in both directions at
+   * once, this returns false, the merge fails as it does today unless the flag permitted the warmup
+   * write, and after that write the remaining difference is purely narrowing and the tolerance
+   * applies. The table is re-resolved after the warmup write, so the comparison here sees the
+   * settled schema.
+   *
+   * @param updates the encoder output being merged
+   * @param table the target table, as resolved for this merge
+   * @return true if schema evolution can safely be enabled on the merge
+   */
+  private static boolean isPurelyNarrowing(
+      @Nonnull final Dataset<Row> updates, @Nonnull final DeltaTable table) {
+    final StructType tableSchema = table.toDF().schema();
+    return SchemaDrift.missingFieldPaths(updates.schema(), tableSchema).isEmpty()
+        && !SchemaDrift.excessFieldPaths(updates.schema(), tableSchema).isEmpty();
   }
 
   /**

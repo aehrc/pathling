@@ -17,8 +17,12 @@
 
 package org.springframework.security.oauth2.jwt;
 
+import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.jwk.source.JWKSource;
+import com.nimbusds.jose.proc.SecurityContext;
 import jakarta.annotation.Nonnull;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Provides access to functionality within the package-private {@link
@@ -39,5 +43,22 @@ public class JwtDecoderProviderConfigurationUtilsProxy {
   public static Map<String, Object> getConfigurationForIssuerLocation(
       @Nonnull final String issuer) {
     return JwtDecoderProviderConfigurationUtils.getConfigurationForIssuerLocation(issuer);
+  }
+
+  /**
+   * Derives the set of JWS signing algorithms that the keys published by a JWK source can verify.
+   * Each key's {@code alg} value is used when present; otherwise the algorithms implied by the key
+   * type are contributed.
+   *
+   * @param <C> the type of security context used when retrieving keys
+   * @param jwkSource the source of the published keys
+   * @return the set of derivable JWS algorithms
+   * @throws IllegalStateException if the keys cannot be retrieved
+   * @throws IllegalArgumentException if no algorithms could be derived from the published keys
+   */
+  @Nonnull
+  public static <C extends SecurityContext> Set<JWSAlgorithm> getJwsAlgorithms(
+      @Nonnull final JWKSource<C> jwkSource) {
+    return JwtDecoderProviderConfigurationUtils.getJWSAlgorithms(jwkSource);
   }
 }
