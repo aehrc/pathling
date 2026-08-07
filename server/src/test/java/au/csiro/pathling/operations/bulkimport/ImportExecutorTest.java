@@ -20,15 +20,20 @@ package au.csiro.pathling.operations.bulkimport;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 import au.csiro.pathling.cache.CacheableDatabase;
 import au.csiro.pathling.config.ImportConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.errors.AccessDeniedError;
+import au.csiro.pathling.io.DynamicDeltaSource;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.SaveMode;
 import au.csiro.pathling.library.io.sink.FileInformation;
 import au.csiro.pathling.library.io.sink.WriteDetails;
+import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.util.FhirServerTestConfiguration;
 import java.io.IOException;
@@ -70,6 +75,7 @@ class ImportExecutorTest {
 
   private Path uniqueTempDir;
   private ImportExecutor importExecutor;
+  private DynamicDeltaSource dataSource;
 
   @BeforeEach
   void setUp() throws IOException {
@@ -77,6 +83,7 @@ class ImportExecutorTest {
     Files.createDirectories(uniqueTempDir);
 
     final String databasePath = "file://" + uniqueTempDir.toAbsolutePath();
+    dataSource = mock(DynamicDeltaSource.class);
     importExecutor =
         new ImportExecutor(
             Optional.empty(), // No access rules for most tests
@@ -84,7 +91,8 @@ class ImportExecutorTest {
             databasePath,
             serverConfiguration,
             cacheableDatabase,
-            true);
+            true,
+            dataSource);
   }
 
   // ========================================
@@ -408,7 +416,8 @@ class ImportExecutorTest {
             "file://" + uniqueTempDir.toAbsolutePath(),
             serverConfiguration,
             cacheableDatabase,
-            true);
+            true,
+            dataSource);
 
     final String patientUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
     final ImportRequest request =
@@ -439,7 +448,8 @@ class ImportExecutorTest {
             "file://" + uniqueTempDir.toAbsolutePath(),
             serverConfiguration,
             cacheableDatabase,
-            true);
+            true,
+            dataSource);
 
     final String deniedUrl = "s3://denied-bucket/Patient.ndjson";
     final ImportRequest request =
@@ -489,7 +499,8 @@ class ImportExecutorTest {
             "file://" + uniqueTempDir.toAbsolutePath(),
             serverConfiguration,
             cacheableDatabase,
-            true);
+            true,
+            dataSource);
 
     final String allowedUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
     final String deniedUrl = "s3://denied-bucket/Condition.ndjson";
@@ -568,7 +579,8 @@ class ImportExecutorTest {
             "file://" + uniqueTempDir.toAbsolutePath(),
             serverConfiguration,
             cacheableDatabase,
-            true);
+            true,
+            dataSource);
 
     final String patientUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
     final List<String> customAllowableSources = List.of("file://");
@@ -710,6 +722,110 @@ class ImportExecutorTest {
       // Reset Spark configuration to default
       pathlingContext.getSpark().conf().unset("spark.sql.files.maxRecordsPerFile");
     }
+  }
+
+  // ========================================
+  // Data Source Refresh Tests
+  // ========================================
+
+  /**
+   * After an overwrite import, the dataset served for each imported resource type must be
+   * refreshed, so that reads do not continue to be answered from a cached plan pinned before the
+   * import (see issue #2714).
+   */
+  @Test
+  void overwriteImportRefreshesDataSourceForEachImportedType() {
+    // Given - an overwrite import covering two resource types.
+    final ImportRequest request =
+        new ImportRequest(
+            "http://example.com/fhir/$import",
+            Map.of(
+                "Patient",
+                List.of("file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath()),
+                "Condition",
+                List.of("file://" + TEST_DATA_PATH.resolve("Condition.ndjson").toAbsolutePath())),
+            SaveMode.OVERWRITE,
+            ImportFormat.NDJSON);
+
+    // When
+    importExecutor.execute(request, JOB_ID);
+
+    // Then - the data source is refreshed for every imported type.
+    verify(dataSource).refresh("Patient");
+    verify(dataSource).refresh("Condition");
+  }
+
+  /** Non-overwrite imports also modify the table, so they must refresh the data source too. */
+  @Test
+  void appendImportRefreshesDataSource() {
+    // Given - an append import.
+    final String patientUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
+    final ImportRequest request =
+        new ImportRequest(
+            "http://example.com/fhir/$import",
+            Map.of("Patient", List.of(patientUrl)),
+            SaveMode.APPEND,
+            ImportFormat.NDJSON);
+
+    // When
+    importExecutor.execute(request, JOB_ID);
+
+    // Then
+    verify(dataSource).refresh("Patient");
+  }
+
+  /** An import that is rejected before writing anything must not refresh the data source. */
+  @Test
+  void failedImportDoesNotRefreshDataSource() {
+    // Given - an import whose source URL is not allowed.
+    final String deniedUrl = "s3://denied-bucket/Patient.ndjson";
+    final ImportRequest request =
+        new ImportRequest(
+            "http://example.com/fhir/$import",
+            Map.of("Patient", List.of(deniedUrl)),
+            SaveMode.OVERWRITE,
+            ImportFormat.NDJSON);
+
+    // When - the import is rejected by the custom allowable sources.
+    assertThatThrownBy(() -> importExecutor.execute(request, JOB_ID, List.of("https://trusted/")))
+        .isInstanceOf(AccessDeniedError.class);
+
+    // Then - nothing was written, so nothing is refreshed.
+    verifyNoInteractions(dataSource);
+  }
+
+  /**
+   * When the injected data source is not a {@link DynamicDeltaSource}, the import must still
+   * complete successfully; there is simply no pinned dataset to refresh.
+   */
+  @Test
+  void importSucceedsWhenDataSourceIsNotDynamic() {
+    // Given - an executor built over a data source that cannot be refreshed.
+    final QueryableDataSource plainDataSource = mock(QueryableDataSource.class);
+    final ImportExecutor executorWithPlainSource =
+        new ImportExecutor(
+            Optional.empty(),
+            pathlingContext,
+            "file://" + uniqueTempDir.toAbsolutePath(),
+            serverConfiguration,
+            cacheableDatabase,
+            true,
+            plainDataSource);
+
+    final String patientUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
+    final ImportRequest request =
+        new ImportRequest(
+            "http://example.com/fhir/$import",
+            Map.of("Patient", List.of(patientUrl)),
+            SaveMode.OVERWRITE,
+            ImportFormat.NDJSON);
+
+    // When
+    final ImportResponse response = executorWithPlainSource.execute(request, JOB_ID);
+
+    // Then
+    assertThat(response).isNotNull();
+    assertThat(response.getInputUrls()).containsExactly(patientUrl);
   }
 
   // ========================================
