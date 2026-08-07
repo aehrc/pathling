@@ -25,14 +25,14 @@ import { DownloadIcon } from "@radix-ui/react-icons";
 import { Button, Flex, Select } from "@radix-ui/themes";
 import { useState } from "react";
 
-import type { ViewExportFormat } from "../../types/viewExport";
+import type { SqlExportFormat } from "../../types/sqlExport";
 
 interface ExportControlsProps {
-  onExport: (format: ViewExportFormat) => void;
+  onExport: (format: SqlExportFormat) => void;
   disabled?: boolean;
 }
 
-const FORMAT_OPTIONS: { value: ViewExportFormat; label: string }[] = [
+const FORMAT_OPTIONS: { value: SqlExportFormat; label: string }[] = [
   { value: "ndjson", label: "NDJSON" },
   { value: "csv", label: "CSV" },
   { value: "parquet", label: "Parquet" },
@@ -47,13 +47,13 @@ const FORMAT_OPTIONS: { value: ViewExportFormat; label: string }[] = [
  * @returns The export controls component.
  */
 export function ExportControls({ onExport, disabled }: ExportControlsProps) {
-  const [format, setFormat] = useState<ViewExportFormat>("ndjson");
+  const [format, setFormat] = useState<SqlExportFormat>("ndjson");
 
   return (
     <Flex gap="2" align="center">
       <Select.Root
         value={format}
-        onValueChange={(value) => setFormat(value as ViewExportFormat)}
+        onValueChange={(value) => setFormat(value as SqlExportFormat)}
         size="1"
         disabled={disabled}
       >

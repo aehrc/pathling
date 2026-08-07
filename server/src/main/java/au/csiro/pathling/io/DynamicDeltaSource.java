@@ -20,16 +20,23 @@ package au.csiro.pathling.io;
 import au.csiro.pathling.QueryHelpers;
 import au.csiro.pathling.config.StorageConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.FileSystemPersistence;
 import au.csiro.pathling.library.io.source.DatasetSource;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
 import io.delta.tables.DeltaTable;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.io.IOException;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -47,6 +54,9 @@ import org.apache.spark.sql.SparkSession;
  */
 @Slf4j
 public class DynamicDeltaSource extends DriftGuardedSource {
+
+  /** The directory-name suffix under which each resource type's Delta table is stored. */
+  private static final String TABLE_SUFFIX = ".parquet";
 
   @Nonnull private final SparkSession spark;
 
@@ -196,6 +206,75 @@ public class DynamicDeltaSource extends DriftGuardedSource {
     return types;
   }
 
+  /**
+   * Captures the current Delta version of every resource-type table and returns a source that
+   * serves each of them at that version, so all reads made through it observe a single consistent
+   * view of the data regardless of concurrent writes.
+   *
+   * <p>Versions for all tables are captured at one instant, which is what the {@code $sql-export}
+   * single-snapshot guarantee requires. Pinning reads only each table's Delta log, so no data is
+   * copied and reads stay lazy.
+   *
+   * @param context the Pathling context used to hold the pinned datasets
+   * @return a snapshot source pinned at the current instant
+   */
+  @Nonnull
+  public SnapshotDeltaSource snapshot(@Nonnull final PathlingContext context) {
+    final Map<String, Dataset<Row>> pinnedDatasets = new HashMap<>();
+    final Map<String, Long> pinnedVersions = new HashMap<>();
+
+    for (final String resourceType : snapshotCandidateTypes()) {
+      final String tablePath = getTablePath(resourceType);
+      if (!DeltaTable.isDeltaTable(spark, tablePath)) {
+        continue;
+      }
+      final long version = currentVersion(tablePath);
+      pinnedVersions.put(resourceType, version);
+      // Read with versionAsOf rather than through the delegate, so the pinned dataset is
+      // independent of the mutable dataset cache, whose entries track the current table.
+      pinnedDatasets.put(
+          resourceType,
+          spark.read().format("delta").option("versionAsOf", version).load(tablePath));
+    }
+
+    log.debug("Pinned {} resource-type tables for a snapshot read", pinnedVersions.size());
+    return SnapshotDeltaSource.of(
+        context, spark, fhirEncoders, pinnedDatasets, pinnedVersions, driftedTypes);
+  }
+
+  /**
+   * Determines the resource types to consider for a snapshot: those the source already knows about,
+   * plus any Delta table present in the database directory. The directory listing catches a table
+   * created after startup that has never been read, which dynamic discovery would not yet know
+   * about.
+   */
+  @Nonnull
+  private Set<String> snapshotCandidateTypes() {
+    final Set<String> candidates = new HashSet<>(getResourceTypes());
+    try {
+      final Path databaseDir = new Path(databasePath);
+      final FileSystem fileSystem =
+          databaseDir.getFileSystem(spark.sparkContext().hadoopConfiguration());
+      if (fileSystem.exists(databaseDir)) {
+        for (final FileStatus status : fileSystem.listStatus(databaseDir)) {
+          final String name = status.getPath().getName();
+          if (status.isDirectory() && name.endsWith(TABLE_SUFFIX)) {
+            candidates.add(name.substring(0, name.length() - TABLE_SUFFIX.length()));
+          }
+        }
+      }
+    } catch (final IOException e) {
+      // The listing is an enhancement over the known types; if it fails, fall back to those.
+      log.warn("Failed to list the database directory while taking a snapshot", e);
+    }
+    return candidates;
+  }
+
+  /** Reads the current version of a Delta table from its transaction log. */
+  private long currentVersion(@Nonnull final String tablePath) {
+    return DeltaTable.forPath(spark, tablePath).history(1).select("version").first().getLong(0);
+  }
+
   @Nonnull
   private Dataset<Row> cacheIfEnabled(@Nonnull final Dataset<Row> dataset) {
     if (cacheDatasets) {
@@ -212,6 +291,6 @@ public class DynamicDeltaSource extends DriftGuardedSource {
 
   @Nonnull
   private String getTablePath(@Nonnull final String resourceCode) {
-    return FileSystemPersistence.safelyJoinPaths(databasePath, resourceCode + ".parquet");
+    return FileSystemPersistence.safelyJoinPaths(databasePath, resourceCode + TABLE_SUFFIX);
   }
 }

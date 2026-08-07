@@ -32,7 +32,6 @@ import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 import jakarta.annotation.Nonnull;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -45,13 +44,12 @@ import org.springframework.stereotype.Component;
 /**
  * Resolves a {@link ViewArtifactReference} that targets a {@code ViewDefinition} into a {@link
  * ResolvedViewDefinition} leaf node, matching the reference's canonical URL against the stored
- * {@code ViewDefinition.url} (the logical id plays no part). A request-supplied view is preferred
- * over storage, matched by its URL. Has no Spark execution dependency; the {@link FhirView} is the
- * parsed view configuration, not yet a {@code Dataset}.
+ * {@code ViewDefinition.url} (the logical id plays no part). Has no Spark execution dependency; the
+ * {@link FhirView} is the parsed view configuration, not yet a {@code Dataset}.
  *
- * <p>Resolution is split into the supplied-view step and the stored-lookup step so the caller can
- * detect an ambiguous reference (a URL matching both a {@code ViewDefinition} and a {@code SQLView
- * Library}) before committing to either.
+ * <p>Only the stored-lookup step lives here; a request-supplied artefact is matched by the caller
+ * before storage is consulted, so that an ambiguous reference (a URL matching both a {@code
+ * ViewDefinition} and a {@code SQLView Library}) can be detected before committing to either.
  *
  * @author John Grimes
  */
@@ -94,28 +92,6 @@ public class ViewResolver {
     this.serverConfiguration = serverConfiguration;
     this.fhirContext = fhirContext;
     this.gson = ViewDefinitionGson.create();
-  }
-
-  /**
-   * Resolves a reference against a request-supplied view, preferring it over storage. A supplied
-   * view satisfies a reference when its URL matches the reference's url. It carries its own
-   * authorisation as the request payload, so no metadata or projected-resource READ check applies.
-   *
-   * @param reference the dependency reference to resolve
-   * @param suppliedViews request-supplied views keyed by the canonical URL they satisfy
-   * @return the resolved leaf node, or empty if no supplied view matches the reference's url
-   */
-  @Nonnull
-  public Optional<ResolvedViewDefinition> resolveSuppliedView(
-      @Nonnull final ViewArtifactReference reference,
-      @Nonnull final Map<String, FhirView> suppliedViews) {
-    final CanonicalReference canonical = CanonicalReference.parse(reference.getCanonicalUrl());
-    final FhirView supplied = suppliedViews.get(canonical.getUrl());
-    if (supplied == null) {
-      return Optional.empty();
-    }
-    // A supplied view carries no version; its identity is its URL.
-    return Optional.of(new ResolvedViewDefinition(canonical.getUrl(), supplied));
   }
 
   /**

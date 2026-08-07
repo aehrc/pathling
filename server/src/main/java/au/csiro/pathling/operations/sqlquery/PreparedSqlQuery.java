@@ -23,8 +23,8 @@ import lombok.Value;
 /**
  * A SQL query that has been parsed and had its dependency graph resolved, ready for static
  * validation and execution by {@link SqlQueryPipeline}. Produced by {@link
- * SqlQueryPipeline#prepare}; shared by the synchronous {@code $sqlquery-run} and the asynchronous
- * {@code $sqlquery-export} operations.
+ * SqlQueryPipeline#prepare}; shared by the synchronous {@code $sql-run} and the asynchronous {@code
+ * $sql-export} operations.
  *
  * @author John Grimes
  */

@@ -61,7 +61,7 @@ import scala.jdk.javaapi.CollectionConverters;
 
 /**
  * Shared utility methods for streaming query results in different formats (NDJSON, CSV, JSON). Used
- * by both {@link ViewExecutionHelper} and the {@code $sqlquery-run} operation.
+ * by both {@link ViewExecutionHelper} and the {@code $sql-run} operation.
  */
 public class ResultStreamingHelper {
 

@@ -52,7 +52,7 @@ import scala.jdk.javaapi.CollectionConverters;
 /**
  * Validates that SQL queries are strictly read-only and contain only allowed operations. This
  * prevents SQL injection attacks and ensures that users cannot execute DDL, DML, or other dangerous
- * operations through the {@code $sqlquery-run} endpoint.
+ * operations through the {@code $sql-run} endpoint.
  *
  * <p>Allow-lists and reject-lists are matched on fully-qualified class names so that classes from
  * unrelated packages (for example a third-party plugin's {@code Project}) cannot slip through.
@@ -82,8 +82,8 @@ import scala.jdk.javaapi.CollectionConverters;
  *   <li><strong>Expression allow-list</strong> — only safe expression types are permitted.
  *   <li><strong>Built-in functions only</strong> — every {@link UnresolvedFunction} in user SQL
  *       must resolve to a built-in Spark function. Pathling-registered UDFs (terminology, FHIRPath
- *       helpers, etc.) are intended for use within ViewDefinitions; the {@code $sqlquery-run}
- *       surface stays portable and implementation-agnostic. UDFs introduced by referenced views are
+ *       helpers, etc.) are intended for use within ViewDefinitions; the {@code $sql-run} surface
+ *       stays portable and implementation-agnostic. UDFs introduced by referenced views are
  *       unaffected because they appear in the analyzed plan, not in the unresolved tree this rule
  *       walks.
  * </ol>

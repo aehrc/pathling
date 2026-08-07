@@ -45,7 +45,9 @@ vi.mock("../../../contexts/ToastContext", () => ({
 // Define mock functions at module level.
 const mockExecute = vi.fn();
 let mockStatus: "idle" | "pending" | "success" | "error" = "idle";
-let mockResult: { columns: string[]; rows: Record<string, unknown>[] } | undefined = undefined;
+let mockResult:
+  | { kind: "tabular"; columns: string[]; rows: Record<string, unknown>[] }
+  | undefined = undefined;
 let mockError: Error | undefined = undefined;
 
 // Captures the options the card passes to its data hook, so a test can prove no
@@ -53,9 +55,9 @@ let mockError: Error | undefined = undefined;
 type HookOptions = { onError?: (error: Error) => void } | undefined;
 let capturedOptions: HookOptions = undefined;
 
-// Mock useViewRun hook.
+// Mock the useSqlRun hook.
 vi.mock("../../../hooks", () => ({
-  useViewRun: (options?: { onError?: (error: Error) => void }) => {
+  useSqlRun: (options?: { onError?: (error: Error) => void }) => {
     capturedOptions = options;
     return {
       execute: mockExecute,
@@ -80,14 +82,9 @@ vi.mock("../../../config", () => ({
   },
 }));
 
-// Mock the API read function.
-vi.mock("../../../api", () => ({
-  read: vi.fn().mockResolvedValue({ resourceType: "ViewDefinition", name: "test-view" }),
-}));
-
-// Mock the ViewExportCardWrapper to simplify testing.
-vi.mock("../ViewExportCardWrapper", () => ({
-  ViewExportCardWrapper: ({ format }: { format: string }) => (
+// Mock the export card wrapper to simplify testing.
+vi.mock("../SqlExportCardWrapper", () => ({
+  SqlExportCardWrapper: ({ format }: { format: string }) => (
     <div data-testid="export-card-wrapper">Export: {format}</div>
   ),
 }));
@@ -197,16 +194,46 @@ describe("ViewCard", () => {
   });
 
   describe("Execution lifecycle", () => {
-    it("executes view on mount", async () => {
+    // A stored view is named by a typed reference, which is what $sql-run
+    // needs to know which artefact family to read from.
+    it("runs a stored view by typed reference on mount", async () => {
       const job = createJob();
 
       render(<ViewCard job={job} onClose={defaultOnClose} />);
 
       await waitFor(() => {
         expect(mockExecute).toHaveBeenCalledWith({
-          mode: "stored",
-          viewDefinitionId: "view-def-123",
-          viewDefinitionJson: undefined,
+          subject: {
+            kind: "reference",
+            reference: "ViewDefinition/view-def-123",
+          },
+          limit: 10,
+        });
+      });
+    });
+
+    // An inline view is sent whole, since the server holds no copy of it.
+    it("runs an inline view as a supplied resource on mount", async () => {
+      const viewDefinitionJson = JSON.stringify({
+        resourceType: "ViewDefinition",
+        resource: "Patient",
+        status: "active",
+        select: [],
+      });
+      const job = createJob({
+        mode: "inline",
+        viewDefinitionId: undefined,
+        viewDefinitionJson,
+      });
+
+      render(<ViewCard job={job} onClose={defaultOnClose} />);
+
+      await waitFor(() => {
+        expect(mockExecute).toHaveBeenCalledWith({
+          subject: {
+            kind: "resource",
+            resource: JSON.parse(viewDefinitionJson),
+          },
           limit: 10,
         });
       });
@@ -296,7 +323,11 @@ describe("ViewCard", () => {
 
     it("displays no rows message when result is empty", () => {
       mockStatus = "success";
-      mockResult = { columns: ["id", "name"], rows: [] };
+      mockResult = {
+        kind: "tabular",
+        columns: ["id", "name"],
+        rows: [],
+      };
       const job = createJob();
 
       render(<ViewCard job={job} onClose={defaultOnClose} />);
@@ -309,6 +340,7 @@ describe("ViewCard", () => {
     it("displays results table when execution succeeds with rows", () => {
       mockStatus = "success";
       mockResult = {
+        kind: "tabular",
         columns: ["id", "name"],
         rows: [
           { id: "1", name: "Test Patient" },
@@ -329,6 +361,7 @@ describe("ViewCard", () => {
     it("formats object values as JSON strings", () => {
       mockStatus = "success";
       mockResult = {
+        kind: "tabular",
         columns: ["data"],
         rows: [{ data: { nested: "value" } }],
       };
@@ -342,6 +375,7 @@ describe("ViewCard", () => {
     it("displays empty string for null values", () => {
       mockStatus = "success";
       mockResult = {
+        kind: "tabular",
         columns: ["value"],
         rows: [{ value: null }],
       };
@@ -358,7 +392,11 @@ describe("ViewCard", () => {
   describe("Close button", () => {
     it("shows Close button when status is success", () => {
       mockStatus = "success";
-      mockResult = { columns: [], rows: [] };
+      mockResult = {
+        kind: "tabular",
+        columns: [],
+        rows: [],
+      };
       const job = createJob();
 
       render(<ViewCard job={job} onClose={defaultOnClose} />);
@@ -387,7 +425,11 @@ describe("ViewCard", () => {
 
     it("does not show Close button when onClose is not provided", () => {
       mockStatus = "success";
-      mockResult = { columns: [], rows: [] };
+      mockResult = {
+        kind: "tabular",
+        columns: [],
+        rows: [],
+      };
       const job = createJob();
 
       render(<ViewCard job={job} />);
@@ -398,7 +440,11 @@ describe("ViewCard", () => {
     it("calls onClose when Close button is clicked", async () => {
       const user = userEvent.setup();
       mockStatus = "success";
-      mockResult = { columns: [], rows: [] };
+      mockResult = {
+        kind: "tabular",
+        columns: [],
+        rows: [],
+      };
       const job = createJob();
 
       render(<ViewCard job={job} onClose={defaultOnClose} />);
@@ -414,6 +460,7 @@ describe("ViewCard", () => {
     it("shows export controls when results have rows", () => {
       mockStatus = "success";
       mockResult = {
+        kind: "tabular",
         columns: ["id"],
         rows: [{ id: "1" }],
       };
@@ -426,7 +473,11 @@ describe("ViewCard", () => {
 
     it("does not show export controls when results are empty", () => {
       mockStatus = "success";
-      mockResult = { columns: [], rows: [] };
+      mockResult = {
+        kind: "tabular",
+        columns: [],
+        rows: [],
+      };
       const job = createJob();
 
       render(<ViewCard job={job} onClose={defaultOnClose} />);
@@ -438,6 +489,7 @@ describe("ViewCard", () => {
       const user = userEvent.setup();
       mockStatus = "success";
       mockResult = {
+        kind: "tabular",
         columns: ["id"],
         rows: [{ id: "1" }],
       };

@@ -36,10 +36,10 @@ import org.hl7.fhir.r4.model.UriType;
 
 /**
  * Builds the SQL on FHIR asynchronous-export completion manifest as a FHIR {@code Parameters}
- * resource. The manifest follows the shape shared by {@code $viewdefinition-export} and {@code
- * $sqlquery-export}: a required {@code exportId} and {@code status}, the echoed {@code
- * clientTrackingId} and {@code _format}, the export timing fields, and one {@code output} per
- * exported unit with a {@code name} and one or more {@code location} download URLs.
+ * resource. The manifest follows the shape shared by {@code $sql-export} and {@code $sql-export}: a
+ * required {@code exportId} and {@code status}, the echoed {@code clientTrackingId} and {@code
+ * _format}, the export timing fields, and one {@code output} per exported unit with a {@code name}
+ * and one or more {@code location} download URLs.
  *
  * <p>The {@code cancelUrl} and {@code estimatedTimeRemaining} parameters are deliberately omitted,
  * consistent with the agreed scope of both export operations.

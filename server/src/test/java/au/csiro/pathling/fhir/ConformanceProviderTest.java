@@ -241,155 +241,110 @@ class ConformanceProviderTest {
         .isNotNull();
   }
 
-  @Test
-  void capabilityStatementIncludesViewDefinitionExportOperation() {
-    // When: Getting the capability statement.
-    final CapabilityStatement capabilityStatement =
-        conformanceProvider.getServerConformance(null, null);
-
-    // Then: The system-level operations should include viewdefinition-export.
-    final List<CapabilityStatementRestResourceOperationComponent> operations =
-        capabilityStatement.getRest().getFirst().getOperation();
-
-    final Set<String> operationNames =
-        operations.stream()
-            .map(CapabilityStatementRestResourceOperationComponent::getName)
-            .collect(Collectors.toSet());
-
-    assertThat(operationNames)
-        .as("System-level operations should include viewdefinition-export")
-        .contains("viewdefinition-export");
-  }
-
   // -------------------------------------------------------------------------
-  // SQL on FHIR conformance canonicals (US2)
+  // The two SQL on FHIR data operations (US5)
   // -------------------------------------------------------------------------
 
   @Test
-  void viewDefinitionRunOperationsDeclareSpecCanonical() {
+  void capabilityStatementIncludesTheTwoSqlOperations() {
     final CapabilityStatement capabilityStatement =
         conformanceProvider.getServerConformance(null, null);
 
-    // The system-level viewdefinition-run operation declares the run canonical.
-    assertThat(systemOperationDefinition(capabilityStatement, "viewdefinition-run"))
-        .isEqualTo("http://sql-on-fhir.org/OperationDefinition/$viewdefinition-run");
+    assertThat(systemOperationNames(capabilityStatement))
+        .as("System-level operations should include both SQL on FHIR data operations")
+        .contains("sql-run", "sql-export");
+  }
 
-    // The ViewDefinition-level run operation declares the same run canonical.
-    assertThat(resourceOperationDefinition(capabilityStatement, "ViewDefinition", "run"))
-        .isEqualTo("http://sql-on-fhir.org/OperationDefinition/$viewdefinition-run");
+  // The four operations these two replace are gone outright, so nothing in the CapabilityStatement
+  // may still advertise them.
+  @Test
+  void capabilityStatementDeclaresNoneOfTheReplacedOperations() {
+    final CapabilityStatement capabilityStatement =
+        conformanceProvider.getServerConformance(null, null);
+
+    assertThat(systemOperationNames(capabilityStatement))
+        .doesNotContain(
+            "viewdefinition-run", "viewdefinition-export", "sqlquery-run", "sqlquery-export");
+    assertThat(resourceOperationDefinition(capabilityStatement, "ViewDefinition", "run")).isNull();
   }
 
   @Test
-  void viewDefinitionExportDeclaresSpecCanonical() {
+  void sqlOperationsDeclareTheSpecCanonicals() {
     final CapabilityStatement capabilityStatement =
         conformanceProvider.getServerConformance(null, null);
-    assertThat(systemOperationDefinition(capabilityStatement, "viewdefinition-export"))
-        .isEqualTo("http://sql-on-fhir.org/OperationDefinition/$viewdefinition-export");
-  }
 
-  @Test
-  void sqlQueryRunDeclaresSpecCanonical() {
-    final CapabilityStatement capabilityStatement =
-        conformanceProvider.getServerConformance(null, null);
-    assertThat(systemOperationDefinition(capabilityStatement, "sqlquery-run"))
-        .isEqualTo("http://sql-on-fhir.org/OperationDefinition/$sqlquery-run");
+    assertThat(systemOperationDefinition(capabilityStatement, "sql-run"))
+        .isEqualTo("http://hl7.org/fhir/uv/sql-on-fhir/OperationDefinition/SQLRun");
+    assertThat(systemOperationDefinition(capabilityStatement, "sql-export"))
+        .isEqualTo("http://hl7.org/fhir/uv/sql-on-fhir/OperationDefinition/SQLExport");
   }
-
-  @Test
-  void sqlQueryExportDeclaresSpecCanonical() {
-    final CapabilityStatement capabilityStatement =
-        conformanceProvider.getServerConformance(null, null);
-    assertThat(systemOperationDefinition(capabilityStatement, "sqlquery-export"))
-        .isEqualTo("http://sql-on-fhir.org/OperationDefinition/$sqlquery-export");
-  }
-
-  // -------------------------------------------------------------------------
-  // Export output format declaration
-  // -------------------------------------------------------------------------
 
   /**
-   * The export operations accept a narrower set of output formats than the spec canonical they
-   * declare. The supported set is stated in the operation documentation so that a client reading
-   * the CapabilityStatement discovers the constraint, rather than discovering it as a 400.
+   * The formats a run offers depend on the kind of subject, and both operations decline parameters
+   * the spec canonical declares. Stating that in the operation documentation lets a client reading
+   * the CapabilityStatement discover the constraints, rather than discovering them as a 400.
    */
   @Test
-  void viewDefinitionExportDocumentsSupportedFormats() {
+  void sqlRunDocumentsItsPerKindFormatsAndUnsupportedParameters() {
     final CapabilityStatement capabilityStatement =
         conformanceProvider.getServerConformance(null, null);
-    final String documentation =
-        systemOperationDocumentation(capabilityStatement, "viewdefinition-export");
+    final String documentation = systemOperationDocumentation(capabilityStatement, "sql-run");
 
     assertThat(documentation)
-        .as("The viewdefinition-export operation should document its supported formats")
+        .isNotNull()
+        .contains("ndjson")
+        .contains("csv")
+        .contains("json")
+        .contains("parquet")
+        .contains("fhir")
+        .contains("ViewDefinition")
+        .contains("source");
+  }
+
+  @Test
+  void sqlExportDocumentsItsFormatsAndUnsupportedParameters() {
+    final CapabilityStatement capabilityStatement =
+        conformanceProvider.getServerConformance(null, null);
+    final String documentation = systemOperationDocumentation(capabilityStatement, "sql-export");
+
+    assertThat(documentation)
         .isNotNull()
         .contains("ndjson")
         .contains("csv")
         .contains("parquet")
         .contains("json")
-        .contains("fhir");
+        .contains("fhir")
+        .contains("_limit")
+        .contains("respond-async");
   }
 
+  // The two operations are gated independently, so disabling one leaves the other declared.
   @Test
-  void sqlQueryExportDocumentsSupportedFormats() {
-    final CapabilityStatement capabilityStatement =
-        conformanceProvider.getServerConformance(null, null);
-    final String documentation =
-        systemOperationDocumentation(capabilityStatement, "sqlquery-export");
+  void sqlOperationsAreNotDeclaredWhenDisabled() {
+    final ConformanceProvider withoutExport =
+        createProviderWithDisabledOperations(ops -> ops.setSqlExportEnabled(false));
+    assertThat(systemOperationNames(withoutExport.getServerConformance(null, null)))
+        .contains("sql-run")
+        .doesNotContain("sql-export");
 
-    assertThat(documentation)
-        .as("The sqlquery-export operation should document its supported formats")
-        .isNotNull()
-        .contains("ndjson")
-        .contains("csv")
-        .contains("parquet")
-        .contains("json")
-        .contains("fhir");
+    final ConformanceProvider withoutRun =
+        createProviderWithDisabledOperations(ops -> ops.setSqlRunEnabled(false));
+    assertThat(systemOperationNames(withoutRun.getServerConformance(null, null)))
+        .contains("sql-export")
+        .doesNotContain("sql-run");
   }
 
-  /**
-   * The documentation is scoped to the operations that actually narrow the format set. The run
-   * operations impose no such constraint, so they carry no documentation.
-   */
-  @Test
-  void runOperationsDeclareNoFormatDocumentation() {
-    final CapabilityStatement capabilityStatement =
-        conformanceProvider.getServerConformance(null, null);
-
-    assertThat(systemOperationDocumentation(capabilityStatement, "viewdefinition-run")).isNull();
-    assertThat(systemOperationDocumentation(capabilityStatement, "sqlquery-run")).isNull();
-  }
-
-  /** Adding documentation must not disturb the declared spec canonicals. */
-  @Test
-  void exportDocumentationDoesNotDisplaceSpecCanonicals() {
-    final CapabilityStatement capabilityStatement =
-        conformanceProvider.getServerConformance(null, null);
-
-    assertThat(systemOperationDefinition(capabilityStatement, "viewdefinition-export"))
-        .isEqualTo("http://sql-on-fhir.org/OperationDefinition/$viewdefinition-export");
-    assertThat(systemOperationDefinition(capabilityStatement, "sqlquery-export"))
-        .isEqualTo("http://sql-on-fhir.org/OperationDefinition/$sqlquery-export");
-  }
-
-  @Test
-  void sqlQueryExportNotDeclaredWhenDisabled() {
-    final ConformanceProvider provider =
-        createProviderWithDisabledOperations(ops -> ops.setSqlQueryExportEnabled(false));
-    final CapabilityStatement capabilityStatement = provider.getServerConformance(null, null);
-
-    final Set<String> operationNames =
-        capabilityStatement.getRest().getFirst().getOperation().stream()
-            .map(CapabilityStatementRestResourceOperationComponent::getName)
-            .collect(Collectors.toSet());
-    // The sibling sqlquery-run operation remains enabled, so the operation list is still populated;
-    // only sqlquery-export should have been dropped.
-    assertThat(operationNames).contains("sqlquery-run").doesNotContain("sqlquery-export");
+  /** Returns the names of the system-level operations declared by a CapabilityStatement. */
+  private static Set<String> systemOperationNames(final CapabilityStatement capabilityStatement) {
+    return capabilityStatement.getRest().getFirst().getOperation().stream()
+        .map(CapabilityStatementRestResourceOperationComponent::getName)
+        .collect(Collectors.toSet());
   }
 
   @Test
   void authoredSqlOnFhirOperationDefinitionsNoLongerServed() {
     for (final String name :
-        List.of("run", "viewdefinition-run", "viewdefinition-export", "sqlquery-run")) {
+        List.of("sql-run", "sql-export", "run", "viewdefinition-run", "sqlquery-run")) {
       assertThatThrownBy(
               () ->
                   conformanceProvider.getOperationDefinitionById(
@@ -560,8 +515,8 @@ class ConformanceProviderTest {
             "import"),
         Arguments.of(
             (java.util.function.Consumer<OperationConfiguration>)
-                ops -> ops.setViewDefinitionRunEnabled(false),
-            "viewdefinition-run"));
+                ops -> ops.setSqlRunEnabled(false),
+            "sql-run"));
   }
 
   @ParameterizedTest
@@ -597,11 +552,6 @@ class ConformanceProviderTest {
 
   static Stream<Arguments> disabledResourceOperations() {
     return Stream.of(
-        Arguments.of(
-            (java.util.function.Consumer<OperationConfiguration>)
-                ops -> ops.setViewDefinitionInstanceRunEnabled(false),
-            "ViewDefinition",
-            "run"),
         Arguments.of(
             (java.util.function.Consumer<OperationConfiguration>)
                 ops -> ops.setPatientExportEnabled(false),

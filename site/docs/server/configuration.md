@@ -170,23 +170,17 @@ error response and is excluded from the CapabilityStatement.
   [$import](./operations/import) operation.
 - `pathling.operations.importPnpEnabled` - (default: `true`) Enables the
   [$import-pnp](./operations/import-pnp) operation.
-- `pathling.operations.viewDefinitionRunEnabled` - (default: `true`) Enables the
-  system-level [$viewdefinition-run](./operations/view-run) operation.
-- `pathling.operations.viewDefinitionInstanceRunEnabled` - (default: `true`)
-  Enables the instance-level [$run](./operations/view-run) operation on
-  ViewDefinition resources.
-- `pathling.operations.viewDefinitionExportEnabled` - (default: `true`) Enables
-  the [$viewdefinition-export](./operations/view-export) operation.
-- `pathling.operations.sqlQueryExportEnabled` - (default: `true`) Enables the
-  system, type, and instance-level
-  [$sqlquery-export](./operations/sql-export) operation.
+- `pathling.operations.sqlRunEnabled` - (default: `true`) Enables the
+  [$sql-run](./operations/sql-run) operation.
+- `pathling.operations.sqlExportEnabled` - (default: `true`) Enables the
+  [$sql-export](./operations/sql-export) operation.
 - `pathling.operations.bulkSubmitEnabled` - (default: `true`) Enables the
   [$bulk-submit](./operations/bulk-submit) operation.
 
 ### SQL query
 
 This setting bounds the resolution of a query's dependency graph, for both
-`$sqlquery-run` and `$sqlquery-export`.
+`$sql-run` and `$sql-export`.
 
 - `pathling.sqlQuery.maxDependencyDepth` - (default: `10`) The maximum nesting
   depth of the SQLView dependency graph resolved for a single query. The
@@ -213,14 +207,14 @@ This setting bounds the resolution of a query's dependency graph, for both
   profiles. In general, you will get the best query performance by encoding your
   data with the shortest possible list.
 
-  Shortening this list against a warehouse that already holds data, or pointing
-  a server at a warehouse written by a deployment with a longer list, leaves
-  stored columns that the running encoder no longer emits. Those columns are
-  preserved: they are not dropped from the table, and writes to the affected
-  resource types succeed with the columns written as null on the new rows. Reads
-  return what the running encoder can represent, so the values in those columns
-  are not visible until the original list is restored. Each affected table is
-  named in the log at startup, along with the field paths involved.
+    Shortening this list against a warehouse that already holds data, or pointing
+    a server at a warehouse written by a deployment with a longer list, leaves
+    stored columns that the running encoder no longer emits. Those columns are
+    preserved: they are not dropped from the table, and writes to the affected
+    resource types succeed with the columns written as null on the new rows. Reads
+    return what the running encoder can represent, so the values in those columns
+    are not visible until the original list is restored. Each affected table is
+    named in the log at startup, along with the field paths involved.
 
 ### Storage
 
@@ -260,14 +254,14 @@ This setting bounds the resolution of a query's dependency graph, for both
   other replicas require a restart, although redeploys (which replace all
   replicas and re-run startup migration) are self-correcting.
 
-  Where a stored table and the running encoders cannot be reconciled at all, the
-  request fails with an error that describes the condition rather than a generic
-  one. The message names the resource type, which direction the two schemas
-  differ in, the field paths involved, and the remedy - enabling this setting
-  where the table is behind the encoders, or restoring the encoding
-  configuration the table was written with where it is ahead of them. It
-  deliberately excludes the underlying schema definitions and warehouse paths,
-  so the full detail remains in the server log alone.
+    Where a stored table and the running encoders cannot be reconciled at all, the
+    request fails with an error that describes the condition rather than a generic
+    one. The message names the resource type, which direction the two schemas
+    differ in, the field paths involved, and the remedy - enabling this setting
+    where the table is behind the encoders, or restoring the encoding
+    configuration the table was written with where it is ahead of them. It
+    deliberately excludes the underlying schema definitions and warehouse paths,
+    so the full detail remains in the server log alone.
 
 Pathling will automatically detect AWS authentication details within the
 environment and use them to access S3 buckets. It uses a chain of authentication

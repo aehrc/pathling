@@ -23,6 +23,14 @@
 
 import { defineConfig, devices } from "@playwright/test";
 
+/**
+ * The port the suite serves the app on. Overridable so a developer whose 5173
+ * is already taken by another project runs against their own server rather
+ * than silently testing whatever is there.
+ */
+const port = process.env.PLAYWRIGHT_PORT ?? "5173";
+const baseURL = `http://localhost:${port}`;
+
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: true,
@@ -31,7 +39,7 @@ export default defineConfig({
   workers: process.env.CI ? 2 : undefined,
   reporter: "html",
   use: {
-    baseURL: "http://localhost:5173",
+    baseURL,
     trace: "on-first-retry",
   },
   projects: [
@@ -41,8 +49,10 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "bun run dev",
-    url: "http://localhost:5173",
+    // --strictPort makes a port collision fail loudly, rather than leaving the
+    // suite pointed at a server for a different application.
+    command: `bun run dev -- --port ${port} --strictPort`,
+    url: baseURL,
     reuseExistingServer: !process.env.CI,
   },
 });

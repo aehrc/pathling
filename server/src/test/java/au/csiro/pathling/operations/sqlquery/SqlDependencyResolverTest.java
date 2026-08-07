@@ -19,13 +19,17 @@ package au.csiro.pathling.operations.sqlquery;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.config.AuthorizationConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.config.SqlQueryConfiguration;
+import au.csiro.pathling.operations.sql.SuppliedArtefact;
+import au.csiro.pathling.operations.sql.SuppliedArtefacts;
 import au.csiro.pathling.views.FhirView;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
@@ -40,9 +44,9 @@ import org.junit.jupiter.api.Test;
 
 /**
  * Unit tests for {@link SqlDependencyResolver} covering canonical-URL resolution, the resolved
- * graph shape for a {@code SQLQuery -> SQLView -> ViewDefinition} chain, request-supplied view
- * preference, diamond de-duplication (including bare-url vs {@code url|version}), and the
- * structural rejections (cycles, depth, ambiguity, not-found, and wrong-typed dependencies).
+ * graph shape for a {@code SQLQuery -> SQLView -> ViewDefinition} chain, supplied-artefact
+ * precedence and traversal, diamond de-duplication (including bare-url vs {@code url|version}), and
+ * the structural rejections (cycles, depth, ambiguity, not-found, and wrong-typed dependencies).
  *
  * @author John Grimes
  */
@@ -79,7 +83,8 @@ class SqlDependencyResolverTest {
     stubStoredViewDefinition(PATIENT_VIEW_URL, PATIENT_VIEW_URL, "Patient");
 
     final ResolvedDependencyGraph graph =
-        resolver.resolve(sqlQuery("SELECT * FROM p", "p", PATIENT_VIEW_URL), Map.of());
+        resolver.resolve(
+            sqlQuery("SELECT * FROM p", "p", PATIENT_VIEW_URL), SuppliedArtefacts.empty());
 
     assertThat(graph.getTopLevelKeysByLabel()).containsEntry("p", PATIENT_VIEW_URL);
     assertThat(graph.getNodesByKey().get(PATIENT_VIEW_URL))
@@ -93,7 +98,7 @@ class SqlDependencyResolverTest {
     stubStoredViewDefinition(PATIENT_VIEW_URL, PATIENT_VIEW_URL, "Patient");
 
     final ResolvedDependencyGraph graph =
-        resolver.resolve(sqlQuery("SELECT * FROM b", "b", baseUrl), Map.of());
+        resolver.resolve(sqlQuery("SELECT * FROM b", "b", baseUrl), SuppliedArtefacts.empty());
 
     assertThat(graph.getTopLevelKeysByLabel()).containsEntry("b", baseUrl);
     assertThat(graph.getNodesByKey().get(baseUrl)).isInstanceOf(ResolvedSqlView.class);
@@ -111,7 +116,7 @@ class SqlDependencyResolverTest {
     stubStoredViewDefinition(PATIENT_VIEW_URL, PATIENT_VIEW_URL, "Patient");
 
     final ResolvedDependencyGraph graph =
-        resolver.resolve(sqlQuery("SELECT * FROM v", "v", v1Url), Map.of());
+        resolver.resolve(sqlQuery("SELECT * FROM v", "v", v1Url), SuppliedArtefacts.empty());
 
     assertThat(graph.getOrderedNodes()).hasSize(3);
     // Dependencies precede dependents: VD, then v2, then v1.
@@ -127,7 +132,7 @@ class SqlDependencyResolverTest {
     stubStoredViewDefinition(PATIENT_VIEW_URL, PATIENT_VIEW_URL, "Patient");
 
     final ResolvedDependencyGraph graph =
-        resolver.resolve(sqlQuery("SELECT * FROM b", "b", baseUrl), Map.of());
+        resolver.resolve(sqlQuery("SELECT * FROM b", "b", baseUrl), SuppliedArtefacts.empty());
 
     assertThat(graph.getOrderedNodes()).hasSize(2);
     assertThat(graph.getOrderedNodes().get(0).getCanonicalKey()).isEqualTo(PATIENT_VIEW_URL);
@@ -150,7 +155,7 @@ class SqlDependencyResolverTest {
             sqlQueryWithDeps(
                 "SELECT * FROM a JOIN b",
                 Map.of("a", PATIENT_VIEW_URL, "b", PATIENT_VIEW_URL + "|2")),
-            Map.of());
+            SuppliedArtefacts.empty());
 
     assertThat(graph.getOrderedNodes()).hasSize(1);
     assertThat(graph.getNodesByKey()).containsKey(versionedKey);
@@ -172,7 +177,7 @@ class SqlDependencyResolverTest {
     final ResolvedDependencyGraph graph =
         resolver.resolve(
             sqlQueryWithDeps("SELECT * FROM l JOIN r", Map.of("l", leftUrl, "r", rightUrl)),
-            Map.of());
+            SuppliedArtefacts.empty());
 
     final long sharedCount =
         graph.getOrderedNodes().stream()
@@ -196,7 +201,7 @@ class SqlDependencyResolverTest {
     final ResolvedDependencyGraph graph =
         resolver.resolve(
             sqlQueryWithDeps("SELECT * FROM one, two", Map.of("one", v1Url, "two", v2Url)),
-            Map.of());
+            SuppliedArtefacts.empty());
 
     final ResolvedSqlView v1 = (ResolvedSqlView) graph.getNodesByKey().get(v1Url);
     final ResolvedSqlView v2 = (ResolvedSqlView) graph.getNodesByKey().get(v2Url);
@@ -204,21 +209,86 @@ class SqlDependencyResolverTest {
     assertThat(v2.getChildKeysByLabel()).containsEntry("t", bUrl);
   }
 
+  // A supplied artefact outranks storage, and storage is not consulted at all for that reference.
   @Test
   void prefersARequestSuppliedViewOverStorage() {
     final FhirView supplied = fhirView("Patient");
-    when(viewResolver.resolveSuppliedView(
-            argThat(ref -> ref != null && PATIENT_VIEW_URL.equals(ref.getCanonicalUrl())),
-            argThat(map -> map.containsKey(PATIENT_VIEW_URL))))
-        .thenReturn(Optional.of(new ResolvedViewDefinition(PATIENT_VIEW_URL, supplied)));
 
     final ResolvedDependencyGraph graph =
         resolver.resolve(
-            sqlQuery("SELECT * FROM p", "p", PATIENT_VIEW_URL), Map.of(PATIENT_VIEW_URL, supplied));
+            sqlQuery("SELECT * FROM p", "p", PATIENT_VIEW_URL),
+            SuppliedArtefacts.ofViews(Map.of(PATIENT_VIEW_URL, supplied)));
 
     final ResolvedViewDefinition node =
         (ResolvedViewDefinition) graph.getNodesByKey().get(PATIENT_VIEW_URL);
     assertThat(node.getView()).isSameAs(supplied);
+    verifyNoInteractions(viewResolver);
+  }
+
+  // A supplied SQLView is traversed like a stored one, so a dependency reachable only through it
+  // is still resolved - and may itself be satisfied by another supplied entry.
+  @Test
+  void traversesThroughASuppliedSqlView() {
+    final String viewUrl = SqlLibraryFixtures.sqlViewUrl("supplied-view");
+    final FhirView leafView = fhirView("Patient");
+    final Library suppliedSqlView =
+        SqlLibraryFixtures.sqlViewWithUrl(viewUrl, "SELECT * FROM p", "p", PATIENT_VIEW_URL);
+
+    final ResolvedDependencyGraph graph =
+        resolver.resolve(
+            sqlQuery("SELECT * FROM v", "v", viewUrl),
+            SuppliedArtefacts.of(
+                List.of(
+                    SuppliedArtefact.ofSqlView(viewUrl, null, suppliedSqlView),
+                    SuppliedArtefact.ofView(PATIENT_VIEW_URL, null, leafView))));
+
+    assertThat(graph.getNodesByKey()).containsKeys(viewUrl, PATIENT_VIEW_URL);
+    assertThat(graph.getNodesByKey().get(viewUrl)).isInstanceOf(ResolvedSqlView.class);
+    verifyNoInteractions(viewResolver);
+  }
+
+  // A dependency pinned to a version is satisfied only by an entry declaring that version; an
+  // entry at a different version does not match and storage is consulted instead.
+  @Test
+  void matchesAVersionPinnedDependencyOnlyWhenVersionsAgree() {
+    final FhirView supplied = fhirView("Patient");
+    when(viewResolver.resolveStoredViewDefinition(any())).thenReturn(Optional.empty());
+    when(libraryReferenceResolver.tryResolveSqlViewLibrary(any())).thenReturn(Optional.empty());
+
+    final SuppliedArtefacts wrongVersion =
+        SuppliedArtefacts.of(List.of(SuppliedArtefact.ofView(PATIENT_VIEW_URL, "2.0", supplied)));
+
+    assertThatThrownBy(
+            () ->
+                resolver.resolve(
+                    sqlQuery("SELECT * FROM p", "p", PATIENT_VIEW_URL + "|1.0"), wrongVersion))
+        .isInstanceOf(ResourceNotFoundException.class);
+
+    final SuppliedArtefacts rightVersion =
+        SuppliedArtefacts.of(List.of(SuppliedArtefact.ofView(PATIENT_VIEW_URL, "1.0", supplied)));
+    final ResolvedDependencyGraph graph =
+        resolver.resolve(sqlQuery("SELECT * FROM p", "p", PATIENT_VIEW_URL + "|1.0"), rightVersion);
+
+    assertThat(graph.getNodesByKey()).containsKey(PATIENT_VIEW_URL + "|1.0");
+  }
+
+  // A dependency shared by two top-level queries is resolved once when the caller shares the
+  // memoisation map, which is what gives an export job one resolution per canonical URL.
+  @Test
+  void sharesResolvedNodesAcrossQueriesWhenTheNodeMapIsShared() {
+    final FhirView supplied = fhirView("Patient");
+    final SuppliedArtefacts artefacts =
+        SuppliedArtefacts.ofViews(Map.of(PATIENT_VIEW_URL, supplied));
+    final Map<String, ResolvedDependency> shared = new java.util.LinkedHashMap<>();
+
+    final ResolvedDependencyGraph first =
+        resolver.resolve(sqlQuery("SELECT * FROM p", "p", PATIENT_VIEW_URL), artefacts, shared);
+    final ResolvedDependencyGraph second =
+        resolver.resolve(sqlQuery("SELECT * FROM q", "q", PATIENT_VIEW_URL), artefacts, shared);
+
+    assertThat(shared).hasSize(1);
+    assertThat(second.getNodesByKey().get(PATIENT_VIEW_URL))
+        .isSameAs(first.getNodesByKey().get(PATIENT_VIEW_URL));
   }
 
   // ---------------------------------------------------------------------------
@@ -232,7 +302,9 @@ class SqlDependencyResolverTest {
     stubSqlView(aUrl, "SELECT * FROM b", "b", bUrl);
     stubSqlView(bUrl, "SELECT * FROM a", "a", aUrl);
 
-    assertThatThrownBy(() -> resolver.resolve(sqlQuery("SELECT * FROM x", "x", aUrl), Map.of()))
+    assertThatThrownBy(
+            () ->
+                resolver.resolve(sqlQuery("SELECT * FROM x", "x", aUrl), SuppliedArtefacts.empty()))
         .isInstanceOf(InvalidRequestException.class)
         .hasMessageContainingAll("Cyclic", aUrl, bUrl);
   }
@@ -242,7 +314,10 @@ class SqlDependencyResolverTest {
     final String selfUrl = SqlLibraryFixtures.sqlViewUrl("self");
     stubSqlView(selfUrl, "SELECT * FROM s", "s", selfUrl);
 
-    assertThatThrownBy(() -> resolver.resolve(sqlQuery("SELECT * FROM x", "x", selfUrl), Map.of()))
+    assertThatThrownBy(
+            () ->
+                resolver.resolve(
+                    sqlQuery("SELECT * FROM x", "x", selfUrl), SuppliedArtefacts.empty()))
         .isInstanceOf(InvalidRequestException.class)
         .hasMessageContaining("Cyclic");
   }
@@ -258,7 +333,10 @@ class SqlDependencyResolverTest {
     stubSqlView(v3Url, "SELECT * FROM pv", "pv", PATIENT_VIEW_URL);
     stubStoredViewDefinition(PATIENT_VIEW_URL, PATIENT_VIEW_URL, "Patient");
 
-    assertThatThrownBy(() -> resolver.resolve(sqlQuery("SELECT * FROM v", "v", v1Url), Map.of()))
+    assertThatThrownBy(
+            () ->
+                resolver.resolve(
+                    sqlQuery("SELECT * FROM v", "v", v1Url), SuppliedArtefacts.empty()))
         .isInstanceOf(InvalidRequestException.class)
         .hasMessageContainingAll("deeper", "2");
   }
@@ -271,7 +349,9 @@ class SqlDependencyResolverTest {
   void reportsNotFoundWhenNeitherAViewDefinitionNorASqlViewMatches() {
     final String missingUrl = SqlLibraryFixtures.viewDefinitionUrl("missing");
 
-    assertThatThrownBy(() -> resolver.resolve(sqlQuery("SELECT 1", "x", missingUrl), Map.of()))
+    assertThatThrownBy(
+            () ->
+                resolver.resolve(sqlQuery("SELECT 1", "x", missingUrl), SuppliedArtefacts.empty()))
         .isInstanceOf(ResourceNotFoundException.class)
         .hasMessageContaining("x")
         .hasMessageContaining(missingUrl);
@@ -283,7 +363,8 @@ class SqlDependencyResolverTest {
     stubStoredViewDefinition(clashUrl, clashUrl, "Patient");
     stubSqlView(clashUrl, "SELECT 1", "p", PATIENT_VIEW_URL);
 
-    assertThatThrownBy(() -> resolver.resolve(sqlQuery("SELECT 1", "c", clashUrl), Map.of()))
+    assertThatThrownBy(
+            () -> resolver.resolve(sqlQuery("SELECT 1", "c", clashUrl), SuppliedArtefacts.empty()))
         .isInstanceOf(InvalidRequestException.class)
         .hasMessageContaining("ambiguous")
         .hasMessageContaining("c")
@@ -299,7 +380,8 @@ class SqlDependencyResolverTest {
     when(libraryReferenceResolver.tryResolveSqlViewLibrary(queryUrl))
         .thenReturn(Optional.of(nested));
 
-    assertThatThrownBy(() -> resolver.resolve(sqlQuery("SELECT 1", "q", queryUrl), Map.of()))
+    assertThatThrownBy(
+            () -> resolver.resolve(sqlQuery("SELECT 1", "q", queryUrl), SuppliedArtefacts.empty()))
         .isInstanceOf(InvalidRequestException.class)
         .hasMessageContaining("sql-query")
         .hasMessageContaining("SQLView");

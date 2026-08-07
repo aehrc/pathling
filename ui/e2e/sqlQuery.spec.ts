@@ -16,7 +16,7 @@
  */
 
 /**
- * E2E tests for the SQL on FHIR page in `$sqlquery-run` mode.
+ * E2E tests for the SQL on FHIR page in `$sql-run` mode.
  *
  * @author John Grimes
  */
@@ -105,12 +105,12 @@ async function mockViewDefinitions(page: Page) {
 }
 
 /**
- * Mocks the `$sqlquery-run` endpoint with a CSV response.
+ * Mocks the `$sql-run` endpoint with a CSV response.
  *
  * @param page - The Playwright Page to attach the route to.
  */
 async function mockSqlQueryRunCsvResponse(page: Page) {
-  await page.route("**/$sqlquery-run", async (route) => {
+  await page.route(/\/\$sql-run/, async (route) => {
     await route.fulfill({
       status: 200,
       contentType: "text/csv",
@@ -120,12 +120,12 @@ async function mockSqlQueryRunCsvResponse(page: Page) {
 }
 
 /**
- * Mocks the `$sqlquery-run` endpoint with a 400 + OperationOutcome response.
+ * Mocks the `$sql-run` endpoint with a 400 + OperationOutcome response.
  *
  * @param page - The Playwright Page to attach the route to.
  */
 async function mockSqlQueryRunFailure(page: Page) {
-  await page.route("**/$sqlquery-run", async (route) => {
+  await page.route(/\/\$sql-run/, async (route) => {
     await route.fulfill({
       status: 400,
       contentType: "application/fhir+json",
@@ -213,9 +213,11 @@ test.describe("SQL on FHIR page - SQL query mode", () => {
     await mockViewDefinitions(page);
 
     // Capture the run request to confirm the SQLView resolves as Library/<id>.
-    let runBody: { parameter?: Array<Record<string, unknown>> } | undefined;
-    await page.route("**/$sqlquery-run", async (route) => {
-      runBody = JSON.parse(route.request().postData() ?? "{}");
+    // A stored subject with no bindings is sent as a GET, so the subject is
+    // named in the query string rather than in a body.
+    let runUrl: string | undefined;
+    await page.route(/\/\$sql-run/, async (route) => {
+      runUrl = route.request().url();
       await route.fulfill({
         status: 200,
         contentType: "text/csv",
@@ -244,12 +246,8 @@ test.describe("SQL on FHIR page - SQL query mode", () => {
     await expect(page.getByText("2 rows")).toBeVisible();
     await expect(page.getByRole("cell", { name: "Alice" })).toBeVisible();
 
-    const queryReference = runBody?.parameter?.find(
-      (p) => p.name === "queryReference",
-    );
-    expect(queryReference?.valueReference).toEqual({
-      reference: "Library/view-active-patients",
-    });
+    const query = new URL(runUrl!).searchParams;
+    expect(query.get("subjectReference")).toBe("Library/view-active-patients");
   });
 
   test("authors and executes an inline Library", async ({ page }) => {

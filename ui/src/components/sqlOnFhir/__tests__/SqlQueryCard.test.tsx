@@ -53,7 +53,7 @@ type HookOptions = { onError?: (error: Error) => void } | undefined;
 let capturedOptions: HookOptions = undefined;
 
 vi.mock("../../../hooks", () => ({
-  useSqlQueryRun: (options?: { onError?: (error: Error) => void }) => {
+  useSqlRun: (options?: { onError?: (error: Error) => void }) => {
     capturedOptions = options;
     return {
       execute: mockExecute,

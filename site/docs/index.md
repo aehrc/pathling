@@ -65,9 +65,9 @@ Pathling Server is a FHIR R4 analytics server that exposes a range of
 functionality for use by applications and implements:
 
 - **SQL on FHIR**:
-  [Run](/docs/server/operations/view-run) view definitions to
+  [Run](/docs/server/operations/sql-run) view definitions to
   preview tabular projections of FHIR data,
-  then [export](/docs/server/operations/view-export) to NDJSON, CSV, or Parquet
+  then [export](/docs/server/operations/sql-export) to NDJSON, CSV, or Parquet
 - **Bulk Data Access**: [Export data](/docs/server/operations/export) at system,
   patient, or group level using the FHIR Bulk Data Access specification
 - **Bulk Import**: [Import data](/docs/server/operations/import) from NDJSON,

@@ -42,7 +42,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * Tests for {@link ViewRegistrationService}, with particular attention to the request-id
- * namespacing that prevents concurrent {@code $sqlquery-run} requests from clobbering one another's
+ * namespacing that prevents concurrent {@code $sql-run} requests from clobbering one another's
  * temporary views in Spark's session-global catalog.
  */
 @SpringBootUnitTest

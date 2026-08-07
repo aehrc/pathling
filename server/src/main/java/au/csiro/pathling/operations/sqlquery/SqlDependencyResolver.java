@@ -18,7 +18,8 @@
 package au.csiro.pathling.operations.sqlquery;
 
 import au.csiro.pathling.config.ServerConfiguration;
-import au.csiro.pathling.views.FhirView;
+import au.csiro.pathling.operations.sql.SuppliedArtefact;
+import au.csiro.pathling.operations.sql.SuppliedArtefacts;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
 import jakarta.annotation.Nonnull;
@@ -93,12 +94,10 @@ public class SqlDependencyResolver {
   }
 
   /**
-   * Resolves the dependency graph for a parsed top-level query.
+   * Resolves the dependency graph for a parsed top-level query, memoising within this call only.
    *
    * @param topLevel the parsed top-level query (SQLQuery or SQLView)
-   * @param suppliedViews request-supplied views keyed by the canonical URL they satisfy, used for
-   *     the top-level query's direct references; nested SQLView dependencies resolve from storage
-   *     only
+   * @param supplied request-supplied artefacts matched by the canonical URL they satisfy
    * @return the resolved dependency graph, topologically ordered
    * @throws InvalidRequestException if a reference is ambiguous, a cycle or depth-limit breach is
    *     detected, or a dependency is a malformed or wrong-typed resource
@@ -106,13 +105,36 @@ public class SqlDependencyResolver {
    */
   @Nonnull
   public ResolvedDependencyGraph resolve(
-      @Nonnull final ParsedSqlQuery topLevel, @Nonnull final Map<String, FhirView> suppliedViews) {
+      @Nonnull final ParsedSqlQuery topLevel, @Nonnull final SuppliedArtefacts supplied) {
+    return resolve(topLevel, supplied, new LinkedHashMap<>());
+  }
+
+  /**
+   * Resolves the dependency graph for a parsed top-level query, memoising into a caller-supplied
+   * node map.
+   *
+   * <p>Passing one map across every subject of an export job gives the contract's
+   * one-resolution-per-canonical-URL guarantee: a dependency shared by two subjects is resolved
+   * once and both subjects see the same artefact.
+   *
+   * @param topLevel the parsed top-level query (SQLQuery or SQLView)
+   * @param supplied request-supplied artefacts matched by the canonical URL they satisfy
+   * @param nodesByKey the memoisation map, shared across the subjects of one job
+   * @return the resolved dependency graph, topologically ordered
+   * @throws InvalidRequestException if a reference is ambiguous, a cycle or depth-limit breach is
+   *     detected, or a dependency is a malformed or wrong-typed resource
+   * @throws ResourceNotFoundException if a reference matches no stored ViewDefinition or SQLView
+   */
+  @Nonnull
+  public ResolvedDependencyGraph resolve(
+      @Nonnull final ParsedSqlQuery topLevel,
+      @Nonnull final SuppliedArtefacts supplied,
+      @Nonnull final Map<String, ResolvedDependency> nodesByKey) {
     final int maxDepth = serverConfiguration.getSqlQuery().getMaxDependencyDepth();
-    final Map<String, ResolvedDependency> nodesByKey = new LinkedHashMap<>();
     final Set<String> resolutionStack = new LinkedHashSet<>();
     final Map<String, String> topLevelKeysByLabel =
         resolveReferences(
-            topLevel.getViewReferences(), suppliedViews, 1, maxDepth, resolutionStack, nodesByKey);
+            topLevel.getViewReferences(), supplied, 1, maxDepth, resolutionStack, nodesByKey);
     return new ResolvedDependencyGraph(
         new ArrayList<>(nodesByKey.values()), topLevelKeysByLabel, nodesByKey);
   }
@@ -124,7 +146,7 @@ public class SqlDependencyResolver {
   @Nonnull
   private Map<String, String> resolveReferences(
       @Nonnull final List<ViewArtifactReference> references,
-      @Nonnull final Map<String, FhirView> suppliedViews,
+      @Nonnull final SuppliedArtefacts supplied,
       final int depth,
       final int maxDepth,
       @Nonnull final Set<String> resolutionStack,
@@ -133,21 +155,21 @@ public class SqlDependencyResolver {
     for (final ViewArtifactReference reference : references) {
       keysByLabel.put(
           reference.getLabel(),
-          resolveReference(reference, suppliedViews, depth, maxDepth, resolutionStack, nodesByKey));
+          resolveReference(reference, supplied, depth, maxDepth, resolutionStack, nodesByKey));
     }
     return keysByLabel;
   }
 
   /**
    * Resolves a single reference into the canonical key of its node, registering it if new. A
-   * request-supplied view wins; otherwise the canonical url is matched against stored
+   * request-supplied artefact wins; otherwise the canonical url is matched against stored
    * ViewDefinitions then SQLView Libraries, rejecting an ambiguous match (both types) and a
    * not-found match (neither type).
    */
   @Nonnull
   private String resolveReference(
       @Nonnull final ViewArtifactReference reference,
-      @Nonnull final Map<String, FhirView> suppliedViews,
+      @Nonnull final SuppliedArtefacts supplied,
       final int depth,
       final int maxDepth,
       @Nonnull final Set<String> resolutionStack,
@@ -163,11 +185,27 @@ public class SqlDependencyResolver {
               + "')");
     }
 
-    // A request-supplied view, matched by url, is preferred over storage.
-    final Optional<ResolvedViewDefinition> suppliedView =
-        viewResolver.resolveSuppliedView(reference, suppliedViews);
-    if (suppliedView.isPresent()) {
-      return registerLeaf(suppliedView.get(), nodesByKey);
+    // A request-supplied artefact, matched by url and agreeing version, outranks storage. A
+    // supplied SQLView is traversed in turn, so a chain of supplied artefacts resolves.
+    final CanonicalReference canonical = CanonicalReference.parse(reference.getCanonicalUrl());
+    final Optional<SuppliedArtefact> suppliedArtefact =
+        supplied.match(canonical.getUrl(), canonical.getVersion());
+    if (suppliedArtefact.isPresent()) {
+      final SuppliedArtefact artefact = suppliedArtefact.get();
+      final String suppliedKey = CanonicalReference.key(artefact.getUrl(), artefact.getVersion());
+      if (artefact.isView()) {
+        return registerLeaf(
+            new ResolvedViewDefinition(suppliedKey, artefact.getView()), nodesByKey);
+      }
+      return resolveSqlView(
+          artefact.getSqlView(),
+          reference,
+          suppliedKey,
+          supplied,
+          depth,
+          maxDepth,
+          resolutionStack,
+          nodesByKey);
     }
 
     // Search stored ViewDefinitions, then stored SQLView Libraries, both by url.
@@ -188,8 +226,16 @@ public class SqlDependencyResolver {
       return registerLeaf(storedViewDefinition.get(), nodesByKey);
     }
     if (sqlViewLibrary.isPresent()) {
+      final Library library = sqlViewLibrary.get();
       return resolveSqlView(
-          sqlViewLibrary.get(), reference, depth, maxDepth, resolutionStack, nodesByKey);
+          library,
+          reference,
+          CanonicalReference.key(library.getUrl(), library.getVersion()),
+          supplied,
+          depth,
+          maxDepth,
+          resolutionStack,
+          nodesByKey);
     }
     throw new ResourceNotFoundException(
         "Failed to resolve the dependency for label '"
@@ -215,15 +261,17 @@ public class SqlDependencyResolver {
    * reference - deduplicate. Detects diamonds (already resolved), cycles (currently on the
    * resolution stack), and rejects a {@code sql-query} Library referenced as a dependency.
    */
+  @SuppressWarnings("java:S107")
   @Nonnull
   private String resolveSqlView(
       @Nonnull final Library library,
       @Nonnull final ViewArtifactReference reference,
+      @Nonnull final String canonicalKey,
+      @Nonnull final SuppliedArtefacts supplied,
       final int depth,
       final int maxDepth,
       @Nonnull final Set<String> resolutionStack,
       @Nonnull final Map<String, ResolvedDependency> nodesByKey) {
-    final String canonicalKey = CanonicalReference.key(library.getUrl(), library.getVersion());
 
     // A node already fully resolved is shared (diamond dedup).
     if (nodesByKey.containsKey(canonicalKey)) {
@@ -251,11 +299,11 @@ public class SqlDependencyResolver {
     }
 
     resolutionStack.add(canonicalKey);
-    // Nested dependencies resolve from storage only; request-supplied views satisfy the top-level
-    // query's references, not the internals of a stored SQLView.
+    // Supplied artefacts are matched at every level, so a dependency reachable only through a
+    // supplied SQLView is still satisfied by another supplied entry.
     final Map<String, String> childKeysByLabel =
         resolveReferences(
-            parsed.getViewReferences(), Map.of(), depth + 1, maxDepth, resolutionStack, nodesByKey);
+            parsed.getViewReferences(), supplied, depth + 1, maxDepth, resolutionStack, nodesByKey);
     resolutionStack.remove(canonicalKey);
 
     final ResolvedSqlView node =

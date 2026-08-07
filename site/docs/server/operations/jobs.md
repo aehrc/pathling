@@ -1,5 +1,5 @@
 ---
-sidebar_position: 11
+sidebar_position: 9
 description: The jobs operation lists the asynchronous jobs held in the server's in-memory registry, so a client can monitor and cancel their work without retaining every kick-off response.
 ---
 
@@ -7,8 +7,8 @@ description: The jobs operation lists the asynchronous jobs held in the server's
 
 This operation lists the asynchronous jobs currently held in the server's
 in-memory registry, such as those created by
-[import](import), [export](export), [SQL on FHIR export](sql-export) and
-[ViewDefinition export](view-export). It lets a client enumerate the jobs it
+[import](import), [export](export) and
+[SQL on FHIR export](sql-export). It lets a client enumerate the jobs it
 owns, with their current status and progress, without having to retain the
 poll URL returned when each job was started.
 
