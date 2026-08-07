@@ -29,10 +29,21 @@ import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 
 /**
- * Detects schema drift between the schema produced by the current FHIR encoders and the schema of
- * an existing Delta table. Only field paths present in the source but absent from the target count
- * as drift; nullability and column metadata differences are ignored, and extra target-only fields
- * are tolerated.
+ * Compares the schema produced by the current FHIR encoders against the schema of an existing Delta
+ * table, in both directions. Nullability and column metadata differences are ignored throughout.
+ *
+ * <p>{@link #missingFieldPaths} reports paths the encoder emits that the table lacks. That
+ * direction is migratable, by an additive schema evolution, and is the subject of the {@code
+ * pathling.storage.schemaAutoMerge} policy.
+ *
+ * <p>{@link #excessFieldPaths} reports paths the table carries that the encoder does not emit. That
+ * direction is not migratable: the columns cannot be reconstructed, and narrowing the table would
+ * discard data. It exists so that startup can report the condition, and so that the write path can
+ * recognise when it is safe to let Delta null-fill the columns it cannot supply. It is not a reason
+ * to refuse service. Reading such a table back is made safe by the core-side decode fix in {@code
+ * 048-name-based-nested-decode}, which resolves nested fields by name rather than by position; the
+ * core Delta sink computes its own equivalent of this comparison, because the two modules are
+ * released independently.
  *
  * @author John Grimes
  */
@@ -67,6 +78,21 @@ public final class SchemaDrift {
     final SortedSet<String> missing = new TreeSet<>(collectFieldPaths(source));
     missing.removeAll(collectFieldPaths(target));
     return missing;
+  }
+
+  /**
+   * Returns the field paths present in the target schema but absent from the source schema, in
+   * lexicographic order. This is the reverse of {@link #missingFieldPaths}, and describes a table
+   * that carries fields the encoder does not emit.
+   *
+   * @param source the candidate schema (typically the encoder output)
+   * @param target the existing table schema
+   * @return the excess field paths, dot-separated
+   */
+  @Nonnull
+  public static SortedSet<String> excessFieldPaths(
+      @Nonnull final StructType source, @Nonnull final StructType target) {
+    return missingFieldPaths(target, source);
   }
 
   @Nonnull
