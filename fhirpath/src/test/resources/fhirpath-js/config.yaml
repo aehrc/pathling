@@ -184,7 +184,7 @@ excludeSet:
           duration union deduplication" exclusion for the `|`/combine() operators below, and for
           repeat() in the filtering and projection exclusions.
         any:
-          - "** should use year-to-month conversion factor (https://hl7.org/fhirpath/#equals)"
+          - "(1 year).combine(12 months).distinct()"
   - title: Filtering and projection exclusions
     glob: "fhirpath-js/cases/5.2_filtering_and_projection.yaml"
     exclude:
