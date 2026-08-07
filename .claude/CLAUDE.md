@@ -34,6 +34,13 @@ Build:
   a stale jar and the tests pass without exercising the new code. See CONTRIBUTING.md for the exact
   sequence, including the `mkdir` step that is required afterwards.
 
+Tooling:
+
+- **Worktrees for issue work live under `.claude/worktrees/`** (e.g.
+  `.claude/worktrees/issue/<N>`), matching the `EnterWorktree` tool's own hardcoded root — that root
+  is not configurable via settings.json, so this is the only sane convention to standardise on. The
+  `implement-pathling` skill's `--worktree` flag uses this path, and it is gitignored.
+
 Tests:
 
 - **The YAML exclusion baseline polices itself.** Excluded conformance cases are still executed and

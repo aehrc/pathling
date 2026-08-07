@@ -16,8 +16,8 @@ Repository: `aehrc/pathling`, default branch `main`.
 /implement-pathling <issue-number> [--worktree] [--unattended] [--base <ref>]
 ```
 
-- `--worktree` — work in an isolated worktree at `.worktrees/issue/<issue-number>`. Use when several
-  issues are in flight at once.
+- `--worktree` — work in an isolated worktree at `.claude/worktrees/issue/<issue-number>`. Use when
+  several issues are in flight at once.
 - `--unattended` — no user is available. Every gate becomes an abort, except the test-matrix review
   and review triage (see table below), which proceed and report instead. **Required** when this
   skill runs inside a dispatched subagent, which cannot ask anything. Thread it through to every
@@ -74,8 +74,8 @@ Gate behaviour by mode:
 the decision needed. Do not guess past a gate.
 
 Print, for example:
-`Mode: worktree=.worktrees/issue/2385, unattended=false, base=origin/main — will stop after the PR
-is opened.`
+`Mode: worktree=.claude/worktrees/issue/2385, unattended=false, base=origin/main — will stop after
+the PR is opened.`
 
 ## Step 1 — Read the issue and confirm it is actionable
 
@@ -141,8 +141,8 @@ let the user decide whether to resume, rename, or delete it.
 With `--worktree`, create the worktree and branch together:
 
 ```bash
-git worktree add .worktrees/issue/<N> -b issue/<N> <base>
-cd .worktrees/issue/<N>
+git worktree add .claude/worktrees/issue/<N> -b issue/<N> <base>
+cd .claude/worktrees/issue/<N>
 ```
 
 ## Step 3 — Research the specification

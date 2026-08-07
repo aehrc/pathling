@@ -40,7 +40,7 @@ spark-warehouse
 .aider*
 
 # Isolated worktrees used when several issues are implemented concurrently.
-/.worktrees/
+/.claude/worktrees/
 
 #server
 server/.idea
