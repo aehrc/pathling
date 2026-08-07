@@ -46,7 +46,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.StreamSupport;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
 import org.apache.spark.sql.SparkSession;
@@ -297,30 +296,7 @@ class ExportOperationIT {
     assertThat(getParameterBooleanValue(parameters, "requiresAccessToken")).isFalse();
 
     // Extract output file information from the output parameters.
-    final List<FileInformation> actualFileInfos =
-        StreamSupport.stream(parameters.spliterator(), false)
-            .filter(param -> "output".equals(param.get("name").asText()))
-            .map(
-                outputParam -> {
-                  final JsonNode parts = outputParam.get("part");
-                  String type = null;
-                  String url = null;
-                  for (final JsonNode part : parts) {
-                    final String partName = part.get("name").asText();
-                    if ("type".equals(partName)) {
-                      type =
-                          part.has("valueCode")
-                              ? part.get("valueCode").asText()
-                              : part.get("valueString").asText();
-                    } else if ("url".equals(partName)) {
-                      url = part.get("valueUri").asText();
-                    }
-                  }
-                  assertNotNull(type);
-                  assertNotNull(url);
-                  return new FileInformation(type, url);
-                })
-            .toList();
+    final List<FileInformation> actualFileInfos = ExportOperationUtil.extractFileInfos(parameters);
 
     assertThat(actualFileInfos).isNotEmpty();
 
@@ -646,30 +622,7 @@ class ExportOperationIT {
       final JsonNode parameters = node.get("parameter");
 
       // Extract output file information.
-      final List<FileInformation> fileInfos =
-          StreamSupport.stream(parameters.spliterator(), false)
-              .filter(param -> "output".equals(param.get("name").asText()))
-              .map(
-                  outputParam -> {
-                    final JsonNode parts = outputParam.get("part");
-                    String type = null;
-                    String url = null;
-                    for (final JsonNode part : parts) {
-                      final String partName = part.get("name").asText();
-                      if ("type".equals(partName)) {
-                        type =
-                            part.has("valueCode")
-                                ? part.get("valueCode").asText()
-                                : part.get("valueString").asText();
-                      } else if ("url".equals(partName)) {
-                        url = part.get("valueUri").asText();
-                      }
-                    }
-                    assertNotNull(type);
-                    assertNotNull(url);
-                    return new FileInformation(type, url);
-                  })
-              .toList();
+      final List<FileInformation> fileInfos = ExportOperationUtil.extractFileInfos(parameters);
 
       assertThat(fileInfos).isNotEmpty();
       // All output should be for the expected resource type.

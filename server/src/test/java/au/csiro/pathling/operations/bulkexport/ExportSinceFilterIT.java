@@ -40,7 +40,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
 import org.apache.spark.sql.Encoders;
@@ -227,7 +226,7 @@ class ExportSinceFilterIT {
     final JsonNode parameters = node.get("parameter");
     assertThat(parameters).isNotNull();
 
-    final List<FileInformation> fileInfos = extractFileInfos(parameters);
+    final List<FileInformation> fileInfos = ExportOperationUtil.extractFileInfos(parameters);
     assertThat(fileInfos).isNotEmpty();
     assertThat(fileInfos).allMatch(fileInfo -> "Patient".equals(fileInfo.fhirResourceType()));
 
@@ -256,31 +255,5 @@ class ExportSinceFilterIT {
     expectedIds.addAll(nullLastUpdatedIds);
     assertThat(exportedIds).containsExactlyInAnyOrderElementsOf(expectedIds);
     assertThat(exportedIds).doesNotContainAnyElementsOf(beforeCutoffIds);
-  }
-
-  /** Extracts the output file information entries from a manifest's parameter array. */
-  private static List<FileInformation> extractFileInfos(final JsonNode parameters) {
-    return StreamSupport.stream(parameters.spliterator(), false)
-        .filter(param -> "output".equals(param.get("name").asText()))
-        .map(
-            outputParam -> {
-              String type = null;
-              String url = null;
-              for (final JsonNode part : outputParam.get("part")) {
-                final String partName = part.get("name").asText();
-                if ("type".equals(partName)) {
-                  type =
-                      part.has("valueCode")
-                          ? part.get("valueCode").asText()
-                          : part.get("valueString").asText();
-                } else if ("url".equals(partName)) {
-                  url = part.get("valueUri").asText();
-                }
-              }
-              assertNotNull(type);
-              assertNotNull(url);
-              return new FileInformation(type, url);
-            })
-        .toList();
   }
 }

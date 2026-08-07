@@ -196,7 +196,7 @@ class ExportAuthorisationFilteringIT {
     // With authorisation enabled, the manifest must declare that downloads require a token.
     assertThat(getRequiresAccessToken(parameters)).isTrue();
 
-    final List<FileInformation> fileInfos = extractFileInfos(parameters);
+    final List<FileInformation> fileInfos = ExportOperationUtil.extractFileInfos(parameters);
     assertThat(fileInfos).isNotEmpty();
 
     // The output must be narrowed to the permitted type only: the Encounter table is present in
@@ -223,32 +223,6 @@ class ExportAuthorisationFilteringIT {
       final List<Resource> resources = ExportOperationUtil.parseNdjson(parser, content, "Patient");
       assertThat(resources).isNotEmpty();
     }
-  }
-
-  /** Extracts the output file information entries from a manifest's parameter array. */
-  private static List<FileInformation> extractFileInfos(final JsonNode parameters) {
-    return StreamSupport.stream(parameters.spliterator(), false)
-        .filter(param -> "output".equals(param.get("name").asText()))
-        .map(
-            outputParam -> {
-              String type = null;
-              String url = null;
-              for (final JsonNode part : outputParam.get("part")) {
-                final String partName = part.get("name").asText();
-                if ("type".equals(partName)) {
-                  type =
-                      part.has("valueCode")
-                          ? part.get("valueCode").asText()
-                          : part.get("valueString").asText();
-                } else if ("url".equals(partName)) {
-                  url = part.get("valueUri").asText();
-                }
-              }
-              assertNotNull(type);
-              assertNotNull(url);
-              return new FileInformation(type, url);
-            })
-        .toList();
   }
 
   /** Reads the requiresAccessToken boolean parameter from a manifest's parameter array. */
