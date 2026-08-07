@@ -23,13 +23,13 @@ import static org.awaitility.Awaitility.await;
 
 import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.JsonNode;
 import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.ObjectMapper;
+import au.csiro.pathling.util.DirectoryCleanup;
 import au.csiro.pathling.util.TestDataSetup;
 import jakarta.annotation.Nullable;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Tag;
@@ -74,16 +74,16 @@ class JobListIT {
 
   @AfterEach
   void cleanup() throws IOException {
-    // Only clean up the jobs directory, preserving the delta tables for reuse.
+    // Only clean up the jobs directory, preserving the delta tables for reuse. Cancelling a job
+    // deletes its directory asynchronously, so the cleanup must tolerate entries disappearing
+    // underneath it (issue #2711).
     final Path jobsDir = warehouseDir.resolve("delta").resolve("jobs");
-    if (jobsDir.toFile().exists()) {
-      FileUtils.cleanDirectory(jobsDir.toFile());
-    }
+    DirectoryCleanup.cleanDirectoryTolerantly(jobsDir);
   }
 
   @AfterAll
   static void cleanupAll() throws IOException {
-    FileUtils.cleanDirectory(warehouseDir.toFile());
+    DirectoryCleanup.cleanDirectoryTolerantly(warehouseDir);
   }
 
   @Test

@@ -32,6 +32,7 @@ import au.csiro.pathling.library.io.source.DataSourceBuilder;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.JsonNode;
 import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.ObjectMapper;
+import au.csiro.pathling.util.DirectoryCleanup;
 import au.csiro.pathling.util.ExportOperationUtil;
 import au.csiro.pathling.util.TestDataSetup;
 import ca.uhn.fhir.context.FhirContext;
@@ -48,7 +49,6 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.StreamSupport;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.io.FileUtils;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Encounter;
@@ -128,18 +128,18 @@ class ExportOperationIT {
 
   @AfterEach
   void cleanup() throws IOException {
-    // Only clean up the jobs directory, preserving the delta tables for reuse.
+    // Only clean up the jobs directory, preserving the delta tables for reuse. Cancelling a job
+    // deletes its directory asynchronously, so the cleanup must tolerate entries disappearing
+    // underneath it (issue #2711).
     final Path jobsDir = warehouseDir.resolve("delta").resolve("jobs");
-    if (jobsDir.toFile().exists()) {
-      FileUtils.cleanDirectory(jobsDir.toFile());
-    }
+    DirectoryCleanup.cleanDirectoryTolerantly(jobsDir);
   }
 
   @AfterAll
   static void cleanupAll() throws IOException {
     // Clean the entire temp directory before JUnit's @TempDir cleanup runs.
     // This ensures Spark/Delta file handles don't prevent directory deletion.
-    FileUtils.cleanDirectory(warehouseDir.toFile());
+    DirectoryCleanup.cleanDirectoryTolerantly(warehouseDir);
   }
 
   @Test
