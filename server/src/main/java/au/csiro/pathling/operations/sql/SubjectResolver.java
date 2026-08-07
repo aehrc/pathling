@@ -31,6 +31,7 @@ import au.csiro.pathling.security.SecurityAspect;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.List;
+import java.util.Objects;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
@@ -146,13 +147,15 @@ public class SubjectResolver {
               + " 'subjectResource', but more than one was supplied.");
     }
 
+    // The requireNonNull calls restate what the hasResource, hasCanonical and hasReference guards
+    // already establish, in a form that static analysis can verify.
     final IBaseResource artefact;
     if (hasResource) {
       artefact = subjectResource;
     } else if (hasCanonical) {
-      artefact = resolveCanonical(subjectCanonical);
+      artefact = resolveCanonical(Objects.requireNonNull(subjectCanonical));
     } else {
-      artefact = resolveReference(subjectReference);
+      artefact = resolveReference(Objects.requireNonNull(subjectReference));
     }
 
     return new ResolvedSubject(detectKind(artefact), artefact, suppliedName);

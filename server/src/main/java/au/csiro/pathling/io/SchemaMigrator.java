@@ -38,10 +38,19 @@ import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.StructType;
 
 /**
- * Detects Delta tables in the warehouse whose schemas are missing fields relative to the current
- * FHIR encoders, and migrates them at startup when {@code schemaAutoMerge} is enabled. Tables that
- * remain drifted (flag disabled, or migration failure) are reported so that requests against them
- * can fail with an actionable error instead of a generic one.
+ * Reports, at startup, every Delta table in the warehouse whose schema differs from the current
+ * FHIR encoders, in either direction, and migrates the migratable direction when {@code
+ * schemaAutoMerge} is enabled.
+ *
+ * <p>A table missing fields the encoders require is migrated by an additive schema evolution.
+ * Tables that remain in that state (flag disabled, or migration failure) are reported so that
+ * requests against them can fail with an actionable error instead of a generic one.
+ *
+ * <p>A table carrying fields the encoders do not emit cannot be migrated - the columns cannot be
+ * reconstructed - so it is reported and otherwise left alone. That condition is tolerated rather
+ * than fatal, so it does not enter the drifted set.
+ *
+ * <p>Neither direction ever fails startup.
  *
  * @author John Grimes
  */
@@ -103,6 +112,7 @@ public class SchemaMigrator {
       @Nonnull final String resourceCode, @Nonnull final Set<String> driftedTypes) {
     final String tablePath = safelyJoinPaths(databasePath, resourceCode + TABLE_EXTENSION);
     final SortedSet<String> missingFields;
+    final SortedSet<String> excessFields;
     try {
       if (!DeltaTable.isDeltaTable(spark, tablePath)) {
         return;
@@ -110,10 +120,28 @@ public class SchemaMigrator {
       final StructType encoderSchema = fhirEncoders.of(resourceCode).schema();
       final StructType tableSchema = spark.read().format("delta").load(tablePath).schema();
       missingFields = SchemaDrift.missingFieldPaths(encoderSchema, tableSchema);
+      excessFields = SchemaDrift.excessFieldPaths(encoderSchema, tableSchema);
     } catch (final Exception e) {
       // A table that cannot be inspected (for example, an unencodable name) is skipped.
       log.debug("Skipping schema drift check for {}: {}", resourceCode, e.getMessage());
       return;
+    }
+
+    if (!excessFields.isEmpty()) {
+      // This direction is not migratable: the columns cannot be reconstructed, and narrowing the
+      // table would discard data. It is reported so that a deployment state which is otherwise
+      // invisible - most often a narrowed pathling.encoding.openTypes against a populated warehouse
+      // - can be seen before it has any effect, and at INFO because it is tolerated: writes
+      // null-fill
+      // these columns and reads return what the encoder can represent. The type is deliberately not
+      // added to the drifted set, and no migration is attempted.
+      log.info(
+          "The {} table carries fields this server's encoders do not emit (extra fields: {}). These"
+              + " columns are preserved and written as null; reads return what the encoders can"
+              + " represent. To read them, restore the encoding configuration the table was written"
+              + " with, in particular pathling.encoding.openTypes.",
+          resourceCode,
+          excessFields);
     }
 
     if (missingFields.isEmpty()) {

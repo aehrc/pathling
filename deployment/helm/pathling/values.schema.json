@@ -200,6 +200,14 @@
             "type": ["string", "integer", "boolean", "null"]
           },
           "default": {}
+        },
+        "trustedCertificates": {
+          "type": "array",
+          "description": "Additional CA certificates (PEM format) to be trusted by the server JVM, merged into a copy of the image's default truststore at pod startup.",
+          "items": {
+            "type": "string"
+          },
+          "default": []
         }
       }
     }

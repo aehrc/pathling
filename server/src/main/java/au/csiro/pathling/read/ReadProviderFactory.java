@@ -24,15 +24,20 @@ import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 
 /**
- * Factory for creating resource-specific ReadProvider instances.
+ * Factory for creating resource-specific ReadProvider instances. Uses the application context to
+ * create instances so that they are Spring beans and can be detected by Spring AOP for security
+ * interception.
  *
  * @author John Grimes
  */
 @Component
 public class ReadProviderFactory {
+
+  @Nonnull private final ApplicationContext applicationContext;
 
   @Nonnull private final ServerConfiguration configuration;
 
@@ -45,16 +50,19 @@ public class ReadProviderFactory {
   /**
    * Constructs a new ReadProviderFactory.
    *
+   * @param applicationContext the Spring application context for bean creation
    * @param configuration the server configuration
    * @param fhirContext the FHIR context for resource definitions
    * @param dataSource the data source containing the resources to read
    * @param fhirEncoders the encoders for converting Spark rows to FHIR resources
    */
   public ReadProviderFactory(
+      @Nonnull final ApplicationContext applicationContext,
       @Nonnull final ServerConfiguration configuration,
       @Nonnull final FhirContext fhirContext,
       @Nonnull final DataSource dataSource,
       @Nonnull final FhirEncoders fhirEncoders) {
+    this.applicationContext = applicationContext;
     this.configuration = configuration;
     this.fhirContext = fhirContext;
     this.dataSource = dataSource;
@@ -62,7 +70,7 @@ public class ReadProviderFactory {
   }
 
   /**
-   * Creates a ReadProvider for the given resource type.
+   * Creates a ReadProvider bean for the given resource type.
    *
    * @param resourceType the type of resource to create the provider for
    * @return a ReadProvider configured for the specified resource type
@@ -73,12 +81,13 @@ public class ReadProviderFactory {
         fhirContext.getResourceDefinition(resourceType.name()).getImplementingClass();
 
     final ReadExecutor readExecutor = new ReadExecutor(dataSource, fhirEncoders);
-    return new ReadProvider(configuration, readExecutor, fhirContext, resourceTypeClass);
+    return applicationContext.getBean(
+        ReadProvider.class, configuration, readExecutor, fhirContext, resourceTypeClass);
   }
 
   /**
-   * Creates a ReadProvider for the given resource type code. This method supports custom resource
-   * types like ViewDefinition that are not part of the standard FHIR ResourceType enum.
+   * Creates a ReadProvider bean for the given resource type code. This method supports custom
+   * resource types like ViewDefinition that are not part of the standard FHIR ResourceType enum.
    *
    * @param resourceTypeCode the type code of the resource (e.g., "Patient", "ViewDefinition")
    * @return a ReadProvider configured for the specified resource type
@@ -89,6 +98,7 @@ public class ReadProviderFactory {
         fhirContext.getResourceDefinition(resourceTypeCode).getImplementingClass();
 
     final ReadExecutor readExecutor = new ReadExecutor(dataSource, fhirEncoders);
-    return new ReadProvider(configuration, readExecutor, fhirContext, resourceTypeClass);
+    return applicationContext.getBean(
+        ReadProvider.class, configuration, readExecutor, fhirContext, resourceTypeClass);
   }
 }
