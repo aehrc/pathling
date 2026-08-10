@@ -295,23 +295,34 @@ export function SqlQueryForm({
         />
 
         <Flex gap="3">
-          <Button size="3" onClick={handleExecute} disabled={!canExecute} style={{ flex: 1 }}>
+          <Button
+            size="2"
+            onClick={handleExecute}
+            disabled={!canExecute}
+            style={{ flex: 1, whiteSpace: "nowrap" }}
+          >
             <PlayIcon />
             {isExecuting ? "Executing..." : "Execute"}
           </Button>
           {onAddToExportSet && (
-            <Button size="3" variant="soft" onClick={handleAddToExportSet} disabled={!canExecute}>
+            <Button
+              size="2"
+              variant="soft"
+              onClick={handleAddToExportSet}
+              disabled={!canExecute}
+              style={{ whiteSpace: "nowrap" }}
+            >
               <PlusIcon />
               Add to export set
             </Button>
           )}
           {source === "inline" && (
             <Button
-              size="3"
+              size="2"
               variant="soft"
               onClick={handleSaveToServer}
               disabled={!canSave}
-              style={{ flex: 1 }}
+              style={{ flex: 1, whiteSpace: "nowrap" }}
             >
               <UploadIcon />
               {isSaving ? "Saving..." : "Save to server"}

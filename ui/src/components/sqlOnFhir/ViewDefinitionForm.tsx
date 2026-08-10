@@ -257,20 +257,21 @@ export function ViewDefinitionForm({
 
         <Flex gap="3">
           <Button
-            size="3"
+            size="2"
             onClick={handleExecute}
             disabled={disabled || isExecuting || !canExecute}
-            style={{ flex: 1 }}
+            style={{ flex: 1, whiteSpace: "nowrap" }}
           >
             <PlayIcon />
             {isExecuting ? "Executing..." : "Execute"}
           </Button>
           {onAddToExportSet && (
             <Button
-              size="3"
+              size="2"
               variant="soft"
               onClick={handleAddToExportSet}
               disabled={disabled || !canExecute}
+              style={{ whiteSpace: "nowrap" }}
             >
               <PlusIcon />
               Add to export set
@@ -278,11 +279,11 @@ export function ViewDefinitionForm({
           )}
           {activeTab === "custom" && (
             <Button
-              size="3"
+              size="2"
               variant="soft"
               onClick={handleSaveToServer}
               disabled={disabled || isSaving || !customJson.trim()}
-              style={{ flex: 1 }}
+              style={{ flex: 1, whiteSpace: "nowrap" }}
             >
               <UploadIcon />
               {isSaving ? "Saving..." : "Save to server"}
