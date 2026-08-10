@@ -39,6 +39,9 @@ spark-warehouse
 # AI
 .aider*
 
+# Isolated worktrees used when several issues are implemented concurrently.
+/.claude/worktrees/
+
 #server
 server/.idea
 server/.mvn
