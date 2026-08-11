@@ -20,6 +20,7 @@ package au.csiro.pathling.operations.sql;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -35,6 +36,7 @@ import ca.uhn.fhir.rest.api.RequestTypeEnum;
 import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
+import ca.uhn.fhir.rest.server.exceptions.UnprocessableEntityException;
 import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -44,6 +46,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.apache.spark.sql.AnalysisException;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.InstantType;
@@ -432,7 +435,84 @@ class SqlRunProviderTest {
         .streamView(any(), any(), any(), anyBooleanValue(), any(), any());
   }
 
+  // ---------------------------------------------------------------------------
+  // Analysis failures.
+  // ---------------------------------------------------------------------------
+
+  // Spark's analyser is what catches an unresolved column, an unknown function or a missing GROUP
+  // BY, and those are faults in the subject's own SQL rather than in the server. The dataset is
+  // analysed before the streaming consumer writes a byte, so the failure is reported as a 422
+  // naming the subject, carrying Spark's own message so the caller can see what is wrong.
+  @Test
+  void reportsAnAnalysisFailureAgainstTheSubject() {
+    stubSubject(SubjectKind.SQL_QUERY);
+    stubExecuteToThrow(analysisException(UNRESOLVED_COLUMN_MESSAGE));
+
+    final BaseServerResponseException exception = catchServerException(() -> run(builder()));
+
+    assertThat(exception).isInstanceOf(UnprocessableEntityException.class);
+    assertThat(exception.getStatusCode()).isEqualTo(422);
+    assertIssue(exception, IssueType.INVALID, "subject");
+    assertThat(diagnosticsOf(exception))
+        .contains("UNRESOLVED_COLUMN")
+        .contains("no_such_col")
+        .contains("Did you mean");
+  }
+
+  // The translation is confined to analysis failures. Anything else raised by the query engine is
+  // an infrastructure fault, and must keep propagating untouched so that it still renders as a 500
+  // rather than being mislabelled as a fault in the caller's SQL.
+  @Test
+  void leavesANonAnalysisFailureUntranslated() {
+    stubSubject(SubjectKind.SQL_QUERY);
+    stubExecuteToThrow(new IllegalStateException("The warehouse is unreachable"));
+
+    assertThatThrownBy(() -> run(builder()))
+        .isInstanceOf(IllegalStateException.class)
+        .isNotInstanceOf(BaseServerResponseException.class)
+        .hasMessage("The warehouse is unreachable");
+  }
+
   // ---- helpers ----
+
+  /** A representative Spark analyser message, of the shape the caller is meant to receive. */
+  private static final String UNRESOLVED_COLUMN_MESSAGE =
+      "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name "
+          + "`no_such_col` cannot be resolved. Did you mean one of the following? [`id`, `gender`]."
+          + " SQLSTATE: 42703; line 1 pos 7;";
+
+  /**
+   * Builds a stand-in for Spark's analyser failure. {@code AnalysisException} is a Scala-declared
+   * checked exception whose constructors take Scala collections, so it is stubbed rather than
+   * constructed; the real thing is exercised end-to-end by {@link SqlRunProviderIT}.
+   */
+  @Nonnull
+  private static AnalysisException analysisException(@Nonnull final String message) {
+    final AnalysisException exception = mock(AnalysisException.class);
+    when(exception.getMessage()).thenReturn(message);
+    return exception;
+  }
+
+  /**
+   * Stubs the pipeline to fail during execution. An {@code Answer} is used rather than {@code
+   * doThrow}, since the failure is not declared on the method's signature.
+   */
+  private void stubExecuteToThrow(@Nonnull final Throwable failure) {
+    doAnswer(
+            invocation -> {
+              throw failure;
+            })
+        .when(pipeline)
+        .execute(any(), any(), any(), any());
+  }
+
+  /** Extracts the diagnostics of the exception's first outcome issue. */
+  @Nonnull
+  private static String diagnosticsOf(@Nonnull final BaseServerResponseException exception) {
+    final OperationOutcome outcome = (OperationOutcome) exception.getOperationOutcome();
+    assertThat(outcome).isNotNull();
+    return outcome.getIssueFirstRep().getDiagnostics();
+  }
 
   /** Matches any boolean argument, for the primitive parameter of streamView. */
   private static boolean anyBooleanValue() {

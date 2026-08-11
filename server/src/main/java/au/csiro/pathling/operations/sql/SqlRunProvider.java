@@ -271,11 +271,18 @@ public class SqlRunProvider {
     // may be reached through another supplied entry.
     supplied.checkAllMatched();
 
-    pipeline.execute(
-        prepared,
-        filteredSource(filters),
-        requestDetails.getRequestId(),
-        result -> streamer.stream(result, toSqlQueryOutputFormat(outputFormat), header, response));
+    try {
+      pipeline.execute(
+          prepared,
+          filteredSource(filters),
+          requestDetails.getRequestId(),
+          result ->
+              streamer.stream(result, toSqlQueryOutputFormat(outputFormat), header, response));
+    } catch (final Exception e) {
+      // The dataset is analysed inside execute() before the streaming consumer writes a byte, so an
+      // analysis failure is still free to decide the status.
+      throw SqlOperationError.executionFailure(e);
+    }
   }
 
   /** Applies the request's filters to the server's data source. */

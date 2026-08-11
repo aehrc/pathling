@@ -302,6 +302,64 @@ class SqlRunProviderIT {
         .contains(parameterName);
   }
 
+  // -------------------------------------------------------------------------
+  // Analysis failures.
+  // -------------------------------------------------------------------------
+
+  // A column that does not exist is a fault Spark's analyser catches, not one SqlValidator does.
+  // It is a conformant subject that cannot be processed, so it is a 422 naming the subject, and it
+  // carries Spark's own message - including the "did you mean" suggestions, which are what makes
+  // the failure actionable rather than opaque.
+  @Test
+  void reportsAnUnresolvedColumnAsAnUnprocessableSubject() {
+    final String body =
+        postExpectStatus(
+            inlineSqlQueryRequest("SELECT no_such_col FROM adh"), 422, "application/fhir+json");
+
+    assertThat(body)
+        .contains("\"code\":\"invalid\"")
+        .contains("\"subject\"")
+        .contains("UNRESOLVED_COLUMN")
+        .contains("no_such_col");
+    // The analyser's suggestions name the columns the subject's own dependency declares.
+    assertThat(body).contains("family_name");
+  }
+
+  // The unresolved reference is reported whatever wraps it, so a subquery the outer plan never
+  // reads from is still analysed rather than being optimised away into a success.
+  @Test
+  void reportsAnUnresolvedColumnInsideASubquery() {
+    final String body =
+        postExpectStatus(
+            inlineSqlQueryRequest("SELECT * FROM (SELECT no_such_col FROM adh) x LIMIT 0"),
+            422,
+            "application/fhir+json");
+
+    assertThat(body).contains("\"code\":\"invalid\"").contains("no_such_col");
+  }
+
+  // An unknown function name is deliberately left for Spark's analyser by SqlValidator, on the
+  // grounds that its message is more helpful than a synthetic rejection. That only holds if the
+  // message reaches the caller.
+  @Test
+  void reportsAnUnknownFunctionAsAnUnprocessableSubject() {
+    final String body =
+        postExpectStatus(
+            inlineSqlQueryRequest("SELECT no_such_fn(id) FROM adh"), 422, "application/fhir+json");
+
+    assertThat(body).contains("\"code\":\"invalid\"").contains("no_such_fn");
+  }
+
+  // The faults SqlValidator catches statically keep their existing status. Analysis translation
+  // must not pull a parameter-level rejection up or down into a different tier.
+  @Test
+  void leavesStaticallyDetectedFaultsAsBadRequests() {
+    // Malformed SQL, a table the subject never declared, and a disallowed operation.
+    postExpectStatus(inlineSqlQueryRequest("SELEKT id FROM adh"), 400, "application/fhir+json");
+    postExpectStatus(inlineSqlQueryRequest("SELECT x FROM nope"), 400, "application/fhir+json");
+    postExpectStatus(inlineSqlQueryRequest("DROP TABLE adh"), 400, "application/fhir+json");
+  }
+
   @Test
   void fhirFormatIsRejectedForAViewDefinitionSubject() {
     // The fhir format is not available to a ViewDefinition subject, whose result is a flat table.
@@ -313,6 +371,42 @@ class SqlRunProviderIT {
   // -------------------------------------------------------------------------
   // Helpers.
   // -------------------------------------------------------------------------
+
+  /** Builds a POST body carrying an inline SQLQuery Library over the ad-hoc view as its context. */
+  @Nonnull
+  private String inlineSqlQueryRequest(@Nonnull final String sql) {
+    final Map<String, Object> parameters = new LinkedHashMap<>();
+    parameters.put("resourceType", "Parameters");
+    parameters.put(
+        "parameter",
+        List.of(
+            resourceParameter(
+                "subjectResource",
+                jsonParser.encodeResourceToString(sqlQueryLibrary(sql, "adh", AD_HOC_VIEW_URL))),
+            resourceParameter("context", adHocViewJson()),
+            stringParameter("_format", SqlRunFormat.NDJSON.getCode())));
+    return GSON.toJson(parameters);
+  }
+
+  /** Issues a POST, asserts the given status code, and returns the body. */
+  @Nonnull
+  private String postExpectStatus(
+      @Nonnull final String body, final int status, @Nonnull final String accept) {
+    final byte[] content =
+        webTestClient
+            .post()
+            .uri("http://localhost:" + port + PATH)
+            .header("Content-Type", "application/fhir+json")
+            .header("Accept", accept)
+            .bodyValue(body)
+            .exchange()
+            .expectStatus()
+            .isEqualTo(status)
+            .expectBody()
+            .returnResult()
+            .getResponseBodyContent();
+    return new String(content == null ? new byte[0] : content, StandardCharsets.UTF_8);
+  }
 
   /** Serialises the ad-hoc Patient ViewDefinition, which is never stored on the server. */
   @Nonnull

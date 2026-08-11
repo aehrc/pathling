@@ -39,13 +39,19 @@ import au.csiro.pathling.operations.export.ExportManifestOutput;
 import au.csiro.pathling.operations.sqlquery.PreparedSqlQuery;
 import au.csiro.pathling.operations.sqlquery.SqlQueryPipeline;
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
+import ca.uhn.fhir.rest.server.exceptions.UnprocessableEntityException;
 import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
 import org.apache.hadoop.fs.Path;
+import org.apache.spark.sql.AnalysisException;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.hl7.fhir.r4.model.OperationOutcome;
+import org.hl7.fhir.r4.model.OperationOutcome.IssueType;
+import org.hl7.fhir.r4.model.StringType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -214,8 +220,48 @@ class SqlExportExecutorTest {
         .when(pipeline)
         .execute(any(), any(), any(), any());
 
+    // It also propagates untranslated: only an analysis failure is a fault in the subject, so an
+    // infrastructure fault must not be relabelled as one.
     assertThatThrownBy(() -> executor.execute(request(sqlSubject("only")), JOB_ID))
-        .isInstanceOf(IllegalStateException.class);
+        .isInstanceOf(IllegalStateException.class)
+        .isNotInstanceOf(BaseServerResponseException.class);
+  }
+
+  // A fault in the subject's own SQL is caught by Spark's analyser. It is reported as a 422 naming
+  // the subject and carrying Spark's message, which survives the asynchronous round-trip because
+  // JobProvider renders a failed job through the same converter as a synchronous request, and that
+  // converter passes a typed HAPI exception through unaltered.
+  @Test
+  void reportsAnAnalysisFailureAgainstTheSubject() {
+    final AnalysisException analysisError = mock(AnalysisException.class);
+    when(analysisError.getMessage())
+        .thenReturn(
+            "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with"
+                + " name `no_such_col` cannot be resolved. Did you mean one of the following?"
+                + " [`id`, `gender`]. SQLSTATE: 42703; line 1 pos 7;");
+    doAnswer(
+            invocation -> {
+              throw analysisError;
+            })
+        .when(pipeline)
+        .execute(any(), any(), any(), any());
+
+    assertThatThrownBy(() -> executor.execute(request(sqlSubject("only")), JOB_ID))
+        .isInstanceOf(UnprocessableEntityException.class)
+        .satisfies(
+            thrown -> {
+              final BaseServerResponseException e = (BaseServerResponseException) thrown;
+              assertThat(e.getStatusCode()).isEqualTo(422);
+              final OperationOutcome outcome = (OperationOutcome) e.getOperationOutcome();
+              assertThat(outcome).isNotNull();
+              assertThat(outcome.getIssueFirstRep().getCode()).isEqualTo(IssueType.INVALID);
+              assertThat(outcome.getIssueFirstRep().getExpression())
+                  .extracting(StringType::getValue)
+                  .containsExactly(SubjectResolver.SUBJECT_EXPRESSION);
+              assertThat(outcome.getIssueFirstRep().getDiagnostics())
+                  .contains("UNRESOLVED_COLUMN")
+                  .contains("no_such_col");
+            });
   }
 
   // ---- helpers ----

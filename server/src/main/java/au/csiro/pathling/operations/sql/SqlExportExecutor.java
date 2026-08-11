@@ -156,6 +156,8 @@ public class SqlExportExecutor {
       throw SqlOperationError.unprocessable(
           SubjectResolver.SUBJECT_EXPRESSION,
           "The subject '%s' is invalid: %s".formatted(subject.name(), e.getMessage()));
+    } catch (final Exception e) {
+      throw SqlOperationError.executionFailure(e);
     }
     return writeOutput(result, subject.name(), request, jobDirPath);
   }
@@ -169,11 +171,18 @@ public class SqlExportExecutor {
       @Nonnull final Path jobDirPath,
       @Nonnull final String requestId) {
     final AtomicReference<List<String>> fileUrls = new AtomicReference<>(List.of());
-    pipeline.execute(
-        Objects.requireNonNull(subject.preparedQuery()),
-        dataSource,
-        requestId,
-        result -> fileUrls.set(writeOutput(result, subject.name(), request, jobDirPath)));
+    try {
+      pipeline.execute(
+          Objects.requireNonNull(subject.preparedQuery()),
+          dataSource,
+          requestId,
+          result -> fileUrls.set(writeOutput(result, subject.name(), request, jobDirPath)));
+    } catch (final Exception e) {
+      // A 422 raised here survives the async round-trip: JobProvider renders a failed job through
+      // ErrorHandlingInterceptor.convertError, which passes a typed BaseServerResponseException
+      // through unaltered.
+      throw SqlOperationError.executionFailure(e);
+    }
     return fileUrls.get();
   }
 

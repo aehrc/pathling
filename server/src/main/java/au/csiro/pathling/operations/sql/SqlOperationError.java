@@ -17,6 +17,8 @@
 
 package au.csiro.pathling.operations.sql;
 
+import static java.util.Objects.requireNonNullElse;
+
 import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
@@ -24,6 +26,7 @@ import ca.uhn.fhir.rest.server.exceptions.UnprocessableEntityException;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.List;
+import org.apache.spark.sql.AnalysisException;
 import org.hl7.fhir.r4.model.OperationOutcome;
 import org.hl7.fhir.r4.model.OperationOutcome.IssueSeverity;
 import org.hl7.fhir.r4.model.OperationOutcome.IssueType;
@@ -95,6 +98,37 @@ public final class SqlOperationError {
     exception.setOperationOutcome(
         outcomeOf(List.of(issue(IssueType.INVALID, expression, message))));
     return exception;
+  }
+
+  /**
+   * Translates a failure raised while planning or running a subject's query.
+   *
+   * <p>A Spark {@link AnalysisException} is a fault in the subject itself - an unresolved column,
+   * an unknown function, a missing {@code GROUP BY}, an ambiguous reference - so it becomes a
+   * {@code 422} carrying Spark's own analyser message, which names the problem and often suggests
+   * the intended identifier. Analysis runs before execution, so that message cannot carry data
+   * values.
+   *
+   * <p>Any other failure is a server-side fault and is returned unaltered, so it continues to
+   * render as a {@code 500}. Runtime errors in particular are raised once the result is being
+   * consumed, where the response may already be committed and the status can no longer be
+   * rewritten.
+   *
+   * @param error the failure raised by the query engine
+   * @return the exception to throw
+   */
+  @Nonnull
+  public static RuntimeException executionFailure(@Nonnull final Exception error) {
+    // AnalysisException is declared in Scala as a checked exception that no signature on the call
+    // path declares, so it cannot be named in a catch clause and is matched by type instead.
+    if (error instanceof final AnalysisException analysisError) {
+      return unprocessable(
+          SubjectResolver.SUBJECT_EXPRESSION,
+          requireNonNullElse(analysisError.getMessage(), analysisError.toString()));
+    }
+    return error instanceof final RuntimeException runtimeError
+        ? runtimeError
+        : new RuntimeException(error);
   }
 
   /**
