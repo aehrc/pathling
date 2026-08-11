@@ -473,6 +473,40 @@ class SqlRunProviderTest {
         .hasMessage("The warehouse is unreachable");
   }
 
+  // getMessage appends the whole unresolved logical plan, which is unbounded, names the internal
+  // request-scoped views the dependency graph was materialised under, and tells the caller nothing
+  // they can act on. The analyser's own simple message is what is returned.
+  @Test
+  void omitsTheLogicalPlanFromTheReportedMessage() {
+    stubSubject(SubjectKind.SQL_QUERY);
+    final AnalysisException failure = analysisException(UNRESOLVED_COLUMN_MESSAGE);
+    when(failure.getMessage())
+        .thenReturn(
+            UNRESOLVED_COLUMN_MESSAGE
+                + "\n'Project ['no_such_col]\n+- SubqueryAlias sqlquery_rKo3ryQTTa2xoDQx_internal");
+    stubExecuteToThrow(failure);
+
+    final BaseServerResponseException exception = catchServerException(() -> run(builder()));
+
+    assertThat(diagnosticsOf(exception))
+        .isEqualTo(UNRESOLVED_COLUMN_MESSAGE)
+        .doesNotContain("SubqueryAlias")
+        .doesNotContain("sqlquery_rKo3ryQTTa2xoDQx_internal");
+  }
+
+  // The suggestion list is drawn from the subject's own columns, so a wide dependency can make even
+  // the simple message long. A response body is not the place for an unbounded string.
+  @Test
+  void boundsTheLengthOfTheReportedMessage() {
+    stubSubject(SubjectKind.SQL_QUERY);
+    stubExecuteToThrow(analysisException("[UNRESOLVED_COLUMN] ".concat("x".repeat(5000))));
+
+    final BaseServerResponseException exception = catchServerException(() -> run(builder()));
+
+    final String diagnostics = diagnosticsOf(exception);
+    assertThat(diagnostics).hasSize(1027).startsWith("[UNRESOLVED_COLUMN] ").endsWith("...");
+  }
+
   // ---- helpers ----
 
   /** A representative Spark analyser message, of the shape the caller is meant to receive. */
@@ -489,7 +523,7 @@ class SqlRunProviderTest {
   @Nonnull
   private static AnalysisException analysisException(@Nonnull final String message) {
     final AnalysisException exception = mock(AnalysisException.class);
-    when(exception.getMessage()).thenReturn(message);
+    when(exception.getSimpleMessage()).thenReturn(message);
     return exception;
   }
 

@@ -44,6 +44,9 @@ import org.hl7.fhir.r4.model.OperationOutcome.OperationOutcomeIssueComponent;
  */
 public final class SqlOperationError {
 
+  /** The longest analyser message returned to the caller, beyond which it is truncated. */
+  private static final int MAX_ANALYSER_MESSAGE_LENGTH = 1024;
+
   private SqlOperationError() {
     // Utility class.
   }
@@ -122,13 +125,27 @@ public final class SqlOperationError {
     // AnalysisException is declared in Scala as a checked exception that no signature on the call
     // path declares, so it cannot be named in a catch clause and is matched by type instead.
     if (error instanceof final AnalysisException analysisError) {
-      return unprocessable(
-          SubjectResolver.SUBJECT_EXPRESSION,
-          requireNonNullElse(analysisError.getMessage(), analysisError.toString()));
+      return unprocessable(SubjectResolver.SUBJECT_EXPRESSION, analyserMessage(analysisError));
     }
     return error instanceof final RuntimeException runtimeError
         ? runtimeError
         : new RuntimeException(error);
+  }
+
+  /**
+   * Renders an analyser failure for the wire. {@code getMessage} appends the whole unresolved
+   * logical plan, which is unbounded, names internal request-scoped views and says nothing the
+   * caller can act on; {@code getSimpleMessage} is the same condition, position and suggestions
+   * without it. The result is bounded as well, since a suggestion list is drawn from the subject's
+   * columns and a wide dependency makes it long.
+   */
+  @Nonnull
+  private static String analyserMessage(@Nonnull final AnalysisException error) {
+    final String message =
+        requireNonNullElse(error.getSimpleMessage(), requireNonNullElse(error.getMessage(), ""));
+    return message.length() <= MAX_ANALYSER_MESSAGE_LENGTH
+        ? message
+        : message.substring(0, MAX_ANALYSER_MESSAGE_LENGTH) + "...";
   }
 
   /**

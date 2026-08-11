@@ -234,7 +234,7 @@ class SqlExportExecutorTest {
   @Test
   void reportsAnAnalysisFailureAgainstTheSubject() {
     final AnalysisException analysisError = mock(AnalysisException.class);
-    when(analysisError.getMessage())
+    when(analysisError.getSimpleMessage())
         .thenReturn(
             "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with"
                 + " name `no_such_col` cannot be resolved. Did you mean one of the following?"

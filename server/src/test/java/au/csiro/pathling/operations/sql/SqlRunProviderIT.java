@@ -323,6 +323,9 @@ class SqlRunProviderIT {
         .contains("no_such_col");
     // The analyser's suggestions name the columns the subject's own dependency declares.
     assertThat(body).contains("family_name");
+    // Spark's getMessage would append the unresolved logical plan, naming the internal
+    // request-scoped views the dependency graph was materialised under. It is not returned.
+    assertThat(body).doesNotContain("SubqueryAlias").doesNotContain("Project [");
   }
 
   // The unresolved reference is reported whatever wraps it, so a subquery the outer plan never
