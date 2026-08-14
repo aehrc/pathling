@@ -738,6 +738,7 @@ public class TerminologyFunctionsDslTest extends FhirPathDslTestBase {
             sb ->
                 sb.quantity("mass", "10.5 'mg'")
                     .quantity("weight", "70 'kg'")
+                    .quantity("bulk", "500 'g'")
                     .quantity("distance", "30.5 'cm'")
                     .quantityArray("measurements", "10.5 'mg'", "70 'kg'")
                     .quantityEmpty("emptyQuantity")
@@ -796,6 +797,19 @@ public class TerminologyFunctionsDslTest extends FhirPathDslTestBase {
             List.of(true, true),
             "measurements.memberOf('" + massUnitsValueSet + "')",
             "memberOf() returns a result for each quantity within a collection")
+        .group("subsumes() function with Quantity")
+        .testTrue(
+            "bulk.subsumes(http://unitsofmeasure.org|mg)",
+            "subsumes() returns true for a quantity whose unit subsumes the argument")
+        .testFalse(
+            "distance.subsumes(http://unitsofmeasure.org|mg)",
+            "subsumes() returns false for a quantity whose unit does not subsume the argument")
+        .testEmpty(
+            "emptyQuantity.subsumes(http://unitsofmeasure.org|mg)",
+            "subsumes() returns empty for an empty quantity")
+        .testTrue(
+            "bulk.subsumes(mass)",
+            "subsumes() accepts a quantity as the argument as well as the input")
         .group("subsumedBy() function with Quantity")
         .testTrue(
             "mass.subsumedBy(http://unitsofmeasure.org|g)",
