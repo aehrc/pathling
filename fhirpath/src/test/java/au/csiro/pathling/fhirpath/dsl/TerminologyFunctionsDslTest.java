@@ -20,7 +20,9 @@ package au.csiro.pathling.fhirpath.dsl;
 import static au.csiro.pathling.test.yaml.FhirTypedLiteral.toCoding;
 import static au.csiro.pathling.test.yaml.FhirTypedLiteral.toInteger;
 import static org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType.CODEABLECONCEPT;
+import static org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType.QUANTITY;
 
+import au.csiro.pathling.fhirpath.unit.UcumUnit;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.test.SharedMocks;
 import au.csiro.pathling.test.dsl.FhirPathDslTestBase;
@@ -683,6 +685,124 @@ public class TerminologyFunctionsDslTest extends FhirPathDslTestBase {
         .testError(
             "loinc.translate('" + conceptMap1 + "', false, 'equivalent', 'target', 'extra')",
             "translate() throws an error when called with more than four parameters")
+        .build();
+  }
+
+  @FhirPathTest
+  public Stream<DynamicTest> testTerminologyFunctionsWithQuantity() {
+    // Reset mocks and setup terminology service expectations
+    SharedMocks.resetAll();
+
+    // Create the codings that identify the units of the quantities under test.
+    final Coding milligrams = new Coding(UcumUnit.UCUM_SYSTEM_URI, "mg", "mg");
+    final Coding kilograms = new Coding(UcumUnit.UCUM_SYSTEM_URI, "kg", "kg");
+
+    // Create the codings that the units translate to.
+    final Coding localMilligrams = new Coding("http://example.org/units", "MILLIGRAM", "Milligram");
+    final Coding localKilograms = new Coding("http://example.org/units", "KILOGRAM", "Kilogram");
+
+    // Create a unit that subsumes another unit. Subsumption is decided by the terminology server,
+    // and is only tested between codings of the same system, so this relationship is a fiction of
+    // the mock that exists to exercise the conversion.
+    final Coding grams = new Coding(UcumUnit.UCUM_SYSTEM_URI, "g", "g");
+
+    // Define the concept map and value set URLs.
+    final String unitMap = "http://example.org/fhir/ConceptMap/ucum-to-local";
+    final String massUnitsValueSet = "http://example.org/fhir/ValueSet/mass-units";
+
+    TerminologyServiceHelpers.setupTranslate(terminologyService)
+        .withTranslations(
+            milligrams,
+            unitMap,
+            false,
+            TerminologyService.Translation.of(ConceptMapEquivalence.EQUIVALENT, localMilligrams))
+        .withTranslations(
+            kilograms,
+            unitMap,
+            false,
+            TerminologyService.Translation.of(ConceptMapEquivalence.EQUIVALENT, localKilograms))
+        // Reverse translation, from a local unit back to the UCUM unit.
+        .withTranslations(
+            localMilligrams,
+            unitMap,
+            true,
+            TerminologyService.Translation.of(ConceptMapEquivalence.EQUIVALENT, milligrams));
+
+    TerminologyServiceHelpers.setupValidate(terminologyService)
+        .withValueSet(massUnitsValueSet, milligrams, kilograms);
+
+    TerminologyServiceHelpers.setupSubsumes(terminologyService).withSubsumes(grams, milligrams);
+
+    return builder()
+        .withSubject(
+            sb ->
+                sb.quantity("mass", "10.5 'mg'")
+                    .quantity("weight", "70 'kg'")
+                    .quantity("distance", "30.5 'cm'")
+                    .quantityArray("measurements", "10.5 'mg'", "70 'kg'")
+                    .quantityEmpty("emptyQuantity")
+                    // A quantity carrying a free-text unit, without a coded unit.
+                    .element(
+                        "freeTextQuantity",
+                        quantity ->
+                            quantity
+                                .fhirType(QUANTITY)
+                                .decimal("value", 10.0)
+                                .string("unit", "widgets")
+                                .stringEmpty("system")
+                                .stringEmpty("code"))
+                    .coding("localMilligrams", "http://example.org/units|MILLIGRAM||'Milligram'"))
+        .group("translate() function with Quantity")
+        .testEquals(
+            toCoding("http://example.org/units|MILLIGRAM||'Milligram'"),
+            "mass.translate('" + unitMap + "')",
+            "translate() returns the translation of the coded unit of a quantity")
+        .testEquals(
+            toCoding("http://example.org/units|KILOGRAM||'Kilogram'"),
+            "weight.translate('" + unitMap + "')",
+            "translate() returns the translation of the coded unit of another quantity")
+        .testEmpty(
+            "distance.translate('" + unitMap + "')",
+            "translate() returns empty for a quantity with an untranslatable unit")
+        .testEmpty(
+            "emptyQuantity.translate('" + unitMap + "')",
+            "translate() returns empty for an empty quantity")
+        .testEmpty(
+            "freeTextQuantity.translate('" + unitMap + "')",
+            "translate() returns empty for a quantity with a free-text unit")
+        .group("translate() function with collections of Quantities")
+        .testEquals(
+            List.of(
+                toCoding("http://example.org/units|MILLIGRAM||'Milligram'"),
+                toCoding("http://example.org/units|KILOGRAM||'Kilogram'")),
+            "measurements.translate('" + unitMap + "')",
+            "translate() returns translations for a collection of quantities")
+        .group("translate() function with Quantity and the reverse parameter")
+        .testEquals(
+            toCoding(UcumUnit.UCUM_SYSTEM_URI + "|mg||'mg'"),
+            "localMilligrams.translate('" + unitMap + "', true)",
+            "translate() with reverse=true returns the UCUM unit for a local unit")
+        .group("memberOf() function with Quantity")
+        .testTrue(
+            "mass.memberOf('" + massUnitsValueSet + "')",
+            "memberOf() returns true for a quantity whose unit is in the value set")
+        .testFalse(
+            "distance.memberOf('" + massUnitsValueSet + "')",
+            "memberOf() returns false for a quantity whose unit is not in the value set")
+        .testEmpty(
+            "emptyQuantity.memberOf('" + massUnitsValueSet + "')",
+            "memberOf() returns empty for an empty quantity")
+        .testEquals(
+            List.of(true, true),
+            "measurements.memberOf('" + massUnitsValueSet + "')",
+            "memberOf() returns a result for each quantity within a collection")
+        .group("subsumedBy() function with Quantity")
+        .testTrue(
+            "mass.subsumedBy(http://unitsofmeasure.org|g)",
+            "subsumedBy() returns true for a quantity whose unit is subsumed by the argument")
+        .testFalse(
+            "distance.subsumedBy(http://unitsofmeasure.org|g)",
+            "subsumedBy() returns false for a quantity whose unit is not subsumed by the argument")
         .build();
   }
 
