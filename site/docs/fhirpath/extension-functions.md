@@ -147,11 +147,16 @@ currently unique to the Pathling implementation.
 ## translate
 
 ```
-collection<Coding|CodeableConcept> -> translate(conceptMapUrl: String, reverse: Boolean = false, equivalence: String = 'equivalent', target?: String) : collection<Coding>
+collection<Coding|CodeableConcept|Quantity> -> translate(conceptMapUrl: String, reverse: Boolean = false, equivalence: String = 'equivalent', target?: String) : collection<Coding>
 ```
 
 When invoked on a [Coding](#coding), returns any
 matching concepts using the ConceptMap specified using `conceptMapUrl`.
+
+When invoked on a
+[Quantity](https://hl7.org/fhir/R4/datatypes.html#Quantity), the coded unit is
+translated &mdash; see
+[Quantity as a concept](fhir-functions.md#quantity-as-a-concept).
 
 The `reverse` parameter controls the direction to traverse the map - `false`
 results in "source to target" mappings, while `true` results in "target to

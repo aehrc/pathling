@@ -17,11 +17,15 @@
 
 package au.csiro.pathling.fhirpath.collection;
 
+import static org.apache.spark.sql.functions.lit;
+import static org.apache.spark.sql.functions.struct;
+
 import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
 import au.csiro.pathling.fhirpath.FhirPathQuantity;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.StringCoercible;
+import au.csiro.pathling.fhirpath.TerminologyConcepts;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.column.QuantityValue;
@@ -32,6 +36,7 @@ import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.definition.defaults.DefaultCompositeDefinition;
 import au.csiro.pathling.fhirpath.definition.defaults.DefaultPrimitiveDefinition;
+import au.csiro.pathling.fhirpath.encoding.CodingSchema;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import au.csiro.pathling.sql.misc.QuantityToLiteral;
 import jakarta.annotation.Nonnull;
@@ -39,6 +44,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
 import org.apache.spark.sql.Column;
+import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
@@ -147,6 +153,50 @@ public class QuantityCollection extends Collection implements Comparable, String
     // by using UCUM '1' unit.
     return QuantityCollection.build(
         columnRepresentation.transform(QuantityEncoding::encodeNumeric), Optional.empty());
+  }
+
+  /**
+   * Projects a Coding structure from the coded unit of a single quantity value.
+   *
+   * <p>The unit name is carried across as the display, as it is the human-readable rendering of the
+   * unit in the same way that a display is the human-readable rendering of a code. The original
+   * code is used rather than the canonicalised one, as a ConceptMap is authored against the codes
+   * that appear within the data.
+   *
+   * <p>The result is cast to the canonical Coding schema, as the terminology UDFs decode the
+   * structure using positional indices into that schema.
+   *
+   * @param quantity The column containing a single quantity value
+   * @return A column containing a Coding structure
+   */
+  @Nonnull
+  private static Column toCoding(@Nonnull final Column quantity) {
+    return struct(
+            lit(null).cast(DataTypes.StringType).as(CodingSchema.ID_FIELD),
+            quantity.getField(QuantityEncoding.SYSTEM_COLUMN).as(CodingSchema.SYSTEM_FIELD),
+            lit(null).cast(DataTypes.StringType).as(CodingSchema.VERSION_FIELD),
+            quantity.getField(QuantityEncoding.CODE_COLUMN).as(CodingSchema.CODE_FIELD),
+            quantity.getField(QuantityEncoding.UNIT_COLUMN).as(CodingSchema.DISPLAY_FIELD),
+            lit(null).cast(DataTypes.BooleanType).as(CodingSchema.USER_SELECTED_FIELD),
+            lit(null).cast(DataTypes.IntegerType).as(CodingSchema.FID_FIELD))
+        .cast(CodingSchema.DATA_TYPE);
+  }
+
+  /**
+   * A quantity identifies a concept through its coded unit, so it can be used as the input to the
+   * terminology functions that operate upon concepts. Each quantity carries a single concept, and
+   * so the result is a set of independent concepts rather than a union.
+   *
+   * <p>Quantities that carry a free-text unit without a system and code yield a Coding that the
+   * terminology functions treat as invalid, and which is excluded from the operation.
+   *
+   * @return A {@link TerminologyConcepts} representation of this collection
+   */
+  @Nonnull
+  @Override
+  public Optional<TerminologyConcepts> toConcepts() {
+    final ColumnRepresentation codings = getColumn().transform(QuantityCollection::toCoding);
+    return Optional.of(TerminologyConcepts.set(codings, CodingCollection.build(codings)));
   }
 
   /**
