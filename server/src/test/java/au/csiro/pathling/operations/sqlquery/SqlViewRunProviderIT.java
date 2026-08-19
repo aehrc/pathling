@@ -233,6 +233,96 @@ class SqlViewRunProviderIT {
     assertThat(body).containsIgnoringCase("cycl");
   }
 
+  // -------------------------------------------------------------------------
+  // 422 for Spark analysis failures inside a SQLView dependency (US3, FR-002)
+  // -------------------------------------------------------------------------
+
+  @Test
+  void analysisFailureInSqlViewDependencyNamesTheDependency() {
+    // The submitted SQL is well-formed; the failure is inside the stored SQLView's own SQL, which
+    // selects a column its child ViewDefinition does not project. The diagnostics must name the
+    // failing dependency by canonical key so the client knows the mistake is not in the SQL it
+    // just wrote.
+    final String canonicalKey =
+        SqlViewTestConfiguration.libraryUrl(SqlViewTestConfiguration.BROKEN_PATIENTS_ID);
+    final Library library = sqlQueryLibrary("SELECT id FROM bp", "bp", canonicalKey);
+
+    final String diagnostics = assertAnalysisFailure(parametersJson(library));
+    assertThat(diagnostics)
+        .startsWith("SQL analysis failed for dependency '" + canonicalKey + "': ")
+        .contains("UNRESOLVED_COLUMN");
+  }
+
+  @Test
+  void analysisFailureInTopLevelSqlCarriesNoDependencyClause() {
+    // The dependency materialises cleanly and the failure is in the submitted SQL, so the plain
+    // top-level prefix is used with no dependency clause.
+    final Library library =
+        sqlQueryLibrary(
+            "SELECT no_such_col FROM ap",
+            "ap",
+            SqlViewTestConfiguration.libraryUrl(SqlViewTestConfiguration.ACTIVE_PATIENTS_ID));
+
+    final String diagnostics = assertAnalysisFailure(parametersJson(library));
+    assertThat(diagnostics)
+        .startsWith("SQL analysis failed: ")
+        .contains("UNRESOLVED_COLUMN")
+        .doesNotContain("for dependency");
+  }
+
+  /**
+   * Posts a {@code $sqlquery-run} request expected to fail Spark analysis, asserts the whole 422
+   * contract, and returns the diagnostics so the caller can assert on the failing-node prefix and
+   * the analyser message.
+   */
+  @Nonnull
+  private String assertAnalysisFailure(@Nonnull final String body) {
+    final Map<String, Object> outcome = postExpectingStatus(body, 422);
+    assertThat(outcome.get("resourceType")).isEqualTo("OperationOutcome");
+    final List<Map<String, Object>> issues = issuesOf(outcome);
+    assertThat(issues).hasSize(1);
+    final Map<String, Object> issue = issues.get(0);
+    assertThat(issue.get("severity")).isEqualTo("error");
+    assertThat(issue.get("code")).isEqualTo("invalid");
+    // The faulting element is the SQL text rather than a request parameter, so no expression is
+    // reported.
+    assertThat(issue).doesNotContainKey("expression");
+    final String diagnostics = (String) issue.get("diagnostics");
+    log.debug("Analysis failure diagnostics: {}", diagnostics);
+    return diagnostics;
+  }
+
+  /**
+   * Posts a request body and asserts the given status, returning the parsed response body. The
+   * {@code Accept} header requests FHIR JSON so an error surfaces as an OperationOutcome.
+   */
+  @Nonnull
+  @SuppressWarnings("unchecked")
+  private Map<String, Object> postExpectingStatus(@Nonnull final String body, final int status) {
+    final byte[] content =
+        webTestClient
+            .post()
+            .uri("http://localhost:" + port + "/fhir/$sqlquery-run")
+            .header("Content-Type", "application/fhir+json")
+            .header("Accept", "application/fhir+json")
+            .bodyValue(body)
+            .exchange()
+            .expectStatus()
+            .isEqualTo(status)
+            .expectBody()
+            .returnResult()
+            .getResponseBodyContent();
+    return GSON.fromJson(
+        new String(Objects.requireNonNull(content), StandardCharsets.UTF_8), Map.class);
+  }
+
+  /** Extracts the issue list from a parsed OperationOutcome body. */
+  @Nonnull
+  @SuppressWarnings("unchecked")
+  private static List<Map<String, Object>> issuesOf(@Nonnull final Map<String, Object> outcome) {
+    return (List<Map<String, Object>>) outcome.get("issue");
+  }
+
   @Nonnull
   private String postExpect4xx(@Nonnull final String body) {
     final EntityExchangeResult<byte[]> result =

@@ -75,6 +75,15 @@ class SqlQueryRunProviderIT {
   private static final String SELF_CONTAINED_SQL =
       "SELECT * FROM (VALUES (1, 'alice'), (2, 'bob')) AS t(id, name)";
 
+  /**
+   * A self-contained inline table standing in for the declared dependency {@code t} of
+   * contracts/error-response.md, with an integer {@code id} column and a string {@code name}
+   * column. Using an inline table keeps these cases independent of registered ViewDefinitions, in
+   * keeping with the rest of this class; the equivalent path through a registered ViewDefinition is
+   * covered by {@link SqlQueryRunWithViewDefinitionsIT}.
+   */
+  private static final String INLINE_TABLE = "(VALUES (1, 'alice'), (2, 'bob')) AS t(id, name)";
+
   @LocalServerPort int port;
 
   @Autowired WebTestClient webTestClient;
@@ -359,6 +368,7 @@ class SqlQueryRunProviderIT {
   // -------------------------------------------------------------------------
 
   @Test
+  @SuppressWarnings("unchecked")
   void fhirFormatWithUnmappableColumnTypeReturns422() {
     // _format=fhir requires every column to map to a FHIR value; an array column cannot, so the
     // shared streaming helper rejects it up front with 422 before any bytes are written. This
@@ -379,15 +389,31 @@ class SqlQueryRunProviderIT {
     parameters.put("parameter", List.of(queryResourceParam, formatParam));
     final String body = GSON.toJson(parameters);
 
-    webTestClient
-        .post()
-        .uri("http://localhost:" + port + "/fhir/$sqlquery-run")
-        .header("Content-Type", "application/fhir+json")
-        .header("Accept", "application/fhir+json")
-        .bodyValue(body)
-        .exchange()
-        .expectStatus()
-        .isEqualTo(422);
+    final byte[] content =
+        webTestClient
+            .post()
+            .uri("http://localhost:" + port + "/fhir/$sqlquery-run")
+            .header("Content-Type", "application/fhir+json")
+            .header("Accept", "application/fhir+json")
+            .bodyValue(body)
+            .exchange()
+            .expectStatus()
+            .isEqualTo(422)
+            .expectBody()
+            .returnResult()
+            .getResponseBodyContent();
+
+    // This 422 predates, and is unrelated to, the Spark analysis-failure 422: it must keep its own
+    // diagnostics and must not be reclassified as an analysis failure.
+    final Map<String, Object> outcome =
+        GSON.fromJson(
+            new String(Objects.requireNonNull(content), StandardCharsets.UTF_8), Map.class);
+    final String diagnostics = (String) issuesOf(outcome).get(0).get("diagnostics");
+    assertThat(diagnostics)
+        .isEqualTo(
+            "Column 'arr' of type array<int> cannot be expressed as a FHIR primitive; use a"
+                + " different _format")
+        .doesNotContain("SQL analysis failed");
 
     // The same query in a flat format (NDJSON) succeeds.
     final Map<String, Object> ndjsonParameters = new LinkedHashMap<>();
@@ -401,6 +427,162 @@ class SqlQueryRunProviderIT {
     ndjsonParameters.put("parameter", List.of(ndjsonQueryParam));
 
     postOk("/fhir/$sqlquery-run", GSON.toJson(ndjsonParameters), SqlQueryOutputFormat.NDJSON);
+  }
+
+  // -------------------------------------------------------------------------
+  // 422 for Spark analysis failures (US1, FR-001/FR-003)
+  // -------------------------------------------------------------------------
+
+  @Test
+  void unresolvedColumnReturns422() {
+    final String diagnostics =
+        assertAnalysisFailure("SELECT no_such_col FROM " + INLINE_TABLE, "UNRESOLVED_COLUMN");
+    // Spark's column suggestions are part of the raw analyser message and are passed through
+    // verbatim, so the client can see which columns were actually available.
+    assertThat(diagnostics).contains("Did you mean one of the following? [`id`, `name`]");
+  }
+
+  @Test
+  void unresolvedColumnInsideSubqueryReturns422() {
+    // The analyser fails on the inner query even though the outer query is well-formed and the row
+    // limit is zero, so no rows are ever produced.
+    assertAnalysisFailure(
+        "SELECT * FROM (SELECT no_such_col FROM " + INLINE_TABLE + ") x LIMIT 0",
+        "UNRESOLVED_COLUMN");
+  }
+
+  @Test
+  void unknownFunctionReturns422() {
+    // Static validation deliberately lets an unknown function name through so that Spark's own
+    // "cannot resolve routine" message reaches the client.
+    assertAnalysisFailure("SELECT no_such_fn(id) FROM " + INLINE_TABLE, "UNRESOLVED_ROUTINE");
+  }
+
+  @Test
+  void groupByUnresolvedColumnReturns422() {
+    assertAnalysisFailure(
+        "SELECT id FROM " + INLINE_TABLE + " GROUP BY nonexistent", "UNRESOLVED_COLUMN");
+  }
+
+  @Test
+  void aggregateWithoutGroupByReturns422() {
+    assertAnalysisFailure("SELECT id, count(*) FROM " + INLINE_TABLE, "MISSING_GROUP_BY");
+  }
+
+  @Test
+  void ambiguousReferenceReturns422() {
+    assertAnalysisFailure(
+        "SELECT id FROM (VALUES (1)) AS a(id), (VALUES (1)) AS b(id)", "AMBIGUOUS_REFERENCE");
+  }
+
+  @Test
+  void subscriptOnScalarColumnReturns422() {
+    // Subscripting an integer column is the datatype fault named in the issue's reproduction
+    // matrix; Spark reports it as an invalid extract base type.
+    assertAnalysisFailure("SELECT id[1] FROM " + INLINE_TABLE, "INVALID_EXTRACT_BASE_FIELD_TYPE");
+  }
+
+  @Test
+  void datatypeMismatchReturns422() {
+    // A built-in function applied to the wrong column type, which Spark reports under its own
+    // DATATYPE_MISMATCH error class rather than as an unresolved reference.
+    assertAnalysisFailure("SELECT array_contains(id, 1) FROM " + INLINE_TABLE, "DATATYPE_MISMATCH");
+  }
+
+  // -------------------------------------------------------------------------
+  // Boundary rows that must not be reclassified (US1, FR-005/FR-006)
+  // -------------------------------------------------------------------------
+
+  @Test
+  void divisionByZeroStaysAs500() {
+    // A runtime arithmetic fault fires in the terminal consumer, after analysis has succeeded, so
+    // it remains a 500 rather than being reclassified as a client SQL mistake.
+    postSqlExpectStatus("SELECT 1/0 FROM " + INLINE_TABLE, 500);
+  }
+
+  @Test
+  void syntaxErrorStaysAs400() {
+    postSqlExpectStatus("SELEKT id FROM " + INLINE_TABLE, 400);
+  }
+
+  @Test
+  void undeclaredTableStaysAs400() {
+    postSqlExpectStatus("SELECT x FROM nope", 400);
+  }
+
+  @Test
+  void disallowedOperationStaysAs400() {
+    postSqlExpectStatus("DROP TABLE t", 400);
+  }
+
+  /**
+   * Posts a {@code $sqlquery-run} request carrying SQL that fails Spark analysis, asserts the whole
+   * 422 contract, and returns the diagnostics so the caller can make further assertions about the
+   * analyser message.
+   */
+  @Nonnull
+  private String assertAnalysisFailure(
+      @Nonnull final String sql, @Nonnull final String sparkErrorClass) {
+    final Map<String, Object> outcome = postSqlExpectingStatus(sql, 422);
+    assertThat(outcome.get("resourceType")).isEqualTo("OperationOutcome");
+    final List<Map<String, Object>> issues = issuesOf(outcome);
+    assertThat(issues).hasSize(1);
+    final Map<String, Object> issue = issues.get(0);
+    assertThat(issue.get("severity")).isEqualTo("error");
+    assertThat(issue.get("code")).isEqualTo("invalid");
+    // The faulting element is the SQL text rather than a request parameter, so no expression is
+    // reported.
+    assertThat(issue).doesNotContainKey("expression");
+    final String diagnostics = (String) issue.get("diagnostics");
+    log.debug("Analysis failure diagnostics: {}", diagnostics);
+    assertThat(diagnostics).startsWith("SQL analysis failed: ").contains(sparkErrorClass);
+    return diagnostics;
+  }
+
+  /**
+   * Posts a {@code $sqlquery-run} request carrying the given SQL, asserts the given status, and
+   * returns the parsed response body. The {@code Accept} header requests FHIR JSON so the error
+   * body is serialised as an OperationOutcome, while {@code _format} keeps the success format
+   * NDJSON.
+   */
+  @Nonnull
+  @SuppressWarnings("unchecked")
+  private Map<String, Object> postSqlExpectingStatus(@Nonnull final String sql, final int status) {
+    final byte[] content =
+        webTestClient
+            .post()
+            .uri("http://localhost:" + port + "/fhir/$sqlquery-run")
+            .header("Content-Type", "application/fhir+json")
+            .header("Accept", "application/fhir+json")
+            .bodyValue(parametersJson(sqlQueryLibrary(sql), SqlQueryOutputFormat.NDJSON))
+            .exchange()
+            .expectStatus()
+            .isEqualTo(status)
+            .expectBody()
+            .returnResult()
+            .getResponseBodyContent();
+    return GSON.fromJson(
+        new String(Objects.requireNonNull(content), StandardCharsets.UTF_8), Map.class);
+  }
+
+  /** Posts a {@code $sqlquery-run} request carrying the given SQL and asserts the given status. */
+  private void postSqlExpectStatus(@Nonnull final String sql, final int status) {
+    webTestClient
+        .post()
+        .uri("http://localhost:" + port + "/fhir/$sqlquery-run")
+        .header("Content-Type", "application/fhir+json")
+        .header("Accept", "application/fhir+json")
+        .bodyValue(parametersJson(sqlQueryLibrary(sql), SqlQueryOutputFormat.NDJSON))
+        .exchange()
+        .expectStatus()
+        .isEqualTo(status);
+  }
+
+  /** Extracts the issue list from a parsed OperationOutcome body. */
+  @Nonnull
+  @SuppressWarnings("unchecked")
+  private static List<Map<String, Object>> issuesOf(@Nonnull final Map<String, Object> outcome) {
+    return (List<Map<String, Object>>) outcome.get("issue");
   }
 
   /** Issues a GET and asserts the given status code. */

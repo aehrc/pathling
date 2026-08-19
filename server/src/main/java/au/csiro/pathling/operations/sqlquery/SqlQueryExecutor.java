@@ -21,15 +21,21 @@ import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.config.SqlQueryConfiguration;
 import au.csiro.pathling.io.source.DataSource;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
+import ca.uhn.fhir.rest.server.exceptions.UnprocessableEntityException;
 import jakarta.annotation.Nonnull;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.spark.sql.AnalysisException;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.hl7.fhir.r4.model.OperationOutcome;
+import org.hl7.fhir.r4.model.OperationOutcome.IssueSeverity;
+import org.hl7.fhir.r4.model.OperationOutcome.IssueType;
+import org.hl7.fhir.r4.model.OperationOutcome.OperationOutcomeIssueComponent;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -43,6 +49,10 @@ import org.springframework.stereotype.Component;
  * already-materialised children, validated, and run. The top-level SQL is then rewritten against
  * its own direct dependencies' temp views and run. Every node's SQL is validated statically before
  * execution and against its analysed plan during execution.
+ *
+ * <p>A failure raised by Spark's analyser while analysing the user's SQL is a client mistake rather
+ * than a server fault, so it is translated into a {@code 422 Unprocessable Entity} carrying the
+ * analyser message; see {@link #analysisFailure(String)}.
  *
  * @author John Grimes
  */
@@ -142,14 +152,28 @@ public class SqlQueryExecutor {
       final String rewrittenSql =
           viewRegistrationService.rewriteSql(request.getParsedQuery().getSql(), topLevelViews);
 
-      Dataset<Row> result = runSql(rewrittenSql, request.getParameterBindings());
+      final Dataset<Row> analysed;
+      try {
+        analysed = runSql(rewrittenSql, request.getParameterBindings());
+        sqlValidator.validateAnalyzed(
+            analysed.queryExecution().analyzed(), Set.copyOf(topLevelViews.values()));
+      } catch (final Exception e) {
+        // Spark analyses eagerly, so a mistake in the user's SQL surfaces here as an
+        // AnalysisException. Scala-compiled methods declare no checked exceptions, so
+        // AnalysisException cannot be named in a catch clause around sparkSession.sql; the same
+        // pattern is used in ExportFileWriter.
+        if (e instanceof final AnalysisException analysisException) {
+          throw analysisFailure("SQL analysis failed: " + analysisException.getMessage());
+        }
+        if (e instanceof final RuntimeException runtimeException) {
+          throw runtimeException;
+        }
+        throw new RuntimeException(e);
+      }
 
-      sqlValidator.validateAnalyzed(
-          result.queryExecution().analyzed(), Set.copyOf(topLevelViews.values()));
-
-      result = result.limit(effectiveLimit(request.getLimit(), requestId));
-
-      consumer.accept(result);
+      // The terminal consumer sits outside the wrapped region: a failure while streaming or
+      // writing the result is an execution fault, not a client SQL mistake, and keeps its 500.
+      consumer.accept(analysed.limit(effectiveLimit(request.getLimit(), requestId)));
     } catch (final RuntimeException e) {
       if (watch.timedOut()) {
         throw new InvalidRequestException(
@@ -167,8 +191,7 @@ public class SqlQueryExecutor {
 
   /**
    * Materialises a single graph node as a request-scoped temp view, recording its name by canonical
-   * key. A {@code SQLView} node's analysed plan is validated against its own children's temp views
-   * before registration, so it cannot reach an unauthorised data source.
+   * key.
    */
   private void materialiseNode(
       @Nonnull final ResolvedDependency node,
@@ -179,11 +202,7 @@ public class SqlQueryExecutor {
     if (node instanceof final ResolvedViewDefinition viewDefinition) {
       dataset = viewRegistrationService.buildViewDefinition(viewDefinition.getView(), dataSource);
     } else if (node instanceof final ResolvedSqlView sqlView) {
-      dataset = viewRegistrationService.buildSqlView(sqlView, registeredByKey);
-      final Set<String> childViewNames =
-          Set.copyOf(
-              resolveLabelToViewName(sqlView.getChildKeysByLabel(), registeredByKey).values());
-      sqlValidator.validateAnalyzed(dataset.queryExecution().analyzed(), childViewNames);
+      dataset = materialiseSqlView(sqlView, registeredByKey);
     } else {
       throw new InvalidRequestException(
           "Unsupported dependency node type: " + node.getClass().getSimpleName());
@@ -193,6 +212,41 @@ public class SqlQueryExecutor {
     registeredByKey.put(node.getCanonicalKey(), tempViewName);
     log.debug(
         "Materialised temp view '{}' for dependency '{}'", tempViewName, node.getCanonicalKey());
+  }
+
+  /**
+   * Builds the dataset for a {@code SQLView} node from its own SQL, rewritten against the temp
+   * views of its already-materialised children. The node's analysed plan is validated against those
+   * temp views before it is returned, so it cannot reach an unauthorised data source.
+   *
+   * <p>The node's SQL is the user's, so an analysis failure here is a client mistake and is
+   * translated into the same 422 as a top-level failure, with the failing dependency named so the
+   * client knows it is not the SQL it just submitted that is at fault.
+   */
+  @Nonnull
+  private Dataset<Row> materialiseSqlView(
+      @Nonnull final ResolvedSqlView sqlView, @Nonnull final Map<String, String> registeredByKey) {
+    try {
+      final Dataset<Row> dataset = viewRegistrationService.buildSqlView(sqlView, registeredByKey);
+      final Set<String> childViewNames =
+          Set.copyOf(
+              resolveLabelToViewName(sqlView.getChildKeysByLabel(), registeredByKey).values());
+      sqlValidator.validateAnalyzed(dataset.queryExecution().analyzed(), childViewNames);
+      return dataset;
+    } catch (final Exception e) {
+      // The catch clause cannot name AnalysisException, for the reason given in execute.
+      if (e instanceof final AnalysisException analysisException) {
+        throw analysisFailure(
+            "SQL analysis failed for dependency '"
+                + sqlView.getCanonicalKey()
+                + "': "
+                + analysisException.getMessage());
+      }
+      if (e instanceof final RuntimeException runtimeException) {
+        throw runtimeException;
+      }
+      throw new RuntimeException(e);
+    }
   }
 
   /**
@@ -239,6 +293,32 @@ public class SqlQueryExecutor {
       return cap;
     }
     return callerLimit;
+  }
+
+  /**
+   * Builds the {@code 422 Unprocessable Entity} response for a Spark analysis failure. Spark's own
+   * analyser message is the most useful thing the client can be told, so it is carried through as
+   * the diagnostics of a single issue with {@code code = invalid}: the SQL is well-formed but
+   * cannot be processed as submitted. No {@code expression} is set, because the faulting element is
+   * the SQL text rather than a request parameter.
+   *
+   * <p>The outcome is built by hand rather than left to HAPI, whose default outcome for this
+   * exception uses {@code code = processing} and so does not distinguish a client mistake from a
+   * processing fault.
+   *
+   * @param diagnostics the diagnostics message, already prefixed with the identity of the failing
+   *     node
+   * @return the exception to throw
+   */
+  @Nonnull
+  static UnprocessableEntityException analysisFailure(@Nonnull final String diagnostics) {
+    final OperationOutcome outcome = new OperationOutcome();
+    final OperationOutcomeIssueComponent issue = new OperationOutcomeIssueComponent();
+    issue.setSeverity(IssueSeverity.ERROR);
+    issue.setCode(IssueType.INVALID);
+    issue.setDiagnostics(diagnostics);
+    outcome.addIssue(issue);
+    return new UnprocessableEntityException(diagnostics, outcome);
   }
 
   @Nonnull

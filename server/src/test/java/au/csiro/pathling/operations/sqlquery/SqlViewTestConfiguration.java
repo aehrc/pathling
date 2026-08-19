@@ -62,6 +62,8 @@ import org.springframework.context.annotation.Primary;
  *   <li>{@code Library/active-patients} - SQLView over {@code patient-view}.
  *   <li>{@code Library/refined-patients} - SQLView over {@code active-patients} (a nested chain).
  *   <li>{@code Library/cycle-a} / {@code Library/cycle-b} - a mutually-referencing cycle.
+ *   <li>{@code Library/broken-patients} - SQLView whose own SQL selects a column its child does not
+ *       project, so it fails Spark analysis during dependency materialisation.
  * </ul>
  *
  * @author John Grimes
@@ -118,6 +120,13 @@ public class SqlViewTestConfiguration {
   /** The id of the right arm of a diamond, over {@link #SHARED_PATIENTS_ID}. */
   public static final String RIGHT_PATIENTS_ID = "right-patients";
 
+  /**
+   * The id of a SQLView whose own SQL selects a column that its child ViewDefinition does not
+   * project. Materialising it fails Spark analysis, so it exercises the dependency-node analysis
+   * failure path.
+   */
+  public static final String BROKEN_PATIENTS_ID = "broken-patients";
+
   @Primary
   @Bean
   @Nonnull
@@ -152,6 +161,11 @@ public class SqlViewTestConfiguration {
     resources.add(
         sqlView(
             RIGHT_PATIENTS_ID, "SELECT id FROM sp", Map.of("sp", libraryUrl(SHARED_PATIENTS_ID))));
+    resources.add(
+        sqlView(
+            BROKEN_PATIENTS_ID,
+            "SELECT id, no_such_col FROM patient_view",
+            Map.of("patient_view", PATIENT_VIEW_URL)));
     resources.add(patient("p1", "Smith"));
     resources.add(patient("p2", "Johnson"));
     resources.add(patient("p3", "Williams"));

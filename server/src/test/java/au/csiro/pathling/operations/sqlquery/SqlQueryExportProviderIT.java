@@ -53,6 +53,14 @@ import org.springframework.test.context.DynamicPropertySource;
 @Import(SqlQueryExportTestConfiguration.class)
 class SqlQueryExportProviderIT extends AbstractSqlQueryExportIT {
 
+  /**
+   * SQL selecting a nonexistent column from a self-contained inline table. It is syntactically
+   * valid and passes static validation, so it is only rejected when Spark analyses it inside the
+   * export job.
+   */
+  private static final String UNRESOLVED_COLUMN_SQL =
+      "SELECT no_such_col FROM (VALUES (1, 'alice'), (2, 'bob')) AS t(id, name)";
+
   @DynamicPropertySource
   static void configureProperties(final DynamicPropertyRegistry registry) {
     final Path warehouseDir =
@@ -298,6 +306,91 @@ class SqlQueryExportProviderIT extends AbstractSqlQueryExportIT {
   }
 
   // -------------------------------------------------------------------------
+  // Spark analysis failures surface as 422 at poll time (US2, FR-004)
+  // -------------------------------------------------------------------------
+
+  @Test
+  void unresolvedColumnSurfacesAs422WhenPolled() throws InterruptedException {
+    final Map<String, Object> outcome =
+        settledAnalysisFailure(
+            systemLevelUri(),
+            parametersWith(queryPartWithResource(selfContainedSqlLibrary(UNRESOLVED_COLUMN_SQL))));
+
+    // Spark's column suggestions are part of the raw analyser message and are passed through
+    // verbatim, so the client can see which columns were actually available.
+    assertThat(diagnosticsOf(outcome))
+        .contains("Did you mean one of the following? [`id`, `name`]");
+  }
+
+  @Test
+  void laterQueryFailingAnalysisFailsWholeExportWithoutManifest() throws InterruptedException {
+    // The first query is well-formed and is executed before the second one fails analysis; the
+    // export is all-or-nothing, so the successful output must not be reported.
+    final Map<String, Object> body = new LinkedHashMap<>();
+    body.put("resourceType", "Parameters");
+    final Map<String, Object> validQuery =
+        queryPartWithReference(SqlQueryExportTestConfiguration.PATIENT_QUERY_ID);
+    addPartTo(validQuery, simplePart("name", "valueString", "people"));
+    final Map<String, Object> failingQuery =
+        queryPartWithResource(selfContainedSqlLibrary(UNRESOLVED_COLUMN_SQL));
+    addPartTo(failingQuery, simplePart("name", "valueString", "broken"));
+    body.put("parameter", new ArrayList<>(List.of(validQuery, failingQuery)));
+
+    final Map<String, Object> outcome = settledAnalysisFailure(systemLevelUri(), body);
+
+    // A completion manifest is a Parameters resource carrying a completed status and one output per
+    // query; the settled response is an OperationOutcome carrying none of these.
+    assertThat(findParamValue(outcome, "status", "valueCode")).isNull();
+    assertThat(paramsByName(outcome, "output")).isEmpty();
+  }
+
+  /**
+   * Kicks off an export expected to fail Spark analysis, asserting the 202 kick-off (via {@link
+   * #resultOfFailedExport}), then the whole analysis-failure contract on the settled response, and
+   * returns the parsed OperationOutcome.
+   */
+  @Nonnull
+  private Map<String, Object> settledAnalysisFailure(
+      @Nonnull final String uri, @Nonnull final Map<String, Object> body)
+      throws InterruptedException {
+    final byte[] content =
+        resultOfFailedExport(uri, body)
+            .expectStatus()
+            .isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY)
+            .expectBody()
+            .returnResult()
+            .getResponseBodyContent();
+
+    final Map<String, Object> outcome = parse(content);
+    assertThat(outcome.get("resourceType")).isEqualTo("OperationOutcome");
+    final List<Map<String, Object>> issues = issuesOf(outcome);
+    assertThat(issues).hasSize(1);
+    final Map<String, Object> issue = issues.get(0);
+    assertThat(issue.get("severity")).isEqualTo("error");
+    assertThat(issue.get("code")).isEqualTo("invalid");
+    // The faulting element is the SQL text rather than a request parameter, so no expression is
+    // reported.
+    assertThat(issue).doesNotContainKey("expression");
+    final String diagnostics = diagnosticsOf(outcome);
+    log.debug("Analysis failure diagnostics: {}", diagnostics);
+    assertThat(diagnostics).startsWith("SQL analysis failed: ").contains("UNRESOLVED_COLUMN");
+    return outcome;
+  }
+
+  /** Extracts the issue list from a parsed OperationOutcome body. */
+  @Nonnull
+  @SuppressWarnings("unchecked")
+  private static List<Map<String, Object>> issuesOf(@Nonnull final Map<String, Object> outcome) {
+    return (List<Map<String, Object>>) outcome.get("issue");
+  }
+
+  /** Extracts the diagnostics of the first issue of a parsed OperationOutcome body. */
+  @Nonnull
+  private static String diagnosticsOf(@Nonnull final Map<String, Object> outcome) {
+    return (String) issuesOf(outcome).get(0).get("diagnostics");
+  }
+
+  // -------------------------------------------------------------------------
   // Request builders specific to this suite
   // -------------------------------------------------------------------------
 
@@ -345,6 +438,37 @@ class SqlQueryExportProviderIT extends AbstractSqlQueryExportIT {
                 "patients",
                 "resource",
                 SqlQueryExportTestConfiguration.PATIENT_VIEW_URL)));
+    return library;
+  }
+
+  /**
+   * An inline SQLQuery Library carrying the given SQL and declaring no dependencies, for SQL that
+   * selects from an inline table rather than a view.
+   */
+  @Nonnull
+  private Map<String, Object> selfContainedSqlLibrary(@Nonnull final String sql) {
+    final Map<String, Object> library = new LinkedHashMap<>();
+    library.put("resourceType", "Library");
+    library.put("status", "active");
+    library.put(
+        "type",
+        Map.of(
+            "coding",
+            List.of(
+                Map.of(
+                    "system",
+                    SqlLibraryParser.LIBRARY_TYPE_SYSTEM,
+                    "code",
+                    SqlLibraryParser.SQL_QUERY_TYPE_CODE))));
+    library.put(
+        "content",
+        List.of(
+            Map.of(
+                "contentType",
+                "application/sql",
+                "data",
+                java.util.Base64.getEncoder()
+                    .encodeToString(sql.getBytes(StandardCharsets.UTF_8)))));
     return library;
   }
 

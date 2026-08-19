@@ -45,12 +45,12 @@ level, whether supplied in a POST `Parameters` body or as a GET query parameter.
 
 ## Status codes
 
-| Status                      | Condition                                                                                                |
-| --------------------------- | -------------------------------------------------------------------------------------------------------- |
-| `200 OK`                    | A supported format (explicit or defaulted) and successful execution.                                     |
-| `400 Bad Request`           | The unsupported `source` parameter, an unsupported explicit `_format`, or a malformed request/parameter. |
-| `422 Unprocessable Entity`  | `_format=fhir` where a result column has a type that cannot be represented as a FHIR value.              |
-| `500 Internal Server Error` | A genuine SQL execution or infrastructure fault.                                                         |
+| Status                      | Condition                                                                                                                                                                                                                                    |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `200 OK`                    | A supported format (explicit or defaulted) and successful execution.                                                                                                                                                                         |
+| `400 Bad Request`           | The unsupported `source` parameter, an unsupported explicit `_format`, or a malformed request/parameter.                                                                                                                                     |
+| `422 Unprocessable Entity`  | A Spark analysis failure in the submitted SQL or in the SQL of one of its SQLView dependencies (see [Analysis failures](#analysis-failures)), or `_format=fhir` where a result column has a type that cannot be represented as a FHIR value. |
+| `500 Internal Server Error` | A genuine SQL execution or infrastructure fault, including a runtime error such as division by zero that fires while the result is streamed.                                                                                                 |
 
 When no `_format` is supplied, the format is negotiated from the `Accept` header,
 falling back to NDJSON when nothing matches.
@@ -251,6 +251,50 @@ User SQL is validated before execution. The following are rejected:
 
 The query may use standard Spark SQL functions, joins, aggregates, and
 subqueries against the views referenced by the Library.
+
+## Analysis failures
+
+The validation described above is static, and a query that fails it is rejected
+with `400 Bad Request`. A query that passes is then analysed by Spark, which
+resolves its column, table and function references against the materialised
+views. A failure at that point - an unresolved column, an unknown function, a
+`GROUP BY` on a column that does not exist, an aggregate without a `GROUP BY`,
+an ambiguous column reference, or a datatype mismatch - is a mistake in the
+submitted SQL rather than a server fault, so the server responds
+`422 Unprocessable Entity` with an OperationOutcome carrying exactly one issue:
+`severity` of `error`, `code` of `invalid`, and Spark's own analyser message as
+`diagnostics`.
+
+```json
+{
+    "resourceType": "OperationOutcome",
+    "issue": [
+        {
+            "severity": "error",
+            "code": "invalid",
+            "diagnostics": "SQL analysis failed: [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `no_such_col` cannot be resolved. Did you mean one of the following? [`bd`, `gender`, `pid`]. SQLSTATE: 42703; line 1 pos 7;"
+        }
+    ]
+}
+```
+
+The diagnostics are prefixed `SQL analysis failed: ` when the failure is in the
+submitted query's own SQL, and `SQL analysis failed for dependency '[url]': `
+(or `'[url]|[version]'`) when it is in the SQL of a
+[SQLView dependency](#composing-sqlviews), so that it is clear which SQL needs
+correcting.
+
+The analyser message is passed through verbatim, and the example above is
+abbreviated: Spark appends a dump of the unresolved logical plan to most
+analysis messages. The message may also name the internal temporary views that
+the server substitutes for the labels declared in `relatedArtifact`, and its
+line and position offsets refer to that rewritten SQL rather than to the SQL as
+submitted.
+
+An error that can only arise once rows are computed - division by zero, or a
+`CAST` that fails under ANSI mode, for example - is not an analysis failure. It
+fires while the result is being streamed, and so remains
+`500 Internal Server Error`.
 
 ## Runtime parameters
 

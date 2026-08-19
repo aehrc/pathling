@@ -154,10 +154,23 @@ Content-Location: [base]/$job?id=[job-id]
 Poll the URL from `Content-Location`:
 
 - `202 Accepted` — Export still in progress. Check the `X-Progress` header.
-- `303 See Other` — Export complete; follow the `Location` header to the result
-  URL, then `GET` it for the manifest.
+- `303 See Other` — Export settled; follow the `Location` header to the result
+  URL, then `GET` it for the manifest. A failed export also settles with `303`,
+  and the error is returned by the result URL - see [Failures](#failures).
 - `404 Not Found` — The export was cancelled (via `DELETE` on the status URL) or
   is unknown.
+
+### Failures
+
+Spark analyses each query's SQL inside the asynchronous job rather than at
+kick-off, so a query whose SQL fails analysis is still accepted with
+`202 Accepted`. A failed job settles like any other, so the status URL returns
+`303 See Other`; the failure is then returned by the result URL, in place of the
+completion manifest, as the same `422 Unprocessable Entity` OperationOutcome
+that the synchronous operation returns, with `issue.code` of `invalid` and
+Spark's analyser message as `diagnostics`; see
+[analysis failures](./sql-run.md#analysis-failures). As with any other query
+failure, the export as a whole fails and no completion manifest is produced.
 
 ## Response manifest
 
