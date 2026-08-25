@@ -166,6 +166,14 @@ per file, all under the one `name`.
 | `422 Unprocessable Entity`  | A subject is of no admitted kind, or is conformant but cannot be processed.                                   |
 | `500 Internal Server Error` | An unexpected fault, or - on the result URL - the job's own failure outcome.                                  |
 
+A subject whose SQL only Spark's analyser can fault - an unresolved column, an
+unknown function, a missing `GROUP BY`, an ambiguous reference - fails the job
+rather than the kick-off, since analysis needs the dependency graph
+materialised. Its failure outcome is a `422` at the result URL, and its
+diagnostics name the failing subject and carry the analyser's own message. As
+with `$sql-run`, that message describes the query as rewritten for execution,
+so a reported position can differ from the position in the submitted text.
+
 ## Conformance
 
 The operation declares the spec canonical

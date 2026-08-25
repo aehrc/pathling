@@ -178,6 +178,15 @@ name the parameter at fault in `expression`. A request that is wrong in more
 than one way is answered with one outcome naming every problem, so it can be
 corrected in a single round trip.
 
+A fault in the subject's own SQL that only Spark's analyser can catch - an
+unresolved column, an unknown function, a missing `GROUP BY`, an ambiguous
+reference - is a `422`, and its diagnostics carry the analyser's own message,
+including any suggested identifier. The analyser sees the query as rewritten
+for execution rather than as submitted: each dependency label is replaced with
+an internal request-scoped view name before analysis, so a reported line and
+column position can differ from the position in the submitted text, and a
+qualified suggestion can name one of those internal views.
+
 ## Conformance
 
 The operation declares the spec canonical
