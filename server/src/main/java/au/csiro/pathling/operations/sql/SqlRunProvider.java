@@ -35,6 +35,7 @@ import ca.uhn.fhir.rest.annotation.OperationParam;
 import ca.uhn.fhir.rest.api.RequestTypeEnum;
 import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
+import ca.uhn.fhir.rest.server.exceptions.UnprocessableEntityException;
 import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -271,11 +272,28 @@ public class SqlRunProvider {
     // may be reached through another supplied entry.
     supplied.checkAllMatched();
 
-    pipeline.execute(
-        prepared,
-        filteredSource(filters),
-        requestDetails.getRequestId(),
-        result -> streamer.stream(result, toSqlQueryOutputFormat(outputFormat), header, response));
+    try {
+      pipeline.execute(
+          prepared,
+          filteredSource(filters),
+          requestDetails.getRequestId(),
+          result ->
+              streamer.stream(result, toSqlQueryOutputFormat(outputFormat), header, response));
+    } catch (final Exception e) {
+      // The dataset is analysed inside execute() before the streaming consumer writes a byte, so an
+      // analysis failure is still free to decide the status. A run request carries exactly one
+      // subject, so there is nothing to name.
+      @Nullable
+      final UnprocessableEntityException analysisFailure =
+          SqlOperationError.asAnalysisFailure(null, e);
+      if (analysisFailure != null) {
+        throw analysisFailure;
+      }
+      // Precise rethrow: execute() declares no checked exception, so this needs no throws clause,
+      // and every other failure reaches ErrorHandlingInterceptor exactly as it did before - which
+      // matters, since that is where a SparkException is unwrapped and its cause converted.
+      throw e;
+    }
   }
 
   /** Applies the request's filters to the server's data source. */

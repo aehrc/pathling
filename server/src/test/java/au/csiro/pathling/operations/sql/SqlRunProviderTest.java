@@ -20,6 +20,7 @@ package au.csiro.pathling.operations.sql;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -35,6 +36,7 @@ import ca.uhn.fhir.rest.api.RequestTypeEnum;
 import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
+import ca.uhn.fhir.rest.server.exceptions.UnprocessableEntityException;
 import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -44,6 +46,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.apache.spark.SparkException;
+import org.apache.spark.sql.AnalysisException;
+import org.apache.spark.sql.delta.DeltaAnalysisException;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.InstantType;
@@ -58,6 +63,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import scala.Option;
 
 /**
  * Unit tests for {@link SqlRunProvider}, covering the request-validation rows of
@@ -432,7 +438,165 @@ class SqlRunProviderTest {
         .streamView(any(), any(), any(), anyBooleanValue(), any(), any());
   }
 
+  // ---------------------------------------------------------------------------
+  // Analysis failures.
+  // ---------------------------------------------------------------------------
+
+  // Spark's analyser is what catches an unresolved column, an unknown function or a missing GROUP
+  // BY, and those are faults in the subject's own SQL rather than in the server. The dataset is
+  // analysed before the streaming consumer writes a byte, so the failure is reported as a 422
+  // naming the subject, carrying Spark's own message so the caller can see what is wrong.
+  @Test
+  void reportsAnAnalysisFailureAgainstTheSubject() {
+    stubSubject(SubjectKind.SQL_QUERY);
+    stubExecuteToThrow(analysisException(UNRESOLVED_COLUMN_MESSAGE));
+
+    final BaseServerResponseException exception = catchServerException(() -> run(builder()));
+
+    assertThat(exception).isInstanceOf(UnprocessableEntityException.class);
+    assertThat(exception.getStatusCode()).isEqualTo(422);
+    assertIssue(exception, IssueType.INVALID, "subject");
+    assertThat(diagnosticsOf(exception))
+        .contains("UNRESOLVED_COLUMN")
+        .contains("no_such_col")
+        .contains("Did you mean");
+  }
+
+  // The translation is confined to analysis failures. Anything else raised by the query engine is
+  // an infrastructure fault, and must keep propagating untouched so that it still renders as a 500
+  // rather than being mislabelled as a fault in the caller's SQL.
+  @Test
+  void leavesANonAnalysisFailureUntranslated() {
+    stubSubject(SubjectKind.SQL_QUERY);
+    stubExecuteToThrow(new IllegalStateException("The warehouse is unreachable"));
+
+    assertThatThrownBy(() -> run(builder()))
+        .isInstanceOf(IllegalStateException.class)
+        .isNotInstanceOf(BaseServerResponseException.class)
+        .hasMessage("The warehouse is unreachable");
+  }
+
+  // The dominant checked exception on this path is SparkException, which is how a task-time failure
+  // inside the streaming consumer surfaces. It must arrive at ErrorHandlingInterceptor as itself:
+  // that is where it is unwrapped and its cause converted, which is what turns a singleton
+  // violation into a 400 and a terminology outage into a 503. Wrapping it would lose all of that.
+  @Test
+  void propagatesACheckedFailureAsItself() {
+    stubSubject(SubjectKind.SQL_QUERY);
+    final SparkException failure =
+        new SparkException("Job aborted", new IllegalStateException("Task failed"));
+    stubExecuteToThrow(failure);
+
+    assertThatThrownBy(() -> run(builder())).isSameAs(failure);
+  }
+
+  // DeltaAnalysisException extends AnalysisException, but it describes the stored data rather than
+  // the submitted SQL, and ErrorHandlingInterceptor has its own rendering for it. Translating it
+  // would blame the caller's subject for a schema drift or a vacuumed snapshot.
+  @Test
+  void leavesADeltaAnalysisFailureUntranslated() {
+    stubSubject(SubjectKind.SQL_QUERY);
+    final DeltaAnalysisException failure =
+        new DeltaAnalysisException(
+            "DELTA_UPDATE_SCHEMA_MISMATCH_EXPRESSION",
+            new String[] {"struct<id:string,extra:string>", "struct<id:string>"},
+            Option.empty(),
+            Option.empty());
+    stubExecuteToThrow(failure);
+
+    assertThatThrownBy(() -> run(builder()))
+        .isSameAs(failure)
+        .isNotInstanceOf(BaseServerResponseException.class);
+  }
+
+  // getMessage appends the whole unresolved logical plan, which is unbounded, names the internal
+  // request-scoped views the dependency graph was materialised under, and tells the caller nothing
+  // they can act on. The analyser's own simple message is what is returned.
+  @Test
+  void omitsTheLogicalPlanFromTheReportedMessage() {
+    stubSubject(SubjectKind.SQL_QUERY);
+    final AnalysisException failure = analysisException(UNRESOLVED_COLUMN_MESSAGE);
+    when(failure.getMessage())
+        .thenReturn(
+            UNRESOLVED_COLUMN_MESSAGE
+                + "\n'Project ['no_such_col]\n+- SubqueryAlias sqlquery_rKo3ryQTTa2xoDQx_internal");
+    stubExecuteToThrow(failure);
+
+    final BaseServerResponseException exception = catchServerException(() -> run(builder()));
+
+    assertThat(diagnosticsOf(exception))
+        .isEqualTo(UNRESOLVED_COLUMN_MESSAGE)
+        .doesNotContain("SubqueryAlias")
+        .doesNotContain("sqlquery_rKo3ryQTTa2xoDQx_internal");
+  }
+
+  // The suggestion list is drawn from the subject's own columns, so a wide dependency can make even
+  // the simple message long. A response body is not the place for an unbounded string.
+  @Test
+  void boundsTheLengthOfTheReportedMessage() {
+    stubSubject(SubjectKind.SQL_QUERY);
+    stubExecuteToThrow(analysisException("[UNRESOLVED_COLUMN] ".concat("x".repeat(5000))));
+
+    final BaseServerResponseException exception = catchServerException(() -> run(builder()));
+
+    final String diagnostics = diagnosticsOf(exception);
+    assertThat(diagnostics).hasSize(1027).startsWith("[UNRESOLVED_COLUMN] ").endsWith("...");
+  }
+
+  // An identifier can carry a character outside the basic multilingual plane, and the analyser
+  // quotes identifiers back. Truncating in the middle of one would put half a character on the
+  // wire, which is not valid UTF-8 and renders as a replacement character.
+  @Test
+  void truncatesOnACharacterBoundary() {
+    stubSubject(SubjectKind.SQL_QUERY);
+    // The limit is 1024 characters, so the emoji straddles it: its high surrogate is the 1024th.
+    stubExecuteToThrow(analysisException("x".repeat(1023) + "\uD83D\uDE00" + "y".repeat(100)));
+
+    final BaseServerResponseException exception = catchServerException(() -> run(builder()));
+
+    assertThat(diagnosticsOf(exception)).isEqualTo("x".repeat(1023) + "...");
+  }
+
   // ---- helpers ----
+
+  /** A representative Spark analyser message, of the shape the caller is meant to receive. */
+  private static final String UNRESOLVED_COLUMN_MESSAGE =
+      "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name "
+          + "`no_such_col` cannot be resolved. Did you mean one of the following? [`id`, `gender`]."
+          + " SQLSTATE: 42703; line 1 pos 7;";
+
+  /**
+   * Builds a stand-in for Spark's analyser failure. {@code AnalysisException} is a Scala-declared
+   * checked exception whose constructors take Scala collections, so it is stubbed rather than
+   * constructed; the real thing is exercised end-to-end by {@link SqlRunProviderIT}.
+   */
+  @Nonnull
+  private static AnalysisException analysisException(@Nonnull final String message) {
+    final AnalysisException exception = mock(AnalysisException.class);
+    when(exception.getSimpleMessage()).thenReturn(message);
+    return exception;
+  }
+
+  /**
+   * Stubs the pipeline to fail during execution. An {@code Answer} is used rather than {@code
+   * doThrow}, since the failure is not declared on the method's signature.
+   */
+  private void stubExecuteToThrow(@Nonnull final Throwable failure) {
+    doAnswer(
+            invocation -> {
+              throw failure;
+            })
+        .when(pipeline)
+        .execute(any(), any(), any(), any());
+  }
+
+  /** Extracts the diagnostics of the exception's first outcome issue. */
+  @Nonnull
+  private static String diagnosticsOf(@Nonnull final BaseServerResponseException exception) {
+    final OperationOutcome outcome = (OperationOutcome) exception.getOperationOutcome();
+    assertThat(outcome).isNotNull();
+    return outcome.getIssueFirstRep().getDiagnostics();
+  }
 
   /** Matches any boolean argument, for the primitive parameter of streamView. */
   private static boolean anyBooleanValue() {
