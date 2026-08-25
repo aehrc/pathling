@@ -46,7 +46,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.apache.spark.SparkException;
 import org.apache.spark.sql.AnalysisException;
+import org.apache.spark.sql.delta.DeltaAnalysisException;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.InstantType;
@@ -61,6 +63,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import scala.Option;
 
 /**
  * Unit tests for {@link SqlRunProvider}, covering the request-validation rows of
@@ -473,6 +476,39 @@ class SqlRunProviderTest {
         .hasMessage("The warehouse is unreachable");
   }
 
+  // The dominant checked exception on this path is SparkException, which is how a task-time failure
+  // inside the streaming consumer surfaces. It must arrive at ErrorHandlingInterceptor as itself:
+  // that is where it is unwrapped and its cause converted, which is what turns a singleton
+  // violation into a 400 and a terminology outage into a 503. Wrapping it would lose all of that.
+  @Test
+  void propagatesACheckedFailureAsItself() {
+    stubSubject(SubjectKind.SQL_QUERY);
+    final SparkException failure =
+        new SparkException("Job aborted", new IllegalStateException("Task failed"));
+    stubExecuteToThrow(failure);
+
+    assertThatThrownBy(() -> run(builder())).isSameAs(failure);
+  }
+
+  // DeltaAnalysisException extends AnalysisException, but it describes the stored data rather than
+  // the submitted SQL, and ErrorHandlingInterceptor has its own rendering for it. Translating it
+  // would blame the caller's subject for a schema drift or a vacuumed snapshot.
+  @Test
+  void leavesADeltaAnalysisFailureUntranslated() {
+    stubSubject(SubjectKind.SQL_QUERY);
+    final DeltaAnalysisException failure =
+        new DeltaAnalysisException(
+            "DELTA_UPDATE_SCHEMA_MISMATCH_EXPRESSION",
+            new String[] {"struct<id:string,extra:string>", "struct<id:string>"},
+            Option.empty(),
+            Option.empty());
+    stubExecuteToThrow(failure);
+
+    assertThatThrownBy(() -> run(builder()))
+        .isSameAs(failure)
+        .isNotInstanceOf(BaseServerResponseException.class);
+  }
+
   // getMessage appends the whole unresolved logical plan, which is unbounded, names the internal
   // request-scoped views the dependency graph was materialised under, and tells the caller nothing
   // they can act on. The analyser's own simple message is what is returned.
@@ -505,6 +541,20 @@ class SqlRunProviderTest {
 
     final String diagnostics = diagnosticsOf(exception);
     assertThat(diagnostics).hasSize(1027).startsWith("[UNRESOLVED_COLUMN] ").endsWith("...");
+  }
+
+  // An identifier can carry a character outside the basic multilingual plane, and the analyser
+  // quotes identifiers back. Truncating in the middle of one would put half a character on the
+  // wire, which is not valid UTF-8 and renders as a replacement character.
+  @Test
+  void truncatesOnACharacterBoundary() {
+    stubSubject(SubjectKind.SQL_QUERY);
+    // The limit is 1024 characters, so the emoji straddles it: its high surrogate is the 1024th.
+    stubExecuteToThrow(analysisException("x".repeat(1023) + "\uD83D\uDE00" + "y".repeat(100)));
+
+    final BaseServerResponseException exception = catchServerException(() -> run(builder()));
+
+    assertThat(diagnosticsOf(exception)).isEqualTo("x".repeat(1023) + "...");
   }
 
   // ---- helpers ----

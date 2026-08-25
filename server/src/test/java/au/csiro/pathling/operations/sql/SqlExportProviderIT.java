@@ -124,6 +124,39 @@ class SqlExportProviderIT extends AbstractAsyncExportIT {
     assertThat(content).contains("Smith").contains("Johnson").contains("Williams");
   }
 
+  // An analysis failure cannot be caught at kick-off, since analysing the SQL needs the dependency
+  // graph materialised, so it fails the job instead. The deferred failure keeps the status and the
+  // outcome it was raised with across the asynchronous round-trip, and names the subject that
+  // failed, which is the only thing distinguishing it in a job carrying several.
+  @Test
+  void reportsAnAnalysisFailureAsTheJobsFailureOutcome() throws InterruptedException {
+    final Map<String, Object> body =
+        parameters(
+            subject(
+                nameOf("bad_column"),
+                resourcePart(
+                    "subjectResource", inlineQueryOverAdHocView("SELECT no_such_col FROM adh"))),
+            resourcePart("context", adHocView()));
+
+    final byte[] outcome =
+        webTestClient
+            .get()
+            .uri(resultLocationOf(systemLevelUri(), body))
+            .header("Accept", "application/fhir+json")
+            .exchange()
+            .expectStatus()
+            .isEqualTo(422)
+            .expectBody()
+            .returnResult()
+            .getResponseBodyContent();
+
+    assertThat(new String(outcome == null ? new byte[0] : outcome, StandardCharsets.UTF_8))
+        .contains("\"code\":\"invalid\"")
+        .contains("The subject 'bad_column' cannot be processed")
+        .contains("UNRESOLVED_COLUMN")
+        .contains("no_such_col");
+  }
+
   @Test
   void writesTheRequestedFormat() throws InterruptedException {
     final Map<String, Object> body = mixedJob(null);
@@ -363,11 +396,15 @@ class SqlExportProviderIT extends AbstractAsyncExportIT {
   /** An inline SQLQuery whose only table source is the ad-hoc view above. */
   @Nonnull
   private Map<String, Object> inlineQueryOverAdHocView() {
+    return inlineQueryOverAdHocView("SELECT id, family_name FROM adh ORDER BY id");
+  }
+
+  /** An inline SQLQuery carrying the given SQL over the ad-hoc view above. */
+  @Nonnull
+  private Map<String, Object> inlineQueryOverAdHocView(@Nonnull final String query) {
     final String sql =
         java.util.Base64.getEncoder()
-            .encodeToString(
-                "SELECT id, family_name FROM adh ORDER BY id"
-                    .getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            .encodeToString(query.getBytes(java.nio.charset.StandardCharsets.UTF_8));
     return Map.of(
         "resourceType",
         "Library",

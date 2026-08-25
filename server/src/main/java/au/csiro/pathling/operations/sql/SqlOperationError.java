@@ -27,6 +27,7 @@ import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.List;
 import org.apache.spark.sql.AnalysisException;
+import org.apache.spark.sql.delta.DeltaAnalysisException;
 import org.hl7.fhir.r4.model.OperationOutcome;
 import org.hl7.fhir.r4.model.OperationOutcome.IssueSeverity;
 import org.hl7.fhir.r4.model.OperationOutcome.IssueType;
@@ -104,32 +105,47 @@ public final class SqlOperationError {
   }
 
   /**
-   * Translates a failure raised while planning or running a subject's query.
+   * Translates a failure raised while planning a subject's query into a {@code 422 Unprocessable
+   * Entity}, where it is a fault in the SQL the caller submitted rather than a server fault.
    *
-   * <p>A Spark {@link AnalysisException} is a fault in the subject itself - an unresolved column,
-   * an unknown function, a missing {@code GROUP BY}, an ambiguous reference - so it becomes a
-   * {@code 422} carrying Spark's own analyser message, which names the problem and often suggests
-   * the intended identifier. Analysis runs before execution, so that message cannot carry data
-   * values.
+   * <p>Spark's analyser is what catches an unresolved column, an unknown function, a missing {@code
+   * GROUP BY} or an ambiguous reference, none of which {@code SqlValidator} can detect statically.
+   * The response carries the analyser's own message: it names the problem and often suggests the
+   * intended identifier. Analysis runs before execution, so that message cannot carry data values.
    *
-   * <p>Any other failure is a server-side fault and is returned unaltered, so it continues to
-   * render as a {@code 500}. Runtime errors in particular are raised once the result is being
-   * consumed, where the response may already be committed and the status can no longer be
-   * rewritten.
+   * <p>A Delta analysis failure is not translated. {@code DeltaAnalysisException} extends {@code
+   * AnalysisException}, but it describes the state of the stored data rather than the request: a
+   * schema mismatch between a stored table and this server's encoders, or a snapshot whose version
+   * has been vacuumed away. Those are server-side faults, and {@code ErrorHandlingInterceptor}
+   * already has a dedicated rendering for the schema-mismatch condition, which the raw Delta
+   * message cannot be used for because it embeds both struct definitions in full.
    *
+   * <p>Any other failure returns null and must be rethrown as it is, so that the unwrapping and
+   * per-type conversions of {@code ErrorHandlingInterceptor} still see it. A runtime error raised
+   * by the terminal consumer arrives that way, and stays a {@code 500}: it fires once the response
+   * may already be committed, where the status can no longer be rewritten.
+   *
+   * @param subjectName the name of the subject at fault, or null where the request admits only one
+   *     subject and there is nothing to disambiguate
    * @param error the failure raised by the query engine
-   * @return the exception to throw
+   * @return the exception to throw, or null where the failure is not an analysis failure in the
+   *     caller's own SQL
    */
-  @Nonnull
-  public static RuntimeException executionFailure(@Nonnull final Exception error) {
+  @Nullable
+  public static UnprocessableEntityException asAnalysisFailure(
+      @Nullable final String subjectName, @Nonnull final Exception error) {
     // AnalysisException is declared in Scala as a checked exception that no signature on the call
     // path declares, so it cannot be named in a catch clause and is matched by type instead.
-    if (error instanceof final AnalysisException analysisError) {
-      return unprocessable(SubjectResolver.SUBJECT_EXPRESSION, analyserMessage(analysisError));
+    if (!(error instanceof final AnalysisException analysisError)
+        || error instanceof DeltaAnalysisException) {
+      return null;
     }
-    return error instanceof final RuntimeException runtimeError
-        ? runtimeError
-        : new RuntimeException(error);
+    final String message = analyserMessage(analysisError);
+    return unprocessable(
+        SubjectResolver.SUBJECT_EXPRESSION,
+        subjectName == null
+            ? message
+            : "The subject '%s' cannot be processed: %s".formatted(subjectName, message));
   }
 
   /**
@@ -141,11 +157,18 @@ public final class SqlOperationError {
    */
   @Nonnull
   private static String analyserMessage(@Nonnull final AnalysisException error) {
+    @Nullable final String simpleMessage = error.getSimpleMessage();
     final String message =
-        requireNonNullElse(error.getSimpleMessage(), requireNonNullElse(error.getMessage(), ""));
-    return message.length() <= MAX_ANALYSER_MESSAGE_LENGTH
-        ? message
-        : message.substring(0, MAX_ANALYSER_MESSAGE_LENGTH) + "...";
+        simpleMessage != null ? simpleMessage : requireNonNullElse(error.getMessage(), "");
+    if (message.length() <= MAX_ANALYSER_MESSAGE_LENGTH) {
+      return message;
+    }
+    // Step back off a trailing high surrogate, so that truncation never splits a character in two.
+    final int end =
+        Character.isHighSurrogate(message.charAt(MAX_ANALYSER_MESSAGE_LENGTH - 1))
+            ? MAX_ANALYSER_MESSAGE_LENGTH - 1
+            : MAX_ANALYSER_MESSAGE_LENGTH;
+    return message.substring(0, end) + "...";
   }
 
   /**

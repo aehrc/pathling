@@ -46,15 +46,18 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
 import org.apache.hadoop.fs.Path;
+import org.apache.spark.SparkException;
 import org.apache.spark.sql.AnalysisException;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.delta.DeltaAnalysisException;
 import org.hl7.fhir.r4.model.OperationOutcome;
 import org.hl7.fhir.r4.model.OperationOutcome.IssueType;
 import org.hl7.fhir.r4.model.StringType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import scala.Option;
 
 /**
  * Unit tests for {@link SqlExportExecutor}, covering the job-level guarantees of
@@ -239,14 +242,9 @@ class SqlExportExecutorTest {
             "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with"
                 + " name `no_such_col` cannot be resolved. Did you mean one of the following?"
                 + " [`id`, `gender`]. SQLSTATE: 42703; line 1 pos 7;");
-    doAnswer(
-            invocation -> {
-              throw analysisError;
-            })
-        .when(pipeline)
-        .execute(any(), any(), any(), any());
+    stubExecuteToThrow(analysisError);
 
-    assertThatThrownBy(() -> executor.execute(request(sqlSubject("only")), JOB_ID))
+    assertThatThrownBy(() -> executor.execute(request(sqlSubject("demographics")), JOB_ID))
         .isInstanceOf(UnprocessableEntityException.class)
         .satisfies(
             thrown -> {
@@ -258,10 +256,59 @@ class SqlExportExecutorTest {
               assertThat(outcome.getIssueFirstRep().getExpression())
                   .extracting(StringType::getValue)
                   .containsExactly(SubjectResolver.SUBJECT_EXPRESSION);
+              // A job can carry several subjects, so the failing one is named: expression alone
+              // says only that some subject is at fault.
               assertThat(outcome.getIssueFirstRep().getDiagnostics())
+                  .startsWith("The subject 'demographics' cannot be processed:")
                   .contains("UNRESOLVED_COLUMN")
                   .contains("no_such_col");
             });
+  }
+
+  // The dominant checked exception on this path is SparkException, which is how a task-time failure
+  // inside the file-writing consumer surfaces. It must reach ErrorHandlingInterceptor as itself,
+  // since that is where it is unwrapped and its cause converted; wrapping it would collapse every
+  // such failure into an opaque 500.
+  @Test
+  void propagatesACheckedFailureAsItself() {
+    final SparkException failure =
+        new SparkException("Job aborted", new IllegalStateException("Task failed"));
+    stubExecuteToThrow(failure);
+
+    assertThatThrownBy(() -> executor.execute(request(sqlSubject("only")), JOB_ID))
+        .isSameAs(failure);
+  }
+
+  // DeltaAnalysisException extends AnalysisException, but describes the stored data rather than the
+  // submitted SQL: a schema drift, or a snapshot this job pinned that a vacuum has since removed.
+  // Blaming the caller's subject for either would be wrong, and ErrorHandlingInterceptor has its
+  // own rendering for the schema-mismatch condition.
+  @Test
+  void leavesADeltaAnalysisFailureUntranslated() {
+    final DeltaAnalysisException failure =
+        new DeltaAnalysisException(
+            "DELTA_UPDATE_SCHEMA_MISMATCH_EXPRESSION",
+            new String[] {"struct<id:string,extra:string>", "struct<id:string>"},
+            Option.empty(),
+            Option.empty());
+    stubExecuteToThrow(failure);
+
+    assertThatThrownBy(() -> executor.execute(request(sqlSubject("only")), JOB_ID))
+        .isSameAs(failure)
+        .isNotInstanceOf(BaseServerResponseException.class);
+  }
+
+  /**
+   * Stubs the pipeline to fail during execution. An {@code Answer} is used rather than {@code
+   * doThrow}, since the failure is not declared on the method's signature.
+   */
+  private void stubExecuteToThrow(@Nonnull final Throwable failure) {
+    doAnswer(
+            invocation -> {
+              throw failure;
+            })
+        .when(pipeline)
+        .execute(any(), any(), any(), any());
   }
 
   // ---- helpers ----
