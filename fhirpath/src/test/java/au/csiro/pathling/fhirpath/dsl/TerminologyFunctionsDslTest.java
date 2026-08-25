@@ -793,6 +793,11 @@ public class TerminologyFunctionsDslTest extends FhirPathDslTestBase {
         .testEmpty(
             "emptyQuantity.memberOf('" + massUnitsValueSet + "')",
             "memberOf() returns empty for an empty quantity")
+        // A quantity with a free-text unit yields a Coding that the terminology functions treat
+        // as invalid, which is false rather than empty for the boolean functions.
+        .testFalse(
+            "freeTextQuantity.memberOf('" + massUnitsValueSet + "')",
+            "memberOf() returns false for a quantity with a free-text unit")
         .testEquals(
             List.of(true, true),
             "measurements.memberOf('" + massUnitsValueSet + "')",
@@ -810,6 +815,12 @@ public class TerminologyFunctionsDslTest extends FhirPathDslTestBase {
         .testTrue(
             "bulk.subsumes(mass)",
             "subsumes() accepts a quantity as the argument as well as the input")
+        .testFalse(
+            "freeTextQuantity.subsumes(http://unitsofmeasure.org|mg)",
+            "subsumes() returns false for a quantity with a free-text unit as the input")
+        .testFalse(
+            "bulk.subsumes(freeTextQuantity)",
+            "subsumes() returns false for a quantity with a free-text unit as the argument")
         .group("subsumedBy() function with Quantity")
         .testTrue(
             "mass.subsumedBy(http://unitsofmeasure.org|g)",
@@ -817,6 +828,9 @@ public class TerminologyFunctionsDslTest extends FhirPathDslTestBase {
         .testFalse(
             "distance.subsumedBy(http://unitsofmeasure.org|g)",
             "subsumedBy() returns false for a quantity whose unit is not subsumed by the argument")
+        .testFalse(
+            "freeTextQuantity.subsumedBy(http://unitsofmeasure.org|g)",
+            "subsumedBy() returns false for a quantity with a free-text unit")
         .build();
   }
 
