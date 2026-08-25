@@ -171,5 +171,6 @@ derives for the purposes of comparison, as a ConceptMap or ValueSet is authored
 against the codes that appear within the data.
 
 A quantity that carries only a free-text `unit`, without a `system` and `code`,
-does not identify a concept. Such a quantity is excluded from the operation, in
-the same way as a Coding without a system and code.
+does not identify a concept. Such a quantity yields `false` from `memberOf`,
+`subsumes` and `subsumedBy`, and an empty result from `translate` &mdash; the
+same behaviour as a Coding without a system and code.

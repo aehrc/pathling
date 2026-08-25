@@ -188,7 +188,8 @@ public class QuantityCollection extends Collection implements Comparable, String
    * so the result is a set of independent concepts rather than a union.
    *
    * <p>Quantities that carry a free-text unit without a system and code yield a Coding that the
-   * terminology functions treat as invalid, and which is excluded from the operation.
+   * terminology functions treat as invalid; it yields {@code false} from the boolean functions and
+   * no output from {@code translate}.
    *
    * @return A {@link TerminologyConcepts} representation of this collection
    */
