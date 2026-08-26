@@ -24,6 +24,10 @@
  * query on the stored tab and carries the values typed inline across to it,
  * since values are never persisted.
  *
+ * Execute and Add to export set are offered only while every declared
+ * parameter carries a valid value; Save only requires that no name is
+ * declared twice.
+ *
  * @author John Grimes
  */
 
@@ -32,7 +36,8 @@ import { Box, Button, Card, Flex, Heading, Tabs } from "@radix-ui/themes";
 import { useState } from "react";
 
 import {
-  areRuntimeBindingsValid,
+  areBindingsCompleteAndValid,
+  areParameterRowsValid,
   buildInlineSqlQueryLibrary,
   buildParameterTypes,
   canExecuteInlineForm,
@@ -218,16 +223,33 @@ export function SqlQueryForm({
   const limitInvalid =
     limit.trim() !== "" && (!/^[0-9]+$/.test(limit.trim()) || Number.parseInt(limit, 10) <= 0);
 
-  const bindingsValid = areRuntimeBindingsValid(declaredParameters, bindings);
+  const duplicateParameterNames = findDuplicateParameterNames(parameters);
+
+  // Every declared parameter must carry a valid value before the query can be
+  // submitted: an unbound parameter has nothing for the server to substitute.
+  // The inline tab's values live on its rows, the stored tab's in the
+  // name-keyed map, so each mode checks its own store.
+  const parametersBound =
+    source === "stored"
+      ? areBindingsCompleteAndValid(declaredParameters, bindings)
+      : areParameterRowsValid(parameters);
 
   const canExecute =
     !disabled &&
     !isExecuting &&
     !limitInvalid &&
-    bindingsValid &&
+    parametersBound &&
     (source === "stored" ? selectedLibraryId !== "" : canExecuteInlineForm(inlineInput));
 
-  const canSave = !disabled && !isSaving && source === "inline" && canSaveInlineForm(inlineInput);
+  // Values are never persisted, so an empty or invalid value cannot block a
+  // save. A name declared twice can: the declarations themselves would be
+  // ambiguous once saved.
+  const canSave =
+    !disabled &&
+    !isSaving &&
+    source === "inline" &&
+    canSaveInlineForm(inlineInput) &&
+    duplicateParameterNames.size === 0;
 
   return (
     <Card>
@@ -263,7 +285,7 @@ export function SqlQueryForm({
                 onTablesChange={setTables}
                 parameters={parameters}
                 onParametersChange={setParameters}
-                duplicateNames={findDuplicateParameterNames(parameters)}
+                duplicateNames={duplicateParameterNames}
                 viewDefinitions={(viewDefinitions ?? []).map((vd) => ({
                   id: vd.id,
                   name: vd.name,

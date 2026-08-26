@@ -24,7 +24,9 @@
  * inline query binds the values typed on its rows, and values bound on the
  * stored tab are retained by parameter name across query selections. Saving an
  * inline query switches to the stored tab with the saved query selected and
- * the values typed inline carried across by name.
+ * the values typed inline carried across by name. Execute and Add to export
+ * set are gated on every declared parameter carrying a valid value, while Save
+ * is gated only on duplicate names, since values are never persisted.
  *
  * @author John Grimes
  */
@@ -143,6 +145,7 @@ const RUNTIME_SECTION = "Runtime parameter values";
 function renderForm(
   overrides: Readonly<{
     onExecute?: (request: SqlQueryRequest) => void;
+    onAddToExportSet?: (request: SqlQueryRequest) => void;
     onSaveToServer?: (library: SqlQueryLibrary) => Promise<SaveSqlQueryLibraryResult>;
   }> = {},
 ) {
@@ -189,16 +192,37 @@ async function authorInlineQuery(
   await user.click(screen.getByRole("option", { name: "Active patients view" }));
   const parameter = options.parameter;
   if (parameter) {
-    await user.click(screen.getByRole("button", { name: /add parameter/i }));
-    await user.type(screen.getByRole("textbox", { name: "Name for parameter 1" }), parameter.name);
-    await user.click(screen.getByRole("combobox", { name: "Type for parameter 1" }));
-    await user.click(screen.getByRole("option", { name: parameter.type }));
-    if (parameter.value !== undefined) {
-      await user.type(
-        screen.getByRole("textbox", { name: "Value for parameter 1" }),
-        parameter.value,
-      );
-    }
+    await declareParameter(user, 1, parameter);
+  }
+}
+
+/**
+ * Declares one inline parameter row: adds a row and fills the row at the given
+ * one-based position.
+ *
+ * @param user - The userEvent instance.
+ * @param index - The one-based position of the row to fill.
+ * @param parameter - The name and type to declare, and the value to type
+ *   against the row. A value is only typed when supplied, and a boolean row's
+ *   control is a switch rather than a text field, so it is never typed into.
+ */
+async function declareParameter(
+  user: UserEvent,
+  index: number,
+  parameter: Readonly<{ name: string; type: SqlQueryParameterType; value?: string }>,
+) {
+  await user.click(screen.getByRole("button", { name: /add parameter/i }));
+  await user.type(
+    screen.getByRole("textbox", { name: `Name for parameter ${index}` }),
+    parameter.name,
+  );
+  await user.click(screen.getByRole("combobox", { name: `Type for parameter ${index}` }));
+  await user.click(screen.getByRole("option", { name: parameter.type }));
+  if (parameter.value !== undefined) {
+    await user.type(
+      screen.getByRole("textbox", { name: `Value for parameter ${index}` }),
+      parameter.value,
+    );
   }
 }
 
@@ -457,5 +481,135 @@ describe("SqlQueryForm save seeding", () => {
       name: "Runtime value for period_end",
     });
     expect(valueInput).toHaveValue("2020-01-01");
+  });
+});
+
+describe("SqlQueryForm parameter gating", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  /**
+   * Renders the form with an export-set handler, so the "Add to export set"
+   * button is present and its gating can be observed.
+   *
+   * @param overrides - Props to override beyond the export-set handler.
+   * @returns The userEvent instance for driving interactions.
+   */
+  function renderExportableForm(
+    overrides: Readonly<{
+      onExecute?: (request: SqlQueryRequest) => void;
+      onAddToExportSet?: (request: SqlQueryRequest) => void;
+    }> = {},
+  ) {
+    return renderForm({ onAddToExportSet: vi.fn(), ...overrides });
+  }
+
+  // US4 scenario 1: an unbound parameter can only produce a server failure, so
+  // neither submission is offered and the input says which value is missing.
+  it("disables Execute and Add to export set while a stored parameter is unbound", async () => {
+    const onExecute = vi.fn();
+    const onAddToExportSet = vi.fn();
+    const { user } = renderExportableForm({ onExecute, onAddToExportSet });
+
+    await selectSource(user, "Parameterised query");
+
+    const execute = screen.getByRole("button", { name: /execute/i });
+    const addToExportSet = screen.getByRole("button", { name: /add to export set/i });
+    expect(execute).toBeDisabled();
+    expect(addToExportSet).toBeDisabled();
+    expect(screen.getByRole("textbox", { name: "Runtime value for patient_id" })).toBeRequired();
+
+    // SC-004: the buttons are the only way to submit, so with both refusing
+    // the click no request can reach the server unbound.
+    await user.click(execute);
+    await user.click(addToExportSet);
+    expect(onExecute).not.toHaveBeenCalled();
+    expect(onAddToExportSet).not.toHaveBeenCalled();
+  });
+
+  // US4 scenario 2: with every declared parameter valued, both submissions are
+  // available and the input is no longer marked.
+  it("enables Execute and Add to export set once the stored parameter is valued", async () => {
+    const { user } = renderExportableForm();
+
+    await selectSource(user, "Parameterised query");
+    const valueInput = screen.getByRole("textbox", { name: "Runtime value for patient_id" });
+    await user.type(valueInput, "patient-1");
+
+    expect(screen.getByRole("button", { name: /execute/i })).toBeEnabled();
+    expect(screen.getByRole("button", { name: /add to export set/i })).toBeEnabled();
+    expect(valueInput).not.toBeRequired();
+  });
+
+  // FR-007: an empty value blocks execution, but nothing about a value is
+  // persisted, so it must not block saving the declarations.
+  it("disables Execute but not Save while an inline row has no value", async () => {
+    const { user } = renderExportableForm();
+
+    await authorInlineQuery(user, {
+      title: "Saved period query",
+      sql: SAVED_QUERY_SQL,
+      parameter: { name: "period_end", type: "date" },
+    });
+
+    expect(screen.getByRole("button", { name: /execute/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /add to export set/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /save to server/i })).toBeEnabled();
+  });
+
+  // FR-007: one name can only bind one value, so an ambiguous declaration
+  // blocks both running and saving until it is resolved.
+  it("disables Execute and Save while two inline rows declare the same name", async () => {
+    const { user } = renderExportableForm();
+
+    await authorInlineQuery(user, {
+      title: "Saved period query",
+      sql: SAVED_QUERY_SQL,
+      parameter: { name: "period_end", type: "date", value: "2025-06-30" },
+    });
+    await declareParameter(user, 2, { name: "period_end", type: "date", value: "2025-01-01" });
+
+    expect(screen.getByRole("button", { name: /execute/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /add to export set/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /save to server/i })).toBeDisabled();
+  });
+
+  // A boolean switch has no unbound state, so an untouched row is complete and
+  // binds what the switch displays.
+  it("executes an untouched boolean parameter, binding false", async () => {
+    const onExecute = vi.fn();
+    const { user } = renderExportableForm({ onExecute });
+
+    await authorInlineQuery(user, {
+      sql: "SELECT * FROM patients WHERE active = :active",
+      parameter: { name: "active", type: "boolean" },
+    });
+
+    expect(screen.getByRole("button", { name: /execute/i })).toBeEnabled();
+    await user.click(screen.getByRole("button", { name: /execute/i }));
+
+    expect(onExecute).toHaveBeenCalledWith(
+      expect.objectContaining({
+        mode: "inline",
+        bindings: { active: "false" },
+        parameterTypes: { active: "boolean" },
+      }),
+    );
+  });
+
+  // US4 scenario 3: with nothing declared there is nothing to bind, so the
+  // gating rests on the existing non-parameter conditions alone.
+  it("leaves Execute enabled on an inline query with no parameter rows", async () => {
+    const { user } = renderExportableForm();
+
+    await authorInlineQuery(user, { sql: "SELECT 1" });
+
+    expect(screen.getByRole("button", { name: /execute/i })).toBeEnabled();
+    expect(screen.getByRole("button", { name: /add to export set/i })).toBeEnabled();
   });
 });
