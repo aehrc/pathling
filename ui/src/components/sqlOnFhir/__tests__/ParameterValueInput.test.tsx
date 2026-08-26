@@ -107,6 +107,49 @@ describe("ParameterValueInput", () => {
     expect(screen.getByText("Expected a ISO 8601 date (YYYY-MM-DD) value.")).toBeInTheDocument();
   });
 
+  // The placeholder is the user's only cue to the form a value must take, so
+  // each entered type carries its own example.
+  it.each([
+    ["integer" as const, "e.g. 42"],
+    ["decimal" as const, "e.g. 1.5"],
+    ["date" as const, "YYYY-MM-DD"],
+    ["dateTime" as const, "YYYY-MM-DDTHH:MM:SSZ"],
+    ["string" as const, ""],
+    ["code" as const, ""],
+  ])("places a %s example in the placeholder", (type, placeholder) => {
+    render(
+      <ParameterValueInput
+        type={type}
+        value=""
+        onChange={onChange}
+        ariaLabel="Runtime value for arg"
+      />,
+    );
+
+    expect(screen.getByRole("textbox", { name: "Runtime value for arg" })).toHaveAttribute(
+      "placeholder",
+      placeholder,
+    );
+  });
+
+  // The message names the expected form per type, so each type that can fail
+  // validation reports its own wording.
+  it.each([
+    ["decimal" as const, "Expected a decimal value."],
+    ["dateTime" as const, "Expected a ISO 8601 dateTime value."],
+  ])("names the expected form for an invalid %s", (type, message) => {
+    render(
+      <ParameterValueInput
+        type={type}
+        value="nope"
+        onChange={onChange}
+        ariaLabel="Runtime value for arg"
+      />,
+    );
+
+    expect(screen.getByText(message)).toBeInTheDocument();
+  });
+
   // A valid value carries no message.
   it("shows no message for a valid value", () => {
     render(
