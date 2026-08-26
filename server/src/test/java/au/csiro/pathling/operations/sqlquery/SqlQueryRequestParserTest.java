@@ -19,6 +19,7 @@ package au.csiro.pathling.operations.sqlquery;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchThrowable;
 
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.math.BigDecimal;
@@ -26,7 +27,9 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.List;
 import java.util.Map;
+import org.hl7.fhir.instance.model.api.IBaseOperationOutcome;
 import org.hl7.fhir.r4.model.Base64BinaryType;
 import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.CodeableConcept;
@@ -37,6 +40,10 @@ import org.hl7.fhir.r4.model.DecimalType;
 import org.hl7.fhir.r4.model.Enumerations.PublicationStatus;
 import org.hl7.fhir.r4.model.IntegerType;
 import org.hl7.fhir.r4.model.Library;
+import org.hl7.fhir.r4.model.OperationOutcome;
+import org.hl7.fhir.r4.model.OperationOutcome.IssueSeverity;
+import org.hl7.fhir.r4.model.OperationOutcome.IssueType;
+import org.hl7.fhir.r4.model.OperationOutcome.OperationOutcomeIssueComponent;
 import org.hl7.fhir.r4.model.ParameterDefinition.ParameterUse;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.StringType;
@@ -47,6 +54,8 @@ import org.junit.jupiter.api.Test;
 /**
  * Unit tests for {@link SqlQueryRequestParser}, focused on the typed parameter binding path that
  * cross-checks runtime {@code value[x]} against {@code Library.parameter} declarations.
+ *
+ * @author John Grimes
  */
 class SqlQueryRequestParserTest {
 
@@ -275,6 +284,107 @@ class SqlQueryRequestParserTest {
   }
 
   // ---------------------------------------------------------------------------
+  // Unbound declared parameters.
+  //
+  // Every parameter declared by the Library requires a binding. The vacuous case (a Library
+  // declaring nothing, parsed with no bindings) is held by the two tests at the top of this class
+  // and by acceptsTopLevelSqlViewLibrary; the neighbouring rejections are held by the section
+  // above.
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void rejectsDeclaredParameterWhenNoBindingsAreSuppliedAtAll() {
+    // The absence of the parameters resource is itself the fault, so the outcome still names it.
+    final Library library = libraryWithSql("SELECT * FROM t WHERE d < :period_end");
+    library.addParameter().setName("period_end").setType("date").setUse(ParameterUse.IN);
+
+    final List<OperationOutcomeIssueComponent> issues = rejectionIssues(library, null);
+
+    assertThat(issues).hasSize(1);
+    final OperationOutcomeIssueComponent issue = issues.get(0);
+    assertThat(issue.getSeverity()).isEqualTo(IssueSeverity.ERROR);
+    assertThat(issue.getCode()).isEqualTo(IssueType.INVALID);
+    assertThat(issue.getExpression())
+        .extracting(StringType::getValue)
+        .containsExactly("parameters");
+    assertThat(issue.getDiagnostics()).contains("period_end");
+  }
+
+  @Test
+  void rejectsDeclaredParameterWhenTheParametersResourceIsEmpty() {
+    // An empty Parameters resource binds nothing, so it is answered exactly as its absence is.
+    final Library library = libraryWithSql("SELECT * FROM t WHERE d < :period_end");
+    library.addParameter().setName("period_end").setType("date").setUse(ParameterUse.IN);
+
+    final List<OperationOutcomeIssueComponent> issues = rejectionIssues(library, new Parameters());
+
+    assertThat(issues).hasSize(1);
+    assertThat(issues.get(0).getCode()).isEqualTo(IssueType.INVALID);
+    assertThat(issues.get(0).getDiagnostics()).contains("period_end");
+  }
+
+  @Test
+  void namesOnlyTheUnboundParameterWhenSomeAreBound() {
+    // A partially bound request reports the parameter at fault and not the one already supplied.
+    final Library library =
+        libraryWithSql("SELECT * FROM t WHERE d >= :period_start AND d < :period_end");
+    library.addParameter().setName("period_start").setType("date").setUse(ParameterUse.IN);
+    library.addParameter().setName("period_end").setType("date").setUse(ParameterUse.IN);
+    final Parameters params = new Parameters();
+    params.addParameter().setName("period_start").setValue(new DateType("2026-01-01"));
+
+    final List<OperationOutcomeIssueComponent> issues = rejectionIssues(library, params);
+
+    assertThat(issues).hasSize(1);
+    assertThat(issues.get(0).getDiagnostics())
+        .contains("period_end")
+        .doesNotContain("period_start");
+  }
+
+  @Test
+  void reportsEveryUnboundParameterInDeclarationOrder() {
+    // Several faults are reported in one outcome, so a single correction round trip suffices.
+    final Library library =
+        libraryWithSql("SELECT * FROM t WHERE d >= :period_start AND d < :period_end");
+    library.addParameter().setName("period_start").setType("date").setUse(ParameterUse.IN);
+    library.addParameter().setName("period_end").setType("date").setUse(ParameterUse.IN);
+
+    final List<OperationOutcomeIssueComponent> issues = rejectionIssues(library, null);
+
+    assertThat(issues).hasSize(2);
+    assertThat(issues)
+        .allSatisfy(
+            issue -> {
+              assertThat(issue.getSeverity()).isEqualTo(IssueSeverity.ERROR);
+              assertThat(issue.getCode()).isEqualTo(IssueType.INVALID);
+              assertThat(issue.getExpression())
+                  .extracting(StringType::getValue)
+                  .containsExactly("parameters");
+            });
+    assertThat(issues.get(0).getDiagnostics()).contains("period_start");
+    assertThat(issues.get(1).getDiagnostics()).contains("period_end");
+  }
+
+  @Test
+  void bindsEveryDeclaredParameterWhenAllAreSupplied() {
+    // The happy path is unchanged: a fully bound request parses with every value present.
+    final Library library =
+        libraryWithSql("SELECT * FROM t WHERE d >= :period_start AND d < :period_end");
+    library.addParameter().setName("period_start").setType("date").setUse(ParameterUse.IN);
+    library.addParameter().setName("period_end").setType("date").setUse(ParameterUse.IN);
+    final Parameters params = new Parameters();
+    params.addParameter().setName("period_start").setValue(new DateType("2026-01-01"));
+    params.addParameter().setName("period_end").setValue(new DateType("2026-12-31"));
+
+    final SqlQueryRequest request = parser.parse(library, null, null, null, null, params);
+
+    assertThat(request.getParameterBindings())
+        .containsExactly(
+            Map.entry("period_start", LocalDate.of(2026, 1, 1)),
+            Map.entry("period_end", LocalDate.of(2026, 12, 31)));
+  }
+
+  // ---------------------------------------------------------------------------
   // Output-format selection: strict for explicit _format, lenient for Accept.
   // ---------------------------------------------------------------------------
 
@@ -345,6 +455,20 @@ class SqlQueryRequestParserTest {
 
     assertThatThrownBy(() -> parser.parse(library, null, null, null, null, null))
         .isInstanceOf(InvalidRequestException.class);
+  }
+
+  /**
+   * Parses the given inputs expecting a rejection, and returns the issues its OperationOutcome
+   * carries.
+   */
+  private List<OperationOutcomeIssueComponent> rejectionIssues(
+      final Library library, final Parameters parameters) {
+    final Throwable thrown =
+        catchThrowable(() -> parser.parse(library, null, null, null, null, parameters));
+    assertThat(thrown).isInstanceOf(InvalidRequestException.class);
+    final IBaseOperationOutcome outcome = ((InvalidRequestException) thrown).getOperationOutcome();
+    assertThat(outcome).isInstanceOf(OperationOutcome.class);
+    return ((OperationOutcome) outcome).getIssue();
   }
 
   /** Builds a minimal SQLQuery-typed Library carrying the given SQL. */
