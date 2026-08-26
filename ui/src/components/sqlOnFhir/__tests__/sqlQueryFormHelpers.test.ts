@@ -15,13 +15,23 @@
  * limitations under the License.
  */
 
+/**
+ * Tests for the SQL query form helpers.
+ *
+ * Covers the inline Library builder and the SQL round trip, the Execute and
+ * Save preconditions, per-type value validation, and the parameter checks the
+ * form gates on: binding completeness, duplicate declared names, row validity
+ * and the row-to-binding seeding used after a save.
+ *
+ * @author John Grimes
+ */
+
 import { describe, expect, it } from "vitest";
 
 import { decodeSql, encodeSql } from "../../../utils/sqlBase64";
 import {
   areBindingsCompleteAndValid,
   areParameterRowsValid,
-  areRuntimeBindingsValid,
   buildInlineSqlQueryLibrary,
   buildParameterTypes,
   canExecuteInlineForm,
@@ -340,36 +350,6 @@ describe("isRuntimeValueValid", () => {
       true,
     );
     expect(isRuntimeValueValid("yesterday", "dateTime")).toBe(false);
-  });
-});
-
-describe("areRuntimeBindingsValid", () => {
-  // Empty bindings pass for declared-but-not-bound parameters.
-  it("accepts empty bindings", () => {
-    expect(
-      areRuntimeBindingsValid([{ name: "x", type: "integer" }], { x: "" }),
-    ).toBe(true);
-    expect(areRuntimeBindingsValid([{ name: "x", type: "integer" }], {})).toBe(
-      true,
-    );
-  });
-
-  it("rejects when any binding fails type validation", () => {
-    expect(
-      areRuntimeBindingsValid([{ name: "x", type: "integer" }], { x: "abc" }),
-    ).toBe(false);
-  });
-
-  it("accepts when all bindings pass type validation", () => {
-    expect(
-      areRuntimeBindingsValid(
-        [
-          { name: "x", type: "integer" },
-          { name: "y", type: "string" },
-        ],
-        { x: "42", y: "hello" },
-      ),
-    ).toBe(true);
   });
 });
 

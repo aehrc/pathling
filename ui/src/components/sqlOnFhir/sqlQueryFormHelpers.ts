@@ -199,33 +199,6 @@ export function canSaveInlineForm(input: BuildInlineLibraryInput): boolean {
 }
 
 /**
- * Returns true when each runtime binding parses cleanly to its declared
- * FHIR primitive type.
- *
- * Empty values are allowed and pass validation; the API client will omit
- * them from the request.
- *
- * @param parameters - The declared parameters in the active Library.
- * @param bindings - The runtime values entered by the user.
- * @returns Whether the bindings are submittable.
- */
-export function areRuntimeBindingsValid(
-  parameters: Array<{ name: string; type: SqlQueryParameterType }>,
-  bindings: SqlQueryRuntimeBindings,
-): boolean {
-  for (const param of parameters) {
-    const raw = bindings[param.name];
-    if (raw === undefined || raw === "") {
-      continue;
-    }
-    if (!isRuntimeValueValid(raw, param.type)) {
-      return false;
-    }
-  }
-  return true;
-}
-
-/**
  * Returns true when a value entered against a declared parameter is bound and
  * parses to its declared type.
  *
