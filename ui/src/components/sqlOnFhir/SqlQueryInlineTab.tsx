@@ -170,6 +170,7 @@ export function SqlQueryInlineTab({
         rowId: crypto.randomUUID(),
         name: "",
         type: "string",
+        value: "",
       },
     ]);
   };
@@ -363,11 +364,11 @@ export function SqlQueryInlineTab({
                   </Text>
                 )}
                 <TextField.Root
-                  value={param.defaultValue ?? ""}
+                  value={param.value}
                   placeholder="(none)"
                   onChange={(e) =>
                     handleUpdateParameter(param.rowId, {
-                      defaultValue: e.target.value,
+                      value: e.target.value,
                     })
                   }
                   disabled={disabled}

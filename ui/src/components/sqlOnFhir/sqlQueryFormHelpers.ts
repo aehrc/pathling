@@ -226,6 +226,128 @@ export function areRuntimeBindingsValid(
 }
 
 /**
+ * Returns true when a value entered against a declared parameter is bound and
+ * parses to its declared type.
+ *
+ * An empty value is unbound, and so invalid, except for a boolean: its switch
+ * has only two states, so an untouched switch reads as `false` rather than as
+ * an absent value.
+ *
+ * @param value - The value entered against the parameter.
+ * @param type - The declared parameter type.
+ * @returns Whether the value is bound and valid.
+ */
+function isBoundValueValid(
+  value: string,
+  type: SqlQueryParameterType,
+): boolean {
+  if (value === "") {
+    return type === "boolean";
+  }
+  return isRuntimeValueValid(value, type);
+}
+
+/**
+ * Returns true when every declared parameter carries a non-empty value that
+ * parses to its declared type.
+ *
+ * A parameter with no entry in the bindings map is unbound, and so blocks
+ * submission, because the server has no value to substitute. A boolean is
+ * always bound: an absent or empty entry is submitted as `false`, matching
+ * what its switch displays.
+ *
+ * @param parameters - The declared parameters in the active Library.
+ * @param bindings - The runtime values entered by the user.
+ * @returns Whether the bindings are complete and submittable.
+ */
+export function areBindingsCompleteAndValid(
+  parameters: Array<{ name: string; type: SqlQueryParameterType }>,
+  bindings: SqlQueryRuntimeBindings,
+): boolean {
+  return parameters.every((param) =>
+    isBoundValueValid(bindings[param.name] ?? "", param.type),
+  );
+}
+
+/**
+ * Returns the set of parameter names declared by more than one row.
+ *
+ * Names are compared after trimming, since that is the form in which they are
+ * declared. A row with an empty name is not a declaration, so unnamed rows are
+ * never duplicates of each other.
+ *
+ * @param rows - The inline parameter rows.
+ * @returns The names declared by more than one row.
+ */
+export function findDuplicateParameterNames(
+  rows: readonly SqlQueryParameterDeclaration[],
+): ReadonlySet<string> {
+  const seen = new Set<string>();
+  const duplicates = new Set<string>();
+  for (const row of rows) {
+    const name = row.name.trim();
+    if (name === "") {
+      continue;
+    }
+    if (seen.has(name)) {
+      duplicates.add(name);
+    }
+    seen.add(name);
+  }
+  return duplicates;
+}
+
+/**
+ * Returns true when every named inline row carries a bound, valid value and no
+ * name is declared twice.
+ *
+ * Rows with an empty name are ignored: they are neither declared nor bound, so
+ * they cannot block submission.
+ *
+ * @param rows - The inline parameter rows.
+ * @returns Whether the rows are complete and submittable.
+ */
+export function areParameterRowsValid(
+  rows: readonly SqlQueryParameterDeclaration[],
+): boolean {
+  if (findDuplicateParameterNames(rows).size > 0) {
+    return false;
+  }
+  return rows.every(
+    (row) => row.name.trim() === "" || isBoundValueValid(row.value, row.type),
+  );
+}
+
+/**
+ * Converts inline parameter rows into the name-keyed bindings map used to
+ * assemble a request and to seed the stored tab's values on save.
+ *
+ * Rows with an empty name contribute nothing, as do named rows with an empty
+ * value: omitting them leaves the parameter unbound rather than binding it to
+ * an empty string. A boolean row always contributes, its untouched switch
+ * yielding `"false"`.
+ *
+ * @param rows - The inline parameter rows.
+ * @returns The runtime bindings contributed by the rows.
+ */
+export function rowsToBindings(
+  rows: readonly SqlQueryParameterDeclaration[],
+): SqlQueryRuntimeBindings {
+  const bindings: SqlQueryRuntimeBindings = {};
+  for (const row of rows) {
+    if (row.name.trim() === "") {
+      continue;
+    }
+    if (row.type === "boolean") {
+      bindings[row.name] = row.value === "" ? "false" : row.value;
+    } else if (row.value !== "") {
+      bindings[row.name] = row.value;
+    }
+  }
+  return bindings;
+}
+
+/**
  * Validates a single runtime value against its declared FHIR primitive
  * type. Used for both per-field guidance and overall form validity.
  *

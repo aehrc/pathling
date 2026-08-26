@@ -87,8 +87,12 @@ export interface SqlQueryParameterDeclaration {
   name: string;
   /** Declared FHIR primitive type. */
   type: SqlQueryParameterType;
-  /** Optional default value supplied as a string; coerced on submit. */
-  defaultValue?: string;
+  /**
+   * The runtime value bound for this run, captured as a string and coerced to
+   * the declared type when the request is assembled. This value is never
+   * persisted: saving the query writes the declaration only.
+   */
+  value: string;
 }
 
 /**
