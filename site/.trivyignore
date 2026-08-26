@@ -71,3 +71,10 @@ CVE-2026-9595
 # brace-expansion out-of-memory DoS — build-time minimatch transitive used for file globbing,
 # not deployed. The only fix is a 1.x to 5.x major upgrade of a transitive dependency.
 CVE-2026-14257
+
+# image-size denial of service via crafted image buffers, no fixed release available (2.0.2 is
+# the latest published version). image-size is a build-time transitive of @docusaurus/mdx-loader,
+# which uses it to measure the dimensions of image files committed to this repository. It never
+# sees a request-supplied buffer, and it is not deployed with the static site.
+CVE-2025-71329
+CVE-2025-71330
