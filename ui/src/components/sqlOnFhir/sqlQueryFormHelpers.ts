@@ -117,8 +117,11 @@ export function buildInlineSqlQueryLibrary(
     }));
   }
 
-  if (input.parameters.length > 0) {
-    library.parameter = input.parameters.map((param) => ({
+  // An empty-name row is not a declaration, so it must not ride along into
+  // the saved Library - only names that would actually be bound are persisted.
+  const declared = input.parameters.filter((param) => param.name.trim() !== "");
+  if (declared.length > 0) {
+    library.parameter = declared.map((param) => ({
       name: param.name,
       use: "in" as const,
       type: param.type,
@@ -318,6 +321,33 @@ export function rowsToBindings(
     }
   }
   return bindings;
+}
+
+/**
+ * Returns the bindings map with every declared boolean parameter that has no
+ * entry defaulted to "false".
+ *
+ * A boolean's switch has only two states, so an absent or empty entry is
+ * submitted as false, matching what the switch displays. Defaulting the entry
+ * keeps the assembled request complete for the server: without it an untouched
+ * boolean would be omitted entirely and reach the server as an unbound
+ * parameter.
+ *
+ * @param parameters - The declared parameter list.
+ * @param bindings - The runtime values entered by the user.
+ * @returns The bindings with untouched booleans defaulted to "false".
+ */
+export function bindUntouchedBooleans(
+  parameters: Array<{ name: string; type: SqlQueryParameterType }>,
+  bindings: SqlQueryRuntimeBindings,
+): SqlQueryRuntimeBindings {
+  const result = { ...bindings };
+  for (const param of parameters) {
+    if (param.type === "boolean" && result[param.name] === undefined) {
+      result[param.name] = "false";
+    }
+  }
+  return result;
 }
 
 /**

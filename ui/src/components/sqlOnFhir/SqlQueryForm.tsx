@@ -38,6 +38,7 @@ import { useState } from "react";
 import {
   areBindingsCompleteAndValid,
   areParameterRowsValid,
+  bindUntouchedBooleans,
   buildInlineSqlQueryLibrary,
   buildParameterTypes,
   canExecuteInlineForm,
@@ -151,11 +152,16 @@ export function SqlQueryForm({
     const requestLimit = parsedLimit === undefined ? 10 : Math.min(parsedLimit, 10);
     // The inline tab's rows carry their own values, so they are the source of
     // the inline request's bindings; the stored tab uses the name-keyed map.
+    // A stored boolean with no entry is defaulted to false so the assembled
+    // request never sends an unbound parameter.
     return {
       format,
       limit: requestLimit,
       header: format === "csv" ? csvHeader : undefined,
-      bindings: source === "stored" ? bindings : rowsToBindings(parameters),
+      bindings:
+        source === "stored"
+          ? bindUntouchedBooleans(declaredParameters, bindings)
+          : rowsToBindings(parameters),
       parameterTypes: buildParameterTypes(declaredParameters),
     };
   };

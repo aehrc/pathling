@@ -86,6 +86,12 @@ const PARAM_QUERY = makeSummary({
   parameters: [{ name: "patient_id", type: "string" }],
 });
 
+const BOOL_QUERY = makeSummary({
+  id: "bool-query",
+  title: "Boolean query",
+  parameters: [{ name: "active", type: "boolean" }],
+});
+
 const PLAIN_QUERY = makeSummary({
   id: "plain-query",
   title: "Plain query",
@@ -126,7 +132,7 @@ const SQL_VIEW = makeSummary({
 // consume.
 vi.mock("../../../hooks", () => ({
   useSqlQueryLibraries: () => ({
-    data: [PARAM_QUERY, PLAIN_QUERY, PERIOD_QUERY, OTHER_PERIOD_QUERY, SAVED_QUERY],
+    data: [PARAM_QUERY, PLAIN_QUERY, PERIOD_QUERY, OTHER_PERIOD_QUERY, SAVED_QUERY, BOOL_QUERY],
     isLoading: false,
   }),
   useSqlViews: () => ({ data: [SQL_VIEW], isLoading: false }),
@@ -315,6 +321,28 @@ describe("SqlQueryForm stored execution", () => {
         mode: "stored",
         libraryId: "plain-query",
         sql: "SELECT 1",
+      }),
+    );
+  });
+
+  // A stored boolean switch has no unbound state, so an untouched one is bound
+  // as false on the wire request - the server must not see an absent binding.
+  it("binds an untouched stored boolean parameter as false", async () => {
+    const onExecute = vi.fn();
+    const { user } = renderForm({ onExecute });
+
+    await selectSource(user, "Boolean query");
+
+    expect(screen.getByRole("button", { name: /execute/i })).toBeEnabled();
+    await user.click(screen.getByRole("button", { name: /execute/i }));
+
+    expect(onExecute).toHaveBeenCalledTimes(1);
+    expect(onExecute).toHaveBeenCalledWith(
+      expect.objectContaining({
+        mode: "stored",
+        libraryId: "bool-query",
+        bindings: { active: "false" },
+        parameterTypes: { active: "boolean" },
       }),
     );
   });

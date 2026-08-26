@@ -32,6 +32,7 @@ import { decodeSql, encodeSql } from "../../../utils/sqlBase64";
 import {
   areBindingsCompleteAndValid,
   areParameterRowsValid,
+  bindUntouchedBooleans,
   buildInlineSqlQueryLibrary,
   buildParameterTypes,
   canExecuteInlineForm,
@@ -132,6 +133,25 @@ describe("buildInlineSqlQueryLibrary", () => {
       use: "in",
       type: "date",
     });
+  });
+
+  // An empty-name row is not a declaration, so it contributes nothing to the
+  // saved Library's parameter list - only names that would actually be bound
+  // are persisted.
+  it("excludes an empty-name row from the saved parameter list", () => {
+    const library = buildInlineSqlQueryLibrary({
+      title: "Query",
+      sql: "SELECT 1",
+      tables: [],
+      parameters: [
+        row("", "string", "unbound value"),
+        row("period_end", "date", "2025-06-30"),
+      ],
+    });
+
+    expect(library.parameter).toEqual([
+      { name: "period_end", use: "in", type: "date" },
+    ]);
   });
 
   // Each row emits its chosen source's canonical URL verbatim as the
@@ -525,6 +545,33 @@ describe("rowsToBindings", () => {
   // Unnamed rows are not declarations and cannot be bound.
   it("drops rows with an empty name", () => {
     expect(rowsToBindings([row("  ", "string", "a")])).toEqual({});
+  });
+});
+
+describe("bindUntouchedBooleans", () => {
+  // A declared boolean with no entry is defaulted to false so the wire
+  // request stays complete - without it the server would see it unbound.
+  it("defaults an absent boolean entry to false", () => {
+    const parameters = [{ name: "active", type: "boolean" as const }];
+    expect(bindUntouchedBooleans(parameters, {})).toEqual({ active: "false" });
+  });
+
+  it("defaults only absent booleans, leaving existing values alone", () => {
+    const parameters = [
+      { name: "active", type: "boolean" as const },
+      { name: "period_end", type: "date" as const },
+    ];
+    const result = bindUntouchedBooleans(parameters, { active: "true" });
+    expect(result).toEqual({ active: "true" });
+  });
+
+  it("returns the bindings unchanged when no boolean is declared", () => {
+    const parameters = [{ name: "period_end", type: "date" as const }];
+    expect(
+      bindUntouchedBooleans(parameters, { period_end: "2025-06-30" }),
+    ).toEqual({
+      period_end: "2025-06-30",
+    });
   });
 });
 
