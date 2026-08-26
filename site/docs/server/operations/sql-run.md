@@ -45,7 +45,7 @@ server; supplying a resource-valued parameter over `GET` is rejected with a
 | `subjectCanonical` | 0..1        | canonical  | The subject's canonical URL, honouring a `\|version` pin. Matched against both `ViewDefinition.url` and `Library.url`.               |
 | `subjectReference` | 0..1        | Reference  | A relative reference naming its type: `ViewDefinition/[id]` or `Library/[id]`.                                                       |
 | `subjectResource`  | 0..1        | Resource   | An inline ViewDefinition, SQLQuery or SQLView.                                                                                       |
-| `parameters`       | 0..1        | Parameters | Runtime bindings for a SQL subject. Each entry's name must match a `Library.parameter` declaration and its `value[x]` its type.      |
+| `parameters`       | 0..1        | Parameters | Runtime bindings for a SQL subject. Every `Library.parameter` declaration must be bound by an entry matching it in name and type.    |
 | `context`          | 0..\*       | Resource   | Inline supporting artefacts (ViewDefinition or SQLView) for dependencies the server cannot resolve. Matched by canonical URL.        |
 | `resource`         | 0..\*       | string     | FHIR resources to project instead of server data, for a ViewDefinition subject. Each is a serialised resource or a Bundle to unwrap. |
 | `_format`          | 0..1        | code       | Output format; see below. Takes precedence over the `Accept` header.                                                                 |
@@ -177,6 +177,14 @@ Every 4xx and 5xx response carries an
 name the parameter at fault in `expression`. A request that is wrong in more
 than one way is answered with one outcome naming every problem, so it can be
 corrected in a single round trip.
+
+Every parameter the subject declares must be bound. The SQL engine has no
+parameter defaults, so an unbound declaration cannot be executed at all, and
+leaving one out is a `400` rather than a query run over a missing value. Each
+unbound declaration is reported as its own `invalid` issue, so a request short
+of several bindings is answered naming all of them, and `expression` names
+`parameters` even when the request carried no `parameters` resource - its
+absence is the fault.
 
 A fault in the subject's own SQL that only Spark's analyser can catch - an
 unresolved column, an unknown function, a missing `GROUP BY`, an ambiguous
