@@ -171,7 +171,7 @@ export interface SqlQueryExecutionOptions {
   limit?: number;
   /** Whether to include a header row when format is `csv`. */
   header?: boolean;
-  /** Runtime parameter values, keyed by declared parameter name. */
+  /** Values bound to the parameters, keyed by declared parameter name. */
   bindings?: SqlQueryRuntimeBindings;
   /**
    * Declared parameter types, keyed by name. Used to pick the correct

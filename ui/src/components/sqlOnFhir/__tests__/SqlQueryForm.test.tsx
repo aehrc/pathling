@@ -19,10 +19,10 @@
  * Tests for the SqlQueryForm component, focused on where parameter values are
  * presented and how they reach the request.
  *
- * The shared "Runtime parameter values" section below the tabs is not rendered
- * for the "Provide SQL" tab, whose rows carry their own values; on the "Select
- * query" tab it appears only when the selected source declares parameters.
- * Executing an inline query binds the values typed on its rows.
+ * Each tab owns its parameter presentation, so no shared "Runtime parameter
+ * values" section is rendered below the tabs in either mode. Executing an
+ * inline query binds the values typed on its rows, and values bound on the
+ * stored tab are retained by parameter name across query selections.
  *
  * @author John Grimes
  */
@@ -30,7 +30,7 @@
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { render, screen } from "../../../test/testUtils";
+import { render, screen, within } from "../../../test/testUtils";
 import { SqlQueryForm } from "../SqlQueryForm";
 
 import type { SqlQueryLibrarySummary } from "../../../types/sqlQuery";
@@ -77,6 +77,20 @@ const PLAIN_QUERY = makeSummary({
   parameters: [],
 });
 
+// Two queries declaring the same parameter, used to show that a bound value
+// is retained by name across selections.
+const PERIOD_QUERY = makeSummary({
+  id: "period-query",
+  title: "Period query",
+  parameters: [{ name: "period_end", type: "date" }],
+});
+
+const OTHER_PERIOD_QUERY = makeSummary({
+  id: "other-period-query",
+  title: "Other period query",
+  parameters: [{ name: "period_end", type: "date" }],
+});
+
 const SQL_VIEW = makeSummary({
   id: "sql-view",
   title: "Active patients view",
@@ -88,7 +102,7 @@ const SQL_VIEW = makeSummary({
 // consume.
 vi.mock("../../../hooks", () => ({
   useSqlQueryLibraries: () => ({
-    data: [PARAM_QUERY, PLAIN_QUERY],
+    data: [PARAM_QUERY, PLAIN_QUERY, PERIOD_QUERY, OTHER_PERIOD_QUERY],
     isLoading: false,
   }),
   useSqlViews: () => ({ data: [SQL_VIEW], isLoading: false }),
@@ -127,7 +141,7 @@ async function selectSource(user: ReturnType<typeof userEvent.setup>, optionName
   await user.click(screen.getByRole("option", { name: optionName }));
 }
 
-describe("SqlQueryForm runtime parameter visibility", () => {
+describe("SqlQueryForm parameter value placement", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -136,31 +150,19 @@ describe("SqlQueryForm runtime parameter visibility", () => {
     vi.clearAllMocks();
   });
 
-  // With nothing selected on the stored tab, there is nothing to bind.
-  it("hides the runtime params section when no source is selected", () => {
-    renderForm();
-    expect(screen.queryByText(RUNTIME_SECTION)).not.toBeInTheDocument();
-  });
-
-  // A selected parameterised query exposes its bindings.
-  it("shows the runtime params section for a parameterised query", async () => {
+  // US2 scenario 1: the stored tab owns its parameters, so the shared section
+  // that used to sit below the tabs is gone and the value input lives inside
+  // the tab panel.
+  it("renders the stored query's value inputs inside the tab, not below it", async () => {
     const user = renderForm();
+
     await selectSource(user, "Parameterised query");
-    expect(screen.getByText(RUNTIME_SECTION)).toBeInTheDocument();
-  });
 
-  // A selected param-less query has nothing to bind, so the section is hidden.
-  it("hides the runtime params section for a param-less query", async () => {
-    const user = renderForm();
-    await selectSource(user, "Plain query");
     expect(screen.queryByText(RUNTIME_SECTION)).not.toBeInTheDocument();
-  });
-
-  // A SQLView never declares parameters, so the section is hidden.
-  it("hides the runtime params section for a SQLView", async () => {
-    const user = renderForm();
-    await selectSource(user, "Active patients view");
-    expect(screen.queryByText(RUNTIME_SECTION)).not.toBeInTheDocument();
+    const panel = screen.getByRole("tabpanel");
+    expect(
+      within(panel).queryByRole("textbox", { name: "Runtime value for patient_id" }),
+    ).toBeInTheDocument();
   });
 
   // On the "Provide SQL" tab each row carries its own value, so no separate
@@ -169,6 +171,26 @@ describe("SqlQueryForm runtime parameter visibility", () => {
     const user = renderForm();
     await user.click(screen.getByRole("tab", { name: /provide sql/i }));
     expect(screen.queryByText(RUNTIME_SECTION)).not.toBeInTheDocument();
+  });
+
+  // US2 scenario 4: values are keyed by parameter name, so binding a
+  // reporting period once carries it to every query declaring that name.
+  it("retains a bound value when switching to a query declaring the same parameter", async () => {
+    const user = renderForm();
+
+    await selectSource(user, "Period query");
+    await user.type(
+      screen.getByRole("textbox", { name: "Runtime value for period_end" }),
+      "2025-06-30",
+    );
+
+    await selectSource(user, "Other period query");
+
+    const panel = screen.getByRole("tabpanel");
+    const valueInput = within(panel).queryByRole("textbox", {
+      name: "Runtime value for period_end",
+    });
+    expect(valueInput).toHaveValue("2025-06-30");
   });
 });
 

@@ -51,7 +51,7 @@ export interface SqlRunRequest {
   limit?: number;
   /** Whether CSV output carries a header row. */
   header?: boolean;
-  /** Runtime parameter values, for a SQL subject only. */
+  /** Values bound to the declared parameters, for a SQL subject only. */
   bindings?: SqlQueryRuntimeBindings;
   /** Declared parameter types, keyed by name. */
   parameterTypes?: Record<string, SqlQueryParameterType>;

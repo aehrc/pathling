@@ -18,9 +18,9 @@
 /**
  * Form for executing the SQL on FHIR `$sql-run` operation.
  *
- * Hosts a stored/inline tab pair, runtime bindings and output controls,
- * then dispatches Execute and Save actions through the supplied
- * callbacks.
+ * Hosts a stored/inline tab pair - each owning its own parameter
+ * presentation - and the output controls, then dispatches Execute and Save
+ * actions through the supplied callbacks.
  *
  * @author John Grimes
  */
@@ -29,9 +29,6 @@ import { PlayIcon, PlusIcon, UploadIcon } from "@radix-ui/react-icons";
 import { Box, Button, Card, Flex, Heading, Tabs } from "@radix-ui/themes";
 import { useState } from "react";
 
-import { useSqlQueryLibraries, useSqlViews, useViewDefinitions } from "../../hooks";
-import { ErrorCallout } from "../error/ErrorCallout";
-import { FieldLabel } from "../FieldLabel";
 import {
   areRuntimeBindingsValid,
   buildInlineSqlQueryLibrary,
@@ -43,8 +40,9 @@ import {
 } from "./sqlQueryFormHelpers";
 import { SqlQueryInlineTab } from "./SqlQueryInlineTab";
 import { SqlQueryOutputControls } from "./SqlQueryOutputControls";
-import { SqlQueryRuntimeBindings } from "./SqlQueryRuntimeBindings";
 import { SqlQueryStoredTab } from "./SqlQueryStoredTab";
+import { useSqlQueryLibraries, useSqlViews, useViewDefinitions } from "../../hooks";
+import { ErrorCallout } from "../error/ErrorCallout";
 
 import type {
   SaveSqlQueryLibraryResult,
@@ -222,11 +220,6 @@ export function SqlQueryForm({
 
   const canSave = !disabled && !isSaving && source === "inline" && canSaveInlineForm(inlineInput);
 
-  // The "Provide SQL" tab carries a value on each parameter row, so the shared
-  // section serves only the "Select query" tab, and only when the selected
-  // source actually declares parameters (a SQLView never does).
-  const showRuntimeParams = source === "stored" && declaredParameters.length > 0;
-
   return (
     <Card>
       <Flex direction="column" gap="4">
@@ -246,6 +239,8 @@ export function SqlQueryForm({
                 isLoading={isLoadingLibraries || isLoadingViews}
                 selectedId={selectedLibraryId}
                 onSelect={setSelectedLibraryId}
+                bindings={bindings}
+                onBindingChange={handleBindingChange}
                 disabled={disabled || isExecuting}
               />
             </Tabs.Content>
@@ -276,18 +271,6 @@ export function SqlQueryForm({
             </Tabs.Content>
           </Box>
         </Tabs.Root>
-
-        {showRuntimeParams && (
-          <Box>
-            <FieldLabel mb="2">Runtime parameter values</FieldLabel>
-            <SqlQueryRuntimeBindings
-              parameters={declaredParameters}
-              bindings={bindings}
-              onChange={handleBindingChange}
-              disabled={disabled || isExecuting}
-            />
-          </Box>
-        )}
 
         <SqlQueryOutputControls
           format={format}
