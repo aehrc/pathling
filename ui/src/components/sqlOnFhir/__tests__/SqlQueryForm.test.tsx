@@ -16,11 +16,13 @@
  */
 
 /**
- * Tests for the SqlQueryForm component, focused on the conditional
- * visibility of the "Runtime parameter values" section.
+ * Tests for the SqlQueryForm component, focused on where parameter values are
+ * presented and how they reach the request.
  *
- * On the "Select query" tab the section appears only when the selected
- * source declares parameters; on the "Provide SQL" tab it is always shown.
+ * The shared "Runtime parameter values" section below the tabs is not rendered
+ * for the "Provide SQL" tab, whose rows carry their own values; on the "Select
+ * query" tab it appears only when the selected source declares parameters.
+ * Executing an inline query binds the values typed on its rows.
  *
  * @author John Grimes
  */
@@ -161,12 +163,12 @@ describe("SqlQueryForm runtime parameter visibility", () => {
     expect(screen.queryByText(RUNTIME_SECTION)).not.toBeInTheDocument();
   });
 
-  // On the "Provide SQL" tab the section is always shown, preserving the
-  // inline-authoring behaviour.
-  it("always shows the runtime params section on the Provide SQL tab", async () => {
+  // On the "Provide SQL" tab each row carries its own value, so no separate
+  // section is rendered below the tabs.
+  it("shows no runtime params section on the Provide SQL tab", async () => {
     const user = renderForm();
     await user.click(screen.getByRole("tab", { name: /provide sql/i }));
-    expect(screen.getByText(RUNTIME_SECTION)).toBeInTheDocument();
+    expect(screen.queryByText(RUNTIME_SECTION)).not.toBeInTheDocument();
   });
 });
 
@@ -232,5 +234,60 @@ describe("SqlQueryForm stored execution", () => {
     await user.click(screen.getByRole("button", { name: /save to server/i }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Save rejected by the server");
+  });
+});
+
+describe("SqlQueryForm inline execution", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  // The value typed on the row is the value bound on this run, so it must reach
+  // the request along with the type it was declared as.
+  it("binds the inline row's value on the request", async () => {
+    const user = userEvent.setup();
+    const onExecute = vi.fn();
+    render(
+      <SqlQueryForm
+        onExecute={onExecute}
+        onSaveToServer={vi.fn()}
+        isExecuting={false}
+        isSaving={false}
+      />,
+    );
+
+    // Executing an inline query requires some SQL and at least one resolved
+    // view.
+    await user.click(screen.getByRole("tab", { name: /provide sql/i }));
+    await user.type(
+      screen.getByRole("textbox", { name: /^sql$/i }),
+      "SELECT * FROM patients WHERE date <= :period_end",
+    );
+    await user.click(screen.getByRole("button", { name: /add view/i }));
+    await user.type(screen.getByRole("textbox", { name: /label for view 1/i }), "patients");
+    await user.click(screen.getByRole("combobox", { name: /source for view 1/i }));
+    await user.click(screen.getByRole("option", { name: "Active patients view" }));
+
+    // Declare period_end as a date and give it the value to bind.
+    await user.click(screen.getByRole("button", { name: /add parameter/i }));
+    await user.type(screen.getByRole("textbox", { name: "Name for parameter 1" }), "period_end");
+    await user.click(screen.getByRole("combobox", { name: "Type for parameter 1" }));
+    await user.click(screen.getByRole("option", { name: "date" }));
+    await user.type(screen.getByRole("textbox", { name: "Value for parameter 1" }), "2025-06-30");
+
+    await user.click(screen.getByRole("button", { name: /execute/i }));
+
+    expect(onExecute).toHaveBeenCalledTimes(1);
+    expect(onExecute).toHaveBeenCalledWith(
+      expect.objectContaining({
+        mode: "inline",
+        bindings: { period_end: "2025-06-30" },
+        parameterTypes: { period_end: "date" },
+      }),
+    );
   });
 });

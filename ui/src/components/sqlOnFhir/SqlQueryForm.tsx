@@ -38,6 +38,8 @@ import {
   buildParameterTypes,
   canExecuteInlineForm,
   canSaveInlineForm,
+  findDuplicateParameterNames,
+  rowsToBindings,
 } from "./sqlQueryFormHelpers";
 import { SqlQueryInlineTab } from "./SqlQueryInlineTab";
 import { SqlQueryOutputControls } from "./SqlQueryOutputControls";
@@ -142,11 +144,13 @@ export function SqlQueryForm({
     // query export operation.
     const parsedLimit = limit.trim() === "" ? undefined : Number.parseInt(limit, 10);
     const requestLimit = parsedLimit === undefined ? 10 : Math.min(parsedLimit, 10);
+    // The inline tab's rows carry their own values, so they are the source of
+    // the inline request's bindings; the stored tab uses the name-keyed map.
     return {
       format,
       limit: requestLimit,
       header: format === "csv" ? csvHeader : undefined,
-      bindings,
+      bindings: source === "stored" ? bindings : rowsToBindings(parameters),
       parameterTypes: buildParameterTypes(declaredParameters),
     };
   };
@@ -218,10 +222,10 @@ export function SqlQueryForm({
 
   const canSave = !disabled && !isSaving && source === "inline" && canSaveInlineForm(inlineInput);
 
-  // On the "Provide SQL" tab the runtime-params section stays anchored as the
-  // user declares parameters; on the "Select query" tab it appears only when
-  // the selected source actually declares parameters (a SQLView never does).
-  const showRuntimeParams = source === "inline" || declaredParameters.length > 0;
+  // The "Provide SQL" tab carries a value on each parameter row, so the shared
+  // section serves only the "Select query" tab, and only when the selected
+  // source actually declares parameters (a SQLView never does).
+  const showRuntimeParams = source === "stored" && declaredParameters.length > 0;
 
   return (
     <Card>
@@ -255,6 +259,7 @@ export function SqlQueryForm({
                 onTablesChange={setTables}
                 parameters={parameters}
                 onParametersChange={setParameters}
+                duplicateNames={findDuplicateParameterNames(parameters)}
                 viewDefinitions={(viewDefinitions ?? []).map((vd) => ({
                   id: vd.id,
                   name: vd.name,

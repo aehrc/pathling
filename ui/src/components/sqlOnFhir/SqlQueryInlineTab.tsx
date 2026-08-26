@@ -17,7 +17,7 @@
 
 /**
  * "Provide SQL" tab body for the SQL query form: SQL editor, views editor
- * and parameter declarations editor.
+ * and parameters editor.
  *
  * @author John Grimes
  */
@@ -28,6 +28,7 @@ import { Box, Button, Flex, IconButton, Select, Text, TextArea, TextField } from
 import { findSourceByUrl } from "../../hooks/sqlQueryHelpers";
 import { FieldGuidance } from "../FieldGuidance";
 import { FieldLabel } from "../FieldLabel";
+import { ParameterValueInput } from "./ParameterValueInput";
 
 import type {
   SourceOption,
@@ -104,6 +105,8 @@ interface SqlQueryInlineTabProps {
   parameters: SqlQueryParameterDeclaration[];
   /** Callback fired when the parameters list changes. */
   onParametersChange: (parameters: SqlQueryParameterDeclaration[]) => void;
+  /** Parameter names declared by more than one row. */
+  duplicateNames: ReadonlySet<string>;
   /** Available stored ViewDefinitions for the source selector. */
   viewDefinitions: SourceOption[];
   /** Available stored SQLViews for the source selector. */
@@ -124,6 +127,7 @@ interface SqlQueryInlineTabProps {
  * @param props.onTablesChange - Callback fired when the view rows change.
  * @param props.parameters - Configured declared parameters.
  * @param props.onParametersChange - Callback fired when the parameters list changes.
+ * @param props.duplicateNames - Parameter names declared by more than one row.
  * @param props.viewDefinitions - Available stored ViewDefinitions for the source selector.
  * @param props.sqlViews - Available stored SQLViews for the source selector.
  * @param props.disabled - Whether the controls should be disabled.
@@ -138,6 +142,7 @@ export function SqlQueryInlineTab({
   onTablesChange,
   parameters,
   onParametersChange,
+  duplicateNames,
   viewDefinitions,
   sqlViews,
   disabled = false,
@@ -304,89 +309,100 @@ export function SqlQueryInlineTab({
         </FieldLabel>
         {parameters.length === 0 && (
           <FieldGuidance>
-            Declare runtime parameters for the SQL. Each becomes a `Library.parameter` entry with
-            `use=in`.
+            Declare the parameters the SQL binds, and the value to bind on this run. Each becomes a
+            `Library.parameter` entry with `use=in`; values are never saved.
           </FieldGuidance>
         )}
         <Flex direction="column" gap="2" mt="1">
-          {parameters.map((param, index) => (
-            <Flex key={param.rowId} gap="2" align="end" wrap="wrap">
-              <Box style={{ flex: 1, minWidth: "9rem" }}>
-                {index === 0 && (
-                  <Text size="1" color="gray" as="div" mb="1">
-                    Name
-                  </Text>
-                )}
-                <TextField.Root
-                  value={param.name}
-                  placeholder="e.g. patient_id"
-                  onChange={(e) =>
-                    handleUpdateParameter(param.rowId, {
-                      name: e.target.value,
-                    })
-                  }
-                  disabled={disabled}
-                  aria-label={`Name for parameter ${index + 1}`}
-                />
-              </Box>
-              <Box style={{ width: "9rem" }}>
-                {index === 0 && (
-                  <Text size="1" color="gray" as="div" mb="1">
-                    Type
-                  </Text>
-                )}
-                <Select.Root
-                  value={param.type}
-                  onValueChange={(value) =>
-                    handleUpdateParameter(param.rowId, {
-                      type: value as SqlQueryParameterType,
-                    })
-                  }
+          {parameters.map((param, index) => {
+            const declaredName = param.name.trim();
+            // One name can only bind one value, so a name declared twice is
+            // ambiguous and both rows carry the message.
+            const duplicate = declaredName !== "" && duplicateNames.has(declaredName);
+            return (
+              <Flex key={param.rowId} gap="2" align="end" wrap="wrap">
+                <Box style={{ flex: 1, minWidth: "9rem" }}>
+                  {index === 0 && (
+                    <Text size="1" color="gray" as="div" mb="1">
+                      Name
+                    </Text>
+                  )}
+                  <TextField.Root
+                    value={param.name}
+                    placeholder="e.g. patient_id"
+                    onChange={(e) =>
+                      handleUpdateParameter(param.rowId, {
+                        name: e.target.value,
+                      })
+                    }
+                    disabled={disabled}
+                    aria-label={`Name for parameter ${index + 1}`}
+                    color={duplicate ? "red" : undefined}
+                  />
+                  {duplicate && (
+                    <Text size="1" color="red" as="div" mt="1">
+                      {`Duplicate parameter name: ${declaredName}.`}
+                    </Text>
+                  )}
+                </Box>
+                <Box style={{ width: "9rem" }}>
+                  {index === 0 && (
+                    <Text size="1" color="gray" as="div" mb="1">
+                      Type
+                    </Text>
+                  )}
+                  <Select.Root
+                    value={param.type}
+                    onValueChange={(value) =>
+                      handleUpdateParameter(param.rowId, {
+                        type: value as SqlQueryParameterType,
+                      })
+                    }
+                    disabled={disabled}
+                  >
+                    <Select.Trigger
+                      style={{ width: "100%" }}
+                      aria-label={`Type for parameter ${index + 1}`}
+                    />
+                    <Select.Content>
+                      {PARAMETER_TYPES.map((type) => (
+                        <Select.Item key={type} value={type}>
+                          {type}
+                        </Select.Item>
+                      ))}
+                    </Select.Content>
+                  </Select.Root>
+                </Box>
+                <Box style={{ flex: 1, minWidth: "9rem" }}>
+                  {index === 0 && (
+                    <Text size="1" color="gray" as="div" mb="1">
+                      Value
+                    </Text>
+                  )}
+                  <ParameterValueInput
+                    type={param.type}
+                    value={param.value}
+                    onChange={(value) => handleUpdateParameter(param.rowId, { value })}
+                    disabled={disabled}
+                    // An unnamed row declares nothing, so it binds nothing and
+                    // its value is not required.
+                    required={declaredName !== ""}
+                    ariaLabel={`Value for parameter ${index + 1}`}
+                  />
+                </Box>
+                <IconButton
+                  size="2"
+                  variant="soft"
+                  color="gray"
+                  aria-label={`Remove parameter ${index + 1}`}
+                  onClick={() => handleRemoveParameter(param.rowId)}
                   disabled={disabled}
                 >
-                  <Select.Trigger
-                    style={{ width: "100%" }}
-                    aria-label={`Type for parameter ${index + 1}`}
-                  />
-                  <Select.Content>
-                    {PARAMETER_TYPES.map((type) => (
-                      <Select.Item key={type} value={type}>
-                        {type}
-                      </Select.Item>
-                    ))}
-                  </Select.Content>
-                </Select.Root>
-              </Box>
-              <Box style={{ flex: 1, minWidth: "9rem" }}>
-                {index === 0 && (
-                  <Text size="1" color="gray" as="div" mb="1">
-                    Default (optional)
-                  </Text>
-                )}
-                <TextField.Root
-                  value={param.value}
-                  placeholder="(none)"
-                  onChange={(e) =>
-                    handleUpdateParameter(param.rowId, {
-                      value: e.target.value,
-                    })
-                  }
-                  disabled={disabled}
-                  aria-label={`Default value for parameter ${index + 1}`}
-                />
-              </Box>
-              <IconButton
-                size="2"
-                variant="soft"
-                color="gray"
-                aria-label={`Remove parameter ${index + 1}`}
-                onClick={() => handleRemoveParameter(param.rowId)}
-                disabled={disabled}
-              >
-                <TrashIcon />
-              </IconButton>
-            </Flex>
-          ))}
+                  <TrashIcon />
+                </IconButton>
+              </Flex>
+            );
+          })}
         </Flex>
         <Box mt="2">
           <Button size="2" variant="soft" onClick={handleAddParameter} disabled={disabled}>
