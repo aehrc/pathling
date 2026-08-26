@@ -102,6 +102,28 @@ describe("buildInlineSqlQueryLibrary", () => {
     ]);
   });
 
+  // FR-008: the value entered against a row is runtime-only state, so the
+  // saved declaration carries exactly name, use and type. The emitted key set
+  // is asserted in full: `ParameterDefinition` has no default-value element,
+  // and no extension may be introduced to smuggle one in.
+  it("persists only name, use and type for a row carrying a value", () => {
+    const library = buildInlineSqlQueryLibrary({
+      title: "Period query",
+      sql: "SELECT 1",
+      tables: [],
+      parameters: [row("period_end", "date", "2025-06-30")],
+    });
+
+    const parameters = library.parameter ?? [];
+    expect(parameters).toHaveLength(1);
+    expect(Object.keys(parameters[0]).sort()).toEqual(["name", "type", "use"]);
+    expect(parameters[0]).toStrictEqual({
+      name: "period_end",
+      use: "in",
+      type: "date",
+    });
+  });
+
   // Each row emits its chosen source's canonical URL verbatim as the
   // relatedArtifact.resource - regardless of whether the source is a
   // ViewDefinition or a SQLView - so the saved query round-trips a source by

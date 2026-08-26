@@ -20,7 +20,9 @@
  *
  * Hosts a stored/inline tab pair - each owning its own parameter
  * presentation - and the output controls, then dispatches Execute and Save
- * actions through the supplied callbacks.
+ * actions through the supplied callbacks. A successful save selects the saved
+ * query on the stored tab and carries the values typed inline across to it,
+ * since values are never persisted.
  *
  * @author John Grimes
  */
@@ -199,6 +201,13 @@ export function SqlQueryForm({
     try {
       const library = buildInlineSqlQueryLibrary(inlineInput);
       const result = await onSaveToServer(library);
+      // The values just typed on the rows are not persisted, so carry them
+      // into the name-keyed map the stored tab reads. The rows win over any
+      // value retained from an earlier selection of the same name: they are
+      // what the user last typed, and what the saved query is expected to run
+      // with. Rows left empty contribute nothing, so a retained value there
+      // survives.
+      setBindings((prev) => ({ ...prev, ...rowsToBindings(parameters) }));
       setSource("stored");
       setSelectedLibraryId(result.id);
     } catch (err) {
