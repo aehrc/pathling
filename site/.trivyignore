@@ -84,3 +84,10 @@ CVE-2026-18446
 # postcss information disclosure via a crafted sourceMappingURL — build-time CSS processing of
 # trusted source files, not deployed.
 CVE-2026-69153
+
+# image-size denial of service via crafted image buffers, no fixed release available (2.0.2 is
+# the latest published version). image-size is a build-time transitive of @docusaurus/mdx-loader,
+# which uses it to measure the dimensions of image files committed to this repository. It never
+# sees a request-supplied buffer, and it is not deployed with the static site.
+CVE-2025-71329
+CVE-2025-71330
