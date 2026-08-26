@@ -351,8 +351,8 @@ class SqlQueryRequestParserTest {
 
     final List<OperationOutcomeIssueComponent> issues = rejectionIssues(library, null);
 
-    assertThat(issues).hasSize(2);
     assertThat(issues)
+        .hasSize(2)
         .allSatisfy(
             issue -> {
               assertThat(issue.getSeverity()).isEqualTo(IssueSeverity.ERROR);

@@ -374,12 +374,12 @@ class SqlExportProviderIT extends AbstractAsyncExportIT {
             .getResponseBodyContent();
 
     final Map<String, Object> outcome = parse(body);
-    assertThat(outcome.get("resourceType")).isEqualTo("OperationOutcome");
+    assertThat(outcome).containsEntry("resourceType", "OperationOutcome");
 
     final List<Map<String, Object>> issues = issuesOf(outcome);
     assertThat(issues).hasSize(1);
     assertThat(issues.get(0)).containsEntry("severity", "error").containsEntry("code", "invalid");
-    assertThat(issues.get(0).get("expression")).isEqualTo(List.of("parameters"));
+    assertThat(issues.get(0)).containsEntry("expression", List.of("parameters"));
     assertThat((String) issues.get(0).get("diagnostics")).contains("family");
 
     // Nothing was accepted, so the registry holds exactly what it held before the request.
@@ -411,8 +411,9 @@ class SqlExportProviderIT extends AbstractAsyncExportIT {
             .getResponseBodyContent();
 
     final List<Map<String, Object>> issues = issuesOf(parse(body));
-    assertThat(issues).hasSize(2);
-    assertThat(issues).allSatisfy(issue -> assertThat(issue).containsEntry("severity", "error"));
+    assertThat(issues)
+        .hasSize(2)
+        .allSatisfy(issue -> assertThat(issue).containsEntry("severity", "error"));
 
     // The first subject's own rejection: a ViewDefinition declares no parameters.
     assertThat((String) issues.get(0).get("diagnostics")).contains("ViewDefinition");
@@ -420,7 +421,7 @@ class SqlExportProviderIT extends AbstractAsyncExportIT {
     // The second subject's unbound declaration, carried through the accumulation with the shape it
     // was raised with: the parameters element named, and the parameter at fault in the diagnostics.
     assertThat(issues.get(1)).containsEntry("code", "invalid");
-    assertThat(issues.get(1).get("expression")).isEqualTo(List.of("parameters"));
+    assertThat(issues.get(1)).containsEntry("expression", List.of("parameters"));
     assertThat((String) issues.get(1).get("diagnostics")).contains("family");
   }
 

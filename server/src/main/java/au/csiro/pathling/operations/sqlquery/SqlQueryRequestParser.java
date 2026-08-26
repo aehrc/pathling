@@ -188,27 +188,7 @@ public class SqlQueryRequestParser {
     // reports.
     if (parameters != null) {
       for (final ParametersParameterComponent binding : parameters.getParameter()) {
-        final String name = binding.getName();
-        if (name == null || name.isBlank()) {
-          throw new InvalidRequestException(
-              "Each runtime parameter binding must have a non-empty name");
-        }
-        final String declaredType = declaredByName.get(name);
-        if (declaredType == null) {
-          throw new InvalidRequestException(
-              "Runtime parameter '"
-                  + name
-                  + "' is not declared in the SQLQuery Library's parameter list");
-        }
-        final Type value = binding.getValue();
-        if (value == null) {
-          throw new InvalidRequestException("Runtime parameter '" + name + "' has no value[x]");
-        }
-        if (bindings.containsKey(name)) {
-          throw new InvalidRequestException(
-              "Runtime parameter '" + name + "' is supplied more than once");
-        }
-        bindings.put(name, convertTypedValue(name, declaredType, value));
+        bindOneValue(binding, declaredByName, bindings);
       }
     }
 
@@ -231,6 +211,43 @@ public class SqlQueryRequestParser {
     }
 
     return bindings;
+  }
+
+  /**
+   * Validates one runtime binding against the declared parameters and places it into the bindings
+   * map.
+   *
+   * @param binding the binding to validate
+   * @param declaredByName the declared parameters keyed by name
+   * @param bindings the map the validated binding is placed into
+   * @throws InvalidRequestException if the binding is malformed, names a parameter that was not
+   *     declared, or supplies a value of the wrong FHIR type
+   */
+  private void bindOneValue(
+      @Nonnull final ParametersParameterComponent binding,
+      @Nonnull final Map<String, String> declaredByName,
+      @Nonnull final Map<String, Object> bindings) {
+    final String name = binding.getName();
+    if (name == null || name.isBlank()) {
+      throw new InvalidRequestException(
+          "Each runtime parameter binding must have a non-empty name");
+    }
+    final String declaredType = declaredByName.get(name);
+    if (declaredType == null) {
+      throw new InvalidRequestException(
+          "Runtime parameter '"
+              + name
+              + "' is not declared in the SQLQuery Library's parameter list");
+    }
+    final Type value = binding.getValue();
+    if (value == null) {
+      throw new InvalidRequestException("Runtime parameter '" + name + "' has no value[x]");
+    }
+    if (bindings.containsKey(name)) {
+      throw new InvalidRequestException(
+          "Runtime parameter '" + name + "' is supplied more than once");
+    }
+    bindings.put(name, convertTypedValue(name, declaredType, value));
   }
 
   /**
