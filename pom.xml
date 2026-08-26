@@ -98,7 +98,12 @@
     <pathling.fhirAuthVersion>1.0.0</pathling.fhirAuthVersion>
     <!-- Spark brings in a Netty version with published vulnerabilities, so the whole family is
          pinned to a patched release. -->
-    <pathling.nettyVersion>4.1.136.Final</pathling.nettyVersion>
+    <pathling.nettyVersion>4.1.137.Final</pathling.nettyVersion>
+    <!-- HAPI FHIR manages httpclient5 5.4.3 and httpcore5 5.3.1, both of which have published
+         vulnerabilities (CVE-2026-64607, CVE-2026-54399, CVE-2026-54428). No HAPI FHIR release
+         yet ships patched versions, so the transitives are pinned here instead. -->
+    <pathling.httpClient5Version>5.6.4</pathling.httpClient5Version>
+    <pathling.httpCore5Version>5.4.3</pathling.httpCore5Version>
 
     <!-- The number of concurrent Surefire forks, expressed as a multiple of the available
          processors. One fork per processor is the fastest setting measured for a build that has the
@@ -144,6 +149,23 @@
         <version>${pathling.nettyVersion}</version>
         <type>pom</type>
         <scope>import</scope>
+      </dependency>
+      <!-- Declared ahead of the HAPI FHIR BOM import so that these pinned versions win over the
+           ones HAPI FHIR manages. -->
+      <dependency>
+        <groupId>org.apache.httpcomponents.client5</groupId>
+        <artifactId>httpclient5</artifactId>
+        <version>${pathling.httpClient5Version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.httpcomponents.core5</groupId>
+        <artifactId>httpcore5</artifactId>
+        <version>${pathling.httpCore5Version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.httpcomponents.core5</groupId>
+        <artifactId>httpcore5-h2</artifactId>
+        <version>${pathling.httpCore5Version}</version>
       </dependency>
       <dependency>
         <groupId>au.csiro.pathling</groupId>

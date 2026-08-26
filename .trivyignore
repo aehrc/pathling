@@ -66,6 +66,7 @@ CVE-2026-34478
 CVE-2026-34479
 CVE-2026-34480
 CVE-2026-34481
+CVE-2026-49844
 
 # Avro is provided via Spark, not bundled in library-runtime distribution.
 CVE-2025-33042
