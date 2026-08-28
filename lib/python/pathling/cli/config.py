@@ -65,7 +65,13 @@ VALID_AUTH_KEYS = frozenset(
 
 # Valid keys within the [tx-store] table.
 VALID_TX_STORE_KEYS = frozenset(
-    {"path", "default-snomed-edition", "expansion-cache-size", "dialect-aliases"}
+    {
+        "path",
+        "default-snomed-edition",
+        "expansion-cache-size",
+        "dialect-aliases",
+        "default-dialect",
+    }
 )
 
 
@@ -141,12 +147,17 @@ class TxStore:
     :param dialect_aliases: additional dialect tags recognised when a display or
            designation is requested in a particular language, mapping a language
            tag to a SNOMED CT language reference set identifier, or None.
+    :param default_dialect: the dialect whose preferred synonyms become the
+           stored display when ``import-snomed`` runs without a
+           ``--default-dialect`` flag: a tag such as ``en-AU``, or a language
+           reference set identifier. None when unset.
     """
 
     path: str
     default_snomed_edition: Optional[str] = None
     expansion_cache_size: Optional[int] = None
     dialect_aliases: Optional[dict] = None
+    default_dialect: Optional[str] = None
 
 
 @dataclass
@@ -504,6 +515,13 @@ def _resolve_tx_store(
                 exit_code=EXIT_USAGE,
             )
 
+    dialect = table.get("default-dialect")
+    if dialect is not None and not isinstance(dialect, str):
+        raise CliError(
+            "The tx-store.default-dialect config value must be a string.",
+            exit_code=EXIT_USAGE,
+        )
+
     aliases = table.get("dialect-aliases")
     if aliases is not None and not _is_string_table(aliases):
         # A malformed alias table is a mistake worth reporting, but it cannot make
@@ -532,6 +550,7 @@ def _resolve_tx_store(
         default_snomed_edition=edition,
         expansion_cache_size=cache_size,
         dialect_aliases=aliases,
+        default_dialect=dialect,
     )
 
 

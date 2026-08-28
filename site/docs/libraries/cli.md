@@ -372,10 +372,11 @@ shift more between releases - see
 
 It also accepts `--default-dialect`, which names the dialect whose preferred
 synonyms become each concept's stored display: a tag such as `en-GB`, or a
-language reference set identifier. Omit it and the dialect is chosen from the
-release. A release holding several language reference sets that is not the
-International edition fails the import, listing the candidates, so that one can
-be named - see [dialects](terminology#dialects).
+language reference set identifier. When the flag is omitted, the
+`tx-store.default-dialect` config key applies; when neither is set, the dialect
+is chosen from the release. A release holding several language reference sets
+that is not the International edition fails the import, listing the candidates,
+so that one can be named - see [dialects](terminology#dialects).
 
 ```bash
 pathling import-snomed --default-dialect en-GB /data/rf2.zip /data/tx-store
@@ -439,6 +440,7 @@ values:
 path = "/data/tx-store"                      # selects local mode
 default-snomed-edition = "32506021000036107" # optional
 expansion-cache-size = 200                   # optional, positive integer
+default-dialect = "en-AU"                    # optional, used by import-snomed
 
 [tx-store.dialect-aliases]                   # optional
 en-NZ = "271000210107"
@@ -483,6 +485,7 @@ token-endpoint = "https://auth.example.org/token"
 path = "/data/tx-store"
 default-snomed-edition = "32506021000036107"
 expansion-cache-size = 200
+default-dialect = "en-AU"
 
 [tx-store.dialect-aliases]
 en-NZ = "271000210107"
@@ -491,7 +494,9 @@ en-NZ = "271000210107"
 Command-line flags always take precedence over the config file. Unknown keys
 produce a warning that names the key and lists the valid keys. The `[tx-store]`
 table selects [local terminology mode](#local-terminology-mode); its tuning keys
-are config-file only, while the store path can also be set with `--tx-store`.
+are config-file only, while the store path can also be set with `--tx-store`,
+and `default-dialect` with the `import-snomed` command's `--default-dialect`
+flag.
 
 ### Spark configuration
 

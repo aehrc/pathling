@@ -943,6 +943,43 @@ def test_tx_store_boolean_cache_size_is_usage_error(tmp_path):
     assert "expansion-cache-size" in exc_info.value.message
 
 
+# ========== The default dialect config key ==========
+
+
+def test_tx_store_default_dialect_parsed_into_txstore(tmp_path):
+    """A tx-store.default-dialect value is parsed into the TxStore."""
+    path = _write_config(
+        tmp_path,
+        '[tx-store]\npath = "/data/tx-store"\ndefault-dialect = "en-AU"\n',
+    )
+
+    config = resolve_config(config_path=path)
+
+    assert config.tx_store is not None
+    assert config.tx_store.default_dialect == "en-AU"
+
+
+def test_tx_store_default_dialect_defaults_to_none(tmp_path):
+    """A store configured without default-dialect leaves the field unset."""
+    path = _write_config(tmp_path, '[tx-store]\npath = "/data/tx-store"\n')
+
+    config = resolve_config(config_path=path)
+
+    assert config.tx_store is not None
+    assert config.tx_store.default_dialect is None
+
+
+def test_tx_store_non_string_default_dialect_is_usage_error(tmp_path):
+    """A non-string default-dialect is a usage error naming the key."""
+    path = _write_config(tmp_path, '[tx-store]\npath = "/s"\ndefault-dialect = 5\n')
+
+    with pytest.raises(CliError) as exc_info:
+        resolve_config(config_path=path)
+
+    assert exc_info.value.exit_code == 2
+    assert "default-dialect" in exc_info.value.message
+
+
 def test_tx_store_unknown_key_warns(tmp_path):
     """An unknown key in [tx-store] warns and lists the valid keys."""
     path = _write_config(tmp_path, '[tx-store]\npath = "/s"\nbogus = 1\n')

@@ -107,8 +107,9 @@ def _resolve_storage_path(config: CliConfig, storage_path: Optional[str]) -> str
     "default_dialect",
     help=(
         "The dialect whose preferred synonyms become the stored display: a tag "
-        "such as 'en-GB', or a language reference set identifier. Chosen from "
-        "the release when omitted."
+        "such as 'en-GB', or a language reference set identifier. Falls back to "
+        "the 'tx-store.default-dialect' config key; chosen from the release "
+        "when neither is set."
     ),
 )
 @click.pass_obj
@@ -131,10 +132,15 @@ def import_snomed(
     config = obj.config
     console = obj.console
     resolved_path = _resolve_storage_path(config, storage_path)
+    resolved_dialect = (
+        default_dialect
+        if default_dialect is not None
+        else (config.tx_store.default_dialect if config.tx_store is not None else None)
+    )
     pc = _import_context(config, console)
     with progress_status(console, "Importing SNOMED CT...", config.verbose):
         pc.import_snomed(
-            source, resolved_path, edition_uri, dense_id_order, default_dialect
+            source, resolved_path, edition_uri, dense_id_order, resolved_dialect
         )
     click.echo(f"Imported SNOMED CT from {source} into {resolved_path}")
 

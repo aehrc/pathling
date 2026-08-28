@@ -1376,6 +1376,10 @@ pathling_import_snomed(pc, "/data/rf2.zip", "/data/tx-store", default_dialect = 
 pathling import-snomed --default-dialect en-GB /data/rf2.zip /data/tx-store
 ```
 
+The dialect can also be recorded once as the `tx-store.default-dialect` config
+key, which applies whenever the flag is omitted - see the
+[command line interface documentation](cli#terminology-import-commands).
+
 </TabItem>
 </Tabs>
 

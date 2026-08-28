@@ -116,6 +116,66 @@ def test_import_snomed_help_documents_the_default_dialect_flag(runner):
     assert "--default-dialect" in result.stdout
 
 
+def test_import_snomed_reads_default_dialect_from_config(
+    runner, patched_context, tmp_path, monkeypatch
+):
+    """Without the flag, the configured tx-store.default-dialect is used.
+
+    The store path is also taken from the config, so this is the flagless
+    invocation a configured project uses: `pathling import-snomed SOURCE`.
+    """
+    captured = {}
+
+    def fake_import_snomed(*args):
+        captured["args"] = args
+
+    monkeypatch.setattr(patched_context, "import_snomed", fake_import_snomed)
+    store = str(tmp_path / "store")
+    config = tmp_path / "config.toml"
+    config.write_text(
+        f'[tx-store]\npath = "{store}"\ndefault-dialect = "en-AU"\n',
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(cli, ["--config", str(config), "import-snomed", RF2_MINI])
+
+    assert result.exit_code == 0, result.output
+    assert captured["args"] == (RF2_MINI, store, None, "code-order", "en-AU")
+
+
+def test_import_snomed_flag_overrides_configured_default_dialect(
+    runner, patched_context, tmp_path, monkeypatch
+):
+    """The --default-dialect flag wins over the configured value."""
+    captured = {}
+
+    def fake_import_snomed(*args):
+        captured["args"] = args
+
+    monkeypatch.setattr(patched_context, "import_snomed", fake_import_snomed)
+    store = str(tmp_path / "store")
+    config = tmp_path / "config.toml"
+    config.write_text(
+        f'[tx-store]\npath = "{store}"\ndefault-dialect = "en-AU"\n',
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        cli,
+        [
+            "--config",
+            str(config),
+            "import-snomed",
+            "--default-dialect",
+            "en-GB",
+            RF2_MINI,
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert captured["args"][4] == "en-GB"
+
+
 def test_import_snomed_missing_source_fails(runner, patched_context, tmp_path):
     """A non-existent source produces a non-zero exit code."""
     store = str(tmp_path / "store")
