@@ -25,9 +25,11 @@ import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import com.google.gson.Gson;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,6 +40,8 @@ import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.PublicationStatus;
 import org.hl7.fhir.r4.model.Library;
+import org.hl7.fhir.r4.model.ParameterDefinition;
+import org.hl7.fhir.r4.model.ParameterDefinition.ParameterUse;
 import org.hl7.fhir.r4.model.Patient;
 import org.hl7.fhir.r4.model.RelatedArtifact;
 import org.hl7.fhir.r4.model.RelatedArtifact.RelatedArtifactType;
@@ -303,6 +307,34 @@ class SqlRunProviderIT {
   }
 
   // -------------------------------------------------------------------------
+  // Unbound parameters.
+  // -------------------------------------------------------------------------
+
+  // A parameter the subject declares but the request never binds is a client fault, not a server
+  // one. It is answered with a 400 naming the parameters element and the parameter at fault,
+  // rather than reaching the SQL engine and surfacing as an opaque 500.
+  @Test
+  void rejectsASubjectWhoseDeclaredParameterIsNotBound() {
+    final String body =
+        postExpectStatus(parameterisedSqlQueryRequest(null), 400, "application/fhir+json");
+
+    assertThat(body)
+        .contains("\"code\":\"invalid\"")
+        .contains("\"expression\":[\"parameters\"]")
+        .contains("family");
+  }
+
+  // The bound case is unchanged, so the rejection cannot be reached by declaring a parameter alone.
+  @Test
+  void runsASubjectWhoseDeclaredParameterIsBound() {
+    final String body = postOk(parameterisedSqlQueryRequest("Johnson"), SqlRunFormat.NDJSON);
+
+    final List<String> lines = body.lines().filter(line -> !line.isBlank()).toList();
+    assertThat(lines).hasSize(1);
+    assertThat(body).contains("\"family_name\":\"Johnson\"").contains("\"id\":\"p2\"");
+  }
+
+  // -------------------------------------------------------------------------
   // Analysis failures.
   // -------------------------------------------------------------------------
 
@@ -388,6 +420,32 @@ class SqlRunProviderIT {
                 jsonParser.encodeResourceToString(sqlQueryLibrary(sql, "adh", AD_HOC_VIEW_URL))),
             resourceParameter("context", adHocViewJson()),
             stringParameter("_format", SqlRunFormat.NDJSON.getCode())));
+    return GSON.toJson(parameters);
+  }
+
+  /**
+   * Builds a POST body carrying an inline SQLQuery Library that declares a {@code family}
+   * parameter, binding it to the given value, or supplying no bindings at all when it is null.
+   */
+  @Nonnull
+  private String parameterisedSqlQueryRequest(@Nullable final String family) {
+    final Library library =
+        sqlQueryLibrary(
+            "SELECT id, family_name FROM adh WHERE family_name = :family", "adh", AD_HOC_VIEW_URL);
+    library.addParameter(
+        new ParameterDefinition().setName("family").setUse(ParameterUse.IN).setType("string"));
+
+    final List<Map<String, Object>> parts = new ArrayList<>();
+    parts.add(resourceParameter("subjectResource", jsonParser.encodeResourceToString(library)));
+    parts.add(resourceParameter("context", adHocViewJson()));
+    parts.add(stringParameter("_format", SqlRunFormat.NDJSON.getCode()));
+    if (family != null) {
+      parts.add(boundParameters("family", family));
+    }
+
+    final Map<String, Object> parameters = new LinkedHashMap<>();
+    parameters.put("resourceType", "Parameters");
+    parameters.put("parameter", parts);
     return GSON.toJson(parameters);
   }
 

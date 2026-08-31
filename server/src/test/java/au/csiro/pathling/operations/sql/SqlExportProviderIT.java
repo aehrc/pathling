@@ -344,6 +344,91 @@ class SqlExportProviderIT extends AbstractAsyncExportIT {
     assertThat((List<?>) outcome.get("issue")).hasSize(1);
   }
 
+  // -------------------------------------------------------------------------
+  // Unbound parameters.
+  // -------------------------------------------------------------------------
+
+  // A parameter the subject declares but the request never binds is a client fault, and it is
+  // decidable without touching the data, so it is decided here. The operation promises that a job
+  // which starts will not be rejected later, so the kick-off is refused outright and no job is
+  // registered - the client is not left polling one that was doomed before it began.
+  @Test
+  void rejectsASubjectWhoseDeclaredParameterIsNotBound() {
+    final int jobsBefore = jobCount();
+
+    final byte[] body =
+        kickOff(
+                systemLevelUri(),
+                parameters(
+                    subject(
+                        nameOf("johnsons"),
+                        canonicalOf(
+                            SqlRunTestConfiguration.libraryUrl(
+                                SqlRunTestConfiguration.PATIENTS_BY_FAMILY_ID)))))
+            .expectStatus()
+            .isBadRequest()
+            .expectHeader()
+            .doesNotExist("Content-Location")
+            .expectBody()
+            .returnResult()
+            .getResponseBodyContent();
+
+    final Map<String, Object> outcome = parse(body);
+    assertThat(outcome).containsEntry("resourceType", "OperationOutcome");
+
+    final List<Map<String, Object>> issues = issuesOf(outcome);
+    assertThat(issues).hasSize(1);
+    assertThat(issues.get(0)).containsEntry("severity", "error").containsEntry("code", "invalid");
+    assertThat(issues.get(0)).containsEntry("expression", List.of("parameters"));
+    assertThat((String) issues.get(0).get("diagnostics")).contains("family");
+
+    // Nothing was accepted, so the registry holds exactly what it held before the request.
+    assertThat(jobCount()).as("A rejected kick-off must not register a job").isEqualTo(jobsBefore);
+  }
+
+  // The missing binding is one subject's failure, so it joins the other subjects' kick-off issues
+  // in a single outcome rather than being thrown on its own: a body wrong in more than one way is
+  // answered once, naming every problem.
+  @Test
+  void reportsAnUnboundParameterAlongsideAnotherSubjectsKickOffIssue() {
+    final byte[] body =
+        kickOff(
+                systemLevelUri(),
+                parameters(
+                    subject(
+                        nameOf("demographics"),
+                        canonicalOf(SqlRunTestConfiguration.PATIENT_VIEW_URL),
+                        resourcePart("parameters", Map.of("resourceType", "Parameters"))),
+                    subject(
+                        nameOf("johnsons"),
+                        canonicalOf(
+                            SqlRunTestConfiguration.libraryUrl(
+                                SqlRunTestConfiguration.PATIENTS_BY_FAMILY_ID)))))
+            .expectStatus()
+            .isBadRequest()
+            .expectBody()
+            .returnResult()
+            .getResponseBodyContent();
+
+    final List<Map<String, Object>> issues = issuesOf(parse(body));
+    assertThat(issues)
+        .hasSize(2)
+        .allSatisfy(issue -> assertThat(issue).containsEntry("severity", "error"));
+
+    // The first subject's own rejection: a ViewDefinition declares no parameters.
+    assertThat((String) issues.get(0).get("diagnostics")).contains("ViewDefinition");
+
+    // The second subject's unbound declaration, carried through the accumulation with the shape it
+    // was raised with: the parameters element named, and the parameter at fault in the diagnostics.
+    assertThat(issues.get(1)).containsEntry("code", "invalid");
+    assertThat(issues.get(1)).containsEntry("expression", List.of("parameters"));
+    assertThat((String) issues.get(1).get("diagnostics")).contains("family");
+  }
+
+  // The fully bound case is unchanged, and is covered by exportsAMixedJobWithOneOutputPerSubject
+  // above: its SQLQuery subject binds the 'family' parameter the stored Library declares, kicks
+  // off with a 202, and completes with the narrowed result.
+
   // ---- helpers ----
 
   /** Builds a job mixing a ViewDefinition subject and a parameter-bound SQLQuery subject. */
@@ -449,6 +534,30 @@ class SqlExportProviderIT extends AbstractAsyncExportIT {
         .filter(o -> name.equals(partValue(o, "name", "valueString")))
         .findFirst()
         .orElseThrow(() -> new AssertionError("No output named " + name));
+  }
+
+  /** The issues of an OperationOutcome response body, in the order the server reported them. */
+  @SuppressWarnings("unchecked")
+  @Nonnull
+  private static List<Map<String, Object>> issuesOf(@Nonnull final Map<String, Object> outcome) {
+    final List<Map<String, Object>> issues = (List<Map<String, Object>>) outcome.get("issue");
+    return issues == null ? List.of() : issues;
+  }
+
+  /** The number of jobs the {@code $jobs} listing currently holds. */
+  private int jobCount() {
+    final byte[] body =
+        webTestClient
+            .get()
+            .uri("http://localhost:" + port + "/fhir/$jobs")
+            .header("Accept", "application/fhir+json")
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody()
+            .returnResult()
+            .getResponseBodyContent();
+    return paramsByName(parse(body), "job").size();
   }
 
   /** Kicks off a request expected to be rejected, asserting the status and the named parameter. */
