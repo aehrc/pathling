@@ -333,6 +333,26 @@ class SqlViewRunProviderIT {
     assertThat(body).contains("\"v\":99");
   }
 
+  @Test
+  void runsTableQueryOverADependencyWhoseLabelCollidesWithAColumn() {
+    // The TABLE query primary admits no table alias, so the substitution must not inject one here.
+    final String body = postOk(parametersJson(ageQueryLibrary("TABLE age")));
+
+    assertThat(body.trim().split("\n")).hasSize(3);
+    assertThat(body).contains("\"age\":1");
+  }
+
+  @Test
+  void runsRowCountSampleQueryOverADependencyWhoseLabelCollidesWithAColumn() {
+    // The alias the substitution injects has to follow the TABLESAMPLE clause, which for a row
+    // count is not visible as a sample node in the parsed plan.
+    final String body =
+        postOk(parametersJson(ageQueryLibrary("SELECT age FROM age TABLESAMPLE (2 ROWS)")));
+
+    assertThat(body.trim().split("\n")).hasSize(2);
+    assertThat(body).contains("\"age\":1");
+  }
+
   /**
    * Builds a SQLQuery Library over the age-source SQLView under the colliding label {@code age}.
    */

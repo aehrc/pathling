@@ -18,6 +18,7 @@
 package au.csiro.pathling.operations.sqlquery;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatNoException;
 
 import au.csiro.pathling.test.SpringBootUnitTest;
 import jakarta.annotation.Nonnull;
@@ -178,21 +179,145 @@ class SqlLabelRewriterTest {
   }
 
   // ---------------------------------------------------------------------------
-  // Relation-primary wrappers.
+  // Options and sample clauses of a relation primary.
   // ---------------------------------------------------------------------------
 
   @Test
-  void injectsAliasAfterSampleClauseWhenRelationIsNotAliased() {
-    // The grammar orders the clauses as identifier, sample, alias, so the injected alias must
-    // follow the TABLESAMPLE clause rather than the identifier.
+  void injectsAliasAfterPercentageSampleClauseWhenRelationIsNotAliased() {
+    // The grammar orders the clauses as identifier, options, sample, alias, so the injected alias
+    // must follow the TABLESAMPLE clause rather than the identifier.
     assertThat(rewriteAge("SELECT * FROM age TABLESAMPLE (10 PERCENT)"))
         .isEqualTo("SELECT * FROM " + AGE_VIEW + " TABLESAMPLE (10 PERCENT) AS age");
   }
 
   @Test
-  void doesNotInjectAliasAfterSampleClauseWhenRelationIsAliased() {
+  void doesNotInjectAliasAfterPercentageSampleClauseWhenRelationIsAliased() {
     assertThat(rewriteAge("SELECT * FROM age TABLESAMPLE (10 PERCENT) AS t"))
         .isEqualTo("SELECT * FROM " + AGE_VIEW + " TABLESAMPLE (10 PERCENT) AS t");
+  }
+
+  @Test
+  void injectsAliasAfterRowCountSampleClauseWhenRelationIsNotAliased() {
+    // A row-count sample builds a limit rather than a Sample, so the clause is invisible as a
+    // sample node and its extent can only be taken from the tokens.
+    assertThat(rewriteAge("SELECT * FROM age TABLESAMPLE (2 ROWS)"))
+        .isEqualTo("SELECT * FROM " + AGE_VIEW + " TABLESAMPLE (2 ROWS) AS age");
+  }
+
+  @Test
+  void doesNotInjectAliasAfterRowCountSampleClauseWhenRelationIsAliased() {
+    // The alias sits above the limit nodes the row-count sample builds, so the flag marking the
+    // reference as aliased has to survive them.
+    assertThat(rewriteAge("SELECT * FROM age TABLESAMPLE (2 ROWS) AS t"))
+        .isEqualTo("SELECT * FROM " + AGE_VIEW + " TABLESAMPLE (2 ROWS) AS t");
+  }
+
+  @Test
+  void doesNotInjectAliasAfterRowCountSampleClauseWhenRelationCarriesColumnAliases() {
+    assertThat(rewriteAge("SELECT * FROM age TABLESAMPLE (2 ROWS) AS t(a, b)"))
+        .isEqualTo("SELECT * FROM " + AGE_VIEW + " TABLESAMPLE (2 ROWS) AS t(a, b)");
+  }
+
+  @Test
+  void injectsAliasAfterBucketSampleClauseWhenRelationIsNotAliased() {
+    assertThat(rewriteAge("SELECT * FROM age TABLESAMPLE (BUCKET 1 OUT OF 2)"))
+        .isEqualTo("SELECT * FROM " + AGE_VIEW + " TABLESAMPLE (BUCKET 1 OUT OF 2) AS age");
+  }
+
+  @Test
+  void injectsAliasAfterOptionsClauseWhenRelationIsNotAliased() {
+    // The options clause builds no plan node at all, the options landing in a field of the
+    // relation, so its extent likewise comes from the tokens.
+    assertThat(rewriteAge("SELECT * FROM age WITH (`k` = 'v')"))
+        .isEqualTo("SELECT * FROM " + AGE_VIEW + " WITH (`k` = 'v') AS age");
+  }
+
+  @Test
+  void doesNotInjectAliasAfterOptionsClauseWhenRelationIsAliased() {
+    assertThat(rewriteAge("SELECT * FROM age WITH (`k` = 'v') AS t"))
+        .isEqualTo("SELECT * FROM " + AGE_VIEW + " WITH (`k` = 'v') AS t");
+  }
+
+  @Test
+  void injectsAliasAfterBothOptionsAndSampleClausesWhenRelationIsNotAliased() {
+    assertThat(rewriteAge("SELECT * FROM age WITH (`k` = 'v') TABLESAMPLE (2 ROWS)"))
+        .isEqualTo("SELECT * FROM " + AGE_VIEW + " WITH (`k` = 'v') TABLESAMPLE (2 ROWS) AS age");
+  }
+
+  @Test
+  void doesNotInjectAliasAfterBothOptionsAndSampleClausesWhenRelationIsAliased() {
+    assertThat(rewriteAge("SELECT * FROM age WITH (`k` = 'v') TABLESAMPLE (2 ROWS) AS t"))
+        .isEqualTo("SELECT * FROM " + AGE_VIEW + " WITH (`k` = 'v') TABLESAMPLE (2 ROWS) AS t");
+  }
+
+  @Test
+  void injectsAliasAfterASampleClauseSeparatedFromTheIdentifierByAComment() {
+    // The clauses are found over the tokens, so a comment between them is stepped across and
+    // preserved.
+    assertThat(rewriteAge("SELECT * FROM age /* c */ TABLESAMPLE (2 ROWS)"))
+        .isEqualTo("SELECT * FROM " + AGE_VIEW + " /* c */ TABLESAMPLE (2 ROWS) AS age");
+  }
+
+  // ---------------------------------------------------------------------------
+  // The TABLE query primary.
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void rewritesTableQueryPrimaryWithoutInjectingAnAlias() {
+    // The grammar's TABLE query primary is "TABLE identifierReference", which admits no table
+    // alias, so an injected alias would leave the query unparseable.
+    assertThat(rewriteAge("TABLE age")).isEqualTo("TABLE " + AGE_VIEW);
+  }
+
+  @Test
+  void rewritesTableQueryPrimaryUnderALimitWithoutInjectingAnAlias() {
+    // "TABLE age LIMIT 1" and "FROM age LIMIT 1", where an alias is legal, parse to the same plan
+    // shape, so the decision cannot come from the plan.
+    assertThat(rewriteAge("TABLE age LIMIT 1")).isEqualTo("TABLE " + AGE_VIEW + " LIMIT 1");
+  }
+
+  @Test
+  void rewritesTableQueryPrimaryUnderAnOrderByWithoutInjectingAnAlias() {
+    // The "age" in the ORDER BY clause is a column reference and survives untouched.
+    assertThat(rewriteAge("TABLE age ORDER BY age"))
+        .isEqualTo("TABLE " + AGE_VIEW + " ORDER BY age");
+  }
+
+  @Test
+  void rewritesTableQueryPrimarySeparatedFromTheKeywordByABlockComment() {
+    // Comments sit on the lexer's hidden channel, so the look-back for the TABLE keyword steps
+    // over them.
+    assertThat(rewriteAge("TABLE /* a comment */ age"))
+        .isEqualTo("TABLE /* a comment */ " + AGE_VIEW);
+  }
+
+  @Test
+  void rewritesTableQueryPrimarySeparatedFromTheKeywordByALineComment() {
+    assertThat(rewriteAge("TABLE -- a comment\nage")).isEqualTo("TABLE -- a comment\n" + AGE_VIEW);
+  }
+
+  @Test
+  void injectsAliasOnlyForTheFromClauseReferenceAlongsideATableQueryPrimary() {
+    // The two forms are decided independently within one query: the TABLE target takes no alias,
+    // the FROM-clause reference takes one.
+    assertThat(rewriteAge("TABLE age UNION ALL SELECT age FROM age"))
+        .isEqualTo("TABLE " + AGE_VIEW + " UNION ALL SELECT age FROM " + AGE_VIEW + " AS age");
+  }
+
+  @Test
+  void injectsAliasWhenALineCommentAheadOfTheReferenceEndsWithTheTableKeyword() {
+    // The look-back runs over real tokens rather than text, so the word TABLE inside a comment is
+    // never mistaken for the keyword.
+    assertThat(rewriteAge("-- FROM A TABLE\nSELECT age.age FROM age"))
+        .isEqualTo("-- FROM A TABLE\nSELECT age.age FROM " + AGE_VIEW + " AS age");
+  }
+
+  @Test
+  void rewritesTableQueryPrimaryWithinAParenthesisedQueryWithoutInjectingAnAlias() {
+    // A parenthesised query is wrapped in an auto-generated subquery alias by the parser, which
+    // already suppresses the injection.
+    assertThat(rewriteAge("SELECT * FROM (TABLE age)"))
+        .isEqualTo("SELECT * FROM (TABLE " + AGE_VIEW + ")");
   }
 
   // ---------------------------------------------------------------------------
@@ -409,10 +534,19 @@ class SqlLabelRewriterTest {
     return rewrite(sql, Map.of("age", AGE_VIEW));
   }
 
-  /** Rewrites the given SQL against the given label mapping, using the session's SQL parser. */
+  /**
+   * Rewrites the given SQL against the given label mapping, using the session's SQL parser, and
+   * checks that the result still parses. Every expectation in this class is taken from here,
+   * because the rewriter exists to hand executable SQL to Spark: an output that no longer parses is
+   * a defect however well it reads.
+   */
   @Nonnull
   private String rewrite(
       @Nonnull final String sql, @Nonnull final Map<String, String> labelToViewName) {
-    return SqlLabelRewriter.rewrite(parser, sql, labelToViewName);
+    final String rewritten = SqlLabelRewriter.rewrite(parser, sql, labelToViewName);
+    assertThatNoException()
+        .describedAs("rewritten SQL must parse: %s", rewritten)
+        .isThrownBy(() -> parser.parsePlan(rewritten));
+    return rewritten;
   }
 }

@@ -35,7 +35,6 @@ import org.apache.spark.sql.catalyst.expressions.Expression;
 import org.apache.spark.sql.catalyst.expressions.SubqueryExpression;
 import org.apache.spark.sql.catalyst.parser.ParserInterface;
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
-import org.apache.spark.sql.catalyst.plans.logical.Sample;
 import org.apache.spark.sql.catalyst.plans.logical.SubqueryAlias;
 import org.apache.spark.sql.catalyst.plans.logical.UnresolvedWith;
 import org.apache.spark.sql.catalyst.trees.Origin;
@@ -53,7 +52,9 @@ import scala.jdk.javaapi.CollectionConverters;
  * <p>Where a substituted relation reference carries no alias of its own, {@code AS <label>} is
  * injected after it. The rewritten query then behaves as if a real table existed under the label's
  * own name, so a column qualified by the label (for example {@code SELECT age.age FROM age})
- * continues to resolve.
+ * continues to resolve. Where the alias goes, and whether the grammar admits one at all, is decided
+ * from the query's tokens by {@code SqlSource.aliasInsertionPoint}. The target of a {@code
+ * DESCRIBE} never takes one.
  *
  * <p>A reference is left alone when a common table expression of the same name is in scope: the
  * query author's definition shadows the label, per standard SQL scoping. Scope follows Spark's own
@@ -62,9 +63,6 @@ import scala.jdk.javaapi.CollectionConverters;
  * @author John Grimes
  */
 public final class SqlLabelRewriter {
-
-  /** Sentinel meaning that no relation-primary wrapper is in effect. */
-  private static final int NO_WRAPPER = -1;
 
   private SqlLabelRewriter() {
     // This class is not intended to be instantiated.
@@ -99,35 +97,33 @@ public final class SqlLabelRewriter {
       throw new InvalidRequestException("Invalid SQL syntax: " + e.getMessage());
     }
 
+    final SqlSource source = new SqlSource(sql);
     final List<SqlEdit> edits = new ArrayList<>();
     final Set<LogicalPlan> visited = Collections.newSetFromMap(new IdentityHashMap<>());
-    collectEdits(sql, plan, labelToViewName, Set.of(), false, NO_WRAPPER, visited, edits);
+    collectEdits(source, plan, labelToViewName, Set.of(), false, visited, edits);
     return applyEdits(sql, edits);
   }
 
   /**
    * Walks the parsed plan, collecting one edit per relation reference that names a label.
    *
-   * @param sql the original SQL query
+   * @param sql the original SQL query, and the token view over it
    * @param plan the plan node to visit
    * @param labelToViewName the mapping from dependency labels to temporary view names
    * @param cteScope the names of the common table expressions in scope at this node, each of which
    *     shadows a label of the same name
    * @param aliased whether an alias has already been seen between this node and the relation
    *     primary it belongs to
-   * @param wrapperStop the last character offset of the outermost relation-primary wrapper seen so
-   *     far, or {@link #NO_WRAPPER} when there is none
    * @param visited the plan nodes already visited, compared by identity because a subquery plan is
    *     reachable both as an inner child and through its subquery expression
    * @param edits the edits collected so far
    */
   private static void collectEdits(
-      @Nonnull final String sql,
+      @Nonnull final SqlSource sql,
       @Nonnull final LogicalPlan plan,
       @Nonnull final Map<String, String> labelToViewName,
       @Nonnull final Set<String> cteScope,
       final boolean aliased,
-      final int wrapperStop,
       @Nonnull final Set<LogicalPlan> visited,
       @Nonnull final List<SqlEdit> edits) {
 
@@ -136,7 +132,7 @@ public final class SqlLabelRewriter {
     }
 
     if (plan instanceof final UnresolvedRelation relation) {
-      collectRelationEdit(sql, relation, labelToViewName, cteScope, aliased, wrapperStop, edits);
+      collectRelationEdit(sql, relation, labelToViewName, cteScope, aliased, edits);
     } else if (plan instanceof final UnresolvedTableOrView target) {
       collectDescribeTargetEdit(target, labelToViewName, edits);
     }
@@ -149,8 +145,7 @@ public final class SqlLabelRewriter {
     // DESCRIBE QUERY holds the query it describes as a constructor argument, so neither the child
     // walk nor the inner-child walk below reaches it.
     if (plan instanceof final DescribeQueryCommand describeQuery) {
-      collectEdits(
-          sql, describeQuery.plan(), labelToViewName, cteScope, false, NO_WRAPPER, visited, edits);
+      collectEdits(sql, describeQuery.plan(), labelToViewName, cteScope, false, visited, edits);
     }
 
     // A WITH clause gives each of its subtrees a different scope, so it is walked explicitly
@@ -164,21 +159,22 @@ public final class SqlLabelRewriter {
     // carried into the descent so that a plan first reached this way keeps it.
     for (final Object innerChild : CollectionConverters.asJava(plan.innerChildren())) {
       if (innerChild instanceof final LogicalPlan innerPlan) {
-        collectEdits(sql, innerPlan, labelToViewName, cteScope, false, NO_WRAPPER, visited, edits);
+        collectEdits(sql, innerPlan, labelToViewName, cteScope, false, visited, edits);
       }
     }
 
-    final boolean childAliased = isAliasWrapper(plan) || (plan instanceof Sample && aliased);
-    final int childWrapperStop = childWrapperStop(plan, wrapperStop);
+    // The parser wraps an aliased relation in its alias wrapper before any sample clause, so the
+    // wrapper is always the relation's immediate parent and the flag never has to survive another
+    // node. Every other node ends the relation primary, so the flag resets.
+    final boolean childAliased = isAliasWrapper(plan);
     for (final LogicalPlan child : CollectionConverters.asJava(plan.children())) {
-      collectEdits(
-          sql, child, labelToViewName, cteScope, childAliased, childWrapperStop, visited, edits);
+      collectEdits(sql, child, labelToViewName, cteScope, childAliased, visited, edits);
     }
   }
 
   /** Recurses through expression trees to reach the plans held by subquery expressions. */
   private static void collectEditsInExpression(
-      @Nonnull final String sql,
+      @Nonnull final SqlSource sql,
       @Nonnull final Expression expression,
       @Nonnull final Map<String, String> labelToViewName,
       @Nonnull final Set<String> cteScope,
@@ -186,8 +182,7 @@ public final class SqlLabelRewriter {
       @Nonnull final List<SqlEdit> edits) {
 
     if (expression instanceof final SubqueryExpression subquery) {
-      collectEdits(
-          sql, subquery.plan(), labelToViewName, cteScope, false, NO_WRAPPER, visited, edits);
+      collectEdits(sql, subquery.plan(), labelToViewName, cteScope, false, visited, edits);
     }
     for (final Expression child : CollectionConverters.asJava(expression.children())) {
       collectEditsInExpression(sql, child, labelToViewName, cteScope, visited, edits);
@@ -206,7 +201,7 @@ public final class SqlLabelRewriter {
    * in place, each descent completing before the next name is added.
    */
   private static void collectEditsInWith(
-      @Nonnull final String sql,
+      @Nonnull final SqlSource sql,
       @Nonnull final UnresolvedWith with,
       @Nonnull final Map<String, String> labelToViewName,
       @Nonnull final Set<String> cteScope,
@@ -222,10 +217,10 @@ public final class SqlLabelRewriter {
         // self-reference there is the recursion rather than a label of the same name.
         scope.add(cte._1());
       }
-      collectEdits(sql, cte._2(), labelToViewName, scope, false, NO_WRAPPER, visited, edits);
+      collectEdits(sql, cte._2(), labelToViewName, scope, false, visited, edits);
       scope.add(cte._1());
     }
-    collectEdits(sql, with.child(), labelToViewName, scope, false, NO_WRAPPER, visited, edits);
+    collectEdits(sql, with.child(), labelToViewName, scope, false, visited, edits);
   }
 
   /**
@@ -234,12 +229,11 @@ public final class SqlLabelRewriter {
    * already rejected anything that could not have been a declared label.
    */
   private static void collectRelationEdit(
-      @Nonnull final String sql,
+      @Nonnull final SqlSource sql,
       @Nonnull final UnresolvedRelation relation,
       @Nonnull final Map<String, String> labelToViewName,
       @Nonnull final Set<String> cteScope,
       final boolean aliased,
-      final int wrapperStop,
       @Nonnull final List<SqlEdit> edits) {
 
     final String label = singlePartLabel(relation.multipartIdentifier(), labelToViewName);
@@ -250,17 +244,19 @@ public final class SqlLabelRewriter {
     final int start = spanStart(relation.origin(), label);
     final int stop = spanStop(relation.origin(), label);
 
-    if (aliased) {
-      // The reference already carries an alias, so only the identifier is replaced. Standard SQL
-      // scoping makes the original name unavailable as a qualifier once an alias is present.
+    final int insertion = aliased ? SqlSource.NO_ALIAS : sql.aliasInsertionPoint(start, stop);
+    if (insertion == SqlSource.NO_ALIAS) {
+      // Only the identifier is replaced, because no alias can be added here. Either the reference
+      // already carries one, in which case standard SQL scoping makes the original name unavailable
+      // as a qualifier anyway, or the grammar offers no alias slot at all.
       edits.add(new SqlEdit(start, stop + 1, viewName));
       return;
     }
-    // The alias must follow any relation-primary clause the grammar orders before it, which among
-    // the constructs validation permits is the TABLESAMPLE clause.
-    final int end = Math.max(stop, wrapperStop);
+    // Any options and sample clauses between the identifier and the alias slot are carried over
+    // unchanged, because the grammar orders the alias after them.
     edits.add(
-        new SqlEdit(start, end + 1, viewName + sql.substring(stop + 1, end + 1) + " AS " + label));
+        new SqlEdit(
+            start, insertion, viewName + sql.substring(stop + 1, insertion) + " AS " + label));
   }
 
   /**
@@ -303,25 +299,6 @@ public final class SqlLabelRewriter {
   /** Returns true when the node is one of the wrappers the parser builds for a relation alias. */
   private static boolean isAliasWrapper(@Nonnull final LogicalPlan plan) {
     return plan instanceof SubqueryAlias || plan instanceof UnresolvedSubqueryColumnAliases;
-  }
-
-  /**
-   * Returns the wrapper extent to pass to a node's children. A {@code Sample} node carries the span
-   * of the TABLESAMPLE clause, which an injected alias must follow; any other node ends the
-   * relation primary, so the extent resets.
-   */
-  private static int childWrapperStop(@Nonnull final LogicalPlan plan, final int wrapperStop) {
-    if (plan instanceof final Sample sample) {
-      final Origin origin = sample.origin();
-      if (origin.stopIndex().isDefined()) {
-        return Math.max(wrapperStop, (Integer) origin.stopIndex().get());
-      }
-      return wrapperStop;
-    }
-    if (isAliasWrapper(plan)) {
-      return wrapperStop;
-    }
-    return NO_WRAPPER;
   }
 
   /** Returns the offset of the first character of a matched node's span. */
