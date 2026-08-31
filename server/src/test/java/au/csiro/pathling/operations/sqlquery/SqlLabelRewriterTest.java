@@ -212,13 +212,113 @@ class SqlLabelRewriterTest {
   }
 
   // ---------------------------------------------------------------------------
+  // String literals and comments.
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void preservesSingleQuotedLiteralContainingALabel() {
+    // The parse spans cover relation identifiers only, so a literal that happens to contain the
+    // label text cannot be touched.
+    assertThat(rewriteAge("SELECT * FROM age WHERE label = 'age'"))
+        .isEqualTo("SELECT * FROM " + AGE_VIEW + " AS age WHERE label = 'age'");
+  }
+
+  @Test
+  void preservesDoubleQuotedLiteralContainingALabel() {
+    assertThat(rewriteAge("SELECT * FROM age WHERE note = \"age of patient\""))
+        .isEqualTo("SELECT * FROM " + AGE_VIEW + " AS age WHERE note = \"age of patient\"");
+  }
+
+  @Test
+  void preservesDoubledQuoteEscapedLiteralContainingALabel() {
+    // Spark accepts a doubled single quote as an embedded apostrophe, and the label text inside
+    // such a literal must survive along with the escape.
+    assertThat(rewriteAge("SELECT * FROM age WHERE label = 'pat''s age'"))
+        .isEqualTo("SELECT * FROM " + AGE_VIEW + " AS age WHERE label = 'pat''s age'");
+  }
+
+  @Test
+  void preservesLineCommentMentioningALabel() {
+    assertThat(rewriteAge("SELECT * FROM age -- age comment\nWHERE x = 1"))
+        .isEqualTo("SELECT * FROM " + AGE_VIEW + " AS age -- age comment\nWHERE x = 1");
+  }
+
+  @Test
+  void preservesBlockCommentMentioningALabel() {
+    assertThat(rewriteAge("SELECT /* age in here */ * FROM age"))
+        .isEqualTo("SELECT /* age in here */ * FROM " + AGE_VIEW + " AS age");
+  }
+
+  @Test
+  void preservesLineCommentMentioningALabelAheadOfARewrittenRelation() {
+    // A comment ahead of the reference pins that the rewrite offsets are counted over the
+    // submitted text, newline and comment included, rather than over any normalised form of it.
+    assertThat(rewriteAge("-- age comment\nSELECT * FROM age"))
+        .isEqualTo("-- age comment\nSELECT * FROM " + AGE_VIEW + " AS age");
+  }
+
+  @Test
+  void leavesBacktickQuotedIdentifierThatIsNotALabelAlone() {
+    assertThat(rewriteAge("SELECT * FROM age WHERE `random col` = 'x'"))
+        .isEqualTo("SELECT * FROM " + AGE_VIEW + " AS age WHERE `random col` = 'x'");
+  }
+
+  // ---------------------------------------------------------------------------
+  // Named parameters.
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void preservesNamedParameterMarkersAndTheSpansAroundThem() {
+    // A named parameter marker is not an identifier, so it survives; the marker before the relation
+    // reference also proves the rewrite spans are offsets into the submitted text.
+    assertThat(rewriteAge("SELECT :threshold AS t FROM age WHERE v > :threshold"))
+        .isEqualTo("SELECT :threshold AS t FROM " + AGE_VIEW + " AS age WHERE v > :threshold");
+  }
+
+  // ---------------------------------------------------------------------------
+  // Case sensitivity.
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void doesNotRewriteARelationDifferingFromTheLabelOnlyByCase() {
+    // Label matching is case-sensitive, as it is in the validator, which rejects the reference as
+    // an undeclared table before execution.
+    final String sql = "SELECT * FROM AGE";
+    assertThat(rewriteAge(sql)).isEqualTo(sql);
+  }
+
+  // ---------------------------------------------------------------------------
+  // DESCRIBE statements.
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void rewritesDescribeTargetWithoutInjectingAnAlias() {
+    // The grammar permits no alias on a DESCRIBE target, and there is nothing to qualify.
+    assertThat(rewriteAge("DESCRIBE age")).isEqualTo("DESCRIBE " + AGE_VIEW);
+  }
+
+  @Test
+  void rewritesDescribeTableTargetWithoutInjectingAnAlias() {
+    assertThat(rewriteAge("DESCRIBE TABLE age")).isEqualTo("DESCRIBE TABLE " + AGE_VIEW);
+  }
+
+  @Test
+  void rewritesOnlyTheRelationWithinDescribeQuery() {
+    // The described query is a constructor argument of the command rather than a tree child, so
+    // this also pins that the walk reaches it.
+    assertThat(rewriteAge("DESCRIBE QUERY SELECT age FROM age"))
+        .isEqualTo("DESCRIBE QUERY SELECT age FROM " + AGE_VIEW + " AS age");
+  }
+
+  // ---------------------------------------------------------------------------
   // Degenerate inputs.
   // ---------------------------------------------------------------------------
 
   @Test
   void returnsInputUnchangedWhenThereAreNoLabels() {
     final String sql = "SELECT age FROM age";
-    assertThat(rewrite(sql, Map.of())).isEqualTo(sql);
+    // With nothing to substitute the input is returned as-is, without even being parsed.
+    assertThat(rewrite(sql, Map.of())).isSameAs(sql);
   }
 
   /** Rewrites the given SQL against the single {@code age} label. */
