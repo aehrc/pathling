@@ -77,6 +77,14 @@ public class TestData {
       new java.math.BigDecimal("0.1234567");
   public static final java.math.BigDecimal TEST_VERY_SMALL_DECIMAL_SCALE_6 =
       new java.math.BigDecimal("0.123457");
+  public static final java.math.BigDecimal TEST_SCALE_16_DECIMAL =
+      new java.math.BigDecimal("4.0460004806518555");
+  public static final java.math.BigDecimal TEST_SCALE_16_DECIMAL_SCALE_6 =
+      new java.math.BigDecimal("4.046000");
+  public static final java.math.BigDecimal TEST_SCALE_17_DECIMAL =
+      new java.math.BigDecimal("0.10000000894069672");
+  public static final java.math.BigDecimal TEST_SCALE_17_DECIMAL_SCALE_6 =
+      new java.math.BigDecimal("0.100000");
 
   /** Returns a FHIR Condition for testing purposes. */
   public static Condition newCondition() {
