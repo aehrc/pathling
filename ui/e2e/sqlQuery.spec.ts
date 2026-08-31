@@ -187,16 +187,31 @@ test.describe("SQL on FHIR page - SQL query mode", () => {
       .getByRole("option", { name: mockSqlQueryLibrary1.title })
       .click();
 
-    // Enter a runtime value for the declared parameter.
-    await page
-      .getByRole("textbox", { name: /runtime value for patient_id/i })
-      .fill("Patient/pat-1");
+    // The parameters section now lives inside the tab, so no second section
+    // renders below the tabs.
+    await expect(page.getByText("Runtime parameter values")).toBeHidden();
+
+    const executeButton = page.getByRole("button", { name: /^execute$/i });
+    const patientId = page.getByRole("textbox", {
+      name: /runtime value for patient_id/i,
+    });
+
+    // The declared parameter starts unbound, so Execute is gated.
+    await expect(executeButton).toBeDisabled();
+    await patientId.fill("Patient/pat-1");
+    await expect(executeButton).toBeEnabled();
+
+    // Clearing the value gates Execute again: an unbound parameter can only
+    // ever produce the server's opaque failure, so it is never sent.
+    await patientId.fill("");
+    await expect(executeButton).toBeDisabled();
+    await patientId.fill("Patient/pat-1");
 
     // Switch the format to CSV so the response branch is deterministic.
     await page.getByRole("combobox", { name: /output format/i }).click();
     await page.getByRole("option", { name: "csv" }).click();
 
-    await page.getByRole("button", { name: /^execute$/i }).click();
+    await executeButton.click();
 
     await expect(page.getByText("2 rows")).toBeVisible();
     await expect(
@@ -232,7 +247,11 @@ test.describe("SQL on FHIR page - SQL query mode", () => {
     await page.getByRole("combobox", { name: /sql query source/i }).click();
     await page.getByRole("option", { name: mockSqlViewLibrary1.title }).click();
 
-    // A SQLView declares no parameters, so the runtime-params section is absent.
+    // A SQLView declares no parameters, so the tab's own Parameters section
+    // says so, and no section renders below the tabs.
+    await expect(
+      page.getByText("This Library declares no runtime parameters."),
+    ).toBeVisible();
     await expect(page.getByText("Runtime parameter values")).toBeHidden();
 
     // The dependency heading reads "Views" rather than "Tables".
@@ -258,7 +277,18 @@ test.describe("SQL on FHIR page - SQL query mode", () => {
       mockEmptySqlViewLibraryBundle,
     );
     await mockViewDefinitions(page);
-    await mockSqlQueryRunCsvResponse(page);
+
+    // Capture the run request so the value entered on the row can be checked
+    // against what is actually bound.
+    let runBody: string | null = null;
+    await page.route(/\/\$sql-run/, async (route) => {
+      runBody = route.request().postData();
+      await route.fulfill({
+        status: 200,
+        contentType: "text/csv",
+        body: mockSqlQueryRunCsv,
+      });
+    });
 
     await page.goto("/admin/sql-on-fhir");
     await selectSqlQueryMode(page);
@@ -277,14 +307,57 @@ test.describe("SQL on FHIR page - SQL query mode", () => {
     await page.getByRole("combobox", { name: /source for view 1/i }).click();
     await page.getByRole("option", { name: "Patient Demographics" }).click();
 
+    // Declare a parameter. The row carries name, type and value together, so
+    // the dead default field is gone and no second section renders.
+    await page.getByRole("button", { name: /add parameter/i }).click();
+    await page
+      .getByRole("textbox", { name: /name for parameter 1/i })
+      .fill("period_end");
+    await page.getByRole("combobox", { name: /type for parameter 1/i }).click();
+    await page.getByRole("option", { name: "date", exact: true }).click();
+    await expect(page.getByText("Default (optional)")).toBeHidden();
+    await expect(page.getByText("Runtime parameter values")).toBeHidden();
+
+    const executeButton = page.getByRole("button", { name: /^execute$/i });
+    const periodEnd = page.getByRole("textbox", {
+      name: /value for parameter 1/i,
+    });
+
+    // A named row with no value leaves the parameter unbound, so Execute is
+    // gated.
+    await expect(executeButton).toBeDisabled();
+
+    // A value that does not parse as its declared type is reported and gates
+    // Execute too.
+    await periodEnd.fill("not-a-date");
+    await expect(page.getByText(/expected an? iso 8601 date/i)).toBeVisible();
+    await expect(executeButton).toBeDisabled();
+
+    await periodEnd.fill("2025-06-30");
+    await expect(executeButton).toBeEnabled();
+
     // Use CSV output so the result rendering is deterministic.
     await page.getByRole("combobox", { name: /output format/i }).click();
     await page.getByRole("option", { name: "csv" }).click();
 
-    await page.getByRole("button", { name: /^execute$/i }).click();
+    await executeButton.click();
 
     await expect(page.getByText("2 rows")).toBeVisible();
     await expect(page.getByRole("cell", { name: "pat-1" })).toBeVisible();
+
+    // The row's value is bound in the nested Parameters resource, typed
+    // against the declared date.
+    expect(runBody).not.toBeNull();
+    const sent = JSON.parse(runBody as unknown as string) as {
+      parameter?: Array<{
+        name?: string;
+        resource?: { parameter?: Array<{ name?: string; valueDate?: string }> };
+      }>;
+    };
+    const bound = sent.parameter
+      ?.find((p) => p.name === "parameters")
+      ?.resource?.parameter?.find((p) => p.name === "period_end");
+    expect(bound?.valueDate).toBe("2025-06-30");
   });
 
   test("saves an inline Library and switches to the picker", async ({

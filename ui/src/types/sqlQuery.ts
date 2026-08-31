@@ -87,8 +87,12 @@ export interface SqlQueryParameterDeclaration {
   name: string;
   /** Declared FHIR primitive type. */
   type: SqlQueryParameterType;
-  /** Optional default value supplied as a string; coerced on submit. */
-  defaultValue?: string;
+  /**
+   * The runtime value bound for this run, captured as a string and coerced to
+   * the declared type when the request is assembled. This value is never
+   * persisted: saving the query writes the declaration only.
+   */
+  value: string;
 }
 
 /**
@@ -167,7 +171,7 @@ export interface SqlQueryExecutionOptions {
   limit?: number;
   /** Whether to include a header row when format is `csv`. */
   header?: boolean;
-  /** Runtime parameter values, keyed by declared parameter name. */
+  /** Values bound to the parameters, keyed by declared parameter name. */
   bindings?: SqlQueryRuntimeBindings;
   /**
    * Declared parameter types, keyed by name. Used to pick the correct

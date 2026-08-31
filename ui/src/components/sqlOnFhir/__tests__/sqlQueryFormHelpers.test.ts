@@ -15,20 +15,57 @@
  * limitations under the License.
  */
 
+/**
+ * Tests for the SQL query form helpers.
+ *
+ * Covers the inline Library builder and the SQL round trip, the Execute and
+ * Save preconditions, per-type value validation, and the parameter checks the
+ * form gates on: binding completeness, duplicate declared names, row validity
+ * and the row-to-binding seeding used after a save.
+ *
+ * @author John Grimes
+ */
+
 import { describe, expect, it } from "vitest";
 
 import { decodeSql, encodeSql } from "../../../utils/sqlBase64";
 import {
-  areRuntimeBindingsValid,
+  areBindingsCompleteAndValid,
+  areParameterRowsValid,
+  bindUntouchedBooleans,
   buildInlineSqlQueryLibrary,
   buildParameterTypes,
   canExecuteInlineForm,
   canSaveInlineForm,
   extractRequestSql,
+  findDuplicateParameterNames,
   isRuntimeValueValid,
+  rowsToBindings,
 } from "../sqlQueryFormHelpers";
 
-import type { SqlQueryLibrary, SqlQueryRequest } from "../../../types/sqlQuery";
+import type {
+  SqlQueryLibrary,
+  SqlQueryParameterDeclaration,
+  SqlQueryParameterType,
+  SqlQueryRequest,
+} from "../../../types/sqlQuery";
+
+/**
+ * Builds an inline parameter row, so each test states only the fields it
+ * cares about.
+ *
+ * @param name - The declared parameter name.
+ * @param type - The declared parameter type.
+ * @param value - The runtime value entered against the row.
+ * @returns A parameter row with a unique row id.
+ */
+function row(
+  name: string,
+  type: SqlQueryParameterType,
+  value: string,
+): SqlQueryParameterDeclaration {
+  return { rowId: `${name}-${type}-${value}`, name, type, value };
+}
 
 describe("buildInlineSqlQueryLibrary", () => {
   // The assembled Library carries the SQL on FHIR profile, the
@@ -45,7 +82,9 @@ describe("buildInlineSqlQueryLibrary", () => {
           referenceUrl: "https://example.org/ViewDefinition/patients",
         },
       ],
-      parameters: [{ rowId: "p1", name: "patient_id", type: "string" }],
+      parameters: [
+        { rowId: "p1", name: "patient_id", type: "string", value: "pat-1" },
+      ],
     });
 
     expect(library.resourceType).toBe("Library");
@@ -71,6 +110,47 @@ describe("buildInlineSqlQueryLibrary", () => {
     ]);
     expect(library.parameter).toEqual([
       { name: "patient_id", use: "in", type: "string" },
+    ]);
+  });
+
+  // FR-008: the value entered against a row is runtime-only state, so the
+  // saved declaration carries exactly name, use and type. The emitted key set
+  // is asserted in full: `ParameterDefinition` has no default-value element,
+  // and no extension may be introduced to smuggle one in.
+  it("persists only name, use and type for a row carrying a value", () => {
+    const library = buildInlineSqlQueryLibrary({
+      title: "Period query",
+      sql: "SELECT 1",
+      tables: [],
+      parameters: [row("period_end", "date", "2025-06-30")],
+    });
+
+    const parameters = library.parameter ?? [];
+    expect(parameters).toHaveLength(1);
+    expect(Object.keys(parameters[0]).sort()).toEqual(["name", "type", "use"]);
+    expect(parameters[0]).toStrictEqual({
+      name: "period_end",
+      use: "in",
+      type: "date",
+    });
+  });
+
+  // An empty-name row is not a declaration, so it contributes nothing to the
+  // saved Library's parameter list - only names that would actually be bound
+  // are persisted.
+  it("excludes an empty-name row from the saved parameter list", () => {
+    const library = buildInlineSqlQueryLibrary({
+      title: "Query",
+      sql: "SELECT 1",
+      tables: [],
+      parameters: [
+        row("", "string", "unbound value"),
+        row("period_end", "date", "2025-06-30"),
+      ],
+    });
+
+    expect(library.parameter).toEqual([
+      { name: "period_end", use: "in", type: "date" },
     ]);
   });
 
@@ -293,33 +373,205 @@ describe("isRuntimeValueValid", () => {
   });
 });
 
-describe("areRuntimeBindingsValid", () => {
-  // Empty bindings pass for declared-but-not-bound parameters.
-  it("accepts empty bindings", () => {
+describe("areBindingsCompleteAndValid", () => {
+  // A declared parameter with no entry in the bindings map is unbound, which
+  // is exactly the case that produces the opaque server failure.
+  it("rejects a declared parameter with no binding", () => {
     expect(
-      areRuntimeBindingsValid([{ name: "x", type: "integer" }], { x: "" }),
-    ).toBe(true);
-    expect(areRuntimeBindingsValid([{ name: "x", type: "integer" }], {})).toBe(
-      true,
-    );
-  });
-
-  it("rejects when any binding fails type validation", () => {
-    expect(
-      areRuntimeBindingsValid([{ name: "x", type: "integer" }], { x: "abc" }),
+      areBindingsCompleteAndValid([{ name: "x", type: "integer" }], {}),
     ).toBe(false);
   });
 
-  it("accepts when all bindings pass type validation", () => {
+  // An empty string is unbound too, not a value of the empty string.
+  it("rejects a declared parameter bound to an empty value", () => {
     expect(
-      areRuntimeBindingsValid(
+      areBindingsCompleteAndValid([{ name: "x", type: "integer" }], { x: "" }),
+    ).toBe(false);
+  });
+
+  // A value that does not parse as its declared type cannot be submitted.
+  it("rejects a value that fails type validation", () => {
+    expect(
+      areBindingsCompleteAndValid([{ name: "x", type: "integer" }], {
+        x: "abc",
+      }),
+    ).toBe(false);
+  });
+
+  // Every parameter carrying a parseable value is submittable.
+  it("accepts when every parameter has a valid value", () => {
+    expect(
+      areBindingsCompleteAndValid(
         [
           { name: "x", type: "integer" },
-          { name: "y", type: "string" },
+          { name: "period_end", type: "date" },
         ],
-        { x: "42", y: "hello" },
+        { x: "42", period_end: "2025-06-30" },
       ),
     ).toBe(true);
+  });
+
+  // A boolean switch cannot express "unbound": an absent entry is false.
+  it("accepts a boolean parameter with no binding, treating it as false", () => {
+    expect(
+      areBindingsCompleteAndValid([{ name: "flag", type: "boolean" }], {}),
+    ).toBe(true);
+    expect(
+      areBindingsCompleteAndValid([{ name: "flag", type: "boolean" }], {
+        flag: "",
+      }),
+    ).toBe(true);
+  });
+
+  // A query declaring nothing imposes no constraint.
+  it("accepts a query with no declared parameters", () => {
+    expect(areBindingsCompleteAndValid([], {})).toBe(true);
+  });
+});
+
+describe("findDuplicateParameterNames", () => {
+  // Two rows binding the same name are ambiguous, and both are reported.
+  it("reports a name declared by two rows", () => {
+    expect(
+      findDuplicateParameterNames([
+        row("x", "string", "a"),
+        row("x", "integer", "1"),
+      ]),
+    ).toEqual(new Set(["x"]));
+  });
+
+  // Names are compared after trimming, since the declaration is trimmed too.
+  it("compares names after trimming", () => {
+    expect(
+      findDuplicateParameterNames([
+        row(" x ", "string", "a"),
+        row("x", "string", "b"),
+      ]),
+    ).toEqual(new Set(["x"]));
+  });
+
+  // Unnamed rows are not declarations, so they never collide.
+  it("never reports empty names as duplicates", () => {
+    expect(
+      findDuplicateParameterNames([
+        row("", "string", "a"),
+        row("   ", "string", "b"),
+      ]),
+    ).toEqual(new Set());
+  });
+
+  // Distinct names are unambiguous.
+  it("reports nothing when every name is distinct", () => {
+    expect(
+      findDuplicateParameterNames([
+        row("x", "string", "a"),
+        row("y", "string", "b"),
+      ]),
+    ).toEqual(new Set());
+  });
+});
+
+describe("areParameterRowsValid", () => {
+  // A named row with no value is unbound.
+  it("rejects a named row with an empty value", () => {
+    expect(areParameterRowsValid([row("x", "string", "")])).toBe(false);
+  });
+
+  // A named row whose value does not parse as its type cannot be submitted.
+  it("rejects a named row with an invalid value", () => {
+    expect(areParameterRowsValid([row("x", "integer", "abc")])).toBe(false);
+  });
+
+  // Ambiguous names block execution regardless of their values.
+  it("rejects duplicate names among named rows", () => {
+    expect(
+      areParameterRowsValid([row("x", "string", "a"), row("x", "string", "b")]),
+    ).toBe(false);
+  });
+
+  // An unnamed row is not a declaration, so neither its emptiness nor an
+  // unparseable value blocks execution.
+  it("ignores rows with an empty name", () => {
+    expect(areParameterRowsValid([row("", "integer", "")])).toBe(true);
+    expect(areParameterRowsValid([row("  ", "integer", "abc")])).toBe(true);
+  });
+
+  // A boolean row is always bound, so an untouched switch is still valid.
+  it("accepts a boolean row with an empty value", () => {
+    expect(areParameterRowsValid([row("flag", "boolean", "")])).toBe(true);
+  });
+
+  // Every named row carrying a parseable value is submittable.
+  it("accepts named rows with valid values", () => {
+    expect(
+      areParameterRowsValid([
+        row("period_end", "date", "2025-06-30"),
+        row("count", "integer", "7"),
+      ]),
+    ).toBe(true);
+  });
+
+  // No rows at all imposes no constraint.
+  it("accepts an empty row list", () => {
+    expect(areParameterRowsValid([])).toBe(true);
+  });
+});
+
+describe("rowsToBindings", () => {
+  // Named rows become the name-keyed map the request assembly consumes.
+  it("maps named rows to their values", () => {
+    expect(
+      rowsToBindings([
+        row("period_end", "date", "2025-06-30"),
+        row("count", "integer", "7"),
+      ]),
+    ).toEqual({ period_end: "2025-06-30", count: "7" });
+  });
+
+  // An untouched boolean switch reads as false, and binds as false.
+  it("emits false for a boolean row with an empty value", () => {
+    expect(rowsToBindings([row("flag", "boolean", "")])).toEqual({
+      flag: "false",
+    });
+  });
+
+  // A named row with no value contributes nothing, so seeding the stored
+  // tab's bindings on save leaves that parameter unbound rather than bound
+  // to an empty string.
+  it("drops named rows with an empty non-boolean value", () => {
+    expect(rowsToBindings([row("x", "string", "")])).toEqual({});
+  });
+
+  // Unnamed rows are not declarations and cannot be bound.
+  it("drops rows with an empty name", () => {
+    expect(rowsToBindings([row("  ", "string", "a")])).toEqual({});
+  });
+});
+
+describe("bindUntouchedBooleans", () => {
+  // A declared boolean with no entry is defaulted to false so the wire
+  // request stays complete - without it the server would see it unbound.
+  it("defaults an absent boolean entry to false", () => {
+    const parameters = [{ name: "active", type: "boolean" as const }];
+    expect(bindUntouchedBooleans(parameters, {})).toEqual({ active: "false" });
+  });
+
+  it("defaults only absent booleans, leaving existing values alone", () => {
+    const parameters = [
+      { name: "active", type: "boolean" as const },
+      { name: "period_end", type: "date" as const },
+    ];
+    const result = bindUntouchedBooleans(parameters, { active: "true" });
+    expect(result).toEqual({ active: "true" });
+  });
+
+  it("returns the bindings unchanged when no boolean is declared", () => {
+    const parameters = [{ name: "period_end", type: "date" as const }];
+    expect(
+      bindUntouchedBooleans(parameters, { period_end: "2025-06-30" }),
+    ).toEqual({
+      period_end: "2025-06-30",
+    });
   });
 });
 

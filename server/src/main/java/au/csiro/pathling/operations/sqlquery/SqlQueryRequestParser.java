@@ -17,12 +17,17 @@
 
 package au.csiro.pathling.operations.sqlquery;
 
+import au.csiro.pathling.operations.sql.SqlOperationError;
+import au.csiro.pathling.operations.sql.SqlOperationOutcomes;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import jakarta.servlet.http.HttpServletResponse;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
@@ -34,6 +39,8 @@ import org.hl7.fhir.r4.model.DateType;
 import org.hl7.fhir.r4.model.DecimalType;
 import org.hl7.fhir.r4.model.IntegerType;
 import org.hl7.fhir.r4.model.Library;
+import org.hl7.fhir.r4.model.OperationOutcome.IssueType;
+import org.hl7.fhir.r4.model.OperationOutcome.OperationOutcomeIssueComponent;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
 import org.hl7.fhir.r4.model.PrimitiveType;
@@ -46,6 +53,10 @@ import org.springframework.stereotype.Component;
  * Validates and normalises the raw HTTP inputs of a {@code $sql-run} invocation into a {@link
  * SqlQueryRequest}. Has no Spark dependency; performs only structural FHIR-level validation and
  * parsing.
+ *
+ * <p>That validation includes the completeness of the runtime parameter bindings: every parameter
+ * the Library declares must be bound, and a request that leaves any of them unbound is rejected
+ * with a {@code 400} naming each one.
  *
  * @author John Grimes
  */
@@ -83,7 +94,8 @@ public class SqlQueryRequestParser {
    * @param limit optional row cap
    * @param parameters runtime parameter bindings as a {@code Parameters} resource
    * @return the validated request
-   * @throws InvalidRequestException if the inputs are not a valid SQLQuery invocation
+   * @throws InvalidRequestException if the inputs are not a valid SQLQuery invocation, including
+   *     where a parameter the Library declares has no runtime binding
    */
   @Nonnull
   @SuppressWarnings("java:S107")
@@ -149,20 +161,21 @@ public class SqlQueryRequestParser {
    * Validates the runtime parameter bindings against the declarations in {@code Library.parameter}
    * and converts each {@code value[x]} to a typed Java object.
    *
+   * <p>Every declared parameter requires a binding. The SQL engine has no parameter defaults, so an
+   * unbound declaration can only fail once the query is analysed, long after the point where the
+   * fault can be attributed to the request.
+   *
    * @param parameters the runtime bindings, may be {@code null}
    * @param declaredParameters the declarations from the SQLQuery Library
    * @return an ordered map of name → typed Java value
    * @throws InvalidRequestException if a binding is malformed, names a parameter that was not
-   *     declared, or supplies a value of the wrong FHIR type
+   *     declared, or supplies a value of the wrong FHIR type; or if a declared parameter has no
+   *     binding, in which case the outcome carries one issue per unbound parameter
    */
   @Nonnull
   private Map<String, Object> bindParameters(
       @Nullable final Parameters parameters,
-      @Nonnull final java.util.List<SqlParameterDeclaration> declaredParameters) {
-
-    if (parameters == null || parameters.getParameter().isEmpty()) {
-      return Map.of();
-    }
+      @Nonnull final List<SqlParameterDeclaration> declaredParameters) {
 
     final Map<String, String> declaredByName = new LinkedHashMap<>();
     for (final SqlParameterDeclaration declaration : declaredParameters) {
@@ -170,30 +183,71 @@ public class SqlQueryRequestParser {
     }
 
     final Map<String, Object> bindings = new LinkedHashMap<>();
-    for (final ParametersParameterComponent binding : parameters.getParameter()) {
-      final String name = binding.getName();
-      if (name == null || name.isBlank()) {
-        throw new InvalidRequestException(
-            "Each runtime parameter binding must have a non-empty name");
+    // A null or absent set of bindings skips the binding loop, but not the completeness check
+    // below: the absence of a binding for a declared parameter is precisely what that check
+    // reports.
+    if (parameters != null) {
+      for (final ParametersParameterComponent binding : parameters.getParameter()) {
+        bindOneValue(binding, declaredByName, bindings);
       }
-      final String declaredType = declaredByName.get(name);
-      if (declaredType == null) {
-        throw new InvalidRequestException(
-            "Runtime parameter '"
-                + name
-                + "' is not declared in the SQLQuery Library's parameter list");
-      }
-      final Type value = binding.getValue();
-      if (value == null) {
-        throw new InvalidRequestException("Runtime parameter '" + name + "' has no value[x]");
-      }
-      if (bindings.containsKey(name)) {
-        throw new InvalidRequestException(
-            "Runtime parameter '" + name + "' is supplied more than once");
-      }
-      bindings.put(name, convertTypedValue(name, declaredType, value));
     }
+
+    // Every unbound declaration is reported together, in declaration order, so that a request
+    // missing more than one binding can be corrected in a single round trip.
+    final List<OperationOutcomeIssueComponent> unbound = new ArrayList<>();
+    for (final String name : declaredByName.keySet()) {
+      if (!bindings.containsKey(name)) {
+        unbound.add(
+            SqlOperationError.issue(
+                IssueType.INVALID,
+                SqlOperationOutcomes.PARAMETERS_EXPRESSION,
+                "Runtime parameter '"
+                    + name
+                    + "' is declared by the SQLQuery Library but no binding was supplied"));
+      }
+    }
+    if (!unbound.isEmpty()) {
+      throw SqlOperationError.of(HttpServletResponse.SC_BAD_REQUEST, unbound);
+    }
+
     return bindings;
+  }
+
+  /**
+   * Validates one runtime binding against the declared parameters and places it into the bindings
+   * map.
+   *
+   * @param binding the binding to validate
+   * @param declaredByName the declared parameters keyed by name
+   * @param bindings the map the validated binding is placed into
+   * @throws InvalidRequestException if the binding is malformed, names a parameter that was not
+   *     declared, or supplies a value of the wrong FHIR type
+   */
+  private void bindOneValue(
+      @Nonnull final ParametersParameterComponent binding,
+      @Nonnull final Map<String, String> declaredByName,
+      @Nonnull final Map<String, Object> bindings) {
+    final String name = binding.getName();
+    if (name == null || name.isBlank()) {
+      throw new InvalidRequestException(
+          "Each runtime parameter binding must have a non-empty name");
+    }
+    final String declaredType = declaredByName.get(name);
+    if (declaredType == null) {
+      throw new InvalidRequestException(
+          "Runtime parameter '"
+              + name
+              + "' is not declared in the SQLQuery Library's parameter list");
+    }
+    final Type value = binding.getValue();
+    if (value == null) {
+      throw new InvalidRequestException("Runtime parameter '" + name + "' has no value[x]");
+    }
+    if (bindings.containsKey(name)) {
+      throw new InvalidRequestException(
+          "Runtime parameter '" + name + "' is supplied more than once");
+    }
+    bindings.put(name, convertTypedValue(name, declaredType, value));
   }
 
   /**

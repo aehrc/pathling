@@ -36,7 +36,7 @@ rejected rather than answered synchronously.
 | `subject.subjectCanonical` | 0..1        | canonical  | The subject's canonical URL, honouring a `\|version` pin.                                          |
 | `subject.subjectReference` | 0..1        | Reference  | A relative reference naming its type: `ViewDefinition/[id]` or `Library/[id]`.                     |
 | `subject.subjectResource`  | 0..1        | Resource   | An inline ViewDefinition, SQLQuery or SQLView.                                                     |
-| `subject.parameters`       | 0..1        | Parameters | Runtime bindings, for a SQL subject only.                                                          |
+| `subject.parameters`       | 0..1        | Parameters | Runtime bindings, for a SQL subject only. Every declared parameter must be bound.                  |
 | `context`                  | 0..\*       | Resource   | Job-wide inline supporting artefacts, matched by canonical URL. These produce no output.           |
 | `clientTrackingId`         | 0..1        | string     | Echoed in the completion manifest.                                                                 |
 | `_format`                  | 0..1        | code       | `ndjson` (default), `csv` or `parquet`.                                                            |
@@ -165,6 +165,13 @@ per file, all under the one `name`.
 | `404 Not Found`             | A subject's canonical or reference resolves to nothing; the status URL of a cancelled job.                    |
 | `422 Unprocessable Entity`  | A subject is of no admitted kind, or is conformant but cannot be processed.                                   |
 | `500 Internal Server Error` | An unexpected fault, or - on the result URL - the job's own failure outcome.                                  |
+
+A subject whose `parameters` part leaves a parameter its Library declares
+unbound is refused at kick-off with a `400`, before any job is created: the
+fault is decidable from the request alone, so there is no status URL to poll and
+nothing to clean up. Each unbound declaration is its own `invalid` issue naming
+`parameters`, as on [`$sql-run`](sql-run.md), and with several subjects those
+issues join the rest of the kick-off issues in the one outcome.
 
 A subject whose SQL only Spark's analyser can fault - an unresolved column, an
 unknown function, a missing `GROUP BY`, an ambiguous reference - fails the job
