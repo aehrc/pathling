@@ -17,19 +17,24 @@
 
 /**
  * "Select query" tab body for the SQL query form: a grouped picker offering
- * stored SQLQueries and SQLViews, a decoded SQL preview and read-only
- * summaries of referenced views and declared parameters.
+ * stored SQLQueries and SQLViews, a decoded SQL preview, a read-only summary
+ * of referenced views, and the parameters section pairing each declared
+ * parameter with the value to bind on this run.
  *
  * @author John Grimes
  */
 
-import { Badge, Box, Code, Flex, Select, Spinner, Text, Tooltip } from "@radix-ui/themes";
+import { Box, Code, Flex, Select, Spinner, Text, Tooltip } from "@radix-ui/themes";
 
 import { SqlPreview } from "./SqlPreview";
+import { SqlQueryRuntimeBindings } from "./SqlQueryRuntimeBindings";
 import { FieldGuidance } from "../FieldGuidance";
 import { FieldLabel } from "../FieldLabel";
 
-import type { SqlQueryLibrarySummary } from "../../types/sqlQuery";
+import type {
+  SqlQueryLibrarySummary,
+  SqlQueryRuntimeBindings as SqlQueryRuntimeBindingsState,
+} from "../../types/sqlQuery";
 
 interface SqlQueryStoredTabProps {
   /** Stored SQLQuery summaries; undefined while loading. */
@@ -42,6 +47,10 @@ interface SqlQueryStoredTabProps {
   selectedId: string;
   /** Callback fired when the user picks a source. */
   onSelect: (id: string) => void;
+  /** Values bound to the selected query's parameters, keyed by name. */
+  bindings: SqlQueryRuntimeBindingsState;
+  /** Callback fired when the value bound to a parameter changes. */
+  onBindingChange: (name: string, value: string) => void;
   /** Whether the controls should be disabled. */
   disabled?: boolean;
 }
@@ -55,6 +64,8 @@ interface SqlQueryStoredTabProps {
  * @param props.isLoading - Whether either stored list is loading.
  * @param props.selectedId - The currently selected logical ID.
  * @param props.onSelect - Callback fired when the user picks a source.
+ * @param props.bindings - Values bound to the selected query's parameters.
+ * @param props.onBindingChange - Callback fired when a bound value changes.
  * @param props.disabled - Whether the controls should be disabled.
  * @returns The tab body.
  */
@@ -64,6 +75,8 @@ export function SqlQueryStoredTab({
   isLoading,
   selectedId,
   onSelect,
+  bindings,
+  onBindingChange,
   disabled = false,
 }: Readonly<SqlQueryStoredTabProps>) {
   const hasQueries = (queries?.length ?? 0) > 0;
@@ -176,21 +189,13 @@ export function SqlQueryStoredTab({
           </Box>
 
           <Box>
-            <FieldLabel mb="1">Declared parameters</FieldLabel>
-            {selectedLibrary.parameters.length > 0 ? (
-              <Flex gap="1" wrap="wrap">
-                {selectedLibrary.parameters.map((p) => (
-                  <Badge key={p.name} color="gray">
-                    {p.name}
-                    <Text size="1" color="gray">
-                      :{p.type}
-                    </Text>
-                  </Badge>
-                ))}
-              </Flex>
-            ) : (
-              <FieldGuidance>None.</FieldGuidance>
-            )}
+            <FieldLabel mb="1">Parameters</FieldLabel>
+            <SqlQueryRuntimeBindings
+              parameters={selectedLibrary.parameters}
+              bindings={bindings}
+              onChange={onBindingChange}
+              disabled={disabled}
+            />
           </Box>
         </>
       ) : (
