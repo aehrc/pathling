@@ -322,6 +322,17 @@ class SqlViewRunProviderIT {
     assertThat(body).contains("\"age\":1");
   }
 
+  @Test
+  void runsQueryWhoseCteShadowsTheDependencyLabel() {
+    // A CTE named after the label shadows it per standard SQL scoping, so the single row comes
+    // from the CTE rather than from the dependency.
+    final String body =
+        postOk(parametersJson(ageQueryLibrary("WITH age AS (SELECT 99 AS v) SELECT v FROM age")));
+
+    assertThat(body.trim().split("\n")).hasSize(1);
+    assertThat(body).contains("\"v\":99");
+  }
+
   /**
    * Builds a SQLQuery Library over the age-source SQLView under the colliding label {@code age}.
    */

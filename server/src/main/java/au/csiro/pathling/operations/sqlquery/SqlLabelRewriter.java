@@ -23,6 +23,7 @@ import jakarta.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
@@ -36,8 +37,10 @@ import org.apache.spark.sql.catalyst.parser.ParserInterface;
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
 import org.apache.spark.sql.catalyst.plans.logical.Sample;
 import org.apache.spark.sql.catalyst.plans.logical.SubqueryAlias;
+import org.apache.spark.sql.catalyst.plans.logical.UnresolvedWith;
 import org.apache.spark.sql.catalyst.trees.Origin;
 import org.apache.spark.sql.execution.command.DescribeQueryCommand;
+import scala.Tuple2;
 import scala.collection.immutable.Seq;
 import scala.jdk.javaapi.CollectionConverters;
 
@@ -51,6 +54,10 @@ import scala.jdk.javaapi.CollectionConverters;
  * injected after it. The rewritten query then behaves as if a real table existed under the label's
  * own name, so a column qualified by the label (for example {@code SELECT age.age FROM age})
  * continues to resolve.
+ *
+ * <p>A reference is left alone when a common table expression of the same name is in scope: the
+ * query author's definition shadows the label, per standard SQL scoping. Scope follows Spark's own
+ * {@code CTESubstitution}, and the names are compared case-sensitively, exactly as the labels are.
  *
  * @author John Grimes
  */
@@ -94,7 +101,7 @@ public final class SqlLabelRewriter {
 
     final List<SqlEdit> edits = new ArrayList<>();
     final Set<LogicalPlan> visited = Collections.newSetFromMap(new IdentityHashMap<>());
-    collectEdits(sql, plan, labelToViewName, false, NO_WRAPPER, visited, edits);
+    collectEdits(sql, plan, labelToViewName, Set.of(), false, NO_WRAPPER, visited, edits);
     return applyEdits(sql, edits);
   }
 
@@ -104,6 +111,8 @@ public final class SqlLabelRewriter {
    * @param sql the original SQL query
    * @param plan the plan node to visit
    * @param labelToViewName the mapping from dependency labels to temporary view names
+   * @param cteScope the names of the common table expressions in scope at this node, each of which
+   *     shadows a label of the same name
    * @param aliased whether an alias has already been seen between this node and the relation
    *     primary it belongs to
    * @param wrapperStop the last character offset of the outermost relation-primary wrapper seen so
@@ -116,6 +125,7 @@ public final class SqlLabelRewriter {
       @Nonnull final String sql,
       @Nonnull final LogicalPlan plan,
       @Nonnull final Map<String, String> labelToViewName,
+      @Nonnull final Set<String> cteScope,
       final boolean aliased,
       final int wrapperStop,
       @Nonnull final Set<LogicalPlan> visited,
@@ -126,34 +136,43 @@ public final class SqlLabelRewriter {
     }
 
     if (plan instanceof final UnresolvedRelation relation) {
-      collectRelationEdit(sql, relation, labelToViewName, aliased, wrapperStop, edits);
+      collectRelationEdit(sql, relation, labelToViewName, cteScope, aliased, wrapperStop, edits);
     } else if (plan instanceof final UnresolvedTableOrView target) {
       collectDescribeTargetEdit(target, labelToViewName, edits);
     }
 
     // A subquery expression holds its plan outside the tree's children.
     for (final Expression expression : CollectionConverters.asJava(plan.expressions())) {
-      collectEditsInExpression(sql, expression, labelToViewName, visited, edits);
+      collectEditsInExpression(sql, expression, labelToViewName, cteScope, visited, edits);
     }
 
     // DESCRIBE QUERY holds the query it describes as a constructor argument, so neither the child
     // walk nor the inner-child walk below reaches it.
     if (plan instanceof final DescribeQueryCommand describeQuery) {
-      collectEdits(sql, describeQuery.plan(), labelToViewName, false, NO_WRAPPER, visited, edits);
+      collectEdits(
+          sql, describeQuery.plan(), labelToViewName, cteScope, false, NO_WRAPPER, visited, edits);
     }
 
-    // The definition bodies of a WITH clause are inner children rather than children, so the
-    // generic child walk never reaches them.
+    // A WITH clause gives each of its subtrees a different scope, so it is walked explicitly
+    // instead of through the generic inner-child and child walks below.
+    if (plan instanceof final UnresolvedWith with) {
+      collectEditsInWith(sql, with, labelToViewName, cteScope, visited, edits);
+      return;
+    }
+
+    // Any plan a node holds outside its children is exposed as an inner child. The scope is
+    // carried into the descent so that a plan first reached this way keeps it.
     for (final Object innerChild : CollectionConverters.asJava(plan.innerChildren())) {
       if (innerChild instanceof final LogicalPlan innerPlan) {
-        collectEdits(sql, innerPlan, labelToViewName, false, NO_WRAPPER, visited, edits);
+        collectEdits(sql, innerPlan, labelToViewName, cteScope, false, NO_WRAPPER, visited, edits);
       }
     }
 
     final boolean childAliased = isAliasWrapper(plan) || (plan instanceof Sample && aliased);
     final int childWrapperStop = childWrapperStop(plan, wrapperStop);
     for (final LogicalPlan child : CollectionConverters.asJava(plan.children())) {
-      collectEdits(sql, child, labelToViewName, childAliased, childWrapperStop, visited, edits);
+      collectEdits(
+          sql, child, labelToViewName, cteScope, childAliased, childWrapperStop, visited, edits);
     }
   }
 
@@ -162,32 +181,69 @@ public final class SqlLabelRewriter {
       @Nonnull final String sql,
       @Nonnull final Expression expression,
       @Nonnull final Map<String, String> labelToViewName,
+      @Nonnull final Set<String> cteScope,
       @Nonnull final Set<LogicalPlan> visited,
       @Nonnull final List<SqlEdit> edits) {
 
     if (expression instanceof final SubqueryExpression subquery) {
-      collectEdits(sql, subquery.plan(), labelToViewName, false, NO_WRAPPER, visited, edits);
+      collectEdits(
+          sql, subquery.plan(), labelToViewName, cteScope, false, NO_WRAPPER, visited, edits);
     }
     for (final Expression child : CollectionConverters.asJava(expression.children())) {
-      collectEditsInExpression(sql, child, labelToViewName, visited, edits);
+      collectEditsInExpression(sql, child, labelToViewName, cteScope, visited, edits);
     }
   }
 
   /**
+   * Walks the definitions and the main query of a {@code WITH} clause, mirroring the scoping of
+   * Spark's own {@code CTESubstitution}: the i-th definition sees the names in scope around the
+   * clause plus the definitions declared before it, and the main query sees every definition. A
+   * definition referencing its own name therefore resolves outward to a label of that name, because
+   * a {@code WITH} without {@code RECURSIVE} cannot refer to itself.
+   *
+   * <p>The definitions are taken from {@code cteRelations} rather than {@code innerChildren}
+   * because only the former pairs each body with the name it is bound to. The scope is accumulated
+   * in place, each descent completing before the next name is added.
+   */
+  private static void collectEditsInWith(
+      @Nonnull final String sql,
+      @Nonnull final UnresolvedWith with,
+      @Nonnull final Map<String, String> labelToViewName,
+      @Nonnull final Set<String> cteScope,
+      @Nonnull final Set<LogicalPlan> visited,
+      @Nonnull final List<SqlEdit> edits) {
+
+    final List<Tuple2<String, SubqueryAlias>> ctes =
+        CollectionConverters.asJava(with.cteRelations());
+    final Set<String> scope = new HashSet<>(cteScope);
+    for (final Tuple2<String, SubqueryAlias> cte : ctes) {
+      if (with.allowRecursion()) {
+        // A RECURSIVE clause puts a definition's own name in scope for its body, so a
+        // self-reference there is the recursion rather than a label of the same name.
+        scope.add(cte._1());
+      }
+      collectEdits(sql, cte._2(), labelToViewName, scope, false, NO_WRAPPER, visited, edits);
+      scope.add(cte._1());
+    }
+    collectEdits(sql, with.child(), labelToViewName, scope, false, NO_WRAPPER, visited, edits);
+  }
+
+  /**
    * Collects the edit for a relation reference. A reference whose identifier is not a single-part
-   * label is left alone; static validation has already rejected anything that could not have been a
-   * declared label.
+   * label, or which names a common table expression in scope, is left alone; static validation has
+   * already rejected anything that could not have been a declared label.
    */
   private static void collectRelationEdit(
       @Nonnull final String sql,
       @Nonnull final UnresolvedRelation relation,
       @Nonnull final Map<String, String> labelToViewName,
+      @Nonnull final Set<String> cteScope,
       final boolean aliased,
       final int wrapperStop,
       @Nonnull final List<SqlEdit> edits) {
 
     final String label = singlePartLabel(relation.multipartIdentifier(), labelToViewName);
-    if (label == null) {
+    if (label == null || cteScope.contains(label)) {
       return;
     }
     final String viewName = labelToViewName.get(label);

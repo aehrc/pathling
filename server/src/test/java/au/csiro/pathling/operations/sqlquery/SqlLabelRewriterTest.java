@@ -311,6 +311,88 @@ class SqlLabelRewriterTest {
   }
 
   // ---------------------------------------------------------------------------
+  // Common table expression scoping.
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void leavesReferenceShadowedByACteOfTheSameName() {
+    // The definition is in scope throughout the main query, so both occurrences of "age" name the
+    // CTE rather than the labelled table, and the label is simply unused.
+    final String sql = "WITH age AS (SELECT 99 AS v) SELECT v FROM age";
+    assertThat(rewriteAge(sql)).isEqualTo(sql);
+  }
+
+  @Test
+  void rewritesOnlyTheSelfReferenceWithinACteBodyNamedAfterALabel() {
+    // A CTE without RECURSIVE cannot refer to itself, so the reference inside the body resolves
+    // outward to the labelled table while the reference in the main query resolves to the CTE.
+    assertThat(rewriteAge("WITH age AS (SELECT * FROM age) SELECT * FROM age"))
+        .isEqualTo("WITH age AS (SELECT * FROM " + AGE_VIEW + " AS age) SELECT * FROM age");
+  }
+
+  @Test
+  void rewritesLabelReferenceInsideADifferentlyNamedCteBody() {
+    // Nothing named "age" is in scope, so the body's reference is a reference to the label.
+    assertThat(rewriteAge("WITH c AS (SELECT * FROM age) SELECT * FROM c"))
+        .isEqualTo("WITH c AS (SELECT * FROM " + AGE_VIEW + " AS age) SELECT * FROM c");
+  }
+
+  @Test
+  void leavesReferenceToAnEarlierSiblingCteNamedAfterALabel() {
+    // A definition sees the definitions declared before it, so "age" within the body of c names
+    // the first CTE.
+    final String sql = "WITH age AS (SELECT 1 AS v), c AS (SELECT * FROM age) SELECT * FROM c";
+    assertThat(rewriteAge(sql)).isEqualTo(sql);
+  }
+
+  @Test
+  void rewritesLabelReferenceInASubqueryOutsideACollidingCteScope() {
+    // The CTE defined within the first derived table is out of scope in the second, so the
+    // sibling's reference is still a reference to the labelled table.
+    assertThat(
+            rewriteAge(
+                "SELECT * FROM (WITH age AS (SELECT 1 AS v) SELECT v FROM age) AS a"
+                    + " JOIN (SELECT v FROM age) AS b ON a.v = b.v"))
+        .isEqualTo(
+            "SELECT * FROM (WITH age AS (SELECT 1 AS v) SELECT v FROM age) AS a"
+                + " JOIN (SELECT v FROM "
+                + AGE_VIEW
+                + " AS age) AS b ON a.v = b.v");
+  }
+
+  @Test
+  void leavesReferenceShadowedByACteDefinedWithinAnEnclosingCteBody() {
+    // An inner WITH shadows the label for the remainder of the enclosing definition's body.
+    final String sql = "WITH c AS (WITH age AS (SELECT 1 AS v) SELECT v FROM age) SELECT * FROM c";
+    assertThat(rewriteAge(sql)).isEqualTo(sql);
+  }
+
+  @Test
+  void leavesReferenceShadowedByACteFromWithinASubqueryOfTheMainQuery() {
+    // A definition's scope covers the whole main query, nested subqueries included.
+    final String sql = "WITH age AS (SELECT 1 AS v) SELECT * FROM (SELECT v FROM age) AS t";
+    assertThat(rewriteAge(sql)).isEqualTo(sql);
+  }
+
+  @Test
+  void rewritesReferenceMatchingACteNameOnlyByCase() {
+    // CTE names are compared case-sensitively, exactly as labels are, so a CTE named AGE does not
+    // shadow a reference that matches the label "age" exactly.
+    assertThat(rewriteAge("WITH AGE AS (SELECT 99 AS v) SELECT v FROM age"))
+        .isEqualTo("WITH AGE AS (SELECT 99 AS v) SELECT v FROM " + AGE_VIEW + " AS age");
+  }
+
+  @Test
+  void leavesSelfReferenceWithinARecursiveCteNamedAfterALabel() {
+    // RECURSIVE puts a definition's own name in scope for its body, so there the self-reference
+    // is the recursion rather than the labelled table.
+    final String sql =
+        "WITH RECURSIVE age AS (SELECT 1 AS v UNION ALL SELECT v + 1 FROM age WHERE v < 3)"
+            + " SELECT v FROM age";
+    assertThat(rewriteAge(sql)).isEqualTo(sql);
+  }
+
+  // ---------------------------------------------------------------------------
   // Degenerate inputs.
   // ---------------------------------------------------------------------------
 
