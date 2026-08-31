@@ -46,6 +46,7 @@ CVE-2026-34478
 CVE-2026-34479
 CVE-2026-34480
 CVE-2026-34481
+CVE-2026-49844
 
 # Avro is provided via the Spark runtime. Server overrides to patched version
 # 1.12.1 in server/pom.xml.
