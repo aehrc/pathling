@@ -233,6 +233,135 @@ class SqlViewRunProviderIT {
     assertThat(body).containsIgnoringCase("cycl");
   }
 
+  // ---------------------------------------------------------------------------
+  // Issue 2730: a column sharing a dependency label's name must not be rewritten.
+  // The age-source SQLView exposes patient_key, age and age_years, so the label
+  // "age" collides with the column "age".
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void runsQueryWhoseAliasQualifiedColumnSharesTheDependencyLabelsName() {
+    // Issue variant A.
+    final String body = postOk(parametersJson(ageQueryLibrary("SELECT t.age FROM age AS t")));
+
+    assertThat(body.trim().split("\n")).hasSize(3);
+    assertThat(body).contains("\"age\":1");
+  }
+
+  @Test
+  void runsQueryWhoseUnqualifiedColumnSharesTheDependencyLabelsName() {
+    // Issue variant B.
+    final String body = postOk(parametersJson(ageQueryLibrary("SELECT age FROM age")));
+
+    assertThat(body.trim().split("\n")).hasSize(3);
+    assertThat(body).contains("\"age\":1");
+  }
+
+  @Test
+  void runsQuerySelectingAColumnThatMerelyStartsWithTheDependencyLabelsName() {
+    // Issue variant C, the control: this worked before the fix and must keep working.
+    final String body = postOk(parametersJson(ageQueryLibrary("SELECT t.age_years FROM age AS t")));
+
+    assertThat(body.trim().split("\n")).hasSize(3);
+    assertThat(body).contains("\"age_years\":2");
+  }
+
+  @Test
+  void runsQueryWhoseColumnDoesNotCollideWithTheDependencyLabel() {
+    // Issue variant D, the control: with a non-colliding label the column resolves as before.
+    final Library library =
+        sqlQueryLibrary(
+            "SELECT t.age FROM dep_age AS t",
+            "dep_age",
+            SqlViewTestConfiguration.libraryUrl(SqlViewTestConfiguration.AGE_SOURCE_ID));
+
+    final String body = postOk(parametersJson(library));
+
+    assertThat(body.trim().split("\n")).hasSize(3);
+    assertThat(body).contains("\"age\":1");
+  }
+
+  @Test
+  void runsQueryQualifyingAColumnByTheDependencyLabelItself() {
+    // The qualifier names the labelled table rather than an alias, so the substituted relation must
+    // still be reachable under the label's own name.
+    final String body = postOk(parametersJson(ageQueryLibrary("SELECT age.age FROM age")));
+
+    assertThat(body.trim().split("\n")).hasSize(3);
+    assertThat(body).contains("\"age\":1");
+  }
+
+  @Test
+  void runsMimicStyleQueryScoringACollidingColumn() {
+    // The MIMIC-IV charlson pattern: a dependency labelled "age" exposing a column "age",
+    // referenced as "FROM age AS src_age" with "src_age.age" predicates.
+    final String body =
+        postOk(
+            parametersJson(
+                ageQueryLibrary(
+                    "SELECT CASE WHEN src_age.age <= 50 THEN 0 ELSE 1 END AS age_score "
+                        + "FROM age AS src_age")));
+
+    assertThat(body.trim().split("\n")).hasSize(3);
+    assertThat(body).contains("\"age_score\":0").doesNotContain("\"age_score\":1");
+  }
+
+  @Test
+  void runsQueryWhoseNestedNodeSuffersTheLabelCollision() {
+    // A three-level chain where the collision sits in the middle node (age-middle runs
+    // "SELECT age FROM age"), not in the top-level query.
+    final Library library =
+        sqlQueryLibrary(
+            "SELECT age FROM m",
+            "m",
+            SqlViewTestConfiguration.libraryUrl(SqlViewTestConfiguration.AGE_MIDDLE_ID));
+
+    final String body = postOk(parametersJson(library));
+
+    assertThat(body.trim().split("\n")).hasSize(3);
+    assertThat(body).contains("\"age\":1");
+  }
+
+  @Test
+  void runsQueryWhoseCteShadowsTheDependencyLabel() {
+    // A CTE named after the label shadows it per standard SQL scoping, so the single row comes
+    // from the CTE rather than from the dependency.
+    final String body =
+        postOk(parametersJson(ageQueryLibrary("WITH age AS (SELECT 99 AS v) SELECT v FROM age")));
+
+    assertThat(body.trim().split("\n")).hasSize(1);
+    assertThat(body).contains("\"v\":99");
+  }
+
+  @Test
+  void runsTableQueryOverADependencyWhoseLabelCollidesWithAColumn() {
+    // The TABLE query primary admits no table alias, so the substitution must not inject one here.
+    final String body = postOk(parametersJson(ageQueryLibrary("TABLE age")));
+
+    assertThat(body.trim().split("\n")).hasSize(3);
+    assertThat(body).contains("\"age\":1");
+  }
+
+  @Test
+  void runsRowCountSampleQueryOverADependencyWhoseLabelCollidesWithAColumn() {
+    // The alias the substitution injects has to follow the TABLESAMPLE clause, which for a row
+    // count is not visible as a sample node in the parsed plan.
+    final String body =
+        postOk(parametersJson(ageQueryLibrary("SELECT age FROM age TABLESAMPLE (2 ROWS)")));
+
+    assertThat(body.trim().split("\n")).hasSize(2);
+    assertThat(body).contains("\"age\":1");
+  }
+
+  /**
+   * Builds a SQLQuery Library over the age-source SQLView under the colliding label {@code age}.
+   */
+  @Nonnull
+  private Library ageQueryLibrary(@Nonnull final String sql) {
+    return sqlQueryLibrary(
+        sql, "age", SqlViewTestConfiguration.libraryUrl(SqlViewTestConfiguration.AGE_SOURCE_ID));
+  }
+
   @Nonnull
   private String postExpect4xx(@Nonnull final String body) {
     final EntityExchangeResult<byte[]> result =

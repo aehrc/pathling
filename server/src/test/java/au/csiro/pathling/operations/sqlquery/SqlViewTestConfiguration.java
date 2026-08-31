@@ -62,6 +62,10 @@ import org.springframework.context.annotation.Primary;
  *   <li>{@code Library/active-patients} - SQLView over {@code patient-view}.
  *   <li>{@code Library/refined-patients} - SQLView over {@code active-patients} (a nested chain).
  *   <li>{@code Library/cycle-a} / {@code Library/cycle-b} - a mutually-referencing cycle.
+ *   <li>{@code Library/age-source} - SQLView exposing {@code patient_key}, {@code age} and {@code
+ *       age_years}, so a dependency label can collide with one of its own column names.
+ *   <li>{@code Library/age-middle} - SQLView over {@code age-source} that itself suffers the
+ *       label/column collision, placing the collision in a nested node.
  * </ul>
  *
  * @author John Grimes
@@ -118,6 +122,18 @@ public class SqlViewTestConfiguration {
   /** The id of the right arm of a diamond, over {@link #SHARED_PATIENTS_ID}. */
   public static final String RIGHT_PATIENTS_ID = "right-patients";
 
+  /**
+   * The id of a SQLView exposing a column named {@code age}, used by the issue 2730 regression
+   * tests where a dependency label collides with one of the dependency's own column names.
+   */
+  public static final String AGE_SOURCE_ID = "age-source";
+
+  /**
+   * The id of a SQLView that itself suffers the label/column collision, used to prove the
+   * substitution is applied correctly in a nested (non-top-level) node.
+   */
+  public static final String AGE_MIDDLE_ID = "age-middle";
+
   @Primary
   @Bean
   @Nonnull
@@ -152,6 +168,13 @@ public class SqlViewTestConfiguration {
     resources.add(
         sqlView(
             RIGHT_PATIENTS_ID, "SELECT id FROM sp", Map.of("sp", libraryUrl(SHARED_PATIENTS_ID))));
+    resources.add(
+        sqlView(
+            AGE_SOURCE_ID,
+            "SELECT id AS patient_key, 1 AS age, 2 AS age_years FROM patient_view",
+            Map.of("patient_view", PATIENT_VIEW_URL)));
+    resources.add(
+        sqlView(AGE_MIDDLE_ID, "SELECT age FROM age", Map.of("age", libraryUrl(AGE_SOURCE_ID))));
     resources.add(patient("p1", "Smith"));
     resources.add(patient("p2", "Johnson"));
     resources.add(patient("p3", "Williams"));

@@ -190,10 +190,12 @@ A fault in the subject's own SQL that only Spark's analyser can catch - an
 unresolved column, an unknown function, a missing `GROUP BY`, an ambiguous
 reference - is a `422`, and its diagnostics carry the analyser's own message,
 including any suggested identifier. The analyser sees the query as rewritten
-for execution rather than as submitted: each dependency label is replaced with
-an internal request-scoped view name before analysis, so a reported line and
-column position can differ from the position in the submitted text, and a
-qualified suggestion can name one of those internal views.
+for execution rather than as submitted: each table reference naming a
+dependency label is replaced with an internal request-scoped view name before
+analysis, so a reported line and column position can differ from the position
+in the submitted text, and a qualified suggestion can name one of those
+internal views. Only table references are replaced, so a column, alias or
+function that happens to share a label's name is left as submitted.
 
 ## Conformance
 
