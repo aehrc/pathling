@@ -38,6 +38,11 @@ import org.hl7.fhir.r4.model.DecimalType
  * an additional IntegerType column with `_scale` suffix storing the scale of the
  * original FHIR decimal value.
  *
+ * The scale is written without any cap, so a stored scale greater than the scale of the value
+ * column identifies a value that was rounded during encoding. The cap is applied when reading,
+ * where the scale set on the reconstructed value is the lesser of the stored scale and the scale
+ * of the value column.
+ *
  * @param elementName the name of the element that this will be used to encode
  */
 case class DecimalCustomCoder(elementName: String) extends CustomCoder {
@@ -82,24 +87,35 @@ case class DecimalCustomCoder(elementName: String) extends CustomCoder {
       StructField(scaleFieldName, encode(IntegerType)))
   }
 
+  /**
+   * Decodes the value column into a DecimalType, setting the scale to the lesser of the stored
+   * scale and the scale of the value column. The stored scale can exceed the scale of the value
+   * column, in which case the additional digits are no longer available and must not be
+   * reinstated.
+   */
   private def decimalExpression(addToPath: String => Expression) = {
+    val clampedScale = Catalyst.staticInvoke(classOf[Math],
+      IntegerType,
+      "min", Literal(decimalType.scale) :: addToPath(scaleFieldName) :: Nil
+    )
     NewInstance(primitiveClass,
       Invoke(
         Invoke(addToPath(elementName), "toJavaBigDecimal",
           ObjectType(classOf[java.math.BigDecimal])),
-        "setScale", ObjectType(classOf[java.math.BigDecimal]), addToPath(scaleFieldName) :: Nil
+        "setScale", ObjectType(classOf[java.math.BigDecimal]), clampedScale :: Nil
       ) :: Nil,
       ObjectType(primitiveClass)
     )
   }
 
+  /**
+   * Encodes the scale of the original FHIR decimal value, without any cap, so that a stored scale
+   * greater than the scale of the value column identifies a value that lost precision during
+   * encoding.
+   */
   private def scaleExpression(inputObject: Expression) = {
-    Catalyst.staticInvoke(classOf[Math],
-      IntegerType,
-      "min", Literal(decimalType.scale) ::
-        Invoke(Invoke(inputObject, "getValue", ObjectType(classOf[java.math.BigDecimal])),
-          "scale", DataTypes.IntegerType) :: Nil
-    )
+    Invoke(Invoke(inputObject, "getValue", ObjectType(classOf[java.math.BigDecimal])),
+      "scale", DataTypes.IntegerType)
   }
 
 }
@@ -134,14 +150,19 @@ object DecimalCustomCoder {
 
 
   /**
-   * Need a way to zip two arrays so that they can be decoded to an arrays of DecimalTYpe
+   * Zips the value and scale arrays so that they can be decoded to an array of DecimalType.
+   *
+   * The scale applied to each element is the lesser of the stored scale and the scale of the value
+   * column, as the stored scale records the scale of the original FHIR decimal value and can
+   * exceed what the value column represents.
    */
   def zipToDecimal(values: ArrayData, scales: ArrayData): Array[DecimalType] = {
     assert(values.numElements() == scales.numElements(),
       "Values and scales must have the same length")
     Array.tabulate(values.numElements()) { i =>
       new DecimalType(
-        values.getDecimal(i, precision, scale).toJavaBigDecimal.setScale(scales.getInt(i)))
+        values.getDecimal(i, precision, scale).toJavaBigDecimal
+          .setScale(Math.min(scales.getInt(i), scale)))
     }
   }
 }
