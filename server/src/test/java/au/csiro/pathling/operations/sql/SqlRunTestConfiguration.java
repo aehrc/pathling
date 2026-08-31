@@ -63,6 +63,11 @@ import org.springframework.context.annotation.Primary;
  *   <li>{@code Library/patients-by-family} - a SQLQuery over the ViewDefinition, declaring a {@code
  *       family} input parameter.
  *   <li>{@code Library/all-patients} - a SQLView over the ViewDefinition.
+ *   <li>{@code Library/java-time-types} - a SQLView over the ViewDefinition projecting the three
+ *       column types Spark materialises as {@code java.time} values: {@code TIMESTAMP_NTZ}, a
+ *       day-time interval and a year-month interval.
+ *   <li>{@code Library/timestamp-ntz-only} - a SQLView over the ViewDefinition projecting a single
+ *       {@code TIMESTAMP_NTZ} column, with no interval columns.
  * </ul>
  *
  * @author John Grimes
@@ -84,6 +89,19 @@ public class SqlRunTestConfiguration {
 
   /** The logical id of the stored SQLView over the Patient ViewDefinition. */
   public static final String ALL_PATIENTS_ID = "all-patients";
+
+  /**
+   * The logical id of the stored SQLView projecting the three column types Spark materialises as
+   * {@code java.time} values.
+   */
+  public static final String JAVA_TIME_TYPES_ID = "java-time-types";
+
+  /**
+   * The logical id of the stored SQLView projecting a single {@code TIMESTAMP_NTZ} column. Needed
+   * as a subject for the {@code fhir} format, which rejects an interval column outright and so
+   * cannot be exercised against {@link #JAVA_TIME_TYPES_ID}.
+   */
+  public static final String TIMESTAMP_NTZ_ONLY_ID = "timestamp-ntz-only";
 
   /**
    * Returns the canonical URL of a stored Library given its logical id.
@@ -116,6 +134,8 @@ public class SqlRunTestConfiguration {
     resources.add(patientView());
     resources.add(patientsByFamily());
     resources.add(allPatients());
+    resources.add(javaTimeTypes());
+    resources.add(timestampNtzOnly());
     resources.add(patient("p1", "Smith"));
     resources.add(patient("p2", "Johnson"));
     resources.add(patient("p3", "Williams"));
@@ -162,6 +182,44 @@ public class SqlRunTestConfiguration {
         ALL_PATIENTS_ID,
         SQL_VIEW_TYPE_CODE,
         "SELECT id, family_name FROM pv",
+        Map.of("pv", PATIENT_VIEW_URL));
+  }
+
+  /**
+   * Builds the stored SQLView projecting the three column types Spark materialises as {@code
+   * java.time} values: {@code TIMESTAMP_NTZ} as a {@code LocalDateTime}, a day-time interval
+   * (timestamp subtraction) as a {@code Duration}, and a year-month interval as a {@code Period}.
+   *
+   * <p>Every projected expression is a literal, so the values do not depend on the Patient data.
+   * The projection is still anchored to the patient view and limited to a single row, so that the
+   * subject exercises the ordinary dependency-resolution path rather than a bare literal select.
+   * The patient view projects the three Patients registered by {@link #deltaLake}, so the view is
+   * never empty and {@code LIMIT 1} yields exactly one row.
+   */
+  @Nonnull
+  private static Library javaTimeTypes() {
+    return sqlLibrary(
+        JAVA_TIME_TYPES_ID,
+        SQL_VIEW_TYPE_CODE,
+        "SELECT CAST('2020-01-01 12:00:00' AS TIMESTAMP_NTZ) AS ts_ntz,"
+            + " CAST('2020-01-01 13:00:00' AS TIMESTAMP)"
+            + " - CAST('2020-01-01 12:00:00' AS TIMESTAMP) AS dt,"
+            + " INTERVAL '1' YEAR AS ym"
+            + " FROM pv LIMIT 1",
+        Map.of("pv", PATIENT_VIEW_URL));
+  }
+
+  /**
+   * Builds the stored SQLView projecting a single {@code TIMESTAMP_NTZ} column. The {@code fhir}
+   * format maps that type to {@code valueDateTime}, but rejects an interval column outright, so a
+   * subject free of interval columns is required to exercise the mapping.
+   */
+  @Nonnull
+  private static Library timestampNtzOnly() {
+    return sqlLibrary(
+        TIMESTAMP_NTZ_ONLY_ID,
+        SQL_VIEW_TYPE_CODE,
+        "SELECT CAST('2020-01-01 12:00:00' AS TIMESTAMP_NTZ) AS ts_ntz FROM pv LIMIT 1",
         Map.of("pv", PATIENT_VIEW_URL));
   }
 
