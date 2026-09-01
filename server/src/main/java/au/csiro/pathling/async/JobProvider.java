@@ -248,9 +248,11 @@ public class JobProvider {
   /**
    * Handles a completed job by returning its result or redirecting to the result endpoint.
    *
-   * <p>If the job has {@code redirectOnComplete} enabled (following the SQL on FHIR unify-async
-   * specification), returns 303 See Other with a Location header pointing to the result endpoint.
-   * Otherwise, returns the result inline.
+   * <p>If the job follows the {@link AsyncPattern#STANDARD_ASYNC_PATTERN} (the HL7 Asynchronous
+   * Interaction Request Pattern, <a
+   * href="https://build.fhir.org/ig/HL7/api-incubator-ig/branches/simplified-async-interaction/async-interaction.html">spec</a>),
+   * returns 303 See Other with a Location header pointing to the result endpoint. Otherwise,
+   * returns the result inline.
    *
    * @param job The completed job.
    * @param request The HTTP request for building the result URL.
@@ -269,8 +271,9 @@ public class JobProvider {
         setAsyncCacheHeaders(response);
       }
 
-      // If redirect is enabled, return 303 See Other with Location header.
-      if (job.isRedirectOnComplete() && response != null) {
+      // Under the HL7 Asynchronous Interaction Request Pattern, return 303 See Other with a
+      // Location header pointing to the result endpoint.
+      if (job.getPattern() == AsyncPattern.STANDARD_ASYNC_PATTERN && response != null) {
         final String resultUrl = buildResultUrl(request, job.getId());
         response.setStatus(HttpServletResponse.SC_SEE_OTHER);
         response.setHeader("Location", resultUrl);

@@ -71,10 +71,6 @@ def pathling_ctx(request, temp_warehouse_dir):
         .config("spark.driver.memory", "4g")
         .config("spark.sql.mapKeyDedupPolicy", "LAST_WIN")
         .config(
-            "spark.driver.extraJavaOptions",
-            "-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=7896",
-        )
-        .config(
             "spark.jars.packages",
             f"au.csiro.pathling:library-runtime:{__java_version__},"
             f"io.delta:delta-spark_{__scala_version__}:{__delta_version__}",

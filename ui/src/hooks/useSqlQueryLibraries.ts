@@ -17,7 +17,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 
-import { listSqlQueryLibraries } from "../api";
+import { listStoredLibraries } from "../api";
 import { config } from "../config";
 import { mapLibraryBundle } from "./sqlQueryHelpers";
 import { useAuth } from "../contexts/AuthContext";
@@ -63,7 +63,8 @@ export function useSqlQueryLibraries(
   return useQuery<SqlQueryLibrarySummary[], Error>({
     queryKey: SQL_QUERY_LIBRARIES_QUERY_KEY,
     queryFn: async () => {
-      const bundle = await listSqlQueryLibraries(fhirBaseUrl!, {
+      const bundle = await listStoredLibraries(fhirBaseUrl!, {
+        typeCode: "sql-query",
         accessToken,
       });
       return mapLibraryBundle(bundle);

@@ -18,120 +18,145 @@
 package au.csiro.pathling.operations.sqlquery;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.config.AuthorizationConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.ViewDefinitionResource;
 import au.csiro.pathling.encoders.ViewDefinitionResource.ColumnComponent;
 import au.csiro.pathling.encoders.ViewDefinitionResource.SelectComponent;
-import au.csiro.pathling.errors.ResourceNotFoundError;
-import au.csiro.pathling.read.ReadExecutor;
-import au.csiro.pathling.views.FhirView;
+import au.csiro.pathling.io.source.DataSource;
+import au.csiro.pathling.test.SpringBootUnitTest;
 import ca.uhn.fhir.context.FhirContext;
-import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.util.List;
-import java.util.Map;
+import java.util.Optional;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.StringType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
- * Unit tests for {@link ViewResolver} covering id extraction, label-order preservation, and the
- * read-error and parse-error wrapping paths.
+ * Unit tests for {@link ViewResolver}, verifying that a {@code ViewDefinition} dependency resolves
+ * by matching its canonical {@code url} (and {@code url|version}) - never its logical id - and that
+ * the resolved canonical key is the resource's url plus its version.
+ *
+ * @author John Grimes
  */
+@SpringBootUnitTest
 class ViewResolverTest {
 
-  private ReadExecutor readExecutor;
-  private ServerConfiguration serverConfiguration;
+  private static final String PATIENTS_URL = "https://example.org/Patients";
+
+  @Autowired private SparkSession spark;
+  @Autowired private FhirEncoders fhirEncoders;
+  @Autowired private FhirContext fhirContext;
+
+  private DataSource dataSource;
   private ViewResolver resolver;
 
   @BeforeEach
   void setUp() {
-    readExecutor = mock(ReadExecutor.class);
-    serverConfiguration = new ServerConfiguration();
+    dataSource = mock(DataSource.class);
+    final ServerConfiguration serverConfiguration = new ServerConfiguration();
     final AuthorizationConfiguration auth = new AuthorizationConfiguration();
     auth.setEnabled(false);
     serverConfiguration.setAuth(auth);
-    resolver = new ViewResolver(readExecutor, serverConfiguration, FhirContext.forR4());
+    resolver = new ViewResolver(dataSource, fhirEncoders, serverConfiguration, fhirContext);
   }
 
   @Test
-  void resolvesEmptyReferenceListToEmptyMap() {
-    final Map<String, FhirView> resolved = resolver.resolve(List.of());
+  void resolvesAViewDefinitionByUrlNotLogicalId() {
+    // The logical id ("vd-abc") deliberately differs from the URL's final segment ("Patients").
+    when(dataSource.read("ViewDefinition"))
+        .thenReturn(dataset(viewDefinition("vd-abc", PATIENTS_URL, null, "active", "Patient")));
+
+    final Optional<ResolvedViewDefinition> resolved =
+        resolver.resolveStoredViewDefinition(new ViewArtifactReference("patients", PATIENTS_URL));
+
+    assertThat(resolved).isPresent();
+    assertThat(resolved.get().getCanonicalKey()).isEqualTo(PATIENTS_URL);
+    assertThat(resolved.get().getView().getResource()).isEqualTo("Patient");
+  }
+
+  @Test
+  void returnsEmptyWhenNoStoredViewDefinitionMatchesTheUrl() {
+    when(dataSource.read("ViewDefinition"))
+        .thenReturn(dataset(viewDefinition("vd-abc", PATIENTS_URL, null, "active", "Patient")));
+
+    final Optional<ResolvedViewDefinition> resolved =
+        resolver.resolveStoredViewDefinition(
+            new ViewArtifactReference("missing", "https://example.org/Missing"));
+
     assertThat(resolved).isEmpty();
   }
 
   @Test
-  void resolvesSingleReferenceByBareId() {
-    when(readExecutor.read("ViewDefinition", "patient-view"))
-        .thenReturn(simpleViewDefinition("patient-view", "Patient"));
+  void selectsTheExactVersionWhenOneIsRequested() {
+    when(dataSource.read("ViewDefinition"))
+        .thenReturn(
+            dataset(
+                viewDefinition("v1", PATIENTS_URL, "1", "active", "Patient"),
+                viewDefinition("v2", PATIENTS_URL, "2", "active", "Patient")));
 
-    final Map<String, FhirView> resolved =
-        resolver.resolve(List.of(new ViewArtifactReference("patients", "patient-view")));
+    final Optional<ResolvedViewDefinition> resolved =
+        resolver.resolveStoredViewDefinition(
+            new ViewArtifactReference("patients", PATIENTS_URL + "|2"));
 
-    assertThat(resolved).containsOnlyKeys("patients");
-    assertThat(resolved.get("patients").getResource()).isEqualTo("Patient");
+    assertThat(resolved).isPresent();
+    assertThat(resolved.get().getCanonicalKey()).isEqualTo(PATIENTS_URL + "|2");
   }
 
   @Test
-  void extractsIdFromCanonicalUrl() {
-    when(readExecutor.read("ViewDefinition", "obs-view"))
-        .thenReturn(simpleViewDefinition("obs-view", "Observation"));
+  void selectsTheLatestActiveVersionForABareUrl() {
+    when(dataSource.read("ViewDefinition"))
+        .thenReturn(
+            dataset(
+                viewDefinition("v1", PATIENTS_URL, "1", "retired", "Patient"),
+                viewDefinition("v2", PATIENTS_URL, "2", "active", "Patient")));
 
-    final Map<String, FhirView> resolved =
-        resolver.resolve(
-            List.of(
-                new ViewArtifactReference("obs", "https://example.org/ViewDefinition/obs-view")));
+    final Optional<ResolvedViewDefinition> resolved =
+        resolver.resolveStoredViewDefinition(new ViewArtifactReference("patients", PATIENTS_URL));
 
-    assertThat(resolved).containsOnlyKeys("obs");
-    assertThat(resolved.get("obs").getResource()).isEqualTo("Observation");
+    // The resolved canonical key is the chosen resource's url plus its version.
+    assertThat(resolved).isPresent();
+    assertThat(resolved.get().getCanonicalKey()).isEqualTo(PATIENTS_URL + "|2");
   }
 
-  @Test
-  void preservesLabelOrderAcrossMultipleReferences() {
-    when(readExecutor.read("ViewDefinition", "a")).thenReturn(simpleViewDefinition("a", "Patient"));
-    when(readExecutor.read("ViewDefinition", "b"))
-        .thenReturn(simpleViewDefinition("b", "Observation"));
-    when(readExecutor.read("ViewDefinition", "c"))
-        .thenReturn(simpleViewDefinition("c", "Condition"));
+  // ---------------------------------------------------------------------------
+  // Helpers.
+  // ---------------------------------------------------------------------------
 
-    final Map<String, FhirView> resolved =
-        resolver.resolve(
-            List.of(
-                new ViewArtifactReference("first", "a"),
-                new ViewArtifactReference("second", "b"),
-                new ViewArtifactReference("third", "c")));
-
-    assertThat(resolved.keySet()).containsExactly("first", "second", "third");
-  }
-
-  @Test
-  void wrapsReadExecutorFailureWithLabelAndReference() {
-    when(readExecutor.read("ViewDefinition", "missing"))
-        .thenThrow(new ResourceNotFoundError("not there"));
-
-    final List<ViewArtifactReference> refs =
-        List.of(new ViewArtifactReference("patients", "missing"));
-
-    assertThatThrownBy(() -> resolver.resolve(refs))
-        .isInstanceOf(InvalidRequestException.class)
-        .hasMessageContaining("patients")
-        .hasMessageContaining("missing");
+  @Nonnull
+  private Dataset<Row> dataset(@Nonnull final ViewDefinitionResource... views) {
+    return spark
+        .createDataset(List.of(views), fhirEncoders.of(ViewDefinitionResource.class))
+        .toDF();
   }
 
   @Nonnull
-  private static ViewDefinitionResource simpleViewDefinition(
-      @Nonnull final String id, @Nonnull final String resourceType) {
+  private static ViewDefinitionResource viewDefinition(
+      @Nonnull final String id,
+      @Nonnull final String url,
+      @Nullable final String version,
+      @Nonnull final String status,
+      @Nonnull final String resourceType) {
     final ViewDefinitionResource view = new ViewDefinitionResource();
     view.setId(id);
+    view.setUrl(url);
+    if (version != null) {
+      view.setVersion(version);
+    }
     view.setName(new StringType(id + "_view"));
     view.setResource(new CodeType(resourceType));
-    view.setStatus(new CodeType("active"));
+    view.setStatus(new CodeType(status));
     final SelectComponent select = new SelectComponent();
     final ColumnComponent column = new ColumnComponent();
     column.setName(new StringType("id"));

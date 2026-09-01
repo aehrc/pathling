@@ -43,6 +43,7 @@ import au.csiro.pathling.views.FhirView;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -74,6 +75,7 @@ class ViewDefinitionExportProviderTest {
   @Mock private FhirContext fhirContext;
   @Mock private QueryableDataSource deltaLake;
   @Mock private GroupMemberService groupMemberService;
+  @Mock private ViewExecutionHelper viewExecutionHelper;
   @Mock private ServletRequestDetails requestDetails;
 
   private ViewDefinitionExportProvider provider;
@@ -89,7 +91,8 @@ class ViewDefinitionExportProviderTest {
             serverConfiguration,
             fhirContext,
             deltaLake,
-            groupMemberService);
+            groupMemberService,
+            viewExecutionHelper);
   }
 
   @AfterEach
@@ -214,6 +217,7 @@ class ViewDefinitionExportProviderTest {
     when(job.getPreAsyncValidationResult()).thenReturn(exportRequest);
     when(job.isCancelled()).thenReturn(false);
     when(job.getId()).thenReturn("job-1");
+    when(job.getStartTime()).thenReturn(Instant.parse("2026-06-21T01:00:00Z"));
     when(job.getOwnerId()).thenReturn(Optional.empty());
     when(executor.execute(exportRequest, "job-1")).thenReturn(List.of());
     lenient().when(serverConfiguration.getExport()).thenReturn(exportConfig);
@@ -222,7 +226,7 @@ class ViewDefinitionExportProviderTest {
     AsyncJobContext.setCurrentJob(job);
 
     final Parameters result =
-        provider.export(null, null, null, null, null, null, null, null, requestDetails);
+        provider.export(null, null, null, null, null, null, null, null, null, requestDetails);
 
     assertNotNull(result);
     verify(exportResultRegistry).put(eq("job-1"), any(ExportResult.class));
@@ -251,7 +255,7 @@ class ViewDefinitionExportProviderTest {
     AsyncJobContext.setCurrentJob(job);
 
     final Parameters result =
-        provider.export(null, null, null, null, null, null, null, null, requestDetails);
+        provider.export(null, null, null, null, null, null, null, null, null, requestDetails);
 
     assertNull(result);
   }
@@ -263,6 +267,7 @@ class ViewDefinitionExportProviderTest {
 
     assertThrows(
         InvalidRequestException.class,
-        () -> provider.export(null, null, null, null, null, null, null, null, requestDetails));
+        () ->
+            provider.export(null, null, null, null, null, null, null, null, null, requestDetails));
   }
 }

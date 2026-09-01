@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.operations.view;
 
+import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.Arrays;
@@ -64,11 +65,41 @@ public enum ViewOutputFormat {
     if (isNullOrBlank(format)) {
       return DEFAULT_FORMAT;
     }
-    final String normalised = format.toLowerCase().trim();
+    return matchFormat(format).orElse(DEFAULT_FORMAT);
+  }
+
+  /**
+   * Parses an explicit {@code _format} parameter value strictly. A null or blank value maps to the
+   * default (NDJSON); a non-blank value that matches no supported code or media type is rejected.
+   *
+   * @param format the explicit {@code _format} value to parse, or null/blank for the default
+   * @return the corresponding ViewOutputFormat
+   * @throws InvalidRequestException if the value is non-blank and not a supported format
+   */
+  @Nonnull
+  public static ViewOutputFormat fromStringStrict(@Nullable final String format) {
+    if (isNullOrBlank(format)) {
+      return DEFAULT_FORMAT;
+    }
+    return matchFormat(format)
+        .orElseThrow(
+            () ->
+                new InvalidRequestException(
+                    "Unsupported _format value '%s'. Supported formats: ndjson, csv, json."
+                        .formatted(format)));
+  }
+
+  /**
+   * Matches a format string against the supported codes and content types. Any media-type
+   * parameters (e.g. {@code text/csv;charset=utf-8}) are stripped before matching, so a supported
+   * media type carrying parameters is treated as that format.
+   */
+  @Nonnull
+  private static Optional<ViewOutputFormat> matchFormat(@Nonnull final String format) {
+    final String base = format.split(";", 2)[0].trim().toLowerCase();
     return Arrays.stream(values())
-        .filter(f -> f.code.equals(normalised) || f.contentType.equals(normalised))
-        .findFirst()
-        .orElse(DEFAULT_FORMAT);
+        .filter(f -> f.code.equals(base) || f.contentType.equals(base))
+        .findFirst();
   }
 
   /**

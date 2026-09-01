@@ -36,10 +36,13 @@ import java.lang.annotation.Target;
 public @interface AsyncSupported {
 
   /**
-   * When true, completed jobs return 303 See Other with a redirect to the result endpoint, rather
-   * than returning the result inline. This follows the SQL on FHIR unify-async specification.
+   * The asynchronous wire contract this operation follows. Selecting {@link
+   * AsyncPattern#STANDARD_ASYNC_PATTERN} (the HL7 Asynchronous Interaction Request Pattern, <a
+   * href="https://build.fhir.org/ig/HL7/api-incubator-ig/branches/simplified-async-interaction/async-interaction.html">spec</a>)
+   * makes a completed job return 303 See Other with a redirect to the result endpoint, rather than
+   * returning the result inline. Defaults to {@link AsyncPattern#BULK_DATA}.
    *
-   * @return true if completed jobs should redirect to the result endpoint
+   * @return the asynchronous pattern for this operation
    */
-  boolean redirectOnComplete() default false;
+  AsyncPattern pattern() default AsyncPattern.BULK_DATA;
 }

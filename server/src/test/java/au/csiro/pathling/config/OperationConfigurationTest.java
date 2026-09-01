@@ -86,11 +86,14 @@ class OperationConfigurationTest {
 
   @Test
   void isAnyExportEnabledReturnsFalseWhenAllExportDisabled() {
-    // Given: A configuration with all export operations disabled.
+    // Given: A configuration with all export operations disabled, including the SQL on FHIR
+    // asynchronous exports that also serve results through the $result endpoint.
     final OperationConfiguration config = new OperationConfiguration();
     config.setExportEnabled(false);
     config.setPatientExportEnabled(false);
     config.setGroupExportEnabled(false);
+    config.setViewDefinitionExportEnabled(false);
+    config.setSqlQueryExportEnabled(false);
 
     // Then: isAnyExportEnabled should return false.
     assertThat(config.isAnyExportEnabled()).isFalse();

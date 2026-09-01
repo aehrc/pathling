@@ -26,10 +26,13 @@ import { expect, test } from "@playwright/test";
 import {
   mockCapabilityStatement,
   mockEmptySqlQueryLibraryBundle,
+  mockEmptySqlViewLibraryBundle,
   mockSqlQueryLibrary1,
   mockSqlQueryLibraryBundle,
   mockSqlQueryRunCsv,
   mockSqlQueryRunOperationOutcome,
+  mockSqlViewLibrary1,
+  mockSqlViewLibraryBundle,
   mockViewDefinitionBundle,
 } from "./fixtures/fhirData";
 
@@ -52,35 +55,34 @@ async function mockMetadata(page: Page) {
 
 /**
  * Mocks the Library search endpoint, branching on the type filter so the
- * SQLQuery search returns the SQLQuery bundle while other Library
- * searches return an empty bundle.
+ * SQLQuery search returns the SQLQuery bundle and the SQLView search returns
+ * the SQLView bundle, while any other Library search returns an empty bundle.
  *
  * @param page - The Playwright Page to attach the route to.
- * @param bundle - The Bundle to return for SQLQuery searches.
+ * @param queryBundle - The Bundle to return for SQLQuery searches.
+ * @param viewBundle - The Bundle to return for SQLView searches.
  */
 async function mockSqlQueryLibraries(
   page: Page,
-  bundle: object = mockSqlQueryLibraryBundle,
+  queryBundle: object = mockSqlQueryLibraryBundle,
+  viewBundle: object = mockSqlViewLibraryBundle,
 ) {
   await page.route(/\/Library\?[^"]*$/, async (route) => {
     const url = route.request().url();
-    if (url.includes("sql-query")) {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/fhir+json",
-        body: JSON.stringify(bundle),
-      });
-      return;
-    }
+    const bundle = url.includes("sql-view")
+      ? viewBundle
+      : url.includes("sql-query")
+        ? queryBundle
+        : {
+            resourceType: "Bundle",
+            type: "searchset",
+            total: 0,
+            entry: [],
+          };
     await route.fulfill({
       status: 200,
       contentType: "application/fhir+json",
-      body: JSON.stringify({
-        resourceType: "Bundle",
-        type: "searchset",
-        total: 0,
-        entry: [],
-      }),
+      body: JSON.stringify(bundle),
     });
   });
 }
@@ -180,7 +182,7 @@ test.describe("SQL on FHIR page - SQL query mode", () => {
     await selectSqlQueryMode(page);
 
     // Pick the stored library.
-    await page.getByRole("combobox", { name: /sql query library/i }).click();
+    await page.getByRole("combobox", { name: /sql query source/i }).click();
     await page
       .getByRole("option", { name: mockSqlQueryLibrary1.title })
       .click();
@@ -203,9 +205,60 @@ test.describe("SQL on FHIR page - SQL query mode", () => {
     await expect(page.getByRole("cell", { name: "Alice" })).toBeVisible();
   });
 
+  test("executes a stored SQLView from the SQL views group", async ({
+    page,
+  }) => {
+    await mockMetadata(page);
+    await mockSqlQueryLibraries(page);
+    await mockViewDefinitions(page);
+
+    // Capture the run request to confirm the SQLView resolves as Library/<id>.
+    let runBody: { parameter?: Array<Record<string, unknown>> } | undefined;
+    await page.route("**/$sqlquery-run", async (route) => {
+      runBody = JSON.parse(route.request().postData() ?? "{}");
+      await route.fulfill({
+        status: 200,
+        contentType: "text/csv",
+        body: mockSqlQueryRunCsv,
+      });
+    });
+
+    await page.goto("/admin/sql-on-fhir");
+    await selectSqlQueryMode(page);
+
+    // The picker groups queries and views; pick the SQLView.
+    await page.getByRole("combobox", { name: /sql query source/i }).click();
+    await page.getByRole("option", { name: mockSqlViewLibrary1.title }).click();
+
+    // A SQLView declares no parameters, so the runtime-params section is absent.
+    await expect(page.getByText("Runtime parameter values")).toBeHidden();
+
+    // The dependency heading reads "Views" rather than "Tables".
+    await expect(page.getByText("Views", { exact: true })).toBeVisible();
+
+    await page.getByRole("combobox", { name: /output format/i }).click();
+    await page.getByRole("option", { name: "csv" }).click();
+
+    await page.getByRole("button", { name: /^execute$/i }).click();
+
+    await expect(page.getByText("2 rows")).toBeVisible();
+    await expect(page.getByRole("cell", { name: "Alice" })).toBeVisible();
+
+    const queryReference = runBody?.parameter?.find(
+      (p) => p.name === "queryReference",
+    );
+    expect(queryReference?.valueReference).toEqual({
+      reference: "Library/view-active-patients",
+    });
+  });
+
   test("authors and executes an inline Library", async ({ page }) => {
     await mockMetadata(page);
-    await mockSqlQueryLibraries(page, mockEmptySqlQueryLibraryBundle);
+    await mockSqlQueryLibraries(
+      page,
+      mockEmptySqlQueryLibraryBundle,
+      mockEmptySqlViewLibraryBundle,
+    );
     await mockViewDefinitions(page);
     await mockSqlQueryRunCsvResponse(page);
 
@@ -218,14 +271,12 @@ test.describe("SQL on FHIR page - SQL query mode", () => {
     // Author the SQL.
     await page.getByRole("textbox", { name: /^sql$/i }).fill("SELECT 1");
 
-    // Add a table row and select the first ViewDefinition.
-    await page.getByRole("button", { name: /add table/i }).click();
+    // Add a view row and select the first ViewDefinition.
+    await page.getByRole("button", { name: /add view/i }).click();
     await page
-      .getByRole("textbox", { name: /label for table 1/i })
+      .getByRole("textbox", { name: /label for view 1/i })
       .fill("patients");
-    await page
-      .getByRole("combobox", { name: /view definition for table 1/i })
-      .click();
+    await page.getByRole("combobox", { name: /source for view 1/i }).click();
     await page.getByRole("option", { name: "Patient Demographics" }).click();
 
     // Use CSV output so the result rendering is deterministic.
@@ -253,13 +304,11 @@ test.describe("SQL on FHIR page - SQL query mode", () => {
       .getByRole("textbox", { name: /library title/i })
       .fill("Inline SQL query");
     await page.getByRole("textbox", { name: /^sql$/i }).fill("SELECT 1");
-    await page.getByRole("button", { name: /add table/i }).click();
+    await page.getByRole("button", { name: /add view/i }).click();
     await page
-      .getByRole("textbox", { name: /label for table 1/i })
+      .getByRole("textbox", { name: /label for view 1/i })
       .fill("patients");
-    await page
-      .getByRole("combobox", { name: /view definition for table 1/i })
-      .click();
+    await page.getByRole("combobox", { name: /source for view 1/i }).click();
     await page.getByRole("option", { name: "Patient Demographics" }).click();
 
     await page.getByRole("button", { name: /save to server/i }).click();
@@ -268,6 +317,60 @@ test.describe("SQL on FHIR page - SQL query mode", () => {
     await expect(
       page.getByRole("tab", { name: /select query/i }),
     ).toHaveAttribute("aria-selected", "true");
+  });
+
+  test("saves the chosen source by its canonical URL", async ({ page }) => {
+    await mockMetadata(page);
+    await mockViewDefinitions(page);
+
+    // Capture the body POSTed to /Library so the persisted reference can be
+    // asserted to be the source's canonical URL.
+    let postedBody: string | null = null;
+    await page.route(/\/Library$/, async (route) => {
+      if (route.request().method() === "POST") {
+        postedBody = route.request().postData();
+        await route.fulfill({
+          status: 201,
+          contentType: "application/fhir+json",
+          body: JSON.stringify({
+            ...mockSqlQueryLibrary1,
+            id: "saved-library",
+          }),
+        });
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: "application/fhir+json",
+        body: JSON.stringify(mockSqlQueryLibraryBundle),
+      });
+    });
+
+    await page.goto("/admin/sql-on-fhir");
+    await selectSqlQueryMode(page);
+
+    await page.getByRole("tab", { name: /provide sql/i }).click();
+    await page.getByRole("textbox", { name: /library title/i }).fill("By URL");
+    await page.getByRole("textbox", { name: /^sql$/i }).fill("SELECT 1");
+    await page.getByRole("button", { name: /add view/i }).click();
+    await page
+      .getByRole("textbox", { name: /label for view 1/i })
+      .fill("patients");
+    await page.getByRole("combobox", { name: /source for view 1/i }).click();
+    await page.getByRole("option", { name: "Patient Demographics" }).click();
+
+    await page.getByRole("button", { name: /save to server/i }).click();
+
+    await expect(
+      page.getByRole("tab", { name: /select query/i }),
+    ).toHaveAttribute("aria-selected", "true");
+    expect(postedBody).not.toBeNull();
+    const saved = JSON.parse(postedBody as unknown as string) as {
+      relatedArtifact?: Array<{ resource?: string }>;
+    };
+    expect(saved.relatedArtifact?.[0]?.resource).toBe(
+      "https://pathling.example/ViewDefinition/PatientDemographics",
+    );
   });
 
   test("renders a callout when the server returns 400", async ({ page }) => {
@@ -279,7 +382,7 @@ test.describe("SQL on FHIR page - SQL query mode", () => {
     await page.goto("/admin/sql-on-fhir");
     await selectSqlQueryMode(page);
 
-    await page.getByRole("combobox", { name: /sql query library/i }).click();
+    await page.getByRole("combobox", { name: /sql query source/i }).click();
     await page
       .getByRole("option", { name: mockSqlQueryLibrary1.title })
       .click();

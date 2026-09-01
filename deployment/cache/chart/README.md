@@ -26,19 +26,20 @@ helm install my-cache ./chart \
 
 ## Configuration
 
-| Parameter                       | Description                                | Default                               |
-| ------------------------------- | ------------------------------------------ | ------------------------------------- |
-| `pathlingCache.image`           | Container image to use                     | `ghcr.io/aehrc/pathling-cache:latest` |
-| `pathlingCache.imagePullPolicy` | Image pull policy                          | `IfNotPresent`                        |
-| `pathlingCache.replicas`        | Number of replicas to deploy               | `1`                                   |
-| `pathlingCache.pathlingHost`    | Hostname of the Pathling server (required) | `~`                                   |
-| `pathlingCache.pathlingPort`    | Port of the Pathling server (required)     | `~`                                   |
-| `pathlingCache.service.type`    | Kubernetes service type                    | `ClusterIP`                           |
-| `pathlingCache.service.port`    | Service port                               | `80`                                  |
-| `pathlingCache.resources`       | CPU/memory resource requests and limits    | `{}`                                  |
-| `pathlingCache.tolerations`     | Pod tolerations                            | `[]`                                  |
-| `pathlingCache.affinity`        | Pod affinity rules                         | `{}`                                  |
-| `pathlingCache.nodeSelector`    | Node selector labels                       | `{}`                                  |
+| Parameter                        | Description                                               | Default                               |
+| -------------------------------- | --------------------------------------------------------- | ------------------------------------- |
+| `pathlingCache.image`            | Container image to use                                    | `ghcr.io/aehrc/pathling-cache:latest` |
+| `pathlingCache.imagePullPolicy`  | Image pull policy                                         | `IfNotPresent`                        |
+| `pathlingCache.replicas`         | Number of replicas to deploy                              | `1`                                   |
+| `pathlingCache.pathlingHost`     | Hostname of the Pathling server (required)                | `~`                                   |
+| `pathlingCache.pathlingPort`     | Port of the Pathling server (required)                    | `~`                                   |
+| `pathlingCache.firstByteTimeout` | Backend first-byte timeout (Varnish duration, e.g. `10m`) | `60s`                                 |
+| `pathlingCache.service.type`     | Kubernetes service type                                   | `ClusterIP`                           |
+| `pathlingCache.service.port`     | Service port                                              | `80`                                  |
+| `pathlingCache.resources`        | CPU/memory resource requests and limits                   | `{}`                                  |
+| `pathlingCache.tolerations`      | Pod tolerations                                           | `[]`                                  |
+| `pathlingCache.affinity`         | Pod affinity rules                                        | `{}`                                  |
+| `pathlingCache.nodeSelector`     | Node selector labels                                      | `{}`                                  |
 
 ## Examples
 

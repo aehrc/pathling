@@ -46,6 +46,8 @@ import org.springframework.stereotype.Component;
  * Validates and normalises the raw HTTP inputs of a {@code $sqlquery-run} invocation into a {@link
  * SqlQueryRequest}. Has no Spark dependency; performs only structural FHIR-level validation and
  * parsing.
+ *
+ * @author John Grimes
  */
 @Slf4j
 @Component
@@ -59,7 +61,7 @@ public class SqlQueryRequestParser {
   private static final Set<String> INTEGER_LIKE_TYPES =
       Set.of("integer", "unsignedInt", "positiveInt");
 
-  @Nonnull private final SqlQueryLibraryParser libraryParser;
+  @Nonnull private final SqlLibraryParser libraryParser;
 
   /**
    * Constructs a new SqlQueryRequestParser.
@@ -67,7 +69,7 @@ public class SqlQueryRequestParser {
    * @param libraryParser parser for the SQLQuery Library profile
    */
   @Autowired
-  public SqlQueryRequestParser(@Nonnull final SqlQueryLibraryParser libraryParser) {
+  public SqlQueryRequestParser(@Nonnull final SqlLibraryParser libraryParser) {
     this.libraryParser = libraryParser;
   }
 
@@ -135,8 +137,10 @@ public class SqlQueryRequestParser {
   @Nonnull
   private SqlQueryOutputFormat selectOutputFormat(
       @Nullable final String format, @Nullable final String acceptHeader) {
+    // An explicit _format parameter is parsed strictly (an unsupported value is rejected), while
+    // Accept-header negotiation remains lenient and falls back to NDJSON.
     if (format != null && !format.isBlank()) {
-      return SqlQueryOutputFormat.fromString(format);
+      return SqlQueryOutputFormat.fromStringStrict(format);
     }
     return SqlQueryOutputFormat.fromAcceptHeader(acceptHeader);
   }

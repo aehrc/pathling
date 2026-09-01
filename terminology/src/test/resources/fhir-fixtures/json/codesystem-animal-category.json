@@ -1,0 +1,13 @@
+{
+  "resourceType": "CodeSystem",
+  "url": "http://example.org/fhir/CodeSystem/animal-category",
+  "version": "1.0.0",
+  "name": "AnimalCategory",
+  "status": "active",
+  "content": "complete",
+  "concept": [
+    { "code": "pet", "display": "Pet" },
+    { "code": "wild", "display": "Wild" },
+    { "code": "aquatic", "display": "Aquatic" }
+  ]
+}

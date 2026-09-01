@@ -184,6 +184,38 @@ class SqlValidatorTest {
   }
 
   // -------------------------------------------------------------------------
+  // String concatenation. The || operator parses directly to a Concat
+  // expression (AstBuilder maps CONCAT_PIPE to Concat), so it never appears
+  // as an UnresolvedFunction and must be present in the expression allow-list
+  // in its own right. The equivalent concat() function call resolves to an
+  // UnresolvedFunction named 'concat', which is already permitted because it
+  // is a built-in, so the two spellings must behave consistently.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void acceptsStringConcatenationOperator() {
+    assertThatCode(() -> validate("SELECT a || b FROM t", "t")).doesNotThrowAnyException();
+  }
+
+  @Test
+  void acceptsConcatFunction() {
+    assertThatCode(() -> validate("SELECT concat(a, b) FROM t", "t")).doesNotThrowAnyException();
+  }
+
+  @Test
+  void acceptsDrugStrengthStyleConcatenation() {
+    // Mirrors the real-world "Drug strength" view that triggered this fix: a
+    // human-readable strength label assembled from several columns using ||.
+    assertThatCode(
+            () ->
+                validate(
+                    "SELECT numerator_value || ' ' || numerator_unit || '/' || denominator_value"
+                        + " || ' ' || denominator_unit AS strength FROM t",
+                    "t"))
+        .doesNotThrowAnyException();
+  }
+
+  // -------------------------------------------------------------------------
   // Invalid SQL — should reject DDL and DML.
   // -------------------------------------------------------------------------
 
@@ -354,6 +386,79 @@ class SqlValidatorTest {
   @Test
   void acceptsRelationInLabelSet() {
     assertThatCode(() -> validate("SELECT * FROM patients", "patients")).doesNotThrowAnyException();
+  }
+
+  // -------------------------------------------------------------------------
+  // Relation references inside CTE definition bodies. A WITH node exposes its
+  // CTE bodies as innerChildren rather than children, so the strict walk must
+  // descend into them explicitly. Without this, an undeclared table referenced
+  // inside a CTE body (for example an OMOP 'concept' vocabulary table) slips
+  // past static validation and surfaces as an opaque 500 from Spark's analyser
+  // instead of a clean rejection.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void rejectsUndeclaredTableInsideCteBody() {
+    // The relation is named only inside the CTE definition, never at the top level.
+    assertThatThrownBy(() -> validate("WITH cr AS (SELECT * FROM concept) SELECT * FROM cr"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("undeclared table")
+        .hasMessageContaining("concept");
+  }
+
+  @Test
+  void rejectsUndeclaredTableInJoinInsideCteBody() {
+    // Mirrors the real OMOP concept-resolution CTE, which joins several undeclared
+    // vocabulary tables within its body.
+    assertThatThrownBy(
+            () ->
+                validate(
+                    "WITH cr AS ("
+                        + "  SELECT * FROM concept c"
+                        + "  LEFT JOIN concept_relationship rel ON c.concept_id = rel.concept_id_1"
+                        + ") SELECT * FROM cr"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("undeclared table");
+  }
+
+  @Test
+  void rejectsUndeclaredLabelInsideCteBody() {
+    // A label reference inside a CTE body must still be checked against the declared
+    // set: when 'patients' is not declared, the relation is undeclared and rejected.
+    assertThatThrownBy(() -> validate("WITH foo AS (SELECT * FROM patients) SELECT * FROM foo"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("undeclared table")
+        .hasMessageContaining("patients");
+  }
+
+  @Test
+  void rejectsDatasourceShortNameFileReadInsideCteBody() {
+    // The datasource short-name file-read lane must stay closed inside CTE bodies too.
+    assertThatThrownBy(
+            () -> validate("WITH leak AS (SELECT * FROM csv.`/etc/passwd`) SELECT * FROM leak"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("undeclared table");
+  }
+
+  @Test
+  void rejectsUndeclaredTableInNestedCteBody() {
+    // Nested WITH: the inner CTE 'b' is defined inside the body of the outer CTE 'a'.
+    assertThatThrownBy(
+            () ->
+                validate(
+                    "WITH a AS (WITH b AS (SELECT * FROM concept) SELECT * FROM b) SELECT * FROM"
+                        + " a"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("undeclared table")
+        .hasMessageContaining("concept");
+  }
+
+  @Test
+  void acceptsCteBodyReferencingDeclaredLabel() {
+    // The positive counterpart: once the body is walked, a declared label inside it
+    // resolves cleanly and the query is accepted.
+    assertThatCode(() -> validate("WITH cr AS (SELECT * FROM concept) SELECT * FROM cr", "concept"))
+        .doesNotThrowAnyException();
   }
 
   // -------------------------------------------------------------------------

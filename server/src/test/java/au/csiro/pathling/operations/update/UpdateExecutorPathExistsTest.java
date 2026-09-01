@@ -19,11 +19,13 @@ package au.csiro.pathling.operations.update;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
+import static org.mockito.Mockito.mock;
 
 import au.csiro.pathling.cache.CacheableDatabase;
 import au.csiro.pathling.config.StorageConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.library.PathlingContext;
+import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.util.FhirServerTestConfiguration;
 import io.delta.tables.DeltaTable;
@@ -128,7 +130,8 @@ class UpdateExecutorPathExistsTest {
         fhirEncoders,
         tempDatabasePath.toAbsolutePath().toString(),
         cacheableDatabase,
-        storageConfiguration);
+        storageConfiguration,
+        mock(QueryableDataSource.class));
   }
 
   @Nonnull

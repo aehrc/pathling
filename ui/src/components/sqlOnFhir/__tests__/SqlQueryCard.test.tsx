@@ -46,6 +46,9 @@ vi.mock("../../../hooks", () => ({
     result: mockResult,
     error: mockError,
   }),
+  // The submitted-SQL preview composes useClipboard; the card itself does not
+  // exercise it, so a no-op stub suffices here.
+  useClipboard: () => vi.fn(),
 }));
 
 vi.mock("../../../utils", () => ({
@@ -142,6 +145,23 @@ describe("SqlQueryCard", () => {
     expect(screen.queryByLabelText(/download/i)).not.toBeInTheDocument();
   });
 
+  // The submitted SQL is echoed beneath a successful result in the shared,
+  // height-bounded preview area.
+  it("echoes the submitted SQL beneath a successful result", () => {
+    mockStatus = "success";
+    mockResult = TABULAR_RESULT;
+    render(
+      <SqlQueryCard
+        job={createJob({ sql: "SELECT * FROM patients" })}
+        onError={onError}
+        onClose={onClose}
+      />,
+    );
+    expect(screen.getByRole("textbox", { name: /submitted sql/i })).toHaveValue(
+      "SELECT * FROM patients",
+    );
+  });
+
   // The card is a preview only and clamps the rendered rows to 10, with
   // full-result downloads deferred to a future SQL query export operation.
   it("clamps the rendered rows to 10 even if the result has more", () => {
@@ -159,14 +179,14 @@ describe("SqlQueryCard", () => {
     expect(screen.queryByText("pat-11")).not.toBeInTheDocument();
   });
 
-  // The format indicator (e.g. "ndjson") is not rendered alongside the
-  // close button - format selection is owned by the form.
-  it("does not render a format badge in the header", () => {
+  // Once a run returns rows, the result card offers an export affordance: a
+  // format picker and an Export button to start an asynchronous export.
+  it("renders export controls once the run returns rows", () => {
     mockStatus = "success";
     mockResult = TABULAR_RESULT;
     render(<SqlQueryCard job={createJob()} onError={onError} onClose={onClose} />);
-    expect(screen.queryByText(/^csv$/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/^ndjson$/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/export full result set/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^export$/i })).toBeInTheDocument();
   });
 
   // Empty tabular results show "No rows returned" instead of an empty
@@ -181,10 +201,9 @@ describe("SqlQueryCard", () => {
     expect(screen.getByText(/no rows returned/i)).toBeInTheDocument();
   });
 
-  // Binary (parquet) results cannot be previewed in the card; the body
-  // explains that downloads will be supported by a future export
-  // operation.
-  it("renders an export-pending notice for parquet results", () => {
+  // Binary (parquet) results cannot be previewed in the card; the body points
+  // the operator to the Export control to download the full result set.
+  it("offers export for non-previewable parquet results", () => {
     mockStatus = "success";
     mockResult = BINARY_RESULT;
     render(
@@ -196,9 +215,10 @@ describe("SqlQueryCard", () => {
         onClose={onClose}
       />,
     );
-    expect(screen.getByText(/binary results cannot be previewed/i)).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /download/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/parquet results cannot be previewed/i)).toBeInTheDocument();
+    // No preview table for a binary result, but the export affordance is present.
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^export$/i })).toBeInTheDocument();
   });
 
   // OperationOutcome errors are shown in a callout with the submitted SQL
@@ -227,7 +247,10 @@ describe("SqlQueryCard", () => {
       />,
     );
     expect(screen.getByText(/sql contains a disallowed operation/i)).toBeInTheDocument();
-    expect(screen.getByText(/drop table conditions/i)).toBeInTheDocument();
+    // The submitted SQL is echoed in the read-only preview area.
+    expect(screen.getByRole("textbox", { name: /submitted sql/i })).toHaveValue(
+      "DROP TABLE conditions",
+    );
   });
 
   // Generic errors fall back to the message text.

@@ -26,7 +26,7 @@
   <parent>
     <artifactId>pathling</artifactId>
     <groupId>au.csiro.pathling</groupId>
-    <version>9.9.0-SNAPSHOT</version>
+    <version>9.9.0</version>
   </parent>
   <artifactId>terminology</artifactId>
   <packaging>jar</packaging>
@@ -58,6 +58,53 @@
       <groupId>org.apache.spark</groupId>
       <artifactId>spark-catalyst_${pathling.scalaVersion}</artifactId>
       <scope>provided</scope>
+    </dependency>
+
+    <!-- Delta Lake. The Spark integration is used at import time to write the store
+         and is provided by the runtime classpath, exactly as Spark is. The Kernel
+         libraries read the store on executors through the Hadoop FileSystem API with
+         no Spark dependency at query time. -->
+    <dependency>
+      <groupId>io.delta</groupId>
+      <artifactId>delta-spark_${pathling.scalaVersion}</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.delta</groupId>
+      <artifactId>delta-kernel-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.delta</groupId>
+      <artifactId>delta-kernel-defaults</artifactId>
+      <!-- Delta Kernel declares an old Parquet (1.12.3) that lacks the LZ4_RAW
+           codec expected by Spark 4's Parquet 1.15.x. As a Spark package,
+           library-runtime must never bundle its own Parquet; Spark supplies it
+           on the runtime classpath. Exclude Delta Kernel's copy so the single
+           Spark-provided Parquet is used everywhere. -->
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.parquet</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
+    <!-- Compressed bitmaps for the runtime terminology indexes. -->
+    <dependency>
+      <groupId>org.roaringbitmap</groupId>
+      <artifactId>RoaringBitmap</artifactId>
+    </dependency>
+
+    <!-- ANTLR runtime for the VCL and ECL parsers. -->
+    <dependency>
+      <groupId>org.antlr</groupId>
+      <artifactId>antlr4-runtime</artifactId>
+    </dependency>
+
+    <!-- Jackson streaming API for bounded-memory FHIR CodeSystem import. -->
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-core</artifactId>
     </dependency>
 
     <!-- HAPI FHIR -->
@@ -159,6 +206,21 @@
         <groupId>net.alchim31.maven</groupId>
         <artifactId>scala-maven-plugin</artifactId>
       </plugin>
+      <plugin>
+        <groupId>org.antlr</groupId>
+        <artifactId>antlr4-maven-plugin</artifactId>
+        <version>${pathling.antlrVersion}</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>antlr4</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <visitor>true</visitor>
+        </configuration>
+      </plugin>
 
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -224,6 +286,10 @@
             <configuration>
               <failOnError>false</failOnError>
               <failOnWarnings>false</failOnWarnings>
+              <sourceFileExcludes>
+                <sourceFileExclude>au/csiro/pathling/vcl/generated/**</sourceFileExclude>
+                <sourceFileExclude>au/csiro/pathling/ecl/generated/**</sourceFileExclude>
+              </sourceFileExcludes>
               <additionalClasspathElements>
                 <additionalClasspathElement>${project.build.outputDirectory}</additionalClasspathElement>
               </additionalClasspathElements>

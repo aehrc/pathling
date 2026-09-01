@@ -18,14 +18,12 @@
 package au.csiro.pathling.operations.view;
 
 import au.csiro.pathling.encoders.ViewDefinitionResource;
-import au.csiro.pathling.errors.ResourceNotFoundError;
-import au.csiro.pathling.read.ReadExecutor;
 import au.csiro.pathling.security.OperationAccess;
 import ca.uhn.fhir.rest.annotation.IdParam;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.OperationParam;
 import ca.uhn.fhir.rest.server.IResourceProvider;
-import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
+import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import jakarta.servlet.http.HttpServletResponse;
@@ -35,6 +33,7 @@ import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.IdType;
 import org.hl7.fhir.r4.model.InstantType;
 import org.hl7.fhir.r4.model.IntegerType;
+import org.hl7.fhir.r4.model.Reference;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -44,7 +43,8 @@ import org.springframework.stereotype.Component;
  * <p>This provides operations at:
  *
  * <ul>
- *   <li>{@code POST /fhir/ViewDefinition/$run} - Type-level operation with viewResource parameter
+ *   <li>{@code POST /fhir/ViewDefinition/$run} - Type-level operation with a viewResource or
+ *       viewReference parameter
  *   <li>{@code GET /fhir/ViewDefinition/[id]/$run} - Instance-level operation using stored
  *       ViewDefinition
  *   <li>{@code POST /fhir/ViewDefinition/[id]/$run} - Instance-level operation with additional
@@ -61,20 +61,15 @@ public class ViewDefinitionInstanceRunProvider implements IResourceProvider {
 
   @Nonnull private final ViewExecutionHelper viewExecutionHelper;
 
-  @Nonnull private final ReadExecutor readExecutor;
-
   /**
    * Constructs a new ViewDefinitionInstanceRunProvider.
    *
-   * @param viewExecutionHelper the helper for executing view queries
-   * @param readExecutor the read executor for reading stored ViewDefinitions
+   * @param viewExecutionHelper the helper for executing view queries and resolving stored
+   *     ViewDefinitions
    */
   @Autowired
-  public ViewDefinitionInstanceRunProvider(
-      @Nonnull final ViewExecutionHelper viewExecutionHelper,
-      @Nonnull final ReadExecutor readExecutor) {
+  public ViewDefinitionInstanceRunProvider(@Nonnull final ViewExecutionHelper viewExecutionHelper) {
     this.viewExecutionHelper = viewExecutionHelper;
-    this.readExecutor = readExecutor;
   }
 
   @Override
@@ -83,16 +78,20 @@ public class ViewDefinitionInstanceRunProvider implements IResourceProvider {
   }
 
   /**
-   * Type-level $run operation that accepts a ViewDefinition inline.
+   * Type-level $run operation that accepts a ViewDefinition inline ({@code viewResource}) or by
+   * reference ({@code viewReference}).
    *
-   * @param viewResource the ViewDefinition resource
-   * @param format the output format (ndjson or csv), overrides Accept header if provided
+   * @param viewResource the inline ViewDefinition resource (mutually exclusive with viewReference)
+   * @param viewReference a reference to a stored ViewDefinition (mutually exclusive with
+   *     viewResource)
+   * @param format the output format (ndjson, csv, or json), overrides Accept header if provided
    * @param includeHeader whether to include a header row in CSV output
    * @param limit the maximum number of rows to return
-   * @param patientIds patient IDs to filter by
-   * @param groupIds group IDs to filter by
+   * @param patient a single patient reference to filter by
+   * @param group group references to filter by
    * @param since filter by meta.lastUpdated >= value
    * @param inlineResources FHIR resources to use instead of the main data source
+   * @param source the unsupported external data source parameter, rejected when supplied
    * @param requestDetails the servlet request details containing HTTP headers
    * @param response the HTTP response for streaming output
    */
@@ -100,21 +99,30 @@ public class ViewDefinitionInstanceRunProvider implements IResourceProvider {
   @Operation(name = "$run", idempotent = true, manualResponse = true)
   @OperationAccess("view-run")
   public void runTypeLevel(
-      @Nonnull @OperationParam(name = "viewResource") final IBaseResource viewResource,
+      @Nullable @OperationParam(name = "viewResource") final IBaseResource viewResource,
+      @Nullable @OperationParam(name = "viewReference") final Reference viewReference,
       @Nullable @OperationParam(name = "_format") final String format,
       @Nullable @OperationParam(name = "header") final BooleanType includeHeader,
       @Nullable @OperationParam(name = "_limit") final IntegerType limit,
-      @Nullable @OperationParam(name = "patient") final List<String> patientIds,
-      @Nullable @OperationParam(name = "group") final List<IdType> groupIds,
+      @Nullable @OperationParam(name = "patient", max = OperationParam.MAX_UNLIMITED)
+          final List<Reference> patient,
+      @Nullable @OperationParam(name = "group", max = OperationParam.MAX_UNLIMITED)
+          final List<Reference> group,
       @Nullable @OperationParam(name = "_since") final InstantType since,
       @Nullable @OperationParam(name = "resource") final List<String> inlineResources,
-      @Nonnull final ca.uhn.fhir.rest.server.servlet.ServletRequestDetails requestDetails,
+      @Nullable @OperationParam(name = "source") final String source,
+      @Nonnull final ServletRequestDetails requestDetails,
       @Nullable final HttpServletResponse response) {
 
+    viewExecutionHelper.rejectSourceParameter(source);
+
+    final IBaseResource view = viewExecutionHelper.resolveViewInput(viewResource, viewReference);
+    final List<String> patientIds = viewExecutionHelper.toPatientIds(patient);
+    final List<IdType> groupIds = viewExecutionHelper.toGroupIds(group);
     final String acceptHeader = requestDetails.getServletRequest().getHeader("Accept");
 
     viewExecutionHelper.executeView(
-        viewResource,
+        view,
         format,
         acceptHeader,
         includeHeader,
@@ -127,17 +135,19 @@ public class ViewDefinitionInstanceRunProvider implements IResourceProvider {
   }
 
   /**
-   * Instance-level $run operation that uses a stored ViewDefinition by ID. Supports both GET and
-   * POST requests.
+   * Instance-level $run operation that uses a stored ViewDefinition by ID. The view is inferred
+   * from the path; a {@code viewReference} parameter is neither required nor consulted. Supports
+   * both GET and POST requests.
    *
    * @param viewDefinitionId the ID of the stored ViewDefinition
-   * @param format the output format (ndjson or csv), overrides Accept header if provided
+   * @param format the output format (ndjson, csv, or json), overrides Accept header if provided
    * @param includeHeader whether to include a header row in CSV output
    * @param limit the maximum number of rows to return
-   * @param patientIds patient IDs to filter by
-   * @param groupIds group IDs to filter by
+   * @param patient a single patient reference to filter by
+   * @param group group references to filter by
    * @param since filter by meta.lastUpdated >= value
    * @param inlineResources FHIR resources to use instead of the main data source
+   * @param source the unsupported external data source parameter, rejected when supplied
    * @param requestDetails the servlet request details containing HTTP headers
    * @param response the HTTP response for streaming output
    */
@@ -149,20 +159,27 @@ public class ViewDefinitionInstanceRunProvider implements IResourceProvider {
       @Nullable @OperationParam(name = "_format") final String format,
       @Nullable @OperationParam(name = "header") final BooleanType includeHeader,
       @Nullable @OperationParam(name = "_limit") final IntegerType limit,
-      @Nullable @OperationParam(name = "patient") final List<String> patientIds,
-      @Nullable @OperationParam(name = "group") final List<IdType> groupIds,
+      @Nullable @OperationParam(name = "patient", max = OperationParam.MAX_UNLIMITED)
+          final List<Reference> patient,
+      @Nullable @OperationParam(name = "group", max = OperationParam.MAX_UNLIMITED)
+          final List<Reference> group,
       @Nullable @OperationParam(name = "_since") final InstantType since,
       @Nullable @OperationParam(name = "resource") final List<String> inlineResources,
-      @Nonnull final ca.uhn.fhir.rest.server.servlet.ServletRequestDetails requestDetails,
+      @Nullable @OperationParam(name = "source") final String source,
+      @Nonnull final ServletRequestDetails requestDetails,
       @Nullable final HttpServletResponse response) {
 
-    // Read the ViewDefinition by ID.
-    final IBaseResource viewResource = readViewDefinition(viewDefinitionId);
+    viewExecutionHelper.rejectSourceParameter(source);
 
+    // The view is inferred from the path id; viewReference is not consulted at the instance level.
+    final IBaseResource view =
+        viewExecutionHelper.readStoredViewDefinition(viewDefinitionId.getIdPart());
+    final List<String> patientIds = viewExecutionHelper.toPatientIds(patient);
+    final List<IdType> groupIds = viewExecutionHelper.toGroupIds(group);
     final String acceptHeader = requestDetails.getServletRequest().getHeader("Accept");
 
     viewExecutionHelper.executeView(
-        viewResource,
+        view,
         format,
         acceptHeader,
         includeHeader,
@@ -172,23 +189,5 @@ public class ViewDefinitionInstanceRunProvider implements IResourceProvider {
         since,
         inlineResources,
         response);
-  }
-
-  /** Reads a ViewDefinition resource by ID. */
-  @Nonnull
-  private IBaseResource readViewDefinition(@Nonnull final IdType viewDefinitionId) {
-    try {
-      return readExecutor.read("ViewDefinition", viewDefinitionId.getIdPart());
-    } catch (final ResourceNotFoundError e) {
-      throw new ResourceNotFoundException(
-          "ViewDefinition with ID '" + viewDefinitionId.getIdPart() + "' not found");
-    } catch (final IllegalArgumentException e) {
-      // Handle case where no ViewDefinition data exists in the data source.
-      if (e.getMessage() != null && e.getMessage().contains("No data found for resource type")) {
-        throw new ResourceNotFoundException(
-            "ViewDefinition with ID '" + viewDefinitionId.getIdPart() + "' not found");
-      }
-      throw e;
-    }
   }
 }

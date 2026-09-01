@@ -17,10 +17,18 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { OperationOutcomeError, UnauthorizedError } from "../../types/errors";
+import {
+  NotFoundError,
+  OperationOutcomeError,
+  UnauthorizedError,
+} from "../../types/errors";
 import {
   listSqlQueryLibraries,
+  listStoredLibraries,
   SQL_QUERY_LIBRARY_TYPE_FILTER,
+  SQL_VIEW_LIBRARY_TYPE_FILTER,
+  sqlQueryExportDownload,
+  sqlQueryExportKickOff,
   sqlQueryRun,
 } from "../sqlQuery";
 
@@ -363,6 +371,166 @@ describe("listSqlQueryLibraries", () => {
     );
     await expect(
       listSqlQueryLibraries("https://example.com/fhir"),
+    ).rejects.toThrow(UnauthorizedError);
+  });
+});
+
+describe("SQL_VIEW_LIBRARY_TYPE_FILTER", () => {
+  // The SQLView filter shares the SQL on FHIR Library code system with the
+  // SQLQuery filter; only the type code differs.
+  it("is the SQL on FHIR Library code system scoped to sql-view", () => {
+    expect(SQL_VIEW_LIBRARY_TYPE_FILTER).toBe(
+      "https://sql-on-fhir.org/ig/CodeSystem/LibraryTypesCodes|sql-view",
+    );
+  });
+});
+
+describe("listStoredLibraries", () => {
+  // The generalised list function scopes its search by the requested type
+  // code, issuing the SQLView token for sql-view requests.
+  it("queries Library with the sql-view type filter", async () => {
+    mockFetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ resourceType: "Bundle", entry: [] }), {
+        status: 200,
+        headers: { "Content-Type": "application/fhir+json" },
+      }),
+    );
+
+    await listStoredLibraries("https://example.com/fhir", {
+      typeCode: "sql-view",
+    });
+
+    const url = decodeURIComponent(mockFetch.mock.calls[0][0] as string);
+    expect(url).toContain("/Library?");
+    expect(url).toContain(`type=${SQL_VIEW_LIBRARY_TYPE_FILTER}`);
+  });
+
+  // The same function issues the SQLQuery token for sql-query requests, so
+  // both Library kinds share one code path.
+  it("queries Library with the sql-query type filter", async () => {
+    mockFetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ resourceType: "Bundle", entry: [] }), {
+        status: 200,
+        headers: { "Content-Type": "application/fhir+json" },
+      }),
+    );
+
+    await listStoredLibraries("https://example.com/fhir", {
+      typeCode: "sql-query",
+    });
+
+    const url = decodeURIComponent(mockFetch.mock.calls[0][0] as string);
+    expect(url).toContain(`type=${SQL_QUERY_LIBRARY_TYPE_FILTER}`);
+  });
+
+  // The Authorization header is forwarded for authenticated servers.
+  it("attaches a bearer token when an access token is provided", async () => {
+    mockFetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ resourceType: "Bundle" }), {
+        status: 200,
+        headers: { "Content-Type": "application/fhir+json" },
+      }),
+    );
+
+    await listStoredLibraries("https://example.com/fhir", {
+      typeCode: "sql-view",
+      accessToken: "secret",
+    });
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        headers: expect.objectContaining({ Authorization: "Bearer secret" }),
+      }),
+    );
+  });
+
+  // A 401 propagates as UnauthorizedError, consistent with the rest of the
+  // API layer.
+  it("throws UnauthorizedError on a 401 response", async () => {
+    mockFetch.mockResolvedValueOnce(
+      new Response("Unauthorized", { status: 401 }),
+    );
+    await expect(
+      listStoredLibraries("https://example.com/fhir", { typeCode: "sql-view" }),
+    ).rejects.toThrow(UnauthorizedError);
+  });
+});
+
+describe("sqlQueryExportKickOff", () => {
+  // The kick-off must request asynchronous processing and return the polling
+  // URL carried by the Content-Location header.
+  it("sets Prefer: respond-async and returns the polling URL", async () => {
+    mockFetch.mockResolvedValueOnce(
+      new Response(null, {
+        status: 202,
+        headers: { "Content-Location": "https://example.com/fhir/$job?id=abc" },
+      }),
+    );
+
+    const result = await sqlQueryExportKickOff("https://example.com/fhir", {
+      request: {
+        mode: "stored",
+        libraryId: "patient-bp-query",
+        format: "ndjson",
+      },
+    });
+
+    expect(result.pollingUrl).toBe("https://example.com/fhir/$job?id=abc");
+    expect(mockFetch).toHaveBeenCalledWith(
+      "https://example.com/fhir/$sqlquery-export",
+      expect.objectContaining({
+        method: "POST",
+        headers: expect.objectContaining({ Prefer: "respond-async" }),
+      }),
+    );
+  });
+
+  // Without a Content-Location header the kick-off cannot be polled, so it
+  // fails rather than returning an undefined URL.
+  it("throws when no Content-Location header is present", async () => {
+    mockFetch.mockResolvedValueOnce(new Response(null, { status: 202 }));
+    await expect(
+      sqlQueryExportKickOff("https://example.com/fhir", {
+        request: { mode: "stored", libraryId: "q", format: "ndjson" },
+      }),
+    ).rejects.toThrow("No Content-Location");
+  });
+});
+
+describe("sqlQueryExportDownload", () => {
+  it("returns the response body stream on success", async () => {
+    const body = new ReadableStream();
+    mockFetch.mockResolvedValueOnce(new Response(body, { status: 200 }));
+
+    const stream = await sqlQueryExportDownload({
+      location: "https://example.com/fhir/$result?job=j&file=people.ndjson",
+    });
+
+    expect(stream).toBe(body);
+    expect(mockFetch).toHaveBeenCalledWith(
+      "https://example.com/fhir/$result?job=j&file=people.ndjson",
+      expect.objectContaining({ method: "GET" }),
+    );
+  });
+
+  it("throws NotFoundError on a 404 response", async () => {
+    mockFetch.mockResolvedValueOnce(new Response("Not found", { status: 404 }));
+    await expect(
+      sqlQueryExportDownload({
+        location: "https://example.com/fhir/$result?job=j&file=x",
+      }),
+    ).rejects.toThrow(NotFoundError);
+  });
+
+  it("throws UnauthorizedError on a 401 response", async () => {
+    mockFetch.mockResolvedValueOnce(
+      new Response("Unauthorized", { status: 401 }),
+    );
+    await expect(
+      sqlQueryExportDownload({
+        location: "https://example.com/fhir/$result?job=j&file=x",
+      }),
     ).rejects.toThrow(UnauthorizedError);
   });
 });

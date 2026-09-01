@@ -44,8 +44,12 @@ export type ViewExportManifest = Parameters;
 /**
  * Extracts output file entries from a view export manifest Parameters resource.
  *
+ * Each SQL on FHIR `output` parameter carries one `name` part and one or more `location` parts
+ * (one per file the view produced). This emits one download entry per `location`, all sharing the
+ * output's name, so a view that produced several files lists every file.
+ *
  * @param manifest - The view export manifest Parameters resource.
- * @returns Array of output file entries with name and url.
+ * @returns Array of output file entries with name and url, one per file.
  */
 export function getViewExportOutputFiles(
   manifest: ViewExportManifest,
@@ -56,10 +60,11 @@ export function getViewExportOutputFiles(
 
   return manifest.parameter
     .filter((param) => param.name === "output" && param.part)
-    .map((param) => {
+    .flatMap((param) => {
       const parts = param.part!;
       const name = parts.find((p) => p.name === "name")?.valueString ?? "";
-      const url = parts.find((p) => p.name === "url")?.valueUri ?? "";
-      return { name, url };
+      return parts
+        .filter((p) => p.name === "location" && p.valueUri)
+        .map((p) => ({ name, url: p.valueUri! }));
     });
 }

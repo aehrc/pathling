@@ -30,6 +30,8 @@ import type { Bundle } from "fhir/r4";
 export interface ViewDefinitionSummary {
   id: string;
   name: string;
+  /** Canonical URL (`ViewDefinition.url`), used to reference this view by URL. */
+  url?: string;
   json: string;
 }
 
@@ -76,10 +78,15 @@ export const useViewDefinitions: UseViewDefinitionsFn = (options) => {
       });
       return (
         bundle.entry?.map((e) => {
-          const resource = e.resource as { id: string; name?: string };
+          const resource = e.resource as {
+            id: string;
+            name?: string;
+            url?: string;
+          };
           return {
             id: resource.id,
             name: resource.name || resource.id,
+            url: resource.url,
             json: JSON.stringify(resource, null, 2),
           };
         }) ?? []

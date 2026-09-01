@@ -55,6 +55,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.function.UnaryOperator;
 import org.apache.spark.SparkContext;
 import org.apache.spark.sql.SparkSession;
@@ -167,7 +168,7 @@ class BulkSubmitExecutorTest {
   @Test
   @DisplayName("downloadManifestJob creates and registers job when async enabled")
   @SuppressWarnings("unchecked")
-  void downloadManifestJobCreatesAndRegistersJobWhenAsyncEnabled() {
+  void downloadManifestJobCreatesAndRegistersJobWhenAsyncEnabled() throws Exception {
     // Given: a submission and manifest job with async enabled.
     final Submission submission = createTestSubmission();
     final ManifestJob manifestJob = createTestManifestJob();
@@ -176,19 +177,17 @@ class BulkSubmitExecutorTest {
     // Capture the job registered.
     final ArgumentCaptor<Job<?>> jobCaptor = ArgumentCaptor.forClass(Job.class);
 
-    // When: calling downloadManifestJob.
-    executor.downloadManifestJob(submission, manifestJob, List.of(), FHIR_SERVER_BASE);
+    // When: calling downloadManifestJob and awaiting the async download work, so that no file
+    // writes race the JUnit temp-dir cleanup after the test completes.
+    final CompletableFuture<Void> download =
+        executor.downloadManifestJob(submission, manifestJob, List.of(), FHIR_SERVER_BASE);
+    download.get(30, TimeUnit.SECONDS);
 
     // Then: should register a Job in the JobRegistry.
-    await()
-        .atMost(Duration.ofSeconds(5))
-        .untilAsserted(
-            () -> {
-              verify(jobRegistry).register(jobCaptor.capture());
-              final Job<?> registeredJob = jobCaptor.getValue();
-              assertThat(registeredJob).isNotNull();
-              assertThat(registeredJob.getOwnerId()).isEqualTo(Optional.empty());
-            });
+    verify(jobRegistry).register(jobCaptor.capture());
+    final Job<?> registeredJob = jobCaptor.getValue();
+    assertThat(registeredJob).isNotNull();
+    assertThat(registeredJob.getOwnerId()).isEqualTo(Optional.empty());
   }
 
   @Test

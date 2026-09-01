@@ -115,6 +115,11 @@ In addition, an `INT32` field SHALL be included with the suffix `_scale`. This
 field SHALL be used to store the scale of the decimal value from the original
 FHIR data.
 
+A value with more than 6 decimal places is stored in the `DECIMAL` field
+rounded to a scale of 6, while the `_scale` field retains the scale of the
+original FHIR data. A `_scale` value greater than 6 therefore identifies a
+value that lost precision during encoding.
+
 ### ID type
 
 An element of type `id` SHALL be represented as a `BINARY (UTF8)` field. This

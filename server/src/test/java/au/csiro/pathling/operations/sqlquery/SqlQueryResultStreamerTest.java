@@ -18,10 +18,19 @@
 package au.csiro.pathling.operations.sqlquery;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.test.SpringBootUnitTest;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
@@ -113,6 +122,69 @@ class SqlQueryResultStreamerTest {
     final byte[] bytes = response.getContentAsByteArray();
     assertThat(bytes).isNotEmpty();
     assertThat(new String(bytes, 0, 4, StandardCharsets.US_ASCII)).isEqualTo("PAR1");
+  }
+
+  @Test
+  void parquetWithVoidColumnRejectedBeforeCreatingTempDirectory() throws IOException {
+    // A NullType (VOID) column cannot be written to Parquet. The streamer must reject it with an
+    // InvalidUserInputError (mapped to a 400) rather than letting Spark fail deep in the writer.
+    final Set<Path> tempDirsBefore = sqlQueryParquetTempDirs();
+    final MockHttpServletResponse response = new MockHttpServletResponse();
+
+    assertThatThrownBy(
+            () ->
+                streamer.stream(voidColumnDataset(), SqlQueryOutputFormat.PARQUET, false, response))
+        .isInstanceOf(InvalidUserInputError.class)
+        .hasMessageContaining("'foo'")
+        .hasMessageContaining("CAST")
+        .hasMessageContaining("output format");
+
+    // The validation fires before any temporary directory is created, so no filesystem work
+    // happens for a rejected request.
+    assertThat(sqlQueryParquetTempDirs()).isEqualTo(tempDirsBefore);
+  }
+
+  @Test
+  void csvWithVoidColumnStillSucceeds() {
+    // Non-Parquet formats are unaffected by the new validation.
+    final MockHttpServletResponse response = new MockHttpServletResponse();
+
+    assertThatCode(
+            () -> streamer.stream(voidColumnDataset(), SqlQueryOutputFormat.CSV, true, response))
+        .doesNotThrowAnyException();
+
+    assertThat(response.getStatus()).isEqualTo(200);
+    final String body = new String(response.getContentAsByteArray(), StandardCharsets.UTF_8);
+    assertThat(body).startsWith("id,foo");
+  }
+
+  @Test
+  void parquetWithFullyTypedDatasetStillSucceeds() {
+    // A fully typed dataset must still be written to Parquet exactly as before.
+    final MockHttpServletResponse response = new MockHttpServletResponse();
+
+    assertThatCode(
+            () -> streamer.stream(twoRowDataset(), SqlQueryOutputFormat.PARQUET, false, response))
+        .doesNotThrowAnyException();
+
+    final byte[] bytes = response.getContentAsByteArray();
+    assertThat(bytes).isNotEmpty();
+    assertThat(new String(bytes, 0, 4, StandardCharsets.US_ASCII)).isEqualTo("PAR1");
+  }
+
+  /** Lists the streamer's Parquet temporary directories currently present under the temp root. */
+  private Set<Path> sqlQueryParquetTempDirs() throws IOException {
+    final Path tempRoot = Path.of(System.getProperty("java.io.tmpdir"));
+    try (final Stream<Path> entries = Files.list(tempRoot)) {
+      return entries
+          .filter(p -> p.getFileName().toString().startsWith("sqlquery-parquet-"))
+          .collect(Collectors.toSet());
+    }
+  }
+
+  private Dataset<Row> voidColumnDataset() {
+    // A literal NULL projection produces a NullType (VOID) column, reproducing the failure mode.
+    return spark.range(2).toDF("id").selectExpr("id", "NULL AS foo");
   }
 
   private Dataset<Row> twoRowDataset() {

@@ -129,6 +129,13 @@ bun run test:e2e:headed
   rendering or to handle user events. Effects are escape hatches, not primary
   tools.
 
+The asynchronous export operations share a single presentational card,
+`components/sqlOnFhir/ExportJobCard.tsx`. It is parameterised by the export
+format and a manifest-output parser, and is reused by both the ViewDefinition
+export (`ViewExportCard`) and the SQL query export (`SqlQueryExportCardWrapper`)
+flows. When adding a new export-style operation, reuse `ExportJobCard` rather
+than duplicating the status, progress, cancel, and download presentation.
+
 ### Naming
 
 | Element               | Convention     | Example                         |

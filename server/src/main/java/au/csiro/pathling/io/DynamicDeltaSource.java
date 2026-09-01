@@ -20,36 +20,33 @@ package au.csiro.pathling.io;
 import au.csiro.pathling.QueryHelpers;
 import au.csiro.pathling.config.StorageConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.io.FileSystemPersistence;
-import au.csiro.pathling.library.io.sink.DataSinkBuilder;
+import au.csiro.pathling.library.io.source.DatasetSource;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
-import au.csiro.pathling.library.query.FhirViewQuery;
-import au.csiro.pathling.views.FhirView;
 import io.delta.tables.DeltaTable;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.BiFunction;
-import java.util.function.Predicate;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 
 /**
- * A QueryableDataSource wrapper that dynamically discovers new resource types created after
- * startup. Delegates to the underlying data source for known types, and attempts on-demand
- * discovery for unknown types by checking if a Delta table exists at the expected path.
+ * A {@link DriftGuardedSource} that dynamically discovers new resource types created after startup.
+ * Delegates to the underlying data source for known types, and attempts on-demand discovery for
+ * unknown types by checking if a Delta table exists at the expected path.
+ *
+ * <p>The drift guard behaviour, including its propagation into derived sources, is inherited from
+ * {@link DriftGuardedSource}. The drifted types set is mutable so that a successful {@link
+ * #refresh} clears the guard for the refreshed type.
  *
  * @author John Grimes
  */
 @Slf4j
-public class DynamicDeltaSource implements QueryableDataSource {
-
-  @Nonnull private final QueryableDataSource delegate;
+public class DynamicDeltaSource extends DriftGuardedSource {
 
   @Nonnull private final SparkSession spark;
 
@@ -62,7 +59,7 @@ public class DynamicDeltaSource implements QueryableDataSource {
   @Nonnull private final Set<String> dynamicallyDiscoveredTypes = ConcurrentHashMap.newKeySet();
 
   /**
-   * Constructs a new DynamicDeltaSource.
+   * Constructs a new DynamicDeltaSource with no drifted types.
    *
    * @param delegate the underlying QueryableDataSource to delegate to
    * @param spark the Spark session for Delta table operations
@@ -76,11 +73,45 @@ public class DynamicDeltaSource implements QueryableDataSource {
       @Nonnull final String databasePath,
       @Nonnull final FhirEncoders fhirEncoders,
       @Nonnull final StorageConfiguration storageConfiguration) {
-    this.delegate = delegate;
+    this(delegate, spark, databasePath, fhirEncoders, storageConfiguration, Set.of());
+  }
+
+  /**
+   * Constructs a new DynamicDeltaSource.
+   *
+   * @param delegate the underlying QueryableDataSource to delegate to
+   * @param spark the Spark session for Delta table operations
+   * @param databasePath the path to the Delta database
+   * @param fhirEncoders the FHIR encoders for creating empty datasets
+   * @param storageConfiguration the storage configuration
+   * @param driftedTypes the resource types left drifted and unmigrated at startup
+   */
+  public DynamicDeltaSource(
+      @Nonnull final QueryableDataSource delegate,
+      @Nonnull final SparkSession spark,
+      @Nonnull final String databasePath,
+      @Nonnull final FhirEncoders fhirEncoders,
+      @Nonnull final StorageConfiguration storageConfiguration,
+      @Nonnull final Set<String> driftedTypes) {
+    super(delegate, concurrentCopyOf(driftedTypes));
     this.spark = spark;
     this.databasePath = databasePath;
     this.fhirEncoders = fhirEncoders;
     this.cacheDatasets = storageConfiguration.getCacheDatasets();
+  }
+
+  /**
+   * Copies the given types into a mutable concurrent set, so that the drifted mark can be cleared
+   * by {@link #refresh} and observed by derived sources.
+   *
+   * @param types the types to copy
+   * @return a mutable concurrent set containing the given types
+   */
+  @Nonnull
+  private static Set<String> concurrentCopyOf(@Nonnull final Set<String> types) {
+    final Set<String> copy = ConcurrentHashMap.newKeySet();
+    copy.addAll(types);
+    return copy;
   }
 
   @Override
@@ -89,6 +120,10 @@ public class DynamicDeltaSource implements QueryableDataSource {
     if (resourceCode == null) {
       throw new IllegalArgumentException("Resource code must not be null");
     }
+
+    // A type whose table is drifted and unmigrated cannot be queried; fail with an actionable
+    // error rather than an opaque analysis failure.
+    checkNotDrifted(resourceCode);
 
     // If delegate knows about this type, use it.
     if (delegate.getResourceTypes().contains(resourceCode)) {
@@ -113,50 +148,52 @@ public class DynamicDeltaSource implements QueryableDataSource {
     return QueryHelpers.createEmptyDataset(spark, fhirEncoders, resourceCode);
   }
 
+  /**
+   * Re-loads the Delta table for the given resource type and replaces the dataset served for it, so
+   * that all consumers observe the table's current schema. Intended to be called after a
+   * schema-evolving write. When dataset caching is enabled, the stale cached dataset is
+   * unpersisted. If no Delta table exists for the type, the call is a no-op.
+   *
+   * @param resourceCode the resource type code to refresh
+   */
+  public void refresh(@Nonnull final String resourceCode) {
+    final String tablePath = getTablePath(resourceCode);
+    if (!DeltaTable.isDeltaTable(spark, tablePath)) {
+      log.debug("No Delta table found for resource type {}, nothing to refresh", resourceCode);
+      return;
+    }
+
+    // Unpersist the stale cached dataset before replacing it, so the cached plan for the old
+    // snapshot does not linger in the Spark cache.
+    if (cacheDatasets && delegate.getResourceTypes().contains(resourceCode)) {
+      delegate.read(resourceCode).unpersist();
+    }
+
+    final Dataset<Row> refreshed = spark.read().format("delta").load(tablePath);
+    if (delegate instanceof final DatasetSource datasetSource) {
+      // Replace the pinned entry in the delegate's resource map, so every consumer that resolves
+      // datasets through the delegate observes the evolved schema.
+      datasetSource.dataset(resourceCode, refreshed);
+      log.info("Refreshed dataset for resource type {}", resourceCode);
+    } else {
+      // The delegate cannot be mutated; serve the type through dynamic discovery, which re-loads
+      // the Delta table on each read.
+      dynamicallyDiscoveredTypes.add(resourceCode);
+      log.info("Registered resource type {} for dynamic discovery following refresh", resourceCode);
+    }
+
+    // The freshly loaded table carries the current schema, so the type is no longer drifted.
+    if (driftedTypes.remove(resourceCode)) {
+      log.info("Cleared drifted mark for resource type {}", resourceCode);
+    }
+  }
+
   @Override
   @Nonnull
   public Set<String> getResourceTypes() {
     final Set<String> types = new HashSet<>(delegate.getResourceTypes());
     types.addAll(dynamicallyDiscoveredTypes);
     return types;
-  }
-
-  @Override
-  @Nonnull
-  public DataSinkBuilder write() {
-    return delegate.write();
-  }
-
-  @Override
-  @Nonnull
-  public FhirViewQuery view(@Nullable final String subjectResource) {
-    return delegate.view(subjectResource);
-  }
-
-  @Override
-  @Nonnull
-  public FhirViewQuery view(@Nullable final FhirView view) {
-    return delegate.view(view);
-  }
-
-  @Override
-  @Nonnull
-  public QueryableDataSource map(
-      @Nonnull final BiFunction<String, Dataset<Row>, Dataset<Row>> operator) {
-    return delegate.map(operator);
-  }
-
-  @Override
-  @Nonnull
-  public QueryableDataSource filterByResourceType(
-      @Nonnull final Predicate<String> resourceTypePredicate) {
-    return delegate.filterByResourceType(resourceTypePredicate);
-  }
-
-  @Override
-  @Nonnull
-  public DataSource cache() {
-    return delegate.cache();
   }
 
   @Nonnull

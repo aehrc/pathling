@@ -64,11 +64,11 @@ def _write_script(tmp_path, body, name="script.py"):
 # ========== Namespace binding ==========
 
 
-def test_spark_and_pathling_are_bound(runner, patched_context, tmp_path):
+def test_spark_and_pc_are_bound(runner, patched_context, tmp_path):
     """The script sees the context's Spark session and the context itself."""
     script = _write_script(
         tmp_path,
-        "print(id(spark))\nprint(id(pathling))\n",
+        "print(id(spark))\nprint(id(pc))\n",
     )
 
     result = runner.invoke(cli, ["run", script])
@@ -191,7 +191,7 @@ def test_sys_exit_message_prints_and_exits_1(runner, patched_context, tmp_path):
 
 def test_inline_code_executes_with_namespace(runner, patched_context):
     """-c code executes with both variables bound."""
-    result = runner.invoke(cli, ["run", "-c", "print(id(spark)); print(id(pathling))"])
+    result = runner.invoke(cli, ["run", "-c", "print(id(spark)); print(id(pc))"])
 
     assert result.exit_code == 0, result.stderr
     lines = result.stdout.splitlines()
@@ -223,7 +223,7 @@ def test_inline_syntax_error_names_string(runner, patched_context):
 
 def test_stdin_code_executes_with_namespace(runner, patched_context):
     """Code piped on stdin via '-' executes with both variables bound."""
-    result = runner.invoke(cli, ["run", "-"], input="print(type(pathling).__name__)\n")
+    result = runner.invoke(cli, ["run", "-"], input="print(type(pc).__name__)\n")
 
     assert result.exit_code == 0, result.stderr
     assert "PathlingContext" in result.stdout
@@ -331,3 +331,127 @@ def test_missing_script_is_usage_error_without_session(
 
     assert result.exit_code == 2
     assert "missing.py" in result.stderr
+
+
+# ========== Pre-imported Pathling functions (US1) ==========
+
+
+def test_public_functions_available_without_import(runner, patched_context, tmp_path):
+    """A script uses public functions and types with no import (FR-001)."""
+    script = _write_script(
+        tmp_path,
+        "print(callable(to_snomed_coding))\n"
+        "print(callable(member_of))\n"
+        "print(Coding.__name__)\n",
+    )
+
+    result = runner.invoke(cli, ["run", script])
+
+    assert result.exit_code == 0, result.stderr
+    lines = result.stdout.splitlines()
+    assert lines[0] == "True"
+    assert lines[1] == "True"
+    assert lines[2] == "Coding"
+
+
+def test_inline_and_stdin_resolve_public_function(runner, patched_context):
+    """Inline -c and piped stdin programs resolve a public name with no import."""
+    inline = runner.invoke(cli, ["run", "-c", "print(callable(translate))"])
+    piped = runner.invoke(cli, ["run", "-"], input="print(callable(subsumes))\n")
+
+    assert inline.exit_code == 0, inline.stderr
+    assert inline.stdout.splitlines()[0] == "True"
+    assert piped.exit_code == 0, piped.stderr
+    assert piped.stdout.splitlines()[0] == "True"
+
+
+def test_display_and_tx_display_are_the_same_object(runner, patched_context):
+    """In run, display and tx_display are the same terminology function (FR-004)."""
+    result = runner.invoke(cli, ["run", "-c", "print(display is tx_display)"])
+
+    assert result.exit_code == 0, result.stderr
+    assert result.stdout.splitlines()[0] == "True"
+
+
+def test_user_code_overrides_injected_name(runner, patched_context):
+    """A user definition of an injected name takes precedence (FR-006)."""
+    result = runner.invoke(
+        cli, ["run", "-c", "translate = lambda x: 'mine'\nprint(translate('x'))"]
+    )
+
+    assert result.exit_code == 0, result.stderr
+    assert result.stdout.splitlines()[0] == "mine"
+
+
+def test_explicit_import_still_works(runner, patched_context):
+    """An explicit from-import continues to work unchanged (FR-007)."""
+    result = runner.invoke(
+        cli,
+        ["run", "-c", "from pathling import member_of\nprint(callable(member_of))"],
+    )
+
+    assert result.exit_code == 0, result.stderr
+    assert result.stdout.splitlines()[0] == "True"
+
+
+def test_every_public_name_is_in_program_globals(runner, patched_context):
+    """Every name in pathling.__all__ is bound in the program globals (INV-1)."""
+    # dir() is captured before `import pathling` rebinds the injected name, so
+    # the expectation is derived from __all__ rather than a hard-coded list.
+    program = (
+        "names = set(dir())\n"
+        "import pathling\n"
+        "missing = [n for n in pathling.__all__ if n not in names]\n"
+        "print(missing)\n"
+    )
+
+    result = runner.invoke(cli, ["run", "-c", program])
+
+    assert result.exit_code == 0, result.stderr
+    assert result.stdout.splitlines()[0] == "[]"
+
+
+def test_pathling_is_bound_to_the_module(runner, patched_context):
+    """``pathling`` is the package module, not the context (FR-013, FR-014)."""
+    result = runner.invoke(
+        cli,
+        ["run", "-c", "import types\nprint(isinstance(pathling, types.ModuleType))"],
+    )
+
+    assert result.exit_code == 0, result.stderr
+    assert result.stdout.splitlines()[0] == "True"
+
+
+def test_import_pathling_leaves_the_context_usable(runner, patched_context, tmp_path):
+    """A bare ``import pathling`` is a no-op and pc still works afterwards (SC-003).
+
+    This is the failure this rename removes: with the context bound to
+    ``pathling``, the import silently rebound the name and the break surfaced
+    later as an AttributeError far from its cause.
+    """
+    script = _write_script(
+        tmp_path,
+        "import pathling\n"
+        "print(type(pathling).__name__)\n"
+        "print(type(pc).__name__)\n"
+        "print(pc.spark is spark)\n",
+    )
+
+    result = runner.invoke(cli, ["run", script])
+
+    assert result.exit_code == 0, result.stderr
+    lines = result.stdout.splitlines()
+    assert lines[0] == "module"
+    assert lines[1] == "PathlingContext"
+    assert lines[2] == "True"
+
+
+def test_module_attribute_resolves_without_an_import(runner, patched_context):
+    """``pathling.PathlingContext`` resolves with no import, since the module is
+    bound under its own name."""
+    result = runner.invoke(
+        cli, ["run", "-c", "print(pathling.PathlingContext.__name__)"]
+    )
+
+    assert result.exit_code == 0, result.stderr
+    assert result.stdout.splitlines()[0] == "PathlingContext"

@@ -47,16 +47,34 @@ export type SqlQueryParameterType =
   | "dateTime";
 
 /**
+ * A selectable table source in the inline authoring form: a stored
+ * ViewDefinition or SQLView, listed by name and bound by its canonical URL.
+ */
+export interface SourceOption {
+  /** Logical id of the source (used only as a stable list key). */
+  id: string;
+  /** Human-readable name shown in the picker. */
+  name: string;
+  /**
+   * Canonical URL the dependency reference resolves against. A source with no
+   * URL cannot be referenced and is shown disabled in the picker.
+   */
+  url?: string;
+}
+
+/**
  * A `relatedArtifact` entry on a SQLQuery Library, expressed in form-state
- * terms.
+ * terms. A row binds a SQL table label to a chosen stored source by the
+ * source's canonical URL, which is emitted verbatim as
+ * `relatedArtifact.resource` on save.
  */
 export interface SqlQueryRelatedArtifact {
   /** Stable identifier for use as a React `key`. */
   rowId: string;
   /** Table name referenced by the SQL. */
   label: string;
-  /** ID of the referenced ViewDefinition (becomes `ViewDefinition/<id>`). */
-  viewDefinitionId: string;
+  /** Canonical URL of the chosen source; empty until a source is picked. */
+  referenceUrl: string;
 }
 
 /**
@@ -89,6 +107,8 @@ export interface SqlQueryLibrarySummary {
   id: string;
   /** Human-readable title (`title` or `name`, falling back to the ID). */
   title: string;
+  /** Canonical URL (`Library.url`), used to reference this source by URL. */
+  url?: string;
   /** Decoded SQL text from `Library.content[0].data`. */
   sql: string;
   /** Related-artifact entries with label and ViewDefinition reference. */
@@ -164,6 +184,12 @@ export type SqlQueryRequest =
       mode: "stored";
       /** ID of a stored Library conforming to the SQLQuery profile. */
       libraryId: string;
+      /**
+       * Resolved SQL text of the referenced Library, retained for display
+       * only. The server receives just the `libraryId` reference, so this is
+       * never sent; it lets the result card show the query that ran.
+       */
+      sql?: string;
     })
   | (SqlQueryExecutionOptions & {
       mode: "inline";
@@ -227,3 +253,37 @@ export interface SaveSqlQueryLibraryResult {
   id: string;
   title: string;
 }
+
+/**
+ * Output formats accepted by the asynchronous `$sqlquery-export` operation.
+ *
+ * Narrower than {@link SqlQueryOutputFormat}: the export operation supports only the file-friendly
+ * formats, mirroring `$viewdefinition-export`.
+ */
+export type SqlQueryExportFormat = "ndjson" | "csv" | "parquet";
+
+/**
+ * A `$sqlquery-export` request, reusing the same query source (stored or inline) as the
+ * synchronous run, plus the chosen export format and CSV header flag.
+ */
+export type SqlQueryExportRequest =
+  | {
+      mode: "stored";
+      /** ID of a stored Library conforming to the SQLQuery profile. */
+      libraryId: string;
+      format: SqlQueryExportFormat;
+      header?: boolean;
+    }
+  | {
+      mode: "inline";
+      /** Inline Library to send as the `query.queryResource` part. */
+      library: SqlQueryLibrary;
+      format: SqlQueryExportFormat;
+      header?: boolean;
+    };
+
+/**
+ * The `$sqlquery-export` completion manifest, a FHIR Parameters resource describing the export
+ * outputs. Shares the SQL on FHIR manifest shape with the view export manifest.
+ */
+export type SqlQueryExportManifest = import("fhir/r4").Parameters;

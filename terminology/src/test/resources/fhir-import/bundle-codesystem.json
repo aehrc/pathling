@@ -1,0 +1,24 @@
+{
+  "resourceType": "Bundle",
+  "type": "collection",
+  "entry": [
+    {
+      "resource": {
+        "resourceType": "CodeSystem",
+        "url": "http://example.org/fhir/CodeSystem/bundled",
+        "version": "1.0.0",
+        "name": "Bundled",
+        "status": "active",
+        "content": "complete",
+        "hierarchyMeaning": "is-a",
+        "concept": [
+          {
+            "code": "A",
+            "display": "Alpha",
+            "concept": [{ "code": "B", "display": "Beta" }]
+          }
+        ]
+      }
+    }
+  ]
+}

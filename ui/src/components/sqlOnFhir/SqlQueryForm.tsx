@@ -29,7 +29,7 @@ import { PlayIcon, UploadIcon } from "@radix-ui/react-icons";
 import { Box, Button, Callout, Card, Flex, Heading, Tabs } from "@radix-ui/themes";
 import { useState } from "react";
 
-import { useSqlQueryLibraries, useViewDefinitions } from "../../hooks";
+import { useSqlQueryLibraries, useSqlViews, useViewDefinitions } from "../../hooks";
 import { FieldLabel } from "../FieldLabel";
 import {
   areRuntimeBindingsValid,
@@ -106,10 +106,15 @@ export function SqlQueryForm({
   const [saveError, setSaveError] = useState<Error | null>(null);
 
   const { data: storedLibraries, isLoading: isLoadingLibraries } = useSqlQueryLibraries();
+  const { data: storedViews, isLoading: isLoadingViews } = useSqlViews();
   const { data: viewDefinitions } = useViewDefinitions();
 
   // Derived: declared parameters surfaced through the runtime bindings panel.
-  const activeStoredLibrary = storedLibraries?.find((lib) => lib.id === selectedLibraryId);
+  // The selected source may be a SQLQuery or a SQLView, so locate it across
+  // both stored lists.
+  const activeStoredLibrary = [...(storedLibraries ?? []), ...(storedViews ?? [])].find(
+    (lib) => lib.id === selectedLibraryId,
+  );
   const declaredParameters: Array<{
     name: string;
     type: SqlQueryParameterType;
@@ -147,6 +152,9 @@ export function SqlQueryForm({
       const request: SqlQueryRequest = {
         mode: "stored",
         libraryId: selectedLibraryId,
+        // Carry the resolved SQL for display only; the server receives just
+        // the reference.
+        sql: activeStoredLibrary?.sql,
         ...baseRequestOptions(),
       };
       onExecute(request);
@@ -189,6 +197,11 @@ export function SqlQueryForm({
 
   const canSave = !disabled && !isSaving && source === "inline" && canSaveInlineForm(inlineInput);
 
+  // On the "Provide SQL" tab the runtime-params section stays anchored as the
+  // user declares parameters; on the "Select query" tab it appears only when
+  // the selected source actually declares parameters (a SQLView never does).
+  const showRuntimeParams = source === "inline" || declaredParameters.length > 0;
+
   return (
     <Card>
       <Flex direction="column" gap="4">
@@ -203,8 +216,9 @@ export function SqlQueryForm({
           <Box pt="4">
             <Tabs.Content value="stored">
               <SqlQueryStoredTab
-                libraries={storedLibraries}
-                isLoading={isLoadingLibraries}
+                queries={storedLibraries}
+                views={storedViews}
+                isLoading={isLoadingLibraries || isLoadingViews}
                 selectedId={selectedLibraryId}
                 onSelect={setSelectedLibraryId}
                 disabled={disabled || isExecuting}
@@ -223,6 +237,12 @@ export function SqlQueryForm({
                 viewDefinitions={(viewDefinitions ?? []).map((vd) => ({
                   id: vd.id,
                   name: vd.name,
+                  url: vd.url,
+                }))}
+                sqlViews={(storedViews ?? []).map((view) => ({
+                  id: view.id,
+                  name: view.title,
+                  url: view.url,
                 }))}
                 disabled={disabled || isExecuting}
               />
@@ -235,15 +255,17 @@ export function SqlQueryForm({
           </Box>
         </Tabs.Root>
 
-        <Box>
-          <FieldLabel mb="2">Runtime parameter values</FieldLabel>
-          <SqlQueryRuntimeBindings
-            parameters={declaredParameters}
-            bindings={bindings}
-            onChange={handleBindingChange}
-            disabled={disabled || isExecuting}
-          />
-        </Box>
+        {showRuntimeParams && (
+          <Box>
+            <FieldLabel mb="2">Runtime parameter values</FieldLabel>
+            <SqlQueryRuntimeBindings
+              parameters={declaredParameters}
+              bindings={bindings}
+              onChange={handleBindingChange}
+              disabled={disabled || isExecuting}
+            />
+          </Box>
+        )}
 
         <SqlQueryOutputControls
           format={format}

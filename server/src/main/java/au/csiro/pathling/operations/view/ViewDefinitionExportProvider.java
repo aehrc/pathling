@@ -20,6 +20,7 @@ package au.csiro.pathling.operations.view;
 import static au.csiro.pathling.security.SecurityAspect.getCurrentUserId;
 
 import au.csiro.pathling.async.AsyncJobContext;
+import au.csiro.pathling.async.AsyncPattern;
 import au.csiro.pathling.async.AsyncSupported;
 import au.csiro.pathling.async.Job;
 import au.csiro.pathling.async.JobRegistry;
@@ -47,6 +48,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -64,6 +66,7 @@ import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.IdType;
 import org.hl7.fhir.r4.model.InstantType;
 import org.hl7.fhir.r4.model.Parameters;
+import org.hl7.fhir.r4.model.Reference;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -98,6 +101,8 @@ public class ViewDefinitionExportProvider
 
   @Nonnull private final GroupMemberService groupMemberService;
 
+  @Nonnull private final ViewExecutionHelper viewExecutionHelper;
+
   @Nonnull private final Gson gson;
 
   /**
@@ -111,7 +116,10 @@ public class ViewDefinitionExportProvider
    * @param fhirContext the FHIR context
    * @param deltaLake the queryable data source
    * @param groupMemberService the group member service
+   * @param viewExecutionHelper the helper used to resolve a view.viewReference to a stored
+   *     ViewDefinition via the shared read path
    */
+  @SuppressWarnings("java:S107")
   @Autowired
   public ViewDefinitionExportProvider(
       @Nonnull final ViewDefinitionExportExecutor executor,
@@ -121,7 +129,8 @@ public class ViewDefinitionExportProvider
       @Nonnull final ServerConfiguration serverConfiguration,
       @Nonnull final FhirContext fhirContext,
       @Nonnull final QueryableDataSource deltaLake,
-      @Nonnull final GroupMemberService groupMemberService) {
+      @Nonnull final GroupMemberService groupMemberService,
+      @Nonnull final ViewExecutionHelper viewExecutionHelper) {
     this.executor = executor;
     this.jobRegistry = jobRegistry;
     this.requestTagFactory = requestTagFactory;
@@ -130,6 +139,7 @@ public class ViewDefinitionExportProvider
     this.fhirContext = fhirContext;
     this.deltaLake = deltaLake;
     this.groupMemberService = groupMemberService;
+    this.viewExecutionHelper = viewExecutionHelper;
     this.gson = ViewDefinitionGson.create();
   }
 
@@ -144,13 +154,14 @@ public class ViewDefinitionExportProvider
    * @param patientIds patient IDs to filter by
    * @param groupIds group IDs to filter by
    * @param since filter resources modified after this timestamp
+   * @param source the unsupported external data source parameter, rejected when supplied
    * @param requestDetails the request details
    * @return the parameters result containing the export manifest, or null if cancelled
    */
   @SuppressWarnings({"unused", "java:S107"})
   @Operation(name = "viewdefinition-export", idempotent = true)
   @OperationAccess("view-export")
-  @AsyncSupported(redirectOnComplete = true)
+  @AsyncSupported(pattern = AsyncPattern.STANDARD_ASYNC_PATTERN)
   @Nullable
   public Parameters export(
       @Nullable @OperationParam(name = "view.name") final List<String> viewNames,
@@ -161,6 +172,7 @@ public class ViewDefinitionExportProvider
       @Nullable @OperationParam(name = "patient") final List<String> patientIds,
       @Nullable @OperationParam(name = "group") final List<IdType> groupIds,
       @Nullable @OperationParam(name = "_since") final InstantType since,
+      @Nullable @OperationParam(name = "source") final String source,
       @Nonnull final ServletRequestDetails requestDetails) {
     final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
@@ -185,7 +197,8 @@ public class ViewDefinitionExportProvider
                             includeHeader,
                             patientIds,
                             groupIds,
-                            since
+                            since,
+                            source
                           });
                   final String operationCacheKey =
                       computeCacheKeyComponent(
@@ -231,10 +244,13 @@ public class ViewDefinitionExportProvider
 
     final ViewDefinitionExportResponse response =
         new ViewDefinitionExportResponse(
-            exportRequest.originalRequest(),
             exportRequest.serverBaseUrl(),
             outputs,
-            serverConfiguration.getAuth().isEnabled());
+            ownJob.getId(),
+            exportRequest.clientTrackingId(),
+            exportRequest.format().getCode(),
+            ownJob.getStartTime(),
+            Instant.now());
 
     return response.toOutput();
   }
@@ -244,6 +260,17 @@ public class ViewDefinitionExportProvider
   public PreAsyncValidationResult<ViewDefinitionExportRequest> preAsyncValidate(
       @Nonnull final ServletRequestDetails servletRequestDetails, @Nonnull final Object[] params)
       throws InvalidRequestException {
+
+    // Reject the unsupported source parameter synchronously at kick-off, before any other work.
+    final String source = (String) params[8];
+    if (source != null && !source.isBlank()) {
+      throw new InvalidRequestException(
+          "The 'source' parameter (external data source) is not supported by this server.");
+    }
+
+    // Parse the explicit _format strictly, so an unsupported value is rejected at kick-off
+    // regardless of the view parameters.
+    final ViewExportFormat exportFormat = ViewExportFormat.fromString((String) params[3]);
 
     // Extract view parameters from the raw Parameters resource, since HAPI's automatic extraction
     // does not handle nested part arrays containing resources correctly.
@@ -264,7 +291,6 @@ public class ViewDefinitionExportProvider
 
     // Other parameters are extracted correctly by HAPI.
     final String clientTrackingId = (String) params[2];
-    final String format = (String) params[3];
     final BooleanType includeHeader = (BooleanType) params[4];
 
     @SuppressWarnings("unchecked")
@@ -289,7 +315,7 @@ public class ViewDefinitionExportProvider
             servletRequestDetails.getFhirServerBase(),
             views,
             clientTrackingId,
-            ViewExportFormat.fromString(format),
+            exportFormat,
             header,
             allPatientIds,
             since);
@@ -353,21 +379,27 @@ public class ViewDefinitionExportProvider
       if ("view".equals(param.getName())) {
         String viewName = null;
         IBaseResource viewResource = null;
+        Reference viewReference = null;
 
-        // Extract name and viewResource from the nested parts.
+        // Extract name, viewResource, and viewReference from the nested parts.
         for (final Parameters.ParametersParameterComponent part : param.getPart()) {
           if ("name".equals(part.getName()) && part.getValue() != null) {
             viewName = part.getValue().primitiveValue();
           } else if ("viewResource".equals(part.getName()) && part.getResource() != null) {
             viewResource = part.getResource();
+          } else if ("viewReference".equals(part.getName())
+              && part.getValue() instanceof final Reference reference) {
+            viewReference = reference;
           }
         }
 
-        if (viewResource != null) {
-          final FhirView fhirView = parseViewDefinition(viewResource, viewIndex);
-          views.add(new ViewInput(viewName, fhirView));
-          viewIndex++;
-        }
+        // Each view part must supply exactly one of viewResource or viewReference; resolveViewInput
+        // enforces the exclusivity (400), presence (400), and reference resolution (404).
+        final IBaseResource resolved =
+            viewExecutionHelper.resolveViewInput(viewResource, viewReference);
+        final FhirView fhirView = parseViewDefinition(resolved, viewIndex);
+        views.add(new ViewInput(viewName, fhirView));
+        viewIndex++;
       }
     }
 

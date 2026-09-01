@@ -18,19 +18,26 @@
 """The ``pathling run`` command.
 
 Executes user-supplied Python code - from a script file, standard input, or an
-inline ``-c`` option - with ``spark`` (the Spark session) and ``pathling`` (the
-configured Pathling context) bound in the code's global scope, reproducing
-Python interpreter script semantics (``sys.argv``, ``__main__``, ``__file__``,
-``sys.path``, traceback fidelity, and ``SystemExit`` propagation).
+inline ``-c`` option - with ``spark`` (the Spark session) and ``pc`` (the
+configured Pathling context) bound in the code's global scope, along with the
+Pathling package's public API (its terminology and coding functions, argument
+helper types, and API types) so scripts need no explicit ``from pathling import
+...``. The ``pathling`` name is bound to the package module itself, so a bare
+``import pathling`` cannot clobber the context. The terminology display function
+is bound as both ``display`` and ``tx_display``. Python interpreter script
+semantics (``sys.argv``, ``__main__``, ``__file__``, ``sys.path``, traceback
+fidelity, and ``SystemExit`` propagation) are reproduced.
 
 Author: John Grimes.
 """
+
+from __future__ import annotations
 
 import os
 import sys
 import traceback
 from dataclasses import dataclass
-from typing import Optional, Tuple
+from typing import List, Optional, Sequence, Tuple
 
 import click
 
@@ -72,7 +79,7 @@ class RunCommand(click.Command):
     with trailing arguments), which parse to the same option values.
     """
 
-    def parse_args(self, ctx, args):
+    def parse_args(self, ctx: click.Context, args: List[str]) -> List[str]:
         """Stores the raw arguments on the context, then parses as normal.
 
         :param ctx: the Click context.
@@ -83,7 +90,7 @@ class RunCommand(click.Command):
         return super().parse_args(ctx, args)
 
 
-def _positional_precedes_code_flag(raw_args) -> bool:
+def _positional_precedes_code_flag(raw_args: Sequence[str]) -> bool:
     """Determines whether a positional argument appears before ``-c``.
 
     A positional (a script path or ``-``) before the inline-code flag means
@@ -103,7 +110,12 @@ def _positional_precedes_code_flag(raw_args) -> bool:
     return False
 
 
-def _resolve_source(ctx, script, code, args) -> Tuple[CodeSource, list]:
+def _resolve_source(
+    ctx: click.Context,
+    script: Optional[str],
+    code: Optional[str],
+    args: Tuple[str, ...],
+) -> Tuple[CodeSource, list]:
     """Validates the code-source rules and reads the program text.
 
     Exactly one source is required: a script path, ``-`` (stdin), or
@@ -171,7 +183,7 @@ def _resolve_source(ctx, script, code, args) -> Tuple[CodeSource, list]:
     )
 
 
-def _execute(source: CodeSource, program_args, namespace) -> None:
+def _execute(source: CodeSource, program_args: Sequence[str], namespace: dict) -> None:
     """Compiles and executes the program with interpreter semantics.
 
     ``sys.argv`` and ``sys.path`` are set for the duration of execution and
@@ -181,7 +193,8 @@ def _execute(source: CodeSource, program_args, namespace) -> None:
 
     :param source: the resolved code source.
     :param program_args: the program's arguments (``sys.argv[1:]``).
-    :param namespace: the extra globals to bind (``spark`` and ``pathling``).
+    :param namespace: the extra globals to bind (``spark``, ``pc``, and the
+           pre-imported public API).
     """
     try:
         code_object = compile(source.text, source.filename, "exec")
@@ -229,13 +242,21 @@ def _execute(source: CodeSource, program_args, namespace) -> None:
 @click.option("-c", "--code", "code", help="Inline Python code to execute.")
 @click.argument("args", nargs=-1, type=click.UNPROCESSED)
 @click.pass_context
-def run(ctx, script, code, args):
+def run(
+    ctx: click.Context,
+    script: Optional[str],
+    code: Optional[str],
+    args: Tuple[str, ...],
+) -> None:
     """Run Python code with the Pathling environment ready.
 
     Executes a script file (or '-' for standard input, or inline code via
-    -c) with two variables already in scope: spark (the Spark session) and
-    pathling (the configured Pathling context). Trailing arguments are
-    passed to the code as sys.argv, following Python interpreter
+    -c) with spark (the Spark session) and pc (the configured Pathling
+    context) already in scope. The Pathling public functions (to_coding,
+    to_snomed_coding, member_of, translate, subsumes, display, and so on) are
+    pre-imported too, so no "from pathling import ..." is needed; the
+    terminology display is available as both display and tx_display. Trailing
+    arguments are passed to the code as sys.argv, following Python interpreter
     conventions.
 
     \b
@@ -246,7 +267,7 @@ def run(ctx, script, code, args):
     SQL. Save this as summary.py and run "pathling run summary.py":
 
     \b
-        patients = pathling.read.ndjson("data").view(
+        patients = pc.read.ndjson("data").view(
             "Patient",
             select=[{"column": [{"path": "gender", "name": "gender"}]}],
         )
@@ -258,6 +279,14 @@ def run(ctx, script, code, args):
 
     obj = ctx.obj
     pc = session.create_context(obj.config, obj.console)
-    namespace = {"spark": pc.spark, "pathling": pc}
+    # Pre-import the whole public API surface so scripts need no explicit
+    # `from pathling import ...`. The terminology display is bound under its
+    # natural name `display` and also aliased as `tx_display`, so a snippet
+    # developed at the console (where `display` is IPython's built-in and the
+    # terminology display is `tx_display`) pastes into a script unchanged.
+    namespace = session.public_namespace()
+    namespace["tx_display"] = namespace["display"]
+    namespace["spark"] = pc.spark
+    namespace["pc"] = pc
 
     _execute(source, program_args, namespace)

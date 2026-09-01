@@ -22,8 +22,10 @@ import java.util.List;
 import lombok.Value;
 
 /**
- * Represents a parsed SQLQuery Library resource containing the SQL text, ViewDefinition
- * dependencies, and declared parameters.
+ * Represents a parsed SQL on FHIR Library resource ({@code SQLQuery} or {@code SQLView}) containing
+ * the SQL text, dependency references, declared parameters, and the resolved library type code.
+ *
+ * @author John Grimes
  */
 @Value
 public class ParsedSqlQuery {
@@ -31,9 +33,24 @@ public class ParsedSqlQuery {
   /** The decoded SQL query text. */
   @Nonnull String sql;
 
-  /** The ViewDefinition dependencies referenced in the SQL query. */
+  /** The dependency references (to ViewDefinitions and/or SQLViews) referenced in the SQL. */
   @Nonnull List<ViewArtifactReference> viewReferences;
 
-  /** The declared parameters that can be bound at execution time. */
+  /** The declared parameters that can be bound at execution time. Always empty for a SQLView. */
   @Nonnull List<SqlParameterDeclaration> declaredParameters;
+
+  /**
+   * The SQL on FHIR library type code: {@link SqlLibraryParser#SQL_QUERY_TYPE_CODE} or {@link
+   * SqlLibraryParser#SQL_VIEW_TYPE_CODE}.
+   */
+  @Nonnull String libraryTypeCode;
+
+  /**
+   * Indicates whether this parsed query came from a {@code SQLView} Library.
+   *
+   * @return {@code true} if the library type is {@code sql-view}
+   */
+  public boolean isView() {
+    return SqlLibraryParser.isView(libraryTypeCode);
+  }
 }

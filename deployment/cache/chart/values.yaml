@@ -12,6 +12,11 @@ pathlingCache:
   pathlingHost: ~
   pathlingPort: ~
 
+  # Maximum time the cache waits for the first byte of a backend response,
+  # expressed as a Varnish duration (e.g. "60s", "10m"). Raise this when
+  # synchronous Pathling queries take longer than the Varnish default of 60s.
+  firstByteTimeout: "60s"
+
   service:
     type: "ClusterIP"
     port: 80

@@ -25,10 +25,14 @@ counts.
 Author: John Grimes.
 """
 
+from __future__ import annotations
+
 from datetime import datetime
 from pathlib import Path
+from typing import TYPE_CHECKING, Optional, Tuple
 
 import click
+from rich.console import Console
 from rich.table import Table
 
 from pathling.cli import session
@@ -41,8 +45,13 @@ from pathling.cli.errors import (
 )
 from pathling.cli.render import check_overwrite, progress_status
 
+if TYPE_CHECKING:
+    from pathling.cli.config import BulkAuth
+    from pathling.cli.main import CliContext
+    from pathling.datasource import DataSource
 
-def _parse_since(since):
+
+def _parse_since(since: Optional[str]) -> Optional[datetime]:
     """Parses a ``--since`` ISO 8601 timestamp with a timezone offset.
 
     :param since: the raw ``--since`` value, or None.
@@ -70,7 +79,7 @@ def _parse_since(since):
     return parsed
 
 
-def _build_auth_config(bulk_auth) -> dict:
+def _build_auth_config(bulk_auth: BulkAuth) -> dict:
     """Builds the library's auth config dict from resolved bulk auth.
 
     :param bulk_auth: the resolved :class:`BulkAuth`.
@@ -144,25 +153,25 @@ def _build_auth_config(bulk_auth) -> dict:
 @click.option("--overwrite", is_flag=True, help="Replace an existing output directory.")
 @click.pass_obj
 def export(
-    obj,
-    endpoint,
-    output,
-    group,
-    patients,
-    types,
-    elements,
-    type_filters,
-    include_associated_data,
-    since,
-    timeout,
-    max_downloads,
-    client_id,
-    token_endpoint,
-    scope,
-    private_key_jwk,
-    client_secret,
-    overwrite,
-):
+    obj: CliContext,
+    endpoint: str,
+    output: str,
+    group: Optional[str],
+    patients: Tuple[str, ...],
+    types: Tuple[str, ...],
+    elements: Tuple[str, ...],
+    type_filters: Tuple[str, ...],
+    include_associated_data: Tuple[str, ...],
+    since: Optional[str],
+    timeout: Optional[int],
+    max_downloads: int,
+    client_id: Optional[str],
+    token_endpoint: Optional[str],
+    scope: Optional[str],
+    private_key_jwk: Optional[str],
+    client_secret: Optional[str],
+    overwrite: bool,
+) -> None:
     """Bulk export data from a FHIR server.
 
     Examples:
@@ -234,7 +243,9 @@ def export(
     _print_summary(console, data_source, output_path)
 
 
-def _print_summary(console, data_source, output_path) -> None:
+def _print_summary(
+    console: Console, data_source: DataSource, output_path: Path
+) -> None:
     """Prints a summary of the resource types, file count, and output path.
 
     Row counts are deliberately omitted: counting each type would trigger an

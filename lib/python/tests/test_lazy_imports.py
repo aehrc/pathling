@@ -118,3 +118,26 @@ def test_bare_import_does_not_import_pyspark():
         "print('ok')\n"
     )
     assert "ok" in out
+
+
+# ========== to_loinc_coding exposed in the public API (FR-013) ==========
+
+
+def test_to_loinc_coding_in_public_api():
+    """`to_loinc_coding` is a member of the public API list, like its siblings."""
+    out = _run(
+        "import pathling\n"
+        "assert 'to_loinc_coding' in pathling.__all__, pathling.__all__\n"
+        "print('ok')\n"
+    )
+    assert "ok" in out
+
+
+def test_to_loinc_coding_importable_and_callable():
+    """`from pathling import to_loinc_coding` succeeds and is callable."""
+    out = _run(
+        "from pathling import to_loinc_coding\n"
+        "assert callable(to_loinc_coding)\n"
+        "print('ok')\n"
+    )
+    assert "ok" in out

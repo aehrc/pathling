@@ -226,6 +226,28 @@ class ExportOperationIT {
   }
 
   @Test
+  void bulkExportKickOffBodyRemainsOperationOutcome() {
+    // The SQL on FHIR kick-off body change (a Parameters acknowledgement) applies only to the
+    // redirect-on-complete operations; the FHIR Bulk Data $export kick-off body is unchanged and
+    // remains an OperationOutcome.
+    final String uri =
+        "http://localhost:"
+            + port
+            + "/fhir/$export?_outputFormat=application/fhir+ndjson&_type=Patient";
+    webTestClient
+        .get()
+        .uri(uri)
+        .header("Accept", "application/fhir+json")
+        .header("Prefer", "respond-async")
+        .exchange()
+        .expectStatus()
+        .isAccepted()
+        .expectBody()
+        .jsonPath("$.resourceType")
+        .isEqualTo("OperationOutcome");
+  }
+
+  @Test
   void testExportValid() {
     final String uri =
         "http://localhost:"

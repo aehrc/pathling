@@ -18,6 +18,8 @@
 package au.csiro.pathling.io;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatNoException;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import au.csiro.pathling.config.StorageConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
@@ -25,14 +27,24 @@ import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.util.FhirServerTestConfiguration;
+import au.csiro.pathling.views.FhirView;
 import jakarta.annotation.Nonnull;
 import java.nio.file.Path;
+import java.util.List;
+import java.util.Set;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.RowFactory;
+import org.apache.spark.sql.SaveMode;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.types.DataTypes;
+import org.apache.spark.sql.types.Metadata;
+import org.apache.spark.sql.types.StructField;
+import org.apache.spark.sql.types.StructType;
 import org.apache.spark.storage.StorageLevel;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
 
@@ -105,12 +117,219 @@ class DynamicDeltaSourceTest {
     assertThat(result.storageLevel()).isEqualTo(StorageLevel.NONE());
   }
 
+  // Verifies that after the underlying Delta table's schema evolves, refresh() replaces the
+  // pinned delegate entry so that read() returns a dataset with the new schema.
+  @Test
+  void refreshReplacesPinnedDatasetAfterSchemaEvolution(@TempDir final Path tempDir) {
+    // Arrange: a Delta table for Patient with only an id column, pinned at construction.
+    final String databasePath = tempDir.toAbsolutePath().toString();
+    writePatientTable(databasePath, "id");
+    final DynamicDeltaSource source = newTempDirSource(databasePath, false);
+    assertThat(source.read("Patient").schema().fieldNames()).doesNotContain("newField");
+
+    // Act: evolve the table schema by appending zero rows carrying an extra column, which leaves
+    // the pinned dataset behind the table, then refresh.
+    evolvePatientTable(databasePath, "id", "newField");
+    assertThat(source.read("Patient").schema().fieldNames()).doesNotContain("newField");
+    source.refresh("Patient");
+
+    // Assert: the replacement dataset presents the evolved schema and still reads the data.
+    final Dataset<Row> refreshed = source.read("Patient");
+    assertThat(refreshed.schema().fieldNames()).contains("id", "newField");
+    assertThat(refreshed.count()).isEqualTo(1);
+  }
+
+  // Verifies that with dataset caching enabled, refresh() unpersists the stale cached dataset and
+  // subsequent reads serve the refreshed dataset with caching applied.
+  @Test
+  void refreshUnpersistsStaleCachedDataset(@TempDir final Path tempDir) {
+    // Arrange: a cached source over a Patient table with only an id column.
+    final String databasePath = tempDir.toAbsolutePath().toString();
+    writePatientTable(databasePath, "id");
+    final DynamicDeltaSource source = newTempDirSource(databasePath, true);
+    final Dataset<Row> stale = source.read("Patient");
+    assertThat(stale.storageLevel()).isEqualTo(StorageLevel.MEMORY_AND_DISK());
+
+    // Act: evolve the table and refresh.
+    evolvePatientTable(databasePath, "id", "newField");
+    source.refresh("Patient");
+
+    // Assert: the stale dataset is no longer persisted, and the refreshed dataset is served with
+    // the evolved schema and caching applied.
+    assertThat(stale.storageLevel()).isEqualTo(StorageLevel.NONE());
+    final Dataset<Row> refreshed = source.read("Patient");
+    try {
+      assertThat(refreshed.schema().fieldNames()).contains("newField");
+      assertThat(refreshed.storageLevel()).isEqualTo(StorageLevel.MEMORY_AND_DISK());
+    } finally {
+      refreshed.unpersist();
+    }
+  }
+
+  // Verifies that reading a type recorded as drifted and unmigrated throws SchemaDriftError
+  // naming the type, and that other types are unaffected (FR-005, FR-006).
+  @Test
+  void readOfDriftedTypeThrowsSchemaDriftError(@TempDir final Path tempDir) {
+    final String databasePath = tempDir.toAbsolutePath().toString();
+    writePatientTable(databasePath, "id");
+    final DynamicDeltaSource source = newTempDirSource(databasePath, false, Set.of("Patient"));
+
+    assertThatThrownBy(() -> source.read("Patient"))
+        .isInstanceOf(SchemaDriftError.class)
+        .hasMessageContaining("Patient")
+        .hasMessageContaining("schemaAutoMerge");
+    // A type that is not drifted continues to work.
+    assertThat(source.read("ImmunizationEvaluation").count()).isZero();
+  }
+
+  // Verifies that a successful refresh clears the drifted mark, so a later schema-evolving update
+  // recovers the type without a restart (update-driven recovery).
+  @Test
+  void refreshClearsDriftedMark(@TempDir final Path tempDir) {
+    final String databasePath = tempDir.toAbsolutePath().toString();
+    writePatientTable(databasePath, "id");
+    final DynamicDeltaSource source = newTempDirSource(databasePath, false, Set.of("Patient"));
+    assertThatThrownBy(() -> source.read("Patient")).isInstanceOf(SchemaDriftError.class);
+
+    source.refresh("Patient");
+
+    assertThat(source.read("Patient").count()).isEqualTo(1);
+  }
+
+  // Verifies that constructing a view query over a drifted subject type throws SchemaDriftError.
+  // The executed query resolves its subject dataset through the delegate's own dispatcher rather
+  // than the guarded read(), so the guard must be applied when the query is constructed.
+  @Test
+  void viewOverDriftedTypeThrowsSchemaDriftError(@TempDir final Path tempDir) {
+    final String databasePath = tempDir.toAbsolutePath().toString();
+    writePatientTable(databasePath, "id");
+    final DynamicDeltaSource source = newTempDirSource(databasePath, false, Set.of("Patient"));
+    final FhirView view =
+        FhirView.ofResource("Patient")
+            .select(FhirView.columns(FhirView.column("id", "id")))
+            .build();
+
+    assertThatThrownBy(() -> source.view(view))
+        .isInstanceOf(SchemaDriftError.class)
+        .hasMessageContaining("Patient");
+    assertThatThrownBy(() -> source.view("Patient")).isInstanceOf(SchemaDriftError.class);
+    // A view over a type that is not drifted can still be constructed.
+    assertThatNoException().isThrownBy(() -> source.view("Observation"));
+  }
+
+  // Verifies that a source derived through map() keeps the drift guard, covering filtered view
+  // runs and exports which resolve datasets through the derived source rather than this one.
+  @Test
+  void mappedSourcePreservesDriftGuard(@TempDir final Path tempDir) {
+    final String databasePath = tempDir.toAbsolutePath().toString();
+    writePatientTable(databasePath, "id");
+    final DynamicDeltaSource source = newTempDirSource(databasePath, false, Set.of("Patient"));
+
+    final QueryableDataSource mapped = source.map((resourceType, dataset) -> dataset);
+
+    assertThatThrownBy(() -> mapped.read("Patient")).isInstanceOf(SchemaDriftError.class);
+    // The guard survives further derivation and applies to view construction on the derived
+    // source.
+    assertThatThrownBy(() -> mapped.map((resourceType, dataset) -> dataset).read("Patient"))
+        .isInstanceOf(SchemaDriftError.class);
+    assertThatThrownBy(() -> mapped.view("Patient")).isInstanceOf(SchemaDriftError.class);
+  }
+
+  // Verifies that a source derived through filterByResourceType() keeps the drift guard.
+  @Test
+  void filteredSourcePreservesDriftGuard(@TempDir final Path tempDir) {
+    final String databasePath = tempDir.toAbsolutePath().toString();
+    writePatientTable(databasePath, "id");
+    final DynamicDeltaSource source = newTempDirSource(databasePath, false, Set.of("Patient"));
+
+    final QueryableDataSource filtered = source.filterByResourceType(resourceType -> true);
+
+    assertThatThrownBy(() -> filtered.read("Patient")).isInstanceOf(SchemaDriftError.class);
+  }
+
+  // Verifies that once refresh() clears the drifted mark, newly derived sources read normally.
+  @Test
+  void derivedSourceAfterRefreshReadsSuccessfully(@TempDir final Path tempDir) {
+    final String databasePath = tempDir.toAbsolutePath().toString();
+    writePatientTable(databasePath, "id");
+    final DynamicDeltaSource source = newTempDirSource(databasePath, false, Set.of("Patient"));
+
+    source.refresh("Patient");
+
+    assertThat(source.map((resourceType, dataset) -> dataset).read("Patient").count()).isEqualTo(1);
+  }
+
+  // Verifies that refreshing a type with no Delta table is a harmless no-op.
+  @Test
+  void refreshOfMissingTableIsNoOp(@TempDir final Path tempDir) {
+    final String databasePath = tempDir.toAbsolutePath().toString();
+    final DynamicDeltaSource source = newTempDirSource(databasePath, false);
+
+    source.refresh("ImmunizationEvaluation");
+
+    assertThat(source.read("ImmunizationEvaluation").count()).isZero();
+  }
+
+  // ---- helpers ----
+
   @Nonnull
   private DynamicDeltaSource newDynamicDeltaSource(final boolean cacheDatasets) {
+    return newTempDirSource(DATABASE_PATH, cacheDatasets);
+  }
+
+  @Nonnull
+  private DynamicDeltaSource newTempDirSource(
+      @Nonnull final String databasePath, final boolean cacheDatasets) {
+    return newTempDirSource(databasePath, cacheDatasets, Set.of());
+  }
+
+  @Nonnull
+  private DynamicDeltaSource newTempDirSource(
+      @Nonnull final String databasePath,
+      final boolean cacheDatasets,
+      @Nonnull final Set<String> driftedTypes) {
     final StorageConfiguration storageConfiguration = new StorageConfiguration();
     storageConfiguration.setCacheDatasets(cacheDatasets);
-    final QueryableDataSource baseSource = pathlingContext.read().delta(DATABASE_PATH);
+    final QueryableDataSource baseSource = pathlingContext.read().delta(databasePath);
     return new DynamicDeltaSource(
-        baseSource, sparkSession, DATABASE_PATH, fhirEncoders, storageConfiguration);
+        baseSource, sparkSession, databasePath, fhirEncoders, storageConfiguration, driftedTypes);
+  }
+
+  /** Writes a single-row Patient Delta table whose schema has only the given string columns. */
+  private void writePatientTable(
+      @Nonnull final String databasePath, @Nonnull final String... columns) {
+    patientDataset(1, columns)
+        .write()
+        .format("delta")
+        .mode(SaveMode.ErrorIfExists)
+        .save(databasePath + "/Patient.parquet");
+  }
+
+  /**
+   * Evolves the Patient table's schema by appending zero rows carrying the given columns with the
+   * {@code mergeSchema} option, mirroring the warmup write performed on update.
+   */
+  private void evolvePatientTable(
+      @Nonnull final String databasePath, @Nonnull final String... columns) {
+    patientDataset(0, columns)
+        .write()
+        .format("delta")
+        .mode(SaveMode.Append)
+        .option("mergeSchema", "true")
+        .save(databasePath + "/Patient.parquet");
+  }
+
+  /** Creates a dataset with the given number of rows and string columns. */
+  @Nonnull
+  private Dataset<Row> patientDataset(final int rowCount, @Nonnull final String... columns) {
+    final StructField[] fields = new StructField[columns.length];
+    for (int i = 0; i < columns.length; i++) {
+      fields[i] = new StructField(columns[i], DataTypes.StringType, true, Metadata.empty());
+    }
+    final List<Row> rows =
+        rowCount == 0
+            ? List.of()
+            : List.of(RowFactory.create((Object[]) new String[columns.length]));
+    return sparkSession.createDataFrame(rows, new StructType(fields));
   }
 }
