@@ -93,7 +93,7 @@
 
 <span class="c1"># noinspection PyPackageRequirements</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">py4j.java_gateway</span><span class="w"> </span><span class="kn">import</span> <span class="n">JavaObject</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pyspark.sql</span><span class="w"> </span><span class="kn">import</span> <span class="n">Column</span><span class="p">,</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="n">SparkSession</span>
@@ -105,6 +105,19 @@
     <span class="kn">from</span><span class="w"> </span><span class="nn">.datasource</span><span class="w"> </span><span class="kn">import</span> <span class="n">DataSources</span>
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;PathlingContext&quot;</span><span class="p">]</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_java_map</span><span class="p">(</span><span class="n">jvm</span><span class="p">,</span> <span class="n">entries</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">JavaObject</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Converts a Python dict of strings to a Java map.</span>
+
+<span class="sd">    :param jvm: the Py4J JVM view used to construct the map</span>
+<span class="sd">    :param entries: the entries to copy into the map</span>
+<span class="sd">    :return: a ``java.util.HashMap`` holding the same entries</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">java_map</span> <span class="o">=</span> <span class="n">jvm</span><span class="o">.</span><span class="n">java</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">HashMap</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">entries</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">java_map</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">java_map</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_convert_java_value</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
@@ -221,6 +234,11 @@
         <span class="n">scope</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">token_expiry_tolerance</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="mi">120</span><span class="p">,</span>
         <span class="n">accept_language</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">terminology_mode</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;server&quot;</span><span class="p">,</span>
+        <span class="n">terminology_storage_path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">default_snomed_edition</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">expansion_cache_size</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="mi">100</span><span class="p">,</span>
+        <span class="n">dialect_aliases</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">explain_queries</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
         <span class="n">max_unbound_traversal_depth</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span>
         <span class="n">enable_delta</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
@@ -296,7 +314,22 @@
 <span class="sd">               https://www.rfc-editor.org/rfc/rfc9110.html#name-accept-language. If not provided,</span>
 <span class="sd">               the header is not sent. The server can use the header to return the result in the</span>
 <span class="sd">               preferred language if it is able. The actual behaviour may depend on the server</span>
-<span class="sd">               implementation and the code systems used.</span>
+<span class="sd">               implementation and the code systems used. In local mode this value selects the</span>
+<span class="sd">               preferred display and designation language.</span>
+<span class="sd">        :param terminology_mode: the terminology evaluation backend, either ``&quot;server&quot;`` (the</span>
+<span class="sd">               default, using a remote FHIR terminology server) or ``&quot;local&quot;`` (evaluating against a</span>
+<span class="sd">               local terminology store with no network access).</span>
+<span class="sd">        :param terminology_storage_path: the location of the local terminology store, required when</span>
+<span class="sd">               ``terminology_mode`` is ``&quot;local&quot;``.</span>
+<span class="sd">        :param default_snomed_edition: the SNOMED CT module identifier used to disambiguate an</span>
+<span class="sd">               unversioned SNOMED reference when the local store holds multiple editions.</span>
+<span class="sd">        :param expansion_cache_size: the maximum number of value set expansions cached per executor</span>
+<span class="sd">               in local mode.</span>
+<span class="sd">        :param dialect_aliases: additional dialect tags recognised in local mode when a display or</span>
+<span class="sd">               designation is requested in a particular language, mapping a language tag to the</span>
+<span class="sd">               identifier of the SNOMED CT language reference set that serves it (for example</span>
+<span class="sd">               ``{&quot;en-NZ&quot;: &quot;271000210107&quot;}``). An entry for a tag that is already recognised</span>
+<span class="sd">               replaces the built-in mapping for it.</span>
 <span class="sd">        :param explain_queries: setting this option to `True` will enable additional logging relating</span>
 <span class="sd">               to the query plan used to execute queries</span>
 <span class="sd">        :param max_unbound_traversal_depth: maximum depth for self-referencing structure traversals</span>
@@ -309,6 +342,15 @@
 <span class="sd">        :param debug_suspend: if true, the JVM will suspend until a debugger is attached</span>
 <span class="sd">        :return: a :class:`PathlingContext` instance initialized with the specified configuration</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Validate the terminology mode up front, before paying the Spark cold start.</span>
+        <span class="k">if</span> <span class="n">terminology_mode</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;server&quot;</span><span class="p">,</span> <span class="s2">&quot;local&quot;</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;terminology_mode must be &#39;server&#39; or &#39;local&#39;, got &#39;</span><span class="si">{</span><span class="n">terminology_mode</span><span class="si">}</span><span class="s2">&#39;&quot;</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="n">terminology_mode</span> <span class="o">==</span> <span class="s2">&quot;local&quot;</span> <span class="ow">and</span> <span class="n">terminology_storage_path</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;terminology_storage_path is required when terminology_mode is &#39;local&#39;&quot;</span>
+            <span class="p">)</span>
 
         <span class="k">def</span><span class="w"> </span><span class="nf">_new_spark_session</span><span class="p">():</span>
             <span class="n">extra_configs</span> <span class="o">=</span> <span class="p">{}</span>
@@ -373,8 +415,33 @@
             <span class="o">.</span><span class="n">build</span><span class="p">()</span>
         <span class="p">)</span>
 
+        <span class="c1"># Select the terminology evaluation mode (validated at the top of this method).</span>
+        <span class="n">mode</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">jvm</span><span class="o">.</span><span class="n">au</span><span class="o">.</span><span class="n">csiro</span><span class="o">.</span><span class="n">pathling</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">TerminologyMode</span><span class="o">.</span><span class="n">LOCAL</span>
+            <span class="k">if</span> <span class="n">terminology_mode</span> <span class="o">==</span> <span class="s2">&quot;local&quot;</span>
+            <span class="k">else</span> <span class="n">jvm</span><span class="o">.</span><span class="n">au</span><span class="o">.</span><span class="n">csiro</span><span class="o">.</span><span class="n">pathling</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">TerminologyMode</span><span class="o">.</span><span class="n">SERVER</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Build the local terminology configuration when a storage path is supplied.</span>
+        <span class="n">local_config</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">terminology_storage_path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">local_builder</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">jvm</span><span class="o">.</span><span class="n">au</span><span class="o">.</span><span class="n">csiro</span><span class="o">.</span><span class="n">pathling</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">LocalTerminologyConfiguration</span><span class="o">.</span><span class="n">builder</span><span class="p">()</span>
+                <span class="o">.</span><span class="n">storagePath</span><span class="p">(</span><span class="n">terminology_storage_path</span><span class="p">)</span>
+                <span class="o">.</span><span class="n">expansionCacheSize</span><span class="p">(</span><span class="n">expansion_cache_size</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="n">default_snomed_edition</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">local_builder</span> <span class="o">=</span> <span class="n">local_builder</span><span class="o">.</span><span class="n">defaultSnomedEdition</span><span class="p">(</span>
+                    <span class="n">default_snomed_edition</span>
+                <span class="p">)</span>
+            <span class="k">if</span> <span class="n">dialect_aliases</span><span class="p">:</span>
+                <span class="n">local_builder</span> <span class="o">=</span> <span class="n">local_builder</span><span class="o">.</span><span class="n">dialectAliases</span><span class="p">(</span>
+                    <span class="n">_java_map</span><span class="p">(</span><span class="n">jvm</span><span class="p">,</span> <span class="n">dialect_aliases</span><span class="p">)</span>
+                <span class="p">)</span>
+            <span class="n">local_config</span> <span class="o">=</span> <span class="n">local_builder</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
+
         <span class="c1"># Build a terminology configuration object from the provided parameters.</span>
-        <span class="n">terminology_config</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">terminology_builder</span> <span class="o">=</span> <span class="p">(</span>
             <span class="n">jvm</span><span class="o">.</span><span class="n">au</span><span class="o">.</span><span class="n">csiro</span><span class="o">.</span><span class="n">pathling</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">TerminologyConfiguration</span><span class="o">.</span><span class="n">builder</span><span class="p">()</span>
             <span class="o">.</span><span class="n">enabled</span><span class="p">(</span><span class="n">enable_terminology</span><span class="p">)</span>
             <span class="o">.</span><span class="n">serverUrl</span><span class="p">(</span><span class="n">terminology_server_url</span><span class="p">)</span>
@@ -383,8 +450,11 @@
             <span class="o">.</span><span class="n">cache</span><span class="p">(</span><span class="n">cache_config</span><span class="p">)</span>
             <span class="o">.</span><span class="n">authentication</span><span class="p">(</span><span class="n">auth_config</span><span class="p">)</span>
             <span class="o">.</span><span class="n">acceptLanguage</span><span class="p">(</span><span class="n">accept_language</span><span class="p">)</span>
-            <span class="o">.</span><span class="n">build</span><span class="p">()</span>
+            <span class="o">.</span><span class="n">mode</span><span class="p">(</span><span class="n">mode</span><span class="p">)</span>
         <span class="p">)</span>
+        <span class="k">if</span> <span class="n">local_config</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">terminology_builder</span> <span class="o">=</span> <span class="n">terminology_builder</span><span class="o">.</span><span class="n">local</span><span class="p">(</span><span class="n">local_config</span><span class="p">)</span>
+        <span class="n">terminology_config</span> <span class="o">=</span> <span class="n">terminology_builder</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
 
         <span class="c1"># Build a query configuration object from the provided parameters.</span>
         <span class="n">query_config</span> <span class="o">=</span> <span class="p">(</span>
@@ -423,6 +493,69 @@
 <span class="sd">        :return: The version of the Pathling library.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_jpc</span><span class="o">.</span><span class="n">getVersion</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="PathlingContext.import_snomed"><a class="viewcode-back" href="../../pathling.html#pathling.context.PathlingContext.import_snomed">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">import_snomed</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">source</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">storage_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">edition_uri</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">dense_id_order</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">default_dialect</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Imports a SNOMED CT RF2 snapshot release into a local terminology store.</span>
+
+<span class="sd">        :param source: the path to an RF2 release archive or extracted directory, on any filesystem</span>
+<span class="sd">               accessible through the Hadoop FileSystem API</span>
+<span class="sd">        :param storage_path: the terminology store location, created if absent</span>
+<span class="sd">        :param edition_uri: an explicit SNOMED edition/version URI, overriding detection</span>
+<span class="sd">        :param dense_id_order: how dense identifiers are assigned to concepts, either</span>
+<span class="sd">               ``&quot;code-order&quot;`` (the default) or ``&quot;pre-order&quot;``. The pre-order makes the runtime</span>
+<span class="sd">               hierarchy index materially smaller, in exchange for identifiers that shift more</span>
+<span class="sd">               between releases</span>
+<span class="sd">        :param default_dialect: the dialect whose preferred synonyms become the stored display of</span>
+<span class="sd">               every concept, given as a dialect tag such as ``&quot;en-GB&quot;``, as a private-use dialect</span>
+<span class="sd">               extension tag, or as a language reference set identifier. When omitted, the dialect is</span>
+<span class="sd">               chosen from the release: the sole language reference set where there is only one, or US</span>
+<span class="sd">               English for the International edition. A release that holds several and is not the</span>
+<span class="sd">               International edition fails the import, naming the candidates</span>
+<span class="sd">        :raises: the mapped JVM ``TerminologyImportException`` if the source is not a valid RF2</span>
+<span class="sd">                 snapshot release, or the default dialect can be neither honoured nor derived; the</span>
+<span class="sd">                 store is left unmodified</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">jvm</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_spark</span><span class="o">.</span><span class="n">_jvm</span>
+        <span class="n">options</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="p">(</span>
+            <span class="n">edition_uri</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="ow">or</span> <span class="n">dense_id_order</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="ow">or</span> <span class="n">default_dialect</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+        <span class="p">):</span>
+            <span class="n">builder</span> <span class="o">=</span> <span class="n">jvm</span><span class="o">.</span><span class="n">au</span><span class="o">.</span><span class="n">csiro</span><span class="o">.</span><span class="n">pathling</span><span class="o">.</span><span class="n">library</span><span class="o">.</span><span class="n">terminology</span><span class="o">.</span><span class="n">TerminologyImportOptions</span><span class="o">.</span><span class="n">builder</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">edition_uri</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">builder</span> <span class="o">=</span> <span class="n">builder</span><span class="o">.</span><span class="n">editionUri</span><span class="p">(</span><span class="n">edition_uri</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">dense_id_order</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">builder</span> <span class="o">=</span> <span class="n">builder</span><span class="o">.</span><span class="n">denseIdOrder</span><span class="p">(</span>
+                    <span class="n">jvm</span><span class="o">.</span><span class="n">au</span><span class="o">.</span><span class="n">csiro</span><span class="o">.</span><span class="n">pathling</span><span class="o">.</span><span class="n">terminology</span><span class="o">.</span><span class="n">store</span><span class="o">.</span><span class="n">DenseIdOrder</span><span class="o">.</span><span class="n">fromValue</span><span class="p">(</span>
+                        <span class="n">dense_id_order</span>
+                    <span class="p">)</span>
+                <span class="p">)</span>
+            <span class="k">if</span> <span class="n">default_dialect</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">builder</span> <span class="o">=</span> <span class="n">builder</span><span class="o">.</span><span class="n">defaultDialect</span><span class="p">(</span><span class="n">default_dialect</span><span class="p">)</span>
+            <span class="n">options</span> <span class="o">=</span> <span class="n">builder</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_jpc</span><span class="o">.</span><span class="n">importSnomed</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">storage_path</span><span class="p">,</span> <span class="n">options</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="PathlingContext.import_fhir_terminology"><a class="viewcode-back" href="../../pathling.html#pathling.context.PathlingContext.import_fhir_terminology">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">import_fhir_terminology</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">source</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">storage_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Imports FHIR R4 CodeSystem, ValueSet, and ConceptMap resources into a local terminology</span>
+<span class="sd">        store.</span>
+
+<span class="sd">        :param source: the path to a JSON file, a directory of JSON files, or a FHIR NPM package</span>
+<span class="sd">               (``.tgz``), on any filesystem accessible through the Hadoop FileSystem API</span>
+<span class="sd">        :param storage_path: the terminology store location, created if absent</span>
+<span class="sd">        :raises: the mapped JVM ``TerminologyImportException`` if the source contains no importable</span>
+<span class="sd">                 resources or an invalid resource; the store is left unmodified</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_jpc</span><span class="o">.</span><span class="n">importFhirTerminology</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">storage_path</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="PathlingContext.encode"><a class="viewcode-back" href="../../pathling.html#pathling.context.PathlingContext.encode">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">encode</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>

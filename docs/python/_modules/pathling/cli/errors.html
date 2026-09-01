@@ -96,6 +96,8 @@
 <span class="sd">Author: John Grimes.</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
 <span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">traceback</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span>
@@ -144,32 +146,39 @@
 
 
 <div class="viewcode-block" id="unwrap_java_exception"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.errors.unwrap_java_exception">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">unwrap_java_exception</span><span class="p">(</span><span class="n">exc</span><span class="p">:</span> <span class="ne">BaseException</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Extracts the most useful single-line message from an exception.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Extracts the most useful message from an exception.</span>
 
 <span class="sd">    Py4J wraps Java exceptions, whose ``str`` representation includes the full</span>
-<span class="sd">    stack trace. This returns the leading message line, stripping the Java</span>
-<span class="sd">    exception class prefix where present.</span>
+<span class="sd">    stack trace. Where the wrapped exception can report its own message, that</span>
+<span class="sd">    message is returned in full, because a library failure may deliberately span</span>
+<span class="sd">    several lines - the import failure that lists a release&#39;s language reference</span>
+<span class="sd">    sets, for example, is only useful if the operator can see the list. Otherwise</span>
+<span class="sd">    only the leading line is taken, since the rest would be stack frames. The</span>
+<span class="sd">    Java exception class prefix is stripped where present.</span>
 
 <span class="sd">    :param exc: the exception to unwrap.</span>
-<span class="sd">    :return: a concise message describing the underlying problem.</span>
+<span class="sd">    :return: a message describing the underlying problem.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">java_exception</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">exc</span><span class="p">,</span> <span class="s2">&quot;java_exception&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="n">own_message</span> <span class="o">=</span> <span class="kc">False</span>
     <span class="k">if</span> <span class="n">java_exception</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">get_message</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">java_exception</span><span class="p">,</span> <span class="s2">&quot;getMessage&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
         <span class="n">message</span> <span class="o">=</span> <span class="n">get_message</span><span class="p">()</span> <span class="k">if</span> <span class="nb">callable</span><span class="p">(</span><span class="n">get_message</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
+        <span class="n">own_message</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">message</span><span class="p">:</span>
             <span class="n">message</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">java_exception</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">message</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span>
 
-    <span class="c1"># Take only the first non-empty line; Java traces span many lines.</span>
-    <span class="n">first_line</span> <span class="o">=</span> <span class="nb">next</span><span class="p">((</span><span class="n">line</span> <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">message</span><span class="o">.</span><span class="n">splitlines</span><span class="p">()</span> <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()),</span> <span class="n">message</span><span class="p">)</span>
+    <span class="n">lines</span> <span class="o">=</span> <span class="p">[</span><span class="n">line</span> <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">message</span><span class="o">.</span><span class="n">splitlines</span><span class="p">()</span> <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()]</span> <span class="ow">or</span> <span class="p">[</span><span class="n">message</span><span class="p">]</span>
     <span class="c1"># Strip a leading fully-qualified Java exception class name, e.g.</span>
     <span class="c1"># &quot;java.lang.IllegalArgumentException: actual message&quot;.</span>
-    <span class="n">match</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;^(?:[\w.$]+Exception|[\w.$]+Error):\s*(.*)$&quot;</span><span class="p">,</span> <span class="n">first_line</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">match</span> <span class="ow">and</span> <span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">):</span>
-        <span class="k">return</span> <span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
-    <span class="k">return</span> <span class="n">first_line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span></div>
+    <span class="n">match</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;^(?:[\w.$]+Exception|[\w.$]+Error):\s*(.*)$&quot;</span><span class="p">,</span> <span class="n">lines</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">lines</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="k">if</span> <span class="n">match</span> <span class="ow">and</span> <span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="k">else</span> <span class="n">lines</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">own_message</span><span class="p">:</span>
+        <span class="c1"># The remaining lines are stack frames rather than part of the message.</span>
+        <span class="k">return</span> <span class="n">lines</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+    <span class="k">return</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">lines</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">(),</span> <span class="o">*</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">rstrip</span><span class="p">()</span> <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">lines</span><span class="p">[</span><span class="mi">1</span><span class="p">:])])</span></div>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_categorise</span><span class="p">(</span><span class="n">root_message</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
@@ -220,16 +229,44 @@
     <span class="n">exc</span><span class="p">:</span> <span class="ne">BaseException</span><span class="p">,</span>
     <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="n">server_url</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">store_path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Builds a friendly, actionable message for an unexpected exception.</span>
 
 <span class="sd">    :param exc: the exception to describe.</span>
 <span class="sd">    :param verbose: when True, append the full traceback.</span>
 <span class="sd">    :param server_url: a server URL to name in connection errors, or None.</span>
+<span class="sd">    :param store_path: a local terminology store path to name in local-mode</span>
+<span class="sd">           failures, or None. When set, the message names the store and suggests</span>
+<span class="sd">           the import commands, and never names a terminology server (FR-011).</span>
 <span class="sd">    :return: the message to present to the user.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">root</span> <span class="o">=</span> <span class="n">unwrap_java_exception</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span>
     <span class="n">category</span> <span class="o">=</span> <span class="n">_categorise</span><span class="p">(</span><span class="n">root</span><span class="p">)</span>
+
+    <span class="c1"># In local mode, name the store and point at the import commands rather than</span>
+    <span class="c1"># naming a server that was never contacted (FR-011). This takes precedence</span>
+    <span class="c1"># over the connection-error branch below.</span>
+    <span class="k">if</span> <span class="n">store_path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># The library failure usually already names the store path, so only</span>
+        <span class="c1"># restate it when the root cause has not, to avoid a repeated path.</span>
+        <span class="k">if</span> <span class="n">store_path</span> <span class="ow">in</span> <span class="n">root</span><span class="p">:</span>
+            <span class="n">message</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">root</span><span class="si">}</span><span class="s2"> Check that it has been populated with &#39;pathling &quot;</span>
+                <span class="s2">&quot;import-snomed&#39; or &#39;pathling import-fhir-terminology&#39;.&quot;</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">message</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">root</span><span class="si">}</span><span class="s2"> The local terminology store at </span><span class="si">{</span><span class="n">store_path</span><span class="si">}</span><span class="s2"> could not &quot;</span>
+                <span class="s2">&quot;be used. Check that it exists and has been populated with &quot;</span>
+                <span class="s2">&quot;&#39;pathling import-snomed&#39; or &#39;pathling import-fhir-terminology&#39;.&quot;</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+            <span class="n">trace</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+                <span class="n">traceback</span><span class="o">.</span><span class="n">format_exception</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">exc</span><span class="p">),</span> <span class="n">exc</span><span class="p">,</span> <span class="n">exc</span><span class="o">.</span><span class="n">__traceback__</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="n">message</span> <span class="o">=</span> <span class="n">message</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n\n</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="n">trace</span>
+        <span class="k">return</span> <span class="n">message</span>
 
     <span class="k">if</span> <span class="n">category</span> <span class="o">==</span> <span class="s2">&quot;connection&quot;</span> <span class="ow">and</span> <span class="n">server_url</span><span class="p">:</span>
         <span class="n">message</span> <span class="o">=</span> <span class="p">(</span>
@@ -244,7 +281,12 @@
     <span class="k">else</span><span class="p">:</span>
         <span class="n">message</span> <span class="o">=</span> <span class="n">root</span> <span class="ow">or</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">verbose</span><span class="p">:</span>
-            <span class="n">message</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">message</span><span class="si">}</span><span class="s2"> Re-run with --verbose for the full stack trace.&quot;</span>
+            <span class="c1"># A multi-line message ends in content the reader needs to see intact, so the hint goes</span>
+            <span class="c1"># on a line of its own rather than being run onto the last of them.</span>
+            <span class="n">separator</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="k">if</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="ow">in</span> <span class="n">message</span> <span class="k">else</span> <span class="s2">&quot; &quot;</span>
+            <span class="n">message</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">message</span><span class="si">}{</span><span class="n">separator</span><span class="si">}</span><span class="s2">Re-run with --verbose for the full stack trace.&quot;</span>
+            <span class="p">)</span>
 
     <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
         <span class="c1"># Use the three-argument form for Python 3.9 compatibility.</span>

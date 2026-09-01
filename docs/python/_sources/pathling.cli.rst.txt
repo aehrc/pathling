@@ -60,6 +60,14 @@ pathling.cli.fhirpath module
    :undoc-members:
    :show-inheritance:
 
+pathling.cli.import\_terminology module
+---------------------------------------
+
+.. automodule:: pathling.cli.import_terminology
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 pathling.cli.io module
 ----------------------
 

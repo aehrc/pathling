@@ -99,15 +99,22 @@
 <span class="sd">Author: John Grimes.</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Union</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">py4j.java_gateway</span><span class="w"> </span><span class="kn">import</span> <span class="n">is_instance_of</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathling.cli.errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">CliError</span>
 
+<span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">pyspark.sql</span><span class="w"> </span><span class="kn">import</span> <span class="n">SparkSession</span>
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_filesystem</span><span class="p">(</span><span class="n">spark</span><span class="p">,</span> <span class="n">reference_path</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">]):</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_filesystem</span><span class="p">(</span>
+    <span class="n">spark</span><span class="p">:</span> <span class="n">SparkSession</span><span class="p">,</span> <span class="n">reference_path</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">]</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">object</span><span class="p">,</span> <span class="nb">object</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Resolves the Hadoop ``FileSystem`` for a path, unwrapping checksums.</span>
 
 <span class="sd">    The filesystem is resolved from ``reference_path`` so that operations stay</span>
@@ -134,7 +141,7 @@
     <span class="k">return</span> <span class="n">fs</span><span class="p">,</span> <span class="n">path_class</span>
 
 
-<div class="viewcode-block" id="remove_path"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.departition.remove_path">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">remove_path</span><span class="p">(</span><span class="n">spark</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<div class="viewcode-block" id="remove_path"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.departition.remove_path">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">remove_path</span><span class="p">(</span><span class="n">spark</span><span class="p">:</span> <span class="n">SparkSession</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Removes a file or directory over its Hadoop ``FileSystem``, if it exists.</span>
 
 <span class="sd">    Used to clear an existing target before an overwrite and to clean up the</span>
@@ -152,7 +159,7 @@
 
 
 <div class="viewcode-block" id="departition"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.departition.departition">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">departition</span><span class="p">(</span>
-    <span class="n">spark</span><span class="p">,</span>
+    <span class="n">spark</span><span class="p">:</span> <span class="n">SparkSession</span><span class="p">,</span>
     <span class="n">source_dir</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">],</span>
     <span class="n">target_path</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">],</span>
     <span class="n">part_extension</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>

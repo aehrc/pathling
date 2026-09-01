@@ -101,6 +101,8 @@
 <span class="sd">Author: John Grimes.</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
 <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
@@ -124,12 +126,23 @@
 
 <span class="c1"># Valid top-level keys in the config file.</span>
 <span class="n">VALID_CONFIG_KEYS</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">(</span>
-    <span class="p">{</span><span class="s2">&quot;tx-server&quot;</span><span class="p">,</span> <span class="s2">&quot;fhir-version&quot;</span><span class="p">,</span> <span class="s2">&quot;terminology-auth&quot;</span><span class="p">,</span> <span class="s2">&quot;bulk-auth&quot;</span><span class="p">,</span> <span class="s2">&quot;spark&quot;</span><span class="p">}</span>
+    <span class="p">{</span><span class="s2">&quot;tx-server&quot;</span><span class="p">,</span> <span class="s2">&quot;fhir-version&quot;</span><span class="p">,</span> <span class="s2">&quot;terminology-auth&quot;</span><span class="p">,</span> <span class="s2">&quot;bulk-auth&quot;</span><span class="p">,</span> <span class="s2">&quot;spark&quot;</span><span class="p">,</span> <span class="s2">&quot;tx-store&quot;</span><span class="p">}</span>
 <span class="p">)</span>
 
 <span class="c1"># Valid keys within the [terminology-auth] and [bulk-auth] tables.</span>
 <span class="n">VALID_AUTH_KEYS</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">(</span>
     <span class="p">{</span><span class="s2">&quot;client-id&quot;</span><span class="p">,</span> <span class="s2">&quot;client-secret&quot;</span><span class="p">,</span> <span class="s2">&quot;private-key-jwk&quot;</span><span class="p">,</span> <span class="s2">&quot;token-endpoint&quot;</span><span class="p">,</span> <span class="s2">&quot;scope&quot;</span><span class="p">}</span>
+<span class="p">)</span>
+
+<span class="c1"># Valid keys within the [tx-store] table.</span>
+<span class="n">VALID_TX_STORE_KEYS</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">(</span>
+    <span class="p">{</span>
+        <span class="s2">&quot;path&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;default-snomed-edition&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;expansion-cache-size&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;dialect-aliases&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;default-dialect&quot;</span><span class="p">,</span>
+    <span class="p">}</span>
 <span class="p">)</span>
 
 
@@ -187,6 +200,37 @@
         <span class="k">return</span> <span class="s2">&quot;no credential&quot;</span></div>
 
 
+<div class="viewcode-block" id="TxStore"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.config.TxStore">[docs]</a><span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">TxStore</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Resolved local terminology store settings for a single invocation.</span>
+
+<span class="sd">    A ``TxStore`` exists only when a store path was supplied (via the</span>
+<span class="sd">    ``--tx-store`` flag or the ``tx-store.path`` config key); its presence on</span>
+<span class="sd">    :class:`CliConfig` is what selects local terminology mode. Tuning fields</span>
+<span class="sd">    left unset fall through to the library defaults.</span>
+
+<span class="sd">    :param path: the store location; a filesystem path or a URI. Not checked for</span>
+<span class="sd">           existence.</span>
+<span class="sd">    :param default_snomed_edition: the SNOMED CT module identifier used to</span>
+<span class="sd">           disambiguate an ambiguous edition, or None to use the library default.</span>
+<span class="sd">    :param expansion_cache_size: the per-executor value set expansion cache size,</span>
+<span class="sd">           or None to use the library default.</span>
+<span class="sd">    :param dialect_aliases: additional dialect tags recognised when a display or</span>
+<span class="sd">           designation is requested in a particular language, mapping a language</span>
+<span class="sd">           tag to a SNOMED CT language reference set identifier, or None.</span>
+<span class="sd">    :param default_dialect: the dialect whose preferred synonyms become the</span>
+<span class="sd">           stored display when ``import-snomed`` runs without a</span>
+<span class="sd">           ``--default-dialect`` flag: a tag such as ``en-AU``, or a language</span>
+<span class="sd">           reference set identifier. None when unset.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">path</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">default_snomed_edition</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">expansion_cache_size</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">dialect_aliases</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">default_dialect</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span></div>
+
+
 <div class="viewcode-block" id="CliConfig"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.config.CliConfig">[docs]</a><span class="nd">@dataclass</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">CliConfig</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Resolved global configuration for a single invocation.</span>
@@ -202,6 +246,12 @@
 <span class="sd">           config file, or None when absent. Carried so ``export`` resolves bulk</span>
 <span class="sd">           credentials from the already-loaded config rather than re-reading a</span>
 <span class="sd">           file.</span>
+<span class="sd">    :param tx_store: the resolved local terminology store settings, or None. When</span>
+<span class="sd">           present, terminology evaluation uses the local store rather than a</span>
+<span class="sd">           remote server.</span>
+<span class="sd">    :param tx_server_explicit: whether the terminology server URL was set</span>
+<span class="sd">           explicitly (via flag or config key) rather than falling back to the</span>
+<span class="sd">           built-in default. Drives the store-wins conflict warning.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">tx_server</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DEFAULT_TX_SERVER</span>
@@ -210,7 +260,9 @@
     <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
     <span class="n">config_path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="n">spark_conf</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span>
-    <span class="n">bulk_auth_table</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span></div>
+    <span class="n">bulk_auth_table</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">tx_store</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">TxStore</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">tx_server_explicit</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span></div>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_load_toml</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
@@ -327,6 +379,23 @@
                         <span class="sa">f</span><span class="s2">&quot;Ignoring unknown config key &#39;</span><span class="si">{</span><span class="n">table_name</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">&#39; in &quot;</span>
                         <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">. Valid keys are: </span><span class="si">{</span><span class="n">valid_auth</span><span class="si">}</span><span class="s2">.&quot;</span>
                     <span class="p">)</span>
+    <span class="n">tx_store_table</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;tx-store&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tx_store_table</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="n">valid_tx_store</span> <span class="o">=</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">VALID_TX_STORE_KEYS</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">tx_store_table</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">VALID_TX_STORE_KEYS</span><span class="p">:</span>
+                <span class="n">warn</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Ignoring unknown config key &#39;tx-store.</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">&#39; in </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">. &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;Valid keys are: </span><span class="si">{</span><span class="n">valid_tx_store</span><span class="si">}</span><span class="s2">.&quot;</span>
+                <span class="p">)</span>
+    <span class="k">elif</span> <span class="n">tx_store_table</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># A scalar tx-store value cannot configure local mode; warn rather than</span>
+        <span class="c1"># silently ignoring it (a common mistake is &#39;tx-store = \&quot;/path\&quot;&#39;</span>
+        <span class="c1"># instead of a [tx-store] table with a &#39;path&#39; key).</span>
+        <span class="n">warn</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Ignoring &#39;tx-store&#39; in </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">; it must be a [tx-store] table with &quot;</span>
+            <span class="s2">&quot;a &#39;path&#39; key, not a single value.&quot;</span>
+        <span class="p">)</span>
     <span class="k">return</span> <span class="n">data</span></div>
 
 
@@ -456,6 +525,117 @@
     <span class="p">)</span></div>
 
 
+<span class="k">def</span><span class="w"> </span><span class="nf">_resolve_tx_store</span><span class="p">(</span>
+    <span class="n">file_data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
+    <span class="n">tx_store_flag</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+    <span class="n">on_warning</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="kc">None</span><span class="p">]],</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">TxStore</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Resolves and validates the local terminology store settings.</span>
+
+<span class="sd">    The store path follows the precedence ``--tx-store`` flag &gt;</span>
+<span class="sd">    ``tx-store.path`` config key; the tuning keys come from the config table</span>
+<span class="sd">    only. All type and range checks happen here, before any Spark session, so a</span>
+<span class="sd">    configuration mistake fails fast (FR-008).</span>
+
+<span class="sd">    :param file_data: the parsed config file contents.</span>
+<span class="sd">    :param tx_store_flag: the ``--tx-store`` flag value, or None.</span>
+<span class="sd">    :param on_warning: the warning callback for the path-less-table notice.</span>
+<span class="sd">    :return: a populated :class:`TxStore`, or None when no store is configured.</span>
+<span class="sd">    :raises CliError: with EXIT_USAGE for an empty flag or an invalid table value.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">pathling.cli.errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">EXIT_USAGE</span><span class="p">,</span> <span class="n">CliError</span>
+
+    <span class="c1"># An empty flag value is a usage error rather than a silent no-op (FR-008).</span>
+    <span class="k">if</span> <span class="n">tx_store_flag</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">tx_store_flag</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">CliError</span><span class="p">(</span>
+            <span class="s2">&quot;The --tx-store value must not be empty. Provide a store path or URI.&quot;</span><span class="p">,</span>
+            <span class="n">exit_code</span><span class="o">=</span><span class="n">EXIT_USAGE</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="n">table</span> <span class="o">=</span> <span class="n">file_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;tx-store&quot;</span><span class="p">)</span>
+    <span class="n">table</span> <span class="o">=</span> <span class="n">table</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="k">else</span> <span class="p">{}</span>
+
+    <span class="n">config_path</span> <span class="o">=</span> <span class="n">table</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;path&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">config_path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">config_path</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">CliError</span><span class="p">(</span>
+            <span class="s2">&quot;The tx-store.path config value must be a string.&quot;</span><span class="p">,</span>
+            <span class="n">exit_code</span><span class="o">=</span><span class="n">EXIT_USAGE</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="n">resolved_path</span> <span class="o">=</span> <span class="n">tx_store_flag</span> <span class="ow">or</span> <span class="n">config_path</span>
+
+    <span class="n">edition</span> <span class="o">=</span> <span class="n">table</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;default-snomed-edition&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">edition</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">edition</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">CliError</span><span class="p">(</span>
+            <span class="s2">&quot;The tx-store.default-snomed-edition config value must be a string.&quot;</span><span class="p">,</span>
+            <span class="n">exit_code</span><span class="o">=</span><span class="n">EXIT_USAGE</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="n">cache_size</span> <span class="o">=</span> <span class="n">table</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;expansion-cache-size&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">cache_size</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># A bool is an int in Python; reject it so the value is an honest count.</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">cache_size</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">cache_size</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">CliError</span><span class="p">(</span>
+                <span class="s2">&quot;The tx-store.expansion-cache-size config value must be an integer.&quot;</span><span class="p">,</span>
+                <span class="n">exit_code</span><span class="o">=</span><span class="n">EXIT_USAGE</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="n">cache_size</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">CliError</span><span class="p">(</span>
+                <span class="s2">&quot;The tx-store.expansion-cache-size config value must be a &quot;</span>
+                <span class="s2">&quot;positive integer.&quot;</span><span class="p">,</span>
+                <span class="n">exit_code</span><span class="o">=</span><span class="n">EXIT_USAGE</span><span class="p">,</span>
+            <span class="p">)</span>
+
+    <span class="n">dialect</span> <span class="o">=</span> <span class="n">table</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;default-dialect&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">dialect</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dialect</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">CliError</span><span class="p">(</span>
+            <span class="s2">&quot;The tx-store.default-dialect config value must be a string.&quot;</span><span class="p">,</span>
+            <span class="n">exit_code</span><span class="o">=</span><span class="n">EXIT_USAGE</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="n">aliases</span> <span class="o">=</span> <span class="n">table</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;dialect-aliases&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">aliases</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">_is_string_table</span><span class="p">(</span><span class="n">aliases</span><span class="p">):</span>
+        <span class="c1"># A malformed alias table is a mistake worth reporting, but it cannot make</span>
+        <span class="c1"># a lookup wrong, so it is warned about and dropped rather than fatal.</span>
+        <span class="n">notify</span> <span class="o">=</span> <span class="n">on_warning</span> <span class="ow">or</span> <span class="p">(</span><span class="k">lambda</span> <span class="n">message</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="n">message</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">))</span>
+        <span class="n">notify</span><span class="p">(</span>
+            <span class="s2">&quot;Ignoring &#39;tx-store.dialect-aliases&#39;; it must be a table mapping a &quot;</span>
+            <span class="s2">&quot;language tag to a SNOMED CT language reference set identifier, for &quot;</span>
+            <span class="s1">&#39;example [tx-store.dialect-aliases] with en-NZ = &quot;271000210107&quot;.&#39;</span>
+        <span class="p">)</span>
+        <span class="n">aliases</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="c1"># Without a path, tuning keys cannot activate local mode; warn that the</span>
+    <span class="c1"># table is inert rather than silently ignoring it (FR-009).</span>
+    <span class="k">if</span> <span class="n">resolved_path</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">table</span><span class="p">:</span>
+            <span class="n">notify</span> <span class="o">=</span> <span class="n">on_warning</span> <span class="ow">or</span> <span class="p">(</span><span class="k">lambda</span> <span class="n">message</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="n">message</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">))</span>
+            <span class="n">notify</span><span class="p">(</span>
+                <span class="s2">&quot;The [tx-store] config table has no effect without a &#39;path&#39; key &quot;</span>
+                <span class="s2">&quot;(or the --tx-store flag); remote terminology mode will be used.&quot;</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="k">return</span> <span class="n">TxStore</span><span class="p">(</span>
+        <span class="n">path</span><span class="o">=</span><span class="n">resolved_path</span><span class="p">,</span>
+        <span class="n">default_snomed_edition</span><span class="o">=</span><span class="n">edition</span><span class="p">,</span>
+        <span class="n">expansion_cache_size</span><span class="o">=</span><span class="n">cache_size</span><span class="p">,</span>
+        <span class="n">dialect_aliases</span><span class="o">=</span><span class="n">aliases</span><span class="p">,</span>
+        <span class="n">default_dialect</span><span class="o">=</span><span class="n">dialect</span><span class="p">,</span>
+    <span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_is_string_table</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="nb">object</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Reports whether a config value is a table whose keys and values are strings.</span>
+
+<span class="sd">    :param value: the value read from the config file.</span>
+<span class="sd">    :return: True when the value is a dict of string to string.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">all</span><span class="p">(</span>
+        <span class="nb">isinstance</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">entry</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">value</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+    <span class="p">)</span>
+
+
 <div class="viewcode-block" id="resolve_config_source"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.config.resolve_config_source">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">resolve_config_source</span><span class="p">(</span>
     <span class="n">config_path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Path</span><span class="p">],</span>
     <span class="n">cwd</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
@@ -496,6 +676,7 @@
     <span class="n">config_path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">cwd</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">env</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">tx_store</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">on_warning</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="kc">None</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">on_notice</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="kc">None</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">CliConfig</span><span class="p">:</span>
@@ -520,6 +701,8 @@
 <span class="sd">    :param cwd: the directory searched for a project-local ``pathling.toml``;</span>
 <span class="sd">           defaults to the current working directory.</span>
 <span class="sd">    :param env: the environment mapping for secret resolution.</span>
+<span class="sd">    :param tx_store: the ``--tx-store`` flag value selecting a local terminology</span>
+<span class="sd">           store, or None.</span>
 <span class="sd">    :param on_warning: an optional warning callback passed to the file loader and</span>
 <span class="sd">           used to surface the managed Spark-package version-override warning;</span>
 <span class="sd">           defaults to writing to stderr so warnings appear even in quiet mode.</span>
@@ -556,6 +739,10 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="n">on_notice</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Using project config </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
 
+    <span class="c1"># Record whether the server URL was set explicitly (flag or config key) as</span>
+    <span class="c1"># opposed to falling back to the built-in default; the store-wins conflict</span>
+    <span class="c1"># warning fires only for an explicit server (FR-004).</span>
+    <span class="n">tx_server_explicit</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">tx_server</span> <span class="ow">or</span> <span class="n">file_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;tx-server&quot;</span><span class="p">))</span>
     <span class="n">resolved_tx_server</span> <span class="o">=</span> <span class="n">tx_server</span> <span class="ow">or</span> <span class="n">file_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;tx-server&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">DEFAULT_TX_SERVER</span>
     <span class="n">resolved_fhir_version</span> <span class="o">=</span> <span class="p">(</span>
         <span class="n">fhir_version</span> <span class="ow">or</span> <span class="n">file_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;fhir-version&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">DEFAULT_FHIR_VERSION</span>
@@ -579,10 +766,15 @@
         <span class="n">env</span><span class="p">,</span>
     <span class="p">)</span>
 
+    <span class="c1"># Resolve the local terminology store; its presence selects local mode.</span>
+    <span class="n">resolved_tx_store</span> <span class="o">=</span> <span class="n">_resolve_tx_store</span><span class="p">(</span><span class="n">file_data</span><span class="p">,</span> <span class="n">tx_store</span><span class="p">,</span> <span class="n">on_warning</span><span class="p">)</span>
+
     <span class="c1"># Some terminology auth input was supplied but it is insufficient to</span>
     <span class="c1"># authenticate (a client ID and a token endpoint are both required); tell the</span>
-    <span class="c1"># user rather than silently disabling it (FR-005).</span>
-    <span class="k">if</span> <span class="n">tx_auth</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">tx_auth</span><span class="o">.</span><span class="n">enabled</span><span class="p">:</span>
+    <span class="c1"># user rather than silently disabling it (FR-005). In local mode the store</span>
+    <span class="c1"># wins and auth is ignored entirely, so this incomplete-auth warning is</span>
+    <span class="c1"># suppressed in favour of the store-wins warning below.</span>
+    <span class="k">if</span> <span class="n">resolved_tx_store</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">tx_auth</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">tx_auth</span><span class="o">.</span><span class="n">enabled</span><span class="p">:</span>
         <span class="n">notify</span> <span class="o">=</span> <span class="n">on_warning</span> <span class="ow">or</span> <span class="p">(</span><span class="k">lambda</span> <span class="n">message</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="n">message</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">))</span>
         <span class="n">notify</span><span class="p">(</span>
             <span class="s2">&quot;Terminology authentication is incomplete and will be disabled: a &quot;</span>
@@ -602,6 +794,24 @@
     <span class="n">resolved_spark</span> <span class="o">=</span> <span class="n">resolve_spark_conf</span><span class="p">(</span><span class="n">spark_table</span><span class="p">,</span> <span class="n">spark_conf_flags</span><span class="p">,</span> <span class="n">env</span><span class="p">)</span>
     <span class="n">spark_conf</span> <span class="o">=</span> <span class="n">merge_spark_conf</span><span class="p">(</span><span class="n">resolved_spark</span><span class="p">,</span> <span class="n">on_warning</span><span class="o">=</span><span class="n">spark_warn</span><span class="p">)</span>
 
+    <span class="c1"># When a store is selected it wins over any server or authentication</span>
+    <span class="c1"># settings; warn about the ones that were explicitly configured so the</span>
+    <span class="c1"># override is never a silent surprise (FR-004, FR-005). An explicitly set</span>
+    <span class="c1"># authentication is also disabled so it can never reach the session.</span>
+    <span class="k">if</span> <span class="n">resolved_tx_store</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">conflict_warn</span> <span class="o">=</span> <span class="n">on_warning</span> <span class="ow">or</span> <span class="p">(</span><span class="k">lambda</span> <span class="n">message</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="n">message</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">tx_server_explicit</span><span class="p">:</span>
+            <span class="n">conflict_warn</span><span class="p">(</span>
+                <span class="s2">&quot;A local terminology store is configured, so the terminology &quot;</span>
+                <span class="s2">&quot;server setting is ignored.&quot;</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="n">tx_auth</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">conflict_warn</span><span class="p">(</span>
+                <span class="s2">&quot;A local terminology store is configured, so the terminology &quot;</span>
+                <span class="s2">&quot;authentication settings are ignored.&quot;</span>
+            <span class="p">)</span>
+            <span class="n">tx_auth</span> <span class="o">=</span> <span class="kc">None</span>
+
     <span class="k">return</span> <span class="n">CliConfig</span><span class="p">(</span>
         <span class="n">tx_server</span><span class="o">=</span><span class="n">resolved_tx_server</span><span class="p">,</span>
         <span class="n">tx_auth</span><span class="o">=</span><span class="n">tx_auth</span><span class="p">,</span>
@@ -610,6 +820,8 @@
         <span class="n">config_path</span><span class="o">=</span><span class="n">path</span> <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">spark_conf</span><span class="o">=</span><span class="n">spark_conf</span><span class="p">,</span>
         <span class="n">bulk_auth_table</span><span class="o">=</span><span class="n">file_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;bulk-auth&quot;</span><span class="p">),</span>
+        <span class="n">tx_store</span><span class="o">=</span><span class="n">resolved_tx_store</span><span class="p">,</span>
+        <span class="n">tx_server_explicit</span><span class="o">=</span><span class="n">tx_server_explicit</span><span class="p">,</span>
     <span class="p">)</span></div>
 </pre></div>
 

@@ -89,19 +89,26 @@
 <span class="sd">&quot;&quot;&quot;The ``pathling run`` command.</span>
 
 <span class="sd">Executes user-supplied Python code - from a script file, standard input, or an</span>
-<span class="sd">inline ``-c`` option - with ``spark`` (the Spark session) and ``pathling`` (the</span>
-<span class="sd">configured Pathling context) bound in the code&#39;s global scope, reproducing</span>
-<span class="sd">Python interpreter script semantics (``sys.argv``, ``__main__``, ``__file__``,</span>
-<span class="sd">``sys.path``, traceback fidelity, and ``SystemExit`` propagation).</span>
+<span class="sd">inline ``-c`` option - with ``spark`` (the Spark session) and ``pc`` (the</span>
+<span class="sd">configured Pathling context) bound in the code&#39;s global scope, along with the</span>
+<span class="sd">Pathling package&#39;s public API (its terminology and coding functions, argument</span>
+<span class="sd">helper types, and API types) so scripts need no explicit ``from pathling import</span>
+<span class="sd">...``. The ``pathling`` name is bound to the package module itself, so a bare</span>
+<span class="sd">``import pathling`` cannot clobber the context. The terminology display function</span>
+<span class="sd">is bound as both ``display`` and ``tx_display``. Python interpreter script</span>
+<span class="sd">semantics (``sys.argv``, ``__main__``, ``__file__``, ``sys.path``, traceback</span>
+<span class="sd">fidelity, and ``SystemExit`` propagation) are reproduced.</span>
 
 <span class="sd">Author: John Grimes.</span>
 <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">traceback</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Tuple</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">click</span>
 
@@ -143,7 +150,7 @@
 <span class="sd">    with trailing arguments), which parse to the same option values.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-<div class="viewcode-block" id="RunCommand.parse_args"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.run.RunCommand.parse_args">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">parse_args</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ctx</span><span class="p">,</span> <span class="n">args</span><span class="p">):</span>
+<div class="viewcode-block" id="RunCommand.parse_args"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.run.RunCommand.parse_args">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">parse_args</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ctx</span><span class="p">:</span> <span class="n">click</span><span class="o">.</span><span class="n">Context</span><span class="p">,</span> <span class="n">args</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Stores the raw arguments on the context, then parses as normal.</span>
 
 <span class="sd">        :param ctx: the Click context.</span>
@@ -154,7 +161,7 @@
         <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">parse_args</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">args</span><span class="p">)</span></div></div>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_positional_precedes_code_flag</span><span class="p">(</span><span class="n">raw_args</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_positional_precedes_code_flag</span><span class="p">(</span><span class="n">raw_args</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Determines whether a positional argument appears before ``-c``.</span>
 
 <span class="sd">    A positional (a script path or ``-``) before the inline-code flag means</span>
@@ -174,7 +181,12 @@
     <span class="k">return</span> <span class="kc">False</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_resolve_source</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">script</span><span class="p">,</span> <span class="n">code</span><span class="p">,</span> <span class="n">args</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">CodeSource</span><span class="p">,</span> <span class="nb">list</span><span class="p">]:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_resolve_source</span><span class="p">(</span>
+    <span class="n">ctx</span><span class="p">:</span> <span class="n">click</span><span class="o">.</span><span class="n">Context</span><span class="p">,</span>
+    <span class="n">script</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+    <span class="n">code</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+    <span class="n">args</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">CodeSource</span><span class="p">,</span> <span class="nb">list</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Validates the code-source rules and reads the program text.</span>
 
 <span class="sd">    Exactly one source is required: a script path, ``-`` (stdin), or</span>
@@ -242,7 +254,7 @@
     <span class="p">)</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_execute</span><span class="p">(</span><span class="n">source</span><span class="p">:</span> <span class="n">CodeSource</span><span class="p">,</span> <span class="n">program_args</span><span class="p">,</span> <span class="n">namespace</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_execute</span><span class="p">(</span><span class="n">source</span><span class="p">:</span> <span class="n">CodeSource</span><span class="p">,</span> <span class="n">program_args</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">namespace</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Compiles and executes the program with interpreter semantics.</span>
 
 <span class="sd">    ``sys.argv`` and ``sys.path`` are set for the duration of execution and</span>
@@ -252,7 +264,8 @@
 
 <span class="sd">    :param source: the resolved code source.</span>
 <span class="sd">    :param program_args: the program&#39;s arguments (``sys.argv[1:]``).</span>
-<span class="sd">    :param namespace: the extra globals to bind (``spark`` and ``pathling``).</span>
+<span class="sd">    :param namespace: the extra globals to bind (``spark``, ``pc``, and the</span>
+<span class="sd">           pre-imported public API).</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="n">code_object</span> <span class="o">=</span> <span class="nb">compile</span><span class="p">(</span><span class="n">source</span><span class="o">.</span><span class="n">text</span><span class="p">,</span> <span class="n">source</span><span class="o">.</span><span class="n">filename</span><span class="p">,</span> <span class="s2">&quot;exec&quot;</span><span class="p">)</span>
@@ -300,13 +313,21 @@
 <span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s2">&quot;-c&quot;</span><span class="p">,</span> <span class="s2">&quot;--code&quot;</span><span class="p">,</span> <span class="s2">&quot;code&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Inline Python code to execute.&quot;</span><span class="p">)</span>
 <span class="nd">@click</span><span class="o">.</span><span class="n">argument</span><span class="p">(</span><span class="s2">&quot;args&quot;</span><span class="p">,</span> <span class="n">nargs</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="n">click</span><span class="o">.</span><span class="n">UNPROCESSED</span><span class="p">)</span>
 <span class="nd">@click</span><span class="o">.</span><span class="n">pass_context</span>
-<span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">script</span><span class="p">,</span> <span class="n">code</span><span class="p">,</span> <span class="n">args</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span>
+    <span class="n">ctx</span><span class="p">:</span> <span class="n">click</span><span class="o">.</span><span class="n">Context</span><span class="p">,</span>
+    <span class="n">script</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+    <span class="n">code</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+    <span class="n">args</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Run Python code with the Pathling environment ready.</span>
 
 <span class="sd">    Executes a script file (or &#39;-&#39; for standard input, or inline code via</span>
-<span class="sd">    -c) with two variables already in scope: spark (the Spark session) and</span>
-<span class="sd">    pathling (the configured Pathling context). Trailing arguments are</span>
-<span class="sd">    passed to the code as sys.argv, following Python interpreter</span>
+<span class="sd">    -c) with spark (the Spark session) and pc (the configured Pathling</span>
+<span class="sd">    context) already in scope. The Pathling public functions (to_coding,</span>
+<span class="sd">    to_snomed_coding, member_of, translate, subsumes, display, and so on) are</span>
+<span class="sd">    pre-imported too, so no &quot;from pathling import ...&quot; is needed; the</span>
+<span class="sd">    terminology display is available as both display and tx_display. Trailing</span>
+<span class="sd">    arguments are passed to the code as sys.argv, following Python interpreter</span>
 <span class="sd">    conventions.</span>
 
 <span class="sd">    \b</span>
@@ -317,7 +338,7 @@
 <span class="sd">    SQL. Save this as summary.py and run &quot;pathling run summary.py&quot;:</span>
 
 <span class="sd">    \b</span>
-<span class="sd">        patients = pathling.read.ndjson(&quot;data&quot;).view(</span>
+<span class="sd">        patients = pc.read.ndjson(&quot;data&quot;).view(</span>
 <span class="sd">            &quot;Patient&quot;,</span>
 <span class="sd">            select=[{&quot;column&quot;: [{&quot;path&quot;: &quot;gender&quot;, &quot;name&quot;: &quot;gender&quot;}]}],</span>
 <span class="sd">        )</span>
@@ -329,7 +350,15 @@
 
     <span class="n">obj</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">obj</span>
     <span class="n">pc</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">create_context</span><span class="p">(</span><span class="n">obj</span><span class="o">.</span><span class="n">config</span><span class="p">,</span> <span class="n">obj</span><span class="o">.</span><span class="n">console</span><span class="p">)</span>
-    <span class="n">namespace</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;spark&quot;</span><span class="p">:</span> <span class="n">pc</span><span class="o">.</span><span class="n">spark</span><span class="p">,</span> <span class="s2">&quot;pathling&quot;</span><span class="p">:</span> <span class="n">pc</span><span class="p">}</span>
+    <span class="c1"># Pre-import the whole public API surface so scripts need no explicit</span>
+    <span class="c1"># `from pathling import ...`. The terminology display is bound under its</span>
+    <span class="c1"># natural name `display` and also aliased as `tx_display`, so a snippet</span>
+    <span class="c1"># developed at the console (where `display` is IPython&#39;s built-in and the</span>
+    <span class="c1"># terminology display is `tx_display`) pastes into a script unchanged.</span>
+    <span class="n">namespace</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">public_namespace</span><span class="p">()</span>
+    <span class="n">namespace</span><span class="p">[</span><span class="s2">&quot;tx_display&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">namespace</span><span class="p">[</span><span class="s2">&quot;display&quot;</span><span class="p">]</span>
+    <span class="n">namespace</span><span class="p">[</span><span class="s2">&quot;spark&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pc</span><span class="o">.</span><span class="n">spark</span>
+    <span class="n">namespace</span><span class="p">[</span><span class="s2">&quot;pc&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pc</span>
 
     <span class="n">_execute</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">program_args</span><span class="p">,</span> <span class="n">namespace</span><span class="p">)</span>
 </pre></div>

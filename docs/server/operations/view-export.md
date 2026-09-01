@@ -12,16 +12,22 @@ POST [base]/$viewdefinition-export
 
 ## Parameters[​](#parameters "Direct link to Parameters")
 
-| Name                | Cardinality | Type     | Description                                                               |
-| ------------------- | ----------- | -------- | ------------------------------------------------------------------------- |
-| `view.name`         | 0..\*       | string   | Optional names for exported views. Used in output filenames.              |
-| `view.viewResource` | 1..\*       | Resource | ViewDefinition resources to execute.                                      |
-| `clientTrackingId`  | 0..1        | string   | Client-provided tracking identifier for correlation.                      |
-| `_format`           | 0..1        | string   | Output format: `ndjson` (default), `csv`, or `parquet`.                   |
-| `header`            | 0..1        | boolean  | Include header row in CSV output. Defaults to `true`.                     |
-| `patient`           | 0..\*       | id       | Filter to resources for the specified patient(s).                         |
-| `group`             | 0..\*       | id       | Filter to resources for patients in the specified Group(s).               |
-| `_since`            | 0..1        | instant  | Only include resources where `meta.lastUpdated` is at or after this time. |
+| Name                 | Cardinality | Type      | Description                                                                                                                  |
+| -------------------- | ----------- | --------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `view`               | 1..\*       | (parts)   | A repeating parameter; each repetition identifies one ViewDefinition to export.                                              |
+| `view.name`          | 0..1        | string    | Optional name for the exported view. Used in output filenames.                                                               |
+| `view.viewResource`  | 0..1        | Resource  | An inline ViewDefinition resource. Mutually exclusive with `view.viewReference`.                                             |
+| `view.viewReference` | 0..1        | Reference | A reference to a stored ViewDefinition. Mutually exclusive with `view.viewResource`.                                         |
+| `clientTrackingId`   | 0..1        | string    | Client-provided tracking identifier; echoed in the completion manifest.                                                      |
+| `_format`            | 0..1        | code      | Output format: `ndjson` (default), `csv`, or `parquet`, or the corresponding media type. An unsupported value returns `400`. |
+| `header`             | 0..1        | boolean   | Include header row in CSV output. Defaults to `true`.                                                                        |
+| `patient`            | 0..\*       | id        | Filter to resources for the specified patient(s).                                                                            |
+| `group`              | 0..\*       | id        | Filter to resources for patients in the specified Group(s).                                                                  |
+| `_since`             | 0..1        | instant   | Only include resources where `meta.lastUpdated` is at or after this time.                                                    |
+
+Each `view` part must supply exactly one of `view.viewResource` or `view.viewReference`; supplying both, or neither, returns `400 Bad Request`. A `view.viewReference` that does not resolve to a stored ViewDefinition returns `404 Not Found`. These rejections are returned synchronously at kick-off.
+
+The `source` parameter (an external data source) is not supported by this server; supplying it returns `400 Bad Request` with an OperationOutcome, synchronously at kick-off.
 
 ## Asynchronous processing[​](#asynchronous-processing "Direct link to Asynchronous processing")
 
@@ -75,9 +81,19 @@ Prefer: respond-async
 
 ### Kick-off response[​](#kick-off-response "Direct link to Kick-off response")
 
+The `202 Accepted` response carries a `Parameters` acknowledgement with the export status and identifier, and a `Content-Location` header pointing at the status URL:
+
 ```
 HTTP/1.1 202 Accepted
-Content-Location: [base]/$exportstatus/[job-id]
+Content-Location: [base]/$job?id=[job-id]
+
+{
+    "resourceType": "Parameters",
+    "parameter": [
+        {"name": "status", "valueCode": "accepted"},
+        {"name": "exportId", "valueString": "[job-id]"}
+    ]
+}
 ```
 
 ### Polling[​](#polling "Direct link to Polling")
@@ -89,32 +105,50 @@ Poll the URL from `Content-Location` until you receive a `200 OK` response with 
 
 ## Response manifest[​](#response-manifest "Direct link to Response manifest")
 
-When the export completes, the response contains a JSON manifest:
+When the export completes, the response is a FHIR `Parameters` resource following the SQL on FHIR shape:
 
 ```
 {
-    "transactionTime": "2025-01-15T10:30:00.000Z",
-    "request": "https://pathling.example.com/fhir/$viewdefinition-export",
-    "requiresAccessToken": true,
-    "output": [
+    "resourceType": "Parameters",
+    "parameter": [
+        { "name": "exportId", "valueString": "abc123" },
+        { "name": "status", "valueCode": "completed" },
+        { "name": "clientTrackingId", "valueString": "my-tracking-id" },
+        { "name": "_format", "valueCode": "ndjson" },
         {
-            "name": "patient_demographics",
-            "url": "https://pathling.example.com/fhir/$result?job=abc123&file=patient_demographics.ndjson"
+            "name": "exportStartTime",
+            "valueInstant": "2026-06-21T01:00:00.000Z"
+        },
+        { "name": "exportEndTime", "valueInstant": "2026-06-21T01:00:12.000Z" },
+        { "name": "exportDuration", "valueInteger": 12 },
+        {
+            "name": "output",
+            "part": [
+                { "name": "name", "valueString": "patient_demographics" },
+                {
+                    "name": "location",
+                    "valueUri": "https://pathling.example.com/fhir/$result?job=abc123&file=patient_demographics.ndjson"
+                }
+            ]
         }
-    ],
-    "error": []
+    ]
 }
 ```
 
 ### Manifest fields[​](#manifest-fields "Direct link to Manifest fields")
 
-| Field                 | Description                                                 |
-| --------------------- | ----------------------------------------------------------- |
-| `transactionTime`     | The time the export was initiated                           |
-| `request`             | The original kick-off request URL                           |
-| `requiresAccessToken` | Whether authentication is required to download result files |
-| `output`              | Array of exported files with view name and download URL     |
-| `error`               | Array of OperationOutcome files for any errors              |
+| Field              | Description                                                                              |
+| ------------------ | ---------------------------------------------------------------------------------------- |
+| `exportId`         | The server-assigned export job identifier.                                               |
+| `status`           | The export status; `completed` on the success path.                                      |
+| `clientTrackingId` | The tracking identifier supplied at kick-off. Present only when one was supplied.        |
+| `_format`          | The effective output format.                                                             |
+| `exportStartTime`  | The time the export was initiated (kick-off).                                            |
+| `exportEndTime`    | The time the export completed.                                                           |
+| `exportDuration`   | The whole number of seconds between the start and end times.                             |
+| `output`           | One per exported view, each with a `name` part and one or more `location` download URLs. |
+
+A view that produced several files (for example through Spark partitioning) is represented as a single `output` with one `name` and a repeating `location` part per file.
 
 ## Output formats[​](#output-formats "Direct link to Output formats")
 
@@ -123,6 +157,8 @@ When the export completes, the response contains a JSON manifest:
 | NDJSON  | `ndjson`        | `application/x-ndjson`           | Newline-delimited JSON. Default format.                        |
 | CSV     | `csv`           | `text/csv`                       | Comma-separated values. Use `header=false` to exclude headers. |
 | Parquet | `parquet`       | `application/vnd.apache.parquet` | Apache Parquet columnar format. Efficient for large datasets.  |
+
+Parquet cannot represent a column whose type is unresolved (Spark `NullType`, displayed as "VOID"), such as a column that resolves to an empty collection. If a view's result contains such a column and Parquet output is requested, the export job fails and the polled status carries an `OperationOutcome` that names every offending column and suggests two remediations: add an explicit cast in the view, or choose a different output format. The NDJSON and CSV formats are unaffected.
 
 ## Multiple views[​](#multiple-views "Direct link to Multiple views")
 
@@ -358,24 +394,36 @@ def poll_status(status_url, timeout=3600):
 
 
 def download_files(manifest, output_dir):
-    """Download all files from the export manifest."""
+    """Download all files from the export manifest Parameters resource."""
     os.makedirs(output_dir, exist_ok=True)
 
-    for item in manifest.get("output", []):
-        name = item["name"]
-        url = item["url"]
-        # Extract extension from URL or default to ndjson.
-        ext = url.split(".")[-1] if "." in url.split("=")[-1] else "ndjson"
-        filename = f"{name}.{ext}"
-        filepath = os.path.join(output_dir, filename)
+    # The manifest is a FHIR Parameters resource; each output parameter has a
+    # name part and one or more location parts (one per file).
+    for param in manifest.get("parameter", []):
+        if param.get("name") != "output":
+            continue
+        parts = param.get("part", [])
+        name = next(
+            (p.get("valueString") for p in parts if p.get("name") == "name"),
+            "output",
+        )
+        locations = [
+            p.get("valueUri") for p in parts if p.get("name") == "location"
+        ]
+        for index, url in enumerate(locations):
+            # Extract extension from the URL or default to ndjson.
+            ext = url.split(".")[-1] if "." in url.split("=")[-1] else "ndjson"
+            suffix = f"-{index}" if len(locations) > 1 else ""
+            filename = f"{name}{suffix}.{ext}"
+            filepath = os.path.join(output_dir, filename)
 
-        print(f"Downloading {name}...")
-        response = requests.get(url)
-        response.raise_for_status()
+            print(f"Downloading {name}...")
+            response = requests.get(url)
+            response.raise_for_status()
 
-        with open(filepath, "wb") as f:
-            f.write(response.content)
-        print(f"  Saved to {filepath}")
+            with open(filepath, "wb") as f:
+                f.write(response.content)
+            print(f"  Saved to {filepath}")
 
 
 def main():

@@ -59,12 +59,14 @@ For accessing data from referenced resources, use the `reverseResolve()` functio
 ## memberOf[​](#memberof "Direct link to memberOf")
 
 ```
-collection<Coding|CodeableConcept> -> memberOf(valueSetUrl: String) : collection<Boolean>
+collection<Coding|CodeableConcept|Quantity> -> memberOf(valueSetUrl: String) : collection<Boolean>
 ```
 
-The `memberOf` function can be invoked on a collection of [Coding](/docs/fhirpath/extension-functions.md#coding) or [CodeableConcept](https://hl7.org/fhir/R4/datatypes.html#CodeableConcept) values, returning a collection of Boolean values based on whether each concept is a member of the [ValueSet](https://hl7.org/fhir/R4/valueset.html) with the specified [url](https://hl7.org/fhir/R4/valueset-definitions.html#ValueSet.url).
+The `memberOf` function can be invoked on a collection of [Coding](/docs/fhirpath/extension-functions.md#coding), [CodeableConcept](https://hl7.org/fhir/R4/datatypes.html#CodeableConcept) or [Quantity](https://hl7.org/fhir/R4/datatypes.html#Quantity) values, returning a collection of Boolean values based on whether each concept is a member of the [ValueSet](https://hl7.org/fhir/R4/valueset.html) with the specified [url](https://hl7.org/fhir/R4/valueset-definitions.html#ValueSet.url).
 
 For a `CodeableConcept`, the function will return `true` if any of the codings are members of the value set.
+
+For a `Quantity`, the concept is the coded unit — see [Quantity as a concept](#quantity-as-a-concept).
 
 note
 
@@ -73,10 +75,10 @@ The `memberOf` function is a terminology function, which means that it requires 
 ## subsumes[​](#subsumes "Direct link to subsumes")
 
 ```
-collection<Coding|CodeableConcept> -> subsumes(code: Coding|CodeableConcept) : collection<Boolean>
+collection<Coding|CodeableConcept|Quantity> -> subsumes(code: Coding|CodeableConcept|Quantity) : collection<Boolean>
 ```
 
-This function takes a collection of [Coding](/docs/fhirpath/extension-functions.md#coding) or [CodeableConcept](https://hl7.org/fhir/R4/datatypes.html#CodeableConcept) elements as input, and another collection as the argument. The result is a collection with a Boolean value for each source concept, each value being true if the concept subsumes any of the concepts within the argument collection, and false otherwise.
+This function takes a collection of [Coding](/docs/fhirpath/extension-functions.md#coding), [CodeableConcept](https://hl7.org/fhir/R4/datatypes.html#CodeableConcept) or [Quantity](https://hl7.org/fhir/R4/datatypes.html#Quantity) elements as input, and another collection as the argument. The result is a collection with a Boolean value for each source concept, each value being true if the concept subsumes any of the concepts within the argument collection, and false otherwise.
 
 Example:
 
@@ -91,7 +93,7 @@ The `subsumes` function is a terminology function, which means that it requires 
 ## subsumedBy[​](#subsumedby "Direct link to subsumedBy")
 
 ```
-collection<Coding|CodeableConcept> -> subsumedBy(code: Coding|CodeableConcept) : collection<Boolean>
+collection<Coding|CodeableConcept|Quantity> -> subsumedBy(code: Coding|CodeableConcept|Quantity) : collection<Boolean>
 ```
 
 The `subsumedBy` function is the inverse of the [subsumes](#subsumes) function, examining whether each input concept is *subsumed by* any of the argument concepts.
@@ -105,3 +107,17 @@ Patient.reverseResolve(Condition.subject).code.subsumedBy(http://snomed.info/sct
 note
 
 The `subsumedBy` function is a terminology function, which means that it requires a configured [terminology service](https://hl7.org/fhir/R4/terminology-service.html). See [Terminology functions](/docs/libraries/terminology.md) for details.
+
+## Quantity as a concept[​](#quantity-as-a-concept "Direct link to Quantity as a concept")
+
+The terminology functions that operate upon concepts — `memberOf`, `subsumes`, `subsumedBy` and [translate](/docs/fhirpath/extension-functions.md#translate) — can also be invoked on a [Quantity](https://hl7.org/fhir/R4/datatypes.html#Quantity). The concept is the coded unit of the quantity, taken from its `system` and `code`, with the `unit` as the display. The value of the quantity plays no part.
+
+This allows units of measure to be checked against a value set, or mapped to another set of unit codes:
+
+```
+Observation.value.ofType(Quantity).translate('https://csiro.au/fhir/ConceptMap/units')
+```
+
+The original unit code is used, rather than the canonical form that Pathling derives for the purposes of comparison, as a ConceptMap or ValueSet is authored against the codes that appear within the data.
+
+A quantity that carries only a free-text `unit`, without a `system` and `code`, does not identify a concept. Such a quantity yields `false` from `memberOf`, `subsumes` and `subsumedBy`, and an empty result from `translate` — the same behaviour as a Coding without a system and code.

@@ -88,45 +88,70 @@
 
 <span class="sd">&quot;&quot;&quot;The ``pathling console`` command.</span>
 
-<span class="sd">Opens an interactive IPython session with ``spark`` (the Spark session) and</span>
-<span class="sd">``pathling`` (the configured Pathling context) bound in the user namespace,</span>
-<span class="sd">after a banner identifying the version and the variables in scope. IPython is</span>
-<span class="sd">imported inside the command body so that ``--help`` stays fast.</span>
+<span class="sd">Opens an interactive IPython session with ``spark`` (the Spark session), ``pc``</span>
+<span class="sd">(the configured Pathling context), and the Pathling package&#39;s public API</span>
+<span class="sd">pre-imported into the user namespace, after a banner identifying the version and</span>
+<span class="sd">the variables in scope. The ``pathling`` name is bound to the package module</span>
+<span class="sd">itself, so typing ``import pathling`` at the prompt cannot clobber the context.</span>
+<span class="sd">The terminology display function is bound as ``tx_display`` rather than</span>
+<span class="sd">``display`` so that IPython&#39;s built-in ``display`` remains reachable at the</span>
+<span class="sd">prompt. IPython is imported inside the command body so that ``--help`` stays</span>
+<span class="sd">fast.</span>
 
 <span class="sd">Author: John Grimes.</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
 <span class="kn">import</span><span class="w"> </span><span class="nn">platform</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">click</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathling._version</span><span class="w"> </span><span class="kn">import</span> <span class="n">__version__</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathling.cli</span><span class="w"> </span><span class="kn">import</span> <span class="n">session</span>
 
+<span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">pathling.cli.main</span><span class="w"> </span><span class="kn">import</span> <span class="n">CliContext</span>
+
 
 <div class="viewcode-block" id="build_banner"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.console.build_banner">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">build_banner</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Builds the banner shown before the console&#39;s first prompt.</span>
 
 <span class="sd">    The banner identifies the Pathling and Python versions, lists the</span>
-<span class="sd">    variables in scope, and explains how to exit.</span>
+<span class="sd">    variables in scope - naming the context ``pc``, the name a user copies into</span>
+<span class="sd">    their next command - notes that the Pathling public functions (e.g.</span>
+<span class="sd">    ``member_of``, ``translate``, ``to_coding``) are pre-imported, points to</span>
+<span class="sd">    the Python API reference for the full list, notes that the terminology</span>
+<span class="sd">    display is available as ``tx_display`` rather than ``display``, and</span>
+<span class="sd">    explains how to exit.</span>
 
 <span class="sd">    :return: the banner text.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="p">(</span>
         <span class="sa">f</span><span class="s2">&quot;Pathling console (version </span><span class="si">{</span><span class="n">__version__</span><span class="si">}</span><span class="s2">, &quot;</span>
         <span class="sa">f</span><span class="s2">&quot;Python </span><span class="si">{</span><span class="n">platform</span><span class="o">.</span><span class="n">python_version</span><span class="p">()</span><span class="si">}</span><span class="s2">)</span><span class="se">\n</span><span class="s2">&quot;</span>
-        <span class="s2">&quot;Variables in scope: spark (SparkSession), pathling (PathlingContext)</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="s2">&quot;Variables in scope: spark (SparkSession), pc (PathlingContext)</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="s2">&quot;Pathling public functions are pre-imported (member_of, translate, &quot;</span>
+        <span class="s2">&quot;to_coding, ...).</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="s2">&quot;See https://pathling.csiro.au/docs/python/pathling.html#module-pathling &quot;</span>
+        <span class="s2">&quot;for the full list.</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="s2">&quot;The terminology display function is available as tx_display &quot;</span>
+        <span class="s2">&quot;(display is IPython&#39;s built-in).</span><span class="se">\n</span><span class="s2">&quot;</span>
         <span class="s2">&quot;Type exit or press Ctrl-D to leave.</span><span class="se">\n</span><span class="s2">&quot;</span>
     <span class="p">)</span></div>
 
 
 <span class="nd">@click</span><span class="o">.</span><span class="n">command</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;console&quot;</span><span class="p">)</span>
 <span class="nd">@click</span><span class="o">.</span><span class="n">pass_obj</span>
-<span class="k">def</span><span class="w"> </span><span class="nf">console</span><span class="p">(</span><span class="n">obj</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">console</span><span class="p">(</span><span class="n">obj</span><span class="p">:</span> <span class="n">CliContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Open an interactive console with the Pathling environment ready.</span>
 
-<span class="sd">    Starts an IPython session with two variables in scope: spark (the Spark</span>
-<span class="sd">    session) and pathling (the configured Pathling context). Exit with</span>
+<span class="sd">    Starts an IPython session with spark (the Spark session) and pc</span>
+<span class="sd">    (the configured Pathling context) in scope. The Pathling public functions</span>
+<span class="sd">    (member_of, translate, to_coding, and so on) are pre-imported, so no</span>
+<span class="sd">    &quot;from pathling import ...&quot; is needed; the terminology display is available</span>
+<span class="sd">    as tx_display, leaving IPython&#39;s built-in display unchanged. Exit with</span>
 <span class="sd">    &#39;exit&#39; or Ctrl-D.</span>
 
 <span class="sd">    \b</span>
@@ -141,6 +166,14 @@
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">pc</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">create_context</span><span class="p">(</span><span class="n">obj</span><span class="o">.</span><span class="n">config</span><span class="p">,</span> <span class="n">obj</span><span class="o">.</span><span class="n">console</span><span class="p">)</span>
 
+    <span class="c1"># Pre-import the public API surface, but expose the terminology display as</span>
+    <span class="c1"># tx_display only: IPython installs its own `display` into the interpreter&#39;s</span>
+    <span class="c1"># built-ins, so binding Pathling&#39;s display here would silently shadow it.</span>
+    <span class="n">user_ns</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">public_namespace</span><span class="p">()</span>
+    <span class="n">user_ns</span><span class="p">[</span><span class="s2">&quot;tx_display&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">user_ns</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;display&quot;</span><span class="p">)</span>
+    <span class="n">user_ns</span><span class="p">[</span><span class="s2">&quot;spark&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pc</span><span class="o">.</span><span class="n">spark</span>
+    <span class="n">user_ns</span><span class="p">[</span><span class="s2">&quot;pc&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pc</span>
+
     <span class="kn">import</span><span class="w"> </span><span class="nn">IPython</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">traitlets.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">Config</span>
 
@@ -148,7 +181,7 @@
     <span class="n">config</span><span class="o">.</span><span class="n">TerminalInteractiveShell</span><span class="o">.</span><span class="n">banner1</span> <span class="o">=</span> <span class="n">build_banner</span><span class="p">()</span>
     <span class="n">IPython</span><span class="o">.</span><span class="n">start_ipython</span><span class="p">(</span>
         <span class="n">argv</span><span class="o">=</span><span class="p">[],</span>
-        <span class="n">user_ns</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;spark&quot;</span><span class="p">:</span> <span class="n">pc</span><span class="o">.</span><span class="n">spark</span><span class="p">,</span> <span class="s2">&quot;pathling&quot;</span><span class="p">:</span> <span class="n">pc</span><span class="p">},</span>
+        <span class="n">user_ns</span><span class="o">=</span><span class="n">user_ns</span><span class="p">,</span>
         <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">,</span>
     <span class="p">)</span>
 </pre></div>

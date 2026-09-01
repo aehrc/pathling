@@ -3,6 +3,8 @@ au.csiro.fhir.export.download
 au.csiro.fhir.export.ws
 au.csiro.pathling
 au.csiro.pathling.config
+au.csiro.pathling.ecl
+au.csiro.pathling.ecl.generated
 au.csiro.pathling.fhir
 au.csiro.pathling.fhirpath
 au.csiro.pathling.fhirpath.annotations
@@ -31,6 +33,7 @@ au.csiro.pathling.library.io
 au.csiro.pathling.library.io.sink
 au.csiro.pathling.library.io.source
 au.csiro.pathling.library.query
+au.csiro.pathling.library.terminology
 au.csiro.pathling.projection
 au.csiro.pathling.search
 au.csiro.pathling.search.filter
@@ -39,11 +42,16 @@ au.csiro.pathling.sql.misc
 au.csiro.pathling.sql.udf
 au.csiro.pathling.terminology
 au.csiro.pathling.terminology.caching
+au.csiro.pathling.terminology.local
+au.csiro.pathling.terminology.local.index
 au.csiro.pathling.terminology.lookup
 au.csiro.pathling.terminology.mock
+au.csiro.pathling.terminology.store
 au.csiro.pathling.terminology.subsumes
 au.csiro.pathling.terminology.translate
 au.csiro.pathling.terminology.validatecode
+au.csiro.pathling.vcl
+au.csiro.pathling.vcl.generated
 au.csiro.pathling.views
 au.csiro.pathling.views.ansi
 au.csiro.pathling.views.validation

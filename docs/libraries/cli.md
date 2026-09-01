@@ -23,14 +23,16 @@ pathling --help
 
 The following options are accepted before any command and may also be supplied through a configuration file.
 
-| Option                                                                      | Config key           | Default                                 |
-| --------------------------------------------------------------------------- | -------------------- | --------------------------------------- |
-| `--tx-server`                                                               | `tx-server`          | the library default terminology server  |
-| `--tx-client-id`, `--tx-client-secret`, `--tx-token-endpoint`, `--tx-scope` | `[terminology-auth]` | none                                    |
-| `--fhir-version`                                                            | `fhir-version`       | `R4`                                    |
-| `--spark-conf KEY=VALUE`                                                    | `[spark]`            | none                                    |
-| `--config PATH`                                                             | -                    | `$XDG_CONFIG_HOME/pathling/config.toml` |
-| `--verbose`                                                                 | -                    | off                                     |
+| Option                                                                      | Config key                   | Default                                 |
+| --------------------------------------------------------------------------- | ---------------------------- | --------------------------------------- |
+| `--tx-server`                                                               | `tx-server`                  | the library default terminology server  |
+| `--tx-store`                                                                | `tx-store.path`              | none (remote mode)                      |
+| -                                                                           | `[tx-store.dialect-aliases]` | none                                    |
+| `--tx-client-id`, `--tx-client-secret`, `--tx-token-endpoint`, `--tx-scope` | `[terminology-auth]`         | none                                    |
+| `--fhir-version`                                                            | `fhir-version`               | `R4`                                    |
+| `--spark-conf KEY=VALUE`                                                    | `[spark]`                    | none                                    |
+| `--config PATH`                                                             | -                            | `$XDG_CONFIG_HOME/pathling/config.toml` |
+| `--verbose`                                                                 | -                            | off                                     |
 
 Values are resolved with the precedence flag > config file > built-in default. The `--verbose` flag re-enables Spark and JVM logging and prints full stack traces on error.
 
@@ -44,17 +46,31 @@ Commands that read FHIR data take a positional `SOURCE` path. The format is auto
 
 Tabular results (from `view`, `fhirpath`, and the terminology commands) render as a human-readable table by default.
 
-| Option                           | Behaviour                                                                                                              |
-| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `--format`                       | `table` (default), `csv`, `ndjson`; with `-o` also `parquet`, `delta`.                                                 |
-| `-o PATH`                        | Write to a file instead of stdout; the format is inferred from the extension (`.csv`, `.ndjson`/`.jsonl`, `.parquet`). |
-| `--limit N`                      | Row cap for stdout table output (default 50).                                                                          |
-| `--overwrite`                    | Allow replacing an existing output path.                                                                               |
-| `--departition/--no-departition` | Write file output as a single file (default) or as a Spark directory of part files. No effect on Delta.                |
+| Option                           | Behaviour                                                                                                                                                    |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `--format`                       | `table` (default), `csv`, `ndjson`; with `-o` also `parquet`, `delta`.                                                                                       |
+| `-o PATH`                        | Write to a file instead of stdout; the format, and for `.tsv` the delimiter, is inferred from the extension (`.csv`/`.tsv`, `.ndjson`/`.jsonl`, `.parquet`). |
+| `--limit N`                      | Row cap for stdout table output (default 50).                                                                                                                |
+| `--overwrite`                    | Allow replacing an existing output path.                                                                                                                     |
+| `--departition/--no-departition` | Write file output as a single file (default) or as a Spark directory of part files. No effect on Delta.                                                      |
+| `--delimiter CHAR`               | Field separator for CSV input and output (default: a tab for a `.tsv` path, otherwise `,`). Accepts an escape such as `\t`.                                  |
+| `--header/--no-header`           | Include a header row in CSV output (default enabled).                                                                                                        |
 
 File output is produced by Spark's distributed writers, so results larger than driver memory can be written. By default the output is departitioned to a single file at the path given; pass `--no-departition` to keep Spark's native directory of part files. Delta output is always written as a table directory.
 
 For scripted use, prefer `--format csv` or `--format ndjson`, which stream the full result.
+
+The `--delimiter` and `--header/--no-header` options apply to CSV output for `view`, `fhirpath`, and the terminology commands, and are ignored for non-CSV formats. The delimiter is also used to read CSV input in the terminology commands.
+
+`--delimiter` has no fixed default. When it is omitted, the input side and the output side each take their default from their own path: a `.tsv` extension (in any letter case) means a tab, and anything else means a comma. CSV written to standard output, where there is no path, is comma-separated. A tab-separated dataset therefore round-trips with no delimiter flag at all:
+
+```
+pathling member-of codes.tsv --code-column code \
+  --system http://snomed.info/sct --value-set <uri> \
+  -o out.tsv
+```
+
+Because the two sides resolve independently, `codes.tsv -o out.csv` reads with a tab and writes with a comma. A delimiter given explicitly applies to both sides and overrides both extensions, so `--delimiter ','` on a `.tsv` path yields a comma. Whenever a tab is derived from an extension rather than typed, the CLI says so on standard error, naming the path.
 
 ## Commands[​](#commands "Direct link to Commands")
 
@@ -113,7 +129,9 @@ SMART backend services authentication is configured with `--client-id`, `--token
 
 ### run[​](#run "Direct link to run")
 
-Execute Python code with the Pathling environment ready. The code runs with two variables already in scope: `spark` (the Spark session) and `pathling` (the configured Pathling context), built with the same configuration resolution as every other command.
+Execute Python code with the Pathling environment ready. The code runs with two variables already in scope: `spark` (the Spark session) and `pc` (the configured Pathling context), built with the same configuration resolution as every other command.
+
+The Pathling public functions are also pre-imported, so no `from pathling import ...` line is needed. This covers the terminology and coding functions (`to_coding`, `to_snomed_coding`, `to_loinc_coding`, `member_of`, `translate`, `subsumes`, and so on), the argument helper types (`Coding`, `PropertyType`, `Equivalence`), and the API types (`PathlingContext`, `DataSource`, and the rest). The pre-imported names are exactly the [public functions and types listed in the Python API reference](https://pathling.csiro.au/docs/python/pathling.html#module-pathling). The terminology display function is bound under both its natural name `display` and the alias `tx_display`. The name `pathling` is bound to the package module itself, so a bare `import pathling` is a harmless no-op that leaves `pc` intact. Any pre-imported name is only a default: assigning or defining the same name in your own code takes precedence, and an explicit `from pathling import ...` continues to work unchanged.
 
 ```
 # Run a script file.
@@ -132,7 +150,7 @@ pathling run etl.py --input data.ndjson out/
 For example, a script that projects a tabular view of patients and then summarises it with Spark SQL:
 
 ```
-patients = pathling.read.ndjson("data").view(
+patients = pc.read.ndjson("data").view(
     "Patient",
     select=[{"column": [{"path": "gender", "name": "gender"}]}],
 )
@@ -148,13 +166,15 @@ The exit code is `0` on success and `1` for an uncaught exception or syntax erro
 
 ### console[​](#console "Direct link to console")
 
-Open an interactive [IPython](https://ipython.org/) console with the same `spark` and `pathling` variables in scope.
+Open an interactive [IPython](https://ipython.org/) console with the same `spark` and `pc` variables in scope, and the Pathling public functions pre-imported just as in [`run`](#run).
 
 ```
 pathling console
 ```
 
-After the startup progress indicator, a banner identifies the Pathling version and the variables in scope. Errors evaluated at the prompt show normal tracebacks without ending the session; leave with `exit` or Ctrl-D (exit code 0).
+After the startup progress indicator, a banner identifies the Pathling version, the variables in scope, and the pre-imported functions. Errors evaluated at the prompt show normal tracebacks without ending the session; leave with `exit` or Ctrl-D (exit code 0).
+
+The one difference from `run` is the terminology display function. IPython installs its own `display` at the prompt, so Pathling's terminology display is bound as `tx_display` only; `display` remains IPython's built-in. A snippet that uses `tx_display` therefore behaves the same in the console and in a script.
 
 ### Terminology commands[​](#terminology-commands "Direct link to Terminology commands")
 
@@ -169,7 +189,7 @@ pathling translate codes.csv --code-column code \
   --system http://snomed.info/sct --concept-map '<uri>'
 ```
 
-The input format is set with `--from csv|parquet|delta`. When omitted, it is auto-detected from the dataset path: files ending in `.csv` or `.parquet` are read as CSV or Parquet; a directory containing a `_delta_log` entry is read as Delta; and any other directory containing at least one `.parquet` file is read as Parquet. CSV inputs are read with a header row and all columns as strings. Passing `--from` bypasses detection, which is useful for Delta tables or CSV files with an unconventional extension. An input whose format cannot be determined - an unrecognised suffix, or a directory with neither a `_delta_log` entry nor `.parquet` files - is reported as a usage error before any Spark session starts. This also lets you read the CLI's own Parquet or Delta output directory straight back into another terminology command.
+The input format is set with `--from csv|parquet|delta`. When omitted, it is auto-detected from the dataset path: files ending in `.csv` or `.parquet` are read as CSV or Parquet; a directory containing a `_delta_log` entry is read as Delta; and any other directory containing at least one `.parquet` file is read as Parquet. CSV inputs are read with a header row by default and all columns as strings. Passing `--from` bypasses detection, which is useful for Delta tables or CSV files with an unconventional extension. An input whose format cannot be determined - an unrecognised suffix, or a directory with neither a `_delta_log` entry nor `.parquet` files - is reported as a usage error before any Spark session starts. This also lets you read the CLI's own Parquet or Delta output directory straight back into another terminology command.
 
 ```
 # Explicit Delta input.
@@ -183,6 +203,13 @@ pathling member-of warehouse/codes --code-column code \
 ```
 
 The default result column names (`member_of`, `translated_system` and `translated_code`, `subsumes`, `subsumed_by`, `display`, `property`, `designation`) can be overridden with `--result-column`.
+
+CSV input is read with the shared `--delimiter` (so a semicolon-separated dataset is read correctly); a `.tsv` file is read as CSV and, with no `--delimiter`, as tab-separated. Pass `--no-input-header` to read a headerless CSV; its columns are then addressable by the positional names Spark assigns (`_c0`, `_c1`, ...), which you reference via `--code-column`, `--system-column`, and the other column options.
+
+```
+pathling member-of headerless.csv --no-input-header --code-column _c0 \
+  --system http://snomed.info/sct --value-set '<uri>'
+```
 
 #### Subsumption against a fixed target coding[​](#subsumption-against-a-fixed-target-coding "Direct link to Subsumption against a fixed target coding")
 
@@ -201,6 +228,65 @@ pathling subsumes pairs.csv --code-column a \
 ```
 
 Invalid combinations - supplying both or neither of `--other-code` / `--other-code-column`, or both or neither of `--other-system` / `--other-system-column` - are reported as usage errors before any Spark session starts.
+
+### Terminology import commands[​](#terminology-import-commands "Direct link to Terminology import commands")
+
+The `import-snomed` and `import-fhir-terminology` commands import terminology content into a local terminology store for use with [local terminology mode](/docs/libraries/terminology.md#local-terminology-mode). Both take a `SOURCE` path and a `STORAGE_PATH` for the store, report progress, and print a completion summary.
+
+```
+pathling import-snomed /data/rf2.zip /data/tx-store
+pathling import-fhir-terminology /data/hl7.terminology.tgz /data/tx-store
+```
+
+`import-snomed` accepts `--edition-uri` to override the detected SNOMED edition/version, and `--dense-id-order pre-order` to assign internal concept identifiers by a depth-first traversal of the is-a hierarchy, which makes the hierarchy index materially smaller at query time in exchange for identifiers that shift more between releases - see [reducing the memory the hierarchy takes at query time](/docs/libraries/terminology.md#reducing-the-memory-the-hierarchy-takes-at-query-time).
+
+It also accepts `--default-dialect`, which names the dialect whose preferred synonyms become each concept's stored display: a tag such as `en-GB`, or a language reference set identifier. When the flag is omitted, the `tx-store.default-dialect` config key applies; when neither is set, the dialect is chosen from the release. A release holding several language reference sets that is not the International edition fails the import, listing the candidates, so that one can be named - see [dialects](/docs/libraries/terminology.md#dialects).
+
+```
+pathling import-snomed --default-dialect en-GB /data/rf2.zip /data/tx-store
+```
+
+`import-fhir-terminology` accepts a JSON file, a directory of JSON files, or a FHIR NPM package (`.tgz`), and imports CodeSystems of any size with bounded memory (for example, the multi-gigabyte OMOP vocabulary CodeSystem).
+
+An RF2 source given to `import-snomed` must be [self-contained](/docs/libraries/terminology.md#rf2-sources-must-be-self-contained): rows referencing concepts the source does not itself ship are dropped, which is the ordinary shape of a derived or extension package supplied without the release it depends on. The import reports, for each file, how many of its active rows resolved, which is how a shortfall is detected. The same section gives a [recipe for combining a package with its dependency](/docs/libraries/terminology.md#combining-a-derived-package-with-its-dependency).
+
+Large imports run for many minutes. With `--verbose`, the command streams a running count of parsed concepts and stage-transition messages so progress is visible; without it, the startup spinner covers the wait. If an import fails partway through writing a CodeSystem, it reports that the store may hold a partial version and advises re-running; because content is keyed by system version, re-running with a corrected source repairs the store.
+
+Peak memory does not grow with the number of concepts, but the largest vocabularies still need more driver heap than the 1 GB default to hold the working set of the Spark joins that build the store. The OMOP vocabulary (around 6.6 million concepts), for example, imports comfortably with a 4 GB heap. Set the heap with the `SPARK_DRIVER_MEMORY` environment variable; in local mode the driver JVM starts before `--spark-conf` can size its heap, so that flag has no effect on driver memory.
+
+```
+SPARK_DRIVER_MEMORY=4g pathling import-fhir-terminology \
+  /data/ohdsi.fhir.omop-0.1.0.tgz /data/tx-store
+```
+
+The `STORAGE_PATH` positional is optional: when it is omitted, the commands fall back to the configured `tx-store.path` (see below). An explicit positional wins over the configured path. Supplying neither is a usage error.
+
+### Local terminology mode[​](#local-terminology-mode "Direct link to Local terminology mode")
+
+Once a store has been populated, point any terminology-evaluating command at it with `--tx-store` (or the `tx-store.path` config key) to evaluate terminology against the local store instead of a remote server, entirely offline. This applies to every command that creates a session, including `view`, `fhirpath`, `convert`, `run`, and `console`.
+
+```
+pathling --tx-store /data/tx-store member-of codes.csv \
+  --code-column code --system 'http://snomed.info/sct' \
+  --value-set 'http://snomed.info/sct?fhir_vs=ecl/<404684003'
+```
+
+The `[tx-store]` config table records the store once, along with optional tuning values:
+
+```
+[tx-store]
+path = "/data/tx-store"                      # selects local mode
+default-snomed-edition = "32506021000036107" # optional
+expansion-cache-size = 200                   # optional, positive integer
+default-dialect = "en-AU"                    # optional, used by import-snomed
+
+[tx-store.dialect-aliases]                   # optional
+en-NZ = "271000210107"
+```
+
+The `[tx-store.dialect-aliases]` table registers additional dialect tags, mapping a language tag to the identifier of the SNOMED CT language reference set that serves it. An entry for a tag that is already recognised replaces the built-in mapping for it. A value that is not a table of strings is reported and ignored rather than being fatal, since an unrecognised tag simply expresses no preference. See [dialects](/docs/libraries/terminology.md#dialects).
+
+The presence of a store selects local mode. When a store is configured, the store wins over any explicitly set `--tx-server` or terminology authentication: each is ignored and a warning is printed. The built-in default server URL never triggers this warning. A runtime failure in local mode names the store path and suggests the import commands rather than a terminology server URL.
 
 ## Configuration file[​](#configuration-file "Direct link to Configuration file")
 
@@ -222,9 +308,18 @@ token-endpoint = "https://auth.example.org/token"
 [spark]
 "spark.sql.shuffle.partitions" = 16
 "spark.executor.memory" = "4g"
+
+[tx-store]
+path = "/data/tx-store"
+default-snomed-edition = "32506021000036107"
+expansion-cache-size = 200
+default-dialect = "en-AU"
+
+[tx-store.dialect-aliases]
+en-NZ = "271000210107"
 ```
 
-Command-line flags always take precedence over the config file. Unknown keys produce a warning that names the key and lists the valid keys.
+Command-line flags always take precedence over the config file. Unknown keys produce a warning that names the key and lists the valid keys. The `[tx-store]` table selects [local terminology mode](#local-terminology-mode); its tuning keys are config-file only, while the store path can also be set with `--tx-store`, and `default-dialect` with the `import-snomed` command's `--default-dialect` flag.
 
 ### Spark configuration[​](#spark-configuration "Direct link to Spark configuration")
 

@@ -80,6 +80,11 @@
 <span>  scope <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  token_expiry_tolerance <span class="op">=</span> <span class="fl">120</span>,</span>
 <span>  accept_language <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  terminology_mode <span class="op">=</span> <span class="st">"server"</span>,</span>
+<span>  terminology_storage_path <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  default_snomed_edition <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  expansion_cache_size <span class="op">=</span> <span class="fl">100</span>,</span>
+<span>  dialect_aliases <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  explain_queries <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  max_unbound_traversal_depth <span class="op">=</span> <span class="fl">10</span></span>
 <span><span class="op">)</span></span></code></pre></div>
@@ -197,7 +202,35 @@ expiry when deciding whether to send it with a terminology request</p></dd>
 
 <dt id="arg-accept-language">accept_language<a class="anchor" aria-label="anchor" href="#arg-accept-language"></a></dt>
 <dd><p>The default value of the Accept-Language HTTP header passed to the
-terminology server</p></dd>
+terminology server. In local mode this selects the preferred display and designation language.</p></dd>
+
+
+<dt id="arg-terminology-mode">terminology_mode<a class="anchor" aria-label="anchor" href="#arg-terminology-mode"></a></dt>
+<dd><p>The terminology evaluation backend, either "server" (the default) or
+"local" (evaluating against a local terminology store with no network access)</p></dd>
+
+
+<dt id="arg-terminology-storage-path">terminology_storage_path<a class="anchor" aria-label="anchor" href="#arg-terminology-storage-path"></a></dt>
+<dd><p>The location of the local terminology store, required when
+terminology_mode is "local"</p></dd>
+
+
+<dt id="arg-default-snomed-edition">default_snomed_edition<a class="anchor" aria-label="anchor" href="#arg-default-snomed-edition"></a></dt>
+<dd><p>The SNOMED CT module identifier used to disambiguate an unversioned
+SNOMED reference when the local store holds multiple editions</p></dd>
+
+
+<dt id="arg-expansion-cache-size">expansion_cache_size<a class="anchor" aria-label="anchor" href="#arg-expansion-cache-size"></a></dt>
+<dd><p>The maximum number of value set expansions cached per executor in
+local mode</p></dd>
+
+
+<dt id="arg-dialect-aliases">dialect_aliases<a class="anchor" aria-label="anchor" href="#arg-dialect-aliases"></a></dt>
+<dd><p>Additional dialect tags recognised in local mode when a display or
+designation is requested in a particular language, given as a named character vector or list
+mapping a language tag to the identifier of the SNOMED CT language reference set that serves it
+(for example c("en-NZ" = "271000210107")). An entry for a tag that is already recognised
+replaces the built-in mapping for it. At most ten aliases can be configured from R</p></dd>
 
 
 <dt id="arg-explain-queries">explain_queries<a class="anchor" aria-label="anchor" href="#arg-explain-queries"></a></dt>

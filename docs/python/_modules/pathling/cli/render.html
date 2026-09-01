@@ -98,6 +98,9 @@
 <span class="sd">Author: John Grimes.</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">codecs</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">csv</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">io</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
@@ -105,7 +108,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">contextlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">contextmanager</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Iterator</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Union</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">click</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">rich.console</span><span class="w"> </span><span class="kn">import</span> <span class="n">Console</span>
@@ -113,6 +116,9 @@
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathling.cli.departition</span><span class="w"> </span><span class="kn">import</span> <span class="n">departition</span><span class="p">,</span> <span class="n">remove_path</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathling.cli.errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">EXIT_USAGE</span><span class="p">,</span> <span class="n">CliError</span>
+
+<span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">pyspark.sql</span><span class="w"> </span><span class="kn">import</span> <span class="n">DataFrame</span>
 
 <span class="c1"># The default cap on rows collected for stdout table rendering.</span>
 <span class="n">DEFAULT_LIMIT</span> <span class="o">=</span> <span class="mi">50</span>
@@ -153,13 +159,121 @@
 <span class="p">)</span>
 
 
-<div class="viewcode-block" id="output_options"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.render.output_options">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">output_options</span><span class="p">(</span><span class="n">func</span><span class="p">):</span>
+<div class="viewcode-block" id="decode_delimiter"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.render.decode_delimiter">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">decode_delimiter</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Decodes and validates a CSV field separator supplied on the command line.</span>
+
+<span class="sd">    The raw value is escape-decoded so a tab can be supplied as ``\\t`` rather</span>
+<span class="sd">    than a literal tab, then validated to be exactly one character that is not a</span>
+<span class="sd">    CSV row terminator. Validation runs at option-parse time (before any Spark</span>
+<span class="sd">    session starts) by raising :class:`click.BadParameter`, which Click renders</span>
+<span class="sd">    as a usage error with a non-zero exit code.</span>
+
+<span class="sd">    :param value: the raw ``--delimiter`` value.</span>
+<span class="sd">    :return: the decoded single-character delimiter.</span>
+<span class="sd">    :raises click.BadParameter: when the value cannot be escape-decoded, is not</span>
+<span class="sd">            exactly one character (including empty), or decodes to a carriage</span>
+<span class="sd">            return or line feed.</span>
+<span class="sd">    :example:</span>
+<span class="sd">        &gt;&gt;&gt; decode_delimiter(&quot;\\t&quot;)</span>
+<span class="sd">        &#39;\\t&#39;</span>
+<span class="sd">        &gt;&gt;&gt; decode_delimiter(&quot;;&quot;)</span>
+<span class="sd">        &#39;;&#39;</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">decoded</span> <span class="o">=</span> <span class="n">codecs</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="s2">&quot;unicode_escape&quot;</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">UnicodeDecodeError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">click</span><span class="o">.</span><span class="n">BadParameter</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;could not decode </span><span class="si">{</span><span class="n">value</span><span class="si">!r}</span><span class="s2">. Provide a single character, &quot;</span>
+            <span class="s2">&quot;optionally as a backslash escape such as &#39;</span><span class="se">\\</span><span class="s2">t&#39;.&quot;</span>
+        <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">decoded</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">click</span><span class="o">.</span><span class="n">BadParameter</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;must be a single character, but </span><span class="si">{</span><span class="n">value</span><span class="si">!r}</span><span class="s2"> is &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;empty&#39;</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">decoded</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">decoded</span><span class="p">)</span><span class="si">}</span><span class="s1"> characters&#39;</span><span class="si">}</span><span class="s2">.&quot;</span>
+        <span class="p">)</span>
+    <span class="k">if</span> <span class="n">decoded</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;</span><span class="se">\r</span><span class="s2">&quot;</span><span class="p">,</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">click</span><span class="o">.</span><span class="n">BadParameter</span><span class="p">(</span>
+            <span class="s2">&quot;must not be a carriage return or line feed, which would collide &quot;</span>
+            <span class="s2">&quot;with CSV row terminators.&quot;</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">decoded</span></div>
+
+
+<div class="viewcode-block" id="default_delimiter_for_path"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.render.default_delimiter_for_path">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">default_delimiter_for_path</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Path</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Resolves the default field separator implied by a path&#39;s extension.</span>
+
+<span class="sd">    A ``.tsv`` path means tab-separated, matched case-insensitively as format</span>
+<span class="sd">    inference is; every other path, and the absence of a path (stdout), takes the</span>
+<span class="sd">    base comma default. This is consulted only when ``--delimiter`` was not</span>
+<span class="sd">    supplied, and independently for the input and the output side, so each side&#39;s</span>
+<span class="sd">    default comes from its own path.</span>
+
+<span class="sd">    :param path: the path for the side being resolved, or None when there is no</span>
+<span class="sd">           path (CSV to stdout).</span>
+<span class="sd">    :return: the default single-character field separator for that side.</span>
+<span class="sd">    :example:</span>
+<span class="sd">        &gt;&gt;&gt; default_delimiter_for_path(Path(&quot;codes.tsv&quot;))</span>
+<span class="sd">        &#39;\\t&#39;</span>
+<span class="sd">        &gt;&gt;&gt; default_delimiter_for_path(Path(&quot;codes.csv&quot;))</span>
+<span class="sd">        &#39;,&#39;</span>
+<span class="sd">        &gt;&gt;&gt; default_delimiter_for_path(None)</span>
+<span class="sd">        &#39;,&#39;</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">path</span><span class="o">.</span><span class="n">suffix</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;.tsv&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span>
+    <span class="k">return</span> <span class="s2">&quot;,&quot;</span></div>
+
+
+<div class="viewcode-block" id="tab_inference_notice"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.render.tab_inference_notice">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">tab_inference_notice</span><span class="p">(</span><span class="n">action</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Builds the notice announcing a tab delimiter derived from a path.</span>
+
+<span class="sd">    A default the user did not type, derived from their filename, is announced</span>
+<span class="sd">    rather than assumed. Both sides share this wording so they cannot drift; only</span>
+<span class="sd">    the leading verb differs.</span>
+
+<span class="sd">    :param action: the leading verb, ``Reading`` for the input side or</span>
+<span class="sd">           ``Writing`` for the output side.</span>
+<span class="sd">    :param path: the path the delimiter was inferred from, as the user gave it.</span>
+<span class="sd">    :return: the notice text, for printing on standard error.</span>
+<span class="sd">    :example:</span>
+<span class="sd">        &gt;&gt;&gt; tab_inference_notice(&quot;Reading&quot;, &quot;codes.tsv&quot;)</span>
+<span class="sd">        &#39;Reading codes.tsv as tab-separated CSV, inferred from the .tsv extension.&#39;</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">action</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2"> as tab-separated CSV, inferred from the .tsv extension.&quot;</span></div>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_delimiter_callback</span><span class="p">(</span>
+    <span class="n">ctx</span><span class="p">:</span> <span class="n">click</span><span class="o">.</span><span class="n">Context</span><span class="p">,</span> <span class="n">param</span><span class="p">:</span> <span class="n">click</span><span class="o">.</span><span class="n">Parameter</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Click callback that decodes and validates the ``--delimiter`` value.</span>
+
+<span class="sd">    An absent value is passed through untouched, meaning &quot;not supplied - infer</span>
+<span class="sd">    each side from its own path&quot; (see :func:`default_delimiter_for_path`).</span>
+
+<span class="sd">    :param ctx: the Click context (unused).</span>
+<span class="sd">    :param param: the Click parameter (unused).</span>
+<span class="sd">    :param value: the raw option value, or None when the option was omitted.</span>
+<span class="sd">    :return: the decoded single-character delimiter, or None when omitted.</span>
+<span class="sd">    :raises click.BadParameter: when a supplied value is invalid (see</span>
+<span class="sd">            :func:`decode_delimiter`).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">return</span> <span class="n">decode_delimiter</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="output_options"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.render.output_options">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">output_options</span><span class="p">(</span><span class="n">func</span><span class="p">:</span> <span class="n">Callable</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Applies the shared output options to a command callback.</span>
 
 <span class="sd">    These options form the common output surface of every command that emits a</span>
 <span class="sd">    result DataFrame - ``--format``, ``-o``/``--output``, ``--limit``,</span>
-<span class="sd">    ``--overwrite``, and ``--departition/--no-departition`` - and are resolved</span>
-<span class="sd">    together by :func:`resolve_output` and consumed by :func:`write_output`.</span>
+<span class="sd">    ``--overwrite``, ``--departition/--no-departition``, ``--delimiter``, and</span>
+<span class="sd">    ``--header/--no-header`` - and are resolved together by</span>
+<span class="sd">    :func:`resolve_output` and consumed by :func:`write_output`. The delimiter</span>
+<span class="sd">    and header apply to CSV output only and are no-ops for other formats.</span>
+<span class="sd">    ``--delimiter`` has no fixed default: when it is omitted each side resolves</span>
+<span class="sd">    its own separator from its own path (see</span>
+<span class="sd">    :func:`default_delimiter_for_path`), and a supplied value applies to both.</span>
 
 <span class="sd">    :param func: the command callback to decorate.</span>
 <span class="sd">    :return: the decorated callback.</span>
@@ -189,6 +303,20 @@
             <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Write file output as a single file (or a Spark directory of &quot;</span>
             <span class="s2">&quot;part files).&quot;</span><span class="p">,</span>
         <span class="p">),</span>
+        <span class="n">click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span>
+            <span class="s2">&quot;--delimiter&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;delimiter&quot;</span><span class="p">,</span>
+            <span class="n">callback</span><span class="o">=</span><span class="n">_delimiter_callback</span><span class="p">,</span>
+            <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Field separator for CSV input and output (default: a tab for &quot;</span>
+            <span class="s2">&quot;a .tsv path, otherwise &#39;,&#39;).&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="n">click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span>
+            <span class="s2">&quot;--header/--no-header&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;header&quot;</span><span class="p">,</span>
+            <span class="n">default</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">show_default</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Include a header row in CSV output (default: enabled).&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
     <span class="p">]</span>
     <span class="k">for</span> <span class="n">option</span> <span class="ow">in</span> <span class="nb">reversed</span><span class="p">(</span><span class="n">options</span><span class="p">):</span>
         <span class="n">func</span> <span class="o">=</span> <span class="n">option</span><span class="p">(</span><span class="n">func</span><span class="p">)</span>
@@ -198,6 +326,9 @@
 <span class="c1"># Maps file extensions to output formats for inference.</span>
 <span class="n">_EXTENSION_FORMATS</span> <span class="o">=</span> <span class="p">{</span>
     <span class="s2">&quot;.csv&quot;</span><span class="p">:</span> <span class="n">OutputFormat</span><span class="o">.</span><span class="n">CSV</span><span class="p">,</span>
+    <span class="c1"># A .tsv file is CSV output; the extension governs the delimiter rather than</span>
+    <span class="c1"># the format, defaulting it to a tab (see default_delimiter_for_path).</span>
+    <span class="s2">&quot;.tsv&quot;</span><span class="p">:</span> <span class="n">OutputFormat</span><span class="o">.</span><span class="n">CSV</span><span class="p">,</span>
     <span class="s2">&quot;.ndjson&quot;</span><span class="p">:</span> <span class="n">OutputFormat</span><span class="o">.</span><span class="n">NDJSON</span><span class="p">,</span>
     <span class="s2">&quot;.jsonl&quot;</span><span class="p">:</span> <span class="n">OutputFormat</span><span class="o">.</span><span class="n">NDJSON</span><span class="p">,</span>
     <span class="s2">&quot;.parquet&quot;</span><span class="p">:</span> <span class="n">OutputFormat</span><span class="o">.</span><span class="n">PARQUET</span><span class="p">,</span>
@@ -214,13 +345,24 @@
 <span class="sd">    :param overwrite: whether an existing output path may be replaced.</span>
 <span class="sd">    :param departition: whether file output is departitioned to a single file</span>
 <span class="sd">           (the default) rather than left as a Spark directory of part files.</span>
+<span class="sd">    :param delimiter: the resolved field separator for CSV output (stdout and</span>
+<span class="sd">           file), always a concrete character; applies to CSV only, a no-op for</span>
+<span class="sd">           other formats.</span>
+<span class="sd">    :param delimiter_inferred: whether the delimiter was resolved from the output</span>
+<span class="sd">           path rather than supplied as a flag. Only an inference is announced to</span>
+<span class="sd">           the user, since an explicit value needs no announcement.</span>
+<span class="sd">    :param header: whether CSV output includes a header row; applies to CSV</span>
+<span class="sd">           only, a no-op for other formats.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Path</span><span class="p">]</span>
     <span class="nb">format</span><span class="p">:</span> <span class="nb">str</span>
     <span class="n">limit</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">DEFAULT_LIMIT</span>
     <span class="n">overwrite</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
-    <span class="n">departition</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span></div>
+    <span class="n">departition</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">delimiter</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;,&quot;</span>
+    <span class="n">delimiter_inferred</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">header</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span></div>
 
 
 <div class="viewcode-block" id="infer_format_from_extension"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.render.infer_format_from_extension">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">infer_format_from_extension</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
@@ -238,6 +380,8 @@
     <span class="n">limit</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">DEFAULT_LIMIT</span><span class="p">,</span>
     <span class="n">overwrite</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="n">departition</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">delimiter</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">header</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">OutputSpec</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Resolves and validates output options.</span>
 
@@ -246,6 +390,11 @@
 <span class="sd">    :param limit: the stdout table row cap.</span>
 <span class="sd">    :param overwrite: whether replacing an existing output path is allowed.</span>
 <span class="sd">    :param departition: whether file output is departitioned to a single file.</span>
+<span class="sd">    :param delimiter: the CSV field separator, already decoded and validated by</span>
+<span class="sd">           the option callback, or None to derive the output-side default from</span>
+<span class="sd">           the output path; a no-op for non-CSV formats.</span>
+<span class="sd">    :param header: whether CSV output includes a header row; a no-op for non-CSV</span>
+<span class="sd">           formats.</span>
 <span class="sd">    :return: the resolved :class:`OutputSpec`.</span>
 <span class="sd">    :raises CliError: when the combination of options is invalid.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -285,12 +434,23 @@
             <span class="n">exit_code</span><span class="o">=</span><span class="n">EXIT_USAGE</span><span class="p">,</span>
         <span class="p">)</span>
 
+    <span class="c1"># An omitted delimiter takes its default from the output path, so a .tsv</span>
+    <span class="c1"># target is tab-separated without the user naming the separator. Recording</span>
+    <span class="c1"># that it was inferred lets the impure layer announce it.</span>
+    <span class="n">delimiter_inferred</span> <span class="o">=</span> <span class="n">delimiter</span> <span class="ow">is</span> <span class="kc">None</span>
+    <span class="n">resolved_delimiter</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">default_delimiter_for_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="k">if</span> <span class="n">delimiter_inferred</span> <span class="k">else</span> <span class="n">delimiter</span>
+    <span class="p">)</span>
+
     <span class="k">return</span> <span class="n">OutputSpec</span><span class="p">(</span>
         <span class="n">path</span><span class="o">=</span><span class="n">path</span><span class="p">,</span>
         <span class="nb">format</span><span class="o">=</span><span class="n">fmt</span><span class="p">,</span>
         <span class="n">limit</span><span class="o">=</span><span class="n">limit</span><span class="p">,</span>
         <span class="n">overwrite</span><span class="o">=</span><span class="n">overwrite</span><span class="p">,</span>
         <span class="n">departition</span><span class="o">=</span><span class="n">departition</span><span class="p">,</span>
+        <span class="n">delimiter</span><span class="o">=</span><span class="n">resolved_delimiter</span><span class="p">,</span>
+        <span class="n">delimiter_inferred</span><span class="o">=</span><span class="n">delimiter_inferred</span><span class="p">,</span>
+        <span class="n">header</span><span class="o">=</span><span class="n">header</span><span class="p">,</span>
     <span class="p">)</span></div>
 
 
@@ -336,16 +496,24 @@
     <span class="k">return</span> <span class="n">buffer</span><span class="o">.</span><span class="n">getvalue</span><span class="p">()</span></div>
 
 
-<div class="viewcode-block" id="render_csv"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.render.render_csv">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">render_csv</span><span class="p">(</span><span class="n">columns</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">rows</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Sequence</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Renders rows as CSV with a header line.</span>
+<div class="viewcode-block" id="render_csv"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.render.render_csv">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">render_csv</span><span class="p">(</span>
+    <span class="n">columns</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+    <span class="n">rows</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Sequence</span><span class="p">],</span>
+    <span class="n">delimiter</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;,&quot;</span><span class="p">,</span>
+    <span class="n">header</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Renders rows as CSV, optionally with a header line.</span>
 
 <span class="sd">    :param columns: the column names.</span>
 <span class="sd">    :param rows: the row values.</span>
+<span class="sd">    :param delimiter: the field separator (default comma).</span>
+<span class="sd">    :param header: whether to emit the header line (default True).</span>
 <span class="sd">    :return: the CSV text.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">buffer</span> <span class="o">=</span> <span class="n">io</span><span class="o">.</span><span class="n">StringIO</span><span class="p">()</span>
-    <span class="n">writer</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">writer</span><span class="p">(</span><span class="n">buffer</span><span class="p">,</span> <span class="n">lineterminator</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
-    <span class="n">writer</span><span class="o">.</span><span class="n">writerow</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">columns</span><span class="p">))</span>
+    <span class="n">writer</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">writer</span><span class="p">(</span><span class="n">buffer</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="n">delimiter</span><span class="p">,</span> <span class="n">lineterminator</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">header</span><span class="p">:</span>
+        <span class="n">writer</span><span class="o">.</span><span class="n">writerow</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">columns</span><span class="p">))</span>
     <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">rows</span><span class="p">:</span>
         <span class="n">writer</span><span class="o">.</span><span class="n">writerow</span><span class="p">([</span><span class="s2">&quot;&quot;</span> <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">value</span> <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">row</span><span class="p">])</span>
     <span class="k">return</span> <span class="n">buffer</span><span class="o">.</span><span class="n">getvalue</span><span class="p">()</span></div>
@@ -373,19 +541,28 @@
     <span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="render_rows"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.render.render_rows">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">render_rows</span><span class="p">(</span><span class="n">columns</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">rows</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Sequence</span><span class="p">],</span> <span class="n">fmt</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<div class="viewcode-block" id="render_rows"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.render.render_rows">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">render_rows</span><span class="p">(</span>
+    <span class="n">columns</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+    <span class="n">rows</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Sequence</span><span class="p">],</span>
+    <span class="n">fmt</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">delimiter</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;,&quot;</span><span class="p">,</span>
+    <span class="n">header</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Renders rows in the requested stdout format.</span>
 
 <span class="sd">    :param columns: the column names.</span>
 <span class="sd">    :param rows: the row values.</span>
 <span class="sd">    :param fmt: one of table, csv, or ndjson.</span>
+<span class="sd">    :param delimiter: the CSV field separator; ignored for non-CSV formats.</span>
+<span class="sd">    :param header: whether CSV output includes a header line; ignored for</span>
+<span class="sd">           non-CSV formats.</span>
 <span class="sd">    :return: the rendered text.</span>
 <span class="sd">    :raises CliError: when the format cannot render to stdout.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="n">fmt</span> <span class="o">==</span> <span class="n">OutputFormat</span><span class="o">.</span><span class="n">TABLE</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">render_table</span><span class="p">(</span><span class="n">columns</span><span class="p">,</span> <span class="n">rows</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">fmt</span> <span class="o">==</span> <span class="n">OutputFormat</span><span class="o">.</span><span class="n">CSV</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">render_csv</span><span class="p">(</span><span class="n">columns</span><span class="p">,</span> <span class="n">rows</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">render_csv</span><span class="p">(</span><span class="n">columns</span><span class="p">,</span> <span class="n">rows</span><span class="p">,</span> <span class="n">delimiter</span><span class="p">,</span> <span class="n">header</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">fmt</span> <span class="o">==</span> <span class="n">OutputFormat</span><span class="o">.</span><span class="n">NDJSON</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">render_ndjson</span><span class="p">(</span><span class="n">columns</span><span class="p">,</span> <span class="n">rows</span><span class="p">)</span>
     <span class="k">raise</span> <span class="n">CliError</span><span class="p">(</span>
@@ -407,7 +584,9 @@
 
 
 <div class="viewcode-block" id="progress_status"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.render.progress_status">[docs]</a><span class="nd">@contextmanager</span>
-<span class="k">def</span><span class="w"> </span><span class="nf">progress_status</span><span class="p">(</span><span class="n">console</span><span class="p">:</span> <span class="n">Console</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">progress_status</span><span class="p">(</span>
+    <span class="n">console</span><span class="p">:</span> <span class="n">Console</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="kc">None</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Shows a status spinner on stderr for a long-running stage.</span>
 
 <span class="sd">    :param console: the stderr console.</span>
@@ -423,17 +602,18 @@
         <span class="k">yield</span></div>
 
 
-<div class="viewcode-block" id="write_output"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.render.write_output">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">write_output</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">spec</span><span class="p">:</span> <span class="n">OutputSpec</span><span class="p">,</span> <span class="n">console</span><span class="p">:</span> <span class="n">Console</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<div class="viewcode-block" id="write_output"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.render.write_output">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">write_output</span><span class="p">(</span><span class="n">df</span><span class="p">:</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="n">spec</span><span class="p">:</span> <span class="n">OutputSpec</span><span class="p">,</span> <span class="n">console</span><span class="p">:</span> <span class="n">Console</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Writes a result DataFrame to stdout or a file per the output spec.</span>
 
 <span class="sd">    For stdout, the table format is capped at ``spec.limit`` rows; other</span>
 <span class="sd">    formats stream the full result. File output is produced by Spark&#39;s native</span>
 <span class="sd">    writers (see :func:`_write_file`) and confirmed with a single stderr line</span>
-<span class="sd">    naming the format and path.</span>
+<span class="sd">    naming the format and path. A tab delimiter derived from a ``.tsv`` target is</span>
+<span class="sd">    announced on stderr before the write begins, since the user did not name it.</span>
 
 <span class="sd">    :param df: the result Spark DataFrame.</span>
 <span class="sd">    :param spec: the resolved output specification.</span>
-<span class="sd">    :param console: the stderr console for the confirmation message.</span>
+<span class="sd">    :param console: the stderr console for the notice and confirmation messages.</span>
 <span class="sd">    :raises CliError: when the output path exists without ``--overwrite``.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">columns</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span>
@@ -443,18 +623,27 @@
             <span class="n">rows</span> <span class="o">=</span> <span class="p">[</span><span class="nb">list</span><span class="p">(</span><span class="n">row</span><span class="p">)</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">limit</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">limit</span><span class="p">)</span><span class="o">.</span><span class="n">collect</span><span class="p">()]</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">rows</span> <span class="o">=</span> <span class="p">[</span><span class="nb">list</span><span class="p">(</span><span class="n">row</span><span class="p">)</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">collect</span><span class="p">()]</span>
-        <span class="n">text</span> <span class="o">=</span> <span class="n">render_rows</span><span class="p">(</span><span class="n">columns</span><span class="p">,</span> <span class="n">rows</span><span class="p">,</span> <span class="n">spec</span><span class="o">.</span><span class="n">format</span><span class="p">)</span>
+        <span class="n">text</span> <span class="o">=</span> <span class="n">render_rows</span><span class="p">(</span><span class="n">columns</span><span class="p">,</span> <span class="n">rows</span><span class="p">,</span> <span class="n">spec</span><span class="o">.</span><span class="n">format</span><span class="p">,</span> <span class="n">spec</span><span class="o">.</span><span class="n">delimiter</span><span class="p">,</span> <span class="n">spec</span><span class="o">.</span><span class="n">header</span><span class="p">)</span>
         <span class="c1"># Strip any trailing newline so print&#39;s own newline does not introduce</span>
         <span class="c1"># a spurious blank line (which would parse as an empty CSV row).</span>
         <span class="nb">print</span><span class="p">(</span><span class="n">text</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">))</span>
         <span class="k">return</span>
 
     <span class="n">check_overwrite</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">path</span><span class="p">,</span> <span class="n">spec</span><span class="o">.</span><span class="n">overwrite</span><span class="p">)</span>
+    <span class="c1"># Announce an inferred tab before writing, and only where the delimiter is</span>
+    <span class="c1"># actually consulted: a non-CSV format ignores it entirely, and an explicit</span>
+    <span class="c1"># value was the user&#39;s own choice.</span>
+    <span class="k">if</span> <span class="p">(</span>
+        <span class="n">spec</span><span class="o">.</span><span class="n">format</span> <span class="o">==</span> <span class="n">OutputFormat</span><span class="o">.</span><span class="n">CSV</span>
+        <span class="ow">and</span> <span class="n">spec</span><span class="o">.</span><span class="n">delimiter_inferred</span>
+        <span class="ow">and</span> <span class="n">spec</span><span class="o">.</span><span class="n">delimiter</span> <span class="o">==</span> <span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span>
+    <span class="p">):</span>
+        <span class="n">console</span><span class="o">.</span><span class="n">print</span><span class="p">(</span><span class="n">tab_inference_notice</span><span class="p">(</span><span class="s2">&quot;Writing&quot;</span><span class="p">,</span> <span class="n">spec</span><span class="o">.</span><span class="n">path</span><span class="p">))</span>
     <span class="n">_write_file</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">spec</span><span class="p">)</span>
     <span class="n">console</span><span class="o">.</span><span class="n">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Wrote </span><span class="si">{</span><span class="n">spec</span><span class="o">.</span><span class="n">format</span><span class="si">}</span><span class="s2"> output to </span><span class="si">{</span><span class="n">spec</span><span class="o">.</span><span class="n">path</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span></div>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_write_file</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">spec</span><span class="p">:</span> <span class="n">OutputSpec</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_write_file</span><span class="p">(</span><span class="n">df</span><span class="p">:</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="n">spec</span><span class="p">:</span> <span class="n">OutputSpec</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Writes a result DataFrame to a file using Spark&#39;s native writers.</span>
 
 <span class="sd">    CSV, NDJSON, and Parquet are written by Spark rather than collected onto</span>
@@ -493,7 +682,7 @@
     <span class="k">if</span> <span class="ow">not</span> <span class="n">spec</span><span class="o">.</span><span class="n">departition</span><span class="p">:</span>
         <span class="c1"># Leave Spark&#39;s native directory of part files at the target, written</span>
         <span class="c1"># with full parallelism (no repartition to a single partition).</span>
-        <span class="n">_write_spark_directory</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">spec</span><span class="o">.</span><span class="n">format</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
+        <span class="n">_write_spark_directory</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">spec</span><span class="o">.</span><span class="n">format</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">spec</span><span class="o">.</span><span class="n">delimiter</span><span class="p">,</span> <span class="n">spec</span><span class="o">.</span><span class="n">header</span><span class="p">)</span>
         <span class="k">return</span>
 
     <span class="n">part_extension</span> <span class="o">=</span> <span class="n">_PART_EXTENSIONS</span><span class="p">[</span><span class="n">spec</span><span class="o">.</span><span class="n">format</span><span class="p">]</span>
@@ -501,24 +690,37 @@
     <span class="c1"># on the same filesystem so departitioning moves rather than copies.</span>
     <span class="n">temp_dir</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;.</span><span class="si">{</span><span class="n">path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">.departition-</span><span class="si">{</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">()</span><span class="o">.</span><span class="n">hex</span><span class="si">}</span><span class="s2">&quot;</span>
     <span class="k">try</span><span class="p">:</span>
-        <span class="n">_write_spark_directory</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">repartition</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">spec</span><span class="o">.</span><span class="n">format</span><span class="p">,</span> <span class="n">temp_dir</span><span class="p">)</span>
+        <span class="n">_write_spark_directory</span><span class="p">(</span>
+            <span class="n">df</span><span class="o">.</span><span class="n">repartition</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">spec</span><span class="o">.</span><span class="n">format</span><span class="p">,</span> <span class="n">temp_dir</span><span class="p">,</span> <span class="n">spec</span><span class="o">.</span><span class="n">delimiter</span><span class="p">,</span> <span class="n">spec</span><span class="o">.</span><span class="n">header</span>
+        <span class="p">)</span>
         <span class="n">departition</span><span class="p">(</span><span class="n">spark</span><span class="p">,</span> <span class="n">temp_dir</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">part_extension</span><span class="p">)</span>
     <span class="k">finally</span><span class="p">:</span>
         <span class="c1"># Always remove the temporary directory, including on a write failure.</span>
         <span class="n">remove_path</span><span class="p">(</span><span class="n">spark</span><span class="p">,</span> <span class="n">temp_dir</span><span class="p">)</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_write_spark_directory</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">fmt</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">target_dir</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_write_spark_directory</span><span class="p">(</span>
+    <span class="n">frame</span><span class="p">:</span> <span class="n">DataFrame</span><span class="p">,</span>
+    <span class="n">fmt</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">target_dir</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">],</span>
+    <span class="n">delimiter</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;,&quot;</span><span class="p">,</span>
+    <span class="n">header</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Writes a frame to a Spark directory of part files in the given format.</span>
 
 <span class="sd">    :param frame: the Spark DataFrame to write (already repartitioned as</span>
 <span class="sd">           required by the caller).</span>
 <span class="sd">    :param fmt: the file format - CSV, NDJSON, or Parquet.</span>
 <span class="sd">    :param target_dir: the directory Spark writes its part files into.</span>
+<span class="sd">    :param delimiter: the CSV field separator; ignored for non-CSV formats.</span>
+<span class="sd">    :param header: whether a CSV header row is written; ignored for non-CSV</span>
+<span class="sd">           formats.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">writer</span> <span class="o">=</span> <span class="n">frame</span><span class="o">.</span><span class="n">write</span><span class="o">.</span><span class="n">mode</span><span class="p">(</span><span class="s2">&quot;overwrite&quot;</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">fmt</span> <span class="o">==</span> <span class="n">OutputFormat</span><span class="o">.</span><span class="n">CSV</span><span class="p">:</span>
-        <span class="n">writer</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s2">&quot;header&quot;</span><span class="p">,</span> <span class="s2">&quot;true&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">csv</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">target_dir</span><span class="p">))</span>
+        <span class="n">writer</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s2">&quot;header&quot;</span><span class="p">,</span> <span class="s2">&quot;true&quot;</span> <span class="k">if</span> <span class="n">header</span> <span class="k">else</span> <span class="s2">&quot;false&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">option</span><span class="p">(</span>
+            <span class="s2">&quot;sep&quot;</span><span class="p">,</span> <span class="n">delimiter</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">csv</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">target_dir</span><span class="p">))</span>
     <span class="k">elif</span> <span class="n">fmt</span> <span class="o">==</span> <span class="n">OutputFormat</span><span class="o">.</span><span class="n">NDJSON</span><span class="p">:</span>
         <span class="c1"># Retain null-valued fields so every record carries the same keys,</span>
         <span class="c1"># matching the prior driver-side behaviour.</span>

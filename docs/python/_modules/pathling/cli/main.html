@@ -97,10 +97,12 @@
 <span class="sd">Author: John Grimes.</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
 <span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">click</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">rich.console</span><span class="w"> </span><span class="kn">import</span> <span class="n">Console</span>
@@ -110,6 +112,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathling.cli</span><span class="w"> </span><span class="kn">import</span> <span class="n">convert</span> <span class="k">as</span> <span class="n">convert_module</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathling.cli</span><span class="w"> </span><span class="kn">import</span> <span class="n">export</span> <span class="k">as</span> <span class="n">export_module</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathling.cli</span><span class="w"> </span><span class="kn">import</span> <span class="n">fhirpath</span> <span class="k">as</span> <span class="n">fhirpath_module</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathling.cli</span><span class="w"> </span><span class="kn">import</span> <span class="n">import_terminology</span> <span class="k">as</span> <span class="n">import_terminology_module</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathling.cli</span><span class="w"> </span><span class="kn">import</span> <span class="n">run</span> <span class="k">as</span> <span class="n">run_module</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathling.cli</span><span class="w"> </span><span class="kn">import</span> <span class="n">terminology</span> <span class="k">as</span> <span class="n">terminology_module</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathling.cli</span><span class="w"> </span><span class="kn">import</span> <span class="n">view</span> <span class="k">as</span> <span class="n">view_module</span>
@@ -161,15 +164,36 @@
 
 <span class="sd">    :param ctx: the Click context.</span>
 <span class="sd">    :return: the configured terminology server URL, or None when no context is</span>
-<span class="sd">             present.</span>
+<span class="sd">             present or a local store is configured.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="n">ctx</span><span class="o">.</span><span class="n">obj</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">tx_server</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">ctx</span><span class="o">.</span><span class="n">obj</span><span class="p">,</span> <span class="n">CliContext</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">ctx</span><span class="o">.</span><span class="n">obj</span><span class="p">,</span> <span class="n">CliContext</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="c1"># In local mode no server is contacted, so a server URL must never be named.</span>
+    <span class="k">if</span> <span class="n">ctx</span><span class="o">.</span><span class="n">obj</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">tx_store</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">return</span> <span class="n">ctx</span><span class="o">.</span><span class="n">obj</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">tx_server</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_store_path_from</span><span class="p">(</span><span class="n">ctx</span><span class="p">:</span> <span class="n">click</span><span class="o">.</span><span class="n">Context</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Returns the configured local terminology store path, or None.</span>
+
+<span class="sd">    Threaded into the friendly error message so a runtime failure in local mode</span>
+<span class="sd">    names the store it could not use (FR-011).</span>
+
+<span class="sd">    :param ctx: the Click context.</span>
+<span class="sd">    :return: the configured store path, or None when no context is present or no</span>
+<span class="sd">             local store is configured.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">ctx</span><span class="o">.</span><span class="n">obj</span><span class="p">,</span> <span class="n">CliContext</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="n">store</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">obj</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">tx_store</span>
+    <span class="k">return</span> <span class="n">store</span><span class="o">.</span><span class="n">path</span> <span class="k">if</span> <span class="n">store</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span>
 
 
 <div class="viewcode-block" id="PathlingCli"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.main.PathlingCli">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">PathlingCli</span><span class="p">(</span><span class="n">click</span><span class="o">.</span><span class="n">Group</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;The root group with centralised error handling and exit codes.&quot;&quot;&quot;</span>
 
-<div class="viewcode-block" id="PathlingCli.invoke"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.main.PathlingCli.invoke">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">invoke</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ctx</span><span class="p">:</span> <span class="n">click</span><span class="o">.</span><span class="n">Context</span><span class="p">):</span>
+<div class="viewcode-block" id="PathlingCli.invoke"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.main.PathlingCli.invoke">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">invoke</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ctx</span><span class="p">:</span> <span class="n">click</span><span class="o">.</span><span class="n">Context</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">object</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Invokes a command, mapping errors to friendly messages and codes.</span>
 
 <span class="sd">        :param ctx: the Click context.</span>
@@ -195,6 +219,7 @@
                 <span class="n">exc</span><span class="p">,</span>
                 <span class="n">verbose</span><span class="o">=</span><span class="n">_verbose_from</span><span class="p">(</span><span class="n">ctx</span><span class="p">),</span>
                 <span class="n">server_url</span><span class="o">=</span><span class="n">_server_url_from</span><span class="p">(</span><span class="n">ctx</span><span class="p">),</span>
+                <span class="n">store_path</span><span class="o">=</span><span class="n">_store_path_from</span><span class="p">(</span><span class="n">ctx</span><span class="p">),</span>
             <span class="p">)</span>
             <span class="n">_console_from</span><span class="p">(</span><span class="n">ctx</span><span class="p">)</span><span class="o">.</span><span class="n">print</span><span class="p">(</span><span class="n">message</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="s2">&quot;red&quot;</span><span class="p">)</span>
             <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="n">EXIT_RUNTIME</span><span class="p">)</span></div></div>
@@ -203,6 +228,12 @@
 <span class="nd">@click</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="bp">cls</span><span class="o">=</span><span class="n">PathlingCli</span><span class="p">,</span> <span class="n">context_settings</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;help_option_names&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;-h&quot;</span><span class="p">,</span> <span class="s2">&quot;--help&quot;</span><span class="p">]})</span>
 <span class="nd">@click</span><span class="o">.</span><span class="n">version_option</span><span class="p">(</span><span class="n">version</span><span class="o">=</span><span class="n">__version__</span><span class="p">,</span> <span class="n">prog_name</span><span class="o">=</span><span class="s2">&quot;pathling&quot;</span><span class="p">)</span>
 <span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s2">&quot;--tx-server&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Terminology server URL (config key: tx-server).&quot;</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span>
+    <span class="s2">&quot;--tx-store&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;tx_store&quot;</span><span class="p">,</span>
+    <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Local terminology store location (config key: tx-store.path). &quot;</span>
+    <span class="s2">&quot;Selects local mode; --tx-server and terminology auth are ignored when set.&quot;</span><span class="p">,</span>
+<span class="p">)</span>
 <span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s2">&quot;--tx-client-id&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Terminology auth client ID.&quot;</span><span class="p">)</span>
 <span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s2">&quot;--tx-client-secret&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Terminology auth client secret.&quot;</span><span class="p">)</span>
 <span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s2">&quot;--tx-token-endpoint&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Terminology auth token endpoint.&quot;</span><span class="p">)</span>
@@ -233,16 +264,17 @@
 <span class="nd">@click</span><span class="o">.</span><span class="n">pass_context</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">cli</span><span class="p">(</span>
     <span class="n">ctx</span><span class="p">:</span> <span class="n">click</span><span class="o">.</span><span class="n">Context</span><span class="p">,</span>
-    <span class="n">tx_server</span><span class="p">,</span>
-    <span class="n">tx_client_id</span><span class="p">,</span>
-    <span class="n">tx_client_secret</span><span class="p">,</span>
-    <span class="n">tx_token_endpoint</span><span class="p">,</span>
-    <span class="n">tx_scope</span><span class="p">,</span>
-    <span class="n">fhir_version</span><span class="p">,</span>
-    <span class="n">spark_conf</span><span class="p">,</span>
-    <span class="n">config_path</span><span class="p">,</span>
-    <span class="n">verbose</span><span class="p">,</span>
-<span class="p">):</span>
+    <span class="n">tx_server</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+    <span class="n">tx_store</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+    <span class="n">tx_client_id</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+    <span class="n">tx_client_secret</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+    <span class="n">tx_token_endpoint</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+    <span class="n">tx_scope</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+    <span class="n">fhir_version</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+    <span class="n">spark_conf</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span>
+    <span class="n">config_path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Path</span><span class="p">],</span>
+    <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Pathling: a command line interface for FHIR analytics.</span>
 
 <span class="sd">    Run a SQL on FHIR view, evaluate FHIRPath, convert FHIR data between</span>
@@ -255,6 +287,7 @@
     <span class="n">console</span> <span class="o">=</span> <span class="n">stderr_console</span><span class="p">()</span>
     <span class="n">config</span> <span class="o">=</span> <span class="n">resolve_config</span><span class="p">(</span>
         <span class="n">tx_server</span><span class="o">=</span><span class="n">tx_server</span><span class="p">,</span>
+        <span class="n">tx_store</span><span class="o">=</span><span class="n">tx_store</span><span class="p">,</span>
         <span class="n">tx_client_id</span><span class="o">=</span><span class="n">tx_client_id</span><span class="p">,</span>
         <span class="n">tx_client_secret</span><span class="o">=</span><span class="n">tx_client_secret</span><span class="p">,</span>
         <span class="n">tx_token_endpoint</span><span class="o">=</span><span class="n">tx_token_endpoint</span><span class="p">,</span>
@@ -282,6 +315,9 @@
 <span class="c1"># Register the terminology commands.</span>
 <span class="k">for</span> <span class="n">_terminology_command</span> <span class="ow">in</span> <span class="n">terminology_module</span><span class="o">.</span><span class="n">TERMINOLOGY_COMMANDS</span><span class="p">:</span>
     <span class="n">cli</span><span class="o">.</span><span class="n">add_command</span><span class="p">(</span><span class="n">_terminology_command</span><span class="p">)</span>
+
+<span class="k">for</span> <span class="n">_import_command</span> <span class="ow">in</span> <span class="n">import_terminology_module</span><span class="o">.</span><span class="n">IMPORT_COMMANDS</span><span class="p">:</span>
+    <span class="n">cli</span><span class="o">.</span><span class="n">add_command</span><span class="p">(</span><span class="n">_import_command</span><span class="p">)</span>
 
 
 <span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
