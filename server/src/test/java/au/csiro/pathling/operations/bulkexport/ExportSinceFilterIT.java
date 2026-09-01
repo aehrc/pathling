@@ -115,7 +115,17 @@ class ExportSinceFilterIT {
   }
 
   @BeforeEach
-  void stampLastUpdatedValues() {
+  void setup() {
+    stampLastUpdatedValues();
+    parser = fhirContext.newJsonParser();
+    webTestClient =
+        webTestClient
+            .mutate()
+            .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(100 * 1024 * 1024))
+            .build();
+  }
+
+  private void stampLastUpdatedValues() {
     // The stamping runs once for the class; a static guard is used because the autowired Spark
     // session is not available in a static @BeforeAll method.
     if (beforeCutoffIds != null) {
@@ -147,16 +157,6 @@ class ExportSinceFilterIT {
     // The table was modified outside the server's own write path, so the server's dataset for the
     // type is refreshed to make sure it observes the stamped timestamps.
     ((DynamicDeltaSource) deltaLake).refresh("Patient");
-  }
-
-  @BeforeEach
-  void setup() {
-    parser = fhirContext.newJsonParser();
-    webTestClient =
-        webTestClient
-            .mutate()
-            .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(100 * 1024 * 1024))
-            .build();
   }
 
   @AfterEach
