@@ -113,11 +113,17 @@ for detailed semantics.
 
 #### Existence functions
 
-| Function            | Description                                                                        |
-| ------------------- | ---------------------------------------------------------------------------------- |
-| `exists(criteria?)` | Returns `true` if the collection has any elements, optionally filtered by criteria |
-| `empty()`           | Returns `true` if the collection is empty                                          |
-| `count()`           | Returns the integer count of items in the collection (0 if empty)                  |
+| Function            | Description                                                                                              |
+| ------------------- | -------------------------------------------------------------------------------------------------------- |
+| `exists(criteria?)` | Returns `true` if the collection has any elements, optionally filtered by criteria                       |
+| `empty()`           | Returns `true` if the collection is empty                                                                |
+| `count()`           | Returns the integer count of items in the collection (0 if empty)                                        |
+| `all(criteria)`     | Returns `true` if criteria evaluates to `true` for every element (`true` for an empty collection)        |
+| `allTrue()`         | Returns `true` if all Boolean items are `true` (`true` for an empty collection)                          |
+| `anyTrue()`         | Returns `true` if any Boolean item is `true` (`false` for an empty collection)                           |
+| `allFalse()`        | Returns `true` if all Boolean items are `false` (`true` for an empty collection)                         |
+| `anyFalse()`        | Returns `true` if any Boolean item is `false` (`false` for an empty collection)                          |
+| `isDistinct()`      | Returns `true` if all items in the collection are distinct, using FHIRPath equality (`=`)                |
 
 #### Filtering and projection functions
 
@@ -128,6 +134,7 @@ for detailed semantics.
 | `ofType(type)`          | Filter collection by type                                         |
 | `repeat(projection)`    | Recursively evaluate projection, deduplicating results            |
 | `repeatAll(projection)` | Recursively evaluate projection without deduplication (see below) |
+| `distinct()`            | Returns only the unique items, using FHIRPath equality (`=`); element order is not preserved |
 
 #### Subsetting functions
 
@@ -199,6 +206,7 @@ The following FHIRPath features are **not currently supported**:
 - **Equivalence operators**: `~` and `!~`
 - **Aggregate functions**: `sum()`, `avg()`, `min()`, `max()`
 - **Special variables**: `$index`, `$total`
+- **Subset functions**: `subsetOf()` and `supersetOf()`
 - **Quantity arithmetic**: Math operations on Quantity types
 - **DateTime arithmetic**: DateTime math operations
 - **Full resource resolution**: The `resolve()` function extracts type
