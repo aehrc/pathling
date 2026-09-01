@@ -18,11 +18,11 @@
 package au.csiro.pathling.operations.sqlquery;
 
 import au.csiro.pathling.library.io.source.QueryableDataSource;
+import au.csiro.pathling.operations.sql.SuppliedArtefacts;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import jakarta.servlet.http.HttpServletResponse;
-import java.util.Map;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.IntegerType;
@@ -32,8 +32,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
- * Orchestrates the {@code $sqlquery-run} operation by selecting the query Library, running it
- * through the shared {@link SqlQueryPipeline}, and streaming the single result.
+ * Orchestrates the {@code $sql-run} operation by selecting the query Library, running it through
+ * the shared {@link SqlQueryPipeline}, and streaming the single result.
  *
  * @author John Grimes
  */
@@ -85,8 +85,8 @@ public class SqlQueryExecutionHelper {
   }
 
   /**
-   * Executes a {@code $sqlquery-run} request and streams results to the HTTP response. Exactly one
-   * of {@code queryResource} and {@code queryReference} must be provided.
+   * Executes a {@code $sql-run} request and streams results to the HTTP response. Exactly one of
+   * {@code queryResource} and {@code queryReference} must be provided.
    *
    * @param queryResource the inline SQLQuery Library resource, if supplied
    * @param queryReference reference to a stored SQLQuery Library, if supplied
@@ -117,7 +117,14 @@ public class SqlQueryExecutionHelper {
     final IBaseResource library = selectLibrary(queryResource, queryReference);
 
     final PreparedSqlQuery prepared =
-        pipeline.prepare(library, format, acceptHeader, includeHeader, limit, parameters, Map.of());
+        pipeline.prepare(
+            library,
+            format,
+            acceptHeader,
+            includeHeader,
+            limit,
+            parameters,
+            SuppliedArtefacts.empty());
 
     pipeline.execute(
         prepared,

@@ -33,19 +33,35 @@ import { OperationOutcomeError } from "../../../types/errors";
 import { SqlQueryCard } from "../SqlQueryCard";
 
 import type { SqlQueryJob, SqlQueryResult } from "../../../types/sqlQuery";
+import type { OperationOutcome } from "fhir/r4";
+
+// A failure the card displays must not also be announced, so the toast is
+// mocked to prove it is never called.
+const mockShowToast = vi.fn();
+vi.mock("../../../contexts/ToastContext", () => ({
+  useToast: () => ({ showToast: mockShowToast }),
+}));
 
 const mockExecute = vi.fn();
 let mockStatus: "idle" | "pending" | "success" | "error" = "idle";
 let mockResult: SqlQueryResult | undefined;
 let mockError: Error | undefined;
 
+// Captures the options the card passes to its data hook, so a test can prove no
+// failure callback is wired into it.
+type HookOptions = { onError?: (error: Error) => void } | undefined;
+let capturedOptions: HookOptions = undefined;
+
 vi.mock("../../../hooks", () => ({
-  useSqlQueryRun: () => ({
-    execute: mockExecute,
-    status: mockStatus,
-    result: mockResult,
-    error: mockError,
-  }),
+  useSqlRun: (options?: { onError?: (error: Error) => void }) => {
+    capturedOptions = options;
+    return {
+      execute: mockExecute,
+      status: mockStatus,
+      result: mockResult,
+      error: mockError,
+    };
+  },
   // The submitted-SQL preview composes useClipboard; the card itself does not
   // exercise it, so a no-op stub suffices here.
   useClipboard: () => vi.fn(),
@@ -109,7 +125,6 @@ function createJob(overrides: Partial<SqlQueryJob> = {}): SqlQueryJob {
 }
 
 describe("SqlQueryCard", () => {
-  const onError = vi.fn();
   const onClose = vi.fn();
 
   beforeEach(() => {
@@ -117,6 +132,7 @@ describe("SqlQueryCard", () => {
     mockStatus = "idle";
     mockResult = undefined;
     mockError = undefined;
+    capturedOptions = undefined;
   });
 
   afterEach(() => {
@@ -127,7 +143,7 @@ describe("SqlQueryCard", () => {
   // so the user knows the request is in flight.
   it("shows a spinner and pending message while the request is in flight", () => {
     mockStatus = "pending";
-    render(<SqlQueryCard job={createJob()} onError={onError} onClose={onClose} />);
+    render(<SqlQueryCard job={createJob()} onClose={onClose} />);
     expect(screen.getByText(/executing sql query/i)).toBeInTheDocument();
   });
 
@@ -136,7 +152,7 @@ describe("SqlQueryCard", () => {
   it("renders a table for a successful tabular result", () => {
     mockStatus = "success";
     mockResult = TABULAR_RESULT;
-    render(<SqlQueryCard job={createJob()} onError={onError} onClose={onClose} />);
+    render(<SqlQueryCard job={createJob()} onClose={onClose} />);
     expect(screen.getByText(/2 rows/i)).toBeInTheDocument();
     expect(screen.getByText("patient_id")).toBeInTheDocument();
     expect(screen.getByText("given_name")).toBeInTheDocument();
@@ -150,13 +166,7 @@ describe("SqlQueryCard", () => {
   it("echoes the submitted SQL beneath a successful result", () => {
     mockStatus = "success";
     mockResult = TABULAR_RESULT;
-    render(
-      <SqlQueryCard
-        job={createJob({ sql: "SELECT * FROM patients" })}
-        onError={onError}
-        onClose={onClose}
-      />,
-    );
+    render(<SqlQueryCard job={createJob({ sql: "SELECT * FROM patients" })} onClose={onClose} />);
     expect(screen.getByRole("textbox", { name: /submitted sql/i })).toHaveValue(
       "SELECT * FROM patients",
     );
@@ -173,7 +183,7 @@ describe("SqlQueryCard", () => {
         given_name: `Name ${i + 1}`,
       })),
     };
-    render(<SqlQueryCard job={createJob()} onError={onError} onClose={onClose} />);
+    render(<SqlQueryCard job={createJob()} onClose={onClose} />);
     expect(screen.getByText(/10 rows/i)).toBeInTheDocument();
     expect(screen.getByText("pat-10")).toBeInTheDocument();
     expect(screen.queryByText("pat-11")).not.toBeInTheDocument();
@@ -184,7 +194,7 @@ describe("SqlQueryCard", () => {
   it("renders export controls once the run returns rows", () => {
     mockStatus = "success";
     mockResult = TABULAR_RESULT;
-    render(<SqlQueryCard job={createJob()} onError={onError} onClose={onClose} />);
+    render(<SqlQueryCard job={createJob()} onClose={onClose} />);
     expect(screen.getByText(/export full result set/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^export$/i })).toBeInTheDocument();
   });
@@ -197,7 +207,7 @@ describe("SqlQueryCard", () => {
       ...TABULAR_RESULT,
       rows: [],
     };
-    render(<SqlQueryCard job={createJob()} onError={onError} onClose={onClose} />);
+    render(<SqlQueryCard job={createJob()} onClose={onClose} />);
     expect(screen.getByText(/no rows returned/i)).toBeInTheDocument();
   });
 
@@ -211,7 +221,6 @@ describe("SqlQueryCard", () => {
         job={createJob({
           request: { ...createJob().request, format: "parquet" },
         })}
-        onError={onError}
         onClose={onClose}
       />,
     );
@@ -239,14 +248,9 @@ describe("SqlQueryCard", () => {
       400,
       "SQL query run",
     );
-    render(
-      <SqlQueryCard
-        job={createJob({ sql: "DROP TABLE conditions" })}
-        onError={onError}
-        onClose={onClose}
-      />,
-    );
-    expect(screen.getByText(/sql contains a disallowed operation/i)).toBeInTheDocument();
+    render(<SqlQueryCard job={createJob({ sql: "DROP TABLE conditions" })} onClose={onClose} />);
+    // The shared error presentation announces every error as an alert.
+    expect(screen.getByRole("alert")).toHaveTextContent(/sql contains a disallowed operation/i);
     // The submitted SQL is echoed in the read-only preview area.
     expect(screen.getByRole("textbox", { name: /submitted sql/i })).toHaveValue(
       "DROP TABLE conditions",
@@ -257,14 +261,62 @@ describe("SqlQueryCard", () => {
   it("renders a generic error message when the error is not an OperationOutcome", () => {
     mockStatus = "error";
     mockError = new Error("Network error");
-    render(<SqlQueryCard job={createJob()} onError={onError} onClose={onClose} />);
-    expect(screen.getByText(/network error/i)).toBeInTheDocument();
+    render(<SqlQueryCard job={createJob()} onClose={onClose} />);
+    expect(screen.getByRole("alert")).toHaveTextContent(/network error/i);
+  });
+
+  // FR-001 and FR-002: the card displays the failure, so nothing else announces
+  // it.
+  it("displays the failure without raising a notification", () => {
+    mockStatus = "error";
+    mockError = new Error("Network error");
+    render(<SqlQueryCard job={createJob()} onClose={onClose} />);
+    // Driving whatever callback the card wired in, so that a reinstated
+    // notification fails this test rather than passing unnoticed.
+    capturedOptions?.onError?.(mockError);
+    expect(screen.getByRole("alert")).toHaveTextContent(/network error/i);
+    expect(capturedOptions?.onError).toBeUndefined();
+    expect(mockShowToast).not.toHaveBeenCalled();
+  });
+
+  // FR-009: the outcome diagnostics are still preferred now that the shared
+  // derivation has replaced the card's own extraction helper.
+  it("prefers the outcome diagnostics over the flattened message", () => {
+    mockStatus = "error";
+    const outcome: OperationOutcome = {
+      resourceType: "OperationOutcome",
+      issue: [{ severity: "error", code: "processing", diagnostics: "Unknown column: bad_column" }],
+    };
+    mockError = new OperationOutcomeError(outcome, 400, "SQL query");
+    render(<SqlQueryCard job={createJob()} onClose={onClose} />);
+    expect(screen.getByRole("alert")).toHaveTextContent("Unknown column: bad_column");
+    expect(screen.getByRole("alert")).not.toHaveTextContent("SQL query failed");
+  });
+
+  // FR-008: an outcome carrying several issues shows each one, with its own
+  // severity, rather than only the first.
+  it("shows every issue of a multi-issue outcome with its severity", () => {
+    mockStatus = "error";
+    const outcome: OperationOutcome = {
+      resourceType: "OperationOutcome",
+      issue: [
+        { severity: "error", code: "processing", diagnostics: "Unknown column: bad_column" },
+        { severity: "warning", code: "informational", diagnostics: "Result set was truncated" },
+      ],
+    };
+    mockError = new OperationOutcomeError(outcome, 400, "SQL query");
+    render(<SqlQueryCard job={createJob()} onClose={onClose} />);
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveTextContent("Unknown column: bad_column");
+    expect(alert).toHaveTextContent("Result set was truncated");
+    expect(screen.getByText("Error")).toBeInTheDocument();
+    expect(screen.getByText("Warning")).toBeInTheDocument();
   });
 
   // The close button only appears once the request has terminated.
   it("hides the close button while the request is pending", () => {
     mockStatus = "pending";
-    render(<SqlQueryCard job={createJob()} onError={onError} onClose={onClose} />);
+    render(<SqlQueryCard job={createJob()} onClose={onClose} />);
     expect(screen.queryByRole("button", { name: /close result/i })).not.toBeInTheDocument();
   });
 
@@ -274,7 +326,7 @@ describe("SqlQueryCard", () => {
     mockStatus = "success";
     mockResult = TABULAR_RESULT;
     const user = userEvent.setup();
-    render(<SqlQueryCard job={createJob()} onError={onError} onClose={onClose} />);
+    render(<SqlQueryCard job={createJob()} onClose={onClose} />);
     await user.click(screen.getByRole("button", { name: /close result/i }));
     expect(onClose).toHaveBeenCalled();
   });

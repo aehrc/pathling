@@ -91,6 +91,20 @@ operation, which retrieves data from external FHIR bulk export endpoints.
   resolve to internal or private IP addresses (loopback, link-local,
   site-local, and unique-local). Set to `true` only if your deployment
   legitimately uses internal FHIR bulk export endpoints.
+- `pathling.import.pnp.maxConcurrentDownloads` - (default: `4`) The number of
+  files to download concurrently. Each download is written to storage as it is
+  received, so a value higher than the storage can keep up with leaves
+  connections idle while they wait their turn to write.
+- `pathling.import.pnp.downloadSocketTimeout` - (default: `600000`) The number
+  of milliseconds a download may wait for more data before the connection is
+  treated as failed. A download that is blocked writing what it has already
+  received is not reading from its connection, so this needs to accommodate the
+  slowest write the storage will perform, not just network latency.
+
+If imports of large resource types fail with a download error while smaller
+ones succeed, lower `maxConcurrentDownloads` or raise
+`downloadSocketTimeout`: the symptom of exceeding what the storage can sustain
+is a connection closed part-way through a file.
 
 **Security note**: When PNP credentials are configured,
 `pathling.auth.enabled` must also be set to `true`. If authentication is
@@ -156,33 +170,18 @@ error response and is excluded from the CapabilityStatement.
   [$import](./operations/import) operation.
 - `pathling.operations.importPnpEnabled` - (default: `true`) Enables the
   [$import-pnp](./operations/import-pnp) operation.
-- `pathling.operations.viewDefinitionRunEnabled` - (default: `true`) Enables the
-  system-level [$viewdefinition-run](./operations/view-run) operation.
-- `pathling.operations.viewDefinitionInstanceRunEnabled` - (default: `true`)
-  Enables the instance-level [$run](./operations/view-run) operation on
-  ViewDefinition resources.
-- `pathling.operations.viewDefinitionExportEnabled` - (default: `true`) Enables
-  the [$viewdefinition-export](./operations/view-export) operation.
-- `pathling.operations.sqlQueryExportEnabled` - (default: `true`) Enables the
-  system, type, and instance-level
-  [$sqlquery-export](./operations/sql-export) operation.
+- `pathling.operations.sqlRunEnabled` - (default: `true`) Enables the
+  [$sql-run](./operations/sql-run) operation.
+- `pathling.operations.sqlExportEnabled` - (default: `true`) Enables the
+  [$sql-export](./operations/sql-export) operation.
 - `pathling.operations.bulkSubmitEnabled` - (default: `true`) Enables the
   [$bulk-submit](./operations/bulk-submit) operation.
 
 ### SQL query
 
-These settings apply resource limits to the `$sqlquery-run` operation. Both
-limits are always applied; they cannot be disabled per request.
+This setting bounds the resolution of a query's dependency graph, for both
+`$sql-run` and `$sql-export`.
 
-- `pathling.sqlQuery.maxRows` - (default: `1000000`) The maximum number of rows
-  that a single `$sqlquery-run` response may stream. Always applied; clamps the
-  caller-supplied `_limit` when that value is larger.
-- `pathling.sqlQuery.timeoutSeconds` - (default: `60`) The maximum wall-clock
-  time in seconds that a single query may run before its Spark job group is
-  cancelled. A timeout that fires before the response stream begins produces a
-  4xx response; a timeout that fires mid-stream aborts the connection and is
-  recorded as a server warning. Long-running queries should use the
-  asynchronous path.
 - `pathling.sqlQuery.maxDependencyDepth` - (default: `10`) The maximum nesting
   depth of the SQLView dependency graph resolved for a single query. The
   top-level query's direct dependencies sit at depth one; each further level of
@@ -207,6 +206,15 @@ limits are always applied; they cannot be disabled per request.
   common to extensions found in widely-used IGs, such as the US and AU base
   profiles. In general, you will get the best query performance by encoding your
   data with the shortest possible list.
+
+    Shortening this list against a warehouse that already holds data, or pointing
+    a server at a warehouse written by a deployment with a longer list, leaves
+    stored columns that the running encoder no longer emits. Those columns are
+    preserved: they are not dropped from the table, and writes to the affected
+    resource types succeed with the columns written as null on the new rows. Reads
+    return what the running encoder can represent, so the values in those columns
+    are not visible until the original list is restored. Each affected table is
+    named in the log at startup, along with the field paths involved.
 
 ### Storage
 
@@ -245,6 +253,15 @@ limits are always applied; they cannot be disabled per request.
   runtime schema evolution is only visible to the replica that performed it;
   other replicas require a restart, although redeploys (which replace all
   replicas and re-run startup migration) are self-correcting.
+
+    Where a stored table and the running encoders cannot be reconciled at all, the
+    request fails with an error that describes the condition rather than a generic
+    one. The message names the resource type, which direction the two schemas
+    differ in, the field paths involved, and the remedy - enabling this setting
+    where the table is behind the encoders, or restoring the encoding
+    configuration the table was written with where it is ahead of them. It
+    deliberately excludes the underlying schema definitions and warehouse paths,
+    so the full detail remains in the server log alone.
 
 Pathling will automatically detect AWS authentication details within the
 environment and use them to access S3 buckets. It uses a chain of authentication
@@ -286,6 +303,26 @@ fs:
                 magic:
                     enabled: true
 ```
+
+When the warehouse is an S3 object store, the S3A magic committer avoids the
+rename-based commit that is unsafe on some stores by completing writes through
+S3 multipart uploads instead. Setting `fs.s3a.committer.name=magic` alone is not
+enough for Spark's Parquet writes to use it; the commit protocol classes must
+also be selected:
+
+```yaml
+spark:
+    sql:
+        sources:
+            commitProtocolClass: org.apache.spark.internal.io.cloud.PathOutputCommitProtocol
+        parquet:
+            output:
+                committer:
+                    class: org.apache.spark.internal.io.cloud.BindingParquetOutputCommitter
+```
+
+These committer bindings ship with the server image, so no extra dependency is
+required to enable this configuration.
 
 ### Query
 
@@ -434,6 +471,18 @@ spark:
 - `pathling.auth.codeChallengeMethodsSupported` - (default: `S256`) A list of
   PKCE code challenge methods supported. Must include `S256` and must not
   include `plain` as per the SMART specification.
+- `pathling.auth.tokenSigningAlgorithms` - (default: empty) A list of the
+  [JWS signing algorithms](https://datatracker.ietf.org/doc/html/rfc7518#section-3.1)
+  accepted within incoming bearer tokens. When empty, the accepted algorithms
+  are derived from the keys published in the issuer's JWKS: a key's `alg` value
+  is used when present, otherwise the algorithms implied by its key type. This
+  derivation happens at token verification time, so key rotation at the identity
+  provider takes effect without a restart. When one or more values are
+  configured, only tokens whose header algorithm is in that list are accepted,
+  regardless of what the JWKS publishes. Tokens are verified against a public
+  JWKS, so only the asymmetric algorithm names `RS256`, `RS384`, `RS512`,
+  `PS256`, `PS384`, `PS512`, `ES256`, `ES256K`, `ES384`, `ES512` and `EdDSA` are
+  permitted; any other value fails validation at startup.
 
 ### Admin UI
 

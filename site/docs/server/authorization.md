@@ -41,20 +41,25 @@ graph TB
 
     subgraph Resources[" "]
         direction LR
-        read-resource["pathling:read:[resource type]"]
+        read-type["pathling:read:[resource type]"]
         read[pathling:read]
         write[pathling:write]
-        write-resource["pathling:write:[resource type]"]
+        write-type["pathling:write:[resource type]"]
     end
 
     pathling --> operation
     pathling --> read
     pathling --> write
-    read --> read-resource
-    write --> write-resource
+    read --> read-type
+    write --> write-type
 ```
 
 → includes
+
+Note that `pathling:read-resource`, which gates the read interaction, is an
+operation authority and so belongs to the `pathling:[operation]` family above.
+It is distinct from the `pathling:read` data authority: neither implies the
+other, and only the root `pathling` authority implies both.
 
 | Authority                        | Description                                                                     |
 | -------------------------------- | ------------------------------------------------------------------------------- |
@@ -63,16 +68,19 @@ graph TB
 | `pathling:read:[resource type]`  | Provides read access to only a specified resource type.                         |
 | `pathling:write`                 | Provides write access to all resource types.                                    |
 | `pathling:write:[resource type]` | Provides write access to only a specified resource type.                        |
+| `pathling:read-resource`         | Provides access to the read interaction.                                        |
 | `pathling:import`                | Provides access to the import operation.                                        |
 | `pathling:import-pnp`            | Provides access to the ping and pull import operation.                          |
 | `pathling:search`                | Provides access to the search operation.                                        |
+| `pathling:create`                | Provides access to the create operation.                                        |
 | `pathling:update`                | Provides access to the update operation.                                        |
 | `pathling:delete`                | Provides access to the delete operation.                                        |
 | `pathling:batch`                 | Provides access to the batch operation.                                         |
 | `pathling:bulk-submit`           | Provides access to the bulk submit operation.                                   |
 | `pathling:export`                | Provides access to the export operation.                                        |
-| `pathling:view-run`              | Provides access to the $viewdefinition-run operation.                           |
-| `pathling:view-export`           | Provides access to the $viewdefinition-export operation.                        |
+| `pathling:sql-run`               | Provides access to the $sql-run operation.                                      |
+| `pathling:sql-export`            | Provides access to the $sql-export operation.                                   |
+| `pathling:jobs`                  | Provides access to the [jobs](operations/jobs) list operation.                  |
 
 In order to enable access to an operation, an operation authority (e.g.
 `pathling:search`) must be provided along with a `read` or `write` authority
@@ -82,29 +90,49 @@ Where expressions within a request reference multiple different resource types
 (e.g. through resource references), authority for read access to all those
 resources must be present within the token.
 
+The read interaction follows this pattern like any other: reading a resource by
+id requires the `pathling:read-resource` operation authority, plus read
+authority for the type being read (`pathling:read:[resource type]`, or
+`pathling:read` for all types). A token holding only `pathling:read` can no
+longer perform an instance read, which is a breaking change introduced in
+version 3.0.0 of the server.
+
 The import, delete, batch, and bulk submit operations require `write` authority
 for all resource types that are referenced within the request.
 
-The view operations (`view-run` and `view-export`) require `read` authority for
-the resource type specified in the ViewDefinition's `resource` element. For
-example, a ViewDefinition targeting `Patient` resources requires
-`pathling:read:Patient` authority in addition to the operation authority.
+The SQL on FHIR data operations (`sql-run` and `sql-export`) require `read`
+authority for the resource type a ViewDefinition subject projects, named in its
+`resource` element. For example, a ViewDefinition targeting `Patient` resources
+requires `pathling:read:Patient` authority in addition to the operation
+authority.
 
-### Reading view definitions and queries from storage
+### Job ownership
+
+Asynchronous jobs are owned by the token subject that started them. When
+authorisation is enabled, the [jobs](operations/jobs) list operation
+(`pathling:jobs`) returns only the caller's own jobs, and both polling a job's
+status and cancelling it (via `GET` and `DELETE` on the job's URL) require the
+caller to be the job's owner and to hold the authority for the operation that
+started the job. A request to cancel a job owned by a different subject is
+refused with an access-denied error and the job is left unaffected.
+
+### Reading subjects and dependencies from storage
 
 Resolving a metadata resource from server storage requires `read` authority on
 that resource type, in addition to the per-projected-resource checks above:
 
 - Resolving a `ViewDefinition` from storage requires `pathling:read:ViewDefinition`.
-  This applies to a `view-run` or `view-export` `viewReference`, and to a
-  `ViewDefinition` referenced as a dependency of a SQL query.
-- Resolving a `SQLView` (a `Library`) from storage requires `pathling:read:Library`.
-  This applies to a `$sqlquery-run` or `$sqlquery-export` `queryReference` or
-  instance-level Library, and to a `SQLView` referenced as a dependency.
+  This applies to a `subjectCanonical` or `subjectReference` that names one, and
+  to a `ViewDefinition` referenced as a dependency of a SQL subject.
+- Resolving a `SQLQuery` or `SQLView` (both `Library` resources) from storage
+  requires `pathling:read:Library`. This applies to a `subjectCanonical` or
+  `subjectReference` that names one, and to a `SQLView` referenced as a
+  dependency.
 
-A resource supplied inline in the request body (an inline `viewResource` or
-`queryResource`) is not read from storage and is therefore not subject to these
-metadata read checks, though the per-projected-resource read checks still apply.
+A resource supplied inline in the request body - a `subjectResource` or a
+`context` entry - is not read from storage and is therefore not subject to
+these metadata read checks, though the per-projected-resource read checks still
+apply.
 
 ## SMART configuration
 

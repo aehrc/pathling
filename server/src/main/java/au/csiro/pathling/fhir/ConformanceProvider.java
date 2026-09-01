@@ -103,28 +103,39 @@ public class ConformanceProvider
   public static final String URI_BASE = "https://pathling.csiro.au/fhir";
 
   private static final String EXPORT_OPERATION = "export";
-  private static final String RUN_OPERATION = "run";
-  private static final String VIEWDEFINITION_RUN_OPERATION = "viewdefinition-run";
-  private static final String VIEWDEFINITION_EXPORT_OPERATION = "viewdefinition-export";
-  private static final String SQLQUERY_RUN_OPERATION = "sqlquery-run";
-  private static final String SQLQUERY_EXPORT_OPERATION = "sqlquery-export";
+  private static final String SQL_RUN_OPERATION = "sql-run";
+  private static final String SQL_EXPORT_OPERATION = "sql-export";
 
   /**
-   * The spec canonical OperationDefinition URLs for the SQL on FHIR operations. The server declares
-   * these in the CapabilityStatement instead of Pathling-authored OperationDefinitions, and no
-   * longer serves a private OperationDefinition for these operations.
+   * The spec canonical OperationDefinition URLs for the two SQL on FHIR data operations. The server
+   * declares these in the CapabilityStatement instead of Pathling-authored OperationDefinitions,
+   * and serves no private OperationDefinition for them.
    */
-  private static final String SOF_VIEWDEFINITION_RUN_CANONICAL =
-      "http://sql-on-fhir.org/OperationDefinition/$viewdefinition-run";
+  private static final String SOF_SQL_RUN_CANONICAL =
+      "http://hl7.org/fhir/uv/sql-on-fhir/OperationDefinition/SQLRun";
 
-  private static final String SOF_VIEWDEFINITION_EXPORT_CANONICAL =
-      "http://sql-on-fhir.org/OperationDefinition/$viewdefinition-export";
+  private static final String SOF_SQL_EXPORT_CANONICAL =
+      "http://hl7.org/fhir/uv/sql-on-fhir/OperationDefinition/SQLExport";
 
-  private static final String SOF_SQLQUERY_RUN_CANONICAL =
-      "http://sql-on-fhir.org/OperationDefinition/$sqlquery-run";
+  /**
+   * The formats {@code $sql-run} offers depend on the kind of subject, and the parameters it
+   * declines are declined outright. Stating both here lets a client reading the CapabilityStatement
+   * discover the constraints, rather than discovering them as a 400.
+   */
+  private static final String SQL_RUN_DOCUMENTATION =
+      "Supported `_format` values depend on the subject: a ViewDefinition offers `ndjson` (the"
+          + " default), `csv` and `json`, while a SQLQuery or SQLView adds `parquet` and `fhir`."
+          + " The `source` parameter (external data sources) is not supported; a request supplying"
+          + " it is rejected with a 400.";
 
-  private static final String SOF_SQLQUERY_EXPORT_CANONICAL =
-      "http://sql-on-fhir.org/OperationDefinition/$sqlquery-export";
+  /**
+   * The export writes bulk files, so it offers a narrower set of formats than the run and declines
+   * the row cap the run offers.
+   */
+  private static final String SQL_EXPORT_DOCUMENTATION =
+      "Supported `_format` values: `ndjson` (the default), `csv` and `parquet`. The `json` and"
+          + " `fhir` formats are not supported for export, and `_limit` is not offered; a request"
+          + " using either is rejected with a 400. Requires `Prefer: respond-async`.";
 
   /**
    * Base system-level operations whose Pathling-authored OperationDefinition resources are served.
@@ -132,7 +143,7 @@ public class ConformanceProvider
    * canonical and Pathling does not serve an OperationDefinition for them.
    */
   private static final List<String> BASE_SYSTEM_OPERATIONS =
-      Arrays.asList("job", "result", EXPORT_OPERATION, "import", "import-pnp");
+      Arrays.asList("job", "jobs", "result", EXPORT_OPERATION, "import", "import-pnp");
 
   /** Bulk submit operations, added when bulk submit is configured. */
   private static final List<String> BULK_SUBMIT_OPERATIONS =
@@ -489,15 +500,6 @@ public class ConformanceProvider
       viewDefResource.addInteraction(viewDefDeleteInteraction);
     }
 
-    // Add $run operation to ViewDefinition resource if enabled, declaring the spec canonical.
-    if (ops.isViewDefinitionInstanceRunEnabled()) {
-      final CanonicalType runUri = new CanonicalType(SOF_VIEWDEFINITION_RUN_CANONICAL);
-      final CapabilityStatementRestResourceOperationComponent runOp =
-          new CapabilityStatementRestResourceOperationComponent(
-              new StringType(RUN_OPERATION), runUri);
-      viewDefResource.addOperation(runOp);
-    }
-
     resources2.add(viewDefResource);
 
     return resources2;
@@ -508,8 +510,9 @@ public class ConformanceProvider
     final List<CapabilityStatementRestResourceOperationComponent> operations = new ArrayList<>();
     final OperationConfiguration ops = configuration.getOperations();
 
-    // Add job operation (always included when async is enabled).
+    // Add job operations (always included when async is enabled).
     addOperationIfEnabled(operations, "job", true);
+    addOperationIfEnabled(operations, "jobs", true);
 
     // Add result operation (needed for export results).
     addOperationIfEnabled(operations, "result", ops.isAnyExportEnabled());
@@ -521,29 +524,19 @@ public class ConformanceProvider
     addOperationIfEnabled(operations, "import", ops.isImportEnabled());
     addOperationIfEnabled(operations, "import-pnp", ops.isImportPnpEnabled());
 
-    // Add viewdefinition operations, declaring the SQL on FHIR spec canonicals.
+    // Add the two SQL on FHIR data operations, declaring the spec canonicals.
     addOperationIfEnabled(
         operations,
-        VIEWDEFINITION_RUN_OPERATION,
-        ops.isViewDefinitionRunEnabled(),
-        SOF_VIEWDEFINITION_RUN_CANONICAL);
+        SQL_RUN_OPERATION,
+        ops.isSqlRunEnabled(),
+        SOF_SQL_RUN_CANONICAL,
+        SQL_RUN_DOCUMENTATION);
     addOperationIfEnabled(
         operations,
-        VIEWDEFINITION_EXPORT_OPERATION,
-        ops.isViewDefinitionExportEnabled(),
-        SOF_VIEWDEFINITION_EXPORT_CANONICAL);
-
-    // Add SQL query run operation, declaring the SQL on FHIR spec canonical.
-    addOperationIfEnabled(
-        operations, SQLQUERY_RUN_OPERATION, ops.isSqlQueryRunEnabled(), SOF_SQLQUERY_RUN_CANONICAL);
-
-    // Add SQL query export operation, declaring the SQL on FHIR spec canonical. The referenced
-    // OperationDefinition declares the system, type, and instance scopes.
-    addOperationIfEnabled(
-        operations,
-        SQLQUERY_EXPORT_OPERATION,
-        ops.isSqlQueryExportEnabled(),
-        SOF_SQLQUERY_EXPORT_CANONICAL);
+        SQL_EXPORT_OPERATION,
+        ops.isSqlExportEnabled(),
+        SOF_SQL_EXPORT_CANONICAL,
+        SQL_EXPORT_DOCUMENTATION);
 
     // Add bulk submit operations if configured and enabled.
     if (configuration.getBulkSubmit() != null && ops.isBulkSubmitEnabled()) {
@@ -566,10 +559,23 @@ public class ConformanceProvider
       final String name,
       final boolean enabled,
       final String definitionUri) {
+    addOperationIfEnabled(operations, name, enabled, definitionUri, null);
+  }
+
+  private void addOperationIfEnabled(
+      final List<CapabilityStatementRestResourceOperationComponent> operations,
+      final String name,
+      final boolean enabled,
+      final String definitionUri,
+      @Nullable final String documentation) {
     if (enabled) {
-      operations.add(
+      final CapabilityStatementRestResourceOperationComponent operation =
           new CapabilityStatementRestResourceOperationComponent(
-              new StringType(name), new CanonicalType(definitionUri)));
+              new StringType(name), new CanonicalType(definitionUri));
+      if (documentation != null) {
+        operation.setDocumentation(documentation);
+      }
+      operations.add(operation);
     }
   }
 

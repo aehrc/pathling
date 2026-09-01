@@ -16,13 +16,13 @@
  */
 
 /**
- * Type definitions for the SQL query (`$sqlquery-run`) UI flow.
+ * Type definitions for the SQL query (`$sql-run`) UI flow.
  *
  * @author John Grimes
  */
 
 /**
- * Output formats accepted by the `$sqlquery-run` operation.
+ * Output formats accepted by the `$sql-run` operation.
  */
 export type SqlQueryOutputFormat =
   | "ndjson"
@@ -87,8 +87,12 @@ export interface SqlQueryParameterDeclaration {
   name: string;
   /** Declared FHIR primitive type. */
   type: SqlQueryParameterType;
-  /** Optional default value supplied as a string; coerced on submit. */
-  defaultValue?: string;
+  /**
+   * The runtime value bound for this run, captured as a string and coerced to
+   * the declared type when the request is assembled. This value is never
+   * persisted: saving the query writes the declaration only.
+   */
+  value: string;
 }
 
 /**
@@ -167,7 +171,7 @@ export interface SqlQueryExecutionOptions {
   limit?: number;
   /** Whether to include a header row when format is `csv`. */
   header?: boolean;
-  /** Runtime parameter values, keyed by declared parameter name. */
+  /** Values bound to the parameters, keyed by declared parameter name. */
   bindings?: SqlQueryRuntimeBindings;
   /**
    * Declared parameter types, keyed by name. Used to pick the correct
@@ -177,7 +181,7 @@ export interface SqlQueryExecutionOptions {
 }
 
 /**
- * A `$sqlquery-run` request, distinguished by how the Library is supplied.
+ * A `$sql-run` request, distinguished by how the Library is supplied.
  */
 export type SqlQueryRequest =
   | (SqlQueryExecutionOptions & {
@@ -198,7 +202,7 @@ export type SqlQueryRequest =
     });
 
 /**
- * Successful tabular result from a `$sqlquery-run` execution.
+ * Successful tabular result from a `$sql-run` execution.
  */
 export interface SqlQueryTabularResult {
   /** Discriminator. */
@@ -214,7 +218,7 @@ export interface SqlQueryTabularResult {
 }
 
 /**
- * Successful binary (parquet) result from a `$sqlquery-run` execution.
+ * Successful binary (parquet) result from a `$sql-run` execution.
  */
 export interface SqlQueryBinaryResult {
   /** Discriminator. */
@@ -255,15 +259,15 @@ export interface SaveSqlQueryLibraryResult {
 }
 
 /**
- * Output formats accepted by the asynchronous `$sqlquery-export` operation.
+ * Output formats accepted by the asynchronous `$sql-export` operation.
  *
- * Narrower than {@link SqlQueryOutputFormat}: the export operation supports only the file-friendly
- * formats, mirroring `$viewdefinition-export`.
+ * Narrower than {@link SqlQueryOutputFormat}: an export writes bulk files, so it offers only the
+ * file-friendly formats.
  */
 export type SqlQueryExportFormat = "ndjson" | "csv" | "parquet";
 
 /**
- * A `$sqlquery-export` request, reusing the same query source (stored or inline) as the
+ * A `$sql-export` request, reusing the same query source (stored or inline) as the
  * synchronous run, plus the chosen export format and CSV header flag.
  */
 export type SqlQueryExportRequest =
@@ -283,7 +287,7 @@ export type SqlQueryExportRequest =
     };
 
 /**
- * The `$sqlquery-export` completion manifest, a FHIR Parameters resource describing the export
+ * The `$sql-export` completion manifest, a FHIR Parameters resource describing the export
  * outputs. Shares the SQL on FHIR manifest shape with the view export manifest.
  */
 export type SqlQueryExportManifest = import("fhir/r4").Parameters;

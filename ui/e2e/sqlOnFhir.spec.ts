@@ -102,12 +102,9 @@ async function mockViewRun(
   const contentType =
     status === 200 ? "application/x-ndjson" : "application/fhir+json";
 
-  await page.route(/\/ViewDefinition\/[^/]+\/\$run/, async (route) => {
-    if (delayMs) await new Promise((resolve) => setTimeout(resolve, delayMs));
-    await route.fulfill({ status, contentType, body: bodyStr });
-  });
-
-  await page.route("**/ViewDefinition/$run", async (route) => {
+  // Both the GET form (a stored view) and the POST form (an inline view) hit
+  // the one system-level endpoint.
+  await page.route(/\/\$sql-run/, async (route) => {
     if (delayMs) await new Promise((resolve) => setTimeout(resolve, delayMs));
     await route.fulfill({ status, contentType, body: bodyStr });
   });
@@ -459,8 +456,9 @@ test.describe("SQL on FHIR page", () => {
       await page.getByRole("option", { name: "Patient Demographics" }).click();
       await page.getByRole("button", { name: "Execute" }).click();
 
-      // Verify error message is displayed.
-      await expect(page.getByText(/View run failed/)).toBeVisible();
+      // The card shows the outcome's diagnostics, with no prefix of its own, and
+      // is now the only place a job failure is reported.
+      await expect(page.getByText("Invalid view definition")).toBeVisible();
     });
 
     test("displays the 422 message for an invalid custom view definition", async ({
@@ -499,7 +497,7 @@ test.describe("SQL on FHIR page", () => {
 
       await page.getByRole("button", { name: "Execute" }).click();
 
-      // The OperationOutcome diagnostics are shown clearly.
+      // The OperationOutcome diagnostics are shown clearly in the card.
       await expect(page.getByText(/Invalid ViewDefinition/)).toBeVisible();
     });
   });
@@ -518,8 +516,8 @@ test.describe("SQL on FHIR page", () => {
         });
       });
 
-      // Mock the export kick-off endpoint using regex to match $viewdefinition-export.
-      await page.route(/\/\$viewdefinition-export/, async (route) => {
+      // Mock the export kick-off endpoint using regex to match $sql-export.
+      await page.route(/\/\$sql-export/, async (route) => {
         await route.fulfill({
           status: 202,
           headers: {
@@ -573,7 +571,7 @@ test.describe("SQL on FHIR page", () => {
       await expect(page.getByRole("cell", { name: "Smith" })).toBeVisible();
 
       // Click export button.
-      await page.getByRole("button", { name: "Export" }).click();
+      await page.getByRole("button", { name: /^Export$/ }).click();
 
       // Verify export completed and output file is listed.
       await expect(page.getByText("Completed")).toBeVisible();
@@ -597,7 +595,7 @@ test.describe("SQL on FHIR page", () => {
       });
 
       // Mock the export kick-off endpoint.
-      await page.route(/\/\$viewdefinition-export/, async (route) => {
+      await page.route(/\/\$sql-export/, async (route) => {
         await route.fulfill({
           status: 202,
           headers: {
@@ -674,7 +672,7 @@ test.describe("SQL on FHIR page", () => {
       await expect(page.getByRole("cell", { name: "Smith" })).toBeVisible();
 
       // Click export button.
-      await page.getByRole("button", { name: "Export" }).click();
+      await page.getByRole("button", { name: /^Export$/ }).click();
 
       // Wait for export to complete.
       await expect(page.getByText("Completed")).toBeVisible();
@@ -818,7 +816,7 @@ test.describe("SQL on FHIR page", () => {
 
       // Mock the export kick-off endpoint.
       let exportCounter = 0;
-      await page.route(/\/\$viewdefinition-export/, async (route) => {
+      await page.route(/\/\$sql-export/, async (route) => {
         exportCounter++;
         await route.fulfill({
           status: 202,
@@ -881,9 +879,9 @@ test.describe("SQL on FHIR page", () => {
       await expect(page.getByRole("cell", { name: "Smith" })).toBeVisible();
 
       // Click export button twice.
-      await page.getByRole("button", { name: "Export" }).click();
+      await page.getByRole("button", { name: /^Export$/ }).click();
       await expect(page.getByText("Completed").first()).toBeVisible();
-      await page.getByRole("button", { name: "Export" }).click();
+      await page.getByRole("button", { name: /^Export$/ }).click();
 
       // Verify two export cards are visible.
       await expect(page.getByText("Completed")).toHaveCount(2);
@@ -901,11 +899,11 @@ test.describe("SQL on FHIR page", () => {
       await expect(page.getByRole("cell", { name: "Smith" })).toBeVisible();
 
       // Start first export and wait for completion.
-      await page.getByRole("button", { name: "Export" }).click();
+      await page.getByRole("button", { name: /^Export$/ }).click();
       await expect(page.getByText("Completed").first()).toBeVisible();
 
       // Start second export.
-      await page.getByRole("button", { name: "Export" }).click();
+      await page.getByRole("button", { name: /^Export$/ }).click();
       await expect(page.getByText("Completed")).toHaveCount(2);
 
       // Get the timestamps of the two export cards.
@@ -927,7 +925,7 @@ test.describe("SQL on FHIR page", () => {
       await page.getByRole("button", { name: "Execute" }).click();
       await expect(page.getByRole("cell", { name: "Smith" })).toBeVisible();
 
-      await page.getByRole("button", { name: "Export" }).click();
+      await page.getByRole("button", { name: /^Export$/ }).click();
       await expect(page.getByText("Completed")).toBeVisible();
 
       // Verify close button is visible on export card (should have 2 Close buttons:
@@ -946,7 +944,7 @@ test.describe("SQL on FHIR page", () => {
       await page.getByRole("button", { name: "Execute" }).click();
       await expect(page.getByRole("cell", { name: "Smith" })).toBeVisible();
 
-      await page.getByRole("button", { name: "Export" }).click();
+      await page.getByRole("button", { name: /^Export$/ }).click();
       await expect(page.getByText("Completed")).toBeVisible();
 
       // Click close button on export card (the second Close button).
@@ -969,7 +967,7 @@ test.describe("SQL on FHIR page", () => {
       await page.getByRole("button", { name: "Execute" }).click();
       await expect(page.getByRole("cell", { name: "Smith" })).toBeVisible();
 
-      await page.getByRole("button", { name: "Export" }).click();
+      await page.getByRole("button", { name: /^Export$/ }).click();
 
       // Wait for export to start (Cancel button visible).
       await expect(page.getByRole("button", { name: "Cancel" })).toBeVisible();
@@ -996,7 +994,7 @@ test.describe("SQL on FHIR page", () => {
       });
 
       // Mock export kick-off to succeed.
-      await page.route(/\/\$viewdefinition-export/, async (route) => {
+      await page.route(/\/\$sql-export/, async (route) => {
         await route.fulfill({
           status: 202,
           headers: {
@@ -1031,7 +1029,7 @@ test.describe("SQL on FHIR page", () => {
       await page.getByRole("button", { name: "Execute" }).click();
       await expect(page.getByRole("cell", { name: "Smith" })).toBeVisible();
 
-      await page.getByRole("button", { name: "Export" }).click();
+      await page.getByRole("button", { name: /^Export$/ }).click();
 
       // Verify error is shown and close button is visible.
       await expect(page.getByText("Failed", { exact: true })).toBeVisible();
@@ -1051,7 +1049,7 @@ test.describe("SQL on FHIR page", () => {
       await page.getByRole("button", { name: "Execute" }).click();
       await expect(page.getByRole("cell", { name: "Smith" })).toBeVisible();
 
-      await page.getByRole("button", { name: "Export" }).click();
+      await page.getByRole("button", { name: /^Export$/ }).click();
       await expect(page.getByText("Completed")).toBeVisible();
 
       // Click close button on query card (the first Close button).
@@ -1123,8 +1121,8 @@ test.describe("SQL on FHIR page", () => {
       await page.getByRole("option", { name: "Patient Demographics" }).click();
       await page.getByRole("button", { name: "Execute" }).click();
 
-      // Wait for error to appear.
-      await expect(page.getByText(/View run failed/)).toBeVisible({
+      // Wait for the failure to appear in the card.
+      await expect(page.getByText("Query failed")).toBeVisible({
         timeout: 10000,
       });
 
@@ -1152,7 +1150,7 @@ test.describe("SQL on FHIR page", () => {
       await page.getByRole("button", { name: "Execute" }).click();
 
       // Wait for error and close button.
-      await expect(page.getByText(/View run failed/)).toBeVisible({
+      await expect(page.getByText("Query failed")).toBeVisible({
         timeout: 10000,
       });
       await expect(page.getByRole("button", { name: "Close" })).toBeVisible();
@@ -1160,8 +1158,9 @@ test.describe("SQL on FHIR page", () => {
       // Click close button.
       await page.getByRole("button", { name: "Close" }).click();
 
-      // Verify the query card is removed.
-      await expect(page.getByText(/View run failed/)).not.toBeVisible();
+      // Verify the query card is removed, along with the failure it displayed.
+      await expect(page.getByRole("button", { name: "Close" })).toBeHidden();
+      await expect(page.getByText("Query failed")).toBeHidden();
     });
   });
 });

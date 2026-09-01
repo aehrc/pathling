@@ -46,6 +46,7 @@ CVE-2026-34478
 CVE-2026-34479
 CVE-2026-34480
 CVE-2026-34481
+CVE-2026-49844
 
 # Avro is provided via the Spark runtime. Server overrides to patched version
 # 1.12.1 in server/pom.xml.
@@ -89,10 +90,16 @@ CVE-2026-43869
 # annotations, so the vulnerable Baggage parsing code path is never reached.
 CVE-2026-45292
 
-# jackson-databind: per-property @JsonIgnoreProperties bypass when combined with
-# ACCEPT_CASE_INSENSITIVE_PROPERTIES. Pathling does not enable case-insensitive
-# property matching or use per-property @JsonIgnoreProperties, so the vulnerable
-# path is unreachable. No fixed version is published to Maven Central yet
-# (2.22.1/2.21.5/2.18.9 all absent as of 2026-07-05); remove this suppression
-# and upgrade jackson-bom once 2.22.1 is released.
-CVE-2026-54515
+# okhttp and ini4j are transitive dependencies of spark-hadoop-cloud (via the
+# Hadoop Aliyun/GCS cloud connectors), not on Pathling's request path. okhttp's
+# fix requires a 3.x->4.x major jump untested against Hadoop 3.4.1; ini4j has no
+# fixed release. Neither vulnerable code path is reachable in our usage.
+CVE-2021-0341
+CVE-2022-41404
+
+# lz4-java native XXHash JVM crash on invalid byte array ranges — a Spark transitive used
+# for internal shuffle and block compression. Spark passes only its own valid buffer ranges,
+# so the invalid-range path is not reachable from user input. There is no fixed release for
+# the org.lz4 coordinate; the fix exists only in the renamed at.yawk.lz4 fork, which Spark
+# does not use.
+CVE-2026-59949

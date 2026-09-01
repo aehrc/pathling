@@ -93,6 +93,14 @@ bun run test:e2e:headed
   React primitives.
 - Use role-based selectors (`getByRole`, `getByText`) in E2E tests.
 - Mock network requests using `page.route()` in Playwright tests.
+- **Never use a fixed sleep in an E2E test.** `page.waitForTimeout()` is
+  rejected by linting, at error severity, for every test under `e2e/`. Wait on a
+  condition instead. Where the point of the test is that recurring work does
+  _not_ happen, and so there is no condition to wait for, install Playwright's
+  clock with `page.clock.install()` before navigating and advance it with
+  `page.clock.runFor()`. A test that proves a negative this way needs a positive
+  control alongside it, or it can pass without proving anything - see the
+  control in `e2e/jobs.spec.ts` for the pattern.
 
 ## Coding conventions
 
@@ -135,6 +143,28 @@ format and a manifest-output parser, and is reused by both the ViewDefinition
 export (`ViewExportCard`) and the SQL query export (`SqlQueryExportCardWrapper`)
 flows. When adding a new export-style operation, reuse `ExportJobCard` rather
 than duplicating the status, progress, cancel, and download presentation.
+
+Every error message shown as a callout uses the shared
+`components/error/ErrorCallout.tsx`. It always renders the warning icon and
+always carries `role="alert"`, so errors look and behave the same wherever they
+appear. Its body takes one of two mutually exclusive forms: a `message` string,
+or an `issues` list of `DisplayIssue` values, which renders one badged row per
+issue so that a failure carrying several issues keeps each one's severity. Build
+the issues form with `toDisplayIssues` from
+`components/error/errorPresentation.ts`, which derives the rows from a failure -
+preferring an OperationOutcome's diagnostics over the flattened message, and
+falling back to a fixed sentence when a failure carries nothing usable. Both
+forms also take an optional bold `title`, optional `size` and `mt`, and children
+for recovery actions such as a retry button. Do not build a red `Callout.Root`
+directly.
+
+A failure is reported exactly once. A surface that displays a failure does not
+also notify: an operation's failure belongs in the card for that operation, where
+it stays until the card is closed. A notification is raised only where no surface
+can display the failure, which is a failed file download - the card is describing
+a job that succeeded, so the download site calls `showToast` itself with a title
+naming the download. Do not add a failure-reporting callback to a component that
+neither displays nor originates the failure.
 
 ### Naming
 
@@ -227,3 +257,8 @@ Run the following after making code changes to ensure quality:
 - `bun run lint:duplication`
 - `bun run test:coverage`
 - `bun run test:e2e`
+
+Continuous integration runs all five, along with the `bun run format:check`
+described above, so a coverage or duplication threshold breached locally will
+also fail the build. Running them before opening a pull request is the faster
+way to find out.

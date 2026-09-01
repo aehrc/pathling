@@ -23,8 +23,8 @@ import java.util.List;
 /**
  * One finished export unit within a completion manifest: a friendly name and one or more
  * downloadable file locations (local file URLs that the manifest builder maps to {@code $result}
- * download URLs). Shared by both the {@code $viewdefinition-export} and {@code $sqlquery-export}
- * operations, which produce the identical manifest shape (one output per exported unit).
+ * download URLs). Shared by both the {@code $sql-export} operations, which produce the identical
+ * manifest shape (one output per exported unit).
  *
  * @param name the output name (one per exported unit)
  * @param fileUrls the local file URLs for this output, in order; repeats once per partitioned file

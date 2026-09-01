@@ -11,12 +11,36 @@ pathling:
   deployment:
     strategy: Recreate
     imagePullPolicy: Always
-  volumes: [ ]
-  volumeMounts: [ ]
+  volumes: []
+  volumeMounts: []
   serviceAccount: ~
-  imagePullSecrets: [ ]
-  tolerations: [ ]
+  imagePullSecrets: []
+  tolerations: []
   affinity: ~
   securityContext: ~
-  config: { }
-  secretConfig: { }
+  config: {}
+  secretConfig: {}
+  # Full JVM trust store (JKS or PKCS12) containing every CA that the server
+  # and its Spark executors must trust, e.g. the base JDK cacerts merged with
+  # any internal roots. Merging is out of scope: provide a complete store as a
+  # Kubernetes Secret with a single data entry, never a list of PEM certs.
+  #
+  # The chart mounts this Secret read-only into the server pod and points that
+  # JVM at it. Configuring executors to mount the same store is deliberately
+  # left to the local Spark config (spark.kubernetes.executor.volumes.secret.*
+  # and spark.executorEnv.JAVA_TOOL_OPTIONS) - spark.* settings are out of the
+  # chart's scope so they cannot stomp on custom configs. Create the Secret out
+  # of band, e.g.:
+  #   kubectl create secret generic pathling-truststore \
+  #     --from-file=cacerts=/path/to/cacerts
+  truststore:
+    enabled: false
+    # Name of the Kubernetes Secret holding the store, and the data key within
+    # it that contains the store file itself.
+    secretName: pathling-truststore
+    key: cacerts
+    # Trust store password and format (jks or pkcs12) used for
+    # javax.net.ssl.trustStorePassword / trustStoreType.
+    password: changeit
+    type: jks
+    mountPath: /truststore

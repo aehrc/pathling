@@ -19,13 +19,18 @@ package au.csiro.pathling.async;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.config.AsyncConfiguration;
 import au.csiro.pathling.config.AuthorizationConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.io.JobDirectoryFileSystem;
+import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
 import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
@@ -33,15 +38,23 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
+import jakarta.annotation.Nonnull;
 import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.spark.SparkContext;
+import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.instance.model.api.IBaseResource;
+import org.hl7.fhir.r4.model.OperationOutcome;
+import org.hl7.fhir.r4.model.OperationOutcome.IssueSeverity;
+import org.hl7.fhir.r4.model.OperationOutcome.OperationOutcomeIssueComponent;
 import org.hl7.fhir.r4.model.Parameters;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -63,6 +76,7 @@ class JobProviderTest {
 
   private JobRegistry jobRegistry;
   private JobProvider jobProvider;
+  private SparkContext sparkContext;
   private MockHttpServletRequest request;
   private MockHttpServletResponse response;
 
@@ -83,7 +97,7 @@ class JobProviderTest {
 
     final JobDirectoryFileSystem jobDirectoryFileSystem =
         new JobDirectoryFileSystem(tempDir.toUri(), new Configuration());
-    jobProvider = new JobProvider(config, jobRegistry, jobDirectoryFileSystem);
+    jobProvider = new JobProvider(config, jobRegistry, jobDirectoryFileSystem, mockSpark());
     request = new MockHttpServletRequest();
     request.setMethod("GET");
     // Set the servlet path to match the FHIR server mount point.
@@ -317,7 +331,8 @@ class JobProviderTest {
     final JobDirectoryFileSystem jobDirectoryFileSystem =
         new JobDirectoryFileSystem(tempDir.toUri(), hadoopConfig);
     final ServerConfiguration config = mock(ServerConfiguration.class);
-    final JobProvider provider = new JobProvider(config, jobRegistry, jobDirectoryFileSystem);
+    final JobProvider provider =
+        new JobProvider(config, jobRegistry, jobDirectoryFileSystem, mockSpark());
 
     final Path jobsDir = tempDir.resolve("jobs").resolve(JOB_ID);
     Files.createDirectories(jobsDir);
@@ -331,23 +346,287 @@ class JobProviderTest {
 
   @Test
   void deleteJobFilesSucceedsWhenDirectoryDoesNotExist() throws Exception {
-    // Deleting a non-existent job directory should not throw; the underlying delete returns false
-    // and is logged as a warning. Capture the JobProvider log to assert the warning is emitted.
-    final Logger logger = (Logger) LoggerFactory.getLogger(JobProvider.class);
-    final ListAppender<ILoggingEvent> appender = new ListAppender<>();
-    appender.start();
-    logger.addAppender(appender);
+    // An absent job directory is a normal outcome, not a failure: a job that fails removes its own
+    // output as it unwinds, so a deletion that follows finds nothing. It must not be logged as a
+    // problem, or the genuine failures would be lost among spurious ones.
+    final ListAppender<ILoggingEvent> appender = attachJobProviderAppender();
     try {
       jobProvider.deleteJobFiles(JOB_ID);
     } finally {
-      logger.detachAppender(appender);
+      detachJobProviderAppender(appender);
+    }
+
+    assertThat(appender.list).noneMatch(JobProviderTest::isProblem);
+  }
+
+  @Test
+  void deleteJobFilesTwiceDoesNotLogAFailure() throws Exception {
+    // The second removal of the same job directory finds nothing left to remove, which is the
+    // ordinary outcome once one party has already done the work.
+    final Path jobsDir = tempDir.resolve("jobs").resolve(JOB_ID);
+    Files.createDirectories(jobsDir);
+    Files.writeString(jobsDir.resolve("output.ndjson"), "{}");
+    jobProvider.deleteJobFiles(JOB_ID);
+
+    final ListAppender<ILoggingEvent> appender = attachJobProviderAppender();
+    try {
+      jobProvider.deleteJobFiles(JOB_ID);
+    } finally {
+      detachJobProviderAppender(appender);
+    }
+
+    assertThat(Files.exists(jobsDir)).isFalse();
+    assertThat(appender.list).noneMatch(JobProviderTest::isProblem);
+  }
+
+  // -- Deleting a job: cancelling the Spark work --
+
+  @Test
+  void deletingRunningJobCancelsItsSparkJobGroup() {
+    // Nothing on the delete path used to touch Spark, so the work carried on until the server next
+    // happened to observe a stage boundary for it. Signalling Spark here is what makes abandoning a
+    // job actually stop it, and therefore what makes the deferred clean-up prompt.
+    final Job<IBaseResource> job = registerRunningJob();
+
+    assertThatThrownBy(() -> jobProvider.deleteJob(job.getId()))
+        .isInstanceOf(ProcessingNotCompletedException.class);
+
+    verify(sparkContext).cancelJobGroup(job.getId());
+  }
+
+  @Test
+  void deletingFinishedJobAttemptsNoSparkCancellation() {
+    // There is no work left to cancel, so the delete path leaves Spark alone.
+    final Job<IBaseResource> job =
+        jobRegistry.getOrCreate(
+            new Job.JobTag() {},
+            id ->
+                new Job<>(
+                    id,
+                    "export",
+                    CompletableFuture.completedFuture(new Parameters()),
+                    Optional.empty()));
+
+    assertThatThrownBy(() -> jobProvider.deleteJob(job.getId()))
+        .isInstanceOf(ProcessingNotCompletedException.class);
+
+    verify(sparkContext, never()).cancelJobGroup(anyString());
+  }
+
+  // -- Deleting a job: who removes the output directory --
+
+  @Test
+  void deletingRunningJobLeavesTheDirectoryForTheJobThread() throws Exception {
+    // The work is still running, so removing its output directory now would pull the ground out
+    // from under tasks that are still writing into it. The removal is left to the job's own thread,
+    // and the client still receives the acceptance and sees the job leave the registry.
+    final Job<IBaseResource> job = registerRunningJob();
+    final Path jobsDir = createJobDirectory(job.getId());
+
+    assertThatThrownBy(() -> jobProvider.deleteJob(job.getId()))
+        .isInstanceOf(ProcessingNotCompletedException.class)
+        .satisfies(
+            thrown ->
+                assertThat(informationalDiagnostics(thrown))
+                    .containsExactly("The job and its resources will be deleted."));
+
+    assertThat(Files.exists(jobsDir)).as("no removal is attempted while the work runs").isTrue();
+    assertThat(jobRegistry.get(job.getId())).isNull();
+  }
+
+  @Test
+  void deletingTerminatedJobRemovesTheDirectoryInline() throws Exception {
+    // The work has already stopped, so nothing is writing and this request owns the removal.
+    final Job<IBaseResource> job = registerRunningJob();
+    // The job's own thread has finished unwinding without any deletion having been requested, so it
+    // leaves the claim untaken.
+    assertThat(job.markTerminatedAndClaim()).isFalse();
+    final Path jobsDir = createJobDirectory(job.getId());
+
+    assertThatThrownBy(() -> jobProvider.deleteJob(job.getId()))
+        .isInstanceOf(ProcessingNotCompletedException.class);
+
+    assertThat(Files.exists(jobsDir)).isFalse();
+  }
+
+  // -- Deleting a job: reporting a failed removal --
+
+  @Test
+  void failedRemovalStillAcceptsTheDeletionAndWarnsAboutTheFiles() throws Exception {
+    // By this point the job has been cancelled and removed from the registry, so the client's
+    // request succeeded; reporting a server error would misdescribe it and cannot be usefully
+    // retried, since a retry returns 404 and the client cannot repair the warehouse. The response
+    // says so instead.
+    final JobProvider provider = providerWithFailingRemoval();
+    final Job<IBaseResource> job = registerRunningJob();
+    assertThat(job.markTerminatedAndClaim()).isFalse();
+
+    assertThatThrownBy(() -> provider.deleteJob(job.getId()))
+        .isInstanceOf(ProcessingNotCompletedException.class)
+        .isNotInstanceOf(InternalErrorException.class)
+        .satisfies(
+            thrown -> {
+              assertThat(informationalDiagnostics(thrown))
+                  .containsExactly("The job and its resources will be deleted.");
+              assertThat(diagnosticsOfSeverity(thrown, IssueSeverity.WARNING))
+                  .singleElement()
+                  .satisfies(
+                      diagnostics ->
+                          assertThat(diagnostics)
+                              .contains("stored files")
+                              .contains("manual clean-up"));
+              // The informational issue stays first, so existing clients reading only the first
+              // issue see what they always have.
+              assertThat(issues(thrown).get(0).getSeverity()).isEqualTo(IssueSeverity.INFORMATION);
+            });
+  }
+
+  @Test
+  void failedRemovalIsLoggedAtErrorLevel() throws Exception {
+    // The operator is the only party who can act on it: the files are orphaned in the warehouse.
+    final JobProvider provider = providerWithFailingRemoval();
+    final Job<IBaseResource> job = registerRunningJob();
+    assertThat(job.markTerminatedAndClaim()).isFalse();
+
+    final ListAppender<ILoggingEvent> appender = attachJobProviderAppender();
+    try {
+      assertThatThrownBy(() -> provider.deleteJob(job.getId()))
+          .isInstanceOf(ProcessingNotCompletedException.class);
+    } finally {
+      detachJobProviderAppender(appender);
     }
 
     assertThat(appender.list)
         .anySatisfy(
             event -> {
-              assertThat(event.getLevel()).isEqualTo(Level.WARN);
-              assertThat(event.getFormattedMessage()).contains("Failed to delete dir");
+              assertThat(event.getLevel()).isEqualTo(Level.ERROR);
+              assertThat(event.getFormattedMessage()).contains("Failed to remove the output");
             });
+  }
+
+  /**
+   * Creates a provider whose warehouse rejects the removal of a job's output directory.
+   *
+   * @return a provider that cannot remove job files
+   * @throws IOException never; declared because the stubbed method does
+   */
+  @Nonnull
+  private JobProvider providerWithFailingRemoval() throws IOException {
+    final JobDirectoryFileSystem failing = mock(JobDirectoryFileSystem.class);
+    doThrow(new IOException("the warehouse is unavailable"))
+        .when(failing)
+        .deleteJobDirectory(anyString());
+    final ServerConfiguration config = mock(ServerConfiguration.class);
+    final AuthorizationConfiguration authConfig = mock(AuthorizationConfiguration.class);
+    when(config.getAuth()).thenReturn(authConfig);
+    when(authConfig.isEnabled()).thenReturn(false);
+    return new JobProvider(config, jobRegistry, failing, mockSpark());
+  }
+
+  /**
+   * Creates a Spark session whose context records job-group cancellation, and remembers the context
+   * so that tests can assert against it.
+   *
+   * @return a mock Spark session
+   */
+  @Nonnull
+  private SparkSession mockSpark() {
+    sparkContext = mock(SparkContext.class);
+    final SparkSession spark = mock(SparkSession.class);
+    when(spark.sparkContext()).thenReturn(sparkContext);
+    return spark;
+  }
+
+  /**
+   * Registers a running job through the tag-based factory, so it is present in both the id and tag
+   * maps and can be removed by the delete path exactly as a real asynchronous job would be.
+   *
+   * @return the registered job
+   */
+  @Nonnull
+  private Job<IBaseResource> registerRunningJob() {
+    return jobRegistry.getOrCreate(
+        new Job.JobTag() {},
+        id -> new Job<>(id, "export", new CompletableFuture<>(), Optional.empty()));
+  }
+
+  /**
+   * Creates the per-job output directory with a file in it, standing in for output an operation has
+   * written.
+   *
+   * @param jobId the identifier of the job that owns the directory
+   * @return the path of the created directory
+   * @throws IOException if the directory cannot be created
+   */
+  @Nonnull
+  private Path createJobDirectory(@Nonnull final String jobId) throws IOException {
+    final Path jobsDir = tempDir.resolve("jobs").resolve(jobId);
+    Files.createDirectories(jobsDir);
+    Files.writeString(jobsDir.resolve("output.ndjson"), "{}");
+    return jobsDir;
+  }
+
+  /**
+   * Extracts the diagnostics of the informational issues carried by a thrown server exception.
+   *
+   * @param thrown the exception to inspect
+   * @return the diagnostics of each informational issue, in order
+   */
+  @Nonnull
+  private static List<String> informationalDiagnostics(@Nonnull final Throwable thrown) {
+    return diagnosticsOfSeverity(thrown, IssueSeverity.INFORMATION);
+  }
+
+  /**
+   * Extracts the diagnostics of the issues of a given severity carried by a thrown server
+   * exception.
+   *
+   * @param thrown the exception to inspect
+   * @param severity the severity to select
+   * @return the diagnostics of each matching issue, in order
+   */
+  @Nonnull
+  private static List<String> diagnosticsOfSeverity(
+      @Nonnull final Throwable thrown, @Nonnull final IssueSeverity severity) {
+    return issues(thrown).stream()
+        .filter(issue -> issue.getSeverity() == severity)
+        .map(OperationOutcomeIssueComponent::getDiagnostics)
+        .toList();
+  }
+
+  /**
+   * Extracts the issues carried by the {@code OperationOutcome} of a thrown server exception.
+   *
+   * @param thrown the exception to inspect
+   * @return the issues of the attached outcome
+   */
+  @Nonnull
+  private static List<OperationOutcomeIssueComponent> issues(@Nonnull final Throwable thrown) {
+    final BaseServerResponseException exception = (BaseServerResponseException) thrown;
+    return ((OperationOutcome) exception.getOperationOutcome()).getIssue();
+  }
+
+  @Nonnull
+  private static ListAppender<ILoggingEvent> attachJobProviderAppender() {
+    final Logger logger = (Logger) LoggerFactory.getLogger(JobProvider.class);
+    final ListAppender<ILoggingEvent> appender = new ListAppender<>();
+    appender.start();
+    logger.addAppender(appender);
+    return appender;
+  }
+
+  private static void detachJobProviderAppender(
+      @Nonnull final ListAppender<ILoggingEvent> appender) {
+    ((Logger) LoggerFactory.getLogger(JobProvider.class)).detachAppender(appender);
+  }
+
+  /**
+   * Tests whether a log event reports a problem, as opposed to routine progress.
+   *
+   * @param event the log event to test
+   * @return true if the event was logged at warning level or above
+   */
+  private static boolean isProblem(@Nonnull final ILoggingEvent event) {
+    return event.getLevel().isGreaterOrEqual(Level.WARN);
   }
 }

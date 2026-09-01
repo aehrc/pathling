@@ -186,6 +186,31 @@ function parseCapabilities(
 }
 
 /**
+ * Builds a map from resource type to its declared search parameters, for
+ * populating search-parameter controls on the pages that offer them.
+ *
+ * @param capabilities - The parsed server capabilities, or undefined while they
+ *   are still resolving.
+ * @returns A map keyed by resource type, or undefined when the capabilities
+ *   carry no resource information.
+ * @example
+ * const searchParams = buildSearchParamMap(capabilities);
+ * // { Patient: [{ name: "gender", type: "token" }], ... }
+ */
+export function buildSearchParamMap(
+  capabilities: ServerCapabilities | undefined,
+): Record<string, SearchParamCapability[]> | undefined {
+  if (!capabilities?.resources) {
+    return undefined;
+  }
+  const searchParams: Record<string, SearchParamCapability[]> = {};
+  for (const resource of capabilities.resources) {
+    searchParams[resource.type] = resource.searchParams;
+  }
+  return searchParams;
+}
+
+/**
  * Fetch server capabilities from the CapabilityStatement.
  *
  * @param fhirBaseUrl - The FHIR server base URL.

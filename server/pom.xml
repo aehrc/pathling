@@ -24,7 +24,7 @@
 
   <groupId>au.csiro.pathling</groupId>
   <artifactId>server</artifactId>
-  <version>3.0.0-SNAPSHOT</version>
+  <version>3.0.0</version>
 
   <name>Pathling Server</name>
   <description>
@@ -35,18 +35,20 @@
     <maven.compiler.source>21</maven.compiler.source>
     <maven.compiler.target>21</maven.compiler.target>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <project.majorVersion>1</project.majorVersion>
-    <pathling.version>9.9.0-SNAPSHOT</pathling.version>
+    <project.majorVersion>3</project.majorVersion>
+    <pathling.version>9.9.0</pathling.version>
     <pathling.hapiFhirVersion>8.10.0</pathling.hapiFhirVersion>
     <pathling.springBootVersion>3.5.16</pathling.springBootVersion>
     <pathling.sparkVersion>4.0.2</pathling.sparkVersion>
     <pathling.hadoopVersion>3.4.1</pathling.hadoopVersion>
     <pathling.scalaVersion>2.13</pathling.scalaVersion>
     <pathling.deltaVersion>4.0.0</pathling.deltaVersion>
-    <pathling.nettyVersion>4.1.135.Final</pathling.nettyVersion>
+    <pathling.nettyVersion>4.1.137.Final</pathling.nettyVersion>
+    <pathling.httpClient5Version>5.6.4</pathling.httpClient5Version>
+    <pathling.httpCore5Version>5.4.3</pathling.httpCore5Version>
     <pathling.testSetup.skip>false</pathling.testSetup.skip>
     <pathling.ui.skip>false</pathling.ui.skip>
-    <pathling.jacksonVersion>2.22.0</pathling.jacksonVersion>
+    <pathling.jacksonVersion>2.22.1</pathling.jacksonVersion>
     <pathling.testDataVersion>1.0.0</pathling.testDataVersion>
     <pathling.slf4jVersion>2.0.17</pathling.slf4jVersion>
     <pathling.jibVersion>3.4.6</pathling.jibVersion>
@@ -171,6 +173,14 @@
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-aws</artifactId>
       <version>${pathling.hadoopVersion}</version>
+    </dependency>
+    <!-- Provides the S3A magic committer classes (PathOutputCommitProtocol and
+         BindingParquetOutputCommitter) used when the warehouse is an S3 object
+         store, avoiding rename-based commits. Version must match Spark. -->
+    <dependency>
+      <groupId>org.apache.spark</groupId>
+      <artifactId>spark-hadoop-cloud_${pathling.scalaVersion}</artifactId>
+      <version>${pathling.sparkVersion}</version>
     </dependency>
     <dependency>
       <groupId>software.amazon.awssdk</groupId>
@@ -344,7 +354,7 @@
     <dependency>
       <groupId>org.apache.httpcomponents.client5</groupId>
       <artifactId>httpclient5</artifactId>
-      <version>5.1.3</version>
+      <version>${pathling.httpClient5Version}</version>
       <scope>compile</scope>
       <exclusions>
         <exclusion>
@@ -356,7 +366,7 @@
     <dependency>
       <groupId>org.apache.httpcomponents.client5</groupId>
       <artifactId>httpclient5-cache</artifactId>
-      <version>5.1.3</version>
+      <version>${pathling.httpClient5Version}</version>
       <scope>compile</scope>
       <exclusions>
         <exclusion>
@@ -413,11 +423,6 @@
         <type>pom</type>
         <scope>import</scope>
       </dependency>
-      <dependency>
-        <groupId>jakarta.servlet</groupId>
-        <artifactId>jakarta.servlet-api</artifactId>
-        <version>6.0.0</version>
-      </dependency>
       <!-- Override Spark's Avro version to fix CVE-2025-33042. -->
       <dependency>
         <groupId>org.apache.avro</groupId>
@@ -459,6 +464,21 @@
         <groupId>org.apache.tomcat.embed</groupId>
         <artifactId>tomcat-embed-websocket</artifactId>
         <version>10.1.55</version>
+      </dependency>
+      <!-- Override Spring Boot's HttpCore 5 version to fix CVE-2026-54399 and
+           CVE-2026-54428. Spring Boot 3.5.16 manages 5.3.6; the fix requires
+           5.4.3, which is also the version httpclient5 5.6.4 is built against.
+           Remove once Spring Boot is upgraded to a release that manages
+           HttpCore 5 >= 5.4.3. -->
+      <dependency>
+        <groupId>org.apache.httpcomponents.core5</groupId>
+        <artifactId>httpcore5</artifactId>
+        <version>${pathling.httpCore5Version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.httpcomponents.core5</groupId>
+        <artifactId>httpcore5-h2</artifactId>
+        <version>${pathling.httpCore5Version}</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
@@ -772,6 +792,10 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-failsafe-plugin</artifactId>
+            <!-- The system test settings belong to this execution alone. Declaring them on the
+                 plugin would also apply them to the default execution inherited from the main
+                 build, pointing it at the main classes directory and the SystemTest group, which
+                 silently reduces the integration test suite to nothing. -->
             <executions>
               <execution>
                 <id>system-test</id>
@@ -779,32 +803,34 @@
                   <goal>integration-test</goal>
                   <goal>verify</goal>
                 </goals>
+                <configuration>
+                  <classesDirectory>${project.build.outputDirectory}</classesDirectory>
+                  <includes combine.children="override">
+                    <include>**/*.java</include>
+                  </includes>
+                  <groups>SystemTest</groups>
+                  <systemPropertyVariables>
+                    <pathling.systemTest.version>${git.commit.id}</pathling.systemTest.version>
+                    <pathling.systemTest.auth.issuer>
+                      https://auth.ontoserver.csiro.au/auth/realms/aehrc
+                    </pathling.systemTest.auth.issuer>
+                    <pathling.systemTest.auth.clientId>
+                      pathling-test
+                    </pathling.systemTest.auth.clientId>
+                    <pathling.systemTest.auth.requestedScope>
+                      openid user/*.*
+                    </pathling.systemTest.auth.requestedScope>
+                    <pathling.systemTest.terminology.serverUrl>
+                      https://tx.ontoserver.csiro.au/fhir
+                    </pathling.systemTest.terminology.serverUrl>
+                    <pathling.systemTest.dockerRepository>
+                      ${pathling.fhirServerDockerRepo}
+                    </pathling.systemTest.dockerRepository>
+                    <spring.profiles.active>system-test</spring.profiles.active>
+                  </systemPropertyVariables>
+                </configuration>
               </execution>
             </executions>
-            <configuration>
-              <classesDirectory>${project.build.outputDirectory}</classesDirectory>
-              <includes>
-                <include>**/*.java</include>
-              </includes>
-              <groups>SystemTest</groups>
-              <systemPropertyVariables>
-                <pathling.systemTest.version>${git.commit.id}</pathling.systemTest.version>
-                <pathling.systemTest.auth.issuer>
-                  https://auth.ontoserver.csiro.au/auth/realms/aehrc
-                </pathling.systemTest.auth.issuer>
-                <pathling.systemTest.auth.clientId>pathling-test</pathling.systemTest.auth.clientId>
-                <pathling.systemTest.auth.requestedScope>
-                  openid user/*.*
-                </pathling.systemTest.auth.requestedScope>
-                <pathling.systemTest.terminology.serverUrl>
-                  https://tx.ontoserver.csiro.au/fhir
-                </pathling.systemTest.terminology.serverUrl>
-                <pathling.systemTest.dockerRepository>
-                  ${pathling.fhirServerDockerRepo}
-                </pathling.systemTest.dockerRepository>
-                <spring.profiles.active>system-test</spring.profiles.active>
-              </systemPropertyVariables>
-            </configuration>
           </plugin>
           <plugin>
             <groupId>com.google.cloud.tools</groupId>
@@ -901,6 +927,10 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-failsafe-plugin</artifactId>
+            <!-- The system test settings belong to this execution alone. Declaring them on the
+                 plugin would also apply them to the default execution inherited from the main
+                 build, pointing it at the main classes directory and the SystemTest group, which
+                 silently reduces the integration test suite to nothing. -->
             <executions>
               <execution>
                 <id>system-test</id>
@@ -908,32 +938,34 @@
                   <goal>integration-test</goal>
                   <goal>verify</goal>
                 </goals>
+                <configuration>
+                  <classesDirectory>${project.build.outputDirectory}</classesDirectory>
+                  <includes combine.children="override">
+                    <include>**/*.java</include>
+                  </includes>
+                  <groups>SystemTest</groups>
+                  <systemPropertyVariables>
+                    <pathling.systemTest.version>${git.commit.id}</pathling.systemTest.version>
+                    <pathling.systemTest.auth.issuer>
+                      https://auth.ontoserver.csiro.au/auth/realms/aehrc
+                    </pathling.systemTest.auth.issuer>
+                    <pathling.systemTest.auth.clientId>
+                      pathling-test
+                    </pathling.systemTest.auth.clientId>
+                    <pathling.systemTest.auth.requestedScope>
+                      openid user/*.*
+                    </pathling.systemTest.auth.requestedScope>
+                    <pathling.systemTest.terminology.serverUrl>
+                      https://tx.ontoserver.csiro.au/fhir
+                    </pathling.systemTest.terminology.serverUrl>
+                    <pathling.systemTest.dockerRepository>
+                      ${pathling.fhirServerDockerRepo}
+                    </pathling.systemTest.dockerRepository>
+                    <spring.profiles.active>system-test</spring.profiles.active>
+                  </systemPropertyVariables>
+                </configuration>
               </execution>
             </executions>
-            <configuration>
-              <classesDirectory>${project.build.outputDirectory}</classesDirectory>
-              <includes>
-                <include>**/*.java</include>
-              </includes>
-              <groups>SystemTest</groups>
-              <systemPropertyVariables>
-                <pathling.systemTest.version>${git.commit.id}</pathling.systemTest.version>
-                <pathling.systemTest.auth.issuer>
-                  https://auth.ontoserver.csiro.au/auth/realms/aehrc
-                </pathling.systemTest.auth.issuer>
-                <pathling.systemTest.auth.clientId>pathling-test</pathling.systemTest.auth.clientId>
-                <pathling.systemTest.auth.requestedScope>
-                  openid user/*.*
-                </pathling.systemTest.auth.requestedScope>
-                <pathling.systemTest.terminology.serverUrl>
-                  https://tx.ontoserver.csiro.au/fhir
-                </pathling.systemTest.terminology.serverUrl>
-                <pathling.systemTest.dockerRepository>
-                  ${pathling.fhirServerDockerRepo}
-                </pathling.systemTest.dockerRepository>
-                <spring.profiles.active>system-test</spring.profiles.active>
-              </systemPropertyVariables>
-            </configuration>
           </plugin>
           <plugin>
             <groupId>com.google.cloud.tools</groupId>

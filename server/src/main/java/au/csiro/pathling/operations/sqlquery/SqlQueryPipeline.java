@@ -18,9 +18,10 @@
 package au.csiro.pathling.operations.sqlquery;
 
 import au.csiro.pathling.io.source.DataSource;
-import au.csiro.pathling.views.FhirView;
+import au.csiro.pathling.operations.sql.SuppliedArtefacts;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.Consumer;
 import org.apache.spark.sql.Dataset;
@@ -37,8 +38,8 @@ import org.springframework.stereotype.Component;
  * parameters, and optional request-supplied views, it parses the query, resolves its ViewDefinition
  * table sources, statically validates the SQL, and executes it against Spark.
  *
- * <p>Both the synchronous {@code $sqlquery-run} operation (which streams the single result) and the
- * asynchronous {@code $sqlquery-export} operation (which writes each result to files) call this
+ * <p>Both the synchronous {@code $sql-run} operation (which streams the single result) and the
+ * asynchronous {@code $sql-export} operation (which writes each result to files) call this
  * pipeline, so the parsing, view resolution, validation, and execution semantics are identical
  * across the two. Only the terminal step (stream-to-response vs. write-to-files) differs and is
  * supplied by the caller as a {@link Consumer} of the result dataset.
@@ -84,7 +85,7 @@ public class SqlQueryPipeline {
    * @param includeHeader whether to include a CSV header row; {@code null} defaults to {@code true}
    * @param limit optional row cap
    * @param parameters runtime parameter bindings as a {@code Parameters} resource
-   * @param suppliedViews request-supplied views keyed by the ViewDefinition id they satisfy
+   * @param supplied request-supplied artefacts matched by the canonical URL they satisfy
    * @return the prepared query
    */
   @Nonnull
@@ -96,11 +97,47 @@ public class SqlQueryPipeline {
       @Nullable final BooleanType includeHeader,
       @Nullable final IntegerType limit,
       @Nullable final Parameters parameters,
-      @Nonnull final Map<String, FhirView> suppliedViews) {
+      @Nonnull final SuppliedArtefacts supplied) {
+    return prepare(
+        library,
+        format,
+        acceptHeader,
+        includeHeader,
+        limit,
+        parameters,
+        supplied,
+        new LinkedHashMap<>());
+  }
+
+  /**
+   * Prepares a query, memoising dependency resolution into a caller-supplied node map so that a
+   * dependency shared by several queries in one job is resolved once and shared.
+   *
+   * @param library the SQLQuery or SQLView Library resource
+   * @param format the explicit {@code _format} parameter, if any
+   * @param acceptHeader the HTTP {@code Accept} header value, used as a fallback for {@code format}
+   * @param includeHeader whether to include a CSV header row; {@code null} defaults to {@code true}
+   * @param limit optional row cap
+   * @param parameters runtime parameter bindings as a {@code Parameters} resource
+   * @param supplied request-supplied artefacts matched by the canonical URL they satisfy
+   * @param nodesByKey the memoisation map, shared across the queries of one job
+   * @return the prepared query
+   */
+  @Nonnull
+  @SuppressWarnings("java:S107")
+  public PreparedSqlQuery prepare(
+      @Nonnull final IBaseResource library,
+      @Nullable final String format,
+      @Nullable final String acceptHeader,
+      @Nullable final BooleanType includeHeader,
+      @Nullable final IntegerType limit,
+      @Nullable final Parameters parameters,
+      @Nonnull final SuppliedArtefacts supplied,
+      @Nonnull final Map<String, ResolvedDependency> nodesByKey) {
     final SqlQueryRequest request =
         requestParser.parse(library, format, acceptHeader, includeHeader, limit, parameters);
     final ResolvedDependencyGraph dependencyGraph =
-        dependencyResolver.resolve(request.getParsedQuery(), suppliedViews);
+        dependencyResolver.resolve(request.getParsedQuery(), supplied, nodesByKey);
     return new PreparedSqlQuery(request, dependencyGraph);
   }
 

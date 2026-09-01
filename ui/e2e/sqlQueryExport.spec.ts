@@ -16,7 +16,7 @@
  */
 
 /**
- * E2E tests for the `$sqlquery-export` affordance on the SQL on FHIR page: running a query, then
+ * E2E tests for the `$sql-export` affordance on the SQL on FHIR page: running a query, then
  * exporting its result set asynchronously and downloading an output file. All network is mocked
  * with `page.route`.
  *
@@ -70,7 +70,7 @@ async function mockBaseEndpoints(page: Page) {
   await page.route("**/ViewDefinition?*", viewDefinitions);
   await page.route(/\/ViewDefinition$/, viewDefinitions);
 
-  await page.route("**/$sqlquery-run", async (route) => {
+  await page.route(/\/\$sql-run/, async (route) => {
     await route.fulfill({
       status: 200,
       contentType: "text/csv",
@@ -87,7 +87,7 @@ async function mockBaseEndpoints(page: Page) {
  */
 async function mockExportEndpoints(page: Page) {
   // Kick-off returns 202 with a polling URL.
-  await page.route(/\/\$sqlquery-export/, async (route) => {
+  await page.route(/\/\$sql-export/, async (route) => {
     await route.fulfill({
       status: 202,
       headers: {

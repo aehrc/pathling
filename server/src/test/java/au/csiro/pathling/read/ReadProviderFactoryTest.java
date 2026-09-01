@@ -36,6 +36,7 @@ import org.hl7.fhir.r4.model.Patient;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Import;
 
 /**
@@ -43,7 +44,9 @@ import org.springframework.context.annotation.Import;
  *
  * @author John Grimes
  */
-@Import(FhirServerTestConfiguration.class)
+// ReadProvider is imported so the context carries its (prototype-scoped) bean definition, which
+// is what the factory asks for.
+@Import({FhirServerTestConfiguration.class, ReadProvider.class})
 @SpringBootUnitTest
 class ReadProviderFactoryTest {
 
@@ -57,6 +60,8 @@ class ReadProviderFactoryTest {
 
   @Autowired private au.csiro.pathling.config.ServerConfiguration configuration;
 
+  @Autowired private ApplicationContext applicationContext;
+
   private ReadProviderFactory readProviderFactory;
 
   @BeforeEach
@@ -67,7 +72,8 @@ class ReadProviderFactoryTest {
         new CustomObjectDataSource(sparkSession, pathlingContext, fhirEncoders, resources);
 
     readProviderFactory =
-        new ReadProviderFactory(configuration, fhirContext, dataSource, fhirEncoders);
+        new ReadProviderFactory(
+            applicationContext, configuration, fhirContext, dataSource, fhirEncoders);
   }
 
   // -------------------------------------------------------------------------

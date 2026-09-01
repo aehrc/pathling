@@ -33,8 +33,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "../../../test/testUtils";
 import { ViewDefinitionForm } from "../ViewDefinitionForm";
 
-import type { ViewRunRequest } from "../../../hooks";
 import type { CreateViewDefinitionResult } from "../../../types/sqlOnFhir";
+import type { ViewRunRequest } from "../../../types/viewJob";
 
 // Mock the hooks.
 const mockUseViewDefinitions = vi.fn();
@@ -471,8 +471,9 @@ describe("ViewDefinitionForm", () => {
       // Click save.
       await user.click(screen.getByRole("button", { name: /save to server/i }));
 
+      // The shared error presentation announces every error as an alert.
       await waitFor(() => {
-        expect(screen.getByText(/save failed/i)).toBeInTheDocument();
+        expect(screen.getByRole("alert")).toHaveTextContent(/save failed/i);
       });
     });
 

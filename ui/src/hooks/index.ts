@@ -27,35 +27,30 @@ export { useAsyncJob } from "./useAsyncJob";
 export { useBulkExport } from "./useBulkExport";
 export type { BulkExportType } from "./useBulkExport";
 export { useImport } from "./useImport";
+export { useJobsList, JOBS_QUERY_KEY } from "./useJobsList";
 export { useImportPnp } from "./useImportPnp";
 export { useBulkSubmit } from "./useBulkSubmit";
 /**
  * @deprecated Use useBulkSubmit with mode: 'monitor' instead.
  */
 export { useBulkSubmit as useBulkSubmitMonitor } from "./useBulkSubmit";
-export { useViewExport } from "./useViewExport";
-export type { ViewExportOutputFormat } from "./useViewExport";
-export { useSqlQueryExport } from "./useSqlQueryExport";
+
+// SQL on FHIR data operations.
+export { useSqlRun } from "./useSqlRun";
 export type {
-  UseSqlQueryExportOptions,
-  UseSqlQueryExportResult,
-} from "./useSqlQueryExport";
-export {
-  buildSqlQueryExportKickOffBody,
-  parseSqlQueryExportManifest,
-} from "./sqlQueryExportHelpers";
-export type { SqlQueryExportOutput } from "./sqlQueryExportHelpers";
+  SqlRunRequest,
+  UseSqlRunOptions,
+  UseSqlRunResult,
+} from "./useSqlRun";
+export { useSqlExport } from "./useSqlExport";
+export type {
+  SqlExportManifest,
+  SqlExportRequest,
+  UseSqlExportOptions,
+  UseSqlExportResult,
+} from "./useSqlExport";
 
 // View operations.
-export { useViewRun } from "./useViewRun";
-export type {
-  ViewDefinition,
-  ViewRunRequest,
-  ViewDefinitionResult,
-  UseViewRunOptions,
-  UseViewRunResult,
-  UseViewRunFn,
-} from "./useViewRun";
 export { useViewDefinitions } from "./useViewDefinitions";
 export type { ViewDefinitionSummary } from "./useViewDefinitions";
 export { useSaveViewDefinition } from "./useSaveViewDefinition";
@@ -65,17 +60,18 @@ export { useSqlQueryLibraries } from "./useSqlQueryLibraries";
 export { useSqlViews } from "./useSqlViews";
 export type { UseSqlViewsOptions, UseSqlViewsResult } from "./useSqlViews";
 export { useSaveSqlQueryLibrary } from "./useSaveSqlQueryLibrary";
-export { useSqlQueryRun } from "./useSqlQueryRun";
-export type {
-  UseSqlQueryRunOptions,
-  UseSqlQueryRunResult,
-} from "./useSqlQueryRun";
+
+// Authentication.
+export { useLogin } from "./useLogin";
 
 // Other operations.
 export { useClipboard } from "./useClipboard";
 export { useDownloadFile } from "./useDownloadFile";
 export { useFhirPathSearch } from "./useFhirPathSearch";
-export { useServerCapabilities } from "./useServerCapabilities";
+export {
+  useServerCapabilities,
+  buildSearchParamMap,
+} from "./useServerCapabilities";
 
 // Re-export types from the base hook.
 export type { UseAsyncJobResult } from "./useAsyncJob";

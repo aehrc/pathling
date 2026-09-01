@@ -16,32 +16,41 @@
  */
 
 /**
- * Form for executing the SQL on FHIR `$sqlquery-run` operation.
+ * Form for executing the SQL on FHIR `$sql-run` operation.
  *
- * Hosts a stored/inline tab pair, runtime bindings and output controls,
- * then dispatches Execute and Save actions through the supplied
- * callbacks.
+ * Hosts a stored/inline tab pair - each owning its own parameter
+ * presentation - and the output controls, then dispatches Execute and Save
+ * actions through the supplied callbacks. A successful save selects the saved
+ * query on the stored tab and carries the values typed inline across to it,
+ * since values are never persisted.
+ *
+ * Execute and Add to export set are offered only while every declared
+ * parameter carries a valid value; Save only requires that no name is
+ * declared twice.
  *
  * @author John Grimes
  */
 
-import { PlayIcon, UploadIcon } from "@radix-ui/react-icons";
-import { Box, Button, Callout, Card, Flex, Heading, Tabs } from "@radix-ui/themes";
+import { PlayIcon, PlusIcon, UploadIcon } from "@radix-ui/react-icons";
+import { Box, Button, Card, Flex, Heading, Tabs } from "@radix-ui/themes";
 import { useState } from "react";
 
-import { useSqlQueryLibraries, useSqlViews, useViewDefinitions } from "../../hooks";
-import { FieldLabel } from "../FieldLabel";
 import {
-  areRuntimeBindingsValid,
+  areBindingsCompleteAndValid,
+  areParameterRowsValid,
+  bindUntouchedBooleans,
   buildInlineSqlQueryLibrary,
   buildParameterTypes,
   canExecuteInlineForm,
   canSaveInlineForm,
+  findDuplicateParameterNames,
+  rowsToBindings,
 } from "./sqlQueryFormHelpers";
 import { SqlQueryInlineTab } from "./SqlQueryInlineTab";
 import { SqlQueryOutputControls } from "./SqlQueryOutputControls";
-import { SqlQueryRuntimeBindings } from "./SqlQueryRuntimeBindings";
 import { SqlQueryStoredTab } from "./SqlQueryStoredTab";
+import { useSqlQueryLibraries, useSqlViews, useViewDefinitions } from "../../hooks";
+import { ErrorCallout } from "../error/ErrorCallout";
 
 import type {
   SaveSqlQueryLibraryResult,
@@ -59,6 +68,8 @@ type LibrarySource = "stored" | "inline";
 interface SqlQueryFormProps {
   /** Callback fired when the user clicks Execute. */
   onExecute: (request: SqlQueryRequest) => void;
+  /** Callback fired when the user adds the current query to the export set. */
+  onAddToExportSet?: (request: SqlQueryRequest) => void;
   /** Callback fired to save an inline Library to the server. */
   onSaveToServer: (library: SqlQueryLibrary) => Promise<SaveSqlQueryLibraryResult>;
   /** Whether a query is currently executing. */
@@ -74,6 +85,7 @@ interface SqlQueryFormProps {
  *
  * @param props - The component props.
  * @param props.onExecute - Callback fired when the user clicks Execute.
+ * @param props.onAddToExportSet - Callback fired when the user adds the current query to the export set.
  * @param props.onSaveToServer - Callback fired to save an inline Library to the server.
  * @param props.isExecuting - Whether a query is currently executing.
  * @param props.isSaving - Whether a save is currently in progress.
@@ -82,6 +94,7 @@ interface SqlQueryFormProps {
  */
 export function SqlQueryForm({
   onExecute,
+  onAddToExportSet,
   onSaveToServer,
   isExecuting,
   isSaving,
@@ -137,19 +150,32 @@ export function SqlQueryForm({
     // query export operation.
     const parsedLimit = limit.trim() === "" ? undefined : Number.parseInt(limit, 10);
     const requestLimit = parsedLimit === undefined ? 10 : Math.min(parsedLimit, 10);
+    // The inline tab's rows carry their own values, so they are the source of
+    // the inline request's bindings; the stored tab uses the name-keyed map.
+    // A stored boolean with no entry is defaulted to false so the assembled
+    // request never sends an unbound parameter.
     return {
       format,
       limit: requestLimit,
       header: format === "csv" ? csvHeader : undefined,
-      bindings,
+      bindings:
+        source === "stored"
+          ? bindUntouchedBooleans(declaredParameters, bindings)
+          : rowsToBindings(parameters),
       parameterTypes: buildParameterTypes(declaredParameters),
     };
   };
 
-  const handleExecute = () => {
+  /**
+   * Builds the request the form currently describes, or undefined when it
+   * describes nothing runnable.
+   *
+   * @returns The request, or undefined.
+   */
+  const buildRequest = (): SqlQueryRequest | undefined => {
     if (source === "stored") {
-      if (!selectedLibraryId) return;
-      const request: SqlQueryRequest = {
+      if (!selectedLibraryId) return undefined;
+      return {
         mode: "stored",
         libraryId: selectedLibraryId,
         // Carry the resolved SQL for display only; the server receives just
@@ -157,17 +183,27 @@ export function SqlQueryForm({
         sql: activeStoredLibrary?.sql,
         ...baseRequestOptions(),
       };
-      onExecute(request);
-      return;
     }
-    if (!canExecuteInlineForm(inlineInput)) return;
-    const library = buildInlineSqlQueryLibrary(inlineInput);
-    const request: SqlQueryRequest = {
+    if (!canExecuteInlineForm(inlineInput)) return undefined;
+    return {
       mode: "inline",
-      library,
+      library: buildInlineSqlQueryLibrary(inlineInput),
       ...baseRequestOptions(),
     };
-    onExecute(request);
+  };
+
+  const handleExecute = () => {
+    const request = buildRequest();
+    if (request) {
+      onExecute(request);
+    }
+  };
+
+  const handleAddToExportSet = () => {
+    const request = buildRequest();
+    if (request) {
+      onAddToExportSet?.(request);
+    }
   };
 
   const handleSaveToServer = async () => {
@@ -176,6 +212,13 @@ export function SqlQueryForm({
     try {
       const library = buildInlineSqlQueryLibrary(inlineInput);
       const result = await onSaveToServer(library);
+      // The values just typed on the rows are not persisted, so carry them
+      // into the name-keyed map the stored tab reads. The rows win over any
+      // value retained from an earlier selection of the same name: they are
+      // what the user last typed, and what the saved query is expected to run
+      // with. Rows left empty contribute nothing, so a retained value there
+      // survives.
+      setBindings((prev) => ({ ...prev, ...rowsToBindings(parameters) }));
       setSource("stored");
       setSelectedLibraryId(result.id);
     } catch (err) {
@@ -186,21 +229,33 @@ export function SqlQueryForm({
   const limitInvalid =
     limit.trim() !== "" && (!/^[0-9]+$/.test(limit.trim()) || Number.parseInt(limit, 10) <= 0);
 
-  const bindingsValid = areRuntimeBindingsValid(declaredParameters, bindings);
+  const duplicateParameterNames = findDuplicateParameterNames(parameters);
+
+  // Every declared parameter must carry a valid value before the query can be
+  // submitted: an unbound parameter has nothing for the server to substitute.
+  // The inline tab's values live on its rows, the stored tab's in the
+  // name-keyed map, so each mode checks its own store.
+  const parametersBound =
+    source === "stored"
+      ? areBindingsCompleteAndValid(declaredParameters, bindings)
+      : areParameterRowsValid(parameters);
 
   const canExecute =
     !disabled &&
     !isExecuting &&
     !limitInvalid &&
-    bindingsValid &&
+    parametersBound &&
     (source === "stored" ? selectedLibraryId !== "" : canExecuteInlineForm(inlineInput));
 
-  const canSave = !disabled && !isSaving && source === "inline" && canSaveInlineForm(inlineInput);
-
-  // On the "Provide SQL" tab the runtime-params section stays anchored as the
-  // user declares parameters; on the "Select query" tab it appears only when
-  // the selected source actually declares parameters (a SQLView never does).
-  const showRuntimeParams = source === "inline" || declaredParameters.length > 0;
+  // Values are never persisted, so an empty or invalid value cannot block a
+  // save. A name declared twice can: the declarations themselves would be
+  // ambiguous once saved.
+  const canSave =
+    !disabled &&
+    !isSaving &&
+    source === "inline" &&
+    canSaveInlineForm(inlineInput) &&
+    duplicateParameterNames.size === 0;
 
   return (
     <Card>
@@ -221,6 +276,8 @@ export function SqlQueryForm({
                 isLoading={isLoadingLibraries || isLoadingViews}
                 selectedId={selectedLibraryId}
                 onSelect={setSelectedLibraryId}
+                bindings={bindings}
+                onBindingChange={handleBindingChange}
                 disabled={disabled || isExecuting}
               />
             </Tabs.Content>
@@ -234,6 +291,7 @@ export function SqlQueryForm({
                 onTablesChange={setTables}
                 parameters={parameters}
                 onParametersChange={setParameters}
+                duplicateNames={duplicateParameterNames}
                 viewDefinitions={(viewDefinitions ?? []).map((vd) => ({
                   id: vd.id,
                   name: vd.name,
@@ -246,26 +304,10 @@ export function SqlQueryForm({
                 }))}
                 disabled={disabled || isExecuting}
               />
-              {saveError && (
-                <Callout.Root color="red" mt="3" size="1">
-                  <Callout.Text>{saveError.message}</Callout.Text>
-                </Callout.Root>
-              )}
+              {saveError && <ErrorCallout message={saveError.message} size="1" mt="3" />}
             </Tabs.Content>
           </Box>
         </Tabs.Root>
-
-        {showRuntimeParams && (
-          <Box>
-            <FieldLabel mb="2">Runtime parameter values</FieldLabel>
-            <SqlQueryRuntimeBindings
-              parameters={declaredParameters}
-              bindings={bindings}
-              onChange={handleBindingChange}
-              disabled={disabled || isExecuting}
-            />
-          </Box>
-        )}
 
         <SqlQueryOutputControls
           format={format}
@@ -278,17 +320,34 @@ export function SqlQueryForm({
         />
 
         <Flex gap="3">
-          <Button size="3" onClick={handleExecute} disabled={!canExecute} style={{ flex: 1 }}>
+          <Button
+            size="2"
+            onClick={handleExecute}
+            disabled={!canExecute}
+            style={{ flex: 1, whiteSpace: "nowrap" }}
+          >
             <PlayIcon />
             {isExecuting ? "Executing..." : "Execute"}
           </Button>
+          {onAddToExportSet && (
+            <Button
+              size="2"
+              variant="soft"
+              onClick={handleAddToExportSet}
+              disabled={!canExecute}
+              style={{ whiteSpace: "nowrap" }}
+            >
+              <PlusIcon />
+              Add to export set
+            </Button>
+          )}
           {source === "inline" && (
             <Button
-              size="3"
+              size="2"
               variant="soft"
               onClick={handleSaveToServer}
               disabled={!canSave}
-              style={{ flex: 1 }}
+              style={{ flex: 1, whiteSpace: "nowrap" }}
             >
               <UploadIcon />
               {isSaving ? "Saving..." : "Save to server"}

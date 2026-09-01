@@ -355,7 +355,7 @@ export const mockEmptyViewRunNdjson = "";
 // ============================================================================
 
 /**
- * Mock SQLQuery Library for use in `$sqlquery-run` tests.
+ * Mock SQLQuery Library for use in `$sql-run` tests.
  *
  * Carries Base64-encoded SQL ("SELECT 1"), references a single
  * ViewDefinition and declares one runtime parameter.
@@ -422,7 +422,7 @@ export const mockEmptySqlQueryLibraryBundle: Bundle = {
 // ============================================================================
 
 /**
- * Mock SQLView Library for use in `$sqlquery-run` / `$sqlquery-export` tests.
+ * Mock SQLView Library for use in `$sql-run` / `$sql-export` tests.
  *
  * Carries Base64-encoded SQL ("SELECT 2"), references a single ViewDefinition
  * as a dependency and declares no parameters (SQLViews are parameter-less).
@@ -484,13 +484,13 @@ export const mockEmptySqlViewLibraryBundle: Bundle = {
 };
 
 /**
- * Mock CSV body for `$sqlquery-run` results.
+ * Mock CSV body for `$sql-run` results.
  */
 export const mockSqlQueryRunCsv =
   "patient_id,given_name\npat-1,Alice\npat-2,Bob";
 
 /**
- * Mock OperationOutcome body for `$sqlquery-run` validation failures.
+ * Mock OperationOutcome body for `$sql-run` validation failures.
  */
 export const mockSqlQueryRunOperationOutcome = {
   resourceType: "OperationOutcome",

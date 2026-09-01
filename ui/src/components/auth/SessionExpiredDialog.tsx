@@ -23,57 +23,80 @@
  */
 
 import { LockClosedIcon } from "@radix-ui/react-icons";
-import { AlertDialog, Button, Flex } from "@radix-ui/themes";
+import { AlertDialog, Box, Button, Flex, Spinner } from "@radix-ui/themes";
 
-import { config } from "../../config";
 import { useAuth } from "../../contexts/AuthContext";
-import { initiateAuth } from "../../services/auth";
+import { useLogin } from "../../hooks/useLogin";
+import { ErrorCallout } from "../error/ErrorCallout";
 
 /**
  * Dialog prompting the user to re-authenticate after session expiry.
  *
+ * The body is a separate component because the dialog primitive unmounts its
+ * content when closed. Holding the login attempt's state there means each
+ * expiry starts with a clean slate, rather than presenting the previous
+ * attempt's failure as though it described the new one.
+ *
  * @returns The session expired dialog component.
  */
 export function SessionExpiredDialog() {
-  const { sessionExpired, setSessionExpired, setLoading, setError } = useAuth();
-  const { fhirBaseUrl } = config;
-
-  const handleLogin = async () => {
-    if (!fhirBaseUrl) return;
-    setSessionExpired(false);
-    setLoading(true);
-    try {
-      await initiateAuth(fhirBaseUrl);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Authentication failed");
-    }
-  };
-
-  const handleDismiss = () => {
-    setSessionExpired(false);
-  };
+  const { sessionExpired, setSessionExpired } = useAuth();
 
   return (
     <AlertDialog.Root open={sessionExpired} onOpenChange={setSessionExpired}>
       <AlertDialog.Content maxWidth="450px">
-        <AlertDialog.Title>Session expired</AlertDialog.Title>
-        <AlertDialog.Description size="2">
-          Your session has expired. Please log in again to continue working.
-        </AlertDialog.Description>
-        <Flex gap="3" mt="4" justify="end">
-          <AlertDialog.Cancel>
-            <Button variant="soft" color="gray" onClick={handleDismiss}>
-              Dismiss
-            </Button>
-          </AlertDialog.Cancel>
-          <AlertDialog.Action>
-            <Button onClick={handleLogin}>
-              <LockClosedIcon />
-              Log in
-            </Button>
-          </AlertDialog.Action>
-        </Flex>
+        <SessionExpiredDialogBody onDismiss={() => setSessionExpired(false)} />
       </AlertDialog.Content>
     </AlertDialog.Root>
+  );
+}
+
+interface SessionExpiredDialogBodyProps {
+  /** Closes the dialog without initiating authorisation. */
+  onDismiss: () => void;
+}
+
+/**
+ * The dialog's content and actions.
+ *
+ * The dialog stays open while an authorisation attempt is under way, and stays
+ * open when that attempt fails, so the user sees the outcome where they asked
+ * for it. The login control is therefore a plain button rather than an
+ * `AlertDialog.Action`, which would close the dialog on activation.
+ *
+ * @param props - The component props.
+ * @param props.onDismiss - Closes the dialog without initiating authorisation.
+ * @returns The dialog body.
+ */
+function SessionExpiredDialogBody({ onDismiss }: Readonly<SessionExpiredDialogBodyProps>) {
+  const { login, isPending, error } = useLogin();
+
+  return (
+    <>
+      <AlertDialog.Title>Session expired</AlertDialog.Title>
+      <AlertDialog.Description size="2">
+        Your session has expired. Please log in again to continue working.
+      </AlertDialog.Description>
+      {error && (
+        <Box mt="3">
+          <ErrorCallout message={error} size="1" />
+        </Box>
+      )}
+      <Flex gap="3" mt="4" justify="end">
+        <AlertDialog.Cancel>
+          <Button variant="soft" color="gray" disabled={isPending} onClick={onDismiss}>
+            Dismiss
+          </Button>
+        </AlertDialog.Cancel>
+        {/* The spinner replaces the icon rather than the whole label, so the
+            button still says what it does while the attempt is under way. */}
+        <Button disabled={isPending} onClick={() => void login()}>
+          <Spinner loading={isPending}>
+            <LockClosedIcon />
+          </Spinner>
+          Log in
+        </Button>
+      </Flex>
+    </>
   );
 }

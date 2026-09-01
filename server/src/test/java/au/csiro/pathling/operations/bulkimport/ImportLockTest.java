@@ -19,9 +19,11 @@ package au.csiro.pathling.operations.bulkimport;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
 
 import au.csiro.pathling.cache.CacheableDatabase;
 import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.io.DynamicDeltaSource;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.SaveMode;
 import au.csiro.pathling.test.SpringBootUnitTest;
@@ -81,7 +83,8 @@ class ImportLockTest {
             databasePath,
             serverConfiguration,
             cacheableDatabase,
-            true);
+            true,
+            mock(DynamicDeltaSource.class));
   }
 
   @Test

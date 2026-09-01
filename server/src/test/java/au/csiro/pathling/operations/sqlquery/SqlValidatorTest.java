@@ -25,6 +25,9 @@ import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import jakarta.annotation.Nonnull;
 import java.util.Set;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.catalyst.parser.ParseException;
+import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
+import org.apache.spark.sql.catalyst.plans.logical.WithWindowDefinition;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -158,6 +161,205 @@ class SqlValidatorTest {
   void acceptsSelectWithWindowFunction() {
     assertThatCode(() -> validate("SELECT id, row_number() OVER (ORDER BY id) AS rn FROM t", "t"))
         .doesNotThrowAnyException();
+  }
+
+  // -------------------------------------------------------------------------
+  // Explicit window frames (US1, #2650). An inline frame with the CURRENT ROW,
+  // UNBOUNDED PRECEDING, and UNBOUNDED FOLLOWING boundary markers must be
+  // accepted. Before the fix, the CURRENT ROW boundary was rejected as
+  // "CurrentRow$" (the Scala case-object runtime name). Value-based bounds
+  // (N PRECEDING / N FOLLOWING) were already permitted and are covered here as
+  // a non-regression guard.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void acceptsWindowFrameWithCurrentRow() {
+    // The reporter's "rolling worst value over the prior 24 hours per patient"
+    // form, reduced to the window construct over a declared label.
+    assertThatCode(
+            () ->
+                validate(
+                    "SELECT patient_id, min(value) OVER ("
+                        + "  PARTITION BY patient_id"
+                        + "  ORDER BY obs_time"
+                        + "  RANGE BETWEEN INTERVAL '24' HOUR PRECEDING AND CURRENT ROW"
+                        + ") AS worst_value FROM t",
+                    "t"))
+        .doesNotThrowAnyException();
+  }
+
+  @Test
+  void acceptsWindowFrameWithUnboundedPrecedingToCurrentRow() {
+    assertThatCode(
+            () ->
+                validate(
+                    "SELECT sum(x) OVER (ORDER BY id ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT"
+                        + " ROW) FROM t",
+                    "t"))
+        .doesNotThrowAnyException();
+  }
+
+  @Test
+  void acceptsWindowFrameWithUnboundedBounds() {
+    assertThatCode(
+            () ->
+                validate(
+                    "SELECT sum(x) OVER (ORDER BY id ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED"
+                        + " FOLLOWING) FROM t",
+                    "t"))
+        .doesNotThrowAnyException();
+  }
+
+  @Test
+  void acceptsValueBoundedWindowFrame() {
+    // Value bounds parse to ordinary arithmetic expressions (UnaryMinus over a
+    // Literal), which are already permitted, so this needs no new allow-list
+    // entry; it guards against a regression in that reasoning.
+    assertThatCode(
+            () ->
+                validate(
+                    "SELECT avg(x) OVER (ORDER BY id ROWS BETWEEN 3 PRECEDING AND 1 FOLLOWING)"
+                        + " FROM t",
+                    "t"))
+        .doesNotThrowAnyException();
+  }
+
+  // -------------------------------------------------------------------------
+  // Named window definitions (US2, #2649). A SELECT that references a named
+  // window via OVER w with a matching WINDOW w AS (...) clause must be
+  // accepted. Before the fix, the named-window reference was rejected as
+  // "UnresolvedWindowExpression". The frameless form isolates that gate; the
+  // frame-bearing form additionally relies on US1's boundary additions.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void acceptsFramelessNamedWindow() {
+    // No explicit frame, so this fails only on UnresolvedWindowExpression and
+    // remains red until US2, isolating that gate from US1's frame boundaries.
+    assertThatCode(
+            () ->
+                validate(
+                    "SELECT patient_id, min(value) OVER w AS worst_value FROM t"
+                        + " WINDOW w AS (PARTITION BY patient_id ORDER BY obs_time)",
+                    "t"))
+        .doesNotThrowAnyException();
+  }
+
+  @Test
+  void rejectsReflectionInsideNamedWindowDefinition() {
+    // A named-window definition body is a plan sub-structure the strict walk must
+    // descend into: a reflection-style function hidden in its PARTITION BY must
+    // still be rejected, exactly as it is in the inline form.
+    assertThatThrownBy(
+            () ->
+                validate(
+                    "SELECT sum(x) OVER w FROM t"
+                        + " WINDOW w AS (PARTITION BY java_method('java.lang.Math', 'random')"
+                        + " ORDER BY id)",
+                    "t"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("disallowed function");
+  }
+
+  @Test
+  void rejectsUdfInsideNamedWindowDefinitionOrderBy() {
+    // A non-built-in (terminology UDF) function in the ORDER BY of a named window
+    // must also be rejected.
+    assertThatThrownBy(
+            () ->
+                validate(
+                    "SELECT sum(x) OVER w FROM t"
+                        + " WINDOW w AS (PARTITION BY id"
+                        + " ORDER BY member_of(coding, 'http://snomed.info/sct?fhir_vs'))",
+                    "t"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("non-built-in function");
+  }
+
+  @Test
+  void rejectsNonLiteralFunctionInNamedWindowFrameBound() {
+    // A frame bound cannot smuggle a function: Spark's grammar requires the bound
+    // to be a literal, so a function-valued bound is rejected at parse time. This
+    // guards the frame-bound position of a named window's definition body.
+    assertThatThrownBy(
+            () ->
+                validate(
+                    "SELECT sum(x) OVER w FROM t"
+                        + " WINDOW w AS (ORDER BY id"
+                        + " ROWS BETWEEN CAST(java_method('java.lang.Math', 'random') AS INT)"
+                        + " PRECEDING AND CURRENT ROW)",
+                    "t"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("Invalid SQL syntax");
+  }
+
+  @Test
+  void acceptsNamedWindowWithRangeFrame() {
+    // The reporter's ten-column case reduced to two aggregates that share one
+    // named window carrying a RANGE frame with a CURRENT ROW boundary.
+    assertThatCode(
+            () ->
+                validate(
+                    "SELECT patient_id,"
+                        + "  min(value) OVER w AS worst_min,"
+                        + "  max(value) OVER w AS worst_max"
+                        + " FROM t"
+                        + " WINDOW w AS ("
+                        + "  PARTITION BY patient_id"
+                        + "  ORDER BY obs_time"
+                        + "  RANGE BETWEEN INTERVAL '24' HOUR PRECEDING AND CURRENT ROW"
+                        + ")",
+                    "t"))
+        .doesNotThrowAnyException();
+  }
+
+  // -------------------------------------------------------------------------
+  // Analysed-plan defence in depth for named windows (US2, #2649). Ordinary SQL
+  // substitutes named windows into Window nodes before analysis, so a
+  // WithWindowDefinition normally never reaches the analysed-plan walk, and its
+  // windowDefinitions map is not reachable through plan.expressions(). The walk
+  // nonetheless descends into any WithWindowDefinition that survives, so that a
+  // definition body cannot become a blind spot. These tests force that branch
+  // by wrapping a real named-window definition map around an already-validated
+  // child.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void walksCleanBodyOfSurvivingWithWindowDefinition() throws ParseException {
+    // A clean named-window body passes: the walk reaches into the definition and
+    // finds nothing disallowed.
+    final WithWindowDefinition node =
+        withWindowNode("SELECT 1 FROM t WINDOW w AS (PARTITION BY id ORDER BY ts)");
+    assertThatCode(() -> sqlValidator.validateAnalyzed(node, Set.of())).doesNotThrowAnyException();
+  }
+
+  @Test
+  void rejectsReflectionInBodyOfSurvivingWithWindowDefinition() throws ParseException {
+    // A reflection-style function hidden in a surviving named-window definition
+    // must still be rejected by the analysed-plan walk, mirroring the strict-walk
+    // carve-out.
+    final WithWindowDefinition node =
+        withWindowNode(
+            "SELECT 1 FROM t WINDOW w AS ("
+                + "PARTITION BY java_method('java.lang.Math', 'random') ORDER BY id)");
+    assertThatThrownBy(() -> sqlValidator.validateAnalyzed(node, Set.of()))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("disallowed function");
+  }
+
+  /**
+   * Builds a {@link WithWindowDefinition} that carries a real named-window definition map (parsed
+   * from the given WINDOW-clause SQL) but a trivial, already-validated child. This forces the
+   * analysed-plan walk through the WithWindowDefinition branch that ordinary SQL elides during
+   * analysis, where named windows are substituted into Window nodes before the walk runs.
+   */
+  @Nonnull
+  private WithWindowDefinition withWindowNode(@Nonnull final String windowSql)
+      throws ParseException {
+    final LogicalPlan source = sparkSession.sessionState().sqlParser().parsePlan(windowSql);
+    final WithWindowDefinition parsed = (WithWindowDefinition) source;
+    final LogicalPlan cleanChild = sparkSession.sql("SELECT 1 AS id").queryExecution().analyzed();
+    return new WithWindowDefinition(parsed.windowDefinitions(), cleanChild, false);
   }
 
   @Test
@@ -567,6 +769,164 @@ class SqlValidatorTest {
   void acceptsExplodeInProjection() {
     assertThatCode(() -> validate("SELECT explode(array(1, 2, 3)) AS x"))
         .doesNotThrowAnyException();
+  }
+
+  // -------------------------------------------------------------------------
+  // DESCRIBE [TABLE] <label> — the plain named-view introspection form is
+  // allowed for declared labels; every unsafe variant is rejected at parse
+  // time (issue #2651, spec 029 US1/US3).
+  // -------------------------------------------------------------------------
+
+  @Test
+  void acceptsDescribeOfDeclaredLabel() {
+    assertThatCode(() -> validate("DESCRIBE patients", "patients")).doesNotThrowAnyException();
+  }
+
+  @Test
+  void acceptsDescribeTableOfDeclaredLabel() {
+    assertThatCode(() -> validate("DESCRIBE TABLE patients", "patients"))
+        .doesNotThrowAnyException();
+  }
+
+  @Test
+  void acceptsDescSynonymOfDeclaredLabel() {
+    assertThatCode(() -> validate("DESC patients", "patients")).doesNotThrowAnyException();
+  }
+
+  @Test
+  void acceptsLowerCaseDescribeOfDeclaredLabel() {
+    assertThatCode(() -> validate("describe patients", "patients")).doesNotThrowAnyException();
+  }
+
+  @Test
+  void rejectsDescribeExtended() {
+    assertThatThrownBy(() -> validate("DESCRIBE EXTENDED patients", "patients"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("disallowed operation")
+        .hasMessageContaining("EXTENDED");
+  }
+
+  @Test
+  void rejectsDescribeFormatted() {
+    assertThatThrownBy(() -> validate("DESCRIBE FORMATTED patients", "patients"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("disallowed operation")
+        .hasMessageContaining("EXTENDED");
+  }
+
+  @Test
+  void rejectsDescribeWithPartitionSpec() {
+    assertThatThrownBy(() -> validate("DESCRIBE patients PARTITION (x = 1)", "patients"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("disallowed operation")
+        .hasMessageContaining("partition");
+  }
+
+  @Test
+  void rejectsDescribeColumnForm() {
+    assertThatThrownBy(() -> validate("DESCRIBE patients id", "patients"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("disallowed operation");
+  }
+
+  @Test
+  void rejectsDescribeExtendedAsJson() {
+    assertThatThrownBy(() -> validate("DESCRIBE EXTENDED patients AS JSON", "patients"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("disallowed operation");
+  }
+
+  @Test
+  void rejectsDescribeOfUndeclaredLabel() {
+    assertThatThrownBy(() -> validate("DESCRIBE undeclared", "patients"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("undeclared table");
+  }
+
+  @Test
+  void rejectsDescribeOfMultiPartIdentifier() {
+    assertThatThrownBy(() -> validate("DESCRIBE db.patients", "patients"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("undeclared table");
+  }
+
+  @Test
+  void rejectsDescribeOfTempViewShapedNameNotInLabelSet() {
+    // A name shaped like a request-scoped temp view but not a declared label must be rejected,
+    // so one request cannot introspect another request's views.
+    assertThatThrownBy(() -> validate("DESCRIBE sqlquery_abc123_patients", "patients"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("undeclared table");
+  }
+
+  // -------------------------------------------------------------------------
+  // DESCRIBE [QUERY] <query> — the query-introspection form is allowed and its
+  // inner query is validated exactly like a directly submitted query (spec 029
+  // US2). The QUERY keyword is optional in the Spark grammar.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void acceptsDescribeQueryOverDeclaredLabel() {
+    assertThatCode(() -> validate("DESCRIBE QUERY SELECT id FROM patients", "patients"))
+        .doesNotThrowAnyException();
+  }
+
+  @Test
+  void acceptsDescQueryForm() {
+    assertThatCode(() -> validate("DESC QUERY SELECT id FROM patients", "patients"))
+        .doesNotThrowAnyException();
+  }
+
+  @Test
+  void acceptsKeywordlessDescribeQuery() {
+    // The QUERY keyword is optional; DESCRIBE SELECT ... parses to the same command.
+    assertThatCode(() -> validate("DESCRIBE SELECT id FROM patients", "patients"))
+        .doesNotThrowAnyException();
+  }
+
+  @Test
+  void acceptsDescribeQueryWithCte() {
+    assertThatCode(
+            () ->
+                validate(
+                    "DESCRIBE QUERY WITH x AS (SELECT id FROM patients) SELECT * FROM x",
+                    "patients"))
+        .doesNotThrowAnyException();
+  }
+
+  @Test
+  void rejectsDescribeQueryOverUndeclaredTable() {
+    assertThatThrownBy(() -> validate("DESCRIBE QUERY SELECT * FROM undeclared", "patients"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("undeclared table");
+  }
+
+  @Test
+  void rejectsDescribeQueryWithReflectFunction() {
+    assertThatThrownBy(
+            () -> validate("DESCRIBE QUERY SELECT reflect('java.lang.System', 'getenv')"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("disallowed function");
+  }
+
+  @Test
+  void rejectsDescribeQueryWithNonBuiltInFunction() {
+    assertThatThrownBy(
+            () ->
+                validate(
+                    "DESCRIBE QUERY SELECT member_of(coding, 'http://snomed.info/sct?fhir_vs')"
+                        + " FROM patients",
+                    "patients"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("non-built-in function");
+  }
+
+  @Test
+  void rejectsDescribeQueryWithDisallowedPlanNode() {
+    // The range TVF is a disallowed plan node in the inner query, just as in a submitted query.
+    assertThatThrownBy(() -> validate("DESCRIBE QUERY SELECT * FROM range(0, 100)"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("disallowed plan node");
   }
 
   // -------------------------------------------------------------------------

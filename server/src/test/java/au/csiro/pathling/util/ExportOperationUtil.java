@@ -46,6 +46,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
+import java.util.stream.StreamSupport;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.InstantType;
@@ -309,6 +310,39 @@ public class ExportOperationUtil {
 
     assertThat(pollUrl).isNotNull();
     return pollUrl;
+  }
+
+  /**
+   * Extracts the output file information entries from a completed export manifest's parameter
+   * array. Each "output" parameter carries "type" and "url" parts, which are mapped to a {@link
+   * FileInformation}.
+   *
+   * @param parameters the "parameter" array node of the manifest Parameters resource
+   * @return the output file information entries
+   */
+  public static List<FileInformation> extractFileInfos(final JsonNode parameters) {
+    return StreamSupport.stream(parameters.spliterator(), false)
+        .filter(param -> "output".equals(param.get("name").asText()))
+        .map(
+            outputParam -> {
+              String type = null;
+              String url = null;
+              for (final JsonNode part : outputParam.get("part")) {
+                final String partName = part.get("name").asText();
+                if ("type".equals(partName)) {
+                  type =
+                      part.has("valueCode")
+                          ? part.get("valueCode").asText()
+                          : part.get("valueString").asText();
+                } else if ("url".equals(partName)) {
+                  url = part.get("valueUri").asText();
+                }
+              }
+              assertThat(type).isNotNull();
+              assertThat(url).isNotNull();
+              return new FileInformation(type, url);
+            })
+        .toList();
   }
 
   public static boolean doPolling(

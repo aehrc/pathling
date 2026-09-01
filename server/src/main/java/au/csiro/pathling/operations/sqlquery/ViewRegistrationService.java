@@ -39,7 +39,7 @@ import org.springframework.stereotype.Component;
 /**
  * Manages the lifecycle of Spark temporary views for SQL query execution. Each execution scopes its
  * views to the HAPI per-request id and keys them by the resolved dependency's canonical identity,
- * so concurrent {@code $sqlquery-run} requests cannot clobber one another in Spark's session-global
+ * so concurrent {@code $sql-run} requests cannot clobber one another in Spark's session-global
  * temporary view catalog, a shared node materialises once, and the same table label used in
  * different nodes cannot collide.
  *
@@ -174,12 +174,12 @@ public class ViewRegistrationService {
   }
 
   /**
-   * Rewrites SQL table references to use the prefixed temporary view names. Each unquoted
-   * identifier token whose text equals a label is replaced with the corresponding temporary view
-   * name; backtick-quoted identifiers matching a label are also rewritten. Single-quoted and
-   * double-quoted string literals, line comments ({@code -- ...}), and block comments ({@code /*
-   * ... *}{@code /}) are left untouched, so a literal value happening to equal a label (e.g. {@code
-   * WHERE x = 'patients'}) is preserved.
+   * Rewrites the table references within the given SQL to use the request-scoped temporary view
+   * names. The rewrite is parse-guided: only the character spans that the SQL parser reports as
+   * relation references are substituted, so a column, column alias, table alias, function name,
+   * string literal or comment that happens to share a label's name is left untouched. Where a
+   * substituted reference carries no alias of its own, {@code AS <label>} is injected after it so
+   * that a column qualified by the label continues to resolve.
    *
    * @param sql the original SQL query
    * @param labelToViewName the mapping from labels to temporary view names
@@ -188,164 +188,7 @@ public class ViewRegistrationService {
   @Nonnull
   public String rewriteSql(
       @Nonnull final String sql, @Nonnull final Map<String, String> labelToViewName) {
-
-    if (labelToViewName.isEmpty()) {
-      return sql;
-    }
-
-    final int n = sql.length();
-    final StringBuilder out = new StringBuilder(n);
-    int i = 0;
-    while (i < n) {
-      i = consumeNextToken(sql, n, i, labelToViewName, out);
-    }
-    return out.toString();
-  }
-
-  /** Consumes one token starting at {@code i} and returns the index after it. */
-  private static int consumeNextToken(
-      @Nonnull final String sql,
-      final int n,
-      final int i,
-      @Nonnull final Map<String, String> labelToViewName,
-      @Nonnull final StringBuilder out) {
-    final char c = sql.charAt(i);
-    if (c == '\'' || c == '"') {
-      return copyStringLiteral(sql, i, c, out);
-    }
-    if (c == '`') {
-      return copyOrRewriteBacktickIdentifier(sql, i, labelToViewName, out);
-    }
-    if (c == '-' && i + 1 < n && sql.charAt(i + 1) == '-') {
-      return copyLineComment(sql, i, out);
-    }
-    if (c == '/' && i + 1 < n && sql.charAt(i + 1) == '*') {
-      return copyBlockComment(sql, i, out);
-    }
-    if (Character.isLetter(c) || c == '_') {
-      return copyOrRewriteIdentifier(sql, i, labelToViewName, out);
-    }
-    out.append(c);
-    return i + 1;
-  }
-
-  /**
-   * Copies a {@code '...'} or {@code "..."} string literal verbatim, honouring both doubled-quote
-   * and backslash escapes (Spark accepts either). Returns the position after the closing quote.
-   */
-  private static int copyStringLiteral(
-      @Nonnull final String sql,
-      final int start,
-      final char quote,
-      @Nonnull final StringBuilder out) {
-    final int n = sql.length();
-    out.append(quote);
-    int i = start + 1;
-    while (i < n) {
-      final char d = sql.charAt(i);
-      if (d == '\\' && i + 1 < n) {
-        out.append(d).append(sql.charAt(i + 1));
-        i += 2;
-      } else if (d == quote && i + 1 < n && sql.charAt(i + 1) == quote) {
-        // Doubled quote inside the literal — Spark treats this as an escaped quote.
-        out.append(d).append(d);
-        i += 2;
-      } else if (d == quote) {
-        out.append(d);
-        return i + 1;
-      } else {
-        out.append(d);
-        i++;
-      }
-    }
-    return i;
-  }
-
-  /**
-   * A backtick-quoted identifier is a delimited identifier in Spark SQL. If its text matches a
-   * label, rewrite it to the (unquoted) temp view name; otherwise copy it verbatim.
-   */
-  private static int copyOrRewriteBacktickIdentifier(
-      @Nonnull final String sql,
-      final int start,
-      @Nonnull final Map<String, String> labelToViewName,
-      @Nonnull final StringBuilder out) {
-    final int n = sql.length();
-    int j = start + 1;
-    while (j < n && sql.charAt(j) != '`') {
-      j++;
-    }
-    if (j >= n) {
-      // Unterminated backtick — copy the rest verbatim and stop.
-      out.append(sql, start, n);
-      return n;
-    }
-    final String inner = sql.substring(start + 1, j);
-    final String replacement = labelToViewName.get(inner);
-    if (replacement != null) {
-      out.append(replacement);
-    } else {
-      out.append(sql, start, j + 1);
-    }
-    return j + 1;
-  }
-
-  /** Copies a {@code -- ...} line comment up to (and including) the terminating newline. */
-  private static int copyLineComment(
-      @Nonnull final String sql, final int start, @Nonnull final StringBuilder out) {
-    final int n = sql.length();
-    int i = start;
-    while (i < n && sql.charAt(i) != '\n') {
-      out.append(sql.charAt(i));
-      i++;
-    }
-    return i;
-  }
-
-  /** Copies a {@code /* ... *}{@code /} block comment verbatim. */
-  private static int copyBlockComment(
-      @Nonnull final String sql, final int start, @Nonnull final StringBuilder out) {
-    final int n = sql.length();
-    out.append("/*");
-    int i = start + 2;
-    while (i + 1 < n) {
-      if (sql.charAt(i) == '*' && sql.charAt(i + 1) == '/') {
-        out.append("*/");
-        return i + 2;
-      }
-      out.append(sql.charAt(i));
-      i++;
-    }
-    while (i < n) {
-      out.append(sql.charAt(i));
-      i++;
-    }
-    return i;
-  }
-
-  /**
-   * Reads an unquoted identifier starting at {@code start} and replaces it with the matching temp
-   * view name if the token equals a known label.
-   */
-  private static int copyOrRewriteIdentifier(
-      @Nonnull final String sql,
-      final int start,
-      @Nonnull final Map<String, String> labelToViewName,
-      @Nonnull final StringBuilder out) {
-    final int n = sql.length();
-    int j = start;
-    while (j < n) {
-      final char ch = sql.charAt(j);
-      if (Character.isLetterOrDigit(ch) || ch == '_') {
-        j++;
-      } else {
-        break;
-      }
-    }
-    final String token = sql.substring(start, j);
-    final String replacement = labelToViewName.get(token);
-    out.append(replacement != null ? replacement : token);
-    return j;
+    return SqlLabelRewriter.rewrite(sparkSession.sessionState().sqlParser(), sql, labelToViewName);
   }
 
   /**

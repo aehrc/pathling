@@ -24,11 +24,16 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import au.csiro.pathling.config.StorageConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.library.PathlingContext;
+import au.csiro.pathling.library.io.source.DatasetSource;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.util.FhirServerTestConfiguration;
+import au.csiro.pathling.util.LogCapture;
 import au.csiro.pathling.views.FhirView;
+import ch.qos.logback.classic.Level;
 import jakarta.annotation.Nonnull;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
@@ -270,6 +275,83 @@ class DynamicDeltaSourceTest {
     assertThat(source.read("ImmunizationEvaluation").count()).isZero();
   }
 
+  // Verifies that a table written into the warehouse after the source was built is enumerated even
+  // though nothing has read it. Writing the table directly rather than through the source also
+  // stands in for a table created by another process sharing the warehouse (FR-006).
+  @Test
+  void enumeratesNeverReadTableCreatedAfterConstruction(@TempDir final Path tempDir) {
+    final String databasePath = tempDir.toAbsolutePath().toString();
+    final DynamicDeltaSource source = newTempDirSource(databasePath, false);
+    assertThat(source.getResourceTypes()).isEmpty();
+
+    writePatientTable(databasePath, "id");
+
+    assertThat(source.getResourceTypes()).containsExactly("Patient");
+  }
+
+  // Verifies that a directory whose name does not correspond to a supported resource type is not
+  // reported as one, and that a stray file alongside the tables does not disturb enumeration.
+  @Test
+  void enumerationIgnoresUnsupportedNamesAndStrayFiles(@TempDir final Path tempDir)
+      throws IOException {
+    final String databasePath = tempDir.toAbsolutePath().toString();
+    final DynamicDeltaSource source = newTempDirSource(databasePath, false);
+    writePatientTable(databasePath, "id");
+    Files.createDirectories(tempDir.resolve("NotAType.parquet"));
+    Files.createDirectories(tempDir.resolve("jobs"));
+    Files.writeString(tempDir.resolve("stray.txt"), "not a table");
+
+    assertThat(source.getResourceTypes()).containsExactly("Patient");
+  }
+
+  // Verifies that a failure to list the database directory falls back to the types already known,
+  // logs a warning and does not fail the caller (FR-008).
+  @Test
+  void enumerationFallsBackWhenListingFails() {
+    // A scheme with no registered filesystem makes the listing throw an IOException.
+    final DatasetSource delegate = new DatasetSource(pathlingContext);
+    delegate.dataset("Patient", patientDataset(1, "id"));
+    final StorageConfiguration storageConfiguration = new StorageConfiguration();
+    storageConfiguration.setCacheDatasets(false);
+    final DynamicDeltaSource source =
+        new DynamicDeltaSource(
+            pathlingContext,
+            delegate,
+            sparkSession,
+            "nosuchscheme://host/database",
+            fhirEncoders,
+            storageConfiguration,
+            Set.of());
+
+    try (final LogCapture logCapture = LogCapture.forClass(DynamicDeltaSource.class)) {
+      assertThatNoException().isThrownBy(source::getResourceTypes);
+      assertThat(source.getResourceTypes()).containsExactly("Patient");
+
+      // The fallback must be accompanied by a warning naming the failed listing.
+      assertThat(logCapture.events())
+          .anySatisfy(
+              event -> {
+                assertThat(event.getLevel()).isEqualTo(Level.WARN);
+                assertThat(event.getFormattedMessage())
+                    .contains("Failed to list the database directory");
+              });
+    }
+  }
+
+  // Verifies that a snapshot pins and serves a table that exists in the warehouse but has never
+  // been read, which is the behaviour the enumeration refactor has to preserve.
+  @Test
+  void snapshotPinsNeverReadTable(@TempDir final Path tempDir) {
+    final String databasePath = tempDir.toAbsolutePath().toString();
+    final DynamicDeltaSource source = newTempDirSource(databasePath, false);
+    writePatientTable(databasePath, "id");
+
+    final SnapshotDeltaSource snapshot = source.snapshot();
+
+    assertThat(snapshot.getPinnedVersions()).containsKey("Patient");
+    assertThat(snapshot.read("Patient").count()).isEqualTo(1);
+  }
+
   // ---- helpers ----
 
   @Nonnull
@@ -292,7 +374,13 @@ class DynamicDeltaSourceTest {
     storageConfiguration.setCacheDatasets(cacheDatasets);
     final QueryableDataSource baseSource = pathlingContext.read().delta(databasePath);
     return new DynamicDeltaSource(
-        baseSource, sparkSession, databasePath, fhirEncoders, storageConfiguration, driftedTypes);
+        pathlingContext,
+        baseSource,
+        sparkSession,
+        databasePath,
+        fhirEncoders,
+        storageConfiguration,
+        driftedTypes);
   }
 
   /** Writes a single-row Patient Delta table whose schema has only the given string columns. */

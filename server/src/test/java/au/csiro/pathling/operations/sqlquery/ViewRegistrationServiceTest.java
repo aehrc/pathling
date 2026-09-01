@@ -42,7 +42,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * Tests for {@link ViewRegistrationService}, with particular attention to the request-id
- * namespacing that prevents concurrent {@code $sqlquery-run} requests from clobbering one another's
+ * namespacing that prevents concurrent {@code $sql-run} requests from clobbering one another's
  * temporary views in Spark's session-global catalog.
  */
 @SpringBootUnitTest
@@ -171,7 +171,8 @@ class ViewRegistrationServiceTest {
   void rewriteSqlSubstitutesLabelsWithViewNames() {
     final String rewritten =
         service.rewriteSql("SELECT * FROM patients", Map.of("patients", "sqlquery_req1_patients"));
-    assertThat(rewritten).isEqualTo("SELECT * FROM sqlquery_req1_patients");
+    // The unaliased reference gains "AS patients" so the label still names a table.
+    assertThat(rewritten).isEqualTo("SELECT * FROM sqlquery_req1_patients AS patients");
   }
 
   @Test
@@ -183,8 +184,9 @@ class ViewRegistrationServiceTest {
             "SELECT * FROM patients JOIN patients_archive ON patients.id = patients_archive.id",
             Map.of("patients", "sqlquery_req1_patients"));
     assertThat(rewritten)
-        .contains("FROM sqlquery_req1_patients JOIN patients_archive")
-        .contains("ON sqlquery_req1_patients.id = patients_archive.id");
+        .contains("FROM sqlquery_req1_patients AS patients JOIN patients_archive")
+        // The qualifiers are column references, so they keep the names the query author wrote.
+        .contains("ON patients.id = patients_archive.id");
   }
 
   @Test
@@ -205,7 +207,8 @@ class ViewRegistrationServiceTest {
         service.rewriteSql(
             "SELECT * FROM patients WHERE name = 'patients'",
             Map.of("patients", "sqlquery_req1_patients"));
-    assertThat(rewritten).isEqualTo("SELECT * FROM sqlquery_req1_patients WHERE name = 'patients'");
+    assertThat(rewritten)
+        .isEqualTo("SELECT * FROM sqlquery_req1_patients AS patients WHERE name = 'patients'");
   }
 
   @Test
@@ -216,7 +219,8 @@ class ViewRegistrationServiceTest {
             Map.of("patients", "sqlquery_req1_patients"));
     assertThat(rewritten)
         .isEqualTo(
-            "SELECT * FROM sqlquery_req1_patients WHERE note = \"patients are interesting\"");
+            "SELECT * FROM sqlquery_req1_patients AS patients WHERE note = \"patients are"
+                + " interesting\"");
   }
 
   @Test
@@ -226,7 +230,8 @@ class ViewRegistrationServiceTest {
             "SELECT * FROM patients -- patients comment\nWHERE x = 1",
             Map.of("patients", "sqlquery_req1_patients"));
     assertThat(rewritten)
-        .isEqualTo("SELECT * FROM sqlquery_req1_patients -- patients comment\nWHERE x = 1");
+        .isEqualTo(
+            "SELECT * FROM sqlquery_req1_patients AS patients -- patients comment\nWHERE x = 1");
   }
 
   @Test
@@ -235,7 +240,8 @@ class ViewRegistrationServiceTest {
         service.rewriteSql(
             "SELECT /* patients in here */ * FROM patients",
             Map.of("patients", "sqlquery_req1_patients"));
-    assertThat(rewritten).isEqualTo("SELECT /* patients in here */ * FROM sqlquery_req1_patients");
+    assertThat(rewritten)
+        .isEqualTo("SELECT /* patients in here */ * FROM sqlquery_req1_patients AS patients");
   }
 
   @Test
@@ -247,7 +253,8 @@ class ViewRegistrationServiceTest {
             "SELECT * FROM patients WHERE label = 'pat''s patients'",
             Map.of("patients", "sqlquery_req1_patients"));
     assertThat(rewritten)
-        .isEqualTo("SELECT * FROM sqlquery_req1_patients WHERE label = 'pat''s patients'");
+        .isEqualTo(
+            "SELECT * FROM sqlquery_req1_patients AS patients WHERE label = 'pat''s patients'");
   }
 
   @Test
@@ -255,7 +262,7 @@ class ViewRegistrationServiceTest {
     final String rewritten =
         service.rewriteSql(
             "SELECT * FROM `patients`", Map.of("patients", "sqlquery_req1_patients"));
-    assertThat(rewritten).isEqualTo("SELECT * FROM sqlquery_req1_patients");
+    assertThat(rewritten).isEqualTo("SELECT * FROM sqlquery_req1_patients AS patients");
   }
 
   @Test
@@ -265,7 +272,17 @@ class ViewRegistrationServiceTest {
             "SELECT * FROM patients WHERE `random col` = 'x'",
             Map.of("patients", "sqlquery_req1_patients"));
     assertThat(rewritten)
-        .isEqualTo("SELECT * FROM sqlquery_req1_patients WHERE `random col` = 'x'");
+        .isEqualTo("SELECT * FROM sqlquery_req1_patients AS patients WHERE `random col` = 'x'");
+  }
+
+  @Test
+  void rewriteSqlLeavesColumnSharingALabelsNameAlone() {
+    // Regression test for issue 2730. The label "age" names a table; the column "t.age" merely
+    // shares its name and occupies a different namespace, so only the relation reference is
+    // substituted.
+    final String rewritten =
+        service.rewriteSql("SELECT t.age FROM age AS t", Map.of("age", "sqlquery_req1_age"));
+    assertThat(rewritten).isEqualTo("SELECT t.age FROM sqlquery_req1_age AS t");
   }
 
   // ---------------------------------------------------------------------------

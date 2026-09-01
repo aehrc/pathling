@@ -28,14 +28,20 @@ import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.catalyst.FunctionIdentifier;
 import org.apache.spark.sql.catalyst.analysis.UnresolvedFunction;
 import org.apache.spark.sql.catalyst.analysis.UnresolvedRelation;
+import org.apache.spark.sql.catalyst.analysis.UnresolvedTableOrView;
 import org.apache.spark.sql.catalyst.catalog.HiveTableRelation;
 import org.apache.spark.sql.catalyst.expressions.Expression;
 import org.apache.spark.sql.catalyst.expressions.ExpressionInfo;
 import org.apache.spark.sql.catalyst.expressions.SubqueryExpression;
+import org.apache.spark.sql.catalyst.expressions.WindowSpecDefinition;
 import org.apache.spark.sql.catalyst.plans.logical.Command;
+import org.apache.spark.sql.catalyst.plans.logical.DescribeRelation;
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
 import org.apache.spark.sql.catalyst.plans.logical.SubqueryAlias;
 import org.apache.spark.sql.catalyst.plans.logical.UnresolvedWith;
+import org.apache.spark.sql.catalyst.plans.logical.WithWindowDefinition;
+import org.apache.spark.sql.execution.command.DescribeQueryCommand;
+import org.apache.spark.sql.execution.command.DescribeTableCommand;
 import org.apache.spark.sql.execution.datasources.LogicalRelation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -46,7 +52,7 @@ import scala.jdk.javaapi.CollectionConverters;
 /**
  * Validates that SQL queries are strictly read-only and contain only allowed operations. This
  * prevents SQL injection attacks and ensures that users cannot execute DDL, DML, or other dangerous
- * operations through the {@code $sqlquery-run} endpoint.
+ * operations through the {@code $sql-run} endpoint.
  *
  * <p>Allow-lists and reject-lists are matched on fully-qualified class names so that classes from
  * unrelated packages (for example a third-party plugin's {@code Project}) cannot slip through.
@@ -76,11 +82,22 @@ import scala.jdk.javaapi.CollectionConverters;
  *   <li><strong>Expression allow-list</strong> — only safe expression types are permitted.
  *   <li><strong>Built-in functions only</strong> — every {@link UnresolvedFunction} in user SQL
  *       must resolve to a built-in Spark function. Pathling-registered UDFs (terminology, FHIRPath
- *       helpers, etc.) are intended for use within ViewDefinitions; the {@code $sqlquery-run}
- *       surface stays portable and implementation-agnostic. UDFs introduced by referenced views are
+ *       helpers, etc.) are intended for use within ViewDefinitions; the {@code $sql-run} surface
+ *       stays portable and implementation-agnostic. UDFs introduced by referenced views are
  *       unaffected because they appear in the analyzed plan, not in the unresolved tree this rule
  *       walks.
  * </ol>
+ *
+ * <p>Two schema-introspection statements are carved out of the blanket {@link Command} rejection:
+ * {@code DESCRIBE [TABLE] <label>} and {@code DESCRIBE [QUERY] <query>}. Because Spark executes
+ * {@link Command} plans eagerly when {@code sparkSession.sql(...)} builds the Dataset - before the
+ * analysed-plan walk runs - the parse-time carve-out ({@code validateDescribeStrict}) is the
+ * complete security gate for these forms: it accepts only the non-extended, partition-free table
+ * form over a declared label, and the query form whose inner query passes the full strict walk. The
+ * analysed-mode carve-out ({@code isAllowedDescribeAnalyzed}) is defence in depth only; it
+ * re-recognises the rewritten {@code DescribeTableCommand} / {@code DescribeQueryCommand} and
+ * confirms the resolved target is one of the registered temp views. Every other DESCRIBE / SHOW
+ * variant remains rejected.
  *
  * @see <a
  *     href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/OperationDefinition-SQLQueryRun.html">SQLQueryRun</a>
@@ -147,6 +164,16 @@ public class SqlValidator {
           "org.apache.spark.sql.catalyst.analysis.UnresolvedRelation",
           "org.apache.spark.sql.catalyst.analysis.UnresolvedInlineTable",
           "org.apache.spark.sql.catalyst.analysis.UnresolvedSubqueryColumnAliases");
+
+  // Fully-qualified names of the Catalyst command classes carved out of the blanket Command
+  // rejection to support schema introspection (spec 029). These are matched via instanceof against
+  // the imported types; the names are held here only so the build-time integrity test can confirm
+  // they still resolve on the classpath and catch a Spark rename.
+  private static final Set<String> DESCRIBE_COMMAND_NAMES =
+      Set.of(
+          "org.apache.spark.sql.catalyst.plans.logical.DescribeRelation",
+          "org.apache.spark.sql.execution.command.DescribeTableCommand",
+          "org.apache.spark.sql.execution.command.DescribeQueryCommand");
 
   // Function names rejected outright because they enable arbitrary code execution.
   private static final Set<String> REJECTED_FUNCTION_NAMES =
@@ -263,6 +290,15 @@ public class SqlValidator {
           "org.apache.spark.sql.catalyst.expressions.WindowSpecDefinition",
           "org.apache.spark.sql.catalyst.expressions.SpecifiedWindowFrame",
           "org.apache.spark.sql.catalyst.expressions.UnspecifiedFrame",
+          // The SpecialFrameBoundary markers for an explicit frame (CURRENT ROW,
+          // UNBOUNDED PRECEDING, UNBOUNDED FOLLOWING). These are leaf, unevaluable
+          // objects describing a frame edge and carry no code-execution risk.
+          "org.apache.spark.sql.catalyst.expressions.CurrentRow",
+          "org.apache.spark.sql.catalyst.expressions.UnboundedPreceding",
+          "org.apache.spark.sql.catalyst.expressions.UnboundedFollowing",
+          // The named-window reference (OVER w) resolved during analysis into the
+          // already-permitted WindowExpression; it is an unevaluable placeholder.
+          "org.apache.spark.sql.catalyst.expressions.UnresolvedWindowExpression",
           // Struct, array, and map expressions.
           "org.apache.spark.sql.catalyst.expressions.CreateNamedStruct",
           "org.apache.spark.sql.catalyst.expressions.CreateArray",
@@ -416,6 +452,13 @@ public class SqlValidator {
   /** Recursively validates a parsed plan in strict mode. */
   private void walkPlanStrict(
       @Nonnull final LogicalPlan plan, @Nonnull final Set<String> allowedLabels) {
+    if (validateDescribeStrict(plan, allowedLabels)) {
+      // The node is one of the two allowed DESCRIBE forms and has been fully validated above. Its
+      // relation reference and inner query plan are checked there, so the generic strict walk must
+      // not descend into them (the relation node and the command itself are not in the plan-node
+      // allow-list).
+      return;
+    }
     validatePlanNodeStrict(plan, allowedLabels);
     final List<Expression> expressions = CollectionConverters.asJava(plan.expressions());
     for (final Expression expr : expressions) {
@@ -433,10 +476,71 @@ public class SqlValidator {
         walkPlanStrict(cte._2(), allowedLabels);
       }
     }
+    // A WithWindowDefinition node (a WINDOW w AS (...) clause) holds its named-window
+    // specifications in a windowDefinitions map that is neither a tree child nor reported
+    // by plan.expressions(), so the generic walk never reaches it. Walk each definition
+    // explicitly so that a disallowed function hidden in a named window's PARTITION BY,
+    // ORDER BY, or frame bound is rejected just as it is in the inline OVER (...) form.
+    if (plan instanceof final WithWindowDefinition withWindow) {
+      for (final WindowSpecDefinition spec :
+          CollectionConverters.asJava(withWindow.windowDefinitions()).values()) {
+        walkExpressionStrict(spec, allowedLabels);
+      }
+    }
     final List<LogicalPlan> children = CollectionConverters.asJava(plan.children());
     for (final LogicalPlan child : children) {
       walkPlanStrict(child, allowedLabels);
     }
+  }
+
+  /**
+   * Recognises and validates the two allowed {@code DESCRIBE} forms at parse time, before the
+   * blanket {@link Command} rejection in {@link #validatePlanNodeStrict}. This is the complete
+   * security gate for describe statements: Spark executes {@link Command} plans eagerly when the
+   * statement is submitted, so the later analysed-mode walk is only defence in depth.
+   *
+   * <ul>
+   *   <li>{@link DescribeRelation} ({@code DESCRIBE [TABLE] <label>}) is accepted only when it is
+   *       not extended and carries no partition specification, and its target is a single-part
+   *       declared label. {@code EXTENDED}/{@code FORMATTED} and partition forms are rejected here;
+   *       the column form ({@link org.apache.spark.sql.catalyst.plans.logical.DescribeColumn}) and
+   *       {@code AS JSON} form are left to the blanket {@link Command} rejection.
+   *   <li>{@link DescribeQueryCommand} ({@code DESCRIBE [QUERY] <query>}) is accepted after its
+   *       inner query plan is strictly validated with the same allowed-label set (extended with any
+   *       CTEs the inner query defines). The inner plan is a constructor argument rather than a
+   *       tree child, so it must be walked explicitly.
+   * </ul>
+   *
+   * @return {@code true} when the node is a recognised, validated DESCRIBE form and the caller
+   *     should not descend into it; {@code false} when the node is not a DESCRIBE form at all
+   */
+  private boolean validateDescribeStrict(
+      @Nonnull final LogicalPlan plan, @Nonnull final Set<String> allowedLabels) {
+    if (plan instanceof final DescribeRelation describe) {
+      if (describe.isExtended()) {
+        throw new InvalidRequestException(
+            "SQL contains a disallowed operation: DESCRIBE EXTENDED / FORMATTED");
+      }
+      if (!describe.partitionSpec().isEmpty()) {
+        throw new InvalidRequestException(
+            "SQL contains a disallowed operation: DESCRIBE with a partition specification");
+      }
+      if (describe.child() instanceof final UnresolvedTableOrView target) {
+        validateSinglePartLabel(
+            CollectionConverters.asJava(target.multipartIdentifier()), allowedLabels);
+        return true;
+      }
+      // An unexpected target shape falls through to the generic Command rejection.
+      return false;
+    }
+    if (plan instanceof final DescribeQueryCommand describeQuery) {
+      final LogicalPlan innerPlan = describeQuery.plan();
+      final Set<String> innerLabels = new HashSet<>(allowedLabels);
+      collectCteNames(innerPlan, innerLabels);
+      walkPlanStrict(innerPlan, innerLabels);
+      return true;
+    }
+    return false;
   }
 
   /** Recursively validates an analyzed plan, tracking whether we are inside a trusted alias. */
@@ -448,6 +552,16 @@ public class SqlValidator {
     final List<Expression> expressions = CollectionConverters.asJava(plan.expressions());
     for (final Expression expr : expressions) {
       walkExpressionAnalyzed(expr, registeredViewNames);
+    }
+    // Defence in depth: mirror the strict-walk carve-out for any WithWindowDefinition that
+    // survives analysis (for example a pipe-SQL WINDOW clause), whose windowDefinitions map
+    // is not reached by plan.expressions(). The authoritative gate is the strict walk in
+    // validate; ordinary SQL substitutes named windows into Window nodes before this runs.
+    if (plan instanceof final WithWindowDefinition withWindow) {
+      for (final WindowSpecDefinition spec :
+          CollectionConverters.asJava(withWindow.windowDefinitions()).values()) {
+        walkExpressionAnalyzed(spec, registeredViewNames);
+      }
     }
     final boolean childTrust = inTrustedAlias || isTrustedAlias(plan, registeredViewNames);
     final List<LogicalPlan> children = CollectionConverters.asJava(plan.children());
@@ -541,6 +655,12 @@ public class SqlValidator {
       @Nonnull final LogicalPlan plan,
       @Nonnull final Set<String> registeredViewNames,
       final boolean inTrustedAlias) {
+    if (isAllowedDescribeAnalyzed(plan, registeredViewNames)) {
+      // A DESCRIBE command already fully vetted at parse time. Spark rewrites the parsed
+      // DescribeRelation into a DescribeTableCommand during analysis, so it is recognised here by
+      // its analysed form. This is defence in depth only; the parse-time gate is authoritative.
+      return;
+    }
     if (plan instanceof Command) {
       throw new InvalidRequestException(
           "SQL contains a disallowed operation: " + plan.getClass().getSimpleName());
@@ -556,13 +676,61 @@ public class SqlValidator {
   }
 
   /**
+   * Recognises the analysed form of the two allowed {@code DESCRIBE} statements. Spark's {@code
+   * ResolveSessionCatalog} rewrites a parsed {@link DescribeRelation} over a (temp) view into a
+   * {@link DescribeTableCommand}, so the table form is matched by that class here rather than by
+   * {@link DescribeRelation}.
+   *
+   * <ul>
+   *   <li>{@link DescribeTableCommand} is accepted only when it is not extended, carries no
+   *       partition specification, and its table name matches one of the request-scoped temp views
+   *       (case-insensitively, matching {@link #isTrustedAlias} for the same catalog-normalisation
+   *       reason). Any other target would indicate the parse-time label check was bypassed.
+   *   <li>{@link DescribeQueryCommand} is accepted unconditionally: its inner query plan was
+   *       strictly validated at parse time and is only ever analysed - never executed - by the
+   *       command, so no analysed-plan re-check is required.
+   * </ul>
+   *
+   * @return {@code true} when the node is an allowed analysed DESCRIBE form; {@code false}
+   *     otherwise, so a disallowed describe falls through to the blanket {@link Command} rejection
+   */
+  private static boolean isAllowedDescribeAnalyzed(
+      @Nonnull final LogicalPlan plan, @Nonnull final Set<String> registeredViewNames) {
+    if (plan instanceof DescribeQueryCommand) {
+      return true;
+    }
+    if (plan instanceof final DescribeTableCommand describe) {
+      if (describe.isExtended() || !describe.partitionSpec().isEmpty()) {
+        return false;
+      }
+      final String tableName = describe.table().table();
+      for (final String registered : registeredViewNames) {
+        if (registered.equalsIgnoreCase(tableName)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  /**
    * Enforces that an unresolved relation is a single-part identifier matching {@link
    * #LABEL_PATTERN} and present in the allowed-label set. Rejects two-part datasource short-name
    * references such as {@code parquet.`/etc/passwd`}.
    */
   private static void validateRelationReference(
       @Nonnull final UnresolvedRelation relation, @Nonnull final Set<String> allowedLabels) {
-    final List<String> parts = CollectionConverters.asJava(relation.multipartIdentifier());
+    validateSinglePartLabel(
+        CollectionConverters.asJava(relation.multipartIdentifier()), allowedLabels);
+  }
+
+  /**
+   * Enforces that a relation identifier is a single-part identifier matching {@link #LABEL_PATTERN}
+   * and present in the allowed-label set. Shared by ordinary relation references and the {@code
+   * DESCRIBE [TABLE] <label>} target check.
+   */
+  private static void validateSinglePartLabel(
+      @Nonnull final List<String> parts, @Nonnull final Set<String> allowedLabels) {
     if (parts.size() != 1) {
       throw new InvalidRequestException(
           "SQL references an undeclared table: " + String.join(".", parts));
@@ -699,5 +867,11 @@ public class SqlValidator {
   @Nonnull
   static Set<String> rejectedExpressionNames() {
     return REJECTED_EXPRESSION_NAMES;
+  }
+
+  /** DESCRIBE carve-out class names, exposed for build-time integrity tests. */
+  @Nonnull
+  static Set<String> describeCommandNames() {
+    return DESCRIBE_COMMAND_NAMES;
   }
 }

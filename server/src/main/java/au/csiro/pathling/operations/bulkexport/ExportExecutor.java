@@ -26,6 +26,7 @@ import static org.apache.spark.sql.functions.map;
 import static org.apache.spark.sql.functions.struct;
 
 import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.io.JobDirectoryFileSystem;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.sink.DataSinkBuilder;
 import au.csiro.pathling.library.io.sink.WriteDetails;
@@ -41,7 +42,6 @@ import ca.uhn.fhir.context.RuntimeResourceDefinition;
 import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
 import jakarta.annotation.Nonnull;
 import java.io.IOException;
-import java.net.URI;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Map;
@@ -49,19 +49,15 @@ import java.util.Set;
 import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.MapType;
 import org.apache.spark.sql.types.StructField;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 /**
@@ -80,9 +76,7 @@ public class ExportExecutor {
 
   @Nonnull private final FhirContext fhirContext;
 
-  @Nonnull private final SparkSession sparkSession;
-
-  @Nonnull private final String databasePath;
+  @Nonnull private final JobDirectoryFileSystem jobDirectoryFileSystem;
 
   @Nonnull private final ServerConfiguration serverConfiguration;
 
@@ -94,8 +88,8 @@ public class ExportExecutor {
    * @param pathlingContext The Pathling context.
    * @param deltaLake The queryable data source.
    * @param fhirContext The FHIR context.
-   * @param sparkSession The Spark session.
-   * @param databasePath The database path.
+   * @param jobDirectoryFileSystem The shared helper that creates per-job directories on the
+   *     warehouse filesystem.
    * @param serverConfiguration The server configuration.
    * @param patientCompartmentService The patient compartment service.
    */
@@ -104,16 +98,13 @@ public class ExportExecutor {
       @Nonnull final PathlingContext pathlingContext,
       @Nonnull final QueryableDataSource deltaLake,
       @Nonnull final FhirContext fhirContext,
-      @Nonnull final SparkSession sparkSession,
-      @Nonnull @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}")
-          final String databasePath,
+      @Nonnull final JobDirectoryFileSystem jobDirectoryFileSystem,
       @Nonnull final ServerConfiguration serverConfiguration,
       @Nonnull final PatientCompartmentService patientCompartmentService) {
     this.pathlingContext = pathlingContext;
     this.deltaLake = deltaLake;
     this.fhirContext = fhirContext;
-    this.sparkSession = sparkSession;
-    this.databasePath = databasePath;
+    this.jobDirectoryFileSystem = jobDirectoryFileSystem;
     this.serverConfiguration = serverConfiguration;
     this.patientCompartmentService = patientCompartmentService;
   }
@@ -204,38 +195,30 @@ public class ExportExecutor {
       @Nonnull final ExportRequest exportRequest,
       @Nonnull final String jobId,
       @Nonnull final QueryableDataSource mapped) {
-    final URI warehouseUri = URI.create(databasePath);
-    final Path warehousePath = new Path(warehouseUri);
-    final Path jobDirPath = new Path(new Path(warehousePath, "jobs"), jobId);
-    final Configuration configuration = sparkSession.sparkContext().hadoopConfiguration();
+    final Path jobDirPath;
     try {
-      final FileSystem fs = FileSystem.get(configuration);
-      if (!fs.exists(jobDirPath)) {
-        final boolean created = fs.mkdirs(jobDirPath);
-        if (!created) {
-          throw new InternalErrorException(
-              "Failed to created subdirectory at %s for job %s.".formatted(databasePath, jobId));
-        }
-        log.debug("Created dir {}", jobDirPath);
-      }
-
-      final DataSinkBuilder sinkBuilder =
-          new DataSinkBuilder(pathlingContext, mapped).saveMode("overwrite");
-      final WriteDetails writeDetails =
-          switch (exportRequest.outputFormat()) {
-            case NDJSON -> sinkBuilder.ndjson(jobDirPath.toString());
-            case PARQUET -> sinkBuilder.parquet(jobDirPath.toString());
-            case null -> sinkBuilder.ndjson(jobDirPath.toString());
-          };
-      return new ExportResponse(
-          exportRequest.originalRequest(),
-          exportRequest.serverBaseUrl(),
-          writeDetails,
-          serverConfiguration.getAuth().isEnabled());
+      // The helper resolves the filesystem from the warehouse URI, so directory creation works on
+      // any warehouse scheme, not just the process default filesystem.
+      jobDirectoryFileSystem.ensureJobDirectory(jobId);
+      jobDirPath = jobDirectoryFileSystem.jobDirectory(jobId);
     } catch (final IOException e) {
       throw new InternalErrorException(
-          "Failed to created subdirectory at %s for job %s.".formatted(databasePath, jobId));
+          "Failed to create job directory for job %s.".formatted(jobId), e);
     }
+
+    final DataSinkBuilder sinkBuilder =
+        new DataSinkBuilder(pathlingContext, mapped).saveMode("overwrite");
+    final WriteDetails writeDetails =
+        switch (exportRequest.outputFormat()) {
+          case NDJSON -> sinkBuilder.ndjson(jobDirPath.toString());
+          case PARQUET -> sinkBuilder.parquet(jobDirPath.toString());
+          case null -> sinkBuilder.ndjson(jobDirPath.toString());
+        };
+    return new ExportResponse(
+        exportRequest.originalRequest(),
+        exportRequest.serverBaseUrl(),
+        writeDetails,
+        serverConfiguration.getAuth().isEnabled());
   }
 
   @Nonnull

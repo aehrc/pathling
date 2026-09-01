@@ -14,6 +14,23 @@ backend default {
 }
 
 sub vcl_recv {
+  // Bulk-data file downloads ($result) stream large NDJSON bodies to streaming
+  // clients such as the $import-pnp downloader. The frontend cache must not
+  // gzip, buffer, or cache these: on a cache miss Varnish otherwise serves an
+  // on-the-fly-gzipped, chunked, streamed response that is closed mid-body when
+  // the client reads in bursts (paced by its own downstream writes), truncating
+  // the download. Bypass the cache entirely so the response streams straight
+  // through with the backend's Content-Length.
+  if (req.url ~ "/\$result") {
+    // These clients read in bursts, stalling for as long as it takes to write
+    // each block to their own storage, which can exceed the default one minute
+    // allowed for sending to a client that is not reading. Without this, the
+    // connection is closed part-way through a large file and the download fails
+    // with a premature end of message body.
+    set sess.idle_send_timeout = 30m;
+    set sess.send_timeout = 2h;
+    return (pass);
+  }
   if (req.http.Cache-Control ~ "(private|no-cache|no-store)" || req.http.Pragma == "no-cache") {
     return (pass);
   }
@@ -24,6 +41,16 @@ sub vcl_req_authorization {
 }
 
 sub vcl_backend_response {
+  // Never cache or gzip bulk-data file downloads (see vcl_recv). Disabling gzip
+  // lets the backend Content-Length pass through, so the body is delivered with
+  // a fixed length rather than chunked encoding, which is robust to the bursty,
+  // idle-gap read pattern of streaming download clients.
+  if (bereq.url ~ "/\$result") {
+    set beresp.uncacheable = true;
+    set beresp.do_gzip = false;
+    return (deliver);
+  }
+
   // Respect backend cache-control headers that indicate the response should not be cached.
   if (beresp.http.Cache-Control ~ "(no-cache|no-store|private)") {
     set beresp.uncacheable = true;

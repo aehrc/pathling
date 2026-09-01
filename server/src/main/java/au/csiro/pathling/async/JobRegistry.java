@@ -18,11 +18,11 @@
 package au.csiro.pathling.async;
 
 import au.csiro.pathling.async.Job.JobTag;
-import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -130,11 +130,11 @@ public class JobRegistry {
       log.warn("Failed to remove job {} from registry.", job.getId());
       return false;
     }
+    // Jobs registered through register rather than getOrCreate have no tag, so finding no tag entry
+    // is a normal outcome rather than an inconsistency.
     final boolean removedFromTags = jobsByTags.values().removeIf(otherJob -> otherJob.equals(job));
     if (!removedFromTags) {
-      throw new InternalErrorException(
-          "Removed job %s from id map but failed to remove it from tag map."
-              .formatted(job.getId()));
+      log.debug("Job {} had no tag entry to remove.", job.getId());
     }
     removedFromRegistryButStillWithSparkJob.add(job.getId());
     return true;
@@ -148,5 +148,17 @@ public class JobRegistry {
    */
   public boolean removedFromRegistryButStillWithSparkJobContains(final String jobId) {
     return removedFromRegistryButStillWithSparkJob.contains(jobId);
+  }
+
+  /**
+   * Returns a point-in-time snapshot of all jobs currently registered. The returned list is a safe
+   * copy that is not affected by subsequent registrations or removals, and callers cannot mutate
+   * the registry through it.
+   *
+   * @return an immutable list of the currently registered jobs
+   */
+  @Nonnull
+  public synchronized List<Job<?>> allJobs() {
+    return List.copyOf(jobsById.values());
   }
 }

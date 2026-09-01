@@ -16,18 +16,17 @@
  */
 
 /**
- * Form for executing ViewDefinitions via `$viewdefinition-run`.
+ * Form for executing ViewDefinitions via `$sql-run`.
  *
  * Hosted by `SqlOnFhirForm` alongside `SqlQueryForm`.
  *
  * @author John Grimes
  */
 
-import { CopyIcon, PlayIcon, UploadIcon } from "@radix-ui/react-icons";
+import { CopyIcon, PlayIcon, PlusIcon, UploadIcon } from "@radix-ui/react-icons";
 import {
   Box,
   Button,
-  Callout,
   Card,
   Flex,
   Heading,
@@ -43,14 +42,17 @@ import { useState } from "react";
 
 import { useClipboard } from "../../hooks";
 import { useViewDefinitions } from "../../hooks/useViewDefinitions";
+import { ErrorCallout } from "../error/ErrorCallout";
 import { FieldGuidance } from "../FieldGuidance";
 import { FieldLabel } from "../FieldLabel";
 
-import type { ViewRunRequest } from "../../hooks";
 import type { CreateViewDefinitionResult } from "../../types/sqlOnFhir";
+import type { ViewRunRequest } from "../../types/viewJob";
 
 interface ViewDefinitionFormProps {
   onExecute: (request: ViewRunRequest) => void;
+  /** Callback when the current view is added to the export set. */
+  onAddToExportSet?: (request: ViewRunRequest) => void;
   onSaveToServer: (json: string) => Promise<CreateViewDefinitionResult>;
   isExecuting: boolean;
   isSaving: boolean;
@@ -76,6 +78,7 @@ const EXAMPLE_VIEW_DEFINITION = `{
  *
  * @param root0 - The component props.
  * @param root0.onExecute - Callback when view is executed.
+ * @param root0.onAddToExportSet - Callback when the view is added to the export set.
  * @param root0.onSaveToServer - Callback to save view definition to server.
  * @param root0.isExecuting - Whether execution is in progress.
  * @param root0.isSaving - Whether save is in progress.
@@ -84,6 +87,7 @@ const EXAMPLE_VIEW_DEFINITION = `{
  */
 export function ViewDefinitionForm({
   onExecute,
+  onAddToExportSet,
   onSaveToServer,
   isExecuting,
   isSaving,
@@ -97,17 +101,33 @@ export function ViewDefinitionForm({
   const { data: viewDefinitions, isLoading: isLoadingViewDefinitions } = useViewDefinitions();
   const copyToClipboard = useClipboard();
 
-  const handleExecute = () => {
+  /**
+   * Builds the request the form currently describes, or undefined when it
+   * describes nothing runnable.
+   *
+   * @returns The request, or undefined.
+   */
+  const buildRequest = (): ViewRunRequest | undefined => {
     if (activeTab === "stored" && selectedViewDefinitionId) {
-      onExecute({
-        mode: "stored",
-        viewDefinitionId: selectedViewDefinitionId,
-      });
-    } else if (activeTab === "custom" && customJson.trim()) {
-      onExecute({
-        mode: "inline",
-        viewDefinitionJson: customJson,
-      });
+      return { mode: "stored", viewDefinitionId: selectedViewDefinitionId };
+    }
+    if (activeTab === "custom" && customJson.trim()) {
+      return { mode: "inline", viewDefinitionJson: customJson };
+    }
+    return undefined;
+  };
+
+  const handleExecute = () => {
+    const request = buildRequest();
+    if (request) {
+      onExecute(request);
+    }
+  };
+
+  const handleAddToExportSet = () => {
+    const request = buildRequest();
+    if (request) {
+      onAddToExportSet?.(request);
     }
   };
 
@@ -229,11 +249,7 @@ export function ViewDefinitionForm({
                 <FieldGuidance mt="2">
                   Enter a valid view definition resource in JSON format.
                 </FieldGuidance>
-                {saveError && (
-                  <Callout.Root color="red" mt="2" size="1">
-                    <Callout.Text>{saveError.message}</Callout.Text>
-                  </Callout.Root>
-                )}
+                {saveError && <ErrorCallout message={saveError.message} size="1" mt="2" />}
               </Box>
             </Tabs.Content>
           </Box>
@@ -241,21 +257,33 @@ export function ViewDefinitionForm({
 
         <Flex gap="3">
           <Button
-            size="3"
+            size="2"
             onClick={handleExecute}
             disabled={disabled || isExecuting || !canExecute}
-            style={{ flex: 1 }}
+            style={{ flex: 1, whiteSpace: "nowrap" }}
           >
             <PlayIcon />
             {isExecuting ? "Executing..." : "Execute"}
           </Button>
+          {onAddToExportSet && (
+            <Button
+              size="2"
+              variant="soft"
+              onClick={handleAddToExportSet}
+              disabled={disabled || !canExecute}
+              style={{ whiteSpace: "nowrap" }}
+            >
+              <PlusIcon />
+              Add to export set
+            </Button>
+          )}
           {activeTab === "custom" && (
             <Button
-              size="3"
+              size="2"
               variant="soft"
               onClick={handleSaveToServer}
               disabled={disabled || isSaving || !customJson.trim()}
-              style={{ flex: 1 }}
+              style={{ flex: 1, whiteSpace: "nowrap" }}
             >
               <UploadIcon />
               {isSaving ? "Saving..." : "Save to server"}

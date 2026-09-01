@@ -19,18 +19,17 @@
  * Result card for a single SQL query execution.
  *
  * Mirrors the lifecycle pattern of `ViewCard`: each card mounts, kicks off
- * its own `$sqlquery-run` request via `useSqlQueryRun`, and renders the
+ * its own `$sql-run` request via `useSqlRun`, and renders the
  * format-appropriate result body when complete.
  *
  * @author John Grimes
  */
 
-import { Cross2Icon, ExclamationTriangleIcon } from "@radix-ui/react-icons";
+import { Cross2Icon } from "@radix-ui/react-icons";
 import {
   Badge,
   Box,
   Button,
-  Callout,
   Card,
   Code,
   Flex,
@@ -42,26 +41,27 @@ import {
 import { useEffect, useState } from "react";
 
 import { ExportControls } from "./ExportControls";
+import { SqlExportCardWrapper } from "./SqlExportCardWrapper";
 import { SqlPreview } from "./SqlPreview";
-import { SqlQueryExportCardWrapper } from "./SqlQueryExportCardWrapper";
-import { useSqlQueryRun } from "../../hooks";
-import { OperationOutcomeError } from "../../types/errors";
+import { useSqlRun } from "../../hooks";
+import { buildBindingsResource, toSubjectSource } from "../../hooks/sqlQueryHelpers";
 import { formatDateTime } from "../../utils";
+import { ErrorCallout } from "../error/ErrorCallout";
+import { toDisplayIssues } from "../error/errorPresentation";
 
-import type { SqlQueryExportFormat, SqlQueryJob, SqlQueryResult } from "../../types/sqlQuery";
+import type { SqlExportFormat } from "../../types/sqlExport";
+import type { SqlQueryJob, SqlQueryResult } from "../../types/sqlQuery";
 
 /** An in-progress or completed export spawned from this result card. */
 interface SqlQueryExportEntry {
   id: string;
-  format: SqlQueryExportFormat;
+  format: SqlExportFormat;
   createdAt: Date;
 }
 
 interface SqlQueryCardProps {
   /** The SQL query job describing the request. */
   job: SqlQueryJob;
-  /** Callback for surfacing errors to the parent (e.g. for global auth handling). */
-  onError: (message: string) => void;
   /** Optional callback to remove the card once it has terminated. */
   onClose?: () => void;
 }
@@ -71,12 +71,11 @@ interface SqlQueryCardProps {
  *
  * @param props - The component props.
  * @param props.job - The SQL query job describing the request.
- * @param props.onError - Callback for surfacing errors to the parent.
  * @param props.onClose - Optional callback to remove the card once it has terminated.
  * @returns The card.
  */
-export function SqlQueryCard({ job, onError, onClose }: Readonly<SqlQueryCardProps>) {
-  const { execute, status, result, error } = useSqlQueryRun();
+export function SqlQueryCard({ job, onClose }: Readonly<SqlQueryCardProps>) {
+  const { execute, status, result, error } = useSqlRun();
   const [exports, setExports] = useState<SqlQueryExportEntry[]>([]);
 
   const isRunning = status === "pending";
@@ -95,23 +94,23 @@ export function SqlQueryCard({ job, onError, onClose }: Readonly<SqlQueryCardPro
   // Strict Mode's double-render of the mount.
   useEffect(() => {
     if (status === "idle") {
-      execute(job.request);
+      execute({
+        subject: toSubjectSource(job.request),
+        format: job.request.format,
+        limit: job.request.limit,
+        header: job.request.header,
+        bindings: job.request.bindings,
+        parameterTypes: job.request.parameterTypes,
+      });
     }
   }, [status, execute, job]);
-
-  // Surface errors to the parent for global handling.
-  useEffect(() => {
-    if (error) {
-      onError(error.message);
-    }
-  }, [error, onError]);
 
   /**
    * Starts an export of this query's result in the chosen format, reusing the run's query source.
    *
    * @param format - The chosen export format.
    */
-  function handleExport(format: SqlQueryExportFormat) {
+  function handleExport(format: SqlExportFormat) {
     setExports((current) => [
       ...current,
       { id: crypto.randomUUID(), format, createdAt: new Date() },
@@ -185,13 +184,20 @@ export function SqlQueryCard({ job, onError, onClose }: Readonly<SqlQueryCardPro
                 <ExportControls onExport={handleExport} />
               </Flex>
               {exports.map((entry) => (
-                <SqlQueryExportCardWrapper
+                <SqlExportCardWrapper
                   key={entry.id}
-                  source={job.request}
+                  subjects={[
+                    {
+                      subject: toSubjectSource(job.request),
+                      parameters: buildBindingsResource(
+                        job.request.bindings,
+                        job.request.parameterTypes,
+                      ),
+                    },
+                  ]}
                   format={entry.format}
                   createdAt={entry.createdAt}
                   onClose={() => handleCloseExport(entry.id)}
-                  onError={onError}
                 />
               ))}
             </Flex>
@@ -292,33 +298,15 @@ interface SqlQueryErrorBodyProps {
  * @returns The error body.
  */
 function SqlQueryErrorBody({ sql, error }: Readonly<SqlQueryErrorBodyProps>) {
-  const message =
-    error instanceof OperationOutcomeError ? extractOutcomeText(error) : error.message;
   return (
     <Flex direction="column" gap="2">
       <Text size="1" color="gray">
         Submitted SQL:
       </Text>
       <SqlPreview sql={sql || "(empty)"} ariaLabel="Submitted SQL" />
-      <Callout.Root color="red" size="1">
-        <Callout.Icon>
-          <ExclamationTriangleIcon />
-        </Callout.Icon>
-        <Callout.Text>{message}</Callout.Text>
-      </Callout.Root>
+      <ErrorCallout issues={toDisplayIssues(error)} size="1" />
     </Flex>
   );
-}
-
-/**
- * Extracts the most useful display text from an OperationOutcome.
- *
- * @param error - The OperationOutcome error to render.
- * @returns The first available diagnostic or details text.
- */
-function extractOutcomeText(error: OperationOutcomeError): string {
-  const issue = error.operationOutcome.issue?.[0];
-  return issue?.diagnostics ?? issue?.details?.text ?? "Server returned an error.";
 }
 
 /**

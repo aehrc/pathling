@@ -20,8 +20,8 @@ package au.csiro.pathling.operations.view;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import au.csiro.pathling.views.ViewDefinitionGson;
 import ca.uhn.fhir.rest.server.exceptions.UnprocessableEntityException;
-import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -29,6 +29,11 @@ import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.sql.Date;
 import java.sql.Timestamp;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.Period;
 import java.util.Iterator;
 import java.util.List;
 import org.apache.spark.sql.Row;
@@ -37,10 +42,15 @@ import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import scala.jdk.javaapi.CollectionConverters;
 
 /**
- * Tests for {@link ResultStreamingHelper#streamFhirJson} — covers the typed Spark→FHIR mapping,
- * NULL handling, and rejection of unsupported column types.
+ * Tests for {@link ResultStreamingHelper} - covers the typed Spark to FHIR mapping, the NDJSON,
+ * JSON and CSV output forms, NULL handling, the serialisation of the {@code java.time} values Spark
+ * materialises for {@code TIMESTAMP_NTZ} and the interval types, and rejection of column types the
+ * FHIR Parameters format cannot express.
+ *
+ * @author John Grimes
  */
 class ResultStreamingHelperTest {
 
@@ -48,7 +58,7 @@ class ResultStreamingHelperTest {
 
   @BeforeEach
   void setUp() {
-    helper = new ResultStreamingHelper(new Gson());
+    helper = new ResultStreamingHelper(ViewDefinitionGson.create());
   }
 
   // ---------------------------------------------------------------------------
@@ -303,6 +313,203 @@ class ResultStreamingHelperTest {
   }
 
   // ---------------------------------------------------------------------------
+  // java.time-backed values.
+  //
+  // Spark materialises TIMESTAMP_NTZ as java.time.LocalDateTime, day-time intervals as
+  // java.time.Duration and year-month intervals as java.time.Period. Gson has no built-in
+  // adapter for any of these, and the module system blocks its reflective fallback, so these
+  // cases fail until ISO-8601 adapters are registered in ViewDefinitionGson.create(). The
+  // expected strings are the JDK toString() forms, which are what CSV has always emitted.
+  // ---------------------------------------------------------------------------
+
+  /** Verifies NDJSON renders each java.time value as its canonical ISO-8601 string. */
+  @Test
+  void serialisesJavaTimeValuesAsIso8601StringsInNdjson() throws Exception {
+    final StructType schema = javaTimeSchema();
+    final List<Row> rows =
+        javaTimeRows(
+            LocalDateTime.parse("2020-01-01T12:00:00"), Duration.ofHours(1), Period.ofYears(1));
+
+    final JsonObject json = onlyNdjsonObject(rows, schema);
+
+    assertJavaTimeMembers(json, "2020-01-01T12:00", "PT1H", "P1Y");
+  }
+
+  /** Verifies the single-document JSON array carries the same strings as the NDJSON output. */
+  @Test
+  void serialisesJavaTimeValuesAsIso8601StringsInJson() throws Exception {
+    final StructType schema = javaTimeSchema();
+    final List<Row> rows =
+        javaTimeRows(
+            LocalDateTime.parse("2020-01-01T12:00:00"), Duration.ofHours(1), Period.ofYears(1));
+    final ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+    helper.writeJson(out, rows.iterator(), schema);
+
+    final JsonArray array =
+        JsonParser.parseString(out.toString(StandardCharsets.UTF_8)).getAsJsonArray();
+    assertThat(array.size()).isEqualTo(1);
+    assertJavaTimeMembers(array.get(0).getAsJsonObject(), "2020-01-01T12:00", "PT1H", "P1Y");
+  }
+
+  /** Verifies sub-second precision is preserved rather than truncated to whole minutes. */
+  @Test
+  void serialisesLocalDateTimeWithFractionalSecondsAsIso8601String() throws Exception {
+    final StructType schema = javaTimeSchema();
+    final List<Row> rows =
+        javaTimeRows(
+            LocalDateTime.parse("2020-01-01T12:00:00.123"), Duration.ofHours(1), Period.ofYears(1));
+
+    final JsonObject json = onlyNdjsonObject(rows, schema);
+
+    assertJavaTimeMembers(json, "2020-01-01T12:00:00.123", "PT1H", "P1Y");
+  }
+
+  /**
+   * Verifies negative intervals keep the JDK sign form, where the sign sits on the field rather
+   * than in front of the period designator: {@code PT-1H}, not {@code -PT1H}.
+   */
+  @Test
+  void serialisesNegativeIntervalsUsingJdkSignForm() throws Exception {
+    final StructType schema = javaTimeSchema();
+    final List<Row> rows =
+        javaTimeRows(
+            LocalDateTime.parse("2020-01-01T12:00:00"), Duration.ofHours(-1), Period.ofYears(-1));
+
+    final JsonObject json = onlyNdjsonObject(rows, schema);
+
+    assertJavaTimeMembers(json, "2020-01-01T12:00", "PT-1H", "P-1Y");
+  }
+
+  /**
+   * Verifies a DATE column holding a {@link LocalDate} serialises as an ISO-8601 date. Spark only
+   * materialises this Java type when {@code spark.sql.datetime.java8API.enabled} is set, and {@link
+   * RowFactory} reproduces that pairing directly because it applies no conversion of its own.
+   */
+  @Test
+  void serialisesLocalDateAsIso8601String() throws Exception {
+    final StructType schema = schemaOf(nullableField("birth_date", DataTypes.DateType));
+    final List<Row> rows = List.of(RowFactory.create(LocalDate.parse("2020-01-01")));
+
+    final JsonObject json = onlyNdjsonObject(rows, schema);
+
+    assertThat(json.get("birth_date").getAsString()).isEqualTo("2020-01-01");
+  }
+
+  /**
+   * Verifies a TIMESTAMP column holding an {@link Instant} serialises as an ISO-8601 instant, again
+   * only reachable with Spark's Java 8 datetime API enabled.
+   */
+  @Test
+  void serialisesInstantAsIso8601String() throws Exception {
+    final StructType schema = schemaOf(nullableField("created_at", DataTypes.TimestampType));
+    final List<Row> rows = List.of(RowFactory.create(Instant.parse("2020-01-01T00:00:00Z")));
+
+    final JsonObject json = onlyNdjsonObject(rows, schema);
+
+    assertThat(json.get("created_at").getAsString()).isEqualTo("2020-01-01T00:00:00Z");
+  }
+
+  /** Verifies a null TIMESTAMP_NTZ value still omits the member entirely, as it did before. */
+  @Test
+  void omitsMemberForNullTimestampNtzValueInNdjson() throws Exception {
+    final StructType schema =
+        schemaOf(
+            nullableField("id", DataTypes.IntegerType),
+            nullableField("ts_ntz", DataTypes.TimestampNTZType));
+    final List<Row> rows = List.of(RowFactory.create(1, null));
+
+    final JsonObject json = onlyNdjsonObject(rows, schema);
+
+    assertThat(json.get("id").getAsInt()).isEqualTo(1);
+    assertThat(json.has("ts_ntz")).isFalse();
+  }
+
+  /**
+   * Verifies ARRAY&lt;TIMESTAMP_NTZ&gt; elements serialise as canonical strings inside the nested
+   * JSON array. Spark hands array columns to the helper as a Scala sequence, so the value is built
+   * that way here to reach the array branch of convertValue.
+   */
+  @Test
+  void serialisesTimestampNtzInsideArrayAsIso8601Strings() throws Exception {
+    final StructType schema =
+        schemaOf(
+            nullableField("timestamps", DataTypes.createArrayType(DataTypes.TimestampNTZType)));
+    final scala.collection.Seq<Object> values =
+        CollectionConverters.asScala(
+                List.<Object>of(
+                    LocalDateTime.parse("2020-01-01T12:00:00"),
+                    LocalDateTime.parse("2021-06-30T08:15:30")))
+            .toSeq();
+    final List<Row> rows = List.of(RowFactory.create(values));
+
+    final JsonObject json = onlyNdjsonObject(rows, schema);
+
+    final JsonArray timestamps = json.getAsJsonArray("timestamps");
+    assertThat(timestamps.size()).isEqualTo(2);
+    assertThat(timestamps.get(0).getAsString()).isEqualTo("2020-01-01T12:00");
+    assertThat(timestamps.get(1).getAsString()).isEqualTo("2021-06-30T08:15:30");
+  }
+
+  /** Verifies a TIMESTAMP_NTZ field inside a struct column serialises as a canonical string. */
+  @Test
+  void serialisesTimestampNtzInsideStructAsIso8601String() throws Exception {
+    final StructType nested = schemaOf(nullableField("recorded", DataTypes.TimestampNTZType));
+    final StructType schema = schemaOf(nullableField("event", nested));
+    final Row nestedRow = RowFactory.create(LocalDateTime.parse("2020-01-01T12:00:00"));
+    final List<Row> rows = List.of(RowFactory.create(nestedRow));
+
+    final JsonObject json = onlyNdjsonObject(rows, schema);
+
+    assertThat(json.getAsJsonObject("event").get("recorded").getAsString())
+        .isEqualTo("2020-01-01T12:00");
+  }
+
+  /**
+   * Verifies CSV already emits the canonical strings, so this assertion holds both before and after
+   * the JSON adapters are registered. The CSV printer calls toString() on the value, which yields
+   * the same form the adapters produce.
+   */
+  @Test
+  void streamsCsvWithIso8601StringsForJavaTimeValues() throws Exception {
+    final StructType schema = javaTimeSchema();
+    final List<Row> rows =
+        javaTimeRows(
+            LocalDateTime.parse("2020-01-01T12:00:00"), Duration.ofHours(1), Period.ofYears(1));
+    final ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+    helper.streamCsv(out, rows.iterator(), schema);
+
+    assertThat(out.toString(StandardCharsets.UTF_8).trim()).isEqualTo("2020-01-01T12:00,PT1H,P1Y");
+  }
+
+  /**
+   * Verifies the FHIR Parameters format is unaffected: a TIMESTAMP_NTZ column still maps to
+   * valueDateTime carrying the same canonical string.
+   */
+  @Test
+  void mapsTimestampNtzColumnToValueDateTime() throws Exception {
+    final JsonObject part =
+        onlyPart("ts_ntz", DataTypes.TimestampNTZType, LocalDateTime.parse("2020-01-01T12:00:00"));
+    assertThat(part.get("valueDateTime").getAsString()).isEqualTo("2020-01-01T12:00");
+  }
+
+  /**
+   * Verifies interval columns are still rejected by the FHIR Parameters format, which has no
+   * primitive able to carry them.
+   */
+  @Test
+  void rejectsDayTimeIntervalColumnInFhirJson() {
+    final StructType schema = schemaOf(nullableField("dt", DataTypes.createDayTimeIntervalType()));
+    final ByteArrayOutputStream out = new ByteArrayOutputStream();
+    final Iterator<Row> rows = List.of(RowFactory.create(Duration.ofHours(1))).iterator();
+
+    assertThatThrownBy(() -> helper.streamFhirJson(out, rows, schema))
+        .isInstanceOf(UnprocessableEntityException.class)
+        .hasMessageContaining("dt");
+  }
+
+  // ---------------------------------------------------------------------------
   // Misc value conversion.
   // ---------------------------------------------------------------------------
 
@@ -375,5 +582,48 @@ class ResultStreamingHelperTest {
     final JsonObject part = parts.get(0).getAsJsonObject();
     assertThat(part.get("name").getAsString()).isEqualTo(columnName);
     return part;
+  }
+
+  /** Builds a struct type from the supplied fields. */
+  private static StructType schemaOf(final org.apache.spark.sql.types.StructField... fields) {
+    return DataTypes.createStructType(fields);
+  }
+
+  /** Builds a nullable struct field. */
+  private static org.apache.spark.sql.types.StructField nullableField(
+      final String name, final org.apache.spark.sql.types.DataType type) {
+    return DataTypes.createStructField(name, type, true);
+  }
+
+  /** Schema with a TIMESTAMP_NTZ, a day-time interval and a year-month interval column. */
+  private static StructType javaTimeSchema() {
+    return schemaOf(
+        nullableField("ts_ntz", DataTypes.TimestampNTZType),
+        nullableField("dt", DataTypes.createDayTimeIntervalType()),
+        nullableField("ym", DataTypes.createYearMonthIntervalType()));
+  }
+
+  /** Builds a single row matching the column order of {@link #javaTimeSchema()}. */
+  private static List<Row> javaTimeRows(
+      final LocalDateTime timestamp, final Duration dayTime, final Period yearMonth) {
+    return List.of(RowFactory.create(timestamp, dayTime, yearMonth));
+  }
+
+  /** Streams the rows as NDJSON, asserts a single line was written, and returns it parsed. */
+  private JsonObject onlyNdjsonObject(final List<Row> rows, final StructType schema)
+      throws Exception {
+    final ByteArrayOutputStream out = new ByteArrayOutputStream();
+    helper.streamNdjson(out, rows.iterator(), schema);
+    final String[] lines = out.toString(StandardCharsets.UTF_8).split("\n");
+    assertThat(lines).hasSize(1);
+    return JsonParser.parseString(lines[0]).getAsJsonObject();
+  }
+
+  /** Asserts the three java.time columns carry the expected canonical strings. */
+  private static void assertJavaTimeMembers(
+      final JsonObject json, final String timestamp, final String dayTime, final String yearMonth) {
+    assertThat(json.get("ts_ntz").getAsString()).isEqualTo(timestamp);
+    assertThat(json.get("dt").getAsString()).isEqualTo(dayTime);
+    assertThat(json.get("ym").getAsString()).isEqualTo(yearMonth);
   }
 }

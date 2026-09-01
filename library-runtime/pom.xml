@@ -121,6 +121,20 @@
                 <exclude>**</exclude>
               </excludes>
             </filter>
+            <!-- Servlet API classes belong to the runtime environment (server, Spark
+                 distribution); bundling them shadows the environment's own version and
+                 causes NoSuchMethodError on newer servlet API methods. The only classes
+                 retained are the ones that were removed in Servlet 6.0 - they cannot
+                 shadow anything in a Servlet 6 environment, and Spark's shaded Jetty
+                 still links against them when starting the Spark UI. -->
+            <filter>
+              <artifact>jakarta.servlet:jakarta.servlet-api</artifact>
+              <includes>
+                <include>jakarta/servlet/SingleThreadModel.class</include>
+                <include>jakarta/servlet/http/HttpSessionContext.class</include>
+                <include>jakarta/servlet/http/HttpUtils.class</include>
+              </includes>
+            </filter>
           </filters>
           <transformers>
             <transformer

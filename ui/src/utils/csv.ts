@@ -16,7 +16,7 @@
  */
 
 /**
- * Minimal CSV parser used to render `$sqlquery-run` results in a table.
+ * Minimal CSV parser used to render `$sql-run` results in a table.
  *
  * Mirrors the public surface of `parseNdjsonResponse` from `./ndjson`.
  *

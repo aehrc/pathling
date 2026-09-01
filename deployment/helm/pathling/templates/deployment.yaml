@@ -1,3 +1,8 @@
+{{- $truststoreEnabled := .Values.pathling.truststore.enabled }}
+{{- $tsMountPath := .Values.pathling.truststore.mountPath }}
+{{- $tsFilePath := printf "%s/%s" $tsMountPath .Values.pathling.truststore.key }}
+{{- $tsOptions := printf "-Djavax.net.ssl.trustStore=%s -Djavax.net.ssl.trustStorePassword=%s -Djavax.net.ssl.trustStoreType=%s" $tsFilePath .Values.pathling.truststore.password .Values.pathling.truststore.type }}
+{{- $tsJavaOpts := ternary (printf " %s" $tsOptions) "" $truststoreEnabled }}
 kind: Deployment
 apiVersion: apps/v1
 metadata:
@@ -42,11 +47,15 @@ spec:
               port: 8081
             periodSeconds: 5
             failureThreshold: 3
-          volumeMounts: {{ toJson .Values.pathling.volumeMounts }}
+          {{- $volumeMounts := .Values.pathling.volumeMounts }}
+          {{- if $truststoreEnabled }}
+          {{- $volumeMounts = append $volumeMounts (dict "name" "truststore" "mountPath" $tsMountPath "readOnly" true) }}
+          {{- end }}
+          volumeMounts: {{ toJson $volumeMounts }}
           {{- if gt (add (len .Values.pathling.config) (len .Values.pathling.secretConfig)) 0 }}
           env:
             - name: JAVA_TOOL_OPTIONS
-              value: {{ printf "-Xmx%s  --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED %s" .Values.pathling.resources.maxHeapSize .Values.pathling.additionalJavaOptions }}
+              value: {{ printf "-Xmx%s --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED %s%s" .Values.pathling.resources.maxHeapSize .Values.pathling.additionalJavaOptions $tsJavaOpts | quote }}
             - name: spark.driver.host
               value: pathling-driver
             - name: spark.driver.port
@@ -75,7 +84,11 @@ spec:
                   key: {{ $configKey }}
             {{- end }}
           {{- end }}
-      volumes: {{ toJson .Values.pathling.volumes }}
+      {{- $volumes := .Values.pathling.volumes }}
+      {{- if $truststoreEnabled }}
+      {{- $volumes = append $volumes (dict "name" "truststore" "secret" (dict "secretName" .Values.pathling.truststore.secretName)) }}
+      {{- end }}
+      volumes: {{ toJson $volumes }}
       serviceAccountName: {{ .Values.pathling.serviceAccount }}
       imagePullSecrets: {{ toJson .Values.pathling.imagePullSecrets }}
       tolerations: {{ toJson .Values.pathling.tolerations }}

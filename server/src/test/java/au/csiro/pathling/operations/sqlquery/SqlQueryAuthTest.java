@@ -32,6 +32,7 @@ import au.csiro.pathling.encoders.ViewDefinitionResource.ColumnComponent;
 import au.csiro.pathling.encoders.ViewDefinitionResource.SelectComponent;
 import au.csiro.pathling.errors.AccessDeniedError;
 import au.csiro.pathling.io.source.DataSource;
+import au.csiro.pathling.operations.sql.SuppliedArtefacts;
 import au.csiro.pathling.read.ReadExecutor;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.views.FhirView;
@@ -115,12 +116,13 @@ class SqlQueryAuthTest {
 
     // Projected-resource READ alone is not enough; the ViewDefinition metadata READ is required.
     setSecurityContext("pathling:read:Patient");
-    assertThatThrownBy(() -> resolver.resolve(sqlQuery(PV_URL), Map.of()))
+    assertThatThrownBy(() -> resolver.resolve(sqlQuery(PV_URL), SuppliedArtefacts.empty()))
         .isInstanceOf(AccessDeniedError.class)
         .hasMessageContaining("ViewDefinition");
 
     setSecurityContext("pathling:read:ViewDefinition", "pathling:read:Patient");
-    assertThatNoException().isThrownBy(() -> resolver.resolve(sqlQuery(PV_URL), Map.of()));
+    assertThatNoException()
+        .isThrownBy(() -> resolver.resolve(sqlQuery(PV_URL), SuppliedArtefacts.empty()));
   }
 
   @Test
@@ -130,7 +132,7 @@ class SqlQueryAuthTest {
 
     // ViewDefinition READ without the projected Patient READ is still denied.
     setSecurityContext("pathling:read:ViewDefinition");
-    assertThatThrownBy(() -> resolver.resolve(sqlQuery(PV_URL), Map.of()))
+    assertThatThrownBy(() -> resolver.resolve(sqlQuery(PV_URL), SuppliedArtefacts.empty()))
         .isInstanceOf(AccessDeniedError.class)
         .hasMessageContaining("Patient");
   }
@@ -146,27 +148,31 @@ class SqlQueryAuthTest {
 
     // Holding the transitive ViewDefinition and projected reads, but not Library READ, is denied.
     setSecurityContext("pathling:read:ViewDefinition", "pathling:read:Patient");
-    assertThatThrownBy(() -> resolver.resolve(sqlQuery(BASE_URL), Map.of()))
+    assertThatThrownBy(() -> resolver.resolve(sqlQuery(BASE_URL), SuppliedArtefacts.empty()))
         .isInstanceOf(AccessDeniedError.class)
         .hasMessageContaining("Library");
 
     setSecurityContext(
         "pathling:read:Library", "pathling:read:ViewDefinition", "pathling:read:Patient");
-    assertThatNoException().isThrownBy(() -> resolver.resolve(sqlQuery(BASE_URL), Map.of()));
+    assertThatNoException()
+        .isThrownBy(() -> resolver.resolve(sqlQuery(BASE_URL), SuppliedArtefacts.empty()));
   }
 
   @Test
   void inlineSuppliedViewRequiresNoMetadataRead() {
     // A request-supplied (inline) view is not read from storage, so resolving it needs no metadata
     // READ - even with no authorities granted.
-    setSecurityContext("pathling:sqlquery-run");
+    setSecurityContext("pathling:sql-run");
     final FhirView supplied =
         FhirView.ofResource("Patient")
             .select(FhirView.columns(FhirView.column("id", "id")))
             .build();
 
     assertThatNoException()
-        .isThrownBy(() -> resolver.resolve(sqlQuery(PV_URL), Map.of(PV_URL, supplied)));
+        .isThrownBy(
+            () ->
+                resolver.resolve(
+                    sqlQuery(PV_URL), SuppliedArtefacts.ofViews(Map.of(PV_URL, supplied))));
   }
 
   @Test
@@ -177,7 +183,7 @@ class SqlQueryAuthTest {
 
     // The top-level by-reference resolution goes through LibraryReferenceResolver, which enforces
     // the Library metadata READ.
-    setSecurityContext("pathling:sqlquery-run");
+    setSecurityContext("pathling:sql-run");
     assertThatThrownBy(() -> libraryReferenceResolver.resolve(new Reference("Library/base")))
         .isInstanceOf(AccessDeniedError.class)
         .hasMessageContaining("Library");

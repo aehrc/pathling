@@ -44,9 +44,9 @@ import org.springframework.context.annotation.Primary;
 /**
  * Test configuration that overrides the production {@code deltaLake} data source with an in-memory
  * one pre-loaded with FHIR resources and ViewDefinitions that select against them. Used by the
- * {@code $sqlquery-run} end-to-end IT to drive a SQL query that resolves a ViewDefinition reference
- * and executes against real FHIR data — the path the production warehouse caching defeats for
- * resources created at runtime.
+ * {@code $sql-run} end-to-end IT to drive a SQL query that resolves a ViewDefinition reference and
+ * executes against real FHIR data — the path the production warehouse caching defeats for resources
+ * created at runtime.
  *
  * <p>Two views are exposed:
  *

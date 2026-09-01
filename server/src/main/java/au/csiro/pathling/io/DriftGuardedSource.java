@@ -18,6 +18,7 @@
 package au.csiro.pathling.io;
 
 import au.csiro.pathling.io.source.DataSource;
+import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.sink.DataSinkBuilder;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.library.query.FhirViewQuery;
@@ -31,12 +32,17 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 
 /**
- * A {@link QueryableDataSource} wrapper that guards reads against schema drift, and carries that
- * guard into sources derived from it through {@code map} or {@code filterByResourceType}. Reads of
- * a drifted type fail with {@link SchemaDriftError} instead of an opaque Spark analysis failure.
- * View queries are guarded on their subject resource type when the query is constructed, because
- * the executed query resolves datasets through the wrapped source's own dispatcher rather than the
- * guarded {@code read}.
+ * A {@link QueryableDataSource} wrapper that guards reads against schema drift. Reads of a drifted
+ * type fail with {@link SchemaDriftError} instead of an opaque Spark analysis failure. View queries
+ * are guarded on their subject resource type when the query is constructed, because the executed
+ * query resolves datasets through the wrapped source's own dispatcher rather than the guarded
+ * {@code read}.
+ *
+ * <p>Deriving through {@code map}, {@code filterByResourceType} or {@code cache} produces a {@link
+ * DerivedSource} over this source rather than over the delegate. The derived source therefore reads
+ * through this class's guarded {@code read}, so the guard propagates without being re-applied, and
+ * so does whatever read behaviour a subclass adds - dynamic discovery, an empty-dataset fallback, a
+ * pinned version.
  *
  * <p>The drifted types set is held by reference, so guard decisions reflect its current contents.
  * This allows a mutable set shared with a refreshing source to clear the guard when a type is
@@ -45,6 +51,9 @@ import org.apache.spark.sql.Row;
  * @author John Grimes
  */
 public class DriftGuardedSource implements QueryableDataSource {
+
+  /** The Pathling context, used to construct sources derived from this one. */
+  @Nonnull protected final PathlingContext context;
 
   /** The underlying QueryableDataSource that guarded operations delegate to. */
   @Nonnull protected final QueryableDataSource delegate;
@@ -55,12 +64,16 @@ public class DriftGuardedSource implements QueryableDataSource {
   /**
    * Constructs a new DriftGuardedSource.
    *
+   * @param context the Pathling context, used to construct derived sources
    * @param delegate the underlying QueryableDataSource to delegate to
    * @param driftedTypes the resource types whose tables are drifted and unmigrated; held by
    *     reference so that mutations are reflected in guard decisions
    */
   public DriftGuardedSource(
-      @Nonnull final QueryableDataSource delegate, @Nonnull final Set<String> driftedTypes) {
+      @Nonnull final PathlingContext context,
+      @Nonnull final QueryableDataSource delegate,
+      @Nonnull final Set<String> driftedTypes) {
+    this.context = context;
     this.delegate = delegate;
     this.driftedTypes = driftedTypes;
   }
@@ -104,24 +117,26 @@ public class DriftGuardedSource implements QueryableDataSource {
   @Nonnull
   public QueryableDataSource map(
       @Nonnull final BiFunction<String, Dataset<Row>, Dataset<Row>> operator) {
-    return new DriftGuardedSource(delegate.map(operator), driftedTypes);
+    return new DerivedSource(context, this, operator, DerivedSource.RETAIN_ALL_TYPES, driftedTypes);
   }
 
   @Override
   @Nonnull
   public QueryableDataSource filterByResourceType(
       @Nonnull final Predicate<String> resourceTypePredicate) {
-    return new DriftGuardedSource(
-        delegate.filterByResourceType(resourceTypePredicate), driftedTypes);
+    return new DerivedSource(
+        context, this, DerivedSource.IDENTITY_OPERATOR, resourceTypePredicate, driftedTypes);
   }
 
   @Override
   @Nonnull
   public DataSource cache() {
-    final DataSource cached = delegate.cache();
-    return cached instanceof final QueryableDataSource queryable
-        ? new DriftGuardedSource(queryable, driftedTypes)
-        : cached;
+    return new DerivedSource(
+        context,
+        this,
+        (resourceType, dataset) -> dataset.cache(),
+        DerivedSource.RETAIN_ALL_TYPES,
+        driftedTypes);
   }
 
   /**

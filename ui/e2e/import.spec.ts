@@ -403,7 +403,8 @@ test.describe("Import page", () => {
           .fill("s3a://invalid/data.ndjson");
         await page.getByRole("button", { name: "Start import" }).click();
 
-        // Verify error message is displayed.
+        // Verify the failure is displayed in the card, which is now the only
+        // place a job failure is reported.
         await expect(page.getByText("Invalid source URL")).toBeVisible();
       });
     });
@@ -455,8 +456,12 @@ test.describe("Import page", () => {
         // Click cancel button.
         await page.getByRole("button", { name: "Cancel" }).click();
 
-        // Verify cancel was requested to the correct URL.
-        expect(cancelRequestUrl).toContain(`$job?id=${TEST_JOB_ID}`);
+        // Verify cancel was requested to the correct URL. The request is
+        // issued asynchronously, so poll rather than reading the captured URL
+        // straight after the click.
+        await expect
+          .poll(() => cancelRequestUrl)
+          .toContain(`$job?id=${TEST_JOB_ID}`);
       });
 
       test("shows cancelled status indicator when import is cancelled", async ({
@@ -924,7 +929,8 @@ test.describe("Import page", () => {
         .fill("s3a://test/data.ndjson");
       await page.getByRole("button", { name: "Start import" }).click();
 
-      // Wait for error message to appear.
+      // Wait for the failure to appear in the card, which is now the only place
+      // a job failure is reported.
       await expect(page.getByText("Import failed")).toBeVisible({
         timeout: 10000,
       });

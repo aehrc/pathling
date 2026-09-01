@@ -355,6 +355,71 @@ class ParametersToJsonInterceptorTest {
     return response;
   }
 
+  // A repeated name inside a part list is how FHIR expresses a list, and an export manifest uses it
+  // to name every file an output produced. Collapsing it to the last occurrence would leave the
+  // rest of the export unreachable.
+  @Test
+  void rendersARepeatedPartNameAsAnArray() throws Exception {
+    final Parameters parameters = new Parameters();
+    final Parameters.ParametersParameterComponent output =
+        parameters.addParameter().setName("output");
+    output.addPart().setName("name").setValue(new StringType("demographics"));
+    output.addPart().setName("location").setValue(new UriType("https://example.org/a.csv"));
+    output.addPart().setName("location").setValue(new UriType("https://example.org/b.csv"));
+    output.addPart().setName("location").setValue(new UriType("https://example.org/c.csv"));
+
+    final JsonNode node = mapper.readTree(transformAndCapture(parameters));
+
+    assertThat(node.get("output").get("name").asText()).isEqualTo("demographics");
+    final JsonNode locations = node.get("output").get("location");
+    assertThat(locations.isArray()).isTrue();
+    assertThat(locations).hasSize(3);
+    assertThat(locations.get(0).asText()).isEqualTo("https://example.org/a.csv");
+    assertThat(locations.get(2).asText()).isEqualTo("https://example.org/c.csv");
+  }
+
+  // A part that appears once stays a scalar, so the common single-file case reads naturally.
+  @Test
+  void rendersASinglePartAsAScalar() throws Exception {
+    final Parameters parameters = new Parameters();
+    final Parameters.ParametersParameterComponent output =
+        parameters.addParameter().setName("output");
+    output.addPart().setName("name").setValue(new StringType("only"));
+    output.addPart().setName("location").setValue(new UriType("https://example.org/only.csv"));
+
+    final JsonNode node = mapper.readTree(transformAndCapture(parameters));
+
+    assertThat(node.get("output").get("location").isArray()).isFalse();
+    assertThat(node.get("output").get("location").asText())
+        .isEqualTo("https://example.org/only.csv");
+  }
+
+  // A whole export manifest: two outputs, each spanning several files.
+  @Test
+  void rendersEveryFileOfEveryOutputInAnExportManifest() throws Exception {
+    final Parameters parameters = new Parameters();
+    parameters.addParameter().setName("status").setValue(new CodeType("completed"));
+    for (final String name : new String[] {"demographics", "smiths"}) {
+      final Parameters.ParametersParameterComponent output =
+          parameters.addParameter().setName("output");
+      output.addPart().setName("name").setValue(new StringType(name));
+      output.addPart().setName("location").setValue(new UriType(name + ".00000.csv"));
+      output.addPart().setName("location").setValue(new UriType(name + ".00001.csv"));
+    }
+
+    final JsonNode node = mapper.readTree(transformAndCapture(parameters));
+
+    final JsonNode outputs = node.get("output");
+    assertThat(outputs.isArray()).isTrue();
+    assertThat(outputs).hasSize(2);
+    for (final JsonNode output : outputs) {
+      final String name = output.get("name").asText();
+      assertThat(output.get("location")).hasSize(2);
+      assertThat(output.get("location").get(0).asText()).isEqualTo(name + ".00000.csv");
+      assertThat(output.get("location").get(1).asText()).isEqualTo(name + ".00001.csv");
+    }
+  }
+
   private String transformAndCapture(final Parameters parameters) throws Exception {
     final StringWriter writer = new StringWriter();
     final HttpServletRequest request = mockRequest("application/json");

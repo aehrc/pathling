@@ -16,34 +16,51 @@
  */
 
 /**
- * Page for executing the SQL on FHIR `$viewdefinition-run` and
- * `$sqlquery-run` operations.
+ * Page for the SQL on FHIR data operations: running a subject through
+ * `$sql-run`, and exporting one or many through `$sql-export`.
  *
  * @author John Grimes
  */
 
-import { Box, Flex, Heading, Spinner, Text } from "@radix-ui/themes";
+import { Box, Flex, Heading } from "@radix-ui/themes";
 import { useState } from "react";
 
-import { LoginRequired } from "../components/auth/LoginRequired";
-import { SessionExpiredDialog } from "../components/auth/SessionExpiredDialog";
+import { CapabilityGuard } from "../components/auth/CapabilityGuard";
+import { ExportSetPanel } from "../components/sqlOnFhir/ExportSetPanel";
+import { SqlExportCardWrapper } from "../components/sqlOnFhir/SqlExportCardWrapper";
 import { SqlOnFhirForm } from "../components/sqlOnFhir/SqlOnFhirForm";
 import { SqlQueryCard } from "../components/sqlOnFhir/SqlQueryCard";
 import { extractRequestSql } from "../components/sqlOnFhir/sqlQueryFormHelpers";
 import { ViewCard } from "../components/sqlOnFhir/ViewCard";
-import { config } from "../config";
-import { useAuth } from "../contexts/AuthContext";
-import { useSaveSqlQueryLibrary, useSaveViewDefinition, useServerCapabilities } from "../hooks";
+import { useSaveSqlQueryLibrary, useSaveViewDefinition } from "../hooks";
+import {
+  buildExportSetRequest,
+  captureQueryEntry,
+  captureViewEntry,
+  findNameCollisions,
+  parseIdList,
+  removeEntry,
+  renameEntry,
+} from "../hooks/exportSetHelpers";
 
 import type { SqlOnFhirMode } from "../components/sqlOnFhir/SqlOnFhirForm";
-import type { ViewRunRequest } from "../hooks";
+import type { ExportSetEntry } from "../hooks/exportSetHelpers";
+import type { SqlExportRequest } from "../hooks/useSqlExport";
+import type { SqlExportFormat } from "../types/sqlExport";
 import type { SqlQueryJob, SqlQueryRequest } from "../types/sqlQuery";
-import type { ViewJob } from "../types/viewJob";
+import type { ViewJob, ViewRunRequest } from "../types/viewJob";
 
 interface PageJob {
   type: "view" | "sql-query";
   /** Underlying job. */
   job: ViewJob | SqlQueryJob;
+}
+
+/** An export set job started from the panel, shown in the results column. */
+interface ExportSetJob {
+  id: string;
+  request: SqlExportRequest;
+  createdAt: Date;
 }
 
 /**
@@ -52,20 +69,22 @@ interface PageJob {
  * @returns The SQL on FHIR page.
  */
 export function SqlOnFhir() {
-  const { fhirBaseUrl } = config;
-  const { isAuthenticated } = useAuth();
-
   const [mode, setMode] = useState<SqlOnFhirMode>("view-definition");
+
+  // The export set: subjects captured from the form, plus the job-wide
+  // settings that apply to all of them.
+  const [exportSet, setExportSet] = useState<ExportSetEntry[]>([]);
+  const [exportSetFormat, setExportSetFormat] = useState<SqlExportFormat>("ndjson");
+  const [exportSetFilters, setExportSetFilters] = useState({
+    patients: "",
+    groups: "",
+    since: "",
+  });
+  const [exportSetJobs, setExportSetJobs] = useState<ExportSetJob[]>([]);
 
   // Track all view query jobs and SQL query jobs as a single timeline so
   // they can be sorted by createdAt regardless of source.
   const [pageJobs, setPageJobs] = useState<PageJob[]>([]);
-
-  const [, setError] = useState<string | null>(null);
-
-  // Fetch server capabilities to determine if auth is required.
-  const { data: capabilities, isLoading: isLoadingCapabilities } =
-    useServerCapabilities(fhirBaseUrl);
 
   // Mutations: ViewDefinition save and SQL query Library save.
   const { mutateAsync: saveViewDefinition, isPending: isSavingViewDefinition } =
@@ -107,6 +126,39 @@ export function SqlOnFhir() {
   };
 
   /**
+   * Captures the current ViewDefinition into the export set.
+   *
+   * @param request - The view run request the form describes.
+   */
+  const handleAddViewToExportSet = (request: ViewRunRequest) => {
+    setExportSet((prev) => [...prev, captureViewEntry(crypto.randomUUID(), request, prev)]);
+  };
+
+  /**
+   * Captures the current SQL query, with its bindings, into the export set.
+   *
+   * @param request - The SQL query request the form describes.
+   */
+  const handleAddQueryToExportSet = (request: SqlQueryRequest) => {
+    setExportSet((prev) => [...prev, captureQueryEntry(crypto.randomUUID(), request, prev)]);
+  };
+
+  /**
+   * Starts one export job carrying every entry in the set.
+   */
+  const handleExportSet = () => {
+    const request = buildExportSetRequest(exportSet, exportSetFormat, {
+      patientIds: parseIdList(exportSetFilters.patients),
+      groupIds: parseIdList(exportSetFilters.groups),
+      since: exportSetFilters.since,
+    });
+    setExportSetJobs((prev) => [
+      { id: crypto.randomUUID(), request, createdAt: new Date() },
+      ...prev,
+    ]);
+  };
+
+  /**
    * Removes a result card from the column.
    *
    * @param id - The job ID of the card to remove.
@@ -115,71 +167,85 @@ export function SqlOnFhir() {
     setPageJobs((prev) => prev.filter((entry) => entry.job.id !== id));
   };
 
-  // Show loading state while checking server capabilities.
-  if (isLoadingCapabilities) {
-    return (
-      <>
-        <Flex align="center" gap="2">
-          <Spinner />
-          <Text>Checking server capabilities...</Text>
-        </Flex>
-        <SessionExpiredDialog />
-      </>
-    );
-  }
-
-  // Show login prompt if authentication is required but not authenticated.
-  if (capabilities?.authRequired && !isAuthenticated) {
-    return <LoginRequired />;
-  }
-
   return (
-    <>
-      <Flex direction="column" gap="4">
-        <Heading size="6">SQL on FHIR</Heading>
+    <CapabilityGuard>
+      {() => (
+        <Flex direction="column" gap="4">
+          <Heading size="6">SQL on FHIR</Heading>
 
-        <Flex gap="6" direction={{ initial: "column", md: "row" }}>
-          {/* The min-width of zero lets the form column shrink to share width
-              evenly with the results column, rather than being held open by
-              wide content such as long view references. */}
-          <Box style={{ flex: 1, minWidth: 0 }}>
-            <SqlOnFhirForm
-              mode={mode}
-              onModeChange={setMode}
-              onExecuteViewDefinition={handleExecuteViewDefinition}
-              onSaveViewDefinition={saveViewDefinition}
-              onExecuteSqlQuery={handleExecuteSqlQuery}
-              onSaveSqlQueryLibrary={saveSqlQueryLibrary}
-              isViewDefinitionExecuting={false}
-              isViewDefinitionSaving={isSavingViewDefinition}
-              isSqlQueryExecuting={false}
-              isSqlQuerySaving={isSavingSqlQueryLibrary}
-            />
-          </Box>
+          <Flex gap="6" direction={{ initial: "column", md: "row" }}>
+            {/* The min-width of zero lets the form column shrink to share width
+                evenly with the results column, rather than being held open by
+                wide content such as long view references. */}
+            <Box style={{ flex: 1, minWidth: 0 }}>
+              <SqlOnFhirForm
+                mode={mode}
+                onModeChange={setMode}
+                onExecuteViewDefinition={handleExecuteViewDefinition}
+                onAddViewToExportSet={handleAddViewToExportSet}
+                onSaveViewDefinition={saveViewDefinition}
+                onExecuteSqlQuery={handleExecuteSqlQuery}
+                onAddQueryToExportSet={handleAddQueryToExportSet}
+                onSaveSqlQueryLibrary={saveSqlQueryLibrary}
+                isViewDefinitionExecuting={false}
+                isViewDefinitionSaving={isSavingViewDefinition}
+                isSqlQueryExecuting={false}
+                isSqlQuerySaving={isSavingSqlQueryLibrary}
+              />
 
-          <Flex direction="column" gap="3" style={{ flex: 1, overflow: "hidden" }}>
-            {pageJobs.map((entry) =>
-              entry.type === "view" ? (
-                <ViewCard
-                  key={entry.job.id}
-                  job={entry.job as ViewJob}
-                  onError={(message) => setError(message)}
-                  onClose={() => handleCloseJob(entry.job.id)}
+              <Box mt="4">
+                <ExportSetPanel
+                  entries={exportSet}
+                  format={exportSetFormat}
+                  filters={exportSetFilters}
+                  collisions={findNameCollisions(exportSet)}
+                  onRename={(id, name) => setExportSet((prev) => renameEntry(prev, id, name))}
+                  onRemove={(id) => setExportSet((prev) => removeEntry(prev, id))}
+                  onClear={() => setExportSet([])}
+                  onFormatChange={setExportSetFormat}
+                  onFilterChange={(field, value) =>
+                    setExportSetFilters((prev) => ({ ...prev, [field]: value }))
+                  }
+                  onExport={handleExportSet}
                 />
-              ) : (
-                <SqlQueryCard
-                  key={entry.job.id}
-                  job={entry.job as SqlQueryJob}
-                  onError={(message) => setError(message)}
-                  onClose={() => handleCloseJob(entry.job.id)}
+              </Box>
+            </Box>
+
+            <Flex direction="column" gap="3" style={{ flex: 1, overflow: "hidden" }}>
+              {exportSetJobs.map((job) => (
+                <SqlExportCardWrapper
+                  key={job.id}
+                  subjects={job.request.subjects}
+                  format={job.request.format}
+                  header={job.request.header}
+                  patientIds={job.request.patientIds}
+                  groupIds={job.request.groupIds}
+                  since={job.request.since}
+                  createdAt={job.createdAt}
+                  onClose={() =>
+                    setExportSetJobs((prev) => prev.filter((entry) => entry.id !== job.id))
+                  }
                 />
-              ),
-            )}
+              ))}
+              {pageJobs.map((entry) =>
+                entry.type === "view" ? (
+                  <ViewCard
+                    key={entry.job.id}
+                    job={entry.job as ViewJob}
+                    onClose={() => handleCloseJob(entry.job.id)}
+                  />
+                ) : (
+                  <SqlQueryCard
+                    key={entry.job.id}
+                    job={entry.job as SqlQueryJob}
+                    onClose={() => handleCloseJob(entry.job.id)}
+                  />
+                ),
+              )}
+            </Flex>
           </Flex>
         </Flex>
-      </Flex>
-
-      <SessionExpiredDialog />
-    </>
+      )}
+    </CapabilityGuard>
   );
 }
