@@ -331,7 +331,7 @@ val data = pc.read().bundles("/usr/share/staging/bundles",
 
 ```java
 BundlesSource data = pc.read().bundles("/usr/share/staging/bundles",
-        Set.of("Patient", "Condition", "Immunization"), FhirMimeTypes.FHIR_JSON) 
+        Set.of("Patient", "Condition", "Immunization"), FhirMimeTypes.FHIR_JSON)
 ```
 
 </TabItem>
@@ -625,6 +625,15 @@ parameter when initialising the Pathling context.
 The files are named according to their resource
 type (`[resource type].parquet`), e.g. `Patient.parquet`, `Condition.parquet`.
 
+Writing in merge mode into a table that carries columns your current encoder
+configuration does not produce - for example a table written with more open types
+enabled for extension values than you have configured now - succeeds. Those
+columns are left null on the rows that are written, and the table keeps its wider
+schema, so a reader configured with the original open types can still read the
+rows written before. A source that carries columns the table does not is a
+different matter: that would mean widening the table, which is not done for you,
+so such a write still fails.
+
 <!--suppress CheckEmptyScriptTag -->
 <Tabs>
 <TabItem value="python" label="Python">
@@ -706,4 +715,3 @@ tables("test");
 
 </TabItem>
 </Tabs>
-

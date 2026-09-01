@@ -1,0 +1,15 @@
+{
+  "resourceType": "ValueSet",
+  "url": "http://example.org/fhir/ValueSet/pets",
+  "version": "1.0.0",
+  "name": "Pets",
+  "status": "active",
+  "compose": {
+    "include": [
+      {
+        "system": "http://example.org/fhir/CodeSystem/animal-category",
+        "concept": [{ "code": "pet" }]
+      }
+    ]
+  }
+}

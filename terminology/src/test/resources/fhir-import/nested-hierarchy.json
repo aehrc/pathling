@@ -1,0 +1,55 @@
+{
+  "resourceType": "CodeSystem",
+  "url": "http://example.org/fhir/CodeSystem/nested",
+  "version": "1.0.0",
+  "name": "NestedHierarchy",
+  "status": "active",
+  "content": "complete",
+  "hierarchyMeaning": "is-a",
+  "property": [
+    { "code": "weight", "type": "integer" },
+    { "code": "assoc", "type": "Coding" },
+    {
+      "code": "inactive",
+      "uri": "http://hl7.org/fhir/concept-properties#inactive",
+      "type": "boolean"
+    }
+  ],
+  "concept": [
+    {
+      "code": "A",
+      "display": "Alpha",
+      "designation": [
+        {
+          "language": "en",
+          "use": {
+            "system": "http://terminology.hl7.org/CodeSystem/designation-usage",
+            "code": "synonym"
+          },
+          "value": "AlphaSyn"
+        }
+      ],
+      "concept": [
+        {
+          "code": "B",
+          "display": "Beta",
+          "property": [
+            { "code": "weight", "valueInteger": 5 },
+            {
+              "code": "assoc",
+              "valueCoding": {
+                "system": "http://example.org/fhir/CodeSystem/nested",
+                "code": "C"
+              }
+            }
+          ]
+        },
+        {
+          "code": "C",
+          "property": [{ "code": "inactive", "valueBoolean": true }],
+          "concept": [{ "code": "D", "display": "Delta" }]
+        }
+      ]
+    }
+  ]
+}

@@ -47,6 +47,8 @@ def test_all_commands_registered():
             "designation",
             "run",
             "console",
+            "import-snomed",
+            "import-fhir-terminology",
         ]
     )
 
@@ -70,7 +72,7 @@ def test_run_help_mentions_sources_and_arguments(runner):
     assert "SCRIPT" in result.output
     assert "-c" in result.output
     assert "spark" in result.output
-    assert "pathling" in result.output
+    assert "pc" in result.output
     assert "sys.argv" in result.output
 
 
@@ -80,8 +82,23 @@ def test_console_help_mentions_variables(runner):
 
     assert result.exit_code == 0
     assert "spark" in result.output
-    assert "pathling" in result.output
+    assert "pc" in result.output
     assert "exit" in result.output.lower()
+
+
+@pytest.mark.parametrize("command_name", ["run", "console"])
+def test_help_names_the_context_pc(runner, command_name):
+    """Both commands' help refer to the context as pc, in prose and examples.
+
+    A snippet copied out of the help must work at the prompt, so the help cannot
+    describe the context under the name that holds the module (FR-016).
+    """
+    result = runner.invoke(cli, [command_name, "--help"])
+
+    assert result.exit_code == 0
+    collapsed = " ".join(result.output.split())
+    assert "pc (the configured Pathling context)" in collapsed
+    assert "pathling (the configured Pathling context)" not in collapsed
 
 
 @pytest.mark.parametrize(

@@ -84,6 +84,36 @@ def test_view_csv(runner, patched_context, ndjson_source, view_file):
     assert len(rows) == PATIENT_COUNT + 1
 
 
+def test_view_accepts_delimiter_and_header_options(
+    runner, patched_context, ndjson_source, view_file
+):
+    """view inherits --delimiter/--header from the shared output options and runs.
+
+    Adding the two options to the shared ``output_options`` decorator would break
+    every command that applies it unless each accepts and forwards them; this
+    guards ``view`` against that regression (T007).
+    """
+    result = runner.invoke(
+        cli,
+        [
+            "view",
+            ndjson_source,
+            "--view",
+            str(view_file),
+            "--format",
+            "csv",
+            "--delimiter",
+            ";",
+            "--no-header",
+        ],
+    )
+
+    # The command must accept the shared options and still produce its result;
+    # the delimiter/header behaviour itself is covered by the render tests.
+    assert result.exit_code == 0, result.stderr
+    assert FIRST_FAMILY in result.stdout
+
+
 def test_view_format_json_rejected(runner, patched_context, ndjson_source, view_file):
     """The removed json format is rejected as an invalid --format choice."""
     result = runner.invoke(
@@ -122,6 +152,48 @@ def test_view_to_csv_file(runner, patched_context, ndjson_source, view_file, tmp
     assert "Wrote csv output to" in result.stderr
     # The row count is intentionally not reported (FR-012).
     assert "rows" not in result.stderr
+
+
+def test_view_to_tsv_file_is_tab_separated(
+    runner, patched_context, ndjson_source, view_file, tmp_path, wide_stderr
+):
+    """``view -o out.tsv`` writes tab-separated output with no --delimiter (T007).
+
+    ``view`` reads FHIR data rather than CSV, so only the ``-o`` extension takes
+    part in delimiter resolution.
+    """
+    out = tmp_path / "results.tsv"
+
+    result = runner.invoke(
+        cli, ["view", ndjson_source, "--view", str(view_file), "-o", str(out)]
+    )
+
+    assert result.exit_code == 0, result.stderr
+    rows = list(csv.reader(io.StringIO(out.read_text()), delimiter="\t"))
+    # The header parses into its separate columns rather than one tabbed field.
+    assert len(rows[0]) > 1
+    assert "family_name" in rows[0]
+    assert (
+        f"Writing {out} as tab-separated CSV, inferred from the .tsv extension."
+        in result.stderr
+    )
+
+
+def test_view_to_csv_file_stays_comma_separated(
+    runner, patched_context, ndjson_source, view_file, tmp_path
+):
+    """``view -o out.csv`` still writes commas and announces nothing (T007)."""
+    out = tmp_path / "results.csv"
+
+    result = runner.invoke(
+        cli, ["view", ndjson_source, "--view", str(view_file), "-o", str(out)]
+    )
+
+    assert result.exit_code == 0, result.stderr
+    rows = list(csv.reader(io.StringIO(out.read_text())))
+    assert len(rows[0]) > 1
+    assert "family_name" in rows[0]
+    assert "tab-separated" not in result.stderr
 
 
 def test_view_to_parquet_file(

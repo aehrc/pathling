@@ -1,0 +1,21 @@
+{
+  "resourceType": "ValueSet",
+  "url": "http://example.org/fhir/ValueSet/animals-except-whale",
+  "version": "1.0.0",
+  "name": "AnimalsExceptWhale",
+  "status": "active",
+  "compose": {
+    "include": [
+      {
+        "system": "http://example.org/fhir/CodeSystem/animal-species",
+        "filter": [{ "property": "concept", "op": "is-a", "value": "animal" }]
+      }
+    ],
+    "exclude": [
+      {
+        "system": "http://example.org/fhir/CodeSystem/animal-species",
+        "concept": [{ "code": "whale" }]
+      }
+    ]
+  }
+}

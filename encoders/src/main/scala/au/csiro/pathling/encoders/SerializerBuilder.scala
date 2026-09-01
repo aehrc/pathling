@@ -72,6 +72,10 @@ private[encoders] class SerializerBuilderProcessor(expression: Expression,
   override def buildArrayValue(childDefinition: BaseRuntimeChildDefinition,
                                elementDefinition: BaseRuntimeElementDefinition[_],
                                elementName: String): Expression = {
+    // The serialiser keeps its explicit element type where the deserialiser has given one up. The
+    // asymmetry is deliberate: when writing, the encoder's schema is the authority and the element
+    // type is the type of the HAPI object being read from, so there is no second schema for it to
+    // disagree with. It is only on the way back in that the data has a shape of its own.
     MapObjects(withExpression(_).buildSimpleValue(childDefinition, elementDefinition, elementName),
       expression,
       objectTypeFor(childDefinition))

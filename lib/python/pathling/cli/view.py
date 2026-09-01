@@ -24,8 +24,11 @@ restricting the resources processed with a FHIR search ``--filter``.
 Author: John Grimes.
 """
 
+from __future__ import annotations
+
 import json
 from pathlib import Path
+from typing import TYPE_CHECKING, Optional
 
 import click
 
@@ -39,8 +42,11 @@ from pathling.cli.render import (
     write_output,
 )
 
+if TYPE_CHECKING:
+    from pathling.cli.main import CliContext
 
-def _load_view(view_path, view_json) -> tuple:
+
+def _load_view(view_path: Optional[str], view_json: Optional[str]) -> tuple:
     """Loads and minimally validates a ViewDefinition.
 
     :param view_path: the ``--view`` file path, or None.
@@ -104,18 +110,20 @@ def _load_view(view_path, view_json) -> tuple:
 @output_options
 @click.pass_obj
 def view(
-    obj,
-    source,
-    from_format,
-    view_path,
-    view_json,
-    filter_expr,
-    output_format,
-    output,
-    limit,
-    overwrite,
-    departition,
-):
+    obj: CliContext,
+    source: str,
+    from_format: Optional[str],
+    view_path: Optional[str],
+    view_json: Optional[str],
+    filter_expr: Optional[str],
+    output_format: Optional[str],
+    output: Optional[str],
+    limit: int,
+    overwrite: bool,
+    departition: bool,
+    delimiter: Optional[str],
+    header: bool,
+) -> None:
     """Run a SQL on FHIR ViewDefinition against a data source.
 
     \b
@@ -135,7 +143,9 @@ def view(
 
     spec = resolve_source(source, from_format)
     view_text, resource_type = _load_view(view_path, view_json)
-    output_spec = resolve_output(output, output_format, limit, overwrite, departition)
+    output_spec = resolve_output(
+        output, output_format, limit, overwrite, departition, delimiter, header
+    )
 
     pc = session.create_context(config, console)
     # The view already knows its single subject resource type, so pass it to the

@@ -72,19 +72,6 @@ CVE-2026-9595
 # not deployed. The only fix is a 1.x to 5.x major upgrade of a transitive dependency.
 CVE-2026-14257
 
-# brace-expansion DoS via unbounded intermediate arrays — build-time minimatch transitive used for
-# file globbing over trusted source paths, not deployed. Fixed in 1.1.18, a transitive dependency
-# this project does not pin directly.
-CVE-2026-69152
-
-# fast-uri host confusion via backslash in the URI authority — build-time URI parsing during the
-# Docusaurus build, not deployed, and not reached by any request-handling path.
-CVE-2026-18446
-
-# postcss information disclosure via a crafted sourceMappingURL — build-time CSS processing of
-# trusted source files, not deployed.
-CVE-2026-69153
-
 # image-size denial of service via crafted image buffers, no fixed release available (2.0.2 is
 # the latest published version). image-size is a build-time transitive of @docusaurus/mdx-loader,
 # which uses it to measure the dimensions of image files committed to this repository. It never

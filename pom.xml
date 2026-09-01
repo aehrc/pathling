@@ -24,7 +24,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>au.csiro.pathling</groupId>
   <artifactId>pathling</artifactId>
-    <version>9.9.0-SNAPSHOT</version>
+    <version>9.9.0</version>
   <packaging>pom</packaging>
 
   <name>Pathling</name>
@@ -78,20 +78,38 @@
     <pathling.scalaVersion>2.13</pathling.scalaVersion>
     <pathling.scalaFullVersion>2.13.16</pathling.scalaFullVersion>
     <pathling.deltaVersion>4.0.0</pathling.deltaVersion>
+    <pathling.roaringBitmapVersion>1.3.0</pathling.roaringBitmapVersion>
     <pathling.hadoopVersion>3.4.1</pathling.hadoopVersion>
     <pathling.hadoopMajorVersion>3</pathling.hadoopMajorVersion>
     <pathling.hapiFhirVersion>8.10.0</pathling.hapiFhirVersion>
     <pathling.antlrVersion>4.13.1</pathling.antlrVersion>
     <pathling.lombokVersion>1.18.38</pathling.lombokVersion>
     <pathling.infinispanVersion>15.0.3.Final</pathling.infinispanVersion>
-    <pathling.jacksonVersion>2.16.1</pathling.jacksonVersion>
+    <pathling.jacksonVersion>2.22.1</pathling.jacksonVersion>
     <pathling.jerseyVersion>3.1.11</pathling.jerseyVersion>
     <pathling.surefireVersion>3.2.5</pathling.surefireVersion>
-    <pathling.logbackVersion>1.5.25</pathling.logbackVersion>
+    <!-- Pinned at or above 1.5.34, which fixes CVE-2026-9828 and CVE-2026-10532. -->
+    <pathling.logbackVersion>1.5.38</pathling.logbackVersion>
     <pathling.slf4jVersion>2.0.17</pathling.slf4jVersion>
     <pathling.derbyVersion>10.16.1.1</pathling.derbyVersion>
-    <pathling.bulkExportVersion>1.0.4</pathling.bulkExportVersion>
+    <!-- Java Object Layout, used by the benchmark module to measure retained heap. -->
+    <pathling.jolVersion>0.17</pathling.jolVersion>
+    <pathling.bulkExportVersion>1.1.0</pathling.bulkExportVersion>
     <pathling.fhirAuthVersion>1.0.0</pathling.fhirAuthVersion>
+    <!-- Spark brings in a Netty version with published vulnerabilities, so the whole family is
+         pinned to a patched release. -->
+    <pathling.nettyVersion>4.1.137.Final</pathling.nettyVersion>
+    <!-- HAPI FHIR manages httpclient5 5.4.3 and httpcore5 5.3.1, both of which have published
+         vulnerabilities (CVE-2026-64607, CVE-2026-54399, CVE-2026-54428). No HAPI FHIR release
+         yet ships patched versions, so the transitives are pinned here instead. -->
+    <pathling.httpClient5Version>5.6.4</pathling.httpClient5Version>
+    <pathling.httpCore5Version>5.4.3</pathling.httpCore5Version>
+
+    <!-- The number of concurrent Surefire forks, expressed as a multiple of the available
+         processors. One fork per processor is the fastest setting measured for a build that has the
+         machine to itself: doubling it makes the fhirpath suite around 70% slower, because every
+         fork holds its own Spark session. Lower it when the build has to share the machine. -->
+    <pathling.testForkCount>1C</pathling.testForkCount>
   </properties>
 
   <modules>
@@ -123,6 +141,32 @@
 
   <dependencyManagement>
     <dependencies>
+      <!-- Imported ahead of everything else so that the pinned Netty version wins over the one
+           Spark would otherwise bring in. -->
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-bom</artifactId>
+        <version>${pathling.nettyVersion}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <!-- Declared ahead of the HAPI FHIR BOM import so that these pinned versions win over the
+           ones HAPI FHIR manages. -->
+      <dependency>
+        <groupId>org.apache.httpcomponents.client5</groupId>
+        <artifactId>httpclient5</artifactId>
+        <version>${pathling.httpClient5Version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.httpcomponents.core5</groupId>
+        <artifactId>httpcore5</artifactId>
+        <version>${pathling.httpCore5Version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.httpcomponents.core5</groupId>
+        <artifactId>httpcore5-h2</artifactId>
+        <version>${pathling.httpCore5Version}</version>
+      </dependency>
       <dependency>
         <groupId>au.csiro.pathling</groupId>
         <artifactId>encoders</artifactId>
@@ -322,6 +366,21 @@
         <groupId>io.delta</groupId>
         <artifactId>delta-spark_${pathling.scalaVersion}</artifactId>
         <version>${pathling.deltaVersion}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.delta</groupId>
+        <artifactId>delta-kernel-api</artifactId>
+        <version>${pathling.deltaVersion}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.delta</groupId>
+        <artifactId>delta-kernel-defaults</artifactId>
+        <version>${pathling.deltaVersion}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.roaringbitmap</groupId>
+        <artifactId>RoaringBitmap</artifactId>
+        <version>${pathling.roaringBitmapVersion}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
@@ -723,8 +782,10 @@
             <useManifestOnlyJar>false</useManifestOnlyJar>
             <!-- The add-exports and add-opens flags are required for Java 21 -->
             <!-- -XX:+EnableDynamicAgentLoading suppresses warnings about Mockito's dynamic agent loading -->
-            <argLine>@{argLine} -Xshare:off -Xmx4g -ea -Duser.timezone=UTC -XX:+EnableDynamicAgentLoading --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED --add-opens=java.base/sun.util.calendar=ALL-UNNAMED</argLine>
-            <forkCount>1C</forkCount>
+            <!-- -Djava.security.manager=allow permits NoNetworkExtension to install a transient
+                 security manager that verifies terminology tests make no external network calls -->
+            <argLine>@{argLine} -Xshare:off -Xmx4g -ea -Duser.timezone=UTC -XX:+EnableDynamicAgentLoading -Djava.security.manager=allow --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED --add-opens=java.base/sun.util.calendar=ALL-UNNAMED</argLine>
+            <forkCount>${pathling.testForkCount}</forkCount>
             <failIfNoTests>false</failIfNoTests>
           </configuration>
         </plugin>
@@ -734,7 +795,9 @@
           <version>${pathling.surefireVersion}</version>
           <configuration>
             <!-- The add-exports and add-opens flags are required for Java 21 -->
-            <argLine>-Xmx4g -ea -Duser.timezone=UTC --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED</argLine>
+            <!-- -Djava.security.manager=allow permits NoNetworkExtension to install a transient
+                 security manager that verifies terminology tests make no external network calls -->
+            <argLine>-Xmx4g -ea -Duser.timezone=UTC -Djava.security.manager=allow --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED</argLine>
           </configuration>
         </plugin>
         <plugin>
@@ -966,7 +1029,7 @@
                   <exclude>**/src/license/**</exclude>
                   <exclude>**/target/**</exclude>
                   <exclude>**/node_modules/**</exclude>
-                  <exclude>**/.venv/**</exclude>
+                  <exclude>**/.venv*/**</exclude>
                   <exclude>**/spark-warehouse/**</exclude>
                   <exclude>**/metastore_db/**</exclude>
                   <exclude>**/.ipynb_checkpoints/**</exclude>
@@ -1050,6 +1113,8 @@
                   <exclude>**/.lintr</exclude>
                   <exclude>**/*.src</exclude>
                   <exclude>openspec/**</exclude>
+                  <exclude>**/.envrc</exclude>
+                  <exclude>**/.coverage</exclude>
                 </excludes>
               </licenseSet>
             </licenseSets>
@@ -1073,6 +1138,14 @@
               <groupId>com.mycila</groupId>
               <artifactId>license-maven-plugin-git</artifactId>
               <version>5.0.0</version>
+            </dependency>
+            <!-- The JGit version bundled with the plugin cannot open a linked Git worktree, which
+                 makes the check fail with "Bare Repository has neither a working tree, nor an
+                 index" whenever the build runs outside the main checkout. -->
+            <dependency>
+              <groupId>org.eclipse.jgit</groupId>
+              <artifactId>org.eclipse.jgit</artifactId>
+              <version>7.4.0.202509020913-r</version>
             </dependency>
           </dependencies>
         </plugin>
