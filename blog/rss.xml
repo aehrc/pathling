@@ -9,6 +9,212 @@
         <generator>https://github.com/jpmonette/feed</generator>
         <language>en</language>
         <item>
+            <title><![CDATA[Local terminology mode]]></title>
+            <link>https://pathling.csiro.au/blog/local-terminology</link>
+            <guid>https://pathling.csiro.au/blog/local-terminology</guid>
+            <pubDate>Wed, 02 Sep 2026 00:00:00 GMT</pubDate>
+            <description><![CDATA[Pathling 9.9.0 adds a local terminology mode. SNOMED CT and FHIR terminology]]></description>
+            <content:encoded><![CDATA[<p>Pathling 9.9.0 adds a local terminology mode. SNOMED CT and FHIR terminology
+content is imported once into a store on your own filesystem, and the
+terminology functions then evaluate against that store instead of calling a
+remote FHIR terminology server. The same seven functions, <code>member_of</code>,
+<code>translate</code>, <code>subsumes</code>, <code>subsumed_by</code>, <code>display</code>, <code>property_of</code> and
+<code>designation</code>, work identically in both modes. What changes is what you can do
+with them.</p>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="the-server-that-used-to-be-in-the-loop">The server that used to be in the loop<a href="https://pathling.csiro.au/blog/local-terminology#the-server-that-used-to-be-in-the-loop" class="hash-link" aria-label="Direct link to The server that used to be in the loop" title="Direct link to The server that used to be in the loop" translate="no">​</a></h2>
+<p>Until now, every terminology function in Pathling was a wrapper around a call to
+a FHIR terminology server. <code>member_of</code> became <code>$validate-code</code>, <code>subsumes</code>
+became <code>$subsumes</code>, <code>display</code> became <code>$lookup</code>, and so on. Responses were cached
+on each executor, so a query did not make one request per row, but the server
+was always there, and that had consequences.</p>
+<ul>
+<li class="">You needed a server you could reach. The default,
+<code>https://tx.ontoserver.csiro.au/fhir</code>, is suitable for testing only, so
+anything real meant running your own or licensing access to someone else's.</li>
+<li class="">Your analytics were coupled to a network service. A Spark job over a large
+dataset could be slowed, or fail, because of the terminology server's
+availability or request limits rather than anything in the data.</li>
+<li class="">Your results depended on what the server had loaded on the day. A value set
+expanded against one SNOMED CT release in January might have different
+members in July.</li>
+<li class="">Any environment with no outbound network access was ruled out entirely.</li>
+</ul>
+<p>Local mode removes the server from that picture.</p>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="what-you-can-now-do">What you can now do<a href="https://pathling.csiro.au/blog/local-terminology#what-you-can-now-do" class="hash-link" aria-label="Direct link to What you can now do" title="Direct link to What you can now do" translate="no">​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="run-terminology-queries-where-there-is-no-network">Run terminology queries where there is no network<a href="https://pathling.csiro.au/blog/local-terminology#run-terminology-queries-where-there-is-no-network" class="hash-link" aria-label="Direct link to Run terminology queries where there is no network" title="Direct link to Run terminology queries where there is no network" translate="no">​</a></h3>
+<p>Trusted research environments, hospital analytics platforms and other locked
+down settings routinely block outbound connections. Previously, that meant
+Pathling's terminology functions were unavailable there. Now the store is a
+set of Delta tables under a path, so it travels with the data. Build it on a
+machine that has the release files, copy it to S3, HDFS or a local disk
+alongside your FHIR data, and query it with no network at all.</p>
+<p>The command line interface can run an entire pipeline this way. Once a store
+has been populated, <code>--tx-store</code> points any command that evaluates terminology
+at it:</p>
+<div class="language-bash codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-bash codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#393A34"><span class="token plain">pathling import-snomed /data/SnomedCT_InternationalRF2_PRODUCTION_20250601T120000Z.zip /data/tx-store</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain" style="display:inline-block"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">pathling --tx-store /data/tx-store view /data/fhir --view diabetes_cohort.json --format csv</span><br></span></code></pre></div></div>
+<p>The same applies to <code>fhirpath</code>, <code>run</code>, <code>console</code> and the seven terminology
+commands.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="scale-the-query-without-scaling-a-server">Scale the query without scaling a server<a href="https://pathling.csiro.au/blog/local-terminology#scale-the-query-without-scaling-a-server" class="hash-link" aria-label="Direct link to Scale the query without scaling a server" title="Direct link to Scale the query without scaling a server" translate="no">​</a></h3>
+<p>In local mode, each Spark executor loads the store's indexes and answers
+terminology questions itself. The transitive closure of the SNOMED CT is-a
+hierarchy is held as compressed bitmaps, so a subsumption test or an ECL
+descendant query is a bitmap operation rather than a round trip. Value set
+expansions are cached per executor.</p>
+<p>The largest of those indexes is the hierarchy. Over a full SNOMED CT UK edition
+of 1,115,237 concepts it takes 738 MB of heap with the default identifier
+ordering, or 536 MB with the <code>pre-order</code> import option, which assigns internal
+identifiers by a depth-first walk of the hierarchy so that each subtree
+compresses as a near-contiguous interval. Either way, the whole edition fits
+comfortably on an ordinary executor, and there is no service on the other end
+to become the bottleneck as the cluster grows.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="pin-the-exact-release-your-results-depend-on">Pin the exact release your results depend on<a href="https://pathling.csiro.au/blog/local-terminology#pin-the-exact-release-your-results-depend-on" class="hash-link" aria-label="Direct link to Pin the exact release your results depend on" title="Direct link to Pin the exact release your results depend on" translate="no">​</a></h3>
+<p>A store holds specific versions of specific code systems. You decide when to
+import a new release, and re-importing a version replaces it atomically. Every
+SNOMED CT value set form also accepts an edition and version qualified URI, so
+a query can name precisely the content it was validated against:</p>
+<div class="language-python codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-python codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#393A34"><span class="token plain">member_of</span><span class="token punctuation" style="color:#393A34">(</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">    to_snomed_coding</span><span class="token punctuation" style="color:#393A34">(</span><span class="token plain">F</span><span class="token punctuation" style="color:#393A34">.</span><span class="token plain">col</span><span class="token punctuation" style="color:#393A34">(</span><span class="token string" style="color:#e3116c">"code"</span><span class="token punctuation" style="color:#393A34">)</span><span class="token punctuation" style="color:#393A34">)</span><span class="token punctuation" style="color:#393A34">,</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">    </span><span class="token string" style="color:#e3116c">"http://snomed.info/sct/32506021000036107/version/20250630?fhir_vs=ecl/&lt;&lt; 73211009"</span><span class="token punctuation" style="color:#393A34">,</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain"></span><span class="token punctuation" style="color:#393A34">)</span><br></span></code></pre></div></div>
+<p>Because the store is just files, it can be versioned, archived and shipped with
+a study. A cohort definition run against the same store in two environments
+returns the same members, which was not something the remote mode could
+promise.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="bring-your-own-content-without-standing-up-a-server">Bring your own content without standing up a server<a href="https://pathling.csiro.au/blog/local-terminology#bring-your-own-content-without-standing-up-a-server" class="hash-link" aria-label="Direct link to Bring your own content without standing up a server" title="Direct link to Bring your own content without standing up a server" translate="no">​</a></h3>
+<p>FHIR CodeSystem, ValueSet and ConceptMap resources can be imported from a JSON
+file, a directory of JSON files, or a FHIR NPM package. Loading a local code
+system, a set of curated value sets or a mapping table used to require a
+terminology server to load them into. Now it is one call:</p>
+<div class="language-python codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-python codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#393A34"><span class="token plain">pc</span><span class="token punctuation" style="color:#393A34">.</span><span class="token plain">import_fhir_terminology</span><span class="token punctuation" style="color:#393A34">(</span><span class="token string" style="color:#e3116c">"/data/hl7.terminology.r4-6.5.0.tgz"</span><span class="token punctuation" style="color:#393A34">,</span><span class="token plain"> </span><span class="token string" style="color:#e3116c">"/data/tx-store"</span><span class="token punctuation" style="color:#393A34">)</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">pc</span><span class="token punctuation" style="color:#393A34">.</span><span class="token plain">import_fhir_terminology</span><span class="token punctuation" style="color:#393A34">(</span><span class="token string" style="color:#e3116c">"/data/our-local-codes/"</span><span class="token punctuation" style="color:#393A34">,</span><span class="token plain"> </span><span class="token string" style="color:#e3116c">"/data/tx-store"</span><span class="token punctuation" style="color:#393A34">)</span><br></span></code></pre></div></div>
+<p>CodeSystems are streamed with bounded memory, so a single resource larger than
+the 2 GB limit on an in-memory object imports without difficulty. The OMOP
+vocabulary package, which ships a multi-gigabyte CodeSystem, imports with a
+4 GB driver heap. Hierarchies expressed through <code>parent</code> and <code>child</code> properties
+are recognised, so <code>subsumes</code> and descendant based <code>member_of</code> work over flat
+code systems as they do over SNOMED CT. Imported ConceptMaps drive <code>translate</code>
+in both directions.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="choose-the-dialect">Choose the dialect<a href="https://pathling.csiro.au/blog/local-terminology#choose-the-dialect" class="hash-link" aria-label="Direct link to Choose the dialect" title="Direct link to Choose the dialect" translate="no">​</a></h3>
+<p>Which synonym of a SNOMED CT concept is preferred is a property of a language
+reference set, not of the concept. Local mode makes that explicit. A store has
+a default dialect, chosen at import time, and any query can ask for another:</p>
+<div class="language-python codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-python codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#393A34"><span class="token comment" style="color:#999988;font-style:italic"># "Oesophageal structure".</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">property_of</span><span class="token punctuation" style="color:#393A34">(</span><span class="token plain">coding</span><span class="token punctuation" style="color:#393A34">,</span><span class="token plain"> </span><span class="token string" style="color:#e3116c">"display"</span><span class="token punctuation" style="color:#393A34">,</span><span class="token plain"> accept_language</span><span class="token operator" style="color:#393A34">=</span><span class="token string" style="color:#e3116c">"en-GB"</span><span class="token punctuation" style="color:#393A34">)</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain" style="display:inline-block"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain"></span><span class="token comment" style="color:#999988;font-style:italic"># "Esophageal structure".</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">property_of</span><span class="token punctuation" style="color:#393A34">(</span><span class="token plain">coding</span><span class="token punctuation" style="color:#393A34">,</span><span class="token plain"> </span><span class="token string" style="color:#e3116c">"display"</span><span class="token punctuation" style="color:#393A34">,</span><span class="token plain"> accept_language</span><span class="token operator" style="color:#393A34">=</span><span class="token string" style="color:#e3116c">"en-US"</span><span class="token punctuation" style="color:#393A34">)</span><br></span></code></pre></div></div>
+<p><code>en-GB</code>, <code>en-US</code>, <code>en-AU</code>, <code>es</code>, <code>fr</code>, <code>de</code>, <code>ja</code> and <code>zh</code> are recognised out
+of the box, weighted preference lists such as <code>en-NZ;q=0.9,en-GB;q=0.5</code> are
+honoured, and a deployment can register aliases for the language reference sets
+of a national extension.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="write-value-sets-in-ecl-or-vcl-and-evaluate-them-locally">Write value sets in ECL or VCL and evaluate them locally<a href="https://pathling.csiro.au/blog/local-terminology#write-value-sets-in-ecl-or-vcl-and-evaluate-them-locally" class="hash-link" aria-label="Direct link to Write value sets in ECL or VCL and evaluate them locally" title="Direct link to Write value sets in ECL or VCL and evaluate them locally" translate="no">​</a></h3>
+<p><code>member_of</code> resolves imported ValueSets by canonical URL, the SNOMED CT implicit
+forms (<code>?fhir_vs</code>, <code>refset/</code>, <code>isa/</code> and <code>ecl/</code>), and
+<a href="https://build.fhir.org/ig/FHIR/ig-guidance/vcl.html" target="_blank" rel="noopener noreferrer" class="">VCL</a> implicit value sets
+of the form <code>http://fhir.org/VCL?v1=...</code>. Both expression languages run on the
+same engine against the store's indexes. This ECL expression, for instance,
+selects diabetes mellitus and its subtypes less type 1 diabetes and its
+subtypes:</p>
+<div class="language-text codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-text codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#393A34"><span class="token plain">&lt;&lt; 73211009 |Diabetes mellitus| MINUS &lt;&lt; 46635009 |Type 1 diabetes mellitus|</span><br></span></code></pre></div></div>
+<p>The ECL translator covers hierarchy operators, reference set membership,
+conjunction, disjunction and exclusion, attribute refinement and dotted
+attribute navigation. A construct outside that subset, such as a role group or
+a cardinality constraint, is rejected with an error naming it rather than
+answered with the wrong members.</p>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="what-stays-the-same">What stays the same<a href="https://pathling.csiro.au/blog/local-terminology#what-stays-the-same" class="hash-link" aria-label="Direct link to What stays the same" title="Direct link to What stays the same" translate="no">​</a></h2>
+<p>Switching modes is a configuration change. The functions, their signatures and
+their results are the same, and any existing code that uses them runs
+unchanged:</p>
+<div class="language-python codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-python codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#393A34"><span class="token keyword" style="color:#00009f">from</span><span class="token plain"> pathling </span><span class="token keyword" style="color:#00009f">import</span><span class="token plain"> PathlingContext</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain" style="display:inline-block"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">pc </span><span class="token operator" style="color:#393A34">=</span><span class="token plain"> PathlingContext</span><span class="token punctuation" style="color:#393A34">.</span><span class="token plain">create</span><span class="token punctuation" style="color:#393A34">(</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">    terminology_mode</span><span class="token operator" style="color:#393A34">=</span><span class="token string" style="color:#e3116c">"local"</span><span class="token punctuation" style="color:#393A34">,</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">    terminology_storage_path</span><span class="token operator" style="color:#393A34">=</span><span class="token string" style="color:#e3116c">"/data/tx-store"</span><span class="token punctuation" style="color:#393A34">,</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain"></span><span class="token punctuation" style="color:#393A34">)</span><br></span></code></pre></div></div>
+<p>Remote mode remains the default and is unchanged. Local mode is available
+through the Python and R libraries, the Java and Scala API and the command line
+interface.</p>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="things-worth-knowing">Things worth knowing<a href="https://pathling.csiro.au/blog/local-terminology#things-worth-knowing" class="hash-link" aria-label="Direct link to Things worth knowing" title="Direct link to Things worth knowing" translate="no">​</a></h2>
+<ul>
+<li class="">You need the release files. SNOMED CT is imported from an RF2 snapshot,
+obtained under licence from your national release centre or from SNOMED
+International. Pathling does not distribute terminology content.</li>
+<li class="">An RF2 source is imported on its own terms. A derived package or national
+extension that depends on another edition must be combined with that edition
+before import, or most of its content will have nothing to attach to. The
+documentation describes how, and the import log reports how much of each
+file resolved.</li>
+<li class="">The ECL subset excludes grouped attributes, cardinality, the reverse flag,
+concrete values, term filters and history supplements.</li>
+</ul>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="how-it-works">How it works<a href="https://pathling.csiro.au/blog/local-terminology#how-it-works" class="hash-link" aria-label="Direct link to How it works" title="Direct link to How it works" translate="no">​</a></h2>
+<p>The design separates the work into two phases. Everything expensive happens
+once, at import, using Spark. Everything that happens at query time is a
+lookup in a structure already in memory on the executor.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="the-store-on-disk">The store on disk<a href="https://pathling.csiro.au/blog/local-terminology#the-store-on-disk" class="hash-link" aria-label="Direct link to The store on disk" title="Direct link to The store on disk" translate="no">​</a></h3>
+<p>A store is a directory of ten Delta tables: <code>manifest</code>, <code>code_system</code>,
+<code>concept</code>, <code>description</code>, <code>relationship</code>, <code>property</code>, <code>closure</code>,
+<code>refset_member</code>, <code>value_set</code> and <code>concept_map</code>. Every content table is
+partitioned by <code>system_version_id</code>, a hash of a code system's URL and version,
+so several versions of the same code system coexist side by side. Re-importing
+a version is a Delta <code>replaceWhere</code> over that one partition, which is why it is
+atomic: a reader pinned to an earlier snapshot keeps seeing a consistent
+version until it next opens the table. The manifest records what is loaded,
+where it came from, when it was imported and the store format version, which a
+reader checks before opening anything else.</p>
+<p>Within a code system version, every concept is assigned a dense integer
+identifier. Codes are strings, and SNOMED CT identifiers are 64-bit numbers
+with check digits, but neither makes a good array index or bitmap position. The
+dense identifier does, and it is what every other table refers to.</p>
+<p>The <code>closure</code> table is the precomputed transitive closure of the is-a
+hierarchy: one row per ancestor and descendant pair, as dense identifiers, with
+a flag marking the pairs that are direct parent and child. It is built at
+import by iterative Spark self-joins over the active direct edges, the
+semi-naive algorithm, so that no hierarchy is ever walked at query time.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="the-indexes-in-memory">The indexes in memory<a href="https://pathling.csiro.au/blog/local-terminology#the-indexes-in-memory" class="hash-link" aria-label="Direct link to The indexes in memory" title="Direct link to The indexes in memory" translate="no">​</a></h3>
+<p>Spark is not involved in reading the store. Each executor JVM opens the Delta
+tables directly through Delta Kernel and builds a set of in-memory indexes for
+each code system version the first time a query touches it, then keeps them
+for the life of the executor.</p>
+<p>The concept dictionary maps each code to its dense identifier with a hash
+table, and holds the code, display, active flag, module and effective time in
+arrays indexed by that identifier. The hierarchy index is four maps from a
+dense identifier to a <a href="https://roaringbitmap.org/" target="_blank" rel="noopener noreferrer" class="">Roaring bitmap</a>: its
+descendants, its ancestors, its children and its parents. A bitmap of a
+concept's descendants is the set <code>&lt;&lt; X</code>, so ECL's most common operator is a
+map lookup. The bitmaps are asked to adopt run-length encoding wherever that is
+smaller, which is where the <code>pre-order</code> identifier assignment pays off: a
+subtree that occupies a near-contiguous interval compresses to a handful of
+runs.</p>
+<p>Reference set membership, SNOMED CT attributes (indexed both from source to
+destination and back, for dotted navigation and reverse lookups), descriptions
+and FHIR concept properties each have their own index. They are loaded lazily
+behind memoised suppliers, so a job that only calls <code>display()</code> never loads the
+hierarchy, and one that only tests membership of an <code>isa/</code> value set never
+loads the descriptions.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="how-a-query-reaches-them">How a query reaches them<a href="https://pathling.csiro.au/blog/local-terminology#how-a-query-reaches-them" class="hash-link" aria-label="Direct link to How a query reaches them" title="Direct link to How a query reaches them" translate="no">​</a></h3>
+<p>The terminology functions are Spark user-defined functions, exactly as they are
+in remote mode; the two modes differ only in the service the function calls
+into. This is not a join. Terminology content never enters the Spark query
+plan, so there is nothing to shuffle and nothing to broadcast. A DataFrame
+column of codings goes in and a column of results comes out, and the code that
+does the work runs inside the executor, next to the indexes it needs.</p>
+<p>Take <code>member_of</code> over an ECL value set. On the first row an executor sees, the
+value set URL is resolved to a code system version, the ECL is translated into
+the VCL model, and the expression is evaluated recursively: a hierarchy
+operator becomes a bitmap lookup, <code>AND</code>, <code>OR</code> and <code>MINUS</code> become bitmap
+intersection, union and difference, a reference set becomes its membership
+bitmap, and an attribute refinement becomes a union of the source bitmaps
+recorded against each matching attribute value. The result is intersected with
+the active concepts and stored in a per-executor cache keyed by URL and
+version. From then on every row in that executor is a hash lookup from code to
+dense identifier and a bitmap <code>contains</code> test. A <code>subsumes</code> call is two
+dictionary lookups and one <code>contains</code> on the descendants bitmap of the first
+concept. <code>display</code> is an array index. Only the <code>translate</code> and designation
+paths do more, and they too are lookups into structures built once per version.</p>
+<p>Because the indexes are per executor rather than per task, their cost is paid
+once per JVM, not once per partition, and a long-running session amortises it
+across every query it runs.</p>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="getting-started">Getting started<a href="https://pathling.csiro.au/blog/local-terminology#getting-started" class="hash-link" aria-label="Direct link to Getting started" title="Direct link to Getting started" translate="no">​</a></h2>
+<div class="language-bash codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-bash codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#393A34"><span class="token plain">pip install pathling</span><br></span></code></pre></div></div>
+<p>Import a release, create a context in local mode and query as before. The
+<a class="" href="https://pathling.csiro.au/docs/libraries/terminology/local">local terminology mode documentation</a>
+covers the import commands, dialects, and the ECL and VCL forms in full, and
+the <a class="" href="https://pathling.csiro.au/docs/libraries/cli#local-terminology-mode">command line interface</a> guide
+covers offline use from the shell. The full list of changes in 9.9.0 is in the
+<a href="https://github.com/aehrc/pathling/releases/tag/v9.9.0" target="_blank" rel="noopener noreferrer" class="">release notes</a>.</p>]]></content:encoded>
+            <category>release</category>
+            <category>libraries</category>
+            <category>terminology</category>
+        </item>
+        <item>
             <title><![CDATA[Pathling server 3.0.0]]></title>
             <link>https://pathling.csiro.au/blog/pathling-server-3</link>
             <guid>https://pathling.csiro.au/blog/pathling-server-3</guid>
@@ -50,6 +256,9 @@ rejects cycles, and refuses graphs nested deeper than
 <code>pathling.sqlQuery.maxDependencyDepth</code> (default 10) before doing any work.
 Artefacts that are not stored on the server can be passed inline through the
 <code>context</code> parameter, so the same composition works for ad hoc exploration.</p>
+<p>The admin UI resolves the same chain. Selecting a stored query shows its SQL,
+the views it reads and the parameters it declares, before running it:</p>
+<p><img decoding="async" loading="lazy" alt="Running a stored SQL query in the admin UI" src="https://pathling.csiro.au/assets/images/sql-query-ca708ddcbba20f0a6d77362a036b03b9.png" width="2550" height="2040" class="img_ev3q"></p>
 <h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="export-related-tables-as-one-consistent-snapshot">Export related tables as one consistent snapshot<a href="https://pathling.csiro.au/blog/pathling-server-3#export-related-tables-as-one-consistent-snapshot" class="hash-link" aria-label="Direct link to Export related tables as one consistent snapshot" title="Direct link to Export related tables as one consistent snapshot" translate="no">​</a></h2>
 <p>Analytical outputs rarely stand alone. A research extract might need a patient
 table, a conditions table and a medications table that agree with one another;
@@ -71,6 +280,9 @@ once.</p>
 <p>Because a shared dependency such as <code>demographics</code> is resolved once per job
 rather than once per subject, exporting a family of related queries costs less
 than exporting them separately.</p>
+<p>In the admin UI, views and queries are added to an export set, each with the
+name its output will take, and the whole set is exported in one job:</p>
+<p><img decoding="async" loading="lazy" alt="Exporting a set of views and queries in the admin UI" src="https://pathling.csiro.au/assets/images/sql-export-d6c0b19fe55895ee75e0accff9b41d51.png" width="2550" height="2058" class="img_ev3q"></p>
 <p>Read the docs: <a class="" href="https://pathling.csiro.au/docs/server/operations/sql-export">export</a>.</p>
 <h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="monitor-jobs-across-the-server">Monitor jobs across the server<a href="https://pathling.csiro.au/blog/pathling-server-3#monitor-jobs-across-the-server" class="hash-link" aria-label="Direct link to Monitor jobs across the server" title="Direct link to Monitor jobs across the server" translate="no">​</a></h2>
 <p>Import, export and SQL export all run asynchronously, and until now the only
@@ -87,6 +299,7 @@ own token subject; a job can likewise only be cancelled by the principal that
 created it. When authorisation is disabled, the list covers every job on the
 server. The admin UI has a corresponding jobs page, so an operator can see what
 is running and cancel a runaway query without touching the API.</p>
+<p><img decoding="async" loading="lazy" alt="The jobs page in the admin UI" src="https://pathling.csiro.au/assets/images/jobs-adb25d9110b2a56f7e229a75eace8072.png" width="2550" height="2040" class="img_ev3q"></p>
 <p>Read the docs: <a class="" href="https://pathling.csiro.au/docs/server/operations/jobs">jobs</a>.</p>
 <h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="alignment-with-the-sql-on-fhir-ballot">Alignment with the SQL on FHIR ballot<a href="https://pathling.csiro.au/blog/pathling-server-3#alignment-with-the-sql-on-fhir-ballot" class="hash-link" aria-label="Direct link to Alignment with the SQL on FHIR ballot" title="Direct link to Alignment with the SQL on FHIR ballot" translate="no">​</a></h2>
 <p>Server 2.x implemented the operations from the SQL on FHIR continuous build at
