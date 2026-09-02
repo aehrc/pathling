@@ -17,9 +17,41 @@
 // @ts-check
 // Note: type annotations allow type checking and IDEs autocompletion
 
+const { execFileSync } = require("child_process");
 const { themes } = require("prism-react-renderer");
 const lightCodeTheme = themes.github;
 const darkCodeTheme = themes.dracula;
+
+/**
+ * Finds the latest release version from the git tags that carry the given
+ * prefix. Tags are used rather than the POMs because the POMs on main are
+ * bumped to the next SNAPSHOT after each release, while the documentation
+ * should describe the latest release.
+ *
+ * @param {string} prefix Tag prefix, e.g. `v` or `server-v`.
+ * @returns {string} The highest version carrying the prefix, e.g. `9.9.0`.
+ * @throws {Error} If no tag with the prefix exists, e.g. in a shallow clone.
+ */
+function latestReleaseVersion(prefix) {
+  const tags = execFileSync(
+    "git",
+    ["tag", "--list", `${prefix}[0-9]*`, "--sort=-v:refname"],
+    { cwd: __dirname, encoding: "utf8" },
+  );
+  const latest = tags.split("\n").find((tag) => tag !== "");
+  if (!latest) {
+    throw new Error(
+      `No ${prefix}* release tag found. Fetch tags before building the site.`,
+    );
+  }
+  return latest.slice(prefix.length);
+}
+
+// The core libraries and the server are versioned independently, so each
+// documentation section reports the latest release of the artifact it
+// describes.
+const coreVersion = latestReleaseVersion("v");
+const serverVersion = latestReleaseVersion("server-v");
 
 /** @type {import("@docusaurus/types").Config} */
 const config = {
@@ -58,14 +90,8 @@ const config = {
           lastVersion: "current",
           versions: {
             current: {
-              label: "9.9.0",
+              label: coreVersion,
               path: "",
-            },
-            "7.2.0": {
-              label: "7.2.0",
-              path: "7.2.0",
-              banner: "none",
-              noIndex: true,
             },
           },
         },
@@ -91,6 +117,24 @@ const config = {
   plugins: [
     require.resolve("./src/plugins/staticHomePage.js"),
     [
+      "@docusaurus/plugin-content-docs",
+      /** @type {import("@docusaurus/plugin-content-docs").Options} */
+      ({
+        id: "server",
+        path: "server-docs",
+        routeBasePath: "docs/server",
+        sidebarPath: require.resolve("./sidebarsServer.js"),
+        editUrl: "https://github.com/aehrc/pathling/tree/main/site/",
+        lastVersion: "current",
+        versions: {
+          current: {
+            label: serverVersion,
+            path: "",
+          },
+        },
+      }),
+    ],
+    [
       "@signalwire/docusaurus-plugin-llms-txt",
       {
         siteTitle: "Pathling",
@@ -102,7 +146,6 @@ const config = {
           includeBlog: false,
           includePages: true,
           enableLlmsFullTxt: false,
-          excludeRoutes: ["/docs/7.2.0/**"],
         },
       },
     ],
@@ -141,6 +184,7 @@ const config = {
           {
             type: "docSidebar",
             position: "left",
+            docsPluginId: "server",
             sidebarId: "server",
             label: "Server",
           },
@@ -153,9 +197,19 @@ const config = {
             label: "Blog",
             position: "left",
           },
+          // Each docs plugin instance has its own version dropdown. CSS in
+          // custom.css shows only the one that matches the section being read.
           {
             type: "docsVersionDropdown",
             position: "right",
+            className: "navbar__version navbar__version--core",
+            dropdownActiveClassDisabled: true,
+          },
+          {
+            type: "docsVersionDropdown",
+            position: "right",
+            docsPluginId: "server",
+            className: "navbar__version navbar__version--server",
             dropdownActiveClassDisabled: true,
           },
           {

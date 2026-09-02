@@ -17,7 +17,7 @@ The following source formats are supported:
 | Format  | MIME type                        | Description                                                                                                  |
 | ------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------ |
 | NDJSON  | `application/fhir+ndjson`        | [FHIR Newline Delimited JSON](https://hl7.org/fhir/R4/nd-json.html) format                                   |
-| Parquet | `application/vnd.apache.parquet` | [Apache Parquet](https://parquet.apache.org/) conforming to the [Pathling schema](../../libraries/io/schema) |
+| Parquet | `application/vnd.apache.parquet` | [Apache Parquet](https://parquet.apache.org/) conforming to the [Pathling schema](/docs/libraries/io/schema) |
 
 ## Supported URL schemes
 

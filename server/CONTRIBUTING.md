@@ -97,9 +97,15 @@ production environments.
 
 ## Documentation
 
-Server documentation is located in the `site/docs/server` directory at the
-repository root. When making changes to the server, ensure that relevant
-documentation is updated to reflect the changes. This includes:
+Server documentation is located in the `site/server-docs` directory at the
+repository root. It is a separate Docusaurus docs instance from the core
+library documentation in `site/docs`, so that it can display the server
+version and be snapshotted on the server release cadence with
+`bun run docusaurus docs:version:server <version>`. The version shown on the
+site is the latest `server-v*` git tag, not the POM version, because the POM is
+bumped to the next SNAPSHOT after each release. When making changes to the
+server, ensure that relevant documentation is updated to reflect the changes.
+This includes:
 
 - Configuration options in `configuration.md`
 - Operation descriptions in the `operations` subdirectory

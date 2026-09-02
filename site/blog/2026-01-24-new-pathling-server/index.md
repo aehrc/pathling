@@ -15,8 +15,9 @@ operations.
 ## Background
 
 Earlier versions of Pathling included a server component with custom operations
-like [aggregate](/docs/7.2.0/server/operations/aggregate)
-and [extract](/docs/7.2.0/server/operations/extract) for analytics queries.
+like [aggregate](https://github.com/aehrc/pathling/blob/v7.2.0/site/docs/server/operations/aggregate.md)
+and [extract](https://github.com/aehrc/pathling/blob/v7.2.0/site/docs/server/operations/extract.md)
+for analytics queries.
 While these were powerful, they were Pathling-specific and didn't interoperate
 with other systems.
 
