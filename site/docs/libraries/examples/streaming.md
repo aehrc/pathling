@@ -239,9 +239,9 @@ def view_diagnosis(data: DataSource) -> DataFrame:
 Key features:
 
 - **Code extraction**: Filters codings by system to extract SNOMED CT codes
-- **Code translation**: Uses [`translate`](/docs/fhirpath#translate) to map
+- **Code translation**: Uses [`translate`](/docs/fhirpath/extension-functions#translate) to map
   SNOMED CT to ICD-10-AM via a ConceptMap
-- **Concept subsumption**: Uses [`subsumedBy`](/docs/fhirpath#subsumedby) to
+- **Concept subsumption**: Uses [`subsumedBy`](/docs/fhirpath/fhir-functions#subsumedby) to
   detect if a condition is a viral infection by checking against parent concepts
 
 ### Encounter view with complex nested data
