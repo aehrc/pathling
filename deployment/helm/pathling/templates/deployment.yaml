@@ -52,7 +52,6 @@ spec:
           {{- $volumeMounts = append $volumeMounts (dict "name" "truststore" "mountPath" $tsMountPath "readOnly" true) }}
           {{- end }}
           volumeMounts: {{ toJson $volumeMounts }}
-          {{- if gt (add (len .Values.pathling.config) (len .Values.pathling.secretConfig)) 0 }}
           env:
             - name: JAVA_TOOL_OPTIONS
               value: {{ printf "-Xmx%s --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED %s%s" .Values.pathling.resources.maxHeapSize .Values.pathling.additionalJavaOptions $tsJavaOpts | quote }}
@@ -83,7 +82,6 @@ spec:
                   name: pathling-secrets
                   key: {{ $configKey }}
             {{- end }}
-          {{- end }}
       {{- $volumes := .Values.pathling.volumes }}
       {{- if $truststoreEnabled }}
       {{- $volumes = append $volumes (dict "name" "truststore" "secret" (dict "secretName" .Values.pathling.truststore.secretName)) }}
