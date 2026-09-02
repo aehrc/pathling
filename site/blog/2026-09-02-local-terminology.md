@@ -186,6 +186,88 @@ interface.
 - The ECL subset excludes grouped attributes, cardinality, the reverse flag,
   concrete values, term filters and history supplements.
 
+## How it works
+
+The design separates the work into two phases. Everything expensive happens
+once, at import, using Spark. Everything that happens at query time is a
+lookup in a structure already in memory on the executor.
+
+### The store on disk
+
+A store is a directory of ten Delta tables: `manifest`, `code_system`,
+`concept`, `description`, `relationship`, `property`, `closure`,
+`refset_member`, `value_set` and `concept_map`. Every content table is
+partitioned by `system_version_id`, a hash of a code system's URL and version,
+so several versions of the same code system coexist side by side. Re-importing
+a version is a Delta `replaceWhere` over that one partition, which is why it is
+atomic: a reader pinned to an earlier snapshot keeps seeing a consistent
+version until it next opens the table. The manifest records what is loaded,
+where it came from, when it was imported and the store format version, which a
+reader checks before opening anything else.
+
+Within a code system version, every concept is assigned a dense integer
+identifier. Codes are strings, and SNOMED CT identifiers are 64-bit numbers
+with check digits, but neither makes a good array index or bitmap position. The
+dense identifier does, and it is what every other table refers to.
+
+The `closure` table is the precomputed transitive closure of the is-a
+hierarchy: one row per ancestor and descendant pair, as dense identifiers, with
+a flag marking the pairs that are direct parent and child. It is built at
+import by iterative Spark self-joins over the active direct edges, the
+semi-naive algorithm, so that no hierarchy is ever walked at query time.
+
+### The indexes in memory
+
+Spark is not involved in reading the store. Each executor JVM opens the Delta
+tables directly through Delta Kernel and builds a set of in-memory indexes for
+each code system version the first time a query touches it, then keeps them
+for the life of the executor.
+
+The concept dictionary maps each code to its dense identifier with a hash
+table, and holds the code, display, active flag, module and effective time in
+arrays indexed by that identifier. The hierarchy index is four maps from a
+dense identifier to a [Roaring bitmap](https://roaringbitmap.org/): its
+descendants, its ancestors, its children and its parents. A bitmap of a
+concept's descendants is the set `<< X`, so ECL's most common operator is a
+map lookup. The bitmaps are asked to adopt run-length encoding wherever that is
+smaller, which is where the `pre-order` identifier assignment pays off: a
+subtree that occupies a near-contiguous interval compresses to a handful of
+runs.
+
+Reference set membership, SNOMED CT attributes (indexed both from source to
+destination and back, for dotted navigation and reverse lookups), descriptions
+and FHIR concept properties each have their own index. They are loaded lazily
+behind memoised suppliers, so a job that only calls `display()` never loads the
+hierarchy, and one that only tests membership of an `isa/` value set never
+loads the descriptions.
+
+### How a query reaches them
+
+The terminology functions are Spark user-defined functions, exactly as they are
+in remote mode; the two modes differ only in the service the function calls
+into. This is not a join. Terminology content never enters the Spark query
+plan, so there is nothing to shuffle and nothing to broadcast. A DataFrame
+column of codings goes in and a column of results comes out, and the code that
+does the work runs inside the executor, next to the indexes it needs.
+
+Take `member_of` over an ECL value set. On the first row an executor sees, the
+value set URL is resolved to a code system version, the ECL is translated into
+the VCL model, and the expression is evaluated recursively: a hierarchy
+operator becomes a bitmap lookup, `AND`, `OR` and `MINUS` become bitmap
+intersection, union and difference, a reference set becomes its membership
+bitmap, and an attribute refinement becomes a union of the source bitmaps
+recorded against each matching attribute value. The result is intersected with
+the active concepts and stored in a per-executor cache keyed by URL and
+version. From then on every row in that executor is a hash lookup from code to
+dense identifier and a bitmap `contains` test. A `subsumes` call is two
+dictionary lookups and one `contains` on the descendants bitmap of the first
+concept. `display` is an array index. Only the `translate` and designation
+paths do more, and they too are lookups into structures built once per version.
+
+Because the indexes are per executor rather than per task, their cost is paid
+once per JVM, not once per partition, and a long-running session amortises it
+across every query it runs.
+
 ## Getting started
 
 ```bash
