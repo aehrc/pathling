@@ -283,6 +283,12 @@ pathling translate codes.csv --code-column code \
   --system http://snomed.info/sct --concept-map '<uri>'
 ```
 
+In [local terminology mode](#local-terminology-mode), the forms accepted by
+`--value-set` and `--concept-map` - imported canonical URLs, the SNOMED CT
+implicit forms, ECL, and VCL - are listed under
+[value set and concept map expressions](terminology#value-set-and-concept-map-expressions).
+Against a terminology server, they are whatever that server supports.
+
 The input format is set with `--from csv|parquet|delta`. When omitted, it is
 auto-detected from the dataset path: files ending in `.csv` or `.parquet` are
 read as CSV or Parquet; a directory containing a `_delta_log` entry is read as

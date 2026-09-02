@@ -1447,15 +1447,180 @@ preferred over one matching only on the primary subtag, and within each of those
 one whose use is `display` is preferred. An extension tag has no meaning outside
 SNOMED CT, so it falls back to its plain language subtag.
 
-### Supported expressions
+### Value set and concept map expressions
 
-Local `member_of` resolves explicit imported value sets by canonical URL (with
-an optional `|version`), the SNOMED implicit value set forms (`?fhir_vs`,
-`?fhir_vs=refset/[id]`, `?fhir_vs=isa/[id]`, `?fhir_vs=ecl/[expr]`), and VCL
-implicit value sets (`http://fhir.org/VCL?v1=[expr]`). A supported subset of
-SNOMED CT Expression Constraint Language is translated to the internal VCL
-model; ECL constructs outside that subset (role groups, cardinality, term
-filters, history supplements and concrete values) raise an error naming the
-unsupported construct. Local `translate` resolves imported ConceptMaps and the
-SNOMED implicit concept map form (`?fhir_cm=[refsetId]`). Content that has not
-been imported yields the same "unknown content" results as remote mode.
+Local `member_of` resolves three kinds of value set reference, and local
+`translate` two kinds of concept map reference. A reference that resolves to
+content the store does not hold yields the same "unknown content" results as
+remote mode rather than an error.
+
+| Reference                             | Form                                               |
+| ------------------------------------- | -------------------------------------------------- |
+| An imported FHIR ValueSet             | its canonical URL, optionally with `\|version`     |
+| Every SNOMED CT concept               | `http://snomed.info/sct?fhir_vs`                   |
+| A SNOMED CT reference set             | `http://snomed.info/sct?fhir_vs=refset/[refsetId]` |
+| A SNOMED CT subtype hierarchy         | `http://snomed.info/sct?fhir_vs=isa/[conceptId]`   |
+| A SNOMED CT ECL expression            | `http://snomed.info/sct?fhir_vs=ecl/[expression]`  |
+| A VCL expression                      | `http://fhir.org/VCL?v1=[expression]`              |
+| An imported FHIR ConceptMap           | its canonical URL                                  |
+| A SNOMED CT association reference set | `http://snomed.info/sct?fhir_cm=[refsetId]`        |
+
+The `isa/` form is the subtype hierarchy including the named concept itself, so
+it is equivalent to `ecl/<<[conceptId]`. Every SNOMED form is also accepted on an
+edition and version qualified URI, for example
+`http://snomed.info/sct/32506021000036107/version/20250630?fhir_vs=ecl/...`,
+which evaluates against that version rather than the store default. Any other
+`fhir_vs` value is treated as unknown content.
+
+The expression carried by an `ecl/` or `v1=` URL is percent-decoded before it is
+parsed, so it must be percent-encoded when the URL is built. For ECL,
+`to_ecl_value_set` does this (`tx_to_ecl_value_set` in R, `toEclValueSet` in Java
+and Scala); there is no equivalent helper for VCL, so encode it yourself.
+
+Both expression languages are evaluated by the same engine: an ECL expression is
+translated into the VCL model, and the result is evaluated against the store's
+indexes. Members are restricted to active concepts, matching the behaviour of a
+terminology server on an implicit value set, unless the expression explicitly
+asks for inactive concepts with an `inactive = true` filter.
+
+#### SNOMED CT Expression Constraint Language
+
+The grammar recognises the whole of ECL v2, and the translator maps the subset
+below. A construct outside the subset is rejected with an error naming it, so a
+query is never quietly answered with the wrong members. A malformed expression
+raises `Invalid ECL expression at position [n]: [reason]`.
+
+| Construct                                 | Example                                                      |
+| ----------------------------------------- | ------------------------------------------------------------ |
+| Concept reference, with an optional term  | `73211009 \|Diabetes mellitus\|`                             |
+| Wildcard                                  | `*`                                                          |
+| Descendant or self, descendant            | `<< 73211009`, `< 73211009`                                  |
+| Child of                                  | `<! 73211009`                                                |
+| Ancestor or self, ancestor                | `>> 73211009`, `> 73211009`                                  |
+| Parent of                                 | `>! 73211009`                                                |
+| Reference set membership                  | `^ 447562003`                                                |
+| Conjunction, disjunction, exclusion       | `<< 73211009 MINUS << 46635009`                              |
+| Grouping                                  | `(< 19829001) OR (< 301867009)`                              |
+| Attribute refinement                      | `< 404684003 : 363698007 = << 39057004`                      |
+| Attribute negation                        | `< 404684003 : 363698007 != << 39057004`                     |
+| Descendant attribute types                | `< 404684003 : << 47429007 = << 39057004`                    |
+| Attribute sets, with `OR` binding loosest | `< 404684003 : 363698007 = 1, 246075003 = 2 OR 47429007 = 3` |
+| Nested attribute sets                     | `< 404684003 : (363698007 = 1 OR 246075003 = 2)`             |
+| Dotted attribute navigation               | `< 19829001 . 116676008`                                     |
+
+A hierarchy operator applies to a concept reference only. An attribute name may
+carry `<` or `<<`, which broadens the constraint to descendant attribute types.
+
+The viral infection expression at the top of this page is within the subset: its
+two attributes are separated by a comma rather than grouped into a role group.
+
+Each rejected construct raises `Unsupported ECL construct: [construct]`, where
+the construct is one of:
+
+| Construct                                                                         | ECL                                   |
+| --------------------------------------------------------------------------------- | ------------------------------------- |
+| `grouped attributes ({ ... })`                                                    | `< 404684003 : { 363698007 = 1 }`     |
+| `attribute cardinality ([min..max])`                                              | `< 404684003 : [1..2] 363698007 = 1`  |
+| `reverse attribute flag (R)`                                                      | `< 404684003 : R 363698007 = 1`       |
+| `wildcard attribute name`                                                         | `< 404684003 : * = 1`                 |
+| `hierarchy operator other than < or << on an attribute name`                      | `< 404684003 : >> 363698007 = 1`      |
+| `hierarchy operator on an attribute name`                                         | `< 19829001 . << 116676008`           |
+| `child-or-self operator (<<!)`                                                    | `<<! 73211009`                        |
+| `parent-or-self operator (>>!)`                                                   | `>>! 73211009`                        |
+| `hierarchy operator applied to a wildcard, reference set, or compound expression` | `<< (73211009 OR 46635009)`           |
+| `reference set membership over a wildcard or expression`                          | `^ *`                                 |
+| `concrete value (#number or "string")`                                            | `< 404684003 : 1142135004 = #20`      |
+| `term, definition status, or member filter ({{ ... }})`                           | `<< 73211009 {{ term = "diabetes" }}` |
+| `history supplement ({{ + ... }})`                                                | `<< 73211009 {{ + HISTORY }}`         |
+
+#### FHIR ValueSet Compose Language
+
+The VCL grammar is transcribed from the
+[FHIR IG Guidance specification](https://build.fhir.org/ig/FHIR/ig-guidance/vcl.html),
+and the whole of VCL v1 parses. A malformed expression raises
+`Invalid VCL expression at position [n]: [reason]`.
+
+An expression must name its code system with a `(systemUri)` scope, because a
+value set is evaluated over one code system version. The first scope in the
+expression selects that version, optionally by `|version`; a subexpression scoped
+to any other system contributes no members. An expression carrying no scope at
+all is treated as unknown content.
+
+| Construct              | Example                                   | Meaning                                                    |
+| ---------------------- | ----------------------------------------- | ---------------------------------------------------------- |
+| System scope           | `(http://loinc.org\|2.74)4548-4`          | a code in a version of a system                            |
+| Code                   | `4548-4`                                  | one concept                                                |
+| Wildcard               | `*`                                       | every concept                                              |
+| Conjunction            | `A,B`                                     | in both                                                    |
+| Disjunction            | `A;B`                                     | in either                                                  |
+| Exclusion              | `A - B`                                   | in A but not B                                             |
+| Grouping               | `(http://loinc.org)(41995-2;4548-4)`      | a scope or operator over a group                           |
+| Equality               | `concept = 73211009`                      | exactly that concept                                       |
+| Is-a, is-not-a         | `concept << X`, `concept ~<< X`           | that subtype hierarchy, or every active concept outside it |
+| Descendant, child      | `concept < X`, `concept <! X`             | strict descendants, direct children                        |
+| Generalises            | `concept >> X`                            | ancestors of the concept, and itself                       |
+| Descendant leaves      | `concept !!< X`                           | descendants that have no children                          |
+| Regular expression     | `code / "A.*"`                            | a property value fully matching the pattern                |
+| In, not in a code list | `concept ^ {A,B}`, `concept ~^ {A,B}`     | membership in an enumerated list                           |
+| In a filter list       | `363698007 ^ {concept << X}`              | membership in a nested constraint                          |
+| Exists                 | `ingredient ? true`                       | whether the property is present                            |
+| Navigation             | `X.parent`, `{A,B}.parent`, `*.116676008` | the values a property takes                                |
+
+The properties a filter may name are:
+
+- `concept`, which applies the hierarchy operators to the subsumption graph. For
+  a code system that is not SNOMED CT that graph comes from the CodeSystem's
+  nesting and its `parent` and `child` properties, as described under
+  [hierarchies from parent and child properties](#hierarchies-from-parent-and-child-properties).
+- `parent` and `child`, which take one edge rather than the closure, so
+  `parent = X` selects the children of X and `child = X` selects its parents.
+- `inactive`, `moduleId`, `sufficientlyDefined` and `effectiveTime`, which are
+  the SNOMED CT concept metadata held in the store.
+- Any property declared by an imported FHIR CodeSystem, over which `=`, `/`,
+  `^`, `~^` and `?` behave as described above and any other operator falls back
+  to an exact match.
+- Any other property, which is read as a SNOMED CT attribute type, so
+  `363698007 = 39057004` selects the concepts having that attribute with that
+  value.
+
+Three limitations are worth knowing:
+
+- A value set inclusion, whether `^http://example.org/ValueSet/x` at the top
+  level or `property ^ http://example.org/ValueSet/x` as a filter value, parses
+  but contributes no members. Enumerate the codes or nest a filter list instead.
+- An attribute filter matches the value named, and does not apply its operator to
+  that value: `363698007 << 39057004` is the same as `363698007 = 39057004`. To
+  match the value's subtree, nest the constraint as
+  `363698007 ^ {concept << 39057004}`, or write the whole thing in ECL, where
+  `363698007 = << 39057004` does expand the value.
+- The exclusion operator must be surrounded by whitespace, because a hyphen is a
+  valid character within a code: `A - B` excludes B from A, while `A-B` is the
+  single code `A-B`. For the same reason a code containing a full stop must be
+  quoted, otherwise it parses as property navigation: `"B.123"`, not `B.123`.
+
+This example selects diabetes mellitus and its subtypes, less type 1 diabetes
+and its subtypes, over the store's default SNOMED CT edition:
+
+<Tabs>
+<TabItem value="python" label="Python">
+
+```python
+from urllib.parse import quote
+
+VCL = "(http://snomed.info/sct)concept << 73211009 - concept << 46635009"
+value_set = "http://fhir.org/VCL?v1=" + quote(VCL, safe="")
+
+result = df.select("id", member_of(to_snomed_coding(F.col("code")), value_set))
+```
+
+</TabItem>
+<TabItem value="cli" label="CLI">
+
+```bash
+pathling --tx-store /data/tx-store member-of codes.csv \
+  --code-column code --system 'http://snomed.info/sct' \
+  --value-set 'http://fhir.org/VCL?v1=(http://snomed.info/sct)concept%20%3C%3C%2073211009%20-%20concept%20%3C%3C%2046635009'
+```
+
+</TabItem>
+</Tabs>
