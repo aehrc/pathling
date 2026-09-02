@@ -154,6 +154,11 @@ const config = {
   themeConfig:
     /** @type {import("@docusaurus/preset-classic").ThemeConfig} */
     ({
+      // Without this, visiting an archived version is remembered in local
+      // storage and the navbar links resolve to that version thereafter.
+      docs: {
+        versionPersistence: "none",
+      },
       navbar: {
         title: null,
         logo: {
