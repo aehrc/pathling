@@ -67,7 +67,7 @@ public class LocalTerminologyConfiguration implements Serializable {
    * recognised replaces the built-in mapping for that tag. Tags outside both the built-in table and
    * this map remain reachable through the private-use dialect extension form.
    *
-   * <p>This affects the selection of a display and of designations only. It has no bearing on the
+   * <p>This affects the selection of a display only. It has no bearing on designations, the
    * import, or on value set expansion, subsumption, translation or validation.
    */
   @Nullable private Map<@NotBlank String, @Pattern(regexp = "\\d{6,18}") String> dialectAliases;

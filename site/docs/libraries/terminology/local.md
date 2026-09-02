@@ -337,8 +337,8 @@ The following configuration parameters control local mode:
 - `expansion_cache_size` (`terminology.local.expansionCacheSize`): the maximum
   number of value set expansions cached per executor.
 - `dialect_aliases` (`terminology.local.dialectAliases`): additional dialect
-  tags recognised when a display or designation is requested in a particular
-  language. See [dialects](#dialects).
+  tags recognised when a display is requested in a particular language. See
+  [dialects](#dialects).
 
 ## Dialects
 
@@ -506,7 +506,11 @@ en-NZ = "271000210107"
 </TabItem>
 </Tabs>
 
-Aliases affect the selection of a display and of designations only. They are not
+Aliases affect the selection of a display only. The designations of a concept
+are returned regardless of the language requested, and a synonym preferred
+within a language reference set is labelled with the extension tag form rather
+than an alias - see
+[multi-language support](./index.md#multi-language-support). Aliases are not
 consulted by an import, which receives no service configuration; a reference set
 outside the recognised tags is named there by its identifier.
 

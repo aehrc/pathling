@@ -87,8 +87,8 @@ StorageType <- list(
 #'   SNOMED reference when the local store holds multiple editions
 #' @param expansion_cache_size The maximum number of value set expansions cached per executor in
 #'   local mode
-#' @param dialect_aliases Additional dialect tags recognised in local mode when a display or
-#'   designation is requested in a particular language, given as a named character vector or list
+#' @param dialect_aliases Additional dialect tags recognised in local mode when a display is
+#'   requested in a particular language, given as a named character vector or list
 #'   mapping a language tag to the identifier of the SNOMED CT language reference set that serves it
 #'   (for example c("en-NZ" = "271000210107")). An entry for a tag that is already recognised
 #'   replaces the built-in mapping for it. At most ten aliases can be configured from R

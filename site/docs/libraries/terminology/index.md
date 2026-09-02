@@ -705,24 +705,90 @@ Results in:
 
 ### Multi-language support
 
-The library enables communication of a preferred language to the terminology
-server using the `Accept-Language` HTTP header, as described
-in [Multi-language support in FHIR](https://hl7.org/fhir/R4/languages.html#http).
-The header may contain multiple languages, with weighted preferences as defined
-in [RFC 9110](https://www.rfc-editor.org/rfc/rfc9110.html#name-accept-language).
-The server can use the header to return the result in the preferred language if
-it is able. The actual behaviour may depend on the server implementation and the
-code systems used.
+A preferred language can be set for the whole session with the
+`accept_language` or `acceptLanguage` parameter of `PathlingContext`, and
+overridden per call with the parameter of the same name on `display()` and
+`property_of()`. The value is an
+[RFC 9110](https://www.rfc-editor.org/rfc/rfc9110.html#name-accept-language)
+`Accept-Language` list, so it may name several languages with weighted
+preferences, for example `fr;q=0.9,en;q=0.5`.
 
-In local terminology mode the same value is read by Pathling itself rather than
-sent anywhere: weighted preferences are honoured, and each language is tried in
-turn until one yields a term. How a language selects a term there is described
-under [dialects](./local.md#dialects).
+The setting affects the `display` property only, whether requested through
+`display()` or through `property_of(coding, "display")`. It has no effect on
+`designation()`, `member_of()`, `subsumes()`, `translate()` or
+`validate_code()`.
 
-The default value for the header can be configured during the creation of
-the `PathlingContext` with the `accept_language` or `acceptLanguage` parameter.
-The parameter with the same name can also be used to override the default value
-in `display()` and `property_of()` functions.
+#### Server mode
+
+The value is sent to the terminology server as the `Accept-Language` HTTP
+header, as described in
+[Multi-language support in FHIR](https://hl7.org/fhir/R4/languages.html#http).
+Whether and how the server honours it depends on the server implementation and
+the code systems it holds.
+
+#### Local mode
+
+The value is read by Pathling itself. Each language in the list is tried in
+descending order of weight, and the first that yields a term answers; when none
+does, the display stored at import time is returned. A language the store does
+not recognise is not an error, it simply yields no term.
+
+How a language selects a term depends on the code system:
+
+- For SNOMED CT, a language tag names a language reference set, and the synonym
+  that reference set marks as preferred is returned. `en-GB` and `en-US` are
+  therefore distinct, and a bare `en` names nothing. The recognised tags, and
+  how to register more, are described under
+  [dialects](./local.md#dialects).
+- For a FHIR CodeSystem loaded into the store, the designation whose language
+  matches the tag is returned. See
+  [code systems that are not SNOMED CT](./local.md#code-systems-that-are-not-snomed-ct).
+
+`designation()` returns every designation regardless of `accept_language`. Its
+own `language` argument filters on the language string each designation
+carries, matched exactly. In local mode, a SNOMED CT synonym preferred within a
+language reference set carries an extension tag such as
+`en-x-sctlang-90000000-00005080-04` rather than `en-GB`, while acceptable
+synonyms and the stored display carry the plain description language, `en`.
+
+```python
+from pathling import PathlingContext, to_snomed_coding, display, designation, Coding
+
+pc = PathlingContext.create(
+    terminology_mode="local",
+    terminology_storage_path="/data/tx-store",
+    accept_language="en-GB",
+)
+csv = pc.spark.read.csv("conditions.csv")
+
+# "Oesophageal structure" for 32849002, the term GB English prefers.
+british = csv.withColumn("DISPLAY", display(to_snomed_coding(csv.CODE)))
+
+# "Esophageal structure", overriding the session default with US English.
+american = british.withColumn(
+    "DISPLAY_US", display(to_snomed_coding(csv.CODE), accept_language="en-US")
+)
+
+# The term preferred by GB English, requested as a designation. The language
+# is the extension tag form, not "en-GB".
+preferred = american.withColumn(
+    "PREFERRED_GB",
+    designation(
+        to_snomed_coding(csv.CODE),
+        Coding(
+            "http://terminology.hl7.org/CodeSystem/hl7TermMaintInfra",
+            "preferredForLanguage",
+        ),
+        "en-x-sctlang-90000000-00005080-04",
+    ),
+)
+preferred.show()
+```
+
+#### Example
+
+The following example queries LOINC in server mode. It cannot be run in local
+mode, which holds no LOINC content.
 
 <!--suppress CheckEmptyScriptTag -->
 <Tabs>
@@ -789,7 +855,7 @@ import au.csiro.pathling.library.TerminologyHelpers._
 // Configure the default language preferences to prioritise French.
 val pc = PathlingContext.create(
     TerminologyConfiguration.builder()
-            .acceptLangage("fr;q=0.9,en;q=0.5").build()
+            .acceptLanguage("fr;q=0.9,en;q=0.5").build()
 );
 val csv = spark.read.csv("observations.csv")
 
@@ -823,7 +889,7 @@ class MyApp {
         // Configure the default language preferences to prioritise French.
         PathlingContext pc = PathlingContext.create(
                 TerminologyConfiguration.builder()
-                        .acceptLangage("fr;q=0.9,en;q=0.5").build()
+                        .acceptLanguage("fr;q=0.9,en;q=0.5").build()
         );
         Dataset<Row> csv = pc.getSpark().read().csv("observations.csv");
 
