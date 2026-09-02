@@ -13,17 +13,20 @@ Includes the following features:
 - Support for
   the [Spark Kubernetes cluster manager](https://spark.apache.org/docs/latest/running-on-kubernetes.html),
   including a service account, role and role binding to allow it to manage
-  executor pods
-- Customisation
-  of [resource requests and limits](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/)
-- Configuration
-  of [volumes and volume mounts](https://kubernetes.io/docs/concepts/storage/volumes/)
+  executor pods and their on-demand scratch volumes. Executor pods are owned by
+  the driver pod, so they are garbage collected when the driver pod is deleted
+- A custom [JVM trust store](#custom-trust-store) for connecting to services
+  that present certificates from a private certificate authority
+- Customisation of [resource requests and limits](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/)
+- Configuration of [volumes and volume mounts](https://kubernetes.io/docs/concepts/storage/volumes/)
 - [Image pull secrets](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/)
   for private Docker registries
 - [Tolerations and affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/)
   for control over pod scheduling
 - [Secret](https://kubernetes.io/docs/concepts/configuration/secret/) config
   for sensitive values
+- [Security context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/)
+  for pod security settings
 
 ## Installation
 
@@ -63,9 +66,65 @@ their default values.
 | `pathling.tolerations`                | `[ ]`                           | A list of [tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) to apply to the pod                                                  |
 | `pathling.affinity`                   | `~`                             | [Affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity) to apply to the pod                                         |
 | `pathling.securityContext`            | `~`                             | [Security context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/) for the pod                                                                  |
-| `pathling.config`                     | `{ }`                           | A map of [configuration values](/server/configuration) to pass to Pathling                                                                                                  |
+| `pathling.config`                     | `{ }`                           | A map of [configuration values](https://pathling.csiro.au/docs/server/configuration) to pass to Pathling                                                                    |
 | `pathling.secretConfig`               | `{ }`                           | A map of secret configuration values to pass to Pathling, these values will be stored using [Kubernetes secrets](https://kubernetes.io/docs/concepts/configuration/secret/) |
-| `pathling.trustedCertificates`        | `[ ]`                           | A list of additional CA certificates (in PEM format) to be trusted by the server JVM, e.g. a private CA that issues the certificate of an OIDC issuer                       |
+| `pathling.truststore.enabled`         | `false`                         | Whether to mount a custom JVM trust store into the pod, see [Custom trust store](#custom-trust-store)                                                                       |
+| `pathling.truststore.secretName`      | `pathling-truststore`           | The name of the Kubernetes secret that holds the trust store                                                                                                                |
+| `pathling.truststore.key`             | `cacerts`                       | The data key within the secret that contains the trust store file                                                                                                           |
+| `pathling.truststore.password`        | `changeit`                      | The trust store password                                                                                                                                                    |
+| `pathling.truststore.type`            | `jks`                           | The trust store format, either `jks` or `pkcs12`                                                                                                                            |
+| `pathling.truststore.mountPath`       | `/truststore`                   | The directory within the pod at which the trust store secret is mounted                                                                                                     |
+
+Note that the chart only sets `JAVA_TOOL_OPTIONS` (and therefore
+`maxHeapSize`, `additionalJavaOptions` and the trust store options) when at
+least one entry is present in `pathling.config` or `pathling.secretConfig`.
+
+## Custom trust store
+
+If Pathling needs to connect to a terminology server, object store or other
+service that presents a certificate issued by a private certificate authority,
+the chart can mount a complete JVM trust store (JKS or PKCS12) and point the
+server's JVM at it.
+
+The chart does not merge certificates into the default trust store. Build a
+store that contains every certificate authority the server must trust, for
+example by importing your internal root into a copy of the JDK `cacerts` file,
+and create a secret with a single data entry containing the store file:
+
+```bash
+kubectl create secret generic pathling-truststore \
+  --from-file=cacerts=/path/to/cacerts
+```
+
+Then enable the trust store in the chart values:
+
+```yaml
+pathling:
+    truststore:
+        enabled: true
+        secretName: pathling-truststore
+        key: cacerts
+        password: changeit
+        type: jks
+```
+
+The secret is mounted read-only at `pathling.truststore.mountPath` and
+`-Djavax.net.ssl.trustStore`, `-Djavax.net.ssl.trustStorePassword` and
+`-Djavax.net.ssl.trustStoreType` are appended to `JAVA_TOOL_OPTIONS`.
+
+This applies to the driver pod only. In a [cluster](#cluster) deployment,
+executor pods are configured through Spark rather than the chart, so the same
+secret must be mounted and the same options passed via `pathling.config`:
+
+```yaml
+pathling:
+    config:
+        spark.kubernetes.executor.secrets.pathling-truststore: /truststore
+        spark.executorEnv.JAVA_TOOL_OPTIONS: -Djavax.net.ssl.trustStore=/truststore/cacerts -Djavax.net.ssl.trustStorePassword=changeit -Djavax.net.ssl.trustStoreType=jks
+```
+
+The chart's role grants the service account permission to read secrets so that
+both the driver and executor pods can mount the store.
 
 ## Example configuration
 
@@ -77,7 +136,7 @@ different deployment scenarios.
 This configuration is suitable for a single node deployment of Pathling. In this
 scenario, all processing is performed on a single pod.
 
-```yml
+```yaml
 pathling:
     image: ghcr.io/aehrc/pathling:8
     resources:
@@ -115,7 +174,7 @@ This configuration is suitable for the processing of larger datasets, or
 scenarios where it may be desirable to run a small driver pod and spawn executor
 pods on demand (at the cost of some latency).
 
-```yml
+```yaml
 pathling:
     image: ghcr.io/aehrc/pathling:8
     resources:
