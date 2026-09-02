@@ -55,6 +55,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 import java.util.function.UnaryOperator;
 import org.apache.spark.SparkContext;
@@ -157,8 +158,13 @@ class BulkSubmitExecutorTest {
   }
 
   @AfterEach
-  void cleanup() {
-    // Clean up temp directory.
+  void awaitAsynchronousWork() {
+    // The manifest download and import paths run on the common ForkJoinPool and write into the
+    // per-test temporary directory. JUnit removes that directory as soon as the test returns, and
+    // the tests only await the assertion they care about, not the completion of the work. Waiting
+    // for the pool to drain here keeps a task that is still writing from racing the deletion,
+    // which otherwise fails the test with DirectoryNotEmptyException.
+    ForkJoinPool.commonPool().awaitQuiescence(30, TimeUnit.SECONDS);
   }
 
   // ========================================
