@@ -1,4 +1,5 @@
 ---
+sidebar_position: 3
 description: A scheme for representing FHIR resources within a Parquet schema.
 ---
 
