@@ -20,7 +20,7 @@ remote FHIR terminology server. The same seven functions, <code>member_of</code>
 <code>translate</code>, <code>subsumes</code>, <code>subsumed_by</code>, <code>display</code>, <code>property_of</code> and
 <code>designation</code>, work identically in both modes. What changes is what you can do
 with them.</p>
-<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="the-server-that-used-to-be-in-the-loop">The server that used to be in the loop<a href="https://pathling.csiro.au/blog/local-terminology#the-server-that-used-to-be-in-the-loop" class="hash-link" aria-label="Direct link to The server that used to be in the loop" title="Direct link to The server that used to be in the loop" translate="no">​</a></h2>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="remote-mode">Remote mode<a href="https://pathling.csiro.au/blog/local-terminology#remote-mode" class="hash-link" aria-label="Direct link to Remote mode" title="Direct link to Remote mode" translate="no">​</a></h2>
 <p>Until now, every terminology function in Pathling was a wrapper around a call to
 a FHIR terminology server. <code>member_of</code> became <code>$validate-code</code>, <code>subsumes</code>
 became <code>$subsumes</code>, <code>display</code> became <code>$lookup</code>, and so on. Responses were cached
@@ -39,8 +39,8 @@ members in July.</li>
 <li class="">Any environment with no outbound network access was ruled out entirely.</li>
 </ul>
 <p>Local mode removes the server from that picture.</p>
-<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="what-you-can-now-do">What you can now do<a href="https://pathling.csiro.au/blog/local-terminology#what-you-can-now-do" class="hash-link" aria-label="Direct link to What you can now do" title="Direct link to What you can now do" translate="no">​</a></h2>
-<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="run-terminology-queries-where-there-is-no-network">Run terminology queries where there is no network<a href="https://pathling.csiro.au/blog/local-terminology#run-terminology-queries-where-there-is-no-network" class="hash-link" aria-label="Direct link to Run terminology queries where there is no network" title="Direct link to Run terminology queries where there is no network" translate="no">​</a></h3>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="what-local-mode-enables">What local mode enables<a href="https://pathling.csiro.au/blog/local-terminology#what-local-mode-enables" class="hash-link" aria-label="Direct link to What local mode enables" title="Direct link to What local mode enables" translate="no">​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="operation-without-network-access">Operation without network access<a href="https://pathling.csiro.au/blog/local-terminology#operation-without-network-access" class="hash-link" aria-label="Direct link to Operation without network access" title="Direct link to Operation without network access" translate="no">​</a></h3>
 <p>Trusted research environments, hospital analytics platforms and other locked
 down settings routinely block outbound connections. Previously, that meant
 Pathling's terminology functions were unavailable there. Now the store is a
@@ -53,7 +53,7 @@ at it:</p>
 <div class="language-bash codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-bash codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#393A34"><span class="token plain">pathling import-snomed /data/SnomedCT_InternationalRF2_PRODUCTION_20250601T120000Z.zip /data/tx-store</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain" style="display:inline-block"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">pathling --tx-store /data/tx-store view /data/fhir --view diabetes_cohort.json --format csv</span><br></span></code></pre></div></div>
 <p>The same applies to <code>fhirpath</code>, <code>run</code>, <code>console</code> and the seven terminology
 commands.</p>
-<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="scale-the-query-without-scaling-a-server">Scale the query without scaling a server<a href="https://pathling.csiro.au/blog/local-terminology#scale-the-query-without-scaling-a-server" class="hash-link" aria-label="Direct link to Scale the query without scaling a server" title="Direct link to Scale the query without scaling a server" translate="no">​</a></h3>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="scaling-with-the-cluster">Scaling with the cluster<a href="https://pathling.csiro.au/blog/local-terminology#scaling-with-the-cluster" class="hash-link" aria-label="Direct link to Scaling with the cluster" title="Direct link to Scaling with the cluster" translate="no">​</a></h3>
 <p>In local mode, each Spark executor loads the store's indexes and answers
 terminology questions itself. The transitive closure of the SNOMED CT is-a
 hierarchy is held as compressed bitmaps, so a subsumption test or an ECL
@@ -66,7 +66,7 @@ identifiers by a depth-first walk of the hierarchy so that each subtree
 compresses as a near-contiguous interval. Either way, the whole edition fits
 comfortably on an ordinary executor, and there is no service on the other end
 to become the bottleneck as the cluster grows.</p>
-<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="pin-the-exact-release-your-results-depend-on">Pin the exact release your results depend on<a href="https://pathling.csiro.au/blog/local-terminology#pin-the-exact-release-your-results-depend-on" class="hash-link" aria-label="Direct link to Pin the exact release your results depend on" title="Direct link to Pin the exact release your results depend on" translate="no">​</a></h3>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="release-pinning">Release pinning<a href="https://pathling.csiro.au/blog/local-terminology#release-pinning" class="hash-link" aria-label="Direct link to Release pinning" title="Direct link to Release pinning" translate="no">​</a></h3>
 <p>A store holds specific versions of specific code systems. You decide when to
 import a new release, and re-importing a version replaces it atomically. Every
 SNOMED CT value set form also accepts an edition and version qualified URI, so
@@ -76,7 +76,7 @@ a query can name precisely the content it was validated against:</p>
 a study. A cohort definition run against the same store in two environments
 returns the same members, which was not something the remote mode could
 promise.</p>
-<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="bring-your-own-content-without-standing-up-a-server">Bring your own content without standing up a server<a href="https://pathling.csiro.au/blog/local-terminology#bring-your-own-content-without-standing-up-a-server" class="hash-link" aria-label="Direct link to Bring your own content without standing up a server" title="Direct link to Bring your own content without standing up a server" translate="no">​</a></h3>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="importing-your-own-content">Importing your own content<a href="https://pathling.csiro.au/blog/local-terminology#importing-your-own-content" class="hash-link" aria-label="Direct link to Importing your own content" title="Direct link to Importing your own content" translate="no">​</a></h3>
 <p>FHIR CodeSystem, ValueSet and ConceptMap resources can be imported from a JSON
 file, a directory of JSON files, or a FHIR NPM package. Loading a local code
 system, a set of curated value sets or a mapping table used to require a
@@ -89,7 +89,7 @@ vocabulary package, which ships a multi-gigabyte CodeSystem, imports with a
 are recognised, so <code>subsumes</code> and descendant based <code>member_of</code> work over flat
 code systems as they do over SNOMED CT. Imported ConceptMaps drive <code>translate</code>
 in both directions.</p>
-<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="choose-the-dialect">Choose the dialect<a href="https://pathling.csiro.au/blog/local-terminology#choose-the-dialect" class="hash-link" aria-label="Direct link to Choose the dialect" title="Direct link to Choose the dialect" translate="no">​</a></h3>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="language-and-dialect">Language and dialect<a href="https://pathling.csiro.au/blog/local-terminology#language-and-dialect" class="hash-link" aria-label="Direct link to Language and dialect" title="Direct link to Language and dialect" translate="no">​</a></h3>
 <p>Which synonym of a SNOMED CT concept is preferred is a property of a language
 reference set, not of the concept. Local mode makes that explicit. A store has
 a default dialect, chosen at import time, and any query can ask for another:</p>
@@ -98,7 +98,7 @@ a default dialect, chosen at import time, and any query can ask for another:</p>
 of the box, weighted preference lists such as <code>en-NZ;q=0.9,en-GB;q=0.5</code> are
 honoured, and a deployment can register aliases for the language reference sets
 of a national extension.</p>
-<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="write-value-sets-in-ecl-or-vcl-and-evaluate-them-locally">Write value sets in ECL or VCL and evaluate them locally<a href="https://pathling.csiro.au/blog/local-terminology#write-value-sets-in-ecl-or-vcl-and-evaluate-them-locally" class="hash-link" aria-label="Direct link to Write value sets in ECL or VCL and evaluate them locally" title="Direct link to Write value sets in ECL or VCL and evaluate them locally" translate="no">​</a></h3>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="ecl-and-vcl-value-sets">ECL and VCL value sets<a href="https://pathling.csiro.au/blog/local-terminology#ecl-and-vcl-value-sets" class="hash-link" aria-label="Direct link to ECL and VCL value sets" title="Direct link to ECL and VCL value sets" translate="no">​</a></h3>
 <p><code>member_of</code> resolves imported ValueSets by canonical URL, the SNOMED CT implicit
 forms (<code>?fhir_vs</code>, <code>refset/</code>, <code>isa/</code> and <code>ecl/</code>), and
 <a href="https://build.fhir.org/ig/FHIR/ig-guidance/vcl.html" target="_blank" rel="noopener noreferrer" class="">VCL</a> implicit value sets
@@ -112,7 +112,7 @@ conjunction, disjunction and exclusion, attribute refinement and dotted
 attribute navigation. A construct outside that subset, such as a role group or
 a cardinality constraint, is rejected with an error naming it rather than
 answered with the wrong members.</p>
-<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="what-stays-the-same">What stays the same<a href="https://pathling.csiro.au/blog/local-terminology#what-stays-the-same" class="hash-link" aria-label="Direct link to What stays the same" title="Direct link to What stays the same" translate="no">​</a></h2>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="compatibility-with-remote-mode">Compatibility with remote mode<a href="https://pathling.csiro.au/blog/local-terminology#compatibility-with-remote-mode" class="hash-link" aria-label="Direct link to Compatibility with remote mode" title="Direct link to Compatibility with remote mode" translate="no">​</a></h2>
 <p>Switching modes is a configuration change. The functions, their signatures and
 their results are the same, and any existing code that uses them runs
 unchanged:</p>
@@ -120,7 +120,7 @@ unchanged:</p>
 <p>Remote mode remains the default and is unchanged. Local mode is available
 through the Python and R libraries, the Java and Scala API and the command line
 interface.</p>
-<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="things-worth-knowing">Things worth knowing<a href="https://pathling.csiro.au/blog/local-terminology#things-worth-knowing" class="hash-link" aria-label="Direct link to Things worth knowing" title="Direct link to Things worth knowing" translate="no">​</a></h2>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="requirements-and-limitations">Requirements and limitations<a href="https://pathling.csiro.au/blog/local-terminology#requirements-and-limitations" class="hash-link" aria-label="Direct link to Requirements and limitations" title="Direct link to Requirements and limitations" translate="no">​</a></h2>
 <ul>
 <li class="">You need the release files. SNOMED CT is imported from an RF2 snapshot,
 obtained under licence from your national release centre or from SNOMED
@@ -178,7 +178,7 @@ and FHIR concept properties each have their own index. They are loaded lazily
 behind memoised suppliers, so a job that only calls <code>display()</code> never loads the
 hierarchy, and one that only tests membership of an <code>isa/</code> value set never
 loads the descriptions.</p>
-<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="how-a-query-reaches-them">How a query reaches them<a href="https://pathling.csiro.au/blog/local-terminology#how-a-query-reaches-them" class="hash-link" aria-label="Direct link to How a query reaches them" title="Direct link to How a query reaches them" translate="no">​</a></h3>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="query-execution">Query execution<a href="https://pathling.csiro.au/blog/local-terminology#query-execution" class="hash-link" aria-label="Direct link to Query execution" title="Direct link to Query execution" translate="no">​</a></h3>
 <p>The terminology functions are Spark user-defined functions, exactly as they are
 in remote mode; the two modes differ only in the service the function calls
 into. This is not a join. Terminology content never enters the Spark query
