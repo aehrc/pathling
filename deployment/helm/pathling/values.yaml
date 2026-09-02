@@ -27,7 +27,7 @@ pathling:
   #
   # The chart mounts this Secret read-only into the server pod and points that
   # JVM at it. Configuring executors to mount the same store is deliberately
-  # left to the local Spark config (spark.kubernetes.executor.volumes.secret.*
+  # left to the local Spark config (spark.kubernetes.executor.secrets.<name>
   # and spark.executorEnv.JAVA_TOOL_OPTIONS) - spark.* settings are out of the
   # chart's scope so they cannot stomp on custom configs. Create the Secret out
   # of band, e.g.:
