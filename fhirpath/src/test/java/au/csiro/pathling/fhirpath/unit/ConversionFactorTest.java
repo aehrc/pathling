@@ -18,6 +18,7 @@
 package au.csiro.pathling.fhirpath.unit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.math.BigDecimal;
 import org.junit.jupiter.api.Test;
@@ -35,5 +36,40 @@ class ConversionFactorTest {
     assertEquals(
         new BigDecimal(4),
         ConversionFactor.ofFraction(new BigDecimal(2), new BigDecimal(3)).apply(new BigDecimal(6)));
+  }
+
+  /** A zero denominator is rejected, as it would make the conversion undefined. */
+  @Test
+  void testZeroDenominatorIsRejected() {
+    final IllegalArgumentException error =
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> ConversionFactor.ofFraction(BigDecimal.ONE, BigDecimal.ZERO));
+    assertEquals("denominator cannot be zero", error.getMessage());
+  }
+
+  /**
+   * A zero denominator is rejected regardless of its scale. Zero has infinitely many
+   * representations in {@link BigDecimal} ("0", "0.0", "0E-10"), and only numerical comparison
+   * detects them all.
+   */
+  @Test
+  void testScaledZeroDenominatorIsRejected() {
+    for (final String zero : new String[] {"0.0", "0.00", "0E-10", "-0.0"}) {
+      final BigDecimal denominator = new BigDecimal(zero);
+      final IllegalArgumentException error =
+          assertThrows(
+              IllegalArgumentException.class,
+              () -> ConversionFactor.ofFraction(BigDecimal.ONE, denominator),
+              "denominator " + zero + " should be rejected");
+      assertEquals("denominator cannot be zero", error.getMessage());
+    }
+  }
+
+  /** The inverse of a scaled zero is also rejected, as it delegates the same check. */
+  @Test
+  void testInverseOfScaledZeroIsRejected() {
+    assertThrows(
+        IllegalArgumentException.class, () -> ConversionFactor.inverseOf(new BigDecimal("0.0")));
   }
 }

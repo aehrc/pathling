@@ -113,7 +113,9 @@ class ConversionFactor {
   @Nonnull
   static ConversionFactor ofFraction(
       @Nonnull final BigDecimal numerator, @Nonnull final BigDecimal denominator) {
-    if (BigDecimal.ZERO.equals(denominator)) {
+    // Numerical comparison is used rather than equals(), which also compares scale and would
+    // therefore let representations such as "0.0" through.
+    if (denominator.compareTo(BigDecimal.ZERO) == 0) {
       throw new IllegalArgumentException("denominator cannot be zero");
     }
     return new ConversionFactor(numerator, denominator);
