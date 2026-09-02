@@ -1,6 +1,6 @@
 ---
 slug: local-terminology
-title: Terminology without a terminology server
+title: Local terminology mode
 authors: [johngrimes]
 tags: [release, libraries, terminology]
 ---
