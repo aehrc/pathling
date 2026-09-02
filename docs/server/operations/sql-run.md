@@ -1,391 +1,175 @@
-# Run SQL query
+# Run
 
-This operation executes a SQL query against materialised [ViewDefinition](https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition.html) tables within the Pathling server. The query is supplied as a Library resource conforming to the [SQLQuery profile](https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-SQLQuery.html) from the SQL on FHIR v2 specification, and is executed against the views it references via `relatedArtifact`.
+The `$sql-run` operation executes a single SQL on FHIR *subject* and returns its result in the response body. A subject is one of three artefacts:
 
-## Endpoints[​](#endpoints "Direct link to Endpoints")
+* a [ViewDefinition](https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition.html), which projects a resource type into a flat table;
+* a [SQLQuery](https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-SQLQuery.html) Library, which runs SQL over the tables its `relatedArtifact` entries name; or
+* a [SQLView](https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-SQLView.html) Library, which is a named, reusable SQL table source.
+
+The operation is subject-polymorphic: which kind you supply decides which parameters apply and which output formats are available, but the endpoint, filters and error contract are the same for all three.
+
+Use [`$sql-export`](/docs/server/operations/sql-export.md) instead when the result is too large or too slow to return synchronously, or when you want to export several subjects together.
+
+## Endpoint[​](#endpoint "Direct link to Endpoint")
 
 ```
-POST [base]/$sqlquery-run
-POST [base]/Library/$sqlquery-run
-POST [base]/Library/[id]/$sqlquery-run
+GET  [base]/$sql-run
+POST [base]/$sql-run
 ```
 
-The instance-level form executes a stored Library by ID; the system and type-level forms accept the Library inline or by reference.
+The operation is system level only. A `GET` can carry only primitive parameters, so it is available when the subject is already stored on the server; supplying a resource-valued parameter over `GET` is rejected with a `400`.
 
 ## Parameters[​](#parameters "Direct link to Parameters")
 
-| Name             | Cardinality | Type       | Description                                                                                                                                                    |
-| ---------------- | ----------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `queryResource`  | 0..1        | Resource   | An inline Library resource conforming to the SQLQuery profile. Mutually exclusive with `queryReference`.                                                       |
-| `queryReference` | 0..1        | Reference  | A relative literal (`Library/[id]`) or canonical (`[url]` or `[url]\|[version]`) reference to a stored Library. Resolves against the server's Library store.   |
-| `_format`        | 0..1        | code       | Output format. Accepts `ndjson` (default), `csv`, `json`, `parquet`, or `fhir` (or the corresponding media type). An unsupported explicit value returns `400`. |
-| `header`         | 0..1        | boolean    | Include the header row in CSV output. Defaults to `true`.                                                                                                      |
-| `_limit`         | 0..1        | integer    | Maximum number of rows to return. Always clamped to the server-configured `maxRows` ceiling.                                                                   |
-| `parameters`     | 0..1        | Parameters | Runtime parameter bindings. Each entry's name must match a `Library.parameter` declaration, and its `value[x]` must match the declared FHIR type.              |
+| Name               | Cardinality | Type       | Description                                                                                                                          |
+| ------------------ | ----------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `subjectCanonical` | 0..1        | canonical  | The subject's canonical URL, honouring a `\|version` pin. Matched against both `ViewDefinition.url` and `Library.url`.               |
+| `subjectReference` | 0..1        | Reference  | A relative reference naming its type: `ViewDefinition/[id]` or `Library/[id]`.                                                       |
+| `subjectResource`  | 0..1        | Resource   | An inline ViewDefinition, SQLQuery or SQLView.                                                                                       |
+| `parameters`       | 0..1        | Parameters | Runtime bindings for a SQL subject. Every `Library.parameter` declaration must be bound by an entry matching it in name and type.    |
+| `context`          | 0..\*       | Resource   | Inline supporting artefacts (ViewDefinition or SQLView) for dependencies the server cannot resolve. Matched by canonical URL.        |
+| `resource`         | 0..\*       | string     | FHIR resources to project instead of server data, for a ViewDefinition subject. Each is a serialised resource or a Bundle to unwrap. |
+| `_format`          | 0..1        | code       | Output format; see below. Takes precedence over the `Accept` header.                                                                 |
+| `header`           | 0..1        | boolean    | Include the header row in CSV output. Defaults to `true`.                                                                            |
+| `_limit`           | 0..1        | integer    | Maximum rows to return. When omitted, the whole result is returned.                                                                  |
+| `patient`          | 0..\*       | Reference  | Restricts the data the subject reads to these patients' compartments.                                                                |
+| `group`            | 0..\*       | Reference  | Restricts the data the subject reads to these groups' member patients.                                                               |
+| `_since`           | 0..1        | instant    | Restricts to resources updated at or after this instant.                                                                             |
+| `source`           | 0..1        | string     | **Not supported**: an external data source. Supplying it is rejected with a `400`.                                                   |
 
-Exactly one of `queryResource` and `queryReference` must be supplied to the system and type-level forms. The instance-level form ignores both and uses the Library identified in the URL.
+Exactly one of `subjectCanonical`, `subjectReference` and `subjectResource` must be supplied; naming none, or more than one, is a `400`.
 
-The `source` parameter (an external data source) is not supported by this server; supplying it returns `400 Bad Request` with an OperationOutcome at every level, whether supplied in a POST `Parameters` body or as a GET query parameter.
+`parameters` applies only to a SQL subject, and `resource` only to a ViewDefinition subject. Supplying either to the other kind is a `400` naming the parameter, rather than being silently ignored.
 
-## Status codes[​](#status-codes "Direct link to Status codes")
+## Output formats[​](#output-formats "Direct link to Output formats")
 
-| Status                      | Condition                                                                                                |
-| --------------------------- | -------------------------------------------------------------------------------------------------------- |
-| `200 OK`                    | A supported format (explicit or defaulted) and successful execution.                                     |
-| `400 Bad Request`           | The unsupported `source` parameter, an unsupported explicit `_format`, or a malformed request/parameter. |
-| `422 Unprocessable Entity`  | `_format=fhir` where a result column has a type that cannot be represented as a FHIR value.              |
-| `500 Internal Server Error` | A genuine SQL execution or infrastructure fault.                                                         |
+The formats on offer depend on the kind of subject:
 
-When no `_format` is supplied, the format is negotiated from the `Accept` header, falling back to NDJSON when nothing matches.
+| Format    | ViewDefinition | SQLQuery / SQLView | Media type                       |
+| --------- | -------------- | ------------------ | -------------------------------- |
+| `ndjson`  | yes (default)  | yes (default)      | `application/x-ndjson`           |
+| `csv`     | yes            | yes                | `text/csv`                       |
+| `json`    | yes            | yes                | `application/json`               |
+| `parquet` | no             | yes                | `application/vnd.apache.parquet` |
+| `fhir`    | no             | yes                | `application/fhir+json`          |
 
-The operation declares the SQL on FHIR spec canonical `http://sql-on-fhir.org/OperationDefinition/$sqlquery-run` in the server [CapabilityStatement](https://hl7.org/fhir/R4/capabilitystatement.html); the server does not host a Pathling-authored OperationDefinition for it.
+An explicit `_format` is parsed strictly: an unrecognised value, or one not available for the resolved kind, is a `400` naming `_format`. With no `_format`, the format is negotiated from the `Accept` header, falling back to NDJSON when nothing matches; content negotiation never fails, since a client that sends a header the server cannot honour still wants a result.
 
-## The Library resource[​](#the-library-resource "Direct link to The Library resource")
+## Supporting artefacts[​](#supporting-artefacts "Direct link to Supporting artefacts")
 
-The `$sqlquery-run` operation expects a Library that conforms to the SQLQuery profile. The relevant elements are:
+A SQL subject reaches its table sources through `relatedArtifact` references resolved by canonical URL. A `context` entry offers an artefact the server does not hold, and outranks server resolution when both are available. Every entry must carry a `url`, since that is what a dependency is matched by, and an entry that matches no dependency of the subject is a `400`: it usually means a URL was mistyped, and ignoring it would run the request against different artefacts than the client intended.
 
-* `type` - must include the coding `sql-query` from `https://sql-on-fhir.org/ig/CodeSystem/LibraryTypesCodes`. A [SQLView](https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-SQLView.html) (`sql-view`) is also accepted as a top-level resource and runs as a parameter-less query.
-* `content` - exactly one entry with `contentType` of `application/sql` and the SQL text Base64-encoded in `data`.
-* `relatedArtifact` - one entry per dependency the query references. The `label` becomes the table name available to the SQL, and `resource` is the canonical URL of a ViewDefinition or a SQLView, matched against that resource's `url`. See [Composing SQLViews](#composing-sqlviews).
-* `parameter` - optional declarations of named runtime parameters. Each entry with `use` of `in` must have a `name` and `type`, and the type must be a primitive FHIR type. A SQLView declares no parameters.
+## Examples[​](#examples "Direct link to Examples")
 
-Example Library:
-
-```
-{
-    "resourceType": "Library",
-    "status": "active",
-    "type": {
-        "coding": [
-            {
-                "system": "https://sql-on-fhir.org/ig/CodeSystem/LibraryTypesCodes",
-                "code": "sql-query"
-            }
-        ]
-    },
-    "content": [
-        {
-            "contentType": "application/sql",
-            "data": "U0VMRUNUIHBhdGllbnRfaWQsIGdpdmVuX25hbWUsIGZhbWlseV9uYW1lIEZST00gcGF0aWVudHM="
-        }
-    ],
-    "relatedArtifact": [
-        {
-            "type": "depends-on",
-            "label": "patients",
-            "resource": "https://example.org/ViewDefinition/patient-demographics"
-        }
-    ]
-}
-```
-
-The `data` value above decodes to:
+Run a stored view over `GET`, as CSV:
 
 ```
-SELECT patient_id, given_name, family_name FROM patients
+GET [base]/$sql-run?subjectCanonical=https://example.org/ViewDefinition/demographics&_format=csv
+Accept: text/csv
 ```
 
-## Request format[​](#request-format "Direct link to Request format")
-
-The system-level form accepts a FHIR Parameters resource with the Library nested under `queryResource`:
+Run a stored query with a bound parameter:
 
 ```
-POST [base]/$sqlquery-run HTTP/1.1
+POST [base]/$sql-run
 Content-Type: application/fhir+json
 Accept: application/x-ndjson
 
 {
-    "resourceType": "Parameters",
-    "parameter": [
-        {
-            "name": "queryResource",
-            "resource": {
-                "resourceType": "Library",
-                "status": "active",
-                "type": {
-                    "coding": [
-                        {
-                            "system": "https://sql-on-fhir.org/ig/CodeSystem/LibraryTypesCodes",
-                            "code": "sql-query"
-                        }
-                    ]
-                },
-                "content": [
-                    {
-                        "contentType": "application/sql",
-                        "data": "U0VMRUNUIHBhdGllbnRfaWQgRlJPTSBwYXRpZW50cw=="
-                    }
-                ],
-                "relatedArtifact": [
-                    {
-                        "type": "depends-on",
-                        "label": "patients",
-                        "resource": "https://example.org/ViewDefinition/patient-demographics"
-                    }
-                ]
-            }
-        }
-    ]
+  "resourceType": "Parameters",
+  "parameter": [
+    {
+      "name": "subjectReference",
+      "valueReference": { "reference": "Library/patients-by-family" }
+    },
+    {
+      "name": "parameters",
+      "resource": {
+        "resourceType": "Parameters",
+        "parameter": [{ "name": "family", "valueString": "Smith" }]
+      }
+    }
+  ]
 }
 ```
 
-To execute a stored Library by reference instead, use `queryReference`:
+Run entirely ad hoc, with an inline query and the view it depends on supplied as `context`:
 
 ```
+POST [base]/$sql-run
+Content-Type: application/fhir+json
+
 {
-    "resourceType": "Parameters",
-    "parameter": [
-        {
-            "name": "queryReference",
-            "valueReference": {
-                "reference": "Library/patients-with-conditions"
-            }
-        }
-    ]
+  "resourceType": "Parameters",
+  "parameter": [
+    { "name": "subjectResource", "resource": { "resourceType": "Library", "...": "..." } },
+    { "name": "context", "resource": { "resourceType": "ViewDefinition", "...": "..." } }
+  ]
 }
 ```
 
-If no Library matches the reference, the server responds with `404`. Supplying neither (or both) of `queryResource` and `queryReference` returns `400`.
-
-## Response formats[​](#response-formats "Direct link to Response formats")
-
-The response uses HTTP chunked transfer encoding so that clients can process results incrementally as they arrive.
-
-### NDJSON[​](#ndjson "Direct link to NDJSON")
-
-When `_format` is `ndjson` (the default), the response is newline-delimited JSON with one row per line:
+Run a view over data supplied with the request, rather than server data:
 
 ```
-Content-Type: application/x-ndjson
+POST [base]/$sql-run
+Content-Type: application/fhir+json
 
-{"patient_id":"pat-1","given_name":"John","family_name":"Smith"}
-{"patient_id":"pat-2","given_name":"Jane","family_name":"Johnson"}
-```
-
-### CSV[​](#csv "Direct link to CSV")
-
-When `_format` is `csv`, the response is comma-separated values:
-
-```
-Content-Type: text/csv
-
-patient_id,given_name,family_name
-pat-1,John,Smith
-pat-2,Jane,Johnson
-```
-
-Set `header=false` to exclude the header row.
-
-### JSON[​](#json "Direct link to JSON")
-
-When `_format` is `json`, the response is a single JSON array of row objects.
-
-### Parquet[​](#parquet "Direct link to Parquet")
-
-When `_format` is `parquet`, the response is a binary Parquet file.
-
-Parquet cannot represent a column whose type is unresolved (Spark `NullType`, displayed as "VOID"). This typically arises when a query projects a literal `NULL` without a cast (for example `SELECT NULL AS foo`). If the result contains such a column, the request is rejected with an HTTP 400 and an `OperationOutcome` that names every offending column and suggests two remediations: add an explicit `CAST` (for example `CAST(foo AS STRING)`), or choose a different output format. Other formats (`ndjson`, `csv`, `json`, `fhir`) accept these columns without error.
-
-### FHIR Parameters[​](#fhir-parameters "Direct link to FHIR Parameters")
-
-When `_format` is `fhir`, the response is a FHIR Parameters resource (`application/fhir+json`) with one repeating `row` parameter per result row. Each column appears as a part with a typed `value[x]`, mapped from the SQL result schema.
-
-If a result column has a type that cannot be represented as a FHIR value (for example an array or struct), the server responds `422 Unprocessable Entity` with an OperationOutcome identifying the column. The same query in a flat format (`ndjson`, `csv`, `json`, or `parquet`) succeeds.
-
-## SQL constraints[​](#sql-constraints "Direct link to SQL constraints")
-
-User SQL is validated before execution. The following are rejected:
-
-* DDL and DML statements (e.g. `CREATE`, `INSERT`, `UPDATE`, `DROP`, `MERGE`).
-* References to tables other than those declared in `relatedArtifact`.
-* Built-in table-valued functions and arbitrary local file reads.
-* Pathling-registered FHIRPath UDFs - these are not part of the SQL surface.
-
-The query may use standard Spark SQL functions, joins, aggregates, and subqueries against the views referenced by the Library.
-
-## Runtime parameters[​](#runtime-parameters "Direct link to Runtime parameters")
-
-A Library may declare named parameters, which are then bound at execution time via the `parameters` input:
-
-```
 {
-    "resourceType": "Parameters",
-    "parameter": [
-        {
-            "name": "queryReference",
-            "valueReference": {
-                "reference": "Library/conditions-by-onset"
-            }
-        },
-        {
-            "name": "parameters",
-            "resource": {
-                "resourceType": "Parameters",
-                "parameter": [
-                    {
-                        "name": "minOnsetDate",
-                        "valueDate": "2015-01-01"
-                    }
-                ]
-            }
-        }
-    ]
+  "resourceType": "Parameters",
+  "parameter": [
+    { "name": "subjectResource", "resource": { "resourceType": "ViewDefinition", "...": "..." } },
+    { "name": "resource", "valueString": "{\"resourceType\":\"Patient\",\"id\":\"p1\"}" }
+  ]
 }
 ```
 
-Each binding's name must match a declaration on the Library, and its `value[x]` must match the declared FHIR type.
-
-## Composing SQLViews[​](#composing-sqlviews "Direct link to Composing SQLViews")
-
-A `relatedArtifact` dependency may reference a [SQLView](https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-SQLView.html) as well as a ViewDefinition. A SQLView is a reusable, named SQL query (a `Library` with `type` of `sql-view` and no parameters) that other queries build on as a virtual table. A SQLView may itself depend on ViewDefinitions and other SQLViews, forming a directed acyclic graph of virtual tables that the server resolves and executes. Each node's result is available to its referrer under the `label` of the `relatedArtifact` that points at it; labels are scoped to the node that declares them, so the same label may name different sources in different nodes.
-
-A SQLView may also be supplied directly as the top-level `queryResource`, `queryReference`, or instance-level Library; it then executes as a parameter-less query and returns its rows.
-
-### Reference resolution[​](#reference-resolution "Direct link to Reference resolution")
-
-Each `relatedArtifact.resource` is an absolute **canonical URL** of a ViewDefinition or SQLView, resolved by matching the referenced resource's `url` element - never its logical id:
-
-* The reference must be an absolute canonical URL (scheme `http://`, `https://` or `urn:`), optionally suffixed with a single `|version`. A relative literal form such as `ViewDefinition/abc`, a bare id, or a value carrying a fragment is rejected with a `400` at parse time.
-* `[url]|[version]` selects the resource whose `url` and `version` match exactly; a bare `[url]` selects the latest active match (preferring `active` status, then the greatest version string).
-* ViewDefinitions are searched first, then SQLView Libraries. A canonical that matches both a ViewDefinition and a SQLView is rejected as ambiguous (`400`); one that matches neither is a not-found error (`404`). Both messages name the failing label and reference.
-
-A ViewDefinition or SQLView must therefore carry a `url` to be referenceable as a dependency. ViewDefinitions ingested before URL retention was added must be re-ingested so their `url` is stored.
-
-A `Library` that is a `sql-query` rather than a `sql-view`, a cycle (for example `A -> B -> A`), and a graph nested deeper than `pathling.sqlQuery.maxDependencyDepth` are each rejected with a `400` before any SQL executes, with a message identifying the cause. De-duplication, cycle detection, and depth enforcement are keyed on resolved canonical identity, so a bare-url and a `url|version` reference to the same stored resource materialise once.
-
-When authorisation is enabled, resolving a ViewDefinition from storage requires READ on `ViewDefinition`, and resolving a SQLView from storage requires READ on `Library`, in addition to the READ check on each projected resource type. A resource supplied inline in the request body is not read from storage and is not subject to the metadata check. See the [authorisation documentation](/docs/server/authorization.md).
-
-## Resource limits[​](#resource-limits "Direct link to Resource limits")
-
-Two server-configured limits are always applied to a `$sqlquery-run` invocation, regardless of any caller-supplied parameters:
-
-* `pathling.sqlQuery.maxRows` (default `1000000`) - the maximum number of rows that a single response may stream. Clamps `_limit` when that value is larger.
-* `pathling.sqlQuery.timeoutSeconds` (default `60`) - the maximum wall-clock time, in seconds, that a query may run before its Spark job group is cancelled.
-* `pathling.sqlQuery.maxDependencyDepth` (default `10`) - the maximum nesting depth of the SQLView dependency graph. A graph nested deeper is rejected with a `400` before any Spark work.
-
-Long-running queries should use the asynchronous bulk submit path rather than the synchronous `$sqlquery-run` endpoint. See the [configuration reference](/docs/server/configuration.md) for the full list of options.
-
-## Python example[​](#python-example "Direct link to Python example")
-
-The following Python script demonstrates the `$sqlquery-run` operation against a stored Library.
-
-Run the script using [uv](https://docs.astral.sh/uv/):
+Filter the data every subject reads:
 
 ```
-uv run sqlquery_run_client.py
+GET [base]/$sql-run?subjectReference=ViewDefinition/demographics&patient=Patient/p1&patient=Patient/p2
 ```
 
-### SQL query run client[​](#sql-query-run-client "Direct link to SQL query run client")
+## Status codes[​](#status-codes "Direct link to Status codes")
+
+| Status                      | Condition                                                                                                                               |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `200 OK`                    | Successful execution, in the negotiated format.                                                                                         |
+| `400 Bad Request`           | No subject or more than one; an inapplicable conditional parameter; an unsupported `_format`; `source`; an unresolvable filter value.   |
+| `404 Not Found`             | The subject's canonical or reference resolves to nothing, or a dependency cannot be resolved.                                           |
+| `422 Unprocessable Entity`  | The subject is of no admitted kind, or is conformant but cannot be processed (for example a column type `_format=fhir` cannot express). |
+| `500 Internal Server Error` | An unexpected execution or infrastructure fault.                                                                                        |
+
+Every 4xx and 5xx response carries an [OperationOutcome](https://hl7.org/fhir/R4/operationoutcome.html) whose issues name the parameter at fault in `expression`. A request that is wrong in more than one way is answered with one outcome naming every problem, so it can be corrected in a single round trip.
+
+Every parameter the subject declares must be bound. The SQL engine has no parameter defaults, so an unbound declaration cannot be executed at all, and leaving one out is a `400` rather than a query run over a missing value. Each unbound declaration is reported as its own `invalid` issue, so a request short of several bindings is answered naming all of them, and `expression` names `parameters` even when the request carried no `parameters` resource - its absence is the fault.
+
+A fault in the subject's own SQL that only Spark's analyser can catch - an unresolved column, an unknown function, a missing `GROUP BY`, an ambiguous reference - is a `422`, and its diagnostics carry the analyser's own message, including any suggested identifier. The analyser sees the query as rewritten for execution rather than as submitted: each table reference naming a dependency label is replaced with an internal request-scoped view name before analysis, so a reported line and column position can differ from the position in the submitted text, and a qualified suggestion can name one of those internal views. Only table references are replaced, so a column, alias or function that happens to share a label's name is left as submitted.
+
+## Conformance[​](#conformance "Direct link to Conformance")
+
+The operation declares the spec canonical `http://hl7.org/fhir/uv/sql-on-fhir/OperationDefinition/SQLRun` in the server [CapabilityStatement](https://hl7.org/fhir/R4/capabilitystatement.html), whose `documentation` states the per-kind format sets and the parameters this server declines. Pathling serves no OperationDefinition of its own for it.
+
+## Configuration and authorisation[​](#configuration-and-authorisation "Direct link to Configuration and authorisation")
+
+The operation is enabled by `pathling.operations.sqlRunEnabled` (default `true`) and guarded by the `pathling:sql-run` authority. Running a subject also requires `read` authority for the resource type it projects, and reading a stored subject requires `read` authority for `ViewDefinition` or `Library`. See [authorization](/docs/server/authorization.md).
+
+## Python client[​](#python-client "Direct link to Python client")
 
 ```
-#!/usr/bin/env python3
-# /// script
-# requires-python = ">=3.10"
-# dependencies = ["requests"]
-# ///
-"""Demonstrates the $sqlquery-run operation."""
+from pathling import PathlingContext
 
-import base64
-import json
+# Subjects and results are exchanged as FHIR Parameters and flat files, so any
+# HTTP client will do; the example below uses requests directly.
 import requests
 
-BASE_URL = "https://pathling.example.com/fhir"
-
-
-def build_sql_query_library(sql, view_references):
-    """Build a Library resource conforming to the SQLQuery profile."""
-    encoded = base64.b64encode(sql.encode("utf-8")).decode("ascii")
-    return {
-        "resourceType": "Library",
-        "status": "active",
-        "type": {
-            "coding": [
-                {
-                    "system": (
-                        "https://sql-on-fhir.org/ig/CodeSystem/"
-                        "LibraryTypesCodes"
-                    ),
-                    "code": "sql-query",
-                }
-            ]
-        },
-        "content": [
-            {"contentType": "application/sql", "data": encoded}
-        ],
-        "relatedArtifact": [
-            {
-                "type": "depends-on",
-                "label": label,
-                "resource": reference,
-            }
-            for label, reference in view_references.items()
-        ],
-    }
-
-
-def run_sql_query(library, output_format="ndjson", limit=None):
-    """Execute a SQLQuery Library and return the streamed response."""
-    url = f"{BASE_URL}/$sqlquery-run"
-    parameters = {
-        "resourceType": "Parameters",
-        "parameter": [
-            {"name": "queryResource", "resource": library},
-            {"name": "_format", "valueCode": output_format},
-        ],
-    }
-    if limit is not None:
-        parameters["parameter"].append(
-            {"name": "_limit", "valueInteger": limit}
-        )
-
-    accept = {
-        "ndjson": "application/x-ndjson",
-        "csv": "text/csv",
-        "json": "application/json",
-        "fhir": "application/fhir+json",
-        "parquet": "application/octet-stream",
-    }[output_format]
-
-    headers = {
-        "Content-Type": "application/fhir+json",
-        "Accept": accept,
-    }
-
-    response = requests.post(
-        url, json=parameters, headers=headers, stream=True
-    )
-    response.raise_for_status()
-    return response
-
-
-def main():
-    """Execute a join across two materialised views."""
-    sql = (
-        "SELECT p.given_name, p.family_name, c.condition_name, c.onset_date "
-        "FROM patients p "
-        "JOIN conditions c "
-        "  ON concat('Patient/', p.patient_id) = c.patient_ref "
-        "ORDER BY p.family_name, c.onset_date"
-    )
-
-    library = build_sql_query_library(
-        sql,
-        {
-            "patients": "https://example.org/ViewDefinition/patient-demographics",
-            "conditions": "https://example.org/ViewDefinition/conditions",
-        },
-    )
-
-    response = run_sql_query(library, output_format="ndjson", limit=20)
-    for line in response.iter_lines(decode_unicode=True):
-        if line:
-            row = json.loads(line)
-            print(
-                f"{row['given_name']} {row['family_name']}: "
-                f"{row['condition_name']} ({row['onset_date']})"
-            )
-
-
-if __name__ == "__main__":
-    main()
+response = requests.get(
+    "https://example.org/fhir/$sql-run",
+    params={
+        "subjectReference": "ViewDefinition/demographics",
+        "_format": "csv",
+    },
+    headers={"Accept": "text/csv"},
+)
+response.raise_for_status()
+print(response.text)
 ```

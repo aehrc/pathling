@@ -189,6 +189,8 @@ pathling translate codes.csv --code-column code \
   --system http://snomed.info/sct --concept-map '<uri>'
 ```
 
+In [local terminology mode](#local-terminology-mode), the forms accepted by `--value-set` and `--concept-map` - imported canonical URLs, the SNOMED CT implicit forms, ECL, and VCL - are listed under [value set and concept map expressions](/docs/libraries/terminology/local.md#value-set-and-concept-map-expressions). Against a terminology server, they are whatever that server supports.
+
 The input format is set with `--from csv|parquet|delta`. When omitted, it is auto-detected from the dataset path: files ending in `.csv` or `.parquet` are read as CSV or Parquet; a directory containing a `_delta_log` entry is read as Delta; and any other directory containing at least one `.parquet` file is read as Parquet. CSV inputs are read with a header row by default and all columns as strings. Passing `--from` bypasses detection, which is useful for Delta tables or CSV files with an unconventional extension. An input whose format cannot be determined - an unrecognised suffix, or a directory with neither a `_delta_log` entry nor `.parquet` files - is reported as a usage error before any Spark session starts. This also lets you read the CLI's own Parquet or Delta output directory straight back into another terminology command.
 
 ```
@@ -231,16 +233,16 @@ Invalid combinations - supplying both or neither of `--other-code` / `--other-co
 
 ### Terminology import commands[​](#terminology-import-commands "Direct link to Terminology import commands")
 
-The `import-snomed` and `import-fhir-terminology` commands import terminology content into a local terminology store for use with [local terminology mode](/docs/libraries/terminology.md#local-terminology-mode). Both take a `SOURCE` path and a `STORAGE_PATH` for the store, report progress, and print a completion summary.
+The `import-snomed` and `import-fhir-terminology` commands import terminology content into a local terminology store for use with [local terminology mode](/docs/libraries/terminology/local.md). Both take a `SOURCE` path and a `STORAGE_PATH` for the store, report progress, and print a completion summary.
 
 ```
 pathling import-snomed /data/rf2.zip /data/tx-store
 pathling import-fhir-terminology /data/hl7.terminology.tgz /data/tx-store
 ```
 
-`import-snomed` accepts `--edition-uri` to override the detected SNOMED edition/version, and `--dense-id-order pre-order` to assign internal concept identifiers by a depth-first traversal of the is-a hierarchy, which makes the hierarchy index materially smaller at query time in exchange for identifiers that shift more between releases - see [reducing the memory the hierarchy takes at query time](/docs/libraries/terminology.md#reducing-the-memory-the-hierarchy-takes-at-query-time).
+`import-snomed` accepts `--edition-uri` to override the detected SNOMED edition/version, and `--dense-id-order pre-order` to assign internal concept identifiers by a depth-first traversal of the is-a hierarchy, which makes the hierarchy index materially smaller at query time in exchange for identifiers that shift more between releases - see [reducing the memory the hierarchy takes at query time](/docs/libraries/terminology/local.md#reducing-the-memory-the-hierarchy-takes-at-query-time).
 
-It also accepts `--default-dialect`, which names the dialect whose preferred synonyms become each concept's stored display: a tag such as `en-GB`, or a language reference set identifier. When the flag is omitted, the `tx-store.default-dialect` config key applies; when neither is set, the dialect is chosen from the release. A release holding several language reference sets that is not the International edition fails the import, listing the candidates, so that one can be named - see [dialects](/docs/libraries/terminology.md#dialects).
+It also accepts `--default-dialect`, which names the dialect whose preferred synonyms become each concept's stored display: a tag such as `en-GB`, or a language reference set identifier. When the flag is omitted, the `tx-store.default-dialect` config key applies; when neither is set, the dialect is chosen from the release. A release holding several language reference sets that is not the International edition fails the import, listing the candidates, so that one can be named - see [dialects](/docs/libraries/terminology/local.md#dialects).
 
 ```
 pathling import-snomed --default-dialect en-GB /data/rf2.zip /data/tx-store
@@ -248,7 +250,7 @@ pathling import-snomed --default-dialect en-GB /data/rf2.zip /data/tx-store
 
 `import-fhir-terminology` accepts a JSON file, a directory of JSON files, or a FHIR NPM package (`.tgz`), and imports CodeSystems of any size with bounded memory (for example, the multi-gigabyte OMOP vocabulary CodeSystem).
 
-An RF2 source given to `import-snomed` must be [self-contained](/docs/libraries/terminology.md#rf2-sources-must-be-self-contained): rows referencing concepts the source does not itself ship are dropped, which is the ordinary shape of a derived or extension package supplied without the release it depends on. The import reports, for each file, how many of its active rows resolved, which is how a shortfall is detected. The same section gives a [recipe for combining a package with its dependency](/docs/libraries/terminology.md#combining-a-derived-package-with-its-dependency).
+An RF2 source given to `import-snomed` must be [self-contained](/docs/libraries/terminology/local.md#rf2-sources-must-be-self-contained): rows referencing concepts the source does not itself ship are dropped, which is the ordinary shape of a derived or extension package supplied without the release it depends on. The import reports, for each file, how many of its active rows resolved, which is how a shortfall is detected. The same section gives a [recipe for combining a package with its dependency](/docs/libraries/terminology/local.md#combining-a-derived-package-with-its-dependency).
 
 Large imports run for many minutes. With `--verbose`, the command streams a running count of parsed concepts and stage-transition messages so progress is visible; without it, the startup spinner covers the wait. If an import fails partway through writing a CodeSystem, it reports that the store may hold a partial version and advises re-running; because content is keyed by system version, re-running with a corrected source repairs the store.
 
@@ -284,7 +286,7 @@ default-dialect = "en-AU"                    # optional, used by import-snomed
 en-NZ = "271000210107"
 ```
 
-The `[tx-store.dialect-aliases]` table registers additional dialect tags, mapping a language tag to the identifier of the SNOMED CT language reference set that serves it. An entry for a tag that is already recognised replaces the built-in mapping for it. A value that is not a table of strings is reported and ignored rather than being fatal, since an unrecognised tag simply expresses no preference. See [dialects](/docs/libraries/terminology.md#dialects).
+The `[tx-store.dialect-aliases]` table registers additional dialect tags, mapping a language tag to the identifier of the SNOMED CT language reference set that serves it. An entry for a tag that is already recognised replaces the built-in mapping for it. A value that is not a table of strings is reported and ignored rather than being fatal, since an unrecognised tag simply expresses no preference. See [dialects](/docs/libraries/terminology/local.md#dialects).
 
 The presence of a store selects local mode. When a store is configured, the store wins over any explicitly set `--tx-server` or terminology authentication: each is ignored and a warning is printed. The built-in default server URL never triggers this warning. A runtime failure in local mode names the store path and suggests the import commands rather than a terminology server URL.
 

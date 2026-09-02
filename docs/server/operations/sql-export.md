@@ -1,132 +1,122 @@
-# Export SQL query
+# Export
 
-This operation is the asynchronous counterpart to the [run SQL query](/docs/server/operations/sql-run.md) operation. It runs one or more SQL queries against materialised [ViewDefinition](https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition.html) tables and exports the results to downloadable files, following the [SQL on FHIR specification](http://sql-on-fhir.org/OperationDefinition/$sqlquery-export) and the [FHIR Asynchronous Request Pattern](https://hl7.org/fhir/R4/async.html).
+The `$sql-export` operation is the asynchronous counterpart to [`$sql-run`](/docs/server/operations/sql-run.md). It exports one or more *subjects* - in any mixture of the three kinds - to downloadable files, following the [FHIR Asynchronous Request Pattern](https://hl7.org/fhir/R4/async.html).
 
-Use this operation for result sets that are too large or too slow to retrieve synchronously with [run SQL query](/docs/server/operations/sql-run.md). Each query produces one downloadable output.
+One job carries every subject, which is what makes the outputs comparable: every subject in a job is computed against a single snapshot of the data, so a write that lands while the job runs cannot leave two outputs disagreeing with one another.
 
-## Endpoints[​](#endpoints "Direct link to Endpoints")
-
-The operation is invocable at the system, type, and instance levels:
+## Endpoint[​](#endpoint "Direct link to Endpoint")
 
 ```
-POST [base]/$sqlquery-export
-POST [base]/Library/$sqlquery-export
-POST [base]/Library/[id]/$sqlquery-export
+POST [base]/$sql-export
+Prefer: respond-async
 ```
 
-At the instance level the bound `Library` is the single query source; the `query` parameter does not apply, and per-query parameter binding is not offered at that level.
-
-All invocations require the `Prefer: respond-async` header.
+The operation is system level only. `GET` is rejected with a `400`, because a job's subjects and supporting artefacts cannot be expressed in a query string. The `Prefer: respond-async` header is required; without it the request is rejected rather than answered synchronously.
 
 ## Parameters[​](#parameters "Direct link to Parameters")
 
-| Name                   | Cardinality | Type       | Description                                                                                                |
-| ---------------------- | ----------- | ---------- | ---------------------------------------------------------------------------------------------------------- |
-| `query`                | 1..\*       | (parts)    | A repeating parameter (system and type levels only); each repetition is one query and produces one output. |
-| `query.name`           | 0..1        | string     | Optional output name. Highest precedence in the output-name derivation.                                    |
-| `query.queryReference` | 0..1        | Reference  | A reference to a stored SQLQuery `Library`. Mutually exclusive with `query.queryResource`.                 |
-| `query.queryResource`  | 0..1        | Resource   | An inline SQLQuery `Library`. Mutually exclusive with `query.queryReference`.                              |
-| `query.parameters`     | 0..1        | Parameters | Per-query runtime parameter bindings, bound by name to the Library's declared parameters.                  |
-| `view`                 | 0..\*       | (parts)    | A repeating parameter supplying ViewDefinition table sources at request time.                              |
-| `view.name`            | 0..1        | string     | Optional friendly label. Not used for matching or as an output name.                                       |
-| `view.viewReference`   | 0..1        | Reference  | A reference to a stored ViewDefinition. Mutually exclusive with `view.viewResource`.                       |
-| `view.viewResource`    | 0..1        | Resource   | An inline ViewDefinition. Mutually exclusive with `view.viewReference`.                                    |
-| `clientTrackingId`     | 0..1        | string     | Client-provided tracking identifier; echoed in the acknowledgement and the completion manifest.            |
-| `_format`              | 0..1        | code       | Output format: `ndjson` (default), `csv`, or `parquet`. An unsupported value returns `400`.                |
-| `header`               | 0..1        | boolean    | Include a header row in CSV output. Defaults to `true`. Has no effect on NDJSON or Parquet.                |
-| `patient`              | 0..\*       | Reference  | Filter to resources for the specified patient(s).                                                          |
-| `group`                | 0..\*       | Reference  | Filter to resources for patients in the specified Group(s).                                                |
-| `_since`               | 0..1        | instant    | Only include resources where `meta.lastUpdated` is at or after this time.                                  |
+| Name                       | Cardinality | Type       | Description                                                                                        |
+| -------------------------- | ----------- | ---------- | -------------------------------------------------------------------------------------------------- |
+| `subject`                  | 1..\*       | (parts)    | One repetition per artefact to export, in any mixture of kinds. Each produces exactly one output.  |
+| `subject.name`             | 0..1        | string     | The output name. Falls back to the artefact's own `name`, then to a generated one. Must be unique. |
+| `subject.subjectCanonical` | 0..1        | canonical  | The subject's canonical URL, honouring a `\|version` pin.                                          |
+| `subject.subjectReference` | 0..1        | Reference  | A relative reference naming its type: `ViewDefinition/[id]` or `Library/[id]`.                     |
+| `subject.subjectResource`  | 0..1        | Resource   | An inline ViewDefinition, SQLQuery or SQLView.                                                     |
+| `subject.parameters`       | 0..1        | Parameters | Runtime bindings, for a SQL subject only. Every declared parameter must be bound.                  |
+| `context`                  | 0..\*       | Resource   | Job-wide inline supporting artefacts, matched by canonical URL. These produce no output.           |
+| `clientTrackingId`         | 0..1        | string     | Echoed in the completion manifest.                                                                 |
+| `_format`                  | 0..1        | code       | `ndjson` (default), `csv` or `parquet`.                                                            |
+| `header`                   | 0..1        | boolean    | Include the header row in CSV output. Defaults to `true`.                                          |
+| `patient`                  | 0..\*       | Reference  | Applies to every subject in the job.                                                               |
+| `group`                    | 0..\*       | Reference  | Applies to every subject in the job.                                                               |
+| `_since`                   | 0..1        | instant    | Applies to every subject in the job.                                                               |
+| `source`                   | 0..1        | string     | **Not supported**: an external data source. Supplying it is rejected with a `400`.                 |
 
-### Query and table sources[​](#query-and-table-sources "Direct link to Query and table sources")
+Exactly one naming form must be supplied per `subject` repetition. `_limit` is not offered: an export writes the whole result set.
 
-Each `query` part must supply exactly one of `query.queryReference` or `query.queryResource`; supplying both, or neither, returns `400 Bad Request`. A `query.queryReference` that does not resolve to a stored Library returns `404 Not Found`.
+The `json` and `fhir` formats are not available. `json` is a format this server has not implemented for export, and is refused as `not-supported`; `fhir` is meaningless for a bulk file set, and is refused as `invalid`.
 
-A SQLQuery `Library` declares its table sources as `relatedArtifact` entries, each labelling a ViewDefinition or SQLView the SQL references by its canonical URL. The optional `view` parameter supplies those ViewDefinitions at request time, matched to the `relatedArtifact` entries by canonical URL; a supplied view is therefore preferred over storage when its `url` matches, and a supplied view that carries no `url` is rejected with `400 Bad Request` because it could never satisfy a canonical reference. A view the SQL references but no `view` part supplies is read from server storage, exactly as the synchronous operation does. Each `view` part must supply exactly one of `view.viewReference` or `view.viewResource`; supplying both, or neither, returns `400 Bad Request`. A supplied ViewDefinition that is well-formed but semantically invalid returns `422 Unprocessable Entity`.
+## Job guarantees[​](#job-guarantees "Direct link to Job guarantees")
 
-A `relatedArtifact` dependency may reference a SQLView as well as a ViewDefinition, and a SQLView may itself depend on further ViewDefinitions and SQLViews. A SQLView may also be the top-level resource of a `query` (or the bound Library at the instance level), running as a parameter-less query. The dependency-graph resolution, reference disambiguation, cycle and depth limits, and metadata-resource authorisation are identical to the synchronous operation; see [Composing SQLViews](/docs/server/operations/sql-run.md#composing-sqlviews). These structural rejections are returned synchronously at kick-off.
+* **One snapshot.** Every subject reads the Delta table versions pinned when the job began, so concurrent writes are invisible to it.
+* **One resolution per canonical URL.** Dependency resolution is memoised across the job, so an artefact several subjects share is resolved once.
+* **One output per subject.** The manifest carries exactly one `output` per `subject`, correlated by `name`. There is no ordering guarantee.
+* **Validated at kick-off.** Every subject is resolved, named and prepared before the job starts, and every problem in the request is reported in one `OperationOutcome`. A job that starts is never rejected later at its status URL.
+* **All or nothing.** A subject that fails fails the whole job, and its partial files are removed rather than offered for download.
 
-The `source` parameter (an external data source) is not supported by this server; supplying it returns `400 Bad Request`. All of these rejections are returned synchronously at kick-off.
+## Asynchronous flow[​](#asynchronous-flow "Direct link to Asynchronous flow")
 
-## Asynchronous processing[​](#asynchronous-processing "Direct link to Asynchronous processing")
+Kick-off returns `202 Accepted` with a `Content-Location` status URL. Polling that URL returns `202` with progress until the job finishes, then `303 See Other` pointing at the result URL. The result URL returns the completion manifest, or the failure `OperationOutcome` if the job failed. `DELETE` on the status URL cancels the job; subsequent polls return `404` and partial files are cleaned up. Result and download URLs remain valid for at least 24 hours.
 
-<!-- -->
-
-### Kick-off request[​](#kick-off-request "Direct link to Kick-off request")
+## Example[​](#example "Direct link to Example")
 
 ```
-POST [base]/Library/$sqlquery-export HTTP/1.1
+POST [base]/$sql-export
 Content-Type: application/fhir+json
-Accept: application/fhir+json
 Prefer: respond-async
 
 {
-    "resourceType": "Parameters",
-    "parameter": [
+  "resourceType": "Parameters",
+  "parameter": [
+    {
+      "name": "subject",
+      "part": [
+        { "name": "name", "valueString": "demographics" },
         {
-            "name": "query",
-            "part": [
-                {"name": "name", "valueString": "people"},
-                {
-                    "name": "queryReference",
-                    "valueReference": {"reference": "Library/patient-bp-query"}
-                }
-            ]
+          "name": "subjectCanonical",
+          "valueCanonical": "https://example.org/ViewDefinition/demographics"
         }
-    ]
-}
-```
-
-### Kick-off response[​](#kick-off-response "Direct link to Kick-off response")
-
-The `202 Accepted` response carries a `Parameters` acknowledgement and a `Content-Location` header pointing at the status URL:
-
-```
-HTTP/1.1 202 Accepted
-Content-Location: [base]/$job?id=[job-id]
-
-{
-    "resourceType": "Parameters",
-    "parameter": [
-        {"name": "status", "valueCode": "accepted"},
-        {"name": "exportId", "valueString": "[job-id]"}
-    ]
-}
-```
-
-### Polling[​](#polling "Direct link to Polling")
-
-Poll the URL from `Content-Location`:
-
-* `202 Accepted` — Export still in progress. Check the `X-Progress` header.
-* `303 See Other` — Export complete; follow the `Location` header to the result URL, then `GET` it for the manifest.
-* `404 Not Found` — The export was cancelled (via `DELETE` on the status URL) or is unknown.
-
-## Response manifest[​](#response-manifest "Direct link to Response manifest")
-
-The completion manifest is a FHIR `Parameters` resource following the SQL on FHIR shape:
-
-```
-{
-    "resourceType": "Parameters",
-    "parameter": [
-        { "name": "exportId", "valueString": "abc123" },
-        { "name": "status", "valueCode": "completed" },
-        { "name": "clientTrackingId", "valueString": "my-tracking-id" },
-        { "name": "_format", "valueCode": "ndjson" },
+      ]
+    },
+    {
+      "name": "subject",
+      "part": [
+        { "name": "name", "valueString": "smiths" },
         {
-            "name": "exportStartTime",
-            "valueInstant": "2026-06-21T01:00:00.000Z"
+          "name": "subjectReference",
+          "valueReference": { "reference": "Library/patients-by-family" }
         },
-        { "name": "exportEndTime", "valueInstant": "2026-06-21T01:00:12.000Z" },
-        { "name": "exportDuration", "valueInteger": 12 },
+        {
+          "name": "parameters",
+          "resource": {
+            "resourceType": "Parameters",
+            "parameter": [{ "name": "family", "valueString": "Smith" }]
+          }
+        }
+      ]
+    },
+    { "name": "_format", "valueCode": "csv" },
+    { "name": "patient", "valueReference": { "reference": "Patient/p1" } }
+  ]
+}
+```
+
+The completion manifest names one output per subject:
+
+```
+{
+    "resourceType": "Parameters",
+    "parameter": [
+        { "name": "exportId", "valueString": "..." },
+        { "name": "status", "valueCode": "completed" },
+        { "name": "_format", "valueCode": "csv" },
         {
             "name": "output",
             "part": [
-                { "name": "name", "valueString": "people" },
+                { "name": "name", "valueString": "demographics" },
                 {
                     "name": "location",
-                    "valueUri": "https://pathling.example.com/fhir/$result?job=abc123&file=people.00000.ndjson"
+                    "valueUri": "[base]/$result?job=...&file=demographics.00000.csv"
+                }
+            ]
+        },
+        {
+            "name": "output",
+            "part": [
+                { "name": "name", "valueString": "smiths" },
+                {
+                    "name": "location",
+                    "valueUri": "[base]/$result?job=...&file=smiths.00000.csv"
                 }
             ]
         }
@@ -134,39 +124,71 @@ The completion manifest is a FHIR `Parameters` resource following the SQL on FHI
 }
 ```
 
-There is one `output` per query, each with a `name` part and one or more `location` download URLs (a query partitioned into several files repeats the `location` part once per file). The manifest does not include the optional `cancelUrl` or `estimatedTimeRemaining` parameters.
+A subject whose result spans several Spark partitions repeats `location` once per file, all under the one `name`.
 
-## Output formats[​](#output-formats "Direct link to Output formats")
+## Status codes[​](#status-codes "Direct link to Status codes")
 
-| Format  | `_format` value | Content type                     | Description                                                    |
-| ------- | --------------- | -------------------------------- | -------------------------------------------------------------- |
-| NDJSON  | `ndjson`        | `application/x-ndjson`           | Newline-delimited JSON. Default format.                        |
-| CSV     | `csv`           | `text/csv`                       | Comma-separated values. Use `header=false` to exclude headers. |
-| Parquet | `parquet`       | `application/vnd.apache.parquet` | Apache Parquet columnar format. Efficient for large datasets.  |
+| Status                      | Condition                                                                                                     |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `202 Accepted`              | The job was accepted; poll the `Content-Location` URL.                                                        |
+| `400 Bad Request`           | A missing `Prefer` header or a `GET`; no `subject`; a malformed subject; colliding names; `_limit`; `source`. |
+| `404 Not Found`             | A subject's canonical or reference resolves to nothing; the status URL of a cancelled job.                    |
+| `422 Unprocessable Entity`  | A subject is of no admitted kind, or is conformant but cannot be processed.                                   |
+| `500 Internal Server Error` | An unexpected fault, or - on the result URL - the job's own failure outcome.                                  |
 
-## Multiple queries[​](#multiple-queries "Direct link to Multiple queries")
+A subject whose `parameters` part leaves a parameter its Library declares unbound is refused at kick-off with a `400`, before any job is created: the fault is decidable from the request alone, so there is no status URL to poll and nothing to clean up. Each unbound declaration is its own `invalid` issue naming `parameters`, as on [`$sql-run`](/docs/server/operations/sql-run.md), and with several subjects those issues join the rest of the kick-off issues in the one outcome.
 
-Include several `query` parameters to export several result sets in one operation. Each produces one named output. The `output.name` is derived as the `query.name` when supplied, otherwise the Library's `name` element, otherwise a generated unique name. If any query fails, the whole export fails (all or nothing): no manifest is produced and the result URL returns the error status with an OperationOutcome.
+A subject whose SQL only Spark's analyser can fault - an unresolved column, an unknown function, a missing `GROUP BY`, an ambiguous reference - fails the job rather than the kick-off, since analysis needs the dependency graph materialised. Its failure outcome is a `422` at the result URL, and its diagnostics name the failing subject and carry the analyser's own message. As with `$sql-run`, that message describes the query as rewritten for execution, so a reported position can differ from the position in the submitted text.
 
-## Filtering[​](#filtering "Direct link to Filtering")
+## Conformance[​](#conformance "Direct link to Conformance")
 
-The `patient`, `group`, and `_since` parameters scope the exported rows in the same way as the [export view](/docs/server/operations/view-export.md) operation.
+The operation declares the spec canonical `http://hl7.org/fhir/uv/sql-on-fhir/OperationDefinition/SQLExport` in the server [CapabilityStatement](https://hl7.org/fhir/R4/capabilitystatement.html), whose `documentation` states the supported formats and the parameters this server declines. `cancelUrl` and `estimatedTimeRemaining` are omitted from the manifest; both are optional upstream.
 
-## Cancellation and lifetime[​](#cancellation-and-lifetime "Direct link to Cancellation and lifetime")
+## Configuration and authorisation[​](#configuration-and-authorisation "Direct link to Configuration and authorisation")
 
-Send a `DELETE` to the status URL to cancel an in-progress export; subsequent polls of that URL return `404 Not Found`. The result and download URLs remain valid for at least 24 hours after completion and support repeat retrieval.
+The operation is enabled by `pathling.operations.sqlExportEnabled` (default `true`) and guarded by the `pathling:sql-export` authority. The same per-projected-resource and stored-artefact read authorities apply as for [`$sql-run`](/docs/server/operations/sql-run.md). Jobs are owned by the token subject that started them; see [authorization](/docs/server/authorization.md).
 
-## Comparison with run SQL query[​](#comparison-with-run-sql-query "Direct link to Comparison with run SQL query")
+## Python client[​](#python-client "Direct link to Python client")
 
-| Aspect             | Export SQL query                   | Run SQL query                              |
-| ------------------ | ---------------------------------- | ------------------------------------------ |
-| Processing         | Asynchronous with polling          | Synchronous                                |
-| Output             | Files (download via manifest URLs) | Streamed response                          |
-| Multiple queries   | Yes                                | No                                         |
-| Request-time views | Yes (via the `view` parameter)     | No                                         |
-| Output formats     | `ndjson`, `csv`, `parquet`         | `ndjson`, `csv`, `json`, `parquet`, `fhir` |
-| Use case           | Large result sets, batch export    | Small queries, interactive use             |
+```
+import time
 
-## Configuration[​](#configuration "Direct link to Configuration")
+import requests
 
-The operation is enabled by default and can be disabled with the `pathling.operations.sqlQueryExportEnabled` configuration setting (see [Configuration](/docs/server/configuration.md)).
+base = "https://example.org/fhir"
+kick_off = requests.post(
+    f"{base}/$sql-export",
+    headers={"Content-Type": "application/fhir+json", "Prefer": "respond-async"},
+    json={
+        "resourceType": "Parameters",
+        "parameter": [
+            {
+                "name": "subject",
+                "part": [
+                    {"name": "name", "valueString": "demographics"},
+                    {
+                        "name": "subjectReference",
+                        "valueReference": {"reference": "ViewDefinition/demographics"},
+                    },
+                ],
+            },
+            {"name": "_format", "valueCode": "parquet"},
+        ],
+    },
+)
+kick_off.raise_for_status()
+status_url = kick_off.headers["Content-Location"]
+
+while True:
+    poll = requests.get(status_url, allow_redirects=False)
+    if poll.status_code == 303:
+        manifest = requests.get(poll.headers["Location"]).json()
+        break
+    time.sleep(5)
+
+for parameter in manifest["parameter"]:
+    if parameter["name"] == "output":
+        for part in parameter["part"]:
+            if part["name"] == "location":
+                print(part["valueUri"])
+```

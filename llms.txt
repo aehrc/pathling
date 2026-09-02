@@ -15,6 +15,47 @@ Pathling is a set of tools that make it easier to use FHIR and clinical terminol
 
 - [Overview](/docs.md): Pathling is a set of tools that make it easier to use FHIR and clinical terminology within health data analytics.
 
+### server
+
+A FHIR R4 analytics server implementing SQL on FHIR and Bulk Data Access.
+
+- [Server](/docs/server.md): A FHIR R4 analytics server implementing SQL on FHIR and Bulk Data Access.
+- [Server](/docs/server/2.0.1.md): A FHIR R4 analytics server implementing SQL on FHIR and Bulk Data Access.
+- [Admin UI](/docs/server/2.0.1/admin-ui.md): The admin UI provides a web interface for managing Pathling Server.
+- [Authorization](/docs/server/2.0.1/authorization.md): Pathling can perform the role of a resource server within the OpenID Connect framework.
+- [Caching](/docs/server/2.0.1/caching.md): Pathling implements ETag-based cache validation, which enables clients to skip processing of queries when the underlying data has not changed.
+- [Configuration](/docs/server/2.0.1/configuration.md): Configuration options for the Pathling server.
+- [Kubernetes](/docs/server/2.0.1/deployment/kubernetes.md): Instructions for deploying Pathling server on Kubernetes using Helm.
+- [Synchronization](/docs/server/2.0.1/deployment/synchronization.md): Keep Pathling in sync with a source FHIR server using scheduled jobs and the $import-pnp operation.
+- [Getting started](/docs/server/2.0.1/getting-started.md): Quick start guide for running Pathling Server with Docker.
+- [Batch](/docs/server/2.0.1/operations/batch.md): The batch operation allows you to perform multiple create, update, and delete operations in a single request.
+- [Bulk submit](/docs/server/2.0.1/operations/bulk-submit.md): The bulk submit operation allows external systems to push FHIR data to the server using a staged submission workflow.
+- [Create, read, update, and delete](/docs/server/2.0.1/operations/crud.md): Pathling implements the create, read, update, and delete operations from the FHIR REST API.
+- [Export](/docs/server/2.0.1/operations/export.md): The export operation allows FHIR data to be exported from the server in bulk using the FHIR Bulk Data Access specification.
+- [Import](/docs/server/2.0.1/operations/import.md): The import operation allows FHIR data to be imported into the server from external sources such as S3, HDFS, or local filesystem.
+- [Import (ping and pull)](/docs/server/2.0.1/operations/import-pnp.md): The import-pnp operation allows bulk data to be imported via a ping and pull workflow, where the server fetches data from a remote FHIR bulk export endpoint.
+- [Search](/docs/server/2.0.1/operations/search.md): Pathling supports both standard FHIR search parameters and FHIRPath-based search for filtering resources.
+- [Run SQL query](/docs/server/2.0.1/operations/sql-run.md): The sqlquery-run operation executes a SQL query against materialised ViewDefinition tables and returns tabular results.
+- [Export view](/docs/server/2.0.1/operations/view-export.md): The view export operation executes ViewDefinitions against FHIR data and exports the results to files in NDJSON, CSV, or Parquet format.
+- [Run view](/docs/server/2.0.1/operations/view-run.md): The view run operation executes a ViewDefinition against FHIR data and returns tabular results in NDJSON or CSV format.
+- [Admin UI](/docs/server/admin-ui.md): The admin UI provides a web interface for managing Pathling Server.
+- [Authorization](/docs/server/authorization.md): Pathling can perform the role of a resource server within the OpenID Connect framework.
+- [Caching](/docs/server/caching.md): Pathling implements ETag-based cache validation, which enables clients to skip processing of queries when the underlying data has not changed.
+- [Configuration](/docs/server/configuration.md): Configuration options for the Pathling server.
+- [Kubernetes](/docs/server/deployment/kubernetes.md): Instructions for deploying Pathling server on Kubernetes using Helm.
+- [Synchronization](/docs/server/deployment/synchronization.md): Keep Pathling in sync with a source FHIR server using scheduled jobs and the $import-pnp operation.
+- [Getting started](/docs/server/getting-started.md): Quick start guide for running Pathling Server with Docker.
+- [Batch](/docs/server/operations/batch.md): The batch operation allows you to perform multiple create, update, and delete operations in a single request.
+- [Bulk submit](/docs/server/operations/bulk-submit.md): The bulk submit operation allows external systems to push FHIR data to the server using a staged submission workflow.
+- [Create, read, update, and delete](/docs/server/operations/crud.md): Pathling implements the create, read, update, and delete operations from the FHIR REST API.
+- [Export](/docs/server/operations/export.md): The export operation allows FHIR data to be exported from the server in bulk using the FHIR Bulk Data Access specification.
+- [Import](/docs/server/operations/import.md): The import operation allows FHIR data to be imported into the server from external sources such as S3, HDFS, or local filesystem.
+- [Import (ping and pull)](/docs/server/operations/import-pnp.md): The import-pnp operation allows bulk data to be imported via a ping and pull workflow, where the server fetches data from a remote FHIR bulk export endpoint.
+- [Jobs](/docs/server/operations/jobs.md): The jobs operation lists the asynchronous jobs held in the server's in-memory registry, so a client can monitor and cancel their work without retaining every kick-off response.
+- [Search](/docs/server/operations/search.md): Pathling supports both standard FHIR search parameters and FHIRPath-based search for filtering resources.
+- [Export](/docs/server/operations/sql-export.md): The sql-export operation asynchronously exports one or more ViewDefinition, SQLQuery or SQLView subjects to downloadable files.
+- [Run](/docs/server/operations/sql-run.md): The sql-run operation synchronously executes a ViewDefinition, SQLQuery or SQLView and returns the result.
+
 ### fhirpath
 
 Pathling implements FHIRPath functionality to aid in querying and constructing views over FHIR data.
@@ -43,32 +84,11 @@ Pathling provides a set of libraries that provide assistance with using FHIR and
 - [Spark configuration](/docs/libraries/installation/spark.md): Instructions for configuring Apache Spark to use the Pathling library.
 - [Windows installation](/docs/libraries/installation/windows.md): Instructions for installing the Pathling libraries on Windows.
 - [Data in and out](/docs/libraries/io.md): The Pathling library can read and write data in a variety of different formats.
+- [Cloud storage](/docs/libraries/io/cloud-storage.md): Configure the Pathling library to read and write FHIR data in Amazon S3, Azure Blob Storage, Azure Data Lake Storage and Google Cloud Storage.
 - [FHIR encoders](/docs/libraries/io/encoders.md): The Pathling library can be used to transform FHIR Bundles or NDJSON into Spark data sets.
 - [Parquet specification](/docs/libraries/io/schema.md): A scheme for representing FHIR resources within a Parquet schema.
 - [Running SQL on FHIR views](/docs/libraries/running-queries.md): The Pathling library can be used to query datasets of FHIR resources using SQL on FHIR views. This is useful for creating tabular views of FHIR data for use in analytic tools.
 - [Search](/docs/libraries/search.md): The Pathling library provides functions for converting FHIR search expressions into Spark Columns for filtering resources.
 - [Terminology functions](/docs/libraries/terminology.md): The Pathling library provides a set of functions for querying a FHIR terminology server from within your queries and transformations.
-
-### server
-
-A FHIR R4 analytics server implementing SQL on FHIR and Bulk Data Access.
-
-- [Server](/docs/server.md): A FHIR R4 analytics server implementing SQL on FHIR and Bulk Data Access.
-- [Admin UI](/docs/server/admin-ui.md): The admin UI provides a web interface for managing Pathling Server.
-- [Authorization](/docs/server/authorization.md): Pathling can perform the role of a resource server within the OpenID Connect framework.
-- [Caching](/docs/server/caching.md): Pathling implements ETag-based cache validation, which enables clients to skip processing of queries when the underlying data has not changed.
-- [Configuration](/docs/server/configuration.md): Configuration options for the Pathling server.
-- [Kubernetes](/docs/server/deployment/kubernetes.md): Instructions for deploying Pathling server on Kubernetes using Helm.
-- [Synchronization](/docs/server/deployment/synchronization.md): Keep Pathling in sync with a source FHIR server using scheduled jobs and the $import-pnp operation.
-- [Getting started](/docs/server/getting-started.md): Quick start guide for running Pathling Server with Docker.
-- [Batch](/docs/server/operations/batch.md): The batch operation allows you to perform multiple create, update, and delete operations in a single request.
-- [Bulk submit](/docs/server/operations/bulk-submit.md): The bulk submit operation allows external systems to push FHIR data to the server using a staged submission workflow.
-- [Create, read, update, and delete](/docs/server/operations/crud.md): Pathling implements the create, read, update, and delete operations from the FHIR REST API.
-- [Export](/docs/server/operations/export.md): The export operation allows FHIR data to be exported from the server in bulk using the FHIR Bulk Data Access specification.
-- [Import](/docs/server/operations/import.md): The import operation allows FHIR data to be imported into the server from external sources such as S3, HDFS, or local filesystem.
-- [Import (ping and pull)](/docs/server/operations/import-pnp.md): The import-pnp operation allows bulk data to be imported via a ping and pull workflow, where the server fetches data from a remote FHIR bulk export endpoint.
-- [Search](/docs/server/operations/search.md): Pathling supports both standard FHIR search parameters and FHIRPath-based search for filtering resources.
-- [Export SQL query](/docs/server/operations/sql-export.md): The sqlquery-export operation asynchronously runs one or more SQL queries against materialised ViewDefinition tables and exports the results to downloadable files in NDJSON, CSV, or Parquet format.
-- [Run SQL query](/docs/server/operations/sql-run.md): The sqlquery-run operation executes a SQL query against materialised ViewDefinition tables and returns tabular results.
-- [Export view](/docs/server/operations/view-export.md): The view export operation executes ViewDefinitions against FHIR data and exports the results to files in NDJSON, CSV, or Parquet format.
-- [Run view](/docs/server/operations/view-run.md): The view run operation executes a ViewDefinition against FHIR data and returns tabular results in NDJSON or CSV format.
+- [Local terminology mode](/docs/libraries/terminology/local.md): Pathling can evaluate the terminology functions against a local terminology store built from SNOMED CT and FHIR terminology content, with no network dependency.
+- [Terminology server support](/docs/libraries/terminology/server.md): How to point the Pathling library at a FHIR terminology server, tune the HTTP client and cache, and authenticate to a protected server.

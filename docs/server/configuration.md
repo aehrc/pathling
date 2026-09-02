@@ -37,6 +37,10 @@ These settings configure the [ping and pull import](/docs/server/operations/impo
 * `pathling.import.pnp.downloadLocation` - (default: `/usr/share/staging/pnp`) The directory where files will be downloaded during ping and pull import operations. This location should have sufficient space for large FHIR exports.
 * `pathling.import.pnp.fileExtension` - (default: `.ndjson`) The file extension to filter for when processing downloaded files.
 * `pathling.import.pnp.allowInternalUrls` - (default: `false`) When set to `false`, the `$import-pnp` operation will reject `exportUrl` values that resolve to internal or private IP addresses (loopback, link-local, site-local, and unique-local). Set to `true` only if your deployment legitimately uses internal FHIR bulk export endpoints.
+* `pathling.import.pnp.maxConcurrentDownloads` - (default: `4`) The number of files to download concurrently. Each download is written to storage as it is received, so a value higher than the storage can keep up with leaves connections idle while they wait their turn to write.
+* `pathling.import.pnp.downloadSocketTimeout` - (default: `600000`) The number of milliseconds a download may wait for more data before the connection is treated as failed. A download that is blocked writing what it has already received is not reading from its connection, so this needs to accommodate the slowest write the storage will perform, not just network latency.
+
+If imports of large resource types fail with a download error while smaller ones succeed, lower `maxConcurrentDownloads` or raise `downloadSocketTimeout`: the symptom of exceeding what the storage can sustain is a connection closed part-way through a file.
 
 **Security note**: When PNP credentials are configured, `pathling.auth.enabled` must also be set to `true`. If authentication is disabled but PNP credentials are present, the server logs a warning at startup and rejects all `$import-pnp` requests.
 
@@ -70,33 +74,39 @@ These settings enable or disable individual server operations. All operations ar
 * `pathling.operations.groupExportEnabled` - (default: `true`) Enables the Group-level [$export](/docs/server/operations/export.md) operation.
 * `pathling.operations.importEnabled` - (default: `true`) Enables the [$import](/docs/server/operations/import.md) operation.
 * `pathling.operations.importPnpEnabled` - (default: `true`) Enables the [$import-pnp](/docs/server/operations/import-pnp.md) operation.
-* `pathling.operations.viewDefinitionRunEnabled` - (default: `true`) Enables the system-level [$viewdefinition-run](/docs/server/operations/view-run.md) operation.
-* `pathling.operations.viewDefinitionInstanceRunEnabled` - (default: `true`) Enables the instance-level [$run](/docs/server/operations/view-run.md) operation on ViewDefinition resources.
-* `pathling.operations.viewDefinitionExportEnabled` - (default: `true`) Enables the [$viewdefinition-export](/docs/server/operations/view-export.md) operation.
-* `pathling.operations.sqlQueryExportEnabled` - (default: `true`) Enables the system, type, and instance-level [$sqlquery-export](/docs/server/operations/sql-export.md) operation.
+* `pathling.operations.sqlRunEnabled` - (default: `true`) Enables the [$sql-run](/docs/server/operations/sql-run.md) operation.
+* `pathling.operations.sqlExportEnabled` - (default: `true`) Enables the [$sql-export](/docs/server/operations/sql-export.md) operation.
 * `pathling.operations.bulkSubmitEnabled` - (default: `true`) Enables the [$bulk-submit](/docs/server/operations/bulk-submit.md) operation.
 
 ### SQL query[​](#sql-query "Direct link to SQL query")
 
-These settings apply resource limits to the `$sqlquery-run` operation. Both limits are always applied; they cannot be disabled per request.
+This setting bounds the resolution of a query's dependency graph, for both `$sql-run` and `$sql-export`.
 
-* `pathling.sqlQuery.maxRows` - (default: `1000000`) The maximum number of rows that a single `$sqlquery-run` response may stream. Always applied; clamps the caller-supplied `_limit` when that value is larger.
-* `pathling.sqlQuery.timeoutSeconds` - (default: `60`) The maximum wall-clock time in seconds that a single query may run before its Spark job group is cancelled. A timeout that fires before the response stream begins produces a 4xx response; a timeout that fires mid-stream aborts the connection and is recorded as a server warning. Long-running queries should use the asynchronous path.
 * `pathling.sqlQuery.maxDependencyDepth` - (default: `10`) The maximum nesting depth of the SQLView dependency graph resolved for a single query. The top-level query's direct dependencies sit at depth one; each further level of nested SQLView dependency increments the depth. A graph nested deeper is rejected with a `400` before any Spark work, guarding against accidental fan-out and runaway resolution.
 
 ### Encoding[​](#encoding "Direct link to Encoding")
 
 * `pathling.encoding.maxNestingLevel` - (default: `3`) Controls the maximum depth of nested element data that is encoded upon import. This affects certain elements within FHIR resources that contain recursive references, e.g. [QuestionnaireResponse.item](https://hl7.org/fhir/R4/questionnaireresponse.html).
+
 * `pathling.encoding.enableExtensions` - (default: `true`) Enables support for FHIR extensions.
+
 * `pathling.encoding.openTypes` - (default: `boolean`, `code`, `date`, `dateTime`, `decimal`, `integer`, `string`, `Coding`, `CodeableConcept`, `Address`, `Identifier`, `Reference`) The list of types that are encoded within open types, such as extensions. This default list was taken from the data types that are common to extensions found in widely-used IGs, such as the US and AU base profiles. In general, you will get the best query performance by encoding your data with the shortest possible list.
+
+  Shortening this list against a warehouse that already holds data, or pointing a server at a warehouse written by a deployment with a longer list, leaves stored columns that the running encoder no longer emits. Those columns are preserved: they are not dropped from the table, and writes to the affected resource types succeed with the columns written as null on the new rows. Reads return what the running encoder can represent, so the values in those columns are not visible until the original list is restored. Each affected table is named in the log at startup, along with the field paths involved.
 
 ### Storage[​](#storage "Direct link to Storage")
 
 * `pathling.storage.warehouseUrl` - (default: `file:///usr/share/warehouse`) The base URL at which Pathling will look for data files, and where it will save data received within [import](/docs/server/operations/import.md) requests. Can be an [Amazon S3](https://aws.amazon.com/s3/) (`s3a://`), [HDFS](https://hadoop.apache.org/docs/r1.2.1/hdfs_design.html) (`hdfs://`) or filesystem (`file://`) URL.
+
 * `pathling.storage.databaseName` - (default: `default`) The subdirectory within the warehouse path used to read and write data.
+
 * `pathling.storage.cacheDatasets` - (default: `true`) This controls whether the built-in caching within Spark is used for resource datasets. It may be useful to turn this off for large datasets in memory-constrained environments.
+
 * `pathling.storage.compactionThreshold` - (default: `10`) When a table is updated, the number of partitions is checked. If the number exceeds this threshold, the table will be repartitioned back to the default number of partitions. This prevents large numbers of small updates causing poor subsequent query performance.
+
 * `pathling.storage.schemaAutoMerge` - (default: `false`) When enabled, the schema of an existing Delta table is automatically evolved to accommodate new fields produced by the FHIR encoder. This is useful when upgrading to a Pathling version whose encoder emits additional columns or nested struct fields that are not yet present in tables written by an earlier version. Evolution happens in two places: at startup, every table in the warehouse whose schema is missing encoder fields is migrated before it is served; and on update, a table whose schema is behind the incoming data is evolved before the merge, with the in-memory dataset refreshed so subsequent reads see the new schema without a restart. Migration is additive only - no existing field or row is modified, and existing rows present newly added fields as absent values. When no table has drifted, startup adds only the cost of comparing schemas. When the setting is disabled and a drifted table is detected, the server logs a warning naming the table, the missing fields, and the remedy, and requests against that resource type return an error that describes the condition rather than a generic failure. In multi-replica deployments, a runtime schema evolution is only visible to the replica that performed it; other replicas require a restart, although redeploys (which replace all replicas and re-run startup migration) are self-correcting.
+
+  Where a stored table and the running encoders cannot be reconciled at all, the request fails with an error that describes the condition rather than a generic one. The message names the resource type, which direction the two schemas differ in, the field paths involved, and the remedy - enabling this setting where the table is behind the encoders, or restoring the encoding configuration the table was written with where it is ahead of them. It deliberately excludes the underlying schema definitions and warehouse paths, so the full detail remains in the server log alone.
 
 Pathling will automatically detect AWS authentication details within the environment and use them to access S3 buckets. It uses a chain of authentication methods, see [DefaultAWSCredentialsProviderChain](https://docs.aws.amazon.com/AWSJavaSDK/latest/javadoc/com/amazonaws/auth/DefaultAWSCredentialsProviderChain.html) for details.
 
@@ -130,6 +140,21 @@ fs:
                 magic:
                     enabled: true
 ```
+
+When the warehouse is an S3 object store, the S3A magic committer avoids the rename-based commit that is unsafe on some stores by completing writes through S3 multipart uploads instead. Setting `fs.s3a.committer.name=magic` alone is not enough for Spark's Parquet writes to use it; the commit protocol classes must also be selected:
+
+```
+spark:
+    sql:
+        sources:
+            commitProtocolClass: org.apache.spark.internal.io.cloud.PathOutputCommitProtocol
+        parquet:
+            output:
+                committer:
+                    class: org.apache.spark.internal.io.cloud.BindingParquetOutputCommitter
+```
+
+These committer bindings ship with the server image, so no extra dependency is required to enable this configuration.
 
 ### Query[​](#query "Direct link to Query")
 
@@ -208,6 +233,7 @@ spark:
 * `pathling.auth.capabilities` - (default: `launch-standalone`) A list of [SMART on FHIR capabilities](https://hl7.org/fhir/smart-app-launch/conformance.html) to advertise in the SMART configuration document at `/.well-known/smart-configuration`.
 * `pathling.auth.grantTypesSupported` - (default: `authorization_code`) A list of OAuth 2.0 grant types supported at the token endpoint, e.g. `authorization_code`, `client_credentials`, `refresh_token`. See [SMART App Launch Conformance](https://hl7.org/fhir/smart-app-launch/conformance.html) for more details.
 * `pathling.auth.codeChallengeMethodsSupported` - (default: `S256`) A list of PKCE code challenge methods supported. Must include `S256` and must not include `plain` as per the SMART specification.
+* `pathling.auth.tokenSigningAlgorithms` - (default: empty) A list of the [JWS signing algorithms](https://datatracker.ietf.org/doc/html/rfc7518#section-3.1) accepted within incoming bearer tokens. When empty, the accepted algorithms are derived from the keys published in the issuer's JWKS: a key's `alg` value is used when present, otherwise the algorithms implied by its key type. This derivation happens at token verification time, so key rotation at the identity provider takes effect without a restart. When one or more values are configured, only tokens whose header algorithm is in that list are accepted, regardless of what the JWKS publishes. Tokens are verified against a public JWKS, so only the asymmetric algorithm names `RS256`, `RS384`, `RS512`, `PS256`, `PS384`, `PS512`, `ES256`, `ES256K`, `ES384`, `ES512` and `EdDSA` are permitted; any other value fails validation at startup.
 
 ### Admin UI[​](#admin-ui "Direct link to Admin UI")
 
