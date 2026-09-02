@@ -201,13 +201,36 @@
           },
           "default": {}
         },
-        "trustedCertificates": {
-          "type": "array",
-          "description": "Additional CA certificates (PEM format) to be trusted by the server JVM, merged into a copy of the image's default truststore at pod startup.",
-          "items": {
-            "type": "string"
-          },
-          "default": []
+        "truststore": {
+          "type": "object",
+          "description": "A complete JVM trust store, mounted read-only from a Kubernetes Secret and used by the server JVM.",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Whether to mount the trust store into the pod"
+            },
+            "secretName": {
+              "type": "string",
+              "description": "Name of the Kubernetes Secret that holds the trust store"
+            },
+            "key": {
+              "type": "string",
+              "description": "Data key within the Secret that contains the trust store file"
+            },
+            "password": {
+              "type": "string",
+              "description": "Trust store password, passed as javax.net.ssl.trustStorePassword"
+            },
+            "type": {
+              "type": "string",
+              "enum": ["jks", "pkcs12"],
+              "description": "Trust store format, passed as javax.net.ssl.trustStoreType"
+            },
+            "mountPath": {
+              "type": "string",
+              "description": "Directory within the pod at which the trust store Secret is mounted"
+            }
+          }
         }
       }
     }
