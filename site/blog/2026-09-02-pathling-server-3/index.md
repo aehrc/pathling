@@ -136,6 +136,11 @@ rejects cycles, and refuses graphs nested deeper than
 Artefacts that are not stored on the server can be passed inline through the
 `context` parameter, so the same composition works for ad hoc exploration.
 
+The admin UI resolves the same chain. Selecting a stored query shows its SQL,
+the views it reads and the parameters it declares, before running it:
+
+![Running a stored SQL query in the admin UI](./sql-query.png)
+
 ## Export related tables as one consistent snapshot
 
 Analytical outputs rarely stand alone. A research extract might need a patient
@@ -203,6 +208,11 @@ Because a shared dependency such as `demographics` is resolved once per job
 rather than once per subject, exporting a family of related queries costs less
 than exporting them separately.
 
+In the admin UI, views and queries are added to an export set, each with the
+name its output will take, and the whole set is exported in one job:
+
+![Exporting a set of views and queries in the admin UI](./sql-export.png)
+
 Read the docs: [export](/docs/server/operations/sql-export).
 
 ## Monitor jobs across the server
@@ -247,6 +257,8 @@ own token subject; a job can likewise only be cancelled by the principal that
 created it. When authorisation is disabled, the list covers every job on the
 server. The admin UI has a corresponding jobs page, so an operator can see what
 is running and cancel a runaway query without touching the API.
+
+![The jobs page in the admin UI](./jobs.png)
 
 Read the docs: [jobs](/docs/server/operations/jobs).
 
