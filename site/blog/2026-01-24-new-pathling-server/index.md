@@ -104,7 +104,7 @@ columns using FHIRPath expressions:
 
 ### Running views interactively
 
-The [$viewdefinition-run](/docs/server/operations/view-run) operation executes a
+The [$viewdefinition-run](/docs/server/2.0.1/operations/view-run) operation executes a
 ViewDefinition and returns results synchronously. This is ideal for interactive
 exploration and testing:
 
@@ -148,7 +148,7 @@ You can also request CSV output by setting `Accept: text/csv`.
 ### Exporting views at scale
 
 For larger datasets,
-use [$viewdefinition-export](/docs/server/operations/view-export) to run
+use [$viewdefinition-export](/docs/server/2.0.1/operations/view-export) to run
 views asynchronously and export results to files. This operation supports
 multiple output formats:
 
