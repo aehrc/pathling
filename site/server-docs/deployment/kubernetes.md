@@ -222,3 +222,132 @@ pathling:
         spark.kubernetes.executor.request.memory: 4G
         spark.kubernetes.executor.limit.memory: 4G
 ```
+
+### Cluster with SeaweedFS object storage
+
+A cluster deployment writes to the warehouse from every executor pod at once,
+with many small Parquet and Delta log files created, renamed and deleted
+during each import or query. Some Kubernetes storage classes cope poorly with
+this access pattern, even when they support `ReadWriteMany`. Network file
+systems such as NFS and CIFS can be slow under this many concurrent metadata
+operations, and some provisioners do not support `ReadWriteMany` at all, which
+prevents executor pods on different nodes from mounting the warehouse.
+
+One way around this is to run [SeaweedFS](https://seaweedfs.com/) inside the
+cluster and point Pathling at its S3-compatible API. SeaweedFS holds its data
+on an ordinary `ReadWriteOnce` volume, so it can use whatever block storage
+class is available, and the driver and executor pods talk to it over HTTP
+rather than through a shared file system mount. The Pathling server image
+bundles the Hadoop S3A connector and the S3A "magic" committer, so no extra
+libraries are needed.
+
+Install the [SeaweedFS Helm chart](https://github.com/seaweedfs/seaweedfs/tree/master/k8s/charts/seaweedfs)
+in the same namespace as Pathling. The all-in-one deployment runs the master,
+volume, filer and S3 gateway in a single pod, which is sufficient for a
+single-tenant Pathling installation. This example creates a
+`pathling-warehouse` bucket and enables S3 authentication:
+
+```yaml
+global:
+    seaweedfs:
+        createClusterRole: false
+master:
+    enabled: false
+volume:
+    enabled: false
+filer:
+    enabled: false
+allInOne:
+    enabled: true
+    replicas: 1
+    updateStrategy:
+        type: Recreate
+    resources:
+        requests:
+            cpu: 2
+            memory: 6Gi
+        limits:
+            cpu: 8
+            memory: 24Gi
+    data:
+        type: persistentVolumeClaim
+        storageClass: my-block-storage-class
+        accessModes:
+            - ReadWriteOnce
+        size: 300Gi
+    s3:
+        enabled: true
+        enableAuth: true
+        createBuckets:
+            - name: pathling-warehouse
+s3:
+    enableAuth: true
+    credentials:
+        admin:
+            accessKey: <access key>
+            secretKey: <secret key>
+```
+
+```bash
+helm repo add seaweedfs https://seaweedfs.github.io/seaweedfs/helm
+helm install pathling-seaweedfs seaweedfs/seaweedfs -f seaweedfs-values.yaml
+```
+
+The chart exposes the S3 gateway as a service named
+`<release>-seaweedfs-all-in-one` on port 8333.
+
+Then configure Pathling to use the bucket as its warehouse. The warehouse
+volume and mounts from the [cluster](#cluster) example are no longer needed.
+The S3A settings are Spark configuration, so they are passed through
+`pathling.config` and are picked up by both the driver and the executors. The
+credentials go in `pathling.secretConfig` so that they are stored in a
+Kubernetes secret:
+
+```yaml
+pathling:
+    image: ghcr.io/aehrc/pathling:8
+    serviceAccount: spark-service-account
+    config:
+        pathling.storage.warehouseUrl: s3a://pathling-warehouse
+        spark.hadoop.fs.s3a.endpoint: http://pathling-seaweedfs-all-in-one:8333
+        spark.hadoop.fs.s3a.path.style.access: "true"
+        spark.hadoop.fs.s3a.connection.ssl.enabled: "false"
+        spark.hadoop.fs.s3a.committer.name: magic
+        spark.sql.sources.commitProtocolClass: org.apache.spark.internal.io.cloud.PathOutputCommitProtocol
+        spark.sql.parquet.output.committer.class: org.apache.spark.internal.io.cloud.BindingParquetOutputCommitter
+        spark.master: k8s://https://kubernetes.default.svc
+        spark.kubernetes.namespace: pathling
+        spark.kubernetes.executor.container.image: ghcr.io/aehrc/pathling:8
+        spark.executor.instances: 3
+        spark.executor.memory: 3G
+        spark.kubernetes.executor.request.cores: 2
+        spark.kubernetes.executor.limit.cores: 2
+    secretConfig:
+        spark.hadoop.fs.s3a.access.key: <access key>
+        spark.hadoop.fs.s3a.secret.key: <secret key>
+```
+
+The [magic committer](https://hadoop.apache.org/docs/stable/hadoop-aws/tools/hadoop-aws/committers.html)
+matters here. The default file output committer relies on renames to commit
+task output, and renames on an object store are copies followed by deletes,
+which are slow and not atomic. The magic committer writes each task's output
+as an S3 multipart upload and completes the upload at job commit, so there is
+no rename step. Incomplete uploads from failed tasks are left behind, so it is
+worth configuring SeaweedFS to clean them up periodically through the
+`master.config` value of the chart:
+
+```yaml
+master:
+    config: |-
+        [master.maintenance]
+        scripts = """
+          lock
+          s3.clean.uploads -timeAgo=24h
+          unlock
+        """
+        sleep_minutes = 60
+```
+
+Because the warehouse is now behind an S3 API, it can be populated and
+inspected with any S3 client, for example by port-forwarding the gateway
+service and using the AWS CLI with `--endpoint-url`.
