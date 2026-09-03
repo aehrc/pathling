@@ -5,7 +5,7 @@
 <meta name="generator" content="Docusaurus v3.9.2">
 <title data-rh="true">Export | Pathling</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:image" content="https://pathling.csiro.au/assets/images/social-preview.png"><meta data-rh="true" name="twitter:image" content="https://pathling.csiro.au/assets/images/social-preview.png"><meta data-rh="true" property="og:url" content="https://pathling.csiro.au/docs/server/operations/sql-export"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-server-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-server-current"><meta data-rh="true" property="og:title" content="Export | Pathling"><meta data-rh="true" name="description" content="The sql-export operation asynchronously exports one or more ViewDefinition, SQLQuery or SQLView subjects to downloadable files."><meta data-rh="true" property="og:description" content="The sql-export operation asynchronously exports one or more ViewDefinition, SQLQuery or SQLView subjects to downloadable files."><link data-rh="true" rel="icon" href="/favicon.ico"><link data-rh="true" rel="canonical" href="https://pathling.csiro.au/docs/server/operations/sql-export"><link data-rh="true" rel="alternate" href="https://pathling.csiro.au/docs/server/operations/sql-export" hreflang="en"><link data-rh="true" rel="alternate" href="https://pathling.csiro.au/docs/server/operations/sql-export" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Export","item":"https://pathling.csiro.au/docs/server/operations/sql-export"}]}</script><link rel="alternate" type="application/rss+xml" href="/blog/rss.xml" title="Pathling RSS Feed">
 <link rel="alternate" type="application/atom+xml" href="/blog/atom.xml" title="Pathling Atom Feed"><link rel="stylesheet" href="/assets/css/styles.ba5e946f.css">
-<script src="/assets/js/runtime~main.94f2ff70.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.c89ff3d5.js" defer="defer"></script>
 <script src="/assets/js/main.69549f77.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -42,10 +42,15 @@ the job began, so concurrent writes are invisible to it.</li>
 across the job, so an artefact several subjects share is resolved once.</li>
 <li class=""><strong>One output per subject.</strong> The manifest carries exactly one <code>output</code> per
 <code>subject</code>, correlated by <code>name</code>. There is no ordering guarantee.</li>
-<li class=""><strong>Validated at kick-off.</strong> Every subject is resolved, named and prepared
-before the job starts, and every problem in the request is reported in one
-<code>OperationOutcome</code>. A job that starts is never rejected later at its status
-URL.</li>
+<li class=""><strong>Validated at kick-off, as far as the request alone allows.</strong> Every subject
+is resolved, named and statically checked before the job starts, and every
+problem found that way is reported in one <code>OperationOutcome</code> with no job
+created. That covers malformed subjects, unresolvable canonicals and
+references, colliding names, unbound parameters and SQL that fails the
+server&#x27;s own validator. It does not cover faults only Spark&#x27;s analyser can
+find, such as an unresolved column or an unknown function; those fail the job
+and are reported at its result URL, as described under
+<a href="#status-codes" class="">Status codes</a>.</li>
 <li class=""><strong>All or nothing.</strong> A subject that fails fails the whole job, and its partial
 files are removed rather than offered for download.</li>
 </ul>
@@ -62,7 +67,7 @@ cleaned up. Result and download URLs remain valid for at least 24 hours.</p>
 <p>A subject whose result spans several Spark partitions repeats <code>location</code> once
 per file, all under the one <code>name</code>.</p>
 <h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="status-codes">Status codes<a href="#status-codes" class="hash-link" aria-label="Direct link to Status codes" title="Direct link to Status codes" translate="no">​</a></h2>
-<table><thead><tr><th>Status</th><th>Condition</th></tr></thead><tbody><tr><td><code>202 Accepted</code></td><td>The job was accepted; poll the <code>Content-Location</code> URL.</td></tr><tr><td><code>400 Bad Request</code></td><td>A missing <code>Prefer</code> header or a <code>GET</code>; no <code>subject</code>; a malformed subject; colliding names; <code>_limit</code>; <code>source</code>.</td></tr><tr><td><code>404 Not Found</code></td><td>A subject&#x27;s canonical or reference resolves to nothing; the status URL of a cancelled job.</td></tr><tr><td><code>422 Unprocessable Entity</code></td><td>A subject is of no admitted kind, or is conformant but cannot be processed.</td></tr><tr><td><code>500 Internal Server Error</code></td><td>An unexpected fault, or - on the result URL - the job&#x27;s own failure outcome.</td></tr></tbody></table>
+<table><thead><tr><th>Status</th><th>Condition</th></tr></thead><tbody><tr><td><code>202 Accepted</code></td><td>The job was accepted; poll the <code>Content-Location</code> URL.</td></tr><tr><td><code>400 Bad Request</code></td><td>A missing <code>Prefer</code> header or a <code>GET</code>; no <code>subject</code>; a malformed subject; colliding names; <code>_limit</code>; <code>source</code>.</td></tr><tr><td><code>404 Not Found</code></td><td>A subject&#x27;s canonical or reference resolves to nothing; the status URL of a cancelled job.</td></tr><tr><td><code>422 Unprocessable Entity</code></td><td>A subject is of no admitted kind, or is conformant but cannot be processed; on the result URL, a subject whose SQL Spark&#x27;s analyser rejects.</td></tr><tr><td><code>500 Internal Server Error</code></td><td>An unexpected fault, or - on the result URL - the job&#x27;s failure outcome for any other cause.</td></tr></tbody></table>
 <p>A subject whose <code>parameters</code> part leaves a parameter its Library declares
 unbound is refused at kick-off with a <code>400</code>, before any job is created: the
 fault is decidable from the request alone, so there is no status URL to poll and
