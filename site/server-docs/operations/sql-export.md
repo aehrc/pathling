@@ -61,10 +61,15 @@ meaningless for a bulk file set, and is refused as `invalid`.
   across the job, so an artefact several subjects share is resolved once.
 - **One output per subject.** The manifest carries exactly one `output` per
   `subject`, correlated by `name`. There is no ordering guarantee.
-- **Validated at kick-off.** Every subject is resolved, named and prepared
-  before the job starts, and every problem in the request is reported in one
-  `OperationOutcome`. A job that starts is never rejected later at its status
-  URL.
+- **Validated at kick-off, as far as the request alone allows.** Every subject
+  is resolved, named and statically checked before the job starts, and every
+  problem found that way is reported in one `OperationOutcome` with no job
+  created. That covers malformed subjects, unresolvable canonicals and
+  references, colliding names, unbound parameters and SQL that fails the
+  server's own validator. It does not cover faults only Spark's analyser can
+  find, such as an unresolved column or an unknown function; those fail the job
+  and are reported at its result URL, as described under
+  [Status codes](#status-codes).
 - **All or nothing.** A subject that fails fails the whole job, and its partial
   files are removed rather than offered for download.
 
@@ -158,13 +163,13 @@ per file, all under the one `name`.
 
 ## Status codes
 
-| Status                      | Condition                                                                                                     |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `202 Accepted`              | The job was accepted; poll the `Content-Location` URL.                                                        |
-| `400 Bad Request`           | A missing `Prefer` header or a `GET`; no `subject`; a malformed subject; colliding names; `_limit`; `source`. |
-| `404 Not Found`             | A subject's canonical or reference resolves to nothing; the status URL of a cancelled job.                    |
-| `422 Unprocessable Entity`  | A subject is of no admitted kind, or is conformant but cannot be processed.                                   |
-| `500 Internal Server Error` | An unexpected fault, or - on the result URL - the job's own failure outcome.                                  |
+| Status                      | Condition                                                                                                                                    |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `202 Accepted`              | The job was accepted; poll the `Content-Location` URL.                                                                                       |
+| `400 Bad Request`           | A missing `Prefer` header or a `GET`; no `subject`; a malformed subject; colliding names; `_limit`; `source`.                                |
+| `404 Not Found`             | A subject's canonical or reference resolves to nothing; the status URL of a cancelled job.                                                   |
+| `422 Unprocessable Entity`  | A subject is of no admitted kind, or is conformant but cannot be processed; on the result URL, a subject whose SQL Spark's analyser rejects. |
+| `500 Internal Server Error` | An unexpected fault, or - on the result URL - the job's failure outcome for any other cause.                                                 |
 
 A subject whose `parameters` part leaves a parameter its Library declares
 unbound is refused at kick-off with a `400`, before any job is created: the
