@@ -65,6 +65,35 @@ class ViewDefinitionCrudIT {
 
   private static final String FULL_METADATA_VIEW_ID = "au-core-patient";
 
+  private static final String STRIPPED_VIEW_ID = "au-core-patient-stripped";
+
+  /** The root elements added by this change, which must not influence view execution. */
+  private static final List<String> METADATA_ELEMENTS =
+      List.of(
+          "identifier",
+          "versionAlgorithmString",
+          "title",
+          "experimental",
+          "date",
+          "publisher",
+          "contact",
+          "description",
+          "useContext",
+          "jurisdiction",
+          "purpose",
+          "copyright",
+          "copyrightLabel",
+          "approvalDate",
+          "lastReviewDate",
+          "effectivePeriod",
+          "topic",
+          "author",
+          "editor",
+          "reviewer",
+          "endorser",
+          "relatedArtifact",
+          "profile");
+
   private static final String TITLE = "Smoking Status (AU Core)";
 
   /** A minimal ViewDefinition, as posted by the reproduction in the issue. */
@@ -494,29 +523,40 @@ class ViewDefinitionCrudIT {
   }
 
   @Test
-  void sqlRunOnStoredViewWithMetadataSucceeds() {
+  void sqlRunOnStoredViewIsUnaffectedByMetadata() throws JSONException {
+    // The same view is stored twice: once with every descriptive element and once with them all
+    // removed. Running both must produce identical output.
     putView(FULL_METADATA_VIEW_ID, FULL_METADATA_VIEW);
+    final JSONObject stripped = new JSONObject(FULL_METADATA_VIEW);
+    METADATA_ELEMENTS.forEach(stripped::remove);
+    stripped.put("id", STRIPPED_VIEW_ID);
+    putView(STRIPPED_VIEW_ID, stripped.toString());
 
-    final EntityExchangeResult<byte[]> result =
+    final String withMetadata = sqlRunCsv(FULL_METADATA_VIEW_ID);
+    final List<String> lines = withMetadata.lines().filter(line -> !line.isBlank()).toList();
+    assertThat(lines).hasSizeGreaterThan(1);
+    assertThat(lines.get(0)).isEqualTo("id,family_name");
+    assertThat(withMetadata).isEqualTo(sqlRunCsv(STRIPPED_VIEW_ID));
+  }
+
+  /** Runs the stored view with the given identifier through {@code $sql-run}, returning CSV. */
+  @Nonnull
+  private String sqlRunCsv(@Nonnull final String id) {
+    return body(
         webTestClient
             .get()
             .uri(
                 "http://localhost:"
                     + port
                     + "/fhir/$sql-run?subjectReference=ViewDefinition/"
-                    + FULL_METADATA_VIEW_ID
+                    + id
                     + "&_format=csv")
             .header("Accept", "text/csv")
             .exchange()
             .expectStatus()
             .isOk()
             .expectBody()
-            .returnResult();
-    final String csv = body(result);
-
-    final List<String> lines = csv.lines().filter(line -> !line.isBlank()).toList();
-    assertThat(lines).isNotEmpty();
-    assertThat(lines.get(0)).isEqualTo("id,family_name");
+            .returnResult());
   }
 
   /**

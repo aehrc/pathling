@@ -73,8 +73,9 @@ import org.hl7.fhir.r4.model.UuidType;
  * StructureDefinition, which is also the order in which HAPI serialises them. The complex elements
  * use FHIR R4 datatypes, so sub-elements introduced in R5 or later are not retained: {@code
  * relatedArtifact.classifier}, {@code relatedArtifact.resourceReference}, {@code
- * relatedArtifact.publicationStatus}, {@code relatedArtifact.publicationDate} and {@code
- * constant.valueInteger64}.
+ * relatedArtifact.publicationStatus}, {@code relatedArtifact.publicationDate}, the {@code height},
+ * {@code width}, {@code frames}, {@code duration} and {@code pages} of {@code
+ * relatedArtifact.document}, and {@code constant.valueInteger64}.
  *
  * @author John Grimes
  * @see <a

@@ -141,6 +141,11 @@ defined only in later releases of FHIR are therefore not retained:
 - `relatedArtifact.resourceReference`
 - `relatedArtifact.publicationStatus`
 - `relatedArtifact.publicationDate`
+- `relatedArtifact.document.height`
+- `relatedArtifact.document.width`
+- `relatedArtifact.document.frames`
+- `relatedArtifact.document.duration`
+- `relatedArtifact.document.pages`
 - `constant.valueInteger64`
 
 A warehouse that holds a ViewDefinition table written by an earlier version of
