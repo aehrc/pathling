@@ -148,7 +148,7 @@ scenario, all processing is performed on a single pod.
 
 ```yaml
 pathling:
-    image: ghcr.io/aehrc/pathling:8
+    image: ghcr.io/aehrc/pathling
     resources:
         requests:
             cpu: 2
@@ -186,7 +186,7 @@ pods on demand (at the cost of some latency).
 
 ```yaml
 pathling:
-    image: ghcr.io/aehrc/pathling:8
+    image: ghcr.io/aehrc/pathling
     resources:
         requests:
             cpu: 1
@@ -211,7 +211,7 @@ pathling:
         logging.level.au.csiro.pathling: debug
         spark.master: k8s://https://kubernetes.default.svc
         spark.kubernetes.namespace: pathling
-        spark.kubernetes.executor.container.image: ghcr.io/aehrc/pathling:8
+        spark.kubernetes.executor.container.image: ghcr.io/aehrc/pathling
         spark.kubernetes.executor.volumes.hostPath.warehouse.options.path: /home/user/data/pathling
         spark.kubernetes.executor.volumes.hostPath.warehouse.mount.path: /usr/share/warehouse
         spark.kubernetes.executor.volumes.hostPath.warehouse.mount.readOnly: false
@@ -223,7 +223,7 @@ pathling:
         spark.kubernetes.executor.limit.memory: 4G
 ```
 
-### Cluster with SeaweedFS object storage
+### SeaweedFS object storage
 
 A cluster deployment writes to the warehouse from every executor pod at once,
 with many small Parquet and Delta log files created, renamed and deleted
@@ -305,7 +305,7 @@ Kubernetes secret:
 
 ```yaml
 pathling:
-    image: ghcr.io/aehrc/pathling:8
+    image: ghcr.io/aehrc/pathling
     serviceAccount: spark-service-account
     config:
         pathling.storage.warehouseUrl: s3a://pathling-warehouse
@@ -317,7 +317,7 @@ pathling:
         spark.sql.parquet.output.committer.class: org.apache.spark.internal.io.cloud.BindingParquetOutputCommitter
         spark.master: k8s://https://kubernetes.default.svc
         spark.kubernetes.namespace: pathling
-        spark.kubernetes.executor.container.image: ghcr.io/aehrc/pathling:8
+        spark.kubernetes.executor.container.image: ghcr.io/aehrc/pathling
         spark.executor.instances: 3
         spark.executor.memory: 3G
         spark.kubernetes.executor.request.cores: 2
