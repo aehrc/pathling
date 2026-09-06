@@ -137,6 +137,7 @@ as it was written.
 Complex elements are stored using the FHIR R4 datatypes. Sub-elements that are
 defined only in later releases of FHIR are therefore not retained:
 
+- `useContext.valueCanonical`
 - `relatedArtifact.classifier`
 - `relatedArtifact.resourceReference`
 - `relatedArtifact.publicationStatus`
@@ -147,6 +148,9 @@ defined only in later releases of FHIR are therefore not retained:
 - `relatedArtifact.document.duration`
 - `relatedArtifact.document.pages`
 - `constant.valueInteger64`
+
+Codes that exist only in later releases, such as a `relatedArtifact.type` of
+`part-of`, are rejected with a `400` error rather than dropped.
 
 A warehouse that holds a ViewDefinition table written by an earlier version of
 Pathling needs
