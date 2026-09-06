@@ -38,10 +38,13 @@ import au.csiro.pathling.encoders.ViewDefinitionResource.TagComponent;
 import au.csiro.pathling.encoders.ViewDefinitionResource.WhereComponent;
 import au.csiro.pathling.encoders.datatypes.R4DataTypeMappings;
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.context.api.AddProfileTagEnum;
 import ca.uhn.fhir.parser.IParser;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -78,6 +81,50 @@ class ViewDefinitionEncodingTest {
   private static SchemaConverter schemaConverterL0;
   private static SchemaConverter schemaConverterL2;
 
+  private static final Path FULL_METADATA_FIXTURE =
+      Path.of("src/test/resources/viewdefinitions/FullMetadata.json");
+
+  /**
+   * The root elements of the ViewDefinition StructureDefinition, in specification order, as they
+   * appear in a serialised resource that populates every one of them.
+   */
+  private static final List<String> SPECIFICATION_ELEMENT_ORDER =
+      List.of(
+          "resourceType",
+          "id",
+          "url",
+          "identifier",
+          "version",
+          "versionAlgorithmString",
+          "name",
+          "title",
+          "status",
+          "experimental",
+          "date",
+          "publisher",
+          "contact",
+          "description",
+          "useContext",
+          "jurisdiction",
+          "purpose",
+          "copyright",
+          "copyrightLabel",
+          "approvalDate",
+          "lastReviewDate",
+          "effectivePeriod",
+          "topic",
+          "author",
+          "editor",
+          "reviewer",
+          "endorser",
+          "relatedArtifact",
+          "resource",
+          "profile",
+          "fhirVersion",
+          "constant",
+          "select",
+          "where");
+
   @BeforeAll
   static void setUp() {
     spark =
@@ -93,6 +140,9 @@ class ViewDefinitionEncodingTest {
     // Create a FhirContext and register the custom ViewDefinition resource type.
     fhirContext = FhirContext.forR4();
     fhirContext.registerCustomType(ViewDefinitionResource.class);
+    // HAPI adds a meta.profile tag when it encodes a custom resource type. That tag is not part of
+    // the resource being round-tripped, so it is suppressed here to keep the comparisons exact.
+    fhirContext.setAddProfileTagWhenEncoding(AddProfileTagEnum.NEVER);
 
     // Create encoders with the custom FhirContext at different nesting levels.
     // Note: Extensions must be enabled for schema matching between SchemaConverter and
@@ -136,6 +186,43 @@ class ViewDefinitionEncodingTest {
     assertTrue(schema.getFieldIndex("select").isDefined());
     assertTrue(schema.getFieldIndex("where").isDefined());
     assertTrue(schema.getFieldIndex("constant").isDefined());
+  }
+
+  @Test
+  void testSchemaHasEveryRootElementField() {
+    final StructType schema = schemaConverterL0.resourceSchema(ViewDefinitionResource.class);
+
+    // Every root element of the specification must have a column, with the versionAlgorithm choice
+    // expanded into one column per permitted type.
+    final List<String> expected =
+        List.of(
+            "identifier",
+            "versionAlgorithmString",
+            "versionAlgorithmCoding",
+            "title",
+            "experimental",
+            "date",
+            "publisher",
+            "contact",
+            "description",
+            "useContext",
+            "jurisdiction",
+            "purpose",
+            "copyright",
+            "copyrightLabel",
+            "approvalDate",
+            "lastReviewDate",
+            "effectivePeriod",
+            "topic",
+            "author",
+            "editor",
+            "reviewer",
+            "endorser",
+            "relatedArtifact",
+            "profile");
+    final List<String> missing =
+        expected.stream().filter(field -> schema.getFieldIndex(field).isEmpty()).toList();
+    assertEquals(List.of(), missing, "Schema is missing columns for root elements");
   }
 
   @Test
@@ -611,8 +698,40 @@ class ViewDefinitionEncodingTest {
           "Round-trip failed for: " + file.getFileName(),
           originalJson,
           decodedJson,
-          JSONCompareMode.STRICT_ORDER);
+          JSONCompareMode.STRICT);
     }
+  }
+
+  /**
+   * Parsing and serialising the full metadata fixture without Spark isolates the HAPI parser, which
+   * discards any element that the resource class does not declare.
+   */
+  @Test
+  void testParserRetainsEveryRootElement() throws IOException, JSONException {
+    final String originalJson = Files.readString(FULL_METADATA_FIXTURE);
+    final IParser parser = fhirContext.newJsonParser();
+    final ViewDefinitionResource parsed =
+        parser.parseResource(ViewDefinitionResource.class, originalJson);
+
+    final String serialised = parser.encodeResourceToString(parsed);
+    JSONAssert.assertEquals(originalJson, serialised, JSONCompareMode.NON_EXTENSIBLE);
+  }
+
+  /**
+   * The serialised element order follows the field declaration order of the resource class, which
+   * must match the specification.
+   */
+  @Test
+  void testSerialisedRootElementOrderFollowsSpecification() throws IOException {
+    final IParser parser = fhirContext.newJsonParser();
+    final ViewDefinitionResource parsed =
+        parser.parseResource(ViewDefinitionResource.class, Files.readString(FULL_METADATA_FIXTURE));
+    final String serialised = parser.encodeResourceToString(parsed);
+
+    // Jackson preserves insertion order, which org.json does not.
+    final List<String> actualOrder = new ArrayList<>();
+    new ObjectMapper().readTree(serialised).fieldNames().forEachRemaining(actualOrder::add);
+    assertEquals(SPECIFICATION_ELEMENT_ORDER, actualOrder);
   }
 
   // ========== TEST DATA FACTORY METHODS ==========

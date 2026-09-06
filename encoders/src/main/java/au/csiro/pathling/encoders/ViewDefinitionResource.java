@@ -36,21 +36,30 @@ import org.hl7.fhir.r4.model.Base64BinaryType;
 import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.CanonicalType;
 import org.hl7.fhir.r4.model.CodeType;
+import org.hl7.fhir.r4.model.CodeableConcept;
+import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.ContactDetail;
 import org.hl7.fhir.r4.model.DateTimeType;
 import org.hl7.fhir.r4.model.DateType;
 import org.hl7.fhir.r4.model.DecimalType;
 import org.hl7.fhir.r4.model.DomainResource;
 import org.hl7.fhir.r4.model.IdType;
+import org.hl7.fhir.r4.model.Identifier;
 import org.hl7.fhir.r4.model.InstantType;
 import org.hl7.fhir.r4.model.IntegerType;
+import org.hl7.fhir.r4.model.MarkdownType;
 import org.hl7.fhir.r4.model.OidType;
+import org.hl7.fhir.r4.model.Period;
 import org.hl7.fhir.r4.model.PositiveIntType;
+import org.hl7.fhir.r4.model.RelatedArtifact;
 import org.hl7.fhir.r4.model.ResourceType;
 import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.TimeType;
+import org.hl7.fhir.r4.model.Type;
 import org.hl7.fhir.r4.model.UnsignedIntType;
 import org.hl7.fhir.r4.model.UriType;
 import org.hl7.fhir.r4.model.UrlType;
+import org.hl7.fhir.r4.model.UsageContext;
 import org.hl7.fhir.r4.model.UuidType;
 
 /**
@@ -59,6 +68,13 @@ import org.hl7.fhir.r4.model.UuidType;
  * <p>This class allows HAPI to recognise and parse ViewDefinition resources. It mirrors the
  * structure of {@code au.csiro.pathling.views.FhirView} with HAPI annotations so that the JSON
  * structure is preserved during serialisation.
+ *
+ * <p>Every root element of ViewDefinition 3.0.0-ballot is declared, in the order given by the
+ * StructureDefinition, which is also the order in which HAPI serialises them. The complex elements
+ * use FHIR R4 datatypes, so sub-elements introduced in R5 or later are not retained: {@code
+ * relatedArtifact.classifier}, {@code relatedArtifact.resourceReference}, {@code
+ * relatedArtifact.publicationStatus}, {@code relatedArtifact.publicationDate} and {@code
+ * constant.valueInteger64}.
  *
  * @author John Grimes
  * @see <a
@@ -77,36 +93,121 @@ public class ViewDefinitionResource extends DomainResource {
   @Child(name = "url")
   private UriType url;
 
+  @Child(name = "identifier", max = Child.MAX_UNLIMITED)
+  private List<Identifier> identifier;
+
   @Nullable
   @Child(name = "version")
   private StringType version;
 
   @Nullable
   @Getter
-  @Child(name = "name")
-  private StringType name;
-
-  @Child(name = "fhirVersion", max = Child.MAX_UNLIMITED)
-  private List<CodeType> fhirVersion;
+  @Child(
+      name = "versionAlgorithm",
+      type = {StringType.class, Coding.class})
+  private Type versionAlgorithm;
 
   @Nullable
   @Getter
-  @Child(name = "resource", min = 1)
-  private CodeType resource;
+  @Child(name = "name")
+  private StringType name;
+
+  @Nullable
+  @Child(name = "title")
+  private StringType title;
 
   @Nullable
   @Getter
   @Child(name = "status")
   private CodeType status;
 
+  @Nullable
+  @Child(name = "experimental")
+  private BooleanType experimental;
+
+  @Nullable
+  @Child(name = "date")
+  private DateTimeType date;
+
+  @Nullable
+  @Child(name = "publisher")
+  private StringType publisher;
+
+  @Child(name = "contact", max = Child.MAX_UNLIMITED)
+  private List<ContactDetail> contact;
+
+  @Nullable
+  @Child(name = "description")
+  private MarkdownType description;
+
+  @Child(name = "useContext", max = Child.MAX_UNLIMITED)
+  private List<UsageContext> useContext;
+
+  @Child(name = "jurisdiction", max = Child.MAX_UNLIMITED)
+  private List<CodeableConcept> jurisdiction;
+
+  @Nullable
+  @Child(name = "purpose")
+  private MarkdownType purpose;
+
+  @Nullable
+  @Child(name = "copyright")
+  private MarkdownType copyright;
+
+  @Nullable
+  @Child(name = "copyrightLabel")
+  private StringType copyrightLabel;
+
+  @Nullable
+  @Child(name = "approvalDate")
+  private DateType approvalDate;
+
+  @Nullable
+  @Child(name = "lastReviewDate")
+  private DateType lastReviewDate;
+
+  @Nullable
+  @Getter
+  @Child(name = "effectivePeriod")
+  private Period effectivePeriod;
+
+  @Child(name = "topic", max = Child.MAX_UNLIMITED)
+  private List<CodeableConcept> topic;
+
+  @Child(name = "author", max = Child.MAX_UNLIMITED)
+  private List<ContactDetail> author;
+
+  @Child(name = "editor", max = Child.MAX_UNLIMITED)
+  private List<ContactDetail> editor;
+
+  @Child(name = "reviewer", max = Child.MAX_UNLIMITED)
+  private List<ContactDetail> reviewer;
+
+  @Child(name = "endorser", max = Child.MAX_UNLIMITED)
+  private List<ContactDetail> endorser;
+
+  @Child(name = "relatedArtifact", max = Child.MAX_UNLIMITED)
+  private List<RelatedArtifact> relatedArtifact;
+
+  @Nullable
+  @Getter
+  @Child(name = "resource", min = 1)
+  private CodeType resource;
+
+  @Child(name = "profile", max = Child.MAX_UNLIMITED)
+  private List<CanonicalType> profile;
+
+  @Child(name = "fhirVersion", max = Child.MAX_UNLIMITED)
+  private List<CodeType> fhirVersion;
+
+  @Child(name = "constant", max = Child.MAX_UNLIMITED)
+  private List<ConstantComponent> constant;
+
   @Child(name = "select", min = 1, max = Child.MAX_UNLIMITED)
   private List<SelectComponent> select;
 
   @Child(name = "where", max = Child.MAX_UNLIMITED)
   private List<WhereComponent> where;
-
-  @Child(name = "constant", max = Child.MAX_UNLIMITED)
-  private List<ConstantComponent> constant;
 
   @Nullable
   public String getUrl() {
@@ -128,6 +229,17 @@ public class ViewDefinitionResource extends DomainResource {
 
   public void setUrl(final String url) {
     this.url = url == null ? null : new UriType(url);
+  }
+
+  public List<Identifier> getIdentifier() {
+    if (identifier == null) {
+      identifier = new ArrayList<>();
+    }
+    return identifier;
+  }
+
+  public boolean hasIdentifier() {
+    return identifier != null && !identifier.isEmpty();
   }
 
   @Nullable
@@ -152,6 +264,10 @@ public class ViewDefinitionResource extends DomainResource {
     this.version = version == null ? null : new StringType(version);
   }
 
+  public boolean hasVersionAlgorithm() {
+    return versionAlgorithm != null && !versionAlgorithm.isEmpty();
+  }
+
   @Nullable
   public StringType getNameElement() {
     return name;
@@ -165,15 +281,250 @@ public class ViewDefinitionResource extends DomainResource {
     this.name = name;
   }
 
-  public List<CodeType> getFhirVersion() {
-    if (fhirVersion == null) {
-      fhirVersion = new ArrayList<>();
-    }
-    return fhirVersion;
+  @Nullable
+  public StringType getTitleElement() {
+    return title;
   }
 
-  public boolean hasFhirVersion() {
-    return fhirVersion != null && !fhirVersion.isEmpty();
+  public boolean hasTitleElement() {
+    return title != null && !title.isEmpty();
+  }
+
+  public void setTitleElement(final StringType title) {
+    this.title = title;
+  }
+
+  @Nullable
+  public CodeType getStatusElement() {
+    return status;
+  }
+
+  public boolean hasStatusElement() {
+    return status != null && !status.isEmpty();
+  }
+
+  public void setStatusElement(final CodeType status) {
+    this.status = status;
+  }
+
+  @Nullable
+  public BooleanType getExperimentalElement() {
+    return experimental;
+  }
+
+  public boolean hasExperimentalElement() {
+    return experimental != null && !experimental.isEmpty();
+  }
+
+  public void setExperimentalElement(final BooleanType experimental) {
+    this.experimental = experimental;
+  }
+
+  @Nullable
+  public DateTimeType getDateElement() {
+    return date;
+  }
+
+  public boolean hasDateElement() {
+    return date != null && !date.isEmpty();
+  }
+
+  public void setDateElement(final DateTimeType date) {
+    this.date = date;
+  }
+
+  @Nullable
+  public StringType getPublisherElement() {
+    return publisher;
+  }
+
+  public boolean hasPublisherElement() {
+    return publisher != null && !publisher.isEmpty();
+  }
+
+  public void setPublisherElement(final StringType publisher) {
+    this.publisher = publisher;
+  }
+
+  public List<ContactDetail> getContact() {
+    if (contact == null) {
+      contact = new ArrayList<>();
+    }
+    return contact;
+  }
+
+  public boolean hasContact() {
+    return contact != null && !contact.isEmpty();
+  }
+
+  @Nullable
+  public MarkdownType getDescriptionElement() {
+    return description;
+  }
+
+  public boolean hasDescriptionElement() {
+    return description != null && !description.isEmpty();
+  }
+
+  public void setDescriptionElement(final MarkdownType description) {
+    this.description = description;
+  }
+
+  public List<UsageContext> getUseContext() {
+    if (useContext == null) {
+      useContext = new ArrayList<>();
+    }
+    return useContext;
+  }
+
+  public boolean hasUseContext() {
+    return useContext != null && !useContext.isEmpty();
+  }
+
+  public List<CodeableConcept> getJurisdiction() {
+    if (jurisdiction == null) {
+      jurisdiction = new ArrayList<>();
+    }
+    return jurisdiction;
+  }
+
+  public boolean hasJurisdiction() {
+    return jurisdiction != null && !jurisdiction.isEmpty();
+  }
+
+  @Nullable
+  public MarkdownType getPurposeElement() {
+    return purpose;
+  }
+
+  public boolean hasPurposeElement() {
+    return purpose != null && !purpose.isEmpty();
+  }
+
+  public void setPurposeElement(final MarkdownType purpose) {
+    this.purpose = purpose;
+  }
+
+  @Nullable
+  public MarkdownType getCopyrightElement() {
+    return copyright;
+  }
+
+  public boolean hasCopyrightElement() {
+    return copyright != null && !copyright.isEmpty();
+  }
+
+  public void setCopyrightElement(final MarkdownType copyright) {
+    this.copyright = copyright;
+  }
+
+  @Nullable
+  public StringType getCopyrightLabelElement() {
+    return copyrightLabel;
+  }
+
+  public boolean hasCopyrightLabelElement() {
+    return copyrightLabel != null && !copyrightLabel.isEmpty();
+  }
+
+  public void setCopyrightLabelElement(final StringType copyrightLabel) {
+    this.copyrightLabel = copyrightLabel;
+  }
+
+  @Nullable
+  public DateType getApprovalDateElement() {
+    return approvalDate;
+  }
+
+  public boolean hasApprovalDateElement() {
+    return approvalDate != null && !approvalDate.isEmpty();
+  }
+
+  public void setApprovalDateElement(final DateType approvalDate) {
+    this.approvalDate = approvalDate;
+  }
+
+  @Nullable
+  public DateType getLastReviewDateElement() {
+    return lastReviewDate;
+  }
+
+  public boolean hasLastReviewDateElement() {
+    return lastReviewDate != null && !lastReviewDate.isEmpty();
+  }
+
+  public void setLastReviewDateElement(final DateType lastReviewDate) {
+    this.lastReviewDate = lastReviewDate;
+  }
+
+  public boolean hasEffectivePeriod() {
+    return effectivePeriod != null && !effectivePeriod.isEmpty();
+  }
+
+  public List<CodeableConcept> getTopic() {
+    if (topic == null) {
+      topic = new ArrayList<>();
+    }
+    return topic;
+  }
+
+  public boolean hasTopic() {
+    return topic != null && !topic.isEmpty();
+  }
+
+  public List<ContactDetail> getAuthor() {
+    if (author == null) {
+      author = new ArrayList<>();
+    }
+    return author;
+  }
+
+  public boolean hasAuthor() {
+    return author != null && !author.isEmpty();
+  }
+
+  public List<ContactDetail> getEditor() {
+    if (editor == null) {
+      editor = new ArrayList<>();
+    }
+    return editor;
+  }
+
+  public boolean hasEditor() {
+    return editor != null && !editor.isEmpty();
+  }
+
+  public List<ContactDetail> getReviewer() {
+    if (reviewer == null) {
+      reviewer = new ArrayList<>();
+    }
+    return reviewer;
+  }
+
+  public boolean hasReviewer() {
+    return reviewer != null && !reviewer.isEmpty();
+  }
+
+  public List<ContactDetail> getEndorser() {
+    if (endorser == null) {
+      endorser = new ArrayList<>();
+    }
+    return endorser;
+  }
+
+  public boolean hasEndorser() {
+    return endorser != null && !endorser.isEmpty();
+  }
+
+  public List<RelatedArtifact> getRelatedArtifact() {
+    if (relatedArtifact == null) {
+      relatedArtifact = new ArrayList<>();
+    }
+    return relatedArtifact;
+  }
+
+  public boolean hasRelatedArtifact() {
+    return relatedArtifact != null && !relatedArtifact.isEmpty();
   }
 
   @Nullable
@@ -189,17 +540,37 @@ public class ViewDefinitionResource extends DomainResource {
     this.resource = resource;
   }
 
-  @Nullable
-  public CodeType getStatusElement() {
-    return status;
+  public List<CanonicalType> getProfile() {
+    if (profile == null) {
+      profile = new ArrayList<>();
+    }
+    return profile;
   }
 
-  public boolean hasStatusElement() {
-    return status != null && !status.isEmpty();
+  public boolean hasProfile() {
+    return profile != null && !profile.isEmpty();
   }
 
-  public void setStatusElement(final CodeType status) {
-    this.status = status;
+  public List<CodeType> getFhirVersion() {
+    if (fhirVersion == null) {
+      fhirVersion = new ArrayList<>();
+    }
+    return fhirVersion;
+  }
+
+  public boolean hasFhirVersion() {
+    return fhirVersion != null && !fhirVersion.isEmpty();
+  }
+
+  public List<ConstantComponent> getConstant() {
+    if (constant == null) {
+      constant = new ArrayList<>();
+    }
+    return constant;
+  }
+
+  public boolean hasConstant() {
+    return constant != null && !constant.isEmpty();
   }
 
   public List<SelectComponent> getSelect() {
@@ -224,32 +595,105 @@ public class ViewDefinitionResource extends DomainResource {
     return where != null && !where.isEmpty();
   }
 
-  public List<ConstantComponent> getConstant() {
-    if (constant == null) {
-      constant = new ArrayList<>();
-    }
-    return constant;
-  }
-
-  public boolean hasConstant() {
-    return constant != null && !constant.isEmpty();
-  }
-
   @Override
   public DomainResource copy() {
     final ViewDefinitionResource copy = new ViewDefinitionResource();
     copyValues(copy);
     copy.url = url != null ? url.copy() : null;
+    if (identifier != null) {
+      copy.identifier = new ArrayList<>();
+      for (final Identifier i : identifier) {
+        copy.identifier.add(i.copy());
+      }
+    }
     copy.version = version != null ? version.copy() : null;
+    copy.versionAlgorithm = versionAlgorithm != null ? versionAlgorithm.copy() : null;
     copy.name = name != null ? name.copy() : null;
+    copy.title = title != null ? title.copy() : null;
+    copy.status = status != null ? status.copy() : null;
+    copy.experimental = experimental != null ? experimental.copy() : null;
+    copy.date = date != null ? date.copy() : null;
+    copy.publisher = publisher != null ? publisher.copy() : null;
+    if (contact != null) {
+      copy.contact = new ArrayList<>();
+      for (final ContactDetail c : contact) {
+        copy.contact.add(c.copy());
+      }
+    }
+    copy.description = description != null ? description.copy() : null;
+    if (useContext != null) {
+      copy.useContext = new ArrayList<>();
+      for (final UsageContext u : useContext) {
+        copy.useContext.add(u.copy());
+      }
+    }
+    if (jurisdiction != null) {
+      copy.jurisdiction = new ArrayList<>();
+      for (final CodeableConcept j : jurisdiction) {
+        copy.jurisdiction.add(j.copy());
+      }
+    }
+    copy.purpose = purpose != null ? purpose.copy() : null;
+    copy.copyright = copyright != null ? copyright.copy() : null;
+    copy.copyrightLabel = copyrightLabel != null ? copyrightLabel.copy() : null;
+    copy.approvalDate = approvalDate != null ? approvalDate.copy() : null;
+    copy.lastReviewDate = lastReviewDate != null ? lastReviewDate.copy() : null;
+    copy.effectivePeriod = effectivePeriod != null ? effectivePeriod.copy() : null;
+    if (topic != null) {
+      copy.topic = new ArrayList<>();
+      for (final CodeableConcept t : topic) {
+        copy.topic.add(t.copy());
+      }
+    }
+    if (author != null) {
+      copy.author = new ArrayList<>();
+      for (final ContactDetail a : author) {
+        copy.author.add(a.copy());
+      }
+    }
+    if (editor != null) {
+      copy.editor = new ArrayList<>();
+      for (final ContactDetail e : editor) {
+        copy.editor.add(e.copy());
+      }
+    }
+    if (reviewer != null) {
+      copy.reviewer = new ArrayList<>();
+      for (final ContactDetail r : reviewer) {
+        copy.reviewer.add(r.copy());
+      }
+    }
+    if (endorser != null) {
+      copy.endorser = new ArrayList<>();
+      for (final ContactDetail e : endorser) {
+        copy.endorser.add(e.copy());
+      }
+    }
+    if (relatedArtifact != null) {
+      copy.relatedArtifact = new ArrayList<>();
+      for (final RelatedArtifact r : relatedArtifact) {
+        copy.relatedArtifact.add(r.copy());
+      }
+    }
+    copy.resource = resource != null ? resource.copy() : null;
+    if (profile != null) {
+      copy.profile = new ArrayList<>();
+      for (final CanonicalType p : profile) {
+        copy.profile.add(p.copy());
+      }
+    }
     if (fhirVersion != null) {
       copy.fhirVersion = new ArrayList<>();
       for (final CodeType v : fhirVersion) {
         copy.fhirVersion.add(v.copy());
       }
     }
-    copy.resource = resource != null ? resource.copy() : null;
-    copy.status = status != null ? status.copy() : null;
+    if (constant != null) {
+      copy.constant = new ArrayList<>();
+      for (final ConstantComponent c : constant) {
+        copy.constant.add(c.copy());
+      }
+    }
     if (select != null) {
       copy.select = new ArrayList<>();
       for (final SelectComponent s : select) {
@@ -260,12 +704,6 @@ public class ViewDefinitionResource extends DomainResource {
       copy.where = new ArrayList<>();
       for (final WhereComponent w : where) {
         copy.where.add(w.copy());
-      }
-    }
-    if (constant != null) {
-      copy.constant = new ArrayList<>();
-      for (final ConstantComponent c : constant) {
-        copy.constant.add(c.copy());
       }
     }
     return copy;
@@ -288,14 +726,37 @@ public class ViewDefinitionResource extends DomainResource {
   public boolean isEmpty() {
     return super.isEmpty()
         && (url == null || url.isEmpty())
+        && (identifier == null || identifier.isEmpty())
         && (version == null || version.isEmpty())
+        && (versionAlgorithm == null || versionAlgorithm.isEmpty())
         && (name == null || name.isEmpty())
-        && (fhirVersion == null || fhirVersion.isEmpty())
-        && (resource == null || resource.isEmpty())
+        && (title == null || title.isEmpty())
         && (status == null || status.isEmpty())
+        && (experimental == null || experimental.isEmpty())
+        && (date == null || date.isEmpty())
+        && (publisher == null || publisher.isEmpty())
+        && (contact == null || contact.isEmpty())
+        && (description == null || description.isEmpty())
+        && (useContext == null || useContext.isEmpty())
+        && (jurisdiction == null || jurisdiction.isEmpty())
+        && (purpose == null || purpose.isEmpty())
+        && (copyright == null || copyright.isEmpty())
+        && (copyrightLabel == null || copyrightLabel.isEmpty())
+        && (approvalDate == null || approvalDate.isEmpty())
+        && (lastReviewDate == null || lastReviewDate.isEmpty())
+        && (effectivePeriod == null || effectivePeriod.isEmpty())
+        && (topic == null || topic.isEmpty())
+        && (author == null || author.isEmpty())
+        && (editor == null || editor.isEmpty())
+        && (reviewer == null || reviewer.isEmpty())
+        && (endorser == null || endorser.isEmpty())
+        && (relatedArtifact == null || relatedArtifact.isEmpty())
+        && (resource == null || resource.isEmpty())
+        && (profile == null || profile.isEmpty())
+        && (fhirVersion == null || fhirVersion.isEmpty())
+        && (constant == null || constant.isEmpty())
         && (select == null || select.isEmpty())
-        && (where == null || where.isEmpty())
-        && (constant == null || constant.isEmpty());
+        && (where == null || where.isEmpty());
   }
 
   /** Select clause component. */
