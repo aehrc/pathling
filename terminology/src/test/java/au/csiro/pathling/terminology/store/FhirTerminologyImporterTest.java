@@ -615,6 +615,65 @@ class FhirTerminologyImporterTest {
     assertEquals(0, registry.getAllServeEvents().size());
   }
 
+  // --- Source fingerprint (feature 059, user story 2). ---
+
+  @Test
+  void jsonFileSourceRecordsTheFileSha256(@TempDir final Path dir) throws Exception {
+    final Path file = FhirPackageFixtures.resource("nested-hierarchy.json");
+    final String store = dir.resolve("store").toString();
+
+    new FhirTerminologyImporter(spark, store).importFrom(file.toString(), true, registry.baseUrl());
+
+    final ManifestEntry entry = manifest(store).get(0);
+    assertEquals(FhirPackageFixtures.sha256Hex(file), entry.getSourceSha256());
+  }
+
+  @Test
+  void directorySourceRecordsNullsEvenWithAPackageJson(@TempDir final Path dir) throws Exception {
+    final Path source = dir.resolve("source");
+    Files.createDirectories(source);
+    Files.writeString(source.resolve("package.json"), FhirPackageFixtures.DEFAULT_PACKAGE_JSON);
+    Files.copy(
+        FhirPackageFixtures.resource("nested-hierarchy.json"), source.resolve("nested.json"));
+    final String store = dir.resolve("store").toString();
+
+    new FhirTerminologyImporter(spark, store)
+        .importFrom(source.toString(), true, registry.baseUrl());
+
+    final ManifestEntry entry = manifest(store).get(0);
+    // A directory is not an archive, so its resources are not the content of any one file: a
+    // package.json sitting beside them names nothing that was imported as a package.
+    assertNull(entry.getSourceSha256());
+    assertNull(entry.getPackageName());
+    assertNull(entry.getPackageVersion());
+    assertNull(entry.getPackageVerification());
+    assertNull(entry.getPackageRegistry());
+    assertEquals(0, registry.getAllServeEvents().size());
+  }
+
+  @Test
+  void reimportReplacesTheRowsProvenance(@TempDir final Path dir) throws Exception {
+    final Path archive =
+        FhirPackageFixtures.buildPackage(dir, "fixtures.tgz", "nested-hierarchy.json");
+    final String store = dir.resolve("store").toString();
+    new FhirTerminologyImporter(spark, store).importFrom(archive.toString(), false, null);
+    assertEquals(PackageVerification.SKIPPED, manifest(store).get(0).getPackageVerification());
+
+    RegistryStub.stubListing(
+        registry,
+        FhirPackageFixtures.PACKAGE_NAME,
+        FhirPackageFixtures.PACKAGE_VERSION,
+        FhirPackageFixtures.sha1Hex(archive));
+    new FhirTerminologyImporter(spark, store)
+        .importFrom(archive.toString(), true, registry.baseUrl());
+
+    // The manifest row was replaced, so it describes the most recent import rather than the first.
+    final List<ManifestEntry> manifest = manifest(store);
+    assertEquals(1, manifest.size());
+    assertEquals(PackageVerification.VERIFIED, manifest.get(0).getPackageVerification());
+    assertEquals(registry.baseUrl(), manifest.get(0).getPackageRegistry());
+  }
+
   /** Stubs a listing whose checksum belongs to a differently compressed copy of the archive. */
   private void stubMismatch(final Path archive) throws IOException {
     RegistryStub.stubListing(

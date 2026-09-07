@@ -88,6 +88,7 @@ import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.io.input.CloseShieldInputStream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
@@ -218,14 +219,20 @@ public class SnomedRf2Importer {
       @Nonnull final DenseIdOrder denseIdOrder,
       @Nullable final String defaultDialect) {
     // A zip archive is extracted to a temporary directory first, since the file discovery and Spark
-    // readers operate on the extracted release layout. A plain directory is read in place.
-    final java.nio.file.Path extracted = isZipArchive(source) ? extractArchive(source) : null;
+    // readers operate on the extracted release layout. A plain directory is read in place, and has
+    // no bytes of its own to fingerprint.
+    final ExtractedArchive extracted = isZipArchive(source) ? extractArchive(source) : null;
+    final ImportProvenance provenance =
+        ImportProvenance.of(source, extracted != null ? extracted.getSha256() : null);
+    if (extracted != null) {
+      log.info("Source {} has SHA-256 {}", source, extracted.getSha256());
+    }
     try {
-      final String releaseRoot = extracted != null ? extracted.toString() : source;
-      importFromRelease(releaseRoot, source, editionUriOverride, denseIdOrder, defaultDialect);
+      final String releaseRoot = extracted != null ? extracted.getDirectory().toString() : source;
+      importFromRelease(releaseRoot, provenance, editionUriOverride, denseIdOrder, defaultDialect);
     } finally {
       if (extracted != null) {
-        deleteRecursively(extracted);
+        deleteRecursively(extracted.getDirectory());
       }
     }
   }
@@ -234,7 +241,7 @@ public class SnomedRf2Importer {
    * Imports an RF2 snapshot release from an extracted directory layout.
    *
    * @param releaseRoot the directory holding the extracted release, scanned for the Snapshot files
-   * @param source the original source path, recorded in the manifest for provenance
+   * @param provenance where the release came from, recorded in every manifest row it writes
    * @param editionUriOverride an explicit edition/version URI, or null to detect it
    * @param denseIdOrder the rule for assigning dense identifiers
    * @param defaultDialect the dialect whose preferred synonyms become each concept's display, or
@@ -242,7 +249,7 @@ public class SnomedRf2Importer {
    */
   private void importFromRelease(
       @Nonnull final String releaseRoot,
-      @Nonnull final String source,
+      @Nonnull final ImportProvenance provenance,
       @Nullable final String editionUriOverride,
       @Nonnull final DenseIdOrder denseIdOrder,
       @Nullable final String defaultDialect) {
@@ -315,7 +322,7 @@ public class SnomedRf2Importer {
     closure.unpersist();
     writer.writePartitionedBySystemVersion(refsets.members, REFSET_MEMBER, systemVersionId);
     logResolutions(refsets.resolutions);
-    writeManifest(writer, version, source);
+    writeManifest(writer, version, provenance);
     descriptions.cached.forEach(Dataset::unpersist);
     concepts.unpersist();
     codeOrdered.unpersist();
@@ -499,13 +506,14 @@ public class SnomedRf2Importer {
    * Extracts a zip archive to a fresh local temporary directory, reading the archive through the
    * Hadoop file system so it may reside on any accessible storage. Entries are streamed to disk to
    * bound memory use, and paths are validated to prevent extraction outside the target directory.
+   * The archive is digested as it is read, so its fingerprint costs no additional pass over it.
    *
    * @param source the path of the zip archive
-   * @return the temporary directory containing the extracted release
+   * @return the temporary directory containing the extracted release, and the archive's SHA-256
    * @throws TerminologyImportException if the archive cannot be read or extracted
    */
   @Nonnull
-  private java.nio.file.Path extractArchive(@Nonnull final String source) {
+  private ExtractedArchive extractArchive(@Nonnull final String source) {
     final Path archive = new Path(source);
     try {
       final FileSystem fs = archive.getFileSystem(hadoopConf);
@@ -514,24 +522,31 @@ public class SnomedRf2Importer {
       }
       final java.nio.file.Path target = SecureTempDirectory.create("pathling-rf2-");
       log.info("Extracting RF2 archive {} to {}", source, target);
-      try (final ZipInputStream zip =
-          new ZipInputStream(new BufferedInputStream(fs.open(archive)))) {
-        ZipEntry entry;
-        while ((entry = zip.getNextEntry()) != null) {
-          if (entry.isDirectory()) {
-            continue;
+      try (final DigestingInputStream digesting = new DigestingInputStream(fs.open(archive))) {
+        // Closing the zip reader must not close the digesting stream, which still has the central
+        // directory trailing the last entry to give up.
+        try (final ZipInputStream zip =
+            new ZipInputStream(new BufferedInputStream(CloseShieldInputStream.wrap(digesting)))) {
+          ZipEntry entry;
+          while ((entry = zip.getNextEntry()) != null) {
+            if (entry.isDirectory()) {
+              continue;
+            }
+            final java.nio.file.Path destination = target.resolve(entry.getName()).normalize();
+            if (!destination.startsWith(target)) {
+              throw new TerminologyImportException(
+                  "Refusing to extract archive entry outside the target directory: "
+                      + entry.getName());
+            }
+            Files.createDirectories(destination.getParent());
+            Files.copy(zip, destination, StandardCopyOption.REPLACE_EXISTING);
           }
-          final java.nio.file.Path destination = target.resolve(entry.getName()).normalize();
-          if (!destination.startsWith(target)) {
-            throw new TerminologyImportException(
-                "Refusing to extract archive entry outside the target directory: "
-                    + entry.getName());
-          }
-          Files.createDirectories(destination.getParent());
-          Files.copy(zip, destination, StandardCopyOption.REPLACE_EXISTING);
         }
+        // The zip reader stops at the central directory, so the bytes describing it are pulled
+        // through the digest here and the hash covers the whole file.
+        digesting.drain();
+        return new ExtractedArchive(target, digesting.sha256Hex());
       }
-      return target;
     } catch (final IOException e) {
       throw new TerminologyImportException("Unable to extract the RF2 archive at " + source, e);
     }
@@ -1198,10 +1213,9 @@ public class SnomedRf2Importer {
   private void writeManifest(
       @Nonnull final TerminologyStoreWriter writer,
       @Nonnull final String version,
-      @Nonnull final String source) {
+      @Nonnull final ImportProvenance provenance) {
     writer.upsertManifestEntry(
-        ManifestEntry.forImport(
-            "code_system", SNOMED_URI, version, ImportProvenance.of(source, null), Instant.now()));
+        ManifestEntry.forImport("code_system", SNOMED_URI, version, provenance, Instant.now()));
   }
 
   // --- Version detection. ---
