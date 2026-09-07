@@ -356,7 +356,9 @@ The package hl7.terminology.r4 6.5.0 does not match the registry checksum publis
 The library logs the outcome: a verified package at `INFO`, naming the package,
 its version, the registry and the SHA-1; an unverified one at `WARN`, naming
 the reason. Both appear wherever logging for `au.csiro.pathling` is enabled at
-that level, and the CLI shows them in `--verbose` mode.
+that level. The CLI runs the library at `WARN`, so `--verbose` shows the reason
+for an unverified package; the verified outcome is reported on the completion
+line instead.
 
 #### Importing offline, and choosing a registry
 
