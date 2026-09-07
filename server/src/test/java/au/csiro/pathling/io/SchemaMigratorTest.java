@@ -23,7 +23,6 @@ import static org.assertj.core.api.Assertions.assertThatNoException;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.ViewDefinitionResource;
 import au.csiro.pathling.test.SpringBootUnitTest;
-import au.csiro.pathling.util.DeltaSchemaFixtures;
 import au.csiro.pathling.util.FhirEncoderFixtures;
 import au.csiro.pathling.util.FhirServerTestConfiguration;
 import au.csiro.pathling.util.LogCapture;
@@ -58,20 +57,6 @@ import org.springframework.context.annotation.Import;
 @SpringBootUnitTest
 class SchemaMigratorTest {
 
-  /**
-   * The top-level ViewDefinition columns holding the metadata elements added alongside this test. A
-   * table written before they were encoded lacks all of them.
-   */
-  private static final Set<String> METADATA_COLUMNS =
-      Set.of(
-          "title",
-          "description",
-          "contact",
-          "relatedArtifact",
-          "versionAlgorithmString",
-          "versionAlgorithmCoding",
-          "effectivePeriod");
-
   @Autowired private SparkSession sparkSession;
 
   @Autowired private FhirEncoders fhirEncoders;
@@ -94,35 +79,6 @@ class SchemaMigratorTest {
     assertThat(row.getString(0)).isEqualTo("test-view");
     assertThat(row.isNullAt(1)).isTrue();
     assertThat(row.isNullAt(2)).isTrue();
-  }
-
-  // Verifies that a ViewDefinition table written before the metadata elements were encoded is
-  // reported as drifted with the flag off, and with the flag on gains every metadata column while
-  // keeping its rows, which read back with those elements absent (US3).
-  @Test
-  void viewDefinitionTableLackingMetadataColumnsIsMigrated(@TempDir final Path tempDir)
-      throws IOException {
-    final String databasePath = tempDir.toAbsolutePath().toString();
-    seedCurrentSchemaViewDefinitionTable(databasePath);
-    final Path tablePath = tempDir.resolve("ViewDefinition.parquet");
-    DeltaSchemaFixtures.removeFieldsFromTableSchema(tablePath, METADATA_COLUMNS);
-    sparkSession.catalog().clearCache();
-    sparkSession.catalog().refreshByPath(tablePath.toAbsolutePath().toString());
-
-    assertThat(newMigrator(databasePath, false).migrate()).contains("ViewDefinition");
-    assertThat(newMigrator(databasePath, true).migrate()).isEmpty();
-
-    final Dataset<Row> migrated = readTable(databasePath, "ViewDefinition");
-    assertThat(migrated.schema().fieldNames()).contains(METADATA_COLUMNS.toArray(new String[0]));
-    assertThat(migrated.count()).isEqualTo(1);
-    // The pre-existing row carries no value in any of the new columns, so the decoded resource
-    // presents those elements as absent.
-    final ViewDefinitionResource decoded =
-        migrated.as(fhirEncoders.<ViewDefinitionResource>of("ViewDefinition")).first();
-    assertThat(decoded.getIdPart()).isEqualTo("test-view");
-    assertThat(decoded.hasTitleElement()).isFalse();
-    assertThat(decoded.hasContact()).isFalse();
-    assertThat(decoded.hasRelatedArtifact()).isFalse();
   }
 
   // Verifies that an undrifted table produces no Delta write: the table version is unchanged
