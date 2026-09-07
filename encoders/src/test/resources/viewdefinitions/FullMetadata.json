@@ -1,0 +1,270 @@
+{
+  "resourceType": "ViewDefinition",
+  "id": "FullMetadata",
+  "url": "https://aehrc.csiro.au/fhir/ViewDefinition/au-core-smoking-status",
+  "identifier": [
+    {
+      "use": "official",
+      "system": "https://aehrc.csiro.au/fhir/view-definition",
+      "value": "au-core-smoking-status"
+    },
+    {
+      "use": "secondary",
+      "type": {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+            "code": "OID",
+            "display": "Object Identifier"
+          }
+        ],
+        "text": "Object identifier"
+      },
+      "system": "urn:ietf:rfc:3986",
+      "value": "urn:oid:1.2.36.1.2001.1005.99",
+      "period": {
+        "start": "2026-01-01",
+        "end": "2028-12-31"
+      }
+    }
+  ],
+  "version": "1.2.0",
+  "versionAlgorithmString": "semver",
+  "name": "au_core_smoking_status",
+  "title": "AU Core smoking status",
+  "status": "active",
+  "experimental": false,
+  "date": "2026-09-07T14:30:00+10:00",
+  "publisher": "Australian e-Health Research Centre",
+  "contact": [
+    {
+      "name": "AU Core support",
+      "telecom": [
+        {
+          "system": "email",
+          "value": "support@aehrc.csiro.au",
+          "use": "work",
+          "rank": 1,
+          "period": {
+            "start": "2026-01-01T00:00:00+10:00"
+          }
+        },
+        {
+          "system": "url",
+          "value": "https://aehrc.csiro.au",
+          "use": "work"
+        }
+      ]
+    }
+  ],
+  "description": "A flattened view of AU Core smoking status observations.\n\nOne row is produced for each smoking status observation, carrying the patient reference, the effective date and the coded status value.",
+  "useContext": [
+    {
+      "code": {
+        "system": "http://terminology.hl7.org/CodeSystem/usage-context-type",
+        "code": "focus",
+        "display": "Clinical Focus"
+      },
+      "valueCodeableConcept": {
+        "coding": [
+          {
+            "system": "http://snomed.info/sct",
+            "code": "365981007",
+            "display": "Finding of tobacco smoking behaviour"
+          }
+        ],
+        "text": "Smoking status"
+      }
+    },
+    {
+      "code": {
+        "system": "http://terminology.hl7.org/CodeSystem/usage-context-type",
+        "code": "age",
+        "display": "Age Range"
+      },
+      "valueQuantity": {
+        "value": 18,
+        "comparator": ">=",
+        "unit": "years",
+        "system": "http://unitsofmeasure.org",
+        "code": "a"
+      }
+    },
+    {
+      "code": {
+        "system": "http://terminology.hl7.org/CodeSystem/usage-context-type",
+        "code": "age",
+        "display": "Age Range"
+      },
+      "valueRange": {
+        "low": {
+          "value": 18,
+          "unit": "years",
+          "system": "http://unitsofmeasure.org",
+          "code": "a"
+        },
+        "high": {
+          "value": 120,
+          "unit": "years",
+          "system": "http://unitsofmeasure.org",
+          "code": "a"
+        }
+      }
+    },
+    {
+      "code": {
+        "system": "http://terminology.hl7.org/CodeSystem/usage-context-type",
+        "code": "program",
+        "display": "Program"
+      },
+      "valueReference": {
+        "reference": "Organization/aehrc",
+        "display": "Australian e-Health Research Centre"
+      }
+    }
+  ],
+  "jurisdiction": [
+    {
+      "coding": [
+        {
+          "system": "urn:iso:std:iso:3166",
+          "code": "AU",
+          "display": "Australia"
+        },
+        {
+          "system": "urn:iso:std:iso:3166:-2",
+          "code": "AU-QLD",
+          "display": "Queensland"
+        }
+      ],
+      "text": "Australia"
+    }
+  ],
+  "purpose": "To support population health reporting on tobacco smoking.\n\nThe view is intended for analytical use over an AU Core conformant data set.",
+  "copyright": "Copyright 2026 Commonwealth Scientific and Industrial Research Organisation (CSIRO).\n\nLicensed under the Apache License, Version 2.0.",
+  "copyrightLabel": "CC-BY-4.0",
+  "approvalDate": "2026-03-01",
+  "lastReviewDate": "2026-08",
+  "effectivePeriod": {
+    "start": "2026-03-01",
+    "end": "2027-03-01"
+  },
+  "topic": [
+    {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/definition-topic",
+          "code": "assessment",
+          "display": "Assessment"
+        },
+        {
+          "system": "http://snomed.info/sct",
+          "code": "229819007",
+          "display": "Tobacco use and exposure"
+        }
+      ],
+      "text": "Smoking status assessment"
+    }
+  ],
+  "author": [
+    {
+      "name": "John Grimes",
+      "telecom": [
+        {
+          "system": "email",
+          "value": "john.grimes@csiro.au",
+          "use": "work"
+        }
+      ]
+    }
+  ],
+  "editor": [
+    {
+      "name": "AU Core editorial group",
+      "telecom": [
+        {
+          "system": "email",
+          "value": "editors@aehrc.csiro.au",
+          "use": "work"
+        }
+      ]
+    }
+  ],
+  "reviewer": [
+    {
+      "name": "AU Core review panel",
+      "telecom": [
+        {
+          "system": "email",
+          "value": "reviewers@aehrc.csiro.au",
+          "use": "work"
+        }
+      ]
+    }
+  ],
+  "endorser": [
+    {
+      "name": "HL7 Australia",
+      "telecom": [
+        {
+          "system": "url",
+          "value": "https://hl7.org.au",
+          "use": "work"
+        }
+      ]
+    }
+  ],
+  "relatedArtifact": [
+    {
+      "type": "documentation",
+      "label": "AU Core smoking status",
+      "display": "AU Core Smoking Status profile guidance",
+      "citation": "HL7 Australia. AU Core Implementation Guide, version 2.0.0.",
+      "url": "https://hl7.org.au/fhir/core/StructureDefinition-au-core-smokingstatus.html",
+      "document": {
+        "contentType": "application/pdf",
+        "url": "https://aehrc.csiro.au/docs/smoking-status-view.pdf",
+        "title": "Smoking status view notes"
+      }
+    },
+    {
+      "type": "derived-from",
+      "label": "AU Core Smoking Status",
+      "resource": "http://hl7.org.au/fhir/core/StructureDefinition/au-core-smokingstatus"
+    }
+  ],
+  "resource": "Observation",
+  "profile": [
+    "http://hl7.org.au/fhir/core/StructureDefinition/au-core-smokingstatus",
+    "http://hl7.org/fhir/StructureDefinition/Observation"
+  ],
+  "fhirVersion": ["4.0.1"],
+  "constant": [
+    {
+      "name": "smoking_status_code",
+      "valueCode": "72166-2"
+    }
+  ],
+  "select": [
+    {
+      "column": [
+        {
+          "path": "getResourceKey()",
+          "name": "id",
+          "type": "string"
+        },
+        {
+          "path": "subject.getReferenceKey(Patient)",
+          "name": "patient_id",
+          "type": "string"
+        }
+      ]
+    }
+  ],
+  "where": [
+    {
+      "path": "code.coding.where(system = 'http://loinc.org' and code = %smoking_status_code).exists()",
+      "description": "Smoking status observations only."
+    }
+  ]
+}
