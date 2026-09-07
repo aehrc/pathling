@@ -56,9 +56,15 @@ import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.StringType;
 import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.r4.model.BooleanType;
+import org.hl7.fhir.r4.model.CanonicalType;
 import org.hl7.fhir.r4.model.CodeType;
+import org.hl7.fhir.r4.model.CodeableConcept;
+import org.hl7.fhir.r4.model.ContactDetail;
+import org.hl7.fhir.r4.model.Identifier;
 import org.hl7.fhir.r4.model.IntegerType;
+import org.hl7.fhir.r4.model.RelatedArtifact;
 import org.hl7.fhir.r4.model.UriType;
+import org.hl7.fhir.r4.model.UsageContext;
 import org.json.JSONException;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -1090,5 +1096,86 @@ class ViewDefinitionEncodingTest {
     emptyElements.setUrlElement(new UriType());
     emptyElements.setVersionElement(new org.hl7.fhir.r4.model.StringType());
     assertTrue(emptyElements.isEmpty());
+  }
+
+  /**
+   * copy() must duplicate every root element, including the repeating complex elements, so the copy
+   * serialises to the same JSON as the original and is independent of it.
+   */
+  @Test
+  void testCopyRetainsEveryRootElement() throws IOException, JSONException {
+    final String originalJson = Files.readString(FULL_METADATA_FIXTURE);
+    final IParser parser = fhirContext.newJsonParser();
+    final ViewDefinitionResource original =
+        parser.parseResource(ViewDefinitionResource.class, originalJson);
+
+    final ViewDefinitionResource copy = (ViewDefinitionResource) original.copy();
+
+    // The class does not override equalsDeep, so the serialised form is the meaningful comparison.
+    JSONAssert.assertEquals(
+        originalJson, parser.encodeResourceToString(copy), JSONCompareMode.NON_EXTENSIBLE);
+
+    // Mutating a repeating element on the copy must not affect the original.
+    copy.getIdentifier().clear();
+    copy.getContact().clear();
+    assertFalse(copy.hasIdentifier());
+    assertFalse(copy.hasContact());
+    JSONAssert.assertEquals(
+        originalJson, parser.encodeResourceToString(original), JSONCompareMode.NON_EXTENSIBLE);
+  }
+
+  /**
+   * The repeating root elements follow the HAPI convention: the getter on an unpopulated resource
+   * returns an empty, mutable list, and the has-method reports false until an item is added.
+   */
+  @Test
+  void testRepeatingRootElementsAreLazilyInitialised() {
+    final ViewDefinitionResource view = new ViewDefinitionResource();
+
+    assertTrue(view.getIdentifier().isEmpty());
+    assertTrue(view.getContact().isEmpty());
+    assertTrue(view.getUseContext().isEmpty());
+    assertTrue(view.getJurisdiction().isEmpty());
+    assertTrue(view.getTopic().isEmpty());
+    assertTrue(view.getAuthor().isEmpty());
+    assertTrue(view.getEditor().isEmpty());
+    assertTrue(view.getReviewer().isEmpty());
+    assertTrue(view.getEndorser().isEmpty());
+    assertTrue(view.getRelatedArtifact().isEmpty());
+    assertTrue(view.getProfile().isEmpty());
+    assertFalse(view.hasIdentifier());
+    assertFalse(view.hasContact());
+    assertFalse(view.hasUseContext());
+    assertFalse(view.hasJurisdiction());
+    assertFalse(view.hasTopic());
+    assertFalse(view.hasAuthor());
+    assertFalse(view.hasEditor());
+    assertFalse(view.hasReviewer());
+    assertFalse(view.hasEndorser());
+    assertFalse(view.hasRelatedArtifact());
+    assertFalse(view.hasProfile());
+
+    view.getIdentifier().add(new Identifier().setValue("view-1"));
+    view.getContact().add(new ContactDetail().setName("Team"));
+    view.getUseContext().add(new UsageContext());
+    view.getJurisdiction().add(new CodeableConcept().setText("AU"));
+    view.getTopic().add(new CodeableConcept().setText("Demographics"));
+    view.getAuthor().add(new ContactDetail().setName("Author"));
+    view.getEditor().add(new ContactDetail().setName("Editor"));
+    view.getReviewer().add(new ContactDetail().setName("Reviewer"));
+    view.getEndorser().add(new ContactDetail().setName("Endorser"));
+    view.getRelatedArtifact().add(new RelatedArtifact().setDisplay("Spec"));
+    view.getProfile().add(new CanonicalType("http://example.org/profile"));
+    assertTrue(view.hasIdentifier());
+    assertTrue(view.hasContact());
+    assertTrue(view.hasUseContext());
+    assertTrue(view.hasJurisdiction());
+    assertTrue(view.hasTopic());
+    assertTrue(view.hasAuthor());
+    assertTrue(view.hasEditor());
+    assertTrue(view.hasReviewer());
+    assertTrue(view.hasEndorser());
+    assertTrue(view.hasRelatedArtifact());
+    assertTrue(view.hasProfile());
   }
 }
