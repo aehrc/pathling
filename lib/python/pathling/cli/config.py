@@ -55,7 +55,15 @@ PROJECT_CONFIG_FILENAME = "pathling.toml"
 
 # Valid top-level keys in the config file.
 VALID_CONFIG_KEYS = frozenset(
-    {"tx-server", "fhir-version", "terminology-auth", "bulk-auth", "spark", "tx-store"}
+    {
+        "tx-server",
+        "fhir-version",
+        "terminology-auth",
+        "bulk-auth",
+        "spark",
+        "tx-store",
+        "package-registry",
+    }
 )
 
 # Valid keys within the [terminology-auth] and [bulk-auth] tables.
@@ -181,6 +189,10 @@ class CliConfig:
     :param tx_server_explicit: whether the terminology server URL was set
            explicitly (via flag or config key) rather than falling back to the
            built-in default. Drives the store-wins conflict warning.
+    :param package_registry: the FHIR package registry that a package import
+           checks a package against, or None to leave the choice to the library
+           default. Concerns package distribution rather than the store, so it
+           is a top-level key rather than part of ``[tx-store]``.
     """
 
     tx_server: str = DEFAULT_TX_SERVER
@@ -192,6 +204,7 @@ class CliConfig:
     bulk_auth_table: Optional[dict] = None
     tx_store: Optional[TxStore] = None
     tx_server_explicit: bool = False
+    package_registry: Optional[str] = None
 
 
 def _load_toml(path: Path) -> dict:
@@ -751,4 +764,5 @@ def resolve_config(
         bulk_auth_table=file_data.get("bulk-auth"),
         tx_store=resolved_tx_store,
         tx_server_explicit=tx_server_explicit,
+        package_registry=file_data.get("package-registry"),
     )

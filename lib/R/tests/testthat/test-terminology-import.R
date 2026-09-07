@@ -9,6 +9,53 @@ fhir_fixtures_dir <- function() {
     mustWork = FALSE
   )
 }
+build_fhir_package <- function(tarfile) {
+  # Builds a FHIR NPM package from the JSON fixtures, with a package.json that names and versions
+  # it, so that the import has a package identity to record.
+  build_dir <- file.path(tempdir(), "r-fhir-package-build")
+  unlink(build_dir, recursive = TRUE)
+  package_dir <- file.path(build_dir, "package")
+  dir.create(package_dir, recursive = TRUE)
+  file.copy(
+    list.files(fhir_fixtures_dir(), pattern = "\\.json$", full.names = TRUE),
+    package_dir
+  )
+  writeLines(
+    '{"name": "fixtures", "version": "1.0.0"}',
+    file.path(package_dir, "package.json")
+  )
+
+  # The archive holds the package directory at its root, as a published FHIR package does, so the
+  # tar runs from the build directory.
+  previous_dir <- setwd(build_dir)
+  on.exit(setwd(previous_dir), add = TRUE)
+  utils::tar(tarfile, files = "package", compression = "gzip")
+  tarfile
+}
+
+test_that("pathling_import_fhir_terminology records skipped verification", {
+  spark <- def_spark()
+  store <- file.path(tempdir(), "r-fhir-store-skipped")
+  unlink(store, recursive = TRUE)
+  package <- build_fhir_package(file.path(tempdir(), "r-fixtures-1.0.0.tgz"))
+
+  pc_import <- pathling_connect(spark)
+  pathling_import_fhir_terminology(pc_import, package, store, verify_package = FALSE)
+
+  manifest <- sparklyr::spark_read_delta(
+    spark,
+    path = file.path(store, "manifest"),
+    name = "r_fhir_manifest_skipped",
+    memory = FALSE
+  ) %>% sdf_collect()
+
+  # Turning the check off records the package identity and the source hash, but no registry.
+  expect_true(nrow(manifest) > 0)
+  expect_equal(unique(manifest$package_verification), "skipped")
+  expect_equal(unique(manifest$package_name), "fixtures")
+  expect_equal(unique(manifest$package_version), "1.0.0")
+  expect_false(any(is.na(manifest$source_sha256)))
+})
 
 test_that("pathling_import_fhir_terminology enables local member_of", {
   spark <- def_spark()
