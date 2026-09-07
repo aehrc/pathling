@@ -33,7 +33,7 @@ import lombok.Value;
 @Value
 public class ManifestEntry implements Serializable {
 
-  @Serial private static final long serialVersionUID = 1L;
+  @Serial private static final long serialVersionUID = 2L;
 
   /** The store format version at the time this entry was written. */
   int storeFormatVersion;
@@ -52,4 +52,52 @@ public class ManifestEntry implements Serializable {
 
   /** When the entry was imported, or null if not recorded. */
   @Nullable Instant importedAt;
+
+  /** The SHA-256 of the source file bytes as lowercase hexadecimal, or null if not recorded. */
+  @Nullable String sourceSha256;
+
+  /** The name of the package the entry came from, or null if it did not come from one. */
+  @Nullable String packageName;
+
+  /** The version of the package the entry came from, or null if it did not come from one. */
+  @Nullable String packageVersion;
+
+  /** The registry verification outcome of the package, or null if the source was not a package. */
+  @Nullable PackageVerification packageVerification;
+
+  /** The registry that vouched for the package bytes, set only when the package was verified. */
+  @Nullable String packageRegistry;
+
+  /**
+   * Creates an entry describing a resource written by an import, taking the provenance values from
+   * the import that wrote it.
+   *
+   * @param entryType the kind of entry: {@code code_system}, {@code value_set} or {@code
+   *     concept_map}
+   * @param canonicalUrl the canonical URL of the entry
+   * @param version the version of the entry, or null if unversioned
+   * @param provenance the provenance of the import that wrote the entry
+   * @param importedAt when the entry was imported
+   * @return the manifest entry
+   */
+  @Nonnull
+  public static ManifestEntry forImport(
+      @Nonnull final String entryType,
+      @Nonnull final String canonicalUrl,
+      @Nullable final String version,
+      @Nonnull final ImportProvenance provenance,
+      @Nonnull final Instant importedAt) {
+    return new ManifestEntry(
+        TerminologyStoreSchema.STORE_FORMAT_VERSION,
+        entryType,
+        canonicalUrl,
+        version,
+        provenance.getSource(),
+        importedAt,
+        provenance.getSourceSha256(),
+        provenance.getPackageName(),
+        provenance.getPackageVersion(),
+        provenance.getPackageVerification(),
+        provenance.getPackageRegistry());
+  }
 }

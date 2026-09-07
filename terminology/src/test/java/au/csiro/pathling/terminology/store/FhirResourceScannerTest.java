@@ -18,6 +18,7 @@
 package au.csiro.pathling.terminology.store;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -66,7 +67,7 @@ class FhirResourceScannerTest {
     Files.copy(FhirPackageFixtures.resource("nested-hierarchy.json"), dir.resolve("nested.json"));
 
     final List<ScannedResource> scanned =
-        new FhirResourceScanner(new Configuration()).scan(dir.toString());
+        new FhirResourceScanner(new Configuration()).scan(dir.toString()).getResources();
 
     assertEquals(1, scanned.size());
     assertEquals("CodeSystem", scanned.get(0).getResourceType());
@@ -82,7 +83,7 @@ class FhirResourceScannerTest {
             dir, "cs.tgz", "nested-hierarchy.json", "valueset-simple.json");
 
     final List<ScannedResource> scanned =
-        new FhirResourceScanner(new Configuration()).scan(archive.toString());
+        new FhirResourceScanner(new Configuration()).scan(archive.toString()).getResources();
 
     final Map<String, ScannedResource> byType =
         scanned.stream().collect(Collectors.toMap(ScannedResource::getResourceType, s -> s));
@@ -150,10 +151,69 @@ class FhirResourceScannerTest {
     final Path archive = FhirPackageFixtures.buildPackage(dir, "cs.tgz", "nested-hierarchy.json");
 
     final List<ScannedResource> scanned =
-        new FhirResourceScanner(new Configuration()).scan(archive.toString());
+        new FhirResourceScanner(new Configuration()).scan(archive.toString()).getResources();
 
     assertEquals(1, scanned.size());
     assertEquals("CodeSystem", scanned.get(0).getResourceType());
+  }
+
+  @Test
+  void scanOfPackageReturnsIdentityAndDigests(@TempDir final Path dir) throws Exception {
+    final Path archive = FhirPackageFixtures.buildPackage(dir, "cs.tgz", "nested-hierarchy.json");
+
+    final FhirSourceScan scan =
+        new FhirResourceScanner(new Configuration()).scan(archive.toString());
+
+    assertTrue(scan.isPackage());
+    assertEquals(FhirPackageFixtures.PACKAGE_NAME, scan.getPackageName());
+    assertEquals(FhirPackageFixtures.PACKAGE_VERSION, scan.getPackageVersion());
+    // The digests cover the whole archive file, including the bytes that trail the last entry.
+    assertEquals(FhirPackageFixtures.sha1Hex(archive), scan.getSha1());
+    assertEquals(FhirPackageFixtures.sha256Hex(archive), scan.getSha256());
+    assertEquals(1, scan.getResources().size());
+  }
+
+  @Test
+  void scanOfPackageWithoutPackageJsonHasNullIdentity(@TempDir final Path dir) throws Exception {
+    final Path archive =
+        FhirPackageFixtures.buildPackageWithJson(dir, "anon.tgz", null, "nested-hierarchy.json");
+
+    final FhirSourceScan scan =
+        new FhirResourceScanner(new Configuration()).scan(archive.toString());
+
+    assertTrue(scan.isPackage());
+    assertNull(scan.getPackageName());
+    assertNull(scan.getPackageVersion());
+    // An unidentified package is still hashed.
+    assertEquals(FhirPackageFixtures.sha1Hex(archive), scan.getSha1());
+  }
+
+  @Test
+  void scanOfPackageJsonLackingVersionHasNullVersion(@TempDir final Path dir) throws Exception {
+    final Path archive =
+        FhirPackageFixtures.buildPackageWithJson(
+            dir, "unversioned.tgz", "{\"name\":\"fixtures\"}", "nested-hierarchy.json");
+
+    final FhirSourceScan scan =
+        new FhirResourceScanner(new Configuration()).scan(archive.toString());
+
+    assertEquals("fixtures", scan.getPackageName());
+    assertNull(scan.getPackageVersion());
+  }
+
+  @Test
+  void scanOfDirectoryHasNullDigestsAndIdentity(@TempDir final Path dir) throws Exception {
+    Files.copy(FhirPackageFixtures.resource("nested-hierarchy.json"), dir.resolve("nested.json"));
+
+    final FhirSourceScan scan = new FhirResourceScanner(new Configuration()).scan(dir.toString());
+
+    // A directory has no single set of bytes to hash and no package identity.
+    assertFalse(scan.isPackage());
+    assertNull(scan.getSha1());
+    assertNull(scan.getSha256());
+    assertNull(scan.getPackageName());
+    assertNull(scan.getPackageVersion());
+    assertEquals(1, scan.getResources().size());
   }
 
   /** A stream that counts the bytes read through it, for asserting the pre-scan's early exit. */

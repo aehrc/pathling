@@ -1200,13 +1200,8 @@ public class SnomedRf2Importer {
       @Nonnull final String version,
       @Nonnull final String source) {
     writer.upsertManifestEntry(
-        new ManifestEntry(
-            TerminologyStoreSchema.STORE_FORMAT_VERSION,
-            "code_system",
-            SNOMED_URI,
-            version,
-            source,
-            Instant.now()));
+        ManifestEntry.forImport(
+            "code_system", SNOMED_URI, version, ImportProvenance.of(source, null), Instant.now()));
   }
 
   // --- Version detection. ---

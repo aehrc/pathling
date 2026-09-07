@@ -32,11 +32,16 @@ import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.CONCEPT
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.DESCRIPTION;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.PROPERTY;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.test.FhirFixtures;
+import com.github.tomakehurst.wiremock.WireMockServer;
+import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
+import java.io.IOException;
+import java.net.ServerSocket;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
@@ -47,7 +52,9 @@ import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.spark.sql.SparkSession;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -62,6 +69,8 @@ import org.junit.jupiter.api.io.TempDir;
 class FhirTerminologyImporterTest {
 
   private static SparkSession spark;
+
+  private WireMockServer registry;
 
   @BeforeAll
   static void setUp(@TempDir final Path warehouse) {
@@ -87,6 +96,17 @@ class FhirTerminologyImporterTest {
       spark.stop();
       spark = null;
     }
+  }
+
+  @BeforeEach
+  void startRegistry() {
+    registry = new WireMockServer(WireMockConfiguration.options().dynamicPort());
+    registry.start();
+  }
+
+  @AfterEach
+  void stopRegistry() {
+    registry.stop();
   }
 
   // The import path bounds the Parquet row-group size while writing, so the many concurrent Delta
@@ -136,7 +156,8 @@ class FhirTerminologyImporterTest {
   @Test
   void importsASingleCodeSystemFile(@TempDir final Path storeDir) {
     final String store = storeDir.resolve("store").toString();
-    new FhirTerminologyImporter(spark, store).importFrom(FhirFixtures.codeSystemFile().toString());
+    new FhirTerminologyImporter(spark, store)
+        .importFrom(FhirFixtures.codeSystemFile().toString(), false, null);
 
     final TerminologyStoreReader reader = TerminologyStoreReader.open(store, Map.of());
     final List<ManifestEntry> manifest = reader.readManifest();
@@ -199,7 +220,8 @@ class FhirTerminologyImporterTest {
   @Test
   void importsADirectoryOfResources(@TempDir final Path storeDir) {
     final String store = storeDir.resolve("store").toString();
-    new FhirTerminologyImporter(spark, store).importFrom(FhirFixtures.jsonDirectory().toString());
+    new FhirTerminologyImporter(spark, store)
+        .importFrom(FhirFixtures.jsonDirectory().toString(), false, null);
 
     final Map<String, Set<String>> byType = manifestByType(store);
     assertTrue(byType.get("code_system").contains(FhirFixtures.ANIMAL_SPECIES));
@@ -211,7 +233,8 @@ class FhirTerminologyImporterTest {
   @Test
   void importsAFhirPackage(@TempDir final Path storeDir) {
     final String store = storeDir.resolve("store").toString();
-    new FhirTerminologyImporter(spark, store).importFrom(FhirFixtures.packageArchive().toString());
+    new FhirTerminologyImporter(spark, store)
+        .importFrom(FhirFixtures.packageArchive().toString(), false, null);
 
     final Map<String, Set<String>> byType = manifestByType(store);
     assertTrue(byType.get("code_system").contains(FhirFixtures.ANIMAL_SPECIES));
@@ -230,7 +253,8 @@ class FhirTerminologyImporterTest {
     final FhirTerminologyImporter importer = new FhirTerminologyImporter(spark, store);
     final TerminologyImportException e =
         assertThrows(
-            TerminologyImportException.class, () -> importer.importFrom(invalid.toString()));
+            TerminologyImportException.class,
+            () -> importer.importFrom(invalid.toString(), false, null));
     assertTrue(e.getMessage().toLowerCase().contains("canonical url"));
     // Nothing was written to the store.
     assertThrows(
@@ -244,7 +268,9 @@ class FhirTerminologyImporterTest {
     final String store = dir.resolve("store").toString();
 
     final FhirTerminologyImporter importer = new FhirTerminologyImporter(spark, store);
-    assertThrows(TerminologyImportException.class, () -> importer.importFrom(patient.toString()));
+    assertThrows(
+        TerminologyImportException.class,
+        () -> importer.importFrom(patient.toString(), false, null));
   }
 
   // --- Streaming import (feature 024). ---
@@ -263,13 +289,13 @@ class FhirTerminologyImporterTest {
     Files.copy(
         FhirPackageFixtures.resource("nested-hierarchy.json"), dirSource.resolve("nested.json"));
     final String dirStore = dir.resolve("dir-store").toString();
-    new FhirTerminologyImporter(spark, dirStore).importFrom(dirSource.toString());
+    new FhirTerminologyImporter(spark, dirStore).importFrom(dirSource.toString(), false, null);
     assertEquals(fileClosure, closurePairs(dirStore));
 
     final Path archive =
         FhirPackageFixtures.buildPackage(dir, "nested.tgz", "nested-hierarchy.json");
     final String pkgStore = dir.resolve("pkg-store").toString();
-    new FhirTerminologyImporter(spark, pkgStore).importFrom(archive.toString());
+    new FhirTerminologyImporter(spark, pkgStore).importFrom(archive.toString(), false, null);
     assertEquals(fileClosure, closurePairs(pkgStore));
   }
 
@@ -277,7 +303,7 @@ class FhirTerminologyImporterTest {
   void streamingImportPreservesConceptDetail(@TempDir final Path dir) {
     final String store = dir.resolve("store").toString();
     new FhirTerminologyImporter(spark, store)
-        .importFrom(FhirPackageFixtures.resource("nested-hierarchy.json").toString());
+        .importFrom(FhirPackageFixtures.resource("nested-hierarchy.json").toString(), false, null);
 
     final TerminologyStoreReader reader = TerminologyStoreReader.open(store, Map.of());
     final Map<String, String> display = new HashMap<>();
@@ -305,7 +331,9 @@ class FhirTerminologyImporterTest {
             TerminologyImportException.class,
             () ->
                 importer.importFrom(
-                    FhirPackageFixtures.resource("codesystem-no-url.json").toString()));
+                    FhirPackageFixtures.resource("codesystem-no-url.json").toString(),
+                    false,
+                    null));
     assertTrue(e.getMessage().toLowerCase().contains("canonical url"));
     // The pre-scan failed before any write, so the store was never created.
     assertThrows(
@@ -325,7 +353,8 @@ class FhirTerminologyImporterTest {
 
     final TerminologyImportException e =
         assertThrows(
-            TerminologyImportException.class, () -> importer.importFrom(corruptPackage.toString()));
+            TerminologyImportException.class,
+            () -> importer.importFrom(corruptPackage.toString(), false, null));
     final String message = e.getMessage();
     assertTrue(message.contains("http://example.org/fhir/CodeSystem/corrupt"), message);
     assertTrue(message.toLowerCase().contains("partial"), message);
@@ -335,7 +364,7 @@ class FhirTerminologyImporterTest {
     final Path fixedPackage =
         FhirPackageFixtures.buildPackage(
             dir, "fixed.tgz", "simple-valid.json", "corrupt-concepts-fixed.json");
-    new FhirTerminologyImporter(spark, store).importFrom(fixedPackage.toString());
+    new FhirTerminologyImporter(spark, store).importFrom(fixedPackage.toString(), false, null);
 
     final Map<String, Set<String>> byType = manifestByType(store);
     assertTrue(byType.get("code_system").contains("http://example.org/fhir/CodeSystem/corrupt"));
@@ -357,7 +386,8 @@ class FhirTerminologyImporterTest {
 
     final TerminologyImportException e =
         assertThrows(
-            TerminologyImportException.class, () -> importer.importFrom(guardPackage.toString()));
+            TerminologyImportException.class,
+            () -> importer.importFrom(guardPackage.toString(), false, null));
     assertTrue(e.getMessage().contains("ValueSet"), e.getMessage());
     assertTrue(e.getMessage().toLowerCase().contains("limit"), e.getMessage());
     // The guard fired during validation, before any write.
@@ -369,7 +399,7 @@ class FhirTerminologyImporterTest {
   void importsACodeSystemWrappedInABundleThroughTheStreamingPath(@TempDir final Path dir) {
     final String store = dir.resolve("store").toString();
     new FhirTerminologyImporter(spark, store)
-        .importFrom(FhirPackageFixtures.resource("bundle-codesystem.json").toString());
+        .importFrom(FhirPackageFixtures.resource("bundle-codesystem.json").toString(), false, null);
 
     final Map<String, Set<String>> byType = manifestByType(store);
     assertTrue(byType.get("code_system").contains("http://example.org/fhir/CodeSystem/bundled"));
@@ -404,18 +434,218 @@ class FhirTerminologyImporterTest {
     assertEquals(Set.of("A->B", "A->C"), mixed);
   }
 
+  // --- Provenance and registry verification (feature 059). ---
+
+  @Test
+  void packageImportRecordsVerifiedProvenanceOnEveryRow(@TempDir final Path dir) throws Exception {
+    final Path archive =
+        FhirPackageFixtures.buildPackage(
+            dir, "fixtures.tgz", "nested-hierarchy.json", "valueset-simple.json");
+    RegistryStub.stubListing(
+        registry,
+        FhirPackageFixtures.PACKAGE_NAME,
+        FhirPackageFixtures.PACKAGE_VERSION,
+        FhirPackageFixtures.sha1Hex(archive));
+    final String store = dir.resolve("store").toString();
+
+    new FhirTerminologyImporter(spark, store)
+        .importFrom(archive.toString(), true, registry.baseUrl());
+
+    final List<ManifestEntry> manifest = manifest(store);
+    assertEquals(2, manifest.size());
+    for (final ManifestEntry entry : manifest) {
+      assertEquals(FhirPackageFixtures.sha256Hex(archive), entry.getSourceSha256());
+      assertEquals(FhirPackageFixtures.PACKAGE_NAME, entry.getPackageName());
+      assertEquals(FhirPackageFixtures.PACKAGE_VERSION, entry.getPackageVersion());
+      assertEquals(PackageVerification.VERIFIED, entry.getPackageVerification());
+      assertEquals(registry.baseUrl(), entry.getPackageRegistry());
+    }
+  }
+
+  @Test
+  void mismatchFailsBeforeAnyWriteIntoAFreshStore(@TempDir final Path dir) throws Exception {
+    final Path archive =
+        FhirPackageFixtures.buildPackage(dir, "fixtures.tgz", "nested-hierarchy.json");
+    stubMismatch(archive);
+    final String store = dir.resolve("store").toString();
+    final FhirTerminologyImporter importer = new FhirTerminologyImporter(spark, store);
+
+    final TerminologyImportException e =
+        assertThrows(
+            TerminologyImportException.class,
+            () -> importer.importFrom(archive.toString(), true, registry.baseUrl()));
+
+    assertTrue(e.getMessage().contains("does not match the registry checksum"), e.getMessage());
+    // The store was never created: the check ran before anything was written.
+    assertTrue(Files.notExists(Path.of(store)));
+  }
+
+  @Test
+  void mismatchLeavesAnExistingStoreUnchanged(@TempDir final Path dir) throws Exception {
+    final Path first = FhirPackageFixtures.buildPackage(dir, "first.tgz", "nested-hierarchy.json");
+    final String store = dir.resolve("store").toString();
+    new FhirTerminologyImporter(spark, store).importFrom(first.toString(), false, null);
+    final List<ManifestEntry> before = manifest(store);
+
+    final Path tampered =
+        FhirPackageFixtures.buildPackage(dir, "tampered.tgz", "simple-valid.json");
+    stubMismatch(tampered);
+    final FhirTerminologyImporter importer = new FhirTerminologyImporter(spark, store);
+    assertThrows(
+        TerminologyImportException.class,
+        () -> importer.importFrom(tampered.toString(), true, registry.baseUrl()));
+
+    assertEquals(before, manifest(store));
+  }
+
+  @Test
+  void noShasumImportsAsUnverifiedWithNullRegistry(@TempDir final Path dir) throws Exception {
+    final Path archive =
+        FhirPackageFixtures.buildPackage(dir, "fixtures.tgz", "nested-hierarchy.json");
+    RegistryStub.stubListing(
+        registry, FhirPackageFixtures.PACKAGE_NAME, FhirPackageFixtures.PACKAGE_VERSION, null);
+    final String store = dir.resolve("store").toString();
+
+    new FhirTerminologyImporter(spark, store)
+        .importFrom(archive.toString(), true, registry.baseUrl());
+
+    final ManifestEntry entry = manifest(store).get(0);
+    assertEquals(PackageVerification.UNVERIFIED, entry.getPackageVerification());
+    assertNull(entry.getPackageRegistry());
+    // The package is still identified and hashed even though it could not be verified.
+    assertEquals(FhirPackageFixtures.PACKAGE_NAME, entry.getPackageName());
+    assertEquals(FhirPackageFixtures.sha256Hex(archive), entry.getSourceSha256());
+  }
+
+  @Test
+  void unreachableRegistryImportsAsUnverified(@TempDir final Path dir) throws Exception {
+    final Path archive =
+        FhirPackageFixtures.buildPackage(dir, "fixtures.tgz", "nested-hierarchy.json");
+    final String store = dir.resolve("store").toString();
+
+    new FhirTerminologyImporter(spark, store)
+        .importFrom(archive.toString(), true, "http://127.0.0.1:" + closedPort());
+
+    final ManifestEntry entry = manifest(store).get(0);
+    assertEquals(PackageVerification.UNVERIFIED, entry.getPackageVerification());
+    assertNull(entry.getPackageRegistry());
+  }
+
+  @Test
+  void packageWithoutPackageJsonImportsAsUnverifiedWithNullIdentity(@TempDir final Path dir)
+      throws Exception {
+    final Path archive =
+        FhirPackageFixtures.buildPackageWithJson(dir, "anon.tgz", null, "nested-hierarchy.json");
+    final String store = dir.resolve("store").toString();
+
+    new FhirTerminologyImporter(spark, store)
+        .importFrom(archive.toString(), true, registry.baseUrl());
+
+    final ManifestEntry entry = manifest(store).get(0);
+    assertEquals(PackageVerification.UNVERIFIED, entry.getPackageVerification());
+    assertNull(entry.getPackageName());
+    assertNull(entry.getPackageVersion());
+    assertNotNull(entry.getSourceSha256());
+    // An unidentifiable package is never looked up.
+    assertEquals(0, registry.getAllServeEvents().size());
+  }
+
+  @Test
+  void skippedVerificationMakesNoRequestAndRecordsSkipped(@TempDir final Path dir)
+      throws Exception {
+    final Path archive =
+        FhirPackageFixtures.buildPackage(dir, "fixtures.tgz", "nested-hierarchy.json");
+    final String store = dir.resolve("store").toString();
+
+    new FhirTerminologyImporter(spark, store)
+        .importFrom(archive.toString(), false, registry.baseUrl());
+
+    final ManifestEntry entry = manifest(store).get(0);
+    assertEquals(PackageVerification.SKIPPED, entry.getPackageVerification());
+    assertNull(entry.getPackageRegistry());
+    // The identity and hash are recorded even when the check is declined.
+    assertEquals(FhirPackageFixtures.PACKAGE_NAME, entry.getPackageName());
+    assertEquals(FhirPackageFixtures.PACKAGE_VERSION, entry.getPackageVersion());
+    assertEquals(FhirPackageFixtures.sha256Hex(archive), entry.getSourceSha256());
+    assertEquals(0, registry.getAllServeEvents().size());
+  }
+
+  @Test
+  void jsonFileAndDirectorySourcesRecordNullStatusAndMakeNoRequest(@TempDir final Path dir)
+      throws Exception {
+    final Path file = FhirPackageFixtures.resource("nested-hierarchy.json");
+    final String fileStore = dir.resolve("file-store").toString();
+    new FhirTerminologyImporter(spark, fileStore)
+        .importFrom(file.toString(), true, registry.baseUrl());
+
+    final ManifestEntry fromFile = manifest(fileStore).get(0);
+    // A single file is hashed but carries no package identity or verification status.
+    assertEquals(FhirPackageFixtures.sha256Hex(file), fromFile.getSourceSha256());
+    assertNull(fromFile.getPackageVerification());
+    assertNull(fromFile.getPackageName());
+
+    final Path dirSource = dir.resolve("source");
+    Files.createDirectories(dirSource);
+    Files.copy(file, dirSource.resolve("nested.json"));
+    final String dirStore = dir.resolve("dir-store").toString();
+    new FhirTerminologyImporter(spark, dirStore)
+        .importFrom(dirSource.toString(), true, registry.baseUrl());
+
+    final ManifestEntry fromDirectory = manifest(dirStore).get(0);
+    assertNull(fromDirectory.getSourceSha256());
+    assertNull(fromDirectory.getPackageVerification());
+    assertEquals(0, registry.getAllServeEvents().size());
+  }
+
+  @Test
+  void verificationOptionHasNoEffectOnNonPackageSources(@TempDir final Path dir) {
+    final Path file = FhirPackageFixtures.resource("nested-hierarchy.json");
+    final String verifying = dir.resolve("verifying").toString();
+    final String skipping = dir.resolve("skipping").toString();
+
+    new FhirTerminologyImporter(spark, verifying)
+        .importFrom(file.toString(), true, registry.baseUrl());
+    new FhirTerminologyImporter(spark, skipping).importFrom(file.toString(), false, null);
+
+    final ManifestEntry verified = manifest(verifying).get(0);
+    final ManifestEntry skipped = manifest(skipping).get(0);
+    assertEquals(verified.getSourceSha256(), skipped.getSourceSha256());
+    assertNull(verified.getPackageVerification());
+    assertNull(skipped.getPackageVerification());
+    assertEquals(0, registry.getAllServeEvents().size());
+  }
+
+  /** Stubs a listing whose checksum belongs to a differently compressed copy of the archive. */
+  private void stubMismatch(final Path archive) throws IOException {
+    RegistryStub.stubListing(
+        registry,
+        FhirPackageFixtures.PACKAGE_NAME,
+        FhirPackageFixtures.PACKAGE_VERSION,
+        FhirPackageFixtures.sha1Hex(FhirPackageFixtures.recompress(archive)));
+  }
+
+  private static int closedPort() throws IOException {
+    try (ServerSocket socket = new ServerSocket(0)) {
+      return socket.getLocalPort();
+    }
+  }
+
+  private List<ManifestEntry> manifest(final String store) {
+    return TerminologyStoreReader.open(store, Map.of()).readManifest();
+  }
+
   private Set<String> importFixtureClosure(
       final Path dir, final String fixtureName, final String suffix) {
     final String store = dir.resolve("store-" + suffix).toString();
     new FhirTerminologyImporter(spark, store)
-        .importFrom(FhirPackageFixtures.resource(fixtureName).toString());
+        .importFrom(FhirPackageFixtures.resource(fixtureName).toString(), false, null);
     return closurePairs(store);
   }
 
   private Set<String> importNestedAndReadClosure(final Path dir, final String suffix) {
     final String store = dir.resolve("store-" + suffix).toString();
     new FhirTerminologyImporter(spark, store)
-        .importFrom(FhirPackageFixtures.resource("nested-hierarchy.json").toString());
+        .importFrom(FhirPackageFixtures.resource("nested-hierarchy.json").toString(), false, null);
     return closurePairs(store);
   }
 
