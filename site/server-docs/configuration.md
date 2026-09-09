@@ -196,7 +196,10 @@ These settings govern the resolution of a query's dependency graph, for both
 - `pathling.sqlQuery.externalTables.N.path` - The location of the table.
   Accepts the same URL schemes as `pathling.storage.warehouseUrl`.
 - `pathling.sqlQuery.externalTables.N.format` - (default: `delta`) The storage
-  format of the table, either `delta` or `parquet`.
+  format of the table, either `delta` or `parquet`. The format is passed to
+  Spark as declared, so declare it accurately: a Parquet directory declared
+  `delta` fails to read, but a Delta table declared `parquet` is read as its
+  raw data files, including those superseded by later commits.
 
 `N` is a zero-based index. The list is validated at startup: every entry must
 have a non-blank `url` that contains no `|` and is unique among the configured
