@@ -18,14 +18,17 @@
 package au.csiro.pathling.operations.sqlquery;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -39,6 +42,7 @@ import org.apache.spark.sql.catalyst.expressions.Literal;
 import org.apache.spark.sql.catalyst.plans.logical.GlobalLimit;
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
 import scala.jdk.javaapi.CollectionConverters;
@@ -57,7 +61,12 @@ import scala.jdk.javaapi.CollectionConverters;
  *       {@code validateAnalyzed} sequence the executor uses and yields the engine's describe rows.
  *       This exercises the analysed-mode carve-out end to end in the JVM, since the executor calls
  *       {@link SqlValidator#validateAnalyzed} on the eagerly-executed command plan (spec 029 US1).
+ *   <li>That a configured external table leaf is materialised under its request-scoped temp view
+ *       and so passes the analysed-plan check, while naming the same data by path is still rejected
+ *       (spec 060 US1).
  * </ul>
+ *
+ * @author John Grimes
  */
 @Import(SqlValidator.class)
 @SpringBootUnitTest
@@ -218,6 +227,66 @@ class SqlQueryExecutorTest {
   }
 
   // -------------------------------------------------------------------------
+  // External table leaves: reachable under the declared label only.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void executesAQueryOverAnExternalTableLeaf(@TempDir final Path tempDir) {
+    // The table's relation sits beneath the trusted temp-view alias the executor registers for the
+    // leaf, so validateAnalyzed accepts the plan and the rows flow through.
+    final ResolvedExternalTable table = writeExternalTable(tempDir);
+    final AtomicReference<List<Row>> rows = new AtomicReference<>();
+
+    newExecutor()
+        .execute(
+            request("SELECT * FROM t ORDER BY id", null, table.getCanonicalKey()),
+            graphOf(table),
+            mock(DataSource.class),
+            REQUEST_ID,
+            dataset -> rows.set(dataset.collectAsList()));
+
+    assertThat(rows.get()).extracting(row -> row.getInt(0)).containsExactly(1, 2);
+    assertThat(rows.get()).extracting(row -> row.getString(1)).containsExactly("alice", "bob");
+  }
+
+  @Test
+  void rejectsNamingTheExternalTableByPathInsteadOfLabel(@TempDir final Path tempDir) {
+    // A data-source short name bypasses the label and must fall foul of the existing allow-list.
+    final ResolvedExternalTable table = writeExternalTable(tempDir);
+    final SqlQueryRequest byPath =
+        request("SELECT * FROM parquet.`" + table.getPath() + "`", null, table.getCanonicalKey());
+
+    assertThatThrownBy(
+            () ->
+                newExecutor()
+                    .execute(
+                        byPath, graphOf(table), mock(DataSource.class), REQUEST_ID, dataset -> {}))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("SQL references an undeclared table");
+  }
+
+  /** Writes a two-row Delta table into the temp directory and returns the leaf that reads it. */
+  @Nonnull
+  private ResolvedExternalTable writeExternalTable(@Nonnull final Path tempDir) {
+    final String path = "file://" + tempDir.resolve("external_delta").toAbsolutePath();
+    sparkSession
+        .sql("SELECT * FROM (VALUES (1, 'alice'), (2, 'bob')) AS t(id, name)")
+        .write()
+        .format("delta")
+        .save(path);
+    return new ResolvedExternalTable("https://example.org/data/external", path, "delta");
+  }
+
+  /** Builds a graph whose only node is the given leaf, exposed under the top-level label t. */
+  @Nonnull
+  private static ResolvedDependencyGraph graphOf(@Nonnull final ResolvedExternalTable table) {
+    return new ResolvedDependencyGraph(
+        List.of(table),
+        Map.of("t", table.getCanonicalKey()),
+        Map.of(table.getCanonicalKey(), table));
+  }
+
+  // -------------------------------------------------------------------------
   // Helpers
   // -------------------------------------------------------------------------
 
@@ -267,6 +336,22 @@ class SqlQueryExecutorTest {
   private static SqlQueryRequest request(@Nonnull final String sql, @Nullable final Integer limit) {
     return new SqlQueryRequest(
         new ParsedSqlQuery(sql, List.of(), List.of(), SqlLibraryParser.SQL_QUERY_TYPE_CODE),
+        SqlQueryOutputFormat.NDJSON,
+        /* includeHeader= */ true,
+        limit,
+        Map.of());
+  }
+
+  /** Builds a request over SQL that declares one dependency under the label t. */
+  @Nonnull
+  private static SqlQueryRequest request(
+      @Nonnull final String sql, @Nullable final Integer limit, @Nonnull final String resource) {
+    return new SqlQueryRequest(
+        new ParsedSqlQuery(
+            sql,
+            List.of(new ViewArtifactReference("t", resource)),
+            List.of(),
+            SqlLibraryParser.SQL_QUERY_TYPE_CODE),
         SqlQueryOutputFormat.NDJSON,
         /* includeHeader= */ true,
         limit,

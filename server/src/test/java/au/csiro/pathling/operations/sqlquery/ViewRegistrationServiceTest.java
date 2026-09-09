@@ -18,10 +18,14 @@
 package au.csiro.pathling.operations.sqlquery;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
+import jakarta.annotation.Nonnull;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -35,18 +39,28 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
+import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
+import org.hl7.fhir.r4.model.OperationOutcome;
+import org.hl7.fhir.r4.model.OperationOutcome.IssueType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * Tests for {@link ViewRegistrationService}, with particular attention to the request-id
  * namespacing that prevents concurrent {@code $sql-run} requests from clobbering one another's
- * temporary views in Spark's session-global catalog.
+ * temporary views in Spark's session-global catalog, and to the reading of configured external
+ * tables.
+ *
+ * @author John Grimes
  */
 @SpringBootUnitTest
 class ViewRegistrationServiceTest {
+
+  /** The canonical URL under which the cohorts fixture is configured. */
+  private static final String TABLE_URL = "https://example.org/data/cohorts";
 
   @Autowired private SparkSession spark;
   @Autowired private FhirContext fhirContext;
@@ -161,6 +175,101 @@ class ViewRegistrationServiceTest {
     } finally {
       service.dropViews(List.of(childViewName));
     }
+  }
+
+  // ---------------------------------------------------------------------------
+  // External table materialisation (spec 060 US1).
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void buildExternalTableReadsADeltaTable(@TempDir final Path tempDir) {
+    final String path = writeCohorts(tempDir.resolve("cohorts_delta"), "delta");
+
+    final Dataset<Row> result =
+        service.buildExternalTable(new ResolvedExternalTable(TABLE_URL, path, "delta"));
+
+    assertCohorts(result);
+  }
+
+  @Test
+  void buildExternalTableReadsAParquetTable(@TempDir final Path tempDir) {
+    final String path = writeCohorts(tempDir.resolve("cohorts_parquet"), "parquet");
+
+    final Dataset<Row> result =
+        service.buildExternalTable(new ResolvedExternalTable(TABLE_URL, path, "parquet"));
+
+    assertCohorts(result);
+  }
+
+  // ---------------------------------------------------------------------------
+  // External table read failures (spec 060 US3).
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void buildExternalTableReportsAMissingDeltaPathAsAReadFailure(@TempDir final Path tempDir) {
+    final String path = "file://" + tempDir.resolve("does-not-exist").toAbsolutePath();
+
+    assertReadFailure(new ResolvedExternalTable(TABLE_URL, path, "delta"), path);
+  }
+
+  @Test
+  void buildExternalTableReportsAMissingParquetPathAsAReadFailure(@TempDir final Path tempDir) {
+    final String path = "file://" + tempDir.resolve("does-not-exist").toAbsolutePath();
+
+    assertReadFailure(new ResolvedExternalTable(TABLE_URL, path, "parquet"), path);
+  }
+
+  @Test
+  void buildExternalTableReportsAParquetDirectoryDeclaredAsDeltaAsAReadFailure(
+      @TempDir final Path tempDir) {
+    final String path = writeCohorts(tempDir.resolve("cohorts_parquet"), "parquet");
+
+    assertReadFailure(new ResolvedExternalTable(TABLE_URL, path, "delta"), path);
+  }
+
+  /**
+   * Asserts that reading the node fails with the operator-side 500 that names the URL, hides the
+   * path and carries a single processing issue.
+   */
+  private void assertReadFailure(
+      @Nonnull final ResolvedExternalTable node, @Nonnull final String path) {
+    assertThatThrownBy(() -> service.buildExternalTable(node))
+        .isInstanceOf(BaseServerResponseException.class)
+        .hasMessage("Failed to read external table '" + TABLE_URL + "'")
+        .hasMessageNotContaining(path)
+        .satisfies(
+            thrown -> {
+              final BaseServerResponseException exception = (BaseServerResponseException) thrown;
+              assertThat(exception.getStatusCode()).isEqualTo(500);
+              final OperationOutcome outcome = (OperationOutcome) exception.getOperationOutcome();
+              assertThat(outcome.getIssue()).hasSize(1);
+              assertThat(outcome.getIssueFirstRep().getCode()).isEqualTo(IssueType.PROCESSING);
+            });
+  }
+
+  /** Writes the two-row cohorts fixture in the given format and returns its {@code file://} URL. */
+  @Nonnull
+  private String writeCohorts(@Nonnull final Path directory, @Nonnull final String format) {
+    final StructType schema =
+        DataTypes.createStructType(
+            new StructField[] {
+              DataTypes.createStructField("family_name", DataTypes.StringType, false),
+              DataTypes.createStructField("cohort", DataTypes.StringType, false)
+            });
+    final List<Row> rows =
+        List.of(RowFactory.create("Smith", "A"), RowFactory.create("Williams", "B"));
+    final String path = "file://" + directory.toAbsolutePath();
+    spark.createDataFrame(rows, schema).write().format(format).save(path);
+    return path;
+  }
+
+  private static void assertCohorts(@Nonnull final Dataset<Row> result) {
+    assertThat(result.schema().fieldNames()).containsExactly("family_name", "cohort");
+    assertThat(
+            result.collectAsList().stream()
+                .map(row -> row.getString(0) + "/" + row.getString(1))
+                .toList())
+        .containsExactlyInAnyOrder("Smith/A", "Williams/B");
   }
 
   // ---------------------------------------------------------------------------
@@ -339,7 +448,7 @@ class ViewRegistrationServiceTest {
   private Dataset<Row> singleColumnDataset(final String columnName, final List<String> values) {
     final StructType schema =
         DataTypes.createStructType(
-            new org.apache.spark.sql.types.StructField[] {
+            new StructField[] {
               DataTypes.createStructField(columnName, DataTypes.StringType, false)
             });
     final List<Row> rows =

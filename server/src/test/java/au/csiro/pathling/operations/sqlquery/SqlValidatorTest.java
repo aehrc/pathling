@@ -30,6 +30,8 @@ import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
 import org.apache.spark.sql.catalyst.plans.logical.WithWindowDefinition;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
 
@@ -478,6 +480,17 @@ class SqlValidatorTest {
   @Test
   void rejectsJavaMethodFunction() {
     assertThatThrownBy(() -> validate("SELECT java_method('java.lang.Math', 'random') FROM t", "t"))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("disallowed function");
+  }
+
+  // The input file functions expose the storage path of a scanned file, which for an external
+  // table is the operator's configured path that responses must never disclose (spec 060 FR-012).
+  @ParameterizedTest
+  @ValueSource(
+      strings = {"input_file_name()", "input_file_block_start()", "input_file_block_length()"})
+  void rejectsInputFileFunctions(final String call) {
+    assertThatThrownBy(() -> validate("SELECT " + call + " FROM t", "t"))
         .isInstanceOf(InvalidRequestException.class)
         .hasMessageContaining("disallowed function");
   }
