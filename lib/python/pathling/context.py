@@ -473,18 +473,46 @@ class PathlingContext:
             options = builder.build()
         self._jpc.importSnomed(source, storage_path, options)
 
-    def import_fhir_terminology(self, source: str, storage_path: str) -> None:
+    def import_fhir_terminology(
+        self,
+        source: str,
+        storage_path: str,
+        verify_package: bool = True,
+        package_registry: Optional[str] = None,
+    ) -> None:
         """
         Imports FHIR R4 CodeSystem, ValueSet, and ConceptMap resources into a local terminology
         store.
 
+        A FHIR NPM package (``.tgz``) is checked against the checksum its registry publishes before
+        anything is written: a package that does not match fails the import and leaves the store
+        untouched. A package the registry does not describe, or a registry that cannot be reached,
+        is imported and recorded as unverified. For an offline import, or a package that was never
+        published to a registry, pass ``verify_package=False``; the import is then recorded as
+        having skipped verification.
+
         :param source: the path to a JSON file, a directory of JSON files, or a FHIR NPM package
                (``.tgz``), on any filesystem accessible through the Hadoop FileSystem API
         :param storage_path: the terminology store location, created if absent
+        :param verify_package: whether a package source is checked against its registry's published
+               checksum; ``True`` by default
+        :param package_registry: the FHIR package registry to check a package against; when omitted
+               the library default (``https://packages.fhir.org``) is used
         :raises: the mapped JVM ``TerminologyImportException`` if the source contains no importable
-                 resources or an invalid resource; the store is left unmodified
+                 resources or an invalid resource, or the package does not match the registry
+                 checksum; the store is left unmodified
         """
-        self._jpc.importFhirTerminology(source, storage_path)
+        options = None
+        if not verify_package or package_registry is not None:
+            jvm = self._spark._jvm
+            builder = (
+                jvm.au.csiro.pathling.library.terminology.FhirImportOptions.builder()
+            )
+            builder = builder.verifyPackage(verify_package)
+            if package_registry is not None:
+                builder = builder.packageRegistry(package_registry)
+            options = builder.build()
+        self._jpc.importFhirTerminology(source, storage_path, options)
 
     def encode(
         self,

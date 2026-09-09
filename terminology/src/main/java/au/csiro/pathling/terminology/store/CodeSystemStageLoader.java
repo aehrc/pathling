@@ -105,14 +105,14 @@ public class CodeSystemStageLoader {
    * @param url the CodeSystem canonical URL
    * @param version the CodeSystem version, or null
    * @param hierarchyMeaning the CodeSystem hierarchy meaning, or null (defaults to {@code is-a})
-   * @param source the source path recorded in the manifest for provenance
+   * @param provenance where the content came from, recorded in the manifest
    */
   public void load(
       @Nonnull final CodeSystemStaging staging,
       @Nonnull final String url,
       @Nullable final String version,
       @Nullable final String hierarchyMeaning,
-      @Nonnull final String source) {
+      @Nonnull final ImportProvenance provenance) {
     final String systemVersionId =
         TerminologyStoreSchema.systemVersionId(url, version == null ? "" : version);
 
@@ -173,13 +173,7 @@ public class CodeSystemStageLoader {
     writer.writePartitionedBySystemVersion(closure, CLOSURE, systemVersionId);
     closure.unpersist();
     writer.upsertManifestEntry(
-        new ManifestEntry(
-            TerminologyStoreSchema.STORE_FORMAT_VERSION,
-            "code_system",
-            url,
-            version,
-            source,
-            Instant.now()));
+        ManifestEntry.forImport("code_system", url, version, provenance, Instant.now()));
     survivors.unpersist();
     relationships.unpersist();
   }
