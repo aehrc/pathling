@@ -290,6 +290,42 @@ class SqlExternalTableIT extends AbstractAsyncExportIT {
   }
 
   // -------------------------------------------------------------------------
+  // Scenario 7: version pins, URL collisions and unreadable paths are reported precisely.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void rejectsAVersionPinnedReferenceToTheTableAsNotFound() {
+    final Library library =
+        sqlQueryLibrary("SELECT * FROM cohort", Map.of("cohort", COHORTS_DELTA_URL + "|2"));
+
+    final String body = postExpectStatus(parametersJson(library), 404);
+
+    assertThat(body)
+        .contains("no ViewDefinition, SQLView or external table matches that canonical URL");
+  }
+
+  @Test
+  void rejectsAUrlSharedByTheTableAndAStoredSqlViewAsAmbiguous() {
+    final Library library =
+        sqlQueryLibrary("SELECT * FROM cohort", Map.of("cohort", AMBIGUOUS_URL));
+
+    final String body = postExpectStatus(parametersJson(library), 400);
+
+    assertThat(body).contains("is ambiguous");
+  }
+
+  @Test
+  void reportsAnUnreadablePathWithoutRevealingIt() {
+    final Library library = sqlQueryLibrary("SELECT * FROM cohort", Map.of("cohort", MISSING_URL));
+
+    final String body = postExpectStatus(parametersJson(library), 500);
+
+    assertThat(body)
+        .contains("Failed to read external table '" + MISSING_URL + "'")
+        .doesNotContain(MISSING_DIRECTORY);
+  }
+
+  // -------------------------------------------------------------------------
   // Request helpers
   // -------------------------------------------------------------------------
 

@@ -20,9 +20,11 @@ package au.csiro.pathling.operations.sqlquery;
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.io.source.DataSource;
+import au.csiro.pathling.operations.sql.SqlOperationError;
 import au.csiro.pathling.views.FhirView;
 import au.csiro.pathling.views.FhirViewExecutor;
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import jakarta.annotation.Nonnull;
 import java.util.Collection;
@@ -163,12 +165,29 @@ public class ViewRegistrationService {
    * relation and schema eagerly, so a missing or unreadable path fails here rather than at collect
    * time.
    *
+   * <p>Any failure of the read is an operator-side fault, not a defect in the caller's SQL, so it
+   * is translated into a 500 that names the table's URL only; the path and the Spark cause are
+   * logged but not returned. The cause is deliberately not attached to the thrown exception because
+   * the error interceptor unwraps an internal error to its cause, which would discard this message.
+   *
    * @param node the resolved external table
    * @return the table's dataset
+   * @throws BaseServerResponseException with status 500 if the table cannot be read
    */
   @Nonnull
   public Dataset<Row> buildExternalTable(@Nonnull final ResolvedExternalTable node) {
-    return sparkSession.read().format(node.getFormat()).load(node.getPath());
+    try {
+      return sparkSession.read().format(node.getFormat()).load(node.getPath());
+    } catch (final Exception e) {
+      log.error(
+          "Failed to read external table {} ({} at {})",
+          node.getCanonicalKey(),
+          node.getFormat(),
+          node.getPath(),
+          e);
+      throw SqlOperationError.internalError(
+          "Failed to read external table '" + node.getCanonicalKey() + "'");
+    }
   }
 
   /**

@@ -378,7 +378,6 @@ class SqlDependencyResolverTest {
     assertThat(graph.getOrderedNodes().get(1).getCanonicalKey()).isEqualTo(viewUrl);
     final ResolvedSqlView sqlView = (ResolvedSqlView) graph.getNodesByKey().get(viewUrl);
     assertThat(sqlView.getChildKeysByLabel()).containsExactly(Map.entry("cohort", TABLE_URL));
-    verifyNoInteractions(viewResolver);
   }
 
   @Test
@@ -406,6 +405,73 @@ class SqlDependencyResolverTest {
     assertThat(graph.getNodesByKey().get(TABLE_URL))
         .isSameAs(graph.getOrderedNodes().get(0))
         .isInstanceOf(ResolvedExternalTable.class);
+  }
+
+  // ---------------------------------------------------------------------------
+  // External table faults (spec 060 US3): version pins, collisions and context precedence.
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void rejectsAVersionPinnedReferenceToAnExternalTableAsNotFound() {
+    // Tables carry no version, so a pinned reference can never mean one; with nothing stored under
+    // that URL either, the reference is not found.
+    configureExternalTable(TABLE_URL, TABLE_PATH, "delta");
+
+    assertThatThrownBy(
+            () ->
+                resolver.resolve(
+                    sqlQuery("SELECT * FROM c", "c", TABLE_URL + "|2"), SuppliedArtefacts.empty()))
+        .isInstanceOf(ResourceNotFoundException.class)
+        .hasMessageContainingAll("'c'", TABLE_URL + "|2")
+        .hasMessageEndingWith(
+            "no ViewDefinition, SQLView or external table matches that canonical URL");
+  }
+
+  @Test
+  void rejectsAUrlMatchingAnExternalTableAndAStoredViewDefinitionAsAmbiguous() {
+    configureExternalTable(TABLE_URL, TABLE_PATH, "delta");
+    stubStoredViewDefinition(TABLE_URL, TABLE_URL, "Patient");
+
+    assertThatThrownBy(
+            () ->
+                resolver.resolve(
+                    sqlQuery("SELECT * FROM c", "c", TABLE_URL), SuppliedArtefacts.empty()))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContainingAll(
+            "'c'", TABLE_URL, "is ambiguous", "external table", "ViewDefinition")
+        .hasMessageNotContaining("SQLView");
+  }
+
+  @Test
+  void rejectsAUrlMatchingAnExternalTableAndAStoredSqlViewAsAmbiguous() {
+    configureExternalTable(TABLE_URL, TABLE_PATH, "delta");
+    stubSqlView(TABLE_URL, "SELECT * FROM pv", "pv", PATIENT_VIEW_URL);
+
+    assertThatThrownBy(
+            () ->
+                resolver.resolve(
+                    sqlQuery("SELECT * FROM c", "c", TABLE_URL), SuppliedArtefacts.empty()))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContainingAll("'c'", TABLE_URL, "is ambiguous", "external table", "SQLView")
+        .hasMessageNotContaining("ViewDefinition");
+  }
+
+  @Test
+  void prefersASuppliedViewDefinitionOverAnExternalTableWithTheSameUrl() {
+    // A context artefact outranks both configuration and storage, and neither is consulted.
+    configureExternalTable(TABLE_URL, TABLE_PATH, "delta");
+    final FhirView supplied = fhirView("Patient");
+
+    final ResolvedDependencyGraph graph =
+        resolver.resolve(
+            sqlQuery("SELECT * FROM c", "c", TABLE_URL),
+            SuppliedArtefacts.ofViews(Map.of(TABLE_URL, supplied)));
+
+    assertThat(graph.getOrderedNodes()).hasSize(1);
+    final ResolvedDependency node = graph.getNodesByKey().get(TABLE_URL);
+    assertThat(node).isInstanceOf(ResolvedViewDefinition.class);
+    assertThat(((ResolvedViewDefinition) node).getView()).isSameAs(supplied);
+    verifyNoInteractions(viewResolver, libraryReferenceResolver);
   }
 
   // ---------------------------------------------------------------------------
@@ -463,15 +529,16 @@ class SqlDependencyResolverTest {
   // ---------------------------------------------------------------------------
 
   @Test
-  void reportsNotFoundWhenNeitherAViewDefinitionNorASqlViewMatches() {
+  void reportsNotFoundWhenNothingMatches() {
     final String missingUrl = SqlLibraryFixtures.viewDefinitionUrl("missing");
 
     assertThatThrownBy(
             () ->
                 resolver.resolve(sqlQuery("SELECT 1", "x", missingUrl), SuppliedArtefacts.empty()))
         .isInstanceOf(ResourceNotFoundException.class)
-        .hasMessageContaining("x")
-        .hasMessageContaining(missingUrl);
+        .hasMessageContainingAll("'x'", missingUrl)
+        .hasMessageEndingWith(
+            "no ViewDefinition, SQLView or external table matches that canonical URL");
   }
 
   @Test
@@ -483,9 +550,8 @@ class SqlDependencyResolverTest {
     assertThatThrownBy(
             () -> resolver.resolve(sqlQuery("SELECT 1", "c", clashUrl), SuppliedArtefacts.empty()))
         .isInstanceOf(InvalidRequestException.class)
-        .hasMessageContaining("ambiguous")
-        .hasMessageContaining("c")
-        .hasMessageContaining(clashUrl);
+        .hasMessageContainingAll("is ambiguous", "'c'", clashUrl, "ViewDefinition", "SQLView")
+        .hasMessageNotContaining("external table");
   }
 
   @Test
