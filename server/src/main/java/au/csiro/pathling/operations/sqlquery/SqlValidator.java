@@ -175,9 +175,17 @@ public class SqlValidator {
           "org.apache.spark.sql.execution.command.DescribeTableCommand",
           "org.apache.spark.sql.execution.command.DescribeQueryCommand");
 
-  // Function names rejected outright because they enable arbitrary code execution.
+  // Function names rejected outright: the reflection functions enable arbitrary code execution, and
+  // the input file functions disclose the storage path of a scanned file, which for an external
+  // table is the operator's configured path.
   private static final Set<String> REJECTED_FUNCTION_NAMES =
-      Set.of("reflect", "java_method", "try_reflect");
+      Set.of(
+          "reflect",
+          "java_method",
+          "try_reflect",
+          "input_file_name",
+          "input_file_block_start",
+          "input_file_block_length");
 
   // Source marker used by Spark's ExpressionInfo for built-in functions. Anything else (scala_udf,
   // hive, python_udf, sql_udf, java_udf, ...) is implementation-specific and rejected from user
