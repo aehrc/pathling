@@ -353,6 +353,62 @@ class SqlDependencyResolverTest {
   }
 
   // ---------------------------------------------------------------------------
+  // External tables beneath SQLViews (spec 060 US2).
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void resolvesAConfiguredExternalTableBeneathASuppliedSqlView() {
+    // The table is a leaf of the SQLView, so it is ordered before the view and the view's child
+    // map binds the label to the table's bare URL.
+    configureExternalTable(TABLE_URL, TABLE_PATH, "delta");
+    final String viewUrl = SqlLibraryFixtures.sqlViewUrl("cohort-view");
+    final Library suppliedSqlView =
+        SqlLibraryFixtures.sqlViewWithUrl(
+            viewUrl, "SELECT family_name, cohort FROM cohort", "cohort", TABLE_URL);
+
+    final ResolvedDependencyGraph graph =
+        resolver.resolve(
+            sqlQuery("SELECT * FROM cv", "cv", viewUrl),
+            SuppliedArtefacts.of(
+                List.of(SuppliedArtefact.ofSqlView(viewUrl, null, suppliedSqlView))));
+
+    assertThat(graph.getOrderedNodes()).hasSize(2);
+    assertThat(graph.getOrderedNodes().get(0)).isInstanceOf(ResolvedExternalTable.class);
+    assertThat(graph.getOrderedNodes().get(0).getCanonicalKey()).isEqualTo(TABLE_URL);
+    assertThat(graph.getOrderedNodes().get(1).getCanonicalKey()).isEqualTo(viewUrl);
+    final ResolvedSqlView sqlView = (ResolvedSqlView) graph.getNodesByKey().get(viewUrl);
+    assertThat(sqlView.getChildKeysByLabel()).containsExactly(Map.entry("cohort", TABLE_URL));
+    verifyNoInteractions(viewResolver);
+  }
+
+  @Test
+  void resolvesADiamondOverAnExternalTableToASingleTableNode() {
+    // Two SQLViews reach the same table under different labels; the table is keyed by its URL and
+    // so is resolved once and shared by both arms.
+    configureExternalTable(TABLE_URL, TABLE_PATH, "parquet");
+    final String leftUrl = SqlLibraryFixtures.sqlViewUrl("left");
+    final String rightUrl = SqlLibraryFixtures.sqlViewUrl("right");
+    stubSqlView(leftUrl, "SELECT * FROM c", "c", TABLE_URL);
+    stubSqlView(rightUrl, "SELECT * FROM t", "t", TABLE_URL);
+
+    final ResolvedDependencyGraph graph =
+        resolver.resolve(
+            sqlQueryWithDeps("SELECT * FROM l JOIN r", Map.of("l", leftUrl, "r", rightUrl)),
+            SuppliedArtefacts.empty());
+
+    assertThat(graph.getOrderedNodes()).hasSize(3);
+    assertThat(graph.getOrderedNodes().get(0)).isInstanceOf(ResolvedExternalTable.class);
+    assertThat(graph.getOrderedNodes().get(0).getCanonicalKey()).isEqualTo(TABLE_URL);
+    final ResolvedSqlView left = (ResolvedSqlView) graph.getNodesByKey().get(leftUrl);
+    final ResolvedSqlView right = (ResolvedSqlView) graph.getNodesByKey().get(rightUrl);
+    assertThat(left.getChildKeysByLabel()).containsEntry("c", TABLE_URL);
+    assertThat(right.getChildKeysByLabel()).containsEntry("t", TABLE_URL);
+    assertThat(graph.getNodesByKey().get(TABLE_URL))
+        .isSameAs(graph.getOrderedNodes().get(0))
+        .isInstanceOf(ResolvedExternalTable.class);
+  }
+
+  // ---------------------------------------------------------------------------
   // Cycles and depth (keyed by canonical identity).
   // ---------------------------------------------------------------------------
 

@@ -19,6 +19,7 @@ package au.csiro.pathling.operations.sql;
 
 import static au.csiro.pathling.operations.sqlquery.SqlLibraryParser.LIBRARY_TYPE_SYSTEM;
 import static au.csiro.pathling.operations.sqlquery.SqlLibraryParser.SQL_QUERY_TYPE_CODE;
+import static au.csiro.pathling.operations.sqlquery.SqlLibraryParser.SQL_VIEW_TYPE_CODE;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import au.csiro.pathling.operations.sqlquery.SqlQueryOutputFormat;
@@ -30,7 +31,6 @@ import jakarta.annotation.Nonnull;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -69,7 +69,9 @@ import org.springframework.test.web.reactive.server.EntityExchangeResult;
  * End-to-end integration test for operator-configured external tables in SQL on FHIR queries (spec
  * 060). Follows the scenarios of the feature's quickstart: a SQLQuery joins a stored ViewDefinition
  * to a Delta table and to a Parquet table, reads a table on its own, describes it, and is still
- * refused when it names the table by anything other than its declared label.
+ * refused when it names the table by anything other than its declared label. A SQLView over the
+ * table is run through {@code $sql-run} and exported through {@code $sql-export}, and the {@code
+ * patient} filter is shown to narrow the FHIR side of a join without touching the table.
  *
  * <p>Backed by {@link SqlViewTestConfiguration} for the stored FHIR artefacts and data, and by two
  * small tables written into a temporary directory before the server reads them. Four tables are
@@ -100,6 +102,9 @@ class SqlExternalTableIT extends AbstractAsyncExportIT {
 
   /** The directory name under the temp directory of the path that is never written. */
   static final String MISSING_DIRECTORY = "does-not-exist";
+
+  /** The URL of the SQLView over the Delta cohorts table, supplied inline through context. */
+  static final String COHORT_VIEW_URL = "https://example.org/Library/cohort-view";
 
   @TempDir static Path tablesDir;
 
@@ -227,6 +232,64 @@ class SqlExternalTableIT extends AbstractAsyncExportIT {
   }
 
   // -------------------------------------------------------------------------
+  // Scenario 5: a SQLView over the table, run through $sql-run and exported.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void runsASqlViewOverTheTableSuppliedThroughContext() {
+    final Library query =
+        sqlQueryLibrary("SELECT * FROM cv ORDER BY family_name", Map.of("cv", COHORT_VIEW_URL));
+
+    final String body = postOk(parametersJson(query, resourceParam("context", cohortView())));
+
+    assertThat(rowsOf(body, "family_name", "cohort")).containsExactly("Smith/A", "Williams/B");
+  }
+
+  @Test
+  void exportsASqlViewOverTheTableAsAnInlineSubject() throws InterruptedException {
+    final Map<String, Object> body =
+        parameters(
+            subject(
+                simpleParam("name", "valueString", "cohort_view"),
+                resourcePart("subjectResource", libraryMap(cohortView()))),
+            simpleParam("_format", "valueString", SqlQueryOutputFormat.NDJSON.getCode()));
+
+    final Map<String, Object> manifest = exportToCompletion(systemLevelUri(), body);
+
+    assertThat(findParamValue(manifest, "status", "valueCode")).isEqualTo("completed");
+    final List<Map<String, Object>> outputs = paramsByName(manifest, "output");
+    assertThat(outputs).hasSize(1);
+    assertThat(partValue(outputs.get(0), "name", "valueString")).isEqualTo("cohort_view");
+    final String content = downloadAll(outputs.get(0));
+    assertThat(rowsOf(content, "family_name", "cohort"))
+        .containsExactlyInAnyOrder("Smith/A", "Williams/B");
+  }
+
+  // -------------------------------------------------------------------------
+  // Scenario 6: the patient filter narrows the FHIR side of a join but never the table.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void patientFilterNarrowsTheJoinThroughTheFhirView() {
+    final String body =
+        postOk(parametersJson(joinQuery(COHORTS_DELTA_URL), patientParam("Patient/p1")));
+
+    assertThat(rowsOf(body, "id", "cohort")).containsExactly("p1/A");
+  }
+
+  @Test
+  void patientFilterLeavesTheTableItselfUntouched() {
+    final Library library =
+        sqlQueryLibrary(
+            "SELECT family_name, cohort FROM cohort ORDER BY family_name",
+            Map.of("cohort", COHORTS_DELTA_URL));
+
+    final String body = postOk(parametersJson(library, patientParam("Patient/p1")));
+
+    assertThat(rowsOf(body, "family_name", "cohort")).containsExactly("Smith/A", "Williams/B");
+  }
+
+  // -------------------------------------------------------------------------
   // Request helpers
   // -------------------------------------------------------------------------
 
@@ -299,11 +362,31 @@ class SqlExternalTableIT extends AbstractAsyncExportIT {
   @Nonnull
   Library sqlQueryLibrary(
       @Nonnull final String sql, @Nonnull final Map<String, String> dependenciesByLabel) {
+    return sqlLibrary(SQL_QUERY_TYPE_CODE, sql, dependenciesByLabel);
+  }
+
+  /** Builds the Scenario 5 SQLView selecting every row of the Delta cohorts table. */
+  @Nonnull
+  Library cohortView() {
+    final Library view =
+        sqlLibrary(
+            SQL_VIEW_TYPE_CODE,
+            "SELECT family_name, cohort FROM cohort",
+            Map.of("cohort", COHORTS_DELTA_URL));
+    view.setUrl(COHORT_VIEW_URL);
+    return view;
+  }
+
+  @Nonnull
+  private Library sqlLibrary(
+      @Nonnull final String typeCode,
+      @Nonnull final String sql,
+      @Nonnull final Map<String, String> dependenciesByLabel) {
     final Library library = new Library();
     library.setStatus(PublicationStatus.ACTIVE);
     library.setType(
         new CodeableConcept()
-            .addCoding(new Coding().setSystem(LIBRARY_TYPE_SYSTEM).setCode(SQL_QUERY_TYPE_CODE)));
+            .addCoding(new Coding().setSystem(LIBRARY_TYPE_SYSTEM).setCode(typeCode)));
     final Attachment content = new Attachment();
     content.setContentType("application/sql");
     content.setData(sql.getBytes(StandardCharsets.UTF_8));
@@ -319,25 +402,40 @@ class SqlExternalTableIT extends AbstractAsyncExportIT {
     return library;
   }
 
-  /** Wraps the Library as the {@code subjectResource} of a {@code $sql-run} Parameters body. */
+  /** Encodes a Library as the generic JSON map the Gson-built request bodies carry. */
   @Nonnull
-  String parametersJson(@Nonnull final Library library) {
-    final String libraryJson = jsonParser.encodeResourceToString(library);
-    final Map<String, Object> parameters = new LinkedHashMap<>();
-    parameters.put("resourceType", "Parameters");
-    final List<Map<String, Object>> parameterList = new ArrayList<>();
+  @SuppressWarnings("unchecked")
+  Map<String, Object> libraryMap(@Nonnull final Library library) {
+    return gson.fromJson(jsonParser.encodeResourceToString(library), Map.class);
+  }
 
-    final Map<String, Object> queryResourceParam = new LinkedHashMap<>();
-    queryResourceParam.put("name", "subjectResource");
-    queryResourceParam.put("resource", gson.fromJson(libraryJson, Map.class));
-    parameterList.add(queryResourceParam);
+  /** A resource-valued {@code $sql-run} parameter such as {@code context}. */
+  @Nonnull
+  Map<String, Object> resourceParam(@Nonnull final String name, @Nonnull final Library library) {
+    return resourcePart(name, libraryMap(library));
+  }
 
-    final Map<String, Object> formatParam = new LinkedHashMap<>();
-    formatParam.put("name", "_format");
-    formatParam.put("valueString", SqlQueryOutputFormat.NDJSON.getCode());
-    parameterList.add(formatParam);
+  /** The {@code patient} filter parameter carrying one reference. */
+  @Nonnull
+  Map<String, Object> patientParam(@Nonnull final String reference) {
+    return referencePart("patient", reference);
+  }
 
-    parameters.put("parameter", parameterList);
+  /**
+   * Wraps the Library as the {@code subjectResource} of a {@code $sql-run} Parameters body, along
+   * with the NDJSON format and any further parameters.
+   */
+  @SafeVarargs
+  @Nonnull
+  final String parametersJson(
+      @Nonnull final Library library, @Nonnull final Map<String, Object>... extraParameters) {
+    final Map<String, Object> parameters =
+        parameters(
+            resourceParam("subjectResource", library),
+            simpleParam("_format", "valueString", SqlQueryOutputFormat.NDJSON.getCode()));
+    for (final Map<String, Object> extra : extraParameters) {
+      addParam(parameters, extra);
+    }
     return gson.toJson(parameters);
   }
 }
