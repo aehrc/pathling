@@ -26,6 +26,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.config.AuthorizationConfiguration;
+import au.csiro.pathling.config.ExternalTableConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.config.SqlQueryConfiguration;
 import au.csiro.pathling.operations.sql.SuppliedArtefact;
@@ -45,8 +46,9 @@ import org.junit.jupiter.api.Test;
 /**
  * Unit tests for {@link SqlDependencyResolver} covering canonical-URL resolution, the resolved
  * graph shape for a {@code SQLQuery -> SQLView -> ViewDefinition} chain, supplied-artefact
- * precedence and traversal, diamond de-duplication (including bare-url vs {@code url|version}), and
- * the structural rejections (cycles, depth, ambiguity, not-found, and wrong-typed dependencies).
+ * precedence and traversal, diamond de-duplication (including bare-url vs {@code url|version}),
+ * configured external tables, and the structural rejections (cycles, depth, ambiguity, not-found,
+ * and wrong-typed dependencies).
  *
  * @author John Grimes
  */
@@ -54,6 +56,10 @@ class SqlDependencyResolverTest {
 
   private static final String PATIENT_VIEW_URL =
       SqlLibraryFixtures.viewDefinitionUrl("patient-view");
+
+  private static final String TABLE_URL = "https://example.org/data/cohorts";
+
+  private static final String TABLE_PATH = "file:///data/reference/cohorts";
 
   private ViewResolver viewResolver;
   private LibraryReferenceResolver libraryReferenceResolver;
@@ -292,6 +298,61 @@ class SqlDependencyResolverTest {
   }
 
   // ---------------------------------------------------------------------------
+  // Configured external tables (spec 060 US1).
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void resolvesAConfiguredExternalTableByUrl() {
+    configureExternalTable(TABLE_URL, TABLE_PATH, "parquet");
+
+    final ResolvedDependencyGraph graph =
+        resolver.resolve(sqlQuery("SELECT * FROM c", "c", TABLE_URL), SuppliedArtefacts.empty());
+
+    assertThat(graph.getTopLevelKeysByLabel()).containsEntry("c", TABLE_URL);
+    final ResolvedDependency node = graph.getNodesByKey().get(TABLE_URL);
+    assertThat(node).isInstanceOf(ResolvedExternalTable.class);
+    final ResolvedExternalTable table = (ResolvedExternalTable) node;
+    assertThat(table.getCanonicalKey()).isEqualTo(TABLE_URL);
+    assertThat(table.getPath()).isEqualTo(TABLE_PATH);
+    assertThat(table.getFormat()).isEqualTo("parquet");
+  }
+
+  @Test
+  void resolvesTheSameExternalTableUnderTwoLabelsOnce() {
+    // The table is keyed by its bare URL, so two labels over it share one leaf and the SQL can join
+    // the table to itself.
+    configureExternalTable(TABLE_URL, TABLE_PATH, "delta");
+
+    final ResolvedDependencyGraph graph =
+        resolver.resolve(
+            sqlQueryWithDeps(
+                "SELECT * FROM a JOIN b ON a.k = b.k", Map.of("a", TABLE_URL, "b", TABLE_URL)),
+            SuppliedArtefacts.empty());
+
+    assertThat(graph.getOrderedNodes()).hasSize(1);
+    assertThat(graph.getTopLevelKeysByLabel())
+        .containsEntry("a", TABLE_URL)
+        .containsEntry("b", TABLE_URL);
+  }
+
+  @Test
+  void rejectsAnExternalTableBeyondTheDepthLimit() {
+    // A table leaf counts towards the depth like any other leaf: a SQLView at depth 1 referencing
+    // the table places it at depth 2, over a limit of 1.
+    serverConfiguration.getSqlQuery().setMaxDependencyDepth(1);
+    configureExternalTable(TABLE_URL, TABLE_PATH, "delta");
+    final String viewUrl = SqlLibraryFixtures.sqlViewUrl("over-table");
+    stubSqlView(viewUrl, "SELECT * FROM c", "c", TABLE_URL);
+
+    assertThatThrownBy(
+            () ->
+                resolver.resolve(
+                    sqlQuery("SELECT * FROM v", "v", viewUrl), SuppliedArtefacts.empty()))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContainingAll("deeper", "1", TABLE_URL);
+  }
+
+  // ---------------------------------------------------------------------------
   // Cycles and depth (keyed by canonical identity).
   // ---------------------------------------------------------------------------
 
@@ -406,6 +467,22 @@ class SqlDependencyResolverTest {
     dependenciesByLabel.forEach(
         (label, resource) -> references.add(new ViewArtifactReference(label, resource)));
     return new ParsedSqlQuery(sql, references, List.of(), SqlLibraryParser.SQL_QUERY_TYPE_CODE);
+  }
+
+  /**
+   * Adds one external table to the configuration and rebuilds the resolver, since the resolver
+   * indexes the configured tables when it is constructed.
+   */
+  private void configureExternalTable(
+      @Nonnull final String url, @Nonnull final String path, @Nonnull final String format) {
+    final ExternalTableConfiguration table = new ExternalTableConfiguration();
+    table.setUrl(url);
+    table.setPath(path);
+    table.setFormat(format);
+    serverConfiguration.getSqlQuery().getExternalTables().add(table);
+    resolver =
+        new SqlDependencyResolver(
+            viewResolver, libraryReferenceResolver, new SqlLibraryParser(), serverConfiguration);
   }
 
   /**

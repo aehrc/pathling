@@ -22,6 +22,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import ca.uhn.fhir.context.FhirContext;
+import jakarta.annotation.Nonnull;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -35,15 +37,20 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
+import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * Tests for {@link ViewRegistrationService}, with particular attention to the request-id
  * namespacing that prevents concurrent {@code $sql-run} requests from clobbering one another's
- * temporary views in Spark's session-global catalog.
+ * temporary views in Spark's session-global catalog, and to the reading of configured external
+ * tables.
+ *
+ * @author John Grimes
  */
 @SpringBootUnitTest
 class ViewRegistrationServiceTest {
@@ -161,6 +168,57 @@ class ViewRegistrationServiceTest {
     } finally {
       service.dropViews(List.of(childViewName));
     }
+  }
+
+  // ---------------------------------------------------------------------------
+  // External table materialisation (spec 060 US1).
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void buildExternalTableReadsADeltaTable(@TempDir final Path tempDir) {
+    final String path = writeCohorts(tempDir.resolve("cohorts_delta"), "delta");
+
+    final Dataset<Row> result =
+        service.buildExternalTable(
+            new ResolvedExternalTable("https://example.org/data/cohorts", path, "delta"));
+
+    assertCohorts(result);
+  }
+
+  @Test
+  void buildExternalTableReadsAParquetTable(@TempDir final Path tempDir) {
+    final String path = writeCohorts(tempDir.resolve("cohorts_parquet"), "parquet");
+
+    final Dataset<Row> result =
+        service.buildExternalTable(
+            new ResolvedExternalTable("https://example.org/data/cohorts", path, "parquet"));
+
+    assertCohorts(result);
+  }
+
+  /** Writes the two-row cohorts fixture in the given format and returns its {@code file://} URL. */
+  @Nonnull
+  private String writeCohorts(@Nonnull final Path directory, @Nonnull final String format) {
+    final StructType schema =
+        DataTypes.createStructType(
+            new StructField[] {
+              DataTypes.createStructField("family_name", DataTypes.StringType, false),
+              DataTypes.createStructField("cohort", DataTypes.StringType, false)
+            });
+    final List<Row> rows =
+        List.of(RowFactory.create("Smith", "A"), RowFactory.create("Williams", "B"));
+    final String path = "file://" + directory.toAbsolutePath();
+    spark.createDataFrame(rows, schema).write().format(format).save(path);
+    return path;
+  }
+
+  private static void assertCohorts(@Nonnull final Dataset<Row> result) {
+    assertThat(result.schema().fieldNames()).containsExactly("family_name", "cohort");
+    assertThat(
+            result.collectAsList().stream()
+                .map(row -> row.getString(0) + "/" + row.getString(1))
+                .toList())
+        .containsExactlyInAnyOrder("Smith/A", "Williams/B");
   }
 
   // ---------------------------------------------------------------------------
@@ -339,7 +397,7 @@ class ViewRegistrationServiceTest {
   private Dataset<Row> singleColumnDataset(final String columnName, final List<String> values) {
     final StructType schema =
         DataTypes.createStructType(
-            new org.apache.spark.sql.types.StructField[] {
+            new StructField[] {
               DataTypes.createStructField(columnName, DataTypes.StringType, false)
             });
     final List<Row> rows =

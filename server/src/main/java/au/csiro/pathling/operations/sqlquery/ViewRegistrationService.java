@@ -158,6 +158,20 @@ public class ViewRegistrationService {
   }
 
   /**
+   * Builds the dataset for a resolved external table leaf by reading its configured path in its
+   * configured format. The result is not registered; the caller registers it. The read resolves the
+   * relation and schema eagerly, so a missing or unreadable path fails here rather than at collect
+   * time.
+   *
+   * @param node the resolved external table
+   * @return the table's dataset
+   */
+  @Nonnull
+  public Dataset<Row> buildExternalTable(@Nonnull final ResolvedExternalTable node) {
+    return sparkSession.read().format(node.getFormat()).load(node.getPath());
+  }
+
+  /**
    * Drops the specified temporary views from the Spark session.
    *
    * @param tempViewNames the names of the temporary views to drop
