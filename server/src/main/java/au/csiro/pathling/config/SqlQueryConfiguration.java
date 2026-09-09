@@ -17,13 +17,21 @@
 
 package au.csiro.pathling.config;
 
+import jakarta.annotation.Nonnull;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Min;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import lombok.Data;
 import lombok.ToString;
 
 /**
  * Configuration for the SQL query operations. Bounds the resolution of a query's dependency graph,
- * which happens before any query execution.
+ * which happens before any query execution, and declares the external tables that a query may
+ * reference alongside stored ViewDefinitions and SQLViews.
  *
  * @author John Grimes
  */
@@ -40,4 +48,23 @@ public class SqlQueryConfiguration {
    */
   @Min(1)
   private int maxDependencyDepth = 10;
+
+  /**
+   * The external tables reachable from SQL on FHIR queries, each bound to a canonical URL. An
+   * absent property is indistinguishable from no tables. Entry violations are reported as {@code
+   * externalTables[N].<field>}.
+   */
+  @Valid @Nonnull private List<ExternalTableConfiguration> externalTables = new ArrayList<>();
+
+  /**
+   * Checks that no two external tables share a URL, since a reference could otherwise resolve to
+   * either of them.
+   *
+   * @return true if every configured URL is distinct
+   */
+  @AssertTrue(message = "externalTables must not contain duplicate urls")
+  public boolean isExternalTableUrlsUnique() {
+    final Set<String> seen = new HashSet<>();
+    return externalTables.stream().map(ExternalTableConfiguration::getUrl).allMatch(seen::add);
+  }
 }
