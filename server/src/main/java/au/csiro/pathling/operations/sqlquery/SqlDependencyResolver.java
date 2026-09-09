@@ -227,9 +227,8 @@ public class SqlDependencyResolver {
 
     // A configured external table matches the bare url only: tables have no version, so a pinned
     // reference can never mean one. Storage is still searched so that a URL bound to a table and
-    // also stored as an artefact is reported as ambiguous rather than one side silently winning;
-    // the
-    // stored lookups enforce their metadata read checks only once they find a match.
+    // also stored as an artefact is reported as ambiguous rather than one side silently winning.
+    // The stored lookups enforce their metadata read checks only once they find a match.
     final ExternalTableConfiguration externalTable =
         canonical.getVersion() == null ? externalTablesByUrl.get(canonical.getUrl()) : null;
     final Optional<ResolvedViewDefinition> storedViewDefinition =
