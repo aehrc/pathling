@@ -30,7 +30,6 @@ library(purrr)
 #'
 #' @family encoding functions
 #'
-#' @importFrom rlang `%||%`
 #' @importFrom sparklyr sdf_register spark_dataframe j_invoke
 #'
 #' @export
@@ -65,7 +64,6 @@ pathling_encode <- function(pc, df, resource_name, input_type = NULL, column = N
 #'
 #' @family encoding functions
 #'
-#' @importFrom rlang `%||%`
 #' @importFrom sparklyr sdf_register spark_dataframe j_invoke
 #'
 #' @export

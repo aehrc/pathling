@@ -21,21 +21,19 @@
  * @author John Grimes
  */
 
-import { Box, Flex, Spinner, Text } from "@radix-ui/themes";
+import { Box, Flex } from "@radix-ui/themes";
 import { useState } from "react";
 
 import { deleteResource } from "../api";
-import { LoginRequired } from "../components/auth/LoginRequired";
-import { SessionExpiredDialog } from "../components/auth/SessionExpiredDialog";
+import { CapabilityGuard } from "../components/auth/CapabilityGuard";
 import { DeleteConfirmationDialog } from "../components/resources/DeleteConfirmationDialog";
 import { ResourceResultList } from "../components/resources/ResourceResultList";
 import { ResourceSearchForm } from "../components/resources/ResourceSearchForm";
 import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
 import { useToast } from "../contexts/ToastContext";
-import { useFhirPathSearch, useServerCapabilities } from "../hooks";
+import { buildSearchParamMap, useFhirPathSearch } from "../hooks";
 
-import type { SearchParamCapability } from "../hooks/useServerCapabilities";
 import type { SearchRequest } from "../types/search";
 
 interface DeleteTarget {
@@ -51,26 +49,13 @@ interface DeleteTarget {
  */
 export function Resources() {
   const { fhirBaseUrl } = config;
-  const { client, isAuthenticated } = useAuth();
+  const { client } = useAuth();
   const { showToast } = useToast();
   const accessToken = client?.state.tokenResponse?.access_token;
 
   const [searchRequest, setSearchRequest] = useState<SearchRequest | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState<DeleteTarget | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-
-  // Fetch server capabilities to determine if auth is required.
-  const { data: capabilities, isLoading: isLoadingCapabilities } =
-    useServerCapabilities(fhirBaseUrl);
-
-  // Build search parameters mapping from capabilities.
-  let searchParams: Record<string, SearchParamCapability[]> | undefined;
-  if (capabilities?.resources) {
-    searchParams = {};
-    for (const resource of capabilities.resources) {
-      searchParams[resource.type] = resource.searchParams;
-    }
-  }
 
   // Execute the search query. 401 errors handled globally.
   const {
@@ -120,64 +105,53 @@ export function Resources() {
     }
   };
 
-  // Show loading state while checking server capabilities.
-  if (isLoadingCapabilities) {
-    return (
-      <>
-        <Flex align="center" gap="2">
-          <Spinner />
-          <Text>Checking server capabilities...</Text>
-        </Flex>
-        <SessionExpiredDialog />
-      </>
-    );
-  }
-
-  // Show login prompt if authentication is required but not authenticated.
-  if (capabilities?.authRequired && !isAuthenticated) {
-    return <LoginRequired />;
-  }
-
   // Show search form and results.
   return (
-    <>
-      <Flex gap="6" direction={{ initial: "column", md: "row" }}>
-        <Box style={{ flex: 1 }}>
-          <ResourceSearchForm
-            onSubmit={handleSearch}
-            isLoading={isSearching}
-            disabled={false}
-            resourceTypes={capabilities?.resourceTypes ?? []}
-            searchParams={searchParams}
-          />
-        </Box>
+    <CapabilityGuard>
+      {(capabilities) => {
+        const searchParams = buildSearchParamMap(capabilities);
 
-        <Box style={{ flex: 1 }}>
-          <ResourceResultList
-            resources={resources}
-            total={total}
-            isLoading={isSearching}
-            error={searchError}
-            hasSearched={searchRequest !== null}
-            fhirBaseUrl={fhirBaseUrl}
-            onDelete={handleDeleteClick}
-          />
-        </Box>
-      </Flex>
-      <SessionExpiredDialog />
-      {showDeleteDialog && (
-        <DeleteConfirmationDialog
-          open={!!showDeleteDialog}
-          onOpenChange={(open) => {
-            if (!open) setShowDeleteDialog(null);
-          }}
-          resourceType={showDeleteDialog.resourceType}
-          resourceId={showDeleteDialog.resourceId}
-          resourceSummary={showDeleteDialog.summary}
-          onConfirm={handleDeleteConfirm}
-          isDeleting={isDeleting}
-        />
-      )}
-    </>
+        return (
+          <>
+            <Flex gap="6" direction={{ initial: "column", md: "row" }}>
+              <Box style={{ flex: 1 }}>
+                <ResourceSearchForm
+                  onSubmit={handleSearch}
+                  isLoading={isSearching}
+                  disabled={false}
+                  resourceTypes={capabilities?.resourceTypes ?? []}
+                  searchParams={searchParams}
+                />
+              </Box>
+
+              <Box style={{ flex: 1 }}>
+                <ResourceResultList
+                  resources={resources}
+                  total={total}
+                  isLoading={isSearching}
+                  error={searchError}
+                  hasSearched={searchRequest !== null}
+                  fhirBaseUrl={fhirBaseUrl}
+                  onDelete={handleDeleteClick}
+                />
+              </Box>
+            </Flex>
+            {showDeleteDialog && (
+              <DeleteConfirmationDialog
+                open={!!showDeleteDialog}
+                onOpenChange={(open) => {
+                  if (!open) setShowDeleteDialog(null);
+                }}
+                resourceType={showDeleteDialog.resourceType}
+                resourceId={showDeleteDialog.resourceId}
+                resourceSummary={showDeleteDialog.summary}
+                onConfirm={handleDeleteConfirm}
+                isDeleting={isDeleting}
+              />
+            )}
+          </>
+        );
+      }}
+    </CapabilityGuard>
   );
 }

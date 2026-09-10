@@ -1,0 +1,17 @@
+# Ruff configuration for the command line interface package.
+#
+# A nested configuration applies to the files beneath its own directory only, so
+# this adds the missing-annotation rules (ANN) to the CLI package without
+# imposing them on the rest of the library or on the test suite. The CLI is the
+# extension point other commands compose against, so its signatures must state
+# what each parameter is; the project's own lint invocation
+# (`ruff check .` from lib/python) picks this up with no change.
+#
+# Author: John Grimes.
+
+extend = "../../pyproject.toml"
+
+[lint]
+extend-select = [
+    "ANN", # flake8-annotations - require parameter and return type hints
+]

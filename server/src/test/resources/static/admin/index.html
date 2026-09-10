@@ -1,0 +1,20 @@
+<!doctype html>
+<!--
+  Test fixture standing in for the built admin UI entry document.
+
+  The real UI is built into target/classes/static/admin/ at Maven's
+  prepare-package phase, which runs after the test phase, so no built document
+  is on the classpath while unit tests run. Test resources precede main classes
+  on the classpath, so this file shadows any real build and makes the
+  WebConfiguration tests deterministic regardless of build phase.
+-->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Pathling admin UI test fixture</title>
+    <script type="module" src="/admin/assets/index-test.js"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>

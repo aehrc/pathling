@@ -1,5 +1,5 @@
-# React Router vulnerabilities - UI uses Declarative Mode (BrowserRouter), no
-# SSR, no ScrollRestoration, no loader/action redirects.
-CVE-2026-21884
-CVE-2026-22029
-CVE-2026-22030
+# React Router RSC mode CSRF bypass — the admin UI is a client-side single page application
+# using BrowserRouter, with no React Server Components, no server-side request handler and no
+# server actions, so the affected request handling does not exist in this build. The fix is
+# only available in a new major version.
+GHSA-qwww-vcr4-c8h2

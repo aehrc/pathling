@@ -25,6 +25,7 @@ import reactHooks from "eslint-plugin-react-hooks";
 import jsxA11y from "eslint-plugin-jsx-a11y";
 import jsdoc from "eslint-plugin-jsdoc";
 import importPlugin from "eslint-plugin-import";
+import playwright from "eslint-plugin-playwright";
 import unicorn from "eslint-plugin-unicorn";
 import vitest from "eslint-plugin-vitest";
 import { defineConfig, globalIgnores } from "eslint/config";
@@ -117,6 +118,24 @@ export default defineConfig([
       ...vitest.configs.recommended.rules,
       // Relax JSDoc requirements for test files.
       "jsdoc/require-jsdoc": "off",
+    },
+  },
+
+  // End-to-end test configuration.
+  {
+    files: ["e2e/**/*.spec.ts"],
+    plugins: {
+      playwright,
+    },
+    rules: {
+      // A fixed sleep makes a test slow when it passes and flaky when it does
+      // not, because the duration is a guess about the machine rather than a
+      // statement about the application. Wait on a condition instead, or drive
+      // Playwright's clock when the point is that something recurring does not
+      // happen. Set to error rather than warning because `eslint .` exits
+      // successfully in the presence of warnings, so a warning would gate
+      // nothing.
+      "playwright/no-wait-for-timeout": "error",
     },
   },
 ]);

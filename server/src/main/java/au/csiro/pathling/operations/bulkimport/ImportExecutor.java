@@ -21,12 +21,14 @@ import au.csiro.pathling.cache.CacheableDatabase;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.config.UrlAllowlist;
 import au.csiro.pathling.errors.AccessDeniedError;
+import au.csiro.pathling.io.DynamicDeltaSource;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.sink.DataSinkBuilder;
 import au.csiro.pathling.library.io.sink.WriteDetails;
 import au.csiro.pathling.library.io.source.NdjsonSource;
 import au.csiro.pathling.library.io.source.ParquetSource;
+import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.security.PathlingAuthority;
 import au.csiro.pathling.security.ResourceAccess.AccessType;
 import au.csiro.pathling.security.SecurityAspect;
@@ -64,6 +66,8 @@ public class ImportExecutor {
 
   private final boolean allowInsecureUrls;
 
+  @Nonnull private final QueryableDataSource dataSource;
+
   /**
    * Creates a new ImportExecutor.
    *
@@ -74,6 +78,8 @@ public class ImportExecutor {
    * @param cacheableDatabase the cacheable database for cache invalidation
    * @param allowInsecureUrls whether plain-http URLs are accepted; defaults to false so that
    *     outgoing requests use TLS by default.
+   * @param dataSource the data source serving queries, refreshed after an import so that reads do
+   *     not continue to be served from a dataset pinned before the import
    */
   public ImportExecutor(
       @Nonnull final Optional<AccessRules> accessRules,
@@ -82,13 +88,15 @@ public class ImportExecutor {
           final String databasePath,
       final ServerConfiguration serverConfiguration,
       @Nonnull final CacheableDatabase cacheableDatabase,
-      @Value("${pathling.allowInsecureUrls:false}") final boolean allowInsecureUrls) {
+      @Value("${pathling.allowInsecureUrls:false}") final boolean allowInsecureUrls,
+      @Nonnull final QueryableDataSource dataSource) {
     this.accessRules = accessRules;
     this.pathlingContext = pathlingContext;
     this.databasePath = databasePath;
     this.serverConfiguration = serverConfiguration;
     this.cacheableDatabase = cacheableDatabase;
     this.allowInsecureUrls = allowInsecureUrls;
+    this.dataSource = dataSource;
   }
 
   /**
@@ -134,7 +142,7 @@ public class ImportExecutor {
         checkAuthority(request, customAllowableSources);
 
     // Create the appropriate data source based on the import format.
-    final DataSource dataSource =
+    final DataSource importSource =
         switch (request.importFormat()) {
           case NDJSON -> new NdjsonSource(pathlingContext, resourcesWithAuthority, "ndjson");
           case PARQUET ->
@@ -144,12 +152,20 @@ public class ImportExecutor {
 
     // Always write to Delta format regardless of source format.
     final WriteDetails writeDetails =
-        new DataSinkBuilder(pathlingContext, dataSource)
+        new DataSinkBuilder(pathlingContext, importSource)
             .saveMode(request.saveMode().getCode())
             .delta(databasePath);
 
     // Invalidate the cache to ensure subsequent requests see the updated data.
     cacheableDatabase.invalidate();
+
+    // Refresh the dataset served for each imported resource type, so that reads are not answered
+    // from a cached plan pinned before the import. Without this, an overwrite import leaves the
+    // pre-import table snapshot in service, and a schema-changing rewrite makes any recache of
+    // that stale plan fail.
+    if (dataSource instanceof final DynamicDeltaSource dynamicDataSource) {
+      request.input().keySet().forEach(dynamicDataSource::refresh);
+    }
 
     return writeDetails;
   }

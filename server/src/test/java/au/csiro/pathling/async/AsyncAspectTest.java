@@ -18,12 +18,17 @@
 package au.csiro.pathling.async;
 
 import static au.csiro.pathling.async.RequestTagFactoryTest.createServerConfiguration;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -32,7 +37,12 @@ import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.operations.bulkexport.ExportResultRegistry;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import jakarta.annotation.Nonnull;
+import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Callable;
@@ -48,6 +58,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -57,6 +68,12 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.JwtClaimAccessor;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
+/**
+ * Tests for {@link AsyncAspect}, covering job creation and reuse, the kick-off response, and the
+ * clean-up the job's own thread performs as it unwinds.
+ *
+ * @author John Grimes
+ */
 @SpringBootUnitTest
 @MockitoBean(types = ExportResultRegistry.class)
 @Slf4j
@@ -291,6 +308,149 @@ class AsyncAspectTest {
     assertTrue(
         AsyncJobContext.getCurrentJob().isEmpty(),
         "AsyncJobContext should be cleared after async execution");
+  }
+
+  // -- Removal of the job's output directory as the job's thread unwinds --
+
+  @Test
+  void deletedJobHasItsFilesRemovedAsTheTaskUnwinds() throws Throwable {
+    // A client deleted the job while its work was still running, so the request left the removal to
+    // this thread. As the task unwinds it takes the claim and removes the output.
+    final Callable<IBaseResource> task = captureSubmittedTask();
+    final String jobId = assertExecutedAsync();
+    final Job<?> job = jobRegistry.get(jobId);
+    assertNotNull(job);
+    // The delete request marked the job but did not claim, because the work had not terminated.
+    assertFalse(job.markDeletedAndClaim());
+
+    task.call();
+
+    verify(jobProvider).deleteJobFiles(jobId);
+  }
+
+  @Test
+  void completedJobThatWasNeverDeletedKeepsItsFiles() throws Throwable {
+    // Nothing was deleted, so the output must survive for the client to download.
+    final Callable<IBaseResource> task = captureSubmittedTask();
+    final String jobId = assertExecutedAsync();
+
+    task.call();
+
+    verify(jobProvider, never()).deleteJobFiles(jobId);
+  }
+
+  @Test
+  void failedJobHasItsFilesRemovedEvenWhenNeverDeleted() throws Throwable {
+    // A job that fails removes its own partial output as it unwinds, whether or not a client asked
+    // for it to be deleted. This is existing behaviour, retained now that the removal has moved to
+    // the single site in the finally block.
+    final Callable<IBaseResource> task = captureSubmittedTask();
+    final String jobId = assertExecutedAsync();
+    when(proceedingJoinPoint.proceed()).thenThrow(new IllegalArgumentException("failed"));
+
+    assertThrows(IllegalStateException.class, task::call);
+
+    verify(jobProvider).deleteJobFiles(jobId);
+  }
+
+  @Test
+  void removalUsesTheCapturedJobRatherThanTheRegistry() throws Throwable {
+    // The delete request lands while the work is running, so the job has left the registry by the
+    // time the task unwinds. A lookup at that point would find nothing and skip the removal, so the
+    // task must use the reference it captured when it started.
+    final Callable<IBaseResource> task = captureSubmittedTask();
+    final String jobId = assertExecutedAsync();
+    final Job<?> job = jobRegistry.get(jobId);
+    assertNotNull(job);
+    when(proceedingJoinPoint.proceed())
+        .thenAnswer(
+            invocation -> {
+              // Stand in for the delete request arriving mid-work: the job is marked, the claim is
+              // left to this thread, and the job leaves the registry.
+              assertFalse(job.markDeletedAndClaim());
+              assertTrue(jobRegistry.remove(job));
+              return RESULT_RESOURCE;
+            });
+
+    task.call();
+
+    assertNull(jobRegistry.get(jobId));
+    verify(jobProvider).deleteJobFiles(jobId);
+  }
+
+  @Test
+  void removalHappensWhenTheJobWasAlreadyGoneWhenTheTaskStarted() throws Throwable {
+    // A delete request can land in the narrow window between the task entering its body and its
+    // first statement resolving the job, leaving the task with nothing. That request cannot have
+    // taken the claim, because the work had not terminated when it asked, so this thread still owns
+    // the removal. Skipping it here would orphan the output directory permanently.
+    final Callable<IBaseResource> task = captureSubmittedTask();
+    final String jobId = assertExecutedAsync();
+    final Job<?> job = jobRegistry.get(jobId);
+    assertNotNull(job);
+    assertFalse(job.markDeletedAndClaim());
+    assertTrue(jobRegistry.remove(job));
+    assertNull(jobRegistry.get(jobId));
+
+    task.call();
+
+    verify(jobProvider).deleteJobFiles(jobId);
+  }
+
+  @Test
+  void removalFailureOnTheJobThreadIsNotPropagated() throws Throwable {
+    // Throwing out of the finally block would replace the job's own exception with an incidental
+    // one, so a failed removal is reported and swallowed instead.
+    final Callable<IBaseResource> task = captureSubmittedTask();
+    final String jobId = assertExecutedAsync();
+    final Job<?> job = jobRegistry.get(jobId);
+    assertNotNull(job);
+    assertFalse(job.markDeletedAndClaim());
+    doThrow(new IOException("warehouse is unavailable")).when(jobProvider).deleteJobFiles(jobId);
+
+    final ListAppender<ILoggingEvent> appender = attachAppender(JobProvider.class);
+    try {
+      assertDoesNotThrow(task::call);
+    } finally {
+      detachAppender(JobProvider.class, appender);
+    }
+
+    assertTrue(
+        appender.list.stream().anyMatch(event -> event.getLevel() == Level.ERROR),
+        "the failed removal should be logged at error level");
+  }
+
+  /**
+   * Arranges for the executor to capture the submitted task rather than run it, and returns a
+   * handle that invokes it on the calling thread. Stage map interactions are stubbed for the
+   * clean-up that the task performs as it unwinds.
+   *
+   * @return the task that the aspect submits for the next asynchronous request
+   */
+  @Nonnull
+  @SuppressWarnings("unchecked")
+  private Callable<IBaseResource> captureSubmittedTask() {
+    final Future<IBaseResource> mockFuture = mock(Future.class);
+    final ArgumentCaptor<Callable<IBaseResource>> captor = ArgumentCaptor.forClass(Callable.class);
+    when(threadPoolTaskExecutor.submit(captor.capture())).thenReturn(mockFuture);
+    when(stageMap.entrySet()).thenReturn(java.util.Collections.emptySet());
+    when(stageMap.keySet())
+        .thenReturn(new java.util.concurrent.ConcurrentHashMap<Integer, String>().keySet());
+    return () -> captor.getValue().call();
+  }
+
+  @Nonnull
+  private static ListAppender<ILoggingEvent> attachAppender(@Nonnull final Class<?> loggerClass) {
+    final Logger logger = (Logger) LoggerFactory.getLogger(loggerClass);
+    final ListAppender<ILoggingEvent> appender = new ListAppender<>();
+    appender.start();
+    logger.addAppender(appender);
+    return appender;
+  }
+
+  private static void detachAppender(
+      @Nonnull final Class<?> loggerClass, @Nonnull final ListAppender<ILoggingEvent> appender) {
+    ((Logger) LoggerFactory.getLogger(loggerClass)).detachAppender(appender);
   }
 
   @Test

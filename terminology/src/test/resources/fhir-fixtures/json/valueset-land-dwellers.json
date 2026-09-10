@@ -1,0 +1,15 @@
+{
+  "resourceType": "ValueSet",
+  "url": "http://example.org/fhir/ValueSet/land-dwellers",
+  "version": "1.0.0",
+  "name": "LandDwellers",
+  "status": "active",
+  "compose": {
+    "include": [
+      {
+        "system": "http://example.org/fhir/CodeSystem/animal-species",
+        "filter": [{ "property": "habitat", "op": "=", "value": "land" }]
+      }
+    ]
+  }
+}

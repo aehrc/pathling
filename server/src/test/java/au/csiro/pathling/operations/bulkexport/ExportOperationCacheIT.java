@@ -21,12 +21,12 @@ import static au.csiro.pathling.util.ExportOperationUtil.doPolling;
 import static au.csiro.pathling.util.ExportOperationUtil.kickOffRequest;
 import static org.awaitility.Awaitility.await;
 
+import au.csiro.pathling.util.DirectoryCleanup;
 import au.csiro.pathling.util.TestDataSetup;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -67,11 +67,10 @@ class ExportOperationCacheIT {
 
   @AfterEach
   void cleanup() throws IOException {
-    // Only clean up the jobs directory, preserving the delta tables for reuse.
+    // Only clean up the jobs directory, preserving the delta tables for reuse. The cleanup
+    // tolerates entries disappearing underneath it (issue #2711).
     final Path jobsDir = warehouseDir.resolve("delta").resolve("jobs");
-    if (jobsDir.toFile().exists()) {
-      FileUtils.cleanDirectory(jobsDir.toFile());
-    }
+    DirectoryCleanup.cleanDirectoryTolerantly(jobsDir);
   }
 
   @Test

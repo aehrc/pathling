@@ -16,8 +16,8 @@
  */
 
 /**
- * "Provide Library" tab body for the SQL query form: SQL editor, tables
- * editor and parameter declarations editor.
+ * "Provide SQL" tab body for the SQL query form: SQL editor, views editor
+ * and parameters editor.
  *
  * @author John Grimes
  */
@@ -25,10 +25,13 @@
 import { PlusIcon, TrashIcon } from "@radix-ui/react-icons";
 import { Box, Button, Flex, IconButton, Select, Text, TextArea, TextField } from "@radix-ui/themes";
 
+import { findSourceByUrl } from "../../hooks/sqlQueryHelpers";
 import { FieldGuidance } from "../FieldGuidance";
 import { FieldLabel } from "../FieldLabel";
+import { ParameterValueInput } from "./ParameterValueInput";
 
 import type {
+  SourceOption,
   SqlQueryParameterDeclaration,
   SqlQueryParameterType,
   SqlQueryRelatedArtifact,
@@ -44,9 +47,45 @@ const PARAMETER_TYPES: SqlQueryParameterType[] = [
   "dateTime",
 ];
 
-interface ViewDefinitionOption {
-  id: string;
-  name: string;
+/**
+ * Renders a grouped list of selectable table sources for the source picker.
+ * A source is bound by its canonical URL; one without a URL is rendered
+ * disabled with an inline explanation, since it cannot satisfy a canonical
+ * dependency reference.
+ *
+ * @param props - The component props.
+ * @param props.label - The group heading (e.g. "View definitions").
+ * @param props.sources - The sources to list in this group.
+ * @returns The select group, or null when there are no sources.
+ */
+function SourceSelectGroup({
+  label,
+  sources,
+}: Readonly<{ label: string; sources: SourceOption[] }>) {
+  if (sources.length === 0) {
+    return null;
+  }
+  return (
+    <Select.Group>
+      <Select.Label>{label}</Select.Label>
+      {sources.map((source) =>
+        source.url ? (
+          <Select.Item key={source.id} value={source.url}>
+            {source.name}
+          </Select.Item>
+        ) : (
+          <Select.Item key={source.id} value={`no-url:${source.id}`} disabled>
+            <Flex direction="column">
+              <Text>{source.name}</Text>
+              <Text size="1" color="gray">
+                No canonical URL - add a url to reference this view
+              </Text>
+            </Flex>
+          </Select.Item>
+        ),
+      )}
+    </Select.Group>
+  );
 }
 
 interface SqlQueryInlineTabProps {
@@ -58,33 +97,39 @@ interface SqlQueryInlineTabProps {
   sql: string;
   /** Callback fired when the SQL changes. */
   onSqlChange: (sql: string) => void;
-  /** Configured tables (related artefacts). */
+  /** Configured view rows (related artefacts). */
   tables: SqlQueryRelatedArtifact[];
-  /** Callback fired when the tables list changes. */
+  /** Callback fired when the view rows change. */
   onTablesChange: (tables: SqlQueryRelatedArtifact[]) => void;
   /** Configured declared parameters. */
   parameters: SqlQueryParameterDeclaration[];
   /** Callback fired when the parameters list changes. */
   onParametersChange: (parameters: SqlQueryParameterDeclaration[]) => void;
-  /** Available stored ViewDefinitions for the table selector. */
-  viewDefinitions: ViewDefinitionOption[];
+  /** Parameter names declared by more than one row. */
+  duplicateNames: ReadonlySet<string>;
+  /** Available stored ViewDefinitions for the source selector. */
+  viewDefinitions: SourceOption[];
+  /** Available stored SQLViews for the source selector. */
+  sqlViews: SourceOption[];
   /** Whether the controls should be disabled. */
   disabled?: boolean;
 }
 
 /**
- * Renders the "Provide Library" tab body.
+ * Renders the "Provide SQL" tab body.
  *
  * @param props - The component props.
  * @param props.title - Library title (used for `Library.title` on save).
  * @param props.onTitleChange - Callback fired when the title changes.
  * @param props.sql - SQL text.
  * @param props.onSqlChange - Callback fired when the SQL changes.
- * @param props.tables - Configured tables (related artefacts).
- * @param props.onTablesChange - Callback fired when the tables list changes.
+ * @param props.tables - Configured view rows (related artefacts).
+ * @param props.onTablesChange - Callback fired when the view rows change.
  * @param props.parameters - Configured declared parameters.
  * @param props.onParametersChange - Callback fired when the parameters list changes.
- * @param props.viewDefinitions - Available stored ViewDefinitions for the table selector.
+ * @param props.duplicateNames - Parameter names declared by more than one row.
+ * @param props.viewDefinitions - Available stored ViewDefinitions for the source selector.
+ * @param props.sqlViews - Available stored SQLViews for the source selector.
  * @param props.disabled - Whether the controls should be disabled.
  * @returns The tab body.
  */
@@ -97,16 +142,20 @@ export function SqlQueryInlineTab({
   onTablesChange,
   parameters,
   onParametersChange,
+  duplicateNames,
   viewDefinitions,
+  sqlViews,
   disabled = false,
 }: Readonly<SqlQueryInlineTabProps>) {
+  const hasSources = viewDefinitions.length > 0 || sqlViews.length > 0;
+
   const handleAddTable = () => {
     onTablesChange([
       ...tables,
       {
         rowId: crypto.randomUUID(),
         label: "",
-        viewDefinitionId: "",
+        referenceUrl: "",
       },
     ]);
   };
@@ -126,6 +175,7 @@ export function SqlQueryInlineTab({
         rowId: crypto.randomUUID(),
         name: "",
         type: "string",
+        value: "",
       },
     ]);
   };
@@ -176,10 +226,10 @@ export function SqlQueryInlineTab({
       </Box>
 
       <Box>
-        <FieldLabel mb="1">Tables</FieldLabel>
+        <FieldLabel mb="1">Views</FieldLabel>
         {tables.length === 0 && (
           <FieldGuidance>
-            Add at least one table; each maps a label to a stored ViewDefinition.
+            Add at least one view; each maps a label to a stored ViewDefinition or SQLView.
           </FieldGuidance>
         )}
         <Flex direction="column" gap="2" mt="1">
@@ -196,47 +246,47 @@ export function SqlQueryInlineTab({
                   placeholder="e.g. patients"
                   onChange={(e) => handleUpdateTable(table.rowId, { label: e.target.value })}
                   disabled={disabled}
-                  aria-label={`Label for table ${index + 1}`}
+                  aria-label={`Label for view ${index + 1}`}
                 />
               </Box>
               <Box style={{ flex: 1, minWidth: "12rem" }}>
                 {index === 0 && (
                   <Text size="1" color="gray" as="div" mb="1">
-                    View definition
+                    Source
                   </Text>
                 )}
                 <Select.Root
-                  value={table.viewDefinitionId === "" ? undefined : table.viewDefinitionId}
-                  onValueChange={(value) =>
-                    handleUpdateTable(table.rowId, {
-                      viewDefinitionId: value,
-                    })
+                  value={
+                    findSourceByUrl([...viewDefinitions, ...sqlViews], table.referenceUrl)
+                      ? table.referenceUrl
+                      : undefined
                   }
-                  disabled={disabled || viewDefinitions.length === 0}
+                  onValueChange={(value) => handleUpdateTable(table.rowId, { referenceUrl: value })}
+                  disabled={disabled || !hasSources}
                 >
                   <Select.Trigger
                     style={{ width: "100%" }}
-                    placeholder={
-                      viewDefinitions.length === 0
-                        ? "No view definitions"
-                        : "Select view definition"
-                    }
-                    aria-label={`View definition for table ${index + 1}`}
+                    placeholder={hasSources ? "Select a source" : "Nothing to reference"}
+                    aria-label={`Source for view ${index + 1}`}
                   />
                   <Select.Content>
-                    {viewDefinitions.map((vd) => (
-                      <Select.Item key={vd.id} value={vd.id}>
-                        {vd.name}
-                      </Select.Item>
-                    ))}
+                    <SourceSelectGroup label="View definitions" sources={viewDefinitions} />
+                    <SourceSelectGroup label="SQL views" sources={sqlViews} />
                   </Select.Content>
                 </Select.Root>
+                {table.referenceUrl &&
+                  !findSourceByUrl([...viewDefinitions, ...sqlViews], table.referenceUrl) && (
+                    <Text size="1" color="amber" as="div" mt="1">
+                      Source not found:{" "}
+                      <code style={{ wordBreak: "break-all" }}>{table.referenceUrl}</code>
+                    </Text>
+                  )}
               </Box>
               <IconButton
                 size="2"
                 variant="soft"
                 color="gray"
-                aria-label={`Remove table ${index + 1}`}
+                aria-label={`Remove view ${index + 1}`}
                 onClick={() => handleRemoveTable(table.rowId)}
                 disabled={disabled}
               >
@@ -248,7 +298,7 @@ export function SqlQueryInlineTab({
         <Box mt="2">
           <Button size="2" variant="soft" onClick={handleAddTable} disabled={disabled}>
             <PlusIcon />
-            Add table
+            Add view
           </Button>
         </Box>
       </Box>
@@ -259,89 +309,100 @@ export function SqlQueryInlineTab({
         </FieldLabel>
         {parameters.length === 0 && (
           <FieldGuidance>
-            Declare runtime parameters for the SQL. Each becomes a `Library.parameter` entry with
-            `use=in`.
+            Declare the parameters the SQL binds, and the value to bind on this run. Each becomes a
+            `Library.parameter` entry with `use=in`; values are never saved.
           </FieldGuidance>
         )}
         <Flex direction="column" gap="2" mt="1">
-          {parameters.map((param, index) => (
-            <Flex key={param.rowId} gap="2" align="end" wrap="wrap">
-              <Box style={{ flex: 1, minWidth: "9rem" }}>
-                {index === 0 && (
-                  <Text size="1" color="gray" as="div" mb="1">
-                    Name
-                  </Text>
-                )}
-                <TextField.Root
-                  value={param.name}
-                  placeholder="e.g. patient_id"
-                  onChange={(e) =>
-                    handleUpdateParameter(param.rowId, {
-                      name: e.target.value,
-                    })
-                  }
-                  disabled={disabled}
-                  aria-label={`Name for parameter ${index + 1}`}
-                />
-              </Box>
-              <Box style={{ width: "9rem" }}>
-                {index === 0 && (
-                  <Text size="1" color="gray" as="div" mb="1">
-                    Type
-                  </Text>
-                )}
-                <Select.Root
-                  value={param.type}
-                  onValueChange={(value) =>
-                    handleUpdateParameter(param.rowId, {
-                      type: value as SqlQueryParameterType,
-                    })
-                  }
+          {parameters.map((param, index) => {
+            const declaredName = param.name.trim();
+            // One name can only bind one value, so a name declared twice is
+            // ambiguous and both rows carry the message.
+            const duplicate = declaredName !== "" && duplicateNames.has(declaredName);
+            return (
+              <Flex key={param.rowId} gap="2" align="end" wrap="wrap">
+                <Box style={{ flex: 1, minWidth: "9rem" }}>
+                  {index === 0 && (
+                    <Text size="1" color="gray" as="div" mb="1">
+                      Name
+                    </Text>
+                  )}
+                  <TextField.Root
+                    value={param.name}
+                    placeholder="e.g. patient_id"
+                    onChange={(e) =>
+                      handleUpdateParameter(param.rowId, {
+                        name: e.target.value,
+                      })
+                    }
+                    disabled={disabled}
+                    aria-label={`Name for parameter ${index + 1}`}
+                    color={duplicate ? "red" : undefined}
+                  />
+                  {duplicate && (
+                    <Text size="1" color="red" as="div" mt="1">
+                      {`Duplicate parameter name: ${declaredName}.`}
+                    </Text>
+                  )}
+                </Box>
+                <Box style={{ width: "9rem" }}>
+                  {index === 0 && (
+                    <Text size="1" color="gray" as="div" mb="1">
+                      Type
+                    </Text>
+                  )}
+                  <Select.Root
+                    value={param.type}
+                    onValueChange={(value) =>
+                      handleUpdateParameter(param.rowId, {
+                        type: value as SqlQueryParameterType,
+                      })
+                    }
+                    disabled={disabled}
+                  >
+                    <Select.Trigger
+                      style={{ width: "100%" }}
+                      aria-label={`Type for parameter ${index + 1}`}
+                    />
+                    <Select.Content>
+                      {PARAMETER_TYPES.map((type) => (
+                        <Select.Item key={type} value={type}>
+                          {type}
+                        </Select.Item>
+                      ))}
+                    </Select.Content>
+                  </Select.Root>
+                </Box>
+                <Box style={{ flex: 1, minWidth: "9rem" }}>
+                  {index === 0 && (
+                    <Text size="1" color="gray" as="div" mb="1">
+                      Value
+                    </Text>
+                  )}
+                  <ParameterValueInput
+                    type={param.type}
+                    value={param.value}
+                    onChange={(value) => handleUpdateParameter(param.rowId, { value })}
+                    disabled={disabled}
+                    // An unnamed row declares nothing, so it binds nothing and
+                    // its value is not required.
+                    required={declaredName !== ""}
+                    ariaLabel={`Value for parameter ${index + 1}`}
+                  />
+                </Box>
+                <IconButton
+                  size="2"
+                  variant="soft"
+                  color="gray"
+                  aria-label={`Remove parameter ${index + 1}`}
+                  onClick={() => handleRemoveParameter(param.rowId)}
                   disabled={disabled}
                 >
-                  <Select.Trigger
-                    style={{ width: "100%" }}
-                    aria-label={`Type for parameter ${index + 1}`}
-                  />
-                  <Select.Content>
-                    {PARAMETER_TYPES.map((type) => (
-                      <Select.Item key={type} value={type}>
-                        {type}
-                      </Select.Item>
-                    ))}
-                  </Select.Content>
-                </Select.Root>
-              </Box>
-              <Box style={{ flex: 1, minWidth: "9rem" }}>
-                {index === 0 && (
-                  <Text size="1" color="gray" as="div" mb="1">
-                    Default (optional)
-                  </Text>
-                )}
-                <TextField.Root
-                  value={param.defaultValue ?? ""}
-                  placeholder="(none)"
-                  onChange={(e) =>
-                    handleUpdateParameter(param.rowId, {
-                      defaultValue: e.target.value,
-                    })
-                  }
-                  disabled={disabled}
-                  aria-label={`Default value for parameter ${index + 1}`}
-                />
-              </Box>
-              <IconButton
-                size="2"
-                variant="soft"
-                color="gray"
-                aria-label={`Remove parameter ${index + 1}`}
-                onClick={() => handleRemoveParameter(param.rowId)}
-                disabled={disabled}
-              >
-                <TrashIcon />
-              </IconButton>
-            </Flex>
-          ))}
+                  <TrashIcon />
+                </IconButton>
+              </Flex>
+            );
+          })}
         </Flex>
         <Box mt="2">
           <Button size="2" variant="soft" onClick={handleAddParameter} disabled={disabled}>

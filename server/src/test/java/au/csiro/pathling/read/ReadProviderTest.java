@@ -178,9 +178,11 @@ class ReadProviderTest {
     final Method readMethod = ReadProvider.class.getMethod("read", IdType.class);
     final OperationAccess operationAccess = readMethod.getAnnotation(OperationAccess.class);
 
-    // Then: the annotation should be present with value "read".
+    // Then: the annotation should be present with value "read-resource". The operation authority
+    // is deliberately named apart from the "read" data authority, so that instance read can be
+    // granted for a single resource type.
     assertThat(operationAccess).isNotNull();
-    assertThat(operationAccess.value()).containsExactly("read");
+    assertThat(operationAccess.value()).containsExactly("read-resource");
   }
 
   // -------------------------------------------------------------------------

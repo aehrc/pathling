@@ -26,6 +26,7 @@ jobs:
         uses: ./.github/actions/setup-build-tools
         with:
           java: "true"
+          spark: "true"
           r: "true"
           r-pandoc: "true"
           python: "true"

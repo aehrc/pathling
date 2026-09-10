@@ -22,7 +22,7 @@ jobs:
   test-server:
     name: Build and test server
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -88,7 +88,7 @@ jobs:
           -Dsonar.projectKey=aehrc_pathling_server -Dsonar.organization=aehrc \
           -Dsonar.host.url=https://sonarcloud.io \
           -Dsonar.sarifReportPaths=trivy-results.sarif
-        timeout-minutes: 30
+        timeout-minutes: 45
 
       - name: Save test reports
         if: always()

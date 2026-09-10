@@ -13,9 +13,9 @@ main `pom.xml` in the root of the repository:
 - `utilities` - Utility functions used by different components of Pathling.
 - `encoders` - Encoders for transforming [FHIR](https://hl7.org/fhir/) data into
   Spark Datasets.
-- `terminology` - Interact with
+- `terminology` - Terminology operations from Spark, either through
   a [FHIR terminology server](https://hl7.org/fhir/terminology-service.html)
-  from Spark.
+  or a locally imported terminology store.
 - `fhirpath` - A library that can
   translate [FHIRPath expressions](https://hl7.org/fhirpath/) into Spark
   queries.
@@ -114,6 +114,30 @@ To build and install locally, run:
 mvn clean install -pl library-runtime -am
 ```
 
+### Test execution time
+
+Around 90% of a core library build is spent running the tests, so that is where
+any effort to shorten the build belongs.
+
+The tests are run in parallel across Surefire forks, one fork per available
+processor. This is controlled by the `pathling.testForkCount` property, which
+accepts either an absolute number of forks or a multiple of the processor count:
+
+```bash
+mvn install -pl library-runtime -am -Dpathling.testForkCount=4
+```
+
+One fork per processor is the fastest setting measured for a build that has the
+machine to itself. Raising it is counterproductive, because each fork holds its
+own Spark session: doubling the fork count makes the `fhirpath` suite around 70%
+slower. Lower it when the build has to share the machine.
+
+Because forks are allocated a whole test class at a time, a module's test suite
+can never finish faster than its slowest single class. On a machine with eight or
+more processors this, rather than the total amount of work, is what sets the
+build time for every core module. If you add a long-running test class, consider
+whether it can be split.
+
 ## Language libraries
 
 ### Python library
@@ -150,15 +174,33 @@ mvn clean install -pl lib/R -am
 
 ### Clearing the Ivy cache
 
-When rebuilding after making changes to upstream modules, you may need to clear
-the local Ivy cache before the changes will be picked up by the Python and R
-libraries. The Ivy cache is typically located at `~/.ivy2/cache`.
+When rebuilding after making changes to upstream modules, you need to clear the
+local Ivy state before the changes will be picked up by the Python and R
+libraries.
 
-To clear the cache:
+Spark resolves `--packages` through Ivy, which keeps two directories per Ivy
+version: `cache` (the resolved module metadata and artifacts) and `jars` (the
+jars retrieved for the run). Both must be cleared. Removing only `cache` leaves
+`au.csiro.pathling_library-runtime-<version>-SNAPSHOT.jar` in `jars`, and
+because the SNAPSHOT filename never changes, Ivy reports `0 artifacts copied, N
+already retrieved` and silently reuses the stale build. The tests still run and
+pass; they just do not exercise the new code.
+
+Spark also uses a home directory suffixed with its bundled Ivy version (for
+example `~/.ivy2.5.2`) in addition to the conventional `~/.ivy2`, so both trees
+need to be cleared:
 
 ```bash
-rm -rf ~/.ivy2/cache
+rm -rf ~/.ivy2/cache ~/.ivy2/jars ~/.ivy2.5.2/cache ~/.ivy2.5.2/jars
+mkdir -p ~/.ivy2/cache ~/.ivy2/jars ~/.ivy2.5.2/cache ~/.ivy2.5.2/jars
 ```
+
+Run `ls -d ~/.ivy2*` to confirm which version-suffixed directories exist on your
+machine, as the suffix follows the Spark version in use.
+
+The `mkdir` step matters. With the `jars` directory missing, Ivy fails to
+retrieve `delta-spark`, `delta-storage` and `antlr4-runtime` from the local
+Maven resolver, and the run fails with `JAVA_GATEWAY_EXITED`.
 
 After clearing the cache, rebuild the libraries:
 

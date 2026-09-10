@@ -1,0 +1,14 @@
+{
+  "resourceType": "ValueSet",
+  "url": "http://example.org/fhir/ValueSet/nested-mammals",
+  "version": "1.0.0",
+  "name": "NestedMammals",
+  "status": "active",
+  "compose": {
+    "include": [
+      {
+        "valueSet": ["http://example.org/fhir/ValueSet/mammals-enumerated"]
+      }
+    ]
+  }
+}

@@ -29,8 +29,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { useServerCapabilities } from "../useServerCapabilities";
+import { buildSearchParamMap, useServerCapabilities } from "../useServerCapabilities";
 
+import type { ServerCapabilities } from "../useServerCapabilities";
 import type { CapabilityStatement } from "fhir/r4";
 import type { ReactNode } from "react";
 
@@ -530,5 +531,54 @@ describe("useServerCapabilities", () => {
         expect(fetch).toHaveBeenCalledWith("http://server2.com/fhir/metadata", expect.any(Object));
       });
     });
+  });
+});
+
+describe("buildSearchParamMap", () => {
+  it("returns undefined when capabilities are undefined", () => {
+    expect(buildSearchParamMap(undefined)).toBeUndefined();
+  });
+
+  it("returns undefined when capabilities carry no resources", () => {
+    const capabilities: ServerCapabilities = {
+      authRequired: false,
+      resourceTypes: [],
+    };
+
+    expect(buildSearchParamMap(capabilities)).toBeUndefined();
+  });
+
+  it("maps each resource type to its declared search parameters", () => {
+    const capabilities: ServerCapabilities = {
+      authRequired: false,
+      resourceTypes: ["Patient", "Observation"],
+      resources: [
+        {
+          type: "Patient",
+          operations: [],
+          searchParams: [{ name: "gender", type: "token" }],
+        },
+        {
+          type: "Observation",
+          operations: [],
+          searchParams: [{ name: "code", type: "token" }],
+        },
+      ],
+    };
+
+    expect(buildSearchParamMap(capabilities)).toEqual({
+      Patient: [{ name: "gender", type: "token" }],
+      Observation: [{ name: "code", type: "token" }],
+    });
+  });
+
+  it("returns an empty map when the resources list is empty", () => {
+    const capabilities: ServerCapabilities = {
+      authRequired: false,
+      resourceTypes: [],
+      resources: [],
+    };
+
+    expect(buildSearchParamMap(capabilities)).toEqual({});
   });
 });

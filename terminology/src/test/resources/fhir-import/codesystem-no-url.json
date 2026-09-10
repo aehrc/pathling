@@ -1,0 +1,8 @@
+{
+  "resourceType": "CodeSystem",
+  "version": "1.0.0",
+  "name": "MissingUrl",
+  "status": "active",
+  "content": "complete",
+  "concept": [{ "code": "A", "display": "Alpha" }]
+}

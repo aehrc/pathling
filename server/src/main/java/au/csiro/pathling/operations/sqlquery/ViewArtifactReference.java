@@ -21,16 +21,23 @@ import jakarta.annotation.Nonnull;
 import lombok.Value;
 
 /**
- * Represents a reference to a ViewDefinition dependency within a SQLQuery Library resource. Each
- * reference has a label (the table alias used in the SQL) and a canonical URL pointing to the
- * ViewDefinition.
+ * Represents a dependency reference within a SQLQuery or SQLView Library resource (a {@code
+ * relatedArtifact} of type {@code depends-on}). Each reference has a label (the table name used in
+ * the SQL) and the canonical URL of the ViewDefinition or SQLView that backs that table. The
+ * canonical URL is matched against the referenced resource's {@code url} element; the logical id
+ * plays no part in resolution.
+ *
+ * @author John Grimes
  */
 @Value
 public class ViewArtifactReference {
 
-  /** The table alias used in the SQL query to reference this ViewDefinition. */
+  /** The table name used in the SQL query to reference this dependency. */
   @Nonnull String label;
 
-  /** The canonical URL or relative reference to the ViewDefinition resource. */
+  /**
+   * The absolute canonical URL of the referenced ViewDefinition or SQLView, optionally suffixed
+   * with {@code |version}.
+   */
   @Nonnull String canonicalUrl;
 }

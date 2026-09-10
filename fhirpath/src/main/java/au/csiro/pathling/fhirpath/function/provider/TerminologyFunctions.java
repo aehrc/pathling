@@ -196,14 +196,14 @@ public abstract class TerminologyFunctions {
   }
 
   /**
-   * This function can be invoked on a collection of {@code Coding} or {@code CodeableConcept}
-   * values, returning a collection of {@code Boolean} values based on whether each concept is a
-   * member of the ValueSet with the specified url.
+   * This function can be invoked on a collection of {@code Coding}, {@code CodeableConcept} or
+   * {@code Quantity} values, returning a collection of {@code Boolean} values based on whether each
+   * concept is a member of the ValueSet with the specified url.
    *
    * <p>For a {@code CodeableConcept}, the function will return true if any of the codings are
-   * members of the value set.
+   * members of the value set. For a {@code Quantity}, the concept is the coded unit.
    *
-   * @param input The input collection of Codings or CodeableConcepts
+   * @param input The input collection of Codings, CodeableConcepts or Quantities
    * @param valueSetUrl The URL of the ValueSet to check membership against
    * @return A collection of boolean values
    * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#memberof">Pathling
@@ -217,13 +217,13 @@ public abstract class TerminologyFunctions {
   }
 
   /**
-   * This function takes a collection of {@code Coding} or {@code CodeableConcept} elements as
-   * input, and another collection as the argument. The result is a collection with a {@code
-   * Boolean} value for each source concept, each value being {@code true} if the concept subsumes
-   * any of the concepts within the argument collection, and {@code false} otherwise.
+   * This function takes a collection of {@code Coding}, {@code CodeableConcept} or {@code Quantity}
+   * elements as input, and another collection as the argument. The result is a collection with a
+   * {@code Boolean} value for each source concept, each value being {@code true} if the concept
+   * subsumes any of the concepts within the argument collection, and {@code false} otherwise.
    *
-   * @param input The input collection of Codings or CodeableConcepts
-   * @param codes The collection of Codings or CodeableConcepts to check against
+   * @param input The input collection of Codings, CodeableConcepts or Quantities
+   * @param codes The collection of Codings, CodeableConcepts or Quantities to check against
    * @return A collection of boolean values
    * @see <a href="https://hl7.org/fhir/R4/fhirpath.html#functions">FHIR specification - Additional
    *     functions</a>
@@ -242,8 +242,8 @@ public abstract class TerminologyFunctions {
    * This is the inverse of the {@link #subsumes} function, examining whether each input concept is
    * subsumed by any of the argument concepts.
    *
-   * @param input The input collection of Codings or CodeableConcepts
-   * @param codes The collection of Codings or CodeableConcepts to check against
+   * @param input The input collection of Codings, CodeableConcepts or Quantities
+   * @param codes The collection of Codings, CodeableConcepts or Quantities to check against
    * @return A collection of boolean values
    * @see <a href="https://hl7.org/fhir/R4/fhirpath.html#functions">FHIR specification - Additional
    *     functions</a>
@@ -258,7 +258,8 @@ public abstract class TerminologyFunctions {
 
   /**
    * When invoked on a {@code Coding}, returns any matching concepts using the ConceptMap specified
-   * using {@code conceptMapUrl}.
+   * using {@code conceptMapUrl}. It can also be invoked on a {@code CodeableConcept}, or on a
+   * {@code Quantity}, where the coded unit is translated.
    *
    * <p>The {@code reverse} parameter controls the direction to traverse the map - {@code false}
    * results in "source to target" mappings, while {@code true} results in "target to source".
@@ -270,7 +271,7 @@ public abstract class TerminologyFunctions {
    * <p>The {@code target} parameter identifies the value set in which a translation is sought — a
    * scope for the translation.
    *
-   * @param input The input collection of Codings
+   * @param input The input collection of Codings, CodeableConcepts or Quantities
    * @param conceptMapUrl The URL of the ConceptMap to use
    * @param reverse The optional reverse parameter
    * @param equivalence The optional equivalence parameter

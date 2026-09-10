@@ -113,9 +113,12 @@ public class EntityTagInterceptor {
         return;
       }
 
-      // Skip ETag validation for async endpoints - they use TTL-based caching instead.
+      // Skip ETag validation for async endpoints - they use TTL-based caching instead. The $jobs
+      // list is a live snapshot of registry state, not data state, so it must not be validated
+      // against the database ETag (which would serve a stale 304 when jobs change but data does
+      // not).
       final String operation = requestDetails.getOperation();
-      if ("$job".equals(operation) || "$result".equals(operation)) {
+      if ("$job".equals(operation) || "$jobs".equals(operation) || "$result".equals(operation)) {
         log.debug("Async endpoint {}, skipping ETag validation", operation);
         setMissResponseHeaders(response);
         return;

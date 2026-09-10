@@ -28,15 +28,22 @@ keeping the move on a single filesystem.
 Author: John Grimes.
 """
 
+from __future__ import annotations
+
 from pathlib import Path
-from typing import Union
+from typing import TYPE_CHECKING, Tuple, Union
 
 from py4j.java_gateway import is_instance_of
 
 from pathling.cli.errors import CliError
 
+if TYPE_CHECKING:
+    from pyspark.sql import SparkSession
 
-def _filesystem(spark, reference_path: Union[str, Path]):
+
+def _filesystem(
+    spark: SparkSession, reference_path: Union[str, Path]
+) -> Tuple[object, object]:
     """Resolves the Hadoop ``FileSystem`` for a path, unwrapping checksums.
 
     The filesystem is resolved from ``reference_path`` so that operations stay
@@ -63,7 +70,7 @@ def _filesystem(spark, reference_path: Union[str, Path]):
     return fs, path_class
 
 
-def remove_path(spark, path: Union[str, Path]) -> None:
+def remove_path(spark: SparkSession, path: Union[str, Path]) -> None:
     """Removes a file or directory over its Hadoop ``FileSystem``, if it exists.
 
     Used to clear an existing target before an overwrite and to clean up the
@@ -81,7 +88,7 @@ def remove_path(spark, path: Union[str, Path]) -> None:
 
 
 def departition(
-    spark,
+    spark: SparkSession,
     source_dir: Union[str, Path],
     target_path: Union[str, Path],
     part_extension: str,

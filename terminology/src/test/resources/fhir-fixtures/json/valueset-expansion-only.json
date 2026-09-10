@@ -1,0 +1,22 @@
+{
+  "resourceType": "ValueSet",
+  "url": "http://example.org/fhir/ValueSet/expansion-only",
+  "version": "1.0.0",
+  "name": "ExpansionOnly",
+  "status": "active",
+  "expansion": {
+    "timestamp": "2026-01-01T00:00:00Z",
+    "contains": [
+      {
+        "system": "http://example.org/fhir/CodeSystem/animal-species",
+        "code": "dog",
+        "display": "Dog"
+      },
+      {
+        "system": "http://example.org/fhir/CodeSystem/animal-species",
+        "code": "sparrow",
+        "display": "Sparrow"
+      }
+    ]
+  }
+}

@@ -24,6 +24,7 @@ import static org.hl7.fhir.r4.model.Bundle.BundleType.BATCHRESPONSE;
 
 import au.csiro.pathling.FhirServer;
 import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.errors.ErrorHandlingInterceptor;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.operations.delete.DeleteExecutor;
 import au.csiro.pathling.security.OperationAccess;
@@ -31,6 +32,7 @@ import au.csiro.pathling.security.PathlingAuthority;
 import au.csiro.pathling.security.ResourceAccess;
 import ca.uhn.fhir.rest.annotation.Transaction;
 import ca.uhn.fhir.rest.annotation.TransactionParam;
+import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.ArrayList;
@@ -47,6 +49,9 @@ import org.hl7.fhir.r4.model.Bundle.BundleEntryComponent;
 import org.hl7.fhir.r4.model.Bundle.BundleEntryRequestComponent;
 import org.hl7.fhir.r4.model.Bundle.BundleEntryResponseComponent;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.hl7.fhir.r4.model.OperationOutcome;
+import org.hl7.fhir.r4.model.OperationOutcome.IssueSeverity;
+import org.hl7.fhir.r4.model.OperationOutcome.IssueType;
 import org.hl7.fhir.r4.model.Resource;
 import org.springframework.stereotype.Component;
 
@@ -101,18 +106,20 @@ public class BatchProvider {
 
     final Map<ResourceType, List<IBaseResource>> resourcesForUpdate =
         new EnumMap<>(ResourceType.class);
+    final Map<ResourceType, List<BundleEntryComponent>> responsesForUpdate =
+        new EnumMap<>(ResourceType.class);
     final Bundle response = new Bundle();
     response.setType(BATCHRESPONSE);
 
     // Gather all the resources within the request bundle, categorised by their type. Also, prepare
     // the responses should these operations be successful.
     for (final BundleEntryComponent entry : bundle.getEntry()) {
-      processEntry(resourcesForUpdate, response, entry);
+      processEntry(resourcesForUpdate, responsesForUpdate, response, entry);
     }
 
     if (!resourcesForUpdate.isEmpty()) {
       // Merge in any updated resources into their respective tables.
-      update(resourcesForUpdate);
+      update(resourcesForUpdate, responsesForUpdate);
     }
 
     return response;
@@ -120,6 +127,7 @@ public class BatchProvider {
 
   private void processEntry(
       @Nonnull final Map<ResourceType, List<IBaseResource>> resourcesForUpdate,
+      @Nonnull final Map<ResourceType, List<BundleEntryComponent>> responsesForUpdate,
       @Nonnull final Bundle response,
       @Nonnull final BundleEntryComponent entry) {
     final Resource resource = entry.getResource();
@@ -133,12 +141,12 @@ public class BatchProvider {
       if (resource == null) {
         return;
       }
-      processCreateEntry(resourcesForUpdate, response, entry);
+      processCreateEntry(resourcesForUpdate, responsesForUpdate, response, entry);
     } else if ("PUT".equals(method)) {
       if (resource == null) {
         return;
       }
-      processUpdateEntry(resourcesForUpdate, response, entry);
+      processUpdateEntry(resourcesForUpdate, responsesForUpdate, response, entry);
     } else if ("DELETE".equals(method)) {
       processDeleteEntry(response, entry);
     } else {
@@ -150,6 +158,7 @@ public class BatchProvider {
 
   private void processCreateEntry(
       @Nonnull final Map<ResourceType, List<IBaseResource>> resourcesForUpdate,
+      @Nonnull final Map<ResourceType, List<BundleEntryComponent>> responsesForUpdate,
       @Nonnull final Bundle response,
       @Nonnull final BundleEntryComponent entry) {
     final Resource resource = entry.getResource();
@@ -179,11 +188,12 @@ public class BatchProvider {
 
     log.debug("Batch creating {} with generated ID: {}", resourceType.toCode(), generatedId);
     addToResourceMap(resourcesForUpdate, resourceType, resource);
-    addCreateResponse(response, resource);
+    trackResponse(responsesForUpdate, resourceType, addCreateResponse(response, resource));
   }
 
   private void processUpdateEntry(
       @Nonnull final Map<ResourceType, List<IBaseResource>> resourcesForUpdate,
+      @Nonnull final Map<ResourceType, List<BundleEntryComponent>> responsesForUpdate,
       @Nonnull final Bundle response,
       @Nonnull final BundleEntryComponent entry) {
     final Resource resource = entry.getResource();
@@ -211,7 +221,7 @@ public class BatchProvider {
 
     final IBaseResource preparedResource = prepareResourceForUpdate(resource, urlId);
     addToResourceMap(resourcesForUpdate, resourceType, preparedResource);
-    addUpdateResponse(response, preparedResource);
+    trackResponse(responsesForUpdate, resourceType, addUpdateResponse(response, preparedResource));
   }
 
   private void processDeleteEntry(
@@ -243,17 +253,79 @@ public class BatchProvider {
     addDeleteResponse(response);
   }
 
-  private void update(@Nonnull final Map<ResourceType, List<IBaseResource>> resourcesForUpdate) {
+  /**
+   * Merges the gathered resources, one resource type at a time. A batch's entries are independent
+   * of one another, so a type whose merge fails does not prevent the remaining types from being
+   * written: the failure is reported on that type's own response entries, and the rest of the
+   * bundle keeps its success statuses. Without this, a single unwritable type - a table that cannot
+   * be reconciled with this server's encoders, for instance - would fail the whole request and
+   * leave the client unable to tell which entry was at fault.
+   */
+  private void update(
+      @Nonnull final Map<ResourceType, List<IBaseResource>> resourcesForUpdate,
+      @Nonnull final Map<ResourceType, List<BundleEntryComponent>> responsesForUpdate) {
     if (configuration.getAuth().isEnabled()) {
       checkHasAuthority(PathlingAuthority.operationAccess("update"));
     }
     for (final var entry : resourcesForUpdate.entrySet()) {
+      final ResourceType resourceType = entry.getKey();
       log.debug(
           "Batch updating {} resource(s) of type {}",
           entry.getValue().size(),
-          entry.getKey().toCode());
-      updateExecutor.merge(entry.getKey(), entry.getValue());
+          resourceType.toCode());
+      try {
+        updateExecutor.merge(resourceType, entry.getValue());
+      } catch (final Exception e) {
+        log.error("Batch update of type {} failed", resourceType.toCode(), e);
+        reportFailure(
+            responsesForUpdate.getOrDefault(resourceType, List.of()), resourceType.toCode(), e);
+      }
     }
+  }
+
+  /**
+   * Rewrites the response entries of a resource type whose merge failed, so that each carries the
+   * status and the OperationOutcome the same failure would have produced had the entry been
+   * submitted on its own. The resource echo is dropped, because it was not written.
+   */
+  private static void reportFailure(
+      @Nonnull final List<BundleEntryComponent> responseEntries,
+      @Nonnull final String resourceCode,
+      @Nonnull final Exception error) {
+    final BaseServerResponseException converted =
+        ErrorHandlingInterceptor.convertError(error, resourceCode);
+    for (final BundleEntryComponent responseEntry : responseEntries) {
+      final BundleEntryResponseComponent responseElement = responseEntry.getResponse();
+      responseElement.setStatus(String.valueOf(converted.getStatusCode()));
+      responseElement.setOutcome(outcomeFor(converted));
+      responseEntry.setResource(null);
+    }
+  }
+
+  /**
+   * Returns the OperationOutcome a converted failure carries, synthesising one from its message
+   * where it carries none.
+   */
+  @Nonnull
+  private static Resource outcomeFor(@Nonnull final BaseServerResponseException converted) {
+    if (converted.getOperationOutcome() instanceof final OperationOutcome outcome) {
+      return outcome;
+    }
+    final OperationOutcome outcome = new OperationOutcome();
+    outcome
+        .addIssue()
+        .setSeverity(IssueSeverity.ERROR)
+        .setCode(IssueType.PROCESSING)
+        .setDiagnostics(converted.getMessage());
+    return outcome;
+  }
+
+  /** Records the response entry that a resource type's merge outcome will be reported on. */
+  private static void trackResponse(
+      @Nonnull final Map<ResourceType, List<BundleEntryComponent>> responsesForUpdate,
+      @Nonnull final ResourceType resourceType,
+      @Nonnull final BundleEntryComponent responseEntry) {
+    responsesForUpdate.computeIfAbsent(resourceType, k -> new ArrayList<>()).add(responseEntry);
   }
 
   @Nonnull
@@ -313,22 +385,26 @@ public class BatchProvider {
     resourcesForCreation.get(resourceType).add(resource);
   }
 
-  private void addCreateResponse(
+  @Nonnull
+  private BundleEntryComponent addCreateResponse(
       @Nonnull final Bundle response, @Nonnull final IBaseResource createdResource) {
     final BundleEntryComponent responseEntry = response.addEntry();
     final BundleEntryResponseComponent responseElement = new BundleEntryResponseComponent();
     responseElement.setStatus("201");
     responseEntry.setResponse(responseElement);
     responseEntry.setResource((Resource) createdResource);
+    return responseEntry;
   }
 
-  private void addUpdateResponse(
+  @Nonnull
+  private BundleEntryComponent addUpdateResponse(
       @Nonnull final Bundle response, @Nonnull final IBaseResource updatedResource) {
     final BundleEntryComponent responseEntry = response.addEntry();
     final BundleEntryResponseComponent responseElement = new BundleEntryResponseComponent();
     responseElement.setStatus("200");
     responseEntry.setResponse(responseElement);
     responseEntry.setResource((Resource) updatedResource);
+    return responseEntry;
   }
 
   private void addDeleteResponse(@Nonnull final Bundle response) {

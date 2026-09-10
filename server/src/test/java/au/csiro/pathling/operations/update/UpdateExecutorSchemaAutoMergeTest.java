@@ -20,6 +20,10 @@ package au.csiro.pathling.operations.update;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 import au.csiro.pathling.cache.CacheableDatabase;
 import au.csiro.pathling.config.StorageConfiguration;
@@ -27,23 +31,33 @@ import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.ViewDefinitionResource;
 import au.csiro.pathling.encoders.ViewDefinitionResource.ColumnComponent;
 import au.csiro.pathling.encoders.ViewDefinitionResource.SelectComponent;
+import au.csiro.pathling.io.DynamicDeltaSource;
+import au.csiro.pathling.io.SchemaDrift;
 import au.csiro.pathling.library.PathlingContext;
+import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.test.SpringBootUnitTest;
+import au.csiro.pathling.util.DeltaSchemaFixtures;
+import au.csiro.pathling.util.FhirEncoderFixtures;
 import au.csiro.pathling.util.FhirServerTestConfiguration;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import au.csiro.pathling.util.LogCapture;
+import ch.qos.logback.classic.Level;
 import jakarta.annotation.Nonnull;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.r4.model.CodeType;
+import org.hl7.fhir.r4.model.DateTimeType;
+import org.hl7.fhir.r4.model.Enumerations.AdministrativeGender;
+import org.hl7.fhir.r4.model.Extension;
+import org.hl7.fhir.r4.model.Patient;
+import org.hl7.fhir.r4.model.Period;
 import org.hl7.fhir.r4.model.StringType;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -75,6 +89,12 @@ import org.springframework.context.annotation.Import;
 class UpdateExecutorSchemaAutoMergeTest {
 
   private static final String VIEW_ID = "schema-compat-test";
+
+  /** The id of the row seeded at the wide schema, carrying a Period-valued extension. */
+  private static final String WIDE_PATIENT_ID = "wide-schema-patient";
+
+  /** The id written by the narrowed encoder after the table was seeded wide. */
+  private static final String NEW_PATIENT_ID = "narrowed-write-patient";
 
   @Autowired private PathlingContext pathlingContext;
 
@@ -131,22 +151,196 @@ class UpdateExecutorSchemaAutoMergeTest {
     assertThatNoException().isThrownBy(() -> executor.merge("ViewDefinition", update));
   }
 
+  /**
+   * When the warmup write evolves the table schema, the executor must refresh the data source entry
+   * for the resource type so that in-process consumers see the evolved schema (FR-001), and must
+   * log the fields that were added at INFO level (FR-010).
+   */
+  @Test
+  void warmupWriteTriggersRefreshAndLogsAddedFields() throws Exception {
+    seedTableAndDowngradeSchema();
+
+    final DynamicDeltaSource dataSource = mock(DynamicDeltaSource.class);
+    final UpdateExecutor executor = newExecutor(true, dataSource);
+    final ViewDefinitionResource update = createViewDefinition(VIEW_ID, "updated_view", "Patient");
+
+    try (final LogCapture logCapture = LogCapture.forClass(UpdateExecutor.class)) {
+      executor.merge("ViewDefinition", update);
+
+      verify(dataSource).refresh("ViewDefinition");
+      assertThat(logCapture.events())
+          .anySatisfy(
+              event -> {
+                assertThat(event.getLevel()).isEqualTo(Level.INFO);
+                assertThat(event.getFormattedMessage())
+                    .contains("ViewDefinition")
+                    .contains("forEach");
+              });
+    }
+  }
+
+  /**
+   * When the table schema already matches the encoder output, no warmup write occurs and no refresh
+   * must be invoked, so undrifted updates carry no extra cost (FR-008 analogue for the update
+   * path).
+   */
+  @Test
+  void mergeWithoutDriftDoesNotTriggerRefresh() {
+    seedTable();
+
+    final DynamicDeltaSource dataSource = mock(DynamicDeltaSource.class);
+    final UpdateExecutor executor = newExecutor(true, dataSource);
+    final ViewDefinitionResource update = createViewDefinition(VIEW_ID, "updated_view", "Patient");
+
+    executor.merge("ViewDefinition", update);
+
+    verify(dataSource, never()).refresh(anyString());
+  }
+
+  // ---- the narrowing direction: a table wider than the running encoder (US3, FR-008, FR-009) ----
+
+  /**
+   * US3 scenario 1: a merge into a table carrying fields the encoder does not emit succeeds, and
+   * the table keeps its wider schema. Without the tolerance this fails with {@code
+   * DELTA_UPDATE_SCHEMA_MISMATCH_EXPRESSION}, which is the #2697 reproduction.
+   */
+  @Test
+  void mergeIntoWiderTable_succeedsAndLeavesTheSchemaUnchanged() {
+    seedWidePatientTable();
+    final StructType schemaBefore = patientTableSchema();
+
+    final UpdateExecutor executor = newNarrowExecutor(false);
+
+    assertThatNoException()
+        .isThrownBy(() -> executor.merge("Patient", narrowPatient(NEW_PATIENT_ID)));
+    assertThat(patientTableSchema()).isEqualTo(schemaBefore);
+  }
+
+  /**
+   * US3 scenario 1, the null-fill half: the row written by the narrow encoder carries nothing for
+   * the fields it cannot express, so reading it back with the wide encoder finds no Period
+   * extension.
+   */
+  @Test
+  void mergeIntoWiderTable_leavesStoredOnlyColumnsNull() {
+    seedWidePatientTable();
+
+    newNarrowExecutor(false).merge("Patient", narrowPatient(NEW_PATIENT_ID));
+
+    final Patient written = readPatientWithWideEncoder(NEW_PATIENT_ID);
+    assertThat(written.getExtension()).noneSatisfy(e -> assertThat(e.getValue()).isNotNull());
+  }
+
+  /**
+   * US3 scenario 4: the rows written before the configuration was narrowed are untouched, so a
+   * server later restarted with the original open types still reads the columns it wrote before.
+   */
+  @Test
+  void mergeIntoWiderTable_leavesEarlierWideRowsIntact() {
+    seedWidePatientTable();
+
+    newNarrowExecutor(false).merge("Patient", narrowPatient(NEW_PATIENT_ID));
+
+    final Patient existing = readPatientWithWideEncoder(WIDE_PATIENT_ID);
+    assertThat(existing.getExtension()).hasSize(1);
+    final Extension extension = existing.getExtension().get(0);
+    assertThat(extension.getValue()).isInstanceOf(Period.class);
+    assertThat(((Period) extension.getValue()).getStartElement().asStringValue())
+        .startsWith("2020-01-01");
+  }
+
+  /**
+   * US3 scenario 2: a merge matching an existing id replaces that row rather than duplicating it.
+   */
+  @Test
+  void mergeIntoWiderTable_replacesAMatchedRow() {
+    seedWidePatientTable();
+
+    final UpdateExecutor executor = newNarrowExecutor(false);
+    final Patient replacement = narrowPatient(WIDE_PATIENT_ID);
+    replacement.setGender(AdministrativeGender.OTHER);
+    executor.merge("Patient", replacement);
+
+    final Dataset<Row> table = readPatientTable();
+    assertThat(table.filter("id = '" + WIDE_PATIENT_ID + "'").count()).isEqualTo(1);
+    assertThat(readPatientWithWideEncoder(WIDE_PATIENT_ID).getGender())
+        .isEqualTo(AdministrativeGender.OTHER);
+  }
+
+  /**
+   * FR-009: where the table differs in both directions at once, the widening direction stays under
+   * the existing policy. With {@code schemaAutoMerge} disabled the merge still fails, so the
+   * tolerance has not quietly overridden the flag.
+   */
+  @Test
+  void mergeIntoBothDirectionsTable_withoutAutoMerge_stillFails() throws IOException {
+    seedWidePatientTableMissingNestedFields();
+
+    final UpdateExecutor executor = newNarrowExecutor(false);
+
+    assertThatThrownBy(() -> executor.merge("Patient", narrowPatient(NEW_PATIENT_ID)))
+        .hasMessageContaining("DELTA_UPDATE_SCHEMA_MISMATCH_EXPRESSION");
+  }
+
+  /**
+   * FR-009: with {@code schemaAutoMerge} enabled the two directions are settled in order - the
+   * warmup write adds the fields the encoder requires, after which the remaining difference is
+   * purely narrowing and the tolerance applies.
+   */
+  @Test
+  void mergeIntoBothDirectionsTable_withAutoMerge_succeeds() throws IOException {
+    seedWidePatientTableMissingNestedFields();
+
+    final UpdateExecutor executor = newNarrowExecutor(true);
+
+    assertThatNoException()
+        .isThrownBy(() -> executor.merge("Patient", narrowPatient(NEW_PATIENT_ID)));
+    // The warmup write added the encoder's fields; the table's own wider fields are still there.
+    final StructType schema = patientTableSchema();
+    assertThat(SchemaDrift.missingFieldPaths(narrowEncoders().of("Patient").schema(), schema))
+        .isEmpty();
+    assertThat(SchemaDrift.excessFieldPaths(narrowEncoders().of("Patient").schema(), schema))
+        .isNotEmpty();
+  }
+
+  /**
+   * FR-007 and FR-009: a table that reconciles with the running encoder takes neither the warmup
+   * write nor the tolerance, so the ordinary write path is unchanged.
+   */
+  @Test
+  void mergeIntoReconcilingTable_isUnaffectedByTheTolerance() {
+    seedTable();
+    final DynamicDeltaSource dataSource = mock(DynamicDeltaSource.class);
+    final UpdateExecutor executor = newExecutor(true, dataSource);
+
+    executor.merge("ViewDefinition", createViewDefinition(VIEW_ID, "updated_view", "Patient"));
+
+    verify(dataSource, never()).refresh(anyString());
+  }
+
   // ---- helpers ----
 
   /**
    * Two-stage setup: write a ViewDefinition through {@link UpdateExecutor} so the Delta log is
    * created in the correct format, then rewrite the {@code schemaString} on disk to simulate an
-   * older encoder version.
+   * older encoder version. Struct-level removal is used rather than a wholesale schema replacement
+   * because Delta 4.x {@code updateAll()} silently ignores extra top-level columns in the source;
+   * {@code DELTA_UPDATE_SCHEMA_MISMATCH_EXPRESSION} only fires when a struct-typed column in the
+   * target has fewer fields than the corresponding struct in the source.
    */
   private void seedTableAndDowngradeSchema() throws IOException {
+    seedTable();
+
+    final Path tablePath = tempDatabasePath.resolve("ViewDefinition.parquet");
+    DeltaSchemaFixtures.removeFieldsFromTableSchema(tablePath, Set.of("forEach", "forEachOrNull"));
+    invalidateDeltaMetadataCache(tablePath);
+  }
+
+  /** Writes an initial ViewDefinition through {@link UpdateExecutor} to create the Delta table. */
+  private void seedTable() {
     final UpdateExecutor seed = newExecutor(true);
     final ViewDefinitionResource initial = createViewDefinition(VIEW_ID, "initial_view", "Patient");
     seed.merge("ViewDefinition", initial);
-
-    final Path tablePath = tempDatabasePath.resolve("ViewDefinition.parquet");
-    final Path deltaLogDir = tablePath.resolve("_delta_log");
-    downgradeDeltaSchema(deltaLogDir);
-    invalidateDeltaMetadataCache(tablePath);
   }
 
   private void invalidateDeltaMetadataCache(@Nonnull final Path tablePath) {
@@ -156,78 +350,127 @@ class UpdateExecutorSchemaAutoMergeTest {
 
   @Nonnull
   private UpdateExecutor newExecutor(final boolean schemaAutoMerge) {
+    return newExecutor(schemaAutoMerge, mock(QueryableDataSource.class));
+  }
+
+  @Nonnull
+  private UpdateExecutor newExecutor(
+      final boolean schemaAutoMerge, @Nonnull final QueryableDataSource dataSource) {
+    return newExecutor(schemaAutoMerge, dataSource, fhirEncoders);
+  }
+
+  /**
+   * Builds an executor running against the narrowed encoders, so that the table seeded at the
+   * ambient schema is wider than the encoder writing to it. This is the state a warehouse is in
+   * after {@code pathling.encoding.openTypes} has been narrowed, and it does not depend on which
+   * encoding configuration the test profile happens to use.
+   */
+  @Nonnull
+  private UpdateExecutor newNarrowExecutor(final boolean schemaAutoMerge) {
+    return newExecutor(schemaAutoMerge, mock(QueryableDataSource.class), narrowEncoders());
+  }
+
+  @Nonnull
+  private UpdateExecutor newExecutor(
+      final boolean schemaAutoMerge,
+      @Nonnull final QueryableDataSource dataSource,
+      @Nonnull final FhirEncoders encoders) {
     final StorageConfiguration storageConfiguration = new StorageConfiguration();
     storageConfiguration.setSchemaAutoMerge(schemaAutoMerge);
     return new UpdateExecutor(
         pathlingContext,
-        fhirEncoders,
+        encoders,
         tempDatabasePath.toAbsolutePath().toString(),
         cacheableDatabase,
-        storageConfiguration);
+        storageConfiguration,
+        dataSource);
+  }
+
+  /** The ambient encoders with Period and Quantity dropped from their open types. */
+  @Nonnull
+  private FhirEncoders narrowEncoders() {
+    return FhirEncoderFixtures.narrow(fhirEncoders);
   }
 
   /**
-   * Rewrites the {@code metaData} action in the first Delta log commit to remove the {@code
-   * forEach} and {@code forEachOrNull} fields from all nested struct definitions in the table's
-   * {@code schemaString}. Also removes the Delta and Hadoop CRC side-cars so checksum validation
-   * does not reject the modified commit.
-   *
-   * <p>Why struct-level removal rather than a wholesale schema replacement: Delta 4.x {@code
-   * updateAll()} silently ignores extra top-level columns in the source, so a target with only
-   * {@code {id}} does not trigger {@code DELTA_UPDATE_SCHEMA_MISMATCH_EXPRESSION}. The error only
-   * fires when a struct-typed column in the target has fewer fields than the corresponding struct
-   * in the source.
+   * Seeds a Patient table at the ambient (wide) schema, holding one row whose extension carries a
+   * Period value. The narrowed encoder cannot express that value, so the table is wider than the
+   * encoder in a way that has real data behind it.
    */
-  private static void downgradeDeltaSchema(@Nonnull final Path deltaLogDir) throws IOException {
-    final Path logFile = deltaLogDir.resolve("00000000000000000000.json");
-    assertThat(logFile).exists();
-
-    final ObjectMapper mapper = new ObjectMapper();
-    final List<String> original = Files.readAllLines(logFile);
-    final List<String> patched = new ArrayList<>(original.size());
-
-    for (final String line : original) {
-      final JsonNode node = mapper.readTree(line);
-      if (node.has("metaData")) {
-        final String schemaString = node.get("metaData").get("schemaString").asText();
-        final JsonNode schema = mapper.readTree(schemaString);
-        removeStructFields(schema, Set.of("forEach", "forEachOrNull"));
-        ((ObjectNode) node.get("metaData")).put("schemaString", mapper.writeValueAsString(schema));
-        patched.add(mapper.writeValueAsString(node));
-      } else {
-        patched.add(line);
-      }
-    }
-
-    Files.write(logFile, patched);
-
-    Files.deleteIfExists(deltaLogDir.resolve("00000000000000000000.crc"));
-    Files.deleteIfExists(deltaLogDir.resolve(".00000000000000000000.json.crc"));
+  private void seedWidePatientTable() {
+    FhirEncoderFixtures.seedTable(
+        pathlingContext.getSpark(),
+        fhirEncoders,
+        "Patient",
+        List.of(widePatient()),
+        patientTablePath().toString());
   }
 
   /**
-   * Recursively removes fields with the given names from all struct-type definitions within a Spark
-   * schema JSON node (as serialised by Delta Lake). Struct nodes are identified by having a {@code
-   * fields} array; array-type nodes by having an {@code elementType} object.
+   * Seeds the wide Patient table and then removes the nested {@code prefix} and {@code suffix}
+   * fields from its committed schema, so that it differs from the narrowed encoder in both
+   * directions at once.
    */
-  private static void removeStructFields(
-      @Nonnull final JsonNode node, @Nonnull final Set<String> fieldNames) {
-    if (!node.isObject()) {
-      return;
-    }
-    if (node.has("fields")) {
-      final ArrayNode fields = (ArrayNode) node.get("fields");
-      for (int i = fields.size() - 1; i >= 0; i--) {
-        if (fieldNames.contains(fields.get(i).get("name").asText())) {
-          fields.remove(i);
-        }
-      }
-      for (final JsonNode field : fields) {
-        removeStructFields(field.get("type"), fieldNames);
-      }
-    } else if (node.has("elementType")) {
-      removeStructFields(node.get("elementType"), fieldNames);
-    }
+  private void seedWidePatientTableMissingNestedFields() throws IOException {
+    seedWidePatientTable();
+    DeltaSchemaFixtures.removeFieldsFromTableSchema(patientTablePath(), Set.of("prefix", "suffix"));
+    invalidateDeltaMetadataCache(patientTablePath());
+  }
+
+  /** A Patient carrying a Period-valued extension, which only the wide encoder can represent. */
+  @Nonnull
+  private static Patient widePatient() {
+    final Patient patient = new Patient();
+    patient.setId(WIDE_PATIENT_ID);
+    patient.setGender(AdministrativeGender.FEMALE);
+    final Period period = new Period();
+    period.setStartElement(new DateTimeType("2020-01-01T00:00:00Z"));
+    patient.addExtension("http://example.org/period", period);
+    return patient;
+  }
+
+  /** A Patient whose content the narrowed encoder can represent in full. */
+  @Nonnull
+  private static Patient narrowPatient(@Nonnull final String id) {
+    final Patient patient = new Patient();
+    patient.setId(id);
+    patient.setActive(true);
+    return patient;
+  }
+
+  @Nonnull
+  private Path patientTablePath() {
+    return tempDatabasePath.resolve("Patient.parquet");
+  }
+
+  @Nonnull
+  private Dataset<Row> readPatientTable() {
+    invalidateDeltaMetadataCache(patientTablePath());
+    return pathlingContext
+        .getSpark()
+        .read()
+        .format("delta")
+        .load(patientTablePath().toAbsolutePath().toString());
+  }
+
+  @Nonnull
+  private StructType patientTableSchema() {
+    return readPatientTable().schema();
+  }
+
+  /**
+   * Reads one Patient back through the wide encoder, which is what a server restarted with the
+   * original open types would do.
+   */
+  @Nonnull
+  private Patient readPatientWithWideEncoder(@Nonnull final String id) {
+    final List<Patient> patients =
+        readPatientTable()
+            .filter("id = '" + id + "'")
+            .as(fhirEncoders.<Patient>of("Patient"))
+            .collectAsList();
+    assertThat(patients).hasSize(1);
+    return patients.get(0);
   }
 
   @Nonnull

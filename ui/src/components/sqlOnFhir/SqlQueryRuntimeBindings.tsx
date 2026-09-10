@@ -21,10 +21,10 @@
  * @author John Grimes
  */
 
-import { Box, Code, Flex, Switch, Text, TextField } from "@radix-ui/themes";
+import { Box, Code, Flex, Text } from "@radix-ui/themes";
 
 import { FieldGuidance } from "../FieldGuidance";
-import { isRuntimeValueValid } from "./sqlQueryFormHelpers";
+import { ParameterValueInput } from "./ParameterValueInput";
 
 import type { SqlQueryParameterType, SqlQueryRuntimeBindings } from "../../types/sqlQuery";
 
@@ -40,10 +40,13 @@ interface SqlQueryRuntimeBindingsProps {
 }
 
 /**
- * Renders one input per declared parameter, typed against the parameter's
- * declared FHIR primitive type.
+ * Renders one row per declared parameter, pairing the parameter's name and
+ * declared type - read-only, since the stored Library defines them - with a
+ * value input typed against that type.
  *
- * If no parameters are declared, a short hint is shown instead.
+ * Every declared parameter must be bound to execute, so an empty value is
+ * marked as required. If no parameters are declared, a short hint is shown
+ * instead.
  *
  * @param props - The component props.
  * @param props.parameters - Declared parameters for the active Library.
@@ -64,97 +67,26 @@ export function SqlQueryRuntimeBindings({
 
   return (
     <Flex direction="column" gap="2">
-      {parameters.map((param) => {
-        const value = bindings[param.name] ?? "";
-        const valid = value === "" || isRuntimeValueValid(value, param.type);
-        return (
-          <Flex key={param.name} align="start" gap="3" wrap="wrap">
-            <Box style={{ width: "10rem", paddingTop: "0.4rem" }}>
-              <Code size="2">{param.name}</Code>
-              <Text size="1" color="gray" as="div">
-                {param.type}
-              </Text>
-            </Box>
-            <Box style={{ flex: 1, minWidth: "12rem" }}>
-              {param.type === "boolean" ? (
-                <Flex align="center" gap="2" pt="2">
-                  <Switch
-                    checked={value === "true"}
-                    onCheckedChange={(checked) => onChange(param.name, checked ? "true" : "false")}
-                    disabled={disabled}
-                    aria-label={`Runtime value for ${param.name}`}
-                  />
-                  <Text size="2" color="gray">
-                    {value === "true" ? "true" : "false"}
-                  </Text>
-                </Flex>
-              ) : (
-                <TextField.Root
-                  value={value}
-                  placeholder={placeholderForType(param.type)}
-                  onChange={(e) => onChange(param.name, e.target.value)}
-                  disabled={disabled}
-                  aria-label={`Runtime value for ${param.name}`}
-                  color={valid ? undefined : "red"}
-                />
-              )}
-              {!valid && (
-                <Text size="1" color="red" as="div" mt="1">
-                  Expected a {describeType(param.type)} value.
-                </Text>
-              )}
-            </Box>
-          </Flex>
-        );
-      })}
+      {parameters.map((param) => (
+        <Flex key={param.name} align="start" gap="3" wrap="wrap">
+          <Box style={{ width: "10rem", paddingTop: "0.4rem" }}>
+            <Code size="2">{param.name}</Code>
+            <Text size="1" color="gray" as="div">
+              {param.type}
+            </Text>
+          </Box>
+          <Box style={{ flex: 1, minWidth: "12rem" }}>
+            <ParameterValueInput
+              type={param.type}
+              value={bindings[param.name] ?? ""}
+              onChange={(value) => onChange(param.name, value)}
+              disabled={disabled}
+              required
+              ariaLabel={`Runtime value for ${param.name}`}
+            />
+          </Box>
+        </Flex>
+      ))}
     </Flex>
   );
-}
-
-/**
- * Returns placeholder text appropriate for a parameter type.
- *
- * @param type - The declared parameter type.
- * @returns A short example string used as the input's placeholder.
- */
-function placeholderForType(type: SqlQueryParameterType): string {
-  switch (type) {
-    case "string":
-    case "code":
-      return "";
-    case "integer":
-      return "e.g. 42";
-    case "decimal":
-      return "e.g. 1.5";
-    case "boolean":
-      return "";
-    case "date":
-      return "YYYY-MM-DD";
-    case "dateTime":
-      return "YYYY-MM-DDTHH:MM:SSZ";
-  }
-}
-
-/**
- * Returns a human-readable label used in error messages.
- *
- * @param type - The declared parameter type.
- * @returns A short label naming the expected value form.
- */
-function describeType(type: SqlQueryParameterType): string {
-  switch (type) {
-    case "integer":
-      return "integer";
-    case "decimal":
-      return "decimal";
-    case "boolean":
-      return "boolean";
-    case "date":
-      return "ISO 8601 date (YYYY-MM-DD)";
-    case "dateTime":
-      return "ISO 8601 dateTime";
-    case "string":
-    case "code":
-      return "string";
-  }
 }

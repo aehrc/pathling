@@ -48,6 +48,12 @@ private[encoders] class EncodingContext {
   private def nestingLevel(definition: BaseRuntimeElementDefinition[_]): Int = {
     definitionCounters.getOrElse(definition, 0)
   }
+
+  private def snapshot(): EncodingContext = {
+    val copy = new EncodingContext()
+    copy.definitionCounters ++= definitionCounters
+    copy
+  }
 }
 
 /**
@@ -108,6 +114,38 @@ object EncodingContext {
       CONTEXT_STORAGE.remove()
   }
 
+
+  /**
+   * Wraps a function so that it evaluates against the nesting levels current at the point of
+   * wrapping, however much later it is called.
+   *
+   * This is needed for the deserializer's collection lambdas, which the Spark analyser applies
+   * during `resolveAndBind` rather than during the traversal that builds them, by which time the
+   * traversal's context is long gone. The captured levels are copied on each call, so a wrapped
+   * function can be called more than once, and from a thread other than the one that wrapped it,
+   * without the calls interfering.
+   *
+   * @param f the function to wrap
+   * @tparam A the argument type of the function
+   * @tparam B the return type of the function
+   * @return a function that evaluates `f` against the captured nesting levels
+   */
+  def deferring[A, B](f: A => B): A => B = {
+    val captured = currentContext().snapshot()
+    argument => {
+      val enclosing = CONTEXT_STORAGE.get()
+      try {
+        CONTEXT_STORAGE.set(captured.snapshot())
+        f(argument)
+      } finally {
+        if (enclosing == null) {
+          CONTEXT_STORAGE.remove()
+        } else {
+          CONTEXT_STORAGE.set(enclosing)
+        }
+      }
+    }
+  }
 
   /**
    * Evaluates given code in the context with increased nesting level for given element definition.

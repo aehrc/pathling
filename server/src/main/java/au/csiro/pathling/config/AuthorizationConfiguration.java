@@ -21,16 +21,28 @@ import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import lombok.Data;
 import lombok.ToString;
 
-/** Represents configuration specific to authorisation. */
+/**
+ * Represents configuration specific to authorisation.
+ *
+ * @author John Grimes
+ */
 @Data
 @ToString(doNotUseGetters = true)
 public class AuthorizationConfiguration {
+
+  /**
+   * The JWS algorithm names that can verify a signature against a public key, and are therefore the
+   * only values usable for verifying tokens against an issuer's JWKS.
+   */
+  private static final String ASYMMETRIC_ALGORITHMS =
+      "RS256|RS384|RS512|PS256|PS384|PS512|ES256|ES256K|ES384|ES512|EdDSA";
 
   /** Enables authorization. */
   @NotNull private boolean enabled;
@@ -75,6 +87,28 @@ public class AuthorizationConfiguration {
    *     Conformance</a>
    */
   @Nonnull private List<String> codeChallengeMethodsSupported = Collections.singletonList("S256");
+
+  /**
+   * The JWS signing algorithms accepted within incoming bearer tokens. When empty, the accepted
+   * algorithms are derived from the keys published in the issuer's JWKS; when non-empty, only the
+   * listed algorithms are accepted, regardless of what the JWKS publishes.
+   *
+   * <p>Tokens are verified against a public JWKS, so only asymmetric algorithm names are permitted.
+   * Symmetric algorithms could never verify a token, and configuring one would produce a deployment
+   * that silently rejects every request.
+   *
+   * @see <a href="https://datatracker.ietf.org/doc/html/rfc7518#section-3.1">JSON Web
+   *     Algorithms</a>
+   */
+  @Nonnull
+  private List<
+          @Pattern(
+              regexp = ASYMMETRIC_ALGORITHMS,
+              message =
+                  "tokenSigningAlgorithms must contain only asymmetric JWS algorithms: RS256,"
+                      + " RS384, RS512, PS256, PS384, PS512, ES256, ES256K, ES384, ES512, EdDSA")
+          String>
+      tokenSigningAlgorithms = Collections.emptyList();
 
   /**
    * Returns the configured issuer.
@@ -124,6 +158,17 @@ public class AuthorizationConfiguration {
   @Nonnull
   public List<String> getCodeChallengeMethodsSupported() {
     return codeChallengeMethodsSupported;
+  }
+
+  /**
+   * Returns the configured token signing algorithms.
+   *
+   * @return the list of accepted JWS signing algorithms, empty if they are to be derived from the
+   *     issuer's JWKS
+   */
+  @Nonnull
+  public List<String> getTokenSigningAlgorithms() {
+    return tokenSigningAlgorithms;
   }
 
   /**

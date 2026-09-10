@@ -1,3 +1,7 @@
 site/* linguist-documentation
 licenses/* linguist-documentation
 **/src/license/THIRD-PARTY.properties linguist-generated
+
+# The synthetic SNOMED CT RF2 fixtures are stored with their native CRLF line
+# endings so the importer's line-ending handling is exercised faithfully.
+terminology/src/test/resources/rf2-mini/**/*.txt -text linguist-generated

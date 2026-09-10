@@ -99,6 +99,15 @@ code {
     top: 0.85rem;
 }
 
+/*
+ * The core libraries and the server have separate version dropdowns. Show the
+ * server one only on server pages, and the core one everywhere else.
+ */
+html:not(.plugin-id-server) .navbar__version--server,
+html.plugin-id-server .navbar__version--core {
+    display: none;
+}
+
 .main-wrapper {
     padding-top: 0.8em;
 }

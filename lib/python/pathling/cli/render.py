@@ -27,6 +27,9 @@ piped output stays clean.
 Author: John Grimes.
 """
 
+from __future__ import annotations
+
+import codecs
 import csv
 import io
 import json
@@ -34,7 +37,7 @@ import uuid
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional, Sequence
+from typing import TYPE_CHECKING, Callable, Iterator, List, Optional, Sequence, Union
 
 import click
 from rich.console import Console
@@ -42,6 +45,9 @@ from rich.table import Table
 
 from pathling.cli.departition import departition, remove_path
 from pathling.cli.errors import EXIT_USAGE, CliError
+
+if TYPE_CHECKING:
+    from pyspark.sql import DataFrame
 
 # The default cap on rows collected for stdout table rendering.
 DEFAULT_LIMIT = 50
@@ -82,13 +88,121 @@ OUTPUT_FORMAT_CHOICE = click.Choice(
 )
 
 
-def output_options(func):
+def decode_delimiter(value: str) -> str:
+    """Decodes and validates a CSV field separator supplied on the command line.
+
+    The raw value is escape-decoded so a tab can be supplied as ``\\t`` rather
+    than a literal tab, then validated to be exactly one character that is not a
+    CSV row terminator. Validation runs at option-parse time (before any Spark
+    session starts) by raising :class:`click.BadParameter`, which Click renders
+    as a usage error with a non-zero exit code.
+
+    :param value: the raw ``--delimiter`` value.
+    :return: the decoded single-character delimiter.
+    :raises click.BadParameter: when the value cannot be escape-decoded, is not
+            exactly one character (including empty), or decodes to a carriage
+            return or line feed.
+    :example:
+        >>> decode_delimiter("\\t")
+        '\\t'
+        >>> decode_delimiter(";")
+        ';'
+    """
+    try:
+        decoded = codecs.decode(value, "unicode_escape")
+    except UnicodeDecodeError as exc:
+        raise click.BadParameter(
+            f"could not decode {value!r}. Provide a single character, "
+            "optionally as a backslash escape such as '\\t'."
+        ) from exc
+    if len(decoded) != 1:
+        raise click.BadParameter(
+            f"must be a single character, but {value!r} is "
+            f"{'empty' if decoded == '' else f'{len(decoded)} characters'}."
+        )
+    if decoded in ("\r", "\n"):
+        raise click.BadParameter(
+            "must not be a carriage return or line feed, which would collide "
+            "with CSV row terminators."
+        )
+    return decoded
+
+
+def default_delimiter_for_path(path: Optional[Path]) -> str:
+    """Resolves the default field separator implied by a path's extension.
+
+    A ``.tsv`` path means tab-separated, matched case-insensitively as format
+    inference is; every other path, and the absence of a path (stdout), takes the
+    base comma default. This is consulted only when ``--delimiter`` was not
+    supplied, and independently for the input and the output side, so each side's
+    default comes from its own path.
+
+    :param path: the path for the side being resolved, or None when there is no
+           path (CSV to stdout).
+    :return: the default single-character field separator for that side.
+    :example:
+        >>> default_delimiter_for_path(Path("codes.tsv"))
+        '\\t'
+        >>> default_delimiter_for_path(Path("codes.csv"))
+        ','
+        >>> default_delimiter_for_path(None)
+        ','
+    """
+    if path is not None and path.suffix.lower() == ".tsv":
+        return "\t"
+    return ","
+
+
+def tab_inference_notice(action: str, path: Union[str, Path]) -> str:
+    """Builds the notice announcing a tab delimiter derived from a path.
+
+    A default the user did not type, derived from their filename, is announced
+    rather than assumed. Both sides share this wording so they cannot drift; only
+    the leading verb differs.
+
+    :param action: the leading verb, ``Reading`` for the input side or
+           ``Writing`` for the output side.
+    :param path: the path the delimiter was inferred from, as the user gave it.
+    :return: the notice text, for printing on standard error.
+    :example:
+        >>> tab_inference_notice("Reading", "codes.tsv")
+        'Reading codes.tsv as tab-separated CSV, inferred from the .tsv extension.'
+    """
+    return f"{action} {path} as tab-separated CSV, inferred from the .tsv extension."
+
+
+def _delimiter_callback(
+    ctx: click.Context, param: click.Parameter, value: Optional[str]
+) -> Optional[str]:
+    """Click callback that decodes and validates the ``--delimiter`` value.
+
+    An absent value is passed through untouched, meaning "not supplied - infer
+    each side from its own path" (see :func:`default_delimiter_for_path`).
+
+    :param ctx: the Click context (unused).
+    :param param: the Click parameter (unused).
+    :param value: the raw option value, or None when the option was omitted.
+    :return: the decoded single-character delimiter, or None when omitted.
+    :raises click.BadParameter: when a supplied value is invalid (see
+            :func:`decode_delimiter`).
+    """
+    if value is None:
+        return None
+    return decode_delimiter(value)
+
+
+def output_options(func: Callable) -> Callable:
     """Applies the shared output options to a command callback.
 
     These options form the common output surface of every command that emits a
     result DataFrame - ``--format``, ``-o``/``--output``, ``--limit``,
-    ``--overwrite``, and ``--departition/--no-departition`` - and are resolved
-    together by :func:`resolve_output` and consumed by :func:`write_output`.
+    ``--overwrite``, ``--departition/--no-departition``, ``--delimiter``, and
+    ``--header/--no-header`` - and are resolved together by
+    :func:`resolve_output` and consumed by :func:`write_output`. The delimiter
+    and header apply to CSV output only and are no-ops for other formats.
+    ``--delimiter`` has no fixed default: when it is omitted each side resolves
+    its own separator from its own path (see
+    :func:`default_delimiter_for_path`), and a supplied value applies to both.
 
     :param func: the command callback to decorate.
     :return: the decorated callback.
@@ -118,6 +232,20 @@ def output_options(func):
             help="Write file output as a single file (or a Spark directory of "
             "part files).",
         ),
+        click.option(
+            "--delimiter",
+            "delimiter",
+            callback=_delimiter_callback,
+            help="Field separator for CSV input and output (default: a tab for "
+            "a .tsv path, otherwise ',').",
+        ),
+        click.option(
+            "--header/--no-header",
+            "header",
+            default=True,
+            show_default=True,
+            help="Include a header row in CSV output (default: enabled).",
+        ),
     ]
     for option in reversed(options):
         func = option(func)
@@ -127,6 +255,9 @@ def output_options(func):
 # Maps file extensions to output formats for inference.
 _EXTENSION_FORMATS = {
     ".csv": OutputFormat.CSV,
+    # A .tsv file is CSV output; the extension governs the delimiter rather than
+    # the format, defaulting it to a tab (see default_delimiter_for_path).
+    ".tsv": OutputFormat.CSV,
     ".ndjson": OutputFormat.NDJSON,
     ".jsonl": OutputFormat.NDJSON,
     ".parquet": OutputFormat.PARQUET,
@@ -143,6 +274,14 @@ class OutputSpec:
     :param overwrite: whether an existing output path may be replaced.
     :param departition: whether file output is departitioned to a single file
            (the default) rather than left as a Spark directory of part files.
+    :param delimiter: the resolved field separator for CSV output (stdout and
+           file), always a concrete character; applies to CSV only, a no-op for
+           other formats.
+    :param delimiter_inferred: whether the delimiter was resolved from the output
+           path rather than supplied as a flag. Only an inference is announced to
+           the user, since an explicit value needs no announcement.
+    :param header: whether CSV output includes a header row; applies to CSV
+           only, a no-op for other formats.
     """
 
     path: Optional[Path]
@@ -150,6 +289,9 @@ class OutputSpec:
     limit: int = DEFAULT_LIMIT
     overwrite: bool = False
     departition: bool = True
+    delimiter: str = ","
+    delimiter_inferred: bool = False
+    header: bool = True
 
 
 def infer_format_from_extension(path: Path) -> Optional[str]:
@@ -167,6 +309,8 @@ def resolve_output(
     limit: int = DEFAULT_LIMIT,
     overwrite: bool = False,
     departition: bool = True,
+    delimiter: Optional[str] = None,
+    header: bool = True,
 ) -> OutputSpec:
     """Resolves and validates output options.
 
@@ -175,6 +319,11 @@ def resolve_output(
     :param limit: the stdout table row cap.
     :param overwrite: whether replacing an existing output path is allowed.
     :param departition: whether file output is departitioned to a single file.
+    :param delimiter: the CSV field separator, already decoded and validated by
+           the option callback, or None to derive the output-side default from
+           the output path; a no-op for non-CSV formats.
+    :param header: whether CSV output includes a header row; a no-op for non-CSV
+           formats.
     :return: the resolved :class:`OutputSpec`.
     :raises CliError: when the combination of options is invalid.
     """
@@ -214,12 +363,23 @@ def resolve_output(
             exit_code=EXIT_USAGE,
         )
 
+    # An omitted delimiter takes its default from the output path, so a .tsv
+    # target is tab-separated without the user naming the separator. Recording
+    # that it was inferred lets the impure layer announce it.
+    delimiter_inferred = delimiter is None
+    resolved_delimiter = (
+        default_delimiter_for_path(path) if delimiter_inferred else delimiter
+    )
+
     return OutputSpec(
         path=path,
         format=fmt,
         limit=limit,
         overwrite=overwrite,
         departition=departition,
+        delimiter=resolved_delimiter,
+        delimiter_inferred=delimiter_inferred,
+        header=header,
     )
 
 
@@ -265,16 +425,24 @@ def render_table(columns: Sequence[str], rows: Sequence[Sequence]) -> str:
     return buffer.getvalue()
 
 
-def render_csv(columns: Sequence[str], rows: Sequence[Sequence]) -> str:
-    """Renders rows as CSV with a header line.
+def render_csv(
+    columns: Sequence[str],
+    rows: Sequence[Sequence],
+    delimiter: str = ",",
+    header: bool = True,
+) -> str:
+    """Renders rows as CSV, optionally with a header line.
 
     :param columns: the column names.
     :param rows: the row values.
+    :param delimiter: the field separator (default comma).
+    :param header: whether to emit the header line (default True).
     :return: the CSV text.
     """
     buffer = io.StringIO()
-    writer = csv.writer(buffer, lineterminator="\n")
-    writer.writerow(list(columns))
+    writer = csv.writer(buffer, delimiter=delimiter, lineterminator="\n")
+    if header:
+        writer.writerow(list(columns))
     for row in rows:
         writer.writerow(["" if value is None else value for value in row])
     return buffer.getvalue()
@@ -302,19 +470,28 @@ def render_ndjson(columns: Sequence[str], rows: Sequence[Sequence]) -> str:
     )
 
 
-def render_rows(columns: Sequence[str], rows: Sequence[Sequence], fmt: str) -> str:
+def render_rows(
+    columns: Sequence[str],
+    rows: Sequence[Sequence],
+    fmt: str,
+    delimiter: str = ",",
+    header: bool = True,
+) -> str:
     """Renders rows in the requested stdout format.
 
     :param columns: the column names.
     :param rows: the row values.
     :param fmt: one of table, csv, or ndjson.
+    :param delimiter: the CSV field separator; ignored for non-CSV formats.
+    :param header: whether CSV output includes a header line; ignored for
+           non-CSV formats.
     :return: the rendered text.
     :raises CliError: when the format cannot render to stdout.
     """
     if fmt == OutputFormat.TABLE:
         return render_table(columns, rows)
     if fmt == OutputFormat.CSV:
-        return render_csv(columns, rows)
+        return render_csv(columns, rows, delimiter, header)
     if fmt == OutputFormat.NDJSON:
         return render_ndjson(columns, rows)
     raise CliError(
@@ -336,7 +513,9 @@ def stderr_console() -> Console:
 
 
 @contextmanager
-def progress_status(console: Console, message: str, verbose: bool = False):
+def progress_status(
+    console: Console, message: str, verbose: bool = False
+) -> Iterator[None]:
     """Shows a status spinner on stderr for a long-running stage.
 
     :param console: the stderr console.
@@ -352,17 +531,18 @@ def progress_status(console: Console, message: str, verbose: bool = False):
         yield
 
 
-def write_output(df, spec: OutputSpec, console: Console) -> None:
+def write_output(df: DataFrame, spec: OutputSpec, console: Console) -> None:
     """Writes a result DataFrame to stdout or a file per the output spec.
 
     For stdout, the table format is capped at ``spec.limit`` rows; other
     formats stream the full result. File output is produced by Spark's native
     writers (see :func:`_write_file`) and confirmed with a single stderr line
-    naming the format and path.
+    naming the format and path. A tab delimiter derived from a ``.tsv`` target is
+    announced on stderr before the write begins, since the user did not name it.
 
     :param df: the result Spark DataFrame.
     :param spec: the resolved output specification.
-    :param console: the stderr console for the confirmation message.
+    :param console: the stderr console for the notice and confirmation messages.
     :raises CliError: when the output path exists without ``--overwrite``.
     """
     columns = list(df.columns)
@@ -372,18 +552,27 @@ def write_output(df, spec: OutputSpec, console: Console) -> None:
             rows = [list(row) for row in df.limit(spec.limit).collect()]
         else:
             rows = [list(row) for row in df.collect()]
-        text = render_rows(columns, rows, spec.format)
+        text = render_rows(columns, rows, spec.format, spec.delimiter, spec.header)
         # Strip any trailing newline so print's own newline does not introduce
         # a spurious blank line (which would parse as an empty CSV row).
         print(text.rstrip("\n"))
         return
 
     check_overwrite(spec.path, spec.overwrite)
+    # Announce an inferred tab before writing, and only where the delimiter is
+    # actually consulted: a non-CSV format ignores it entirely, and an explicit
+    # value was the user's own choice.
+    if (
+        spec.format == OutputFormat.CSV
+        and spec.delimiter_inferred
+        and spec.delimiter == "\t"
+    ):
+        console.print(tab_inference_notice("Writing", spec.path))
     _write_file(df, spec)
     console.print(f"Wrote {spec.format} output to {spec.path}.")
 
 
-def _write_file(df, spec: OutputSpec) -> None:
+def _write_file(df: DataFrame, spec: OutputSpec) -> None:
     """Writes a result DataFrame to a file using Spark's native writers.
 
     CSV, NDJSON, and Parquet are written by Spark rather than collected onto
@@ -422,7 +611,7 @@ def _write_file(df, spec: OutputSpec) -> None:
     if not spec.departition:
         # Leave Spark's native directory of part files at the target, written
         # with full parallelism (no repartition to a single partition).
-        _write_spark_directory(df, spec.format, path)
+        _write_spark_directory(df, spec.format, path, spec.delimiter, spec.header)
         return
 
     part_extension = _PART_EXTENSIONS[spec.format]
@@ -430,24 +619,37 @@ def _write_file(df, spec: OutputSpec) -> None:
     # on the same filesystem so departitioning moves rather than copies.
     temp_dir = path.parent / f".{path.name}.departition-{uuid.uuid4().hex}"
     try:
-        _write_spark_directory(df.repartition(1), spec.format, temp_dir)
+        _write_spark_directory(
+            df.repartition(1), spec.format, temp_dir, spec.delimiter, spec.header
+        )
         departition(spark, temp_dir, path, part_extension)
     finally:
         # Always remove the temporary directory, including on a write failure.
         remove_path(spark, temp_dir)
 
 
-def _write_spark_directory(frame, fmt: str, target_dir) -> None:
+def _write_spark_directory(
+    frame: DataFrame,
+    fmt: str,
+    target_dir: Union[str, Path],
+    delimiter: str = ",",
+    header: bool = True,
+) -> None:
     """Writes a frame to a Spark directory of part files in the given format.
 
     :param frame: the Spark DataFrame to write (already repartitioned as
            required by the caller).
     :param fmt: the file format - CSV, NDJSON, or Parquet.
     :param target_dir: the directory Spark writes its part files into.
+    :param delimiter: the CSV field separator; ignored for non-CSV formats.
+    :param header: whether a CSV header row is written; ignored for non-CSV
+           formats.
     """
     writer = frame.write.mode("overwrite")
     if fmt == OutputFormat.CSV:
-        writer.option("header", "true").csv(str(target_dir))
+        writer.option("header", "true" if header else "false").option(
+            "sep", delimiter
+        ).csv(str(target_dir))
     elif fmt == OutputFormat.NDJSON:
         # Retain null-valued fields so every record carries the same keys,
         # matching the prior driver-side behaviour.

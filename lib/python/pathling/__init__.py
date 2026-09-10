@@ -39,7 +39,12 @@ if TYPE_CHECKING:
     from .core import Expression, VariableExpression
     from .datasource import DataSource, DataSources
     from .fhir import MimeType, Version
-    from .functions import to_coding, to_ecl_value_set, to_snomed_coding
+    from .functions import (
+        to_coding,
+        to_ecl_value_set,
+        to_loinc_coding,
+        to_snomed_coding,
+    )
     from .udfs import (
         Equivalence,
         PropertyType,
@@ -65,6 +70,7 @@ _LAZY_EXPORTS = {
     "Version": "pathling.fhir",
     "to_coding": "pathling.functions",
     "to_snomed_coding": "pathling.functions",
+    "to_loinc_coding": "pathling.functions",
     "to_ecl_value_set": "pathling.functions",
     "member_of": "pathling.udfs",
     "translate": "pathling.udfs",

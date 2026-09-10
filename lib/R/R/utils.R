@@ -18,3 +18,12 @@
 j_to_set <- function(spark, values) {
   spark %>% j_invoke_static("com.google.common.collect.ImmutableSet", "copyOf", as.list(values))
 }
+
+# Returns the first argument unless it is NULL, in which case it returns the second.
+#
+# This is defined here rather than imported from rlang, which as of version 1.3.0 only re-exports the
+# operator that base R provides from version 4.4.0. The package supports R 3.5.0 and above, so on an
+# older R there is nothing for rlang to export.
+`%||%` <- function(x, y) {
+  if (is.null(x)) y else x
+}

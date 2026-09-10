@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.operations.sqlquery;
 
+import au.csiro.pathling.operations.ParquetSchemaValidator;
 import au.csiro.pathling.operations.view.ResultStreamingHelper;
 import au.csiro.pathling.views.ViewDefinitionGson;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
@@ -140,6 +141,10 @@ public class SqlQueryResultStreamer {
   private void streamParquet(
       @Nonnull final Dataset<Row> result, @Nonnull final HttpServletResponse response)
       throws IOException {
+
+    // Reject unresolved (VOID) columns before any filesystem work, since Spark's Parquet writer
+    // would otherwise fail with an opaque internal error.
+    ParquetSchemaValidator.validateSchemaForParquet(result.schema());
 
     final Path tempDir = Files.createTempDirectory("sqlquery-parquet-", OWNER_ONLY_DIR_ATTRS);
     final String outputPath = tempDir.resolve("result").toString();

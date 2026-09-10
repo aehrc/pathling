@@ -25,6 +25,7 @@ import au.csiro.pathling.async.Job.JobTag;
 import au.csiro.pathling.async.JobRegistry;
 import au.csiro.pathling.async.RequestTagFactory;
 import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.io.JobDirectoryFileSystem;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.source.DataSourceBuilder;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
@@ -190,13 +191,16 @@ abstract class SecurityTestForOperations<T> extends SecurityTest {
     final QueryableDataSource deltaLake =
         new DataSourceBuilder(pathlingContext).delta("file://" + tempDir);
 
+    final JobDirectoryFileSystem jobDirectoryFileSystem =
+        new JobDirectoryFileSystem(
+            java.net.URI.create(tempDir.resolve("delta").toString()),
+            sparkSession.sparkContext().hadoopConfiguration());
     final ExportExecutor executor =
         new ExportExecutor(
             pathlingContext,
             deltaLake,
             fhirContext,
-            sparkSession,
-            tempDir.resolve("delta").toString(),
+            jobDirectoryFileSystem,
             serverConfiguration,
             patientCompartmentService);
 

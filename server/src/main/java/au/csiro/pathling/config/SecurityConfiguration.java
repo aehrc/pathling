@@ -31,6 +31,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
@@ -113,6 +114,12 @@ public class SecurityConfiguration {
                       .authenticated())
           // Enable CORS as per the configuration.
           .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+          // This is a stateless bearer-token API: every request carries its own credentials, so
+          // no HTTP session or session cookie is ever needed. This also prevents the security
+          // layer from attempting to save unauthenticated requests to a session during 401
+          // handling.
+          .sessionManagement(
+              session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
           // Use the provided JWT decoder and authentication converter.
           .oauth2ResourceServer(
               oauth2 ->

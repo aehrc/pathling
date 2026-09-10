@@ -55,6 +55,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.TimeUnit;
 import java.util.function.UnaryOperator;
 import org.apache.spark.SparkContext;
 import org.apache.spark.sql.SparkSession;
@@ -156,8 +158,13 @@ class BulkSubmitExecutorTest {
   }
 
   @AfterEach
-  void cleanup() {
-    // Clean up temp directory.
+  void awaitAsynchronousWork() {
+    // The manifest download and import paths run on the common ForkJoinPool and write into the
+    // per-test temporary directory. JUnit removes that directory as soon as the test returns, and
+    // the tests only await the assertion they care about, not the completion of the work. Waiting
+    // for the pool to drain here keeps a task that is still writing from racing the deletion,
+    // which otherwise fails the test with DirectoryNotEmptyException.
+    ForkJoinPool.commonPool().awaitQuiescence(30, TimeUnit.SECONDS);
   }
 
   // ========================================
@@ -167,7 +174,7 @@ class BulkSubmitExecutorTest {
   @Test
   @DisplayName("downloadManifestJob creates and registers job when async enabled")
   @SuppressWarnings("unchecked")
-  void downloadManifestJobCreatesAndRegistersJobWhenAsyncEnabled() {
+  void downloadManifestJobCreatesAndRegistersJobWhenAsyncEnabled() throws Exception {
     // Given: a submission and manifest job with async enabled.
     final Submission submission = createTestSubmission();
     final ManifestJob manifestJob = createTestManifestJob();
@@ -176,19 +183,21 @@ class BulkSubmitExecutorTest {
     // Capture the job registered.
     final ArgumentCaptor<Job<?>> jobCaptor = ArgumentCaptor.forClass(Job.class);
 
-    // When: calling downloadManifestJob.
-    executor.downloadManifestJob(submission, manifestJob, List.of(), FHIR_SERVER_BASE);
+    // When: calling downloadManifestJob and awaiting the async download work, so that no file
+    // writes race the JUnit temp-dir cleanup after the test completes.
+    final CompletableFuture<Void> download =
+        executor.downloadManifestJob(submission, manifestJob, List.of(), FHIR_SERVER_BASE);
+    download.get(30, TimeUnit.SECONDS);
 
     // Then: should register a Job in the JobRegistry.
-    await()
-        .atMost(Duration.ofSeconds(5))
-        .untilAsserted(
-            () -> {
-              verify(jobRegistry).register(jobCaptor.capture());
-              final Job<?> registeredJob = jobCaptor.getValue();
-              assertThat(registeredJob).isNotNull();
-              assertThat(registeredJob.getOwnerId()).isEqualTo(Optional.empty());
-            });
+    verify(jobRegistry).register(jobCaptor.capture());
+    final Job<?> registeredJob = jobCaptor.getValue();
+    assertThat(registeredJob).isNotNull();
+    assertThat(registeredJob.getOwnerId()).isEqualTo(Optional.empty());
+    // The job is registered as already terminated. Its work is not run by the asynchronous request
+    // machinery, so no thread will ever signal termination for it, and a deletion request has to
+    // handle the clean-up itself rather than defer it to a signal that never arrives.
+    assertThat(registeredJob.isTerminated()).isTrue();
   }
 
   @Test

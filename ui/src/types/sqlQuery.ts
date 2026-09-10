@@ -16,13 +16,13 @@
  */
 
 /**
- * Type definitions for the SQL query (`$sqlquery-run`) UI flow.
+ * Type definitions for the SQL query (`$sql-run`) UI flow.
  *
  * @author John Grimes
  */
 
 /**
- * Output formats accepted by the `$sqlquery-run` operation.
+ * Output formats accepted by the `$sql-run` operation.
  */
 export type SqlQueryOutputFormat =
   | "ndjson"
@@ -47,16 +47,34 @@ export type SqlQueryParameterType =
   | "dateTime";
 
 /**
+ * A selectable table source in the inline authoring form: a stored
+ * ViewDefinition or SQLView, listed by name and bound by its canonical URL.
+ */
+export interface SourceOption {
+  /** Logical id of the source (used only as a stable list key). */
+  id: string;
+  /** Human-readable name shown in the picker. */
+  name: string;
+  /**
+   * Canonical URL the dependency reference resolves against. A source with no
+   * URL cannot be referenced and is shown disabled in the picker.
+   */
+  url?: string;
+}
+
+/**
  * A `relatedArtifact` entry on a SQLQuery Library, expressed in form-state
- * terms.
+ * terms. A row binds a SQL table label to a chosen stored source by the
+ * source's canonical URL, which is emitted verbatim as
+ * `relatedArtifact.resource` on save.
  */
 export interface SqlQueryRelatedArtifact {
   /** Stable identifier for use as a React `key`. */
   rowId: string;
   /** Table name referenced by the SQL. */
   label: string;
-  /** ID of the referenced ViewDefinition (becomes `ViewDefinition/<id>`). */
-  viewDefinitionId: string;
+  /** Canonical URL of the chosen source; empty until a source is picked. */
+  referenceUrl: string;
 }
 
 /**
@@ -69,8 +87,12 @@ export interface SqlQueryParameterDeclaration {
   name: string;
   /** Declared FHIR primitive type. */
   type: SqlQueryParameterType;
-  /** Optional default value supplied as a string; coerced on submit. */
-  defaultValue?: string;
+  /**
+   * The runtime value bound for this run, captured as a string and coerced to
+   * the declared type when the request is assembled. This value is never
+   * persisted: saving the query writes the declaration only.
+   */
+  value: string;
 }
 
 /**
@@ -89,6 +111,8 @@ export interface SqlQueryLibrarySummary {
   id: string;
   /** Human-readable title (`title` or `name`, falling back to the ID). */
   title: string;
+  /** Canonical URL (`Library.url`), used to reference this source by URL. */
+  url?: string;
   /** Decoded SQL text from `Library.content[0].data`. */
   sql: string;
   /** Related-artifact entries with label and ViewDefinition reference. */
@@ -147,7 +171,7 @@ export interface SqlQueryExecutionOptions {
   limit?: number;
   /** Whether to include a header row when format is `csv`. */
   header?: boolean;
-  /** Runtime parameter values, keyed by declared parameter name. */
+  /** Values bound to the parameters, keyed by declared parameter name. */
   bindings?: SqlQueryRuntimeBindings;
   /**
    * Declared parameter types, keyed by name. Used to pick the correct
@@ -157,13 +181,19 @@ export interface SqlQueryExecutionOptions {
 }
 
 /**
- * A `$sqlquery-run` request, distinguished by how the Library is supplied.
+ * A `$sql-run` request, distinguished by how the Library is supplied.
  */
 export type SqlQueryRequest =
   | (SqlQueryExecutionOptions & {
       mode: "stored";
       /** ID of a stored Library conforming to the SQLQuery profile. */
       libraryId: string;
+      /**
+       * Resolved SQL text of the referenced Library, retained for display
+       * only. The server receives just the `libraryId` reference, so this is
+       * never sent; it lets the result card show the query that ran.
+       */
+      sql?: string;
     })
   | (SqlQueryExecutionOptions & {
       mode: "inline";
@@ -172,7 +202,7 @@ export type SqlQueryRequest =
     });
 
 /**
- * Successful tabular result from a `$sqlquery-run` execution.
+ * Successful tabular result from a `$sql-run` execution.
  */
 export interface SqlQueryTabularResult {
   /** Discriminator. */
@@ -188,7 +218,7 @@ export interface SqlQueryTabularResult {
 }
 
 /**
- * Successful binary (parquet) result from a `$sqlquery-run` execution.
+ * Successful binary (parquet) result from a `$sql-run` execution.
  */
 export interface SqlQueryBinaryResult {
   /** Discriminator. */
@@ -227,3 +257,37 @@ export interface SaveSqlQueryLibraryResult {
   id: string;
   title: string;
 }
+
+/**
+ * Output formats accepted by the asynchronous `$sql-export` operation.
+ *
+ * Narrower than {@link SqlQueryOutputFormat}: an export writes bulk files, so it offers only the
+ * file-friendly formats.
+ */
+export type SqlQueryExportFormat = "ndjson" | "csv" | "parquet";
+
+/**
+ * A `$sql-export` request, reusing the same query source (stored or inline) as the
+ * synchronous run, plus the chosen export format and CSV header flag.
+ */
+export type SqlQueryExportRequest =
+  | {
+      mode: "stored";
+      /** ID of a stored Library conforming to the SQLQuery profile. */
+      libraryId: string;
+      format: SqlQueryExportFormat;
+      header?: boolean;
+    }
+  | {
+      mode: "inline";
+      /** Inline Library to send as the `query.queryResource` part. */
+      library: SqlQueryLibrary;
+      format: SqlQueryExportFormat;
+      header?: boolean;
+    };
+
+/**
+ * The `$sql-export` completion manifest, a FHIR Parameters resource describing the export
+ * outputs. Shares the SQL on FHIR manifest shape with the view export manifest.
+ */
+export type SqlQueryExportManifest = import("fhir/r4").Parameters;

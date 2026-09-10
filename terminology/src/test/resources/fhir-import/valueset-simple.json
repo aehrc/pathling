@@ -1,0 +1,10 @@
+{
+  "resourceType": "ValueSet",
+  "url": "http://example.org/fhir/ValueSet/simple",
+  "version": "1.0.0",
+  "name": "SimpleValueSet",
+  "status": "active",
+  "compose": {
+    "include": [{ "system": "http://example.org/fhir/CodeSystem/simple-valid" }]
+  }
+}

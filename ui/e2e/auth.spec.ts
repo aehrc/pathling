@@ -55,6 +55,67 @@ async function setupAuthRequiredMocks(page: Page) {
 }
 
 /**
+ * Makes authorisation discovery fail, so that initiating a login rejects.
+ * Both the SMART configuration and the conformance statement that fhirclient
+ * falls back to are made to fail, which is what a server rejecting an
+ * unauthenticated discovery request looks like.
+ *
+ * @param page - The Playwright page object.
+ */
+async function breakAuthorisationDiscovery(page: Page) {
+  await page.route("**/.well-known/smart-configuration", async (route) => {
+    await route.fulfill({ status: 401, body: "" });
+  });
+  await page.route("**/metadata", async (route) => {
+    await route.fulfill({ status: 500, body: "" });
+  });
+}
+
+/**
+ * Establishes an authenticated session by seeding fhirclient state and visiting
+ * the OAuth callback, which is the only route that authenticates the
+ * application.
+ *
+ * @param page - The Playwright page object.
+ * @param returnUrl - The path to land on once authentication completes.
+ */
+async function authenticate(page: Page, returnUrl: string) {
+  await page.route("**/token", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        access_token: "fake-access-token",
+        token_type: "Bearer",
+        expires_in: 3600,
+        scope: "openid profile user/*.read",
+      }),
+    });
+  });
+
+  await page.goto("/admin");
+  await page.evaluate((url) => {
+    const stateKey = "test-state-key";
+    sessionStorage.setItem("SMART_KEY", JSON.stringify(stateKey));
+    sessionStorage.setItem(
+      stateKey,
+      JSON.stringify({
+        clientId: "test-client-id",
+        scope: "openid profile user/*.read",
+        redirectUri: window.location.origin + "/admin/callback",
+        serverUrl: window.location.origin + "/fhir",
+        tokenUri: window.location.origin + "/token",
+        key: stateKey,
+      }),
+    );
+    sessionStorage.setItem("pathling_return_url", url);
+  }, returnUrl);
+
+  await page.goto("/admin/callback?state=test-state-key&code=fake-auth-code");
+  await page.waitForURL(`**/admin${returnUrl}`);
+}
+
+/**
  * Sets up mocks for a server that does not require authentication.
  *
  * @param page - The Playwright page object.
@@ -121,6 +182,128 @@ test.describe("Authentication", () => {
       );
     });
 
+    // Regression for #2676: the login button used to give no feedback at all
+    // when authorisation could not be initiated.
+    test("shows the failure in the login prompt when authorisation cannot start", async ({
+      page,
+    }) => {
+      await setupAuthRequiredMocks(page);
+      await page.goto("/admin/resources");
+
+      const loginButton = page.getByRole("button", { name: /Login to/ });
+      await expect(loginButton).toBeVisible();
+
+      await breakAuthorisationDiscovery(page);
+      await loginButton.click();
+
+      // The failure is announced and the page has not navigated away.
+      await expect(page.getByRole("alert")).toBeVisible();
+      await expect(page).toHaveURL(/\/admin\/resources/);
+
+      // The button is usable again, so the attempt can be retried.
+      await expect(loginButton).toBeEnabled();
+      await loginButton.click();
+      await expect(page.getByRole("alert")).toBeVisible();
+    });
+
+    // Regression for #2676: the dialog used to close on click and report
+    // nothing, leaving the user with no indication of what happened.
+    test("shows the failure in the session expiry dialog and keeps it open", async ({
+      page,
+    }) => {
+      // The clock is installed before authenticating, since that navigates, and
+      // the page's timers must be under the test's control from the outset.
+      await page.clock.install();
+
+      await setupAuthRequiredMocks(page);
+
+      // The first job list request succeeds; every later one reports that the
+      // session is no longer valid.
+      let jobsCalls = 0;
+      await page.route("**/$jobs*", async (route) => {
+        jobsCalls += 1;
+        if (jobsCalls === 1) {
+          await route.fulfill({
+            status: 200,
+            contentType: "application/fhir+json",
+            body: JSON.stringify({ resourceType: "Parameters", parameter: [] }),
+          });
+          return;
+        }
+        await route.fulfill({ status: 401, body: "" });
+      });
+
+      await authenticate(page, "/jobs");
+      await expect(page.getByText("No jobs to show")).toBeVisible();
+
+      // Advancing well past the refresh interval drives the next poll, which
+      // fails and so raises the expiry dialog. Driving the clock rather than
+      // waiting out the interval keeps the test off the ten second floor that
+      // the real interval would otherwise impose.
+      await page.clock.runFor(30000);
+
+      const dialog = page.getByRole("alertdialog");
+      await expect(dialog).toBeVisible();
+
+      await breakAuthorisationDiscovery(page);
+      await dialog.getByRole("button", { name: /log in/i }).click();
+
+      // The dialog stays open and reports the failure inside itself.
+      await expect(dialog).toBeVisible();
+      await expect(dialog.getByRole("alert")).toBeVisible();
+
+      // Both actions become usable again.
+      await expect(
+        dialog.getByRole("button", { name: /log in/i }),
+      ).toBeEnabled();
+      await expect(
+        dialog.getByRole("button", { name: /dismiss/i }),
+      ).toBeEnabled();
+    });
+
+    // Regression for #2676: a deduplication flag that was never reset meant
+    // only the first expiry in the life of the page was ever reported.
+    test("raises the expiry dialog again after re-authenticating", async ({
+      page,
+    }) => {
+      // The clock is installed before authenticating, since that navigates, and
+      // the page's timers must be under the test's control from the outset.
+      await page.clock.install();
+
+      await setupAuthRequiredMocks(page);
+      await page.route("**/$jobs*", async (route) => {
+        await route.fulfill({ status: 401, body: "" });
+      });
+
+      await authenticate(page, "/jobs");
+
+      const dialog = page.getByRole("alertdialog");
+      await expect(dialog).toBeVisible({ timeout: 15000 });
+
+      // Once dismissed, the login prompt stands in for the withdrawn access.
+      await dialog.getByRole("button", { name: /dismiss/i }).click();
+      await expect(dialog).toBeHidden();
+      await expect(
+        page.getByText("You need to login before you can use this page."),
+      ).toBeVisible();
+
+      // FR-013: no further job list request is made once access is withdrawn.
+      let jobsAfterExpiry = 0;
+      await page.route("**/$jobs*", async (route) => {
+        jobsAfterExpiry += 1;
+        await route.fulfill({ status: 401, body: "" });
+      });
+      // Advancing well past the refresh interval leaves the count at zero, so
+      // the page has genuinely stopped polling rather than merely not polled yet.
+      await page.clock.runFor(30000);
+      expect(jobsAfterExpiry).toBe(0);
+
+      // Re-authenticate, and let a further request fail.
+      await authenticate(page, "/jobs");
+
+      await expect(dialog).toBeVisible({ timeout: 15000 });
+    });
+
     test("login prompt appears on all protected pages", async ({ page }) => {
       await setupAuthRequiredMocks(page);
 
@@ -148,7 +331,9 @@ test.describe("Authentication", () => {
       await page.goto("/admin/callback");
 
       // Should show authentication failed error.
-      await expect(page.getByText("Authentication Failed")).toBeVisible();
+      await expect(page.getByRole("alert")).toContainText(
+        "Authentication failed",
+      );
     });
 
     test("shows error with missing OAuth parameters", async ({ page }) => {
@@ -158,7 +343,9 @@ test.describe("Authentication", () => {
       await page.goto("/admin/callback?state=invalid-state");
 
       // Should show authentication failed error.
-      await expect(page.getByText("Authentication Failed")).toBeVisible();
+      await expect(page.getByRole("alert")).toContainText(
+        "Authentication failed",
+      );
     });
 
     test("redirects to stored return URL after successful auth", async ({

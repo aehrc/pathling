@@ -48,6 +48,7 @@ import java.util.stream.Stream;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.function.MapFunction;
+import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
@@ -370,6 +371,126 @@ class FhirEncodersTest {
     assertEquals(
         TestData.TEST_VERY_SMALL_DECIMAL_SCALE_6,
         decodedObservation.getReferenceRange().getFirst().getLow().getValue());
+  }
+
+  @Test
+  void bigDecimalStoredScaleRecordsSourceScale() {
+    // The stored scale must record the scale of the source FHIR decimal without any cap, so that a
+    // consumer can tell whether the stored value lost precision.
+    final Row scales =
+        observationsDataset
+            .select(
+                col("valueQuantity.value_scale"),
+                col("referenceRange").getItem(0).getField("low").getField("value_scale"))
+            .head();
+
+    // The control is a source scale of 2, which is within the storage scale and therefore
+    // unaffected by the cap.
+    assertEquals(TestData.TEST_SMALL_DECIMAL.scale(), scales.getInt(0));
+    // The source scale of 7 exceeds the storage scale of 6, and must still be recorded exactly.
+    assertEquals(TestData.TEST_VERY_SMALL_DECIMAL.scale(), scales.getInt(1));
+
+    // The value itself is still stored rounded to the storage scale of 6.
+    final BigDecimal storedLow =
+        (BigDecimal)
+            observationsDataset
+                .select(col("referenceRange").getItem(0).getField("low").getField("value"))
+                .head()
+                .get(0);
+    assertEquals(0, TestData.TEST_VERY_SMALL_DECIMAL_SCALE_6.compareTo(storedLow));
+  }
+
+  @Test
+  void bigDecimalStoredScaleRecordsHighSourceScales() {
+    // Reproduces the source scales reported in the issue: 16 and 17 decimal places.
+    final Observation highScaleObservation = new Observation();
+    highScaleObservation.setId("high-scale");
+    highScaleObservation.setStatus(Observation.ObservationStatus.FINAL);
+
+    final Quantity quantity = new Quantity();
+    quantity.setValue(TestData.TEST_SCALE_16_DECIMAL);
+    quantity.setUnit("mL/h");
+    highScaleObservation.setValue(quantity);
+    highScaleObservation.addReferenceRange().getLow().setValue(TestData.TEST_SCALE_17_DECIMAL);
+
+    final Dataset<Observation> highScaleDataset =
+        spark.createDataset(List.of(highScaleObservation), ENCODERS_L0.of(Observation.class));
+
+    final Row row =
+        highScaleDataset
+            .select(
+                col("valueQuantity.value_scale"),
+                col("referenceRange").getItem(0).getField("low").getField("value_scale"),
+                col("valueQuantity.value"),
+                col("referenceRange").getItem(0).getField("low").getField("value"))
+            .head();
+
+    assertEquals(TestData.TEST_SCALE_16_DECIMAL.scale(), row.getInt(0));
+    assertEquals(TestData.TEST_SCALE_17_DECIMAL.scale(), row.getInt(1));
+
+    // The values are stored rounded to the storage scale of 6.
+    assertEquals(0, TestData.TEST_SCALE_16_DECIMAL_SCALE_6.compareTo((BigDecimal) row.get(2)));
+    assertEquals(0, TestData.TEST_SCALE_17_DECIMAL_SCALE_6.compareTo((BigDecimal) row.get(3)));
+  }
+
+  @Test
+  void bigDecimalStoredScaleIdentifiesTruncatedValues() {
+    // The high value has a source scale of exactly 6 and was not truncated, whereas the low value
+    // has a source scale of 7 and was. The predicate `_scale > 6` must separate the two.
+    final Column highScale =
+        col("referenceRange").getItem(0).getField("high").getField("value_scale");
+    final Column lowScale =
+        col("referenceRange").getItem(0).getField("low").getField("value_scale");
+
+    final Row scales = observationsDataset.select(highScale, lowScale).head();
+    assertEquals(6, scales.getInt(0));
+    assertEquals(7, scales.getInt(1));
+
+    assertEquals(
+        0, observationsDataset.select(highScale.as("scale")).filter(col("scale").gt(6)).count());
+    assertEquals(
+        1, observationsDataset.select(lowScale.as("scale")).filter(col("scale").gt(6)).count());
+  }
+
+  @Test
+  void bigDecimalDecodeClampsHighStoredScales() {
+    // A stored scale greater than the storage scale of 6 must not reinstate precision on decode.
+    // The decoded value carries the storage scale, not the source scale, so that no digits are
+    // asserted that the stored value no longer holds.
+    final Observation highScaleObservation = new Observation();
+    highScaleObservation.setId("high-scale-decode");
+    highScaleObservation.setStatus(Observation.ObservationStatus.FINAL);
+
+    final Quantity quantity = new Quantity();
+    quantity.setValue(TestData.TEST_SCALE_16_DECIMAL);
+    quantity.setUnit("mL/h");
+    highScaleObservation.setValue(quantity);
+    highScaleObservation.addReferenceRange().getLow().setValue(TestData.TEST_SCALE_17_DECIMAL);
+
+    final Observation decoded =
+        spark
+            .createDataset(List.of(highScaleObservation), ENCODERS_L0.of(Observation.class))
+            .head();
+
+    // The scale-16 source decodes to its value rounded HALF_UP to a scale of 6. The comparison uses
+    // `equals` rather than `compareTo`, so that the scale is checked along with the value.
+    final BigDecimal decodedValue = ((Quantity) decoded.getValue()).getValue();
+    assertEquals(TestData.TEST_SCALE_16_DECIMAL_SCALE_6, decodedValue);
+    assertEquals(6, decodedValue.scale());
+
+    // The scale-17 source decodes at a scale of 6 in the same way.
+    final BigDecimal decodedLow = decoded.getReferenceRange().getFirst().getLow().getValue();
+    assertEquals(TestData.TEST_SCALE_17_DECIMAL_SCALE_6, decodedLow);
+    assertEquals(6, decodedLow.scale());
+  }
+
+  @Test
+  void bigDecimalDecodePreservesScalesWithinStorageScale() {
+    // A source scale within the storage scale of 6 is preserved exactly on decode, so the
+    // read-time clamp is a no-op for these values. The source here has a scale of 2.
+    final BigDecimal decodedValue = ((Quantity) decodedObservation.getValue()).getValue();
+    assertEquals(TestData.TEST_SMALL_DECIMAL, decodedValue);
+    assertEquals(2, decodedValue.scale());
   }
 
   @Test

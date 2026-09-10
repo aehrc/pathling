@@ -1,0 +1,12 @@
+{
+  "resourceType": "CodeSystem",
+  "url": "http://example.org/fhir/CodeSystem/corrupt",
+  "version": "1.0.0",
+  "name": "CorruptConcepts",
+  "status": "active",
+  "content": "complete",
+  "concept": [
+    { "code": "A", "display": "Alpha" },
+    { "code": "B", "display": "Beta", "property": [ { "code": "weight", "valueInteger": ??? } ] }
+  ]
+}

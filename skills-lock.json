@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "skills": {
+    "snomed-ct-rf2": {
+      "source": "johngrimes/skills",
+      "sourceType": "github",
+      "skillPath": "snomed-ct-rf2/SKILL.md",
+      "computedHash": "1e4ed175a1f0ed55449b8d0770e92b5c5a59377c6ae893994f550f9167e80af2"
+    },
+    "snomed-ecl": {
+      "source": "johngrimes/skills",
+      "sourceType": "github",
+      "skillPath": "snomed-ecl/SKILL.md",
+      "computedHash": "ea07b94c65362f8a63ad02ac5e3af086ff280d7483adad5eba7c36aa8d304880"
+    },
+    "vcl": {
+      "source": "johngrimes/skills",
+      "sourceType": "github",
+      "skillPath": "vcl/SKILL.md",
+      "computedHash": "adcaa7ea1ff79d98cbcf6065a2adc10f63466cc2f646601900a08eaf3bb151cf"
+    }
+  }
+}

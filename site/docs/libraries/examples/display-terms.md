@@ -290,7 +290,7 @@ understand.
 
 ## Further reading
 
-- [Terminology functions](/docs/libraries/terminology.md) - Complete reference
+- [Terminology functions](/docs/libraries/terminology/index.md) - Complete reference
   for all terminology functions
 - [Grouping and analysing SNOMED CT data](/docs/libraries/examples/grouping-snomed.md) -
   Advanced techniques for working with SNOMED CT hierarchies

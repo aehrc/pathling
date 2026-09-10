@@ -64,6 +64,7 @@ class PathlingAuthorityTest {
     PathlingAuthority.fromAuthority("pathling:import-pnp");
     PathlingAuthority.fromAuthority("pathling:create");
     PathlingAuthority.fromAuthority("pathling:update");
+    PathlingAuthority.fromAuthority("pathling:read-resource");
     for (final ResourceType resourceType : ResourceType.values()) {
       PathlingAuthority.fromAuthority("pathling:read:" + resourceType.toCode());
       PathlingAuthority.fromAuthority("pathling:write:" + resourceType.toCode());
@@ -79,6 +80,10 @@ class PathlingAuthorityTest {
     assertFailsValidation("pathling::");
     assertFailsValidation("pathling::Patient");
     assertFailsValidation("pathling:search:Patient", "Subject not supported for action: search");
+    // The new read interaction operation authority is operation-only: a subject is legal only
+    // after the read and write data access actions.
+    assertFailsValidation(
+        "pathling:read-resource:Patient", "Subject not supported for action: read-resource");
     assertFailsValidation("pathling:se_arch");
     assertFailsValidation("pathling:read:Clinical_Impression");
   }
@@ -117,6 +122,29 @@ class PathlingAuthorityTest {
     assertFalse(search.subsumedBy(auth("pathling:import")));
     assertFalse(search.subsumedBy(auth("pathling:read")));
     assertFalse(search.subsumedBy(auth("pathling:write:ClinicalImpression")));
+  }
+
+  /**
+   * The read interaction's operation authority and the all-types read data authority must remain
+   * distinct: neither subsumes the other, so granting read data access does not grant the
+   * interaction, and vice versa. Only the root authority covers both.
+   */
+  @Test
+  void testReadResourceAndReadDoNotSubsumeOneAnother() {
+    final PathlingAuthority readResource =
+        PathlingAuthority.fromAuthority("pathling:read-resource");
+    final PathlingAuthority read = PathlingAuthority.fromAuthority("pathling:read");
+    final PathlingAuthority patientRead = PathlingAuthority.fromAuthority("pathling:read:Patient");
+
+    // The root authority subsumes the new operation authority.
+    assertTrue(readResource.subsumedBy(auth("pathling")));
+    assertTrue(readResource.subsumedBy(auth("pathling:read-resource")));
+
+    // Neither direction of subsumption holds between the two names.
+    assertFalse(readResource.subsumedBy(auth("pathling:read")));
+    assertFalse(readResource.subsumedBy(auth("pathling:read:Patient")));
+    assertFalse(read.subsumedBy(auth("pathling:read-resource")));
+    assertFalse(patientRead.subsumedBy(auth("pathling:read-resource")));
   }
 
   @Test

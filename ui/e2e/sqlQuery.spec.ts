@@ -16,7 +16,7 @@
  */
 
 /**
- * E2E tests for the SQL on FHIR page in `$sqlquery-run` mode.
+ * E2E tests for the SQL on FHIR page in `$sql-run` mode.
  *
  * @author John Grimes
  */
@@ -26,10 +26,13 @@ import { expect, test } from "@playwright/test";
 import {
   mockCapabilityStatement,
   mockEmptySqlQueryLibraryBundle,
+  mockEmptySqlViewLibraryBundle,
   mockSqlQueryLibrary1,
   mockSqlQueryLibraryBundle,
   mockSqlQueryRunCsv,
   mockSqlQueryRunOperationOutcome,
+  mockSqlViewLibrary1,
+  mockSqlViewLibraryBundle,
   mockViewDefinitionBundle,
 } from "./fixtures/fhirData";
 
@@ -52,35 +55,34 @@ async function mockMetadata(page: Page) {
 
 /**
  * Mocks the Library search endpoint, branching on the type filter so the
- * SQLQuery search returns the SQLQuery bundle while other Library
- * searches return an empty bundle.
+ * SQLQuery search returns the SQLQuery bundle and the SQLView search returns
+ * the SQLView bundle, while any other Library search returns an empty bundle.
  *
  * @param page - The Playwright Page to attach the route to.
- * @param bundle - The Bundle to return for SQLQuery searches.
+ * @param queryBundle - The Bundle to return for SQLQuery searches.
+ * @param viewBundle - The Bundle to return for SQLView searches.
  */
 async function mockSqlQueryLibraries(
   page: Page,
-  bundle: object = mockSqlQueryLibraryBundle,
+  queryBundle: object = mockSqlQueryLibraryBundle,
+  viewBundle: object = mockSqlViewLibraryBundle,
 ) {
   await page.route(/\/Library\?[^"]*$/, async (route) => {
     const url = route.request().url();
-    if (url.includes("sql-query")) {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/fhir+json",
-        body: JSON.stringify(bundle),
-      });
-      return;
-    }
+    const bundle = url.includes("sql-view")
+      ? viewBundle
+      : url.includes("sql-query")
+        ? queryBundle
+        : {
+            resourceType: "Bundle",
+            type: "searchset",
+            total: 0,
+            entry: [],
+          };
     await route.fulfill({
       status: 200,
       contentType: "application/fhir+json",
-      body: JSON.stringify({
-        resourceType: "Bundle",
-        type: "searchset",
-        total: 0,
-        entry: [],
-      }),
+      body: JSON.stringify(bundle),
     });
   });
 }
@@ -103,12 +105,12 @@ async function mockViewDefinitions(page: Page) {
 }
 
 /**
- * Mocks the `$sqlquery-run` endpoint with a CSV response.
+ * Mocks the `$sql-run` endpoint with a CSV response.
  *
  * @param page - The Playwright Page to attach the route to.
  */
 async function mockSqlQueryRunCsvResponse(page: Page) {
-  await page.route("**/$sqlquery-run", async (route) => {
+  await page.route(/\/\$sql-run/, async (route) => {
     await route.fulfill({
       status: 200,
       contentType: "text/csv",
@@ -118,12 +120,12 @@ async function mockSqlQueryRunCsvResponse(page: Page) {
 }
 
 /**
- * Mocks the `$sqlquery-run` endpoint with a 400 + OperationOutcome response.
+ * Mocks the `$sql-run` endpoint with a 400 + OperationOutcome response.
  *
  * @param page - The Playwright Page to attach the route to.
  */
 async function mockSqlQueryRunFailure(page: Page) {
-  await page.route("**/$sqlquery-run", async (route) => {
+  await page.route(/\/\$sql-run/, async (route) => {
     await route.fulfill({
       status: 400,
       contentType: "application/fhir+json",
@@ -180,21 +182,36 @@ test.describe("SQL on FHIR page - SQL query mode", () => {
     await selectSqlQueryMode(page);
 
     // Pick the stored library.
-    await page.getByRole("combobox", { name: /sql query library/i }).click();
+    await page.getByRole("combobox", { name: /sql query source/i }).click();
     await page
       .getByRole("option", { name: mockSqlQueryLibrary1.title })
       .click();
 
-    // Enter a runtime value for the declared parameter.
-    await page
-      .getByRole("textbox", { name: /runtime value for patient_id/i })
-      .fill("Patient/pat-1");
+    // The parameters section now lives inside the tab, so no second section
+    // renders below the tabs.
+    await expect(page.getByText("Runtime parameter values")).toBeHidden();
+
+    const executeButton = page.getByRole("button", { name: /^execute$/i });
+    const patientId = page.getByRole("textbox", {
+      name: /runtime value for patient_id/i,
+    });
+
+    // The declared parameter starts unbound, so Execute is gated.
+    await expect(executeButton).toBeDisabled();
+    await patientId.fill("Patient/pat-1");
+    await expect(executeButton).toBeEnabled();
+
+    // Clearing the value gates Execute again: an unbound parameter can only
+    // ever produce the server's opaque failure, so it is never sent.
+    await patientId.fill("");
+    await expect(executeButton).toBeDisabled();
+    await patientId.fill("Patient/pat-1");
 
     // Switch the format to CSV so the response branch is deterministic.
     await page.getByRole("combobox", { name: /output format/i }).click();
     await page.getByRole("option", { name: "csv" }).click();
 
-    await page.getByRole("button", { name: /^execute$/i }).click();
+    await executeButton.click();
 
     await expect(page.getByText("2 rows")).toBeVisible();
     await expect(
@@ -203,11 +220,75 @@ test.describe("SQL on FHIR page - SQL query mode", () => {
     await expect(page.getByRole("cell", { name: "Alice" })).toBeVisible();
   });
 
+  test("executes a stored SQLView from the SQL views group", async ({
+    page,
+  }) => {
+    await mockMetadata(page);
+    await mockSqlQueryLibraries(page);
+    await mockViewDefinitions(page);
+
+    // Capture the run request to confirm the SQLView resolves as Library/<id>.
+    // A stored subject with no bindings is sent as a GET, so the subject is
+    // named in the query string rather than in a body.
+    let runUrl: string | undefined;
+    await page.route(/\/\$sql-run/, async (route) => {
+      runUrl = route.request().url();
+      await route.fulfill({
+        status: 200,
+        contentType: "text/csv",
+        body: mockSqlQueryRunCsv,
+      });
+    });
+
+    await page.goto("/admin/sql-on-fhir");
+    await selectSqlQueryMode(page);
+
+    // The picker groups queries and views; pick the SQLView.
+    await page.getByRole("combobox", { name: /sql query source/i }).click();
+    await page.getByRole("option", { name: mockSqlViewLibrary1.title }).click();
+
+    // A SQLView declares no parameters, so the tab's own Parameters section
+    // says so, and no section renders below the tabs.
+    await expect(
+      page.getByText("This Library declares no runtime parameters."),
+    ).toBeVisible();
+    await expect(page.getByText("Runtime parameter values")).toBeHidden();
+
+    // The dependency heading reads "Views" rather than "Tables".
+    await expect(page.getByText("Views", { exact: true })).toBeVisible();
+
+    await page.getByRole("combobox", { name: /output format/i }).click();
+    await page.getByRole("option", { name: "csv" }).click();
+
+    await page.getByRole("button", { name: /^execute$/i }).click();
+
+    await expect(page.getByText("2 rows")).toBeVisible();
+    await expect(page.getByRole("cell", { name: "Alice" })).toBeVisible();
+
+    const query = new URL(runUrl!).searchParams;
+    expect(query.get("subjectReference")).toBe("Library/view-active-patients");
+  });
+
   test("authors and executes an inline Library", async ({ page }) => {
     await mockMetadata(page);
-    await mockSqlQueryLibraries(page, mockEmptySqlQueryLibraryBundle);
+    await mockSqlQueryLibraries(
+      page,
+      mockEmptySqlQueryLibraryBundle,
+      mockEmptySqlViewLibraryBundle,
+    );
     await mockViewDefinitions(page);
-    await mockSqlQueryRunCsvResponse(page);
+
+    // Capture the run request so the value entered on the row can be checked
+    // against what is actually bound.
+    let runBody: string | null = null;
+    await page.route(/\/\$sql-run/, async (route) => {
+      runBody = route.request().postData();
+      await route.fulfill({
+        status: 200,
+        contentType: "text/csv",
+        body: mockSqlQueryRunCsv,
+      });
+    });
 
     await page.goto("/admin/sql-on-fhir");
     await selectSqlQueryMode(page);
@@ -218,24 +299,65 @@ test.describe("SQL on FHIR page - SQL query mode", () => {
     // Author the SQL.
     await page.getByRole("textbox", { name: /^sql$/i }).fill("SELECT 1");
 
-    // Add a table row and select the first ViewDefinition.
-    await page.getByRole("button", { name: /add table/i }).click();
+    // Add a view row and select the first ViewDefinition.
+    await page.getByRole("button", { name: /add view/i }).click();
     await page
-      .getByRole("textbox", { name: /label for table 1/i })
+      .getByRole("textbox", { name: /label for view 1/i })
       .fill("patients");
-    await page
-      .getByRole("combobox", { name: /view definition for table 1/i })
-      .click();
+    await page.getByRole("combobox", { name: /source for view 1/i }).click();
     await page.getByRole("option", { name: "Patient Demographics" }).click();
+
+    // Declare a parameter. The row carries name, type and value together, so
+    // the dead default field is gone and no second section renders.
+    await page.getByRole("button", { name: /add parameter/i }).click();
+    await page
+      .getByRole("textbox", { name: /name for parameter 1/i })
+      .fill("period_end");
+    await page.getByRole("combobox", { name: /type for parameter 1/i }).click();
+    await page.getByRole("option", { name: "date", exact: true }).click();
+    await expect(page.getByText("Default (optional)")).toBeHidden();
+    await expect(page.getByText("Runtime parameter values")).toBeHidden();
+
+    const executeButton = page.getByRole("button", { name: /^execute$/i });
+    const periodEnd = page.getByRole("textbox", {
+      name: /value for parameter 1/i,
+    });
+
+    // A named row with no value leaves the parameter unbound, so Execute is
+    // gated.
+    await expect(executeButton).toBeDisabled();
+
+    // A value that does not parse as its declared type is reported and gates
+    // Execute too.
+    await periodEnd.fill("not-a-date");
+    await expect(page.getByText(/expected an? iso 8601 date/i)).toBeVisible();
+    await expect(executeButton).toBeDisabled();
+
+    await periodEnd.fill("2025-06-30");
+    await expect(executeButton).toBeEnabled();
 
     // Use CSV output so the result rendering is deterministic.
     await page.getByRole("combobox", { name: /output format/i }).click();
     await page.getByRole("option", { name: "csv" }).click();
 
-    await page.getByRole("button", { name: /^execute$/i }).click();
+    await executeButton.click();
 
     await expect(page.getByText("2 rows")).toBeVisible();
     await expect(page.getByRole("cell", { name: "pat-1" })).toBeVisible();
+
+    // The row's value is bound in the nested Parameters resource, typed
+    // against the declared date.
+    expect(runBody).not.toBeNull();
+    const sent = JSON.parse(runBody as unknown as string) as {
+      parameter?: Array<{
+        name?: string;
+        resource?: { parameter?: Array<{ name?: string; valueDate?: string }> };
+      }>;
+    };
+    const bound = sent.parameter
+      ?.find((p) => p.name === "parameters")
+      ?.resource?.parameter?.find((p) => p.name === "period_end");
+    expect(bound?.valueDate).toBe("2025-06-30");
   });
 
   test("saves an inline Library and switches to the picker", async ({
@@ -253,13 +375,11 @@ test.describe("SQL on FHIR page - SQL query mode", () => {
       .getByRole("textbox", { name: /library title/i })
       .fill("Inline SQL query");
     await page.getByRole("textbox", { name: /^sql$/i }).fill("SELECT 1");
-    await page.getByRole("button", { name: /add table/i }).click();
+    await page.getByRole("button", { name: /add view/i }).click();
     await page
-      .getByRole("textbox", { name: /label for table 1/i })
+      .getByRole("textbox", { name: /label for view 1/i })
       .fill("patients");
-    await page
-      .getByRole("combobox", { name: /view definition for table 1/i })
-      .click();
+    await page.getByRole("combobox", { name: /source for view 1/i }).click();
     await page.getByRole("option", { name: "Patient Demographics" }).click();
 
     await page.getByRole("button", { name: /save to server/i }).click();
@@ -268,6 +388,60 @@ test.describe("SQL on FHIR page - SQL query mode", () => {
     await expect(
       page.getByRole("tab", { name: /select query/i }),
     ).toHaveAttribute("aria-selected", "true");
+  });
+
+  test("saves the chosen source by its canonical URL", async ({ page }) => {
+    await mockMetadata(page);
+    await mockViewDefinitions(page);
+
+    // Capture the body POSTed to /Library so the persisted reference can be
+    // asserted to be the source's canonical URL.
+    let postedBody: string | null = null;
+    await page.route(/\/Library$/, async (route) => {
+      if (route.request().method() === "POST") {
+        postedBody = route.request().postData();
+        await route.fulfill({
+          status: 201,
+          contentType: "application/fhir+json",
+          body: JSON.stringify({
+            ...mockSqlQueryLibrary1,
+            id: "saved-library",
+          }),
+        });
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: "application/fhir+json",
+        body: JSON.stringify(mockSqlQueryLibraryBundle),
+      });
+    });
+
+    await page.goto("/admin/sql-on-fhir");
+    await selectSqlQueryMode(page);
+
+    await page.getByRole("tab", { name: /provide sql/i }).click();
+    await page.getByRole("textbox", { name: /library title/i }).fill("By URL");
+    await page.getByRole("textbox", { name: /^sql$/i }).fill("SELECT 1");
+    await page.getByRole("button", { name: /add view/i }).click();
+    await page
+      .getByRole("textbox", { name: /label for view 1/i })
+      .fill("patients");
+    await page.getByRole("combobox", { name: /source for view 1/i }).click();
+    await page.getByRole("option", { name: "Patient Demographics" }).click();
+
+    await page.getByRole("button", { name: /save to server/i }).click();
+
+    await expect(
+      page.getByRole("tab", { name: /select query/i }),
+    ).toHaveAttribute("aria-selected", "true");
+    expect(postedBody).not.toBeNull();
+    const saved = JSON.parse(postedBody as unknown as string) as {
+      relatedArtifact?: Array<{ resource?: string }>;
+    };
+    expect(saved.relatedArtifact?.[0]?.resource).toBe(
+      "https://pathling.example/ViewDefinition/PatientDemographics",
+    );
   });
 
   test("renders a callout when the server returns 400", async ({ page }) => {
@@ -279,7 +453,7 @@ test.describe("SQL on FHIR page - SQL query mode", () => {
     await page.goto("/admin/sql-on-fhir");
     await selectSqlQueryMode(page);
 
-    await page.getByRole("combobox", { name: /sql query library/i }).click();
+    await page.getByRole("combobox", { name: /sql query source/i }).click();
     await page
       .getByRole("option", { name: mockSqlQueryLibrary1.title })
       .click();
@@ -288,6 +462,8 @@ test.describe("SQL on FHIR page - SQL query mode", () => {
       .fill("Patient/pat-1");
     await page.getByRole("button", { name: /^execute$/i }).click();
 
+    // The failure is shown in the result card, which is now the only place a job
+    // failure is reported.
     await expect(
       page.getByText(/sql contains a disallowed operation/i),
     ).toBeVisible();

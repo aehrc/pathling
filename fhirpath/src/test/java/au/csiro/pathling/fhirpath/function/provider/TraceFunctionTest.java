@@ -563,7 +563,14 @@ class TraceFunctionTest {
           // (literal.unit, isUcum, isCalendarDuration, callUDF, and quantityColumn.isNotNull).
           // Without let()-wrapping, a traced Quantity fires 5× per row.
           Arguments.of(
-              new TraceEntryCase("1.toQuantity().trace('t').convertsToQuantity('1')", "t", 1)));
+              new TraceEntryCase("1.toQuantity().trace('t').convertsToQuantity('1')", "t", 1)),
+          // ExistenceFunctions.all() — the input column was referenced once via where() and once
+          // via the total count(), firing a traced operand 2× per row without let()-wrapping.
+          Arguments.of(new TraceEntryCase("Patient.name.trace('t').all(use.exists())", "t", 3)),
+          // ExistenceFunctions.isDistinct() — the input column was referenced once via
+          // ExistenceLogic.distinct() and once via the total count(), firing a traced operand 2×
+          // per row without let()-wrapping.
+          Arguments.of(new TraceEntryCase("Patient.name.given.trace('t').isDistinct()", "t", 5)));
     }
 
     @Test

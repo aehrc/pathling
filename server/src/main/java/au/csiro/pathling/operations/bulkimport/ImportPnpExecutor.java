@@ -22,6 +22,7 @@ import au.csiro.fhir.export.BulkExportClient;
 import au.csiro.fhir.export.BulkExportResult;
 import au.csiro.fhir.export.BulkExportResult.FileResult;
 import au.csiro.filestore.hdfs.HdfsFileStoreFactory;
+import au.csiro.http.HttpClientConfig;
 import au.csiro.pathling.config.PnpConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.errors.InvalidUserInputError;
@@ -144,7 +145,7 @@ public class ImportPnpExecutor {
 
       // Download files using fhir-bulk-java.
       final Path outputDir = new Path(tempDir, "export-output");
-      final BulkExportClient client = buildBulkExportClient(pnpRequest, pnpConfig, outputDir);
+      final BulkExportClient client = buildBulkExportClient(pnpRequest, pnpConfig, outputDir, fs);
       final Map<String, Collection<String>> downloadedFiles =
           downloadFiles(client, pnpRequest.exportUrl(), outputDir, fs, fileExtension);
 
@@ -171,8 +172,11 @@ public class ImportPnpExecutor {
       return response;
 
     } catch (final IOException e) {
-      log.error("Failed to create temporary directory for ping and pull import", e);
-      throw new InvalidUserInputError("Failed to create temporary directory: " + e.getMessage(), e);
+      // This covers staging file system access anywhere in the operation, not just the creation of
+      // the temporary directory, so the message must not name a single step.
+      log.error("File system error during ping and pull import", e);
+      throw new InvalidUserInputError(
+          "File system error during ping and pull import: " + e.getMessage(), e);
     } catch (final Exception e) {
       log.error("Ping and pull import failed", e);
       final String errorMessage = extractRootCauseMessage(e);
@@ -219,13 +223,15 @@ public class ImportPnpExecutor {
    * @param pnpRequest the ping and pull import request
    * @param pnpConfig the PnP configuration
    * @param outputDir the directory where downloaded files will be written
+   * @param fs the file system that downloads should be written through
    * @return the configured bulk export client
    */
   @Nonnull
   BulkExportClient buildBulkExportClient(
       @Nonnull final ImportPnpRequest pnpRequest,
       @Nonnull final PnpConfiguration pnpConfig,
-      @Nonnull final Path outputDir) {
+      @Nonnull final Path outputDir,
+      @Nonnull final FileSystem fs) {
 
     // Static mode is not currently supported.
     if ("static".equals(pnpRequest.exportType())) {
@@ -260,13 +266,23 @@ public class ImportPnpExecutor {
       authConfig = authBuilder.build();
     }
 
-    // Build the client. The Hadoop FileStore factory routes writes through the same scheme
-    // handlers as the rest of the server, allowing s3a://, hdfs:// and other warehouses.
+    // Build the client. Downloads go through the server's own file system, so that they use the
+    // same scheme handlers as the rest of the server, and so that the file system is still open
+    // for the staging directory to be listed once the download is complete. Lending the file
+    // system also avoids opening a second one for every import.
+    // Downloads are written to storage as they are received, so a download that is waiting on a
+    // slow write is not reading from its connection. Keep the number of concurrent downloads and
+    // the socket timeout in step with what the storage can sustain, or connections are closed
+    // part-way through a file.
+    final HttpClientConfig httpClientConfig =
+        HttpClientConfig.builder().socketTimeout(pnpConfig.getDownloadSocketTimeout()).build();
     final var clientBuilder =
         BulkExportClient.systemBuilder()
             .withFhirEndpointUrl(pnpRequest.exportUrl())
             .withOutputDir(outputDir.toString())
-            .withFileStoreFactory(new HdfsFileStoreFactory(hadoopConfiguration));
+            .withFileStoreFactory(HdfsFileStoreFactory.forFileSystem(fs))
+            .withHttpClientConfig(httpClientConfig)
+            .withMaxConcurrentDownloads(pnpConfig.getMaxConcurrentDownloads());
 
     if (authConfig != null) {
       clientBuilder.withAuthConfig(authConfig);

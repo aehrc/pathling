@@ -173,8 +173,9 @@ public class FhirServerTestConfiguration {
   public JobProvider jobProvider(
       ServerConfiguration serverConfiguration,
       JobRegistry jobRegistry,
-      JobDirectoryFileSystem jobDirectoryFileSystem) {
-    return new JobProvider(serverConfiguration, jobRegistry, jobDirectoryFileSystem);
+      JobDirectoryFileSystem jobDirectoryFileSystem,
+      SparkSession sparkSession) {
+    return new JobProvider(serverConfiguration, jobRegistry, jobDirectoryFileSystem, sparkSession);
   }
 
   @Bean

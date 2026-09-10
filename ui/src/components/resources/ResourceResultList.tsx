@@ -21,10 +21,11 @@
  * @author John Grimes
  */
 
-import { ExclamationTriangleIcon, MagnifyingGlassIcon } from "@radix-ui/react-icons";
-import { Badge, Box, Callout, Flex, Heading, Spinner, Text } from "@radix-ui/themes";
+import { MagnifyingGlassIcon } from "@radix-ui/react-icons";
+import { Badge, Box, Flex, Heading, Spinner, Text } from "@radix-ui/themes";
 
 import { ResourceCard } from "./ResourceCard";
+import { ErrorCallout } from "../error/ErrorCallout";
 
 import type { Resource } from "fhir/r4";
 
@@ -97,12 +98,7 @@ export function ResourceResultList({
         <Heading size="4" mb="4">
           Results
         </Heading>
-        <Callout.Root color="red">
-          <Callout.Icon>
-            <ExclamationTriangleIcon />
-          </Callout.Icon>
-          <Callout.Text>{error.message}</Callout.Text>
-        </Callout.Root>
+        <ErrorCallout message={error.message} />
       </Box>
     );
   }

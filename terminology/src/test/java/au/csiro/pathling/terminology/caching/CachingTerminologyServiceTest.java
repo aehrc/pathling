@@ -70,6 +70,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 class CachingTerminologyServiceTest {
 
   static final int WIREMOCK_PORT = 4072;
+  static final int NOT_MODIFIED_STATUS = 304;
   static final Coding T2D_CODING = new Coding(SNOMED_URI, "44054006", "Type 2 diabetes mellitus");
   static final Coding CHLOROQUINE_POISONING_CODING =
       new Coding(SNOMED_URI, "45110008", "Chloroquine poisoning");
@@ -262,7 +263,24 @@ class CachingTerminologyServiceTest {
       // should have been run past the max age, triggering a revalidation request.
       verify(2, anyRequestedFor(anyUrl()));
       verify(1, anyRequestedFor(anyUrl()).withHeader("If-None-Match", matching(".*")));
+      // Sending the conditional request is not enough: the server must answer it with a 304, so
+      // that the cached data is reused rather than replaced by a fresh response. Without this
+      // assertion a server that answers 200 satisfies the test, even though revalidation never
+      // happened, because both outcomes return the same result to the caller.
+      assertEquals(
+          1,
+          countNotModifiedResponses(),
+          "Expected the revalidation request to be answered with a 304 Not Modified");
     }
+  }
+
+  /**
+   * @return the number of responses served with a 304 Not Modified status since the last reset
+   */
+  static long countNotModifiedResponses() {
+    return wireMockServer.getAllServeEvents().stream()
+        .filter(event -> event.getResponse().getStatus() == NOT_MODIFIED_STATUS)
+        .count();
   }
 
   @AfterEach

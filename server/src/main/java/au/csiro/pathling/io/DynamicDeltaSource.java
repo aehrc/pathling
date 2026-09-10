@@ -20,36 +20,48 @@ package au.csiro.pathling.io;
 import au.csiro.pathling.QueryHelpers;
 import au.csiro.pathling.config.StorageConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.io.source.DataSource;
+import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.FileSystemPersistence;
-import au.csiro.pathling.library.io.sink.DataSinkBuilder;
+import au.csiro.pathling.library.io.source.DatasetSource;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
-import au.csiro.pathling.library.query.FhirViewQuery;
-import au.csiro.pathling.views.FhirView;
 import io.delta.tables.DeltaTable;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.io.IOException;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.BiFunction;
-import java.util.function.Predicate;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 
 /**
- * A QueryableDataSource wrapper that dynamically discovers new resource types created after
- * startup. Delegates to the underlying data source for known types, and attempts on-demand
- * discovery for unknown types by checking if a Delta table exists at the expected path.
+ * A {@link DriftGuardedSource} that dynamically discovers new resource types created after startup.
+ * Delegates to the underlying data source for known types, and attempts on-demand discovery for
+ * unknown types by checking if a Delta table exists at the expected path.
+ *
+ * <p>Discovery on read is matched by discovery on enumeration: {@link #getResourceTypes} also lists
+ * the warehouse database directory, so a table that exists but has never been read is still
+ * enumerable. Reads and enumeration therefore agree, and an unnarrowed export cannot silently omit
+ * a type merely because nothing happened to read it first.
+ *
+ * <p>The drift guard behaviour, including its propagation into derived sources, is inherited from
+ * {@link DriftGuardedSource}. The drifted types set is mutable so that a successful {@link
+ * #refresh} clears the guard for the refreshed type.
  *
  * @author John Grimes
  */
 @Slf4j
-public class DynamicDeltaSource implements QueryableDataSource {
+public class DynamicDeltaSource extends DriftGuardedSource {
 
-  @Nonnull private final QueryableDataSource delegate;
+  /** The directory-name suffix under which each resource type's Delta table is stored. */
+  private static final String TABLE_SUFFIX = ".parquet";
 
   @Nonnull private final SparkSession spark;
 
@@ -62,8 +74,10 @@ public class DynamicDeltaSource implements QueryableDataSource {
   @Nonnull private final Set<String> dynamicallyDiscoveredTypes = ConcurrentHashMap.newKeySet();
 
   /**
-   * Constructs a new DynamicDeltaSource.
+   * Constructs a new DynamicDeltaSource with no drifted types.
    *
+   * @param context the Pathling context, used to construct derived sources and to check whether a
+   *     listed table directory names a supported resource type
    * @param delegate the underlying QueryableDataSource to delegate to
    * @param spark the Spark session for Delta table operations
    * @param databasePath the path to the Delta database
@@ -71,16 +85,55 @@ public class DynamicDeltaSource implements QueryableDataSource {
    * @param storageConfiguration the storage configuration
    */
   public DynamicDeltaSource(
+      @Nonnull final PathlingContext context,
       @Nonnull final QueryableDataSource delegate,
       @Nonnull final SparkSession spark,
       @Nonnull final String databasePath,
       @Nonnull final FhirEncoders fhirEncoders,
       @Nonnull final StorageConfiguration storageConfiguration) {
-    this.delegate = delegate;
+    this(context, delegate, spark, databasePath, fhirEncoders, storageConfiguration, Set.of());
+  }
+
+  /**
+   * Constructs a new DynamicDeltaSource.
+   *
+   * @param context the Pathling context, used to construct derived sources and to check whether a
+   *     listed table directory names a supported resource type
+   * @param delegate the underlying QueryableDataSource to delegate to
+   * @param spark the Spark session for Delta table operations
+   * @param databasePath the path to the Delta database
+   * @param fhirEncoders the FHIR encoders for creating empty datasets
+   * @param storageConfiguration the storage configuration
+   * @param driftedTypes the resource types left drifted and unmigrated at startup
+   */
+  @SuppressWarnings("java:S107")
+  public DynamicDeltaSource(
+      @Nonnull final PathlingContext context,
+      @Nonnull final QueryableDataSource delegate,
+      @Nonnull final SparkSession spark,
+      @Nonnull final String databasePath,
+      @Nonnull final FhirEncoders fhirEncoders,
+      @Nonnull final StorageConfiguration storageConfiguration,
+      @Nonnull final Set<String> driftedTypes) {
+    super(context, delegate, concurrentCopyOf(driftedTypes));
     this.spark = spark;
     this.databasePath = databasePath;
     this.fhirEncoders = fhirEncoders;
     this.cacheDatasets = storageConfiguration.getCacheDatasets();
+  }
+
+  /**
+   * Copies the given types into a mutable concurrent set, so that the drifted mark can be cleared
+   * by {@link #refresh} and observed by derived sources.
+   *
+   * @param types the types to copy
+   * @return a mutable concurrent set containing the given types
+   */
+  @Nonnull
+  private static Set<String> concurrentCopyOf(@Nonnull final Set<String> types) {
+    final Set<String> copy = ConcurrentHashMap.newKeySet();
+    copy.addAll(types);
+    return copy;
   }
 
   @Override
@@ -89,6 +142,10 @@ public class DynamicDeltaSource implements QueryableDataSource {
     if (resourceCode == null) {
       throw new IllegalArgumentException("Resource code must not be null");
     }
+
+    // A type whose table is drifted and unmigrated cannot be queried; fail with an actionable
+    // error rather than an opaque analysis failure.
+    checkNotDrifted(resourceCode);
 
     // If delegate knows about this type, use it.
     if (delegate.getResourceTypes().contains(resourceCode)) {
@@ -113,50 +170,136 @@ public class DynamicDeltaSource implements QueryableDataSource {
     return QueryHelpers.createEmptyDataset(spark, fhirEncoders, resourceCode);
   }
 
+  /**
+   * Re-loads the Delta table for the given resource type and replaces the dataset served for it, so
+   * that all consumers observe the table's current schema. Intended to be called after a
+   * schema-evolving write. When dataset caching is enabled, the stale cached dataset is
+   * unpersisted. If no Delta table exists for the type, the call is a no-op.
+   *
+   * @param resourceCode the resource type code to refresh
+   */
+  public void refresh(@Nonnull final String resourceCode) {
+    final String tablePath = getTablePath(resourceCode);
+    if (!DeltaTable.isDeltaTable(spark, tablePath)) {
+      log.debug("No Delta table found for resource type {}, nothing to refresh", resourceCode);
+      return;
+    }
+
+    // Unpersist the stale cached dataset before replacing it, so the cached plan for the old
+    // snapshot does not linger in the Spark cache.
+    if (cacheDatasets && delegate.getResourceTypes().contains(resourceCode)) {
+      delegate.read(resourceCode).unpersist();
+    }
+
+    final Dataset<Row> refreshed = spark.read().format("delta").load(tablePath);
+    if (delegate instanceof final DatasetSource datasetSource) {
+      // Replace the pinned entry in the delegate's resource map, so every consumer that resolves
+      // datasets through the delegate observes the evolved schema.
+      datasetSource.dataset(resourceCode, refreshed);
+      log.info("Refreshed dataset for resource type {}", resourceCode);
+    } else {
+      // The delegate cannot be mutated; serve the type through dynamic discovery, which re-loads
+      // the Delta table on each read.
+      dynamicallyDiscoveredTypes.add(resourceCode);
+      log.info("Registered resource type {} for dynamic discovery following refresh", resourceCode);
+    }
+
+    // The freshly loaded table carries the current schema, so the type is no longer drifted.
+    if (driftedTypes.remove(resourceCode)) {
+      log.info("Cleared drifted mark for resource type {}", resourceCode);
+    }
+  }
+
+  /**
+   * Returns every resource type this source can serve: those the delegate knew at startup, those
+   * discovered on demand since, and those whose table directory is present in the warehouse
+   * database directory.
+   *
+   * <p>The directory listing is what makes a table created after startup - by this server or by
+   * another process sharing the warehouse - enumerable before anything has read it. Without it, an
+   * unnarrowed export would silently omit such a type until an unrelated request happened to read
+   * it. Listed names are filtered to supported resource types, so an unrelated directory in the
+   * warehouse is not mistaken for one; whether a listed table is actually readable is left to
+   * {@link #read}, which falls back to an empty dataset.
+   *
+   * @return the resource types this source can serve
+   */
   @Override
   @Nonnull
   public Set<String> getResourceTypes() {
     final Set<String> types = new HashSet<>(delegate.getResourceTypes());
     types.addAll(dynamicallyDiscoveredTypes);
+    types.addAll(listTableDirectories());
     return types;
   }
 
-  @Override
+  /**
+   * Lists the resource types with a table directory in the database directory. A listing failure is
+   * an enhancement lost rather than a request lost: it is logged and the caller falls back to the
+   * types already known.
+   */
   @Nonnull
-  public DataSinkBuilder write() {
-    return delegate.write();
+  private Set<String> listTableDirectories() {
+    final Set<String> listed = new HashSet<>();
+    try {
+      final Path databaseDir = new Path(databasePath);
+      final FileSystem fileSystem =
+          databaseDir.getFileSystem(spark.sparkContext().hadoopConfiguration());
+      if (fileSystem.exists(databaseDir)) {
+        for (final FileStatus status : fileSystem.listStatus(databaseDir)) {
+          final String name = status.getPath().getName();
+          if (status.isDirectory() && name.endsWith(TABLE_SUFFIX)) {
+            final String resourceType = name.substring(0, name.length() - TABLE_SUFFIX.length());
+            if (context.isResourceTypeSupported(resourceType)) {
+              listed.add(resourceType);
+            }
+          }
+        }
+      }
+    } catch (final IOException e) {
+      log.warn("Failed to list the database directory while enumerating resource types", e);
+    }
+    return listed;
   }
 
-  @Override
+  /**
+   * Captures the current Delta version of every resource-type table and returns a source that
+   * serves each of them at that version, so all reads made through it observe a single consistent
+   * view of the data regardless of concurrent writes.
+   *
+   * <p>Versions for all tables are captured at one instant, which is what the {@code $sql-export}
+   * single-snapshot guarantee requires. Pinning reads only each table's Delta log, so no data is
+   * copied and reads stay lazy.
+   *
+   * @return a snapshot source pinned at the current instant
+   */
   @Nonnull
-  public FhirViewQuery view(@Nullable final String subjectResource) {
-    return delegate.view(subjectResource);
+  public SnapshotDeltaSource snapshot() {
+    final Map<String, Dataset<Row>> pinnedDatasets = new HashMap<>();
+    final Map<String, Long> pinnedVersions = new HashMap<>();
+
+    for (final String resourceType : getResourceTypes()) {
+      final String tablePath = getTablePath(resourceType);
+      if (!DeltaTable.isDeltaTable(spark, tablePath)) {
+        continue;
+      }
+      final long version = currentVersion(tablePath);
+      pinnedVersions.put(resourceType, version);
+      // Read with versionAsOf rather than through the delegate, so the pinned dataset is
+      // independent of the mutable dataset cache, whose entries track the current table.
+      pinnedDatasets.put(
+          resourceType,
+          spark.read().format("delta").option("versionAsOf", version).load(tablePath));
+    }
+
+    log.debug("Pinned {} resource-type tables for a snapshot read", pinnedVersions.size());
+    return SnapshotDeltaSource.of(
+        context, spark, fhirEncoders, pinnedDatasets, pinnedVersions, driftedTypes);
   }
 
-  @Override
-  @Nonnull
-  public FhirViewQuery view(@Nullable final FhirView view) {
-    return delegate.view(view);
-  }
-
-  @Override
-  @Nonnull
-  public QueryableDataSource map(
-      @Nonnull final BiFunction<String, Dataset<Row>, Dataset<Row>> operator) {
-    return delegate.map(operator);
-  }
-
-  @Override
-  @Nonnull
-  public QueryableDataSource filterByResourceType(
-      @Nonnull final Predicate<String> resourceTypePredicate) {
-    return delegate.filterByResourceType(resourceTypePredicate);
-  }
-
-  @Override
-  @Nonnull
-  public DataSource cache() {
-    return delegate.cache();
+  /** Reads the current version of a Delta table from its transaction log. */
+  private long currentVersion(@Nonnull final String tablePath) {
+    return DeltaTable.forPath(spark, tablePath).history(1).select("version").first().getLong(0);
   }
 
   @Nonnull
@@ -175,6 +318,6 @@ public class DynamicDeltaSource implements QueryableDataSource {
 
   @Nonnull
   private String getTablePath(@Nonnull final String resourceCode) {
-    return FileSystemPersistence.safelyJoinPaths(databasePath, resourceCode + ".parquet");
+    return FileSystemPersistence.safelyJoinPaths(databasePath, resourceCode + TABLE_SUFFIX);
   }
 }

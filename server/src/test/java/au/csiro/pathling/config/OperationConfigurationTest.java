@@ -45,10 +45,34 @@ class OperationConfigurationTest {
     assertThat(config.isGroupExportEnabled()).isTrue();
     assertThat(config.isImportEnabled()).isTrue();
     assertThat(config.isImportPnpEnabled()).isTrue();
-    assertThat(config.isViewDefinitionRunEnabled()).isTrue();
-    assertThat(config.isViewDefinitionInstanceRunEnabled()).isTrue();
-    assertThat(config.isViewDefinitionExportEnabled()).isTrue();
+    assertThat(config.isSqlRunEnabled()).isTrue();
+    assertThat(config.isSqlExportEnabled()).isTrue();
     assertThat(config.isBulkSubmitEnabled()).isTrue();
+  }
+
+  // The two SQL on FHIR operations are gated independently, so one can be offered without the
+  // other.
+  @Test
+  void sqlOperationsCanBeDisabledIndependently() {
+    final OperationConfiguration config = new OperationConfiguration();
+
+    config.setSqlRunEnabled(false);
+
+    assertThat(config.isSqlRunEnabled()).isFalse();
+    assertThat(config.isSqlExportEnabled()).isTrue();
+  }
+
+  // $sql-export writes downloadable files served by $result, so enabling it alone must keep the
+  // $result endpoint available.
+  @Test
+  void isAnyExportEnabledReturnsTrueWhenOnlySqlExportEnabled() {
+    final OperationConfiguration config = new OperationConfiguration();
+    config.setExportEnabled(false);
+    config.setPatientExportEnabled(false);
+    config.setGroupExportEnabled(false);
+
+    assertThat(config.isSqlExportEnabled()).isTrue();
+    assertThat(config.isAnyExportEnabled()).isTrue();
   }
 
   @Test
@@ -86,11 +110,13 @@ class OperationConfigurationTest {
 
   @Test
   void isAnyExportEnabledReturnsFalseWhenAllExportDisabled() {
-    // Given: A configuration with all export operations disabled.
+    // Given: A configuration with all export operations disabled, including the SQL on FHIR
+    // asynchronous exports that also serve results through the $result endpoint.
     final OperationConfiguration config = new OperationConfiguration();
     config.setExportEnabled(false);
     config.setPatientExportEnabled(false);
     config.setGroupExportEnabled(false);
+    config.setSqlExportEnabled(false);
 
     // Then: isAnyExportEnabled should return false.
     assertThat(config.isAnyExportEnabled()).isFalse();
@@ -102,12 +128,12 @@ class OperationConfigurationTest {
     final OperationConfiguration config = new OperationConfiguration();
     config.setCreateEnabled(false);
     config.setImportEnabled(false);
-    config.setViewDefinitionRunEnabled(false);
+    config.setSqlRunEnabled(false);
 
     // Then: Only the disabled operations should be false.
     assertThat(config.isCreateEnabled()).isFalse();
     assertThat(config.isImportEnabled()).isFalse();
-    assertThat(config.isViewDefinitionRunEnabled()).isFalse();
+    assertThat(config.isSqlRunEnabled()).isFalse();
 
     // And: Other operations should remain enabled.
     assertThat(config.isReadEnabled()).isTrue();

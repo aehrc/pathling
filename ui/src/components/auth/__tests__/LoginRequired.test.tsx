@@ -19,8 +19,8 @@
  * Tests for the LoginRequired component.
  *
  * This test suite verifies that the LoginRequired component correctly displays
- * the login prompt, handles login button clicks, and shows appropriate server
- * name in the button text.
+ * the login prompt, shows a pending indication while an authorisation attempt
+ * is under way, and reports a failure to initiate authorisation.
  *
  * @author John Grimes
  */
@@ -30,18 +30,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { render, screen, waitFor } from "../../../test/testUtils";
 import { LoginRequired } from "../LoginRequired";
-
-// Mock state for auth context.
-const mockSetLoading = vi.fn();
-const mockSetError = vi.fn();
-
-// Mock the auth context.
-vi.mock("../../../contexts/AuthContext", () => ({
-  useAuth: () => ({
-    setLoading: mockSetLoading,
-    setError: mockSetError,
-  }),
-}));
 
 // Mock config.
 vi.mock("../../../config", () => ({
@@ -68,6 +56,26 @@ vi.mock("../../../services/auth", () => ({
 vi.mock("../SessionExpiredDialog", () => ({
   SessionExpiredDialog: () => <div data-testid="session-expired-dialog" />,
 }));
+
+/**
+ * Creates a promise that the test controls, so an authorisation attempt can be
+ * held pending while assertions are made.
+ *
+ * @returns The promise and the functions that settle it.
+ */
+function deferred(): {
+  promise: Promise<void>;
+  resolve: () => void;
+  reject: (reason: unknown) => void;
+} {
+  let resolve!: () => void;
+  let reject!: (reason: unknown) => void;
+  const promise = new Promise<void>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
 
 describe("LoginRequired", () => {
   beforeEach(() => {
@@ -116,23 +124,96 @@ describe("LoginRequired", () => {
 
       expect(screen.getByTestId("session-expired-dialog")).toBeInTheDocument();
     });
+
+    it("shows no error before any attempt is made", () => {
+      render(<LoginRequired />);
+
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    });
   });
 
   describe("Login action", () => {
-    it("calls setLoading and initiateAuth when login button is clicked", async () => {
+    it("initiates authorisation with the FHIR base URL", async () => {
       const user = userEvent.setup();
       mockInitiateAuth.mockResolvedValue(undefined);
 
       render(<LoginRequired />);
 
-      const loginButton = screen.getByRole("button", { name: /login/i });
-      await user.click(loginButton);
+      await user.click(screen.getByRole("button", { name: /login/i }));
 
-      expect(mockSetLoading).toHaveBeenCalledWith(true);
       expect(mockInitiateAuth).toHaveBeenCalledWith("https://fhir.example.org/fhir");
     });
 
-    it("calls setError when initiateAuth fails", async () => {
+    // FR-001, FR-002: the button must show it is busy and refuse a second press.
+    it("disables the button and shows a pending indication while the attempt is under way", async () => {
+      const user = userEvent.setup();
+      const attempt = deferred();
+      mockInitiateAuth.mockReturnValue(attempt.promise);
+
+      const { container } = render(<LoginRequired />);
+
+      const loginButton = screen.getByRole("button", { name: /login/i });
+      await user.click(loginButton);
+
+      await waitFor(() => {
+        expect(loginButton).toBeDisabled();
+      });
+      expect(container.querySelector(".rt-Spinner")).toBeInTheDocument();
+      // The label stays visible alongside the spinner, per the wireframe.
+      expect(loginButton).toHaveTextContent(/login to/i);
+
+      attempt.resolve();
+    });
+
+    // FR-002: repeated clicks must not start a second attempt.
+    it("starts no second attempt while one is already pending", async () => {
+      const user = userEvent.setup();
+      const attempt = deferred();
+      mockInitiateAuth.mockReturnValue(attempt.promise);
+
+      render(<LoginRequired />);
+
+      const loginButton = screen.getByRole("button", { name: /login/i });
+      await user.click(loginButton);
+      await waitFor(() => {
+        expect(loginButton).toBeDisabled();
+      });
+      // A disabled button swallows the click, so drive the handler directly too.
+      loginButton.click();
+
+      expect(mockInitiateAuth).toHaveBeenCalledTimes(1);
+
+      attempt.resolve();
+    });
+
+    // FR-003: the reason reported by the failure must be shown.
+    it("displays the failure message when authorisation cannot be initiated", async () => {
+      const user = userEvent.setup();
+      mockInitiateAuth.mockRejectedValue(new Error("Auth failed"));
+
+      render(<LoginRequired />);
+
+      await user.click(screen.getByRole("button", { name: /login/i }));
+
+      const alert = await screen.findByRole("alert");
+      expect(alert).toHaveTextContent("Auth failed");
+    });
+
+    // FR-003: a rejection that is not an Error still produces a message.
+    it("displays a fallback message when the failure is not an Error", async () => {
+      const user = userEvent.setup();
+      mockInitiateAuth.mockRejectedValue("string error");
+
+      render(<LoginRequired />);
+
+      await user.click(screen.getByRole("button", { name: /login/i }));
+
+      const alert = await screen.findByRole("alert");
+      expect(alert).toHaveTextContent("Authentication failed");
+    });
+
+    // FR-004: the user must be able to retry after a failure.
+    it("re-enables the button after a failed attempt", async () => {
       const user = userEvent.setup();
       mockInitiateAuth.mockRejectedValue(new Error("Auth failed"));
 
@@ -141,23 +222,12 @@ describe("LoginRequired", () => {
       const loginButton = screen.getByRole("button", { name: /login/i });
       await user.click(loginButton);
 
-      await waitFor(() => {
-        expect(mockSetError).toHaveBeenCalledWith("Auth failed");
-      });
-    });
+      await screen.findByRole("alert");
+      expect(loginButton).toBeEnabled();
 
-    it("sets generic error message when auth fails with non-Error", async () => {
-      const user = userEvent.setup();
-      mockInitiateAuth.mockRejectedValue("string error");
-
-      render(<LoginRequired />);
-
-      const loginButton = screen.getByRole("button", { name: /login/i });
+      // A second attempt can be made.
       await user.click(loginButton);
-
-      await waitFor(() => {
-        expect(mockSetError).toHaveBeenCalledWith("Authentication failed");
-      });
+      expect(mockInitiateAuth).toHaveBeenCalledTimes(2);
     });
   });
 });

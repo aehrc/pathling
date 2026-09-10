@@ -21,11 +21,11 @@
  * @author John Grimes
  */
 
-import { CrossCircledIcon } from "@radix-ui/react-icons";
-import { Box, Callout, Flex, Spinner, Text } from "@radix-ui/themes";
+import { Box, Flex, Spinner, Text } from "@radix-ui/themes";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 
+import { ErrorCallout } from "../components/error/ErrorCallout";
 import { useAuth } from "../contexts/AuthContext";
 import { clearReturnUrl, completeAuth, getReturnUrl } from "../services/auth";
 
@@ -36,7 +36,7 @@ import { clearReturnUrl, completeAuth, getReturnUrl } from "../services/auth";
  */
 export function Callback() {
   const navigate = useNavigate();
-  const { setClient, setError } = useAuth();
+  const { setClient } = useAuth();
   const [localError, setLocalError] = useState<string | null>(null);
 
   // Track whether callback has been processed to prevent double-execution.
@@ -55,28 +55,17 @@ export function Callback() {
         clearReturnUrl();
         navigate(returnUrl, { replace: true });
       } catch (err) {
-        const message = err instanceof Error ? err.message : "Authentication failed";
-        setLocalError(message);
-        setError(message);
+        setLocalError(err instanceof Error ? err.message : "Authentication failed");
       }
     }
 
     handleCallback();
-  }, [navigate, setClient, setError]);
+  }, [navigate, setClient]);
 
   if (localError) {
     return (
       <Box p="6">
-        <Callout.Root color="red">
-          <Callout.Icon>
-            <CrossCircledIcon />
-          </Callout.Icon>
-          <Callout.Text>
-            <Text weight="bold">Authentication Failed</Text>
-            <br />
-            {localError}
-          </Callout.Text>
-        </Callout.Root>
+        <ErrorCallout title="Authentication failed" message={localError} />
       </Box>
     );
   }

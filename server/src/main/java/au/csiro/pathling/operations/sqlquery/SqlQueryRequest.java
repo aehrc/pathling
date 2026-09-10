@@ -23,7 +23,7 @@ import java.util.Map;
 import lombok.Value;
 
 /**
- * The validated, normalised inputs to a single {@code $sqlquery-run} invocation. Produced by {@link
+ * The validated, normalised inputs to a single {@code $sql-run} invocation. Produced by {@link
  * SqlQueryRequestParser} from the raw HTTP-level parameters and consumed by the downstream resolver
  * / executor / streamer pipeline.
  */
