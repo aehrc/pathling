@@ -41,6 +41,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
@@ -52,6 +53,7 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.functions;
+import org.apache.spark.sql.types.StructType;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -782,6 +784,41 @@ class DataSourcesTest {
 
     // Query the data.
     queryNdjsonData(newData);
+  }
+
+  /**
+   * The catalog sink shares {@code DeltaSink.merge}, so it inherits the tolerance for a source
+   * narrower than the target table: the merge succeeds and leaves the target's additional columns
+   * null on the rows it writes (US3.6 of {@code 048-name-based-nested-decode}).
+   */
+  @Test
+  void tablesMergeWithNarrowerSource() {
+    // Arrange: write a Delta-backed catalog table holding the full encoded schema.
+    final QueryableDataSource data =
+        pathlingContext.read().ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
+    data.write().saveMode("overwrite").tables("test", "delta");
+    final StructType before = spark.table("test.Patient").schema();
+
+    // Arrange: a source that carries every Patient the table holds, but no gender column.
+    final Dataset<Row> narrowerSource = data.read("Patient").drop("gender");
+    assertTrue(
+        List.of(before.fieldNames()).contains("gender"),
+        "the target table should carry the column the source is missing");
+
+    // Act: merge it back in through the catalog sink.
+    pathlingContext
+        .read()
+        .datasets()
+        .dataset("Patient", narrowerSource)
+        .write()
+        .saveMode("merge")
+        .tables("test", "delta");
+
+    // Assert: the table kept its own schema, and the written rows carry no gender.
+    assertEquals(before, spark.table("test.Patient").schema());
+    assertTrue(
+        spark.table("test.Patient").filter("gender is not null").isEmpty(),
+        "the column the source lacked should be null on every written row");
   }
 
   @Test

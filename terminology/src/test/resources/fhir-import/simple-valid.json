@@ -1,0 +1,12 @@
+{
+  "resourceType": "CodeSystem",
+  "url": "http://example.org/fhir/CodeSystem/simple-valid",
+  "version": "1.0.0",
+  "name": "SimpleValid",
+  "status": "active",
+  "content": "complete",
+  "concept": [
+    { "code": "X", "display": "Ex" },
+    { "code": "Y", "display": "Why" }
+  ]
+}

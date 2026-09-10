@@ -34,3 +34,17 @@ export interface ViewJob {
   limit?: number;
   createdAt: Date;
 }
+
+/**
+ * A request to run a ViewDefinition, as captured by the authoring form.
+ */
+export interface ViewRunRequest {
+  /** Whether the view is stored on the server or supplied inline. */
+  mode: ViewJobMode;
+  /** Id of a stored ViewDefinition, when the mode is stored. */
+  viewDefinitionId?: string;
+  /** JSON of an inline ViewDefinition, when the mode is inline. */
+  viewDefinitionJson?: string;
+  /** Maximum rows to return. */
+  limit?: number;
+}

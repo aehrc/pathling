@@ -29,6 +29,8 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import logoDark from "../../../assets/logo-colour-dark.svg";
+import logoLight from "../../../assets/logo-colour.svg";
 import { render, screen } from "../../../test/testUtils";
 import { Layout } from "../Layout";
 
@@ -88,6 +90,18 @@ describe("Layout", () => {
 
       const logoLink = screen.getByRole("link", { name: /pathling/i });
       expect(logoLink).toHaveAttribute("href", "/");
+    });
+
+    // The logos must come from the asset pipeline rather than from hardcoded root paths, so that
+    // they are content-hashed into /admin/assets/ and served with immutable caching directives.
+    it("sources both logos from the asset pipeline", () => {
+      renderWithRouter();
+
+      const logo = screen.getByAltText("Pathling");
+      expect(logo).toHaveAttribute("src", logoLight);
+
+      const darkSource = logo.closest("picture")?.querySelector("source");
+      expect(darkSource).toHaveAttribute("srcset", logoDark);
     });
   });
 

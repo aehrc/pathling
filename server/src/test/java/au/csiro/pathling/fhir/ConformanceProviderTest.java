@@ -18,6 +18,7 @@
 package au.csiro.pathling.fhir;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import au.csiro.pathling.FhirServer;
 import au.csiro.pathling.PathlingServerVersion;
@@ -25,6 +26,7 @@ import au.csiro.pathling.config.AuthorizationConfiguration;
 import au.csiro.pathling.config.OperationConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.errors.ResourceNotFoundError;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
 import ca.uhn.fhir.parser.IParser;
@@ -42,6 +44,7 @@ import org.hl7.fhir.r4.model.CapabilityStatement.ResourceInteractionComponent;
 import org.hl7.fhir.r4.model.CapabilityStatement.TypeRestfulInteraction;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.Enumerations.SearchParamType;
+import org.hl7.fhir.r4.model.IdType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -215,23 +218,149 @@ class ConformanceProviderTest {
   }
 
   @Test
-  void capabilityStatementIncludesViewDefinitionExportOperation() {
+  void capabilityStatementIncludesJobsOperation() {
     // When: Getting the capability statement.
     final CapabilityStatement capabilityStatement =
         conformanceProvider.getServerConformance(null, null);
 
-    // Then: The system-level operations should include viewdefinition-export.
-    final List<CapabilityStatementRestResourceOperationComponent> operations =
-        capabilityStatement.getRest().getFirst().getOperation();
-
+    // Then: The system-level operations should include the jobs list operation.
     final Set<String> operationNames =
-        operations.stream()
+        capabilityStatement.getRest().getFirst().getOperation().stream()
             .map(CapabilityStatementRestResourceOperationComponent::getName)
             .collect(Collectors.toSet());
 
-    assertThat(operationNames)
-        .as("System-level operations should include viewdefinition-export")
-        .contains("viewdefinition-export");
+    assertThat(operationNames).as("System-level operations should include jobs").contains("jobs");
+  }
+
+  @Test
+  void jobsOperationDefinitionIsServed() {
+    // The Pathling-authored OperationDefinition for the jobs list operation is served.
+    assertThat(
+            conformanceProvider.getOperationDefinitionById(
+                new IdType("OperationDefinition/jobs-1")))
+        .isNotNull();
+  }
+
+  // -------------------------------------------------------------------------
+  // The two SQL on FHIR data operations (US5)
+  // -------------------------------------------------------------------------
+
+  @Test
+  void capabilityStatementIncludesTheTwoSqlOperations() {
+    final CapabilityStatement capabilityStatement =
+        conformanceProvider.getServerConformance(null, null);
+
+    assertThat(systemOperationNames(capabilityStatement))
+        .as("System-level operations should include both SQL on FHIR data operations")
+        .contains("sql-run", "sql-export");
+  }
+
+  // The four operations these two replace are gone outright, so nothing in the CapabilityStatement
+  // may still advertise them.
+  @Test
+  void capabilityStatementDeclaresNoneOfTheReplacedOperations() {
+    final CapabilityStatement capabilityStatement =
+        conformanceProvider.getServerConformance(null, null);
+
+    assertThat(systemOperationNames(capabilityStatement))
+        .doesNotContain(
+            "viewdefinition-run", "viewdefinition-export", "sqlquery-run", "sqlquery-export");
+    assertThat(resourceOperationDefinition(capabilityStatement, "ViewDefinition", "run")).isNull();
+  }
+
+  @Test
+  void sqlOperationsDeclareTheSpecCanonicals() {
+    final CapabilityStatement capabilityStatement =
+        conformanceProvider.getServerConformance(null, null);
+
+    assertThat(systemOperationDefinition(capabilityStatement, "sql-run"))
+        .isEqualTo("http://hl7.org/fhir/uv/sql-on-fhir/OperationDefinition/SQLRun");
+    assertThat(systemOperationDefinition(capabilityStatement, "sql-export"))
+        .isEqualTo("http://hl7.org/fhir/uv/sql-on-fhir/OperationDefinition/SQLExport");
+  }
+
+  /**
+   * The formats a run offers depend on the kind of subject, and both operations decline parameters
+   * the spec canonical declares. Stating that in the operation documentation lets a client reading
+   * the CapabilityStatement discover the constraints, rather than discovering them as a 400.
+   */
+  @Test
+  void sqlRunDocumentsItsPerKindFormatsAndUnsupportedParameters() {
+    final CapabilityStatement capabilityStatement =
+        conformanceProvider.getServerConformance(null, null);
+    final String documentation = systemOperationDocumentation(capabilityStatement, "sql-run");
+
+    assertThat(documentation)
+        .isNotNull()
+        .contains("ndjson")
+        .contains("csv")
+        .contains("json")
+        .contains("parquet")
+        .contains("fhir")
+        .contains("ViewDefinition")
+        .contains("source");
+  }
+
+  @Test
+  void sqlExportDocumentsItsFormatsAndUnsupportedParameters() {
+    final CapabilityStatement capabilityStatement =
+        conformanceProvider.getServerConformance(null, null);
+    final String documentation = systemOperationDocumentation(capabilityStatement, "sql-export");
+
+    assertThat(documentation)
+        .isNotNull()
+        .contains("ndjson")
+        .contains("csv")
+        .contains("parquet")
+        .contains("json")
+        .contains("fhir")
+        .contains("_limit")
+        .contains("respond-async");
+  }
+
+  // The two operations are gated independently, so disabling one leaves the other declared.
+  @Test
+  void sqlOperationsAreNotDeclaredWhenDisabled() {
+    final ConformanceProvider withoutExport =
+        createProviderWithDisabledOperations(ops -> ops.setSqlExportEnabled(false));
+    assertThat(systemOperationNames(withoutExport.getServerConformance(null, null)))
+        .contains("sql-run")
+        .doesNotContain("sql-export");
+
+    final ConformanceProvider withoutRun =
+        createProviderWithDisabledOperations(ops -> ops.setSqlRunEnabled(false));
+    assertThat(systemOperationNames(withoutRun.getServerConformance(null, null)))
+        .contains("sql-export")
+        .doesNotContain("sql-run");
+  }
+
+  /** Returns the names of the system-level operations declared by a CapabilityStatement. */
+  private static Set<String> systemOperationNames(final CapabilityStatement capabilityStatement) {
+    return capabilityStatement.getRest().getFirst().getOperation().stream()
+        .map(CapabilityStatementRestResourceOperationComponent::getName)
+        .collect(Collectors.toSet());
+  }
+
+  @Test
+  void authoredSqlOnFhirOperationDefinitionsNoLongerServed() {
+    for (final String name :
+        List.of("sql-run", "sql-export", "run", "viewdefinition-run", "sqlquery-run")) {
+      assertThatThrownBy(
+              () ->
+                  conformanceProvider.getOperationDefinitionById(
+                      new IdType("OperationDefinition/" + name + "-1")))
+          .as("OperationDefinition for %s should no longer be served", name)
+          .isInstanceOf(ResourceNotFoundError.class);
+    }
+  }
+
+  @Test
+  void otherOperationDefinitionsStillServed() {
+    // The Bulk Data export OperationDefinition continues to be served unchanged.
+    assertThat(
+            conformanceProvider.getOperationDefinitionById(
+                new IdType("OperationDefinition/export-1")))
+        .isNotNull();
   }
 
   @Test
@@ -386,8 +515,8 @@ class ConformanceProviderTest {
             "import"),
         Arguments.of(
             (java.util.function.Consumer<OperationConfiguration>)
-                ops -> ops.setViewDefinitionRunEnabled(false),
-            "viewdefinition-run"));
+                ops -> ops.setSqlRunEnabled(false),
+            "sql-run"));
   }
 
   @ParameterizedTest
@@ -423,11 +552,6 @@ class ConformanceProviderTest {
 
   static Stream<Arguments> disabledResourceOperations() {
     return Stream.of(
-        Arguments.of(
-            (java.util.function.Consumer<OperationConfiguration>)
-                ops -> ops.setViewDefinitionInstanceRunEnabled(false),
-            "ViewDefinition",
-            "run"),
         Arguments.of(
             (java.util.function.Consumer<OperationConfiguration>)
                 ops -> ops.setPatientExportEnabled(false),
@@ -574,6 +698,38 @@ class ConformanceProviderTest {
         .filter(r -> r.getType().equals(typeCode))
         .findFirst()
         .orElseThrow(() -> new AssertionError("Resource not found: " + typeCode));
+  }
+
+  /** Returns the declared {@code definition} canonical for a system-level operation, or null. */
+  private String systemOperationDefinition(
+      final CapabilityStatement capabilityStatement, final String operationName) {
+    return capabilityStatement.getRest().getFirst().getOperation().stream()
+        .filter(o -> operationName.equals(o.getName()))
+        .map(CapabilityStatementRestResourceOperationComponent::getDefinition)
+        .findFirst()
+        .orElse(null);
+  }
+
+  /** Returns the declared {@code documentation} for a system-level operation, or null. */
+  private String systemOperationDocumentation(
+      final CapabilityStatement capabilityStatement, final String operationName) {
+    return capabilityStatement.getRest().getFirst().getOperation().stream()
+        .filter(o -> operationName.equals(o.getName()))
+        .findFirst()
+        .map(CapabilityStatementRestResourceOperationComponent::getDocumentation)
+        .orElse(null);
+  }
+
+  /** Returns the declared {@code definition} canonical for a resource-level operation, or null. */
+  private String resourceOperationDefinition(
+      final CapabilityStatement capabilityStatement,
+      final String typeCode,
+      final String operationName) {
+    return findResource(capabilityStatement, typeCode).getOperation().stream()
+        .filter(o -> operationName.equals(o.getName()))
+        .map(CapabilityStatementRestResourceOperationComponent::getDefinition)
+        .findFirst()
+        .orElse(null);
   }
 
   /**

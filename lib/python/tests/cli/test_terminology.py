@@ -26,8 +26,9 @@ Author: John Grimes.
 
 import csv
 import io
+import json
 
-from pytest import fixture
+from pytest import fixture, raises
 
 from pathling.cli.main import cli
 
@@ -43,6 +44,31 @@ def _write_csv(path, header, rows):
         writer = csv.writer(handle)
         writer.writerow(header)
         writer.writerows(rows)
+    return path
+
+
+def _write_parquet(spark, path, header, rows):
+    """Writes a Parquet dataset directory with the given header and rows.
+
+    The dataset is written through the shared Spark session, so it takes the
+    same directory-of-part-files form as the CLI's own Parquet output. Both the
+    single-file and directory forms of Parquet are read back through
+    ``spark.read.parquet``, so this directory form exercises the directory case.
+    """
+    spark.createDataFrame([tuple(row) for row in rows], header).write.parquet(str(path))
+    return path
+
+
+def _write_delta(spark, path, header, rows):
+    """Writes a Delta table directory with the given header and rows.
+
+    The table is written through the shared Spark session, which is Delta
+    enabled, producing a directory containing a ``_delta_log`` entry alongside
+    the Parquet data files.
+    """
+    spark.createDataFrame([tuple(row) for row in rows], header).write.format(
+        "delta"
+    ).save(str(path))
     return path
 
 
@@ -108,6 +134,604 @@ def test_coding_column_matches_library_schema(pathling_ctx):
     )
 
     assert cli_fields == library_fields
+
+
+# ========== CSV read delimiter (US1) ==========
+
+
+def test_read_dataset_parses_tab_separated(pathling_ctx, delimited_csv):
+    """_read_dataset parses a tab-separated CSV into the correct columns (T010)."""
+    from pathling.cli.terminology import _read_dataset
+
+    path = delimited_csv(
+        [["368529001", SNOMED]],
+        header=["code", "system"],
+        delimiter="\t",
+        name="tab.csv",
+    )
+
+    df = _read_dataset(pathling_ctx, str(path), "csv", delimiter="\t")
+
+    # Without the delimiter the tabbed line would collapse into one column.
+    assert df.columns == ["code", "system"]
+    assert df.collect()[0]["code"] == "368529001"
+
+
+def test_read_dataset_parses_semicolon_separated(pathling_ctx, delimited_csv):
+    """_read_dataset parses a semicolon-separated CSV into columns (T010)."""
+    from pathling.cli.terminology import _read_dataset
+
+    path = delimited_csv(
+        [["368529001", SNOMED]],
+        header=["code", "system"],
+        delimiter=";",
+        name="semi.csv",
+    )
+
+    df = _read_dataset(pathling_ctx, str(path), "csv", delimiter=";")
+
+    assert df.columns == ["code", "system"]
+    assert df.collect()[0]["code"] == "368529001"
+
+
+def test_read_dataset_reads_tsv_extension(pathling_ctx, delimited_csv):
+    """_read_dataset reads a .tsv-named file as CSV with the supplied delimiter."""
+    from pathling.cli.terminology import _read_dataset
+
+    path = delimited_csv(
+        [["368529001", SNOMED]],
+        header=["code", "system"],
+        delimiter="\t",
+        name="codes.tsv",
+    )
+
+    df = _read_dataset(pathling_ctx, str(path), "csv", delimiter="\t")
+
+    assert df.columns == ["code", "system"]
+    assert df.collect()[0]["code"] == "368529001"
+
+
+def test_member_of_tsv_round_trip(runner, patched_context, delimited_csv, tmp_path):
+    """member-of round-trips a .tsv file to a .tsv output (quickstart P1)."""
+    dataset = delimited_csv(
+        [["368529001", SNOMED], ["439319006", SNOMED]],
+        header=["code", "system"],
+        delimiter="\t",
+        name="codes.tsv",
+    )
+    out = tmp_path / "out.tsv"
+
+    # No explicit --format: the output format is inferred from the .tsv extension.
+    result = runner.invoke(
+        cli,
+        [
+            "member-of",
+            str(dataset),
+            "--code-column",
+            "code",
+            "--system",
+            SNOMED,
+            "--value-set",
+            VALUE_SET,
+            "--delimiter",
+            "\\t",
+            "-o",
+            str(out),
+        ],
+    )
+
+    assert result.exit_code == 0, result.stderr
+    rows = list(csv.reader(io.StringIO(out.read_text()), delimiter="\t"))
+    assert rows[0] == ["code", "system", "member_of"]
+
+
+def test_member_of_tab_separated_round_trip(
+    runner, patched_context, delimited_csv, tmp_path
+):
+    """member-of round-trips a tab-separated dataset to stdout and a file (T011)."""
+    dataset = delimited_csv(
+        [["368529001", SNOMED], ["439319006", SNOMED]],
+        header=["code", "system"],
+        delimiter="\t",
+        name="codes_tab.csv",
+    )
+    base = [
+        "member-of",
+        str(dataset),
+        "--code-column",
+        "code",
+        "--system",
+        SNOMED,
+        "--value-set",
+        VALUE_SET,
+        "--delimiter",
+        "\\t",
+    ]
+
+    # Stdout: the input parses correctly and the output is tab-separated.
+    result = runner.invoke(cli, base + ["--format", "csv"])
+    assert result.exit_code == 0, result.stderr
+    rows = list(csv.reader(io.StringIO(result.stdout), delimiter="\t"))
+    assert rows[0] == ["code", "system", "member_of"]
+    assert rows[1][2] == "True"
+
+    # File: the written file is tab-separated with the same columns.
+    out = tmp_path / "out.csv"
+    file_result = runner.invoke(cli, base + ["-o", str(out)])
+    assert file_result.exit_code == 0, file_result.stderr
+    file_rows = list(csv.reader(io.StringIO(out.read_text()), delimiter="\t"))
+    assert file_rows[0] == ["code", "system", "member_of"]
+
+
+# ========== Extension-derived delimiter inference (T006) ==========
+
+
+def _member_of_args(dataset):
+    """Builds the common member-of argument list for a dataset path.
+
+    :param dataset: the dataset path to read.
+    :return: the argument list, ready for further options to be appended.
+    """
+    return [
+        "member-of",
+        str(dataset),
+        "--code-column",
+        "code",
+        "--system",
+        SNOMED,
+        "--value-set",
+        VALUE_SET,
+    ]
+
+
+def test_tsv_input_parses_without_a_delimiter_flag(
+    runner, patched_context, delimited_csv
+):
+    """A .tsv input parses into its columns with no --delimiter (FR-002)."""
+    dataset = delimited_csv(
+        [["368529001", SNOMED]],
+        header=["code", "system"],
+        delimiter="\t",
+        name="codes.tsv",
+    )
+
+    result = runner.invoke(cli, _member_of_args(dataset) + ["--format", "csv"])
+
+    # Without the inference the whole tabbed line would collapse into one
+    # column and the --code-column lookup would fail.
+    assert result.exit_code == 0, result.stderr
+    assert _stdout_rows(result)[0] == ["code", "system", "member_of"]
+
+
+def test_tsv_input_prints_the_input_side_notice(
+    runner, patched_context, delimited_csv, wide_stderr
+):
+    """The inferred tab on the input side is announced on stderr (FR-007)."""
+    dataset = delimited_csv(
+        [["368529001", SNOMED]],
+        header=["code", "system"],
+        delimiter="\t",
+        name="codes.tsv",
+    )
+
+    result = runner.invoke(cli, _member_of_args(dataset) + ["--format", "csv"])
+
+    assert result.exit_code == 0, result.stderr
+    assert (
+        f"Reading {dataset} as tab-separated CSV, inferred from the .tsv extension."
+        in result.stderr
+    )
+
+
+def test_csv_input_reads_with_a_comma_and_no_notice(runner, patched_context, codes_csv):
+    """A .csv input keeps the comma default and prints no notice (FR-008)."""
+    result = runner.invoke(cli, _member_of_args(codes_csv) + ["--format", "csv"])
+
+    assert result.exit_code == 0, result.stderr
+    assert _stdout_rows(result)[0] == ["code", "system", "member_of"]
+    assert "tab-separated" not in result.stderr
+
+
+def test_explicit_delimiter_overrides_the_extension_on_both_sides(
+    runner, patched_context, delimited_csv, tmp_path
+):
+    """An explicit --delimiter wins over both path extensions (FR-003)."""
+    # A semicolon-separated file deliberately named .tsv: the explicit flag must
+    # win, otherwise the read would fail to find the code column.
+    dataset = delimited_csv(
+        [["368529001", SNOMED]],
+        header=["code", "system"],
+        delimiter=";",
+        name="codes.tsv",
+    )
+    out = tmp_path / "out.tsv"
+
+    result = runner.invoke(
+        cli, _member_of_args(dataset) + ["--delimiter", ";", "-o", str(out)]
+    )
+
+    assert result.exit_code == 0, result.stderr
+    # Both sides used the semicolon; no inference occurred on either.
+    rows = list(csv.reader(io.StringIO(out.read_text()), delimiter=";"))
+    assert rows[0] == ["code", "system", "member_of"]
+    assert "tab-separated" not in result.stderr
+
+
+def test_explicit_comma_on_a_tsv_path_yields_a_comma(
+    runner, patched_context, codes_csv, tmp_path
+):
+    """An explicit comma on a .tsv output path is honoured with no notice."""
+    out = tmp_path / "out.tsv"
+
+    result = runner.invoke(
+        cli, _member_of_args(codes_csv) + ["--delimiter", ",", "-o", str(out)]
+    )
+
+    assert result.exit_code == 0, result.stderr
+    rows = list(csv.reader(io.StringIO(out.read_text())))
+    assert rows[0] == ["code", "system", "member_of"]
+    assert "tab-separated" not in result.stderr
+
+
+def test_tsv_path_with_from_parquet_involves_no_delimiter(
+    runner, patched_context, tmp_path, pathling_ctx
+):
+    """A .tsv path read as Parquet uses no delimiter and prints no notice (FR-005)."""
+    # A Parquet dataset directory deliberately named .tsv, read with an explicit
+    # --from, so the resolved format is not CSV.
+    dataset = _write_parquet(
+        pathling_ctx.spark,
+        tmp_path / "data.tsv",
+        "code string, system string",
+        [["368529001", SNOMED]],
+    )
+
+    result = runner.invoke(
+        cli, _member_of_args(dataset) + ["--from", "parquet", "--format", "csv"]
+    )
+
+    assert result.exit_code == 0, result.stderr
+    assert _stdout_rows(result)[0] == ["code", "system", "member_of"]
+    assert "tab-separated" not in result.stderr
+
+
+def test_tsv_path_with_from_csv_still_infers_a_tab(
+    runner, patched_context, delimited_csv
+):
+    """Inference is independent of --from, so an explicit csv still infers a tab.
+
+    The extension governs the delimiter; ``--from`` governs only the format
+    (FR-006).
+    """
+    dataset = delimited_csv(
+        [["368529001", SNOMED]],
+        header=["code", "system"],
+        delimiter="\t",
+        name="codes.tsv",
+    )
+
+    result = runner.invoke(
+        cli, _member_of_args(dataset) + ["--from", "csv", "--format", "csv"]
+    )
+
+    assert result.exit_code == 0, result.stderr
+    assert _stdout_rows(result)[0] == ["code", "system", "member_of"]
+    assert "tab-separated" in result.stderr
+
+
+def test_zero_flag_tsv_round_trip(
+    runner, patched_context, delimited_csv, tmp_path, wide_stderr
+):
+    """A .tsv in and .tsv out round trip needs no delimiter flag (SC-001).
+
+    This is quickstart Scenario 1: both sides infer a tab from their own path,
+    and both announce it.
+    """
+    dataset = delimited_csv(
+        [["368529001", SNOMED], ["439319006", SNOMED]],
+        header=["code", "system"],
+        delimiter="\t",
+        name="codes.tsv",
+    )
+    out = tmp_path / "out.tsv"
+
+    result = runner.invoke(cli, _member_of_args(dataset) + ["-o", str(out)])
+
+    assert result.exit_code == 0, result.stderr
+    rows = list(csv.reader(io.StringIO(out.read_text()), delimiter="\t"))
+    assert rows[0] == ["code", "system", "member_of"]
+    assert len(rows[0]) == 3
+    # Both sides announced their inference.
+    assert f"Reading {dataset} as tab-separated CSV" in result.stderr
+    assert f"Writing {out} as tab-separated CSV" in result.stderr
+
+
+def test_tsv_in_csv_out_resolves_each_side_independently(
+    runner, patched_context, delimited_csv, tmp_path, wide_stderr
+):
+    """A .tsv input and .csv output resolve separately (quickstart Scenario 2)."""
+    dataset = delimited_csv(
+        [["368529001", SNOMED]],
+        header=["code", "system"],
+        delimiter="\t",
+        name="codes.tsv",
+    )
+    out = tmp_path / "out.csv"
+
+    result = runner.invoke(cli, _member_of_args(dataset) + ["-o", str(out)])
+
+    assert result.exit_code == 0, result.stderr
+    # The input was read as tab-separated and the output written comma-separated.
+    rows = list(csv.reader(io.StringIO(out.read_text())))
+    assert rows[0] == ["code", "system", "member_of"]
+    # Only the input side announced an inference.
+    assert f"Reading {dataset} as tab-separated CSV" in result.stderr
+    assert "Writing" not in result.stderr
+
+
+def test_stdout_stays_comma_separated_for_a_tsv_input(
+    runner, patched_context, delimited_csv
+):
+    """With no -o there is no path to infer from, so stdout is comma-separated."""
+    dataset = delimited_csv(
+        [["368529001", SNOMED]],
+        header=["code", "system"],
+        delimiter="\t",
+        name="codes.tsv",
+    )
+
+    result = runner.invoke(cli, _member_of_args(dataset) + ["--format", "csv"])
+
+    assert result.exit_code == 0, result.stderr
+    assert result.stdout.splitlines()[0] == "code,system,member_of"
+
+
+def test_invalid_output_path_fails_without_announcing_a_read(
+    runner, patched_context, delimited_csv, tmp_path
+):
+    """An unusable output path fails before the input-side notice is printed.
+
+    Announcing a read that the command then never performs would be misleading,
+    so the notice comes after the output options are resolved - while still
+    staying ahead of the Spark cold start.
+    """
+    dataset = delimited_csv(
+        [["368529001", SNOMED]],
+        header=["code", "system"],
+        delimiter="\t",
+        name="codes.tsv",
+    )
+
+    result = runner.invoke(
+        cli, _member_of_args(dataset) + ["-o", str(tmp_path / "out.json")]
+    )
+
+    assert result.exit_code == 2
+    assert "ndjson" in result.stderr.lower()
+    assert "tab-separated" not in result.stderr
+
+
+def test_from_offers_no_tsv_value(runner, patched_context, delimited_csv):
+    """--from gains no tsv value; the extension governs the delimiter only."""
+    dataset = delimited_csv(
+        [["368529001", SNOMED]], header=["code", "system"], name="codes.tsv"
+    )
+
+    result = runner.invoke(cli, _member_of_args(dataset) + ["--from", "tsv"])
+
+    assert result.exit_code == 2
+    assert "is not one of" in result.stderr
+
+
+# ========== Headerless CSV input (US3) ==========
+
+
+def test_read_dataset_headerless_uses_positional_columns(pathling_ctx, delimited_csv):
+    """_read_dataset treats the first line as data when input-header is off (T019)."""
+    from pathling.cli.terminology import _read_dataset
+
+    path = delimited_csv([["368529001", SNOMED]], header=None, name="headerless.csv")
+
+    df = _read_dataset(pathling_ctx, str(path), "csv", input_header=False)
+
+    # Spark assigns positional column names when there is no header row.
+    assert df.columns == ["_c0", "_c1"]
+    assert df.collect()[0]["_c0"] == "368529001"
+
+
+def test_member_of_headerless_input(runner, patched_context, delimited_csv):
+    """member-of runs against a headerless dataset via --no-input-header (T020)."""
+    dataset = delimited_csv(
+        [["368529001", SNOMED], ["439319006", SNOMED]],
+        header=None,
+        name="headerless.csv",
+    )
+
+    result = runner.invoke(
+        cli,
+        [
+            "member-of",
+            str(dataset),
+            "--no-input-header",
+            "--code-column",
+            "_c0",
+            "--system",
+            SNOMED,
+            "--value-set",
+            VALUE_SET,
+            "--format",
+            "csv",
+        ],
+    )
+
+    assert result.exit_code == 0, result.stderr
+    rows = _stdout_rows(result)
+    # The positional column names carry through to the output header.
+    assert rows[0] == ["_c0", "_c1", "member_of"]
+    assert rows[1][2] == "True"
+
+
+# ========== Non-CSV no-op (T023) ==========
+
+
+def test_output_options_ignored_for_ndjson(runner, patched_context, delimited_csv):
+    """--delimiter/--header are accepted but do not affect NDJSON output (T023).
+
+    The delimiter still applies to the CSV *input* read (here a semicolon file),
+    but the NDJSON output path never consults the delimiter or header, so the
+    result is unaffected JSON objects.
+    """
+    dataset = delimited_csv(
+        [["368529001", SNOMED]],
+        header=["code", "system"],
+        delimiter=";",
+        name="semi.csv",
+    )
+
+    result = runner.invoke(
+        cli,
+        [
+            "member-of",
+            str(dataset),
+            "--code-column",
+            "code",
+            "--system",
+            SNOMED,
+            "--value-set",
+            VALUE_SET,
+            "--format",
+            "ndjson",
+            "--delimiter",
+            ";",
+            "--no-header",
+        ],
+    )
+
+    assert result.exit_code == 0, result.stderr
+    line = result.stdout.splitlines()[0]
+    record = json.loads(line)
+    # The record keeps its keys and values; the header/delimiter had no effect.
+    assert record["code"] == "368529001"
+    assert "member_of" in record
+
+
+def test_output_options_ignored_for_table(runner, patched_context, codes_csv):
+    """--no-header does not suppress the table's header (T023)."""
+    result = runner.invoke(
+        cli,
+        [
+            "member-of",
+            str(codes_csv),
+            "--code-column",
+            "code",
+            "--system",
+            SNOMED,
+            "--value-set",
+            VALUE_SET,
+            "--no-header",
+        ],
+    )
+
+    assert result.exit_code == 0, result.stderr
+    # The table always carries its column names, regardless of --no-header.
+    assert "member_of" in result.stdout
+
+
+# ========== _detect_tabular_format ==========
+
+
+def test_detect_csv_file(tmp_path):
+    """A file ending in .csv is detected as CSV."""
+    from pathling.cli.terminology import _detect_tabular_format
+
+    path = _write_csv(tmp_path / "codes.csv", ["code"], [["a"]])
+    assert _detect_tabular_format(path) == "csv"
+
+
+def test_detect_csv_file_uppercase_suffix(tmp_path):
+    """Suffix matching is case-insensitive, so .CSV is detected as CSV."""
+    from pathling.cli.terminology import _detect_tabular_format
+
+    path = _write_csv(tmp_path / "codes.CSV", ["code"], [["a"]])
+    assert _detect_tabular_format(path) == "csv"
+
+
+def test_detect_tsv_file(tmp_path):
+    """A file ending in .tsv is detected as CSV, read with a tab delimiter."""
+    from pathling.cli.terminology import _detect_tabular_format
+
+    path = _write_csv(tmp_path / "codes.tsv", ["code"], [["a"]])
+    assert _detect_tabular_format(path) == "csv"
+
+
+def test_detect_parquet_file(tmp_path):
+    """A file ending in .parquet is detected as Parquet."""
+    from pathling.cli.terminology import _detect_tabular_format
+
+    path = tmp_path / "codes.parquet"
+    path.write_bytes(b"PAR1")
+    assert _detect_tabular_format(path) == "parquet"
+
+
+def test_detect_delta_directory(tmp_path):
+    """A directory containing a _delta_log entry is detected as Delta."""
+    from pathling.cli.terminology import _detect_tabular_format
+
+    directory = tmp_path / "table"
+    (directory / "_delta_log").mkdir(parents=True)
+    (directory / "part-0.parquet").write_bytes(b"PAR1")
+    assert _detect_tabular_format(directory) == "delta"
+
+
+def test_detect_parquet_directory(tmp_path):
+    """A directory with Parquet contents but no _delta_log is detected as Parquet."""
+    from pathling.cli.terminology import _detect_tabular_format
+
+    directory = tmp_path / "data"
+    directory.mkdir()
+    (directory / "part-00000.snappy.parquet").write_bytes(b"PAR1")
+    (directory / "_SUCCESS").write_bytes(b"")
+    assert _detect_tabular_format(directory) == "parquet"
+
+
+def test_detect_delta_wins_over_parquet(tmp_path):
+    """A directory with both _delta_log and .parquet files is detected as Delta."""
+    from pathling.cli.terminology import _detect_tabular_format
+
+    directory = tmp_path / "table"
+    (directory / "_delta_log").mkdir(parents=True)
+    (directory / "stray.parquet").write_bytes(b"PAR1")
+    assert _detect_tabular_format(directory) == "delta"
+
+
+def test_detect_unrecognised_file_suffix_raises(tmp_path):
+    """An unrecognised file suffix is a usage error suggesting --from."""
+    from pathling.cli.errors import EXIT_USAGE, CliError
+    from pathling.cli.terminology import _detect_tabular_format
+
+    path = tmp_path / "codes.txt"
+    path.write_text("code\na\n")
+    with raises(CliError) as info:
+        _detect_tabular_format(path)
+    assert info.value.exit_code == EXIT_USAGE
+    assert "--from csv|parquet|delta" in str(info.value)
+
+
+def test_detect_unrecognisable_directory_raises(tmp_path):
+    """An unrecognisable directory is a usage error naming the path and contents."""
+    from pathling.cli.errors import EXIT_USAGE, CliError
+    from pathling.cli.terminology import _detect_tabular_format
+
+    directory = tmp_path / "mystery"
+    directory.mkdir()
+    (directory / "notes.txt").write_text("hello")
+    with raises(CliError) as info:
+        _detect_tabular_format(directory)
+    message = str(info.value)
+    assert info.value.exit_code == EXIT_USAGE
+    # The message names the offending path and suggests the flag.
+    assert str(directory) in message
+    assert "--from csv|parquet|delta" in message
 
 
 # ========== member-of ==========
@@ -798,6 +1422,327 @@ def test_bracketed_runtime_error_renders_safely(
     assert "MarkupError" not in result.stderr
     assert "Traceback" not in result.stderr
     assert "[ANALYSIS_ERROR]" in result.stderr
+
+
+def test_local_mode_skips_server_enrichment(
+    runner, patched_context, codes_csv, monkeypatch
+):
+    """In local mode a failure names the store path, not a terminology server.
+
+    The connection-failure enrichment that names the remote server URL must be
+    skipped when a store is configured (FR-011); the message instead names the
+    store and suggests the import commands.
+    """
+
+    def _boom(*args, **kwargs):
+        raise RuntimeError(_BRACKETED_CONNECTION_ERROR)
+
+    monkeypatch.setattr("pathling.udfs.member_of", _boom)
+
+    result = runner.invoke(
+        cli,
+        [
+            "--tx-store",
+            "/data/tx-store",
+            "member-of",
+            str(codes_csv),
+            "--code-column",
+            "code",
+            "--system",
+            SNOMED,
+            "--value-set",
+            VALUE_SET,
+        ],
+    )
+
+    assert result.exit_code == 1
+    # The store is named and the import commands suggested.
+    assert "/data/tx-store" in result.stderr
+    assert "import-snomed" in result.stderr
+    # No terminology server URL is named, and the default is never mentioned.
+    assert "terminology server" not in result.stderr.lower()
+    assert "ontoserver" not in result.stderr
+
+
+# ========== --from input format: explicit (US1) ==========
+
+
+def test_from_delta_reads_delta_table(runner, patched_context, tmp_path):
+    """display --from delta reads a Delta table directory (acceptance 1)."""
+    table = _write_delta(
+        patched_context.spark, tmp_path / "codes", ["code"], [["55915-3"]]
+    )
+
+    result = runner.invoke(
+        cli,
+        [
+            "display",
+            str(table),
+            "--from",
+            "delta",
+            "--code-column",
+            "code",
+            "--system",
+            LOINC,
+            "--format",
+            "csv",
+        ],
+    )
+
+    assert result.exit_code == 0, result.stderr
+    assert "Beta 2 globulin" in result.stdout
+
+
+def test_from_parquet_reads_parquet_directory(runner, patched_context, tmp_path):
+    """member-of --from parquet reads a Parquet directory (acceptance 2)."""
+    data = _write_parquet(
+        patched_context.spark,
+        tmp_path / "codes",
+        ["code", "system"],
+        [["368529001", SNOMED]],
+    )
+
+    result = runner.invoke(
+        cli,
+        [
+            "member-of",
+            str(data),
+            "--from",
+            "parquet",
+            "--code-column",
+            "code",
+            "--system",
+            SNOMED,
+            "--value-set",
+            VALUE_SET,
+            "--format",
+            "csv",
+        ],
+    )
+
+    assert result.exit_code == 0, result.stderr
+    assert _stdout_rows(result)[1][2] == "True"
+
+
+def test_from_csv_reads_arbitrary_extension(runner, patched_context, tmp_path):
+    """translate --from csv reads a CSV file with an arbitrary extension
+    (acceptance 3)."""
+    dataset = _write_csv(tmp_path / "codes.txt", ["code"], [["368529001"]])
+
+    result = runner.invoke(
+        cli,
+        [
+            "translate",
+            str(dataset),
+            "--from",
+            "csv",
+            "--code-column",
+            "code",
+            "--system",
+            SNOMED,
+            "--concept-map",
+            CONCEPT_MAP,
+            "--format",
+            "csv",
+        ],
+    )
+
+    assert result.exit_code == 0, result.stderr
+    assert any("368529002" in row for row in _stdout_rows(result)[1:])
+
+
+def test_from_invalid_choice_is_usage_error(runner, monkeypatch, codes_csv):
+    """--from with an out-of-range value fails before Spark, listing the choices
+    (acceptance 4)."""
+
+    def spy(config, console=None):
+        raise AssertionError("context must not be created on a usage error")
+
+    monkeypatch.setattr("pathling.cli.session.create_context", spy)
+
+    result = runner.invoke(
+        cli,
+        [
+            "member-of",
+            str(codes_csv),
+            "--from",
+            "bogus",
+            "--code-column",
+            "code",
+            "--system",
+            SNOMED,
+            "--value-set",
+            VALUE_SET,
+        ],
+    )
+
+    assert result.exit_code == 2
+    # The Click choice error lists the three valid formats.
+    assert "csv" in result.stderr
+    assert "parquet" in result.stderr
+    assert "delta" in result.stderr
+
+
+def test_from_csv_missing_path_is_usage_error(runner, monkeypatch, tmp_path):
+    """--from with a missing path fails before Spark with the existing error
+    (acceptance 5)."""
+
+    def spy(config, console=None):
+        raise AssertionError("context must not be created on a usage error")
+
+    monkeypatch.setattr("pathling.cli.session.create_context", spy)
+
+    result = runner.invoke(
+        cli,
+        [
+            "member-of",
+            str(tmp_path / "nope.csv"),
+            "--from",
+            "csv",
+            "--code-column",
+            "code",
+            "--system",
+            SNOMED,
+            "--value-set",
+            VALUE_SET,
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert "does not exist" in result.stderr.lower()
+
+
+# ========== --from input format: auto-detection (US2) ==========
+
+
+def test_autodetect_delta_directory(runner, patched_context, tmp_path):
+    """A Delta directory is auto-detected without --from (acceptance 3)."""
+    table = _write_delta(
+        patched_context.spark, tmp_path / "codes", ["code"], [["55915-3"]]
+    )
+
+    result = runner.invoke(
+        cli,
+        [
+            "display",
+            str(table),
+            "--code-column",
+            "code",
+            "--system",
+            LOINC,
+            "--format",
+            "csv",
+        ],
+    )
+
+    assert result.exit_code == 0, result.stderr
+    assert "Beta 2 globulin" in result.stdout
+
+
+def test_autodetect_parquet_directory(runner, patched_context, tmp_path):
+    """A Parquet directory is auto-detected without --from (acceptance 4)."""
+    data = _write_parquet(
+        patched_context.spark,
+        tmp_path / "codes",
+        ["code", "system"],
+        [["368529001", SNOMED]],
+    )
+
+    result = runner.invoke(
+        cli,
+        [
+            "member-of",
+            str(data),
+            "--code-column",
+            "code",
+            "--system",
+            SNOMED,
+            "--value-set",
+            VALUE_SET,
+            "--format",
+            "csv",
+        ],
+    )
+
+    assert result.exit_code == 0, result.stderr
+    assert _stdout_rows(result)[1][2] == "True"
+
+
+def test_roundtrip_own_parquet_output(runner, patched_context, codes_csv, tmp_path):
+    """The CLI's own Parquet output reads back into a second command without
+    --from (SC-002)."""
+    out = tmp_path / "out.parquet"
+    first = runner.invoke(
+        cli,
+        [
+            "display",
+            str(codes_csv),
+            "--code-column",
+            "code",
+            "--system",
+            SNOMED,
+            "-o",
+            str(out),
+        ],
+    )
+    assert first.exit_code == 0, first.stderr
+    assert out.exists()
+
+    # The second command reads the first command's Parquet output directory,
+    # auto-detected as Parquet with no --from flag.
+    second = runner.invoke(
+        cli,
+        [
+            "member-of",
+            str(out),
+            "--code-column",
+            "code",
+            "--system",
+            SNOMED,
+            "--value-set",
+            VALUE_SET,
+            "--format",
+            "csv",
+        ],
+    )
+
+    assert second.exit_code == 0, second.stderr
+    assert "member_of" in _stdout_rows(second)[0]
+
+
+def test_autodetect_undeterminable_directory_is_usage_error(
+    runner, monkeypatch, tmp_path
+):
+    """An unrecognisable directory fails before Spark with an actionable error
+    (acceptance 5)."""
+
+    def spy(config, console=None):
+        raise AssertionError("context must not be created on a usage error")
+
+    monkeypatch.setattr("pathling.cli.session.create_context", spy)
+    directory = tmp_path / "mystery"
+    directory.mkdir()
+    (directory / "notes.txt").write_text("nothing tabular here")
+
+    result = runner.invoke(
+        cli,
+        [
+            "display",
+            str(directory),
+            "--code-column",
+            "code",
+            "--system",
+            SNOMED,
+        ],
+    )
+
+    assert result.exit_code == 2
+    # The message names the offending path and suggests the flag. Newlines are
+    # stripped first because the console wraps the long message across lines,
+    # which would otherwise split the path and the flag text mid-token.
+    flattened = result.stderr.replace("\n", "")
+    assert str(directory) in flattened
+    assert "--from csv|parquet|delta" in flattened
 
 
 # ========== Config precedence wiring ==========

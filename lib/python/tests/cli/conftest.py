@@ -26,10 +26,52 @@ shared mock-backed context instead of starting a fresh Spark session.
 Author: John Grimes.
 """
 
+import csv
 import inspect
 
 from click.testing import CliRunner
 from pytest import fixture
+
+
+def _write_delimited_csv(path, header, rows, delimiter):
+    """Writes a delimited CSV file, optionally omitting the header line.
+
+    This mirrors the ``_write_csv`` helper in ``test_terminology.py`` but
+    parameterises the field separator and whether a header row is written, so
+    tests can build the tab-separated, semicolon-separated, and headerless
+    inputs the delimiter and input-header options need.
+
+    :param path: the file path to write.
+    :param header: the header row, or None to write no header line.
+    :param rows: the data rows.
+    :param delimiter: the field separator to use.
+    :return: the path that was written.
+    """
+    with open(path, "w", newline="") as handle:
+        writer = csv.writer(handle, delimiter=delimiter)
+        if header is not None:
+            writer.writerow(header)
+        writer.writerows(rows)
+    return path
+
+
+@fixture
+def delimited_csv(tmp_path):
+    """Provides a factory that writes a delimited (and optionally headerless) CSV.
+
+    The returned factory writes a CSV file under the test's temporary directory
+    with a caller-supplied field separator, and can omit the header line so the
+    headerless-input path can be exercised.
+
+    :param tmp_path: the pytest temporary directory fixture.
+    :return: a callable ``(rows, *, header=None, delimiter=',', name='data.csv')``
+             that writes the file and returns its path.
+    """
+
+    def _factory(rows, *, header=None, delimiter=",", name="data.csv"):
+        return _write_delimited_csv(tmp_path / name, header, rows, delimiter)
+
+    return _factory
 
 
 def make_cli_runner(runner_cls=CliRunner):
@@ -57,6 +99,20 @@ def runner():
     :return: a configured :class:`CliRunner`.
     """
     return make_cli_runner()
+
+
+@fixture
+def wide_stderr(monkeypatch):
+    """Widens the CLI's stderr console so status messages are not wrapped.
+
+    Rich sizes a console from the ``COLUMNS`` environment variable, and hard-folds
+    a long unbroken run of characters - such as a temporary directory path - onto
+    the next line. Widening the console keeps each message on one line so tests
+    can assert on its content rather than on Rich's display-width wrapping.
+
+    :param monkeypatch: the pytest monkeypatch fixture.
+    """
+    monkeypatch.setenv("COLUMNS", "10000")
 
 
 @fixture

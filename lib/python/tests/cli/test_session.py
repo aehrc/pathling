@@ -29,9 +29,15 @@ import os
 import tempfile
 from pathlib import Path
 
+import pathling
 import pathling.context as context_module
-from pathling.cli.config import CliConfig
-from pathling.cli.session import _build_quiet_spark, quiet_log4j2_path
+from pathling.cli.config import CliConfig, TxAuth, TxStore
+from pathling.cli.session import (
+    _build_quiet_spark,
+    _create_pathling_context,
+    public_namespace,
+    quiet_log4j2_path,
+)
 
 # The temp-file prefix the pre-fix implementation used; no file with this prefix
 # may be created any more (FR-017).
@@ -153,3 +159,209 @@ def test_build_quiet_spark_user_can_disable_arrow(monkeypatch):
     _build_quiet_spark(config)
 
     assert captured["spark.sql.execution.arrow.pyspark.enabled"] == "false"
+
+
+# ========== Local-mode session parameter threading (US1, T004) ==========
+
+
+class _FakeSparkContext:
+    """A stand-in Spark context that records the requested log level."""
+
+    def setLogLevel(self, level):  # noqa: N802 - mirrors the Spark method name.
+        self.level = level
+
+
+class _FakeSpark:
+    """A stand-in Spark session exposing a sparkContext."""
+
+    def __init__(self):
+        self.sparkContext = _FakeSparkContext()
+
+
+def _capture_create(monkeypatch) -> dict:
+    """Replaces the session builder and PathlingContext.create with capturers.
+
+    :param monkeypatch: the pytest monkeypatch fixture.
+    :return: a dict populated with the keyword arguments passed to
+             ``PathlingContext.create``.
+    """
+    import pathling
+
+    monkeypatch.setattr(
+        "pathling.cli.session._build_quiet_spark", lambda config: _FakeSpark()
+    )
+    captured = {}
+
+    def fake_create(spark, **kwargs):
+        captured.update(kwargs)
+        captured["_spark"] = spark
+        return "context"
+
+    monkeypatch.setattr(pathling.PathlingContext, "create", staticmethod(fake_create))
+    return captured
+
+
+def test_local_mode_threads_store_parameters(monkeypatch):
+    """A configured store threads local-mode parameters into the context.
+
+    The store path, edition, and cache size reach ``PathlingContext.create`` in
+    local terminology mode, and no authentication parameters are enabled.
+    """
+    captured = _capture_create(monkeypatch)
+    config = CliConfig(
+        verbose=True,
+        tx_store=TxStore(
+            path="/data/tx-store",
+            default_snomed_edition="32506021000036107",
+            expansion_cache_size=200,
+        ),
+    )
+
+    _create_pathling_context(config)
+
+    assert captured["terminology_mode"] == "local"
+    assert captured["terminology_storage_path"] == "/data/tx-store"
+    assert captured["default_snomed_edition"] == "32506021000036107"
+    assert captured["expansion_cache_size"] == 200
+    # Authentication is not enabled in local mode.
+    assert captured["enable_auth"] is False
+
+
+def test_local_mode_threads_dialect_aliases(monkeypatch):
+    """A configured dialect alias table reaches ``PathlingContext.create``."""
+    captured = _capture_create(monkeypatch)
+    config = CliConfig(
+        verbose=True,
+        tx_store=TxStore(
+            path="/data/tx-store",
+            dialect_aliases={"en-NZ": "271000210107"},
+        ),
+    )
+
+    _create_pathling_context(config)
+
+    assert captured["dialect_aliases"] == {"en-NZ": "271000210107"}
+
+
+def test_local_mode_omits_cache_size_when_unset(monkeypatch):
+    """An unset expansion-cache-size is not passed, leaving the library default."""
+    captured = _capture_create(monkeypatch)
+    config = CliConfig(verbose=True, tx_store=TxStore(path="/data/tx-store"))
+
+    _create_pathling_context(config)
+
+    assert captured["terminology_mode"] == "local"
+    # The library default (100) must apply, so the key is not forwarded at all.
+    assert "expansion_cache_size" not in captured
+    assert "default_snomed_edition" not in captured
+    assert "dialect_aliases" not in captured
+
+
+def test_local_mode_ignores_configured_auth(monkeypatch):
+    """A store wins over configured auth: no auth reaches the local session."""
+    captured = _capture_create(monkeypatch)
+    config = CliConfig(
+        verbose=True,
+        tx_store=TxStore(path="/data/tx-store"),
+        tx_auth=TxAuth(
+            client_id="c", token_endpoint="https://auth/token", client_secret="s"
+        ),
+    )
+
+    _create_pathling_context(config)
+
+    assert captured["enable_auth"] is False
+    assert "terminology_server_url" not in captured
+
+
+def test_remote_mode_passes_existing_parameters_unchanged(monkeypatch):
+    """With no store, the existing remote parameters are passed unchanged."""
+    captured = _capture_create(monkeypatch)
+    config = CliConfig(
+        verbose=True,
+        tx_server="https://tx.example/fhir",
+        tx_auth=TxAuth(
+            client_id="c", token_endpoint="https://auth/token", client_secret="s"
+        ),
+    )
+
+    _create_pathling_context(config)
+
+    assert captured["terminology_server_url"] == "https://tx.example/fhir"
+    assert captured["enable_auth"] is True
+    assert captured["client_id"] == "c"
+    # Local-mode parameters are absent in remote mode.
+    assert "terminology_mode" not in captured or captured["terminology_mode"] != "local"
+
+
+# ========== Public namespace helper ==========
+
+
+def test_public_namespace_keys_equal_all_plus_the_module():
+    """The keys are the public API list plus the package module itself (FR-014)."""
+    namespace = public_namespace()
+
+    assert set(namespace) == set(pathling.__all__) | {"pathling"}
+
+
+def test_public_namespace_binds_the_pathling_module():
+    """``pathling`` is bound to the module, so a bare import cannot clobber it.
+
+    Binding the module makes ``import pathling`` in a script or at the console a
+    genuine no-op: it rebinds the name to the object it already holds (FR-014).
+    """
+    namespace = public_namespace()
+
+    assert namespace["pathling"] is pathling
+
+
+def test_public_namespace_values_are_the_resolved_objects():
+    """Each key maps to the object resolved from the package (INV-5)."""
+    namespace = public_namespace()
+
+    # A representative function, argument type, and API type all resolve to the
+    # same objects the package exports.
+    assert namespace["member_of"] is pathling.member_of
+    assert namespace["Coding"] is pathling.Coding
+    assert namespace["PathlingContext"] is pathling.PathlingContext
+
+
+def test_public_namespace_covers_every_public_name():
+    """Every name in __all__ resolves to its package attribute (INV-5)."""
+    namespace = public_namespace()
+
+    for name in pathling.__all__:
+        assert namespace[name] is getattr(pathling, name)
+
+
+# ========== Namespace sync invariant (INV-5) ==========
+
+
+def test_run_namespace_is_superset_of_public_api():
+    """The run namespace is derived from __all__ plus the run-only extras (INV-1)."""
+    expected = set(pathling.__all__) | {"spark", "pc", "pathling", "tx_display"}
+
+    namespace = dict(public_namespace())
+    namespace["tx_display"] = namespace["display"]
+    namespace["spark"] = object()
+    namespace["pc"] = object()
+
+    assert set(namespace) >= expected
+
+
+def test_console_namespace_equals_public_api_minus_display():
+    """The console namespace is __all__ minus display plus the console extras
+    (INV-2)."""
+    expected = (set(pathling.__all__) - {"display"}) | {
+        "spark",
+        "pc",
+        "pathling",
+        "tx_display",
+    }
+
+    namespace = dict(public_namespace())
+    namespace["tx_display"] = namespace.pop("display")
+    namespace["spark"] = object()
+    namespace["pc"] = object()
+
+    assert set(namespace) == expected

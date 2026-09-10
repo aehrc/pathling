@@ -26,12 +26,15 @@ import csv
 import io
 import json
 
+import click
 import pytest
 
 from pathling.cli.errors import CliError
 from pathling.cli.render import (
     OutputFormat,
     check_overwrite,
+    decode_delimiter,
+    default_delimiter_for_path,
     infer_format_from_extension,
     output_options,
     render_csv,
@@ -39,6 +42,7 @@ from pathling.cli.render import (
     render_rows,
     render_table,
     resolve_output,
+    tab_inference_notice,
 )
 
 COLUMNS = ["id", "family"]
@@ -83,6 +87,88 @@ def test_csv_has_header_and_rows():
     assert parsed[1] == ["1", "Smith"]
     # None is rendered as an empty field.
     assert parsed[2] == ["2", ""]
+
+
+def test_render_csv_uses_supplied_delimiter():
+    """render_csv separates fields with a supplied delimiter (T008)."""
+    output = render_csv(COLUMNS, ROWS, delimiter="\t")
+
+    parsed = list(csv.reader(io.StringIO(output), delimiter="\t"))
+    assert parsed[0] == COLUMNS
+    assert parsed[1] == ["1", "Smith"]
+
+
+def test_render_csv_semicolon_delimiter():
+    """render_csv honours a semicolon delimiter (T008)."""
+    output = render_csv(COLUMNS, ROWS, delimiter=";")
+
+    assert output.splitlines()[0] == "id;family"
+
+
+def test_render_csv_omits_header_when_disabled():
+    """render_csv omits the header line when the header is disabled (T015)."""
+    output = render_csv(COLUMNS, ROWS, header=False)
+
+    parsed = list(csv.reader(io.StringIO(output)))
+    # The first line is a data row, not the column names.
+    assert parsed[0] == ["1", "Smith"]
+    assert COLUMNS not in parsed
+
+
+def test_render_csv_includes_header_by_default():
+    """render_csv includes the header line by default (T015)."""
+    output = render_csv(COLUMNS, ROWS)
+
+    assert list(csv.reader(io.StringIO(output)))[0] == COLUMNS
+
+
+# ========== Delimiter decoding and validation (T002) ==========
+
+
+def test_decode_delimiter_defaults_and_passes_single_chars():
+    """A comma default and single characters decode to themselves."""
+    assert decode_delimiter(",") == ","
+    assert decode_delimiter(";") == ";"
+    assert decode_delimiter("|") == "|"
+
+
+def test_decode_delimiter_decodes_escape_sequences():
+    """A backslash escape such as ``\\t`` decodes to its single character."""
+    # The command-line value is the two characters backslash-t.
+    assert decode_delimiter("\\t") == "\t"
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "ab",  # more than one character after decoding
+        "",  # empty
+        "\\",  # a lone trailing backslash cannot be escape-decoded
+        "\\n",  # a line feed would collide with CSV row terminators
+        "\\r",  # a carriage return would collide with CSV row terminators
+    ],
+)
+def test_decode_delimiter_rejects_invalid(value):
+    """Multi-character, empty, undecodable, and line-terminator values are rejected."""
+    with pytest.raises(click.BadParameter):
+        decode_delimiter(value)
+
+
+def test_delimiter_callback_rejects_before_spark_via_usage_error():
+    """An invalid --delimiter is a usage error (exit code 2) at parse time."""
+    from click.testing import CliRunner
+
+    @click.command()
+    @output_options
+    def cmd(**kwargs):
+        pass
+
+    result = CliRunner().invoke(cmd, ["--delimiter", "ab", "--format", "csv"])
+
+    # Click renders a BadParameter as a usage error with a non-zero exit code,
+    # so validation happens before any command body (and any Spark) runs.
+    assert result.exit_code == 2
+    assert "delimiter" in result.output.lower()
 
 
 # ========== NDJSON ==========
@@ -139,6 +225,8 @@ def test_infer_format_from_extension():
     from pathlib import Path
 
     assert infer_format_from_extension(Path("out.csv")) == OutputFormat.CSV
+    # A .tsv extension is a CSV output (tab separation is chosen via --delimiter).
+    assert infer_format_from_extension(Path("out.tsv")) == OutputFormat.CSV
     # The json-array format is removed, so a .json extension is not inferred.
     assert infer_format_from_extension(Path("out.json")) is None
     assert infer_format_from_extension(Path("out.ndjson")) == OutputFormat.NDJSON
@@ -220,6 +308,156 @@ def test_departition_flag_appears_in_command_help():
     result = CliRunner().invoke(cmd, ["--help"])
 
     assert "--no-departition" in result.output
+
+
+# ========== Delimiter and header resolution (T005) ==========
+
+
+def test_resolve_output_delimiter_and_header_default():
+    """By default the resolved spec carries a comma delimiter and a header."""
+    spec = resolve_output("out.csv", None)
+
+    assert spec.delimiter == ","
+    assert spec.header is True
+
+
+def test_resolve_output_carries_delimiter_and_header():
+    """resolve_output records the supplied delimiter and header on the spec."""
+    spec = resolve_output("out.csv", None, delimiter="\t", header=False)
+
+    assert spec.delimiter == "\t"
+    assert spec.header is False
+
+
+def test_delimiter_and_header_flags_appear_in_command_help():
+    """The new output options are offered in command help."""
+    import click
+    from click.testing import CliRunner
+
+    @click.command()
+    @output_options
+    def cmd(**kwargs):
+        pass
+
+    result = CliRunner().invoke(cmd, ["--help"])
+
+    assert "--delimiter" in result.output
+    assert "--no-header" in result.output
+
+
+# ========== Extension-derived delimiter defaults (T004) ==========
+
+
+@pytest.mark.parametrize(
+    "name,expected",
+    [
+        ("codes.tsv", "\t"),
+        # The suffix is matched case-insensitively, as format inference is.
+        ("codes.TSV", "\t"),
+        ("codes.Tsv", "\t"),
+        ("codes.csv", ","),
+        # An unrecognised or absent suffix falls back to the base default.
+        ("codes.dat", ","),
+        ("codes", ","),
+    ],
+)
+def test_default_delimiter_for_path(name, expected):
+    """Only a .tsv suffix, in any case, defaults to a tab."""
+    from pathlib import Path
+
+    assert default_delimiter_for_path(Path(name)) == expected
+
+
+def test_default_delimiter_for_absent_path_is_a_comma():
+    """With no path (stdout) there is nothing to infer from, so a comma applies."""
+    assert default_delimiter_for_path(None) == ","
+
+
+def test_tab_inference_notice_wording():
+    """Both sides share one wording, differing only in the leading verb."""
+    assert tab_inference_notice("Reading", "/tmp/codes.tsv") == (
+        "Reading /tmp/codes.tsv as tab-separated CSV, inferred from the .tsv extension."
+    )
+    assert tab_inference_notice("Writing", "/tmp/out.tsv") == (
+        "Writing /tmp/out.tsv as tab-separated CSV, inferred from the .tsv extension."
+    )
+
+
+def test_resolve_output_infers_tab_from_tsv_path():
+    """An omitted delimiter with a .tsv output path resolves to a tab."""
+    spec = resolve_output("out.tsv", None)
+
+    assert spec.delimiter == "\t"
+    assert spec.delimiter_inferred is True
+
+
+def test_resolve_output_infers_comma_from_csv_path():
+    """An omitted delimiter with a .csv output path resolves to a comma."""
+    spec = resolve_output("out.csv", None)
+
+    assert spec.delimiter == ","
+    assert spec.delimiter_inferred is True
+
+
+def test_resolve_output_infers_comma_for_stdout():
+    """CSV to stdout has no path to infer from, so it resolves to a comma."""
+    spec = resolve_output(None, OutputFormat.CSV)
+
+    assert spec.delimiter == ","
+    assert spec.delimiter_inferred is True
+
+
+@pytest.mark.parametrize("supplied", [",", "\t", ";"])
+def test_resolve_output_explicit_delimiter_is_not_inferred(supplied):
+    """An explicitly supplied delimiter wins over the path and is not inferred.
+
+    A .tsv path with an explicit comma yields a comma - the flag is authoritative
+    - and the spec records that no inference took place, so no notice is printed.
+    """
+    spec = resolve_output("out.tsv", None, delimiter=supplied)
+
+    assert spec.delimiter == supplied
+    assert spec.delimiter_inferred is False
+
+
+def test_resolve_output_infers_tab_for_uppercase_tsv_path():
+    """The output-side inference is case-insensitive, matching format inference."""
+    spec = resolve_output("OUT.TSV", None)
+
+    assert spec.delimiter == "\t"
+    assert spec.delimiter_inferred is True
+
+
+def test_delimiter_help_states_the_extension_derived_default():
+    """The --delimiter help text documents the per-path default."""
+    from click.testing import CliRunner
+
+    @click.command()
+    @output_options
+    def cmd(**kwargs):
+        pass
+
+    result = CliRunner().invoke(cmd, ["--help"])
+
+    # Rich/Click may wrap the help text, so the words are asserted rather than
+    # the exact line breaks.
+    collapsed = " ".join(result.output.split())
+    assert "a tab for a .tsv path, otherwise ','" in collapsed
+
+
+def test_format_offers_no_tsv_value():
+    """--format gains no tsv value; the extension governs the delimiter only."""
+    from click.testing import CliRunner
+
+    @click.command()
+    @output_options
+    def cmd(**kwargs):
+        pass
+
+    result = CliRunner().invoke(cmd, ["--format", "tsv", "-o", "out.tsv"])
+
+    assert result.exit_code != 0
+    assert "is not one of" in result.output
 
 
 # ========== Overwrite handling ==========

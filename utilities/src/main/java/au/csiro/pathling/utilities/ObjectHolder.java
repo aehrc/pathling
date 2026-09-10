@@ -25,6 +25,8 @@ import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.io.Closeable;
 import java.io.Serializable;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import org.apache.hadoop.util.ShutdownHookManager;
 
@@ -36,6 +38,7 @@ import org.apache.hadoop.util.ShutdownHookManager;
  * @param <C> the type of the configuration
  * @param <V> the type of the instance
  * @author Piotr Szul
+ * @author John Grimes
  */
 public interface ObjectHolder<C extends Serializable, V> {
 
@@ -109,6 +112,51 @@ public interface ObjectHolder<C extends Serializable, V> {
   }
 
   /**
+   * An implementation of {@link ObjectHolder} that memoises one instance per distinct configuration
+   * within the process. Unlike {@link SingletonHolder} this permits several configurations to
+   * coexist in the same JVM, which is required when a single process legitimately works with more
+   * than one configuration at a time (for example, querying two local terminology stores).
+   *
+   * @param <C> the configuration type
+   * @param <V> the value type
+   */
+  class KeyedHolder<C extends Serializable, V> implements ObjectHolder<C, V>, Closeable {
+
+    @Nonnull private final Function<C, V> constructor;
+
+    @Nonnull private final Map<C, V> instances = new ConcurrentHashMap<>();
+
+    private KeyedHolder(@Nonnull final Function<C, V> constructor) {
+      this.constructor = constructor;
+    }
+
+    @Override
+    @Nonnull
+    public V getOrCreate(@Nonnull final C config) {
+      return requireNonNull(instances.computeIfAbsent(config, constructor));
+    }
+
+    @Override
+    public void reset() {
+      // Close every held instance that supports it before discarding the memoised values so that
+      // resources such as store readers are released.
+      instances.values().stream()
+          .filter(Closeable.class::isInstance)
+          .forEach(instance -> closeQuietly((Closeable) instance));
+      instances.clear();
+    }
+
+    /**
+     * Closes this holder and releases the system resources associated with every held instance. If
+     * the holder is already empty then invoking this method has no effect.
+     */
+    @Override
+    public void close() {
+      reset();
+    }
+  }
+
+  /**
    * Creates the holder allowing a single instance to be created per process. Attempts to create
    * another instance with different configuration will fail.
    *
@@ -144,5 +192,44 @@ public interface ObjectHolder<C extends Serializable, V> {
   static <C extends Serializable, V> ObjectHolder<C, V> singleton(
       @Nonnull final Function<C, V> constructor) {
     return singleton(constructor, true, SingletonHolder.DEFAULT_SHUTDOWN_HOOK_PRIORITY);
+  }
+
+  /**
+   * Creates the holder memoising one instance per distinct configuration within the process.
+   * Several configurations may coexist, so lookups with different configurations each receive their
+   * own instance rather than failing.
+   *
+   * @param constructor the function that creates a new instance from the configuration.
+   * @param closeOnShutdown whether to close the held instances on JVM shutdown.
+   * @param shutdownHookPriority the priority of the shutdown hook.
+   * @param <C> the type of the configuration.
+   * @param <V> the type of the instance.
+   * @return the keyed holder.
+   */
+  static <C extends Serializable, V> ObjectHolder<C, V> perConfiguration(
+      @Nonnull final Function<C, V> constructor,
+      final boolean closeOnShutdown,
+      final int shutdownHookPriority) {
+    final KeyedHolder<C, V> keyedHolder = new KeyedHolder<>(constructor);
+    if (closeOnShutdown) {
+      ShutdownHookManager.get()
+          .addShutdownHook(() -> closeQuietly(keyedHolder), shutdownHookPriority);
+    }
+    return keyedHolder;
+  }
+
+  /**
+   * Creates the holder memoising one instance per distinct configuration within the process.
+   * Several configurations may coexist, so lookups with different configurations each receive their
+   * own instance rather than failing. The held instances will be closed on JVM shutdown.
+   *
+   * @param constructor the function that creates a new instance from the configuration.
+   * @param <C> the type of the configuration.
+   * @param <V> the type of the instance.
+   * @return the keyed holder.
+   */
+  static <C extends Serializable, V> ObjectHolder<C, V> perConfiguration(
+      @Nonnull final Function<C, V> constructor) {
+    return perConfiguration(constructor, true, SingletonHolder.DEFAULT_SHUTDOWN_HOOK_PRIORITY);
   }
 }

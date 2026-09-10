@@ -23,9 +23,11 @@ import { useAuth } from "../contexts/AuthContext";
 /**
  * Hook that provides authenticated file download functionality.
  *
- * Handles Bearer token injection and blob downloads. Errors (including 401)
- * are passed to the onError callback; 401 errors are also handled globally
- * to trigger re-authentication.
+ * Handles Bearer token injection and blob downloads. A failure is passed to the
+ * onError callback, and the returned promise then resolves, because a caller
+ * that reports the failure must not have it reported again by the global
+ * unhandled-rejection handler. With no callback there is nothing to report the
+ * failure, so it is rethrown and that handler remains the backstop.
  *
  * @param onError - Optional callback for error reporting. Called with the
  * error when the download fails.
@@ -64,9 +66,11 @@ export function useDownloadFile(
         window.URL.revokeObjectURL(downloadUrl);
       } catch (err) {
         const error = err instanceof Error ? err : new Error("Download failed");
-        onError?.(error);
-        // Re-throw so the global handler can catch UnauthorizedError.
-        throw error;
+        if (!onError) {
+          // Nothing else would report this, so let the global handler have it.
+          throw error;
+        }
+        onError(error);
       }
     },
     [accessToken, onError],

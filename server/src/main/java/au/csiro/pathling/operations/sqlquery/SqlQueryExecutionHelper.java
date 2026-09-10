@@ -18,12 +18,11 @@
 package au.csiro.pathling.operations.sqlquery;
 
 import au.csiro.pathling.library.io.source.QueryableDataSource;
-import au.csiro.pathling.views.FhirView;
+import au.csiro.pathling.operations.sql.SuppliedArtefacts;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import jakarta.servlet.http.HttpServletResponse;
-import java.util.Map;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.IntegerType;
@@ -33,17 +32,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
- * Orchestrates the {@code $sqlquery-run} operation by chaining the parser, view resolver, executor
- * and result streamer.
+ * Orchestrates the {@code $sql-run} operation by selecting the query Library, running it through
+ * the shared {@link SqlQueryPipeline}, and streaming the single result.
+ *
+ * @author John Grimes
  */
 @Component
 public class SqlQueryExecutionHelper {
 
-  @Nonnull private final SqlQueryRequestParser requestParser;
-
-  @Nonnull private final ViewResolver viewResolver;
-
-  @Nonnull private final SqlQueryExecutor executor;
+  @Nonnull private final SqlQueryPipeline pipeline;
 
   @Nonnull private final SqlQueryResultStreamer streamer;
 
@@ -54,33 +51,42 @@ public class SqlQueryExecutionHelper {
   /**
    * Constructs a new SqlQueryExecutionHelper.
    *
-   * @param requestParser parses raw HTTP inputs into a validated request
-   * @param viewResolver resolves view references to parsed FhirViews with auth checks
-   * @param executor validates and runs the SQL against Spark
+   * @param pipeline the shared SQL query pipeline (parse, resolve, validate, execute)
    * @param streamer streams the result dataset in the requested format
    * @param deltaLake the queryable data source backing FhirView execution
    * @param libraryReferenceResolver resolves a queryReference to a stored Library
    */
-  @SuppressWarnings("java:S107")
   @Autowired
   public SqlQueryExecutionHelper(
-      @Nonnull final SqlQueryRequestParser requestParser,
-      @Nonnull final ViewResolver viewResolver,
-      @Nonnull final SqlQueryExecutor executor,
+      @Nonnull final SqlQueryPipeline pipeline,
       @Nonnull final SqlQueryResultStreamer streamer,
       @Nonnull final QueryableDataSource deltaLake,
       @Nonnull final LibraryReferenceResolver libraryReferenceResolver) {
-    this.requestParser = requestParser;
-    this.viewResolver = viewResolver;
-    this.executor = executor;
+    this.pipeline = pipeline;
     this.streamer = streamer;
     this.deltaLake = deltaLake;
     this.libraryReferenceResolver = libraryReferenceResolver;
   }
 
   /**
-   * Executes a {@code $sqlquery-run} request and streams results to the HTTP response. Exactly one
-   * of {@code queryResource} and {@code queryReference} must be provided.
+   * Rejects the unsupported {@code source} parameter (external data source). Pathling does not
+   * implement external data sources, so a supplied {@code source} value is rejected rather than
+   * silently ignored. This shared guard backs the {@code source} rejection at the system, type, and
+   * instance levels, over both POST and GET.
+   *
+   * @param source the {@code source} parameter value, if supplied
+   * @throws InvalidRequestException if {@code source} is present and non-blank
+   */
+  public void rejectSourceParameter(@Nullable final String source) {
+    if (source != null && !source.isBlank()) {
+      throw new InvalidRequestException(
+          "The 'source' parameter (external data source) is not supported by this server.");
+    }
+  }
+
+  /**
+   * Executes a {@code $sql-run} request and streams results to the HTTP response. Exactly one of
+   * {@code queryResource} and {@code queryReference} must be provided.
    *
    * @param queryResource the inline SQLQuery Library resource, if supplied
    * @param queryReference reference to a stored SQLQuery Library, if supplied
@@ -110,20 +116,26 @@ public class SqlQueryExecutionHelper {
 
     final IBaseResource library = selectLibrary(queryResource, queryReference);
 
-    final SqlQueryRequest request =
-        requestParser.parse(library, format, acceptHeader, includeHeader, limit, parameters);
+    final PreparedSqlQuery prepared =
+        pipeline.prepare(
+            library,
+            format,
+            acceptHeader,
+            includeHeader,
+            limit,
+            parameters,
+            SuppliedArtefacts.empty());
 
-    final Map<String, FhirView> resolvedViews =
-        viewResolver.resolve(request.getParsedQuery().getViewReferences());
-
-    executor.execute(
-        request,
-        resolvedViews,
+    pipeline.execute(
+        prepared,
         deltaLake,
         requestId,
         result ->
             streamer.stream(
-                result, request.getOutputFormat(), request.isIncludeHeader(), response));
+                result,
+                prepared.getRequest().getOutputFormat(),
+                prepared.getRequest().isIncludeHeader(),
+                response));
   }
 
   /**

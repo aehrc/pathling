@@ -1,0 +1,551 @@
+---
+sidebar_position: 7
+description: Configuration options for the Pathling server.
+---
+
+# Configuration
+
+Pathling is distributed in two forms: as a JAR file, and a Docker image. The
+easiest way to configure Pathling is through environment variables.
+
+If environment variables are problematic for your deployment, Pathling can be
+also configured in a variety of other ways as supported by the Spring Boot
+framework (see
+[Spring Boot Reference Documentation: Externalized Configuration](https://docs.spring.io/spring-boot/docs/current/reference/html/spring-boot-features.html#boot-features-external-config)).
+
+## Configuration variables
+
+### General
+
+- `server.port` - (default: `8080`) The port which the server should bind to and
+  listen for HTTP connections.
+- `server.servlet.context-path` - A prefix to add to the API endpoint, e.g. a
+  value of `/foo` would cause the FHIR endpoint to be changed to `/foo/fhir`.
+- `pathling.implementationDescription` - (default:
+  `Yet Another Pathling Server`) Controls the content of the
+  `implementation.description` element within the server's
+  [CapabilityStatement](https://hl7.org/fhir/R4/http.html#capabilities).
+- `JAVA_TOOL_OPTIONS` - (default in Docker image: `-Xmx2g`) Allows for the
+  configuration of arbitrary options on the Java VM that Pathling runs within.
+
+Additionally, you can set any variable supported by Spring Boot, see
+[Spring Boot Reference Documentation: Common Application properties](https://docs.spring.io/spring-boot/docs/current/reference/html/appendix-application-properties.html#common-application-properties).
+
+### Outgoing connections
+
+- `pathling.allowInsecureUrls` - (default: `false`) Whether plain-`http` URLs
+  may be used for outgoing connections from the server (the `$import`,
+  `$import-pnp` and `$bulk-submit` operations). Setting this to `true` is
+  intended for local testing against `http://` endpoints; production
+  deployments should leave it at the default.
+
+### Import
+
+- `pathling.import.allowableSources` - (default: `file:///usr/share/staging`) A
+  set of URL prefixes which are allowable for use within the import operation.
+  HTTP(S) prefixes are matched with proper URI semantics: scheme,
+  host (case-insensitive), effective port (default 80 or 443) and a
+  path-segment boundary must all match, and any candidate that contains a
+  userinfo component is rejected. So `https://example.com` admits
+  `https://example.com/foo` but not `https://example.com.evil.com/foo` or
+  `https://example.com@evil.com/foo`. Non-HTTP prefixes (e.g. `s3://`,
+  `file://`) are matched by case-sensitive string prefix; for these,
+  **a trailing slash should be used in cases where an attacker could create
+  an alternative URL with the same prefix**, e.g. `s3://some-bucket` would
+  also match `s3://some-bucket-alternative`.
+
+#### Ping and pull
+
+These settings configure the [ping and pull import](./operations/import-pnp)
+operation, which retrieves data from external FHIR bulk export endpoints.
+
+- `pathling.import.pnp.allowableExportUrls` - (default: `[]`) A list of URL
+  prefixes which are allowable for use as export URLs within the `$import-pnp`
+  operation. This list is mandatory: when it is empty every `$import-pnp`
+  request is rejected. Any `exportUrl` that does not match one of the
+  configured prefixes is also rejected. HTTP(S) prefixes are matched with
+  proper URI semantics (see `pathling.import.allowableSources` above for the
+  full rules).
+- `pathling.import.pnp.clientId` - The client identifier for SMART Backend
+  Services authentication.
+- `pathling.import.pnp.tokenEndpoint` - The token endpoint URL for obtaining
+  access tokens. If not specified, the client will attempt to discover it via
+  the SMART configuration endpoint.
+- `pathling.import.pnp.privateKeyJwk` - The private key in JWK format for
+  asymmetric authentication (RS384).
+- `pathling.import.pnp.clientSecret` - The client secret for symmetric
+  authentication.
+- `pathling.import.pnp.scope` - The requested scope for authentication (e.g.,
+  `system/*.read`).
+- `pathling.import.pnp.tokenExpiryTolerance` - (default: `120`) The minimum
+  number of seconds that a token should have before expiry when deciding whether
+  to use it. If a cached token has less than this many seconds until expiry, a
+  new token will be requested.
+- `pathling.import.pnp.downloadLocation` - (default: `/usr/share/staging/pnp`)
+  The directory where files will be downloaded during ping and pull import
+  operations. This location should have sufficient space for large FHIR exports.
+- `pathling.import.pnp.fileExtension` - (default: `.ndjson`) The file extension
+  to filter for when processing downloaded files.
+- `pathling.import.pnp.allowInternalUrls` - (default: `false`) When set to
+  `false`, the `$import-pnp` operation will reject `exportUrl` values that
+  resolve to internal or private IP addresses (loopback, link-local,
+  site-local, and unique-local). Set to `true` only if your deployment
+  legitimately uses internal FHIR bulk export endpoints.
+- `pathling.import.pnp.maxConcurrentDownloads` - (default: `4`) The number of
+  files to download concurrently. Each download is written to storage as it is
+  received, so a value higher than the storage can keep up with leaves
+  connections idle while they wait their turn to write.
+- `pathling.import.pnp.downloadSocketTimeout` - (default: `600000`) The number
+  of milliseconds a download may wait for more data before the connection is
+  treated as failed. A download that is blocked writing what it has already
+  received is not reading from its connection, so this needs to accommodate the
+  slowest write the storage will perform, not just network latency.
+
+If imports of large resource types fail with a download error while smaller
+ones succeed, lower `maxConcurrentDownloads` or raise
+`downloadSocketTimeout`: the symptom of exceeding what the storage can sustain
+is a connection closed part-way through a file.
+
+**Security note**: When PNP credentials are configured,
+`pathling.auth.enabled` must also be set to `true`. If authentication is
+disabled but PNP credentials are present, the server logs a warning at startup
+and rejects all `$import-pnp` requests.
+
+### Export
+
+- `pathling.export.resultExpiry` - (default: `86400`) The duration in seconds
+  that export results will be available before expiry. Defaults to 24 hours.
+
+### Bulk submit
+
+- `pathling.bulkSubmit.allowedSubmitters` - (default: `[]`) The list of allowed
+  submitters (by system and value) that can use the $bulk-submit operation.
+- `pathling.bulkSubmit.allowableSources` - (default: `[]`) URL prefixes that
+  are allowed as sources for manifest and file URLs. This list is mandatory:
+  when it is empty every URL is rejected and the operation cannot be used.
+  This applies to the `manifestUrl` parameter, every `output[].url` discovered
+  within fetched manifests, and the `oauthMetadataUrl` parameter. HTTP(S)
+  prefixes are matched with proper URI semantics (see
+  `pathling.import.allowableSources` above for the full rules).
+
+### Asynchronous processing
+
+- `pathling.async.enabled` - (default: `true`) Enables asynchronous processing
+  for those operations that support it, when explicitly requested.
+- `pathling.async.varyHeadersExcludedFromCacheKey` - (default: `Accept`,
+  `Accept-Encoding`) A subset of `pathling.httpCaching.vary` HTTP headers,
+  which should be excluded from determining that asynchronous requests are
+  equivalent and can be routed to the same asynchronous job.
+- `pathling.async.cacheMaxAge` - (default: `1`) The max-age value (in seconds)
+  for `Cache-Control` headers on async endpoint responses (`$job` and
+  `$result`). This value should be configured to match your strategy for
+  cleaning up job result files, such as an S3 bucket lifecycle policy. For
+  example, if job files are retained for 24 hours, set this to `86400`.
+
+### Operations
+
+These settings enable or disable individual server operations. All operations
+are enabled by default. When an operation is disabled, it returns a client
+error response and is excluded from the CapabilityStatement.
+
+- `pathling.operations.createEnabled` - (default: `true`) Enables CRUD create
+  operations.
+- `pathling.operations.readEnabled` - (default: `true`) Enables CRUD read
+  operations.
+- `pathling.operations.updateEnabled` - (default: `true`) Enables CRUD update
+  operations.
+- `pathling.operations.deleteEnabled` - (default: `true`) Enables CRUD delete
+  operations.
+- `pathling.operations.searchEnabled` - (default: `true`) Enables CRUD search
+  operations.
+- `pathling.operations.batchEnabled` - (default: `true`) Enables batch/transaction
+  bundle operations.
+- `pathling.operations.exportEnabled` - (default: `true`) Enables the system-level
+  [$export](./operations/export) operation.
+- `pathling.operations.patientExportEnabled` - (default: `true`) Enables the
+  Patient-level [$export](./operations/export) operation.
+- `pathling.operations.groupExportEnabled` - (default: `true`) Enables the
+  Group-level [$export](./operations/export) operation.
+- `pathling.operations.importEnabled` - (default: `true`) Enables the
+  [$import](./operations/import) operation.
+- `pathling.operations.importPnpEnabled` - (default: `true`) Enables the
+  [$import-pnp](./operations/import-pnp) operation.
+- `pathling.operations.sqlRunEnabled` - (default: `true`) Enables the
+  [$sql-run](./operations/sql-run) operation.
+- `pathling.operations.sqlExportEnabled` - (default: `true`) Enables the
+  [$sql-export](./operations/sql-export) operation.
+- `pathling.operations.bulkSubmitEnabled` - (default: `true`) Enables the
+  [$bulk-submit](./operations/bulk-submit) operation.
+
+### SQL query
+
+This setting bounds the resolution of a query's dependency graph, for both
+`$sql-run` and `$sql-export`.
+
+- `pathling.sqlQuery.maxDependencyDepth` - (default: `10`) The maximum nesting
+  depth of the SQLView dependency graph resolved for a single query. The
+  top-level query's direct dependencies sit at depth one; each further level of
+  nested SQLView dependency increments the depth. A graph nested deeper is
+  rejected with a `400` before any Spark work, guarding against accidental
+  fan-out and runaway resolution.
+
+### Encoding
+
+- `pathling.encoding.maxNestingLevel` - (default: `3`) Controls the maximum
+  depth of nested element data that is encoded upon import. This affects certain
+  elements within FHIR resources that contain recursive references, e.g.
+  [QuestionnaireResponse.item](https://hl7.org/fhir/R4/questionnaireresponse.html).
+- `pathling.encoding.enableExtensions` - (default: `true`) Enables support for
+  FHIR extensions.
+- `pathling.encoding.openTypes` - (default: `boolean`, `code`, `date`,
+  `dateTime`,
+  `decimal`, `integer`, `string`, `Coding`, `CodeableConcept`, `Address`,
+  `Identifier`,
+  `Reference`) The list of types that are encoded within open types,
+  such as extensions. This default list was taken from the data types that are
+  common to extensions found in widely-used IGs, such as the US and AU base
+  profiles. In general, you will get the best query performance by encoding your
+  data with the shortest possible list.
+
+    Shortening this list against a warehouse that already holds data, or pointing
+    a server at a warehouse written by a deployment with a longer list, leaves
+    stored columns that the running encoder no longer emits. Those columns are
+    preserved: they are not dropped from the table, and writes to the affected
+    resource types succeed with the columns written as null on the new rows. Reads
+    return what the running encoder can represent, so the values in those columns
+    are not visible until the original list is restored. Each affected table is
+    named in the log at startup, along with the field paths involved.
+
+### Storage
+
+- `pathling.storage.warehouseUrl` - (default: `file:///usr/share/warehouse`) The
+  base URL at which Pathling will look for data files, and where it will save
+  data received within [import](./operations/import) requests. Can be an
+  [Amazon S3](https://aws.amazon.com/s3/) (`s3a://`),
+  [HDFS](https://hadoop.apache.org/docs/r1.2.1/hdfs_design.html) (`hdfs://`) or
+  filesystem (`file://`) URL.
+- `pathling.storage.databaseName` - (default: `default`) The subdirectory within
+  the warehouse path used to read and write data.
+- `pathling.storage.cacheDatasets` - (default: `true`) This controls whether the
+  built-in caching within Spark is used for resource datasets. It may be useful
+  to turn this off for large datasets in memory-constrained environments.
+- `pathling.storage.compactionThreshold` - (default: `10`) When a table is
+  updated, the number of partitions is checked. If the number exceeds this
+  threshold, the table will be repartitioned back to the default number of
+  partitions. This prevents large numbers of small updates causing poor
+  subsequent query performance.
+- `pathling.storage.schemaAutoMerge` - (default: `false`) When enabled, the
+  schema of an existing Delta table is automatically evolved to accommodate new
+  fields produced by the FHIR encoder. This is useful when upgrading to a
+  Pathling version whose encoder emits additional columns or nested struct
+  fields that are not yet present in tables written by an earlier version.
+  Evolution happens in two places: at startup, every table in the warehouse
+  whose schema is missing encoder fields is migrated before it is served; and
+  on update, a table whose schema is behind the incoming data is evolved before
+  the merge, with the in-memory dataset refreshed so subsequent reads see the
+  new schema without a restart. Migration is additive only - no existing field
+  or row is modified, and existing rows present newly added fields as absent
+  values. When no table has drifted, startup adds only the cost of comparing
+  schemas. When the setting is disabled and a drifted table is detected, the
+  server logs a warning naming the table, the missing fields, and the remedy,
+  and requests against that resource type return an error that describes the
+  condition rather than a generic failure. In multi-replica deployments, a
+  runtime schema evolution is only visible to the replica that performed it;
+  other replicas require a restart, although redeploys (which replace all
+  replicas and re-run startup migration) are self-correcting.
+
+    Where a stored table and the running encoders cannot be reconciled at all, the
+    request fails with an error that describes the condition rather than a generic
+    one. The message names the resource type, which direction the two schemas
+    differ in, the field paths involved, and the remedy - enabling this setting
+    where the table is behind the encoders, or restoring the encoding
+    configuration the table was written with where it is ahead of them. It
+    deliberately excludes the underlying schema definitions and warehouse paths,
+    so the full detail remains in the server log alone.
+
+Pathling will automatically detect AWS authentication details within the
+environment and use them to access S3 buckets. It uses a chain of authentication
+methods,
+see [DefaultAWSCredentialsProviderChain](https://docs.aws.amazon.com/AWSJavaSDK/latest/javadoc/com/amazonaws/auth/DefaultAWSCredentialsProviderChain.html)
+for details.
+
+In addition to this, any Hadoop S3 configuration variable (`fs.s3a.*`) can be
+set within Pathling directly. See
+the [Hadoop AWS documentation](https://hadoop.apache.org/docs/stable/hadoop-aws/tools/hadoop-aws/index.html)
+for all the possible options.
+
+This is the default S3 configuration, along with some hints on how to add some
+common configuration parameters:
+
+```yaml
+fs:
+    s3a:
+        aws:
+            # credentials:
+            #   provider: org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider
+            #   provider: org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider
+            #
+            # For use with: SimpleAWSCredentialsProvider
+            # access:
+            #   key: [access key]
+            # secret:
+            #   key: [secret key]
+            #
+            # For use with: AssumedRoleCredentialProvider
+            # assumed:
+            #   role:
+            #     arn: [role ARN]
+            #
+            connection:
+                maximum: 100
+            committer:
+                name: magic
+                magic:
+                    enabled: true
+```
+
+When the warehouse is an S3 object store, the S3A magic committer avoids the
+rename-based commit that is unsafe on some stores by completing writes through
+S3 multipart uploads instead. Setting `fs.s3a.committer.name=magic` alone is not
+enough for Spark's Parquet writes to use it; the commit protocol classes must
+also be selected:
+
+```yaml
+spark:
+    sql:
+        sources:
+            commitProtocolClass: org.apache.spark.internal.io.cloud.PathOutputCommitProtocol
+        parquet:
+            output:
+                committer:
+                    class: org.apache.spark.internal.io.cloud.BindingParquetOutputCommitter
+```
+
+These committer bindings ship with the server image, so no extra dependency is
+required to enable this configuration.
+
+### Query
+
+- `pathling.query.explainQueries` - (default: `false`) If set to true, Spark
+  query plans will be written to the logs.
+- `pathling.query.cacheResults` - (default: `true`) This controls whether the
+  built-in caching within Spark is used for search results. It may be useful to
+  turn this off for large datasets in memory-constrained environments.
+- `pathling.query.maxUnboundTraversalDepth` - (default: `10`) Controls the
+  maximum depth for same-type recursive traversal in `repeat()` and
+  `repeatAll()` FHIRPath functions. Cross-type traversals do not consume depth
+  budget. The minimum value is `1`.
+
+### Apache Spark
+
+- `pathling.spark.appName` - (default: `pathling`) Controls the application name
+  that Pathling will be identified as within any Spark cluster that it
+  participates in.
+
+Any Spark configuration variable can be set within Pathling directly. See
+[Spark Configuration](https://spark.apache.org/docs/latest/configuration.html)
+for the full list.
+
+Here are a few that you might be particularly interested in:
+
+- `spark.master` - (default: `local[*]`) Address of the master node of an
+  [Apache Spark](https://spark.apache.org/) cluster to use for processing data,
+  see [Master URLs](https://spark.apache.org/docs/latest/submitting-applications.html#master-urls).
+- `spark.executor.memory` - (default: `1g`) The quantity of memory available for
+  each child task to process data within, in the same format as JVM memory
+  strings with a size unit suffix (`k`, `m`, `g` or `t`) (e.g. `512m`, `2g`).
+- `spark.sql.shuffle.partitions` - (default: `2`) This option controls the
+  number of data partitions used to distribute data between child tasks. This
+  can be tuned to higher numbers for larger data sets. It also controls the
+  granularity of requests made to the configured terminology service.
+
+This is the default Spark configuration:
+
+```yaml
+spark:
+    master: local[*]
+    sql:
+        adaptive:
+            enabled: true
+            coalescePartitions:
+                enabled: true
+        extensions: io.delta.sql.DeltaSparkSessionExtension
+        catalog:
+            spark_catalog: org.apache.spark.sql.delta.catalog.DeltaCatalog
+    databricks:
+        delta:
+            schema:
+                autoMerge:
+                    enabled: false
+    scheduler:
+        mode: FAIR
+```
+
+### Terminology service
+
+- `pathling.terminology.enabled` - (default: `true`) Enables use of terminology
+  functions within queries.
+- `pathling.terminology.serverUrl` - (default:
+  `https://tx.ontoserver.csiro.au/fhir`) The endpoint of the
+  [FHIR terminology service](https://hl7.org/fhir/R4/terminology-service.html)
+  (R4) that the server can use to resolve terminology queries.
+- `pathling.terminology.verboseLogging` - (default: `false`) Setting this option
+  to `true` will enable additional logging of the details of requests between
+  the server and the terminology service.
+- `pathling.terminology.acceptLanguage` - If this variable is set, it will be
+  used as the value of the `Accept-Language` HTTP header passed to the
+  terminology
+  server. The value may contain multiple languages, with weighted preferences
+  as defined in
+  [RFC 9110](https://www.rfc-editor.org/rfc/rfc9110.html#name-accept-language).
+  If not provided, the header is not sent.
+  The server can use the header to return the result in the preferred language
+  if it is able. The actual behaviour may depend on the server implementation
+  and the code systems used.
+
+#### Client
+
+- `pathling.terminology.client.maxConnectionsTotal` - (default: `32`) The
+  maximum number of total connections allowed from the client.
+- `pathling.terminology.client.maxConnectionsPerRoute` - (default: `16`) The
+  maximum number of connections allowed from the client, per route.
+- `pathling.terminology.client.socketTimeout` - (default: `60000`) The maximum
+  period (in milliseconds) that the server should wait for incoming data from
+  the terminology service.
+- `pathling.terminology.client.retryEnabled` - (default: `true`) Enables
+  automatic retry of failed terminology service requests.
+- `pathling.terminology.client.retryCount` - (default: `2`) The maximum
+  number of times that failed terminology service requests should be retried.
+
+#### Cache
+
+- `pathling.terminology.cache.enabled` - (default: `true`) Set this to false to
+  disable caching of terminology requests (not recommended).
+- `pathling.terminology.cache.storageType` - (default: `memory`) The type of
+  storage to be used by the terminology cache. Valid values are `memory` and
+  `disk`.
+- `pathling.terminology.cache.maxEntries` - (default: `50000`) Sets the maximum
+  number of entries that will be held in memory. Only applicable when using
+  the `memory` storage type.
+- `pathling.terminology.cache.storagePath` - The path at which to store cache
+  data. Required if `pathling.terminology.cache.storageType` is set to `disk`.
+- `pathling.terminology.cache.defaultExpiry` - (default: `600`) The amount
+  of time (in seconds) that a response from the terminology server should be
+  cached if the server does not specify an expiry.
+- `pathling.terminology.cache.overrideExpiry` - If provided, this value
+  overrides the expiry time provided by the terminology server.
+
+#### Authentication
+
+- `pathling.terminology.authentication.enabled` - (default: `false`) Enables
+  authentication for requests to the terminology service.
+- `pathling.terminology.authentication.tokenEndpoint`,
+  `pathling.terminology.authentication.clientId`,
+  `pathling.terminology.authentication.clientSecret` - Authentication details
+  for connecting to a terminology service that requires authentication, using
+  [OAuth 2.0 client credentials flow](https://datatracker.ietf.org/doc/html/rfc6749#section-4.4).
+
+### Authorization
+
+- `pathling.auth.enabled` - (default: `false`) Enables authorization. If this
+  option is set to `true`, `pathling.auth.issuer` and
+  `pathling.auth.audience` options must also be set.
+- `pathling.auth.issuer` - Configures the issuing domain for bearer tokens, e.g.
+  `https://pathling.au.auth0.com/`. Must match the contents of
+  the [issuer claim](https://tools.ietf.org/html/rfc7519#section-4.1.1)
+  within bearer tokens.
+- `pathling.auth.audience` - Configures the audience for bearer tokens, which is
+  the FHIR endpoint that tokens are intended to be authorised for, e.g.
+  `https://pathling.csiro.au/fhir`. Must match the contents of the
+  [audience claim](https://tools.ietf.org/html/rfc7519#section-4.1.3)
+  within bearer tokens.
+- `pathling.auth.capabilities` - (default: `launch-standalone`) A list of
+  [SMART on FHIR capabilities](https://hl7.org/fhir/smart-app-launch/conformance.html)
+  to advertise in the SMART configuration document at
+  `/.well-known/smart-configuration`.
+- `pathling.auth.grantTypesSupported` - (default: `authorization_code`) A list
+  of OAuth 2.0 grant types supported at the token endpoint, e.g.
+  `authorization_code`, `client_credentials`, `refresh_token`. See
+  [SMART App Launch Conformance](https://hl7.org/fhir/smart-app-launch/conformance.html)
+  for more details.
+- `pathling.auth.codeChallengeMethodsSupported` - (default: `S256`) A list of
+  PKCE code challenge methods supported. Must include `S256` and must not
+  include `plain` as per the SMART specification.
+- `pathling.auth.tokenSigningAlgorithms` - (default: empty) A list of the
+  [JWS signing algorithms](https://datatracker.ietf.org/doc/html/rfc7518#section-3.1)
+  accepted within incoming bearer tokens. When empty, the accepted algorithms
+  are derived from the keys published in the issuer's JWKS: a key's `alg` value
+  is used when present, otherwise the algorithms implied by its key type. This
+  derivation happens at token verification time, so key rotation at the identity
+  provider takes effect without a restart. When one or more values are
+  configured, only tokens whose header algorithm is in that list are accepted,
+  regardless of what the JWKS publishes. Tokens are verified against a public
+  JWKS, so only the asymmetric algorithm names `RS256`, `RS384`, `RS512`,
+  `PS256`, `PS384`, `PS512`, `ES256`, `ES256K`, `ES384`, `ES512` and `EdDSA` are
+  permitted; any other value fails validation at startup.
+
+### Admin UI
+
+- `pathling.adminUi.clientId` - The OAuth client ID for the admin UI. When set,
+  this value is included in the SMART configuration response at
+  `/.well-known/smart-configuration` as `admin_ui_client_id`. The admin UI uses
+  this value when initiating OAuth flows. If not set, the UI falls back to the
+  `VITE_CLIENT_ID` environment variable (set at build time), then to the default
+  value `pathling-admin-ui`. See [Admin UI](./admin-ui) for more details.
+
+### HTTP caching
+
+- `pathling.httpCaching.vary` - (default: `Accept`, `Accept-Encoding`, `Prefer`,
+  `Authorization`) A list of values to return within the `Vary` header.
+- `pathling.httpCaching.cacheableControl` - (default: `must-revalidate`,
+  `max-age=1`) A list of values to return within the `Cache-Control` header, for
+  cacheable responses.
+- `pathling.httpCaching.uncacheableControl` - (default: `no-store`) A list of
+  values to return within the `Cache-Control` header, for uncacheable responses.
+
+### Cross-Origin Resource Sharing (CORS)
+
+See the
+[Cross-Origin Resource Sharing](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS)
+specification for more information about the meaning of the different headers
+that are controlled by this configuration.
+
+- `pathling.cors.allowedOriginPatterns` - (default: `[empty]`) This is a
+  comma-delimited list of domain name patterns that controls which domains are
+  permitted to access the server per the `Access-Control-Allow-Origin` header.
+  Supports wildcard patterns, e.g. `https://*.somedomain.com`.
+- `pathling.cors.allowedMethods` - (default: `OPTIONS,GET,POST`) This is a
+  comma-delimited list of HTTP methods permitted via the
+  `Access-Control-Allow-Methods` header.
+- `pathling.cors.allowedHeaders` - (default:
+  `Content-Type,Authorization,Prefer`)
+  This is a comma-delimited list of HTTP headers permitted via the
+  `Access-Control-Allow-Headers` header.
+- `pathling.cors.exposedHeaders` - (default:
+  `Content-Location,Content-Disposition,X-Progress`)
+  This is a comma-delimited list of HTTP headers that are permitted to be
+  exposed via
+  the `Access-Control-Expose-Headers` header.
+- `pathling.cors.maxAge` - (default: `600`) Controls how long the results of a
+  preflight request can be cached via the `Access-Control-Max-Age` header.
+
+### Monitoring
+
+- `pathling.sentryDsn` - If this variable is set, all errors will be reported to
+  a [Sentry](https://sentry.io) service, e.g. `https://abc123@sentry.io/123456`.
+- `pathling.sentryEnvironment` - If this variable is set, this will be sent as
+  the environment when reporting errors to Sentry.
+
+## Server base
+
+There are a number of operations within the Pathling FHIR API that pass back
+URLs referring back to API endpoints. The host and protocol components of these
+URLs are automatically detected based upon the details of the incoming request.
+
+In some cases it might be desirable to override the hostname and protocol,
+particularly where Pathling is being hosted behind some sort of proxy. To
+account for this, Pathling also supports the use of the
+[X-Forwarded-Proto](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Forwarded-Proto),
+[X-Forwarded-Host](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Forwarded-Host)
+and `X-Forwarded-Port` headers to override the protocol, hostname and port
+within URLs sent back by the API.

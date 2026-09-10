@@ -25,13 +25,19 @@ directory) fail quickly with an actionable message.
 Author: John Grimes.
 """
 
+from __future__ import annotations
+
 import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
 
 from pathling.cli.errors import EXIT_USAGE, CliError
+
+if TYPE_CHECKING:
+    from pathling import PathlingContext
+    from pathling.datasource import DataSource
 
 # The number of leading characters of a candidate file inspected during format
 # detection. A FHIR resource names its ``resourceType`` near the start of the
@@ -234,7 +240,9 @@ def read_single_resource(path: Path) -> tuple:
     return resource_type, text
 
 
-def read_source(pc, spec: SourceSpec, types: Optional[List[str]] = None):
+def read_source(
+    pc: PathlingContext, spec: SourceSpec, types: Optional[List[str]] = None
+) -> DataSource:
     """Reads a :class:`SourceSpec` into a Pathling ``DataSource``.
 
     :param pc: the :class:`PathlingContext` to read with.

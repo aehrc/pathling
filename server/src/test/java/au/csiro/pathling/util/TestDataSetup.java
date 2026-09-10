@@ -31,6 +31,7 @@ import java.nio.file.Path;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
+import org.apache.spark.sql.delta.DeltaLog;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -73,6 +74,11 @@ public class TestDataSetup {
    */
   public static void copyTestDataToTempDir(
       @Nonnull final Path tempDir, @Nullable final String... resourceTypes) {
+    // Replacing table directories on the filesystem invalidates any DeltaLog instances that Spark
+    // has cached for those paths. A stale cached log disagrees with the restored transaction log
+    // (which is at an older version), causing intermittent failures such as DELTA_PATH_EXISTS on
+    // subsequent writes. Clearing the cache forces Delta to re-resolve every table from disk.
+    DeltaLog.clearCache();
     try {
       final Path deltaPath = Path.of("src/test/resources/test-data/bulk/fhir/delta");
       if (resourceTypes == null || resourceTypes.length == 0) {

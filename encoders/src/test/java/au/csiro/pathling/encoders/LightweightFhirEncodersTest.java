@@ -44,6 +44,7 @@ import org.hl7.fhir.r4.model.BaseResource;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Condition;
+import org.hl7.fhir.r4.model.DecimalType;
 import org.hl7.fhir.r4.model.Device;
 import org.hl7.fhir.r4.model.Expression;
 import org.hl7.fhir.r4.model.IdType;
@@ -136,6 +137,86 @@ public class LightweightFhirEncodersTest implements JsonMethods {
     rocComponent.addSensitivity(new BigDecimal("0.100").setScale(6, RoundingMode.UNNECESSARY));
     rocComponent.addSensitivity(new BigDecimal("1.23").setScale(3, RoundingMode.UNNECESSARY));
     assertSerDeIsIdentity(encoder, molecularSequence);
+  }
+
+  @Test
+  void testDecimalCollectionRecordsSourceScales() {
+    // A repeated decimal element records the source scale of each value element-wise, without any
+    // cap, so that truncated elements can be identified individually.
+    final ExpressionEncoder<MolecularSequence> encoder = fhirEncoders.of(MolecularSequence.class);
+
+    final MolecularSequence molecularSequence = new MolecularSequence();
+    molecularSequence.setId("someId");
+    final MolecularSequenceQualityRocComponent rocComponent =
+        molecularSequence.getQualityFirstRep().getRoc();
+
+    // Source scales of 3, 7 and 17; only the first is within the storage scale of 6.
+    rocComponent.addSensitivity(new BigDecimal("1.23").setScale(3, RoundingMode.UNNECESSARY));
+    rocComponent.addSensitivity(TestData.TEST_VERY_SMALL_DECIMAL);
+    rocComponent.addSensitivity(TestData.TEST_SCALE_17_DECIMAL);
+
+    final ExpressionEncoder<MolecularSequence> resolvedEncoder =
+        EncoderUtils.defaultResolveAndBind(encoder);
+    final InternalRow serializedRow = resolvedEncoder.createSerializer().apply(molecularSequence);
+
+    // Deserialize the InternalRow to a Row with explicit schema, so that the companion scale array
+    // can be inspected directly.
+    final ExpressionEncoder<Row> rowEncoder =
+        EncoderUtils.defaultResolveAndBind(ExpressionEncoder.apply(encoder.schema()));
+    final Row sequenceRow = rowEncoder.createDeserializer().apply(serializedRow);
+
+    final List<Row> quality = sequenceRow.getList(sequenceRow.fieldIndex("quality"));
+    final Row qualityRow = quality.getFirst();
+    final Row rocRow = qualityRow.getStruct(qualityRow.fieldIndex("roc"));
+    final List<Integer> scales = rocRow.getList(rocRow.fieldIndex("sensitivity_scale"));
+
+    assertEquals(3, scales.size());
+    assertEquals(3, scales.get(0).intValue());
+    assertEquals(7, scales.get(1).intValue());
+    assertEquals(17, scales.get(2).intValue());
+  }
+
+  @Test
+  void testDecimalCollectionDecodeClampsScales() {
+    // Decoding a repeated decimal element applies the storage scale of 6 as a ceiling element-wise.
+    // A stored scale above 6 must not reinstate precision that the stored value no longer carries.
+    final ExpressionEncoder<MolecularSequence> encoder = fhirEncoders.of(MolecularSequence.class);
+
+    final MolecularSequence molecularSequence = new MolecularSequence();
+    molecularSequence.setId("someId");
+    final MolecularSequenceQualityRocComponent rocComponent =
+        molecularSequence.getQualityFirstRep().getRoc();
+
+    // Source scales of 3, 7 and 17; only the first is within the storage scale of 6.
+    rocComponent.addSensitivity(new BigDecimal("1.23").setScale(3, RoundingMode.UNNECESSARY));
+    rocComponent.addSensitivity(TestData.TEST_VERY_SMALL_DECIMAL);
+    rocComponent.addSensitivity(TestData.TEST_SCALE_17_DECIMAL);
+
+    // The round trip is performed explicitly, because `assertSerDeIsIdentity` cannot be used for
+    // values that lose precision during encoding.
+    final ExpressionEncoder<MolecularSequence> resolvedEncoder =
+        EncoderUtils.defaultResolveAndBind(encoder);
+    final MolecularSequence decoded =
+        resolvedEncoder
+            .createDeserializer()
+            .apply(resolvedEncoder.createSerializer().apply(molecularSequence));
+
+    // The expected resource is constructed explicitly, with each element rounded HALF_UP to the
+    // lesser of its source scale and the storage scale of 6.
+    final MolecularSequence expected = new MolecularSequence();
+    expected.setId("someId");
+    final MolecularSequenceQualityRocComponent expectedRoc = expected.getQualityFirstRep().getRoc();
+    expectedRoc.addSensitivity(new BigDecimal("1.230"));
+    expectedRoc.addSensitivity(TestData.TEST_VERY_SMALL_DECIMAL_SCALE_6);
+    expectedRoc.addSensitivity(TestData.TEST_SCALE_17_DECIMAL_SCALE_6);
+    assertResourceEquals(expected, decoded);
+
+    // The decoded scales are the lesser of the source scale and 6, element-wise.
+    final List<DecimalType> sensitivity = decoded.getQualityFirstRep().getRoc().getSensitivity();
+    assertEquals(3, sensitivity.size());
+    assertEquals(3, sensitivity.get(0).getValue().scale());
+    assertEquals(6, sensitivity.get(1).getValue().scale());
+    assertEquals(6, sensitivity.get(2).getValue().scale());
   }
 
   @Test

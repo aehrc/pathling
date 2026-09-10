@@ -39,6 +39,10 @@ export { importKickOff, importPnpKickOff } from "./import";
 // Job operations.
 export { jobStatus, jobCancel } from "./job";
 
+// Job list operation.
+export { listJobs, parseJobsResponse } from "./jobs";
+export type { JobSummary, JobSummaryStatus, ListJobsOptions } from "./jobs";
+
 // FHIR REST operations.
 export { search, read, create, update, deleteResource } from "./rest";
 export type { AuthOptions, ResourceType } from "./rest";
@@ -51,25 +55,38 @@ export {
   extractJobIdFromUrl,
 } from "./utils";
 
-// ViewDefinition operations.
+// SQL on FHIR data operations.
 export {
-  viewRun,
-  viewRunStored,
-  viewExportKickOff,
-  viewExportDownload,
-} from "./view";
+  sqlRun,
+  sqlRunStored,
+  sqlExportKickOff,
+  sqlExportDownload,
+  parseSqlExportManifest,
+} from "./sqlOnFhirOperations";
+export type {
+  SqlExportDownloadOptions,
+  SqlExportEntry,
+  SqlExportFormat,
+  SqlExportKickOffOptions,
+  SqlExportOutput,
+  SqlExportResult,
+  SqlRunFormat,
+  SqlRunOptions,
+  SqlRunStoredOptions,
+  SubjectFilters,
+  SubjectSource,
+} from "./sqlOnFhirOperations";
+
+// ViewDefinition resources.
 export type { ViewDefinition } from "./view";
 
-// SQL query operations.
+// SQL on FHIR Library resources.
 export {
-  sqlQueryRun,
   listSqlQueryLibraries,
+  listStoredLibraries,
   SQL_QUERY_LIBRARY_TYPE_SYSTEM,
   SQL_QUERY_LIBRARY_TYPE_FILTER,
+  SQL_VIEW_LIBRARY_TYPE_FILTER,
   SQL_QUERY_LIBRARY_PROFILE,
 } from "./sqlQuery";
-export type {
-  SqlQueryRunOptions,
-  SqlQueryRunStoredOptions,
-  SqlQueryRunInlineOptions,
-} from "./sqlQuery";
+export type { SqlOnFhirLibraryTypeCode } from "./sqlQuery";

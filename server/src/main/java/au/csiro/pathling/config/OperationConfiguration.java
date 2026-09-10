@@ -61,27 +61,24 @@ public class OperationConfiguration {
   /** Enables $import-pnp operation. */
   private boolean importPnpEnabled = true;
 
-  /** Enables system-level $viewdefinition-run operation. */
-  private boolean viewDefinitionRunEnabled = true;
+  /** Enables the system-level SQL on FHIR $sql-run operation. */
+  private boolean sqlRunEnabled = true;
 
-  /** Enables instance-level $run operation on ViewDefinition. */
-  private boolean viewDefinitionInstanceRunEnabled = true;
-
-  /** Enables $viewdefinition-export operation. */
-  private boolean viewDefinitionExportEnabled = true;
-
-  /** Enables $sqlquery-run operation. */
-  private boolean sqlQueryRunEnabled = true;
+  /** Enables the system-level SQL on FHIR $sql-export operation. */
+  private boolean sqlExportEnabled = true;
 
   /** Enables $bulk-submit operation. */
   private boolean bulkSubmitEnabled = true;
 
   /**
-   * Returns true if any export operation is enabled.
+   * Returns true if any operation that serves its results through the {@code $result} endpoint is
+   * enabled. This covers the Bulk Data exports as well as the SQL on FHIR asynchronous export
+   * operation ({@code $sql-export}), all of which write downloadable files served by {@code
+   * $result}.
    *
-   * @return true if system, patient, or group export is enabled
+   * @return true if any export operation that relies on the {@code $result} endpoint is enabled
    */
   public boolean isAnyExportEnabled() {
-    return exportEnabled || patientExportEnabled || groupExportEnabled;
+    return exportEnabled || patientExportEnabled || groupExportEnabled || sqlExportEnabled;
   }
 }

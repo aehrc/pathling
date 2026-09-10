@@ -80,4 +80,19 @@ public class PnpConfiguration {
    * false for security.
    */
   private boolean allowInternalUrls = false;
+
+  /**
+   * The number of files to download concurrently. Each download is written to storage as it is
+   * received, so a value higher than the storage can keep up with leaves connections idle waiting
+   * for their turn to write, risking a socket timeout. Defaults to 4.
+   */
+  private int maxConcurrentDownloads = 4;
+
+  /**
+   * The number of milliseconds a download may wait for more data before the connection is treated
+   * as failed. A download that is blocked writing what it has already received is not reading from
+   * its connection, so this needs to accommodate the slowest write the storage will perform, not
+   * just network latency. Defaults to 600000 (ten minutes).
+   */
+  private int downloadSocketTimeout = 600_000;
 }

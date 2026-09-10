@@ -161,9 +161,7 @@ describe("useDownloadFile", () => {
 
       const { result } = renderHook(() => useDownloadFile(onError));
 
-      await expect(
-        result.current("http://example.com/file.ndjson", "export.ndjson"),
-      ).rejects.toThrow("Unauthorized");
+      await result.current("http://example.com/file.ndjson", "export.ndjson");
 
       expect(onError).toHaveBeenCalledWith(testError);
     });
@@ -175,9 +173,7 @@ describe("useDownloadFile", () => {
 
       const { result } = renderHook(() => useDownloadFile(onError));
 
-      await expect(
-        result.current("http://example.com/file.ndjson", "export.ndjson"),
-      ).rejects.toThrow("Network error");
+      await result.current("http://example.com/file.ndjson", "export.ndjson");
 
       expect(onError).toHaveBeenCalledWith(testError);
     });
@@ -188,9 +184,7 @@ describe("useDownloadFile", () => {
 
       const { result } = renderHook(() => useDownloadFile(onError));
 
-      await expect(
-        result.current("http://example.com/file.ndjson", "export.ndjson"),
-      ).rejects.toThrow("Download failed");
+      await result.current("http://example.com/file.ndjson", "export.ndjson");
 
       expect(onError).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -199,12 +193,27 @@ describe("useDownloadFile", () => {
       );
     });
 
-    it("re-throws error for global handling", async () => {
-      const testError = new Error("Test error");
-      vi.spyOn(global, "fetch").mockRejectedValue(testError);
+    // A caller that reports the failure itself must not have it reported a
+    // second time by the global unhandled-rejection handler, which is what a
+    // rejection here would reach.
+    it("does not reject once the failure has been reported to the caller", async () => {
+      vi.spyOn(global, "fetch").mockRejectedValue(new Error("Network error"));
       const onError = vi.fn();
 
       const { result } = renderHook(() => useDownloadFile(onError));
+
+      await expect(
+        result.current("http://example.com/file.ndjson", "export.ndjson"),
+      ).resolves.toBeUndefined();
+    });
+
+    // Without a handler the failure would otherwise be silent, so the rejection
+    // still escapes and reaches the global handler.
+    it("re-throws when the caller supplies no handler", async () => {
+      const testError = new Error("Test error");
+      vi.spyOn(global, "fetch").mockRejectedValue(testError);
+
+      const { result } = renderHook(() => useDownloadFile());
 
       await expect(
         result.current("http://example.com/file.ndjson", "export.ndjson"),

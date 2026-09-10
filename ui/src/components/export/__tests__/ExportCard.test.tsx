@@ -16,7 +16,7 @@
  */
 
 /**
- * Tests for the ExportCard component's Delete button functionality.
+ * Tests for the ExportCard component.
  *
  * @author John Grimes
  */
@@ -25,9 +25,11 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { OperationOutcomeError } from "../../../types/errors";
 import { ExportCard } from "../ExportCard";
 
 import type { ExportRequest } from "../../../types/export";
+import type { OperationOutcome } from "fhir/r4";
 
 // Define mock functions at module level.
 const mockStartWith = vi.fn();
@@ -41,22 +43,59 @@ let mockStatus: string = "idle";
 let mockResult: object | undefined = undefined;
 let mockError: Error | undefined = undefined;
 
+// Captures the failure handler the card gives the download hook, so that a
+// download failure can be reported to the card as the hook would report it.
+const mockDownloadFile = vi.fn();
+let reportDownloadFailure: ((error: Error) => void) | undefined = undefined;
+
+// A download failure is the one failure no card can display, so it is the one
+// that must still raise a notification.
+const mockShowToast = vi.fn();
+vi.mock("../../../contexts/ToastContext", () => ({
+  useToast: () => ({ showToast: mockShowToast }),
+}));
+
+// Captures the options the card passes to its data hook, so a test can prove no
+// failure callback is wired into it.
+type HookOptions = { onError?: (error: Error) => void } | undefined;
+let capturedOptions: HookOptions = undefined;
+
 // Mock useBulkExport hook with factory function.
 vi.mock("../../../hooks", () => ({
-  useBulkExport: () => ({
-    startWith: mockStartWith,
-    cancel: mockCancel,
-    deleteJob: mockDeleteJob,
-    download: mockDownload,
-    reset: mockReset,
-    status: mockStatus,
-    result: mockResult,
-    error: mockError,
-    progress: undefined,
-    request: undefined,
-  }),
-  useDownloadFile: () => vi.fn(),
+  useBulkExport: (options?: { onError?: (error: Error) => void }) => {
+    capturedOptions = options;
+    return {
+      startWith: mockStartWith,
+      cancel: mockCancel,
+      deleteJob: mockDeleteJob,
+      download: mockDownload,
+      reset: mockReset,
+      status: mockStatus,
+      result: mockResult,
+      error: mockError,
+      progress: undefined,
+      request: undefined,
+    };
+  },
+  useDownloadFile: (onError?: (error: Error) => void) => {
+    reportDownloadFailure = onError;
+    return mockDownloadFile;
+  },
 }));
+
+/** An export manifest carrying one output file, so a download can be started. */
+const manifestWithOutput = {
+  resourceType: "Parameters",
+  parameter: [
+    {
+      name: "output",
+      part: [
+        { name: "type", valueCode: "Patient" },
+        { name: "url", valueUri: "https://example.com/result?file=Patient.ndjson" },
+      ],
+    },
+  ],
+};
 
 describe("ExportCard", () => {
   const defaultRequest: ExportRequest = {
@@ -65,7 +104,6 @@ describe("ExportCard", () => {
     outputFormat: "ndjson",
   };
   const defaultCreatedAt = new Date("2024-01-15T10:00:00Z");
-  const defaultOnError = vi.fn();
   const defaultOnClose = vi.fn();
 
   beforeEach(() => {
@@ -73,6 +111,8 @@ describe("ExportCard", () => {
     mockStatus = "idle";
     mockResult = undefined;
     mockError = undefined;
+    reportDownloadFailure = undefined;
+    capturedOptions = undefined;
   });
 
   afterEach(() => {
@@ -88,7 +128,6 @@ describe("ExportCard", () => {
         <ExportCard
           request={defaultRequest}
           createdAt={defaultCreatedAt}
-          onError={defaultOnError}
           onClose={defaultOnClose}
         />,
       );
@@ -104,7 +143,6 @@ describe("ExportCard", () => {
         <ExportCard
           request={defaultRequest}
           createdAt={defaultCreatedAt}
-          onError={defaultOnError}
           onClose={defaultOnClose}
         />,
       );
@@ -121,7 +159,6 @@ describe("ExportCard", () => {
         <ExportCard
           request={defaultRequest}
           createdAt={defaultCreatedAt}
-          onError={defaultOnError}
           onClose={defaultOnClose}
         />,
       );
@@ -140,7 +177,6 @@ describe("ExportCard", () => {
         <ExportCard
           request={defaultRequest}
           createdAt={defaultCreatedAt}
-          onError={defaultOnError}
           onClose={defaultOnClose}
         />,
       );
@@ -168,7 +204,6 @@ describe("ExportCard", () => {
         <ExportCard
           request={defaultRequest}
           createdAt={defaultCreatedAt}
-          onError={defaultOnError}
           onClose={defaultOnClose}
         />,
       );
@@ -196,7 +231,6 @@ describe("ExportCard", () => {
         <ExportCard
           request={defaultRequest}
           createdAt={defaultCreatedAt}
-          onError={defaultOnError}
           onClose={defaultOnClose}
         />,
       );
@@ -224,7 +258,6 @@ describe("ExportCard", () => {
         <ExportCard
           request={defaultRequest}
           createdAt={defaultCreatedAt}
-          onError={defaultOnError}
           onClose={defaultOnClose}
         />,
       );
@@ -232,6 +265,101 @@ describe("ExportCard", () => {
       expect(screen.getByRole("button", { name: /cancel/i })).toBeInTheDocument();
       expect(screen.queryByRole("button", { name: /delete/i })).not.toBeInTheDocument();
       expect(screen.queryByRole("button", { name: /close/i })).not.toBeInTheDocument();
+    });
+  });
+
+  // A download failure has no card of its own to appear in, because the card is
+  // describing a job that succeeded, so it is reported as a notification
+  // (FR-003, FR-004).
+  describe("download failure", () => {
+    it("raises a notification naming the download", () => {
+      mockStatus = "complete";
+      mockResult = manifestWithOutput;
+
+      render(
+        <ExportCard
+          request={defaultRequest}
+          createdAt={defaultCreatedAt}
+          onClose={defaultOnClose}
+        />,
+      );
+      reportDownloadFailure?.(new Error("Download failed: 403 - Forbidden"));
+
+      expect(mockShowToast).toHaveBeenCalledWith(
+        "Download failed",
+        "Download failed: 403 - Forbidden",
+      );
+    });
+
+    it("downloads the output file and raises no notification when it succeeds", async () => {
+      const user = userEvent.setup();
+      mockStatus = "complete";
+      mockResult = manifestWithOutput;
+
+      render(
+        <ExportCard
+          request={defaultRequest}
+          createdAt={defaultCreatedAt}
+          onClose={defaultOnClose}
+        />,
+      );
+
+      await user.click(screen.getByRole("button", { name: /download/i }));
+
+      expect(mockDownloadFile).toHaveBeenCalledWith(
+        "https://example.com/result?file=Patient.ndjson",
+        "Patient.ndjson",
+      );
+      expect(mockShowToast).not.toHaveBeenCalled();
+    });
+  });
+
+  // The export job's own failure is displayed in the card, so it must not also
+  // be announced as a notification (FR-001, FR-002).
+  describe("export job failure", () => {
+    it("displays the failure and raises no notification", () => {
+      mockStatus = "error";
+      mockError = new Error("Export failed: 500 - Internal error");
+
+      render(
+        <ExportCard
+          request={defaultRequest}
+          createdAt={defaultCreatedAt}
+          onClose={defaultOnClose}
+        />,
+      );
+
+      // Driving whatever callback the card wired in, so that a reinstated
+      // notification fails this test rather than passing unnoticed.
+      capturedOptions?.onError?.(mockError);
+
+      expect(screen.getByText("Export failed: 500 - Internal error")).toBeInTheDocument();
+      expect(capturedOptions?.onError).toBeUndefined();
+      expect(mockShowToast).not.toHaveBeenCalled();
+    });
+
+    // FR-005 and FR-006: the failure is rendered by the shared callout, so it
+    // looks like every other failure and is announced to assistive technology.
+    it("displays the failure in the shared callout, announced as an alert", () => {
+      mockStatus = "error";
+      const outcome: OperationOutcome = {
+        resourceType: "OperationOutcome",
+        issue: [
+          { severity: "error", code: "processing", diagnostics: "Export path is not writable" },
+        ],
+      };
+      mockError = new OperationOutcomeError(outcome, 400, "Export");
+
+      const { container } = render(
+        <ExportCard
+          request={defaultRequest}
+          createdAt={defaultCreatedAt}
+          onClose={defaultOnClose}
+        />,
+      );
+
+      expect(screen.getByRole("alert")).toHaveTextContent("Export path is not writable");
+      expect(container.querySelector(".rt-CalloutIcon svg")).toBeInTheDocument();
     });
   });
 });

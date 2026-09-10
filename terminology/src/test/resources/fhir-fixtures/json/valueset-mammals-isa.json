@@ -1,0 +1,15 @@
+{
+  "resourceType": "ValueSet",
+  "url": "http://example.org/fhir/ValueSet/mammals-isa",
+  "version": "1.0.0",
+  "name": "MammalsIsA",
+  "status": "active",
+  "compose": {
+    "include": [
+      {
+        "system": "http://example.org/fhir/CodeSystem/animal-species",
+        "filter": [{ "property": "concept", "op": "is-a", "value": "mammal" }]
+      }
+    ]
+  }
+}

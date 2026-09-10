@@ -19,38 +19,49 @@
  * Result card for a single SQL query execution.
  *
  * Mirrors the lifecycle pattern of `ViewCard`: each card mounts, kicks off
- * its own `$sqlquery-run` request via `useSqlQueryRun`, and renders the
+ * its own `$sql-run` request via `useSqlRun`, and renders the
  * format-appropriate result body when complete.
  *
  * @author John Grimes
  */
 
-import { Cross2Icon, ExclamationTriangleIcon } from "@radix-ui/react-icons";
+import { Cross2Icon } from "@radix-ui/react-icons";
 import {
   Badge,
   Box,
   Button,
-  Callout,
   Card,
   Code,
   Flex,
+  Separator,
   Spinner,
   Table,
   Text,
 } from "@radix-ui/themes";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
-import { useSqlQueryRun } from "../../hooks";
-import { OperationOutcomeError } from "../../types/errors";
+import { ExportControls } from "./ExportControls";
+import { SqlExportCardWrapper } from "./SqlExportCardWrapper";
+import { SqlPreview } from "./SqlPreview";
+import { useSqlRun } from "../../hooks";
+import { buildBindingsResource, toSubjectSource } from "../../hooks/sqlQueryHelpers";
 import { formatDateTime } from "../../utils";
+import { ErrorCallout } from "../error/ErrorCallout";
+import { toDisplayIssues } from "../error/errorPresentation";
 
+import type { SqlExportFormat } from "../../types/sqlExport";
 import type { SqlQueryJob, SqlQueryResult } from "../../types/sqlQuery";
+
+/** An in-progress or completed export spawned from this result card. */
+interface SqlQueryExportEntry {
+  id: string;
+  format: SqlExportFormat;
+  createdAt: Date;
+}
 
 interface SqlQueryCardProps {
   /** The SQL query job describing the request. */
   job: SqlQueryJob;
-  /** Callback for surfacing errors to the parent (e.g. for global auth handling). */
-  onError: (message: string) => void;
   /** Optional callback to remove the card once it has terminated. */
   onClose?: () => void;
 }
@@ -60,33 +71,60 @@ interface SqlQueryCardProps {
  *
  * @param props - The component props.
  * @param props.job - The SQL query job describing the request.
- * @param props.onError - Callback for surfacing errors to the parent.
  * @param props.onClose - Optional callback to remove the card once it has terminated.
  * @returns The card.
  */
-export function SqlQueryCard({ job, onError, onClose }: Readonly<SqlQueryCardProps>) {
-  const { execute, status, result, error } = useSqlQueryRun();
+export function SqlQueryCard({ job, onClose }: Readonly<SqlQueryCardProps>) {
+  const { execute, status, result, error } = useSqlRun();
+  const [exports, setExports] = useState<SqlQueryExportEntry[]>([]);
 
   const isRunning = status === "pending";
   const isComplete = status === "success";
   const isError = status === "error";
   const canClose = isComplete || isError;
 
+  // The export affordance appears once a run has returned data: rows for a tabular result, or a
+  // file for a non-previewable binary (Parquet) result.
+  const hasRows =
+    result !== undefined &&
+    (result.kind === "binary" || (result.kind === "tabular" && result.rows.length > 0));
+
   // Mount-time execution: kick off the request once when the card lands
   // in idle state. Using the status as the trigger plays nicely with React
   // Strict Mode's double-render of the mount.
   useEffect(() => {
     if (status === "idle") {
-      execute(job.request);
+      execute({
+        subject: toSubjectSource(job.request),
+        format: job.request.format,
+        limit: job.request.limit,
+        header: job.request.header,
+        bindings: job.request.bindings,
+        parameterTypes: job.request.parameterTypes,
+      });
     }
   }, [status, execute, job]);
 
-  // Surface errors to the parent for global handling.
-  useEffect(() => {
-    if (error) {
-      onError(error.message);
-    }
-  }, [error, onError]);
+  /**
+   * Starts an export of this query's result in the chosen format, reusing the run's query source.
+   *
+   * @param format - The chosen export format.
+   */
+  function handleExport(format: SqlExportFormat) {
+    setExports((current) => [
+      ...current,
+      { id: crypto.randomUUID(), format, createdAt: new Date() },
+    ]);
+  }
+
+  /**
+   * Removes an export card.
+   *
+   * @param id - The id of the export to remove.
+   */
+  function handleCloseExport(id: string) {
+    setExports((current) => current.filter((entry) => entry.id !== id));
+  }
 
   return (
     <Card>
@@ -134,6 +172,37 @@ export function SqlQueryCard({ job, onError, onClose }: Readonly<SqlQueryCardPro
         {isError && error && <SqlQueryErrorBody sql={job.sql} error={error} />}
 
         {isComplete && result && <SqlQueryResultBody result={result} sql={job.sql} />}
+
+        {isComplete && hasRows && (
+          <>
+            <Separator size="4" />
+            <Flex direction="column" gap="2">
+              <Flex align="center" justify="between" wrap="wrap" gap="2">
+                <Text size="2" weight="medium">
+                  Export full result set
+                </Text>
+                <ExportControls onExport={handleExport} />
+              </Flex>
+              {exports.map((entry) => (
+                <SqlExportCardWrapper
+                  key={entry.id}
+                  subjects={[
+                    {
+                      subject: toSubjectSource(job.request),
+                      parameters: buildBindingsResource(
+                        job.request.bindings,
+                        job.request.parameterTypes,
+                      ),
+                    },
+                  ]}
+                  format={entry.format}
+                  createdAt={entry.createdAt}
+                  onClose={() => handleCloseExport(entry.id)}
+                />
+              ))}
+            </Flex>
+          </>
+        )}
       </Flex>
     </Card>
   );
@@ -157,8 +226,8 @@ function SqlQueryResultBody({ result, sql }: Readonly<SqlQueryResultBodyProps>) 
   if (result.kind === "binary") {
     return (
       <Text size="2" color="gray">
-        Binary results cannot be previewed. Download will be supported by a future SQL query export
-        operation.
+        Parquet results cannot be previewed. Use the Export control below to download the full
+        result set.
       </Text>
     );
   }
@@ -210,18 +279,7 @@ function SqlQueryResultBody({ result, sql }: Readonly<SqlQueryResultBodyProps>) 
       <Text size="1" color="gray">
         Submitted SQL:
       </Text>
-      <Box
-        style={{
-          fontFamily: "monospace",
-          fontSize: "0.85em",
-          background: "var(--gray-2)",
-          padding: "0.5rem",
-          borderRadius: "4px",
-          whiteSpace: "pre-wrap",
-        }}
-      >
-        {sql}
-      </Box>
+      <SqlPreview sql={sql} ariaLabel="Submitted SQL" />
     </Flex>
   );
 }
@@ -240,44 +298,15 @@ interface SqlQueryErrorBodyProps {
  * @returns The error body.
  */
 function SqlQueryErrorBody({ sql, error }: Readonly<SqlQueryErrorBodyProps>) {
-  const message =
-    error instanceof OperationOutcomeError ? extractOutcomeText(error) : error.message;
   return (
     <Flex direction="column" gap="2">
       <Text size="1" color="gray">
         Submitted SQL:
       </Text>
-      <Box
-        style={{
-          fontFamily: "monospace",
-          fontSize: "0.85em",
-          background: "var(--gray-2)",
-          padding: "0.5rem",
-          borderRadius: "4px",
-          whiteSpace: "pre-wrap",
-        }}
-      >
-        {sql || "(empty)"}
-      </Box>
-      <Callout.Root color="red" size="1">
-        <Callout.Icon>
-          <ExclamationTriangleIcon />
-        </Callout.Icon>
-        <Callout.Text>{message}</Callout.Text>
-      </Callout.Root>
+      <SqlPreview sql={sql || "(empty)"} ariaLabel="Submitted SQL" />
+      <ErrorCallout issues={toDisplayIssues(error)} size="1" />
     </Flex>
   );
-}
-
-/**
- * Extracts the most useful display text from an OperationOutcome.
- *
- * @param error - The OperationOutcome error to render.
- * @returns The first available diagnostic or details text.
- */
-function extractOutcomeText(error: OperationOutcomeError): string {
-  const issue = error.operationOutcome.issue?.[0];
-  return issue?.diagnostics ?? issue?.details?.text ?? "Server returned an error.";
 }
 
 /**

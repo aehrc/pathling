@@ -17,7 +17,7 @@
 
 /**
  * Card component that displays and manages a single view query job.
- * Each card manages its own query lifecycle via the useViewRun hook.
+ * Each card manages its own query lifecycle via the useSqlRun hook.
  * Supports multiple concurrent exports, each displayed in its own card.
  *
  * @author John Grimes
@@ -28,20 +28,18 @@ import { Badge, Box, Button, Card, Code, Flex, Spinner, Table, Text } from "@rad
 import { useCallback, useEffect, useState } from "react";
 
 import { ExportControls } from "./ExportControls";
-import { ViewExportCardWrapper } from "./ViewExportCardWrapper";
-import { read } from "../../api";
-import { config } from "../../config";
-import { useAuth } from "../../contexts/AuthContext";
-import { useViewRun } from "../../hooks";
+import { SqlExportCardWrapper } from "./SqlExportCardWrapper";
+import { useSqlRun } from "../../hooks";
 import { formatDateTime } from "../../utils";
+import { ErrorCallout } from "../error/ErrorCallout";
+import { toDisplayIssues } from "../error/errorPresentation";
 
-import type { ViewDefinition } from "../../api";
-import type { ViewExportOutputFormat } from "../../hooks";
+import type { SubjectSource } from "../../api";
+import type { SqlExportFormat } from "../../types/sqlExport";
 import type { ViewJob } from "../../types/viewJob";
 
 interface ViewCardProps {
   job: ViewJob;
-  onError: (message: string) => void;
   onClose?: () => void;
 }
 
@@ -50,8 +48,29 @@ interface ViewCardProps {
  */
 interface ViewExportInstance {
   id: string;
-  format: ViewExportOutputFormat;
+  format: SqlExportFormat;
   createdAt: Date;
+}
+
+/**
+ * Derives the wire subject form for a view job: a stored view is named by a
+ * typed reference, an inline one is sent whole.
+ *
+ * @param job - The view job.
+ * @returns The subject source to send.
+ * @throws {Error} When the job names no view definition at all.
+ */
+function toSubjectSource(job: ViewJob): SubjectSource {
+  if (job.mode === "stored" && job.viewDefinitionId) {
+    return {
+      kind: "reference",
+      reference: `ViewDefinition/${job.viewDefinitionId}`,
+    };
+  }
+  if (job.mode === "inline" && job.viewDefinitionJson) {
+    return { kind: "resource", resource: JSON.parse(job.viewDefinitionJson) };
+  }
+  throw new Error("Invalid request: missing view definition ID or JSON");
 }
 
 /**
@@ -90,24 +109,17 @@ function formatCellValue(value: unknown): string {
  *
  * @param props - Component props.
  * @param props.job - The view job configuration.
- * @param props.onError - Callback for error handling (e.g., auth errors).
  * @param props.onClose - Optional callback to close/remove the card.
  * @returns The rendered view card component.
  */
-export function ViewCard({ job, onError, onClose }: Readonly<ViewCardProps>) {
-  const { fhirBaseUrl } = config;
-  const { client } = useAuth();
-  const accessToken = client?.state.tokenResponse?.access_token;
-
-  // Use the view run hook for query execution.
-  const viewRun = useViewRun();
-  const { execute, status, result, error } = viewRun;
+export function ViewCard({ job, onClose }: Readonly<ViewCardProps>) {
+  const { execute, status, result, error } = useSqlRun();
 
   // Track multiple exports within this card.
   const [exports, setExports] = useState<ViewExportInstance[]>([]);
 
-  // Cache the resolved view definition to avoid refetching for each export.
-  const [cachedViewDefinition, setCachedViewDefinition] = useState<ViewDefinition | null>(null);
+  // A view is always run in a tabular format, so a binary result cannot arise.
+  const tabular = result?.kind === "tabular" ? result : undefined;
 
   // Derive states.
   const isRunning = status === "pending";
@@ -122,56 +134,14 @@ export function ViewCard({ job, onError, onClose }: Readonly<ViewCardProps>) {
   // actual mount rather than the first of React 18 Strict Mode's double renders.
   useEffect(() => {
     if (status === "idle") {
-      execute({
-        mode: job.mode,
-        viewDefinitionId: job.viewDefinitionId,
-        viewDefinitionJson: job.viewDefinitionJson,
-        limit: job.limit ?? 10,
-      });
+      execute({ subject: toSubjectSource(job), limit: job.limit ?? 10 });
     }
   }, [status, job, execute]);
 
-  // Report errors to parent.
-  useEffect(() => {
-    if (error) {
-      onError(error.message);
-    }
-  }, [error, onError]);
-
   // Handle export by creating a new export instance.
-  const handleExport = useCallback(
-    async (format: ViewExportOutputFormat) => {
-      if (!fhirBaseUrl) return;
-
-      // Get or build the view definition (cache for subsequent exports).
-      let viewDefinition = cachedViewDefinition;
-      if (!viewDefinition) {
-        if (job.mode === "stored" && job.viewDefinitionId) {
-          // Fetch the stored view definition.
-          const resource = await read(fhirBaseUrl, {
-            resourceType: "ViewDefinition",
-            id: job.viewDefinitionId,
-            accessToken,
-          });
-          viewDefinition = resource as ViewDefinition;
-        } else if (job.mode === "inline" && job.viewDefinitionJson) {
-          viewDefinition = JSON.parse(job.viewDefinitionJson);
-        } else {
-          throw new Error("No view definition available");
-        }
-        setCachedViewDefinition(viewDefinition);
-      }
-
-      // Create a new export instance and prepend it (most recent first).
-      const newExport: ViewExportInstance = {
-        id: crypto.randomUUID(),
-        format,
-        createdAt: new Date(),
-      };
-      setExports((prev) => [newExport, ...prev]);
-    },
-    [job, fhirBaseUrl, accessToken, cachedViewDefinition],
-  );
+  const handleExport = useCallback((format: SqlExportFormat) => {
+    setExports((prev) => [{ id: crypto.randomUUID(), format, createdAt: new Date() }, ...prev]);
+  }, []);
 
   // Handle closing an individual export.
   const handleCloseExport = useCallback((exportId: string) => {
@@ -215,29 +185,25 @@ export function ViewCard({ job, onError, onClose }: Readonly<ViewCardProps>) {
           </Flex>
         )}
 
-        {error && (
-          <Text size="2" color="red">
-            View run failed: {error.message}
-          </Text>
-        )}
+        {error && <ErrorCallout issues={toDisplayIssues(error)} size="1" />}
 
-        {isComplete && result && result.rows.length === 0 && (
+        {isComplete && tabular && tabular.rows.length === 0 && (
           <Text size="2" color="gray">
             No rows returned.
           </Text>
         )}
 
-        {isComplete && result && result.rows.length > 0 && (
+        {isComplete && tabular && tabular.rows.length > 0 && (
           <>
             <Flex align="center" justify="between">
-              <Badge color="gray">{result.rows.length} rows (first 10)</Badge>
+              <Badge color="gray">{tabular.rows.length} rows (first 10)</Badge>
               <ExportControls onExport={handleExport} disabled={false} />
             </Flex>
             <Box style={{ width: "100%", overflowX: "auto" }}>
               <Table.Root size="1">
                 <Table.Header>
                   <Table.Row>
-                    {result.columns.map((column) => (
+                    {tabular.columns.map((column) => (
                       <Table.ColumnHeaderCell key={column} style={{ whiteSpace: "nowrap" }}>
                         <Text weight="medium" size="1">
                           {column}
@@ -247,10 +213,10 @@ export function ViewCard({ job, onError, onClose }: Readonly<ViewCardProps>) {
                   </Table.Row>
                 </Table.Header>
                 <Table.Body>
-                  {result.rows.map((row, rowIndex) => (
+                  {tabular.rows.map((row, rowIndex) => (
                     // eslint-disable-next-line @eslint-react/no-array-index-key -- Query result rows have no stable identifier.
                     <Table.Row key={rowIndex}>
-                      {result.columns.map((column) => (
+                      {tabular.columns.map((column) => (
                         <Table.Cell key={column} style={{ whiteSpace: "nowrap" }}>
                           <Code size="1" title={formatCellValue(row[column])}>
                             {formatCellValue(row[column])}
@@ -263,18 +229,15 @@ export function ViewCard({ job, onError, onClose }: Readonly<ViewCardProps>) {
               </Table.Root>
             </Box>
 
-            {cachedViewDefinition &&
-              exports.map((exportInstance) => (
-                <ViewExportCardWrapper
-                  key={exportInstance.id}
-                  id={exportInstance.id}
-                  viewDefinition={cachedViewDefinition}
-                  format={exportInstance.format}
-                  createdAt={exportInstance.createdAt}
-                  onClose={() => handleCloseExport(exportInstance.id)}
-                  onError={onError}
-                />
-              ))}
+            {exports.map((exportInstance) => (
+              <SqlExportCardWrapper
+                key={exportInstance.id}
+                subjects={[{ subject: toSubjectSource(job) }]}
+                format={exportInstance.format}
+                createdAt={exportInstance.createdAt}
+                onClose={() => handleCloseExport(exportInstance.id)}
+              />
+            ))}
           </>
         )}
       </Flex>

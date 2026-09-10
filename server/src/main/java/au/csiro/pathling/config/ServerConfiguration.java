@@ -111,7 +111,7 @@ public class ServerConfiguration {
   /** Configuration for enabling/disabling individual server operations. */
   @Valid @NotNull private OperationConfiguration operations = new OperationConfiguration();
 
-  /** Configuration for resource limits applied to the $sqlquery-run operation. */
+  /** Configuration for resource limits applied to the $sql-run operation. */
   @Valid @NotNull private SqlQueryConfiguration sqlQuery = new SqlQueryConfiguration();
 
   /** Configuration for the admin UI. */

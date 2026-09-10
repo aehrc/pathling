@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 #
 # Starts the Pathling server with a temporary warehouse and loads test data
-# for demonstrating the $viewdefinition-run and $sqlquery-run operations.
+# for demonstrating the $sql-run operation over each kind of subject.
 #
 # Usage (from any directory within the repository):
 #   ./server/src/main/resources/examples/start-demo.sh
 #
-# The script will print the ViewDefinition IDs needed for the $sqlquery-run
-# examples in sqlquery-run-examples.md.
+# The script will print the ViewDefinition IDs needed for the $sql-run
+# examples in sql-run-examples.md.
 
 set -euo pipefail
 
@@ -242,7 +242,7 @@ echo "  Patients ViewDefinition ID:   $PATIENT_VD_ID"
 echo "  Conditions ViewDefinition ID: $CONDITION_VD_ID"
 echo ""
 echo "  Replace <PATIENT_VD_ID> and <CONDITION_VD_ID> in the"
-echo "  examples in sqlquery-run-examples.md with the IDs above."
+echo "  examples in sql-run-examples.md with the IDs above."
 echo ""
 echo "  Press Ctrl+C to stop the server."
 echo "============================================================"

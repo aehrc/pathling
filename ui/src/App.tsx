@@ -29,6 +29,7 @@ import { Callback } from "./pages/Callback";
 import { Dashboard } from "./pages/Dashboard";
 import { Export } from "./pages/Export";
 import { Import } from "./pages/Import";
+import { Jobs } from "./pages/Jobs";
 import { Resources } from "./pages/Resources";
 import { SqlOnFhir } from "./pages/SqlOnFhir";
 
@@ -48,6 +49,7 @@ export default function App() {
         <Route path="/bulk-submit" element={<BulkSubmit />} />
         <Route path="/resources" element={<Resources />} />
         <Route path="/sql-on-fhir" element={<SqlOnFhir />} />
+        <Route path="/jobs" element={<Jobs />} />
       </Route>
     </Routes>
   );

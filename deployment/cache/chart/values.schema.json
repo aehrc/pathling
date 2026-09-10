@@ -33,6 +33,11 @@
           "type": ["integer", "null"],
           "description": "Port of the Pathling server to cache (required)"
         },
+        "firstByteTimeout": {
+          "type": "string",
+          "description": "Maximum time the cache waits for the first byte of a backend response, as a Varnish duration (e.g. '60s', '10m')",
+          "default": "60s"
+        },
         "service": {
           "type": "object",
           "description": "Kubernetes service configuration",

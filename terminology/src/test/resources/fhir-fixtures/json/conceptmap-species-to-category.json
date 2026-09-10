@@ -1,0 +1,33 @@
+{
+  "resourceType": "ConceptMap",
+  "url": "http://example.org/fhir/ConceptMap/species-to-category",
+  "version": "1.0.0",
+  "name": "SpeciesToCategory",
+  "status": "active",
+  "sourceUri": "http://example.org/fhir/CodeSystem/animal-species",
+  "targetUri": "http://example.org/fhir/CodeSystem/animal-category",
+  "group": [
+    {
+      "source": "http://example.org/fhir/CodeSystem/animal-species",
+      "target": "http://example.org/fhir/CodeSystem/animal-category",
+      "element": [
+        {
+          "code": "dog",
+          "target": [{ "code": "pet", "equivalence": "equivalent" }]
+        },
+        {
+          "code": "cat",
+          "target": [{ "code": "pet", "equivalence": "equivalent" }]
+        },
+        {
+          "code": "whale",
+          "target": [{ "code": "aquatic", "equivalence": "relatedto" }]
+        },
+        {
+          "code": "sparrow",
+          "target": [{ "code": "pet", "equivalence": "wider" }]
+        }
+      ]
+    }
+  ]
+}

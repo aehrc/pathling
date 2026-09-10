@@ -13,9 +13,9 @@ main `pom.xml` in the root of the repository:
 - `utilities` - Utility functions used by different components of Pathling.
 - `encoders` - Encoders for transforming [FHIR](https://hl7.org/fhir/) data into
   Spark Datasets.
-- `terminology` - Interact with
+- `terminology` - Terminology operations from Spark, either through
   a [FHIR terminology server](https://hl7.org/fhir/terminology-service.html)
-  from Spark.
+  or a locally imported terminology store.
 - `fhirpath` - A library that can
   translate [FHIRPath expressions](https://hl7.org/fhirpath/) into Spark
   queries.
@@ -113,6 +113,30 @@ To build and install locally, run:
 ```
 mvn clean install -pl library-runtime -am
 ```
+
+### Test execution time
+
+Around 90% of a core library build is spent running the tests, so that is where
+any effort to shorten the build belongs.
+
+The tests are run in parallel across Surefire forks, one fork per available
+processor. This is controlled by the `pathling.testForkCount` property, which
+accepts either an absolute number of forks or a multiple of the processor count:
+
+```bash
+mvn install -pl library-runtime -am -Dpathling.testForkCount=4
+```
+
+One fork per processor is the fastest setting measured for a build that has the
+machine to itself. Raising it is counterproductive, because each fork holds its
+own Spark session: doubling the fork count makes the `fhirpath` suite around 70%
+slower. Lower it when the build has to share the machine.
+
+Because forks are allocated a whole test class at a time, a module's test suite
+can never finish faster than its slowest single class. On a machine with eight or
+more processors this, rather than the total amount of work, is what sets the
+build time for every core module. If you add a long-running test class, consider
+whether it can be split.
 
 ## Language libraries
 

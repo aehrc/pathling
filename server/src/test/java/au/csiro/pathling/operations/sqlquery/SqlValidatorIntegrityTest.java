@@ -55,6 +55,13 @@ class SqlValidatorIntegrityTest {
     assertThat(resolves(fqn)).as("FQN '%s' did not resolve on the classpath", fqn).isTrue();
   }
 
+  @ParameterizedTest(name = "describe command: {0}")
+  @MethodSource("describeCommandFqns")
+  @DisplayName("Every DESCRIBE carve-out FQN resolves to a class on the classpath")
+  void describeCommandFqnResolves(final String fqn) {
+    assertThat(resolves(fqn)).as("FQN '%s' did not resolve on the classpath", fqn).isTrue();
+  }
+
   static Stream<String> planNodeFqns() {
     return SqlValidator.allowedPlanNodes().stream();
   }
@@ -65,6 +72,10 @@ class SqlValidatorIntegrityTest {
 
   static Stream<String> rejectedExpressionFqns() {
     return SqlValidator.rejectedExpressionNames().stream();
+  }
+
+  static Stream<String> describeCommandFqns() {
+    return SqlValidator.describeCommandNames().stream();
   }
 
   /**

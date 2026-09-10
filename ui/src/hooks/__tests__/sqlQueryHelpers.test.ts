@@ -18,12 +18,15 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  findSourceByUrl,
   libraryToSummary,
   mapLibraryBundle,
   parseTabularBody,
   readSqlQueryResponse,
+  storedReferencesToViewRows,
 } from "../sqlQueryHelpers";
 
+import type { SourceOption } from "../../types/sqlQuery";
 import type { Bundle, Library } from "fhir/r4";
 
 const libraryFixture: Library = {
@@ -217,5 +220,59 @@ describe("readSqlQueryResponse", () => {
     expect(result.kind).toBe("binary");
     if (result.kind !== "binary") return;
     expect(result.blob.size).toBe(3);
+  });
+});
+
+describe("storedReferencesToViewRows", () => {
+  // Each stored dependency reference becomes a view row carrying the canonical
+  // URL verbatim, in reference order, with deterministic row ids.
+  it("maps stored references to view rows by canonical url", () => {
+    const rows = storedReferencesToViewRows([
+      { label: "patients", reference: "https://example.org/Patients" },
+      { label: "active", reference: "https://example.org/Library/Active" },
+    ]);
+
+    expect(rows).toEqual([
+      {
+        rowId: "stored-row-0",
+        label: "patients",
+        referenceUrl: "https://example.org/Patients",
+      },
+      {
+        rowId: "stored-row-1",
+        label: "active",
+        referenceUrl: "https://example.org/Library/Active",
+      },
+    ]);
+  });
+});
+
+describe("findSourceByUrl", () => {
+  const sources: SourceOption[] = [
+    { id: "vd1", name: "Patients", url: "https://example.org/Patients" },
+    { id: "vd2", name: "Draft", url: undefined },
+    { id: "lib1", name: "Active", url: "https://example.org/Library/Active" },
+  ];
+
+  // A stored canonical URL repopulates the picker by matching a known source.
+  it("matches a known source by its canonical url", () => {
+    expect(findSourceByUrl(sources, "https://example.org/Patients")).toEqual({
+      id: "vd1",
+      name: "Patients",
+      url: "https://example.org/Patients",
+    });
+  });
+
+  // An unmatched URL is surfaced verbatim (no source carries it), so the
+  // picker can show a "source not found" note instead of a selection.
+  it("returns undefined for a url no source carries", () => {
+    expect(
+      findSourceByUrl(sources, "https://example.org/Unknown"),
+    ).toBeUndefined();
+  });
+
+  // A url-less source can never be matched.
+  it("never matches a url-less source", () => {
+    expect(findSourceByUrl(sources, "")).toBeUndefined();
   });
 });

@@ -56,7 +56,8 @@ class DisabledOperationIT {
     registry.add("pathling.operations.createEnabled", () -> "false");
     registry.add("pathling.operations.deleteEnabled", () -> "false");
     registry.add("pathling.operations.importEnabled", () -> "false");
-    registry.add("pathling.operations.viewDefinitionRunEnabled", () -> "false");
+    registry.add("pathling.operations.sqlRunEnabled", () -> "false");
+    registry.add("pathling.operations.sqlExportEnabled", () -> "false");
   }
 
   @BeforeEach
@@ -146,44 +147,74 @@ class DisabledOperationIT {
   }
 
   @Test
-  void viewDefinitionRunReturnsClientErrorWhenDisabled() {
-    final String uri = "http://localhost:" + port + "/fhir/$viewdefinition-run";
+  void sqlRunReturnsClientErrorWhenDisabled() {
     final String requestBody =
         """
         {
           "resourceType": "Parameters",
           "parameter": [
             {
-              "name": "viewDefinition",
-              "resource": {
-                "resourceType": "ViewDefinition",
-                "name": "test_view",
-                "resource": "Patient",
-                "select": [
-                  {
-                    "column": [
-                      {"path": "id", "name": "id"}
-                    ]
-                  }
-                ]
-              }
+              "name": "subjectReference",
+              "valueReference": {"reference": "ViewDefinition/anything"}
             }
           ]
         }
         """;
 
-    // When viewdefinition-run is disabled, HAPI returns a client error (operation not found).
+    // When sql-run is disabled, HAPI returns a client error (operation not found).
+    postExpectingClientError("/fhir/$sql-run", requestBody);
+
+    log.info("The $sql-run operation correctly returned a client error when disabled");
+  }
+
+  @Test
+  void sqlExportReturnsClientErrorWhenDisabled() {
+    postExpectingClientError(
+        "/fhir/$sql-export",
+        """
+        {"resourceType": "Parameters", "parameter": []}
+        """);
+
+    log.info("The $sql-export operation correctly returned a client error when disabled");
+  }
+
+  // The four operations these two replaced are gone outright, so they fail as unknown operations
+  // whatever the configuration says.
+  @Test
+  void theReplacedOperationsAreUnknown() {
+    final String body =
+        """
+        {"resourceType": "Parameters", "parameter": []}
+        """;
+    for (final String path :
+        java.util.List.of(
+            "/fhir/$viewdefinition-run",
+            "/fhir/$viewdefinition-export",
+            "/fhir/Library/$sqlquery-run",
+            "/fhir/$sqlquery-export")) {
+      postExpectingClientError(path, body);
+    }
+
     webTestClient
-        .post()
-        .uri(uri)
-        .header("Content-Type", "application/fhir+json")
+        .get()
+        .uri("http://localhost:" + port + "/fhir/ViewDefinition/anything/$run")
         .header("Accept", "application/fhir+json")
-        .bodyValue(requestBody)
         .exchange()
         .expectStatus()
         .is4xxClientError();
+  }
 
-    log.info("ViewDefinition run operation correctly returned client error when disabled");
+  /** Posts a Parameters body to a path and asserts a client error. */
+  private void postExpectingClientError(final String path, final String body) {
+    webTestClient
+        .post()
+        .uri("http://localhost:" + port + path)
+        .header("Content-Type", "application/fhir+json")
+        .header("Accept", "application/fhir+json")
+        .bodyValue(body)
+        .exchange()
+        .expectStatus()
+        .is4xxClientError();
   }
 
   @Test
@@ -217,8 +248,10 @@ class DisabledOperationIT {
         // Verify import operation is not in system-level operations.
         .jsonPath("$.rest[0].operation[?(@.name=='import')]")
         .doesNotExist()
-        // Verify viewdefinition-run operation is not in system-level operations.
-        .jsonPath("$.rest[0].operation[?(@.name=='viewdefinition-run')]")
+        // Verify neither SQL on FHIR data operation is in system-level operations.
+        .jsonPath("$.rest[0].operation[?(@.name=='sql-run')]")
+        .doesNotExist()
+        .jsonPath("$.rest[0].operation[?(@.name=='sql-export')]")
         .doesNotExist();
 
     log.info("CapabilityStatement correctly excludes disabled operations");

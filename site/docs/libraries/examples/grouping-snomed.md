@@ -317,4 +317,4 @@ pc %>% pathling_disconnect()
 </Tabs>
 
 For more detailed information on grouping SNOMED data, you can refer
-to [Terminology functions](/docs/libraries/terminology.md).
+to [Terminology functions](/docs/libraries/terminology/index.md).

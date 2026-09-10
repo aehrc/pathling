@@ -24,6 +24,7 @@
 import {
   DownloadIcon,
   HamburgerMenuIcon,
+  ListBulletIcon,
   PaperPlaneIcon,
   ReaderIcon,
   TableIcon,
@@ -32,6 +33,8 @@ import {
 import { Box, Container, DropdownMenu, Flex, IconButton, Text } from "@radix-ui/themes";
 import { Link, Outlet, useLocation } from "react-router";
 
+import logoDark from "../../assets/logo-colour-dark.svg";
+import logoLight from "../../assets/logo-colour.svg";
 import { config } from "../../config";
 import { useAuth } from "../../contexts/AuthContext";
 import { useDocumentTitle } from "../../hooks/useDocumentTitle";
@@ -73,6 +76,7 @@ const navItems: NavItem[] = [
   { to: "/import", icon: <UploadIcon />, label: "Import" },
   { to: "/bulk-submit", icon: <PaperPlaneIcon />, label: "Bulk submit" },
   { to: "/sql-on-fhir", icon: <TableIcon />, label: "SQL on FHIR" },
+  { to: "/jobs", icon: <ListBulletIcon />, label: "Jobs" },
 ];
 
 interface MobileNavProps {
@@ -157,16 +161,8 @@ export function Layout() {
             <Flex align="center" gap="5">
               <Link to="/">
                 <picture>
-                  <source
-                    srcSet="/admin/logo-colour-dark.svg"
-                    media="(prefers-color-scheme: dark)"
-                  />
-                  <img
-                    src="/admin/logo-colour.svg"
-                    alt="Pathling"
-                    height={50}
-                    style={{ display: "block" }}
-                  />
+                  <source srcSet={logoDark} media="(prefers-color-scheme: dark)" />
+                  <img src={logoLight} alt="Pathling" height={50} style={{ display: "block" }} />
                 </picture>
               </Link>
               <Flex

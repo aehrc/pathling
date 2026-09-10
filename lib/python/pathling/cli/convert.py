@@ -24,15 +24,23 @@ counts written.
 Author: John Grimes.
 """
 
+from __future__ import annotations
+
 from pathlib import Path
+from typing import TYPE_CHECKING, Optional, Tuple
 
 import click
+from rich.console import Console
 from rich.table import Table
 
 from pathling.cli import session
 from pathling.cli.errors import EXIT_USAGE, CliError
 from pathling.cli.io import FROM_CHOICES, read_source, resolve_source
 from pathling.cli.render import check_overwrite, progress_status
+
+if TYPE_CHECKING:
+    from pathling.cli.main import CliContext
+    from pathling.datasource import DataSource
 
 # The output formats convert can write.
 TO_CHOICES = ("ndjson", "parquet", "delta")
@@ -83,7 +91,16 @@ MODE_CHOICES = ("overwrite", "error", "append", "merge")
     help="Replace an existing output path (equivalent to --mode overwrite).",
 )
 @click.pass_obj
-def convert(obj, source, from_format, to_format, output, mode, types, overwrite):
+def convert(
+    obj: CliContext,
+    source: str,
+    from_format: Optional[str],
+    to_format: str,
+    output: str,
+    mode: str,
+    types: Tuple[str, ...],
+    overwrite: bool,
+) -> None:
     """Convert FHIR data between formats.
 
     Examples:
@@ -134,7 +151,9 @@ def convert(obj, source, from_format, to_format, output, mode, types, overwrite)
     _print_summary(console, data_source, output_path)
 
 
-def _print_summary(console, data_source, output_path) -> None:
+def _print_summary(
+    console: Console, data_source: DataSource, output_path: Path
+) -> None:
     """Prints a table of the resource types written and the output location.
 
     Row counts are deliberately omitted: counting each type would trigger an

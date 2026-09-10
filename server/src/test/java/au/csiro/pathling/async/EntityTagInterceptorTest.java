@@ -262,4 +262,18 @@ class EntityTagInterceptorTest {
     verifyCacheableResponseHeaders();
     verify(response).setHeader(eq("Cache-Control"), eq("must-revalidate,max-age=1"));
   }
+
+  @Test
+  void jobsListEndpointSkipsEtagValidation() {
+    // $jobs is a live snapshot of registry state, not data state, so it must not be validated
+    // against the database ETag (which would serve a stale 304 when jobs change but data does not).
+    setupCacheableRequest("GET", TAG, "$jobs");
+
+    interceptor.checkIncomingTag(request, requestDetails, response);
+
+    verify(database, org.mockito.Mockito.never())
+        .cacheKeyMatches(org.mockito.ArgumentMatchers.anyString());
+    verifyCacheableResponseHeaders();
+    verify(response).setHeader(eq("Cache-Control"), eq("must-revalidate,max-age=1"));
+  }
 }

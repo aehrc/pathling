@@ -21,19 +21,15 @@
  * @author John Grimes
  */
 
-import { Box, Flex, Spinner, Tabs, Text } from "@radix-ui/themes";
+import { Box, Flex, Tabs } from "@radix-ui/themes";
 import { useState } from "react";
 
-import { LoginRequired } from "../components/auth/LoginRequired";
-import { SessionExpiredDialog } from "../components/auth/SessionExpiredDialog";
+import { CapabilityGuard } from "../components/auth/CapabilityGuard";
 import { ImportCard } from "../components/import/ImportCard";
 import { ImportForm } from "../components/import/ImportForm";
 import { ImportPnpForm } from "../components/import/ImportPnpForm";
-import { config } from "../config";
-import { useAuth } from "../contexts/AuthContext";
-import { useServerCapabilities } from "../hooks";
+import { buildSearchParamMap } from "../hooks";
 
-import type { SearchParamCapability } from "../hooks/useServerCapabilities";
 import type { ImportJob, ImportRequest } from "../types/import";
 import type { ImportPnpRequest } from "../types/importPnp";
 
@@ -43,18 +39,8 @@ import type { ImportPnpRequest } from "../types/importPnp";
  * @returns The import page component.
  */
 export function Import() {
-  const { fhirBaseUrl } = config;
-  const { isAuthenticated } = useAuth();
-
   // Track all import jobs.
   const [imports, setImports] = useState<ImportJob[]>([]);
-
-  // Track error messages for display.
-  const [, setError] = useState<string | null>(null);
-
-  // Fetch server capabilities to determine if auth is required.
-  const { data: capabilities, isLoading: isLoadingCapabilities } =
-    useServerCapabilities(fhirBaseUrl);
 
   /**
    * Handles submission of a standard import.
@@ -95,78 +81,50 @@ export function Import() {
     setImports((prev) => prev.filter((job) => job.id !== id));
   };
 
-  // Build search parameters mapping from capabilities.
-  let searchParams: Record<string, SearchParamCapability[]> | undefined;
-  if (capabilities?.resources) {
-    searchParams = {};
-    for (const resource of capabilities.resources) {
-      searchParams[resource.type] = resource.searchParams;
-    }
-  }
-
-  // Show loading state while checking server capabilities.
-  if (isLoadingCapabilities) {
-    return (
-      <>
-        <Flex align="center" gap="2">
-          <Spinner />
-          <Text>Checking server capabilities...</Text>
-        </Flex>
-        <SessionExpiredDialog />
-      </>
-    );
-  }
-
-  // Show login prompt if authentication is required but not authenticated.
-  if (capabilities?.authRequired && !isAuthenticated) {
-    return <LoginRequired />;
-  }
-
   // Show import form (either auth not required or user is authenticated).
   return (
-    <>
-      <Flex gap="6" direction={{ initial: "column", md: "row" }}>
-        <Tabs.Root defaultValue="urls" style={{ flex: 1 }}>
-          <Tabs.List>
-            <Tabs.Trigger value="urls">Import from URLs</Tabs.Trigger>
-            <Tabs.Trigger value="fhir-server">Import from FHIR server</Tabs.Trigger>
-          </Tabs.List>
+    <CapabilityGuard>
+      {(capabilities) => {
+        const searchParams = buildSearchParamMap(capabilities);
 
-          <Box pt="4">
-            <Tabs.Content value="urls">
-              <ImportForm
-                onSubmit={handleStandardImport}
-                isSubmitting={false}
-                disabled={false}
-                resourceTypes={capabilities?.resourceTypes ?? []}
-              />
-            </Tabs.Content>
+        return (
+          <Flex gap="6" direction={{ initial: "column", md: "row" }}>
+            <Tabs.Root defaultValue="urls" style={{ flex: 1 }}>
+              <Tabs.List>
+                <Tabs.Trigger value="urls">Import from URLs</Tabs.Trigger>
+                <Tabs.Trigger value="fhir-server">Import from FHIR server</Tabs.Trigger>
+              </Tabs.List>
 
-            <Tabs.Content value="fhir-server">
-              <ImportPnpForm
-                onSubmit={handlePnpImport}
-                isSubmitting={false}
-                disabled={false}
-                resourceTypes={capabilities?.resourceTypes ?? []}
-                searchParams={searchParams}
-              />
-            </Tabs.Content>
-          </Box>
-        </Tabs.Root>
+              <Box pt="4">
+                <Tabs.Content value="urls">
+                  <ImportForm
+                    onSubmit={handleStandardImport}
+                    isSubmitting={false}
+                    disabled={false}
+                    resourceTypes={capabilities?.resourceTypes ?? []}
+                  />
+                </Tabs.Content>
 
-        <Flex direction="column" gap="3" mt="4" style={{ flex: 1 }}>
-          {imports.map((job) => (
-            <ImportCard
-              key={job.id}
-              job={job}
-              onError={(message) => setError(message)}
-              onClose={() => handleCloseImport(job.id)}
-            />
-          ))}
-        </Flex>
-      </Flex>
+                <Tabs.Content value="fhir-server">
+                  <ImportPnpForm
+                    onSubmit={handlePnpImport}
+                    isSubmitting={false}
+                    disabled={false}
+                    resourceTypes={capabilities?.resourceTypes ?? []}
+                    searchParams={searchParams}
+                  />
+                </Tabs.Content>
+              </Box>
+            </Tabs.Root>
 
-      <SessionExpiredDialog />
-    </>
+            <Flex direction="column" gap="3" mt="4" style={{ flex: 1 }}>
+              {imports.map((job) => (
+                <ImportCard key={job.id} job={job} onClose={() => handleCloseImport(job.id)} />
+              ))}
+            </Flex>
+          </Flex>
+        );
+      }}
+    </CapabilityGuard>
   );
 }

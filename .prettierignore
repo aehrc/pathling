@@ -1,1 +1,4 @@
 *.html
+
+# Intentionally malformed fixture for the streaming import corruption test.
+terminology/src/test/resources/fhir-import/corrupt-concepts.json

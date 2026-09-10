@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.async;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -33,6 +34,8 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.spark.SparkContext;
+import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -80,7 +83,8 @@ class JobProviderSecurityTest {
     final JobDirectoryFileSystem jobDirectoryFileSystem =
         new JobDirectoryFileSystem(tempDir.toUri(), new Configuration());
 
-    jobProvider = new JobProvider(serverConfiguration, jobRegistry, jobDirectoryFileSystem);
+    jobProvider =
+        new JobProvider(serverConfiguration, jobRegistry, jobDirectoryFileSystem, mockSpark());
 
     request = new MockHttpServletRequest();
     response = new MockHttpServletResponse();
@@ -118,6 +122,97 @@ class JobProviderSecurityTest {
     // is not done, not AccessDeniedError).
     assertThatThrownBy(() -> jobProvider.job(jobId, request, response))
         .isInstanceOf(ProcessingNotCompletedException.class);
+  }
+
+  @Test
+  void allowsDeleteWhenOwnerWithAuthority() {
+    // The owner, holding the job's operation authority, may delete their own job.
+    final String jobId = registerTaggedJob(OWNER_USER);
+    setAuthenticatedUser(OWNER_USER, "pathling:export");
+
+    // Deletion signals success by throwing ProcessingNotCompletedException, and the job is removed.
+    assertThatThrownBy(() -> jobProvider.deleteJob(jobId))
+        .isInstanceOf(ProcessingNotCompletedException.class);
+    assertThat(jobRegistry.get(jobId)).isNull();
+  }
+
+  @Test
+  void rejectsDeleteWhenDifferentUser() {
+    // A non-owner is refused, and the job is left untouched in the registry.
+    final String jobId = UUID.randomUUID().toString();
+    final CompletableFuture<IBaseResource> future = new CompletableFuture<>();
+    final Job<IBaseResource> job = new Job<>(jobId, "export", future, Optional.of(OWNER_USER));
+    jobRegistry.register(job);
+    setAuthenticatedUser(OTHER_USER, "pathling:export");
+
+    assertThatThrownBy(() -> jobProvider.deleteJob(jobId))
+        .isExactlyInstanceOf(AccessDeniedError.class)
+        .hasMessage("The requested job is not owned by the current user");
+    assertThat(jobRegistry.<IBaseResource>get(jobId)).isSameAs(job);
+  }
+
+  @Test
+  void rejectsDeleteWhenMissingOperationAuthority() {
+    // Even the owner must hold the authority for the job's originating operation.
+    final String jobId = UUID.randomUUID().toString();
+    final CompletableFuture<IBaseResource> future = new CompletableFuture<>();
+    final Job<IBaseResource> job = new Job<>(jobId, "export", future, Optional.of(OWNER_USER));
+    jobRegistry.register(job);
+    setAuthenticatedUser(OWNER_USER, "pathling:import");
+
+    assertThatThrownBy(() -> jobProvider.deleteJob(jobId)).isInstanceOf(AccessDeniedError.class);
+    assertThat(jobRegistry.<IBaseResource>get(jobId)).isSameAs(job);
+  }
+
+  @Test
+  void allowsDeleteByAnyoneWhenAuthDisabled() {
+    // With authorisation disabled, ownership is not enforced on the delete path.
+    final ServerConfiguration authDisabledConfiguration = mock(ServerConfiguration.class);
+    final AuthorizationConfiguration authConfig = mock(AuthorizationConfiguration.class);
+    when(authDisabledConfiguration.getAuth()).thenReturn(authConfig);
+    when(authConfig.isEnabled()).thenReturn(false);
+    final AsyncConfiguration asyncConfig = mock(AsyncConfiguration.class);
+    when(asyncConfig.getCacheMaxAge()).thenReturn(1);
+    when(authDisabledConfiguration.getAsync()).thenReturn(asyncConfig);
+    final JobDirectoryFileSystem fileSystem =
+        new JobDirectoryFileSystem(tempDir.toUri(), new Configuration());
+    final JobProvider authDisabledProvider =
+        new JobProvider(authDisabledConfiguration, jobRegistry, fileSystem, mockSpark());
+
+    final String jobId = registerTaggedJob(OWNER_USER);
+    SecurityContextHolder.clearContext();
+
+    assertThatThrownBy(() -> authDisabledProvider.deleteJob(jobId))
+        .isInstanceOf(ProcessingNotCompletedException.class);
+    assertThat(jobRegistry.get(jobId)).isNull();
+  }
+
+  /**
+   * Registers a running job through the tag-based factory, so it is present in both the id and tag
+   * maps and can be removed by the delete path exactly as a real async job would be.
+   *
+   * @param owner the owner subject to record on the job
+   * @return the generated job id
+   */
+  private String registerTaggedJob(@Nonnull final String owner) {
+    final Job<IBaseResource> job =
+        jobRegistry.getOrCreate(
+            new Job.JobTag() {},
+            id -> new Job<>(id, "export", new CompletableFuture<>(), Optional.of(owner)));
+    return job.getId();
+  }
+
+  /**
+   * Creates a Spark session whose context accepts job-group cancellation, which the delete path
+   * calls to stop the work belonging to the job.
+   *
+   * @return a mock Spark session
+   */
+  @Nonnull
+  private static SparkSession mockSpark() {
+    final SparkSession spark = mock(SparkSession.class);
+    when(spark.sparkContext()).thenReturn(mock(SparkContext.class));
+    return spark;
   }
 
   private void setAuthenticatedUser(

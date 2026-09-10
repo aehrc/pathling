@@ -23,23 +23,19 @@
 
 import { createContext, type ReactNode, use, useCallback, useEffect, useState } from "react";
 
-import { registerClearSession } from "../main";
+import { registerSessionExpiryHandler } from "../services/sessionExpiry";
 
 import type Client from "fhirclient/lib/Client";
 
 interface AuthState {
   isAuthenticated: boolean;
-  isLoading: boolean;
   client: Client | null;
-  error: string | null;
   authRequired: boolean | null; // null = unknown, true = required, false = not required
   sessionExpired: boolean;
 }
 
 interface AuthContextValue extends AuthState {
   setClient: (client: Client) => void;
-  setError: (error: string) => void;
-  setLoading: (loading: boolean) => void;
   setAuthRequired: (required: boolean) => void;
   setSessionExpired: (expired: boolean) => void;
   clearSessionAndPromptLogin: () => void;
@@ -58,9 +54,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [state, setState] = useState<AuthState>({
     isAuthenticated: false,
-    isLoading: false,
     client: null,
-    error: null,
     authRequired: null,
     sessionExpired: false,
   });
@@ -69,9 +63,7 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
     setState((prev) => ({
       ...prev,
       isAuthenticated: true,
-      isLoading: false,
       client,
-      error: null,
     }));
   };
 
@@ -82,22 +74,6 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
     }));
   };
 
-  const setError = (error: string) => {
-    setState((prev) => ({
-      ...prev,
-      isLoading: false,
-      error,
-    }));
-  };
-
-  const setLoading = (loading: boolean) => {
-    setState((prev) => ({
-      ...prev,
-      isLoading: loading,
-      error: loading ? null : prev.error,
-    }));
-  };
-
   const setSessionExpired = (expired: boolean) => {
     setState((prev) => ({
       ...prev,
@@ -105,15 +81,18 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
     }));
   };
 
+  // An authorisation failure only means the session expired if one was held.
+  // Deciding inside the updater keeps the check against the current state
+  // without introducing any state of its own, and makes the prompt idempotent
+  // so concurrent failures raise a single dialog.
   const clearSessionAndPromptLogin = useCallback(() => {
-    setState((prev) => ({
-      ...prev,
-      isAuthenticated: false,
-      isLoading: false,
-      client: null,
-      error: null,
-      sessionExpired: true,
-    }));
+    setState((prev) =>
+      prev.isAuthenticated
+        ? { ...prev, isAuthenticated: false, client: null, sessionExpired: true }
+        : prev,
+    );
+    // Clear the key unconditionally, so a stale one from a previous page load
+    // does not survive.
     sessionStorage.removeItem("SMART_KEY");
   }, []);
 
@@ -121,9 +100,7 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
     setState((prev) => ({
       ...prev,
       isAuthenticated: false,
-      isLoading: false,
       client: null,
-      error: null,
       sessionExpired: false,
     }));
     // Clear any stored session data.
@@ -134,7 +111,7 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
 
   // Register the session clearing function for global 401 handling.
   useEffect(() => {
-    registerClearSession(clearSessionAndPromptLogin);
+    registerSessionExpiryHandler(clearSessionAndPromptLogin);
   }, [clearSessionAndPromptLogin]);
 
   return (
@@ -142,8 +119,6 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
       value={{
         ...state,
         setClient,
-        setError,
-        setLoading,
         setAuthRequired,
         setSessionExpired,
         clearSessionAndPromptLogin,

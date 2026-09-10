@@ -269,6 +269,7 @@ export const mockExportManifest: Parameters = {
 export const mockViewDefinition1 = {
   resourceType: "ViewDefinition",
   id: "patient-demographics",
+  url: "https://pathling.example/ViewDefinition/PatientDemographics",
   name: "Patient Demographics",
   resource: "Patient",
   status: "active",
@@ -288,6 +289,7 @@ export const mockViewDefinition1 = {
 export const mockViewDefinition2 = {
   resourceType: "ViewDefinition",
   id: "observation-vitals",
+  url: "https://pathling.example/ViewDefinition/ObservationVitals",
   name: "Observation Vitals",
   resource: "Observation",
   status: "active",
@@ -353,7 +355,7 @@ export const mockEmptyViewRunNdjson = "";
 // ============================================================================
 
 /**
- * Mock SQLQuery Library for use in `$sqlquery-run` tests.
+ * Mock SQLQuery Library for use in `$sql-run` tests.
  *
  * Carries Base64-encoded SQL ("SELECT 1"), references a single
  * ViewDefinition and declares one runtime parameter.
@@ -381,7 +383,7 @@ export const mockSqlQueryLibrary1 = {
     {
       type: "depends-on",
       label: "patients",
-      resource: "ViewDefinition/patient-demographics",
+      resource: "https://pathling.example/ViewDefinition/PatientDemographics",
     },
   ],
   parameter: [{ name: "patient_id", use: "in", type: "string" }],
@@ -415,14 +417,80 @@ export const mockEmptySqlQueryLibraryBundle: Bundle = {
   entry: [],
 };
 
+// ============================================================================
+// SQLView (sql-view) Library mocks
+// ============================================================================
+
 /**
- * Mock CSV body for `$sqlquery-run` results.
+ * Mock SQLView Library for use in `$sql-run` / `$sql-export` tests.
+ *
+ * Carries Base64-encoded SQL ("SELECT 2"), references a single ViewDefinition
+ * as a dependency and declares no parameters (SQLViews are parameter-less).
+ */
+export const mockSqlViewLibrary1 = {
+  resourceType: "Library",
+  id: "view-active-patients",
+  status: "active",
+  title: "Active patients",
+  type: {
+    coding: [
+      {
+        system: "https://sql-on-fhir.org/ig/CodeSystem/LibraryTypesCodes",
+        code: "sql-view",
+      },
+    ],
+  },
+  content: [
+    {
+      contentType: "application/sql",
+      data: "U0VMRUNUIDI=",
+    },
+  ],
+  relatedArtifact: [
+    {
+      type: "depends-on",
+      label: "patients",
+      resource: "https://pathling.example/ViewDefinition/PatientDemographics",
+    },
+  ],
+};
+
+/**
+ * Mock Bundle containing SQLView Library search results.
+ */
+export const mockSqlViewLibraryBundle: Bundle = {
+  resourceType: "Bundle",
+  type: "searchset",
+  total: 1,
+  entry: [
+    {
+      resource: mockSqlViewLibrary1 as Bundle["entry"] extends (infer T)[]
+        ? T extends { resource?: infer R }
+          ? R
+          : never
+        : never,
+    },
+  ],
+};
+
+/**
+ * Mock empty SQLView Library Bundle for testing the empty-views state.
+ */
+export const mockEmptySqlViewLibraryBundle: Bundle = {
+  resourceType: "Bundle",
+  type: "searchset",
+  total: 0,
+  entry: [],
+};
+
+/**
+ * Mock CSV body for `$sql-run` results.
  */
 export const mockSqlQueryRunCsv =
   "patient_id,given_name\npat-1,Alice\npat-2,Bob";
 
 /**
- * Mock OperationOutcome body for `$sqlquery-run` validation failures.
+ * Mock OperationOutcome body for `$sql-run` validation failures.
  */
 export const mockSqlQueryRunOperationOutcome = {
   resourceType: "OperationOutcome",

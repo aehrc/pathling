@@ -31,16 +31,21 @@ import {
   parseNdjsonResponse,
 } from "../utils";
 
+import type { SubjectSource } from "../api";
 import type {
+  SourceOption,
   SqlQueryBinaryResult,
   SqlQueryLibrary,
   SqlQueryLibrarySummary,
   SqlQueryOutputFormat,
   SqlQueryParameterType,
+  SqlQueryRelatedArtifact,
+  SqlQueryRequest,
   SqlQueryResult,
+  SqlQueryRuntimeBindings,
   SqlQueryTabularResult,
 } from "../types/sqlQuery";
-import type { Bundle, Library } from "fhir/r4";
+import type { Bundle, Library, Parameters, ParametersParameter } from "fhir/r4";
 
 /**
  * Allowed FHIR primitive types for declared SQL parameters in the UI.
@@ -138,6 +143,7 @@ export function libraryToSummary(
   return {
     id,
     title,
+    url: library.url,
     sql,
     relatedArtifacts,
     parameters,
@@ -146,7 +152,61 @@ export function libraryToSummary(
 }
 
 /**
- * Reads the body of a `$sqlquery-run` response and assembles it into a
+ * Repopulates inline-form view rows from a stored query's dependency
+ * references. Each `relatedArtifact` is a canonical URL, carried verbatim as
+ * the row's `referenceUrl`; the picker later matches it back to a known source
+ * (see {@link findSourceByUrl}) or surfaces it as an unmatched URL.
+ *
+ * @param relatedArtifacts - The stored query's decoded dependency references.
+ * @returns The view rows, in reference order, keyed by deterministic row ids.
+ *
+ * @example
+ * storedReferencesToViewRows([
+ *   { label: "patients", reference: "https://example.org/Patients" },
+ * ]);
+ * // [{ rowId: "stored-row-0", label: "patients",
+ * //    referenceUrl: "https://example.org/Patients" }]
+ */
+export function storedReferencesToViewRows(
+  relatedArtifacts: Array<{ label: string; reference: string }>,
+): SqlQueryRelatedArtifact[] {
+  return relatedArtifacts.map((artifact, index) => ({
+    rowId: `stored-row-${index}`,
+    label: artifact.label,
+    referenceUrl: artifact.reference,
+  }));
+}
+
+/**
+ * Finds the source whose canonical URL matches the given reference URL.
+ *
+ * Used to repopulate the picker when editing a stored query: a matched source
+ * is shown selected by name, while an unmatched URL (no source carries it) is
+ * surfaced verbatim with a "source not found" note.
+ *
+ * @param sources - The known selectable sources.
+ * @param url - The canonical URL to match.
+ * @returns The matching source, or `undefined` when none carries that URL.
+ *
+ * @example
+ * findSourceByUrl(
+ *   [{ id: "vd1", name: "Patients", url: "https://example.org/Patients" }],
+ *   "https://example.org/Patients",
+ * );
+ * // { id: "vd1", name: "Patients", url: "https://example.org/Patients" }
+ */
+export function findSourceByUrl(
+  sources: SourceOption[],
+  url: string,
+): SourceOption | undefined {
+  if (!url) {
+    return undefined;
+  }
+  return sources.find((source) => source.url === url);
+}
+
+/**
+ * Reads the body of a `$sql-run` response and assembles it into a
  * format-aware result.
  *
  * Tabular formats (`csv`, `ndjson`, `json`, `fhir`) are parsed into a
@@ -154,7 +214,7 @@ export function libraryToSummary(
  * the UI can offer a verbatim download. Parquet is not parsed; the body
  * is returned as a Blob only.
  *
- * @param response - The fetch Response from `sqlQueryRun`.
+ * @param response - The fetch Response from `sqlRun` or `sqlRunStored`.
  * @param format - The output format requested with the request.
  * @returns The parsed and/or downloadable result.
  *
@@ -271,4 +331,100 @@ function tabularContentType(
     case "fhir":
       return "application/fhir+json";
   }
+}
+
+/**
+ * Builds the nested `parameters` Parameters resource carrying runtime
+ * bindings, or returns `undefined` when there is nothing to send.
+ *
+ * A binding whose value cannot be coerced to its declared type is omitted;
+ * the form layer is responsible for blocking submission in that case.
+ *
+ * @param bindings - Runtime values keyed by declared parameter name.
+ * @param parameterTypes - Declared FHIR primitive types keyed by name.
+ * @returns The bindings resource, or `undefined` when no binding has a value.
+ *
+ * @example
+ * buildBindingsResource({ family: "Smith" }, { family: "string" });
+ * // { resourceType: "Parameters", parameter: [{ name: "family", valueString: "Smith" }] }
+ */
+export function buildBindingsResource(
+  bindings: SqlQueryRuntimeBindings | undefined,
+  parameterTypes: Record<string, SqlQueryParameterType> | undefined,
+): Parameters | undefined {
+  if (!bindings) {
+    return undefined;
+  }
+
+  const entries: ParametersParameter[] = [];
+  for (const [name, rawValue] of Object.entries(bindings)) {
+    if (rawValue === undefined || rawValue === null || rawValue === "") {
+      continue;
+    }
+    const part = bindingToPart(
+      name,
+      rawValue,
+      parameterTypes?.[name] ?? "string",
+    );
+    if (part) {
+      entries.push(part);
+    }
+  }
+  if (entries.length === 0) {
+    return undefined;
+  }
+  return { resourceType: "Parameters", parameter: entries };
+}
+
+/**
+ * Maps a single runtime binding to a typed Parameters part.
+ *
+ * @param name - The parameter name.
+ * @param rawValue - The string captured from the form input.
+ * @param type - The declared FHIR primitive type.
+ * @returns The part with the matching `value[x]` slot, or `undefined` when the
+ *   value cannot be parsed.
+ */
+function bindingToPart(
+  name: string,
+  rawValue: string,
+  type: SqlQueryParameterType,
+): ParametersParameter | undefined {
+  switch (type) {
+    case "string":
+      return { name, valueString: rawValue };
+    case "code":
+      return { name, valueCode: rawValue };
+    case "integer": {
+      const parsed = Number.parseInt(rawValue, 10);
+      return Number.isNaN(parsed) ? undefined : { name, valueInteger: parsed };
+    }
+    case "decimal": {
+      const parsed = Number.parseFloat(rawValue);
+      return Number.isNaN(parsed) ? undefined : { name, valueDecimal: parsed };
+    }
+    case "boolean":
+      return { name, valueBoolean: rawValue === "true" };
+    case "date":
+      return { name, valueDate: rawValue };
+    case "dateTime":
+      return { name, valueDateTime: rawValue };
+  }
+}
+
+/**
+ * Derives the wire subject form from a SQL query request: a stored Library is
+ * named by a typed reference, an inline one is sent whole.
+ *
+ * @param request - The form-level SQL query request.
+ * @returns The subject source to send.
+ *
+ * @example
+ * toSubjectSource({ mode: "stored", libraryId: "bp" });
+ * // { kind: "reference", reference: "Library/bp" }
+ */
+export function toSubjectSource(request: SqlQueryRequest): SubjectSource {
+  return request.mode === "stored"
+    ? { kind: "reference", reference: `Library/${request.libraryId}` }
+    : { kind: "resource", resource: request.library };
 }

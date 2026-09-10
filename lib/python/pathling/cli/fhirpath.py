@@ -25,26 +25,37 @@ named variables, and a FHIR search ``--filter`` in data source mode.
 Author: John Grimes.
 """
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Optional, Tuple
+
 import click
+from rich.console import Console
 
 from pathling.cli import session
 from pathling.cli.errors import EXIT_USAGE, CliError
 from pathling.cli.io import (
     FROM_CHOICES,
     SourceFormat,
+    SourceSpec,
     read_single_resource,
     read_source,
     resolve_source,
 )
 from pathling.cli.render import (
+    OutputSpec,
     output_options,
     progress_status,
     resolve_output,
     write_output,
 )
 
+if TYPE_CHECKING:
+    from pathling import PathlingContext
+    from pathling.cli.main import CliContext
 
-def _parse_variables(var_specs) -> dict:
+
+def _parse_variables(var_specs: Tuple[str, ...]) -> dict:
     """Parses repeated ``name=value`` variable specifications.
 
     :param var_specs: the raw ``--var`` values.
@@ -87,20 +98,22 @@ def _parse_variables(var_specs) -> dict:
 @output_options
 @click.pass_obj
 def fhirpath(
-    obj,
-    source,
-    from_format,
-    expression,
-    resource_type,
-    context_expression,
-    variables,
-    filter_expr,
-    output_format,
-    output,
-    limit,
-    overwrite,
-    departition,
-):
+    obj: CliContext,
+    source: str,
+    from_format: Optional[str],
+    expression: str,
+    resource_type: Optional[str],
+    context_expression: Optional[str],
+    variables: Tuple[str, ...],
+    filter_expr: Optional[str],
+    output_format: Optional[str],
+    output: Optional[str],
+    limit: int,
+    overwrite: bool,
+    departition: bool,
+    delimiter: Optional[str],
+    header: bool,
+) -> None:
     """Evaluate a FHIRPath expression against FHIR data.
 
     \b
@@ -117,7 +130,9 @@ def fhirpath(
     console = obj.console
 
     spec = resolve_source(source, from_format, allow_resource=True)
-    output_spec = resolve_output(output, output_format, limit, overwrite, departition)
+    output_spec = resolve_output(
+        output, output_format, limit, overwrite, departition, delimiter, header
+    )
     parsed_variables = _parse_variables(variables)
 
     # --context and --var only apply to single-resource evaluation; reject them
@@ -160,7 +175,14 @@ def fhirpath(
 
 
 def _run_data_source(
-    pc, spec, expression, resource_type, filter_expr, output_spec, console, verbose
+    pc: PathlingContext,
+    spec: SourceSpec,
+    expression: str,
+    resource_type: Optional[str],
+    filter_expr: Optional[str],
+    output_spec: OutputSpec,
+    console: Console,
+    verbose: bool,
 ) -> None:
     """Evaluates an expression over every resource in a data source.
 
@@ -197,15 +219,15 @@ def _run_data_source(
 
 
 def _run_single_resource(
-    pc,
-    spec,
-    expression,
-    resource_type,
-    context_expression,
-    variables,
-    output_spec,
-    console,
-    verbose,
+    pc: PathlingContext,
+    spec: SourceSpec,
+    expression: str,
+    resource_type: Optional[str],
+    context_expression: Optional[str],
+    variables: dict,
+    output_spec: OutputSpec,
+    console: Console,
+    verbose: bool,
 ) -> None:
     """Evaluates an expression against a single FHIR resource file.
 

@@ -1,0 +1,15 @@
+{
+  "resourceType": "ValueSet",
+  "url": "http://example.org/fhir/ValueSet/mammals-enumerated",
+  "version": "1.0.0",
+  "name": "MammalsEnumerated",
+  "status": "active",
+  "compose": {
+    "include": [
+      {
+        "system": "http://example.org/fhir/CodeSystem/animal-species",
+        "concept": [{ "code": "dog" }, { "code": "cat" }, { "code": "whale" }]
+      }
+    ]
+  }
+}

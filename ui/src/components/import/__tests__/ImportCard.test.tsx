@@ -29,10 +29,19 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { render, screen, waitFor } from "../../../test/testUtils";
+import { OperationOutcomeError } from "../../../types/errors";
 import { ImportCard } from "../ImportCard";
 
 import type { ImportJob, ImportRequest } from "../../../types/import";
 import type { ImportPnpRequest } from "../../../types/importPnp";
+import type { OperationOutcome } from "fhir/r4";
+
+// A failure the card displays must not also be announced, so the toast is
+// mocked to prove it is never called.
+const mockShowToast = vi.fn();
+vi.mock("../../../contexts/ToastContext", () => ({
+  useToast: () => ({ showToast: mockShowToast }),
+}));
 
 // Define mock functions for standard import.
 const mockStandardStartWith = vi.fn();
@@ -48,22 +57,34 @@ let mockPnpStatus: string = "idle";
 let mockPnpError: Error | undefined = undefined;
 let mockPnpProgress: number | undefined = undefined;
 
+// Captures the options the card passes to its data hook, so a test can prove no
+// failure callback is wired into it.
+type HookOptions = { onError?: (error: Error) => void } | undefined;
+let capturedOptions: HookOptions = undefined;
+let capturedPnpOptions: HookOptions = undefined;
+
 // Mock useImport hook.
 vi.mock("../../../hooks", () => ({
-  useImport: () => ({
-    startWith: mockStandardStartWith,
-    cancel: mockStandardCancel,
-    status: mockStandardStatus,
-    error: mockStandardError,
-    progress: mockStandardProgress,
-  }),
-  useImportPnp: () => ({
-    startWith: mockPnpStartWith,
-    cancel: mockPnpCancel,
-    status: mockPnpStatus,
-    error: mockPnpError,
-    progress: mockPnpProgress,
-  }),
+  useImport: (options?: { onError?: (error: Error) => void }) => {
+    capturedOptions = options;
+    return {
+      startWith: mockStandardStartWith,
+      cancel: mockStandardCancel,
+      status: mockStandardStatus,
+      error: mockStandardError,
+      progress: mockStandardProgress,
+    };
+  },
+  useImportPnp: (options?: { onError?: (error: Error) => void }) => {
+    capturedPnpOptions = options;
+    return {
+      startWith: mockPnpStartWith,
+      cancel: mockPnpCancel,
+      status: mockPnpStatus,
+      error: mockPnpError,
+      progress: mockPnpProgress,
+    };
+  },
 }));
 
 // Mock formatDateTime utility.
@@ -72,7 +93,6 @@ vi.mock("../../../utils", () => ({
 }));
 
 describe("ImportCard", () => {
-  const defaultOnError = vi.fn();
   const defaultOnClose = vi.fn();
 
   beforeEach(() => {
@@ -124,7 +144,7 @@ describe("ImportCard", () => {
     it("displays 'Import from URLs' label for standard import", () => {
       const job = createStandardJob();
 
-      render(<ImportCard job={job} onError={defaultOnError} onClose={defaultOnClose} />);
+      render(<ImportCard job={job} onClose={defaultOnClose} />);
 
       expect(screen.getByText("Import from URLs")).toBeInTheDocument();
     });
@@ -132,7 +152,7 @@ describe("ImportCard", () => {
     it("displays source count for standard import", () => {
       const job = createStandardJob();
 
-      render(<ImportCard job={job} onError={defaultOnError} onClose={defaultOnClose} />);
+      render(<ImportCard job={job} onClose={defaultOnClose} />);
 
       expect(screen.getByText("Importing 2 source(s)")).toBeInTheDocument();
     });
@@ -140,7 +160,7 @@ describe("ImportCard", () => {
     it("displays formatted creation date", () => {
       const job = createStandardJob();
 
-      render(<ImportCard job={job} onError={defaultOnError} onClose={defaultOnClose} />);
+      render(<ImportCard job={job} onClose={defaultOnClose} />);
 
       expect(screen.getByText("15 Jan 2024, 10:00 AM")).toBeInTheDocument();
     });
@@ -150,7 +170,7 @@ describe("ImportCard", () => {
     it("displays 'Import from FHIR server' label for PnP import", () => {
       const job = createPnpJob();
 
-      render(<ImportCard job={job} onError={defaultOnError} onClose={defaultOnClose} />);
+      render(<ImportCard job={job} onClose={defaultOnClose} />);
 
       expect(screen.getByText("Import from FHIR server")).toBeInTheDocument();
     });
@@ -158,7 +178,7 @@ describe("ImportCard", () => {
     it("displays source URL for PnP import", () => {
       const job = createPnpJob();
 
-      render(<ImportCard job={job} onError={defaultOnError} onClose={defaultOnClose} />);
+      render(<ImportCard job={job} onClose={defaultOnClose} />);
 
       expect(
         screen.getByText("Importing from https://source-server.example.org/fhir"),
@@ -170,7 +190,7 @@ describe("ImportCard", () => {
     it("starts standard import on mount", async () => {
       const job = createStandardJob();
 
-      render(<ImportCard job={job} onError={defaultOnError} onClose={defaultOnClose} />);
+      render(<ImportCard job={job} onClose={defaultOnClose} />);
 
       await waitFor(() => {
         expect(mockStandardStartWith).toHaveBeenCalledWith({
@@ -185,7 +205,7 @@ describe("ImportCard", () => {
     it("starts PnP import on mount", async () => {
       const job = createPnpJob();
 
-      render(<ImportCard job={job} onError={defaultOnError} onClose={defaultOnClose} />);
+      render(<ImportCard job={job} onClose={defaultOnClose} />);
 
       await waitFor(() => {
         expect(mockPnpStartWith).toHaveBeenCalledWith({
@@ -205,11 +225,9 @@ describe("ImportCard", () => {
     it("only starts import once even if re-rendered", async () => {
       const job = createStandardJob();
 
-      const { rerender } = render(
-        <ImportCard job={job} onError={defaultOnError} onClose={defaultOnClose} />,
-      );
+      const { rerender } = render(<ImportCard job={job} onClose={defaultOnClose} />);
 
-      rerender(<ImportCard job={job} onError={defaultOnError} onClose={defaultOnClose} />);
+      rerender(<ImportCard job={job} onClose={defaultOnClose} />);
 
       await waitFor(() => {
         expect(mockStandardStartWith).toHaveBeenCalledTimes(1);
@@ -222,7 +240,7 @@ describe("ImportCard", () => {
       mockStandardStatus = "pending";
       const job = createStandardJob();
 
-      render(<ImportCard job={job} onError={defaultOnError} onClose={defaultOnClose} />);
+      render(<ImportCard job={job} onClose={defaultOnClose} />);
 
       expect(screen.getByRole("button", { name: /cancel/i })).toBeInTheDocument();
     });
@@ -231,7 +249,7 @@ describe("ImportCard", () => {
       mockStandardStatus = "in-progress";
       const job = createStandardJob();
 
-      render(<ImportCard job={job} onError={defaultOnError} onClose={defaultOnClose} />);
+      render(<ImportCard job={job} onClose={defaultOnClose} />);
 
       expect(screen.getByRole("button", { name: /cancel/i })).toBeInTheDocument();
     });
@@ -241,7 +259,7 @@ describe("ImportCard", () => {
       mockStandardStatus = "in-progress";
       const job = createStandardJob();
 
-      render(<ImportCard job={job} onError={defaultOnError} onClose={defaultOnClose} />);
+      render(<ImportCard job={job} onClose={defaultOnClose} />);
 
       const cancelButton = screen.getByRole("button", { name: /cancel/i });
       await user.click(cancelButton);
@@ -254,7 +272,7 @@ describe("ImportCard", () => {
       mockStandardProgress = 75;
       const job = createStandardJob();
 
-      render(<ImportCard job={job} onError={defaultOnError} onClose={defaultOnClose} />);
+      render(<ImportCard job={job} onClose={defaultOnClose} />);
 
       expect(screen.getByText("Progress")).toBeInTheDocument();
       expect(screen.getByText("75%")).toBeInTheDocument();
@@ -265,7 +283,7 @@ describe("ImportCard", () => {
       mockStandardProgress = undefined;
       const job = createStandardJob();
 
-      render(<ImportCard job={job} onError={defaultOnError} onClose={defaultOnClose} />);
+      render(<ImportCard job={job} onClose={defaultOnClose} />);
 
       expect(screen.getByText("Processing...")).toBeInTheDocument();
     });
@@ -276,7 +294,7 @@ describe("ImportCard", () => {
       mockStandardStatus = "complete";
       const job = createStandardJob();
 
-      render(<ImportCard job={job} onError={defaultOnError} onClose={defaultOnClose} />);
+      render(<ImportCard job={job} onClose={defaultOnClose} />);
 
       expect(screen.getByText("Import completed successfully")).toBeInTheDocument();
     });
@@ -285,7 +303,7 @@ describe("ImportCard", () => {
       mockStandardStatus = "complete";
       const job = createStandardJob();
 
-      render(<ImportCard job={job} onError={defaultOnError} onClose={defaultOnClose} />);
+      render(<ImportCard job={job} onClose={defaultOnClose} />);
 
       expect(screen.getByRole("button", { name: /close/i })).toBeInTheDocument();
     });
@@ -295,7 +313,7 @@ describe("ImportCard", () => {
       mockStandardStatus = "complete";
       const job = createStandardJob();
 
-      render(<ImportCard job={job} onError={defaultOnError} onClose={defaultOnClose} />);
+      render(<ImportCard job={job} onClose={defaultOnClose} />);
 
       const closeButton = screen.getByRole("button", { name: /close/i });
       await user.click(closeButton);
@@ -307,7 +325,7 @@ describe("ImportCard", () => {
       mockStandardStatus = "complete";
       const job = createStandardJob();
 
-      render(<ImportCard job={job} onError={defaultOnError} />);
+      render(<ImportCard job={job} />);
 
       expect(screen.queryByRole("button", { name: /close/i })).not.toBeInTheDocument();
     });
@@ -319,23 +337,49 @@ describe("ImportCard", () => {
       mockStandardError = new Error("Import failed");
       const job = createStandardJob();
 
-      render(<ImportCard job={job} onError={defaultOnError} onClose={defaultOnClose} />);
+      render(<ImportCard job={job} onClose={defaultOnClose} />);
 
-      // OperationOutcomeDisplay shows severity badge and message separately.
+      // The callout shows the severity badge and the text separately.
       expect(screen.getByText("Error")).toBeInTheDocument();
       expect(screen.getByText("Import failed")).toBeInTheDocument();
     });
 
-    it("reports error to parent when import fails", async () => {
+    // FR-001 and FR-002: the card displays the failure, so nothing else
+    // announces it.
+    it("displays the failure without raising a notification", () => {
       mockStandardStatus = "error";
       mockStandardError = new Error("Connection timeout");
       const job = createStandardJob();
 
-      render(<ImportCard job={job} onError={defaultOnError} onClose={defaultOnClose} />);
+      render(<ImportCard job={job} onClose={defaultOnClose} />);
+      // Driving whatever callback the card wired in, so that a reinstated
+      // notification fails this test rather than passing unnoticed.
+      capturedOptions?.onError?.(mockStandardError);
+      capturedPnpOptions?.onError?.(mockStandardError);
 
-      await waitFor(() => {
-        expect(defaultOnError).toHaveBeenCalledWith("Connection timeout");
-      });
+      expect(screen.getByText("Connection timeout")).toBeInTheDocument();
+      expect(capturedOptions?.onError).toBeUndefined();
+      expect(capturedPnpOptions?.onError).toBeUndefined();
+      expect(mockShowToast).not.toHaveBeenCalled();
+    });
+
+    // FR-005 and FR-006: the failure is rendered by the shared callout, so it
+    // looks like every other failure and is announced to assistive technology.
+    it("displays the failure in the shared callout, announced as an alert", () => {
+      mockStandardStatus = "error";
+      const outcome: OperationOutcome = {
+        resourceType: "OperationOutcome",
+        issue: [
+          { severity: "error", code: "processing", diagnostics: "Cannot write to existing path" },
+        ],
+      };
+      mockStandardError = new OperationOutcomeError(outcome, 400, "Import kick-off");
+      const job = createStandardJob();
+
+      const { container } = render(<ImportCard job={job} onClose={defaultOnClose} />);
+
+      expect(screen.getByRole("alert")).toHaveTextContent("Cannot write to existing path");
+      expect(container.querySelector(".rt-CalloutIcon svg")).toBeInTheDocument();
     });
 
     it("shows Close button when import has error", () => {
@@ -343,7 +387,7 @@ describe("ImportCard", () => {
       mockStandardError = new Error("Error");
       const job = createStandardJob();
 
-      render(<ImportCard job={job} onError={defaultOnError} onClose={defaultOnClose} />);
+      render(<ImportCard job={job} onClose={defaultOnClose} />);
 
       expect(screen.getByRole("button", { name: /close/i })).toBeInTheDocument();
     });
@@ -354,7 +398,7 @@ describe("ImportCard", () => {
       mockStandardStatus = "cancelled";
       const job = createStandardJob();
 
-      render(<ImportCard job={job} onError={defaultOnError} onClose={defaultOnClose} />);
+      render(<ImportCard job={job} onClose={defaultOnClose} />);
 
       expect(screen.getByText("Cancelled")).toBeInTheDocument();
     });
@@ -363,7 +407,7 @@ describe("ImportCard", () => {
       mockStandardStatus = "cancelled";
       const job = createStandardJob();
 
-      render(<ImportCard job={job} onError={defaultOnError} onClose={defaultOnClose} />);
+      render(<ImportCard job={job} onClose={defaultOnClose} />);
 
       expect(screen.getByRole("button", { name: /close/i })).toBeInTheDocument();
     });
@@ -386,7 +430,7 @@ describe("ImportCard", () => {
         } as ImportPnpRequest,
       });
 
-      render(<ImportCard job={job} onError={defaultOnError} onClose={defaultOnClose} />);
+      render(<ImportCard job={job} onClose={defaultOnClose} />);
 
       await waitFor(() => {
         expect(mockPnpStartWith).toHaveBeenCalledWith({

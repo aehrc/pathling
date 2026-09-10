@@ -33,7 +33,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "../../../test/testUtils";
 import { ExportControls } from "../ExportControls";
 
-import type { ViewExportFormat } from "../../../types/viewExport";
+import type { SqlExportFormat } from "../../../types/sqlExport";
 
 describe("ExportControls", () => {
   const mockOnExport = vi.fn();
@@ -197,10 +197,10 @@ describe("ExportControls", () => {
   });
 
   describe("format type safety", () => {
-    it("accepts all valid ViewExportFormat values through onExport", async () => {
+    it("accepts all valid SqlExportFormat values through onExport", async () => {
       const user = userEvent.setup();
-      const formats: ViewExportFormat[] = ["ndjson", "csv", "parquet"];
-      const formatLabels: Record<ViewExportFormat, string> = {
+      const formats: SqlExportFormat[] = ["ndjson", "csv", "parquet"];
+      const formatLabels: Record<SqlExportFormat, string> = {
         ndjson: "NDJSON",
         csv: "CSV",
         parquet: "Parquet",
