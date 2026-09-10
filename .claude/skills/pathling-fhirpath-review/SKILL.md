@@ -71,8 +71,9 @@ field behaves the same as an absent one where the spec says it should.
 - Date/time **partial precision**: differing precision alone does not make a comparison empty.
   Components are compared in order, and a difference found before the coarser operand runs out of
   precision gives a definite answer — `@2018-03-01 > @2018-01-01` is true, `@2012-01 = @2013` is
-  false. The result is empty only when the values are *equal* up to the coarser precision, as in
-  `@2018-03 > @2018-03-01` or `@2012-01 = @2012`. Applies to `=` as well as `<`/`>`; both
+  false. The result is empty only when the precisions *differ* and the values are equal up to the
+  coarser one, as in `@2018-03 > @2018-03-01` or `@2012-01 = @2012` — equal values at matching
+  precision are simply equal, so `@2012 = @2012` is true. Applies to `=` as well as `<`/`>`; both
   directions of this have caused regressions before
 - Quantity units — calendar durations and UCUM units are not interchangeable above seconds
 
