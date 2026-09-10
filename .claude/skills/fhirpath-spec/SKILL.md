@@ -38,7 +38,7 @@ given `--unattended` (e.g. by `implement-pathling --unattended`); otherwise call
 
 1. **FHIRPath Specification** — `references/FHIRPath.md` (~4600 lines). This is the normative spec and your primary source of truth.
 2. **Official fhirpath.js reference implementation** (JavaScript): `$FHIRPATH_JS_SRC` — *only if available* (see check above). The HL7-maintained reference implementation of FHIRPath. When the spec text is ambiguous, its behavior is strong comparison evidence to report alongside the ambiguity — not a resolution of it. Consult it proactively when available.
-3. **FHIR-specific FHIRPath bindings** — `references/FHIR_FHIRpath.md` (~700 lines). Covers how FHIRPath is used within FHIR (polymorphism, type mappings, additional functions like `resolve()`, `extension()`).
+3. **FHIR-specific FHIRPath bindings** — `references/FHIR_FHIRpath.md` (~440 lines). Covers how FHIRPath is used within FHIR (polymorphism, type mappings, additional functions like `resolve()`, `extension()`). This is the **R4** binding (v4.0.1), matching the FHIR version Pathling targets — so it will not describe later-version features such as `%factory` or `FHIR.integer64`, and their absence is a statement about Pathling's model rather than a gap in the reference.
 4. **SQL-on-FHIR requirements** — `references/FHIRPath_Sharable_Requirements.md` (~40 lines). Lists the FHIRPath subset required for ShareableViewDefinition.
 
 ## How to search
