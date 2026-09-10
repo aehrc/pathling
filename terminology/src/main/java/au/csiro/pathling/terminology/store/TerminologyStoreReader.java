@@ -20,7 +20,12 @@ package au.csiro.pathling.terminology.store;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_CANONICAL_URL;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_ENTRY_TYPE;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_IMPORTED_AT;
+import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_PACKAGE_NAME;
+import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_PACKAGE_REGISTRY;
+import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_PACKAGE_VERIFICATION;
+import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_PACKAGE_VERSION;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_SOURCE;
+import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_SOURCE_SHA256;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_STORE_FORMAT_VERSION;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_VERSION;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.STORE_FORMAT_VERSION;
@@ -41,6 +46,7 @@ import io.delta.kernel.types.StructType;
 import io.delta.kernel.utils.CloseableIterator;
 import io.delta.kernel.utils.FileStatus;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -125,18 +131,35 @@ public class TerminologyStoreReader {
   @Nonnull
   public List<ManifestEntry> readManifest() {
     final List<ManifestEntry> entries = new ArrayList<>();
-    readTable(
-        TerminologyStoreSchema.MANIFEST,
-        row ->
-            entries.add(
-                new ManifestEntry(
-                    row.getInt(COLUMN_STORE_FORMAT_VERSION),
-                    row.getString(COLUMN_ENTRY_TYPE),
-                    row.getString(COLUMN_CANONICAL_URL),
-                    row.getString(COLUMN_VERSION),
-                    row.getString(COLUMN_SOURCE),
-                    row.getInstant(COLUMN_IMPORTED_AT))));
+    readTable(TerminologyStoreSchema.MANIFEST, row -> entries.add(manifestEntry(row)));
     return entries;
+  }
+
+  /**
+   * Builds a manifest entry from a manifest row, tolerating a manifest written before the
+   * provenance columns existed by reading them only where they are present.
+   */
+  @Nonnull
+  private static ManifestEntry manifestEntry(@Nonnull final TerminologyStoreRow row) {
+    final String verification = stringIfPresent(row, COLUMN_PACKAGE_VERIFICATION);
+    return new ManifestEntry(
+        row.getInt(COLUMN_STORE_FORMAT_VERSION),
+        row.getString(COLUMN_ENTRY_TYPE),
+        row.getString(COLUMN_CANONICAL_URL),
+        row.getString(COLUMN_VERSION),
+        row.getString(COLUMN_SOURCE),
+        row.getInstant(COLUMN_IMPORTED_AT),
+        stringIfPresent(row, COLUMN_SOURCE_SHA256),
+        stringIfPresent(row, COLUMN_PACKAGE_NAME),
+        stringIfPresent(row, COLUMN_PACKAGE_VERSION),
+        verification == null ? null : PackageVerification.fromCode(verification),
+        stringIfPresent(row, COLUMN_PACKAGE_REGISTRY));
+  }
+
+  @Nullable
+  private static String stringIfPresent(
+      @Nonnull final TerminologyStoreRow row, @Nonnull final String column) {
+    return row.hasColumn(column) ? row.getString(column) : null;
   }
 
   /**

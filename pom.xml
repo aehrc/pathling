@@ -24,7 +24,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>au.csiro.pathling</groupId>
   <artifactId>pathling</artifactId>
-    <version>9.9.0</version>
+    <version>9.10.0-SNAPSHOT</version>
   <packaging>pom</packaging>
 
   <name>Pathling</name>
@@ -883,11 +883,29 @@
             <source>21</source>
             <links>
               <link>https://spark.apache.org/docs/latest/api/java/</link>
-              <link>https://hapifhir.io/hapi-fhir/apidocs/hapi-fhir-base/</link>
-              <link>https://hapifhir.io/hapi-fhir/apidocs/hapi-fhir-structures-r4/</link>
-              <link>https://hapifhir.io/hapi-fhir/apidocs/hapi-fhir-client/</link>
-              <link>https://hapifhir.io/hapi-fhir/apidocs/hapi-fhir-server/</link>
             </links>
+            <!-- The HAPI FHIR API documentation is linked offline, using element lists vendored
+                 from the HAPI javadoc jars, so that an outage of hapifhir.io cannot fail the
+                 build. Refresh the lists under config/javadoc when pathling.hapiFhirVersion
+                 changes. -->
+            <offlineLinks>
+              <offlineLink>
+                <url>https://hapifhir.io/hapi-fhir/apidocs/hapi-fhir-base/</url>
+                <location>${maven.multiModuleProjectDirectory}/config/javadoc/hapi-fhir-base</location>
+              </offlineLink>
+              <offlineLink>
+                <url>https://hapifhir.io/hapi-fhir/apidocs/hapi-fhir-structures-r4/</url>
+                <location>${maven.multiModuleProjectDirectory}/config/javadoc/hapi-fhir-structures-r4</location>
+              </offlineLink>
+              <offlineLink>
+                <url>https://hapifhir.io/hapi-fhir/apidocs/hapi-fhir-client/</url>
+                <location>${maven.multiModuleProjectDirectory}/config/javadoc/hapi-fhir-client</location>
+              </offlineLink>
+              <offlineLink>
+                <url>https://hapifhir.io/hapi-fhir/apidocs/hapi-fhir-server/</url>
+                <location>${maven.multiModuleProjectDirectory}/config/javadoc/hapi-fhir-server</location>
+              </offlineLink>
+            </offlineLinks>
             <detectLinks/>
             <doctitle>Pathling ${project.version} API</doctitle>
             <windowtitle>Pathling ${project.version} API</windowtitle>

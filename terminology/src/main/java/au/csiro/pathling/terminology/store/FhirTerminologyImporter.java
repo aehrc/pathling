@@ -152,13 +152,23 @@ public class FhirTerminologyImporter {
    * Imports FHIR terminology resources from a source.
    *
    * @param source a JSON file, a directory of JSON files, or a FHIR NPM package ({@code .tgz})
+   * @param verifyPackage whether a package is checked against the checksum its registry publishes
+   * @param registryUrl the registry to consult, or null for the default
    * @throws TerminologyImportException if the source contains no importable resources or an invalid
-   *     resource; the store is left unmodified
+   *     resource, or if a package does not match the registry's checksum; the store is left
+   *     unmodified
    */
-  public void importFrom(@Nonnull final String source) {
+  public void importFrom(
+      @Nonnull final String source,
+      final boolean verifyPackage,
+      @Nullable final String registryUrl) {
     // Pre-scan and validate before any write so an invalid source leaves the store untouched.
-    final List<ScannedResource> scanned = new FhirResourceScanner(hadoopConf).scan(source);
+    final FhirSourceScan scan = new FhirResourceScanner(hadoopConf).scan(source);
+    final List<ScannedResource> scanned = scan.getResources();
     validate(scanned, source);
+    // The verification runs before anything is written, so a package that does not match its
+    // registry leaves the store exactly as it was.
+    final ImportProvenance provenance = resolveProvenance(scan, source, verifyPackage, registryUrl);
     // The pre-scan already established each entry's type, URL, and version, so the import pass
     // routes by looking these up rather than re-reading each entry's content into memory.
     final Map<String, ScannedResource> byEntry = new HashMap<>();
@@ -175,7 +185,7 @@ public class FhirTerminologyImporter {
     final String previousBlockSize =
         applyBoundedParquetRowGroup(baseHadoopConf, IMPORT_PARQUET_BLOCK_SIZE_BYTES);
     try {
-      importPass(source, byEntry, writer, loader, counts);
+      importPass(provenance, byEntry, writer, loader, counts);
     } catch (final IOException e) {
       throw new TerminologyImportException("Unable to read the FHIR source at " + source, e);
     } finally {
@@ -186,6 +196,56 @@ public class FhirTerminologyImporter {
         counts.codeSystems,
         counts.valueSets,
         counts.conceptMaps);
+  }
+
+  /**
+   * Establishes what this import records about where its content came from, consulting the registry
+   * when the source is an identified package and the caller asked for the check.
+   *
+   * @param scan the pre-scan of the source, carrying its digests and package identity
+   * @param source the source path, as passed to the import
+   * @param verifyPackage whether a package is checked against the registry
+   * @param registryUrl the registry to consult, or null for the default
+   * @return the provenance every manifest row of this import carries
+   * @throws TerminologyImportException if the package does not match the registry's checksum
+   */
+  @Nonnull
+  private static ImportProvenance resolveProvenance(
+      @Nonnull final FhirSourceScan scan,
+      @Nonnull final String source,
+      final boolean verifyPackage,
+      @Nullable final String registryUrl) {
+    if (scan.getSha256() != null) {
+      log.info("Source {} has SHA-256 {}", source, scan.getSha256());
+    }
+    if (!scan.isPackage()) {
+      return ImportProvenance.of(source, scan.getSha256());
+    }
+    final String name = scan.getPackageName();
+    final String version = scan.getPackageVersion();
+    final PackageVerificationResult result;
+    if (name == null || version == null || scan.getSha1() == null) {
+      // Without an identity there is nothing to ask the registry about.
+      result = PackageVerificationResult.unverified("the package could not be identified");
+      log.warn("The package at {} was not verified: {}", source, result.getReason());
+    } else if (!verifyPackage) {
+      result = new PackageVerificationResult(PackageVerification.SKIPPED, null, null);
+      log.info("Package verification skipped for {} {}", name, version);
+    } else {
+      result = new PackageRegistryVerifier(registryUrl).verify(name, version, scan.getSha1());
+      if (result.getStatus() == PackageVerification.VERIFIED) {
+        log.info(
+            "Verified package {} {} against {} (SHA-1 {})",
+            name,
+            version,
+            result.getRegistry(),
+            scan.getSha1());
+      } else {
+        log.warn("Package {} {} was not verified: {}", name, version, result.getReason());
+      }
+    }
+    return new ImportProvenance(
+        source, scan.getSha256(), name, version, result.getStatus(), result.getRegistry());
   }
 
   /**
@@ -275,12 +335,13 @@ public class FhirTerminologyImporter {
   // --- Import pass. ---
 
   private void importPass(
-      @Nonnull final String source,
+      @Nonnull final ImportProvenance provenance,
       @Nonnull final Map<String, ScannedResource> byEntry,
       @Nonnull final TerminologyStoreWriter writer,
       @Nonnull final CodeSystemStageLoader loader,
       @Nonnull final ImportCounts counts)
       throws IOException {
+    final String source = provenance.getSource();
     final Path root = new Path(source);
     final FileSystem fs = root.getFileSystem(hadoopConf);
     if (fs.getFileStatus(root).isDirectory()) {
@@ -290,7 +351,8 @@ public class FhirTerminologyImporter {
         final String name = status.getPath().getName();
         if (name.endsWith(".json") && !FhirResourceScanner.isPackageMetadata(name)) {
           try (InputStream in = fs.open(status.getPath())) {
-            importEntry(in, status.getPath().toString(), source, byEntry, writer, loader, counts);
+            importEntry(
+                in, status.getPath().toString(), provenance, byEntry, writer, loader, counts);
           }
         }
       }
@@ -303,13 +365,13 @@ public class FhirTerminologyImporter {
           if (!entry.isDirectory()
               && name.endsWith(".json")
               && !FhirResourceScanner.isPackageMetadata(name)) {
-            importEntry(tar, entry.getName(), source, byEntry, writer, loader, counts);
+            importEntry(tar, entry.getName(), provenance, byEntry, writer, loader, counts);
           }
         }
       }
     } else {
       try (InputStream in = fs.open(root)) {
-        importEntry(in, source, source, byEntry, writer, loader, counts);
+        importEntry(in, source, provenance, byEntry, writer, loader, counts);
       }
     }
   }
@@ -324,7 +386,7 @@ public class FhirTerminologyImporter {
   private void importEntry(
       @Nonnull final InputStream in,
       @Nonnull final String entryName,
-      @Nonnull final String source,
+      @Nonnull final ImportProvenance provenance,
       @Nonnull final Map<String, ScannedResource> byEntry,
       @Nonnull final TerminologyStoreWriter writer,
       @Nonnull final CodeSystemStageLoader loader,
@@ -336,9 +398,9 @@ public class FhirTerminologyImporter {
     }
     if (scanned.isCodeSystem()) {
       requireUrl(scanned.getUrl(), "CodeSystem", entryName);
-      flattenAndLoad(in, scanned.getUrl(), scanned.getVersion(), source, loader, counts);
+      flattenAndLoad(in, scanned.getUrl(), scanned.getVersion(), provenance, loader, counts);
     } else {
-      importWholeResource(IOUtils.toByteArray(in), entryName, source, writer, loader, counts);
+      importWholeResource(IOUtils.toByteArray(in), entryName, provenance, writer, loader, counts);
     }
   }
 
@@ -351,7 +413,7 @@ public class FhirTerminologyImporter {
       @Nonnull final InputStream in,
       @Nonnull final String url,
       @Nullable final String version,
-      @Nonnull final String source,
+      @Nonnull final ImportProvenance provenance,
       @Nonnull final CodeSystemStageLoader loader,
       @Nonnull final ImportCounts counts) {
     log.info("Streaming CodeSystem {}", url);
@@ -367,14 +429,14 @@ public class FhirTerminologyImporter {
             "Unable to parse CodeSystem "
                 + url
                 + " from "
-                + source
+                + provenance.getSource()
                 + "; the source may be corrupt.",
             e);
       }
       staging.sealForReading();
       counts.writeBegun = true;
       try {
-        loader.load(staging, url, version, flattener.getHierarchyMeaning(), source);
+        loader.load(staging, url, version, flattener.getHierarchyMeaning(), provenance);
       } catch (final RuntimeException e) {
         throw partialFailure(url, version, e);
       }
@@ -398,7 +460,7 @@ public class FhirTerminologyImporter {
   private void importWholeResource(
       @Nonnull final byte[] bytes,
       @Nonnull final String entryName,
-      @Nonnull final String source,
+      @Nonnull final ImportProvenance provenance,
       @Nonnull final TerminologyStoreWriter writer,
       @Nonnull final CodeSystemStageLoader loader,
       @Nonnull final ImportCounts counts) {
@@ -413,18 +475,18 @@ public class FhirTerminologyImporter {
       for (final Bundle.BundleEntryComponent bundleEntry : bundle.getEntry()) {
         final Resource resource = bundleEntry.getResource();
         if (resource != null) {
-          importBundleResource(resource, entryName, source, writer, loader, counts);
+          importBundleResource(resource, entryName, provenance, writer, loader, counts);
         }
       }
     } else if (parsed instanceof final Resource resource) {
-      importBundleResource(resource, entryName, source, writer, loader, counts);
+      importBundleResource(resource, entryName, provenance, writer, loader, counts);
     }
   }
 
   private void importBundleResource(
       @Nonnull final Resource resource,
       @Nonnull final String entryName,
-      @Nonnull final String source,
+      @Nonnull final ImportProvenance provenance,
       @Nonnull final TerminologyStoreWriter writer,
       @Nonnull final CodeSystemStageLoader loader,
       @Nonnull final ImportCounts counts) {
@@ -437,7 +499,7 @@ public class FhirTerminologyImporter {
           new java.io.ByteArrayInputStream(json),
           codeSystem.getUrl(),
           codeSystem.getVersion(),
-          source,
+          provenance,
           loader,
           counts);
     } else if (resource instanceof final ValueSet valueSet) {
@@ -450,7 +512,7 @@ public class FhirTerminologyImporter {
           valueSet.getUrl(),
           valueSet.getVersion(),
           valueSet,
-          source);
+          provenance);
       counts.valueSets++;
     } else if (resource instanceof final ConceptMap conceptMap) {
       requireUrl(conceptMap.getUrl(), "ConceptMap", entryName);
@@ -462,7 +524,7 @@ public class FhirTerminologyImporter {
           conceptMap.getUrl(),
           conceptMap.getVersion(),
           conceptMap,
-          source);
+          provenance);
       counts.conceptMaps++;
     }
   }
@@ -476,7 +538,7 @@ public class FhirTerminologyImporter {
       @Nonnull final String url,
       @Nullable final String version,
       @Nonnull final Resource resource,
-      @Nonnull final String source) {
+      @Nonnull final ImportProvenance provenance) {
     final String json = parser().encodeResourceToString(resource);
     final Dataset<Row> data =
         spark.createDataFrame(
@@ -495,13 +557,7 @@ public class FhirTerminologyImporter {
       writer.writeTable(data, tableName, SaveMode.Overwrite, List.of());
     }
     writer.upsertManifestEntry(
-        new ManifestEntry(
-            TerminologyStoreSchema.STORE_FORMAT_VERSION,
-            entryType,
-            url,
-            version,
-            source,
-            Instant.now()));
+        ManifestEntry.forImport(entryType, url, version, provenance, Instant.now()));
   }
 
   /** Mutable running counts and the write-begun flag across an import. */
