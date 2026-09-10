@@ -109,10 +109,15 @@ if [ ! -d "$CACHE_DIR/.git" ]; then
   if ! git clone --quiet --depth 1 --branch "<version>" \
         "https://github.com/<org>/<repo>.git" "$TMP" 2>/dev/null; then
     # <version> isn't a branch or tag name (e.g. a SHA resolved from `main`) — fetch it directly.
-    git init --quiet "$TMP"
-    git -C "$TMP" remote add origin "https://github.com/<org>/<repo>.git"
-    git -C "$TMP" fetch --quiet --depth 1 origin "<version>"
-    git -C "$TMP" checkout --quiet FETCH_HEAD
+    # Every step is chained, so a failure anywhere leaves nothing behind at $CACHE_DIR.
+    if ! { git init --quiet "$TMP" \
+        && git -C "$TMP" remote add origin "https://github.com/<org>/<repo>.git" \
+        && git -C "$TMP" fetch --quiet --depth 1 origin "<version>" \
+        && git -C "$TMP" checkout --quiet FETCH_HEAD; }; then
+      rm -rf "$TMP"
+      echo "Could not retrieve <org>/<repo> at <version>" >&2
+      exit 1
+    fi
   fi
   mkdir -p "$(dirname "$CACHE_DIR")"
   if [ ! -d "$CACHE_DIR/.git" ]; then
@@ -129,7 +134,9 @@ isn't a fully atomic claim against another writer finishing in between — but t
 worst an occasional wasted clone, never a corrupted destination.
 
 If the clone fails outright (network unreachable, ref doesn't exist upstream), report the error
-clearly and stop. Do not leave a partial `$CACHE_DIR` behind.
+clearly and stop. Do not leave a partial `$CACHE_DIR` behind — an aborted fallback that still got as
+far as `git init` would otherwise install a `.git` directory that every later `ensure` call reads as
+a populated cache, silently serving an empty repository from then on.
 
 ## What this skill does not do
 

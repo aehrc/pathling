@@ -119,9 +119,20 @@ one in a command, check that it is a valid FHIRPath identifier (`^[A-Za-z_][A-Za
 named "function" doesn't match, that is itself a finding to report (the issue is not scoping a real
 function), not a value to search for.
 
+Ask whether the function is *registered*, which means an `@FhirPathFunction`-annotated declaration
+whose method name is the FHIRPath name — not whether the name appears somewhere in the package. A
+bare substring search answers the wrong question: `contains` occurs in three provider files, all of
+it Javadoc prose and one unrelated `List.contains` call, while no `contains()` function exists. That
+match would abort the gate on work that has not been started.
+
 ```bash
-grep -rnF -- "<functionName>" fhirpath/src/main/java/au/csiro/pathling/fhirpath/function/provider/
+grep -rn -A6 "@FhirPathFunction" fhirpath/src/main/java/au/csiro/pathling/fhirpath/function/provider/ \
+  | grep -E "public (static )?[A-Za-z0-9_<>,. ]+ <functionName>\("
 ```
+
+The `static` is optional because not every provider is static — `ConversionFunctions` declares
+instance methods. Having already checked `<functionName>` against the identifier grammar above, it
+carries no regex metacharacters, so interpolating it into the pattern is safe.
 
 **This is a gate (see Step 0 table)** when the issue is already closed, a PR already covers it, or
 the functions named in it are already registered.

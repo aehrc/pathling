@@ -68,8 +68,12 @@ field behaves the same as an absent one where the spec says it should.
 
 - Integer to Decimal promotion in mixed arithmetic and comparison
 - String conversions that must return empty rather than throw on unparseable input
-- Date/time **partial precision**: comparing values of differing precision returns empty, not
-  false. This has caused regressions before
+- Date/time **partial precision**: differing precision alone does not make a comparison empty.
+  Components are compared in order, and a difference found before the coarser operand runs out of
+  precision gives a definite answer — `@2018-03-01 > @2018-01-01` is true, `@2012-01 = @2013` is
+  false. The result is empty only when the values are *equal* up to the coarser precision, as in
+  `@2018-03 > @2018-03-01` or `@2012-01 = @2012`. Applies to `=` as well as `<`/`>`; both
+  directions of this have caused regressions before
 - Quantity units — calendar durations and UCUM units are not interchangeable above seconds
 
 ### 5. Error versus empty
