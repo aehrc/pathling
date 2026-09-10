@@ -323,8 +323,6 @@ The following locations use this restricted FHIRPath language:
 - [DataRequirement.dateFilter.path](https://hl7.org/fhir/R4/metadatatypes-definitions.html#DataRequirement.dateFilter.path)
 - [OperationOutcome.issue.expression](https://hl7.org/fhir/R4/operationoutcome-definitions.html#OperationOutcome.issue.expression)
 
-<div class="draft-content">
-
 <span id="txapi"></span>
 
 ### 2.9.3 Terminology Service API
