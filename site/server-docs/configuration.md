@@ -179,7 +179,7 @@ error response and is excluded from the CapabilityStatement.
 
 ### SQL query
 
-This setting bounds the resolution of a query's dependency graph, for both
+These settings govern the resolution of a query's dependency graph, for both
 `$sql-run` and `$sql-export`.
 
 - `pathling.sqlQuery.maxDependencyDepth` - (default: `10`) The maximum nesting
@@ -188,6 +188,26 @@ This setting bounds the resolution of a query's dependency graph, for both
   nested SQLView dependency increments the depth. A graph nested deeper is
   rejected with a `400` before any Spark work, guarding against accidental
   fan-out and runaway resolution.
+- `pathling.sqlQuery.externalTables.N.url` - The canonical URL by which a
+  SQLQuery or SQLView `relatedArtifact` names this external table. Each
+  configured table is a read-only Delta or Parquet table, outside the
+  warehouse, that a SQL subject may join to its FHIR views; see
+  [$sql-run](./operations/sql-run#supporting-artefacts).
+- `pathling.sqlQuery.externalTables.N.path` - The location of the table.
+  Accepts the same URL schemes as `pathling.storage.warehouseUrl`.
+- `pathling.sqlQuery.externalTables.N.format` - (default: `delta`) The storage
+  format of the table, either `delta` or `parquet`. The format is passed to
+  Spark as declared, so declare it accurately: a Parquet directory declared
+  `delta` fails to read, but a Delta table declared `parquet` is read as its
+  raw data files, including those superseded by later commits.
+
+`N` is a zero-based index. The list is validated at startup: every entry must
+have a non-blank `url` that contains no `|` and is unique among the configured
+tables, a non-blank `path` and an allowed `format`. A violation prevents the
+server from starting, with a failure naming the offending property. No path is
+probed at startup, so an unreachable or not-yet-written table does not stop the
+server; each table is read at its current state on every request that
+references it.
 
 ### Encoding
 

@@ -106,6 +106,14 @@ authority for the resource type a ViewDefinition subject projects, named in its
 requires `pathling:read:Patient` authority in addition to the operation
 authority.
 
+A configured [external table](configuration#sql-query) referenced as a
+dependency of a SQL subject requires only the operation authority. It is
+operator configuration rather than FHIR data, so no resource-type `read`
+authority applies to it and none is checked when it is read. The FHIR-backed
+dependencies alongside it are unaffected: a ViewDefinition or SQLView joined to
+an external table keeps its own resource-type read requirements, and the
+storage read checks below.
+
 ### Job ownership
 
 Asynchronous jobs are owned by the token subject that started them. When

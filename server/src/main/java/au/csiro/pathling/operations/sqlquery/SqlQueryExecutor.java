@@ -37,10 +37,11 @@ import org.springframework.stereotype.Component;
  * lifecycle. The only piece of the pipeline that touches Spark.
  *
  * <p>Each node of the graph is materialised in topological order: a {@code ViewDefinition} leaf is
- * executed as a view, and a {@code SQLView} node's SQL is rewritten against the temp views of its
- * already-materialised children, validated, and run. The top-level SQL is then rewritten against
- * its own direct dependencies' temp views and run. Every node's SQL is validated statically before
- * execution and against its analysed plan during execution.
+ * executed as a view, an external table leaf is read from its configured path, and a {@code
+ * SQLView} node's SQL is rewritten against the temp views of its already-materialised children,
+ * validated, and run. The top-level SQL is then rewritten against its own direct dependencies' temp
+ * views and run. Every node's SQL is validated statically before execution and against its analysed
+ * plan during execution.
  *
  * @author John Grimes
  */
@@ -144,8 +145,11 @@ public class SqlQueryExecutor {
 
   /**
    * Materialises a single graph node as a request-scoped temp view, recording its name by canonical
-   * key. A {@code SQLView} node's analysed plan is validated against its own children's temp views
-   * before registration, so it cannot reach an unauthorised data source.
+   * key. A {@code ViewDefinition} leaf is executed against the data source, an external table leaf
+   * is read from its configured path, and a {@code SQLView} node's analysed plan is validated
+   * against its own children's temp views before registration, so it cannot reach an unauthorised
+   * data source. Neither leaf kind needs that check: a leaf's relation is exposed only through the
+   * trusted alias registered here, which is what the parent's own analysed-plan check accepts.
    */
   private void materialiseNode(
       @Nonnull final ResolvedDependency node,
@@ -155,6 +159,8 @@ public class SqlQueryExecutor {
     final Dataset<Row> dataset;
     if (node instanceof final ResolvedViewDefinition viewDefinition) {
       dataset = viewRegistrationService.buildViewDefinition(viewDefinition.getView(), dataSource);
+    } else if (node instanceof final ResolvedExternalTable externalTable) {
+      dataset = viewRegistrationService.buildExternalTable(externalTable);
     } else if (node instanceof final ResolvedSqlView sqlView) {
       dataset = viewRegistrationService.buildSqlView(sqlView, registeredByKey);
       final Set<String> childViewNames =
