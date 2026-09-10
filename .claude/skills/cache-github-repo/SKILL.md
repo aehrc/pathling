@@ -84,12 +84,16 @@ the entry is missing.
    for the user's choice (e.g. via `AskUserQuestion`) first. If the network call fails, say so and ask
    the user to supply a ref directly instead of guessing.
 
-   Whichever is chosen, **resolve it to a concrete, immutable reference before recording it**:
-   - A tag → record the tag name; it is already immutable.
+   Whichever is chosen, record a reference that stays fixed across future runs:
+   - A tag → record the tag name. This is a deliberate trade-off, not a claim that the tag can never
+     move: a maintainer could in principle recreate or reassign one, but for a maintained upstream
+     release tag that's atypical, and `5.1.0` is far more useful to a reader of
+     `.claude/repo-cache.yaml` than a bare SHA. Readability wins here.
    - `main` (or any branch) → resolve it to its current commit SHA
      (`git ls-remote https://github.com/<org>/<repo>.git main`) and record **the SHA**, not the
-     branch name. Recording a branch name would silently re-resolve to a different commit on every
-     future run — the entire point of pinning is that a resolved answer stays the resolved answer.
+     branch name. A branch moves on every commit by design — a far more frequent failure mode than a
+     maintained tag being reassigned — so recording the branch name would silently re-resolve to a
+     different commit on every future run, defeating the point of pinning.
 3. Write `<org/repo>: <VERSION>` into `.claude/repo-cache.yaml` at the project root, creating the
    file if it doesn't exist and updating the entry in place if the key is already present.
 4. Clone it immediately (see below) so the project is usable right away rather than deferring the

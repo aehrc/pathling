@@ -109,7 +109,10 @@ Only flag these where they are actually violated — do not restate them as advi
 
 ### 9. Test coverage
 
-- One `@FhirPathTest` method per function, in a `*DslTest` class named by capability
+- One `@FhirPathTest` method per function, in a `*DslTest` class named by capability — except
+  where the DSL's one-subject-per-method constraint forces a split by subject (e.g.
+  `ExistenceFunctionsDslTest.testCount()` plus `testCountOnFhirResource()`); don't flag that as a
+  violation
 - Spec examples present as test cases
 - Both cardinalities covered (scalar field and array field)
 - Empty covered in its distinct forms: `{}` literal, typed-empty field, computed empty

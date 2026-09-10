@@ -9,7 +9,7 @@ description: >
   how an operator or function should work, or answering "what does the spec say about X?" questions. Also use
   it when the user mentions FHIR-specific FHIRPath bindings (e.g., ofType with FHIR types, resolve(), extension()).
   When the fhirpath.js reference implementation is available, this skill can cross-reference the spec text
-  with the actual reference implementation code to resolve ambiguities and provide definitive answers.
+  with the actual reference implementation code to surface comparison evidence on ambiguous points.
 ---
 
 # FHIRPath Specification Expert
@@ -37,7 +37,7 @@ given `--unattended` (e.g. by `implement-pathling --unattended`); otherwise call
 ## Sources (in priority order)
 
 1. **FHIRPath Specification** — `references/FHIRPath.md` (~4600 lines). This is the normative spec and your primary source of truth.
-2. **Official fhirpath.js reference implementation** (JavaScript): `$FHIRPATH_JS_SRC` — *only if available* (see check above). The HL7-maintained reference implementation of FHIRPath. It is the official reference that defines correct behavior when the spec text is ambiguous. Consult it proactively when available.
+2. **Official fhirpath.js reference implementation** (JavaScript): `$FHIRPATH_JS_SRC` — *only if available* (see check above). The HL7-maintained reference implementation of FHIRPath. When the spec text is ambiguous, its behavior is strong comparison evidence to report alongside the ambiguity — not a resolution of it. Consult it proactively when available.
 3. **FHIR-specific FHIRPath bindings** — `references/FHIR_FHIRpath.md` (~700 lines). Covers how FHIRPath is used within FHIR (polymorphism, type mappings, additional functions like `resolve()`, `extension()`).
 4. **SQL-on-FHIR requirements** — `references/FHIRPath_Sharable_Requirements.md` (~40 lines). Lists the FHIRPath subset required for ShareableViewDefinition.
 
@@ -58,15 +58,15 @@ When searching, try multiple patterns since the spec uses varying formats:
 
 > Skip this entire section if the reference implementation is not available (see check above).
 
-The fhirpath.js project cached at `$FHIRPATH_JS_SRC` is the HL7-maintained official reference implementation, pinned to the version recorded in this project's `.claude/repo-cache.yaml`. It is authoritative for resolving ambiguities — if the spec text is unclear on edge cases, null handling, type coercion, or collection behavior, check what fhirpath.js does, because that behavior IS the intended spec behavior.
+The fhirpath.js project cached at `$FHIRPATH_JS_SRC` is the HL7-maintained official reference implementation, pinned to the version recorded in this project's `.claude/repo-cache.yaml`. It is strong comparison evidence for resolving ambiguities — if the spec text is unclear on edge cases, null handling, type coercion, or collection behavior, check what fhirpath.js does and report it alongside the ambiguity. Its behavior is evidence to weigh, not a substitute for the spec text; whether an ambiguity needs to be escalated (e.g. via `implement-pathling`'s spec-ambiguity gate) is for the caller to decide, not this skill.
 
 **When to consult it:**
 - **Always** when the spec text leaves room for interpretation (e.g., what happens with empty inputs, mixed types, precision mismatches)
 - When implementing a feature and needing to confirm exact semantics
-- When test cases seem to contradict the spec — check the reference implementation to see which interpretation is correct
+- When test cases seem to contradict the spec — check the reference implementation to see which interpretation it follows
 - When the user asks "what should happen when..." type questions
 
-**Do not wait to be asked** — if you notice ambiguity while reading the spec, proactively check the reference implementation and report what it does.
+**Do not wait to be asked** — if you notice ambiguity while reading the spec, proactively check the reference implementation and report what it does, flagging the ambiguity explicitly rather than treating the reference implementation's behavior as having resolved it.
 
 `$FHIRPATH_JS_SRC` is organized by category:
 - `strings.js` — string functions
@@ -92,4 +92,4 @@ Structure your answer to include whichever of these are relevant:
 - **Related features**: Other functions/operators that interact with this one
 - **FHIR-specific notes**: Any FHIR binding differences (from FHIR_FHIRpath.md)
 
-Always quote or closely paraphrase the spec rather than relying on your general knowledge. If the spec is silent or ambiguous on a point, say so explicitly. If the fhirpath.js reference implementation is available, consult it and report what it does — its behavior is the definitive answer in such cases. If the reference implementation is not available, note the ambiguity and offer your best interpretation based on the spec text and related sections.
+Always quote or closely paraphrase the spec rather than relying on your general knowledge. If the spec is silent or ambiguous on a point, say so explicitly. If the fhirpath.js reference implementation is available, consult it and report what it does as evidence to weigh alongside the ambiguity — not as a resolution of it. If the reference implementation is not available, note the ambiguity and offer your best interpretation based on the spec text and related sections.

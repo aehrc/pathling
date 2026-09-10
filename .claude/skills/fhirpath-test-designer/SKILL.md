@@ -68,7 +68,17 @@ Apply input domain partitioning. The driving question:
 **Cardinality deserves special attention.** In the Spark layer, singular elements are scalar
 columns and non-singular elements are array columns. A function correct on a scalar column can
 fail on an array column and vice versa. Include at least one singular field (`.string("s", "v")`)
-and one array field (`.stringArray("a", "x", "y")`) whenever the function reads model fields.
+and one array field whenever the function reads model fields.
+
+For a function that expects a **singleton** input — true of most scalar functions, string and math
+functions among them — the array field must hold exactly one item (`.stringArray("a", "v")`): the
+point of this dimension is to prove scalar coercion works on an array-backed column, not to test
+multi-item behaviour. A separate array field with more than one item (`.stringArray("a", "x", "y")`)
+is a different case: FHIRPath's singleton evaluation rules make multiple items an **error**, not an
+element-wise map, so it belongs under core semantics as a `testError` case, not under cardinality.
+Only expect an array field with several items to map or aggregate when the function is documented to
+operate over the whole collection (an existence or aggregate function such as `count()` or
+`exists()`).
 
 **When to require a real FHIR resource (`withResource`)** — the map-based builder produces a
 synthetic resource whose type is always `Test`, so it cannot express:
@@ -93,8 +103,9 @@ straight to Phase 3 without waiting:
 | 2 | Empty literal | Emptiness | `{}.fn()` | `{}` | literal |
 | 3 | Typed-empty field | Emptiness | `emptyString.fn()` | `{}` | subject |
 | 4 | Singular field | Cardinality | `singleString.fn()` | `'V'` | subject |
-| 5 | Array field | Cardinality | `stringArray.fn()` | `['X','Y']` | subject |
-| 6 | Choice type | Element type | `Observation.value.ofType(string).fn()` | ... | resource |
+| 5 | Array field, one item | Cardinality | `arrayOfOne.fn()` | `'V'` | subject |
+| 6 | Array field, multiple items | Core semantics | `stringArray.fn()` | error | subject |
+| 7 | Choice type | Element type | `Observation.value.ofType(string).fn()` | ... | resource |
 ```
 
 Rules:
@@ -112,14 +123,17 @@ named `<Capability>DslTest.java` — by capability (`StringFunctionsDslTest`), n
 number. Extend `FhirPathDslTestBase`. Every file needs the CSIRO Apache-2.0 copyright header;
 copy it from a sibling test.
 
-**One `@FhirPathTest` method per function**, using `group()` to organise dimensions within it.
+**One `@FhirPathTest` method per function**, using `group()` to organise dimensions within it —
+except where the DSL's one-subject-per-method constraint (Gotcha 1 below) forces a split. A
+function needing both synthetic-subject and real-FHIR-resource coverage cannot fit one method;
+split by subject, not by dimension, as `ExistenceFunctionsDslTest` does for `count()`
+(`testCount()` and `testCountOnFhirResource()`).
 
 ```java
 package au.csiro.pathling.fhirpath.dsl;
 
 import au.csiro.pathling.test.dsl.FhirPathDslTestBase;
 import au.csiro.pathling.test.dsl.FhirPathTest;
-import java.util.List;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.DynamicTest;
 
@@ -132,6 +146,7 @@ public class StringFunctionsDslTest extends FhirPathDslTestBase {
             sb ->
                 sb.stringEmpty("emptyString")
                     .string("singleString", "test")
+                    .stringArray("arrayOfOne", "test")
                     .stringArray("stringArray", "one", "two"))
         .group("upper() spec examples")
         .testEquals("ABCDEFG", "'abcdefg'.upper()", "Lowercase input is uppercased")
@@ -140,7 +155,9 @@ public class StringFunctionsDslTest extends FhirPathDslTestBase {
         .testEmpty("emptyString.upper()", "Typed-empty field returns empty")
         .group("upper() cardinality")
         .testEquals("TEST", "singleString.upper()", "Singular field")
-        .testEquals(List.of("ONE", "TWO"), "stringArray.upper()", "Array field")
+        .testEquals("TEST", "arrayOfOne.upper()", "Array-backed field with one item")
+        .group("upper() core semantics")
+        .testError("stringArray.upper()", "Multiple items in the input is an error")
         .build();
   }
 }
