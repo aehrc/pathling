@@ -41,6 +41,12 @@ Tooling:
   is not configurable via settings.json, so this is the only sane convention to standardise on. The
   `implement-pathling` skill's `--worktree` flag uses this path, and it is gitignored.
 
+- **Per-branch scratch work lives under `.local/work/<branch-name>/`**, relative to the checkout
+  root — working notes, throwaway scripts, captured output and anything else that belongs to the
+  branch but not to the repository. `/.local/` is gitignored, so nothing under it can be committed
+  by accident. Keeping it keyed by branch means a worktree and the main checkout never mix one
+  issue's working files into another's.
+
 Tests:
 
 - **The YAML exclusion baseline polices itself.** Excluded conformance cases are still executed and
