@@ -199,6 +199,32 @@ current `name` element, matching `name.select(use | given)`.
 | `convertsToTime()`          | Check if convertible to Time     |
 | `convertsToQuantity(unit?)` | Check if convertible to Quantity |
 
+#### Utility functions
+
+| Function                   | Description                                                                                          |
+| -------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `trace(name, projection?)` | Log the current value under the given name and return it unchanged, optionally applying a projection |
+
+:::caution Incompatible with SQL aggregate functions
+
+`trace()` produces a `Nondeterministic` Spark expression by design — this is
+what allows it to fire its side effects (collector entries and log output) on
+every row, even in contexts where Catalyst would otherwise elide duplicate
+evaluations.
+
+Spark's analyzer forbids `Nondeterministic` expressions inside SQL aggregate
+functions (`sum`, `count`, `avg`, `min`, `max`, `collect_list`, `collect_set`,
+…). Aggregating over a traced expression fails during query planning with:
+
+```
+AGGREGATE_FUNCTION_WITH_NONDETERMINISTIC_EXPRESSION
+```
+
+Workaround: move the `trace()` call upstream of the aggregation boundary —
+evaluate and collect the `trace()` output first, then run the aggregation on a
+non-traced form of the same expression.
+:::
+
 ### Limitations
 
 The following FHIRPath features are **not currently supported**:
