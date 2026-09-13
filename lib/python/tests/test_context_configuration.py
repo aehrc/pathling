@@ -19,6 +19,7 @@ import logging
 import os
 from tempfile import mkdtemp
 
+import pytest
 from pyspark.sql import SparkSession
 from pytest import fixture
 
@@ -120,3 +121,9 @@ def test_custom_configurations(spark_session):
     query_config = jpc.getQueryConfiguration()
     assert query_config.isExplainQueries()
     assert query_config.getMaxUnboundTraversalDepth() == 20
+
+
+def test_spark_conf_with_explicit_session_raises(spark_session):
+    """spark_conf cannot be combined with an explicitly supplied SparkSession."""
+    with pytest.raises(ValueError, match="spark_conf"):
+        PathlingContext.create(spark_session, spark_conf={"spark.driver.memory": "8g"})
