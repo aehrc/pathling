@@ -294,6 +294,35 @@ def test_remote_mode_passes_existing_parameters_unchanged(monkeypatch):
     assert "terminology_mode" not in captured or captured["terminology_mode"] != "local"
 
 
+# ========== Verbose/quiet Spark log levels (#2691) ==========
+
+
+def test_verbose_mode_raises_log_level_to_info(monkeypatch):
+    """With --verbose, the Spark context log level is raised to INFO.
+
+    Without this, the level stays at Spark's default of WARN and the
+    library's informational logging (e.g. the importer's stage narration) is
+    silently dropped, so the flag buys a stack trace but no progress
+    narration (#2691).
+    """
+    captured = _capture_create(monkeypatch)
+    config = CliConfig(verbose=True, tx_server="https://tx.example/fhir")
+
+    _create_pathling_context(config)
+
+    assert captured["_spark"].sparkContext.level == "INFO"
+
+
+def test_quiet_mode_lowers_log_level_to_off(monkeypatch):
+    """Without --verbose, the Spark context log level is lowered to OFF."""
+    captured = _capture_create(monkeypatch)
+    config = CliConfig(verbose=False, tx_server="https://tx.example/fhir")
+
+    _create_pathling_context(config)
+
+    assert captured["_spark"].sparkContext.level == "OFF"
+
+
 # ========== Public namespace helper ==========
 
 

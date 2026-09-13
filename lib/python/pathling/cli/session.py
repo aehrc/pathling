@@ -155,6 +155,11 @@ def _create_pathling_context(config: CliConfig) -> PathlingContext:
         # OFF (rather than ERROR) also hides task-failure stack traces, which
         # the CLI surfaces as its own concise message.
         spark.sparkContext.setLogLevel("OFF")
+    else:
+        # --verbose: raise the level to INFO so the library's informational
+        # logging (e.g. the importer's stage narration) reaches the operator,
+        # instead of being dropped at Spark's default level of WARN (#2691).
+        spark.sparkContext.setLogLevel("INFO")
 
     store = config.tx_store
     if store is not None:
