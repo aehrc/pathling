@@ -189,6 +189,11 @@
       <version>20231013</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+      <scope>test</scope>
+    </dependency>
 
     <!-- Lombok -->
     <dependency>
