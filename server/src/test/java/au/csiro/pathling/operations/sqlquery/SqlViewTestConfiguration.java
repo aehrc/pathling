@@ -29,10 +29,12 @@ import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.util.CustomObjectDataSource;
 import jakarta.annotation.Nonnull;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import org.apache.spark.sql.SaveMode;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Attachment;
@@ -134,6 +136,12 @@ public class SqlViewTestConfiguration {
    */
   public static final String AGE_MIDDLE_ID = "age-middle";
 
+  /**
+   * The id of a SQLView whose body carries a subquery over its own declared dependency, used by the
+   * issue 2759 regression test.
+   */
+  public static final String SUBQUERY_PATIENTS_ID = "subquery-patients";
+
   @Primary
   @Bean
   @Nonnull
@@ -175,10 +183,33 @@ public class SqlViewTestConfiguration {
             Map.of("patient_view", PATIENT_VIEW_URL)));
     resources.add(
         sqlView(AGE_MIDDLE_ID, "SELECT age FROM age", Map.of("age", libraryUrl(AGE_SOURCE_ID))));
+    resources.add(
+        sqlView(
+            SUBQUERY_PATIENTS_ID,
+            "SELECT id, family_name FROM ap WHERE family_name >= (SELECT min(family_name) FROM ap)",
+            Map.of("ap", libraryUrl(ACTIVE_PATIENTS_ID))));
     resources.add(patient("p1", "Smith"));
     resources.add(patient("p2", "Johnson"));
     resources.add(patient("p3", "Williams"));
-    return new CustomObjectDataSource(sparkSession, pathlingContext, fhirEncoders, resources);
+    final CustomObjectDataSource source =
+        new CustomObjectDataSource(sparkSession, pathlingContext, fhirEncoders, resources);
+    replacePatientsWithFileBacked(sparkSession, source);
+    return source;
+  }
+
+  /**
+   * Replaces the source's Patient dataset in place with one read back from a Parquet file, so that
+   * a ViewDefinition leaf's plan carries a {@code LogicalRelation} as it does in production against
+   * the Delta warehouse. Built from an in-memory dataset alone it would carry a {@code
+   * LocalRelation}, which the analysed-plan trust gate in {@link SqlValidator} does not police,
+   * leaving the ITs unable to observe it. The file is written under the module's build output, so
+   * {@code mvn clean} disposes of it.
+   */
+  private static void replacePatientsWithFileBacked(
+      @Nonnull final SparkSession sparkSession, @Nonnull final CustomObjectDataSource source) {
+    final String parquetPath = Path.of("target", "sqlview-it", "Patient.parquet").toString();
+    source.read("Patient").write().mode(SaveMode.Overwrite).parquet(parquetPath);
+    source.dataset("Patient", sparkSession.read().parquet(parquetPath));
   }
 
   @Nonnull
