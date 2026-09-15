@@ -98,12 +98,22 @@ Delta 4.0.0 against Spark source 4.0.2, and are recorded in full in
   - Traversal *into* any fallback fails for every candidate type. That is not a
     defect but the reason the tolerant expression must be emitted at every
     traversal step rather than only where absence is suspected.
-- **Residual risk**: `RuntimeReplaceable.dataType` delegates to `replacement`, so
-  a path that probes `dataType` before the child is resolved would force the
-  replacement early. Every built-in `RuntimeReplaceable` carries the same
-  exposure and the default `resolved` guard covers the normal paths, but it is
-  not testable from PySpark and needs a JVM test over an unresolved child. This
-  is the one measurement that could send the design to R-017's option C.
+- **Residual risk — measured, and it does not materialise.**
+  `RuntimeReplaceable.dataType` delegates to `replacement`, so a path that probes
+  `dataType` before the child is resolved would force the replacement early.
+  Every built-in `RuntimeReplaceable` carries the same exposure, but it is not
+  testable from PySpark and needed a JVM test over an unresolved child. T009a ran
+  that test as a throwaway spike: across twenty runs spanning eleven plan shapes
+  and two child constructions, nothing forced the replacement before the child
+  resolved,
+  nothing threw, and every plan optimised to the shape a statically written
+  traversal would produce. The design stays on R-017's option D. See
+  `evidence/t009a-analyzer-gate.md` — which also records the three construction
+  choices T038e must repeat, and one trap: under Spark 4's `ColumnNode` API the
+  child an engine hands over is a `ColumnNodeExpression`, which reports
+  `resolved == true` while still wrapping an unresolved node, so a caller cannot
+  read anything into `resolved()` at construction time. The wrapper does not
+  reach the analyzer, so this is not a hazard inside the expression itself.
 - **Alternatives considered**: the static empty collection — untyped, `void` in
   SQL — which was the earlier decision here and was **changed** because it cannot
   meet the schema-agnostic column contract: a statically pruned column is only
