@@ -33,16 +33,42 @@ user story, so each story can be implemented and tested independently.
 
 ## Milestones
 
-Four, each independently shippable. **Task IDs are frozen** — they are
-referenced throughout this document and by both traceability tables — so they do
-not run in numeric order.
+Four. **M1, M2 and M4 are each independently shippable. M3 is not**: it has no
+green build between Phase 8 and Phase 12, for the two separate reasons set out
+under [The red window](#the-red-window), so it lands as one piece.
 
-| Milestone | Phases | Delivers | User-visible change |
-| --- | --- | --- | --- |
-| **M1 The layout** | 1–6 | FHIR JSON to the new layout and back, losslessly, reachable through `io` | None |
-| **M2 Bundles and XML** | 7 | The remaining ingest formats on the new path | None |
-| **M3 The engine** | 8–14 | The engine reads the new layout, and the public API switches to it | The flag day |
-| **M4 Polish** | 15 | Documentation, follow-ups, benchmark comparison | Documentation |
+**Task IDs are never renumbered and never reused.** They are referenced
+throughout this document and by both traceability tables, so an addition takes a
+letter suffix and sits beside the task it belongs with. Identifiers therefore do
+not run in numeric order, and the phase map below rather than the numbering is
+what says which tasks are where.
+
+| Milestone | Phases | Tasks | Delivers | User-visible change |
+| --- | --- | --- | --- | --- |
+| **M1 The layout** | 1–6 | 68 | FHIR JSON to the new layout and back, losslessly, through `io`. Schema derivation, the canonical structure and the one shared merge. Both risk gates resolved | None |
+| **M2 Bundles and XML** | 7 | 5 | The remaining ingest formats on the new path, each round-tripped through the M1 harness | None |
+| **M3 The engine** | 8–14 | 87 | The engine reads the new layout, earlier layouts are rejected, and the public API switches | The flag day |
+| **M4 Polish** | 15 | 12 | Documentation, follow-ups, benchmark comparison | Documentation |
+
+### Phase map
+
+| Phase | Tasks | Count |
+| --- | --- | --- |
+| 1 Setup | T001–T009, T009a | 10 |
+| 2 The definition abstraction | T010–T019 | 10 |
+| 3 Schema derivation | T028, T029, T030, T030a, T031, T032, T033a, T033, T033b, T038f–T038i, T119 | 14 |
+| 4 US1 The storage layout | T050–T057, T057a, T059–T067 | 18 |
+| 5 US2 Lossless round trip | T071–T078, T078a, T078b, T079, T080 | 12 |
+| 6 US8 The module boundary | T125–T128 | 4 |
+| 7 Remaining ingest formats | T058, T058a, T068, T069, T069a | 5 |
+| 8 Engine foundations | T020–T027, T034–T038, T038a–T038e, T038j–T038l, T027a | 22 |
+| 9 US3 The engine reads the new layout | T083–T099 | 17 |
+| 10 US4 Queries over a fitted schema | T101–T104, T104a, T105–T108, T108a, T109–T113, T113a, T113b | 17 |
+| 11 US7 Detection of earlier layouts | T039–T049 | 11 |
+| 12 The public API switch | T070, T081, T082, T100, T100b, T100c, T100d, T128a | 8 |
+| 13 US5 Divergent files read as one dataset | T114–T117, T117a, T118, T118a | 7 |
+| 14 US6 Primitive ids and extensions | T120–T124 | 5 |
+| 15 Polish | T129–T134, T134a, T135–T139 | 12 |
 
 **M1 and M2 change nothing a user can observe.** `PathlingContext.encode`,
 `PathlingContext.decode` and `NdjsonSink` keep writing and reading the previous
@@ -294,10 +320,10 @@ it costs little, and nothing in M1 or M2 depends on the answer.
 - [ ] T038c [P] Test the fallback types against FR-055: a singular primitive takes the definition's type, a repeating primitive an array of it, a singular complex element the bottom type, a repeating complex element an array of the bottom type. Assert that a repeating fallback survives `transform` — bare `void` does not — and that a complex fallback combines with a populated structure, which a concrete minimal structure does not. In the same file.
 - [ ] T038d [P] Test that a plan using the expression prunes identically to one written with a direct field reference, by comparing `ReadSchema` from the executed plan (finding 14), in the same file. The rewrite runs before every pruning rule, so this must hold; it is the assertion that a future Spark upgrade has not reordered the optimizer batches.
 - [ ] T038e Implement the tolerant traversal expression as a `RuntimeReplaceable` in `encoders/src/main/scala/au/csiro/pathling/sql/ResolveOrNull.scala`, beside the existing query-time expressions in `encoders/src/main/scala/au/csiro/pathling/encoders/Expressions.scala`, and wrap it for use from Java via `ExpressionUtils` as `ColumnFunctions.structProduct` already does. Scala, because `RuntimeReplaceable` is a Scala trait whose tree-node contract runs through `Product`; `encoders` already carries the Scala plugin and this module is where the query-time toolkit lives, so FR-052 covers it and no POM changes. No codegen: `RuntimeReplaceable` supplies `dataType`, `nullable` and a final `eval`.
-- [ ] T027a Extend the T026 divergent-schema fixture so the projected leaf is absent from one file's schema entirely rather than merely null, and re-assert T027 over it, so the pin exercises tolerant traversal over divergent files and not only the unnesting shape.
 - [ ] T038j [P] Test the reconciliation expression in `encoders/src/test/scala/au/csiro/pathling/sql/MergeCastTest.scala` — two structures of the same FHIR type with different fitted shapes project by name into the merged type and combine; fields a side lacks become null; the result is traversable. Assert it is a by-name projection and **not** a cast, by constructing two structures with the same field types in a different order and asserting they are not silently transposed.
 - [ ] T038k [P] Test that folding the binary form gives the same type and values as one variadic call (finding 16), in the same file.
 - [ ] T038l Implement the reconciliation expression as a variadic `RuntimeReplaceable` in `encoders/src/main/scala/au/csiro/pathling/sql/MergeCast.scala`, taking the operand being projected, the full ordered operand list so that every operand computes the same target type, and the canonical structure from T038g, which it cannot recover from the operands. It takes the **interface** declared in `utilities`, never a type from `fhir-schema`, so `encoders` gains no dependency on that module (T009, FR-051). The merge itself is T038g and the definition-backed implementation is T038i.
+- [ ] T027a Extend the T026 divergent-schema fixture so the projected leaf is absent from one file's schema entirely rather than merely null, and re-assert T027 over it, so the pin exercises tolerant traversal over divergent files and not only the unnesting shape.
 
 **Checkpoint**: The join has portable coverage; the unnesting constraint is pinned; fixtures reach Spark without the old encoder; the toolkit can traverse tolerantly and reconcile shapes, and the analyzer risk is resolved either way.
 
@@ -455,9 +481,9 @@ the public write path, which does not exist until T070. The merge it needs
 ### Implementation
 
 - [ ] T117 [P] [US5] Enable schema merging on append in `library-api/src/main/java/au/csiro/pathling/library/io/sink/DeltaSink.java`.
+- [ ] T117a [US5] Enable schema auto-merge on the upsert path in `library-api/src/main/java/au/csiro/pathling/library/io/sink/DeltaSink.java`, so a divergent source widens the target as an append now does. This **reverses a deliberate guarantee**: the upsert path today refuses to widen, so that tolerance does not become schema evolution the caller did not ask for. That reasoning assumed a schema derived from encoder configuration and stable between batches. A fitted schema comes from the data, so divergence is the steady state and the refusal would fire on ordinary use. Append and upsert must not give two answers to the same question. Recorded as decision 41; `NarrowMergeTest` is rewritten by T100d.
 - [ ] T118 [P] [US5] Enable schema merging on read, with an opt-out, in `library-api/src/main/java/au/csiro/pathling/library/io/source/ParquetSource.java`.
 - [ ] T118a [US5] Where a merged schema is produced rather than obtained from Spark, produce it with the shared merge from T038g so field order stays canonical (FR-057, FR-058). A merge that appends newly discovered fields in discovery order rather than definition order yields structures that cannot be combined and, worse, compare positionally.
-- [ ] T117a [US5] Enable schema auto-merge on the upsert path in `library-api/src/main/java/au/csiro/pathling/library/io/sink/DeltaSink.java`, so a divergent source widens the target as an append now does. This **reverses a deliberate guarantee**: the upsert path today refuses to widen, so that tolerance does not become schema evolution the caller did not ask for. That reasoning assumed a schema derived from encoder configuration and stable between batches. A fitted schema comes from the data, so divergence is the steady state and the refusal would fire on ordinary use. Append and upsert must not give two answers to the same question. Recorded as decision 41; `NarrowMergeTest` is rewritten by T100d.
 
 **Checkpoint**: Incremental loading works with schemas fitted to data.
 
@@ -511,9 +537,11 @@ and T136 need the ingest path complete.*
 ## Traceability
 
 Every functional requirement in [spec.md](spec.md) and the task or tasks that
-deliver it. Task IDs are frozen across the milestone restructuring, so these rows
-are unaffected by it. Checked mechanically as part of the consistency pass;
-re-check it when a task is added or removed.
+deliver it. Because identifiers are never renumbered, moving a task between
+phases leaves these rows untouched; adding one does not, so a row is updated
+whenever a suffixed task is introduced. Checked mechanically as part of the
+consistency pass, which expands every range against the task list rather than
+trusting the numbering.
 
 | Requirement | Tasks |
 | --- | --- |
