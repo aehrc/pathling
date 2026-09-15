@@ -9,6 +9,11 @@ as validation once the work is complete, and each maps to a user story in
 Load the FHIR R4 specification examples and a Synthea dataset, write them, read
 them back and export.
 
+**Entry point**: through `io`'s own transform and serialiser in M1 and M2, and
+again through `PathlingContext` once M3 rewires it. The public API keeps the
+previous layout until then, so running this scenario against it before M3 proves
+nothing about the new one.
+
 **Expect**: every conformant resource is semantically equal to its source —
 object key order ignored, array order significant, numbers compared lexically.
 
@@ -25,7 +30,8 @@ the limitation cannot silently widen.
 
 ## QS-002 Inspect the stored layout (US1)
 
-Load a small corpus and inspect the stored schema and values.
+Load a small corpus through `io` and inspect the stored schema and values. As
+with QS-001, this runs against the public API only from M3 onward.
 
 **Expect**: decimals stored as text with a numeric annotation beside them;
 primitive ids and extensions in the metadata group; extensions on complex

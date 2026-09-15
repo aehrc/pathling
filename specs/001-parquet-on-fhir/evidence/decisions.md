@@ -199,3 +199,71 @@ Consequences: typed absence for primitives, so the untyped-column problem narrow
 to absent *complex* elements only; and shape reconciliation becomes a requirement
 in its own right (findings 16–17, R-016), because two collections of one FHIR type
 reached by different paths have different fitted shapes.
+
+## 38. Milestone sequencing — the public API switches with the engine, not before
+
+The task list is organised into four milestones: the layout (M1), bundles and XML
+(M2), the engine (M3), polish (M4). M1 and M2 change nothing a user can observe.
+
+This **fixes a defect in the earlier sequencing.** T070, T081 and T082 rewire
+`PathlingContext.encode`, `PathlingContext.decode` and `NdjsonSink` to the new
+layout, and they sat in US1 and US2 — before US3 moved the engine. The Phase 4
+checkpoint said in as many words that the engine could not yet read what had just
+been written, while the Implementation Strategy called Setup + Foundational + US1
++ US2 "a complete, defensible increment". Both cannot be true: with the public
+encoder writing the new layout and the engine reading the old one, every
+encode-then-query path is broken for the whole of that window. The three tasks
+move to M3 and land after US4, so the encoder never writes what the engine cannot
+read.
+
+Consequences for the other blocks:
+
+- **The definition abstraction (T010–T019) and schema derivation (T028–T033) stay
+  in M1.** The ingest transform writes *into* the derived schema, and FR-008 and
+  FR-012 forbid taking types or cardinality from the data, so there is no encoding
+  milestone without them.
+- **The structure merge and canonical ordering (T038f–T038i) move to M1**, beside
+  `SchemaBuilder`. They are pure structure mechanics over `spark-sql-api` types
+  with no engine dependency, and keeping them there means derivation, reconciliation
+  and file merging share one notion of canonical field order by construction rather
+  than two that can drift. Only the two Catalyst expressions — `ResolveOrNull` and
+  `MergeCast` — remain in M3.
+- **US5 stays in M3** even though its merge dependency is now in M1: its subject is
+  batches arriving over time through the public write path, which does not exist
+  until T070.
+- **The T038a gate is unchanged in substance but cheaper.** Nothing in M1 or M2
+  depends on tolerant traversal, so a failure costs less than it did. It is still
+  worth running as a spike during M1, being the programme's largest unknown.
+
+Task IDs were frozen through the restructuring, so both traceability tables are
+unaffected and the ID set is identical to the pre-restructuring one.
+
+### Addendum to 38 — layout detection moves with the flip, not ahead of it
+
+US7 was first placed in M1, carrying the previous plan's rationale that it should
+"exist before there is anything for it to catch". That rationale is wrong under the
+milestone structure, and inverted. The detector rejects the layout an earlier
+release wrote — which, until the public API switches, is the only layout anyone has
+and the one the engine still reads. Wiring it in during M1 would reject every
+existing user's data for being exactly what the M1 engine expects. Before the flip
+there is nothing for it to catch *and* it would catch the wrong thing.
+
+US7 is therefore sequenced immediately before the public API switch. It still
+depends only on Setup and can be built at any time; it must not be wired in
+earlier. This also keeps M1 within the stated scope — the layout and the encoding
+to and from JSON — since a read-path guard is neither.
+
+## 39. `encoders` is extended, not unmodified — correcting an overstated claim
+
+T128 asserted `git diff main -- encoders/` is empty. That could never have held:
+T038e and T038l add `ResolveOrNull.scala` and `MergeCast.scala` under
+`encoders/src/main/scala/au/csiro/pathling/sql/`, which is the whole point of
+FR-052 permitting the query-time toolkit to be extended. The assertion is narrowed
+to what FR-051 actually requires — the HAPI bridge, the schema converter and the
+existing expressions unchanged, and the module still resolving at its coordinates.
+
+`spec.md` was already correct: FR-051 scopes to the *encoding implementation*, and
+FR-052 says the toolkit "MAY be extended". `plan.md` was not, describing `encoders`
+as `UNCHANGED` and "neither renamed, split nor modified"; corrected to name the two
+additions. This is a specification correction surfaced by the resequencing, not a
+consequence of it.

@@ -121,7 +121,9 @@ io/                                 # NEW. The new encoding.
   src/main/java/au/csiro/pathling/io/annotation/   # Annotation processors.
   src/main/java/au/csiro/pathling/io/egress/       # PoF -> JSON.
 
-encoders/                           # UNCHANGED. Retained for migration tooling.
+encoders/                           # Implementation unchanged; retained for
+  src/main/scala/au/csiro/pathling/sql/   # migration tooling. Gains two
+                                      # query-time expressions (FR-052).
 
 terminology/
   src/main/java/au/csiro/pathling/fhirpath/encoding/CodingSchema.java
@@ -145,7 +147,9 @@ benchmark/                          # JMH baseline and comparison.
 **Structure Decision**: Additive. Build order becomes
 `utilities -> fhir-schema -> {encoders, io} -> terminology -> fhirpath -> library-api`,
 with `fhirpath` depending on `fhir-schema`, `io` and `encoders`. `encoders` is
-neither renamed, split nor modified, so `-pl encoders` and its published
+neither renamed nor split, and its encoding implementation is not modified — it
+gains only two query-time expressions, which FR-052 permits — so `-pl encoders`
+and its published
 coordinates keep working and migration tooling retains its implementation. The
 only motion is `au.csiro.pathling.fhirpath.definition` moving down into
 `fhir-schema` as `au.csiro.pathling.definition`; no module outside `fhirpath`
