@@ -20,6 +20,7 @@ package au.csiro.pathling.schema;
 import static au.csiro.pathling.schema.SchemaFixtures.array;
 import static au.csiro.pathling.schema.SchemaFixtures.at;
 import static au.csiro.pathling.schema.SchemaFixtures.builder;
+import static au.csiro.pathling.schema.SchemaFixtures.builderWithExtensions;
 import static au.csiro.pathling.schema.SchemaFixtures.field;
 import static au.csiro.pathling.schema.SchemaFixtures.names;
 import static au.csiro.pathling.schema.SchemaFixtures.struct;
@@ -34,6 +35,7 @@ import org.apache.spark.sql.types.ArrayType;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructType;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 /**
  * Tests that schema derivation takes element types and cardinality from the FHIR definitions and
@@ -143,5 +145,46 @@ class SchemaBuilderTest {
     assertTrue(fields.contains("deceasedBoolean"));
     assertTrue(fields.contains("deceasedDateTime"));
     assertFalse(fields.contains("deceased"));
+  }
+
+  @Test
+  @Timeout(120)
+  void boundsTheDenseSchemaWhereTheDefinitionGraphRecurs() {
+    // Extensions are self-recursive, so a derivation that did not count the types on the path it
+    // took would never return.
+    final StructType patient = builderWithExtensions().dense("Patient");
+    final List<String> extension = names(structAt(patient, "extension"));
+
+    assertTrue(extension.contains("url"));
+    // The nesting bound is zero here, so an extension carries no extensions of its own.
+    assertFalse(extension.contains("extension"));
+    // An open choice expands only to the types that are enabled, and there are fifty-nine of them.
+    assertTrue(extension.contains("valueString"));
+    assertFalse(extension.contains("valueUuid"));
+  }
+
+  @Test
+  void carriesTheExtensionsOfAPrimitiveInItsMetadataGroup() {
+    final StructType patient = builderWithExtensions().dense("Patient");
+    assertEquals(List.of("id", "extension"), names(structAt(patient, "_birthDate")));
+    assertEquals(List.of("id"), names(structAt(builder().dense("Patient"), "_birthDate")));
+  }
+
+  @Test
+  void countsTheRecurrencesOfATypeRatherThanTheDepthReached() {
+    // A type may recur as many times as the bound allows, counted along the path taken to reach
+    // it rather than by how deep that path is.
+    final StructType patient = builder(1, false).dense("Patient");
+    assertTrue(names(structAt(patient, "identifier", "assigner", "identifier")).contains("system"));
+  }
+
+  @Test
+  void neverNestsAReferenceWithinAReference() {
+    // A reference is bounded to no recursion whatever the nesting bound, which is what keeps the
+    // assigner of the identifier a reference carries out of the schema.
+    final StructType patient = builder(1, false).dense("Patient");
+    assertFalse(
+        names(structAt(patient, "managingOrganization", "identifier")).contains("assigner"));
+    assertTrue(names(structAt(patient, "managingOrganization")).contains("identifier"));
   }
 }

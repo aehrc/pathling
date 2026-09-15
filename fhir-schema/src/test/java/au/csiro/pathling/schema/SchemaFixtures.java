@@ -78,6 +78,18 @@ final class SchemaFixtures {
     return SchemaBuilder.of(DEFINITIONS, 0, true, STANDARD_OPEN_TYPES);
   }
 
+  /**
+   * Returns a builder bounded as given, for the cases that need a bound other than the default.
+   *
+   * @param maxNestingLevel how many times a type may recur within itself
+   * @param enableExtensions whether extensions are carried
+   * @return the builder
+   */
+  @Nonnull
+  static SchemaBuilder builder(final int maxNestingLevel, final boolean enableExtensions) {
+    return SchemaBuilder.of(DEFINITIONS, maxNestingLevel, enableExtensions, STANDARD_OPEN_TYPES);
+  }
+
   @Nonnull
   static StructType struct(@Nonnull final StructField... fields) {
     return new StructType(fields);
