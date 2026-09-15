@@ -267,3 +267,102 @@ FR-052 says the toolkit "MAY be extended". `plan.md` was not, describing `encode
 as `UNCHANGED` and "neither renamed, split nor modified"; corrected to name the two
 additions. This is a specification correction surfaced by the resequencing, not a
 consequence of it.
+
+## 40. M3 runs without a green build, and that is accepted
+
+Two overlapping spans leave M3 red from Phase 8 to Phase 12.
+
+T037 defaults the test framework to pruned in Phase 8, while T110 in Phase 10 is
+what makes traversal to an absent element yield empty. A schema fitted to a small
+fixture set omits most of each resource, so between those points the FHIRPath DSL
+suite, both YAML conformance baselines and the SQL-on-FHIR compliance suite meet
+Spark analysis failures rather than empty collections.
+
+Phase 9 converts the engine by replacement, not addition: after T095 it cannot
+read a previous-layout decimal, and after T097 it cannot reach an extension
+through a field identifier. The public API keeps writing that layout until Phase
+12, so every `library-api` test that encodes and then queries is broken across
+Phases 9 to 11.
+
+Two alternatives were put and not adopted. Running the migration in dense mode —
+where the derivation is unpruned and so carries no absent elements beyond the
+nesting and open-type bounds that already constrain the encoder — would have
+allowed the public API to switch at the end of Phase 9 and given M3 a green,
+releasable interior checkpoint. It was not adopted; the author accepted the red
+window instead. Keeping the engine dual-layout across the window was ruled out
+earlier, by the assumption that the engine reads only the new layout on completion
+and the test estate therefore moves in one step.
+
+*Consequence*: a Phase 9 failure cannot be distinguished from a Phase 10 failure
+by the build. The programme still lands as several pull requests, as `plan.md`
+says, but none of them falls inside Phases 8 to 12: that span is one unreleasable
+piece.
+
+## 41. The Delta upsert path widens the target, reversing a deliberate guarantee
+
+`DeltaSink`'s upsert path refuses to widen the target schema today, and
+`NarrowMergeTest` asserts it: a narrower source merges leaving the target's extra
+columns null, and a wider source fails on the struct mismatch. The test's own note
+says the refusal is what keeps the tolerance from becoming schema evolution the
+caller did not ask for.
+
+That reasoning assumed a schema derived from encoder configuration and therefore
+stable between batches. Under a fitted schema it is derived from the data, so two
+batches diverging is the steady state and the refusal would fire on ordinary use.
+FR-041 and FR-042 cover read and append only, so without this decision append
+would silently widen while upsert refused — two answers to the same question.
+
+T117a enables schema auto-merge on the upsert path. T100d rewrites
+`NarrowMergeTest` against the new behaviour.
+
+## 42. There is no rollback after the switch, and none is possible
+
+Phase 12 is described as the point of no return, and the question was raised of
+shipping a configuration that kept the previous layout writable, since the old
+encoder remains in the build.
+
+There cannot be one. FR-053 has the engine reading only the new layout after the
+switch, so a configuration that kept writing the previous layout would produce
+data that same release could not query. The rollback mechanism is the one users
+already have, which is pinning to the previous library version.
+
+Recorded here so that the absence of a switch reads as a consequence of FR-053
+rather than as an omission. It belongs in the release note.
+
+## 43. Canonical order is a navigable structure, not a flat ordering
+
+R-016 established that the canonical field ordering is an input to the structure
+merge rather than something it derives, because two subsequences of a total order
+do not determine that order. The shape of that input was left as "the field
+ordering", which is wrong.
+
+The merge recurses, so it needs the canonical order for whatever type it has
+descended into, at a depth its operands determine rather than one known
+statically. FHIR's definition graph is cyclic — extensions are self-recursive, and
+a reference carries an identifier that carries a reference — so the expanded
+schema tree is infinite. Dense mode bounds it by configuration and pruned mode by
+data, but the merge must reach whatever depth the operands actually carry. A flat
+list orders one level and leaves every level beneath it in discovery order, which
+passes a single-level test and is wrong.
+
+The input is therefore a lazily navigable canonical structure, answering two
+questions at any node: the field order here, and the structure under a given field
+name. Navigation on demand is what makes an infinite tree representable without
+forcing an expansion the operands never ask for.
+
+*Where it lives*: the interface is declared in `utilities` beside the merge, so
+`encoders` sees the interface and never `fhir-schema`, so the rule that
+`encoders/pom.xml` is not modified (T009, FR-051) is satisfied without a
+trade-off. The
+definition-backed implementation sits beside `SchemaBuilder` in `fhir-schema`,
+which already walks the same cyclic graph and must decide the same positions, so
+derivation and merging cannot drift into two notions of canonical order.
+
+*Consequence for the specification*: FR-057 defined canonical order as definition
+order restricted to the fields present, which leaves the layout's own fields —
+the annotations, and the metadata group beside a primitive — without a position.
+They have no definition element, so two implementations could both claim to be
+canonical and still produce structs that compare positionally wrong, which is the
+failure FR-057 exists to prevent. FR-057 now fixes their positions relative to the
+element they accompany. FR-058 needed no change, since it only ever required a
+recursive field-wise union.

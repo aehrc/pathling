@@ -60,10 +60,12 @@ write what the engine cannot read.
 **The definition abstraction and schema derivation belong to M1**, not to the
 engine, because the ingest transform writes *into* the derived schema and
 FR-008/FR-012 forbid taking types or cardinality from the data. The structure
-merge and canonical ordering (T038f–T038i) are in M1 for the same reason: they
-are pure structure mechanics over `spark-sql-api` types, and keeping them beside
-`SchemaBuilder` means derivation and merging share one notion of canonical field
-order by construction rather than two that can drift.
+merge and the canonical structure (T038f–T038i) are in M1 for the same reason. The
+merge and its interface are pure structure mechanics over `spark-sql-api` types
+and live in `utilities`, so that `encoders` reaches the interface without
+depending on `fhir-schema`. The definition-backed implementation sits beside
+`SchemaBuilder`, so derivation and merging share one notion of canonical order by
+construction rather than two that can drift.
 
 ---
 
@@ -77,17 +79,18 @@ a user can see changes.
 **Purpose**: Capture the baseline and create the module scaffolding. No
 behaviour changes.
 
-- [ ] T001 Run the JMH suite on unmodified `main` in `benchmark/src/main/java/au/csiro/pathling/benchmark/PathlingBenchmark.java` and record the results in `evidence/baseline.md`, noting the machine, fork count and Spark version. **Must precede every other task**: once modules move, the comparison point is gone.
+- [ ] T001 Run the JMH suite on unmodified `main` in `benchmark/src/main/java/au/csiro/pathling/benchmark/PathlingBenchmark.java` and record the results in `evidence/baseline.md`, noting the machine, fork count and Spark version. **Must precede every other task**: the baseline and the comparison must come from the same machine under the same conditions, and capturing it first is the only way to guarantee that. The measurement itself stays recoverable from `main` through a worktree.
 - [ ] T002 Split the benchmark so encode, decode and query execution are timed separately, and planning time separately from execution time, in `benchmark/src/main/java/au/csiro/pathling/benchmark/PathlingBenchmark.java`. The current benchmarks report one number for an NDJSON-to-view pipeline, which cannot answer driver 1 either way.
 - [ ] T003 Re-run T001 against the split benchmark and record the per-phase baseline in `evidence/baseline.md`.
 - [ ] T004 Create the `fhir-schema` module with `fhir-schema/pom.xml`, depending on `utilities` and `spark-sql-api` only.
-- [ ] T005 Add an enforcer rule to `fhir-schema/pom.xml` banning `org.apache.spark:spark-catalyst_*` and `org.apache.spark:spark-sql_*`, and verify it fails the build when violated deliberately.
+- [ ] T005 Add an enforcer rule to `fhir-schema/pom.xml` banning `org.apache.spark:spark-catalyst_*` and `org.apache.spark:spark-sql_*`, and prove the rule works by violating it deliberately on the empty module. T125 re-checks it against real code.
 - [ ] T006 [P] Create the `io` module with `io/pom.xml`, depending on `fhir-schema` and `spark-sql`.
-- [ ] T007 [P] Add a build rule to `io/pom.xml` failing on any `org.apache.spark.sql.catalyst` import, and verify it fails when violated deliberately.
+- [ ] T007 [P] Add a build rule to `io/pom.xml` failing on any `org.apache.spark.sql.catalyst` import, and prove the rule works by violating it deliberately on the empty module. T126 re-checks it against real code.
 - [ ] T008 Add both modules to `<modules>` in `pom.xml` in build order, and to the dependency list in `library-runtime/pom.xml` so the Python and R libraries ship them.
 - [ ] T009 Add `fhir-schema` and `io` as dependencies of `fhirpath` in `fhirpath/pom.xml`. `encoders/pom.xml` is not modified.
+- [ ] T009a **Spike, and the gate on the whole approach.** Build a throwaway `RuntimeReplaceable` over an *unresolved* attribute and confirm it survives the analyzer — that nothing probes `dataType` before the child resolves. Discard the code; T038a is the durable test. Run it here rather than in Phase 8 because it is the programme's largest unknown and costs a day, so the answer is worth having while M1 still has planning time. **On failure**: the design falls back to the unbound column representation in R-017 option C, and T038e, T038l, T110, T113a and T113b are rewritten against it before M3 opens. FR-055 to FR-058 are unaffected either way.
 
-**Checkpoint**: Modules exist and are empty; the boundary is enforced; the baseline is captured.
+**Checkpoint**: Modules exist and are empty; the boundary is enforced; the baseline is captured; the analyzer risk is resolved.
 
 ---
 
@@ -114,7 +117,8 @@ schema derivation. Pure motion first, then widening.
 ## Phase 3: Schema derivation
 
 **Purpose**: Turn definitions into a Spark schema, in both modes, with the
-canonical field ordering and the structure merge that every later consumer shares.
+navigable canonical structure and the structure merge that every later consumer
+shares.
 
 - [ ] T028 Test schema derivation in `fhir-schema/src/test/java/au/csiro/pathling/schema/SchemaBuilderTest.java` — types and cardinality taken from definitions, never from data; a repeating element is an array whether one value or many are present.
 - [ ] T029 Test pruning in `fhir-schema/src/test/java/au/csiro/pathling/schema/SchemaPruningTest.java` — a complex element survives only where some descendant leaf is populated, so a field-less structure never arises (FR-011).
@@ -122,13 +126,16 @@ canonical field ordering and the structure merge that every later consumer share
 - [ ] T030a Test that every derived structure orders its fields in definition order, and that a pruned structure's field order is a subsequence of the dense one (FR-057), in `fhir-schema/src/test/java/au/csiro/pathling/schema/SchemaModeParityTest.java`. Field order is part of the type, so this is a correctness assertion rather than a tidiness one.
 - [ ] T031 Implement definition-derived schema derivation in `fhir-schema/src/main/java/au/csiro/pathling/schema/SchemaBuilder.java`.
 - [ ] T032 Implement pruning as a filter over the derivation output in `fhir-schema/src/main/java/au/csiro/pathling/schema/SchemaPruner.java`.
-- [ ] T033 Add the schema mode, the strictness switch and the per-annotation toggles to the encoding configuration, keeping the nesting, extension and open-type options bounding the dense mode only (FR-044).
-- [ ] T038f [P] Test the structure merge in `utilities/src/test/java/au/csiro/pathling/utilities/StructureMergeTest.java` — recursive field-wise union under a supplied field ordering, and therefore commutative and associative regardless of merge order (FR-058).
-- [ ] T038g Implement the merge in `utilities/src/main/java/au/csiro/pathling/utilities/StructureMerge.java`, as the single implementation serving both reconciliation and the merging of divergent file schemas (FR-058). It lives in `utilities`, not `fhir-schema`, because both callers must reach it and `encoders` must not gain a dependency on `fhir-schema` (T009, FR-051). It is pure structure mechanics over `spark-sql-api` types and takes the field ordering as an argument.
-- [ ] T038h [P] Test the canonical field ordering supplied to the merge in `fhir-schema/src/test/java/au/csiro/pathling/schema/CanonicalOrderTest.java` — the definition order for a FHIR type, and that merging two pruned structures under it yields definition order rather than discovery order (FR-057). This is the input the merge cannot derive: two subsequences of a total order do not determine it, since `[id, family]` and `[id, given]` do not say which of `family` and `given` comes first.
-- [ ] T038i Implement the canonical ordering supplier in `fhir-schema/src/main/java/au/csiro/pathling/schema/CanonicalOrder.java` (FR-057), as the one notion of canonical order shared by derivation, reconciliation and file merging.
+- [ ] T033a Test that the schema mode, the strictness switch and the per-annotation toggles are readable from the new configuration and carry their documented defaults, in `fhir-schema/src/test/java/au/csiro/pathling/schema/SchemaConfigurationTest.java`. T030 covers mode parity and T055 covers the toggles through the transform; neither covers the configuration surface itself.
+- [ ] T033 Add the schema mode, the strictness switch and the per-annotation toggles to a new `fhir-schema/src/main/java/au/csiro/pathling/schema/SchemaConfiguration.java`, **beside** the existing `EncodingConfiguration` rather than on it. That class lives in `encoders`, which FR-051 forbids modifying and which FR-052's carve-out does not reach, so the new options cannot go there. The nesting, extension and open-type options stay where they are and keep bounding the dense mode only (FR-044). T070 threads both onto `PathlingContext`.
+- [ ] T033b Classify every test class **outside `fhirpath`** that reaches the existing encoder, recording the result in `evidence/encoder-scope.md` under the category scheme already there. Split them into those that recover unaided once the public API switches and those that assert behaviour specific to the previous layout and must be converted or retired. Named starting points: `NarrowMergeTest`, `MigratedTableDecodingTest` and `ExtensionContexts` in `library-api`, the `SchemaMisalignment` helper they reach in the `encoders` test jar, and the test-jar dependencies declared by `lib/R/pom.xml`. T100d acts on the second group. Doing this in M1 sizes the flag day while there is still planning time.
+- [ ] T038f [P] Test the structure merge in `utilities/src/test/java/au/csiro/pathling/utilities/StructureMergeTest.java` — recursive field-wise union under a supplied canonical structure, and therefore commutative and associative regardless of merge order (FR-058). Cover **nested depth**, not one level: a merge that orders the top level correctly and the levels beneath it by discovery order passes a single-level test and is wrong. Drive it with a hand-built canonical structure so the test does not depend on `fhir-schema`.
+- [ ] T038g Declare the canonical structure interface in `utilities/src/main/java/au/csiro/pathling/utilities/CanonicalStructure.java` and implement the merge in `utilities/src/main/java/au/csiro/pathling/utilities/StructureMerge.java`, as the single implementation serving both reconciliation and the merging of divergent file schemas (FR-058). The interface answers two questions at any node: the canonical field order here, and the structure under a given field name. It must be **lazily navigable**, because FHIR's definition graph is cyclic — extensions are self-recursive, and a reference carries an identifier that carries a reference — so the expanded tree is infinite and the depth the merge needs is set by its operands, not known statically. Both live in `utilities`, not `fhir-schema`, because both callers must reach them and `encoders` must see only the interface, never `fhir-schema` (T009, FR-051). Pure structure mechanics over `spark-sql-api` types.
+- [ ] T038h [P] Test the definition-backed canonical structure in `fhir-schema/src/test/java/au/csiro/pathling/schema/DefinitionCanonicalStructureTest.java` — the field order at a node is definition order with the layout's own fields at their fixed positions, the annotations and the metadata group beside a primitive (FR-057); descent by field name reaches the structure for that element; and descending a self-recursive type to an arbitrary depth terminates without forcing an expansion beyond the depth asked for. Assert that merging two pruned structures under it yields definition order rather than discovery order. This is the input the merge cannot derive: two subsequences of a total order do not determine it, since `[id, family]` and `[id, given]` do not say which of `family` and `given` comes first.
+- [ ] T038i Implement the interface over the definitions in `fhir-schema/src/main/java/au/csiro/pathling/schema/DefinitionCanonicalStructure.java` (FR-057), and route `SchemaBuilder` through the same traversal. It sits beside derivation because derivation already walks the same cyclic graph and must decide the same positions; sharing the traversal is what stops the two notions of canonical order drifting apart, and structures compare positionally when they do. Memoise per FHIR type, since a merge descends the same types repeatedly.
+- [ ] T119 Measure merge cost over a realistic file count on object storage and record it in `evidence/merge-cost.md`, using synthetic files carrying a derived schema. The result can force a fallback for raw files (R-015). Measured here, not in US5, because it is a gate: merge cost is a property of file count and schema width, so it needs T031 and nothing else, and T118 should be designed around the answer rather than rewritten after it.
 
-**Checkpoint**: Definitions drive schema derivation in both modes; field order is canonical and one merge serves every later consumer.
+**Checkpoint**: Definitions drive schema derivation in both modes; one navigable canonical structure serves derivation, reconciliation and file merging; one merge serves every later consumer; merge cost is known.
 
 ---
 
@@ -212,10 +219,10 @@ API, and the existing implementation is untouched.
 *Mostly delivered by T004–T009; this phase verifies it. It sits at the end of M1
 because there is now encoding code for T126 and T127 to inspect.*
 
-- [ ] T125 [P] [US8] Verify that adding a Catalyst dependency to `fhir-schema/pom.xml` fails the build, and revert.
-- [ ] T126 [P] [US8] Verify that adding a Catalyst import to the new encoding code fails the build, and revert.
+- [ ] T125 [P] [US8] Re-check the dependency ban against real code: add a Catalyst dependency to `fhir-schema/pom.xml`, confirm the build fails, and revert. T005 proved the rule on an empty module; this proves it still holds once the module carries derivation.
+- [ ] T126 [P] [US8] Re-check the import ban against real code: add a Catalyst import to the new encoding code, confirm the build fails, and revert. T007 proved the rule on an empty module.
 - [ ] T127 [US8] Confirm by inspection that the new encoding path contains no expression encoder, no hand-authored serializer or deserializer expression tree and no FHIR object in a per-row plan (FR-050).
-- [ ] T128 [US8] Confirm `encoders` is unmodified — `git diff main -- encoders/` is empty — and that `mvn -pl encoders` still resolves (FR-051). Re-run at the end of M3, where T038e and T038l add to `encoders`: FR-052 permits extending the query-time toolkit, so from that point the assertion narrows to the HAPI bridge and the existing expressions being unchanged.
+- [ ] T128 [US8] Confirm `encoders` is unmodified — `git diff main -- encoders/` is empty — and that `mvn -pl encoders` still resolves (FR-051). T128a re-checks it under a narrowed assertion once the query-time toolkit has been extended.
 
 **Checkpoint**: Driver 5 is delivered for the encoding path and enforced by the build.
 
@@ -228,10 +235,12 @@ The remaining ingest formats reach the new layout. Still nothing user-visible.
 ## Phase 7: Remaining ingest formats (US1)
 
 - [ ] T058 [P] [US1] Test that a bundle is exploded to per-type tables and is never stored as a resource type, in `io/src/test/java/au/csiro/pathling/io/transform/BundleTransformTest.java`.
+- [ ] T058a [P] [US1] Test that XML ingest reaches the same stored result as the equivalent JSON, in `io/src/test/java/au/csiro/pathling/io/transform/XmlIngestTest.java`. Cover a primitive extension, which XML carries as a child element rather than an underscore-prefixed sibling, and a repeating element occurring once. Spark's native XML reader would infer that last case as a non-array, but T069 does not use it — cardinality comes from the FHIR parser and the definitions — so this asserts the chosen design actually avoids the hazard.
 - [ ] T068 [US1] Implement bundle explosion and reference resolution within a bundle in `io/src/main/java/au/csiro/pathling/io/transform/BundleTransformer.java`.
 - [ ] T069 [US1] Implement XML ingest by parsing with FHIR tooling in a UDF and handing JSON to the transform, in `io/src/main/java/au/csiro/pathling/io/transform/XmlIngest.java`.
+- [ ] T069a [US1] Run the M1 round-trip harness over the resources a bundle is exploded into, and over XML input, in `io/src/test/java/au/csiro/pathling/io/IngestFormatRoundTripTest.java`. T076 excludes bundles permanently and correctly, since FR-007 means a bundle is never stored, and T077 runs over per-resource-type NDJSON — so without this task nothing round-trips what this phase adds.
 
-**Checkpoint**: Every ingest format the previous encoder accepted reaches the new layout. Both are then exercised through the M1 round-trip harness.
+**Checkpoint**: Every ingest format the previous encoder accepted reaches the new layout, and each has been round-tripped through the M1 harness.
 
 ---
 
@@ -256,7 +265,7 @@ exist before the fixture mechanism moves underneath them.*
 - [ ] T024 Convert the two tests using direct resource construction in `fhirpath/src/test/java/au/csiro/pathling/fhirpath/function/ResolveFunctionDslTest.java` to the declarative model builder, and confirm the class no longer references the HAPI resolver factory.
 - [ ] T025 Confirm every new case passes against unmodified behaviour. A failure is a defect to raise separately, not to fix here.
 - [ ] T026 [P] Add a divergent-schema fixture under `fhirpath/src/test/resources/viewTests/` whose two files deliberately disagree on a leaf of a repeating element, with a view unnesting that element and projecting only that leaf.
-- [ ] T027 Assert against the real engine that the divergent-schema fixture returns resources from both files (FR-036). This pins the unnesting constraint; if it fails, unnesting has been reshaped into a leaf-level read and rows are being lost silently. Once T038e lands, extend the fixture so the projected leaf is absent from one file's schema entirely rather than merely null, so the pin exercises tolerant traversal over divergent files and not only the unnesting shape.
+- [ ] T027 Assert against the real engine that the divergent-schema fixture returns resources from both files (FR-036). This pins the unnesting constraint; if it fails, unnesting has been reshaped into a leaf-level read and rows are being lost silently. T027a extends it once tolerant traversal exists.
 
 ### Test infrastructure for the flag day
 
@@ -285,9 +294,10 @@ it costs little, and nothing in M1 or M2 depends on the answer.
 - [ ] T038c [P] Test the fallback types against FR-055: a singular primitive takes the definition's type, a repeating primitive an array of it, a singular complex element the bottom type, a repeating complex element an array of the bottom type. Assert that a repeating fallback survives `transform` — bare `void` does not — and that a complex fallback combines with a populated structure, which a concrete minimal structure does not. In the same file.
 - [ ] T038d [P] Test that a plan using the expression prunes identically to one written with a direct field reference, by comparing `ReadSchema` from the executed plan (finding 14), in the same file. The rewrite runs before every pruning rule, so this must hold; it is the assertion that a future Spark upgrade has not reordered the optimizer batches.
 - [ ] T038e Implement the tolerant traversal expression as a `RuntimeReplaceable` in `encoders/src/main/scala/au/csiro/pathling/sql/ResolveOrNull.scala`, beside the existing query-time expressions in `encoders/src/main/scala/au/csiro/pathling/encoders/Expressions.scala`, and wrap it for use from Java via `ExpressionUtils` as `ColumnFunctions.structProduct` already does. Scala, because `RuntimeReplaceable` is a Scala trait whose tree-node contract runs through `Product`; `encoders` already carries the Scala plugin and this module is where the query-time toolkit lives, so FR-052 covers it and no POM changes. No codegen: `RuntimeReplaceable` supplies `dataType`, `nullable` and a final `eval`.
+- [ ] T027a Extend the T026 divergent-schema fixture so the projected leaf is absent from one file's schema entirely rather than merely null, and re-assert T027 over it, so the pin exercises tolerant traversal over divergent files and not only the unnesting shape.
 - [ ] T038j [P] Test the reconciliation expression in `encoders/src/test/scala/au/csiro/pathling/sql/MergeCastTest.scala` — two structures of the same FHIR type with different fitted shapes project by name into the merged type and combine; fields a side lacks become null; the result is traversable. Assert it is a by-name projection and **not** a cast, by constructing two structures with the same field types in a different order and asserting they are not silently transposed.
 - [ ] T038k [P] Test that folding the binary form gives the same type and values as one variadic call (finding 16), in the same file.
-- [ ] T038l Implement the reconciliation expression as a variadic `RuntimeReplaceable` in `encoders/src/main/scala/au/csiro/pathling/sql/MergeCast.scala`, taking the operand being projected, the full ordered operand list so that every operand computes the same target type, and the canonical field ordering from T038i, which it cannot recover from the operands. The merge itself is T038g.
+- [ ] T038l Implement the reconciliation expression as a variadic `RuntimeReplaceable` in `encoders/src/main/scala/au/csiro/pathling/sql/MergeCast.scala`, taking the operand being projected, the full ordered operand list so that every operand computes the same target type, and the canonical structure from T038g, which it cannot recover from the operands. It takes the **interface** declared in `utilities`, never a type from `fhir-schema`, so `encoders` gains no dependency on that module (T009, FR-051). The merge itself is T038g and the definition-backed implementation is T038i.
 
 **Checkpoint**: The join has portable coverage; the unnesting constraint is pinned; fixtures reach Spark without the old encoder; the toolkit can traverse tolerantly and reconcile shapes, and the analyzer risk is resolved either way.
 
@@ -296,7 +306,7 @@ it costs little, and nothing in M1 or M2 depends on the answer.
 ## Phase 9: User Story 3 - The engine reads the new layout (Priority: P1)
 
 **Goal**: Existing expressions, views and searches return the same answers over
-the new layout, and the public API writes it.
+the new layout. The public API does not switch until Phase 12.
 
 **Independent Test**: The FHIRPath suite, both conformance baselines and the
 SQL-on-FHIR compliance suite pass over data in the new layout.
@@ -375,10 +385,10 @@ message rather than producing wrong answers.
 and assert the error.
 
 *Immediately before the public API switch, and not earlier. The detector rejects
-the layout an earlier release wrote — which, until Phase 12, is the only layout
-anyone has and the one the engine still reads. Landing it in M1 would reject every
-existing user's data for reading it exactly as intended. Before the flip there is
-nothing for it to catch, and it would catch the wrong thing.*
+the layout an earlier release wrote, which is the only layout anyone holds until
+the flip. Shipping it in M1 would reject every existing user's data in a release
+whose engine still reads that data exactly as intended. It must be in place by
+Phase 12 and must not ship before it.*
 
 *It depends only on Setup, so it can be built at any point; it must not be wired
 in before Phase 12.*
@@ -388,7 +398,7 @@ in before Phase 12.*
 - [ ] T039 [P] [US7] Test the layout detector against a full previous-layout schema, a sparse previous-layout schema, a new-layout schema and a schema with no markers, in `library-api/src/test/java/au/csiro/pathling/library/io/source/LayoutDetectorTest.java`.
 - [ ] T040 [P] [US7] Test that detection walks nested structures and arrays of structures, not only top-level fields, in the same file.
 - [ ] T041 [P] [US7] Test that reading conforming data succeeds unchanged, that a sparse but conforming schema succeeds, and that an unclassifiable schema succeeds, in `library-api/src/test/java/au/csiro/pathling/library/io/source/FileSourceDetectionTest.java`.
-- [ ] T042 [P] [US7] Test that an unsupported layout fails at read time with a message naming the resource type, the detected layout, the expected layout and the remedy, asserting the message content so it cannot silently degrade, in the same file.
+- [ ] T042 [P] [US7] Test that an unsupported layout fails at read time with a message naming the resource type, the detected layout, the expected layout and the remedy, asserting the exact message content so it cannot silently degrade, in the same file. **The remedy is re-import from source**, and the message says so plainly, because no in-place rewrite exists in this release: migration of data at rest is out of scope here, and the previous layout stored decimals as a fixed-precision numeric, so any rewrite would be lossy where a re-import is not. T134a records the rewrite tool as future work.
 - [ ] T043 [P] [US7] Test that the opt-out permits the read and is scoped to one source, in the same file.
 - [ ] T044 [P] [US7] Test that detection introduces no additional file access beyond the schema metadata the read already obtains (FR-038), in the same file.
 
@@ -416,8 +426,12 @@ rather than a wrong answer.*
 - [ ] T081 [US2] Wire egress into the decode entry point in `library-api/src/main/java/au/csiro/pathling/library/PathlingContext.java`, preserving the existing signature.
 - [ ] T082 [P] [US2] Wire egress into `library-api/src/main/java/au/csiro/pathling/library/io/sink/NdjsonSink.java`.
 - [ ] T100 [US3] Run the full FHIRPath suite, both YAML conformance baselines and the SQL-on-FHIR compliance suite over the new layout (SC-002); remove exclusion entries that have become obsolete rather than leaving them to self-report (SC-003). Confirm the engine now reads only the new layout and no engine code path reads the previous one (FR-053).
+- [ ] T100b Rebuild `library-runtime`, clear both `cache` and `jars` across every `~/.ivy2*` tree and recreate the directories, then run the Python and R suites over the new layout. Assert that encode, decode, the file sources and sinks and the detection opt-out behave as before from both bindings (SC-008). The clearing step is not optional: the SNAPSHOT filename never changes, so without it Ivy reuses a stale jar and both suites pass without exercising any of this work.
+- [ ] T100c Remove the encode and decode plumbing in `library-api/src/main/java/au/csiro/pathling/library/` left unreachable by T070 and T081 — the three encode paths over map partitions, the decode path and the resource parser — confirming first that nothing outside the module references them. The `encoders` module itself is untouched and keeps its coordinates, so migration tooling is unaffected; FR-051 is about that module, not this plumbing.
+- [ ] T100d Convert or retire the test classes T033b classified as asserting behaviour specific to the previous layout. `NarrowMergeTest` is rewritten against the widening behaviour T117a introduces rather than the refusal it asserts today.
+- [ ] T128a [US8] Re-check the `encoders` boundary under the narrowed assertion: the HAPI bridge and the pre-existing expressions are unchanged, and the module has gained only `ResolveOrNull` and `MergeCast`, which FR-052 permits. Confirm `mvn -pl encoders` still resolves.
 
-**Checkpoint**: The engine reads the new layout and the public API writes it. The old encoder is no longer read by the engine.
+**Checkpoint**: The engine reads the new layout and the public API writes it. The old encoder is no longer read by the engine, and both language bindings are verified against the switch.
 
 ---
 
@@ -443,7 +457,7 @@ the public write path, which does not exist until T070. The merge it needs
 - [ ] T117 [P] [US5] Enable schema merging on append in `library-api/src/main/java/au/csiro/pathling/library/io/sink/DeltaSink.java`.
 - [ ] T118 [P] [US5] Enable schema merging on read, with an opt-out, in `library-api/src/main/java/au/csiro/pathling/library/io/source/ParquetSource.java`.
 - [ ] T118a [US5] Where a merged schema is produced rather than obtained from Spark, produce it with the shared merge from T038g so field order stays canonical (FR-057, FR-058). A merge that appends newly discovered fields in discovery order rather than definition order yields structures that cannot be combined and, worse, compare positionally.
-- [ ] T119 [US5] Measure merge cost over a realistic file count on object storage and record it in `evidence/merge-cost.md`. The result can force a fallback for raw files (R-015).
+- [ ] T117a [US5] Enable schema auto-merge on the upsert path in `library-api/src/main/java/au/csiro/pathling/library/io/sink/DeltaSink.java`, so a divergent source widens the target as an append now does. This **reverses a deliberate guarantee**: the upsert path today refuses to widen, so that tolerance does not become schema evolution the caller did not ask for. That reasoning assumed a schema derived from encoder configuration and stable between batches. A fitted schema comes from the data, so divergence is the steady state and the refusal would fire on ordinary use. Append and upsert must not give two answers to the same question. Recorded as decision 41; `NarrowMergeTest` is rewritten by T100d.
 
 **Checkpoint**: Incremental loading works with schemas fitted to data.
 
@@ -485,6 +499,7 @@ and T136 need the ingest path complete.*
 - [ ] T132 [P] File the upstream Spark issue as a follow-up to SPARK-48148, with the reproduction from `evidence/spark-type-findings.md`: exact string parsing covers only byte-array and positionally-readable content references, so the string-dataset and `from_json` paths still route numbers through a double.
 - [ ] T133 [P] Raise the follow-up issue recording the two alternative bindings from R-017 as future options — evaluation-time schema binding, and an unbound column representation bound when the dataset is known. Note what each would add beyond what is built here: bind-time validation and a required-schema manifest, and therefore Pathling-level messages naming the missing element instead of a Spark analysis failure. Note also that they remain compatible, because the representation of absence and the reconciliation mechanism are shared. Typed absent elements are **no longer** a follow-up: FR-055 delivers them for primitives.
 - [ ] T134 [P] Raise the follow-up issue for the decimal quoting pre-pass (R-009), recording that a blanket approach fails because a quoted number against an integer target is rejected.
+- [ ] T134a [P] Raise the follow-up issue for the data-at-rest rewrite tool that T042's message says does not yet exist. Record that the retained `encoders` module is what keeps it possible, that a rewrite cannot restore decimal lexical form because the previous layout stored a fixed-precision numeric, and that a re-imported warehouse therefore carries the losslessness guarantee where a rewritten one does not. This closes the gap between the Constitution Check's retention rationale and work that appears nowhere in this programme.
 - [ ] T135 Benchmark the two ingest mechanisms against each other — the chosen transform approach and direct parsing into a variant — and record the comparison in `evidence/ingest-comparison.md`. This decides whether the lexical-decimal limitation is worth removing by changing mechanism (R-009).
 - [ ] T136 Re-run the split benchmark and compare against the T003 baseline. Record encode, decode, planning and execution separately. No outcome is required (SC-007).
 - [ ] T137 Correct or retire `openspec/parquet-on-fhir-design.md`, which this specification supersedes: the stored decimal precision is wrong, the nested-pruning risk does not apply to the engine and its proposed mitigation was insufficient, and the first argument against schema inference does not hold for FHIR JSON.
@@ -502,7 +517,7 @@ re-check it when a task is added or removed.
 
 | Requirement | Tasks |
 | --- | --- |
-| FR-001 Layout conformance | T050–T070 |
+| FR-001 Layout conformance | T050–T057a, T059–T067 (M1), T058, T058a, T068, T069, T069a (M2), T070 (M3) |
 | FR-002 Decimals lexical plus annotation | T050, T060, T064 |
 | FR-003 Primitive metadata groups, inline extensions, no identifier or map | T051, T052, T061, T062 |
 | FR-004 Date range annotations | T053, T065 |
@@ -510,7 +525,7 @@ re-check it when a task is added or removed.
 | FR-006 `contained` excluded and detected | T056, T067 |
 | FR-007 `Bundle` never stored | T058, T068 |
 | FR-008 Schema derived from definitions | T028, T031 |
-| FR-009 Pruned and dense modes | T029, T032, T033 |
+| FR-009 Pruned and dense modes | T029, T032, T033, T033a |
 | FR-010 Dense is the same derivation unpruned | T030 |
 | FR-011 No field-less structure | T029 |
 | FR-012 Types and cardinality never from data | T028 |
@@ -541,24 +556,24 @@ re-check it when a task is added or removed.
 | FR-054 Traversal tolerant of an absent field, decided after schema resolution | T038a, T038b, T038d, T038e, T110, T108 |
 | FR-055 Absent elements typed by the definitions or the bottom type | T038c, T038e, T105, T110 |
 | FR-056 Reconciliation by by-name projection, never by cast | T038j, T038k, T038l, T104a, T113a, T113b |
-| FR-057 Canonical definition field order wherever a structure type is produced | T030a, T038h, T038i, T104a, T118a |
-| FR-058 One recursive field-wise merge serving reconciliation and file merging | T038f, T038g, T118a |
+| FR-057 Canonical field order, covering the layout's own fields, wherever a structure type is produced | T030a, T038h, T038i, T104a, T118a |
+| FR-058 One recursive field-wise merge, over a navigable canonical structure, serving reconciliation and file merging | T038f, T038g, T038h, T038i, T118a |
 | FR-037 Unsupported layouts rejected with an actionable message | T042, T045, T046, T047 |
 | FR-038 Detection structural, no extra file access | T044 |
 | FR-039 Sparse and unclassifiable schemas accepted | T041 |
 | FR-040 Detection disableable per source | T043, T048, T049 |
-| FR-041 Divergent files read as one dataset | T114, T118 |
-| FR-042 Divergent append widens the table | T115, T117 |
+| FR-041 Divergent files read as one dataset | T114, T118, T119 |
+| FR-042 Divergent append widens the table | T115, T117, T117a |
 | FR-043 Encoding and decoding APIs preserved | T070, T081 |
 | FR-044 Bounds options apply to dense only | T033 |
-| FR-045 XML and Bundle ingest preserved | T058, T068, T069 |
+| FR-045 XML and Bundle ingest preserved | T058, T058a, T068, T069, T069a |
 | FR-046 Earlier layouts not read as the new one | T042, T045 |
 | FR-047 Published layout contract replaced | T129 |
 | FR-048 Dependency ban on the schema module | T005, T125 |
 | FR-049 Import check on the new encoding | T007, T126 |
 | FR-050 No encoder or hand-authored expression trees | T127 |
-| FR-051 Existing implementation untouched | T128 |
-| FR-052 Query toolkit preserved and not relocated | T128 |
+| FR-051 Existing implementation untouched | T128, T128a |
+| FR-052 Query toolkit preserved and not relocated | T038e, T038l, T128, T128a |
 | FR-053 Engine reads only the new layout | T100 |
 
 And the success criteria:
@@ -572,7 +587,7 @@ And the success criteria:
 | SC-005 Divergent files return every resource with correct cardinality | T114, T115, T116 | QS-006 |
 | SC-006 Earlier layouts rejected at read time with an actionable message | T042, T045–T047 | QS-008 |
 | SC-007 Encode, decode, planning and execution measured separately | T002, T003, T136 | QS-010 |
-| SC-008 No incompatible public API change in Java, Python or R | T049, T070, T081, T082 | QS-002, QS-008 |
+| SC-008 No incompatible public API change in Java, Python or R | T049, T070, T081, T082, T100b | QS-002, QS-008 |
 | SC-009 Build fails on internal Catalyst API in the schema module | T005, T125, T126 | QS-009 |
 | SC-010 One column expression gives equal results on a fitted and a dense dataset | T038a, T038b, T108 | QS-005 |
 
@@ -590,8 +605,10 @@ And the success criteria:
 ### Within M1
 
 - Phase 2 (definitions): T010–T012 (motion) before T013–T019 (widening).
-- Phase 3 (derivation): depends on T016–T018. T038f–T038i have no dependency on
-  the definition widening beyond the ordering supplier and may run alongside.
+- Phase 3 (derivation): depends on T016–T018. T038f and T038g are pure structure
+  mechanics over `spark-sql-api` types and may run alongside; T038h and T038i need
+  the definition widening, because the canonical structure is read from the
+  definitions. T119 depends on T031 and nothing else.
 - Phase 4 (US1): depends on Phase 3.
 - Phase 5 (US2): depends on Phase 4 — there is nothing to round-trip until data
   is written. T076 excludes `Bundle` resources, so it does not wait for M2.
@@ -602,8 +619,12 @@ And the success criteria:
 - T020–T027 (coverage) come first: they pin behaviour Phase 9 changes, and T024
   and T036 both touch the fixture mechanism, so the coverage must exist before it
   moves.
+- T027a depends on T038e, so the coverage block is revisited once tolerant
+  traversal exists; T027 itself does not wait.
 - T034–T038 (test infrastructure) depend on T031, from M1.
-- T038a–T038e and T038j–T038l depend on T038g and T038i, from M1.
+- T038l depends on T038g and T038i, from M1, and takes the canonical structure
+  through the interface declared in `utilities`. T038a–T038e and T038j–T038k
+  depend on neither.
 - Phase 9 (US3) depends on the whole of Phase 8. T083–T093 (Coding by name) are
   correct under both layouts and may land at any point, including during M1.
 - Phase 10 (US4) depends on Phase 9.
@@ -611,8 +632,9 @@ And the success criteria:
   wired in no earlier than Phase 12.
 - Phase 12 (the switch) depends on Phases 9, 10 and 11. It is the point of no
   return: after it, the public API writes the new layout.
-- Phase 13 (US5): T114, T115, T117, T118 and T118a depend on M1 and on Phase 12
-  for a public write path; T116 depends on Phase 10.
+- Phase 13 (US5): T114, T115, T117, T117a, T118 and T118a depend on M1 and on
+  Phase 12 for a public write path; T116 depends on Phase 10. T119 measured the
+  merge cost in M1, so its answer is already in hand here.
 - Phase 14 (US6) depends on T094 in Phase 9.
 
 ### The risk gate
@@ -626,8 +648,33 @@ it. The representation of absence (FR-055) and the reconciliation mechanism
 fail.
 
 The milestone structure shrinks what is at stake: nothing in M1 or M2 depends on
-the answer. That makes it safe to defer to M3, but it is still worth running as a
-spike during M1, because it is the programme's largest unknown and costs little.
+the answer. **T009a resolves it in Phase 1 nonetheless**, as a throwaway spike. It
+costs a day, and knowing the answer while M1 is still running means a failure is
+paid for in planning time rather than in rework at the moment M3 opens. T038a
+remains the durable test in Phase 8.
+
+### The red window
+
+**M3 has no green build between Phase 8 and Phase 12, and this is accepted rather
+than overlooked.** Two spans overlap.
+
+The FHIRPath estate is red from T037 in Phase 8 until T110 lands in Phase 10.
+T037 defaults the test framework to pruned, and a schema fitted to a small fixture
+set omits most of each resource, so expressions naming an omitted element meet a
+Spark analysis failure until tolerant traversal is emitted. This covers the DSL
+suite, both YAML conformance baselines and the SQL-on-FHIR compliance suite.
+
+The `library-api` estate is red from Phase 9 until Phase 12. Phase 9 converts the
+engine by replacement rather than addition — after T095 it cannot read a
+previous-layout decimal, and after T097 it cannot reach an extension through a
+field identifier — while the public API keeps writing that layout until Phase 12.
+Any test that encodes through `PathlingContext` and then queries is therefore
+broken for that span.
+
+The consequence to plan around is that a Phase 9 failure cannot be told apart
+from a Phase 10 one by the build. The programme still lands as several pull
+requests, but none of them falls inside Phases 8 to 12: that span is one
+unreleasable piece. Recorded as decision 40.
 
 Within each story: tests written and failing, then implementation. Tasks touching
 the same file run sequentially; `[P]` tasks on different files may run together.
@@ -652,6 +699,12 @@ US7 lands next, so that a user whose data predates the flip meets a message
 rather than a wrong answer. Only then does Phase 12 switch the public API — the
 encoder never writes what the engine cannot read, and the detector is never armed
 against data the engine is still expected to handle. US5 and US6 follow.
+
+**M3 runs red throughout.** Neither the FHIRPath estate nor the `library-api`
+estate is green between Phase 8 and Phase 12, for the two separate reasons set out
+under "The red window" above. This is an accepted cost of migrating the engine in
+one step rather than keeping it dual-layout, not an oversight, and it means M3
+lands as one span rather than as independently mergeable pieces.
 
 The server pins to the last library release before Phase 12 — the first change
 users can observe — and must reach the post-change line before the pinned line

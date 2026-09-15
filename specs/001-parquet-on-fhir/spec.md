@@ -425,10 +425,15 @@ after the schema-binding decision and belong to this section.
   share a SQL type MUST reconcile them by projecting each **by name** into the
   merged type. It MUST NOT reconcile by casting, because a struct cast of equal
   arity reorders fields positionally and silently compares the wrong fields.
-- **FR-057**: Struct field order MUST be canonical — definition order, restricted
-  to the fields present — wherever a struct type is produced: schema derivation,
-  the merge of two element types, the merge of divergent file schemas, and the
-  reconciliation projection.
+- **FR-057**: Struct field order MUST be canonical wherever a struct type is
+  produced: schema derivation, the merge of two element types, the merge of
+  divergent file schemas, and the reconciliation projection. Canonical order is
+  definition order, restricted to the fields present, with the layout's own
+  fields — the annotations, and the metadata group beside a primitive — at fixed
+  positions relative to the element they accompany. Those fields have no
+  definition element, so without a stated position two implementations could both
+  claim to be canonical and still produce structs that compare positionally
+  wrong, which is the failure this requirement exists to prevent.
 - **FR-058**: The merged type MUST be the recursive field-wise union of the
   inputs, and one implementation MUST serve both FR-056 and the merging of
   divergent file schemas in FR-041.
@@ -563,8 +568,13 @@ after the schema-binding decision and belong to this section.
   encoding is built alongside it.
 - The engine reads only the new layout on completion. The test estate therefore
   moves in one step rather than incrementally.
-- The strictness switch and the schema mode are configuration on the existing
-  encoding configuration surface.
+- The strictness switch, the schema mode and the per-annotation toggles are
+  configuration on a **new** surface beside the existing encoding configuration,
+  not on it. The existing configuration class sits in the module FR-051 protects,
+  and FR-052's carve-out reaches query-time expressions only, so adding to it is
+  not available. The public context accepts and exposes both, which is two
+  configuration objects for one conceptual thing — the cost of leaving the
+  existing implementation genuinely untouched.
 - Migration of data at rest is a version gate plus an opt-in rewrite tool, and
   is server-side work outside this specification. A migrated warehouse does not
   carry the losslessness guarantee; a re-imported one does.

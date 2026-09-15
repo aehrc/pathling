@@ -340,10 +340,29 @@ Delta 4.0.0 against Spark source 4.0.2, and are recorded in full in
   file schemas needs, so one implementation serves both. That implementation is
   pure structure mechanics and lives in `utilities`, because both callers must
   reach it and `encoders` must not gain a dependency on `fhir-schema`. The
-  **canonical field ordering is an input to it, not something it derives**: two
+  **canonical order is an input to it, not something it derives**: two
   subsequences of a total order do not determine that order, since `[id, family]`
-  and `[id, given]` do not say which of `family` and `given` comes first. The
-  ordering comes from the definitions, in `fhir-schema`.
+  and `[id, given]` do not say which of `family` and `given` comes first.
+
+  That input is **not a flat ordering**. The merge recurses, so it needs the
+  canonical order for whatever type it has descended into, at a depth its
+  operands determine rather than one known statically. FHIR's definition graph is
+  cyclic — extensions are self-recursive, and a reference carries an identifier
+  that carries a reference — so the expanded schema tree is infinite. Dense mode
+  bounds it by configuration and pruned mode by data, but the merge must reach
+  whatever depth the operands actually carry. The input is therefore a **lazily
+  navigable canonical structure**, answering two questions at any node: the field
+  order here, and the structure under a given field name. Navigation on demand is
+  what makes an infinite tree representable without forcing an expansion the
+  operands never ask for.
+
+  The interface is declared in `utilities` beside the merge, so `encoders` sees
+  the interface and never `fhir-schema`. The implementation over the definitions
+  sits beside `SchemaBuilder` in `fhir-schema`, which already walks the same
+  cyclic graph and must decide the same positions, so derivation and merging
+  cannot drift. Canonical order covers the layout's own fields as well as the
+  definition's, since the annotations and the metadata groups beside primitives
+  have positions and no definition element (FR-057).
 - **Measurements that constrain this** (findings 16–17):
   - `concat` and `array_union` over `array<struct<id,family>>` and
     `array<struct<id,given,period>>` fail with `DATA_DIFF_TYPES` and

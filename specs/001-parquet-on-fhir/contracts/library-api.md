@@ -106,3 +106,11 @@ be disabled where the files are known to be uniform.
 
 Appending to a transactional table merges the schema, so a batch carrying new
 elements widens the table rather than failing.
+
+Upserting into a transactional table also widens it. This is a **behaviour
+change**: the upsert path previously refused a source carrying elements the target
+lacked, failing on the structure mismatch, so that tolerance could not become
+schema evolution the caller had not asked for. That refusal assumed a schema
+derived from encoding configuration and therefore stable between batches. Under a
+schema fitted to the data it would fire on ordinary use, and append and upsert
+would answer the same question two ways.

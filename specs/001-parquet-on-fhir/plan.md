@@ -112,9 +112,18 @@ specs/001-parquet-on-fhir/
 ### Source code (repository root)
 
 ```text
+utilities/                          # Gains the structure merge and the
+  src/main/java/au/csiro/pathling/utilities/       # canonical structure
+                                      # interface, so that both `encoders` and
+                                      # `fhir-schema` reach them without either
+                                      # depending on the other.
+
 fhir-schema/                        # NEW. spark-sql-api only; no Catalyst.
   src/main/java/au/csiro/pathling/definition/      # Moved from fhirpath.
-  src/main/java/au/csiro/pathling/schema/          # Derivation and pruning.
+  src/main/java/au/csiro/pathling/schema/          # Derivation, pruning, and
+                                      # the definition-backed canonical
+                                      # structure that derivation and merging
+                                      # share.
 
 io/                                 # NEW. The new encoding.
   src/main/java/au/csiro/pathling/io/transform/    # JSON -> PoF transforms.

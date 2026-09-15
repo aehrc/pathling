@@ -46,6 +46,13 @@ definitions, and is either present in or absent from a given schema.
   order**, restricted to those present. Field order is part of the type, and
   structure equality compares positionally while ignoring names, so a divergent
   order is a silent wrong answer rather than a failure.
+- The layout's own fields have positions too, and they must, because they have no
+  definition element to take one from. A primitive metadata group and any
+  annotations sit **immediately after the element they accompany**, the metadata
+  group first and then the annotations in the fixed order the annotation registry
+  declares them. Without a stated rule two implementations could both order by
+  the definitions and still disagree, which is exactly the positional mismatch the
+  previous bullet is there to prevent.
 
 ### Primitive metadata group
 
@@ -77,7 +84,8 @@ Properties that hold for every annotation:
 
 - **Optional by definition.** A conformant file may carry none, so the engine
   computes from the annotated element when an annotation is absent.
-- **A sibling** of the element it annotates, named after it, so one
+- **A sibling** of the element it annotates, named after it and positioned
+  immediately after it, following the metadata group where one is present, so one
   sibling-resolution mechanism serves annotations and primitive metadata alike.
 - **Presence is a schema property**, so whether the fast path or the computation
   is used is decided at planning time rather than per row.
