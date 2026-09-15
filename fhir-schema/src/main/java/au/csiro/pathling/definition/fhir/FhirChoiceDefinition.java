@@ -65,6 +65,13 @@ class FhirChoiceDefinition implements ChoiceDefinition {
     return getChildByElementName(name).map(e -> e);
   }
 
+  @Nonnull
+  @Override
+  public List<ChildDefinition> getChildren() {
+    // The children of a choice are the types it can take.
+    return getAllChildTypes().stream().map(ChildDefinition.class::cast).toList();
+  }
+
   /**
    * Returns the child element definition for the given type, if it exists.
    *

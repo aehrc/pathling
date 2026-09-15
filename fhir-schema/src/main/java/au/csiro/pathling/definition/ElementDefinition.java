@@ -19,7 +19,6 @@ package au.csiro.pathling.definition;
 
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /** Represents a definition of a FHIR-like element. */
 public interface ElementDefinition extends ChildDefinition {
@@ -35,11 +34,29 @@ public interface ElementDefinition extends ChildDefinition {
   /**
    * Gets the FHIR type of this element.
    *
-   * @return The {@link FHIRDefinedType} that corresponds to the type of this element. Not all
-   *     elements have a type, e.g. polymorphic elements.
+   * @return The {@link FhirType} that corresponds to the type of this element. Not all elements
+   *     have a type, e.g. polymorphic elements.
    */
   @Nonnull
-  Optional<FHIRDefinedType> getFhirType();
+  Optional<FhirType> getFhirType();
+
+  /**
+   * Gets the maximum number of values this element may hold, where a negative value indicates that
+   * it is unbounded.
+   *
+   * @return the maximum cardinality of this element
+   */
+  int getMaxCardinality();
+
+  /**
+   * Checks whether this element may hold more than one value, and is therefore stored as an array
+   * rather than as a scalar.
+   *
+   * @return true if this element may repeat, false otherwise
+   */
+  default boolean isRepeating() {
+    return getMaxCardinality() < 0 || getMaxCardinality() > 1;
+  }
 
   /**
    * Checks if this element is a choice element.

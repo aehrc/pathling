@@ -19,10 +19,11 @@ package au.csiro.pathling.definition.defaults;
 
 import au.csiro.pathling.definition.ChildDefinition;
 import au.csiro.pathling.definition.ElementDefinition;
+import au.csiro.pathling.definition.FhirType;
 import jakarta.annotation.Nonnull;
+import java.util.List;
 import java.util.Optional;
 import lombok.Value;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * The default implementation of a primitive data type allowing for explicit definition of its
@@ -39,13 +40,13 @@ public class DefaultPrimitiveDefinition implements ElementDefinition {
    * @return a new DefaultPrimitiveDefinition with cardinality 1
    */
   @Nonnull
-  public static DefaultPrimitiveDefinition single(final String name, final FHIRDefinedType type) {
+  public static DefaultPrimitiveDefinition single(final String name, final FhirType type) {
     return new DefaultPrimitiveDefinition(name, type, 1);
   }
 
   String name;
-  FHIRDefinedType type;
-  int cardinality;
+  FhirType type;
+  int maxCardinality;
 
   @Override
   @Nonnull
@@ -61,7 +62,13 @@ public class DefaultPrimitiveDefinition implements ElementDefinition {
 
   @Override
   @Nonnull
-  public Optional<FHIRDefinedType> getFhirType() {
+  public List<ChildDefinition> getChildren() {
+    return List.of();
+  }
+
+  @Override
+  @Nonnull
+  public Optional<FhirType> getFhirType() {
     return Optional.of(type);
   }
 }

@@ -36,6 +36,7 @@ import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import lombok.Value;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.hl7.fhir.r4.model.Extension;
 
 /**
  * The definition context that encapsulates a {@link FhirContext} and provides access to all FHIR
@@ -113,6 +114,17 @@ public class FhirDefinitionContext implements DefinitionContext {
       @Nonnull final String elementName) {
 
     if (childDefinition.getValidChildNames().contains(elementName)) {
+      if (childDefinition instanceof RuntimeChildExtension) {
+        // An extension child cannot be resolved by name, because HAPI resolves every extension
+        // child against the name of the plain "extension" element and so fails on a modifier
+        // extension. The Extension type is taken from the child definition instead.
+        return Optional.of(
+            new FhirElementDefinition(
+                requireNonNull(
+                    childDefinition.getChildElementDefinitionByDatatype(Extension.class)),
+                childDefinition,
+                elementName));
+      }
       final BaseRuntimeElementDefinition<?> elementDefinition =
           childDefinition.getChildByName(elementName);
       if (childDefinition instanceof final RuntimeChildResourceDefinition rctd) {

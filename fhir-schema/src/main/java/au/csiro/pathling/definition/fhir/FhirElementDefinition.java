@@ -71,6 +71,11 @@ class FhirElementDefinition extends BaseFhirNodeDefinition<BaseRuntimeElementDef
   }
 
   @Override
+  public int getMaxCardinality() {
+    return childDefinition.getMax();
+  }
+
+  @Override
   public boolean isChoiceElement() {
     return childDefinition instanceof RuntimeChildChoiceDefinition;
   }

@@ -131,9 +131,9 @@ schema derivation. Pure motion first, then widening.
 - [x] T013 Test child enumeration in `fhir-schema/src/test/java/au/csiro/pathling/definition/NodeDefinitionTest.java` — children of a resource, a backbone element and a complex type, asserting order and completeness against the FHIR definitions, and a choice element appearing once as a choice rather than pre-expanded.
 - [x] T014 Test cardinality in `fhir-schema/src/test/java/au/csiro/pathling/definition/ElementDefinitionTest.java` — singular, repeating, and choice elements.
 - [x] T015 Test that a type code outside the R4 enumeration is representable, and that both implementations agree on enumeration and cardinality for the same resource, in `fhir-schema/src/test/java/au/csiro/pathling/definition/DefinitionContextAgreementTest.java`.
-- [ ] T016 Add child enumeration to `fhir-schema/src/main/java/au/csiro/pathling/definition/NodeDefinition.java`, implemented from the children the HAPI-backed implementation already obtains rather than asking a second time.
-- [ ] T017 Add cardinality to `fhir-schema/src/main/java/au/csiro/pathling/definition/ElementDefinition.java`.
-- [ ] T018 Replace the R4 enumeration in the reported type with a module-local representation in `fhir-schema/src/main/java/au/csiro/pathling/definition/ElementDefinition.java`, mapping the R4 enumeration onto it in the HAPI-backed implementation.
+- [x] T016 Add child enumeration to `fhir-schema/src/main/java/au/csiro/pathling/definition/NodeDefinition.java`, implemented from the children the HAPI-backed implementation already obtains rather than asking a second time.
+- [x] T017 Add cardinality to `fhir-schema/src/main/java/au/csiro/pathling/definition/ElementDefinition.java`.
+- [x] T018 Replace the R4 enumeration in the reported type with a module-local representation in `fhir-schema/src/main/java/au/csiro/pathling/definition/ElementDefinition.java`, mapping the R4 enumeration onto it in the HAPI-backed implementation.
 - [ ] T019 Convert the call sites in `fhirpath/src/main/java/au/csiro/pathling/fhirpath/` to the new type, keeping dispatch typed rather than degrading to string comparison. The engine continues to read cardinality from the Spark schema in this phase.
 
 **Checkpoint**: Definitions live below the engine and report children, cardinality and a version-independent type.

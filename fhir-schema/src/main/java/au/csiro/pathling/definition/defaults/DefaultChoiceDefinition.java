@@ -78,4 +78,11 @@ public class DefaultChoiceDefinition implements ChoiceDefinition {
   public Optional<ChildDefinition> getChildElement(@Nonnull final String name) {
     return choices.stream().filter(child -> child.getName().equals(name)).findFirst();
   }
+
+  @Override
+  @Nonnull
+  public List<ChildDefinition> getChildren() {
+    // The children of a choice are the types it can take.
+    return choices;
+  }
 }

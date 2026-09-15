@@ -19,11 +19,11 @@ package au.csiro.pathling.definition.defaults;
 
 import au.csiro.pathling.definition.ChildDefinition;
 import au.csiro.pathling.definition.ElementDefinition;
+import au.csiro.pathling.definition.FhirType;
 import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.Optional;
 import lombok.Value;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * The default implementation of a composite data type allowing for explicit definition of its
@@ -34,8 +34,8 @@ public class DefaultCompositeDefinition implements ElementDefinition {
 
   String name;
   List<ChildDefinition> children;
-  int cardinality;
-  FHIRDefinedType type;
+  int maxCardinality;
+  FhirType type;
 
   @Override
   @Nonnull
@@ -51,7 +51,7 @@ public class DefaultCompositeDefinition implements ElementDefinition {
 
   @Override
   @Nonnull
-  public Optional<FHIRDefinedType> getFhirType() {
+  public Optional<FhirType> getFhirType() {
     return Optional.of(type);
   }
 
@@ -60,15 +60,14 @@ public class DefaultCompositeDefinition implements ElementDefinition {
    *
    * @param name the element name
    * @param children the child definitions
-   * @param cardinality the cardinality
+   * @param maxCardinality the maximum cardinality
    * @return a new DefaultCompositeDefinition for a backbone element
    */
   @Nonnull
   public static DefaultCompositeDefinition backbone(
       @Nonnull final String name,
       @Nonnull final List<ChildDefinition> children,
-      final int cardinality) {
-    return new DefaultCompositeDefinition(
-        name, children, cardinality, FHIRDefinedType.BACKBONEELEMENT);
+      final int maxCardinality) {
+    return new DefaultCompositeDefinition(name, children, maxCardinality, FhirType.BACKBONEELEMENT);
   }
 }

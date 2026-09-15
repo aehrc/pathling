@@ -18,6 +18,7 @@
 package au.csiro.pathling.definition;
 
 import jakarta.annotation.Nonnull;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -34,6 +35,15 @@ public interface NodeDefinition {
    */
   @Nonnull
   Optional<ChildDefinition> getChildElement(@Nonnull String name);
+
+  /**
+   * Returns the children of this definition, in the order the definitions declare them. A choice
+   * element appears once, as a choice, rather than expanded into one child per type.
+   *
+   * @return the child definitions of this node
+   */
+  @Nonnull
+  List<ChildDefinition> getChildren();
 
   /**
    * Returns whether this definition originates from a FHIR model (as opposed to a synthetic
