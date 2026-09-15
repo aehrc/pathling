@@ -177,13 +177,15 @@ class StructureMergeTest {
             new StructField("family", STRING, false, Metadata.empty()),
             new StructField("given", array(STRING), false, Metadata.empty()));
 
-    final StructType merged = StructureMerge.merge(left, right, humanName());
-
-    assertEquals(
+    final StructType expected =
         struct(
             new StructField("family", STRING, false, Metadata.empty()),
-            new StructField("given", array(STRING), true, Metadata.empty())),
-        merged);
+            new StructField("given", array(STRING), true, Metadata.empty()));
+
+    // Asserted in both directions, because an implementation that simply takes the nullability of
+    // its first operand is right in one direction and wrong in the other.
+    assertEquals(expected, StructureMerge.merge(left, right, humanName()));
+    assertEquals(expected, StructureMerge.merge(right, left, humanName()));
   }
 
   @Test
