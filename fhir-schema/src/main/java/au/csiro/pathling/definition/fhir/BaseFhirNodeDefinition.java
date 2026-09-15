@@ -124,6 +124,15 @@ abstract class BaseFhirNodeDefinition<D extends BaseRuntimeElementDefinition<?>>
     return true;
   }
 
+  @Override
+  @Nonnull
+  public Object getTypeIdentity() {
+    // The implementing class is the identity of the type: HAPI gives each backbone element its own
+    // class, so two backbone elements of the same resource are distinguished, while a complex type
+    // reached by several paths is recognised as the one type it is.
+    return elementDefinition.getImplementingClass();
+  }
+
   @Nonnull
   public Optional<FhirType> getFhirType() {
     return getFhirTypeFromElementDefinition(elementDefinition);

@@ -20,6 +20,7 @@ package au.csiro.pathling.definition.fhir;
 import au.csiro.pathling.definition.ChildDefinition;
 import au.csiro.pathling.definition.ChoiceDefinition;
 import au.csiro.pathling.definition.ElementDefinition;
+import ca.uhn.fhir.context.RuntimeChildAny;
 import ca.uhn.fhir.context.RuntimeChildChoiceDefinition;
 import jakarta.annotation.Nonnull;
 import java.util.List;
@@ -57,6 +58,11 @@ class FhirChoiceDefinition implements ChoiceDefinition {
   @Override
   public String getName() {
     return childDefinition.getElementName();
+  }
+
+  @Override
+  public boolean isOpenType() {
+    return childDefinition instanceof RuntimeChildAny;
   }
 
   @Nonnull

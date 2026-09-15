@@ -135,8 +135,22 @@ class DefinitionCanonicalStructureTest {
             "_suffix",
             "period"),
         descend(patient(), "name").fieldOrder());
+    // The bounds of a period are themselves date times, so each carries a metadata group and a
+    // pair of range annotations.
     assertEquals(
-        List.of("start", "end"), descend(descend(patient(), "name"), "period").fieldOrder());
+        List.of(
+            "id",
+            "_id",
+            "extension",
+            "start",
+            "_start",
+            "__start_start",
+            "__start_end",
+            "end",
+            "_end",
+            "__end_start",
+            "__end_end"),
+        descend(descend(patient(), "name"), "period").fieldOrder());
   }
 
   @Test

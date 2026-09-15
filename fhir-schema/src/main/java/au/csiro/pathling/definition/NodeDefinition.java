@@ -46,6 +46,23 @@ public interface NodeDefinition {
   List<ChildDefinition> getChildren();
 
   /**
+   * Returns a value that identifies the type this node describes, so that a traversal can recognise
+   * a type it has already expanded.
+   *
+   * <p>It is not the FHIR type code, because every backbone element reports the same code while
+   * describing entirely different children. Nor is it the node itself, because a node is built
+   * afresh each time a child is resolved. The default is the node itself, which is correct but
+   * never recognises anything; an implementation backed by a definition set overrides it with the
+   * identity of the underlying definition.
+   *
+   * @return a value identifying the type this node describes
+   */
+  @Nonnull
+  default Object getTypeIdentity() {
+    return this;
+  }
+
+  /**
    * Returns whether this definition originates from a FHIR model (as opposed to a synthetic
    * definition created for literals or internal use).
    *

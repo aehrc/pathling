@@ -34,6 +34,20 @@ public interface ChoiceDefinition extends ChildDefinition {
   Optional<ElementDefinition> getChildByType(@Nonnull final String type);
 
   /**
+   * Returns whether this choice is an open type, which is a choice that may take any type the
+   * specification allows rather than an enumerated few.
+   *
+   * <p>The two are bounded differently: the types an open choice expands to are configurable,
+   * because expanding all of them produces a structure of unusable width, while an ordinary choice
+   * always expands to the types it declares.
+   *
+   * @return true if this choice is an open type, false otherwise
+   */
+  default boolean isOpenType() {
+    return false;
+  }
+
+  /**
    * Returns all possible child element definitions for this choice element.
    *
    * @return the list of all child element definitions
