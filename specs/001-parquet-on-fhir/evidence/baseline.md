@@ -88,3 +88,103 @@ answer it either way** — which is why T002 splits the benchmark and T003 re-ru
 it. The per-phase baseline recorded by T003 is the one M4 compares against; this
 table is the whole-pipeline reference point and the proof that the suite was
 green before the programme began.
+
+---
+
+# Per-phase baseline
+
+The measurement M4 compares against (T003), taken after T002 split the suite.
+Same machine, same session, same JMH settings as the whole-pipeline table above.
+
+**This is not a re-measurement of that table.** It is a different decomposition
+of the same work, so the two are not row-comparable and no figure here should be
+subtracted from one there.
+
+## Conditions
+
+As above, with these differences:
+
+| | |
+| --- | --- |
+| Commit | `4bfadac552` |
+| Benchmarks | `encode`, `decode`, `viewPlanning`, `viewExecution` |
+| Parameters | `resourceType` (5) for encode/decode; `view` (7) x `sourceType=delta` for the query pair |
+| Forks | 48 (24 combinations x 2) |
+| Wall clock | 23 m 35 s, no failures |
+
+    java -Xshare:off -Xmx8g -ea -Duser.timezone=UTC \
+      --add-exports=java.base/sun.nio.ch=ALL-UNNAMED \
+      --add-opens=java.base/java.net=ALL-UNNAMED \
+      -jar benchmark/target/benchmark-9.9.0.jar 'PathlingBenchmark' \
+      -rf json -rff baseline-phases-4bfadac552.json
+
+### Two deliberate departures from the whole-pipeline run
+
+**The query benchmarks are delta-only.** A `DatasetSource` holds a *lazy* encode
+over raw text, so an "ndjson query" figure is encode plus planning plus
+execution — the conflation T002 exists to remove. Encode now has its own
+benchmark, which is the honest home for that cost.
+
+**Materialisation is forced by a write, never by `count()`.** The optimiser
+prunes the fields of an object serializer that nothing downstream reads, so a
+count-forced encode would measure parsing and skip the construction of the very
+columns whose width drivers 1 and 4 are about. The `noop` write consumes the
+full schema.
+
+The same pruning is why **an encode figure cannot be recovered from the
+whole-pipeline table by subtraction**: a view forces only the columns it
+selects, so those `ndjson` numbers do not contain a full encode either.
+
+## Results
+
+Sample time, milliseconds per operation, lower is better.
+
+### Encode and decode
+
+| Resource | Encode | Decode | n (enc / dec) |
+| --- | ---: | ---: | ---: |
+| `Patient` | 83.931 ± 2.115 | 165.723 ± 3.483 | 362 / 185 |
+| `Condition` | 178.641 ± 3.966 | 312.629 ± 9.115 | 171 / 99 |
+| `Encounter` | 265.577 ± 12.401 | 426.943 ± 20.215 | 116 / 73 |
+| `QuestionnaireResponse` | 345.424 ± 9.738 | 824.584 ± 41.351 | 90 / 39 |
+| `Observation` | 1004.597 ± 116.286 | 1442.202 ± 142.382 | 34 / 23 |
+
+### Query planning and execution (delta)
+
+| View | Planning | Execution | Plan:exec |
+| --- | ---: | ---: | ---: |
+| `PatientAddresses` | 50.025 ± 0.988 | 19.612 ± 1.214 | 2.6 |
+| `PatientDemographics` | 54.705 ± 0.811 | 20.879 ± 1.477 | 2.6 |
+| `PatientAndContactAddressUnion` | 56.807 ± 0.836 | 25.181 ± 2.005 | 2.3 |
+| `ConditionFlat` | 62.437 ± 2.646 | 47.544 ± 0.818 | 1.3 |
+| `EncounterFlat` | 63.693 ± 1.041 | 65.428 ± 2.398 | 1.0 |
+| `UsCoreBloodPressures` | 143.643 ± 2.329 | 205.555 ± 9.128 | 0.7 |
+| `QuestionnaireResponseFlat` | 136.004 ± 2.529 | 450.166 ± 19.214 | 0.3 |
+
+Full JMH output is in `baseline-phases-4bfadac552.json`.
+
+## What the split already shows
+
+Three things the whole-pipeline figure could not have told us, all bearing on
+driver 1.
+
+**Planning dominates the light views, by more than two to one.** For the three
+Patient views, translating the view definition and planning the query costs over
+twice what running it does. A change that narrows the schema acts on the number
+of columns the analyzer and optimiser handle, so planning is where it should be
+expected to show up first — and it is the half that the old single number hid
+most completely.
+
+**Planning has a floor near 50 ms** that is close to view-independent. Nothing in
+the range 50–64 ms tracks view complexity much; the two expensive views sit
+apart at ~140 ms. A per-query fixed cost of that size is worth knowing before
+attributing any post-change movement to the layout.
+
+**Decode is consistently the more expensive direction**, running 1.4x to 2.4x
+encode for the same resource type, with the ratio widest on
+`QuestionnaireResponse`. Both directions are dominated by `Observation`, which is
+an order of magnitude above `Patient`.
+
+None of this is gated on: driver 1 is a hypothesis and nothing in the programme
+depends on the outcome. It is recorded so that the comparison in M4 measures the
+change rather than the machine.

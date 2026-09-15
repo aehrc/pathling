@@ -107,7 +107,7 @@ behaviour changes.
 
 - [x] T001 Run the JMH suite on unmodified `main` in `benchmark/src/main/java/au/csiro/pathling/benchmark/PathlingBenchmark.java` and record the results in `evidence/baseline.md`, noting the machine, fork count and Spark version. **Must precede every other task**: the baseline and the comparison must come from the same machine under the same conditions, and capturing it first is the only way to guarantee that. The measurement itself stays recoverable from `main` through a worktree.
 - [x] T002 Split the benchmark so encode, decode and query execution are timed separately, and planning time separately from execution time, in `benchmark/src/main/java/au/csiro/pathling/benchmark/PathlingBenchmark.java`. The current benchmarks report one number for an NDJSON-to-view pipeline, which cannot answer driver 1 either way.
-- [ ] T003 Re-run T001 against the split benchmark and record the per-phase baseline in `evidence/baseline.md`.
+- [x] T003 Re-run T001 against the split benchmark and record the per-phase baseline in `evidence/baseline.md`.
 - [ ] T004 Create the `fhir-schema` module with `fhir-schema/pom.xml`, depending on `utilities` and `spark-sql-api` only.
 - [ ] T005 Add an enforcer rule to `fhir-schema/pom.xml` banning `org.apache.spark:spark-catalyst_*` and `org.apache.spark:spark-sql_*`, and prove the rule works by violating it deliberately on the empty module. T125 re-checks it against real code.
 - [ ] T006 [P] Create the `io` module with `io/pom.xml`, depending on `fhir-schema` and `spark-sql`.
