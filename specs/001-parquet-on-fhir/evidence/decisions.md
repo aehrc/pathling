@@ -366,3 +366,32 @@ canonical and still produce structs that compare positionally wrong, which is th
 failure FR-057 exists to prevent. FR-057 now fixes their positions relative to the
 element they accompany. FR-058 needed no change, since it only ever required a
 recursive field-wise union.
+
+## 44. Non-conformant content is ignored by default, and the mode is a flag
+
+`contracts/library-api.md` left the default of the strictness switch to the
+implementation and required it to be stated. It is **ignore**, with failing as
+the opt-in.
+
+The contract enumerates the behaviour changes a caller must be told about, and an
+ingest that begins failing on content the previous implementation accepted is not
+among them. The previous implementation parsed leniently, FR-043 preserves the
+encoding signatures and SC-008 rules out an incompatible public API change, so a
+fail-by-default switch would break working pipelines on upgrade under a
+requirement set that promises the opposite. Ignoring is not silent: FR-018 forbids
+silent truncation in either position, so ignored content is still detected.
+
+The schema mode is carried as a flag defaulting to the fitted schema, rather than
+as a type of its own. The derivation distinguishes the two by which of
+`SchemaBuilder.dense` and `SchemaBuilder.pruned` is called, so the choice is
+already binary there, and a parallel two-valued type would be a second
+representation of the same thing. A top-level enumeration would not violate the
+letter of the coding conventions — `TerminologyMode` is one — but it would add a
+representation the derivation does not take.
+
+*Consequence for the specification*: the Strictness row of
+`contracts/library-api.md` now states the default. This also supersedes the
+remainder of decision 31, which still reads as though `EncodingConfiguration`
+gains these options; the Key Entities note in `spec.md` and T033 already place
+them on a new surface beside it, because FR-051 forbids modifying the module that
+class lives in.

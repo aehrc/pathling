@@ -308,7 +308,8 @@ assertions or its fixtures rewritten; `Retire` is one that goes.
 A textual sweep for encoder symbols finds only the classes that name them, and
 misses the ones that reach the encoder through the public API — `NarrowMergeTest`,
 a named starting point, names no encoder symbol at all. The list is therefore the
-union of two sweeps, both run from the repository root with `/target/` excluded:
+union of two sweeps, both run from the repository root and both piped through
+`grep -v '/target/'`, which is elided below for width:
 
 ```bash
 # 1. Classes naming the encoder or its configuration.
@@ -428,7 +429,7 @@ point rather than class by class:
 |---|---|---|
 | `util/FhirEncoderFixtures` | 3 | Builds encoders for fixture construction. |
 | `util/CustomObjectDataSource` | 13 | The server's copy of the object data source. |
-| Direct references to `au.csiro.pathling.encoders`, `FhirEncoders` or `EncodingConfiguration` | 43 (the union, including the above) | Includes `SchemaMigratorTest`, `DynamicDeltaSourceTest` and `SnapshotDeltaSourceTest`, which assert the previous layout at rest. |
+| Direct references to `au.csiro.pathling.encoders`, `FhirEncoders` or `EncodingConfiguration` | 43 by direct reference; the overlap with the two rows above was not computed | Includes `SchemaMigratorTest`, `DynamicDeltaSourceTest` and `SnapshotDeltaSourceTest`, which assert the previous layout at rest. |
 
 Not acted on by T100d. Sized here so the flag day is not a surprise on the
 server side.

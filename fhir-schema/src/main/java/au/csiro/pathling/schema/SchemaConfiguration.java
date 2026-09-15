@@ -43,8 +43,8 @@ public class SchemaConfiguration {
    * <p>Fitted is the default: the schema being fitted to the data is the design of this layout, and
    * the dense schema is the option (FR-009). The mode is a flag rather than a type of its own,
    * because the derivation itself distinguishes the two by which of {@link SchemaBuilder#dense} and
-   * {@link SchemaBuilder#pruned} is called, and because a two-valued type would be an enumeration,
-   * which this project does not use.
+   * {@link SchemaBuilder#pruned} is called. A two-valued type would be a second representation of a
+   * choice that is already binary there, and enumerations are discouraged here in any case.
    */
   @Builder.Default private boolean denseSchema = false;
 

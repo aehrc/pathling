@@ -23,7 +23,7 @@ No public signature is removed or narrowed.
 | Option | Meaning | Default |
 | --- | --- | --- |
 | Schema mode | Whether the stored schema is fitted to the data or comprises every defined element. | Fitted |
-| Strictness | Whether content outside the definition set is ignored or raises an error. | *Chosen at implementation; must be stated in the documentation.* |
+| Strictness | Whether content outside the definition set is ignored or raises an error. | Ignored — failing is the opt-in (decision 44) |
 | Annotation toggles | Enable or disable each annotation individually. | All enabled |
 | Layout detection opt-out | Per source, for conforming data the detector cannot classify. | Detection enabled |
 
