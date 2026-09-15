@@ -171,8 +171,11 @@ class DefinitionCanonicalStructureTest {
   void distinguishesTwoBackboneElementsOfTheSameResource() {
     // Every backbone element reports the same FHIR type, so a structure memoised by type would
     // hand the children of one of these to the other.
-    final List<String> contact = descend(patient(), "contact").fieldOrder();
-    final List<String> link = descend(patient(), "link").fieldOrder();
+    // Both are descended from one structure, because a memo keyed by type only confuses them
+    // where they share it.
+    final CanonicalStructure patient = patient();
+    final List<String> contact = descend(patient, "contact").fieldOrder();
+    final List<String> link = descend(patient, "link").fieldOrder();
 
     assertEquals(
         List.of(
