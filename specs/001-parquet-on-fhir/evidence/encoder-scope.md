@@ -351,7 +351,7 @@ as the documentation samples.
 |---|---|---|---|
 | `EvaluateRepeatAllTest` | `library-api` | `PathlingContext` over NDJSON fixtures | — |
 | `PathlingContextLocalModeTest` | `library-api` | context construction only | — |
-| `LocalTerminologyFhirImportTest` | `library-api` | `PathlingContext`, terminology resources from NDJSON | — |
+| `LocalTerminologyFhirImportTest` | `library-api` | context construction only — `importFhirTerminology` delegates to `FhirTerminologyImporter`, which parses into the terminology store rather than through the resource encoder | — |
 | `LocalTerminologyFunctionsTest`, `LocalTerminologyMemberOfTest`, `TerminologyHelpersTest` | `library-api` | hand-built frames; context construction only | — |
 | `DifferentialParityTest` | `library-api` | `PathlingContext.encode`, then FHIRPath columns | — |
 | `TestHelpers`, `TestDataFileLogger`, `FileSystemPersistenceTest` | `library-api` | none — checked and excluded, they touch no encoder path | — |
