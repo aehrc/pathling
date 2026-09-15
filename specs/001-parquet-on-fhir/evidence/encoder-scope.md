@@ -292,6 +292,168 @@ The third row is the expensive one, for three compounding reasons:
 > reference column shape, has no portable coverage at all.** Worth closing
 > independently of this change.
 
+### Test classes outside `fhirpath` — the T033b classification
+
+Which test classes outside `fhirpath` reach the existing encoder, and which of
+them recover unaided once T070 switches the public API. T100d acts on those that
+do not.
+
+The four dispositions above all describe a change, and a class that recovers
+unaided undergoes none, so it is recorded as **—**: *compiles and passes as
+written once the public API switches*. `Rework` is a class that survives with its
+assertions or its fixtures rewritten; `Retire` is one that goes.
+
+#### How the list was established
+
+A textual sweep for encoder symbols finds only the classes that name them, and
+misses the ones that reach the encoder through the public API — `NarrowMergeTest`,
+a named starting point, names no encoder symbol at all. The list is therefore the
+union of two sweeps, both run from the repository root with `/target/` excluded:
+
+```bash
+# 1. Classes naming the encoder or its configuration.
+grep -rlnE 'au\.csiro\.pathling\.encoders|FhirEncoders|EncodingConfiguration' \
+  --include='*.java' --include='*.scala' . | grep -v '^./fhirpath/'
+
+# 2. Classes reaching it through the public API or a test helper.
+grep -rlnE 'PathlingContext|ObjectDataSource|SchemaMisalignment|\.encode\(|encodeBundle|\.decode\(|read\(\)\.(parquet|delta|ndjson|bundles|datasets|tables)' \
+  --include='*.java' --include='*.scala' \
+  library-api/src/test encoders/src/test terminology/src/test utilities/src/test benchmark examples
+```
+
+Then, per candidate, a check for previous-layout markers in the assertions:
+
+```bash
+grep -rnE '_fid|_scale|id_versioned|"_extension"|canonicalized|schema\(\)|StructType' \
+  --include='*.java' library-api/src/test
+```
+
+And, because fixtures decide as much as assertions do, a check of what the
+Parquet and Delta fixtures actually carry — the field names are legible in the
+file footers:
+
+```bash
+strings library-api/src/test/resources/test-data/parquet/Patient.parquet/*.parquet \
+  | grep -oE '_fid|id_versioned|_scale|_value_canonicalized|_extension' | sort -u
+```
+
+Modules swept and found to hold no Java test reaching the encoder: `utilities`,
+`io` (no sources yet), `library-runtime` (no tests of its own),
+`fhirpath-lab-api` (no Java), `test-data`, `site`. `terminology` holds one
+reference, recorded below. The `examples/` apps are not part of any Maven
+reactor and are not tests; they call `encode` and would need the same treatment
+as the documentation samples.
+
+#### Group (a) — recovers unaided
+
+| Class | Module | Reaches the encoder via | Disposition |
+|---|---|---|---|
+| `EvaluateRepeatAllTest` | `library-api` | `PathlingContext` over NDJSON fixtures | — |
+| `PathlingContextLocalModeTest` | `library-api` | context construction only | — |
+| `LocalTerminologyFhirImportTest` | `library-api` | `PathlingContext`, terminology resources from NDJSON | — |
+| `LocalTerminologyFunctionsTest`, `LocalTerminologyMemberOfTest`, `TerminologyHelpersTest` | `library-api` | hand-built frames; context construction only | — |
+| `DifferentialParityTest` | `library-api` | `PathlingContext.encode`, then FHIRPath columns | — |
+| `TestHelpers`, `TestDataFileLogger`, `FileSystemPersistenceTest` | `library-api` | none — checked and excluded, they touch no encoder path | — |
+| `EncodeBenchmarkState`, `DecodeBenchmarkState`, `PathlingBenchmark`, `BenchmarkResources` | `benchmark` (`src/main`) | `PathlingContext.encode` / `.decode` | — |
+| The 26 classes of the `encoders` suite | `encoders` | the encoder directly | — |
+
+Two of those rows need their reasoning stated.
+
+The **`encoders` suite recovers by construction, not by luck**: FR-051 leaves
+that module in place and unmodified, so its tests keep testing what they test
+today. The one class in it with reach beyond the module is
+`encoders/src/test/.../utils/SchemaMisalignment`, a helper the `library-api`
+tests import from the `encoders` test jar; it is classified with its consumers
+below, and it must survive as long as any of them does.
+
+The **benchmark harness is not a test and recovers only while FR-043 holds**. It
+calls `encode` and `decode` by their current signatures and encodes fresh input
+into a Delta table it writes during setup, so it reads no stale fixture. If a
+signature moves, it fails at compile time in a module the reactor builds.
+
+#### Group (b) — converted or retired by T100d
+
+| Class | Module | What ties it to the previous layout | Disposition |
+|---|---|---|---|
+| `NarrowMergeTest` | `library-api` | Asserts that the upsert path **refuses** a widening source, and builds wide and narrow sources from two encoder open-type configurations. T117a reverses the refusal. | Rework |
+| `MigratedTableDecodingTest` | `library-api` | Reproduces #2698: a table written by a narrow encoder, migrated in place by a zero-row `mergeSchema` append from a wider one, then decoded. Both the premise (one canonical schema per encoder configuration) and the defect are properties of the previous encoder. | Retire |
+| `ExtensionContexts` | `library-api` | The helper behind the two above. Builds contexts from `SchemaMisalignment.NARROW_OPEN_TYPES` / `WIDE_OPEN_TYPES` and encodes through `FhirEncoders`. Nothing else uses it. | Retire with `MigratedTableDecodingTest`, unless the rewritten `NarrowMergeTest` still needs two divergent sources — which it can now build from data rather than from encoder configuration. |
+| `PathlingContextTest` | `library-api` | Asserts `id_versioned` on encoded output, the root-level `_extension` map, and that `max_nesting_level` / `enabled_open_types` bound the **default** schema. Under FR-044 those bounds apply to the dense mode only, so the nesting and open-type assertions become assertions about a mode the test never selects. | Rework |
+| `EvaluateFhirPathTest` | `library-api` | Asserts that decoded JSON does **not** contain `value_scale`, `_value_canonicalized`, `_code_canonicalized` or `_fid`. It will pass — those fields no longer exist anywhere — and stop covering what it was written to cover. A green run here is not evidence. | Rework |
+| `DataSourcesTest` | `library-api` | Reads the `parquet`, `parquet-custom` and `delta` fixtures, all written in the previous layout (see below). The FR-046 read gate rejects them by design, so this fails at read regardless of its assertions. | Rework — regenerate the fixtures |
+| `ResourceParserTest` | `library-api` | Tests `ResourceParser`, which T100c removes as unreachable plumbing. Its `urn:uuid:` and conditional-reference cases are the only coverage of bundle reference resolution outside the encoder, and belong wherever bundle ingest is re-expressed (feature inventory A). | Retire with T100c, porting the reference cases |
+| `test_datasource.py` (`test_datasource_parquet`, `..._delta`, `..._delta_merge`) | `lib/python` | Reads the same `parquet` and `delta` fixtures, through `conftest.py`, which points at `library-api/src/test/resources/test-data` in the source tree. | Rework — follows the fixture regeneration |
+| `test_encoders.py` (`test_extension_support`) | `lib/python` | Asserts the extension value keys of the root `_extension` map, including `valueDecimal_scale`. | Rework |
+| `test_encoders.py` (`test_element_nesting`) | `lib/python` | Asserts that `max_nesting_level` bounds the **default** schema, and that the default is 3 levels deep. FR-044 makes that true of the dense mode only. | Rework |
+| `test-datasource.R` (`datasource parquet`, `datasource delta`, `datasource delta merge`) | `lib/R` | The same fixtures, reached through the test-jar unpack. | Rework |
+| `test-encoding.R` (`element_nesting`, the extension tests) | `lib/R` | The R counterparts of the two Python cases above: nesting bounds on the default schema, and `_extension` as a column. | Rework |
+
+#### The fixtures are the coupling, and they are unambiguously previous-layout
+
+Every Parquet file under `library-api/src/test/resources/test-data/{parquet,
+parquet-custom,delta}` carries `_fid`, `_extension`, `_scale` and `id_versioned`,
+and the `Condition` files carry `_value_canonicalized` as well. Those are
+precisely the markers the FR-037 detector looks for, so these fixtures are
+rejected at read by design. Regenerating them is a prerequisite for the three
+Java, Python and R data-source suites above, not an optional tidy-up.
+
+#### What this costs the language libraries — a correction
+
+The `lib/R` build unpacks test jars, but the `unpack-dependencies` execution
+includes only `/test-data/**` and `/data/**`. Those are **resources, not
+classes**:
+
+- Retiring a *test class* in `library-api` or `encoders` does not affect the R
+  build at all.
+- Removing or renaming a *fixture directory*, or ceasing to publish either test
+  jar, breaks it at `generate-test-resources`, before any R test runs.
+- `lib/python` is coupled the same way but by a different route: `conftest.py`
+  reads `library-api/src/test/resources/test-data` from the source tree
+  directly, with no Maven dependency to notice.
+
+So the cost of retiring a class is confined to the Java suite; the cost of
+touching the fixtures is paid three times, in Java, Python and R, and in R it is
+paid by the build rather than by a test.
+
+#### The server is not in this build
+
+`server` is versioned independently and is not a child of the root POM, so
+nothing T100d does can break it directly. It breaks when `server/pom.xml` next
+raises `pathling.version`. Its reach is concentrated, so it is recorded by choke
+point rather than class by class:
+
+| Choke point | Test classes reaching it | Note |
+|---|---|---|
+| `util/FhirEncoderFixtures` | 3 | Builds encoders for fixture construction. |
+| `util/CustomObjectDataSource` | 13 | The server's copy of the object data source. |
+| Direct references to `au.csiro.pathling.encoders`, `FhirEncoders` or `EncodingConfiguration` | 43 (the union, including the above) | Includes `SchemaMigratorTest`, `DynamicDeltaSourceTest` and `SnapshotDeltaSourceTest`, which assert the previous layout at rest. |
+
+Not acted on by T100d. Sized here so the flag day is not a surprise on the
+server side.
+
+#### Not confidently classified
+
+- **`terminology/src/test/.../test/AbstractTerminologyTestBase`.** It imports
+  `DecimalCustomCoder.decimalType()` to type the decimal property in the shared
+  argument set for the terminology property tests. It will keep compiling and
+  passing, because `encoders` stays (FR-051). What is unsettled is whether the
+  terminology UDF surface should follow storage in representing decimals as
+  text: this specification changes the storage layout and says nothing about the
+  UDF return types, and the reference here is to an encoder convention rather
+  than to the encoder. Left unclassified rather than guessed, because retiring it
+  on a wrong reading would silently change what the property tests assert.
+- **`library-api/src/test/.../examples/ViewFromDatabaseApp`.** A `main` in the
+  test source set rather than a test, reading a Delta warehouse from a path the
+  operator supplies. It compiles against the public API and so survives, but
+  whether it is exercised anywhere — a documentation build, a manual check — was
+  not established, so the consequence of it silently reading an unmigrated
+  warehouse is not assessed here.
+- **`encoders/src/test/.../utils/{FindRecursiveTypesApp,GenerateXMLBundlesApp}`.**
+  Generator `main`s in the encoders test tree. They stay by FR-051, but
+  `GenerateXMLBundlesApp` produces the XML bundle fixtures, and XML ingest is an
+  open item in the capability register. Whether that generator is still the
+  source of those fixtures depends on how XML is resolved.
+
 ---
 
 ## Decisions this scope depends on
