@@ -48,6 +48,13 @@ class NodeDefinitionTest {
     return parent.getChildElement(name).orElseThrow();
   }
 
+  @Nonnull
+  private static List<String> variantNames(
+      @Nonnull final NodeDefinition parent, @Nonnull final String name) {
+    final ChoiceDefinition choice = (ChoiceDefinition) childOf(parent, name);
+    return choice.getAllChildTypes().stream().map(ElementDefinition::getElementName).toList();
+  }
+
   @Test
   void enumeratesTheChildrenOfAResourceInDeclarationOrder() {
     // These are the elements of Patient in R4, in the order the specification declares them, with
@@ -134,5 +141,29 @@ class NodeDefinitionTest {
     final NodeDefinition birthDate =
         childOf(DEFINITIONS.findResourceDefinition("Patient"), "birthDate");
     assertTrue(birthDate.getChildren().isEmpty());
+  }
+
+  @Test
+  void expandsAChoiceInTheOrderTheDefinitionsDeclareIt() {
+    // The order of the expanded variants is the order the specification declares the types in, so
+    // that the field order of a stored structure is reproducible by another implementation of the
+    // layout and stable across an upgrade of the definition library.
+    assertEquals(
+        List.of(
+            "valueQuantity",
+            "valueCodeableConcept",
+            "valueString",
+            "valueBoolean",
+            "valueInteger",
+            "valueRange",
+            "valueRatio",
+            "valueSampledData",
+            "valueTime",
+            "valueDateTime",
+            "valuePeriod"),
+        variantNames(DEFINITIONS.findResourceDefinition("Observation"), "value"));
+    assertEquals(
+        List.of("multipleBirthBoolean", "multipleBirthInteger"),
+        variantNames(DEFINITIONS.findResourceDefinition("Patient"), "multipleBirth"));
   }
 }

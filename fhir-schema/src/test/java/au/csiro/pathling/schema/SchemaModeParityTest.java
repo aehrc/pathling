@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.schema;
 
+import static au.csiro.pathling.schema.SchemaFixtures.DEFINITIONS;
 import static au.csiro.pathling.schema.SchemaFixtures.array;
 import static au.csiro.pathling.schema.SchemaFixtures.builder;
 import static au.csiro.pathling.schema.SchemaFixtures.elementTypeOf;
@@ -189,10 +190,10 @@ class SchemaModeParityTest {
             "_deceasedDateTime",
             "address",
             "maritalStatus",
-            "multipleBirthInteger",
-            "_multipleBirthInteger",
             "multipleBirthBoolean",
             "_multipleBirthBoolean",
+            "multipleBirthInteger",
+            "_multipleBirthInteger",
             "photo",
             "contact",
             "communication",
@@ -228,5 +229,40 @@ class SchemaModeParityTest {
     final StructType pruned = builder().pruned("Patient", observedPatient());
 
     assertSubsequenceEverywhere(pruned, dense, "Patient");
+  }
+
+  @Test
+  void derivesAndOrdersAChoiceByTheSameDeclarationOrder() {
+    // The derivation and the canonical structure reach the expansion of a choice by their own
+    // routes. If those routes disagree the two orders drift apart, and structures that compare
+    // positionally compare the wrong fields.
+    final List<String> declared =
+        List.of(
+            "valueQuantity",
+            "valueCodeableConcept",
+            "valueString",
+            "valueBoolean",
+            "valueInteger",
+            "valueRange",
+            "valueRatio",
+            "valueSampledData",
+            "valueTime",
+            "valueDateTime",
+            "valuePeriod");
+
+    assertEquals(declared, variantsOf(names(builder().dense("Observation"))));
+    assertEquals(
+        declared,
+        variantsOf(
+            DefinitionCanonicalStructure.forResource(DEFINITIONS, "Observation").fieldOrder()));
+  }
+
+  /**
+   * Returns the expanded variants of the value choice from a field order, dropping the metadata
+   * groups and annotations that accompany them.
+   */
+  @Nonnull
+  private static List<String> variantsOf(@Nonnull final List<String> fieldOrder) {
+    return fieldOrder.stream().filter(name -> name.startsWith("value")).toList();
   }
 }
