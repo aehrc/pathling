@@ -166,4 +166,32 @@ class NodeDefinitionTest {
         List.of("multipleBirthBoolean", "multipleBirthInteger"),
         variantNames(DEFINITIONS.findResourceDefinition("Patient"), "multipleBirth"));
   }
+
+  @Test
+  void expandsAReferenceBearingChoiceWithEachDeclaredTypeInItsDeclaredPosition() {
+    // A choice that admits a reference declares the resources it targets rather than the reference
+    // itself, and the definition library maps those to no name. The name is recovered so that a
+    // declared target keeps its declared position; only the names that are declared nowhere — the
+    // plain reference and the untyped resource — follow in the stated order that ends the list.
+    assertEquals(
+        List.of(
+            "productMedication",
+            "productSubstance",
+            "productCodeableConcept",
+            "productReference",
+            "productResource"),
+        variantNames(DEFINITIONS.findResourceDefinition("ActivityDefinition"), "product"));
+
+    final NodeDefinition trigger =
+        childOf(childOf(DEFINITIONS.findResourceDefinition("PlanDefinition"), "action"), "trigger");
+    assertEquals(
+        List.of(
+            "timingTiming",
+            "timingSchedule",
+            "timingDate",
+            "timingDateTime",
+            "timingReference",
+            "timingResource"),
+        variantNames(trigger, "timing"));
+  }
 }
