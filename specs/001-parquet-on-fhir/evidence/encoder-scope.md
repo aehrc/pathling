@@ -355,7 +355,8 @@ as the documentation samples.
 | `DifferentialParityTest` | `library-api` | `PathlingContext.encode`, then FHIRPath columns | — |
 | `TestHelpers`, `TestDataFileLogger`, `FileSystemPersistenceTest` | `library-api` | none — checked and excluded, they touch no encoder path | — |
 | `EncodeBenchmarkState`, `DecodeBenchmarkState`, `PathlingBenchmark`, `BenchmarkResources` | `benchmark` (`src/main`) | `PathlingContext.encode` / `.decode` | — |
-| The 26 classes of the `encoders` suite | `encoders` | the encoder directly | — |
+| The remaining `lib/python` and `lib/R` suites — `test_view.py`, `test_search.py`, `test_bulk.py`, `test_functions.py`, `test_udfs.py`, `test_evaluate_fhirpath.py`, `test_terminology_import.py` and their R counterparts | `lib/python`, `lib/R` | `PathlingContext` / `pathling_connect` over NDJSON and bundle fixtures | — |
+| The 26 files of the `encoders` test tree | `encoders` | the encoder directly | — |
 
 Two of those rows need their reasoning stated.
 
@@ -383,10 +384,11 @@ signature moves, it fails at compile time in a module the reactor builds.
 | `DataSourcesTest` | `library-api` | Reads the `parquet`, `parquet-custom` and `delta` fixtures, all written in the previous layout (see below). The FR-046 read gate rejects them by design, so this fails at read regardless of its assertions. | Rework — regenerate the fixtures |
 | `ResourceParserTest` | `library-api` | Tests `ResourceParser`, which T100c removes as unreachable plumbing. Its `urn:uuid:` and conditional-reference cases are the only coverage of bundle reference resolution outside the encoder, and belong wherever bundle ingest is re-expressed (feature inventory A). | Retire with T100c, porting the reference cases |
 | `test_datasource.py` (`test_datasource_parquet`, `..._delta`, `..._delta_merge`) | `lib/python` | Reads the same `parquet` and `delta` fixtures, through `conftest.py`, which points at `library-api/src/test/resources/test-data` in the source tree. | Rework — follows the fixture regeneration |
-| `test_encoders.py` (`test_extension_support`) | `lib/python` | Asserts the extension value keys of the root `_extension` map, including `valueDecimal_scale`. | Rework |
+| `test_encoders.py` (`test_extension_support`) | `lib/python` | Asserts the presence and absence of the root-level `_extension` map as `enable_extensions` is set. The new layout carries extensions inline, so there is no such column in any mode. | Rework |
+| `test_encoders.py` (`test_open_types`) | `lib/python` | Reads the value keys out of the `_extension` map and asserts the list includes `valueDecimal_scale`, and that `enabled_open_types` narrows it. Previous-layout on both counts, and FR-044 makes the open-type bound apply to the dense mode only. | Rework |
 | `test_encoders.py` (`test_element_nesting`) | `lib/python` | Asserts that `max_nesting_level` bounds the **default** schema, and that the default is 3 levels deep. FR-044 makes that true of the dense mode only. | Rework |
 | `test-datasource.R` (`datasource parquet`, `datasource delta`, `datasource delta merge`) | `lib/R` | The same fixtures, reached through the test-jar unpack. | Rework |
-| `test-encoding.R` (`element_nesting`, the extension tests) | `lib/R` | The R counterparts of the two Python cases above: nesting bounds on the default schema, and `_extension` as a column. | Rework |
+| `test-encoding.R` (`element_nesting`, `extension_support`) | `lib/R` | The R counterparts: nesting bounds asserted on the default schema, and `_extension` asserted as a column. R has no open-types case. | Rework |
 
 #### The fixtures are the coupling, and they are unambiguously previous-layout
 
@@ -448,6 +450,11 @@ server side.
   whether it is exercised anywhere — a documentation build, a manual check — was
   not established, so the consequence of it silently reading an unmigrated
   warehouse is not assessed here.
+- **The XML ingest cases** — `test_encoders.py::test_encode_xml_bundles`,
+  `test-encoding.R::encode_xml_bundles`, and the XML fixtures behind them. They
+  pass or fail entirely on whether XML ingest survives, which the capability
+  register lists as an open regression and no requirement here settles. They are
+  neither safely group (a) nor demonstrably group (b) until that is decided.
 - **`encoders/src/test/.../utils/{FindRecursiveTypesApp,GenerateXMLBundlesApp}`.**
   Generator `main`s in the encoders test tree. They stay by FR-051, but
   `GenerateXMLBundlesApp` produces the XML bundle fixtures, and XML ingest is an
