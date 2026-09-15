@@ -24,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.definition.ChildDefinition;
+import au.csiro.pathling.definition.FhirType;
 import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
@@ -61,7 +62,6 @@ import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.StructType;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.opentest4j.TestAbortedException;
 import org.slf4j.Logger;
 import scala.collection.mutable.ArraySeq;
@@ -644,12 +644,12 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
         col = DecimalCollection.fromLiteral(singleValue.toString());
       } else if (singleValue instanceof final FhirTypedLiteral typedLiteral) {
         // Handle typed literals (Coding, Quantity, etc.)
-        if (typedLiteral.getType() == FHIRDefinedType.QUANTITY) {
+        if (FhirType.QUANTITY.equals(typedLiteral.getType())) {
           col =
               nonNull(typedLiteral.getLiteral())
                   ? QuantityCollection.fromLiteral(typedLiteral.getLiteral())
                   : QuantityCollection.build(DefaultRepresentation.empty());
-        } else if (typedLiteral.getType() == FHIRDefinedType.CODING) {
+        } else if (FhirType.CODING.equals(typedLiteral.getType())) {
           col =
               nonNull(typedLiteral.getLiteral())
                   ? CodingCollection.fromLiteral(typedLiteral.getLiteral())

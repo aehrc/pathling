@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.fhirpath.column;
 
+import au.csiro.pathling.definition.FhirType;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import java.util.function.UnaryOperator;
@@ -24,7 +25,6 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * Represents a FHIR resource at the root level of a flat schema dataset where top-level fields are
@@ -227,8 +227,8 @@ public final class ResourceRepresentation extends ColumnRepresentation {
   @Override
   @Nonnull
   public ColumnRepresentation traverse(
-      @Nonnull final String fieldName, @Nonnull final Optional<FHIRDefinedType> fhirType) {
-    if (fhirType.filter(FHIRDefinedType.BASE64BINARY::equals).isPresent()) {
+      @Nonnull final String fieldName, @Nonnull final Optional<FhirType> fhirType) {
+    if (fhirType.filter(FhirType.BASE64BINARY::equals).isPresent()) {
       // If the field is a base64Binary, represent it using binary column handling
       return DefaultRepresentation.fromBinaryColumn(traverse(fieldName).getValue());
     }

@@ -22,6 +22,7 @@ import static org.apache.spark.sql.functions.struct;
 import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.definition.ElementDefinition;
+import au.csiro.pathling.definition.FhirType;
 import au.csiro.pathling.definition.NodeDefinition;
 import au.csiro.pathling.definition.defaults.DefaultCompositeDefinition;
 import au.csiro.pathling.definition.defaults.DefaultPrimitiveDefinition;
@@ -35,7 +36,6 @@ import java.util.function.UnaryOperator;
 import lombok.Value;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.types.DataTypes;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * Represents type information returned by the FHIRPath {@code type()} reflection function. Each
@@ -56,11 +56,11 @@ public class TypeInfo {
       DefaultCompositeDefinition.of(
           "TypeInfo",
           List.of(
-              DefaultPrimitiveDefinition.single("namespace", FHIRDefinedType.STRING),
-              DefaultPrimitiveDefinition.single("name", FHIRDefinedType.STRING),
-              DefaultPrimitiveDefinition.single("baseType", FHIRDefinedType.STRING)),
+              DefaultPrimitiveDefinition.single("namespace", FhirType.STRING),
+              DefaultPrimitiveDefinition.single("name", FhirType.STRING),
+              DefaultPrimitiveDefinition.single("baseType", FhirType.STRING)),
           1,
-          FHIRDefinedType.BACKBONEELEMENT);
+          FhirType.BACKBONEELEMENT);
 
   private static final String FHIR_RESOURCE_BASE = TypeSpecifier.FHIR_NAMESPACE + ".Resource";
   private static final String FHIR_ELEMENT_BASE = TypeSpecifier.FHIR_NAMESPACE + ".Element";
@@ -78,8 +78,7 @@ public class TypeInfo {
    * @return a TypeInfo with the FHIR namespace
    */
   @Nonnull
-  public static TypeInfo forFhirType(
-      @Nonnull final FHIRDefinedType fhirType, final boolean isResource) {
+  public static TypeInfo forFhirType(@Nonnull final FhirType fhirType, final boolean isResource) {
     return new TypeInfo(
         TypeSpecifier.FHIR_NAMESPACE,
         fhirType.toCode(),

@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.test.dsl;
 
+import au.csiro.pathling.definition.FhirType;
 import au.csiro.pathling.test.yaml.FhirTypedLiteral;
 import au.csiro.pathling.test.yaml.YamlSupport;
 import jakarta.annotation.Nonnull;
@@ -31,14 +32,13 @@ import java.util.function.Consumer;
 import java.util.stream.Stream;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 @RequiredArgsConstructor
 public class FhirPathModelBuilder {
 
   @Getter private final Map<String, Object> model = new HashMap<>();
 
-  public FhirPathModelBuilder fhirType(@Nonnull final FHIRDefinedType fhirType) {
+  public FhirPathModelBuilder fhirType(@Nonnull final FhirType fhirType) {
     model.put(YamlSupport.FHIR_TYPE_ANNOTATION, fhirType.toCode());
     return this;
   }
@@ -56,7 +56,7 @@ public class FhirPathModelBuilder {
    * @return this builder with fhirType set to REFERENCE and empty reference and type fields
    */
   public FhirPathModelBuilder fhirReference() {
-    return fhirType(FHIRDefinedType.REFERENCE).stringEmpty("reference").stringEmpty("type");
+    return fhirType(FhirType.REFERENCE).stringEmpty("reference").stringEmpty("type");
   }
 
   public FhirPathModelBuilder string(@Nonnull final String name, @Nullable final String value) {

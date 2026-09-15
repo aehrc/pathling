@@ -18,6 +18,7 @@
 package au.csiro.pathling.fhirpath.collection;
 
 import au.csiro.pathling.annotations.UsedByReflection;
+import au.csiro.pathling.definition.FhirType;
 import au.csiro.pathling.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.FhirPathDateTime;
 import au.csiro.pathling.fhirpath.FhirPathType;
@@ -31,7 +32,6 @@ import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Column;
 import org.hl7.fhir.r4.model.DateType;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * Represents a collection of Date-typed elements.
@@ -54,7 +54,7 @@ public class DateCollection extends Collection
   protected DateCollection(
       @Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
-      @Nonnull final Optional<FHIRDefinedType> fhirType,
+      @Nonnull final Optional<FhirType> fhirType,
       @Nonnull final Optional<? extends NodeDefinition> definition,
       @Nonnull final Optional<Column> extensionMapColumn) {
     super(columnRepresentation, type, fhirType, definition, extensionMapColumn);
@@ -74,7 +74,7 @@ public class DateCollection extends Collection
     return new DateCollection(
         columnRepresentation,
         Optional.of(FhirPathType.DATE),
-        Optional.of(FHIRDefinedType.DATE),
+        Optional.of(FhirType.DATE),
         definition,
         Optional.empty());
   }

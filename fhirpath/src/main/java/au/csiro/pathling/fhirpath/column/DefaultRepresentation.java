@@ -19,6 +19,7 @@ package au.csiro.pathling.fhirpath.column;
 
 import static org.apache.spark.sql.functions.lit;
 
+import au.csiro.pathling.definition.FhirType;
 import au.csiro.pathling.encoders.ValueFunctions;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -32,7 +33,6 @@ import lombok.Setter;
 import lombok.ToString;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * Describes a representation where collections of values are represented as arrays in the dataset.
@@ -122,9 +122,9 @@ public class DefaultRepresentation extends ColumnRepresentation {
   @Override
   @Nonnull
   public ColumnRepresentation traverse(
-      @Nonnull final String fieldName, @Nonnull final Optional<FHIRDefinedType> fhirType) {
-    @Nullable final FHIRDefinedType resolvedFhirType = fhirType.orElse(null);
-    if (FHIRDefinedType.BASE64BINARY.equals(resolvedFhirType)) {
+      @Nonnull final String fieldName, @Nonnull final Optional<FhirType> fhirType) {
+    @Nullable final FhirType resolvedFhirType = fhirType.orElse(null);
+    if (FhirType.BASE64BINARY.equals(resolvedFhirType)) {
       // If the field is a base64Binary, represent it using a BinaryRepresentation.
       return DefaultRepresentation.fromBinaryColumn(traverse(fieldName).getValue());
     } else {

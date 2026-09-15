@@ -21,6 +21,7 @@ import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.struct;
 
 import au.csiro.pathling.definition.ElementDefinition;
+import au.csiro.pathling.definition.FhirType;
 import au.csiro.pathling.definition.NodeDefinition;
 import au.csiro.pathling.definition.defaults.DefaultCompositeDefinition;
 import au.csiro.pathling.definition.defaults.DefaultPrimitiveDefinition;
@@ -39,7 +40,6 @@ import java.util.Optional;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Coding;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * Represents a collection of Coding-typed elements.
@@ -60,14 +60,14 @@ public class CodingCollection extends Collection implements StringCoercible {
     return DefaultCompositeDefinition.of(
         name,
         List.of(
-            DefaultPrimitiveDefinition.single("id", FHIRDefinedType.STRING),
-            DefaultPrimitiveDefinition.single("system", FHIRDefinedType.URI),
-            DefaultPrimitiveDefinition.single("version", FHIRDefinedType.STRING),
-            DefaultPrimitiveDefinition.single("code", FHIRDefinedType.CODE),
-            DefaultPrimitiveDefinition.single("display", FHIRDefinedType.STRING),
-            DefaultPrimitiveDefinition.single("userSelected", FHIRDefinedType.BOOLEAN)),
+            DefaultPrimitiveDefinition.single("id", FhirType.STRING),
+            DefaultPrimitiveDefinition.single("system", FhirType.URI),
+            DefaultPrimitiveDefinition.single("version", FhirType.STRING),
+            DefaultPrimitiveDefinition.single("code", FhirType.CODE),
+            DefaultPrimitiveDefinition.single("display", FhirType.STRING),
+            DefaultPrimitiveDefinition.single("userSelected", FhirType.BOOLEAN)),
         cardinality,
-        FHIRDefinedType.CODING);
+        FhirType.CODING);
   }
 
   private static final ElementDefinition LITERAL_DEFINITION = createDefinition("", 1);
@@ -84,7 +84,7 @@ public class CodingCollection extends Collection implements StringCoercible {
   protected CodingCollection(
       @Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
-      @Nonnull final Optional<FHIRDefinedType> fhirType,
+      @Nonnull final Optional<FhirType> fhirType,
       @Nonnull final Optional<? extends NodeDefinition> definition,
       @Nonnull final Optional<Column> extensionMapColumn) {
     super(columnRepresentation, type, fhirType, definition, extensionMapColumn);
@@ -104,7 +104,7 @@ public class CodingCollection extends Collection implements StringCoercible {
     return new CodingCollection(
         columnRepresentation,
         Optional.of(FhirPathType.CODING),
-        Optional.of(FHIRDefinedType.CODING),
+        Optional.of(FhirType.CODING),
         definition,
         Optional.empty());
   }

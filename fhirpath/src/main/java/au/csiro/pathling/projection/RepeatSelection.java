@@ -19,6 +19,7 @@ package au.csiro.pathling.projection;
 
 import static org.apache.spark.sql.functions.concat;
 
+import au.csiro.pathling.definition.FhirType;
 import au.csiro.pathling.encoders.RowIndexCounter;
 import au.csiro.pathling.encoders.ValueFunctions;
 import au.csiro.pathling.fhirpath.FhirPath;
@@ -30,7 +31,6 @@ import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.types.StructType;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * Represents a selection that performs recursive traversal of nested data structures using the
@@ -73,8 +73,7 @@ public record RepeatSelection(
     final boolean errorOnDepthExhaustion =
         pathCollections.stream()
             .filter(Collection::isNotEmpty)
-            .anyMatch(
-                c -> c.getFhirType().map(t -> !FHIRDefinedType.EXTENSION.equals(t)).orElse(true));
+            .anyMatch(c -> c.getFhirType().map(t -> !FhirType.EXTENSION.equals(t)).orElse(true));
 
     // Create the list of non-empty starting contexts from the evaluated path collections. The row
     // index counter is injected so that %rowIndex resolves to the global element position.

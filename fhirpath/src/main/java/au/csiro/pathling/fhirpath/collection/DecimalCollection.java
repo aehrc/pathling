@@ -19,6 +19,7 @@ package au.csiro.pathling.fhirpath.collection;
 
 import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 
+import au.csiro.pathling.definition.FhirType;
 import au.csiro.pathling.definition.NodeDefinition;
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
 import au.csiro.pathling.errors.InvalidUserInputError;
@@ -39,7 +40,6 @@ import java.util.function.Function;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.DecimalType;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * Represents a FHIRPath decimal literal.
@@ -65,7 +65,7 @@ public class DecimalCollection extends Collection
   protected DecimalCollection(
       @Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> fhirPathType,
-      @Nonnull final Optional<FHIRDefinedType> fhirType,
+      @Nonnull final Optional<FhirType> fhirType,
       @Nonnull final Optional<NodeDefinition> definition,
       @Nonnull final Optional<Column> extensionMapColumn) {
     super(columnRepresentation, fhirPathType, fhirType, definition, extensionMapColumn);
@@ -85,7 +85,7 @@ public class DecimalCollection extends Collection
     return new DecimalCollection(
         columnRepresentation,
         Optional.of(FhirPathType.DECIMAL),
-        Optional.of(FHIRDefinedType.DECIMAL),
+        Optional.of(FhirType.DECIMAL),
         definition,
         Optional.empty());
   }

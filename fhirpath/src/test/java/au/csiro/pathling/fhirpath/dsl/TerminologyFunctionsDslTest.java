@@ -17,10 +17,10 @@
 
 package au.csiro.pathling.fhirpath.dsl;
 
+import static au.csiro.pathling.definition.FhirType.CODEABLECONCEPT;
+import static au.csiro.pathling.definition.FhirType.QUANTITY;
 import static au.csiro.pathling.test.yaml.FhirTypedLiteral.toCoding;
 import static au.csiro.pathling.test.yaml.FhirTypedLiteral.toInteger;
-import static org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType.CODEABLECONCEPT;
-import static org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType.QUANTITY;
 
 import au.csiro.pathling.fhirpath.unit.UcumUnit;
 import au.csiro.pathling.terminology.TerminologyService;

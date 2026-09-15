@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.fhirpath.collection;
 
+import au.csiro.pathling.definition.FhirType;
 import au.csiro.pathling.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
@@ -27,7 +28,6 @@ import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import org.apache.spark.sql.Column;
 import org.hl7.fhir.r4.model.BooleanType;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * Represents a collection of Boolean-typed elements.
@@ -48,7 +48,7 @@ public class BooleanCollection extends Collection implements StringCoercible, Ma
   protected BooleanCollection(
       @Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
-      @Nonnull final Optional<FHIRDefinedType> fhirType,
+      @Nonnull final Optional<FhirType> fhirType,
       @Nonnull final Optional<? extends NodeDefinition> definition,
       @Nonnull final Optional<Column> extensionMapColumn) {
     super(columnRepresentation, type, fhirType, definition, extensionMapColumn);
@@ -68,7 +68,7 @@ public class BooleanCollection extends Collection implements StringCoercible, Ma
     return new BooleanCollection(
         columnRepresentation,
         Optional.of(FhirPathType.BOOLEAN),
-        Optional.of(FHIRDefinedType.BOOLEAN),
+        Optional.of(FhirType.BOOLEAN),
         definition,
         Optional.empty());
   }

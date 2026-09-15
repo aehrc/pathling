@@ -17,17 +17,17 @@
 
 package au.csiro.pathling.test.yaml;
 
+import au.csiro.pathling.definition.FhirType;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import lombok.Value;
-import org.hl7.fhir.r4.model.Enumerations;
 
 @JsonSerialize(using = YamlSupport.FhirTypedLiteralSerializer.class)
 @Value(staticConstructor = "of")
 public class FhirTypedLiteral {
 
-  @Nonnull Enumerations.FHIRDefinedType type;
+  @Nonnull FhirType type;
   @Nullable String literal;
 
   @Nonnull
@@ -36,28 +36,28 @@ public class FhirTypedLiteral {
   }
 
   @Nonnull
-  public static String toTag(final Enumerations.FHIRDefinedType type) {
+  public static String toTag(final FhirType type) {
     return "!fhir." + type.toCode();
   }
 
   @Nonnull
   public static FhirTypedLiteral toCoding(@Nullable final String literal) {
-    return of(Enumerations.FHIRDefinedType.CODING, literal);
+    return of(FhirType.CODING, literal);
   }
 
   @Nonnull
   public static FhirTypedLiteral toDateTime(@Nullable final String literal) {
-    return of(Enumerations.FHIRDefinedType.DATETIME, literal);
+    return of(FhirType.DATETIME, literal);
   }
 
   @Nonnull
   public static FhirTypedLiteral toDate(@Nullable final String literal) {
-    return of(Enumerations.FHIRDefinedType.DATE, literal);
+    return of(FhirType.DATE, literal);
   }
 
   @Nonnull
   public static FhirTypedLiteral toTime(@Nullable final String literal) {
-    return of(Enumerations.FHIRDefinedType.TIME, literal);
+    return of(FhirType.TIME, literal);
   }
 
   /**
@@ -68,7 +68,7 @@ public class FhirTypedLiteral {
    */
   @Nonnull
   public static FhirTypedLiteral toString(@Nullable final String literal) {
-    return of(Enumerations.FHIRDefinedType.STRING, literal);
+    return of(FhirType.STRING, literal);
   }
 
   /**
@@ -79,7 +79,7 @@ public class FhirTypedLiteral {
    */
   @Nonnull
   public static FhirTypedLiteral toInteger(@Nullable final String literal) {
-    return of(Enumerations.FHIRDefinedType.INTEGER, literal);
+    return of(FhirType.INTEGER, literal);
   }
 
   /**
@@ -90,7 +90,7 @@ public class FhirTypedLiteral {
    */
   @Nonnull
   public static FhirTypedLiteral toDecimal(@Nullable final String literal) {
-    return of(Enumerations.FHIRDefinedType.DECIMAL, literal);
+    return of(FhirType.DECIMAL, literal);
   }
 
   /**
@@ -101,7 +101,7 @@ public class FhirTypedLiteral {
    */
   @Nonnull
   public static FhirTypedLiteral toBoolean(@Nullable final String literal) {
-    return of(Enumerations.FHIRDefinedType.BOOLEAN, literal);
+    return of(FhirType.BOOLEAN, literal);
   }
 
   /**
@@ -114,6 +114,6 @@ public class FhirTypedLiteral {
    */
   @Nonnull
   public static FhirTypedLiteral toQuantity(@Nullable final String literal) {
-    return of(Enumerations.FHIRDefinedType.QUANTITY, literal);
+    return of(FhirType.QUANTITY, literal);
   }
 }

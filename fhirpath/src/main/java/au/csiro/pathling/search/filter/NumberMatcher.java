@@ -19,12 +19,12 @@ package au.csiro.pathling.search.filter;
 
 import static org.apache.spark.sql.functions.lit;
 
+import au.csiro.pathling.definition.FhirType;
 import au.csiro.pathling.fhirpath.FhirPathNumber;
 import jakarta.annotation.Nonnull;
 import java.math.BigDecimal;
 import java.util.Set;
 import org.apache.spark.sql.Column;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * Matches elements using FHIR numeric search semantics.
@@ -55,17 +55,17 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  */
 public class NumberMatcher implements ElementMatcher {
 
-  private static final Set<FHIRDefinedType> INTEGER_TYPES =
-      Set.of(FHIRDefinedType.INTEGER, FHIRDefinedType.POSITIVEINT, FHIRDefinedType.UNSIGNEDINT);
+  private static final Set<FhirType> INTEGER_TYPES =
+      Set.of(FhirType.INTEGER, FhirType.POSITIVEINT, FhirType.UNSIGNEDINT);
 
-  @Nonnull private final FHIRDefinedType fhirType;
+  @Nonnull private final FhirType fhirType;
 
   /**
    * Creates a NumberMatcher for the specified FHIR type.
    *
    * @param fhirType the FHIR type of the element being matched
    */
-  public NumberMatcher(@Nonnull final FHIRDefinedType fhirType) {
+  public NumberMatcher(@Nonnull final FhirType fhirType) {
     this.fhirType = fhirType;
   }
 

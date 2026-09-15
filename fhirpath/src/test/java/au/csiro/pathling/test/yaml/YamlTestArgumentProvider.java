@@ -19,6 +19,7 @@ package au.csiro.pathling.test.yaml;
 
 import static au.csiro.pathling.test.TestResources.getResourceAsString;
 
+import au.csiro.pathling.fhirpath.FhirTypes;
 import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluator;
 import au.csiro.pathling.test.TestResources;
 import au.csiro.pathling.test.yaml.YamlTestDefinition.TestCase;
@@ -38,14 +39,12 @@ import java.io.File;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
@@ -141,7 +140,7 @@ public class YamlTestArgumentProvider implements ArgumentsProvider {
 
     if (resourceTypeStr != null) {
       try {
-        Objects.requireNonNull(FHIRDefinedType.fromCode(resourceTypeStr));
+        FhirTypes.resolve(resourceTypeStr).orElseThrow();
         final String jsonStr = YamlSupport.omToJson(subject);
         return FhirResolverFactory.of(jsonStr);
       } catch (final Exception e) {

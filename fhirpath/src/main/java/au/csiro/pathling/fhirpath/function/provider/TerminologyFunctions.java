@@ -21,6 +21,7 @@ import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
 import au.csiro.pathling.config.TerminologyConfiguration;
 import au.csiro.pathling.definition.ElementDefinition;
+import au.csiro.pathling.definition.FhirType;
 import au.csiro.pathling.fhirpath.TerminologyConcepts;
 import au.csiro.pathling.fhirpath.TerminologyConcepts.Set;
 import au.csiro.pathling.fhirpath.annotations.SqlOnFhirConformance;
@@ -145,7 +146,7 @@ public abstract class TerminologyFunctions {
 
     return Collection.build(
         resultCtx,
-        propertyType,
+        FhirType.of(propertyType.toCode()),
         input
             .getDefinition()
             .flatMap(Functions.maybeCast(ElementDefinition.class))

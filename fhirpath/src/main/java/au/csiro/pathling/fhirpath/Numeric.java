@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.fhirpath;
 
+import au.csiro.pathling.definition.FhirType;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import jakarta.annotation.Nonnull;
@@ -26,7 +27,6 @@ import java.util.function.Function;
 import lombok.Getter;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * Describes a path that represents a numeric value, and can be the subject of math operations.
@@ -79,7 +79,7 @@ public interface Numeric {
    * @return The FHIR type of the result of this Numeric, if known.
    */
   @Nonnull
-  Optional<FHIRDefinedType> getFhirType();
+  Optional<FhirType> getFhirType();
 
   /** Represents a type of math operator. */
   enum MathOperation {

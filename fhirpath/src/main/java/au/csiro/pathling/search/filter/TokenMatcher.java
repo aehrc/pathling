@@ -25,12 +25,12 @@ import static org.apache.spark.sql.functions.exists;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.lower;
 
+import au.csiro.pathling.definition.FhirType;
 import au.csiro.pathling.search.TokenSearchValue;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import java.util.stream.Stream;
 import org.apache.spark.sql.Column;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * Matches elements using token search semantics for various FHIR types.
@@ -60,14 +60,14 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  */
 public class TokenMatcher implements ElementMatcher {
 
-  @Nonnull private final FHIRDefinedType fhirType;
+  @Nonnull private final FhirType fhirType;
 
   /**
    * Creates a TokenMatcher for the specified FHIR type.
    *
    * @param fhirType the FHIR type of the element being matched
    */
-  public TokenMatcher(@Nonnull final FHIRDefinedType fhirType) {
+  public TokenMatcher(@Nonnull final FhirType fhirType) {
     this.fhirType = fhirType;
   }
 
@@ -76,17 +76,27 @@ public class TokenMatcher implements ElementMatcher {
   public Column match(@Nonnull final Column element, @Nonnull final String searchValue) {
     final TokenSearchValue token = TokenSearchValue.parse(searchValue);
 
-    return switch (fhirType) {
-      case CODING -> matchCoding(element, token);
-      case CODEABLECONCEPT -> matchCodeableConcept(element, token);
-      case IDENTIFIER -> matchIdentifier(element, token);
-      case CONTACTPOINT -> matchContactPoint(element, token);
-      case CODE, URI, ID -> matchSimpleValue(element, token);
-      case STRING -> matchStringValue(element, token);
-      case BOOLEAN -> matchBoolean(element, token);
-      default ->
-          throw new IllegalArgumentException("Unsupported FHIR type for token search: " + fhirType);
-    };
+    // The type is dispatched on by identity rather than by its code, so that a type the engine
+    // does not support for token search reaches the error below rather than a matcher.
+    if (FhirType.CODING.equals(fhirType)) {
+      return matchCoding(element, token);
+    } else if (FhirType.CODEABLECONCEPT.equals(fhirType)) {
+      return matchCodeableConcept(element, token);
+    } else if (FhirType.IDENTIFIER.equals(fhirType)) {
+      return matchIdentifier(element, token);
+    } else if (FhirType.CONTACTPOINT.equals(fhirType)) {
+      return matchContactPoint(element, token);
+    } else if (FhirType.CODE.equals(fhirType)
+        || FhirType.URI.equals(fhirType)
+        || FhirType.ID.equals(fhirType)) {
+      return matchSimpleValue(element, token);
+    } else if (FhirType.STRING.equals(fhirType)) {
+      return matchStringValue(element, token);
+    } else if (FhirType.BOOLEAN.equals(fhirType)) {
+      return matchBoolean(element, token);
+    } else {
+      throw new IllegalArgumentException("Unsupported FHIR type for token search: " + fhirType);
+    }
   }
 
   /**

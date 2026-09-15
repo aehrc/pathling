@@ -25,6 +25,7 @@ import static org.apache.spark.sql.functions.array_distinct;
 import au.csiro.pathling.definition.ChildDefinition;
 import au.csiro.pathling.definition.ChoiceDefinition;
 import au.csiro.pathling.definition.ElementDefinition;
+import au.csiro.pathling.definition.FhirType;
 import au.csiro.pathling.definition.NodeDefinition;
 import au.csiro.pathling.encoders.ExtensionSupport;
 import au.csiro.pathling.encoders.ValueFunctions;
@@ -57,7 +58,6 @@ import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.instance.model.api.IBase;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * Represents a collection of nodes that are the result of evaluating a FHIRPath expression.
@@ -73,12 +73,11 @@ public class Collection implements Equatable {
 
   // Additional mappings for collection classes that don't directly map to FhirPathType
   @Nonnull
-  private static final Map<FHIRDefinedType, Class<? extends Collection>>
-      ADDITIONAL_COLLECTION_MAPPINGS =
-          new ImmutableMap.Builder<FHIRDefinedType, Class<? extends Collection>>()
-              .put(FHIRDefinedType.REFERENCE, ReferenceCollection.class)
-              .put(FHIRDefinedType.NULL, EmptyCollection.class)
-              .build();
+  private static final Map<FhirType, Class<? extends Collection>> ADDITIONAL_COLLECTION_MAPPINGS =
+      new ImmutableMap.Builder<FhirType, Class<? extends Collection>>()
+          .put(FhirType.REFERENCE, ReferenceCollection.class)
+          .put(FhirType.NULL, EmptyCollection.class)
+          .build();
 
   // See https://hl7.org/fhir/fhirpath.html#types.
 
@@ -89,7 +88,7 @@ public class Collection implements Equatable {
   @Nonnull private final Optional<FhirPathType> type;
 
   /** The FHIR type of the result of evaluating this expression, if there is one. */
-  @Nonnull private final Optional<FHIRDefinedType> fhirType;
+  @Nonnull private final Optional<FhirType> fhirType;
 
   /** The FHIR definition that describes this path, if there is one. */
   @Nonnull private final Optional<? extends NodeDefinition> definition;
@@ -103,7 +102,7 @@ public class Collection implements Equatable {
    * <p>Use this builder when the path may need to be traversable.
    *
    * @param columnRepresentation a {@link Column} containing the result of the expression
-   * @param fhirType the {@link FHIRDefinedType} that this path should be based upon
+   * @param fhirType the {@link FhirType} that this path should be based upon
    * @param definition the {@link ElementDefinition} that this path should be based upon
    * @return a new {@link Collection}
    * @throws CollectionConstructionError if there is a problem constructing the collection
@@ -111,7 +110,7 @@ public class Collection implements Equatable {
   @Nonnull
   public static Collection build(
       @Nonnull final ColumnRepresentation columnRepresentation,
-      @Nonnull final FHIRDefinedType fhirType,
+      @Nonnull final FhirType fhirType,
       @Nonnull final Optional<ElementDefinition> definition) {
     return getInstance(columnRepresentation, Optional.of(fhirType), definition, Optional.empty());
   }
@@ -134,7 +133,7 @@ public class Collection implements Equatable {
       @Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<Column> extensionMapColumn,
       @Nonnull final ElementDefinition definition) {
-    final Optional<FHIRDefinedType> optionalFhirType = definition.getFhirType();
+    final Optional<FhirType> optionalFhirType = definition.getFhirType();
     if (optionalFhirType.isPresent()) {
       return getInstance(
           columnRepresentation, optionalFhirType, Optional.of(definition), extensionMapColumn);
@@ -145,28 +144,26 @@ public class Collection implements Equatable {
   }
 
   /**
-   * Builds the appropriate subtype of {@link Collection} based upon the supplied {@link
-   * FHIRDefinedType}.
+   * Builds the appropriate subtype of {@link Collection} based upon the supplied {@link FhirType}.
    *
    * <p>Use this builder when the path is derived, e.g. the result of a function.
    *
    * @param columnRepresentation a {@link ColumnRepresentation} containing the result of the
    *     expression
-   * @param fhirType the {@link FHIRDefinedType} that this path should be based upon
+   * @param fhirType the {@link FhirType} that this path should be based upon
    * @return a new {@link Collection}
    * @throws CollectionConstructionError if there is a problem constructing the collection
    */
   @Nonnull
   public static Collection build(
-      @Nonnull final ColumnRepresentation columnRepresentation,
-      @Nonnull final FHIRDefinedType fhirType) {
+      @Nonnull final ColumnRepresentation columnRepresentation, @Nonnull final FhirType fhirType) {
     return getInstance(
         columnRepresentation, Optional.of(fhirType), Optional.empty(), Optional.empty());
   }
 
   /**
    * Builds a {@link Collection} with only a {@link ColumnRepresentation} and {@link
-   * NodeDefinition}, without requiring a {@link FHIRDefinedType}. This is used for collections that
+   * NodeDefinition}, without requiring a {@link FhirType}. This is used for collections that
    * represent non-FHIR structures such as TypeInfo results from the {@code type()} reflection
    * function.
    *
@@ -188,11 +185,11 @@ public class Collection implements Equatable {
 
   /**
    * Builds the appropriate subtype of {@link Collection} based upon the supplied {@link
-   * ColumnRepresentation}, {@link FHIRDefinedType} and {@link ElementDefinition}.
+   * ColumnRepresentation}, {@link FhirType} and {@link ElementDefinition}.
    *
    * @param columnRepresentation a {@link ColumnRepresentation} containing the result of the
    *     expression
-   * @param fhirType the {@link FHIRDefinedType} that this path should be based upon
+   * @param fhirType the {@link FhirType} that this path should be based upon
    * @param definition the {@link ElementDefinition} that this path should be based upon
    * @param extensionMapColumn an optional {@link Column} representing the extension map, if this
    *     path is an extension
@@ -202,11 +199,11 @@ public class Collection implements Equatable {
   @Nonnull
   private static Collection getInstance(
       @Nonnull final ColumnRepresentation columnRepresentation,
-      @Nonnull final Optional<FHIRDefinedType> fhirType,
+      @Nonnull final Optional<FhirType> fhirType,
       @Nonnull final Optional<ElementDefinition> definition,
       @Nonnull final Optional<Column> extensionMapColumn) {
     // Look up the class that represents an element with the specified FHIR type.
-    final FHIRDefinedType resolvedType =
+    final FhirType resolvedType =
         fhirType
             .or(() -> definition.flatMap(ElementDefinition::getFhirType))
             .orElseThrow(
@@ -245,12 +242,12 @@ public class Collection implements Equatable {
   /**
    * Gets the collection class for a given FHIR type.
    *
-   * @param fhirType a {@link FHIRDefinedType}
+   * @param fhirType a {@link FhirType}
    * @return The subtype of {@link Collection} that represents this type
    */
   @Nonnull
   public static Optional<Class<? extends Collection>> classForType(
-      @Nonnull final FHIRDefinedType fhirType) {
+      @Nonnull final FhirType fhirType) {
     // First check if there's a direct mapping through FhirPathType
     final Optional<FhirPathType> pathType = FhirPathType.forFhirType(fhirType);
     if (pathType.isPresent()) {
@@ -513,8 +510,8 @@ public class Collection implements Equatable {
     }
 
     // Level_1 is non-empty — check FHIR type consistency.
-    final Optional<FHIRDefinedType> level0Type = level0Collection.getFhirType();
-    final Optional<FHIRDefinedType> level1Type = level1Collection.getFhirType();
+    final Optional<FhirType> level0Type = level0Collection.getFhirType();
+    final Optional<FhirType> level1Type = level1Collection.getFhirType();
 
     // If either type is indeterminate, the recursive traversal cannot safely proceed. This
     // occurs with unresolved choice type elements (MixedCollection) where getFhirType() returns
@@ -530,9 +527,9 @@ public class Collection implements Equatable {
       throw new InvalidUserInputError(
           "Recursive traversal expression does not produce a consistent type across"
               + " levels: level_0 type is "
-              + level0Type.map(FHIRDefinedType::toCode).orElse(UNKNOWN_TYPE)
+              + level0Type.map(FhirType::toCode).orElse(UNKNOWN_TYPE)
               + " but level_1 type is "
-              + level1Type.map(FHIRDefinedType::toCode).orElse(UNKNOWN_TYPE)
+              + level1Type.map(FhirType::toCode).orElse(UNKNOWN_TYPE)
               + ".");
     }
 
@@ -585,7 +582,7 @@ public class Collection implements Equatable {
     // should not raise an error — extensions have a fixed schema at all nesting levels, and
     // repeat() deduplicates the results to guarantee termination.
     final boolean isExtensionTraversal =
-        level0Collection.getFhirType().map(FHIRDefinedType.EXTENSION::equals).orElse(false);
+        level0Collection.getFhirType().map(FhirType.EXTENSION::equals).orElse(false);
     final boolean errorOnDepthExhaustion = !isExtensionTraversal && !allowSelfReference;
 
     // Use Variant-based schema unification for complex types. The identity extractor collects
@@ -856,7 +853,7 @@ public class Collection implements Equatable {
   @Nonnull
   public Optional<TerminologyConcepts> toConcepts() {
     return getFhirType()
-        .filter(FHIRDefinedType.CODEABLECONCEPT::equals)
+        .filter(FhirType.CODEABLECONCEPT::equals)
         .map(
             t ->
                 TerminologyConcepts.union(
@@ -954,7 +951,7 @@ public class Collection implements Equatable {
    */
   @Nonnull
   public static Collection fromValue(@Nonnull final IBase value) {
-    final FHIRDefinedType fhirType = FHIRDefinedType.fromCode(value.fhirType());
+    final FhirType fhirType = FhirType.of(value.fhirType());
 
     // Get the collection class for the FHIR type.
     final Class<? extends Collection> collectionClass =

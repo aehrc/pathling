@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.search;
 
+import au.csiro.pathling.definition.FhirType;
 import au.csiro.pathling.search.filter.DateMatcher;
 import au.csiro.pathling.search.filter.ExactStringMatcher;
 import au.csiro.pathling.search.filter.MatcherFactory;
@@ -31,7 +32,6 @@ import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.Set;
 import org.hl7.fhir.exceptions.FHIRException;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
@@ -40,8 +40,8 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  * <p>Each search parameter type has a set of allowed FHIR types that can be searched and implements
  * {@link MatcherFactory} to create appropriate search filters.
  *
- * <p>Implemented types override {@link #createFilter(String, FHIRDefinedType)} with type-specific
- * logic. Unimplemented types use the default implementation which throws {@link
+ * <p>Implemented types override {@link #createFilter(String, FhirType)} with type-specific logic.
+ * Unimplemented types use the default implementation which throws {@link
  * UnsupportedOperationException}.
  *
  * @see <a href="https://hl7.org/fhir/search.html#ptypes">Search Parameter Types</a>
@@ -54,19 +54,19 @@ public enum SearchParameterType implements MatcherFactory {
    */
   TOKEN(
       Set.of(
-          FHIRDefinedType.CODE,
-          FHIRDefinedType.CODING,
-          FHIRDefinedType.CODEABLECONCEPT,
-          FHIRDefinedType.IDENTIFIER,
-          FHIRDefinedType.CONTACTPOINT,
-          FHIRDefinedType.BOOLEAN,
-          FHIRDefinedType.STRING,
-          FHIRDefinedType.URI,
-          FHIRDefinedType.ID)) {
+          FhirType.CODE,
+          FhirType.CODING,
+          FhirType.CODEABLECONCEPT,
+          FhirType.IDENTIFIER,
+          FhirType.CONTACTPOINT,
+          FhirType.BOOLEAN,
+          FhirType.STRING,
+          FhirType.URI,
+          FhirType.ID)) {
     @Nonnull
     @Override
     public SearchFilter createFilter(
-        @Nullable final String modifier, @Nonnull final FHIRDefinedType fhirType) {
+        @Nullable final String modifier, @Nonnull final FhirType fhirType) {
       if ("not".equals(modifier)) {
         return new SearchFilter(new TokenMatcher(fhirType), true);
       }
@@ -81,16 +81,11 @@ public enum SearchParameterType implements MatcherFactory {
    * A string type search parameter matches string values. Supports the {@code :exact} modifier for
    * case-sensitive exact matching. Default is case-insensitive prefix matching.
    */
-  STRING(
-      Set.of(
-          FHIRDefinedType.STRING,
-          FHIRDefinedType.HUMANNAME,
-          FHIRDefinedType.ADDRESS,
-          FHIRDefinedType.MARKDOWN)) {
+  STRING(Set.of(FhirType.STRING, FhirType.HUMANNAME, FhirType.ADDRESS, FhirType.MARKDOWN)) {
     @Nonnull
     @Override
     public SearchFilter createFilter(
-        @Nullable final String modifier, @Nonnull final FHIRDefinedType fhirType) {
+        @Nullable final String modifier, @Nonnull final FhirType fhirType) {
       if ("exact".equals(modifier)) {
         return new SearchFilter(new ExactStringMatcher());
       }
@@ -105,23 +100,16 @@ public enum SearchParameterType implements MatcherFactory {
    * A date type search parameter matches date/time values. Handles both scalar date types (date,
    * dateTime, instant) and Period type.
    */
-  DATE(
-      Set.of(
-          FHIRDefinedType.DATE,
-          FHIRDefinedType.DATETIME,
-          FHIRDefinedType.INSTANT,
-          FHIRDefinedType.PERIOD)) {
+  DATE(Set.of(FhirType.DATE, FhirType.DATETIME, FhirType.INSTANT, FhirType.PERIOD)) {
     @Nonnull
     @Override
     public SearchFilter createFilter(
-        @Nullable final String modifier, @Nonnull final FHIRDefinedType fhirType) {
+        @Nullable final String modifier, @Nonnull final FhirType fhirType) {
       if (modifier != null) {
         throw new InvalidModifierException(modifier, this);
       }
       final DateMatcher matcher =
-          fhirType == FHIRDefinedType.PERIOD
-              ? DateMatcher.forPeriod()
-              : DateMatcher.forScalarDates();
+          FhirType.PERIOD.equals(fhirType) ? DateMatcher.forPeriod() : DateMatcher.forScalarDates();
       return new SearchFilter(matcher);
     }
   },
@@ -133,12 +121,12 @@ public enum SearchParameterType implements MatcherFactory {
    */
   NUMBER(
       Set.of(
-          FHIRDefinedType.INTEGER, FHIRDefinedType.DECIMAL,
-          FHIRDefinedType.POSITIVEINT, FHIRDefinedType.UNSIGNEDINT)) {
+          FhirType.INTEGER, FhirType.DECIMAL,
+          FhirType.POSITIVEINT, FhirType.UNSIGNEDINT)) {
     @Nonnull
     @Override
     public SearchFilter createFilter(
-        @Nullable final String modifier, @Nonnull final FHIRDefinedType fhirType) {
+        @Nullable final String modifier, @Nonnull final FhirType fhirType) {
       if (modifier != null) {
         throw new InvalidModifierException(modifier, this);
       }
@@ -150,11 +138,11 @@ public enum SearchParameterType implements MatcherFactory {
    * A quantity type search parameter matches quantity values with optional units. Supports
    * value-only matching and will support UCUM unit normalization.
    */
-  QUANTITY(Set.of(FHIRDefinedType.QUANTITY)) {
+  QUANTITY(Set.of(FhirType.QUANTITY)) {
     @Nonnull
     @Override
     public SearchFilter createFilter(
-        @Nullable final String modifier, @Nonnull final FHIRDefinedType fhirType) {
+        @Nullable final String modifier, @Nonnull final FhirType fhirType) {
       if (modifier != null) {
         throw new InvalidModifierException(modifier, this);
       }
@@ -167,11 +155,11 @@ public enum SearchParameterType implements MatcherFactory {
    * :not} modifier for negated matching and the {@code :[type]} modifier to constrain the target
    * resource type of a polymorphic reference.
    */
-  REFERENCE(Set.of(FHIRDefinedType.REFERENCE)) {
+  REFERENCE(Set.of(FhirType.REFERENCE)) {
     @Nonnull
     @Override
     public SearchFilter createFilter(
-        @Nullable final String modifier, @Nonnull final FHIRDefinedType fhirType) {
+        @Nullable final String modifier, @Nonnull final FhirType fhirType) {
       if ("not".equals(modifier)) {
         return new SearchFilter(new ReferenceMatcher(), true);
       }
@@ -201,17 +189,11 @@ public enum SearchParameterType implements MatcherFactory {
    * :not} modifier for negated matching, {@code :below} for prefix matching, and {@code :above} for
    * inverse prefix matching.
    */
-  URI(
-      Set.of(
-          FHIRDefinedType.URI,
-          FHIRDefinedType.URL,
-          FHIRDefinedType.CANONICAL,
-          FHIRDefinedType.OID,
-          FHIRDefinedType.UUID)) {
+  URI(Set.of(FhirType.URI, FhirType.URL, FhirType.CANONICAL, FhirType.OID, FhirType.UUID)) {
     @Nonnull
     @Override
     public SearchFilter createFilter(
-        @Nullable final String modifier, @Nonnull final FHIRDefinedType fhirType) {
+        @Nullable final String modifier, @Nonnull final FhirType fhirType) {
       if ("not".equals(modifier)) {
         return new SearchFilter(UriMatcher.exact(), true);
       }
@@ -234,9 +216,9 @@ public enum SearchParameterType implements MatcherFactory {
   /** A special type search parameter has custom behavior. Not yet implemented. */
   SPECIAL(Set.of());
 
-  @Nonnull private final Set<FHIRDefinedType> allowedFhirTypes;
+  @Nonnull private final Set<FhirType> allowedFhirTypes;
 
-  SearchParameterType(@Nonnull final Set<FHIRDefinedType> allowedFhirTypes) {
+  SearchParameterType(@Nonnull final Set<FhirType> allowedFhirTypes) {
     this.allowedFhirTypes = allowedFhirTypes;
   }
 
@@ -246,7 +228,7 @@ public enum SearchParameterType implements MatcherFactory {
    * @param fhirType the FHIR type to check
    * @return true if the type is allowed, false otherwise
    */
-  public boolean isAllowedFhirType(@Nonnull final FHIRDefinedType fhirType) {
+  public boolean isAllowedFhirType(@Nonnull final FhirType fhirType) {
     return allowedFhirTypes.contains(fhirType);
   }
 
@@ -256,7 +238,7 @@ public enum SearchParameterType implements MatcherFactory {
    * @return the set of allowed FHIR types
    */
   @Nonnull
-  public Set<FHIRDefinedType> getAllowedFhirTypes() {
+  public Set<FhirType> getAllowedFhirTypes() {
     return allowedFhirTypes;
   }
 
@@ -275,7 +257,7 @@ public enum SearchParameterType implements MatcherFactory {
   @Nonnull
   @Override
   public SearchFilter createFilter(
-      @Nullable final String modifier, @Nonnull final FHIRDefinedType fhirType) {
+      @Nullable final String modifier, @Nonnull final FhirType fhirType) {
     throw new UnsupportedOperationException("Search parameter type not yet supported: " + this);
   }
 }

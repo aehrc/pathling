@@ -134,7 +134,7 @@ schema derivation. Pure motion first, then widening.
 - [x] T016 Add child enumeration to `fhir-schema/src/main/java/au/csiro/pathling/definition/NodeDefinition.java`, implemented from the children the HAPI-backed implementation already obtains rather than asking a second time.
 - [x] T017 Add cardinality to `fhir-schema/src/main/java/au/csiro/pathling/definition/ElementDefinition.java`.
 - [x] T018 Replace the R4 enumeration in the reported type with a module-local representation in `fhir-schema/src/main/java/au/csiro/pathling/definition/ElementDefinition.java`, mapping the R4 enumeration onto it in the HAPI-backed implementation.
-- [ ] T019 Convert the call sites in `fhirpath/src/main/java/au/csiro/pathling/fhirpath/` to the new type, keeping dispatch typed rather than degrading to string comparison. The engine continues to read cardinality from the Spark schema in this phase.
+- [x] T019 Convert the call sites in `fhirpath/src/main/java/au/csiro/pathling/fhirpath/` to the new type, keeping dispatch typed rather than degrading to string comparison. The engine continues to read cardinality from the Spark schema in this phase.
 
 **Checkpoint**: Definitions live below the engine and report children, cardinality and a version-independent type.
 

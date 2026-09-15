@@ -20,6 +20,7 @@ package au.csiro.pathling.fhirpath.collection;
 import static org.apache.spark.sql.functions.date_format;
 
 import au.csiro.pathling.annotations.UsedByReflection;
+import au.csiro.pathling.definition.FhirType;
 import au.csiro.pathling.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.FhirPathDateTime;
 import au.csiro.pathling.fhirpath.FhirPathType;
@@ -34,7 +35,6 @@ import java.util.Optional;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.DateTimeType;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.InstantType;
 
 /**
@@ -59,7 +59,7 @@ public class DateTimeCollection extends Collection
   protected DateTimeCollection(
       @Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
-      @Nonnull final Optional<FHIRDefinedType> fhirType,
+      @Nonnull final Optional<FhirType> fhirType,
       @Nonnull final Optional<? extends NodeDefinition> definition,
       @Nonnull final Optional<Column> extensionMapColumn) {
     super(columnRepresentation, type, fhirType, definition, extensionMapColumn);
@@ -79,7 +79,7 @@ public class DateTimeCollection extends Collection
     return new DateTimeCollection(
         columnRepresentation,
         Optional.of(FhirPathType.DATETIME),
-        Optional.of(FHIRDefinedType.DATETIME),
+        Optional.of(FhirType.DATETIME),
         definition,
         Optional.empty());
   }
@@ -121,7 +121,7 @@ public class DateTimeCollection extends Collection
     return new DateTimeCollection(
         column,
         Optional.of(FhirPathType.DATETIME),
-        Optional.of(FHIRDefinedType.INSTANT),
+        Optional.of(FhirType.INSTANT),
         Optional.empty(),
         Optional.empty());
   }
@@ -147,8 +147,8 @@ public class DateTimeCollection extends Collection
   @Override
   public StringCollection asStringPath() {
     final ColumnRepresentation valueColumn;
-    final Optional<FHIRDefinedType> fhirType = getFhirType();
-    if (fhirType.isPresent() && fhirType.get() == FHIRDefinedType.INSTANT) {
+    final Optional<FhirType> fhirType = getFhirType();
+    if (fhirType.filter(FhirType.INSTANT::equals).isPresent()) {
       valueColumn = getColumn().call(c -> date_format(c, SPARK_FHIRPATH_DATETIME_FORMAT));
     } else {
       valueColumn = getColumn();

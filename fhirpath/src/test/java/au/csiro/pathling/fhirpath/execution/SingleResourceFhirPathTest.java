@@ -19,6 +19,7 @@ package au.csiro.pathling.fhirpath.execution;
 
 import static au.csiro.pathling.test.helpers.SqlHelpers.sql_array;
 
+import au.csiro.pathling.definition.FhirType;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
@@ -50,7 +51,6 @@ import org.hl7.fhir.r4.model.Coverage;
 import org.hl7.fhir.r4.model.DecimalType;
 import org.hl7.fhir.r4.model.Device;
 import org.hl7.fhir.r4.model.Enumerations.AdministrativeGender;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.Extension;
 import org.hl7.fhir.r4.model.HumanName;
@@ -330,7 +330,7 @@ class SingleResourceFhirPathTest {
 
     Assertions.assertThat(evalResult)
         .hasClass(IntegerCollection.class)
-        .hasFhirType(FHIRDefinedType.INTEGER)
+        .hasFhirType(FhirType.INTEGER)
         .toCanonicalResult()
         .hasRowsUnordered(RowFactory.create("1", -10));
   }

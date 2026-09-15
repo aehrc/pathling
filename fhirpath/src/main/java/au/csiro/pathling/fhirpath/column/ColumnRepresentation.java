@@ -31,6 +31,7 @@ import static org.apache.spark.sql.functions.try_element_at;
 import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.definition.ElementDefinition;
+import au.csiro.pathling.definition.FhirType;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.Optional;
@@ -44,7 +45,6 @@ import org.apache.spark.sql.functions;
 import org.apache.spark.sql.internal.Literal;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import scala.Predef;
 
 /**
@@ -179,7 +179,7 @@ public abstract class ColumnRepresentation {
    */
   @Nonnull
   public abstract ColumnRepresentation traverse(
-      @Nonnull final String fieldName, @Nonnull final Optional<FHIRDefinedType> fhirType);
+      @Nonnull final String fieldName, @Nonnull final Optional<FhirType> fhirType);
 
   /**
    * Returns a new {@link ColumnRepresentation} that represents the result of traversing to a nested

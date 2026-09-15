@@ -20,10 +20,10 @@ package au.csiro.pathling.test.assertions;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import au.csiro.pathling.definition.FhirType;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.evaluation.CollectionDataset;
 import jakarta.annotation.Nonnull;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * @author Piotr Szul
@@ -58,7 +58,7 @@ public class CollectionAssert {
   }
 
   @Nonnull
-  public CollectionAssert hasFhirType(@Nonnull final FHIRDefinedType type) {
+  public CollectionAssert hasFhirType(@Nonnull final FhirType type) {
     assertEquals(type, result.getFhirType().orElse(null));
     return this;
   }

@@ -17,7 +17,7 @@
 
 package au.csiro.pathling.fhirpath.dsl;
 
-import static org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType.REFERENCE;
+import static au.csiro.pathling.definition.FhirType.REFERENCE;
 
 import au.csiro.pathling.test.dsl.FhirPathDslTestBase;
 import au.csiro.pathling.test.dsl.FhirPathTest;

@@ -18,6 +18,7 @@
 package au.csiro.pathling.fhirpath.collection;
 
 import au.csiro.pathling.definition.ChildDefinition;
+import au.csiro.pathling.definition.FhirType;
 import au.csiro.pathling.definition.NodeDefinition;
 import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
 import au.csiro.pathling.fhirpath.FhirPathType;
@@ -26,7 +27,6 @@ import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import org.apache.spark.sql.Column;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * Represents a collection of resolved references that expose type information only.
@@ -57,7 +57,7 @@ public class ResolvedReferenceCollection extends Collection {
   protected ResolvedReferenceCollection(
       @Nonnull final ColumnRepresentation column,
       @Nonnull final Optional<FhirPathType> type,
-      @Nonnull final Optional<FHIRDefinedType> fhirType,
+      @Nonnull final Optional<FhirType> fhirType,
       @Nonnull final Optional<? extends NodeDefinition> definition,
       @Nonnull final Optional<Column> extensionMapColumn) {
     super(column, type, fhirType, definition, extensionMapColumn);
@@ -76,7 +76,7 @@ public class ResolvedReferenceCollection extends Collection {
    */
   @Nonnull
   public static ResolvedReferenceCollection build(
-      @Nonnull final ColumnRepresentation column, @Nonnull final FHIRDefinedType fhirType) {
+      @Nonnull final ColumnRepresentation column, @Nonnull final FhirType fhirType) {
     final Optional<FhirPathType> fhirPathType = FhirPathType.forFhirType(fhirType);
     return new ResolvedReferenceCollection(
         column, fhirPathType, Optional.of(fhirType), Optional.empty(), Optional.empty());

@@ -25,7 +25,9 @@ import static java.util.stream.Collectors.toMap;
 
 import au.csiro.pathling.config.FhirpathConfiguration;
 import au.csiro.pathling.config.QueryConfiguration;
+import au.csiro.pathling.definition.FhirType;
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.FhirTypes;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.evaluation.CrossResourceStrategy;
 import au.csiro.pathling.fhirpath.evaluation.SingleResourceEvaluator;
@@ -54,8 +56,6 @@ import java.util.stream.Stream;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.types.DataType;
-import org.hl7.fhir.exceptions.FHIRException;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
@@ -291,18 +291,14 @@ public class FhirViewExecutor {
     // Parse the FHIRPath expression using the parser.
     final FhirPath path = parser.parse(column.getPath());
 
-    Optional<FHIRDefinedType> type = Optional.empty();
+    Optional<FhirType> type = Optional.empty();
     if (column.getType() != null) {
       // Replace the HL7 FHIR type URI prefix with an empty string to get the FHIR type.
       final String fhirType =
           column.getType().replaceFirst("^" + Pattern.quote(HL7_FHIR_TYPE_URI_PREFIX), "");
 
-      // Attempt to retrieve the FHIR type.
-      try {
-        type = Optional.ofNullable(FHIRDefinedType.fromCode(fhirType));
-      } catch (final FHIRException ignored) {
-        // If the FHIR type is not valid, we ignore it and leave the type as empty.
-      }
+      // Attempt to retrieve the FHIR type, leaving it empty if the type is not valid.
+      type = FhirTypes.resolve(fhirType);
     }
 
     // Create a RequestedColumn object that represents the column.
