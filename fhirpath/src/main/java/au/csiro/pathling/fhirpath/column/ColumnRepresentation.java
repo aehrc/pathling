@@ -30,7 +30,7 @@ import static org.apache.spark.sql.functions.size;
 import static org.apache.spark.sql.functions.try_element_at;
 import static org.apache.spark.sql.functions.when;
 
-import au.csiro.pathling.fhirpath.definition.ElementDefinition;
+import au.csiro.pathling.definition.ElementDefinition;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.Optional;

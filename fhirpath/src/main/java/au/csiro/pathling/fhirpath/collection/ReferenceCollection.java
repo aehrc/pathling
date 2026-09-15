@@ -17,11 +17,11 @@
 
 package au.csiro.pathling.fhirpath.collection;
 
+import au.csiro.pathling.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.ReferenceValue;
-import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.function.ColumnTransform;
 import au.csiro.pathling.search.filter.FhirFieldNames;
 import jakarta.annotation.Nonnull;

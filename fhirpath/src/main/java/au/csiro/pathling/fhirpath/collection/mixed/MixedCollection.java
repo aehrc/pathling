@@ -17,10 +17,10 @@
 
 package au.csiro.pathling.fhirpath.collection.mixed;
 
+import au.csiro.pathling.definition.ChoiceDefinition;
 import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.column.UnsupportedRepresentation;
-import au.csiro.pathling.fhirpath.definition.ChoiceDefinition;
 import au.csiro.pathling.fhirpath.function.ColumnTransform;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;

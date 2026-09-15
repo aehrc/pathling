@@ -17,14 +17,14 @@
 
 package au.csiro.pathling.fhirpath.collection.mixed;
 
+import au.csiro.pathling.definition.ChoiceDefinition;
+import au.csiro.pathling.definition.ElementDefinition;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.EmptyCollection;
-import au.csiro.pathling.fhirpath.definition.ChoiceDefinition;
-import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import jakarta.annotation.Nonnull;
 import java.util.Arrays;
 import java.util.List;

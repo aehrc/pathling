@@ -21,6 +21,7 @@ import static au.csiro.pathling.fhirpath.literal.StringLiteral.unescapeFhirPathS
 import static au.csiro.pathling.utilities.Strings.unSingleQuote;
 
 import au.csiro.pathling.annotations.UsedByReflection;
+import au.csiro.pathling.definition.NodeDefinition;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
 import au.csiro.pathling.fhirpath.FhirPathType;
@@ -30,7 +31,6 @@ import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.comparison.Comparable;
-import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import java.util.function.Function;

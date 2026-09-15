@@ -125,9 +125,9 @@ behaviour changes.
 **Purpose**: Move the definitions below the engine and widen them enough to drive
 schema derivation. Pure motion first, then widening.
 
-- [ ] T010 Move `fhirpath/src/main/java/au/csiro/pathling/fhirpath/definition/**` (including `defaults/` and `fhir/`) to `fhir-schema/src/main/java/au/csiro/pathling/definition/`. Pure motion — no test task; behaviour is unchanged by construction.
-- [ ] T011 Update the referencing files in `fhirpath` main and test to the new package.
-- [ ] T012 Verify the motion by reviewing the test diff: it must contain only package declarations and import statements. This is the test for T010–T011.
+- [x] T010 Move `fhirpath/src/main/java/au/csiro/pathling/fhirpath/definition/**` (including `defaults/` and `fhir/`) to `fhir-schema/src/main/java/au/csiro/pathling/definition/`. Pure motion — no test task; behaviour is unchanged by construction.
+- [x] T011 Update the referencing files in `fhirpath` main and test to the new package.
+- [x] T012 Verify the motion by reviewing the test diff: it must contain only package declarations and import statements. This is the test for T010–T011.
 - [ ] T013 Test child enumeration in `fhir-schema/src/test/java/au/csiro/pathling/definition/NodeDefinitionTest.java` — children of a resource, a backbone element and a complex type, asserting order and completeness against the FHIR definitions, and a choice element appearing once as a choice rather than pre-expanded.
 - [ ] T014 Test cardinality in `fhir-schema/src/test/java/au/csiro/pathling/definition/ElementDefinitionTest.java` — singular, repeating, and choice elements.
 - [ ] T015 Test that a type code outside the R4 enumeration is representable, and that both implementations agree on enumeration and cardinality for the same resource, in `fhir-schema/src/test/java/au/csiro/pathling/definition/DefinitionContextAgreementTest.java`.
