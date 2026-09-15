@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+    Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
+    Organisation (CSIRO) ABN 41 687 119 230.
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+        http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+
+-->
+
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>au.csiro.pathling</groupId>
+    <artifactId>pathling</artifactId>
+    <version>9.9.0</version>
+  </parent>
+  <artifactId>fhir-schema</artifactId>
+  <packaging>jar</packaging>
+
+  <name>Pathling FHIR Schema</name>
+  <description>
+    The FHIR definition abstraction and the derivation of Spark schemas from it.
+  </description>
+
+  <dependencies>
+    <dependency>
+      <groupId>au.csiro.pathling</groupId>
+      <artifactId>utilities</artifactId>
+      <exclusions>
+        <!-- The utilities module declares the full Spark SQL stack at compile scope. Inheriting
+             it here would put Catalyst on this module's classpath and violate the dependency ban
+             enforced below, so both artifacts are excluded from the transitive graph. -->
+        <exclusion>
+          <groupId>org.apache.spark</groupId>
+          <artifactId>spark-sql_${pathling.scalaVersion}</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.spark</groupId>
+          <artifactId>spark-catalyst_${pathling.scalaVersion}</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
+    <!-- Apache Spark: the SQL API surface only, without the Catalyst implementation behind it. -->
+    <dependency>
+      <groupId>org.apache.spark</groupId>
+      <artifactId>spark-sql-api_${pathling.scalaVersion}</artifactId>
+      <scope>provided</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>ban-catalyst-dependencies</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <bannedDependencies>
+                  <excludes>
+                    <exclude>org.apache.spark:spark-catalyst_*</exclude>
+                    <exclude>org.apache.spark:spark-sql_*</exclude>
+                  </excludes>
+                  <message>FR-048: FHIR definition and schema derivation must not depend on internal Spark Catalyst API; this module may use spark-sql-api only. Exclude the offending transitive dependency rather than relaxing this rule.</message>
+                </bannedDependencies>
+              </rules>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+      </plugin>
+    </plugins>
+  </build>
+
+</project>

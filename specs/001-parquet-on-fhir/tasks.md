@@ -108,12 +108,12 @@ behaviour changes.
 - [x] T001 Run the JMH suite on unmodified `main` in `benchmark/src/main/java/au/csiro/pathling/benchmark/PathlingBenchmark.java` and record the results in `evidence/baseline.md`, noting the machine, fork count and Spark version. **Must precede every other task**: the baseline and the comparison must come from the same machine under the same conditions, and capturing it first is the only way to guarantee that. The measurement itself stays recoverable from `main` through a worktree.
 - [x] T002 Split the benchmark so encode, decode and query execution are timed separately, and planning time separately from execution time, in `benchmark/src/main/java/au/csiro/pathling/benchmark/PathlingBenchmark.java`. The current benchmarks report one number for an NDJSON-to-view pipeline, which cannot answer driver 1 either way.
 - [x] T003 Re-run T001 against the split benchmark and record the per-phase baseline in `evidence/baseline.md`.
-- [ ] T004 Create the `fhir-schema` module with `fhir-schema/pom.xml`, depending on `utilities` and `spark-sql-api` only.
-- [ ] T005 Add an enforcer rule to `fhir-schema/pom.xml` banning `org.apache.spark:spark-catalyst_*` and `org.apache.spark:spark-sql_*`, and prove the rule works by violating it deliberately on the empty module. T125 re-checks it against real code.
-- [ ] T006 [P] Create the `io` module with `io/pom.xml`, depending on `fhir-schema` and `spark-sql`.
-- [ ] T007 [P] Add a build rule to `io/pom.xml` failing on any `org.apache.spark.sql.catalyst` import, and prove the rule works by violating it deliberately on the empty module. T126 re-checks it against real code.
-- [ ] T008 Add both modules to `<modules>` in `pom.xml` in build order, and to the dependency list in `library-runtime/pom.xml` so the Python and R libraries ship them.
-- [ ] T009 Add `fhir-schema` and `io` as dependencies of `fhirpath` in `fhirpath/pom.xml`. `encoders/pom.xml` is not modified.
+- [x] T004 Create the `fhir-schema` module with `fhir-schema/pom.xml`, depending on `utilities` and `spark-sql-api` only.
+- [x] T005 Add an enforcer rule to `fhir-schema/pom.xml` banning `org.apache.spark:spark-catalyst_*` and `org.apache.spark:spark-sql_*`, and prove the rule works by violating it deliberately on the empty module. T125 re-checks it against real code.
+- [x] T006 [P] Create the `io` module with `io/pom.xml`, depending on `fhir-schema` and `spark-sql`.
+- [x] T007 [P] Add a build rule to `io/pom.xml` failing on any `org.apache.spark.sql.catalyst` import, and prove the rule works by violating it deliberately on the empty module. T126 re-checks it against real code.
+- [x] T008 Add both modules to `<modules>` in `pom.xml` in build order, and to the dependency list in `library-runtime/pom.xml` so the Python and R libraries ship them.
+- [x] T009 Add `fhir-schema` and `io` as dependencies of `fhirpath` in `fhirpath/pom.xml`. `encoders/pom.xml` is not modified.
 - [ ] T009a **Spike, and the gate on the whole approach.** Build a throwaway `RuntimeReplaceable` over an *unresolved* attribute and confirm it survives the analyzer — that nothing probes `dataType` before the child resolves. Discard the code; T038a is the durable test. Run it here rather than in Phase 8 because it is the programme's largest unknown and costs a day, so the answer is worth having while M1 still has planning time. **On failure**: the design falls back to the unbound column representation in R-017 option C, and T038e, T038l, T110, T113a and T113b are rewritten against it before M3 opens. FR-055 to FR-058 are unaffected either way.
 
 **Checkpoint**: Modules exist and are empty; the boundary is enforced; the baseline is captured; the analyzer risk is resolved.

@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+    Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
+    Organisation (CSIRO) ABN 41 687 119 230.
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+        http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+
+-->
+
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>au.csiro.pathling</groupId>
+    <artifactId>pathling</artifactId>
+    <version>9.9.0</version>
+  </parent>
+  <artifactId>io</artifactId>
+  <packaging>jar</packaging>
+
+  <name>Pathling IO</name>
+  <description>
+    Encoding of FHIR data into the Parquet on FHIR layout, expressed as dataset transformations.
+  </description>
+
+  <dependencies>
+    <dependency>
+      <groupId>au.csiro.pathling</groupId>
+      <artifactId>fhir-schema</artifactId>
+    </dependency>
+
+    <!-- Apache Spark -->
+    <dependency>
+      <groupId>org.apache.spark</groupId>
+      <artifactId>spark-sql_${pathling.scalaVersion}</artifactId>
+      <scope>provided</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.logging.log4j</groupId>
+          <artifactId>log4j-slf4j2-impl</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-checkstyle-plugin</artifactId>
+        <executions>
+          <!--
+               The Catalyst prohibition cannot be a banned dependency here, because the encoding is
+               built from column expressions and therefore needs spark-sql, which is the artifact
+               that carries the Catalyst classes. It is enforced as an import check instead, in a
+               configuration of its own so that it applies to this module and no other: `encoders`
+               keeps its Catalyst imports under FR-051. This execution runs alongside the inherited
+               one that applies the shared configuration.
+           -->
+          <execution>
+            <id>ban-catalyst-imports</id>
+            <phase>compile</phase>
+            <goals>
+              <goal>check</goal>
+            </goals>
+            <configuration>
+              <configLocation>config/checkstyle/io-catalyst-imports.xml</configLocation>
+              <includeTestSourceDirectory>true</includeTestSourceDirectory>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+      </plugin>
+    </plugins>
+  </build>
+
+</project>
