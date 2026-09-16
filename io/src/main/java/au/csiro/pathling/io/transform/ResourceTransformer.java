@@ -239,11 +239,12 @@ public final class ResourceTransformer {
       return source.cast(target);
     }
     final DefinitionCanonicalStructure child = canonical.elementStructure(entry).orElseThrow();
-    final StructureMapping structures =
-        (column, structure, shape) -> structure(child, column, structure, shape);
-    return ExtensionTransform.isInlineExtension(type)
-        ? ExtensionTransform.inline(structures, source, target, observed)
-        : structures.map(source, target, observed);
+    // An extension needs no case of its own. This layout stores one inline (FR-003), and inline is
+    // what the definitions already describe: an ordinary structure, on the structure carrying it,
+    // recursing as far as the source does. The previous layout needed a case because it hoisted
+    // every extension into a map at the root of the resource; this one stores it where the
+    // definitions put it, so the ordinary structural mapping is the whole of it.
+    return structure(child, source, target, observed);
   }
 
   /**

@@ -41,8 +41,13 @@ import org.junit.jupiter.api.io.TempDir;
  * source does. The previous layout hoisted them into a map at the root of the resource, keyed by a
  * field identifier carried on every composite; neither of those fields belongs to this layout, so
  * neither may appear in a stored schema.
+ *
+ * <p>Nothing in the transform is extension-specific, and that is the result rather than an
+ * omission: because the definitions describe an extension as an ordinary structure and this layout
+ * stores it where they place it, the ordinary structural mapping is already inline storage. These
+ * tests are therefore what says so, since there is no extension component for them to point at.
  */
-class ExtensionTransformTest {
+class InlineExtensionStorageTest {
 
   @Nonnull private static final String SIMPLE_URL = "http://example.org/simple";
 
