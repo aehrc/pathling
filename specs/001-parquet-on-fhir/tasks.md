@@ -268,10 +268,10 @@ API, and the existing implementation is untouched.
 *Mostly delivered by T004–T009; this phase verifies it. It sits at the end of M1
 because there is now encoding code for T126 and T127 to inspect.*
 
-- [ ] T125 [P] [US8] Re-check the dependency ban against real code: add a Catalyst dependency to `fhir-schema/pom.xml`, confirm the build fails, and revert. T005 proved the rule on an empty module; this proves it still holds once the module carries derivation.
-- [ ] T126 [P] [US8] Re-check the import ban against real code: add a Catalyst import to the new encoding code, confirm the build fails, and revert. T007 proved the rule on an empty module.
-- [ ] T127 [US8] Confirm by inspection that the new encoding path contains no expression encoder, no hand-authored serializer or deserializer expression tree and no FHIR object in a per-row plan (FR-050).
-- [ ] T128 [US8] Confirm `encoders` is unmodified — `git diff main -- encoders/` is empty — and that `mvn -pl encoders` still resolves (FR-051). T128a re-checks it under a narrowed assertion once the query-time toolkit has been extended.
+- [x] T125 [P] [US8] Re-check the dependency ban against real code: add a Catalyst dependency to `fhir-schema/pom.xml`, confirm the build fails, and revert. T005 proved the rule on an empty module; this proves it still holds once the module carries derivation.
+- [x] T126 [P] [US8] Re-check the import ban against real code: add a Catalyst import to the new encoding code, confirm the build fails, and revert. T007 proved the rule on an empty module. *Verified with the import **used**: spotless runs ahead of checkstyle and removes or reorders an unused one, so an idle import fails the build on formatting and never reaches the ban. The boundary holds either way, but only a used import proves the ban itself fires.*
+- [x] T127 [US8] Confirm by inspection that the new encoding path contains no expression encoder, no hand-authored serializer or deserializer expression tree and no FHIR object in a per-row plan (FR-050).
+- [x] T128 [US8] Confirm `encoders` is unmodified — `git diff main -- encoders/` is empty — and that `mvn -pl encoders` still resolves (FR-051). T128a re-checks it under a narrowed assertion once the query-time toolkit has been extended.
 
 **Checkpoint**: Driver 5 is delivered for the encoding path and enforced by the build.
 
