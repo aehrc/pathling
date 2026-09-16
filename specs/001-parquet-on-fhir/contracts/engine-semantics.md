@@ -62,6 +62,11 @@ Annotations are optional in the specification, so a conformant file may carry
 none. **The engine computes from the annotated element when an annotation is
 absent**, and uses the annotation only as a fast path when present.
 
+This is not a hypothetical case. The layout ships annotation-free at the flip and
+each kind lands afterwards in M5, so for that period the computed path is the
+only path, and every statement below about an annotation being present describes
+M5 onward.
+
 An engine that required annotations could read only files Pathling itself wrote,
 which would defeat adopting the format. The full test suite therefore passes over
 files written with every annotation disabled.
@@ -135,6 +140,13 @@ and an absent reference all yield empty rather than raising.
 Navigable, for the first time. A primitive element's id and extensions resolve
 from the metadata group stored beside it, and yield empty where the source
 carried neither.
+
+**Delivered in M5, not at the flip.** Neither the writing nor the reading lands
+with the layout switch: the previous layout cannot represent this content and the
+engine cannot navigate it today, so deferring both regresses nothing. Until then
+the metadata group is not written, FR-017 carries a carve-out for the content it
+drops, and that loss is reported through the strictness switch rather than
+occurring silently.
 
 ## Combining collections whose shapes differ
 

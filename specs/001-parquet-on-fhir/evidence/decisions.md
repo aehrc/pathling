@@ -239,6 +239,28 @@ Consequences for the other blocks:
 Task IDs were frozen through the restructuring, so both traceability tables are
 unaffected and the ID set is identical to the pre-restructuring one.
 
+### Addendum to 38 — the milestone labels in this entry are superseded
+
+The core finding stands: the public API must not write what the engine cannot
+read, so T070, T081 and T082 land after the engine, never before it. Everything
+below about where the definition abstraction, the derivation and the structure
+merge belong stands too.
+
+What has changed is the numbering and the placement of two blocks. There are now
+six milestones — the layout (M1), the engine made layout-tolerant (M2), ingest
+formats (M3), the flip (M4), the gaps (M5), completion (M6) — so every "M2",
+"M3" and "M4" in this entry refers to the earlier four-milestone scheme. Two
+statements above are also overtaken:
+
+- **US5 no longer waits for the public write path.** It moves to M2, ahead of the
+  flip, because divergent fitted schemas arise the moment the new layout is
+  written; the batches are written through `io`'s own entry points until M4.
+- **"Nothing in M1 or M2 depends on tolerant traversal"** was true of the old M2,
+  which was bundles and XML. The new M2 is the engine, and it does depend on it.
+  T009a resolved the gate in Phase 1 regardless, and it passed.
+
+See the addendum to decision 40 for why the sequencing was revised.
+
 ### Addendum to 38 — layout detection moves with the flip, not ahead of it
 
 US7 was first placed in M1, carrying the previous plan's rationale that it should
@@ -299,6 +321,28 @@ by the build. The programme still lands as several pull requests, as `plan.md`
 says, but none of them falls inside Phases 8 to 12: that span is one unreleasable
 piece.
 
+### Addendum to 40 — reversed. The red window does not occur
+
+**This decision no longer holds, and the sequencing it described has been
+replaced.** Both spans are designed out rather than accepted.
+
+The second alternative it records — keeping the engine dual-layout across the
+window — was ruled out on the assumption that the engine reads only the new
+layout on completion and the test estate must therefore move in one step. That
+assumption was not wrong, but it was applied too early: FR-053 constrains the
+*end state*, and nothing required the transition to reach it in a single step.
+Dual-layout reading then turned out to be cheap, for the reasons in decisions 47
+and 48, and FR-053 now states the transitional permission explicitly.
+
+So the engine converts by addition, the test framework's schema mode becomes a
+dimension rather than a default, and every milestone ends green with none running
+red in the middle. M2 carries the engine rewrite behind a green build, and the
+switch in M4 is a writer flip.
+
+The author accepted the red window when the alternative looked expensive, and
+revised that on evidence when it did not. The cost that replaces it is recorded
+in decision 51.
+
 ## 41. The Delta upsert path widens the target, reversing a deliberate guarantee
 
 `DeltaSink`'s upsert path refuses to widen the target schema today, and
@@ -329,6 +373,22 @@ already have, which is pinning to the previous library version.
 
 Recorded here so that the absence of a switch reads as a consequence of FR-053
 rather than as an omission. It belongs in the release note.
+
+### Addendum to 42 — reversed in part. There is a rollback until M6
+
+The reasoning held only while the engine read exactly one layout. From M2 it
+reads both, so data written in the previous layout remains queryable by the
+release that switched, and pinning the writer back is a genuine escape hatch
+rather than a way to produce data the release cannot read.
+
+Two limits. The hatch closes at T100e, when the previous-layout reader is removed
+and FR-053 reaches its end state. And what it protects is the *engine*, not the
+data: a warehouse written after the flip carries no primitive ids or extensions
+until M5 (decision 49) and no annotations until then either (decision 50), so
+rolling the writer back does not recover content that was never stored.
+
+Version pinning remains the coarser mechanism, and is still what the release note
+should lead with.
 
 ## 43. Canonical order is a navigable structure, not a flat ordering
 
@@ -477,3 +537,130 @@ annotation to be absent and now requires both. The deviations table in
 `contracts/storage-layout.md` records an addition rather than an omission, the
 capability-regression rows in `evidence/encoder-scope.md` are resolved rather than
 live, and `contracts/engine-semantics.md` says which of the two the engine reads.
+
+## 47. The engine converts by dispatch, not by replacement
+
+The migration of the engine was sequenced as a replacement: Phase 9 would move
+decimal decoding, quantity handling, extension access and reference keys to the
+new layout, losing the previous one as it went. That is what made the window in
+decision 40 unavoidable.
+
+It is not necessary. The tolerant traversal expression T009a proved is already a
+dispatcher — its `replacement` is a `lazy val` matching on the resolved child's
+`dataType`, choosing a field reference where the field is present and a typed
+null where it is not. Branching on which *layout* a column is in is the same
+mechanism with a richer match, over discriminators that are all present in the
+resolved schema: a `DECIMAL(32,6)` value with a `_scale` companion against a
+lexical string, `_value_canonicalized` against `__<field>_canonical_exact`, a
+`_fid` field and a root `_extension` map against inline extensions, a stored
+versioned key against its absence.
+
+*The rule that keeps this sound.* Within a layout, every branch of a dispatching
+replacement MUST yield the same `dataType`. That is what keeps T108's
+fitted-versus-dense equality true and therefore FR-054. Across layouts the
+branches need only agree on the FHIRPath-visible type — the extension structures
+genuinely differ in shape between layouts — because T110 applies the dispatcher
+at every subsequent traversal step, so a differing internal shape is absorbed as
+traversal continues. Two layouts never meet inside one query, so FR-056
+reconciliation is unaffected.
+
+*The rule this inherits.* FR-023 requires an annotation's use to be decided from
+the schema rather than per row. Layout dispatch is held to the same standard: it
+resolves once per schema, at analysis time, never per row.
+
+## 48. Old-layout extension access collapses into one expression
+
+Supporting both layouts looked dearest for extensions, because the previous
+mechanism is structurally unlike the new one: a `_fid` on each element and a
+root-level `_extension` map, against inline nesting.
+
+Inspection says otherwise. `_extension` is named in exactly one file in the whole
+engine, `ResourceCollection`, and the access itself is one fixed shape in
+`Collection.traverseExtension` — the root map, keyed by the element's own `_fid`.
+There is nothing to keep alive beyond that one expression.
+
+Better than that, supporting both is a net simplification. `extensionMapColumn`
+is a constructor parameter on fourteen collection classes, carried for the single
+reason `ResourceCollection`'s own javadoc gives: preserving the resource-level map
+across copies with a different column representation, because the resource handle
+is lost during traversal. T094 restores that handle — it was already required for
+annotations and primitive metadata — so the map can be re-derived at the traversal
+site and the parameter removed. T094a does this, and it is layout-independent: it
+can land as soon as T094 does, and would be worth doing even if there were only
+one layout.
+
+## 49. Primitive ids and extensions are deferred past the flip, writing included
+
+Both halves of FR-003's metadata group and all of FR-034 move to M5.
+
+The reading half costs nothing to defer: the previous layout cannot represent
+primitive ids or extensions at all, and the engine cannot navigate them today, so
+there is no behaviour to regress. The spec already called this new capability
+rather than migration.
+
+The writing half is a real cost, and it is the author's decision taken with that
+cost stated. FR-017 makes the pruned-schema round trip unconditional, and
+`_birthDate: {id, extension}` is legal FHIR JSON, so not populating the group
+means dropping content. The group itself is derived by `fhir-schema` from Phase 3
+either way; it is T061, the transform, that is deferred — so on a pruned schema
+the group prunes away for want of data, and on a dense one it is present and
+null. FR-017 therefore carries a carve-out until T078c closes it.
+
+*What bounds it.* FR-018 forbids silent truncation, so the carve-out requires the
+loss to be **detectable**, on the same terms the dense-bounds clause already sets.
+T057b asserts it and T067a implements it, both in M1. Without that pair the
+carve-out would be an aspiration rather than a requirement.
+
+*What makes it survivable.* Adding the metadata group in M5 changes struct shape
+between files written before and after, which is exactly the divergence US5's
+merge exists to handle, and US5 ships in M2, ahead of it. `MetadataGroupStructure`
+is already built in `fhir-schema`, so nothing is wasted by the deferral — it is
+simply not wired into the `io` transform until M5.
+
+*What users should be told*: a warehouse written between the flip and M5 will
+want re-importing at M5 if its sources carry primitive metadata. T042's remedy
+already points at re-import; this adds a second occasion for it.
+
+## 50. The flip lands annotation-free
+
+The encoder emits no annotations at the switch. Each kind — the decimal numeric
+annotation, the date bounds, the quantity canonical pair — lands afterwards in
+M5, one at a time.
+
+FR-022 is what makes this safe and is not weakened by it: an annotation is a fast
+path and never required for correctness, so the engine computes every value from
+the structure. That requirement was always going to be met; this decision only
+means it is met *first* rather than alongside.
+
+*The consequence to plan around.* At the flip every annotated operation runs its
+computed path — lexical decimal decoding, UCUM canonicalisation per row, computed
+reference keys for joins — so the flip is where query performance is at its worst
+and most honest. T136 therefore stops being a record and becomes the input that
+orders M5. FR-033 already anticipates the specific case: if a precomputed
+reference key proves necessary for join performance it is expressed as an
+annotation, and that is a question T136 answers rather than guesses.
+
+*What it stages.* FR-021 is met progressively and in full only at the end of M5,
+and FR-023 lands with the first kind, since choosing a fast path presupposes one
+exists. T089 changes character with it: the annotation-free suite is the ordinary
+path at the flip rather than a special case, and the annotated case is what needs
+per-kind coverage afterwards.
+
+## 51. M2 builds code M6 deletes, deliberately
+
+The dispatch arms decision 47 introduces are not a product feature by default.
+Their purpose is to keep the build green while the engine is rewritten, and to
+make the flip a writer flip rather than a migration. T100e removes them in M6.
+
+This is the cost that replaces the red window, and it is worth naming rather than
+discovering: some of the work in M2 exists to buy a green build and a safe flip,
+not to ship. What it buys in exchange is a true before-and-after over the same
+data for T110 — the riskiest change in the programme — which the previous
+sequencing could not offer, because under it there was no green baseline to
+compare against.
+
+*Open until T049a.* If the source boundary ends up routing earlier-layout data
+rather than refusing it, the arms become a product feature, deserve product-grade
+coverage, and T100e's scope shrinks accordingly. That is why T049a is a gate
+rather than an ordinary task, and why it sits before the detector work rather
+than after it.

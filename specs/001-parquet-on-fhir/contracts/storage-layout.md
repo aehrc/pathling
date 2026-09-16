@@ -114,6 +114,14 @@ Pathling's sources detect the previous layout and reject it at read time, naming
 the resource type, the detected layout and the remedy. The check can be disabled
 per source for the case where conforming data cannot be classified.
 
+**Provisional, pending T049a.** The query engine itself retains a reader for the
+previous layout from M2 until it is removed in M6, which is what lets the engine
+be converted behind a green build. Whether the *source boundary* keeps refusing
+earlier-layout data, refuses by default but routes under the existing opt-out, or
+routes outright is not yet settled. Only the first is described above; the other
+two would make this section's opening sentence false, so it is not to be
+published until T049a is answered.
+
 Migration of data at rest is separate work: a version gate by default, and an
 opt-in rewrite tool built from the retained previous implementation. A migrated
 warehouse does not carry the round-trip guarantee — the previous layout had

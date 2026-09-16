@@ -6,7 +6,7 @@ that probes `dataType` before the child resolves would force the replacement
 early — and force it against an unresolved child, which either throws or caches
 a wrong answer in the `lazy val`. R-017 routes a failure to option C, the
 unbound column representation, rewriting T038e, T038l, T110, T113a and T113b
-before M3 opens.
+before M2 opens.
 
 **Result: the gate passes.** Across 20 distinct runs — nine plan shapes under
 each of two child constructions, plus two `transform` lambda shapes whose child

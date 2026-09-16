@@ -1,8 +1,8 @@
 # Benchmark baseline
 
 The pre-change measurement that driver 1 is judged against (T001). Captured
-before any module moved, so that the comparison in M4 (T135) measures the
-programme rather than the machine.
+before any module moved, so that the comparison at the flip (T136, in M4)
+measures the programme rather than the machine.
 
 ## Conditions
 
@@ -85,7 +85,7 @@ Each figure times an entire NDJSON-or-Delta-to-view pipeline as one number, so i
 cannot separate encode from decode from query execution, nor planning from
 execution. Driver 1 is stated in those terms, so **this measurement alone cannot
 answer it either way** — which is why T002 splits the benchmark and T003 re-runs
-it. The per-phase baseline recorded by T003 is the one M4 compares against; this
+it. The per-phase baseline recorded by T003 is the one T136 compares against; this
 table is the whole-pipeline reference point and the proof that the suite was
 green before the programme began.
 
@@ -93,7 +93,7 @@ green before the programme began.
 
 # Per-phase baseline
 
-The measurement M4 compares against (T003), taken after T002 split the suite.
+The measurement T136 compares against (T003), taken after T002 split the suite.
 Same machine, same session, same JMH settings as the whole-pipeline table above.
 
 **This is not a re-measurement of that table.** It is a different decomposition
@@ -186,5 +186,5 @@ encode for the same resource type, with the ratio widest on
 an order of magnitude above `Patient`.
 
 None of this is gated on: driver 1 is a hypothesis and nothing in the programme
-depends on the outcome. It is recorded so that the comparison in M4 measures the
-change rather than the machine.
+depends on the outcome. It is recorded so that the comparison at the flip
+measures the change rather than the machine.

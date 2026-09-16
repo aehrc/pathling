@@ -76,12 +76,14 @@ repository `CLAUDE.md` chain (`CONTRIBUTING.md`, `server/CONTRIBUTING.md`,
 - **Commit messages** — `<type>: <objective>`, describing why rather than which
   files.
 - **Branching** — issue branch `issue/2367` off `main`; the programme lands as
-  several pull requests against it.
+  several pull requests against it. Every milestone ends green and none runs red
+  in the middle, so there is no span that has to land as one unreleasable piece.
 
 | Violation | Why needed | Simpler alternative rejected because |
 | --- | --- | --- |
 | The new encoding duplicates schema derivation that `SchemaConverter` performs today | `SchemaConverter` reaches Catalyst through the `CustomCoder` schema hook, and the existing encoders must not be modified | Reusing it in place would either require modifying `encoders` (excluded by decision) or carrying its Catalyst dependency into the new module (excluded by FR-048) |
 | Two layouts exist in the build for the duration | The old encoders are retained for migration tooling | Retiring them now would leave no path for users to migrate data at rest |
+| The query engine reads both layouts from M2 until T100e removes the previous reader in M6 | It is what lets the engine be rewritten behind a green build and makes the switch a writer flip rather than a migration; it also keeps the switch reversible until M6 | Converting the engine by replacement was the previous plan and produced a span with no green build at all (decision 40, reversed). The cost is recorded as decision 51 and retired by a named task rather than left open |
 | FHIR objects still appear inside a UDF for XML and Bundle ingest | Neither has a Spark-native path that preserves FHIR semantics | A second parser for each would split the codebase permanently; UDFs are public, stable Spark API, so the constraint is met |
 
 ## Project Structure

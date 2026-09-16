@@ -62,6 +62,18 @@ Delta 4.0.0 against Spark source 4.0.2, and are recorded in full in
   the cost but risks permanence); keeping the old encoders usable in tests
   (fixture *construction* migrates gradually but the data is then unreadable by
   the engine, so nothing is actually gained).
+- **Addendum — the first alternative is adopted for the transition.** The
+  decision above holds as an *end state*: on completion the engine reads only the
+  new layout. It does not hold for the path there. From M2 the engine reads both,
+  selected from the resolved schema, which is what lets the engine be rewritten
+  behind a green build and makes the switch a writer flip. The stated objection —
+  that carrying two conventions risks permanence — is answered by naming the
+  sunset rather than by refusing the alternative: T100e removes the previous
+  reader in M6, T100f settles FR-053's end-state wording, and decision 51 records
+  the arms as a deliberate trade. The consequence above also softens: the test
+  estate no longer has to move in one step, because the dense dimension carries
+  the suite while the pruned one is switched on. See decisions 47, 48 and 51, and
+  the addendum to 40.
 
 ---
 
