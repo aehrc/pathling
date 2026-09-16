@@ -48,7 +48,7 @@ what says which tasks are where.
 | Milestone | Phases | Tasks | Delivers | User-visible change |
 | --- | --- | --- | --- | --- |
 | **M1 The layout** | 1–6 | 61 | FHIR JSON to the new layout and back through `io`, losslessly except primitive ids and extensions. No annotations. Schema derivation, the canonical structure and the one shared merge. Both risk gates resolved | None |
-| **M2 The engine, layout-tolerant** | 7–10 | 66 | The engine reads both layouts by dispatch, computes every value without annotations, tolerates a fitted schema, and reads divergent files as one dataset. Green on the previous layout throughout | Two, both in Phase 10: the Delta upsert path widens the target where it used to refuse (T117a, decision 41), and reading raw files merges their schemas with a supplied-schema opt-out (T118). Move those three tasks to M4 if the milestone must be invisible |
+| **M2 The engine, layout-tolerant** | 7–10 | 69 | The engine reads both layouts by dispatch, computes every value without annotations, tolerates a fitted schema, and reads divergent files as one dataset. Green on the previous layout throughout | Two, both in Phase 10: the Delta upsert path widens the target where it used to refuse (T117a, decision 41), and reading raw files merges their schemas with a supplied-schema opt-out (T118). Move those three tasks to M4 if the milestone must be invisible |
 | **M3 Ingest formats** | 11 | 5 | Bundles and XML on the new path, each round-tripped through the M1 harness | None |
 | **M4 The flip** | 12–14 | 28 | The public API writes the new layout, earlier layouts are detected, the layout is documented and the benchmark is recorded | The flag day |
 | **M5 The gaps** | 15–16 | 21 | Annotations emitted and read, one kind at a time; primitive ids and extensions written and navigable | Performance, then new capability |
@@ -64,8 +64,8 @@ what says which tasks are where.
 | 4 US1 The storage layout | T050, T052, T056, T057, T057a, T057b, T059, T060, T062, T067, T067a | 11 |
 | 5 US2 Lossless round trip | T071–T078, T078a, T078b, T079, T080 | 12 |
 | 6 US8 The module boundary | T125–T128 | 4 |
-| 7 Engine foundations | T020–T027, T027a, T049a, T034–T038, T037a, T038a–T038e, T038j–T038l, T110a, T101–T107, T110–T113 | 36 |
-| 8 US3 The engine reads both layouts | T083–T089, T091–T094, T094a, T095–T099 | 17 |
+| 7 Engine foundations | T020–T027, T027a, T049a, T034–T038, T037a, T038a–T038e, T038j–T038m, T110a, T101–T107, T110–T113 | 37 |
+| 8 US3 The engine reads both layouts | T083–T089, T089a, T091–T094, T094a, T094b, T095–T099 | 19 |
 | 9 US4 Shape reconciliation (US4's absent-element half is in Phase 7) | T104a, T109, T113a, T113b | 4 |
 | 10 US5 Divergent files read as one dataset | T114–T117, T117a, T118, T118a–T118c | 9 |
 | 11 Remaining ingest formats | T058, T058a, T068, T069, T069a | 5 |
@@ -326,6 +326,7 @@ and that is much cheaper to discover here than after US4 is built on it.
 it costs little, and nothing in M1 depends on the answer. T009a did so, and it
 passed.
 
+- [ ] T038m **Gate.** Spike whether the traversal expression can normalise the previous layout to the new one, rather than the engine dispatching on it. Three questions, in order. Can the expression derive the previous layout's root extension map from its own child, by walking the child's extraction chain to the resource column and emitting a struct-field access beside it? That is built only from resolved leaves, which is what `CheckAnalysis` requires of a replacement, so it should hold. Does it still hold where the child is an `UnresolvedNamedLambdaVariable`, inside the `transform` the engine wraps every repeating element in? The walk terminates at the lambda variable there, not at the resource, so the map is not self-derivable and must be supplied from the handle T094 retains — confirm whether that makes the extension branch binary, and whether a binary form still survives the analyzer on T009a's terms. And is per-level normalisation sufficient for a self-recursive type, given the expression is reapplied at every subsequent step? **On failure of the first two**, the design reverts to dispatch in the collection classes as decision 47 originally described, and T094b, T095 to T098 and T100e are rewritten against it. Run it beside T038a.
 - [ ] T038a Test that the tolerant traversal expression survives the analyzer when constructed over an **unresolved** attribute — that nothing probes `dataType` before the child resolves and forces the replacement early — in `encoders/src/test/scala/au/csiro/pathling/sql/ResolveOrNullTest.scala`. This is the one residual risk of the chosen approach (R-005) and is not testable from PySpark. T009a already answered it in the affirmative as a spike, so this is the durable form of a known-passing test rather than an open question; cover the lambda-variable case too, which is the latest-resolving child the engine produces.
 - [ ] T038b [P] Test that the expression resolves to a direct field reference where the input structure carries the field, and to a null of the declared fallback type where it does not, in the same file.
 - [ ] T038c [P] Test the fallback types against FR-055: a singular primitive takes the definition's type, a repeating primitive an array of it, a singular complex element the bottom type, a repeating complex element an array of the bottom type. Assert that a repeating fallback survives `transform` — bare `void` does not — and that a complex fallback combines with a populated structure, which a concrete minimal structure does not. In the same file.
@@ -400,11 +401,12 @@ suite over the new layout.*
 than read from an annotation. That is what FR-022 requires in any case; the
 annotation fast paths are T086a, T087a, T095a and T096a, in M5.*
 
-*The dispatching expression must satisfy one rule: within a layout every branch
-yields the same `dataType`, which is what keeps T108 and FR-054 true. Across
-layouts the branches need only agree on the FHIRPath-visible type, because T110
-applies the dispatcher at every subsequent traversal step. Recorded as decision
-47.*
+*The dispatching expression must satisfy one rule, and it now holds without
+qualification: **every branch yields the same `dataType`**, across layouts as
+well as within one, because T094b normalises the previous layout to the new
+layout's shape rather than carrying it forward. That is what keeps T108 and
+FR-054 true. Decision 47 originally had to weaken this across layouts; decision
+55 records why it no longer does.*
 
 ### Tests ⚠️ write first, confirm failing
 
@@ -414,6 +416,7 @@ applies the dispatcher at every subsequent traversal step. Recorded as decision
 - [ ] T086 [P] [US3] Test that decimal comparison, arithmetic and ordering over lexically stored decimals match the current results, and that the same operations over a previous-layout `DECIMAL(32,6)` column continue to match them, in `fhirpath/src/test/java/au/csiro/pathling/fhirpath/collection/DecimalCollectionTest.java`. The numeric annotation as a fast path is T086a, in M5.
 - [ ] T087 [P] [US3] Test that cross-unit quantity comparison computes canonicalisation when no annotation is present, and that it continues to work over a previous-layout quantity carrying `_value_canonicalized` and `_code_canonicalized`, in `fhirpath/src/test/java/au/csiro/pathling/fhirpath/collection/QuantityCollectionTest.java`. The `_canonical_exact` annotation as a fast path is T087a, in M5.
 - [ ] T088 [P] [US3] Test that `resolve()` works without a stored versioned-key column, reusing the fixtures from T020–T023, in `fhirpath/src/test/java/au/csiro/pathling/fhirpath/function/ResolveFunctionDslTest.java`.
+- [ ] T089a [P] [US3] Test that the traversal expression normalises each previous-layout discriminator to the new-layout shape, in `encoders/src/test/scala/au/csiro/pathling/sql/ResolveOrNullTest.scala`: a `DECIMAL(32,6)` value with its `_scale` companion, a quantity carrying `_value_canonicalized` and `_code_canonicalized`, an element carrying `_fid` against the resource's root map, and a stored versioned key. Assert the output type is the new-layout type in every case and **equal to the type the same traversal yields over new-layout input**, which is the property that lets decision 47 drop its cross-layout carve-out. Cover the lambda case T038m settles.
 - [ ] T089 [US3] Test that the full suite passes over files written with no annotations (FR-022, SC-004), in `fhirpath/src/test/java/au/csiro/pathling/test/AnnotationFreeSuiteTest.java`. Until M5 this is the only mode the layout is written in, so this asserts the ordinary path rather than an edge case; the annotated case is covered per kind in M5, and T090 asserts the choice is made from the schema.
 
 ### Implementation
@@ -423,10 +426,11 @@ applies the dispatcher at every subsequent traversal step. Recorded as decision
 - [ ] T093 [P] [US3] Remove index-based assumptions from `fhirpath/src/main/java/au/csiro/pathling/fhirpath/collection/CodingCollection.java`, `fhirpath/src/main/java/au/csiro/pathling/fhirpath/FhirPathType.java` and `library-api/src/main/java/au/csiro/pathling/library/TerminologyHelpers.java`.
 - [ ] T094 [US3] Implement sibling resolution — resolve a named sibling of a primitive within its parent structure — in `fhirpath/src/main/java/au/csiro/pathling/fhirpath/column/DefaultRepresentation.java`, retaining the parent handle and element name on traversal to a primitive. This one mechanism serves three consumers: annotations, primitive metadata (R-014), and the previous layout's root extension map (T094a).
 - [ ] T094a [US3] Remove `extensionMapColumn` from the collection hierarchy under `fhirpath/src/main/java/au/csiro/pathling/fhirpath/collection/`, deriving the root extension map at the traversal site from the handle T094 retains. The parameter currently threads through fourteen classes for the one reason `ResourceCollection` states in its javadoc — preserving the resource-level map across copies with a different column representation — which T094 makes unnecessary. Layout-independent, so it can land as soon as T094 does. Recorded as decision 48.
-- [ ] T095 [US3] Decode decimals from the lexical representation, dispatching on the resolved field type so a previous-layout `DECIMAL(32,6)` column with its `_scale` companion still decodes, and keeping query-time precision unchanged (FR-035), in `fhirpath/src/main/java/au/csiro/pathling/fhirpath/collection/DecimalCollection.java`. The computed path is the primary implementation, not a fallback: nothing annotated exists until M5. The fast path is T095a.
-- [ ] T096 [US3] Move quantity handling to the FHIR structure, computing canonicalisation from the structure itself, and dispatching on the resolved schema so a previous-layout quantity carrying `_value_canonicalized` and `_code_canonicalized` still resolves, in `fhirpath/src/main/java/au/csiro/pathling/fhirpath/encoding/QuantityEncoding.java` and `fhirpath/src/main/java/au/csiro/pathling/fhirpath/collection/QuantityCollection.java`. Reading the `_canonical_exact` annotation in preference to the specification's narrower `_canonical` is T096a, in M5.
-- [ ] T097 [US3] Dispatch between inline extension traversal and the previous layout's `map[element._fid]` lookup, on whether the resolved structure carries `_fid` and the resource carries `_extension`, in `fhirpath/src/main/java/au/csiro/pathling/fhirpath/collection/Collection.java` and `fhirpath/src/main/java/au/csiro/pathling/fhirpath/collection/ResourceCollection.java`. The previous access is a fixed shape from a single root column named in exactly one file, so both layouts cost one expression between them (decision 48). The two branches differ in the extension structure's own shape, which is why the dispatcher must be applied recursively rather than once.
-- [ ] T098 [US3] Compute reference keys from the conformant identifier elements rather than a stored versioned-key column, using the stored column where the resolved schema still carries one, in the reference resolution and join machinery under `fhirpath/src/main/java/au/csiro/pathling/fhirpath/`. The computed path is primary; FR-033 leaves a precomputed key to be added as an annotation if T136 shows joins need it.
+- [ ] T094b [US3] Implement previous-layout normalisation as branches of the traversal expression in `encoders/src/main/scala/au/csiro/pathling/sql/ResolveOrNull.scala`, chosen from the resolved schema once per schema and never per row. This is the single site at which the two layouts meet: above it the engine sees only the new layout, which is what lets T095 to T098 be written once rather than as dual paths, and what reduces T100e to deleting these branches. The four discriminators are the ones decision 47 lists. Normalisation is per level rather than per subtree, which is sufficient because T110 reapplies the expression at every subsequent step; that matters for extensions, whose type is self-recursive and whose expansion is therefore infinite.
+- [ ] T095 [US3] Decode decimals from the lexical representation, keeping query-time precision unchanged (FR-035), in `fhirpath/src/main/java/au/csiro/pathling/fhirpath/collection/DecimalCollection.java`. Written against the new layout only: T094b normalises a previous-layout `DECIMAL(32,6)` column with its `_scale` companion before it reaches here, so this class carries no second path. The computed path is the primary implementation, not a fallback, since nothing annotated exists until M5. The fast path is T095a.
+- [ ] T096 [US3] Move quantity handling to the FHIR structure, computing canonicalisation from the structure itself, in `fhirpath/src/main/java/au/csiro/pathling/fhirpath/encoding/QuantityEncoding.java` and `fhirpath/src/main/java/au/csiro/pathling/fhirpath/collection/QuantityCollection.java`. Reading the `_canonical_exact` annotation in preference to the specification's narrower `_canonical` is T096a, in M5.
+- [ ] T097 [US3] Implement inline extension traversal in `fhirpath/src/main/java/au/csiro/pathling/fhirpath/collection/Collection.java` and `fhirpath/src/main/java/au/csiro/pathling/fhirpath/collection/ResourceCollection.java`, against the new layout only. The previous layout's root map keyed by `_fid` is normalised to the inline shape by T094b before it reaches here, so there is no second branch in the engine. This is what makes decision 48's claim literally true rather than nearly so.
+- [ ] T098 [US3] Compute reference keys from the conformant identifier elements rather than a stored versioned-key column, in the reference resolution and join machinery under `fhirpath/src/main/java/au/csiro/pathling/fhirpath/`. The computed path is primary; FR-033 leaves a precomputed key to be added as an annotation if T136 shows joins need it.
 - [ ] T099 [P] [US3] Replace the canonicalised-quantity field-name constants in `fhirpath/src/main/java/au/csiro/pathling/search/filter/FhirFieldNames.java` and update the search matchers that use them.
 
 **Checkpoint**: The engine reads the new layout over the existing fixtures **and still reads the previous one**. The public API has not switched yet, and the build is green.
@@ -726,7 +730,7 @@ source, T134a raises the rewrite tool as a follow-up, and FR-051's retention of
 - [ ] T135 Benchmark the two ingest mechanisms against each other — the chosen transform approach and direct parsing into a variant — and record the comparison in `evidence/ingest-comparison.md`. This records evidence for a future release rather than deciding anything here: the mechanism is settled by this point, so the lexical-decimal limitation stands for this programme, pinned by T078 and documented per FR-020 (R-009).
 - [ ] T137 Correct or retire `openspec/parquet-on-fhir-design.md`, which this specification supersedes: the stored decimal precision is wrong, the nested-pruning risk does not apply to the engine and its proposed mitigation was insufficient, and the first argument against schema inference does not hold for FHIR JSON.
 - [ ] T138 Remove or archive the five superseded change directories under `openspec/changes/` belonging to this programme.
-- [ ] T100e Remove the previous-layout reader and the dispatch arms it serves — in `DecimalCollection`, `QuantityCollection`, `QuantityEncoding`, `Collection`, `ResourceCollection` and the reference machinery — so the engine reads only the new layout. Scope is set by T049a and the wording by T100f. This is what finally makes FR-053 true, and it is why decision 51 records the dispatch arms as a deliberate trade rather than an oversight.
+- [ ] T100e Remove the previous-layout normalisation branches from the traversal expression (T094b), so the engine reads only the new layout. One site, not six: because the two layouts meet only inside that expression, nothing in `DecimalCollection`, `QuantityCollection`, `QuantityEncoding`, `Collection`, `ResourceCollection` or the reference machinery carries a second path to unpick. Scope is set by T049a and the wording by T100f. This is what finally makes FR-053 true, and it is why decision 51 records the dispatch arms as a deliberate trade rather than an oversight.
 - [ ] T139 Run every scenario in [quickstart.md](quickstart.md) as final validation.
 
 ---
@@ -779,9 +783,9 @@ trusting the numbering.
 | FR-030 An absent primitive carries its definition-derived type | T107, T108a, T130 |
 | FR-031 Coding decoded by name | T083, T084, T091 |
 | FR-032 Terminology on narrowed Coding | T085, T092, T093 |
-| FR-033 Reference keys without a stored column | T088, T098 |
+| FR-033 Reference keys without a stored column | T088, T098, T094b |
 | FR-034 Primitive id and extension navigation | T120–T124 (M5) |
-| FR-035 Query-time decimal precision unchanged | T086, T095, T130, T086a, T095a |
+| FR-035 Query-time decimal precision unchanged | T086, T094b, T095, T130, T086a, T095a |
 | FR-036 Unnesting never reduced to a single leaf | T026, T027, T116 |
 | FR-054 Traversal tolerant of an absent field, decided after schema resolution | T038a, T038b, T038d, T038e, T110, T110a (M2, all in Phase 7), T108 (M4) |
 | FR-055 Absent elements typed by the definitions or the bottom type | T038c, T038e, T105, T110 |
@@ -805,7 +809,7 @@ trusting the numbering.
 | FR-050 No encoder or hand-authored expression trees | T127 |
 | FR-051 Existing implementation untouched | T128, T128a |
 | FR-052 Query toolkit preserved and not relocated | T038e, T038l, T128, T128a |
-| FR-053 Engine reads only the new layout | T100f, T100e (M6). T100 confirms the new layout is read on every path but **does not** assert the previous reader is gone; the engine reads both from M2 until T100e |
+| FR-053 Engine reads only the new layout | T100f, T100e (M6), T038m, T094b. T100 confirms the new layout is read on every path but **does not** assert the previous reader is gone; the engine reads both from M2 until T100e |
 
 And the success criteria:
 
@@ -878,8 +882,12 @@ And the success criteria:
   depend on neither.
 - Phase 8 (US3) depends on the whole of Phase 7. T083–T085 and T091–T093 (Coding by
   name) are correct under both layouts and may land at any point, including
-  during M1; the remainder of the phase is the layout dispatch and cannot.
+  during M1; the remainder of the phase is the layout normalisation and cannot.
   T094a depends on T094 and on nothing else.
+- T094b is the one place the two layouts meet (decision 55), so T095 to T098 are
+  written against the new layout only and do not wait on each other. It depends
+  on T038m having settled the lambda case, and on T094 if that gate says the
+  extension branch needs the resource handle supplied rather than derived.
 - Phase 9 (US4) depends on T038l for the reconciliation expression, not on the
   absent-element work that moved out of it.
 - Phase 10 (US5): T114, T115, T117, T117a, T118 and T118a depend on M1 for a

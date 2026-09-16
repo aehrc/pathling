@@ -557,14 +557,19 @@ lexical string, `_value_canonicalized` against `__<field>_canonical_exact`, a
 `_fid` field and a root `_extension` map against inline extensions, a stored
 versioned key against its absence.
 
-*The rule that keeps this sound.* Within a layout, every branch of a dispatching
-replacement MUST yield the same `dataType`. That is what keeps T108's
-fitted-versus-dense equality true and therefore FR-054. Across layouts the
-branches need only agree on the FHIRPath-visible type — the extension structures
-genuinely differ in shape between layouts — because T110 applies the dispatcher
-at every subsequent traversal step, so a differing internal shape is absorbed as
-traversal continues. Two layouts never meet inside one query, so FR-056
-reconciliation is unaffected.
+*The rule that keeps this sound.* Every branch of a dispatching replacement MUST
+yield the same `dataType`. That is what keeps T108's fitted-versus-dense
+equality true and therefore FR-054. **This entry originally weakened the rule
+across layouts**, requiring only agreement on the FHIRPath-visible type, because
+the extension structures genuinely differ in shape and the difference was
+absorbed as traversal continued. Decision 55 removes the need for that: the
+previous layout is normalised to the new layout's shape inside the expression,
+so the strong form holds everywhere. Two layouts never meet inside one query, so
+FR-056 reconciliation is unaffected.
+
+*Where the dispatch lives — superseded.* This entry placed it in the engine's
+collection classes. Decision 55 moves it into the traversal expression, which is
+the same mechanism applied at one site rather than six.
 
 *The rule this inherits.* FR-023 requires an annotation's use to be decided from
 the schema rather than per row. Layout dispatch is held to the same standard: it
@@ -580,6 +585,11 @@ Inspection says otherwise. `_extension` is named in exactly one file in the whol
 engine, `ResourceCollection`, and the access itself is one fixed shape in
 `Collection.traverseExtension` — the root map, keyed by the element's own `_fid`.
 There is nothing to keep alive beyond that one expression.
+
+That the map is reached by ordinary traversal of the resource's own column,
+rather than as a separate top-level column, is also what makes decision 55
+possible: it puts the map within reach of the traversal expression's own child
+chain, so normalisation needs no reference the expression cannot carry.
 
 Better than that, supporting both is a net simplification. `extensionMapColumn`
 is a constructor parameter on fourteen collection classes, carried for the single
@@ -656,7 +666,9 @@ make the flip a writer flip rather than a migration. T100e removes them in M6.
 
 This is the cost that replaces the red window, and it is worth naming rather than
 discovering: some of the work in M2 exists to buy a green build and a safe flip,
-not to ship. What it buys in exchange is a true before-and-after over the same
+not to ship. **Decision 55 shrinks it considerably**: the arms are now branches
+of one expression rather than second paths through six files, so what M6 deletes
+is a single site and the collection classes were only ever written once. What it buys in exchange is a true before-and-after over the same
 data for T110 — the riskiest change in the programme — which the previous
 sequencing could not offer, because under it there was no green baseline to
 compare against.
@@ -745,3 +757,61 @@ which is precisely the analyzer-ordering fragility T038d exists to guard against
 whereas the new one is a declared replacement the analyzer resolves normally.
 
 T110a settles it before T110 lands, and records which sites each mechanism owns.
+
+## 55. The two layouts meet inside the traversal expression, and nowhere else
+
+Decision 47 established that the engine converts by dispatch rather than
+replacement. It placed the dispatch in the engine: the decimal collection, the
+quantity collection and encoding, the base and resource collections, and the
+reference machinery each learned to read both layouts. That is four sites, six
+files, and a second path through each of them.
+
+It does not have to be there. The traversal expression already resolves against
+the input schema, so it can **normalise** the previous layout to the new one
+instead of passing the difference upward. Above the expression the engine then
+sees one layout, and every collection class is written once.
+
+*What made this look impossible, and why it was wrong.* The objection was
+extensions. The previous layout keys a resource-level map by each element's
+field identifier, and that map is not the child being traversed, so reaching it
+appeared to need a reference the expression cannot carry: the analyzer spike
+found that `CheckAnalysis` rejects a `RuntimeReplaceable` whose replacement is
+unresolved, which rules out naming a column from inside the replacement.
+
+The map is not a separate column. `ResourceCollection` reaches it by ordinary
+traversal of the resource's own column representation, so it is a field on the
+resource struct. The expression can therefore walk its own child's extraction
+chain down to the resource root and emit a struct-field access beside it — built
+entirely from resolved leaves, which is exactly what the spike says is required.
+The expression stays unary and no unresolved reference is introduced.
+
+*What this buys.*
+
+- **One site instead of six.** T094b holds every normalisation branch. T095 to
+  T098 become new-layout implementations with no second path.
+- **A single-file removal.** T100e deletes those branches. Decision 51's
+  trade — building in M2 what M6 deletes — shrinks to that one expression.
+- **A rule restored.** Decision 47 had to weaken its own soundness rule across
+  layouts, because the extension structures genuinely differ in shape, and lean
+  on the dispatcher being reapplied at each step to absorb the difference. Under
+  normalisation every branch yields the new layout's shape outright, so the
+  strong form — every branch yields the same `dataType` — holds everywhere.
+  T108's fitted-versus-dense equality and FR-054 rest on the strong form.
+
+*What is not yet settled, and why T038m is a gate.* Two things. Inside the
+`transform` that wraps every repeating element the child is an
+`UnresolvedNamedLambdaVariable`, and the walk to the resource root terminates
+there, so the map is not self-derivable; it must be supplied from the handle
+T094 retains, which would make the extension branch binary and is a change to
+the construction the spike validated. And normalisation is necessarily per level
+rather than per subtree, since the extension type is self-recursive and its
+expansion infinite — sufficient because T110 reapplies the expression at every
+subsequent step, but worth proving rather than assuming. If either fails, the
+design reverts to decision 47 as originally written.
+
+*The cost that stays.* A previous-layout decimal is normalised to its lexical
+form and then parsed back, where dispatch in the decimal collection could have
+read the stored numeric directly. The same holds for a stored canonicalised
+quantity and a stored reference key. The previous layout is transitional and
+T136 measures the computed paths, so this is recorded rather than treated as an
+objection.

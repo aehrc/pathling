@@ -387,9 +387,11 @@ resolves no Spark Catalyst dependency, enforced by the build.
   required for correctness.
 - **FR-023**: Whether an annotation is used MUST be decided from the schema
   rather than per row. **Staged to M5**, because it presupposes that an
-  annotation exists to choose. The same rule governs the layout dispatch the
-  engine performs from M2: which layout a column is read as MUST be settled from
-  the resolved schema, never per row.
+  annotation exists to choose. The same rule governs the layout normalisation
+  the engine performs from M2: which layout a column is read as MUST be settled
+  from the resolved schema, never per row. That normalisation happens at one
+  site, the traversal expression, so that no code above it is written twice and
+  removing it later touches one file (decision 55).
 
 ### Query engine
 
