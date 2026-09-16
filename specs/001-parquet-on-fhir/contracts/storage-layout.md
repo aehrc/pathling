@@ -111,8 +111,11 @@ not additive: a transactional table refuses the merge, and only a destructive
 replace gets past it.
 
 Pathling's sources detect the previous layout and reject it at read time, naming
-the resource type, the detected layout and the remedy. The check can be disabled
-per source for the case where conforming data cannot be classified.
+the resource type, the detected layout and the remedy. Its sinks do the same for
+the target they write into, before any schema merge is attempted, so a write
+into a dataset written by an earlier release cannot quietly leave one table
+carrying both layouts. The check can be disabled per source for the case where
+conforming data cannot be classified.
 
 **Provisional, pending T049a.** The query engine itself retains a reader for the
 previous layout from M2 until it is removed in M6, which is what lets the engine

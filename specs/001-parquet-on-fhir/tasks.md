@@ -33,8 +33,9 @@ user story, so each story can be implemented and tested independently.
 
 ## Milestones
 
-Six. **M1, M2, M3 and M6 change nothing a user can observe, and each is
-independently shippable. M4 is the only breaking release.** M5 lands as a series
+Six. **M1, M3 and M6 change nothing a user can observe, and each is independently
+shippable. M2 changes two things, both in Phase 10 and both named in its row.
+M4 is the only breaking release.** M5 lands as a series
 of independent increments: each annotation kind ships on its own, and primitive
 ids and extensions follow them.
 
@@ -47,11 +48,11 @@ what says which tasks are where.
 | Milestone | Phases | Tasks | Delivers | User-visible change |
 | --- | --- | --- | --- | --- |
 | **M1 The layout** | 1–6 | 61 | FHIR JSON to the new layout and back through `io`, losslessly except primitive ids and extensions. No annotations. Schema derivation, the canonical structure and the one shared merge. Both risk gates resolved | None |
-| **M2 The engine, layout-tolerant** | 7–10 | 61 | The engine reads both layouts by dispatch, computes every value without annotations, tolerates a fitted schema, and reads divergent files as one dataset. Green on the previous layout throughout | None |
+| **M2 The engine, layout-tolerant** | 7–10 | 66 | The engine reads both layouts by dispatch, computes every value without annotations, tolerates a fitted schema, and reads divergent files as one dataset. Green on the previous layout throughout | Two, both in Phase 10: the Delta upsert path widens the target where it used to refuse (T117a, decision 41), and reading raw files merges their schemas with a supplied-schema opt-out (T118). Move those three tasks to M4 if the milestone must be invisible |
 | **M3 Ingest formats** | 11 | 5 | Bundles and XML on the new path, each round-tripped through the M1 harness | None |
-| **M4 The flip** | 12–14 | 25 | The public API writes the new layout, earlier layouts are detected, the layout is documented and the benchmark is recorded | The flag day |
+| **M4 The flip** | 12–14 | 28 | The public API writes the new layout, earlier layouts are detected, the layout is documented and the benchmark is recorded | The flag day |
 | **M5 The gaps** | 15–16 | 21 | Annotations emitted and read, one kind at a time; primitive ids and extensions written and navigable | Performance, then new capability |
-| **M6 Completion** | 17 | 11 | The previous-layout reader removed, FR-053 tightened, the superseded design retired, follow-ups raised | None |
+| **M6 Completion** | 17 | 13 | The previous-layout reader removed, FR-053 tightened, the superseded design retired, follow-ups raised | None, **contingent on T049a**: if the source boundary routes earlier-layout data rather than refusing it, the reader T100e removes is a product feature and its removal is breaking |
 
 ### Phase map
 
@@ -63,30 +64,37 @@ what says which tasks are where.
 | 4 US1 The storage layout | T050, T052, T056, T057, T057a, T057b, T059, T060, T062, T067, T067a | 11 |
 | 5 US2 Lossless round trip | T071–T078, T078a, T078b, T079, T080 | 12 |
 | 6 US8 The module boundary | T125–T128 | 4 |
-| 7 Engine foundations | T020–T027, T027a, T034–T038, T038a–T038e, T038j–T038l | 22 |
+| 7 Engine foundations | T020–T027, T027a, T049a, T034–T038, T037a, T038a–T038e, T038j–T038l, T110a, T101–T107, T110–T113 | 36 |
 | 8 US3 The engine reads both layouts | T083–T089, T091–T094, T094a, T095–T099 | 17 |
-| 9 US4 Queries over a fitted schema | T101–T104, T104a, T105–T107, T109–T113, T113a, T113b | 15 |
-| 10 US5 Divergent files read as one dataset | T114–T117, T117a, T118, T118a | 7 |
+| 9 US4 Shape reconciliation (US4's absent-element half is in Phase 7) | T104a, T109, T113a, T113b | 4 |
+| 10 US5 Divergent files read as one dataset | T114–T117, T117a, T118, T118a–T118c | 9 |
 | 11 Remaining ingest formats | T058, T058a, T068, T069, T069a | 5 |
-| 12 The public API switch | T070, T081, T082, T100, T100b, T100c, T100d, T108, T108a, T128a | 10 |
-| 13 US7 Detection of earlier layouts | T049a, T039–T049 | 12 |
+| 12 The public API switch | T070, T081, T082, T100, T100b, T100c, T100d, T100g, T108, T108a, T128a | 11 |
+| 13 US7 Detection of earlier layouts | T039, T039a, T040–T042, T042a, T043–T046, T046a, T047–T049 | 14 |
 | 14 Documentation and measurement | T129, T130, T136 | 3 |
 | 15 Annotations | T050a, T053–T055, T063–T066, T086a, T087a, T090, T095a, T096a | 13 |
 | 16 US6 Primitive ids and extensions | T051, T061, T078c, T120–T124 | 8 |
-| 17 Completion | T100f, T100e, T131–T135, T137–T139 | 11 |
+| 17 Completion | T100f, T100e, T131–T134, T134a–T134c, T135, T137–T139 | 13 |
 
-**M1, M2 and M3 change nothing a user can observe.** `PathlingContext.encode`,
-`PathlingContext.decode` and `NdjsonSink` keep writing and reading the previous
-layout throughout; the new path is reachable only through `io`'s own entry points
-and the test estate. This is why T070, T081 and T082 — the public API rewiring —
-sit in M4 rather than in US1 and US2 where the rest of their stories live.
+**M1 and M3 change nothing a user can observe, and M2 changes only what its
+milestone row names.** `PathlingContext.encode`, `PathlingContext.decode` and
+`NdjsonSink` keep writing and reading the previous layout throughout; the new
+path is reachable only through `io`'s own entry points and the test estate. This
+is why T070, T081 and T082 — the public API rewiring — sit in M4 rather than in
+US1 and US2 where the rest of their stories live. What M2 does change is the two
+sink and source behaviours in Phase 10, which are reachable through the public
+API and are listed against it.
 
 **M2 keeps the engine green on the previous layout.** Its conversion is by
 addition rather than replacement: each traversal expression dispatches on the
 resolved schema, so the engine reads both layouts for the length of the
-transition. The test framework's schema mode becomes a dimension rather than a
-default (T037), so a pruned schema is never the only signal. **There is
-therefore no window without a green build**, which reverses decision 40.
+transition. The test framework gains two dimensions rather than one — the schema
+mode (T037) and the layout (T037a) — because how much of a layout a schema
+carries and which conventions its fields follow are separate questions, and only
+the first was ever addressed. Tolerant traversal (T110) lands ahead of both, so
+neither dimension can be switched onto something the engine cannot read.
+**There is therefore no window without a green build**, which reverses decision
+40. Decision 52 records the three axes this rests on.
 
 **M4 is the flag day.** The public API switches, detection of earlier layouts
 lands beside it, and the layout is documented. Everything it depends on — the
@@ -280,6 +288,7 @@ nothing here is user-visible and nothing here is a flag day.
 
 **Purpose**: Everything the engine stories depend on. Blocks all of them.
 
+
 ### Coverage that must land before the conventions change (tests only)
 
 *First in the milestone: these pin behaviour that Phase 8 changes, and they must
@@ -294,13 +303,13 @@ exist before the fixture mechanism moves underneath them.*
 - [ ] T026 [P] Add a divergent-schema fixture under `fhirpath/src/test/resources/viewTests/` whose two files deliberately disagree on a leaf of a repeating element, with a view unnesting that element and projecting only that leaf.
 - [ ] T027 Assert against the real engine that the divergent-schema fixture returns resources from both files (FR-036). This pins the unnesting constraint; if it fails, unnesting has been reshaped into a leaf-level read and rows are being lost silently. T027a extends it once tolerant traversal exists.
 
-### Test infrastructure for the flag day
+### The gate on how far the dispatch arms are built
 
-- [ ] T034 Route the YAML conformance runner's fixture factory through the JSON path with an explicit derived schema, in `fhirpath/src/test/java/au/csiro/pathling/test/yaml/`.
-- [ ] T035 Route the SQL-on-FHIR view test pipeline through the JSON path rather than parsing to objects and encoding, in `fhirpath/src/test/java/au/csiro/pathling/views/FhirViewTest.java`. The local fixtures and the submodule fixtures come along unchanged.
-- [ ] T036 Route the object-based test data source through the category-C path — construct, serialise to JSON, read with the derived schema — so the fluent builders survive unchanged, in `fhirpath/src/test/java/au/csiro/pathling/test/`.
-- [ ] T037 Add the schema mode switch to the test framework, defaulting to pruned, opt-in dense per test, switchable with `-Dpathling.testSchemaMode=dense`.
-- [ ] T038 Add a test asserting the active schema mode matches the requested one and failing loudly otherwise. This repository has precedent for test configuration that silently does nothing; a mode switch that fails quietly would leave a green build in a mode nobody is running.
+*Moved here from Phase 13. It decides the coverage standard for the Phase 8
+dispatch arms, so it cannot be settled two milestones after they are written.
+Its wiring stays in Phase 13.*
+
+- [ ] T049a **Gate.** Settle whether the source boundary refuses earlier-layout data, refuses by default but routes under the existing per-source opt-out, or routes by default. The engine reads both layouts as of Phase 8, so routing is now possible where it was not when US7 was written. The answer decides three things beyond this phase: whether FR-046 stands as written, whether Phase 8's dispatch arms are transitional scaffolding or product code deserving product-grade coverage (decision 51), and what T100e is permitted to delete. Settle it before Phase 8 opens, and therefore well before T039, which is where the answer is wired in.
 
 ### Tolerant traversal and type reconciliation
 
@@ -321,16 +330,56 @@ passed.
 - [ ] T038b [P] Test that the expression resolves to a direct field reference where the input structure carries the field, and to a null of the declared fallback type where it does not, in the same file.
 - [ ] T038c [P] Test the fallback types against FR-055: a singular primitive takes the definition's type, a repeating primitive an array of it, a singular complex element the bottom type, a repeating complex element an array of the bottom type. Assert that a repeating fallback survives `transform` — bare `void` does not — and that a complex fallback combines with a populated structure, which a concrete minimal structure does not. In the same file.
 - [ ] T038d [P] Test that a plan using the expression prunes identically to one written with a direct field reference, by comparing `ReadSchema` from the executed plan (finding 14), in the same file. The rewrite runs before every pruning rule, so this must hold; it is the assertion that a future Spark upgrade has not reordered the optimizer batches.
-- [ ] T038e Implement the tolerant traversal expression as a `RuntimeReplaceable` in `encoders/src/main/scala/au/csiro/pathling/sql/ResolveOrNull.scala`, beside the existing query-time expressions in `encoders/src/main/scala/au/csiro/pathling/encoders/Expressions.scala`, and wrap it for use from Java via `ExpressionUtils` as `ColumnFunctions.structProduct` already does. Scala, because `RuntimeReplaceable` is a Scala trait whose tree-node contract runs through `Product`; `encoders` already carries the Scala plugin and this module is where the query-time toolkit lives, so FR-052 covers it and no POM changes. No codegen: `RuntimeReplaceable` supplies `dataType`, `nullable` and a final `eval`. Follow the construction proven by the T009a spike and recorded in `evidence/t009a-analyzer-gate.md`: `UnaryLike` rather than `InheritAnalysisRules`, so the traversal target is the child; `replacement` a `lazy val` on a case class, so resolution produces a fresh copy; and a replacement built only from resolved leaves, which `CheckAnalysis` requires.
+- [ ] T038e Implement the tolerant traversal expression as a `RuntimeReplaceable` in `encoders/src/main/scala/au/csiro/pathling/sql/ResolveOrNull.scala`, beside the existing query-time expressions in `encoders/src/main/scala/au/csiro/pathling/encoders/Expressions.scala`, and wrap it for use from Java via `ExpressionUtils` as `ColumnFunctions.structProduct` already does. Scala, because `RuntimeReplaceable` is a Scala trait whose tree-node contract runs through `Product`; `encoders` already carries the Scala plugin and this module is where the query-time toolkit lives, so FR-052 covers it and no POM changes. No codegen: `RuntimeReplaceable` supplies `dataType`, `nullable` and a final `eval`. Note the precedent it sits beside rather than reinventing: `UnresolvedFallbackIfMissingField` in the same file already tolerates a missing field, by catching an `AnalysisException` inside `mapChildren`. T110a decides which mechanism owns which site. Follow the construction proven by the T009a spike and recorded in `evidence/t009a-analyzer-gate.md`: `UnaryLike` rather than `InheritAnalysisRules`, so the traversal target is the child; `replacement` a `lazy val` on a case class, so resolution produces a fresh copy; and a replacement built only from resolved leaves, which `CheckAnalysis` requires.
+- [ ] T110a **Gate.** Settle whether the pre-existing missing-field fallback is retired once T110 lands, or retained for the repeat directive. `UnresolvedFallbackIfMissingField` in `encoders`, reached as `nullIfMissingField` and `emptyArrayIfMissingField`, already tolerates an absent field at two sites: `RepeatSelection` and the variant transform in `Collection`. T038e adds a second mechanism for the same job. The choice is not cosmetic: the existing one works by catching an `AnalysisException` inside `mapChildren`, which is exactly the analyzer-ordering fragility T038d exists to guard against. Decide before T110, and record which sites each mechanism owns.
 - [ ] T038j [P] Test the reconciliation expression in `encoders/src/test/scala/au/csiro/pathling/sql/MergeCastTest.scala` — two structures of the same FHIR type with different fitted shapes project by name into the merged type and combine; fields a side lacks become null; the result is traversable. Assert it is a by-name projection and **not** a cast, by constructing two structures with the same field types in a different order and asserting they are not silently transposed.
 - [ ] T038k [P] Test that folding the binary form gives the same type and values as one variadic call (finding 16), in the same file.
 - [ ] T038l Implement the reconciliation expression as a variadic `RuntimeReplaceable` in `encoders/src/main/scala/au/csiro/pathling/sql/MergeCast.scala`, taking the operand being projected, the full ordered operand list so that every operand computes the same target type, and the canonical structure from T038g, which it cannot recover from the operands. It takes the **interface** declared in `utilities`, never a type from `fhir-schema`, so `encoders` gains no dependency on that module (T009, FR-051). The merge itself is T038g and the definition-backed implementation is T038i.
 - [ ] T027a Extend the T026 divergent-schema fixture so the projected leaf is absent from one file's schema entirely rather than merely null, and re-assert T027 over it, so the pin exercises tolerant traversal over divergent files and not only the unnesting shape.
 
-**Checkpoint**: The join has portable coverage; the unnesting constraint is pinned; fixtures reach Spark without the old encoder; the toolkit can traverse tolerantly and reconcile shapes, and the analyzer risk is resolved either way.
+### Absent elements, before any fixture moves
+
+*Moved here from Phase 9. Tolerance of an absent field is a precondition for
+moving any fixture, not a consequence of the fitted schema: the existing encoder
+already omits fields past its nesting bound, so absence is a property of the
+current layout too, and `FhirViewExtraTest` already carries two excluded cases
+for it under issue #2625. Emitting the tolerant expression at every traversal
+step is what closes that gap, so it belongs ahead of the test infrastructure
+rather than two phases behind it.*
+
+*This block covers the **absence** axis only. It does not make a fixture safe to
+move to the new layout, because a field present in a different shape is a
+different problem, and that is Phase 8's dispatch.*
+
+#### Tests ⚠️ write first, confirm failing
+
+- [ ] T101 [P] [US4] Test that traversal to an element the definitions describe but the schema lacks yields an empty collection, in `fhirpath/src/test/java/au/csiro/pathling/fhirpath/AbsentElementTest.java`.
+- [ ] T102 [P] [US4] Test that traversal to an element the definitions do not describe still raises an error, in the same file.
+- [ ] T103 [P] [US4] Test that selecting a choice variant absent from the schema yields empty, in the same file.
+- [ ] T104 [P] [US4] Test that combining an absent element with a populated one succeeds — union, combination, conditional selection and comparison (FR-027), in the same file.
+- [ ] T105 [P] [US4] Test that sibling column combination tolerates a bottom-typed complex element, in `fhirpath/src/test/java/au/csiro/pathling/projection/SiblingCombinationTest.java`. No *primitive* is untyped under FR-055, but an absent complex element is the bottom type, and the recursive selection path computes an expected element type that now meets it where it previously met a statically empty collection.
+- [ ] T106 [P] [US4] Test that a view column declaring a FHIR type produces an output column of that type over an absent element (FR-028), in `fhirpath/src/test/java/au/csiro/pathling/projection/ProjectedColumnTypeTest.java`.
+- [ ] T107 [P] [US4] Test that a view column declaring no type over an absent *primitive* element succeeds, carrying the type the definitions give the element (FR-030), and that deriving an output type still fails with a message naming the column, its path and the remedy for a column that genuinely carries no type information (FR-029), in the same file. An element absent from the schema must no longer reach that failure.
+
+#### Implementation
+
+- [ ] T110 [US4] Emit the tolerant traversal expression from T038e at **every** traversal step, replacing the direct field reference, in `fhirpath/src/main/java/au/csiro/pathling/fhirpath/column/DefaultRepresentation.java`, with the fallback type taken from the element definition per FR-055. It must be every step, not only where absence is suspected: traversal into a fallback fails for every possible fallback type, so the tolerance has to intercept before a direct field reference is ever emitted over one.
+- [ ] T111 [US4] Apply the declared FHIR type as a cast on output, not only the explicit SQL-type tag, in `fhirpath/src/main/java/au/csiro/pathling/projection/ProjectedColumn.java`.
+- [ ] T112 [US4] Improve the message raised when no type information is available to name the column, its path and the remedy, in `fhirpath/src/main/java/au/csiro/pathling/projection/ProjectedColumn.java`.
+- [ ] T113 [US4] Ensure sibling combination tolerates a bottom-typed complex element in `fhirpath/src/main/java/au/csiro/pathling/projection/ProjectionResult.java` and `fhirpath/src/main/java/au/csiro/pathling/projection/RepeatSelection.java`.
+
+### Test infrastructure for the flag day
+
+- [ ] T034 Make the JSON path with an explicit derived schema available to the YAML conformance runner's fixture factory, as the new-layout arm of the T037a dimension rather than as an unconditional switch, in `fhirpath/src/test/java/au/csiro/pathling/test/yaml/`.
+- [ ] T035 Make the JSON path available to the SQL-on-FHIR view test pipeline as the new-layout arm of the T037a dimension, rather than switching it off parsing and encoding unconditionally, in `fhirpath/src/test/java/au/csiro/pathling/views/FhirViewTest.java`. The local fixtures and the submodule fixtures come along unchanged.
+- [ ] T036 Make the category-C path — construct, serialise to JSON, read with the derived schema — available to the object-based test data source as the new-layout arm of the T037a dimension, so the fluent builders survive unchanged, in `fhirpath/src/test/java/au/csiro/pathling/test/`.
+- [ ] T037 Add the schema mode switch to the test framework as a dimension, switchable with `-Dpathling.testSchemaMode=dense`. The default is pruned, which is safe here only because the whole absent-element block has already landed in this phase, not T110 alone: a fitted schema also needs the *typed* empty output that T107, T111 and T113 provide, or a view over an absent element crashes in sibling combination rather than yielding a column. T038 is what stops the switch failing quietly.
+- [ ] T037a Add the **layout** dimension to the test framework, defaulting to the previous layout and opt-in to the new one per test, switchable with `-Dpathling.testLayout=pof`. This is a second and independent axis from T037's schema mode: a schema mode says how much of the layout is present, a layout says which conventions the fields follow. Phase 8's tests opt in as each dispatch arm lands, and T100g flips the default at the switch. Without it, T034 to T036 would move every fixture onto conventions the engine does not learn until Phase 8, and a decimal comparison would silently compare strings rather than failing loudly.
+- [ ] T038 Add a test asserting the active schema mode **and the active layout** match the requested ones and failing loudly otherwise. This repository has precedent for test configuration that silently does nothing; a mode switch that fails quietly would leave a green build in a mode nobody is running.
+
+**Checkpoint**: The join has portable coverage; the unnesting constraint is pinned; the toolkit can traverse tolerantly and reconcile shapes, and the analyzer risk is resolved either way. Traversal to an absent element yields empty everywhere and produces a typed column where a view projects one, which closes issue #2625 as well as preparing the fitted schema. Both test dimensions exist: the schema mode may now default to pruned, because the whole absent-element block precedes it, and the layout stays on the previous conventions until Phase 8 has dispatched them.
 
 ---
-
 ## Phase 8: User Story 3 - The engine reads both layouts (Priority: P1)
 
 **Goal**: Existing expressions, views and searches return the same answers over
@@ -342,8 +391,10 @@ switch until Phase 12.
 **Independent Test**: The FHIRPath suite, both conformance baselines and the
 SQL-on-FHIR compliance suite pass over data in the new layout.
 
-*T083–T088 (Coding by name) are correct under both layouts and can land at any
-time, including during M1.*
+*T083–T085 and T091–T093 (Coding by name) are correct under both layouts and can
+land at any time, including during M1. The rest of this phase cannot: T086 to
+T089 and T094 to T099 are the layout dispatch itself, and T089 runs the whole
+suite over the new layout.*
 
 *Annotations are not emitted until M5, so every value here is computed rather
 than read from an annotation. That is what FR-022 requires in any case; the
@@ -382,38 +433,31 @@ applies the dispatcher at every subsequent traversal step. Recorded as decision
 
 ---
 
-## Phase 9: User Story 4 - Queries over a fitted schema (Priority: P1)
+## Phase 9: User Story 4, continued - Shape reconciliation (Priority: P1)
 
-**Goal**: Expressions naming elements absent from the schema evaluate to empty
-rather than failing, and view output types stay predictable.
+**Goal**: Collections of one FHIR type whose fitted schemas differ combine and
+stay traversable, and shape-sensitive assertions pin the schema they ran against.
 
-**Independent Test**: Run the suite in pruned mode; assert an expression over an
-absent element yields empty.
+**Independent Test**: Reach the same FHIR type by two paths whose fitted schemas
+differ; assert the combination holds every element of both.
+
+*The absent-element work that used to sit here — T101 to T107 and T110 to T113 —
+moved to Phase 7, because tolerance of an absent field has to precede any fixture
+movement. What remains is the reconciliation half, which depends on T038l rather
+than on T110.*
 
 ### Tests ⚠️ write first, confirm failing
 
-- [ ] T101 [P] [US4] Test that traversal to an element the definitions describe but the schema lacks yields an empty collection, in `fhirpath/src/test/java/au/csiro/pathling/fhirpath/AbsentElementTest.java`.
-- [ ] T102 [P] [US4] Test that traversal to an element the definitions do not describe still raises an error, in the same file.
-- [ ] T103 [P] [US4] Test that selecting a choice variant absent from the schema yields empty, in the same file.
-- [ ] T104 [P] [US4] Test that combining an absent element with a populated one succeeds — union, combination, conditional selection and comparison (FR-027), in the same file.
 - [ ] T104a [P] [US4] Test that two collections of the same FHIR type reached by different paths, whose fitted schemas differ, combine successfully — holding every element of both and remaining traversable (FR-056) — and that the result's fields are in definition order (FR-057), in `fhirpath/src/test/java/au/csiro/pathling/fhirpath/operator/ShapeReconciliationTest.java`. Cover `combine`, `|`, equality of complex values, conditional selection and membership.
-- [ ] T105 [P] [US4] Test that sibling column combination tolerates a bottom-typed complex element, in `fhirpath/src/test/java/au/csiro/pathling/projection/SiblingCombinationTest.java`. No *primitive* is untyped under FR-055, but an absent complex element is the bottom type, and the recursive selection path computes an expected element type that now meets it where it previously met a statically empty collection.
-- [ ] T106 [P] [US4] Test that a view column declaring a FHIR type produces an output column of that type over an absent element (FR-028), in `fhirpath/src/test/java/au/csiro/pathling/projection/ProjectedColumnTypeTest.java`.
-- [ ] T107 [P] [US4] Test that a view column declaring no type over an absent *primitive* element succeeds, carrying the type the definitions give the element (FR-030), and that deriving an output type still fails with a message naming the column, its path and the remedy for a column that genuinely carries no type information (FR-029), in the same file. An element absent from the schema must no longer reach that failure.
 - [ ] T109 [US4] Run the shape-sensitive tests with an explicit expected schema assertion, since a pruned schema is derived from the whole fixture set and adding a fixture can silently flip an assertion from a null branch to a missing-field branch.
 
 ### Implementation
 
-- [ ] T110 [US4] Emit the tolerant traversal expression from T038e at **every** traversal step, replacing the direct field reference, in `fhirpath/src/main/java/au/csiro/pathling/fhirpath/column/DefaultRepresentation.java`, with the fallback type taken from the element definition per FR-055. It must be every step, not only where absence is suspected: traversal into a fallback fails for every possible fallback type, so the tolerance has to intercept before a direct field reference is ever emitted over one.
-- [ ] T111 [US4] Apply the declared FHIR type as a cast on output, not only the explicit SQL-type tag, in `fhirpath/src/main/java/au/csiro/pathling/projection/ProjectedColumn.java`.
-- [ ] T112 [US4] Improve the message raised when no type information is available to name the column, its path and the remedy, in `fhirpath/src/main/java/au/csiro/pathling/projection/ProjectedColumn.java`.
-- [ ] T113 [US4] Ensure sibling combination tolerates a bottom-typed complex element in `fhirpath/src/main/java/au/csiro/pathling/projection/ProjectionResult.java` and `fhirpath/src/main/java/au/csiro/pathling/projection/RepeatSelection.java`.
 - [ ] T113a [US4] Apply the reconciliation expression from T038l where operands are prepared for combination, in `fhirpath/src/main/java/au/csiro/pathling/fhirpath/operator/CombiningLogic.java`, generalising what `prepareArray` already does for `DecimalCollection` (FR-056). The operators themselves do not change, and the FHIR-type promotion in `FhirPathBinaryOperator.reconcileTypes` stays a separate, definition-driven step ahead of it.
 - [ ] T113b [US4] Apply reconciliation at the remaining sites that need two operands to share a SQL type — conditional selection and membership — and at `ColumnRepresentation.traverseChoice`, which coalesces across several variant fields at once and therefore passes the whole ordered operand list rather than folding (FR-056).
 
-**Checkpoint**: The pruned schema is usable from every query surface, so the public API can safely write it.
-
----
+**Checkpoint**: Two fitted shapes of one FHIR type reconcile, so the public API
+can safely write a schema fitted to the data.
 
 ## Phase 10: User Story 5 - Divergent files read as one dataset (Priority: P2)
 
@@ -439,7 +483,9 @@ merge it needs (T038g) landed in M1.*
 
 - [ ] T117 [P] [US5] Enable schema merging on append in `library-api/src/main/java/au/csiro/pathling/library/io/sink/DeltaSink.java`.
 - [ ] T117a [US5] Enable schema auto-merge on the upsert path in `library-api/src/main/java/au/csiro/pathling/library/io/sink/DeltaSink.java`, so a divergent source widens the target as an append now does. This **reverses a deliberate guarantee**: the upsert path today refuses to widen, so that tolerance does not become schema evolution the caller did not ask for. That reasoning assumed a schema derived from encoder configuration and stable between batches. A fitted schema comes from the data, so divergence is the steady state and the refusal would fire on ordinary use. Append and upsert must not give two answers to the same question. Recorded as decision 41; `NarrowMergeTest` is rewritten by T100d.
-- [ ] T118 [P] [US5] Enable schema merging on read, with an opt-out, in `library-api/src/main/java/au/csiro/pathling/library/io/source/ParquetSource.java`.
+- [ ] T118 [P] [US5] Enable schema merging on read in `library-api/src/main/java/au/csiro/pathling/library/io/source/ParquetSource.java`. **The opt-out takes a supplied schema, not a boolean**, per the T119 gate: `mergeSchema=false` was measured returning as few as 6 of 24 leaf columns on a divergent corpus, silently, so a boolean opt-out is a trap rather than a choice. A supplied schema is safe only while it covers the union of the files, so the mechanism is a way to stop paying for the merge on every read, not a way to never pay for it — the cheap path is to merge once and persist the result, or take the writer's schema, and supply that.
+- [ ] T118b [P] [US5] Resolve schemas lazily and per resource type in `library-api/src/main/java/au/csiro/pathling/library/io/source/FileSource.java`, whose eager `buildResourceMap` multiplies the per-type cost by the number of types in the warehouse before a single query runs. The T119 gate names this as the larger lever on any storage, and the one obtainable without knowing the object-storage constant.
+- [ ] T118c [P] [US5] Expose the supplied-schema opt-out in `lib/python/pathling/datasource.py` and `lib/R/R/datasource.R`, as T049 does for the detection opt-out. The API contract lists every added option as surfaced in Java, Python and R.
 - [ ] T118a [US5] Where a merged schema is produced rather than obtained from Spark, produce it with the shared merge from T038g so field order stays canonical (FR-057, FR-058). A merge that appends newly discovered fields in discovery order rather than definition order yields structures that cannot be combined and, worse, compare positionally.
 
 **Checkpoint**: Incremental loading works with schemas fitted to data.
@@ -493,7 +539,8 @@ close in M5.*
 - [ ] T082 [P] [US2] Wire egress into `library-api/src/main/java/au/csiro/pathling/library/io/sink/NdjsonSink.java`.
 - [ ] T108 [P] [US4] Test that one column expression, built with no reference to any dataset, applied to a fitted dataset and to a dense dataset holding the same resources, yields equal results for every expression in the engine's expression-level test set (FR-054, SC-010), in `library-api/src/test/java/au/csiro/pathling/library/FhirPathToColumnTest.java`. This is the assertion that the expression-to-column API's unchanged signature is honest.
 - [ ] T108a [P] [US4] Test that a column over an absent primitive element reaching a caller through the expression-to-column API carries the element's type and can be written to Parquet (FR-030), in the same file.
-- [ ] T100 [US3] Run the full FHIRPath suite, both YAML conformance baselines and the SQL-on-FHIR compliance suite over the new layout (SC-002); remove exclusion entries that have become obsolete rather than leaving them to self-report (SC-003). Confirm the engine now reads only the new layout and no engine code path reads the previous one (FR-053).
+- [ ] T100 [US3] Run the full FHIRPath suite, both YAML conformance baselines and the SQL-on-FHIR compliance suite over the new layout (SC-002); remove exclusion entries that have become obsolete rather than leaving them to self-report (SC-003). Among them are the two `FhirViewExtraTest` exclusions for issue #2625, which T110 closes. Confirm the engine reads the new layout on every path; it still retains the previous-layout reader, which FR-053 permits until T100e removes it in M6.
+- [ ] T100g Flip the T037a layout dimension's default to the new layout. The previous-layout arm stays available, because the dispatch arms it exercises survive until T100e and decision 51 leaves their coverage standard to T049a.
 - [ ] T100b Rebuild `library-runtime`, clear both `cache` and `jars` across every `~/.ivy2*` tree and recreate the directories, then run the Python and R suites over the new layout. Assert that encode, decode, the file sources and sinks and the detection opt-out behave as before from both bindings (SC-008). The clearing step is not optional: the SNAPSHOT filename never changes, so without it Ivy reuses a stale jar and both suites pass without exercising any of this work.
 - [ ] T100c Remove the encode and decode plumbing in `library-api/src/main/java/au/csiro/pathling/library/` left unreachable by T070 and T081 — the three encode paths over map partitions, the decode path and the resource parser — confirming first that nothing outside the module references them. The `encoders` module itself is untouched and keeps its coordinates, so migration tooling is unaffected; FR-051 is about that module, not this plumbing.
 - [ ] T100d Convert or retire the test classes T033b classified as asserting behaviour specific to the previous layout. `NarrowMergeTest` is rewritten against the widening behaviour T117a introduces rather than the refusal it asserts today.
@@ -520,16 +567,17 @@ Phase 12 and must not ship before it.*
 *It depends only on Setup, so it can be built at any point; it must not be wired
 in before Phase 12.*
 
-### The gate on what this phase is for
-
-- [ ] T049a **Gate.** Settle whether the source boundary refuses earlier-layout data, refuses by default but routes under the existing per-source opt-out, or routes by default. The engine reads both layouts as of Phase 8, so routing is now possible where it was not when US7 was written. The answer decides three things beyond this phase: whether FR-046 stands as written, whether Phase 8's dispatch arms are transitional scaffolding or product code deserving product-grade coverage (decision 51), and what T100e is permitted to delete. Settle it before T039.
+*The gate this phase is built to, T049a, is settled in Phase 7. Its answer says
+whether the boundary refuses or routes, and therefore what T039 to T048 assert.*
 
 ### Tests ⚠️ write first, confirm failing
 
 - [ ] T039 [P] [US7] Test the layout detector against a full previous-layout schema, a sparse previous-layout schema, a new-layout schema and a schema with no markers, in `library-api/src/test/java/au/csiro/pathling/library/io/source/LayoutDetectorTest.java`.
+- [ ] T039a [P] [US7] Test the detector against a **mixed** schema — one table carrying marker fields from both layouts, as an append into a previous-layout table produces — in the same file. Decision 47 assumes two layouts never meet inside one query; this is the case that would falsify it, and none of T039's four schemas covers it.
 - [ ] T040 [P] [US7] Test that detection walks nested structures and arrays of structures, not only top-level fields, in the same file.
 - [ ] T041 [P] [US7] Test that reading conforming data succeeds unchanged, that a sparse but conforming schema succeeds, and that an unclassifiable schema succeeds, in `library-api/src/test/java/au/csiro/pathling/library/io/source/FileSourceDetectionTest.java`.
 - [ ] T042 [P] [US7] Test that an unsupported layout fails at read time with a message naming the resource type, the detected layout, the expected layout and the remedy, asserting the exact message content so it cannot silently degrade, in the same file. **The remedy is re-import from source**, and the message says so plainly, because no in-place rewrite exists in this release: migration of data at rest is out of scope here, and the previous layout stored decimals as a fixed-precision numeric, so any rewrite would be lossy where a re-import is not. T134a records the rewrite tool as future work.
+- [ ] T042a [P] [US7] Test that **writing** new-layout data into a table holding an earlier layout is detected and refused with the same actionable message, rather than failing with a storage-layer schema error or silently widening the table, in `library-api/src/test/java/au/csiro/pathling/library/io/sink/SinkDetectionTest.java`. FR-037 and SC-006 name sources only, and T117 and T117a turn auto-merge on, so an append of a resource type carrying no conflicting types would otherwise succeed and produce the hybrid table T039a describes.
 - [ ] T043 [P] [US7] Test that the opt-out permits the read and is scoped to one source, in the same file.
 - [ ] T044 [P] [US7] Test that detection introduces no additional file access beyond the schema metadata the read already obtains (FR-038), in the same file.
 
@@ -538,6 +586,7 @@ in before Phase 12.*
 - [ ] T045 [US7] Implement the layout detector, classifying a schema by marker fields and returning the markers found so the message can cite evidence, in `library-api/src/main/java/au/csiro/pathling/library/io/source/LayoutDetector.java`.
 - [ ] T046 [US7] Apply the check in `library-api/src/main/java/au/csiro/pathling/library/io/source/FileSource.java`, so `ParquetSource` and `DeltaSource` inherit it.
 - [ ] T047 [US7] Apply the check per table as each resource type is resolved in `library-api/src/main/java/au/csiro/pathling/library/io/source/CatalogSource.java`.
+- [ ] T046a [US7] Apply the check on the write path in `library-api/src/main/java/au/csiro/pathling/library/io/sink/DeltaSink.java` and the other file-based sinks, classifying the **target**'s existing schema before a merge is attempted, so the refusal precedes the widening.
 - [ ] T048 [US7] Thread the opt-out through the source constructors in `library-api/src/main/java/au/csiro/pathling/library/io/source/`.
 - [ ] T049 [P] [US7] Expose the opt-out in `lib/python/pathling/datasource.py` and `lib/R/R/datasource.R`.
 
@@ -672,6 +721,8 @@ source, T134a raises the rewrite tool as a follow-up, and FR-051's retention of
 - [ ] T133 [P] Raise the follow-up issue recording the two alternative bindings from R-017 as future options — evaluation-time schema binding, and an unbound column representation bound when the dataset is known. Note what each would add beyond what is built here: bind-time validation and a required-schema manifest, and therefore Pathling-level messages naming the missing element instead of a Spark analysis failure. Note also that they remain compatible, because the representation of absence and the reconciliation mechanism are shared. Typed absent elements are **no longer** a follow-up: FR-055 delivers them for primitives.
 - [ ] T134 [P] Raise the follow-up issue for the decimal quoting pre-pass (R-009), recording that a blanket approach fails because a quoted number against an integer target is rejected.
 - [ ] T134a [P] Raise the follow-up issue for the data-at-rest rewrite tool that T042's message says does not yet exist. Record that the retained `encoders` module is what keeps it possible, that a rewrite cannot restore decimal lexical form because the previous layout stored a fixed-precision numeric, and that a re-imported warehouse therefore carries the losslessness guarantee where a rewritten one does not. This closes the gap between the Constitution Check's retention rationale and work that appears nowhere in this programme.
+- [ ] T134b [P] Raise the follow-up issue tracking the server's move onto the post-change line. The assumptions in `spec.md` pin the server to the last library release before Phase 12 and require it to reach the post-change line before the pinned line stops receiving fixes. That obligation has a deadline and no owner anywhere in this programme, which is what this task fixes.
+- [ ] T134c [P] Raise the follow-up issue for the object-storage half of the T119 merge gate. R-015's condition was *narrowed*, not discharged: `evidence/merge-cost.md` establishes the shape of the curve locally and shows Delta does not bite, but no object-storage harness exists in this repository, so the wall clock a user on S3 would see for raw files is still unmeasured. Record that the fallback R-015 contemplates therefore remains open rather than ruled out.
 - [ ] T135 Benchmark the two ingest mechanisms against each other — the chosen transform approach and direct parsing into a variant — and record the comparison in `evidence/ingest-comparison.md`. This records evidence for a future release rather than deciding anything here: the mechanism is settled by this point, so the lexical-decimal limitation stands for this programme, pinned by T078 and documented per FR-020 (R-009).
 - [ ] T137 Correct or retire `openspec/parquet-on-fhir-design.md`, which this specification supersedes: the stored decimal precision is wrong, the nested-pruning risk does not apply to the engine and its proposed mitigation was insufficient, and the first argument against schema inference does not hold for FHIR JSON.
 - [ ] T138 Remove or archive the five superseded change directories under `openspec/changes/` belonging to this programme.
@@ -719,7 +770,7 @@ trusting the numbering.
 | FR-021 Annotations default on, individually disableable | T055, T063 (M5) |
 | FR-022 Engine computes when annotations absent | T089 |
 | FR-023 Fast path chosen from the schema | T090 (M5) |
-| FR-024 Absent element yields empty | T101, T110 |
+| FR-024 Absent element yields empty | T101, T110, T110a |
 | FR-025 Undefined element raises | T102 |
 | FR-026 Absent choice variant yields empty | T103 |
 | FR-027 Absent combines with populated | T104, T105, T113 |
@@ -732,39 +783,41 @@ trusting the numbering.
 | FR-034 Primitive id and extension navigation | T120–T124 (M5) |
 | FR-035 Query-time decimal precision unchanged | T086, T095, T130, T086a, T095a |
 | FR-036 Unnesting never reduced to a single leaf | T026, T027, T116 |
-| FR-054 Traversal tolerant of an absent field, decided after schema resolution | T038a, T038b, T038d, T038e, T110 (M2), T108 (M4) |
+| FR-054 Traversal tolerant of an absent field, decided after schema resolution | T038a, T038b, T038d, T038e, T110, T110a (M2, all in Phase 7), T108 (M4) |
 | FR-055 Absent elements typed by the definitions or the bottom type | T038c, T038e, T105, T110 |
 | FR-056 Reconciliation by by-name projection, never by cast | T038j, T038k, T038l, T104a, T113a, T113b |
 | FR-057 Canonical field order, covering the layout's own fields, wherever a structure type is produced | T030a, T038h, T038i, T104a, T118a |
 | FR-058 One recursive field-wise merge, over a navigable canonical structure, serving reconciliation and file merging | T038f, T038g, T038h, T038i, T118a |
-| FR-037 Unsupported layouts rejected with an actionable message | T042, T045, T046, T047 |
+| FR-037 Unsupported layouts rejected with an actionable message | T042, T045, T046, T047 (read path only; the write path is FR-037a) |
+| FR-037a Unsupported layouts rejected on the write path | T039a, T042a, T046a |
 | FR-038 Detection structural, no extra file access | T044 |
 | FR-039 Sparse and unclassifiable schemas accepted | T041 |
 | FR-040 Detection disableable per source | T043, T048, T049 |
-| FR-041 Divergent files read as one dataset | T114, T118, T119 |
+| FR-041 Divergent files read as one dataset | T114, T118, T118b, T118c, T119 |
 | FR-042 Divergent append widens the table | T115, T117, T117a |
 | FR-043 Encoding and decoding APIs preserved | T070, T081 |
 | FR-044 Bounds options apply to dense only | T033 |
 | FR-045 XML and Bundle ingest preserved | T058, T058a, T068, T069, T069a |
-| FR-046 Earlier layouts not read as the new one | T049a, T042, T045 |
+| FR-046 Earlier layouts not read as the new one | T049a (settled in Phase 7), T042, T045 |
 | FR-047 Published layout contract replaced | T129 |
 | FR-048 Dependency ban on the schema module | T005, T125 |
 | FR-049 Import check on the new encoding | T007, T126 |
 | FR-050 No encoder or hand-authored expression trees | T127 |
 | FR-051 Existing implementation untouched | T128, T128a |
 | FR-052 Query toolkit preserved and not relocated | T038e, T038l, T128, T128a |
-| FR-053 Engine reads only the new layout | T100f, T100, T100e (M6; the engine reads both layouts from M2 until T100e) |
+| FR-053 Engine reads only the new layout | T100f, T100e (M6). T100 confirms the new layout is read on every path but **does not** assert the previous reader is gone; the engine reads both from M2 until T100e |
 
 And the success criteria:
 
 | Criterion | Tasks | Quickstart |
 | --- | --- | --- |
 | SC-001 Round trip over a real corpus, including the five decimal forms | T072, T076, T077 | QS-001 |
-| SC-002 Suites pass over the new layout in pruned mode, dense subset green | T100, T037, T038 | QS-003 |
+| SC-002 Suites pass over the new layout in pruned mode, dense subset green | T100, T037, T037a, T038, T100g | QS-003 |
 | SC-003 Exclusion baselines gain no entries, obsolete ones removed | T100 | QS-003 |
 | SC-004 Suite passes with every annotation disabled | T089 | QS-004 |
 | SC-005 Divergent files return every resource with correct cardinality | T114, T115, T116 | QS-006 |
 | SC-006 Earlier layouts rejected at read time with an actionable message | T042, T045–T047 | QS-008 |
+| Follow-ups with a deadline and no other owner | T134b (the server's move), T134c (the unmeasured object-storage half of the T119 gate) | — |
 | SC-007 Encode, decode, planning and execution measured separately | T002, T003, T136 | QS-010 |
 | SC-008 No incompatible public API change in Java, Python or R | T049, T070, T081, T082, T100b | QS-002, QS-008 |
 | SC-009 Build fails on internal Catalyst API in the schema module | T005, T125, T126 | QS-009 |
@@ -806,24 +859,42 @@ And the success criteria:
   moves.
 - T027a depends on T038e, so the coverage block is revisited once tolerant
   traversal exists; T027 itself does not wait.
-- T034–T038 (test infrastructure) depend on T031, from M1. T037 makes the schema
-  mode a dimension rather than a default, which is what keeps the pruned mode
-  from becoming the only signal before T110 lands.
+- T049a is settled first. It sets the coverage standard for the Phase 8 dispatch
+  arms (decision 51), so it cannot wait for Phase 13 where it is wired in.
+- T101–T107 and T110–T113 (absent elements) come before the test infrastructure,
+  not after it. Tolerance of an absent field is a precondition for moving any
+  fixture, and it is owed to the **current** layout too: the existing encoder
+  omits fields past its nesting bound, which is what `FhirViewExtraTest`'s two
+  excluded cases under issue #2625 record. T110a decides which of the two
+  missing-field mechanisms owns which site before T110 lands.
+- T034–T038 and T037a (test infrastructure) depend on T031, from M1, and come
+  last in the phase. Two independent dimensions, not one: T037's schema mode
+  says how much of the layout is present, and T037a's layout says which
+  conventions its fields follow. T037 may default to pruned because T110 has
+  already landed. T037a must default to the **previous** layout, because the
+  conventions are not dispatched until Phase 8, and T100g is what flips it.
 - T038l depends on T038g and T038i, from M1, and takes the canonical structure
   through the interface declared in `utilities`. T038a–T038e and T038j–T038k
   depend on neither.
-- Phase 8 (US3) depends on the whole of Phase 7. T083–T093 (Coding by name) are
-  correct under both layouts and may land at any point, including during M1.
+- Phase 8 (US3) depends on the whole of Phase 7. T083–T085 and T091–T093 (Coding by
+  name) are correct under both layouts and may land at any point, including
+  during M1; the remainder of the phase is the layout dispatch and cannot.
   T094a depends on T094 and on nothing else.
-- Phase 9 (US4) depends on Phase 8.
+- Phase 9 (US4) depends on T038l for the reconciliation expression, not on the
+  absent-element work that moved out of it.
 - Phase 10 (US5): T114, T115, T117, T117a, T118 and T118a depend on M1 for a
   write path — `io`'s own entry points, since the public API does not switch
-  until M4 — and T116 depends on Phase 9. T119 measured the merge cost in M1, so
-  its answer is already in hand here.
+  until M4 — and T116 depends on the absent-element work now in Phase 7. T119 measured the
+  merge cost in M1, so its answer is in hand: it is what fixes the shape of
+  T118's opt-out and what puts T118b on the list.
 
 ### Within M4
 
-- T049a gates Phase 13 and must be settled before T039.
+- T049a was settled in Phase 7. Phase 13 asserts whatever it decided.
+- T042a and T046a extend detection to the write path, which FR-037 and SC-006
+  do not reach. They must land with T117 and T117a, or before them, since it is
+  auto-merge that makes an undetected write into an earlier-layout table widen
+  it rather than fail.
 - Phase 13 (US7) depends only on Setup and may be built at any point, but must
   not be wired in before Phase 12.
 - Phase 12 (the switch) depends on Phases 8, 9, 10, 11 and 13. It is the point of
@@ -834,7 +905,9 @@ And the success criteria:
 
 ### Within M5 and M6
 
-- Phase 15: each annotation kind is independent of the others. The emission task
+- Phase 15: each annotation kind is independent of the others **after the
+  first**. T063's registry and T055's toggle test are shared, so they ride with
+  whichever kind ships first. The emission task
   precedes its fast-path task in every case. T090 depends on any one kind having
   landed, since it needs an annotated input to compare against.
 - Phase 16 depends on T094, from Phase 8, and T078c depends on T051 and T061.
@@ -857,27 +930,39 @@ T038a remains the durable test in Phase 7.
 
 ### Why there is no red window
 
-**Every milestone ends green, and no milestone runs red in the middle.** Two
-earlier hazards are designed out rather than accepted.
+**Every milestone ends green, and no milestone runs red in the middle.** Three
+hazards are designed out rather than accepted. Each is a separate axis, and an
+argument that covers one does not cover another.
 
-The FHIRPath estate stays green because T037 makes the schema mode a dimension
-rather than a default. A schema fitted to a small fixture set omits most of each
-resource, so expressions naming an omitted element would meet a Spark analysis
-failure until tolerant traversal is emitted at T110 — but the dense dimension
-carries the suite throughout, and the pruned dimension is switched on when T110
-makes it safe.
+**Absence.** A schema fitted to a small fixture set omits most of each resource,
+so an expression naming an omitted element would meet a Spark analysis failure
+rather than an empty collection. T110 emits the tolerant traversal expression at
+every step and is what makes it empty instead. It sits in Phase 7, ahead of the
+test infrastructure, so no fixture ever moves onto a schema the engine cannot
+traverse. This axis is not peculiar to the fitted schema: the existing encoder
+omits fields past its nesting bound too, so T110 also closes the two
+`FhirViewExtraTest` cases excluded under issue #2625.
 
-The `library-api` estate stays green because Phase 8 converts by addition rather
-than replacement. Every traversal dispatches on the resolved schema, so after
-T095 the engine still reads a previous-layout decimal and after T097 it still
-reaches an extension through a field identifier. Tests that encode through
-`PathlingContext` and then query keep working for the whole of M2, because
-`PathlingContext` keeps writing the previous layout and the engine keeps reading
-it.
+**Conventions.** A field present in a *different shape* is a different problem
+from a field that is absent, and tolerant traversal does nothing for it. A
+lexical decimal is a string where the engine expects a fixed-precision numeric,
+an extension has no `_fid` to key the root map on, and a quantity has no
+canonicalised companion. Those are the Phase 8 dispatch arms, T095 to T098. The
+T037a layout dimension is what keeps the estate off those conventions until the
+arms exist: were the fixtures moved first, a decimal comparison would not fail
+loudly, it would silently compare strings.
+
+**The previous layout.** Phase 8 converts by addition rather than replacement.
+Every traversal dispatches on the resolved schema, so after T095 the engine still
+reads a previous-layout decimal and after T097 it still reaches an extension
+through a field identifier. Tests that encode through `PathlingContext` and then
+query keep working for the whole of M2, because `PathlingContext` keeps writing
+the previous layout and the engine keeps reading it.
 
 This reverses decision 40, which accepted a red span running from the engine
-foundations to the switch under the previous sequencing. The cost is recorded instead in decision 51: the
-dispatch arms exist to buy this, and T100e removes them in M6.
+foundations to the switch under the previous sequencing. The cost is recorded
+instead in decision 51: the dispatch arms exist to buy this, and T100e removes
+them in M6.
 
 Within each story: tests written and failing, then implementation. Tasks touching
 the same file run sequentially; `[P]` tasks on different files may run together.

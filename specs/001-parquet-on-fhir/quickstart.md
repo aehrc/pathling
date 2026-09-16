@@ -117,6 +117,13 @@ the expected layout and the remedy. A conforming but narrow schema reads
 successfully. A schema carrying no markers reads successfully. Disabling
 detection for one source permits the read and leaves other sources unaffected.
 
+Then append to the same dataset through a file-based sink.
+
+**Expect**: the same error, raised before any schema merge is attempted. The
+append must not succeed and leave one table carrying marker fields from both
+layouts, which is what auto-merge would otherwise do for a resource type whose
+columns happen not to conflict.
+
 ## QS-009 Confirm the module boundary (US8)
 
 Add a dependency on internal Spark Catalyst API to the definitions and schema

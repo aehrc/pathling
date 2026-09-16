@@ -467,6 +467,12 @@ after the schema-binding decision and belong to this section.
 - **FR-037**: File-based sources MUST determine the layout of the data they read
   and reject an unsupported layout at read time, naming the resource type, the
   detected layout, the expected layout and the remedy.
+- **FR-037a**: File-based sinks MUST determine the layout of the target they
+  write into and reject an unsupported layout before any schema merge is
+  attempted, with the same message. Schema merging on append and upsert is
+  enabled by FR-042, so without this a write into a target holding an earlier
+  layout either fails with a storage-layer schema error or, where no type
+  conflicts, succeeds and leaves one table carrying both layouts.
 - **FR-038**: Detection MUST be structural and MUST NOT require file access
   beyond the schema metadata the read already obtains.
 - **FR-039**: A sparse but conforming schema, and a schema carrying no marker
@@ -558,7 +564,8 @@ after the schema-binding decision and belong to this section.
   table.
 - **SC-006**: Reading data written by an earlier release fails at read time with
   a message naming the resource type, the detected layout and the remedy, for
-  every file-based source.
+  every file-based source; writing into such a dataset fails the same way, for
+  every file-based sink.
 - **SC-007**: Encode, decode and query execution are each measured separately
   against a baseline captured before any change, with planning time measured
   separately from execution time. No outcome is required; the measurement is.
@@ -595,8 +602,14 @@ after the schema-binding decision and belong to this section.
   bridge, is deferred: what becomes of it depends on what the data-migration
   tooling turns out to need, since that tooling may have to use it. The new
   encoding is built alongside it.
-- The engine reads only the new layout on completion. The test estate therefore
-  moves in one step rather than incrementally.
+- The engine reads only the new layout **on completion**, and may read both
+  while it is being converted. The test estate therefore moves incrementally,
+  along two independent dimensions in the test framework: how much of the layout
+  a schema carries, and which conventions its fields follow. The earlier form of
+  this assumption — that the engine reads only the new layout throughout, and so
+  the test estate moves in one step — is what made a red window look
+  unavoidable. It was applied to the transition when it constrains only the end
+  state. See decision 40's addendum.
 - The strictness switch, the schema mode and the per-annotation toggles are
   configuration on a **new** surface beside the existing encoding configuration,
   not on it. The existing configuration class sits in the module FR-051 protects,

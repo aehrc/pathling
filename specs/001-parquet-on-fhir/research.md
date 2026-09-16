@@ -341,6 +341,20 @@ Delta 4.0.0 against Spark source 4.0.2, and are recorded in full in
   append to a transactional table fails outright.
 - **Gate**: measure merge cost over a realistic file count on object storage;
   the result can force a fallback for raw files.
+- **Gate outcome (T119, `evidence/merge-cost.md`)**: **narrowed, not
+  discharged.** For Delta the gate does not bite, schema resolution being flat
+  at a few milliseconds across the sweep. For raw Parquet the local measurement
+  establishes the shape of the curve but not the wall clock on object storage,
+  because no such harness exists in this repository; T134c carries that as a
+  follow-up, so the fallback this gate contemplates remains open rather than
+  ruled out. What the measurement did settle is the **shape of the opt-out**:
+  it must be a *supplied schema*, never `mergeSchema=false`, which was measured
+  returning as few as 6 of 24 leaf columns silently. A supplied schema is safe
+  only while it covers the union of the files, and that union is what a merge
+  produces — so supply stops the merge being paid on every read, it does not
+  avoid paying it once. It also identified lazy per-resource-type resolution
+  (T118b) as the larger lever, since `FileSource.buildResourceMap` multiplies
+  the per-type cost by the number of types before any query runs.
 
 ## R-016 Reconciling collections whose SQL shapes differ
 

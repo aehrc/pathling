@@ -334,9 +334,11 @@ assumption was not wrong, but it was applied too early: FR-053 constrains the
 Dual-layout reading then turned out to be cheap, for the reasons in decisions 47
 and 48, and FR-053 now states the transitional permission explicitly.
 
-So the engine converts by addition, the test framework's schema mode becomes a
-dimension rather than a default, and every milestone ends green with none running
-red in the middle. M2 carries the engine rewrite behind a green build, and the
+So the engine converts by addition, the test framework gains *two* dimensions
+rather than one, and every milestone ends green with none running red in the
+middle. **This addendum originally named only the schema mode**, which was not
+enough: it conflated two axes and left a third unstated. Decision 52 separates
+them. M2 carries the engine rewrite behind a green build, and the
 switch in M4 is a writer flip.
 
 The author accepted the red window when the alternative looked expensive, and
@@ -662,5 +664,84 @@ compare against.
 *Open until T049a.* If the source boundary ends up routing earlier-layout data
 rather than refusing it, the arms become a product feature, deserve product-grade
 coverage, and T100e's scope shrinks accordingly. That is why T049a is a gate
-rather than an ordinary task, and why it sits before the detector work rather
-than after it.
+rather than an ordinary task. **It has been moved to Phase 7**, at the head of
+M2: it sets the coverage standard for the arms, so settling it in Phase 13 would
+have decided in M4 how work written in M2 should have been tested. Its wiring
+stays in Phase 13.
+
+## 52. Three axes, not one, and the test framework carries two of them
+
+Decision 40's addendum claimed the red window was designed out because the
+schema mode became a dimension. That was right about the conclusion and wrong
+about the reason, in a way that would have produced a red window anyway.
+
+There are three independent axes, and an argument that covers one covers
+neither of the others.
+
+1. **Absence.** A field the definitions describe that the schema does not carry.
+   Tolerant traversal (T110) is what makes it empty rather than an analysis
+   failure.
+2. **Conventions.** A field that is present *in a different shape* — a lexical
+   decimal against a fixed-precision numeric, an inline extension against a
+   `_fid` and a root map, a quantity with or without its canonicalised
+   companion. Tolerant traversal does nothing for these; the Phase 8 dispatch
+   arms (T095–T098) do.
+3. **Density.** How much of the layout a schema carries. This is the axis the
+   addendum named, and the only one T037 addresses.
+
+Two consequences, both now in the task list.
+
+**Absence is not peculiar to the fitted schema, and T110 moves to Phase 7.** The
+existing encoder already omits fields past its nesting bound, so the current
+layout has absent fields too. The engine half-handles them today: the
+`UnresolvedFallbackIfMissingField` trait is applied at the repeat directive and
+the variant transform, but ordinary traversal calls `getField` bare, which is
+why `FhirViewExtraTest` carries two excluded `forEach` cases under issue #2625.
+Emitting the tolerant expression at every step closes that gap, so it is owed to
+the current layout and belongs ahead of any fixture movement rather than two
+phases behind it. T101–T107 and T110–T113 move with it.
+
+**Conventions need their own dimension, T037a.** Routing the fixtures onto the
+JSON path is what puts them on the new conventions, and the engine does not
+learn those until Phase 8. Moving them first would not produce a loud failure;
+it would produce a silent one, a decimal comparison comparing strings. So the
+layout is a dimension defaulting to the previous conventions, opted into per
+test as each dispatch arm lands, and flipped at T100g.
+
+*Consequence*: T037 may keep pruned as its default, but only because T110 now
+precedes it in the same phase. Under the previous ordering that default was the
+unsafe one, and the addendum's own argument required the opposite.
+
+## 53. Layout detection covers the write path, not only the read path
+
+FR-037 and SC-006 as written name sources. The detector tasks followed them and
+touched `FileSource` and `CatalogSource` only.
+
+That leaves the write path open, and decision 41 is what makes it matter: with
+auto-merge enabled on append and upsert, a write into a table holding an earlier
+layout no longer fails cleanly. Where column types conflict it fails with a
+storage-layer schema error rather than the actionable message FR-037 promises.
+Where they do not — a resource type carrying no decimals, for instance — it
+succeeds, and the merge leaves one table carrying marker fields from both
+layouts.
+
+That hybrid is the case decision 47's soundness argument assumes cannot arise,
+since it holds that two layouts never meet inside one query. Nothing enforced
+it. FR-037a now states the write-side obligation, T046a applies the check before
+the merge is attempted, T042a asserts it, and T039a covers the mixed schema that
+none of T039's four cases reached.
+
+## 54. Two missing-field mechanisms, and a gate to choose between them
+
+T038e adds a `RuntimeReplaceable` that resolves a traversal to a field reference
+or a typed null. `UnresolvedFallbackIfMissingField` already does a similar job
+in the same file, reached as `nullIfMissingField` and `emptyArrayIfMissingField`
+from the repeat directive and the variant transform.
+
+Keeping both without deciding which owns which site would leave two answers to
+one question in the module FR-052 protects. The choice is also not cosmetic: the
+existing mechanism works by catching an `AnalysisException` inside `mapChildren`,
+which is precisely the analyzer-ordering fragility T038d exists to guard against,
+whereas the new one is a declared replacement the analyzer resolves normally.
+
+T110a settles it before T110 lands, and records which sites each mechanism owns.

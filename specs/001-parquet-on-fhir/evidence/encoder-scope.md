@@ -258,6 +258,13 @@ Around 90% of a core library build is test execution, so this is the largest
 single line item — and the prototype paid none of it, because it forked the
 test suite too.
 
+**The dispositions below size the work; they no longer describe when it takes
+effect.** Each was written as a switch of the fixture mechanism. T034 to T036
+now add the JSON path as the opt-in arm of the T037a layout dimension instead,
+and T100g flips the default at the public API switch. The reach of each row is
+unchanged; only the moment the estate moves is, and it moves per test rather
+than all at once. See decision 52.
+
 | Fixture style | Disposition | Reach |
 |---|---|---|
 | YAML conformance runner (`ArbitraryObjectResolverFactory`) | Relocate | **A JSON path already exists in main:** `spark.read().schema(…).json(…)`, paired with `DefaultDefinitionContext`. Switch the factory. |

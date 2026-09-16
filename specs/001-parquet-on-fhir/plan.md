@@ -78,6 +78,9 @@ repository `CLAUDE.md` chain (`CONTRIBUTING.md`, `server/CONTRIBUTING.md`,
 - **Branching** — issue branch `issue/2367` off `main`; the programme lands as
   several pull requests against it. Every milestone ends green and none runs red
   in the middle, so there is no span that has to land as one unreleasable piece.
+  Three independent axes are what that rests on — absence, conventions and
+  density — and the test framework carries the latter two as dimensions
+  (decision 52).
 
 | Violation | Why needed | Simpler alternative rejected because |
 | --- | --- | --- |
