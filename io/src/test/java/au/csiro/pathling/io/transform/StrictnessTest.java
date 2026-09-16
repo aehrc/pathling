@@ -151,7 +151,9 @@ class StrictnessTest {
     assertFalse(
         Stream.of(transformed.schema().fieldNames()).anyMatch("bogusField"::equals),
         "content outside the definitions is not stored");
-    assertEquals("Smith", transformed.first().<List<Row>>getAs("name").get(0).getAs("family"));
+    final Row first = transformed.first();
+    final List<Row> names = first.getList(first.fieldIndex("name"));
+    assertEquals("Smith", names.get(0).<String>getAs("family"));
   }
 
   // Cardinality contradicting the definitions (T057a).

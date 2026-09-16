@@ -14,18 +14,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package au.csiro.pathling.io.transform;
 
 import jakarta.annotation.Nonnull;
 import java.util.Map;
 import org.apache.spark.sql.Column;
+import org.apache.spark.sql.types.DataType;
 
 /**
  * The storage of a decimal, which is the lexical form of the source as text (FR-002).
  *
- * <p>Nothing on this path may parse the value as a number. A skeleton, pending implementation.
+ * <p>A trailing zero, exponent notation, a leading sign and a digit count beyond any fixed-point
+ * type all survive only if nothing on the path parses the value as a number, so the lexical form is
+ * a property of how the source is read rather than of anything done to the column afterwards. The
+ * reader is therefore asked for every primitive as text, and the definitions impose the real type
+ * on the others; the option is not per-field, which is why it lives here beside the reason it is
+ * set.
+ *
+ * <p>The numeric value is supplied by the annotation beside the element, which is added later.
  */
 public final class DecimalTransform {
+
+  /** The reader option that infers every JSON primitive as text rather than as a number. */
+  @Nonnull private static final String PRIMITIVES_AS_STRING = "primitivesAsString";
+
+  @Nonnull
+  private static final Map<String, String> READ_OPTIONS = Map.of(PRIMITIVES_AS_STRING, "true");
 
   private DecimalTransform() {}
 
@@ -36,17 +51,24 @@ public final class DecimalTransform {
    */
   @Nonnull
   public static Map<String, String> lexicalReadOptions() {
-    throw new UnsupportedOperationException("Not implemented");
+    return READ_OPTIONS;
   }
 
   /**
-   * Returns the stored value of a decimal, given the column the source was read into.
+   * Returns the stored value of a decimal, which is the text the source carried.
+   *
+   * <p>Nothing here parses the value. The cast reconciles the column with the type the element is
+   * stored as, which is text and an array of it respectively for a singular and a repeating
+   * element; where the source was read through a path that had already parsed the number, it
+   * renders that parsed value as text, and that path is the documented loss of lexical form
+   * (FR-020) rather than a second chance at preserving it.
    *
    * @param source the column the source was read into
+   * @param target the type the element is stored as
    * @return the stored value
    */
   @Nonnull
-  public static Column storedValue(@Nonnull final Column source) {
-    throw new UnsupportedOperationException("Not implemented");
+  public static Column storedValue(@Nonnull final Column source, @Nonnull final DataType target) {
+    return source.cast(target);
   }
 }

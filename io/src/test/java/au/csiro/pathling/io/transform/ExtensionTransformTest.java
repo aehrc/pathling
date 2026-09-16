@@ -74,8 +74,8 @@ class ExtensionTransformTest {
         Stream.of(address.fieldNames()).anyMatch("extension"::equals),
         "the extension is a field of the element carrying it");
 
-    final Row addressRow = transformed.first().<List<Row>>getAs("address").get(0);
-    final List<Row> extensions = addressRow.getAs("extension");
+    final Row addressRow = list(transformed.first(), "address").get(0);
+    final List<Row> extensions = list(addressRow, "extension");
     assertEquals(1, extensions.size());
     assertEquals(ON_COMPLEX_URL, extensions.get(0).<String>getAs("url"));
     assertEquals("beside the city", extensions.get(0).<String>getAs("valueString"));
@@ -85,7 +85,7 @@ class ExtensionTransformTest {
   void storesAnExtensionOnAResourceInline(@TempDir @Nonnull final Path directory) {
     final Dataset<Row> transformed = transform(directory);
 
-    final List<Row> extensions = transformed.first().getAs("extension");
+    final List<Row> extensions = list(transformed.first(), "extension");
     assertEquals(2, extensions.size());
     assertEquals(SIMPLE_URL, extensions.get(0).<String>getAs("url"));
     assertEquals("root", extensions.get(0).<String>getAs("valueString"));
@@ -95,8 +95,7 @@ class ExtensionTransformTest {
   void storesAnExtensionOfAnExtensionInline(@TempDir @Nonnull final Path directory) {
     final Dataset<Row> transformed = transform(directory);
 
-    final List<Row> nested =
-        transformed.first().<List<Row>>getAs("extension").get(1).getAs("extension");
+    final List<Row> nested = list(list(transformed.first(), "extension").get(1), "extension");
     assertEquals(1, nested.size());
     assertEquals("inner", nested.get(0).<String>getAs("url"));
     assertEquals("deep", nested.get(0).<String>getAs("valueString"));
@@ -115,6 +114,12 @@ class ExtensionTransformTest {
   private static Dataset<Row> transform(@Nonnull final Path directory) {
     final String path = TransformFixtures.corpus(directory, PATIENT);
     return TransformFixtures.transformer().read(TransformFixtures.spark(), "Patient", path);
+  }
+
+  /** Returns the rows of a repeating element, as a list rather than the underlying sequence. */
+  @Nonnull
+  private static List<Row> list(@Nonnull final Row row, @Nonnull final String field) {
+    return row.getList(row.fieldIndex(field));
   }
 
   /** Returns the type of a field, unwrapping the array where the element repeats. */
