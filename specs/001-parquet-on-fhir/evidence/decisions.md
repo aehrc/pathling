@@ -395,3 +395,38 @@ remainder of decision 31, which still reads as though `EncodingConfiguration`
 gains these options; the Key Entities note in `spec.md` and T033 already place
 them on a new surface beside it, because FR-051 forbids modifying the module that
 class lives in.
+
+## 45. A choice expands to the types FHIR declares, not to the definition library's aliases
+
+A choice that admits a reference is declared in FHIR as `Reference(X|Y|Z)`, one
+type. The definition library accepts a name per target — `productMedication`,
+`productSubstance` — and a further name for an untyped resource,
+`productResource`, all of them aliases for the same reference. The expansion took
+the full set of valid names, so `ActivityDefinition.product` became five fields
+where FHIR declares two.
+
+**The expansion is now the declared type list.** A declared class the library
+reports as a reference target contributes one `<element>Reference` field, at the
+position of the first such target; the targets that follow contribute nothing. A
+class that is not a target takes the name the library gives it. The untyped
+resource alias appears in no declaration and so is never emitted.
+
+The alternative was to keep the aliases, which costs three dead columns per
+reference-bearing choice in every stored structure, forever, and puts names into
+the layout that no FHIR instance can populate. Field order is part of the type
+(FR-057), so a column emitted once is emitted for the life of the layout. There
+is no reading of the data that would fill them.
+
+*Consequence beyond the layout*: `ofType()` and `as` over a reference-bearing
+choice now see `Reference` once rather than the target resources. That is the
+FHIR-declared surface, so it is the surface the engine should present.
+
+*What holds the rule*: the sweep over every choice in every R4 resource computes
+its oracle from the definition library alone — the valid names, less the target
+aliases, less the untyped resource alias — rather than from the expansion under
+test, so it fails if the collapse drops too much as readily as if it drops too
+little. The name-building fallback that used to hide a type the library maps to
+no name is gone; such a type is now an inconsistency in the definitions and
+raises. Open types need no special handling: `Extension.value[x]` declares
+`Reference` itself, reports no reference targets, and has no untyped-resource
+alias, so the rule leaves all 59 of its variants in place.

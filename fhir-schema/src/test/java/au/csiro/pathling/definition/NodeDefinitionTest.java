@@ -169,29 +169,31 @@ class NodeDefinitionTest {
 
   @Test
   void expandsAReferenceBearingChoiceWithEachDeclaredTypeInItsDeclaredPosition() {
-    // A choice that admits a reference declares the resources it targets rather than the reference
-    // itself, and the definition library maps those to no name. The name is recovered so that a
-    // declared target keeps its declared position; only the names that are declared nowhere — the
-    // plain reference and the untyped resource — follow in the stated order that ends the list.
+    // A choice that admits a reference declares the resources it can target rather than the
+    // reference itself, and every one of those targets is carried by the same reference. The
+    // expansion therefore carries the types FHIR declares: one reference variant, at the position
+    // of the first declared target, and nothing for the targets that follow it.
     assertEquals(
-        List.of(
-            "productMedication",
-            "productSubstance",
-            "productCodeableConcept",
-            "productReference",
-            "productResource"),
+        List.of("productReference", "productCodeableConcept"),
         variantNames(DEFINITIONS.findResourceDefinition("ActivityDefinition"), "product"));
 
+    // The reference does not lead here, so a rule that always placed it first would agree with the
+    // previous assertion and disagree with this one.
     final NodeDefinition trigger =
         childOf(childOf(DEFINITIONS.findResourceDefinition("PlanDefinition"), "action"), "trigger");
     assertEquals(
-        List.of(
-            "timingTiming",
-            "timingSchedule",
-            "timingDate",
-            "timingDateTime",
-            "timingReference",
-            "timingResource"),
+        List.of("timingTiming", "timingReference", "timingDate", "timingDateTime"),
         variantNames(trigger, "timing"));
+  }
+
+  @Test
+  void collapsesEveryDeclaredTargetOfANonLeadingReferenceIntoOneVariant() {
+    // The reported element of MedicationRequest declares a boolean followed by five resources it
+    // can reference. All five are the same reference column, so the expansion is the boolean and
+    // one reference in second place, rather than six variants of which four could never be
+    // populated.
+    assertEquals(
+        List.of("reportedBoolean", "reportedReference"),
+        variantNames(DEFINITIONS.findResourceDefinition("MedicationRequest"), "reported"));
   }
 }

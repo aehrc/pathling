@@ -23,11 +23,8 @@ import au.csiro.pathling.definition.ElementDefinition;
 import ca.uhn.fhir.context.RuntimeChildAny;
 import ca.uhn.fhir.context.RuntimeChildChoiceDefinition;
 import jakarta.annotation.Nonnull;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Stream;
 import org.apache.commons.lang3.StringUtils;
 import org.hl7.fhir.instance.model.api.IBase;
 
@@ -38,6 +35,9 @@ import org.hl7.fhir.instance.model.api.IBase;
  * @see <a href="https://hl7.org/fhir/R4/fhirpath.html#polymorphism">Polymorphism in FHIR</a>
  */
 class FhirChoiceDefinition implements ChoiceDefinition {
+
+  /** The type every resource a choice can target is carried as. */
+  @Nonnull private static final String REFERENCE_TYPE = "Reference";
 
   @Nonnull private final RuntimeChildChoiceDefinition childDefinition;
 
@@ -102,32 +102,41 @@ class FhirChoiceDefinition implements ChoiceDefinition {
     // of valid child names, which is hash ordered: that order is neither reproducible by another
     // implementation nor stable across an upgrade of the definition library, and the order of an
     // expansion is part of the type of every structure that carries the choice.
-    final Set<String> valid = new LinkedHashSet<>(childDefinition.getValidChildNames());
-    final List<String> declared =
-        childDefinition.getChoices().stream()
-            .map(this::nameOfDeclaredType)
-            .filter(valid::contains)
-            .distinct()
-            .toList();
-    // A choice that admits a reference carries names the declared types do not account for: the
-    // plain reference and the untyped resource. They have no declared position, so they follow in
-    // a stated order rather than in the order the name set happens to iterate in.
-    final Stream<String> remainder =
-        valid.stream().filter(name -> !declared.contains(name)).sorted();
-    return Stream.concat(declared.stream(), remainder)
+    return childDefinition.getChoices().stream()
+        .map(this::nameOfDeclaredType)
+        .distinct()
         .flatMap(name -> getChildByElementName(name).stream())
         .toList();
   }
 
   /**
-   * Returns the name a declared type takes within this choice. A type that admits a reference is
-   * declared as the resource it targets, which the definition library does not map to a name, so
-   * the name is built the way the library builds it.
+   * Returns the name a declared type takes within this choice.
+   *
+   * <p>A type the choice can reference is declared as the resource it targets, and every such
+   * target is carried by the same reference. They therefore share one name, which {@link
+   * #getAllChildTypes()} reduces to a single variant at the position of the first target declared.
+   * The definition library also accepts an alias per target and an alias for an untyped resource,
+   * but no FHIR instance can populate one, so naming them would put columns into every stored
+   * structure that carries the choice which nothing could ever fill.
+   *
+   * <p>A type that is not a reference target takes the name the definition library gives it. A type
+   * the library maps to no name is neither, and so is an inconsistency in the definitions rather
+   * than a name to be invented: inventing one would produce a variant that resolves to nothing, and
+   * the mistake would be invisible.
    */
   @Nonnull
   private String nameOfDeclaredType(@Nonnull final Class<? extends IBase> type) {
+    if (childDefinition.getResourceTypes().contains(type)) {
+      return getColumnName(getName(), REFERENCE_TYPE);
+    }
     return Optional.ofNullable(childDefinition.getChildNameByDatatype(type))
-        .orElseGet(() -> getColumnName(getName(), type.getSimpleName()));
+        .orElseThrow(
+            () ->
+                new IllegalStateException(
+                    "The definitions give the type "
+                        + type.getName()
+                        + " no name within the choice "
+                        + getName()));
   }
 
   /**

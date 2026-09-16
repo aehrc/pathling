@@ -40,12 +40,18 @@ import org.junit.jupiter.api.Test;
 
 /**
  * Pins the expansion of every choice in every R4 resource against the names the definition library
- * says are valid for it.
+ * says are valid for it, less the names that no FHIR instance can populate.
  *
  * <p>The order of an expansion is taken from the declared type list rather than from the set of
  * valid names, because the set is hash ordered. This sweep is what says the two describe the same
  * variants: a declared type that maps to no name, or to a name outside the valid set, would
  * silently drop a variant from every stored structure that carries the choice.
+ *
+ * <p>The valid names are not the expansion, because the definition library also accepts an alias
+ * per resource a reference can target, and an alias for an untyped resource. FHIR declares one
+ * reference, so the oracle subtracts those aliases from the valid names. It is computed from the
+ * definition library alone, never from the expansion under test, so it bites in both directions: an
+ * over-eager collapse makes the expansion too small, and an under-eager one too large.
  */
 class ChoiceExpansionSweepTest {
 
@@ -120,9 +126,25 @@ class ChoiceExpansionSweepTest {
         Set.copyOf(expanded).size(),
         "Duplicate variant in the expansion of " + path);
     assertEquals(
-        Set.copyOf(choice.getValidChildNames()),
+        expectedVariants(choice),
         Set.copyOf(expanded),
         "The expansion of " + path + " does not describe the variants the definitions validate");
     checked.add(path);
+  }
+
+  /**
+   * Returns the names the definitions validate that a FHIR instance can actually carry: every valid
+   * name, less the alias the definition library accepts for each resource a reference can target,
+   * and less the alias it accepts for an untyped resource.
+   */
+  @Nonnull
+  private static Set<String> expectedVariants(@Nonnull final RuntimeChildChoiceDefinition choice) {
+    final String elementName = choice.getElementName();
+    final Set<String> aliases = new HashSet<>();
+    choice.getResourceTypes().forEach(target -> aliases.add(elementName + target.getSimpleName()));
+    aliases.add(elementName + "Resource");
+    final Set<String> expected = new HashSet<>(choice.getValidChildNames());
+    expected.removeAll(aliases);
+    return expected;
   }
 }
