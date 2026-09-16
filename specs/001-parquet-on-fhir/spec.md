@@ -45,6 +45,12 @@ primitive ids and extensions in `_field` groups, extensions inline, dates
 carrying range annotations, and quantities carrying both the specification's
 canonical annotation and a magnitude-preserving one beside it.
 
+**Staged.** M1 delivers the lexical decimals, the inline extensions and the
+strictness switch. Every annotation, and the population of the `_field` groups,
+land in M5 — so scenarios 1, 2 and 4 below are met in part at M1 and in full at
+the end of M5. FR-021's staging note, FR-017's carve-out and decision 49 record
+why; nothing here is descoped.
+
 **Why this priority**: Every other story reads what this one writes. The layout
 is the object of the change.
 
@@ -55,16 +61,19 @@ against the specification, without any FHIRPath evaluation.
 
 1. **Given** a resource carrying a decimal, **When** it is stored and read back,
    **Then** the stored value is the lexical form from the source and a numeric
-   annotation accompanies it.
+   annotation accompanies it. *(The annotation is staged to M5; the lexical form
+   is M1.)*
 2. **Given** a resource carrying an extension on a primitive element, **When** it
    is stored, **Then** the extension appears in the `_field` group beside that
-   element.
+   element. *(Staged to M5. Until then the group is derived but not populated,
+   and the dropped content is detectable rather than silent — FR-017's
+   carve-out.)*
 3. **Given** a resource carrying an extension on a complex element, **When** it is
    stored, **Then** the extension appears inline on that element and no
    root-level extension map or field-id column is emitted.
 4. **Given** a quantity, **When** it is stored, **Then** the specification's
    canonical annotation accompanies it, followed by a second annotation whose
-   precision preserves magnitude across unit conversion.
+   precision preserves magnitude across unit conversion. *(Staged to M5.)*
 5. **Given** content the definition set does not describe, **When** it is loaded
    with the strictness switch set to fail, **Then** an error names the content
    rather than dropping it silently.
@@ -98,7 +107,9 @@ FHIRPath evaluation involved.
    content is detectable rather than silently lost.
 4. **Given** a pruned schema, **When** conformant input is round-tripped,
    **Then** the guarantee holds unconditionally, without reference to those
-   bounds.
+   bounds. *(Until M5 this excludes primitive id and extension content, per
+   FR-017's carve-out; the exclusion is asserted rather than incidental, and
+   T078c removes it.)*
 
 ---
 
@@ -386,10 +397,10 @@ resolves no Spark Catalyst dependency, enforced by the build.
   absent, using an annotation only as a fast path. An annotation MUST NOT be
   required for correctness.
 - **FR-023**: Whether an annotation is used MUST be decided from the schema
-  rather than per row. **Staged to M5**, because it presupposes that an
-  annotation exists to choose. The same rule governs the layout normalisation
-  the engine performs from M2: which layout a column is read as MUST be settled
-  from the resolved schema, never per row. That normalisation happens at one
+  rather than per row. *That half is staged to M5, because it presupposes that an
+  annotation exists to choose.* The same rule governs the layout normalisation
+  the engine performs, and **that half binds from M2**: which layout a column is
+  read as MUST be settled from the resolved schema, never per row. That normalisation happens at one
   site, the traversal expression, so that no code above it is written twice and
   removing it later touches one file (decision 55).
 
@@ -553,7 +564,11 @@ after the schema-binding decision and belong to this section.
 - **SC-001**: A round trip over the FHIR R4 specification examples and a Synthea
   corpus produces semantically equal resources for 100% of conformant input,
   including decimals with trailing zeros, exponent notation, a leading sign, a
-  very small magnitude and forty significant digits.
+  very small magnitude and forty significant digits. Until M5 this is measured
+  with primitive id and extension content excluded, because the metadata group is
+  not populated before then and the R4 examples carry such content; the exclusion
+  is asserted in the harness rather than incidental (T076, T077), and T078c
+  removes it and restores the criterion unconditionally.
 - **SC-002**: The FHIRPath test suite, both conformance baselines and the
   SQL-on-FHIR compliance suite pass over data in the new layout, in the pruned
   schema mode, with a curated subset also passing in the dense mode.

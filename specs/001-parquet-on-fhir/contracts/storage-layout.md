@@ -19,14 +19,17 @@ Deviations, all permitted by the specification:
 | Primitive ids and extensions | The specification's `_field` groups. |
 | Extensions on complex elements | Inline `extension` groups. |
 | Date ranges | The specification's start and end annotations. |
-| Quantity canonicalisation | **Addition.** The specification's `__<field>_canonical` is emitted at the type the specification gives it, followed immediately by `__<field>_canonical_exact`, which carries the same canonicalisation at a precision that preserves magnitude. Both are present, in that order. The second exists because the specification's fixed-point type makes quantities differing by orders of magnitude compare equal, which the engine cannot compare on; the first is what an interchange consumer reads. Non-standard annotations are permitted. Raised upstream; `_canonical_exact` is withdrawn if the specification adopts a magnitude-preserving representation. |
+| Quantity canonicalisation | **Addition.** The specification's `__<field>_canonical` is emitted at the type the specification gives it, followed immediately by `__<field>_canonical_exact`, which carries the same canonicalisation at a precision that preserves magnitude. Both are present, in that order, **from M5** — the layout ships
+annotation-free at the flip and each annotation kind lands afterwards (FR-021,
+decision 50). The names, types and positions below are fixed from Phase 3 and do
+not change when the values arrive. The second exists because the specification's fixed-point type makes quantities differing by orders of magnitude compare equal, which the engine cannot compare on; the first is what an interchange consumer reads. Non-standard annotations are permitted. Raised upstream; `_canonical_exact` is withdrawn if the specification adopts a magnitude-preserving representation. |
 | `contained` | Not represented. Detected, never silently dropped. |
 | `Bundle` | Never stored as a resource type. Accepted as a transport carrier and exploded to per-type tables. |
 
 ### The two quantity annotations
 
 A quantity carries `__<field>_canonical` and then `__<field>_canonical_exact`,
-in that order. The order is fixed rather than incidental: field order is part of
+in that order, once annotations are emitted in M5. The order is fixed rather than incidental: field order is part of
 the type, so a consumer comparing structures positionally depends on it, and an
 interchange consumer reading the specification's layout finds the
 specification's annotation first.

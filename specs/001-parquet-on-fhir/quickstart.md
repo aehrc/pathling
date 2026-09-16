@@ -33,12 +33,17 @@ the limitation cannot silently widen.
 Load a small corpus through `io` and inspect the stored schema and values. As
 with QS-001, this runs against the public API only from M4 onward.
 
-**Expect**: decimals stored as text with a numeric annotation beside them;
-primitive ids and extensions in the metadata group; extensions on complex
-elements inline; date range annotations; two canonical annotations beside a
-quantity, the specification's followed by one whose precision preserves
-magnitude. No field identifier, no root-level extension map, no versioned
-identifier column, no decimal scale column.
+**Expect**, from M5 when every annotation kind has landed: decimals stored as
+text with a numeric annotation beside them; primitive ids and extensions in the
+metadata group; extensions on complex elements inline; date range annotations;
+two canonical annotations beside a quantity, the specification's followed by one
+whose precision preserves magnitude. No field identifier, no root-level extension
+map, no versioned identifier column, no decimal scale column.
+
+**Expect at M1 through M4**: the same, except that the annotation fields and the
+`_field` groups are present in the schema and unpopulated. The layout ships
+annotation-free at the flip (decision 50) and the metadata group is written in M5
+(decision 49), so this scenario is run in two parts rather than deferred whole.
 
 ## QS-003 Run the engine over the new layout (US3)
 
