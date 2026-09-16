@@ -18,7 +18,10 @@
 package au.csiro.pathling.io;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import au.csiro.pathling.io.egress.ResourceSerialiser;
+import au.csiro.pathling.io.transform.TransformFixtures;
 import jakarta.annotation.Nonnull;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -26,6 +29,8 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -76,6 +81,27 @@ class DecimalRoundTripTest {
     // The unit carries the same characters as a string, so a serialiser that quoted the decimal
     // would make the two indistinguishable and this comparison is what separates them.
     assertEquals(0, RoundTripHarness.unconditional().assertRoundTrip("Observation", corpus));
+  }
+
+  @Test
+  void writesADecimalUnquotedAndAStringQuoted(@TempDir @Nonnull final Path directory) {
+    final String path =
+        TransformFixtures.corpus(
+            directory,
+            "{\"resourceType\":\"Observation\",\"id\":\"quantity\",\"status\":\"final\","
+                + "\"valueQuantity\":{\"value\":1.50,\"unit\":\"1.50\"}}");
+    final Dataset<Row> stored =
+        TransformFixtures.transformer().read(TransformFixtures.spark(), "Observation", path);
+
+    final String document =
+        ResourceSerialiser.of(TransformFixtures.DEFINITIONS)
+            .serialise("Observation", stored)
+            .collectAsList()
+            .get(0);
+
+    // The two carry the same characters, and only the definitions say which of them is a number.
+    assertTrue(document.contains("\"value\":1.50"), document);
+    assertTrue(document.contains("\"unit\":\"1.50\""), document);
   }
 
   @Nonnull

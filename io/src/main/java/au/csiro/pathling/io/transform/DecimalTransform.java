@@ -20,6 +20,7 @@ package au.csiro.pathling.io.transform;
 import jakarta.annotation.Nonnull;
 import java.util.Map;
 import org.apache.spark.sql.Column;
+import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.DataType;
 
 /**
@@ -33,6 +34,14 @@ import org.apache.spark.sql.types.DataType;
  * set.
  *
  * <p>The numeric value is supplied by the annotation beside the element, which is added later.
+ *
+ * <p>Egress has the mirror problem. A decimal is text in the layout and a number in the document,
+ * and the JSON writer quotes text; nothing asks it not to, per column or otherwise. So the value is
+ * marked on its way into the document and the marks, with the quotes around them, are removed from
+ * the document afterwards. The mark is a control character, which the writer escapes: a value
+ * carrying the six characters of an escape sequence is escaped again and cannot match, so only a
+ * raw control character in the data could collide, and only where the whole value is one mark, the
+ * characters a decimal is written with, and the other mark.
  */
 public final class DecimalTransform {
 
@@ -41,6 +50,22 @@ public final class DecimalTransform {
 
   @Nonnull
   private static final Map<String, String> READ_OPTIONS = Map.of(PRIMITIVES_AS_STRING, "true");
+
+  /**
+   * The mark wrapped around a decimal in the document, chosen because the JSON writer escapes it
+   * and the FHIR primitive types have no use for it.
+   */
+  @Nonnull private static final String MARK = "\u0001";
+
+  /**
+   * Matches a marked decimal and the quotes the writer put around it, capturing the value. The
+   * characters admitted between the marks are the ones a decimal is written with, so a string that
+   * somehow carried the marks would still have to be a decimal to be affected.
+   */
+  @Nonnull private static final String MARKED = "\"\\\\u0001([-+0-9.eE]+)\\\\u0001\"";
+
+  /** The captured value, which replaces the marks and the quotes together. */
+  @Nonnull private static final String UNQUOTED = "$1";
 
   private DecimalTransform() {}
 
@@ -70,5 +95,29 @@ public final class DecimalTransform {
   @Nonnull
   public static Column storedValue(@Nonnull final Column source, @Nonnull final DataType target) {
     return source.cast(target);
+  }
+
+  /**
+   * Returns the value a decimal takes in the document under construction, which is its stored text
+   * between two marks.
+   *
+   * @param stored the stored value
+   * @return the marked value, which is null where the stored value is
+   */
+  @Nonnull
+  public static Column markedValue(@Nonnull final Column stored) {
+    return functions.concat(functions.lit(MARK), stored, functions.lit(MARK));
+  }
+
+  /**
+   * Returns a document with every marked decimal in it turned from text into a number, which is
+   * what makes the round trip of a decimal lossless rather than merely faithful in its characters.
+   *
+   * @param document the document the JSON writer produced
+   * @return the document, with the decimals unquoted
+   */
+  @Nonnull
+  public static Column unmarkedDocument(@Nonnull final Column document) {
+    return functions.regexp_replace(document, MARKED, UNQUOTED);
   }
 }

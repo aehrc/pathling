@@ -238,21 +238,21 @@ written until M5 — the exclusion is explicit and asserted, and T078c removes i
 
 ### Tests ⚠️ write first, confirm failing
 
-- [ ] T071 [US2] Build the round-trip harness in `io/src/test/java/au/csiro/pathling/io/RoundTripHarness.java`, comparing semantically: object key order ignored, array order significant, numbers compared lexically.
-- [ ] T072 [P] [US2] Test decimals through the harness: a trailing zero, exponent notation, a leading sign, a very small magnitude and forty significant digits, in `io/src/test/java/au/csiro/pathling/io/DecimalRoundTripTest.java`.
-- [ ] T073 [P] [US2] Test that an absent element is absent from the output rather than present and null, in `io/src/test/java/au/csiro/pathling/io/EgressOmissionTest.java`.
-- [ ] T074 [P] [US2] Test that a structure whose every field is null in a row is omitted rather than serialised as an empty object, in the same file. This is the default serialisation behaviour, so it will fail before the fix.
-- [ ] T075 [P] [US2] Test that an array whose every element is null is omitted rather than serialised as an array of nulls, in the same file.
+- [x] T071 [US2] Build the round-trip harness in `io/src/test/java/au/csiro/pathling/io/RoundTripHarness.java`, comparing semantically: object key order ignored, array order significant, numbers compared lexically.
+- [x] T072 [P] [US2] Test decimals through the harness: a trailing zero, exponent notation, a leading sign, a very small magnitude and forty significant digits, in `io/src/test/java/au/csiro/pathling/io/DecimalRoundTripTest.java`.
+- [x] T073 [P] [US2] Test that an absent element is absent from the output rather than present and null, in `io/src/test/java/au/csiro/pathling/io/EgressOmissionTest.java`.
+- [x] T074 [P] [US2] Test that a structure whose every field is null in a row is omitted rather than serialised as an empty object, in the same file. This is the default serialisation behaviour, so it will fail before the fix.
+- [x] T075 [P] [US2] Test that an array whose every element is null is omitted rather than serialised as an array of nulls, in the same file.
 - [ ] T076 [US2] Run the harness over the FHIR R4 specification examples in `io/src/test/java/au/csiro/pathling/io/SpecExampleRoundTripTest.java`, excluding `Bundle` resources and asserting the exclusion is explicit rather than incidental. FR-007 means a bundle is never stored as a resource type, so a bundle can never round-trip as a bundle; its contents round-trip as the resources it is exploded into (T058, T068), which is M2's concern. The Synthea corpus in T077 is per-resource-type NDJSON and is unaffected. Primitive id and extension content is excluded on the same terms — explicitly, and asserted rather than incidental — because the metadata group is not written until M5. The R4 examples carry such content, so without the exclusion this suite fails rather than passing with a recorded gap.
-- [ ] T077 [US2] Run the harness over a Synthea corpus in `io/src/test/java/au/csiro/pathling/io/SyntheaRoundTripTest.java`, carrying the same asserted exclusion for primitive id and extension content as T076.
-- [ ] T078 [P] [US2] Test and thereby pin the documented limitation: resources supplied as a dataset of strings do not preserve decimal lexical form, in `io/src/test/java/au/csiro/pathling/io/StringDatasetLimitationTest.java`. Asserting it stops the limitation silently widening.
-- [ ] T078a [P] [US2] Test that on a pruned schema the round-trip guarantee holds unconditionally **but for primitive id and extension content**, which FR-017's carve-out excludes until M5, and that on a dense schema content the configured nesting, extension or open-type bounds would drop is detectable rather than silently lost (FR-017), in `io/src/test/java/au/csiro/pathling/io/DenseBoundsDetectionTest.java`. The carve-out's own detectability is T057b; T078c closes it.
+- [x] T077 [US2] Run the harness over a Synthea corpus in `io/src/test/java/au/csiro/pathling/io/SyntheaRoundTripTest.java`, carrying the same asserted exclusion for primitive id and extension content as T076.
+- [x] T078 [P] [US2] Test and thereby pin the documented limitation: resources supplied as a dataset of strings do not preserve decimal lexical form, in `io/src/test/java/au/csiro/pathling/io/StringDatasetLimitationTest.java`. Asserting it stops the limitation silently widening.
+- [x] T078a [P] [US2] Test that on a pruned schema the round-trip guarantee holds unconditionally **but for primitive id and extension content**, which FR-017's carve-out excludes until M5, and that on a dense schema content the configured nesting, extension or open-type bounds would drop is detectable rather than silently lost (FR-017), in `io/src/test/java/au/csiro/pathling/io/DenseBoundsDetectionTest.java`. The carve-out's own detectability is T057b; T078c closes it.
 
 ### Implementation
 
-- [ ] T078b [US2] Implement detection of content the dense bounds would drop, reported through the strictness switch, in `io/src/main/java/au/csiro/pathling/io/transform/BoundsCheck.java`.
-- [ ] T079 [US2] Implement egress from the layout to JSON in `io/src/main/java/au/csiro/pathling/io/egress/ResourceSerialiser.java`.
-- [ ] T080 [US2] Implement omission of all-null structures and null-only arrays in `io/src/main/java/au/csiro/pathling/io/egress/EmptyPruning.java`.
+- [x] T078b [US2] Implement detection of content the dense bounds would drop, reported through the strictness switch, in `io/src/main/java/au/csiro/pathling/io/transform/BoundsCheck.java`.
+- [x] T079 [US2] Implement egress from the layout to JSON in `io/src/main/java/au/csiro/pathling/io/egress/ResourceSerialiser.java`.
+- [x] T080 [US2] Implement omission of all-null structures and null-only arrays in `io/src/main/java/au/csiro/pathling/io/egress/EmptyPruning.java`.
 
 **Checkpoint**: Driver 2 is demonstrated over a real corpus, with no user-visible change.
 
