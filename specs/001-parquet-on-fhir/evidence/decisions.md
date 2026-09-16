@@ -855,3 +855,111 @@ Two consequences for the tasks.
 - **The defect is pinned before it is fixed.** T104b runs the recursive case
   against unmodified behaviour and records the failure, so the fix is
   demonstrable and the release note is accurate about what changed.
+
+## 57. The strictness switch governs the definitions, and neither the JSON nor the values
+
+The switch (FR-018, decision 44) asks one question: is this content something the
+definition set describes? Two neighbouring questions are deliberately outside it,
+and both are answered loudly regardless of how it is set.
+
+**Malformed JSON fails the read.** The reader runs in `FAILFAST` mode. Spark's
+permissive default substitutes a row of nulls for a document it cannot parse,
+which is precisely the silent truncation FR-018 forbids — and it would be
+governed by a switch whose default is to ignore. A document that is not JSON is
+not content outside the definition set; it is not content.
+
+**A malformed value fails at execution.** A primitive is stored by a plain
+`cast`, not a `try_cast`, so `"abc"` in an integer element raises rather than
+becoming null. This rests on ANSI mode, which is Spark 4's default and which
+nothing in Pathling disables: the only switch is `pathling.test.ansiEnabled`,
+an ad-hoc developer property in the `fhirpath` test harness that no build
+profile sets. Were ANSI ever turned off by default, a malformed value would
+become a silent null and this decision would have to be revisited — `try_cast`
+plus a finding is the alternative.
+
+The line between the two is the definitions. The switch is about a *schema*
+disagreement, where ignoring is a coherent choice because the content simply has
+nowhere to go. A value that contradicts its own declared type is not a
+disagreement about the schema.
+
+## 58. Shape mismatch is detected in both directions, not just the one named
+
+T057a names one case: a repeating element supplied as a single object. The
+reverse — a singular element supplied as an array — is the more dangerous of the
+two and is detected on the same terms.
+
+Spark will not refuse it. Asked to store `["male"]` where the definitions declare
+a singular `code`, it renders the array as its own text and stores the string
+`[male]`, which is neither an error nor the input. That is a silent corruption
+where the case T057a names is merely a loss, so a check that covered only the
+named direction would leave the worse half open.
+
+Both are therefore one finding kind, reported through the switch and never
+coerced. Leaf-against-structure travels with them, because the target type
+derived from the definitions is the authority on all three questions at once.
+
+## 59. Conformance is judged against the canonical structure, not the derived schema
+
+The obvious check — compare the observed keys against the fields of the schema
+the derivation produced — is wrong in the dense mode, and wrong in a way that
+would hide the very loss FR-017 asks about.
+
+A dense schema omits fields for two unrelated reasons. Some elements the
+definitions do not describe, which is what the strictness switch is for. Others
+the definitions do describe, but the configured nesting depth, extension switch
+or open types bound them away. Judging against the derived schema conflates the
+two and reports the second as undescribed content, which is both untrue and the
+wrong remedy: the caller's recourse is to raise the bound, not to fix the data.
+
+The check therefore runs against the canonical structure, which is the
+definitions and nothing else. The bounded loss is a separate question with a
+separate answer, `BoundsCheck` at T078b.
+
+Name resolution is not an alternative to either. The definition library resolves
+`valuePatient` and `valueResource`, names decision 45 establishes that no FHIR
+instance can populate and the layout has no column for, so a check built on it
+would accept content that is then silently dropped. Verified: with detection
+against the canonical structure, `Observation.valuePatient` is reported.
+
+## 60. The metadata group is stripped before the schema is fitted, until M5
+
+A fitted schema is fitted to the data, and the transform reads that as *the data
+as stored* rather than the data as supplied. Primitive id and extension keys are
+therefore removed from the observed schema before it is handed to the pruner.
+
+Without this, a source carrying `_birthDate` produces a stored schema with a
+metadata group in it that every row leaves null, because the transform does not
+populate the group until T061. A column that is null by construction is worse
+than an absent one: it reads as capability the layout does not yet have.
+
+The content is reported rather than dropped in silence, which is what FR-017's
+carve-out requires of it and what T057b pins.
+
+**This has a consequence at T061.** When the metadata group is populated, the
+strip must come out, or the group will be written into rows of a schema fitted
+not to carry it. The strip and the population are one change in two milestones,
+and T078c is where the carve-out closes.
+
+## 61. An extension needs no case of its own
+
+The layout stores an extension inline, meaning as the structure the definitions
+describe, on the structure carrying it, recursing as far as the source does.
+That is what the ordinary structural mapping does, so there is no
+extension-specific path in the transform and the task that called for one
+(T062) has no implementation.
+
+This was measured rather than assumed. An extension component was written, and
+hard-wiring its predicate to false left every test green — the branch returned
+exactly what the branch beside it returned. It was removed.
+
+The result belongs to the layout rather than to the transform. The previous
+encoding needed extension-specific code because it had nowhere to put an
+extension: a scalar column cannot carry one, so extensions were hoisted into a
+map at the root of the resource and keyed by an identifier added to every
+composite. Neither the map nor the identifier exists here, and with them gone an
+extension is an ordinary element. T052 is where inline storage is stated, since
+there is no component for it to point at.
+
+Extensions on *primitive* elements are the other half of FR-003 and are
+unaffected: they belong in the metadata group beside the element, which is
+`PrimitiveMetadataTransform` at T061.
