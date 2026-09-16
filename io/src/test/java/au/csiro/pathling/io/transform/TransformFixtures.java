@@ -35,22 +35,24 @@ import org.apache.spark.sql.SparkSession;
  * Fixtures shared by the transform tests: the R4 definitions, the bounds that apply to the dense
  * mode, a Spark session, and the writing of a corpus of FHIR JSON documents to a directory.
  *
+ * <p>It is public because the round trip harness in the parent package drives the same transform.
+ *
  * <p>The corpus is written as newline-delimited JSON files, because that is the ingest path on
  * which Spark preserves the lexical form of a number. Reading a dataset of strings routes the value
  * through a double and is documented as lossy (FR-020), so no test here uses it.
  */
-final class TransformFixtures {
+public final class TransformFixtures {
 
   /** The FHIR R4 definitions, built once because the HAPI context is expensive to create. */
   @Nonnull
-  static final DefinitionContext DEFINITIONS = FhirDefinitionContext.of(FhirContext.forR4());
+  public static final DefinitionContext DEFINITIONS = FhirDefinitionContext.of(FhirContext.forR4());
 
   /**
    * The open types Pathling enables by default. They are repeated here rather than taken from the
    * encoders module, which this module must not depend upon.
    */
   @Nonnull
-  static final Set<String> STANDARD_OPEN_TYPES =
+  public static final Set<String> STANDARD_OPEN_TYPES =
       Set.of(
           "boolean",
           "code",
@@ -75,7 +77,7 @@ final class TransformFixtures {
    * expensive to build.
    */
   @Nonnull
-  static synchronized SparkSession spark() {
+  public static synchronized SparkSession spark() {
     if (session == null) {
       session =
           SparkSession.builder()
@@ -94,13 +96,13 @@ final class TransformFixtures {
    * Returns a transformer over the R4 definitions, bounded as the defaults bound the dense mode.
    */
   @Nonnull
-  static ResourceTransformer transformer(@Nonnull final SchemaConfiguration configuration) {
+  public static ResourceTransformer transformer(@Nonnull final SchemaConfiguration configuration) {
     return ResourceTransformer.of(DEFINITIONS, configuration, 0, false, STANDARD_OPEN_TYPES);
   }
 
   /** Returns a transformer in the default configuration, which ignores non-conformant content. */
   @Nonnull
-  static ResourceTransformer transformer() {
+  public static ResourceTransformer transformer() {
     return transformer(SchemaConfiguration.builder().build());
   }
 
@@ -109,7 +111,7 @@ final class TransformFixtures {
    * path the reader is given.
    */
   @Nonnull
-  static String corpus(@Nonnull final Path directory, @Nonnull final String... documents) {
+  public static String corpus(@Nonnull final Path directory, @Nonnull final String... documents) {
     final Path file = directory.resolve("resources.ndjson");
     try {
       Files.write(file, List.of(documents));

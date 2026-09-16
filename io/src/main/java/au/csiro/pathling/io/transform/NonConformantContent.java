@@ -36,6 +36,7 @@ public final class NonConformantContent {
   private static final String UNDESCRIBED_CONTENT = "undescribedContent";
   private static final String SHAPE_MISMATCH = "shapeMismatch";
   private static final String PRIMITIVE_METADATA = "primitiveMetadata";
+  private static final String OUTSIDE_DENSE_BOUNDS = "outsideDenseBounds";
 
   @Nonnull private final String path;
 
@@ -106,6 +107,23 @@ public final class NonConformantContent {
   }
 
   /**
+   * Returns a finding for content the definitions describe but the bounds configured for the dense
+   * mode drop (FR-017).
+   *
+   * <p>It is a different finding from undescribed content, because the remedy is different: the
+   * caller raises the bound rather than correcting the data.
+   *
+   * @param path the path the content was found at
+   * @param detail which bound drops it
+   * @return the finding
+   */
+  @Nonnull
+  public static NonConformantContent outsideDenseBounds(
+      @Nonnull final String path, @Nonnull final String detail) {
+    return new NonConformantContent(path, OUTSIDE_DENSE_BOUNDS, detail);
+  }
+
+  /**
    * Returns the path the content was found at, as a dotted path from the resource type.
    *
    * @return the path
@@ -149,6 +167,15 @@ public final class NonConformantContent {
    */
   public boolean isPrimitiveMetadata() {
     return PRIMITIVE_METADATA.equals(kind);
+  }
+
+  /**
+   * Returns whether this finding names content the bounds configured for the dense mode drop.
+   *
+   * @return true where it does
+   */
+  public boolean isOutsideDenseBounds() {
+    return OUTSIDE_DENSE_BOUNDS.equals(kind);
   }
 
   @Override

@@ -28,6 +28,7 @@ import au.csiro.pathling.schema.PrimitiveTypes;
 import au.csiro.pathling.schema.SchemaBuilder;
 import au.csiro.pathling.schema.SchemaConfiguration;
 import jakarta.annotation.Nonnull;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -126,13 +127,27 @@ public final class ResourceTransformer {
       @Nonnull final SparkSession spark,
       @Nonnull final String resourceType,
       @Nonnull final String path) {
-    final Dataset<Row> source =
-        spark
-            .read()
-            .options(DecimalTransform.lexicalReadOptions())
-            .option(READ_MODE, FAIL_FAST)
-            .json(path);
-    return transform(resourceType, source);
+    return transform(resourceType, source(spark, path));
+  }
+
+  /**
+   * Reads newline-delimited FHIR JSON with an inferred schema, which is what the transform is
+   * imposed upon.
+   *
+   * <p>It is exposed so that a caller can ask what a source carries before deciding to store it:
+   * {@link #findings} takes the schema this returns.
+   *
+   * @param spark the Spark session to read with
+   * @param path the path to read from
+   * @return the source, read with an inferred schema
+   */
+  @Nonnull
+  public Dataset<Row> source(@Nonnull final SparkSession spark, @Nonnull final String path) {
+    return spark
+        .read()
+        .options(DecimalTransform.lexicalReadOptions())
+        .option(READ_MODE, FAIL_FAST)
+        .json(path);
   }
 
   /**
@@ -150,7 +165,7 @@ public final class ResourceTransformer {
     final StructType observed = source.schema();
     final DefinitionCanonicalStructure canonical =
         DefinitionCanonicalStructure.forResource(definitions, resourceType);
-    report(StrictnessCheck.of(canonical, resourceType).check(observed));
+    report(findings(resourceType, observed));
     final StructType target =
         configuration.isDenseSchema()
             ? schemaBuilder.dense(resourceType)
@@ -275,6 +290,34 @@ public final class ResourceTransformer {
     // A structure the source did not carry stays absent rather than becoming a structure of nulls,
     // which is what the round trip needs of it.
     return functions.when(source.isNotNull(), functions.struct(fields));
+  }
+
+  /**
+   * Returns the content a source carries that this layout does not store, as values.
+   *
+   * <p>Two questions are asked, and they are different questions (decision 59). The definitions are
+   * silent about some of it, which is the strictness switch's own subject. The rest the definitions
+   * describe, but the bounds configured for the dense mode drop it, and the caller's remedy there
+   * is to raise the bound rather than to correct the data. Both are detectable, which is what
+   * FR-017 and FR-018 require; returning them rather than only logging them is what makes them so.
+   *
+   * @param resourceType the type of the resources the source carries
+   * @param observed the schema the source was read with
+   * @return the findings, in the order they were reached
+   */
+  @Nonnull
+  public List<NonConformantContent> findings(
+      @Nonnull final String resourceType, @Nonnull final StructType observed) {
+    final DefinitionCanonicalStructure canonical =
+        DefinitionCanonicalStructure.forResource(definitions, resourceType);
+    final List<NonConformantContent> findings =
+        new ArrayList<>(StrictnessCheck.of(canonical, resourceType).check(observed));
+    if (configuration.isDenseSchema()) {
+      findings.addAll(
+          BoundsCheck.of(canonical, schemaBuilder.dense(resourceType), resourceType)
+              .check(observed));
+    }
+    return List.copyOf(findings);
   }
 
   /** Raises or logs the content this layout does not store, as the strictness switch decides. */
