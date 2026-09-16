@@ -205,20 +205,20 @@ T067a enforce.*
 
 ### Tests ⚠️ write first, confirm failing
 
-- [ ] T050 [P] [US1] Test that a decimal is stored as its source lexical form, in `io/src/test/java/au/csiro/pathling/io/transform/DecimalTransformTest.java`. The numeric annotation beside it is T050a, in M5.
-- [ ] T052 [P] [US1] Test that extensions on complex elements are stored inline, and that no field identifier and no root-level extension map are emitted, in `io/src/test/java/au/csiro/pathling/io/transform/ExtensionTransformTest.java`.
-- [ ] T056 [P] [US1] Test that `contained` resources are detected and governed by the strictness switch, never silently dropped, in `io/src/test/java/au/csiro/pathling/io/transform/StrictnessTest.java`.
-- [ ] T057 [P] [US1] Test that content the definition set does not describe is ignored or raises, per the switch, in the same file. Detection must compare observed keys against the definitions: the JSON reader silently skips unknown fields in every mode, so it cannot be asked to enforce this.
-- [ ] T057a [P] [US1] Test that input whose cardinality contradicts the definitions — a repeating element supplied as a single object rather than a one-element array — is governed by the strictness switch and never silently coerced, in the same file. Conformant FHIR JSON always uses an array for a repeating element, so inference gets cardinality right for conformant input; this is the case where it does not, and it surfaces in the transform rather than at the read.
-- [ ] T057b [P] [US1] Test that primitive id and extension content present in the input is reported through the strictness switch rather than silently dropped, in the same file. The metadata group is derived by `fhir-schema` but not populated by the transform until M5, so this content is dropped; FR-018 forbids losing it silently and FR-017's carve-out requires the loss be detectable. T078c removes this task's reason to exist.
+- [x] T050 [P] [US1] Test that a decimal is stored as its source lexical form, in `io/src/test/java/au/csiro/pathling/io/transform/DecimalTransformTest.java`. The numeric annotation beside it is T050a, in M5.
+- [x] T052 [P] [US1] Test that extensions on complex elements are stored inline, and that no field identifier and no root-level extension map are emitted, in `io/src/test/java/au/csiro/pathling/io/transform/ExtensionTransformTest.java`.
+- [x] T056 [P] [US1] Test that `contained` resources are detected and governed by the strictness switch, never silently dropped, in `io/src/test/java/au/csiro/pathling/io/transform/StrictnessTest.java`.
+- [x] T057 [P] [US1] Test that content the definition set does not describe is ignored or raises, per the switch, in the same file. Detection must compare observed keys against the definitions: the JSON reader silently skips unknown fields in every mode, so it cannot be asked to enforce this.
+- [x] T057a [P] [US1] Test that input whose cardinality contradicts the definitions — a repeating element supplied as a single object rather than a one-element array — is governed by the strictness switch and never silently coerced, in the same file. Conformant FHIR JSON always uses an array for a repeating element, so inference gets cardinality right for conformant input; this is the case where it does not, and it surfaces in the transform rather than at the read.
+- [x] T057b [P] [US1] Test that primitive id and extension content present in the input is reported through the strictness switch rather than silently dropped, in the same file. The metadata group is derived by `fhir-schema` but not populated by the transform until M5, so this content is dropped; FR-018 forbids losing it silently and FR-017's carve-out requires the loss be detectable. T078c removes this task's reason to exist.
 
 ### Implementation
 
-- [ ] T059 [US1] Implement the JSON read and the transform into the derived schema in `io/src/main/java/au/csiro/pathling/io/transform/ResourceTransformer.java`. Read with an inferred schema, then impose types, cardinality and conventions from the definitions (R-008). This is the entry point M1, M2 and M3 are exercised through, since the public API is not rewired until M4.
-- [ ] T060 [P] [US1] Implement the decimal transform in `io/src/main/java/au/csiro/pathling/io/transform/DecimalTransform.java`.
-- [ ] T062 [P] [US1] Implement the extension transform in `io/src/main/java/au/csiro/pathling/io/transform/ExtensionTransform.java`.
-- [ ] T067 [US1] Implement strictness checking against the definitions, including `contained` detection, in `io/src/main/java/au/csiro/pathling/io/transform/StrictnessCheck.java`.
-- [ ] T067a [US1] Implement detection of primitive id and extension content in the input, reported through the strictness switch, in the same file.
+- [x] T059 [US1] Implement the JSON read and the transform into the derived schema in `io/src/main/java/au/csiro/pathling/io/transform/ResourceTransformer.java`. Read with an inferred schema, then impose types, cardinality and conventions from the definitions (R-008). This is the entry point M1, M2 and M3 are exercised through, since the public API is not rewired until M4.
+- [x] T060 [P] [US1] Implement the decimal transform in `io/src/main/java/au/csiro/pathling/io/transform/DecimalTransform.java`.
+- [x] T062 [P] [US1] Implement the extension transform in `io/src/main/java/au/csiro/pathling/io/transform/ExtensionTransform.java`.
+- [x] T067 [US1] Implement strictness checking against the definitions, including `contained` detection, in `io/src/main/java/au/csiro/pathling/io/transform/StrictnessCheck.java`.
+- [x] T067a [US1] Implement detection of primitive id and extension content in the input, reported through the strictness switch, in the same file.
 
 **Checkpoint**: JSON is written in the new layout through `io`, without annotations and without primitive metadata. The public API is unchanged and the engine still reads the previous layout.
 
