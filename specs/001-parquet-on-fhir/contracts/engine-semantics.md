@@ -102,9 +102,12 @@ strict improvement.
 
 ## Quantities
 
-Comparison across units uses the canonical annotation when present and computes
-the canonicalisation when not. The annotation's precision preserves magnitude, so
-quantities differing by orders of magnitude do not compare equal.
+Comparison across units uses the `_canonical_exact` annotation when present and
+computes the canonicalisation when not. That annotation's precision preserves
+magnitude, so quantities differing by orders of magnitude do not compare equal.
+The specification's `_canonical` annotation sits beside it and is written for
+interchange; the engine does not read it, because its fixed scale loses the
+magnitude the comparison depends on.
 
 ## Coding and terminology
 

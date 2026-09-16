@@ -111,7 +111,13 @@ class DefinitionCanonicalStructureTest {
         DefinitionCanonicalStructure.forResource(DEFINITIONS, "Observation").fieldOrder();
     final int quantity = order.indexOf("valueQuantity");
     assertTrue(quantity >= 0, "The expanded quantity variant of the value choice is missing");
-    assertEquals(LayoutFields.canonicalAnnotationName("valueQuantity"), order.get(quantity + 1));
+    // The names are spelled out rather than taken from LayoutFields, because the first of them is
+    // the name the Parquet on FHIR specification gives its own annotation and is therefore part of
+    // the contract with any other implementation, not an internal choice. The order is part of the
+    // contract too: the specification's form comes first, so a consumer reading the specification's
+    // layout finds the specification's annotation where it expects it.
+    assertEquals("__valueQuantity_canonical", order.get(quantity + 1));
+    assertEquals("__valueQuantity_canonical_exact", order.get(quantity + 2));
   }
 
   @Test

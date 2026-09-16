@@ -181,7 +181,7 @@ rewiring (T070) to M3.*
 - [ ] T051 [P] [US1] Test that a primitive element's id and extensions are stored in the metadata group beside it, in `io/src/test/java/au/csiro/pathling/io/transform/PrimitiveMetadataTransformTest.java`.
 - [ ] T052 [P] [US1] Test that extensions on complex elements are stored inline, and that no field identifier and no root-level extension map are emitted, in `io/src/test/java/au/csiro/pathling/io/transform/ExtensionTransformTest.java`.
 - [ ] T053 [P] [US1] Test that dates carry range annotations reflecting the stated precision, in `io/src/test/java/au/csiro/pathling/io/annotation/DateRangeAnnotationTest.java`.
-- [ ] T054 [P] [US1] Test that a quantity carries a canonical annotation whose precision preserves magnitude, asserting that quantities differing by orders of magnitude do not compare equal, in `io/src/test/java/au/csiro/pathling/io/annotation/QuantityCanonicalAnnotationTest.java`.
+- [ ] T054 [P] [US1] Test that a quantity carries both canonical annotations, in `io/src/test/java/au/csiro/pathling/io/annotation/QuantityCanonicalAnnotationTest.java`: `__<field>_canonical` present at the specification's `DECIMAL(38,6)`, and `__<field>_canonical_exact` immediately after it, asserting on the second that quantities differing by orders of magnitude do not compare equal. Pin the order, since field order is part of the type (FR-057).
 - [ ] T055 [P] [US1] Test that each annotation can be disabled individually and that disabling one does not affect the others, in `io/src/test/java/au/csiro/pathling/io/annotation/AnnotationToggleTest.java`.
 - [ ] T056 [P] [US1] Test that `contained` resources are detected and governed by the strictness switch, never silently dropped, in `io/src/test/java/au/csiro/pathling/io/transform/StrictnessTest.java`.
 - [ ] T057 [P] [US1] Test that content the definition set does not describe is ignored or raises, per the switch, in the same file. Detection must compare observed keys against the definitions: the JSON reader silently skips unknown fields in every mode, so it cannot be asked to enforce this.
@@ -196,7 +196,7 @@ rewiring (T070) to M3.*
 - [ ] T063 [US1] Implement the annotation processor registry in `io/src/main/java/au/csiro/pathling/io/annotation/AnnotationProcessors.java`, with each processor individually enableable.
 - [ ] T064 [P] [US1] Implement the numeric annotation in `io/src/main/java/au/csiro/pathling/io/annotation/NumericAnnotation.java`.
 - [ ] T065 [P] [US1] Implement the date range annotation in `io/src/main/java/au/csiro/pathling/io/annotation/DateRangeAnnotation.java`.
-- [ ] T066 [P] [US1] Implement the quantity canonical annotation in `io/src/main/java/au/csiro/pathling/io/annotation/QuantityCanonicalAnnotation.java`, carrying the wider arbitrary-scale representation rather than the specification's fixed-point one.
+- [ ] T066 [P] [US1] Implement both quantity canonical annotations in `io/src/main/java/au/csiro/pathling/io/annotation/QuantityCanonicalAnnotation.java`: the specification's `__<field>_canonical` at its `DECIMAL(38,6)`, and `__<field>_canonical_exact` carrying the wider arbitrary-scale representation, in that order. The `_exact` form MUST carry the canonicalised unit code alongside the value — the previous layout used two fields for this, `_value_canonicalized` and `_code_canonicalized`, and a value without its base unit makes one metre and one second compare equal. `fhir-schema` fixes the names and the positions; the Spark types of both are settled here.
 - [ ] T067 [US1] Implement strictness checking against the definitions, including `contained` detection, in `io/src/main/java/au/csiro/pathling/io/transform/StrictnessCheck.java`.
 
 **Checkpoint**: JSON is written in the new layout through `io`. The public API is unchanged and the engine still reads the previous layout.
@@ -346,7 +346,7 @@ time, including during M1.*
 - [ ] T084 [P] [US3] Test that a structure carrying no recognisable Coding field is rejected with an error naming the expected and the actual fields, in the same file.
 - [ ] T085 [P] [US3] Test each terminology operation against a narrowed Coding column, in `terminology/src/test/java/au/csiro/pathling/sql/udf/NarrowCodingTest.java`.
 - [ ] T086 [P] [US3] Test that decimal comparison, arithmetic and ordering over lexically stored decimals match the current results, in `fhirpath/src/test/java/au/csiro/pathling/fhirpath/collection/DecimalCollectionTest.java`.
-- [ ] T087 [P] [US3] Test that cross-unit quantity comparison works with the canonical annotation present and computes it when absent, in `fhirpath/src/test/java/au/csiro/pathling/fhirpath/collection/QuantityCollectionTest.java`.
+- [ ] T087 [P] [US3] Test that cross-unit quantity comparison works with the `_canonical_exact` annotation present and computes it when absent, in `fhirpath/src/test/java/au/csiro/pathling/fhirpath/collection/QuantityCollectionTest.java`.
 - [ ] T088 [P] [US3] Test that `resolve()` works without a stored versioned-key column, reusing the fixtures from T020–T023, in `fhirpath/src/test/java/au/csiro/pathling/fhirpath/function/ResolveFunctionDslTest.java`.
 - [ ] T089 [US3] Test that the full suite passes over files written with every annotation disabled (FR-022, SC-004), in `fhirpath/src/test/java/au/csiro/pathling/test/AnnotationFreeSuiteTest.java`.
 - [ ] T090 [US3] Test that whether an annotation is used is decided from the schema rather than per row (FR-023), by asserting the generated plan differs between an annotated and an unannotated input, in the same file.
@@ -358,7 +358,7 @@ time, including during M1.*
 - [ ] T093 [P] [US3] Remove index-based assumptions from `fhirpath/src/main/java/au/csiro/pathling/fhirpath/collection/CodingCollection.java`, `fhirpath/src/main/java/au/csiro/pathling/fhirpath/FhirPathType.java` and `library-api/src/main/java/au/csiro/pathling/library/TerminologyHelpers.java`.
 - [ ] T094 [US3] Implement sibling resolution — resolve a named sibling of a primitive within its parent structure — in `fhirpath/src/main/java/au/csiro/pathling/fhirpath/column/DefaultRepresentation.java`, retaining the parent handle and element name on traversal to a primitive. This one mechanism serves both annotations and primitive metadata (R-014).
 - [ ] T095 [US3] Move decimal decoding to the lexical representation with the numeric annotation as a fast path, keeping query-time precision unchanged, in `fhirpath/src/main/java/au/csiro/pathling/fhirpath/collection/DecimalCollection.java`.
-- [ ] T096 [US3] Move quantity handling to the FHIR structure with the wide canonical annotation, computing canonicalisation when the annotation is absent, in `fhirpath/src/main/java/au/csiro/pathling/fhirpath/encoding/QuantityEncoding.java` and `fhirpath/src/main/java/au/csiro/pathling/fhirpath/collection/QuantityCollection.java`.
+- [ ] T096 [US3] Move quantity handling to the FHIR structure, reading the `_canonical_exact` annotation rather than the specification's narrower `_canonical`, computing canonicalisation when the annotation is absent, in `fhirpath/src/main/java/au/csiro/pathling/fhirpath/encoding/QuantityEncoding.java` and `fhirpath/src/main/java/au/csiro/pathling/fhirpath/collection/QuantityCollection.java`.
 - [ ] T097 [US3] Replace field-identifier-based extension access with inline extension traversal in `fhirpath/src/main/java/au/csiro/pathling/fhirpath/collection/Collection.java` and `fhirpath/src/main/java/au/csiro/pathling/fhirpath/collection/ResourceCollection.java`.
 - [ ] T098 [US3] Compute reference keys from the conformant identifier elements rather than a stored versioned-key column, in the reference resolution and join machinery under `fhirpath/src/main/java/au/csiro/pathling/fhirpath/`.
 - [ ] T099 [P] [US3] Replace the canonicalised-quantity field-name constants in `fhirpath/src/main/java/au/csiro/pathling/search/filter/FhirFieldNames.java` and update the search matchers that use them.
@@ -549,7 +549,7 @@ trusting the numbering.
 | FR-002 Decimals lexical plus annotation | T050, T060, T064 |
 | FR-003 Primitive metadata groups, inline extensions, no identifier or map | T051, T052, T061, T062 |
 | FR-004 Date range annotations | T053, T065 |
-| FR-005 Magnitude-preserving quantity annotation | T054, T066 |
+| FR-005 Both quantity canonical annotations, the specification's and a magnitude-preserving one | T054, T066 |
 | FR-006 `contained` excluded and detected | T056, T067 |
 | FR-007 `Bundle` never stored | T058, T068 |
 | FR-008 Schema derived from definitions | T028, T031 |

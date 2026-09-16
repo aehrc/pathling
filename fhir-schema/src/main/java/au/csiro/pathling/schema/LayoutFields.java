@@ -34,7 +34,11 @@ import java.util.stream.Stream;
  * <ul>
  *   <li>{@code resourceType} is the first field of a resource.
  *   <li>The metadata group of a primitive sits immediately after the element it accompanies.
- *   <li>The annotations follow the metadata group, in the order declared here.
+ *   <li>The annotations follow the metadata group, in the order declared here. Where a type carries
+ *       more than one — the two bounds of a date range, or the two canonical forms of a quantity —
+ *       that order is fixed here too: the specification's canonical annotation precedes the
+ *       magnitude-preserving one, so a consumer reading the specification's layout meets the
+ *       specification's annotation first.
  * </ul>
  *
  * <p>Whether an annotation is actually written is decided elsewhere: annotations are optional by
@@ -73,16 +77,25 @@ public final class LayoutFields {
   @Nonnull public static final String END_SUFFIX = "_end";
 
   /**
-   * The suffix of the annotation carrying the canonical form of a quantity.
-   *
-   * <p>It is deliberately not {@code _canonical}, which is the name the Parquet on FHIR
-   * specification gives its own canonical annotation. That annotation types its value as a
-   * fixed-point decimal whose absolute precision is constant regardless of magnitude, so quantities
-   * differing by orders of magnitude compare equal; Pathling emits a magnitude-preserving
-   * annotation instead, and it must not be mistaken for the specification's. The name echoes the
-   * canonicalised fields of the previous Pathling layout, so the continuity is visible.
+   * The suffix of the annotation the Parquet on FHIR specification gives the canonical form of a
+   * quantity. It is emitted under the specification's own name, because a consumer reading the
+   * specification's layout must find the specification's annotation where the specification says it
+   * is.
    */
-  @Nonnull public static final String CANONICAL_SUFFIX = "_canonicalized";
+  @Nonnull public static final String CANONICAL_SUFFIX = "_canonical";
+
+  /**
+   * The suffix of the annotation carrying the canonical form of a quantity at a precision that
+   * preserves magnitude.
+   *
+   * <p>It accompanies the specification's annotation rather than replacing it. The specification
+   * types its value as a fixed-point decimal whose absolute precision is constant regardless of
+   * magnitude, so quantities differing by orders of magnitude compare equal and no engine can
+   * compare on it. That argues for a second annotation, not against the first: dropping the
+   * specification's form would make the files unreadable to every other implementation of the
+   * layout, for a saving of one column beside a quantity.
+   */
+  @Nonnull public static final String CANONICAL_EXACT_SUFFIX = "_canonical_exact";
 
   /** The types whose stated precision implies a range, and which therefore carry range bounds. */
   @Nonnull private static final Set<String> RANGE_ANNOTATED = Set.of("date", "dateTime", "instant");
@@ -143,7 +156,7 @@ public final class LayoutFields {
   }
 
   /**
-   * Returns the name of the canonical annotation of a field.
+   * Returns the name of the specification's canonical annotation of a field.
    *
    * @param fieldName the name of the field the annotation accompanies
    * @return the name of the annotation
@@ -151,6 +164,17 @@ public final class LayoutFields {
   @Nonnull
   public static String canonicalAnnotationName(@Nonnull final String fieldName) {
     return ANNOTATION_PREFIX + fieldName + CANONICAL_SUFFIX;
+  }
+
+  /**
+   * Returns the name of the magnitude-preserving canonical annotation of a field.
+   *
+   * @param fieldName the name of the field the annotation accompanies
+   * @return the name of the annotation
+   */
+  @Nonnull
+  public static String canonicalExactAnnotationName(@Nonnull final String fieldName) {
+    return ANNOTATION_PREFIX + fieldName + CANONICAL_EXACT_SUFFIX;
   }
 
   /**
@@ -172,7 +196,7 @@ public final class LayoutFields {
       return List.of(startAnnotationName(fieldName), endAnnotationName(fieldName));
     }
     if (CANONICAL_ANNOTATED.contains(code)) {
-      return List.of(canonicalAnnotationName(fieldName));
+      return List.of(canonicalAnnotationName(fieldName), canonicalExactAnnotationName(fieldName));
     }
     return List.of();
   }

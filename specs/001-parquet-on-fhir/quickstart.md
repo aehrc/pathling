@@ -35,9 +35,10 @@ with QS-001, this runs against the public API only from M3 onward.
 
 **Expect**: decimals stored as text with a numeric annotation beside them;
 primitive ids and extensions in the metadata group; extensions on complex
-elements inline; date range annotations; a quantity canonical annotation whose
-precision preserves magnitude. No field identifier, no root-level extension map,
-no versioned identifier column, no decimal scale column.
+elements inline; date range annotations; two canonical annotations beside a
+quantity, the specification's followed by one whose precision preserves
+magnitude. No field identifier, no root-level extension map, no versioned
+identifier column, no decimal scale column.
 
 ## QS-003 Run the engine over the new layout (US3)
 

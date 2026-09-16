@@ -78,7 +78,8 @@ computation the engine can also perform from the element itself.
 | --- | --- | --- |
 | Numeric | `decimal` | The numeric value of the lexical form |
 | Range start / end | `date`, `dateTime`, `instant` | The bounds implied by the stated precision |
-| Canonical | `Quantity` | The canonicalised value and unit, at a precision that preserves magnitude |
+| Canonical | `Quantity` | The canonicalised value, as the specification types it |
+| Canonical exact | `Quantity` | The canonicalised value and unit, at a precision that preserves magnitude |
 
 Properties that hold for every annotation:
 
@@ -89,8 +90,9 @@ Properties that hold for every annotation:
   sibling-resolution mechanism serves annotations and primitive metadata alike.
 - **Presence is a schema property**, so whether the fast path or the computation
   is used is decided at planning time rather than per row.
-- **Individually disableable**, and disabling one costs performance, never
-  correctness.
+- **Individually disableable by kind**, and disabling one costs performance,
+  never correctness. A kind carried in more than one field — the date range's two
+  bounds, the quantity's two canonical forms — is governed by one switch.
 
 ### Layout
 
@@ -127,7 +129,7 @@ governed by the same switch, so that carve-out is never silent.
 | `date`, `dateTime`, `instant`, `time` | Text, in the lexical form of the source | Range start and end (not for `time`) |
 | `string`, `code`, `uri`, `url`, `canonical`, `oid`, `uuid`, `id`, `markdown` | Text | — |
 | `base64Binary` | Text | — |
-| `Quantity` | The FHIR structure | Canonical |
+| `Quantity` | The FHIR structure | Canonical, then canonical exact |
 | `Coding`, `CodeableConcept` | The FHIR structure | — |
 | `Reference` | The FHIR structure | — |
 | Complex and backbone types | A structure of their elements | — |
@@ -137,14 +139,18 @@ Notes:
 - **Decimals are text** so that the lexical form survives: trailing zeros,
   exponent notation, a leading sign and arbitrary digit counts all compare
   lexically on the round trip. The numeric annotation supplies the value.
-- **The canonical quantity annotation deviates from the specification's**, which
-  types its value as a fixed-point decimal whose absolute precision is constant
-  regardless of magnitude. Canonicalisation shifts magnitude by arbitrary powers
-  of ten, so a mass of one nanogram canonicalises to a value that rounds to zero
-  at that precision, and quantities differing by orders of magnitude compare
-  equal — silently. Pathling emits its own wider annotation under a
-  non-colliding name. Non-standard annotations are permitted by the
-  specification. Raised upstream; withdrawn if the specification adopts a
+- **A quantity carries two canonical annotations**, the specification's and
+  Pathling's, in that order. The specification's types its value as a
+  fixed-point decimal whose absolute precision is constant regardless of
+  magnitude. Canonicalisation shifts magnitude by arbitrary powers of ten, so a
+  mass of one nanogram canonicalises to a value that rounds to zero at that
+  precision, and quantities differing by orders of magnitude compare equal —
+  silently. That form therefore cannot serve the engine, and the wider one under
+  a non-colliding name does. It does not follow that the specification's should
+  be dropped: a consumer reading the specification's layout needs the
+  specification's annotation under the specification's name, so both are
+  emitted. Non-standard annotations are permitted by the specification. Raised
+  upstream; the wider annotation is withdrawn if the specification adopts a
   magnitude-preserving representation.
 - **No field identifier and no root-level extension map.** Extensions on complex
   elements are inline; extensions on primitives are in the metadata group.

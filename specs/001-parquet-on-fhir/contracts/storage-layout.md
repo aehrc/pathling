@@ -19,9 +19,26 @@ Deviations, all permitted by the specification:
 | Primitive ids and extensions | The specification's `_field` groups. |
 | Extensions on complex elements | Inline `extension` groups. |
 | Date ranges | The specification's start and end annotations. |
-| Quantity canonicalisation | **Deviation.** Pathling emits its own canonical annotation under a non-colliding name, at a precision that preserves magnitude. The specification's own canonical annotation is not emitted, because its fixed-point type makes quantities differing by orders of magnitude compare equal. Raised upstream; withdrawn if the specification adopts a magnitude-preserving representation. The specification's form can be added additively later if an interchange consumer needs it. |
+| Quantity canonicalisation | **Addition.** The specification's `__<field>_canonical` is emitted at the type the specification gives it, followed immediately by `__<field>_canonical_exact`, which carries the same canonicalisation at a precision that preserves magnitude. Both are present, in that order. The second exists because the specification's fixed-point type makes quantities differing by orders of magnitude compare equal, which the engine cannot compare on; the first is what an interchange consumer reads. Non-standard annotations are permitted. Raised upstream; `_canonical_exact` is withdrawn if the specification adopts a magnitude-preserving representation. |
 | `contained` | Not represented. Detected, never silently dropped. |
 | `Bundle` | Never stored as a resource type. Accepted as a transport carrier and exploded to per-type tables. |
+
+### The two quantity annotations
+
+A quantity carries `__<field>_canonical` and then `__<field>_canonical_exact`,
+in that order. The order is fixed rather than incidental: field order is part of
+the type, so a consumer comparing structures positionally depends on it, and an
+interchange consumer reading the specification's layout finds the
+specification's annotation first.
+
+`__<field>_canonical` is the specification's annotation and carries what the
+specification says it carries. `__<field>_canonical_exact` is Pathling's, and
+carries the same canonicalisation without the fixed scale. Its stored shape is
+settled with the encoder rather than here, under one constraint: it carries the
+**canonicalised unit code alongside the value**. Canonicalisation maps to a base
+unit, and a value without that unit makes one metre and one second compare
+equal, so a single value is not sufficient. The previous Pathling layout used
+two fields for exactly this reason.
 
 ## The schema is fitted to the data
 

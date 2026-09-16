@@ -76,8 +76,14 @@ public class SchemaConfiguration {
   @Builder.Default private boolean enableRangeAnnotation = true;
 
   /**
-   * Whether the canonical annotation accompanying a quantity is emitted, named by {@link
-   * LayoutFields#CANONICAL_SUFFIX}.
+   * Whether the canonical annotations accompanying a quantity are emitted, named by {@link
+   * LayoutFields#CANONICAL_SUFFIX} and {@link LayoutFields#CANONICAL_EXACT_SUFFIX}. They are one
+   * annotation in two representations, the specification's fixed-point form and a
+   * magnitude-preserving one, so one toggle governs the pair: the unit FR-021 makes individually
+   * disableable is the kind of annotation, and a caller turning this off is saying it does not want
+   * the canonicalisation stored rather than choosing between two spellings of it. Separate toggles
+   * can be added later without disturbing this one, should an interchange-only consumer ever want
+   * the specification's form without the other.
    */
   @Builder.Default private boolean enableCanonicalAnnotation = true;
 }

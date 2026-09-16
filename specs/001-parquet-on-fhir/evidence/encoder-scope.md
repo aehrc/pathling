@@ -131,7 +131,7 @@ are there.
 | `DataTypeMappings`, `R4DataTypeMappings` | FHIR type → Spark type table. The knowledge survives; the `CustomCoder` hooks do not. |
 | `EncodingConfiguration` | `maxNestingLevel` and `openTypes` are meaningless for a focused schema, still required for a comprehensive one — extensions recurse. **Surfaced as `max_nesting_level`, `enable_extensions` and `enabled_open_types` on Python `PathlingContext.create` and R `pathling_connect`**, so their semantics change on a public signature in two languages. |
 | `ExtensionSupport` (`_fid`, `_extension`) | Root-level `MAP<INT, Extension>` keyed by per-composite `_fid` becomes inline `extension` groups. Consumers: `Collection.getFid()` :377, `ResourceCollection` :195. **This gets simpler.** |
-| `QuantitySupport` (`_value_canonicalized`, `_code_canonicalized`) | Becomes the spec's `__x_canonical` annotation. The spec types it `DECIMAL(38,6)` where `FlexiDecimal` carries arbitrary scale — adopting the annotation verbatim is a capability regression. |
+| `QuantitySupport` (`_value_canonicalized`, `_code_canonicalized`) | Becomes the spec's `__x_canonical` annotation **plus** `__x_canonical_exact`. The spec types its own at `DECIMAL(38,6)` where `FlexiDecimal` carries arbitrary scale, so the spec form alone would be a capability regression; `__x_canonical_exact` carries the wider representation and the engine reads that one. Both are emitted (decision 46), so the regression does not arise. The two source fields also say what `__x_canonical_exact` must carry: the base unit code as well as the value. |
 | `CodingSchema` (terminology) | **Highest-risk item.** Fixed 7-field struct decoded **positionally**. See below. |
 | `CodingCollection` :140–150, `CodingEquality`, `DecimalCollection` :54, `QuantityEncoding` :112/:205/:297, `FhirFieldNames`, `ExportExecutor` :302 | Consumers binding literal field names or `DecimalCustomCoder.precision()/scale()`. Mechanical, but each needs its own decision about the replacement convention. |
 
@@ -233,7 +233,7 @@ neither the prototype nor the issue mentions it.
 | Contained resources | Parity | Not in the current encoder schema either. The prototype dropping them is parity, not regression. |
 | XML encode / decode *(public API, Python + R)* | **Regression** | Free today because the mime type only selects a HAPI parser. Zero XML references anywhere in the prototype, and the Parquet on FHIR spec never mentions it. |
 | Bundle ingest *(public API, Python + R)* | **Regression** | Entry explosion and URN resolution both currently happen on HAPI objects. |
-| Canonical quantity comparison | **Regression** | If `__x_canonical` is adopted at its spec'd `DECIMAL(38,6)`, it is narrower than `FlexiDecimal`. `QuantityMatcher` depends on the wider type. |
+| Canonical quantity comparison | Parity | `__x_canonical` at its spec'd `DECIMAL(38,6)` is narrower than `FlexiDecimal`, which `QuantityMatcher` depends on. Resolved by emitting `__x_canonical_exact` beside it at the wider representation and reading that one (decision 46), rather than by omitting the spec's annotation. |
 | Reading Parquet / Delta written by earlier versions *(public API, Python + R)* | **Regression** | Unless category F provides a read-side path, existing files stop being readable by the engine. |
 
 > **XML is harder than a second transformer.**
@@ -472,7 +472,9 @@ Each changes the size of the work, and none is settled by the prototype.
    Annotations are optional in a focused schema, but `DecimalCollection` depends
    on `_scale` and `QuantityEncoding` on `_value_canonicalized` today. Either the
    engine degrades gracefully when `__x_numeric` is absent, or annotations stop
-   being optional in practice.
+   being optional in practice. *Settled:* the engine computes from the annotated
+   element when an annotation is absent, and reads `__x_canonical_exact` rather
+   than the spec's narrower `__x_canonical` when present.
 
 2. **Is inferred cardinality normalised against the definition tree?**
    If not, an element appearing once in one dataset and twice in another produces

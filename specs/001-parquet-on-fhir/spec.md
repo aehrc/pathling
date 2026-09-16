@@ -42,8 +42,8 @@ Driver 5 is why the encoder is replaced rather than modified.
 A user loads FHIR JSON through the library and the data is written in the
 Parquet on FHIR layout: decimals as lexical strings with a numeric annotation,
 primitive ids and extensions in `_field` groups, extensions inline, dates
-carrying range annotations, and quantities carrying a magnitude-preserving
-canonical annotation.
+carrying range annotations, and quantities carrying both the specification's
+canonical annotation and a magnitude-preserving one beside it.
 
 **Why this priority**: Every other story reads what this one writes. The layout
 is the object of the change.
@@ -62,8 +62,9 @@ against the specification, without any FHIRPath evaluation.
 3. **Given** a resource carrying an extension on a complex element, **When** it is
    stored, **Then** the extension appears inline on that element and no
    root-level extension map or field-id column is emitted.
-4. **Given** a quantity, **When** it is stored, **Then** a canonical annotation
-   accompanies it whose precision preserves magnitude across unit conversion.
+4. **Given** a quantity, **When** it is stored, **Then** the specification's
+   canonical annotation accompanies it, followed by a second annotation whose
+   precision preserves magnitude across unit conversion.
 5. **Given** content the definition set does not describe, **When** it is loaded
    with the strictness switch set to fail, **Then** an error names the content
    rather than dropping it silently.
@@ -312,10 +313,14 @@ resolves no Spark Catalyst dependency, enforced by the build.
   inline. The previous root-level extension map and per-composite field id MUST
   NOT be emitted.
 - **FR-004**: Dates MUST carry the specification's range annotations.
-- **FR-005**: Quantities MUST carry a canonical annotation whose precision
-  preserves magnitude across unit conversion. The specification's own canonical
-  annotation MUST NOT be emitted, because its fixed-point type makes quantities
-  differing by orders of magnitude compare equal.
+- **FR-005**: Quantities MUST carry two canonical annotations: the
+  specification's own, at the fixed-point type the specification gives it, for
+  interchange; and, immediately after it, a second annotation whose precision
+  preserves magnitude across unit conversion. The second exists because the
+  fixed-point type makes quantities differing by orders of magnitude compare
+  equal, which no engine can compare on; the first exists because a consumer
+  reading the specification's layout must find the specification's annotation
+  under the specification's name.
 - **FR-006**: `contained` resources MUST NOT be represented, and their presence
   MUST be detected and governed by the strictness switch.
 - **FR-007**: `Bundle` MUST NOT be stored as a resource type.
@@ -362,7 +367,9 @@ resolves no Spark Catalyst dependency, enforced by the build.
 ### Annotations
 
 - **FR-021**: The decimal, date and quantity annotations MUST be emitted by
-  default, each individually disableable.
+  default, each kind individually disableable. A kind carried in more than one
+  field — the date range's two bounds, the quantity's two canonical forms — is
+  one kind and is governed by one switch.
 - **FR-022**: The engine MUST compute correctly when any or all annotations are
   absent, using an annotation only as a fast path. An annotation MUST NOT be
   required for correctness.

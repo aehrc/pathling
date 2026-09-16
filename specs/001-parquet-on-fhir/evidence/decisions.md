@@ -146,10 +146,11 @@ design document is to be corrected.
     annotations.** A collection traversed to a primitive retains a handle on its
     parent struct and element name; `.id` and `.extension` resolve `_<field>`,
     and the annotation fast paths resolve `__<field>_numeric`,
-    `__<field>_start` / `__<field>_end` and the quantity canonical annotation the
-    same way. Primitives never asked for either are untouched. Because absence is
-    decided by the schema rather than the data, the fast-path-versus-compute
-    choice is made at plan time.
+    `__<field>_start` / `__<field>_end` and the quantity canonical annotation
+    (`__<field>_canonical_exact`, per decision 46) the same way. Primitives never
+    asked for either are untouched. Because absence is decided by the schema
+    rather than the data, the fast-path-versus-compute choice is made at plan
+    time.
 31. **Assumption (not grilled, routine):** `EncodingConfiguration` gains the
     schema mode, the non-conformant-content switch (ignore/fail) and the
     per-annotation toggles. `max_nesting_level`, `enable_extensions` and
@@ -430,3 +431,49 @@ no name is gone; such a type is now an inconsistency in the definitions and
 raises. Open types need no special handling: `Extension.value[x]` declares
 `Reference` itself, reports no reference targets, and has no untyped-resource
 alias, so the rule leaves all 59 of its variants in place.
+
+## 46. Both canonical quantity annotations are emitted, under one toggle
+
+Decision 21 settled that a quantity carries a canonical annotation. It was then
+read as a choice between the specification's `__<field>_canonical` and a
+magnitude-preserving one of Pathling's own, and the second was chosen, because
+the specification types its value as a fixed-point decimal whose absolute
+precision is constant regardless of magnitude: canonicalisation shifts magnitude
+by arbitrary powers of ten, so a nanogram rounds to zero and quantities differing
+by orders of magnitude compare equal. That reasoning is intact, but it only ever
+argued that the specification's form cannot serve the engine. It never argued
+that a file should not carry it.
+
+**Both are emitted**: `__<field>_canonical`, the specification's, at the type the
+specification gives it; then `__<field>_canonical_exact`, Pathling's, carrying
+the same canonicalisation without the fixed scale. The engine reads the second.
+An interchange consumer reading the specification's layout finds the first, under
+the name the specification gives it, which it would not if Pathling emitted only
+its own. The cost is one further column beside a quantity, which is small against
+being unreadable to every other implementation of the layout.
+
+**The order is spec form first**, and it is stated rather than left to fall out
+of the code. Field order is part of the type (FR-057), so a consumer comparing
+structures positionally depends on it, and interchange-first puts the
+specification's annotation where a reader of the specification expects it.
+
+**One toggle governs the pair.** Under FR-021 the individually disableable unit
+is the annotation *kind* — decimal, date, quantity — and these are one kind in two
+representations, as the date range annotation is one kind in two fields. A caller
+disabling the quantity annotation is saying it does not want the canonicalisation
+stored, not choosing between two spellings of it. Splitting into two toggles
+remains available additively if an interchange-only consumer ever asks for the
+specification's form without the engine's.
+
+*The shape of the exact form*: the previous Pathling layout carried
+canonicalisation in two fields, `_value_canonicalized` and `_code_canonicalized`
+— value and base unit code. A single `__<field>_canonical_exact` slot must
+therefore carry the unit as well as the value; on the value alone, one metre and
+one second compare equal. The Spark type is settled with the encoder (T066), but
+that constraint is fixed here, not left to be rediscovered.
+
+*Consequence for the specification*: FR-005 required the specification's
+annotation to be absent and now requires both. The deviations table in
+`contracts/storage-layout.md` records an addition rather than an omission, the
+capability-regression rows in `evidence/encoder-scope.md` are resolved rather than
+live, and `contracts/engine-semantics.md` says which of the two the engine reads.
