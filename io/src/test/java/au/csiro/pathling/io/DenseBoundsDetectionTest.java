@@ -53,6 +53,16 @@ class DenseBoundsDetectionTest {
           + "\"valueString\":\"about then\"}]},"
           + "\"extension\":[{\"url\":\"http://example.com/note\",\"valueString\":\"a note\"}]}";
 
+  /**
+   * Carries nothing the bounds reach, so the dense round trip is as unconditional as the pruned.
+   */
+  @Nonnull
+  private static final String PATIENT_WITHIN_BOUNDS =
+      "{\"resourceType\":\"Patient\",\"id\":\"1\",\"active\":true,\"gender\":\"male\","
+          + "\"birthDate\":\"1980-01-01\",\"multipleBirthInteger\":2,"
+          + "\"name\":[{\"family\":\"Smith\",\"given\":[\"Jane\",\"Elizabeth\"]}],"
+          + "\"managingOrganization\":{\"reference\":\"Organization/1\"}}";
+
   /** Carries an extension, which the bounds drop because extensions are off by default. */
   @Nonnull
   private static final String PATIENT_WITH_EXTENSION =
@@ -123,6 +133,19 @@ class DenseBoundsDetectionTest {
     assertTrue(
         findings.isEmpty(),
         "the bounds do not apply to a schema fitted to the data (FR-044): " + findings);
+  }
+
+  @Test
+  void holdsWithinTheBoundsOnADenseSchema(@TempDir @Nonnull final Path directory)
+      throws IOException {
+    final Path corpus = corpus(directory, PATIENT_WITHIN_BOUNDS);
+
+    final int excluded =
+        RoundTripHarness.unconditional()
+            .withConfiguration(SchemaConfiguration.builder().denseSchema(true).build())
+            .assertRoundTrip("Patient", corpus);
+
+    assertEquals(0, excluded, "this source carries no primitive id or extension content");
   }
 
   @Nonnull
