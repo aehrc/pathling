@@ -815,3 +815,43 @@ read the stored numeric directly. The same holds for a stored canonicalised
 quantity and a stored reference key. The previous layout is transitional and
 T136 measures the computed paths, so this is recorded rather than treated as an
 objection.
+
+## 56. Type unification is one entry point, and it closes a defect that predates this work
+
+Unification today is two mechanisms with disjoint callers.
+`FhirPathBinaryOperator.reconcileTypes` promotes the FHIR type, by implicit cast
+only, and is reached from equality, comparison and arithmetic.
+`CombiningLogic.prepareArray` normalises a SQL shape, by an `instanceof` check
+for exactly one type, and is reached from union and combine. No site does both.
+
+**Neither unifies complex types.** `convertibleTo` reduces to
+`typeEquivalentWith`, which compares the FHIR type and the FHIRPath type and
+says nothing about structure. Two collections of one complex type whose SQL
+shapes differ are therefore reported compatible and handed to the equivalent-type
+path, which compares mismatched structs.
+
+*This is already broken, before anything in this programme.* Under the previous
+layout and a dense schema the exposure is bounded but real: the encoder truncates
+a recursive expansion at its nesting bound, so the same recursive type met at two
+depths — a `Questionnaire.item` at one level against one at the level below —
+carries two different struct types. Comparing them fails although the FHIR types
+are compatible.
+
+The fitted schema does not introduce the problem, it widens it. Absence is no
+longer confined to recursion depth, so two non-recursive elements of one type
+reached by different branches can differ in shape too. **The solution is the same
+for both**, which is why the fix belongs here rather than in a separate defect
+change: by-name projection into the merged type, under the canonical order
+(FR-056 to FR-058).
+
+Two consequences for the tasks.
+
+- **One entry point, and every site routed through it.** T113a builds it and
+  deletes the decimal special case; T113b routes equality, comparison,
+  arithmetic, union, combine, conditional selection, membership and choice
+  traversal through it. Enumerating sites is what the layout dispatch did before
+  decision 55, and the failure mode of a missed site is identical: a Spark
+  analysis error rather than anything the engine can explain.
+- **The defect is pinned before it is fixed.** T104b runs the recursive case
+  against unmodified behaviour and records the failure, so the fix is
+  demonstrable and the release note is accurate about what changed.

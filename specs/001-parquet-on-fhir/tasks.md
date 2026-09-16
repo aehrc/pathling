@@ -48,7 +48,7 @@ what says which tasks are where.
 | Milestone | Phases | Tasks | Delivers | User-visible change |
 | --- | --- | --- | --- | --- |
 | **M1 The layout** | 1–6 | 61 | FHIR JSON to the new layout and back through `io`, losslessly except primitive ids and extensions. No annotations. Schema derivation, the canonical structure and the one shared merge. Both risk gates resolved | None |
-| **M2 The engine, layout-tolerant** | 7–10 | 69 | The engine reads both layouts by dispatch, computes every value without annotations, tolerates a fitted schema, and reads divergent files as one dataset. Green on the previous layout throughout | Two, both in Phase 10: the Delta upsert path widens the target where it used to refuse (T117a, decision 41), and reading raw files merges their schemas with a supplied-schema opt-out (T118). Move those three tasks to M4 if the milestone must be invisible |
+| **M2 The engine, layout-tolerant** | 7–10 | 70 | The engine reads both layouts by dispatch, computes every value without annotations, tolerates a fitted schema, and reads divergent files as one dataset. Green on the previous layout throughout | Two, both in Phase 10: the Delta upsert path widens the target where it used to refuse (T117a, decision 41), and reading raw files merges their schemas with a supplied-schema opt-out (T118). Move those three tasks to M4 if the milestone must be invisible |
 | **M3 Ingest formats** | 11 | 5 | Bundles and XML on the new path, each round-tripped through the M1 harness | None |
 | **M4 The flip** | 12–14 | 28 | The public API writes the new layout, earlier layouts are detected, the layout is documented and the benchmark is recorded | The flag day |
 | **M5 The gaps** | 15–16 | 21 | Annotations emitted and read, one kind at a time; primitive ids and extensions written and navigable | Performance, then new capability |
@@ -66,7 +66,7 @@ what says which tasks are where.
 | 6 US8 The module boundary | T125–T128 | 4 |
 | 7 Engine foundations | T020–T027, T027a, T049a, T034–T038, T037a, T038a–T038e, T038j–T038m, T110a, T101–T107, T110–T113 | 37 |
 | 8 US3 The engine reads both layouts | T083–T089, T089a, T091–T094, T094a, T094b, T095–T099 | 19 |
-| 9 US4 Shape reconciliation (US4's absent-element half is in Phase 7) | T104a, T109, T113a, T113b | 4 |
+| 9 US4 Shape reconciliation (US4's absent-element half is in Phase 7) | T104a, T104b, T109, T113a, T113b | 5 |
 | 10 US5 Divergent files read as one dataset | T114–T117, T117a, T118, T118a–T118c | 9 |
 | 11 Remaining ingest formats | T058, T058a, T068, T069, T069a | 5 |
 | 12 The public API switch | T070, T081, T082, T100, T100b, T100c, T100d, T100g, T108, T108a, T128a | 11 |
@@ -450,15 +450,25 @@ moved to Phase 7, because tolerance of an absent field has to precede any fixtur
 movement. What remains is the reconciliation half, which depends on T038l rather
 than on T110.*
 
+*This phase also **fixes an existing defect**. Unification today is by implicit
+cast only, so two collections of one complex FHIR type whose SQL shapes differ
+are reported compatible and then compared as mismatched structs. Under the
+previous layout that is reachable wherever a recursive type is met at two
+nesting depths, which the encoder's bound makes structurally different. The
+fitted schema widens the same hole to non-recursive types reached by different
+branches. One mechanism closes both, which is why T104b pins the recursive case
+against unmodified behaviour before the fix lands.*
+
 ### Tests ⚠️ write first, confirm failing
 
 - [ ] T104a [P] [US4] Test that two collections of the same FHIR type reached by different paths, whose fitted schemas differ, combine successfully — holding every element of both and remaining traversable (FR-056) — and that the result's fields are in definition order (FR-057), in `fhirpath/src/test/java/au/csiro/pathling/fhirpath/operator/ShapeReconciliationTest.java`. Cover `combine`, `|`, equality of complex values, conditional selection and membership.
+- [ ] T104b [P] [US4] Test that two collections of the **same recursive** FHIR type reached at different nesting depths compare and combine — a `Questionnaire.item` at one level against one at the level below — in `fhirpath/src/test/java/au/csiro/pathling/fhirpath/operator/ShapeReconciliationTest.java`. **This fails on `main` today**, under the previous layout and a dense schema, because the encoder truncates the recursive expansion at its nesting bound: the two structs carry different depths and therefore different SQL types, while `convertibleTo` reduces to FHIR type equivalence and reports them compatible. So this task pins an existing defect rather than an accommodation for the fitted schema. Run it against unmodified behaviour first and record the failure, so the fix is demonstrable.
 - [ ] T109 [US4] Run the shape-sensitive tests with an explicit expected schema assertion, since a pruned schema is derived from the whole fixture set and adding a fixture can silently flip an assertion from a null branch to a missing-field branch.
 
 ### Implementation
 
-- [ ] T113a [US4] Apply the reconciliation expression from T038l where operands are prepared for combination, in `fhirpath/src/main/java/au/csiro/pathling/fhirpath/operator/CombiningLogic.java`, generalising what `prepareArray` already does for `DecimalCollection` (FR-056). The operators themselves do not change, and the FHIR-type promotion in `FhirPathBinaryOperator.reconcileTypes` stays a separate, definition-driven step ahead of it.
-- [ ] T113b [US4] Apply reconciliation at the remaining sites that need two operands to share a SQL type — conditional selection and membership — and at `ColumnRepresentation.traverseChoice`, which coalesces across several variant fields at once and therefore passes the whole ordered operand list rather than folding (FR-056).
+- [ ] T113a [US4] Implement **one variadic unification entry point** over the reconciliation expression from T038l, in `fhirpath/src/main/java/au/csiro/pathling/fhirpath/operator/CombiningLogic.java`, and delete the `instanceof DecimalCollection` special case in `prepareArray` that it subsumes (FR-056). It promotes the FHIR type and then unifies the SQL shape, in that order. The two steps stay conceptually distinct, because `FhirPathBinaryOperator.reconcileTypes` answers a definition-driven question and shape unification answers a structural one, but they stop having **disjoint callers**: today `prepareArray` reconciles decimal precision for union and combine while `reconcileTypes` promotes types for equality, comparison and arithmetic, and no site does both. Variadic rather than binary because `traverseChoice` coalesces several variants at once; folding is T038k's subject, not a second entry point.
+- [ ] T113b [US4] Route **every** site that needs two or more operands to share a type through T113a's entry point (FR-056): `SameTypeBinaryOperator`, and therefore equality and comparison, which today calls `reconcileTypes` alone and is the site T104a and T104b exercise; `MathOperator`; `UnionOperator` and `CombineOperator`; conditional selection and membership; and `ColumnRepresentation.traverseChoice`, which passes the whole ordered operand list rather than folding. Routing rather than enumerating is the point: a site added later that does not call the entry point fails as a Spark analysis error the engine cannot name, which is the failure mode the layout dispatch had before decision 55 collapsed it.
 
 **Checkpoint**: Two fitted shapes of one FHIR type reconcile, so the public API
 can safely write a schema fitted to the data.
@@ -789,7 +799,7 @@ trusting the numbering.
 | FR-036 Unnesting never reduced to a single leaf | T026, T027, T116 |
 | FR-054 Traversal tolerant of an absent field, decided after schema resolution | T038a, T038b, T038d, T038e, T110, T110a (M2, all in Phase 7), T108 (M4) |
 | FR-055 Absent elements typed by the definitions or the bottom type | T038c, T038e, T105, T110 |
-| FR-056 Reconciliation by by-name projection, never by cast | T038j, T038k, T038l, T104a, T113a, T113b |
+| FR-056 Reconciliation by by-name projection, never by cast | T038j, T038k, T038l, T104a, T104b, T113a, T113b |
 | FR-057 Canonical field order, covering the layout's own fields, wherever a structure type is produced | T030a, T038h, T038i, T104a, T118a |
 | FR-058 One recursive field-wise merge, over a navigable canonical structure, serving reconciliation and file merging | T038f, T038g, T038h, T038i, T118a |
 | FR-037 Unsupported layouts rejected with an actionable message | T042, T045, T046, T047 (read path only; the write path is FR-037a) |
