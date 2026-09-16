@@ -963,3 +963,63 @@ there is no component for it to point at.
 Extensions on *primitive* elements are the other half of FR-003 and are
 unaffected: they belong in the metadata group beside the element, which is
 `PrimitiveMetadataTransform` at T061.
+
+## 62. A decimal is marked into the document and unquoted out of it
+
+A decimal is stored as text so that its lexical form survives (FR-002), and it
+must appear in the document as a number. The JSON writer quotes text and offers
+no way to say otherwise, per column or at all, so egress marks the value and
+unmarks the document: the stored text is wrapped in U+0001 on the way in, and
+one `regexp_replace` over the finished document removes the marks and the quotes
+around them together.
+
+This is a deliberate ugliness in an otherwise declarative path, and it is
+recorded because it is exactly the kind of thing a later reader tidies away.
+Tidying it away silently re-quotes every decimal, and a round trip that compares
+text to text stays green while doing it.
+
+*Why the mark is safe.* The writer escapes a control character, so a value
+carrying the six characters of the escape sequence is escaped again and cannot
+match a pattern that requires one backslash. Only a raw control character in the
+data could collide, and only where the whole value is a mark, the characters a
+decimal is written with, and the other mark.
+
+*Why it is only decimals.* Every other primitive is stored as text the document
+also quotes, or as an integer, long or boolean the writer renders as itself.
+There is no second class of value with this problem.
+
+*How it is held.* `DecimalRoundTripTest` asserts on the raw document that a
+decimal and a string carrying identical characters come out as `1.50` and
+`"1.50"` respectively, so the discrimination is proven to be by definition
+rather than by content. The comparator refuses a number matched against its
+text, so the round trip cannot pass by comparing strings to strings.
+
+## 63. An array drops its null elements, which collides with primitive metadata
+
+FR-019 requires that an array whose elements are all null be omitted rather than
+written as an array of nulls. The implementation drops null elements
+individually and omits the array when none survive, because an array of three
+values one of which pruned away is an array of two, not an absent element.
+
+**That is right for M1 and wrong from M5.** FHIR's primitive metadata mechanism
+is positional: `"given": ["Jane", null]` beside `"_given": [null, {...}]` uses
+the null in `given` to hold the place of a value whose id or extensions live in
+the parallel array. Dropping it shifts every position after it, and the two
+arrays no longer describe the same element.
+
+Nothing is broken today, because the metadata group is neither written (decision
+60) nor read back, so a positional null carries no information and the Synthea
+corpus does not exercise one. The collision arrives with T061.
+
+Two consequences.
+
+- **T061 must revisit this**, together with the strip in decision 60. Populating
+  the metadata group without changing the pruning writes a group whose positions
+  do not line up with the element beside it, which is worse than not writing it
+  at all. T078c is where the carve-out closes and where both are settled.
+- **A corpus curated for T076 will probably expose it early.** The R4 examples
+  carry primitive metadata, so a source array with a positional null round-trips
+  one element short. The harness's exclusion covers the `_` keys; it does not
+  cover the hole they leave behind. Whoever writes T076's exclusion should
+  expect to widen it, and should say so explicitly rather than letting the
+  narrower assertion pass.
