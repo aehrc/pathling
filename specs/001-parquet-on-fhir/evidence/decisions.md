@@ -1017,9 +1017,56 @@ Two consequences.
   the metadata group without changing the pruning writes a group whose positions
   do not line up with the element beside it, which is worse than not writing it
   at all. T078c is where the carve-out closes and where both are settled.
-- **A corpus curated for T076 will probably expose it early.** The R4 examples
-  carry primitive metadata, so a source array with a positional null round-trips
-  one element short. The harness's exclusion covers the `_` keys; it does not
-  cover the hole they leave behind. Whoever writes T076's exclusion should
-  expect to widen it, and should say so explicitly rather than letting the
-  narrower assertion pass.
+- **T076's corpus does not expose it, which was measured rather than assumed.**
+  The expectation recorded here was that the R4 examples would carry a value
+  array with a positional null and so round-trip one element short. They do not.
+  Of the 2,911 example resources the specification publishes, 81 carry primitive
+  metadata and **none** carries a null inside a value array; the single null in
+  the entire corpus sits inside `_given`, which the harness's exclusion removes
+  wholesale, leaving the `given` beside it untouched. T076's exclusion therefore
+  did not need widening, and the narrower assertion is correct rather than
+  lucky.
+
+  **This does not discharge the hazard, and T061 must still revisit it.** What
+  was measured is a property of the corpus, not of the layout: no published
+  example happens to place a value beside metadata in a way that requires the
+  placeholder. The moment Pathling *writes* the metadata group it must write
+  those placeholders itself, and the pruning above would drop them. The
+  collision arrives with T061 exactly as stated; what has changed is only that
+  no existing test will catch it first, so T061 has to bring its own.
+
+## 64. An inline resource is dropped for want of a type, and mis-reported as undescribed
+
+Three elements in R4 hold an inline arbitrary resource: `DomainResource.contained`,
+`Parameters.parameter.resource` and `Bundle.entry.resource`. The layout represents
+none of them, which is right. It accounts for them in two different ways, and only
+one of those is correct.
+
+`DefinitionCanonicalStructure.addElement` omits `contained` by name, with a comment
+saying why, and `StrictnessCheck` reports its presence as a `containedResource`
+finding. That is FR-006 working exactly as written.
+
+The next branch of the same method returns early when `ElementDefinition.getFhirType()`
+is empty — "an element the definitions do not give a type cannot be represented".
+An element declared as the abstract `Resource` has no `FhirType`, so it takes that
+branch and never reaches the structure. `StrictnessCheck` then finds observed
+content with no matching entry and reports `undescribedContent`: *the definitions
+describe no element of this name*.
+
+**That sentence is false.** The definitions do describe `Parameters.parameter.resource`
+— it is declared, 0..1, of type `Resource`. What is true is that the layout cannot
+represent its type. The outcome is right and the diagnosis is wrong, which is worse
+than it sounds: a finding is the only thing a user gets, and this one sends them
+looking for a typo in their data.
+
+Measured by T076, over `parameters-example.json` in the specification's own examples.
+
+Two consequences.
+
+- **`Bundle.entry.resource` takes the same branch**, and M3's explode path (T058,
+  T068) goes through it. Whoever writes that will meet this as "the definitions
+  describe no element of this name" for an element the definitions plainly describe.
+- **The remedy is not T076's.** It spans the definition abstraction, the kinds
+  `NonConformantContent` offers, and `StrictnessCheck`'s dispatch, and the right
+  shape is probably a fourth kind naming an inline resource rather than widening
+  `containedResource`. T134e raises it. T076's job was to find it.

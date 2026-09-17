@@ -29,6 +29,7 @@ import au.csiro.pathling.io.transform.TransformFixtures;
 import au.csiro.pathling.schema.LayoutFields;
 import au.csiro.pathling.schema.SchemaConfiguration;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import jakarta.annotation.Nonnull;
 import java.io.IOException;
@@ -61,19 +62,30 @@ import org.apache.spark.sql.Row;
  * <p>One exclusion is offered, and it is the carve-out FR-017 states: primitive element ids and
  * extensions are not written until M5. It is asserted rather than assumed — the count of excluded
  * keys is returned, so a test says what it expects that count to be, and an output carrying such a
- * key at all fails. Nothing else is excluded; a corpus carrying content the definitions do not
- * describe fails here, which is the point.
+ * key at all fails. The exclusion cascades into the containers it empties, because the layout omits
+ * those rather than writing an empty structure; nothing else is excluded, and a corpus carrying
+ * content the definitions do not describe fails here, which is the point. A corpus carrying content
+ * the layout deliberately does not store — {@code contained} resources under FR-006 — also fails
+ * here, and the test rather than the harness is where that is accounted for.
  */
 public final class RoundTripHarness {
+
+  /** The element FR-006 says is never represented. */
+  @Nonnull private static final String CONTAINED = "contained";
 
   @Nonnull private final SchemaConfiguration configuration;
 
   private final boolean excludePrimitiveMetadata;
 
+  private final boolean excludeContainedResources;
+
   private RoundTripHarness(
-      @Nonnull final SchemaConfiguration configuration, final boolean excludePrimitiveMetadata) {
+      @Nonnull final SchemaConfiguration configuration,
+      final boolean excludePrimitiveMetadata,
+      final boolean excludeContainedResources) {
     this.configuration = configuration;
     this.excludePrimitiveMetadata = excludePrimitiveMetadata;
+    this.excludeContainedResources = excludeContainedResources;
   }
 
   /**
@@ -84,7 +96,7 @@ public final class RoundTripHarness {
    */
   @Nonnull
   public static RoundTripHarness unconditional() {
-    return new RoundTripHarness(SchemaConfiguration.builder().build(), false);
+    return new RoundTripHarness(SchemaConfiguration.builder().build(), false, false);
   }
 
   /**
@@ -95,7 +107,7 @@ public final class RoundTripHarness {
    */
   @Nonnull
   public static RoundTripHarness excludingPrimitiveMetadata() {
-    return new RoundTripHarness(SchemaConfiguration.builder().build(), true);
+    return new RoundTripHarness(SchemaConfiguration.builder().build(), true, false);
   }
 
   /**
@@ -107,7 +119,26 @@ public final class RoundTripHarness {
   @Nonnull
   public RoundTripHarness withConfiguration(
       @Nonnull final SchemaConfiguration schemaConfiguration) {
-    return new RoundTripHarness(schemaConfiguration, excludePrimitiveMetadata);
+    return new RoundTripHarness(
+        schemaConfiguration, excludePrimitiveMetadata, excludeContainedResources);
+  }
+
+  /**
+   * Returns a harness excluding {@code contained} resources, which FR-006 says are never
+   * represented and whose presence is instead reported as a finding.
+   *
+   * <p>This is not a carve-out that a later milestone removes. A contained resource is never
+   * stored, so a resource carrying one can never round-trip whole, and a corpus carrying one has to
+   * say so to assert anything about the rest of it. What makes the exclusion honest is that the
+   * same content is reported by {@link #findings}, which a caller asserts as an exact set — so a
+   * corpus that stopped carrying contained resources would change that assertion rather than
+   * quietly passing here.
+   *
+   * @return the harness
+   */
+  @Nonnull
+  public RoundTripHarness excludingContainedResources() {
+    return new RoundTripHarness(configuration, excludePrimitiveMetadata, true);
   }
 
   /**
@@ -124,6 +155,9 @@ public final class RoundTripHarness {
     final Map<String, JsonNode> actual = byIdentifier(roundTrip(resourceType, corpus), "output");
     assertEquals(expected.keySet(), actual.keySet(), "the round trip returned different resources");
 
+    if (excludeContainedResources) {
+      expected.values().forEach(RoundTripHarness::removeContainedResources);
+    }
     final int excluded = expected.values().stream().mapToInt(RoundTripHarness::exclude).sum();
     if (excludePrimitiveMetadata) {
       assertNoMetadataGroups(actual);
@@ -205,6 +239,14 @@ public final class RoundTripHarness {
    * Removes the primitive id and extension keys from a tree, returning how many were removed. The
    * count is what makes the exclusion explicit: a test states whether it expects the source to have
    * carried any, so an exclusion that never applied cannot be mistaken for one that did.
+   *
+   * <p>The removal cascades, and it has to. An element whose entire content is primitive metadata
+   * is left with nothing once the metadata is excluded, and FR-019 says the layout omits a
+   * structure whose every field is null rather than writing an empty one. Keeping the emptied
+   * container on this side would compare an empty object against a correctly absent one and call
+   * the layout lossy. A container is dropped only where this exclusion is what emptied it, so a
+   * container that was already empty in the source is still a difference. T078c deletes all of this
+   * along with the carve-out it serves.
    */
   private static int exclude(@Nonnull final JsonNode node) {
     int removed = 0;
@@ -214,15 +256,52 @@ public final class RoundTripHarness {
         object.remove(name);
         removed++;
       }
-      for (final JsonNode child : object) {
-        removed += exclude(child);
+      final List<String> emptied = new ArrayList<>();
+      for (final String name : names(object)) {
+        final int fromChild = exclude(object.get(name));
+        removed += fromChild;
+        if (fromChild > 0 && isEmptyContainer(object.get(name))) {
+          emptied.add(name);
+        }
       }
+      emptied.forEach(object::remove);
     } else if (node.isArray()) {
-      for (final JsonNode child : node) {
-        removed += exclude(child);
+      final ArrayNode array = (ArrayNode) node;
+      for (int i = array.size() - 1; i >= 0; i--) {
+        final int fromChild = exclude(array.get(i));
+        removed += fromChild;
+        if (fromChild > 0 && isEmptyContainer(array.get(i))) {
+          array.remove(i);
+        }
       }
     }
     return removed;
+  }
+
+  /**
+   * Removes every {@code contained} key from a tree, which is the content FR-006 says this layout
+   * never represents.
+   */
+  private static void removeContainedResources(@Nonnull final JsonNode node) {
+    if (node.isObject()) {
+      final ObjectNode object = (ObjectNode) node;
+      object.remove(CONTAINED);
+      names(object).forEach(name -> removeContainedResources(object.get(name)));
+    } else if (node.isArray()) {
+      node.forEach(RoundTripHarness::removeContainedResources);
+    }
+  }
+
+  /** Whether a node is a structure or an array that now holds nothing. */
+  private static boolean isEmptyContainer(@Nonnull final JsonNode node) {
+    return (node.isObject() || node.isArray()) && node.isEmpty();
+  }
+
+  @Nonnull
+  private static List<String> names(@Nonnull final ObjectNode object) {
+    final List<String> names = new ArrayList<>();
+    object.fieldNames().forEachRemaining(names::add);
+    return names;
   }
 
   /** Asserts that no metadata group reached the output, which nothing writes one to before M5. */
@@ -239,15 +318,8 @@ public final class RoundTripHarness {
 
   @Nonnull
   private static List<String> metadataGroupNames(@Nonnull final ObjectNode object) {
-    final List<String> names = new ArrayList<>();
-    object
-        .fieldNames()
-        .forEachRemaining(
-            name -> {
-              if (name.startsWith(LayoutFields.METADATA_GROUP_PREFIX)) {
-                names.add(name);
-              }
-            });
-    return names;
+    return names(object).stream()
+        .filter(name -> name.startsWith(LayoutFields.METADATA_GROUP_PREFIX))
+        .toList();
   }
 }
