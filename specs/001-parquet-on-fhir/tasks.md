@@ -10,7 +10,7 @@ to fail first.
 Three categories are exempt and say so where they appear:
 
 - **Pure motion** (T010–T012): the requirement is that behaviour does not
-  change, so *the existing suite is the test*. Verification is that no test
+  change, so _the existing suite is the test_. Verification is that no test
   changes other than its imports.
 - **Coverage-first** (T020–T027): tests only, by design, landing before the
   conventions they protect.
@@ -45,36 +45,41 @@ letter suffix and sits beside the task it belongs with. Identifiers therefore do
 not run in numeric order, and the phase map below rather than the numbering is
 what says which tasks are where.
 
-| Milestone | Phases | Tasks | Delivers | User-visible change |
-| --- | --- | --- | --- | --- |
-| **M1 The layout** | 1–6 | 61 | FHIR JSON to the new layout and back through `io`, losslessly except primitive ids and extensions. No annotations. Schema derivation, the canonical structure and the one shared merge. Both risk gates resolved | None |
-| **M2 The engine, layout-tolerant** | 7–10 | 70 | The engine reads both layouts by dispatch, computes every value without annotations, tolerates a fitted schema, and reads divergent files as one dataset. Green on the previous layout throughout | Two, both in Phase 10: the Delta upsert path widens the target where it used to refuse (T117a, decision 41), and reading raw files merges their schemas with a supplied-schema opt-out (T118). Move those three tasks to M4 if the milestone must be invisible |
-| **M3 Ingest formats** | 11 | 5 | Bundles and XML on the new path, each round-tripped through the M1 harness | None |
-| **M4 The flip** | 12–14 | 28 | The public API writes the new layout, earlier layouts are detected, the layout is documented and the benchmark is recorded | The flag day |
-| **M5 The gaps** | 15–16 | 21 | Annotations emitted and read, one kind at a time; primitive ids and extensions written and navigable | Performance, then new capability |
-| **M6 Completion** | 17 | 15 | The previous-layout reader removed, FR-053 tightened, the superseded design retired, follow-ups raised | None, **contingent on T049a**: if the source boundary routes earlier-layout data rather than refusing it, the reader T100e removes is a product feature and its removal is breaking |
+| Milestone                                                                                 | Phases | Tasks | Delivers                                                                                                                                                                                                         | User-visible change                                                                                                                                                                                                                                            |
+| ----------------------------------------------------------------------------------------- | ------ | ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **M1 The layout** [#2761](https://github.com/aehrc/pathling/issues/2761)                  | 1–6    | 61    | FHIR JSON to the new layout and back through `io`, losslessly except primitive ids and extensions. No annotations. Schema derivation, the canonical structure and the one shared merge. Both risk gates resolved | None                                                                                                                                                                                                                                                           |
+| **M2 The engine, layout-tolerant** [#2762](https://github.com/aehrc/pathling/issues/2762) | 7–10   | 70    | The engine reads both layouts by dispatch, computes every value without annotations, tolerates a fitted schema, and reads divergent files as one dataset. Green on the previous layout throughout                | Two, both in Phase 10: the Delta upsert path widens the target where it used to refuse (T117a, decision 41), and reading raw files merges their schemas with a supplied-schema opt-out (T118). Move those three tasks to M4 if the milestone must be invisible |
+| **M3 Ingest formats** [#2763](https://github.com/aehrc/pathling/issues/2763)              | 11     | 5     | Bundles and XML on the new path, each round-tripped through the M1 harness                                                                                                                                       | None                                                                                                                                                                                                                                                           |
+| **M4 The flip** [#2764](https://github.com/aehrc/pathling/issues/2764)                    | 12–14  | 28    | The public API writes the new layout, earlier layouts are detected, the layout is documented and the benchmark is recorded                                                                                       | The flag day                                                                                                                                                                                                                                                   |
+| **M5 The gaps** [#2765](https://github.com/aehrc/pathling/issues/2765)                    | 15–16  | 21    | Annotations emitted and read, one kind at a time; primitive ids and extensions written and navigable                                                                                                             | Performance, then new capability                                                                                                                                                                                                                               |
+| **M6 Completion** [#2766](https://github.com/aehrc/pathling/issues/2766)                  | 17     | 15    | The previous-layout reader removed, FR-053 tightened, the superseded design retired, follow-ups raised                                                                                                           | None, **contingent on T049a**: if the source boundary routes earlier-layout data rather than refusing it, the reader T100e removes is a product feature and its removal is breaking                                                                            |
+
+**Each milestone is a sub-issue of #2367 and a pull request against
+`issue/2367`**, which holds the specification and no implementation. The
+numbers are in the table above. Decision 65 records why the delivery is
+structured this way, and what it changes about the review.
 
 ### Phase map
 
-| Phase | Tasks | Count |
-| --- | --- | --- |
-| 1 Setup | T001–T009, T009a | 10 |
-| 2 The definition abstraction | T010–T019 | 10 |
-| 3 Schema derivation | T028, T029, T030, T030a, T031, T032, T033a, T033, T033b, T038f–T038i, T119 | 14 |
-| 4 US1 The storage layout | T050, T052, T056, T057, T057a, T057b, T059, T060, T062, T067, T067a | 11 |
-| 5 US2 Lossless round trip | T071–T078, T078a, T078b, T079, T080 | 12 |
-| 6 US8 The module boundary | T125–T128 | 4 |
-| 7 Engine foundations | T020–T027, T027a, T049a, T034–T038, T037a, T038a–T038e, T038j–T038m, T110a, T101–T107, T110–T113 | 37 |
-| 8 US3 The engine reads both layouts | T083–T089, T089a, T091–T094, T094a, T094b, T095–T099 | 19 |
-| 9 US4 Shape reconciliation (US4's absent-element half is in Phase 7) | T104a, T104b, T109, T113a, T113b | 5 |
-| 10 US5 Divergent files read as one dataset | T114–T117, T117a, T118, T118a–T118c | 9 |
-| 11 Remaining ingest formats | T058, T058a, T068, T069, T069a | 5 |
-| 12 The public API switch | T070, T081, T082, T100, T100b, T100c, T100d, T100g, T108, T108a, T128a | 11 |
-| 13 US7 Detection of earlier layouts | T039, T039a, T040–T042, T042a, T043–T046, T046a, T047–T049 | 14 |
-| 14 Documentation and measurement | T129, T130, T136 | 3 |
-| 15 Annotations | T050a, T053–T055, T063–T066, T086a, T087a, T090, T095a, T096a | 13 |
-| 16 US6 Primitive ids and extensions | T051, T061, T078c, T120–T124 | 8 |
-| 17 Completion | T100f, T100e, T131–T134, T134a–T134e, T135, T137–T139 | 15 |
+| Phase                                                                | Tasks                                                                                            | Count |
+| -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ----- |
+| 1 Setup                                                              | T001–T009, T009a                                                                                 | 10    |
+| 2 The definition abstraction                                         | T010–T019                                                                                        | 10    |
+| 3 Schema derivation                                                  | T028, T029, T030, T030a, T031, T032, T033a, T033, T033b, T038f–T038i, T119                       | 14    |
+| 4 US1 The storage layout                                             | T050, T052, T056, T057, T057a, T057b, T059, T060, T062, T067, T067a                              | 11    |
+| 5 US2 Lossless round trip                                            | T071–T078, T078a, T078b, T079, T080                                                              | 12    |
+| 6 US8 The module boundary                                            | T125–T128                                                                                        | 4     |
+| 7 Engine foundations                                                 | T020–T027, T027a, T049a, T034–T038, T037a, T038a–T038e, T038j–T038m, T110a, T101–T107, T110–T113 | 37    |
+| 8 US3 The engine reads both layouts                                  | T083–T089, T089a, T091–T094, T094a, T094b, T095–T099                                             | 19    |
+| 9 US4 Shape reconciliation (US4's absent-element half is in Phase 7) | T104a, T104b, T109, T113a, T113b                                                                 | 5     |
+| 10 US5 Divergent files read as one dataset                           | T114–T117, T117a, T118, T118a–T118c                                                              | 9     |
+| 11 Remaining ingest formats                                          | T058, T058a, T068, T069, T069a                                                                   | 5     |
+| 12 The public API switch                                             | T070, T081, T082, T100, T100b, T100c, T100d, T100g, T108, T108a, T128a                           | 11    |
+| 13 US7 Detection of earlier layouts                                  | T039, T039a, T040–T042, T042a, T043–T046, T046a, T047–T049                                       | 14    |
+| 14 Documentation and measurement                                     | T129, T130, T136                                                                                 | 3     |
+| 15 Annotations                                                       | T050a, T053–T055, T063–T066, T086a, T087a, T090, T095a, T096a                                    | 13    |
+| 16 US6 Primitive ids and extensions                                  | T051, T061, T078c, T120–T124                                                                     | 8     |
+| 17 Completion                                                        | T100f, T100e, T131–T134, T134a–T134e, T135, T137–T139                                            | 15    |
 
 **M1 and M3 change nothing a user can observe, and M2 changes only what its
 milestone row names.** `PathlingContext.encode`, `PathlingContext.decode` and
@@ -93,8 +98,7 @@ mode (T037) and the layout (T037a) — because how much of a layout a schema
 carries and which conventions its fields follow are separate questions, and only
 the first was ever addressed. Tolerant traversal (T110) lands ahead of both, so
 neither dimension can be switched onto something the engine cannot read.
-**There is therefore no window without a green build**, which reverses decision
-40. Decision 52 records the three axes this rests on.
+**There is therefore no window without a green build**, which reverses decision 40. Decision 52 records the three axes this rests on.
 
 **M4 is the flag day.** The public API switches, detection of earlier layouts
 lands beside it, and the layout is documented. Everything it depends on — the
@@ -108,7 +112,7 @@ carries a carve-out for the second until T078c closes it. T136 at the flip is
 what orders the work, per FR-033.
 
 **The definition abstraction and schema derivation belong to M1**, not to the
-engine, because the ingest transform writes *into* the derived schema and
+engine, because the ingest transform writes _into_ the derived schema and
 FR-008/FR-012 forbid taking types or cardinality from the data. The structure
 merge and the canonical structure (T038f–T038i) are in M1 for the same reason. The
 merge and its interface are pure structure mechanics over `spark-sql-api` types
@@ -139,7 +143,7 @@ behaviour changes.
 - [x] T007 [P] Add a build rule to `io/pom.xml` failing on any `org.apache.spark.sql.catalyst` import, and prove the rule works by violating it deliberately on the empty module. T126 re-checks it against real code.
 - [x] T008 Add both modules to `<modules>` in `pom.xml` in build order, and to the dependency list in `library-runtime/pom.xml` so the Python and R libraries ship them.
 - [x] T009 Add `fhir-schema` and `io` as dependencies of `fhirpath` in `fhirpath/pom.xml`. `encoders/pom.xml` is not modified.
-- [x] T009a **Spike, and the gate on the whole approach.** Build a throwaway `RuntimeReplaceable` over an *unresolved* attribute and confirm it survives the analyzer — that nothing probes `dataType` before the child resolves. Discard the code; T038a is the durable test. Run it here rather than in Phase 7 because it is the programme's largest unknown and costs a day, so the answer is worth having while M1 still has planning time. **On failure**: the design falls back to the unbound column representation in R-017 option C, and T038e, T038l, T110, T113a and T113b are rewritten against it before M2 opens. FR-055 to FR-058 are unaffected either way.
+- [x] T009a **Spike, and the gate on the whole approach.** Build a throwaway `RuntimeReplaceable` over an _unresolved_ attribute and confirm it survives the analyzer — that nothing probes `dataType` before the child resolves. Discard the code; T038a is the durable test. Run it here rather than in Phase 7 because it is the programme's largest unknown and costs a day, so the answer is worth having while M1 still has planning time. **On failure**: the design falls back to the unbound column representation in R-017 option C, and T038e, T038l, T110, T113a and T113b are rewritten against it before M2 opens. FR-055 to FR-058 are unaffected either way.
 
 **Checkpoint**: Modules exist and are empty; the boundary is enforced; the baseline is captured; the analyzer risk is resolved.
 
@@ -197,11 +201,11 @@ shares.
 **Independent Test**: Load a corpus through `io` and inspect the stored schema and
 values against the contract, with no FHIRPath evaluation.
 
-*Bundle and XML ingest are deferred to M3 (T058, T068, T069), and the public API
+_Bundle and XML ingest are deferred to M3 (T058, T068, T069), and the public API
 rewiring (T070) to M4. Every annotation is deferred to M5 (T050a, T053–T055,
 T063–T066), as is the primitive metadata group (T051, T061); FR-022 makes the
 first safe and FR-017's carve-out bounds the second, which is what T057b and
-T067a enforce.*
+T067a enforce._
 
 ### Tests ⚠️ write first, confirm failing
 
@@ -216,7 +220,7 @@ T067a enforce.*
 
 - [x] T059 [US1] Implement the JSON read and the transform into the derived schema in `io/src/main/java/au/csiro/pathling/io/transform/ResourceTransformer.java`. Read with an inferred schema, then impose types, cardinality and conventions from the definitions (R-008). This is the entry point M1, M2 and M3 are exercised through, since the public API is not rewired until M4.
 - [x] T060 [P] [US1] Implement the decimal transform in `io/src/main/java/au/csiro/pathling/io/transform/DecimalTransform.java`.
-- [x] T062 [P] [US1] Implement the extension transform — **no implementation of its own, which is a result rather than a gap**. The definitions describe an extension as an ordinary structure and this layout stores it where they place it, so the generic structural mapping in T059 already is inline storage; an extension-specific path was written, measured to have no observable effect, and removed. T052 is what pins the behaviour. The previous layout needed such a path only because it hoisted extensions into a map at the root of the resource. Extensions on *primitive* elements are the other half of FR-003 and land in `PrimitiveMetadataTransform` at T061, not here.
+- [x] T062 [P] [US1] Implement the extension transform — **no implementation of its own, which is a result rather than a gap**. The definitions describe an extension as an ordinary structure and this layout stores it where they place it, so the generic structural mapping in T059 already is inline storage; an extension-specific path was written, measured to have no observable effect, and removed. T052 is what pins the behaviour. The previous layout needed such a path only because it hoisted extensions into a map at the root of the resource. Extensions on _primitive_ elements are the other half of FR-003 and land in `PrimitiveMetadataTransform` at T061, not here.
 - [x] T067 [US1] Implement strictness checking against the definitions, including `contained` detection, in `io/src/main/java/au/csiro/pathling/io/transform/StrictnessCheck.java`.
 - [x] T067a [US1] Implement detection of primitive id and extension content in the input, reported through the strictness switch, in the same file.
 
@@ -231,10 +235,10 @@ T067a enforce.*
 **Independent Test**: Round-trip a real corpus through `io`, asserting semantic
 equality resource by resource, with no FHIRPath evaluation.
 
-*The public API rewiring (T081, T082) is deferred to M4; the harness drives
+_The public API rewiring (T081, T082) is deferred to M4; the harness drives
 `ResourceTransformer` and `ResourceSerialiser` directly, so it does not need it.
 The harness also excludes primitive id and extension content, which is not
-written until M5 — the exclusion is explicit and asserted, and T078c removes it.*
+written until M5 — the exclusion is explicit and asserted, and T078c removes it._
 
 ### Tests ⚠️ write first, confirm failing
 
@@ -265,11 +269,11 @@ API, and the existing implementation is untouched.
 
 **Independent Test**: The build fails when the boundary is violated.
 
-*Mostly delivered by T004–T009; this phase verifies it. It sits at the end of M1
-because there is now encoding code for T126 and T127 to inspect.*
+_Mostly delivered by T004–T009; this phase verifies it. It sits at the end of M1
+because there is now encoding code for T126 and T127 to inspect._
 
 - [x] T125 [P] [US8] Re-check the dependency ban against real code: add a Catalyst dependency to `fhir-schema/pom.xml`, confirm the build fails, and revert. T005 proved the rule on an empty module; this proves it still holds once the module carries derivation.
-- [x] T126 [P] [US8] Re-check the import ban against real code: add a Catalyst import to the new encoding code, confirm the build fails, and revert. T007 proved the rule on an empty module. *Verified with the import **used**: spotless runs ahead of checkstyle and removes or reorders an unused one, so an idle import fails the build on formatting and never reaches the ban. The boundary holds either way, but only a used import proves the ban itself fires.*
+- [x] T126 [P] [US8] Re-check the import ban against real code: add a Catalyst import to the new encoding code, confirm the build fails, and revert. T007 proved the rule on an empty module. _Verified with the import **used**: spotless runs ahead of checkstyle and removes or reorders an unused one, so an idle import fails the build on formatting and never reaches the ban. The boundary holds either way, but only a used import proves the ban itself fires._
 - [x] T127 [US8] Confirm by inspection that the new encoding path contains no expression encoder, no hand-authored serializer or deserializer expression tree and no FHIR object in a per-row plan (FR-050).
 - [x] T128 [US8] Confirm `encoders` is unmodified — `git diff main -- encoders/` is empty — and that `mvn -pl encoders` still resolves (FR-051). T128a re-checks it under a narrowed assertion once the query-time toolkit has been extended.
 
@@ -288,11 +292,10 @@ nothing here is user-visible and nothing here is a flag day.
 
 **Purpose**: Everything the engine stories depend on. Blocks all of them.
 
-
 ### Coverage that must land before the conventions change (tests only)
 
-*First in the milestone: these pin behaviour that Phase 8 changes, and they must
-exist before the fixture mechanism moves underneath them.*
+_First in the milestone: these pin behaviour that Phase 8 changes, and they must
+exist before the fixture mechanism moves underneath them._
 
 - [ ] T020 [P] Add portable JSON fixtures carrying references between resources, in the same form as the existing `viewTests` fixtures, under `fhirpath/src/test/resources/viewTests/`: a reference that resolves, one whose target is absent, one to a resource type not present, a versioned reference, and a repeating reference element with several targets.
 - [ ] T021 [P] Add view test cases for `resolve()` returning the referenced resource, yielding empty on an unresolvable reference, on an absent reference and on an absent resource type, and returning all targets of a repeating reference, in `fhirpath/src/test/resources/viewTests/`.
@@ -305,9 +308,9 @@ exist before the fixture mechanism moves underneath them.*
 
 ### The gate on how far the dispatch arms are built
 
-*Moved here from Phase 13. It decides the coverage standard for the Phase 8
+_Moved here from Phase 13. It decides the coverage standard for the Phase 8
 dispatch arms, so it cannot be settled two milestones after they are written.
-Its wiring stays in Phase 13.*
+Its wiring stays in Phase 13._
 
 - [ ] T049a **Gate.** Settle whether the source boundary refuses earlier-layout data, refuses by default but routes under the existing per-source opt-out, or routes by default. The engine reads both layouts as of Phase 8, so routing is now possible where it was not when US7 was written. The answer decides three things beyond this phase: whether FR-046 stands as written, whether Phase 8's dispatch arms are transitional scaffolding or product code deserving product-grade coverage (decision 51), and what T100e is permitted to delete. Settle it before Phase 8 opens, and therefore well before T039, which is where the answer is wired in.
 
@@ -340,17 +343,17 @@ passed.
 
 ### Absent elements, before any fixture moves
 
-*Moved here from Phase 9. Tolerance of an absent field is a precondition for
+_Moved here from Phase 9. Tolerance of an absent field is a precondition for
 moving any fixture, not a consequence of the fitted schema: the existing encoder
 already omits fields past its nesting bound, so absence is a property of the
 current layout too, and `FhirViewExtraTest` already carries two excluded cases
 for it under issue #2625. Emitting the tolerant expression at every traversal
 step is what closes that gap, so it belongs ahead of the test infrastructure
-rather than two phases behind it.*
+rather than two phases behind it._
 
-*This block covers the **absence** axis only. It does not make a fixture safe to
+_This block covers the **absence** axis only. It does not make a fixture safe to
 move to the new layout, because a field present in a different shape is a
-different problem, and that is Phase 8's dispatch.*
+different problem, and that is Phase 8's dispatch._
 
 #### Tests ⚠️ write first, confirm failing
 
@@ -358,9 +361,9 @@ different problem, and that is Phase 8's dispatch.*
 - [ ] T102 [P] [US4] Test that traversal to an element the definitions do not describe still raises an error, in the same file.
 - [ ] T103 [P] [US4] Test that selecting a choice variant absent from the schema yields empty, in the same file.
 - [ ] T104 [P] [US4] Test that combining an absent element with a populated one succeeds — union, combination, conditional selection and comparison (FR-027), in the same file.
-- [ ] T105 [P] [US4] Test that sibling column combination tolerates a bottom-typed complex element, in `fhirpath/src/test/java/au/csiro/pathling/projection/SiblingCombinationTest.java`. No *primitive* is untyped under FR-055, but an absent complex element is the bottom type, and the recursive selection path computes an expected element type that now meets it where it previously met a statically empty collection.
+- [ ] T105 [P] [US4] Test that sibling column combination tolerates a bottom-typed complex element, in `fhirpath/src/test/java/au/csiro/pathling/projection/SiblingCombinationTest.java`. No _primitive_ is untyped under FR-055, but an absent complex element is the bottom type, and the recursive selection path computes an expected element type that now meets it where it previously met a statically empty collection.
 - [ ] T106 [P] [US4] Test that a view column declaring a FHIR type produces an output column of that type over an absent element (FR-028), in `fhirpath/src/test/java/au/csiro/pathling/projection/ProjectedColumnTypeTest.java`.
-- [ ] T107 [P] [US4] Test that a view column declaring no type over an absent *primitive* element succeeds, carrying the type the definitions give the element (FR-030), and that deriving an output type still fails with a message naming the column, its path and the remedy for a column that genuinely carries no type information (FR-029), in the same file. An element absent from the schema must no longer reach that failure.
+- [ ] T107 [P] [US4] Test that a view column declaring no type over an absent _primitive_ element succeeds, carrying the type the definitions give the element (FR-030), and that deriving an output type still fails with a message naming the column, its path and the remedy for a column that genuinely carries no type information (FR-029), in the same file. An element absent from the schema must no longer reach that failure.
 
 #### Implementation
 
@@ -374,13 +377,14 @@ different problem, and that is Phase 8's dispatch.*
 - [ ] T034 Make the JSON path with an explicit derived schema available to the YAML conformance runner's fixture factory, as the new-layout arm of the T037a dimension rather than as an unconditional switch, in `fhirpath/src/test/java/au/csiro/pathling/test/yaml/`.
 - [ ] T035 Make the JSON path available to the SQL-on-FHIR view test pipeline as the new-layout arm of the T037a dimension, rather than switching it off parsing and encoding unconditionally, in `fhirpath/src/test/java/au/csiro/pathling/views/FhirViewTest.java`. The local fixtures and the submodule fixtures come along unchanged.
 - [ ] T036 Make the category-C path — construct, serialise to JSON, read with the derived schema — available to the object-based test data source as the new-layout arm of the T037a dimension, so the fluent builders survive unchanged, in `fhirpath/src/test/java/au/csiro/pathling/test/`.
-- [ ] T037 Add the schema mode switch to the test framework as a dimension, switchable with `-Dpathling.testSchemaMode=dense`. The default is pruned, which is safe here only because the whole absent-element block has already landed in this phase, not T110 alone: a fitted schema also needs the *typed* empty output that T107, T111 and T113 provide, or a view over an absent element crashes in sibling combination rather than yielding a column. T038 is what stops the switch failing quietly.
+- [ ] T037 Add the schema mode switch to the test framework as a dimension, switchable with `-Dpathling.testSchemaMode=dense`. The default is pruned, which is safe here only because the whole absent-element block has already landed in this phase, not T110 alone: a fitted schema also needs the _typed_ empty output that T107, T111 and T113 provide, or a view over an absent element crashes in sibling combination rather than yielding a column. T038 is what stops the switch failing quietly.
 - [ ] T037a Add the **layout** dimension to the test framework, defaulting to the previous layout and opt-in to the new one per test, switchable with `-Dpathling.testLayout=pof`. This is a second and independent axis from T037's schema mode: a schema mode says how much of the layout is present, a layout says which conventions the fields follow. Phase 8's tests opt in as each dispatch arm lands, and T100g flips the default at the switch. Without it, T034 to T036 would move every fixture onto conventions the engine does not learn until Phase 8, and a decimal comparison would silently compare strings rather than failing loudly.
 - [ ] T038 Add a test asserting the active schema mode **and the active layout** match the requested ones and failing loudly otherwise. This repository has precedent for test configuration that silently does nothing; a mode switch that fails quietly would leave a green build in a mode nobody is running.
 
 **Checkpoint**: The join has portable coverage; the unnesting constraint is pinned; the toolkit can traverse tolerantly and reconcile shapes, and the analyzer risk is resolved either way. Traversal to an absent element yields empty everywhere and produces a typed column where a view projects one, which closes issue #2625 as well as preparing the fitted schema. Both test dimensions exist: the schema mode may now default to pruned, because the whole absent-element block precedes it, and the layout stays on the previous conventions until Phase 8 has dispatched them.
 
 ---
+
 ## Phase 8: User Story 3 - The engine reads both layouts (Priority: P1)
 
 **Goal**: Existing expressions, views and searches return the same answers over
@@ -392,21 +396,21 @@ switch until Phase 12.
 **Independent Test**: The FHIRPath suite, both conformance baselines and the
 SQL-on-FHIR compliance suite pass over data in the new layout.
 
-*T083–T085 and T091–T093 (Coding by name) are correct under both layouts and can
+_T083–T085 and T091–T093 (Coding by name) are correct under both layouts and can
 land at any time, including during M1. The rest of this phase cannot: T086 to
 T089 and T094 to T099 are the layout dispatch itself, and T089 runs the whole
-suite over the new layout.*
+suite over the new layout._
 
-*Annotations are not emitted until M5, so every value here is computed rather
+_Annotations are not emitted until M5, so every value here is computed rather
 than read from an annotation. That is what FR-022 requires in any case; the
-annotation fast paths are T086a, T087a, T095a and T096a, in M5.*
+annotation fast paths are T086a, T087a, T095a and T096a, in M5._
 
-*The dispatching expression must satisfy one rule, and it now holds without
+_The dispatching expression must satisfy one rule, and it now holds without
 qualification: **every branch yields the same `dataType`**, across layouts as
 well as within one, because T094b normalises the previous layout to the new
 layout's shape rather than carrying it forward. That is what keeps T108 and
 FR-054 true. Decision 47 originally had to weaken this across layouts; decision
-55 records why it no longer does.*
+55 records why it no longer does._
 
 ### Tests ⚠️ write first, confirm failing
 
@@ -445,19 +449,19 @@ stay traversable, and shape-sensitive assertions pin the schema they ran against
 **Independent Test**: Reach the same FHIR type by two paths whose fitted schemas
 differ; assert the combination holds every element of both.
 
-*The absent-element work that used to sit here — T101 to T107 and T110 to T113 —
+_The absent-element work that used to sit here — T101 to T107 and T110 to T113 —
 moved to Phase 7, because tolerance of an absent field has to precede any fixture
 movement. What remains is the reconciliation half, which depends on T038l rather
-than on T110.*
+than on T110._
 
-*This phase also **fixes an existing defect**. Unification today is by implicit
+_This phase also **fixes an existing defect**. Unification today is by implicit
 cast only, so two collections of one complex FHIR type whose SQL shapes differ
 are reported compatible and then compared as mismatched structs. Under the
 previous layout that is reachable wherever a recursive type is met at two
 nesting depths, which the encoder's bound makes structurally different. The
 fitted schema widens the same hole to non-recursive types reached by different
 branches. One mechanism closes both, which is why T104b pins the recursive case
-against unmodified behaviour before the fix lands.*
+against unmodified behaviour before the fix lands._
 
 ### Tests ⚠️ write first, confirm failing
 
@@ -480,12 +484,12 @@ can safely write a schema fitted to the data.
 **Independent Test**: Write two batches with divergent schemas; query across both
 and assert every resource appears with correct cardinality.
 
-*In M2 rather than M1 because its subject is batches arriving over time, and
+_In M2 rather than M1 because its subject is batches arriving over time, and
 because T116 depends on US4. It sits **before** the flip rather than after it:
 divergent fitted schemas arise the moment the new layout is written, so reading
 mixed-shape files has to work by Phase 12, not after. Until then the batches are
 written through `io`'s own entry points rather than the public write path. The
-merge it needs (T038g) landed in M1.*
+merge it needs (T038g) landed in M1._
 
 ### Tests ⚠️ write first, confirm failing
 
@@ -531,22 +535,23 @@ layout, earlier layouts are detected at the source boundary, and the layout is
 documented. The engine already reads both layouts, so the build does not go red.
 
 ## Phase 12: The public API switch
+
 **Goal**: `PathlingContext` and `NdjsonSink` write and read the new layout.
 
-*The point of no return, and the only breaking release. It lands after US4
+_The point of no return, and the only breaking release. It lands after US4
 because until absent elements behave the public API would be writing a fitted
 schema the engine cannot fully query, and beside US7 because a user whose data
 predates the flip must meet a message rather than a wrong answer. The engine
-already reads both layouts, so the build does not go red across the switch.*
+already reads both layouts, so the build does not go red across the switch._
 
-*T108 and T108a sit here rather than with the rest of US4: they assert the
+_T108 and T108a sit here rather than with the rest of US4: they assert the
 expression-to-column guarantee through the public API, which has no fitted mode
 until this phase. The semantics they rest on are covered in Phase 9 by T101–T107
-and T104a, so FR-054 and SC-010 are proven end to end here and not before.*
+and T104a, so FR-054 and SC-010 are proven end to end here and not before._
 
-*The layout lands annotation-free and without primitive metadata. FR-022 makes
+_The layout lands annotation-free and without primitive metadata. FR-022 makes
 the first safe; FR-017's carve-out, asserted by T057b, bounds the second. Both
-close in M5.*
+close in M5._
 
 - [ ] T070 [US1] Wire the transform into `library-api/src/main/java/au/csiro/pathling/library/PathlingContext.java`, preserving the existing signatures (FR-043).
 - [ ] T081 [US2] Wire egress into the decode entry point in `library-api/src/main/java/au/csiro/pathling/library/PathlingContext.java`, preserving the existing signature.
@@ -572,17 +577,17 @@ message rather than producing wrong answers.
 **Independent Test**: Read previous-layout data through each file-based source
 and assert the error.
 
-*Immediately before the public API switch, and not earlier. The detector rejects
+_Immediately before the public API switch, and not earlier. The detector rejects
 the layout an earlier release wrote, which is the only layout anyone holds until
 the flip. Shipping it in M1 would reject every existing user's data in a release
 whose engine still reads that data exactly as intended. It must be in place by
-Phase 12 and must not ship before it.*
+Phase 12 and must not ship before it._
 
-*It depends only on Setup, so it can be built at any point; it must not be wired
-in before Phase 12.*
+_It depends only on Setup, so it can be built at any point; it must not be wired
+in before Phase 12._
 
-*The gate this phase is built to, T049a, is settled in Phase 7. Its answer says
-whether the boundary refuses or routes, and therefore what T039 to T048 assert.*
+_The gate this phase is built to, T049a, is settled in Phase 7. Its answer says
+whether the boundary refuses or routes, and therefore what T039 to T048 assert._
 
 ### Tests ⚠️ write first, confirm failing
 
@@ -614,14 +619,14 @@ whether the boundary refuses or routes, and therefore what T039 to T048 assert.*
 
 **Goal**: The layout users now receive is documented, and its cost is recorded.
 
-*These sit with the flip rather than after it. T129 and T130 describe the layout
+_These sit with the flip rather than after it. T129 and T130 describe the layout
 the public API has just started writing; landing them later would ship an
 undocumented layout. T136 measures the flip itself, and because the layout is
 annotation-free at this point it measures the computed paths at their most
-expensive — which is what makes it the input that orders M5.*
+expensive — which is what makes it the input that orders M5._
 
 - [ ] T129 [P] Rewrite `site/docs/libraries/io/schema.md` from [contracts/storage-layout.md](contracts/storage-layout.md), including the fitted-schema statement, the unnesting caution for direct SQL consumers and the compatibility statement for existing files.
-- [ ] T130 [P] Document the new options and the behaviour changes from [contracts/library-api.md](contracts/library-api.md) in `site/docs/libraries/`, including the decimal limitation on the string-dataset path, that a column expression remains valid over any conformant schema with absent primitives carrying their definition-derived type, and that a column over an absent *complex* element is bottom-typed and so cannot be written to Parquet and is omitted in JSON.
+- [ ] T130 [P] Document the new options and the behaviour changes from [contracts/library-api.md](contracts/library-api.md) in `site/docs/libraries/`, including the decimal limitation on the string-dataset path, that a column expression remains valid over any conformant schema with absent primitives carrying their definition-derived type, and that a column over an absent _complex_ element is bottom-typed and so cannot be written to Parquet and is omitted in JSON.
 - [ ] T136 Re-run the split benchmark and compare against the T003 baseline. Record encode, decode, planning and execution separately. No outcome is required (SC-007). Because nothing is annotated yet, this measures every annotated operation on its computed path, so it is what orders Phase 15: FR-033 in particular leaves a precomputed reference key to be added if joins prove to need one. Re-run after each annotation kind lands.
 
 **Checkpoint**: The new layout is documented and its unaccelerated cost is on record.
@@ -638,12 +643,12 @@ extensions. Each annotation kind is an independent increment.
 **Goal**: Each annotation kind is emitted by the encoder and used by the engine
 as a fast path, one kind at a time.
 
-*Ordered by what T136 measured, not by this list. Every kind is independent: it
+_Ordered by what T136 measured, not by this list. Every kind is independent: it
 can ship on its own, and until it ships the engine computes the value instead.
-FR-021 is satisfied when the last kind lands, and FR-023 with T090.*
+FR-021 is satisfied when the last kind lands, and FR-023 with T090._
 
-*Correctness is never at stake here. FR-022 makes an annotation a fast path and
-nothing more, which is what Phase 8 already delivers and T089 already asserts.*
+_Correctness is never at stake here. FR-022 makes an annotation a fast path and
+nothing more, which is what Phase 8 already delivers and T089 already asserts._
 
 ### Tests ⚠️ write first, confirm failing
 
@@ -676,12 +681,12 @@ navigate to them.
 **Independent Test**: Round-trip a resource carrying primitive metadata, then
 evaluate expressions reaching it.
 
-*Both halves land here, past the flip. The engine cannot navigate primitive
+_Both halves land here, past the flip. The engine cannot navigate primitive
 metadata today and the previous layout cannot represent it at all, so nothing
 regresses by deferring the reading. Deferring the writing is the deliberate cost
 recorded in FR-017's carve-out and decision 49: until T078c, a warehouse written
 by this release does not carry primitive id or extension content, and T057b is
-what keeps that loss visible rather than silent.*
+what keeps that loss visible rather than silent._
 
 ### Tests ⚠️ write first, confirm failing
 
@@ -709,20 +714,20 @@ follow-ups are raised. Nothing user-visible.
 
 ## Phase 17: Completion
 
-*T131, T132, T133, T134, T134a, T137 and T138 depend on nothing beyond M1 and may
+_T131, T132, T133, T134, T134a, T137 and T138 depend on nothing beyond M1 and may
 land at any point; T131 in particular documents modules that already exist.
 Documentation of the layout itself is not here — T129 and T130 ship with the flip
 in Phase 14, because a layout users hold and cannot read about is worse than one
-they do not hold yet.*
+they do not hold yet._
 
-*T100e is the only task here that removes behaviour, and its scope is set by
+_T100e is the only task here that removes behaviour, and its scope is set by
 T049a: if the source boundary routes earlier-layout data rather than refusing it,
 the previous-layout reader is a product feature and removing it is a breaking
-change rather than a cleanup.*
+change rather than a cleanup._
 
-*No migration tooling is built by this programme. T042's remedy is re-import from
+_No migration tooling is built by this programme. T042's remedy is re-import from
 source, T134a raises the rewrite tool as a follow-up, and FR-051's retention of
-`encoders` is what keeps it possible later.*
+`encoders` is what keeps it possible later._
 
 ### The gate on the end state
 
@@ -736,7 +741,7 @@ source, T134a raises the rewrite tool as a follow-up, and FR-051's retention of
 - [ ] T134 [P] Raise the follow-up issue for the decimal quoting pre-pass (R-009), recording that a blanket approach fails because a quoted number against an integer target is rejected.
 - [ ] T134a [P] Raise the follow-up issue for the data-at-rest rewrite tool that T042's message says does not yet exist. Record that the retained `encoders` module is what keeps it possible, that a rewrite cannot restore decimal lexical form because the previous layout stored a fixed-precision numeric, and that a re-imported warehouse therefore carries the losslessness guarantee where a rewritten one does not. This closes the gap between the Constitution Check's retention rationale and work that appears nowhere in this programme.
 - [ ] T134b [P] Raise the follow-up issue tracking the server's move onto the post-change line. The assumptions in `spec.md` pin the server to the last library release before Phase 12 and require it to reach the post-change line before the pinned line stops receiving fixes. That obligation has a deadline and no owner anywhere in this programme, which is what this task fixes.
-- [ ] T134c [P] Raise the follow-up issue for the object-storage half of the T119 merge gate. R-015's condition was *narrowed*, not discharged: `evidence/merge-cost.md` establishes the shape of the curve locally and shows Delta does not bite, but no object-storage harness exists in this repository, so the wall clock a user on S3 would see for raw files is still unmeasured. Record that the fallback R-015 contemplates therefore remains open rather than ruled out.
+- [ ] T134c [P] Raise the follow-up issue for the object-storage half of the T119 merge gate. R-015's condition was _narrowed_, not discharged: `evidence/merge-cost.md` establishes the shape of the curve locally and shows Delta does not bite, but no object-storage harness exists in this repository, so the wall clock a user on S3 would see for raw files is still unmeasured. Record that the fallback R-015 contemplates therefore remains open rather than ruled out.
 - [ ] T134d [P] Raise the follow-up issue for the round-trip corpus that `benchmark` already resolves. `au.csiro.pathling:test-data` ships 25 per-resource-type NDJSON files under `bulk/fhir/` on the classpath, resolved from Maven Central and consumed by `benchmark/src/main/java/au/csiro/pathling/benchmark/BenchmarkResources.java`. T077 instead runs over four resource types vendored into `io/src/test/resources/data/synthea/R4/`, so the wider corpus is available and unused. It was left out of M1 deliberately: `io` is in the `library-runtime` chain and `benchmark` is not, so the dependency adds a 124 MB test-scope download to the core build that a fresh checkout does not pay today, and the cost of round-tripping 600 MB on every build is unmeasured. The follow-up decides whether to take the dependency, and whether to bound what the harness reads per resource type rather than consuming all of it. It widens the resource-type spread only; it is not a substitute for T076, because Synthea does not emit the structural corners the specification examples exist to demonstrate.
 - [ ] T134e [P] Raise the follow-up issue for the inline resource that is dropped for want of a type, per decision 64. `DefinitionCanonicalStructure.addElement` omits an element whose `ElementDefinition.getFhirType()` is empty, which is every element declared as the abstract `Resource`, and `StrictnessCheck` then reports the observed content as `undescribedContent` — "the definitions describe no element of this name" — for an element the definitions plainly describe. The outcome is right and the diagnosis is wrong. Record that `contained` is handled correctly by name while `Parameters.parameter.resource` is not, that `Bundle.entry.resource` takes the same branch and so M3's explode path (T058, T068) will meet it, and that the likely remedy is a fourth `NonConformantContent` kind naming an inline resource rather than widening `containedResource`. Found by T076 over the specification's own examples.
 - [ ] T135 Benchmark the two ingest mechanisms against each other — the chosen transform approach and direct parsing into a variant — and record the comparison in `evidence/ingest-comparison.md`. This records evidence for a future release rather than deciding anything here: the mechanism is settled by this point, so the lexical-decimal limitation stands for this programme, pinned by T078 and documented per FR-020 (R-009).
@@ -761,83 +766,83 @@ FR-021 and FR-023 entirely. Checked mechanically as part of the
 consistency pass, which expands every range against the task list rather than
 trusting the numbering.
 
-| Requirement | Tasks |
-| --- | --- |
-| FR-001 Layout conformance | T050, T052, T056, T057, T057a, T057b, T059, T060, T062, T067, T067a (M1), T058, T058a, T068, T069, T069a (M3), T070 (M4), T051, T053–T055, T061, T063–T066 (M5) |
-| FR-002 Decimals lexical plus annotation | T050, T060 (M1), T050a, T064 (M5) |
-| FR-003 Primitive metadata groups, inline extensions, no identifier or map | T052, T062 (M1), T051, T061 (M5) |
-| FR-004 Date range annotations | T053, T065 (M5) |
-| FR-005 Both quantity canonical annotations, the specification's and a magnitude-preserving one | T054, T066 (M5) |
-| FR-006 `contained` excluded and detected | T056, T067 |
-| FR-007 `Bundle` never stored | T058, T068 |
-| FR-008 Schema derived from definitions | T028, T031 |
-| FR-009 Pruned and dense modes | T029, T032, T033, T033a |
-| FR-010 Dense is the same derivation unpruned | T030 |
-| FR-011 No field-less structure | T029 |
-| FR-012 Types and cardinality never from data | T028 |
-| FR-013 Child enumeration | T013, T016 |
-| FR-014 Cardinality exposed | T014, T017 |
-| FR-015 Version-independent type representation | T015, T018 |
-| FR-016 Round-trip equality | T071, T076, T077 |
-| FR-017 Unconditional on pruned, bounded and detectable on dense | T057b, T067a, T078a, T078b (M1, under the primitive-metadata carve-out), T078c (M5, closing it) |
-| FR-018 Strictness switch | T057, T067 |
-| FR-019 Absent elements omitted on export | T073, T074, T075, T080 |
-| FR-020 Limitations documented per path | T078, T130 |
-| FR-021 Annotations default on, individually disableable | T055, T063 (M5) |
-| FR-022 Engine computes when annotations absent | T089 |
-| FR-023 Fast path chosen from the schema | T090 (M5) |
-| FR-024 Absent element yields empty | T101, T110, T110a |
-| FR-025 Undefined element raises | T102 |
-| FR-026 Absent choice variant yields empty | T103 |
-| FR-027 Absent combines with populated | T104, T105, T113 |
-| FR-028 Declared FHIR type applied to output | T106, T111 |
-| FR-029 Untyped derivation fails with an actionable message, and an absent element is not such a column | T107, T112 |
-| FR-030 An absent primitive carries its definition-derived type | T107, T108a, T130 |
-| FR-031 Coding decoded by name | T083, T084, T091 |
-| FR-032 Terminology on narrowed Coding | T085, T092, T093 |
-| FR-033 Reference keys without a stored column | T088, T098, T094b |
-| FR-034 Primitive id and extension navigation | T120–T124 (M5) |
-| FR-035 Query-time decimal precision unchanged | T086, T094b, T095, T130, T086a, T095a |
-| FR-036 Unnesting never reduced to a single leaf | T026, T027, T116 |
-| FR-054 Traversal tolerant of an absent field, decided after schema resolution | T038a, T038b, T038d, T038e, T110, T110a (M2, all in Phase 7), T108 (M4) |
-| FR-055 Absent elements typed by the definitions or the bottom type | T038c, T038e, T105, T110 |
-| FR-056 Reconciliation by by-name projection, never by cast | T038j, T038k, T038l, T104a, T104b, T113a, T113b |
-| FR-057 Canonical field order, covering the layout's own fields, wherever a structure type is produced | T030a, T038h, T038i, T104a, T118a |
-| FR-058 One recursive field-wise merge, over a navigable canonical structure, serving reconciliation and file merging | T038f, T038g, T038h, T038i, T118a |
-| FR-037 Unsupported layouts rejected with an actionable message | T042, T045, T046, T047 (read path only; the write path is FR-037a) |
-| FR-037a Unsupported layouts rejected on the write path | T039a, T042a, T046a |
-| FR-038 Detection structural, no extra file access | T044 |
-| FR-039 Sparse and unclassifiable schemas accepted | T041 |
-| FR-040 Detection disableable per source | T043, T048, T049 |
-| FR-041 Divergent files read as one dataset | T114, T118, T118b, T118c, T119 |
-| FR-042 Divergent append widens the table | T115, T117, T117a |
-| FR-043 Encoding and decoding APIs preserved | T070, T081 |
-| FR-044 Bounds options apply to dense only | T033 |
-| FR-045 XML and Bundle ingest preserved | T058, T058a, T068, T069, T069a |
-| FR-046 Earlier layouts not read as the new one | T049a (settled in Phase 7), T042, T045 |
-| FR-047 Published layout contract replaced | T129 |
-| FR-048 Dependency ban on the schema module | T005, T125 |
-| FR-049 Import check on the new encoding | T007, T126 |
-| FR-050 No encoder or hand-authored expression trees | T127 |
-| FR-051 Existing implementation untouched | T128, T128a |
-| FR-052 Query toolkit preserved and not relocated | T038e, T038l, T128, T128a |
-| FR-053 Engine reads only the new layout | T100f, T100e (M6), T038m, T094b. T100 confirms the new layout is read on every path but **does not** assert the previous reader is gone; the engine reads both from M2 until T100e |
+| Requirement                                                                                                          | Tasks                                                                                                                                                                              |
+| -------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| FR-001 Layout conformance                                                                                            | T050, T052, T056, T057, T057a, T057b, T059, T060, T062, T067, T067a (M1), T058, T058a, T068, T069, T069a (M3), T070 (M4), T051, T053–T055, T061, T063–T066 (M5)                    |
+| FR-002 Decimals lexical plus annotation                                                                              | T050, T060 (M1), T050a, T064 (M5)                                                                                                                                                  |
+| FR-003 Primitive metadata groups, inline extensions, no identifier or map                                            | T052, T062 (M1), T051, T061 (M5)                                                                                                                                                   |
+| FR-004 Date range annotations                                                                                        | T053, T065 (M5)                                                                                                                                                                    |
+| FR-005 Both quantity canonical annotations, the specification's and a magnitude-preserving one                       | T054, T066 (M5)                                                                                                                                                                    |
+| FR-006 `contained` excluded and detected                                                                             | T056, T067                                                                                                                                                                         |
+| FR-007 `Bundle` never stored                                                                                         | T058, T068                                                                                                                                                                         |
+| FR-008 Schema derived from definitions                                                                               | T028, T031                                                                                                                                                                         |
+| FR-009 Pruned and dense modes                                                                                        | T029, T032, T033, T033a                                                                                                                                                            |
+| FR-010 Dense is the same derivation unpruned                                                                         | T030                                                                                                                                                                               |
+| FR-011 No field-less structure                                                                                       | T029                                                                                                                                                                               |
+| FR-012 Types and cardinality never from data                                                                         | T028                                                                                                                                                                               |
+| FR-013 Child enumeration                                                                                             | T013, T016                                                                                                                                                                         |
+| FR-014 Cardinality exposed                                                                                           | T014, T017                                                                                                                                                                         |
+| FR-015 Version-independent type representation                                                                       | T015, T018                                                                                                                                                                         |
+| FR-016 Round-trip equality                                                                                           | T071, T076, T077                                                                                                                                                                   |
+| FR-017 Unconditional on pruned, bounded and detectable on dense                                                      | T057b, T067a, T078a, T078b (M1, under the primitive-metadata carve-out), T078c (M5, closing it)                                                                                    |
+| FR-018 Strictness switch                                                                                             | T057, T067                                                                                                                                                                         |
+| FR-019 Absent elements omitted on export                                                                             | T073, T074, T075, T080                                                                                                                                                             |
+| FR-020 Limitations documented per path                                                                               | T078, T130                                                                                                                                                                         |
+| FR-021 Annotations default on, individually disableable                                                              | T055, T063 (M5)                                                                                                                                                                    |
+| FR-022 Engine computes when annotations absent                                                                       | T089                                                                                                                                                                               |
+| FR-023 Fast path chosen from the schema                                                                              | T090 (M5)                                                                                                                                                                          |
+| FR-024 Absent element yields empty                                                                                   | T101, T110, T110a                                                                                                                                                                  |
+| FR-025 Undefined element raises                                                                                      | T102                                                                                                                                                                               |
+| FR-026 Absent choice variant yields empty                                                                            | T103                                                                                                                                                                               |
+| FR-027 Absent combines with populated                                                                                | T104, T105, T113                                                                                                                                                                   |
+| FR-028 Declared FHIR type applied to output                                                                          | T106, T111                                                                                                                                                                         |
+| FR-029 Untyped derivation fails with an actionable message, and an absent element is not such a column               | T107, T112                                                                                                                                                                         |
+| FR-030 An absent primitive carries its definition-derived type                                                       | T107, T108a, T130                                                                                                                                                                  |
+| FR-031 Coding decoded by name                                                                                        | T083, T084, T091                                                                                                                                                                   |
+| FR-032 Terminology on narrowed Coding                                                                                | T085, T092, T093                                                                                                                                                                   |
+| FR-033 Reference keys without a stored column                                                                        | T088, T098, T094b                                                                                                                                                                  |
+| FR-034 Primitive id and extension navigation                                                                         | T120–T124 (M5)                                                                                                                                                                     |
+| FR-035 Query-time decimal precision unchanged                                                                        | T086, T094b, T095, T130, T086a, T095a                                                                                                                                              |
+| FR-036 Unnesting never reduced to a single leaf                                                                      | T026, T027, T116                                                                                                                                                                   |
+| FR-054 Traversal tolerant of an absent field, decided after schema resolution                                        | T038a, T038b, T038d, T038e, T110, T110a (M2, all in Phase 7), T108 (M4)                                                                                                            |
+| FR-055 Absent elements typed by the definitions or the bottom type                                                   | T038c, T038e, T105, T110                                                                                                                                                           |
+| FR-056 Reconciliation by by-name projection, never by cast                                                           | T038j, T038k, T038l, T104a, T104b, T113a, T113b                                                                                                                                    |
+| FR-057 Canonical field order, covering the layout's own fields, wherever a structure type is produced                | T030a, T038h, T038i, T104a, T118a                                                                                                                                                  |
+| FR-058 One recursive field-wise merge, over a navigable canonical structure, serving reconciliation and file merging | T038f, T038g, T038h, T038i, T118a                                                                                                                                                  |
+| FR-037 Unsupported layouts rejected with an actionable message                                                       | T042, T045, T046, T047 (read path only; the write path is FR-037a)                                                                                                                 |
+| FR-037a Unsupported layouts rejected on the write path                                                               | T039a, T042a, T046a                                                                                                                                                                |
+| FR-038 Detection structural, no extra file access                                                                    | T044                                                                                                                                                                               |
+| FR-039 Sparse and unclassifiable schemas accepted                                                                    | T041                                                                                                                                                                               |
+| FR-040 Detection disableable per source                                                                              | T043, T048, T049                                                                                                                                                                   |
+| FR-041 Divergent files read as one dataset                                                                           | T114, T118, T118b, T118c, T119                                                                                                                                                     |
+| FR-042 Divergent append widens the table                                                                             | T115, T117, T117a                                                                                                                                                                  |
+| FR-043 Encoding and decoding APIs preserved                                                                          | T070, T081                                                                                                                                                                         |
+| FR-044 Bounds options apply to dense only                                                                            | T033                                                                                                                                                                               |
+| FR-045 XML and Bundle ingest preserved                                                                               | T058, T058a, T068, T069, T069a                                                                                                                                                     |
+| FR-046 Earlier layouts not read as the new one                                                                       | T049a (settled in Phase 7), T042, T045                                                                                                                                             |
+| FR-047 Published layout contract replaced                                                                            | T129                                                                                                                                                                               |
+| FR-048 Dependency ban on the schema module                                                                           | T005, T125                                                                                                                                                                         |
+| FR-049 Import check on the new encoding                                                                              | T007, T126                                                                                                                                                                         |
+| FR-050 No encoder or hand-authored expression trees                                                                  | T127                                                                                                                                                                               |
+| FR-051 Existing implementation untouched                                                                             | T128, T128a                                                                                                                                                                        |
+| FR-052 Query toolkit preserved and not relocated                                                                     | T038e, T038l, T128, T128a                                                                                                                                                          |
+| FR-053 Engine reads only the new layout                                                                              | T100f, T100e (M6), T038m, T094b. T100 confirms the new layout is read on every path but **does not** assert the previous reader is gone; the engine reads both from M2 until T100e |
 
 And the success criteria:
 
-| Criterion | Tasks | Quickstart |
-| --- | --- | --- |
-| SC-001 Round trip over a real corpus, including the five decimal forms | T072, T076, T077 | QS-001 |
-| SC-002 Suites pass over the new layout in pruned mode, dense subset green | T100, T037, T037a, T038, T100g | QS-003 |
-| SC-003 Exclusion baselines gain no entries, obsolete ones removed | T100 | QS-003 |
-| SC-004 Suite passes with every annotation disabled | T089 | QS-004 |
-| SC-005 Divergent files return every resource with correct cardinality | T114, T115, T116 | QS-006 |
-| SC-006 Earlier layouts rejected at read time with an actionable message | T042, T045–T047 | QS-008 |
-| Follow-ups with a deadline and no other owner | T134b (the server's move), T134c (the unmeasured object-storage half of the T119 gate) | — |
-| SC-007 Encode, decode, planning and execution measured separately | T002, T003, T136 | QS-010 |
-| SC-008 No incompatible public API change in Java, Python or R | T049, T070, T081, T082, T100b | QS-002, QS-008 |
-| SC-009 Build fails on internal Catalyst API in the schema module | T005, T125, T126 | QS-009 |
-| SC-010 One column expression gives equal results on a fitted and a dense dataset | T038a, T038b (M2), T108 (M4) | QS-005 |
+| Criterion                                                                        | Tasks                                                                                  | Quickstart     |
+| -------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- | -------------- |
+| SC-001 Round trip over a real corpus, including the five decimal forms           | T072, T076, T077                                                                       | QS-001         |
+| SC-002 Suites pass over the new layout in pruned mode, dense subset green        | T100, T037, T037a, T038, T100g                                                         | QS-003         |
+| SC-003 Exclusion baselines gain no entries, obsolete ones removed                | T100                                                                                   | QS-003         |
+| SC-004 Suite passes with every annotation disabled                               | T089                                                                                   | QS-004         |
+| SC-005 Divergent files return every resource with correct cardinality            | T114, T115, T116                                                                       | QS-006         |
+| SC-006 Earlier layouts rejected at read time with an actionable message          | T042, T045–T047                                                                        | QS-008         |
+| Follow-ups with a deadline and no other owner                                    | T134b (the server's move), T134c (the unmeasured object-storage half of the T119 gate) | —              |
+| SC-007 Encode, decode, planning and execution measured separately                | T002, T003, T136                                                                       | QS-010         |
+| SC-008 No incompatible public API change in Java, Python or R                    | T049, T070, T081, T082, T100b                                                          | QS-002, QS-008 |
+| SC-009 Build fails on internal Catalyst API in the schema module                 | T005, T125, T126                                                                       | QS-009         |
+| SC-010 One column expression gives equal results on a fitted and a dense dataset | T038a, T038b (M2), T108 (M4)                                                           | QS-005         |
 
 ## Dependencies & Execution Order
 
@@ -963,7 +968,7 @@ traverse. This axis is not peculiar to the fitted schema: the existing encoder
 omits fields past its nesting bound too, so T110 also closes the two
 `FhirViewExtraTest` cases excluded under issue #2625.
 
-**Conventions.** A field present in a *different shape* is a different problem
+**Conventions.** A field present in a _different shape_ is a different problem
 from a field that is absent, and tolerant traversal does nothing for it. A
 lexical decimal is a string where the engine expects a fixed-precision numeric,
 an extension has no `_fid` to key the root map on, and a quantity has no

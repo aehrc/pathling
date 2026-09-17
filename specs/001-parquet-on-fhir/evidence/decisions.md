@@ -169,7 +169,7 @@ design document is to be corrected.
     the part being deferred.
 34. **The new encoding goes into its own new `io` module**, beside `encoders`.
     Build order: `utilities -> fhir-schema -> {encoders, io} -> terminology ->
-    fhirpath -> library-api`, with `fhirpath` depending on all three. Nothing is
+fhirpath -> library-api`, with `fhirpath` depending on all three. Nothing is
     retired and nothing is split — only additions plus one package move.
 35. **Catalyst enforcement is two mechanisms.** `fhir-schema` resolves
     `spark-sql-api` only, with a build rule banning `spark-catalyst` and
@@ -197,7 +197,7 @@ evaluation-time binding, and an unbound column representation — recorded as
 future options in R-017 at the user's direction.
 
 Consequences: typed absence for primitives, so the untyped-column problem narrows
-to absent *complex* elements only; and shape reconciliation becomes a requirement
+to absent _complex_ elements only; and shape reconciliation becomes a requirement
 in its own right (findings 16–17, R-016), because two collections of one FHIR type
 reached by different paths have different fitted shapes.
 
@@ -211,16 +211,17 @@ This **fixes a defect in the earlier sequencing.** T070, T081 and T082 rewire
 layout, and they sat in US1 and US2 — before US3 moved the engine. The Phase 4
 checkpoint said in as many words that the engine could not yet read what had just
 been written, while the Implementation Strategy called Setup + Foundational + US1
-+ US2 "a complete, defensible increment". Both cannot be true: with the public
-encoder writing the new layout and the engine reading the old one, every
-encode-then-query path is broken for the whole of that window. The three tasks
-move to M3 and land after US4, so the encoder never writes what the engine cannot
-read.
+
+- US2 "a complete, defensible increment". Both cannot be true: with the public
+  encoder writing the new layout and the engine reading the old one, every
+  encode-then-query path is broken for the whole of that window. The three tasks
+  move to M3 and land after US4, so the encoder never writes what the engine cannot
+  read.
 
 Consequences for the other blocks:
 
 - **The definition abstraction (T010–T019) and schema derivation (T028–T033) stay
-  in M1.** The ingest transform writes *into* the derived schema, and FR-008 and
+  in M1.** The ingest transform writes _into_ the derived schema, and FR-008 and
   FR-012 forbid taking types or cardinality from the data, so there is no encoding
   milestone without them.
 - **The structure merge and canonical ordering (T038f–T038i) move to M1**, beside
@@ -269,7 +270,7 @@ milestone structure, and inverted. The detector rejects the layout an earlier
 release wrote — which, until the public API switches, is the only layout anyone has
 and the one the engine still reads. Wiring it in during M1 would reject every
 existing user's data for being exactly what the M1 engine expects. Before the flip
-there is nothing for it to catch *and* it would catch the wrong thing.
+there is nothing for it to catch _and_ it would catch the wrong thing.
 
 US7 is therefore sequenced immediately before the public API switch. It still
 depends only on Setup and can be built at any time; it must not be wired in
@@ -285,7 +286,7 @@ FR-052 permitting the query-time toolkit to be extended. The assertion is narrow
 to what FR-051 actually requires — the HAPI bridge, the schema converter and the
 existing expressions unchanged, and the module still resolving at its coordinates.
 
-`spec.md` was already correct: FR-051 scopes to the *encoding implementation*, and
+`spec.md` was already correct: FR-051 scopes to the _encoding implementation_, and
 FR-052 says the toolkit "MAY be extended". `plan.md` was not, describing `encoders`
 as `UNCHANGED` and "neither renamed, split nor modified"; corrected to name the two
 additions. This is a specification correction surfaced by the resequencing, not a
@@ -316,7 +317,7 @@ window instead. Keeping the engine dual-layout across the window was ruled out
 earlier, by the assumption that the engine reads only the new layout on completion
 and the test estate therefore moves in one step.
 
-*Consequence*: a Phase 9 failure cannot be distinguished from a Phase 10 failure
+_Consequence_: a Phase 9 failure cannot be distinguished from a Phase 10 failure
 by the build. The programme still lands as several pull requests, as `plan.md`
 says, but none of them falls inside Phases 8 to 12: that span is one unreleasable
 piece.
@@ -330,11 +331,11 @@ The second alternative it records — keeping the engine dual-layout across the
 window — was ruled out on the assumption that the engine reads only the new
 layout on completion and the test estate must therefore move in one step. That
 assumption was not wrong, but it was applied too early: FR-053 constrains the
-*end state*, and nothing required the transition to reach it in a single step.
+_end state_, and nothing required the transition to reach it in a single step.
 Dual-layout reading then turned out to be cheap, for the reasons in decisions 47
 and 48, and FR-053 now states the transitional permission explicitly.
 
-So the engine converts by addition, the test framework gains *two* dimensions
+So the engine converts by addition, the test framework gains _two_ dimensions
 rather than one, and every milestone ends green with none running red in the
 middle. **This addendum originally named only the schema mode**, which was not
 enough: it conflated two axes and left a third unstated. Decision 52 separates
@@ -384,7 +385,7 @@ release that switched, and pinning the writer back is a genuine escape hatch
 rather than a way to produce data the release cannot read.
 
 Two limits. The hatch closes at T100e, when the previous-layout reader is removed
-and FR-053 reaches its end state. And what it protects is the *engine*, not the
+and FR-053 reaches its end state. And what it protects is the _engine_, not the
 data: a warehouse written after the flip carries no primitive ids or extensions
 until M5 (decision 49) and no annotations until then either (decision 50), so
 rolling the writer back does not recover content that was never stored.
@@ -413,7 +414,7 @@ questions at any node: the field order here, and the structure under a given fie
 name. Navigation on demand is what makes an infinite tree representable without
 forcing an expansion the operands never ask for.
 
-*Where it lives*: the interface is declared in `utilities` beside the merge, so
+_Where it lives_: the interface is declared in `utilities` beside the merge, so
 `encoders` sees the interface and never `fhir-schema`, so the rule that
 `encoders/pom.xml` is not modified (T009, FR-051) is satisfied without a
 trade-off. The
@@ -421,7 +422,7 @@ definition-backed implementation sits beside `SchemaBuilder` in `fhir-schema`,
 which already walks the same cyclic graph and must decide the same positions, so
 derivation and merging cannot drift into two notions of canonical order.
 
-*Consequence for the specification*: FR-057 defined canonical order as definition
+_Consequence for the specification_: FR-057 defined canonical order as definition
 order restricted to the fields present, which leaves the layout's own fields —
 the annotations, and the metadata group beside a primitive — without a position.
 They have no definition element, so two implementations could both claim to be
@@ -452,7 +453,7 @@ representation of the same thing. A top-level enumeration would not violate the
 letter of the coding conventions — `TerminologyMode` is one — but it would add a
 representation the derivation does not take.
 
-*Consequence for the specification*: the Strictness row of
+_Consequence for the specification_: the Strictness row of
 `contracts/library-api.md` now states the default. This also supersedes the
 remainder of decision 31, which still reads as though `EncodingConfiguration`
 gains these options; the Key Entities note in `spec.md` and T033 already place
@@ -480,11 +481,11 @@ the layout that no FHIR instance can populate. Field order is part of the type
 (FR-057), so a column emitted once is emitted for the life of the layout. There
 is no reading of the data that would fill them.
 
-*Consequence beyond the layout*: `ofType()` and `as` over a reference-bearing
+_Consequence beyond the layout_: `ofType()` and `as` over a reference-bearing
 choice now see `Reference` once rather than the target resources. That is the
 FHIR-declared surface, so it is the surface the engine should present.
 
-*What holds the rule*: the sweep over every choice in every R4 resource computes
+_What holds the rule_: the sweep over every choice in every R4 resource computes
 its oracle from the definition library alone — the valid names, less the target
 aliases, less the untyped resource alias — rather than from the expansion under
 test, so it fails if the collapse drops too much as readily as if it drops too
@@ -520,21 +521,21 @@ structures positionally depends on it, and interchange-first puts the
 specification's annotation where a reader of the specification expects it.
 
 **One toggle governs the pair.** Under FR-021 the individually disableable unit
-is the annotation *kind* — decimal, date, quantity — and these are one kind in two
+is the annotation _kind_ — decimal, date, quantity — and these are one kind in two
 representations, as the date range annotation is one kind in two fields. A caller
 disabling the quantity annotation is saying it does not want the canonicalisation
 stored, not choosing between two spellings of it. Splitting into two toggles
 remains available additively if an interchange-only consumer ever asks for the
 specification's form without the engine's.
 
-*The shape of the exact form*: the previous Pathling layout carried
+_The shape of the exact form_: the previous Pathling layout carried
 canonicalisation in two fields, `_value_canonicalized` and `_code_canonicalized`
 — value and base unit code. A single `__<field>_canonical_exact` slot must
 therefore carry the unit as well as the value; on the value alone, one metre and
 one second compare equal. The Spark type is settled with the encoder (T066), but
 that constraint is fixed here, not left to be rediscovered.
 
-*Consequence for the specification*: FR-005 required the specification's
+_Consequence for the specification_: FR-005 required the specification's
 annotation to be absent and now requires both. The deviations table in
 `contracts/storage-layout.md` records an addition rather than an omission, the
 capability-regression rows in `evidence/encoder-scope.md` are resolved rather than
@@ -550,14 +551,14 @@ decision 40 unavoidable.
 It is not necessary. The tolerant traversal expression T009a proved is already a
 dispatcher — its `replacement` is a `lazy val` matching on the resolved child's
 `dataType`, choosing a field reference where the field is present and a typed
-null where it is not. Branching on which *layout* a column is in is the same
+null where it is not. Branching on which _layout_ a column is in is the same
 mechanism with a richer match, over discriminators that are all present in the
 resolved schema: a `DECIMAL(32,6)` value with a `_scale` companion against a
 lexical string, `_value_canonicalized` against `__<field>_canonical_exact`, a
 `_fid` field and a root `_extension` map against inline extensions, a stored
 versioned key against its absence.
 
-*The rule that keeps this sound.* Every branch of a dispatching replacement MUST
+_The rule that keeps this sound._ Every branch of a dispatching replacement MUST
 yield the same `dataType`. That is what keeps T108's fitted-versus-dense
 equality true and therefore FR-054. **This entry originally weakened the rule
 across layouts**, requiring only agreement on the FHIRPath-visible type, because
@@ -567,11 +568,11 @@ previous layout is normalised to the new layout's shape inside the expression,
 so the strong form holds everywhere. Two layouts never meet inside one query, so
 FR-056 reconciliation is unaffected.
 
-*Where the dispatch lives — superseded.* This entry placed it in the engine's
+_Where the dispatch lives — superseded._ This entry placed it in the engine's
 collection classes. Decision 55 moves it into the traversal expression, which is
 the same mechanism applied at one site rather than six.
 
-*The rule this inherits.* FR-023 requires an annotation's use to be decided from
+_The rule this inherits._ FR-023 requires an annotation's use to be decided from
 the schema rather than per row. Layout dispatch is held to the same standard: it
 resolves once per schema, at analysis time, never per row.
 
@@ -618,18 +619,18 @@ either way; it is T061, the transform, that is deferred — so on a pruned schem
 the group prunes away for want of data, and on a dense one it is present and
 null. FR-017 therefore carries a carve-out until T078c closes it.
 
-*What bounds it.* FR-018 forbids silent truncation, so the carve-out requires the
+_What bounds it._ FR-018 forbids silent truncation, so the carve-out requires the
 loss to be **detectable**, on the same terms the dense-bounds clause already sets.
 T057b asserts it and T067a implements it, both in M1. Without that pair the
 carve-out would be an aspiration rather than a requirement.
 
-*What makes it survivable.* Adding the metadata group in M5 changes struct shape
+_What makes it survivable._ Adding the metadata group in M5 changes struct shape
 between files written before and after, which is exactly the divergence US5's
 merge exists to handle, and US5 ships in M2, ahead of it. `MetadataGroupStructure`
 is already built in `fhir-schema`, so nothing is wasted by the deferral — it is
 simply not wired into the `io` transform until M5.
 
-*What users should be told*: a warehouse written between the flip and M5 will
+_What users should be told_: a warehouse written between the flip and M5 will
 want re-importing at M5 if its sources carry primitive metadata. T042's remedy
 already points at re-import; this adds a second occasion for it.
 
@@ -642,9 +643,9 @@ M5, one at a time.
 FR-022 is what makes this safe and is not weakened by it: an annotation is a fast
 path and never required for correctness, so the engine computes every value from
 the structure. That requirement was always going to be met; this decision only
-means it is met *first* rather than alongside.
+means it is met _first_ rather than alongside.
 
-*The consequence to plan around.* At the flip every annotated operation runs its
+_The consequence to plan around._ At the flip every annotated operation runs its
 computed path — lexical decimal decoding, UCUM canonicalisation per row, computed
 reference keys for joins — so the flip is where query performance is at its worst
 and most honest. T136 therefore stops being a record and becomes the input that
@@ -652,7 +653,7 @@ orders M5. FR-033 already anticipates the specific case: if a precomputed
 reference key proves necessary for join performance it is expressed as an
 annotation, and that is a question T136 answers rather than guesses.
 
-*What it stages.* FR-021 is met progressively and in full only at the end of M5,
+_What it stages._ FR-021 is met progressively and in full only at the end of M5,
 and FR-023 lands with the first kind, since choosing a fast path presupposes one
 exists. T089 changes character with it: the annotation-free suite is the ordinary
 path at the flip rather than a special case, and the annotated case is what needs
@@ -673,7 +674,7 @@ data for T110 — the riskiest change in the programme — which the previous
 sequencing could not offer, because under it there was no green baseline to
 compare against.
 
-*Open until T049a.* If the source boundary ends up routing earlier-layout data
+_Open until T049a._ If the source boundary ends up routing earlier-layout data
 rather than refusing it, the arms become a product feature, deserve product-grade
 coverage, and T100e's scope shrinks accordingly. That is why T049a is a gate
 rather than an ordinary task. **It has been moved to Phase 7**, at the head of
@@ -693,7 +694,7 @@ neither of the others.
 1. **Absence.** A field the definitions describe that the schema does not carry.
    Tolerant traversal (T110) is what makes it empty rather than an analysis
    failure.
-2. **Conventions.** A field that is present *in a different shape* — a lexical
+2. **Conventions.** A field that is present _in a different shape_ — a lexical
    decimal against a fixed-precision numeric, an inline extension against a
    `_fid` and a root map, a quantity with or without its canonicalised
    companion. Tolerant traversal does nothing for these; the Phase 8 dispatch
@@ -720,7 +721,7 @@ it would produce a silent one, a decimal comparison comparing strings. So the
 layout is a dimension defaulting to the previous conventions, opted into per
 test as each dispatch arm lands, and flipped at T100g.
 
-*Consequence*: T037 may keep pruned as its default, but only because T110 now
+_Consequence_: T037 may keep pruned as its default, but only because T110 now
 precedes it in the same phase. Under the previous ordering that default was the
 unsafe one, and the addendum's own argument required the opposite.
 
@@ -771,7 +772,7 @@ the input schema, so it can **normalise** the previous layout to the new one
 instead of passing the difference upward. Above the expression the engine then
 sees one layout, and every collection class is written once.
 
-*What made this look impossible, and why it was wrong.* The objection was
+_What made this look impossible, and why it was wrong._ The objection was
 extensions. The previous layout keys a resource-level map by each element's
 field identifier, and that map is not the child being traversed, so reaching it
 appeared to need a reference the expression cannot carry: the analyzer spike
@@ -785,7 +786,7 @@ chain down to the resource root and emit a struct-field access beside it — bui
 entirely from resolved leaves, which is exactly what the spike says is required.
 The expression stays unary and no unresolved reference is introduced.
 
-*What this buys.*
+_What this buys._
 
 - **One site instead of six.** T094b holds every normalisation branch. T095 to
   T098 become new-layout implementations with no second path.
@@ -798,7 +799,7 @@ The expression stays unary and no unresolved reference is introduced.
   strong form — every branch yields the same `dataType` — holds everywhere.
   T108's fitted-versus-dense equality and FR-054 rest on the strong form.
 
-*What is not yet settled, and why T038m is a gate.* Two things. Inside the
+_What is not yet settled, and why T038m is a gate._ Two things. Inside the
 `transform` that wraps every repeating element the child is an
 `UnresolvedNamedLambdaVariable`, and the walk to the resource root terminates
 there, so the map is not self-derivable; it must be supplied from the handle
@@ -809,7 +810,7 @@ expansion infinite — sufficient because T110 reapplies the expression at every
 subsequent step, but worth proving rather than assuming. If either fails, the
 design reverts to decision 47 as originally written.
 
-*The cost that stays.* A previous-layout decimal is normalised to its lexical
+_The cost that stays._ A previous-layout decimal is normalised to its lexical
 form and then parsed back, where dispatch in the decimal collection could have
 read the stored numeric directly. The same holds for a stored canonicalised
 quantity and a stored reference key. The previous layout is transitional and
@@ -830,7 +831,7 @@ says nothing about structure. Two collections of one complex type whose SQL
 shapes differ are therefore reported compatible and handed to the equivalent-type
 path, which compares mismatched structs.
 
-*This is already broken, before anything in this programme.* Under the previous
+_This is already broken, before anything in this programme._ Under the previous
 layout and a dense schema the exposure is bounded but real: the encoder truncates
 a recursive expansion at its nesting bound, so the same recursive type met at two
 depths — a `Questionnaire.item` at one level against one at the level below —
@@ -877,7 +878,7 @@ profile sets. Were ANSI ever turned off by default, a malformed value would
 become a silent null and this decision would have to be revisited — `try_cast`
 plus a finding is the alternative.
 
-The line between the two is the definitions. The switch is about a *schema*
+The line between the two is the definitions. The switch is about a _schema_
 disagreement, where ignoring is a coherent choice because the content simply has
 nowhere to go. A value that contradicts its own declared type is not a
 disagreement about the schema.
@@ -923,8 +924,8 @@ against the canonical structure, `Observation.valuePatient` is reported.
 
 ## 60. The metadata group is stripped before the schema is fitted, until M5
 
-A fitted schema is fitted to the data, and the transform reads that as *the data
-as stored* rather than the data as supplied. Primitive id and extension keys are
+A fitted schema is fitted to the data, and the transform reads that as _the data
+as stored_ rather than the data as supplied. Primitive id and extension keys are
 therefore removed from the observed schema before it is handed to the pruner.
 
 Without this, a source carrying `_birthDate` produces a stored schema with a
@@ -960,7 +961,7 @@ composite. Neither the map nor the identifier exists here, and with them gone an
 extension is an ordinary element. T052 is where inline storage is stated, since
 there is no component for it to point at.
 
-Extensions on *primitive* elements are the other half of FR-003 and are
+Extensions on _primitive_ elements are the other half of FR-003 and are
 unaffected: they belong in the metadata group beside the element, which is
 `PrimitiveMetadataTransform` at T061.
 
@@ -978,17 +979,17 @@ recorded because it is exactly the kind of thing a later reader tidies away.
 Tidying it away silently re-quotes every decimal, and a round trip that compares
 text to text stays green while doing it.
 
-*Why the mark is safe.* The writer escapes a control character, so a value
+_Why the mark is safe._ The writer escapes a control character, so a value
 carrying the six characters of the escape sequence is escaped again and cannot
 match a pattern that requires one backslash. Only a raw control character in the
 data could collide, and only where the whole value is a mark, the characters a
 decimal is written with, and the other mark.
 
-*Why it is only decimals.* Every other primitive is stored as text the document
+_Why it is only decimals._ Every other primitive is stored as text the document
 also quotes, or as an integer, long or boolean the writer renders as itself.
 There is no second class of value with this problem.
 
-*How it is held.* `DecimalRoundTripTest` asserts on the raw document that a
+_How it is held._ `DecimalRoundTripTest` asserts on the raw document that a
 decimal and a string carrying identical characters come out as `1.50` and
 `"1.50"` respectively, so the discrimination is proven to be by definition
 rather than by content. The comparator refuses a number matched against its
@@ -1007,8 +1008,7 @@ the null in `given` to hold the place of a value whose id or extensions live in
 the parallel array. Dropping it shifts every position after it, and the two
 arrays no longer describe the same element.
 
-Nothing is broken today, because the metadata group is neither written (decision
-60) nor read back, so a positional null carries no information and the Synthea
+Nothing is broken today, because the metadata group is neither written (decision 60) nor read back, so a positional null carries no information and the Synthea
 corpus does not exercise one. The collision arrives with T061.
 
 Two consequences.
@@ -1027,13 +1027,13 @@ Two consequences.
   did not need widening, and the narrower assertion is correct rather than
   lucky.
 
-  **This does not discharge the hazard, and T061 must still revisit it.** What
-  was measured is a property of the corpus, not of the layout: no published
-  example happens to place a value beside metadata in a way that requires the
-  placeholder. The moment Pathling *writes* the metadata group it must write
-  those placeholders itself, and the pruning above would drop them. The
-  collision arrives with T061 exactly as stated; what has changed is only that
-  no existing test will catch it first, so T061 has to bring its own.
+    **This does not discharge the hazard, and T061 must still revisit it.** What
+    was measured is a property of the corpus, not of the layout: no published
+    example happens to place a value beside metadata in a way that requires the
+    placeholder. The moment Pathling _writes_ the metadata group it must write
+    those placeholders itself, and the pruning above would drop them. The
+    collision arrives with T061 exactly as stated; what has changed is only that
+    no existing test will catch it first, so T061 has to bring its own.
 
 ## 64. An inline resource is dropped for want of a type, and mis-reported as undescribed
 
@@ -1050,8 +1050,8 @@ The next branch of the same method returns early when `ElementDefinition.getFhir
 is empty — "an element the definitions do not give a type cannot be represented".
 An element declared as the abstract `Resource` has no `FhirType`, so it takes that
 branch and never reaches the structure. `StrictnessCheck` then finds observed
-content with no matching entry and reports `undescribedContent`: *the definitions
-describe no element of this name*.
+content with no matching entry and reports `undescribedContent`: _the definitions
+describe no element of this name_.
 
 **That sentence is false.** The definitions do describe `Parameters.parameter.resource`
 — it is declared, 0..1, of type `Resource`. What is true is that the layout cannot
@@ -1070,3 +1070,40 @@ Two consequences.
   `NonConformantContent` offers, and `StrictnessCheck`'s dispatch, and the right
   shape is probably a fourth kind naming an inline resource rather than widening
   `containedResource`. T134e raises it. T076's job was to find it.
+
+## 65. Each milestone is its own issue and its own pull request, against a spec-only baseline
+
+`ssh:build` delivers a spec bundle as one pull request. This programme is too
+large for that: M1 alone is 61 tasks and 44 commits, and the six milestones
+together are 200. A reviewer given all of it at once cannot hold the contract and
+the diff in mind together, which is the failure the adversarial review exists to
+prevent.
+
+So the delivery is restructured, and the branch topology carries the structure:
+
+- **`issue/2367` holds the specification and nothing else.** It is reset to
+  `b5fe0679d6`, the last commit that touched only `specs/`. It is the baseline
+  every milestone targets, and it never carries implementation.
+- **Each milestone is a sub-issue of #2367** — #2761 M1, #2762 M2, #2763 M3,
+  #2764 M4, #2765 M5, #2766 M6 — on its own `issue/<n>` branch, with its own
+  pull request against `issue/2367`. The milestone table records the numbers.
+- **Each pull request gets its own adversarial review**, scoped to that
+  milestone's phases.
+
+**The spec bundle is not split.** The milestone table is already the partition,
+and the functional requirements cut across milestones — FR-016's round trip is
+proved in M1 and extended in M3, M5 and M6; FR-017's carve-out is opened in M1
+and closed in M5. A reviewer needs the whole contract to judge any part of it.
+What is scoped is the review, not the specification.
+
+**This makes the reviewer prompt a deviation from `ssh:build`'s.** An adversarial
+reviewer handed the full spec and one milestone will correctly report every
+later-milestone requirement as unmet, and be useless. The scoped prompt therefore
+adds three constraints: judge only the phases this milestone names; treat a
+requirement another milestone owns as out of scope rather than as a failure; but
+**a milestone that forecloses or contradicts a later requirement is in scope**,
+because that is the one failure the scoping would otherwise hide.
+
+CI needs no change. `.github/workflows/test.yml` triggers on a bare
+`pull_request:` with no branch filter, so a pull request against `issue/2367`
+gets the same checks as one against `main`.
