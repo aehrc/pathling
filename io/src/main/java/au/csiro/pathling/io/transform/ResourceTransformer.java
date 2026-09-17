@@ -194,7 +194,7 @@ public final class ResourceTransformer {
           .orElseGet(() -> functions.lit(resourceType))
           .alias(field.name());
     }
-    return column(canonical, field, observed, functions::col).alias(field.name());
+    return column(canonical, field, observed, functions::col, resourceType).alias(field.name());
   }
 
   /**
@@ -207,13 +207,17 @@ public final class ResourceTransformer {
    * which is never coerced: a repeating element supplied as a single object would otherwise be cast
    * to an array, and a singular element supplied as an array casts to the text of that array, which
    * is a silently wrong value rather than a failure.
+   *
+   * <p>The path is that of the structure carrying the field, and is carried down only so that a
+   * value that contradicts its declared type can be named.
    */
   @Nonnull
   private Column column(
       @Nonnull final DefinitionCanonicalStructure canonical,
       @Nonnull final StructField field,
       @Nonnull final StructType observed,
-      @Nonnull final Function<String, Column> source) {
+      @Nonnull final Function<String, Column> source,
+      @Nonnull final String path) {
     final LayoutEntry entry =
         canonical
             .entry(field.name())
@@ -231,7 +235,8 @@ public final class ResourceTransformer {
                     entry,
                     source.apply(field.name()),
                     field.dataType(),
-                    from.dataType()))
+                    from.dataType(),
+                    path + "." + field.name()))
         .orElseGet(() -> functions.lit(null).cast(field.dataType()));
   }
 
@@ -242,16 +247,14 @@ public final class ResourceTransformer {
       @Nonnull final LayoutEntry entry,
       @Nonnull final Column source,
       @Nonnull final DataType target,
-      @Nonnull final DataType observed) {
+      @Nonnull final DataType observed,
+      @Nonnull final String path) {
     final ElementDefinition element = entry.getElement().orElseThrow();
     final FhirType type = element.getFhirType().orElseThrow();
-    if (FhirType.DECIMAL.equals(type)) {
-      return DecimalTransform.storedValue(source, target);
-    }
     if (PrimitiveTypes.isPrimitive(type)) {
       // Every primitive arrives as text, so the definitions are what turn it back into a number or
-      // a boolean.
-      return source.cast(target);
+      // a boolean, and what decide whether the text is one.
+      return PrimitiveValues.storedValue(source, type, target, path);
     }
     final DefinitionCanonicalStructure child = canonical.elementStructure(entry).orElseThrow();
     // An extension needs no case of its own. This layout stores one inline (FR-003), and inline is
@@ -259,7 +262,7 @@ public final class ResourceTransformer {
     // recursing as far as the source does. The previous layout needed a case because it hoisted
     // every extension into a map at the root of the resource; this one stores it where the
     // definitions put it, so the ordinary structural mapping is the whole of it.
-    return structure(child, source, target, observed);
+    return structure(child, source, target, observed, path);
   }
 
   /**
@@ -272,11 +275,12 @@ public final class ResourceTransformer {
       @Nonnull final DefinitionCanonicalStructure canonical,
       @Nonnull final Column source,
       @Nonnull final DataType target,
-      @Nonnull final DataType observed) {
+      @Nonnull final DataType observed,
+      @Nonnull final String path) {
     if (target instanceof final ArrayType array) {
       final DataType element = elementTypeOf(observed);
       return functions.transform(
-          source, value -> structure(canonical, value, array.elementType(), element));
+          source, value -> structure(canonical, value, array.elementType(), element, path));
     }
     final StructType targetStructure = (StructType) target;
     final StructType observedStructure = (StructType) observed;
@@ -284,7 +288,7 @@ public final class ResourceTransformer {
         Stream.of(targetStructure.fields())
             .map(
                 field ->
-                    column(canonical, field, observedStructure, source::getField)
+                    column(canonical, field, observedStructure, source::getField, path)
                         .alias(field.name()))
             .toArray(Column[]::new);
     // A structure the source did not carry stays absent rather than becoming a structure of nulls,
