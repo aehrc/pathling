@@ -113,27 +113,27 @@ for detailed semantics.
 
 #### Existence functions
 
-| Function            | Description                                                                                              |
-| ------------------- | -------------------------------------------------------------------------------------------------------- |
-| `exists(criteria?)` | Returns `true` if the collection has any elements, optionally filtered by criteria                       |
-| `empty()`           | Returns `true` if the collection is empty                                                                |
-| `count()`           | Returns the integer count of items in the collection (0 if empty)                                        |
-| `all(criteria)`     | Returns `true` if criteria evaluates to `true` for every element (`true` for an empty collection)        |
-| `allTrue()`         | Returns `true` if all Boolean items are `true` (`true` for an empty collection)                          |
-| `anyTrue()`         | Returns `true` if any Boolean item is `true` (`false` for an empty collection)                           |
-| `allFalse()`        | Returns `true` if all Boolean items are `false` (`true` for an empty collection)                         |
-| `anyFalse()`        | Returns `true` if any Boolean item is `false` (`false` for an empty collection)                          |
-| `isDistinct()`      | Returns `true` if all items in the collection are distinct, using FHIRPath equality (`=`)                |
+| Function            | Description                                                                                       |
+| ------------------- | ------------------------------------------------------------------------------------------------- |
+| `exists(criteria?)` | Returns `true` if the collection has any elements, optionally filtered by criteria                |
+| `empty()`           | Returns `true` if the collection is empty                                                         |
+| `count()`           | Returns the integer count of items in the collection (0 if empty)                                 |
+| `all(criteria)`     | Returns `true` if criteria evaluates to `true` for every element (`true` for an empty collection) |
+| `allTrue()`         | Returns `true` if all Boolean items are `true` (`true` for an empty collection)                   |
+| `anyTrue()`         | Returns `true` if any Boolean item is `true` (`false` for an empty collection)                    |
+| `allFalse()`        | Returns `true` if all Boolean items are `false` (`true` for an empty collection)                  |
+| `anyFalse()`        | Returns `true` if any Boolean item is `false` (`false` for an empty collection)                   |
+| `isDistinct()`      | Returns `true` if all items in the collection are distinct, using FHIRPath equality (`=`)         |
 
 #### Filtering and projection functions
 
-| Function                | Description                                                       |
-| ----------------------- | ----------------------------------------------------------------- |
-| `where(criteria)`       | Filter collection by criteria expression                          |
-| `select(projection)`    | Evaluate projection for each element, flattening results          |
-| `ofType(type)`          | Filter collection by type                                         |
-| `repeat(projection)`    | Recursively evaluate projection, deduplicating results            |
-| `repeatAll(projection)` | Recursively evaluate projection without deduplication (see below) |
+| Function                | Description                                                                                  |
+| ----------------------- | -------------------------------------------------------------------------------------------- |
+| `where(criteria)`       | Filter collection by criteria expression                                                     |
+| `select(projection)`    | Evaluate projection for each element, flattening results                                     |
+| `ofType(type)`          | Filter collection by type                                                                    |
+| `repeat(projection)`    | Recursively evaluate projection, deduplicating results                                       |
+| `repeatAll(projection)` | Recursively evaluate projection without deduplication (see below)                            |
 | `distinct()`            | Returns only the unique items, using FHIRPath equality (`=`); element order is not preserved |
 
 #### Subsetting functions
@@ -205,24 +205,40 @@ current `name` element, matching `name.select(use | given)`.
 | -------------------------- | ---------------------------------------------------------------------------------------------------- |
 | `trace(name, projection?)` | Log the current value under the given name and return it unchanged, optionally applying a projection |
 
-:::caution Incompatible with SQL aggregate functions
+The `name` argument must be a string literal.
 
-`trace()` produces a `Nondeterministic` Spark expression by design — this is
-what allows it to fire its side effects (collector entries and log output) on
-every row, even in contexts where Catalyst would otherwise elide duplicate
-evaluations.
+:::caution Traced columns cannot be passed directly to Spark aggregate functions
 
-Spark's analyzer forbids `Nondeterministic` expressions inside SQL aggregate
-functions (`sum`, `count`, `avg`, `min`, `max`, `collect_list`, `collect_set`,
-…). Aggregating over a traced expression fails during query planning with:
+This constraint applies only when using the `fhirPathToColumn` (Python
+`fhirpath_to_column`, R `pathling_fhirpath_to_column`) API. It does not affect
+FHIRPath functions such as `count()`, nor the `extract` operation,
+ViewDefinitions or SQL on FHIR queries.
+
+Because `trace()` has side effects, Spark treats the resulting expression as
+non-deterministic and rejects it as a direct argument to a SQL aggregate
+function (`sum`, `count`, `avg`, `min`, `max`, `collect_list`, `collect_set`,
+…) with:
 
 ```
 AGGREGATE_FUNCTION_WITH_NONDETERMINISTIC_EXPRESSION
 ```
 
-Workaround: move the `trace()` call upstream of the aggregation boundary —
-evaluate and collect the `trace()` output first, then run the aggregation on a
-non-traced form of the same expression.
+To aggregate over a traced expression, first add it to the DataFrame as a
+named column, then aggregate that column in a separate step. The trace still
+fires for every row.
+
+```python
+from pyspark.sql import functions as F
+
+given_count = pc.fhirpath_to_column("Patient", "name.trace('t').given.count()")
+
+# Fails with AGGREGATE_FUNCTION_WITH_NONDETERMINISTIC_EXPRESSION.
+patients.agg(F.sum(given_count)).show()
+
+# Works: the traced expression is projected before it is aggregated.
+patients.withColumn("given_count", given_count).agg(F.sum("given_count")).show()
+```
+
 :::
 
 ### Limitations
