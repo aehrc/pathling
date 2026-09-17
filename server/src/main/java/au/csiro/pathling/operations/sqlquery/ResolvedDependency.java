@@ -38,4 +38,15 @@ public interface ResolvedDependency {
    */
   @Nonnull
   String getCanonicalKey();
+
+  /**
+   * Returns a deterministic description of everything about this node that decides the rows it
+   * produces. Two nodes sharing a canonical key but differing in content - which happens whenever a
+   * client inlines a different body at a canonical URL it has used before - must describe
+   * themselves differently, so that a caller keying on the resolved graph can tell them apart.
+   *
+   * @return the content description
+   */
+  @Nonnull
+  String describeContent();
 }
