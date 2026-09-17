@@ -883,6 +883,44 @@ disagreement, where ignoring is a coherent choice because the content simply has
 nowhere to go. A value that contradicts its own declared type is not a
 disagreement about the schema.
 
+**Amended after M1's first review: the policy stands, and its mechanism did not.**
+The review raised a malformed boolean as a defect, and probing it showed the
+reasoning above was wrong in three ways, all measured.
+
+- **ANSI mode is the caller's, not Pathling's.** "Nothing in Pathling disables
+  it" was true and beside the point: a library runs in someone else's session.
+  With it off, `"not-a-boolean"` and `99999999999` stored as null, and
+  `"valueInteger": 1.5` stored as `1` — silent truncation, which FR-018 forbids
+  outright, reached by a setting this decision assumed nobody would change.
+- **With ANSI on, the cast still accepts what FHIR does not.** Spark casts `yes`,
+  `y`, `t` and `1` to true. `"active": "yes"` was stored as `true`.
+- **A decimal is stored as text, so no cast ever sees it.** `"value": "abc"` was
+  stored, and egress then emitted it with its marks leaked into the string.
+
+None of this touches the policy. A value contradicting its own declared type
+still fails regardless of the switch, for the reason given above: it is not a
+schema disagreement, so ignoring it has nowhere coherent to put it. What changed
+is how the failure is reached. `PrimitiveValues` checks each value against the
+lexical form the R4 definitions declare for its type — the `regex` extension on
+the `boolean`, `integer`, `unsignedInt`, `positiveInt` and `decimal` profiles,
+taken from the specification's own files rather than written from memory — and
+casts with `try_cast`, which does not depend on ANSI mode. A value failing either
+raises an error naming the element and its declared type. It does not name the
+value, which is patient data and is headed for a log.
+
+The review proposed the other remedy this decision named: `try_cast` plus a
+finding, so the switch could ignore a malformed value. That was not taken, because
+it would reverse the policy rather than repair it; a user who wants it is asking
+for a different decision, and this one should be overturned explicitly if so.
+
+Types stored as text other than decimal — dates, codes, identifiers — are not
+checked. Storing them changes nothing about them, and validating FHIR content is
+not this layout's job; a decimal is the exception because the layout's own egress
+depends on it being one.
+
+T057c and T059a. The cost was not measurable: `io`'s round-trip classes ran no
+slower with the check than without it.
+
 ## 58. Shape mismatch is detected in both directions, not just the one named
 
 T057a names one case: a repeating element supplied as a single object. The
@@ -1074,8 +1112,8 @@ Two consequences.
 ## 65. Each milestone is its own issue and its own pull request, against a spec-only baseline
 
 `ssh:build` delivers a spec bundle as one pull request. This programme is too
-large for that: M1 alone is 61 tasks and 44 commits, and the six milestones
-together are 200. A reviewer given all of it at once cannot hold the contract and
+large for that: M1 alone is 64 tasks and 44 commits, and the six milestones
+together are 203. A reviewer given all of it at once cannot hold the contract and
 the diff in mind together, which is the failure the adversarial review exists to
 prevent.
 
@@ -1107,3 +1145,22 @@ because that is the one failure the scoping would otherwise hide.
 CI needs no change. `.github/workflows/test.yml` triggers on a bare
 `pull_request:` with no branch filter, so a pull request against `issue/2367`
 gets the same checks as one against `main`.
+
+## 66. Ignoring undescribed content can shorten an array
+
+Found by M1's first review, and not a defect.
+
+With the switch set to ignore, an occurrence of a repeating element whose only
+content is undescribed has nothing left once that content is dropped, and FR-019
+omits it: `Patient.name = [{"family":"Keep"},{"bogusField":"onlyThis"}]` stores one
+name, not two. The dropped field is reported as a finding; the change in the
+array's length is not reported separately.
+
+That is what ignoring means. Nothing conformant was left in the second
+occurrence, and FR-019 forbids storing an empty object in its place. It is the
+same cascade the metadata exclusion needed in the round-trip harness (decisions
+60 and 63), arising from content the definitions do not describe rather than from
+content the layout does not yet write. It is recorded because no decision said
+so, and because a caller reading positions across the source and the stored
+data needs to know that ignoring can move them. Setting the switch to fail is
+the remedy for a caller who cannot accept that.
