@@ -32,6 +32,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
@@ -43,6 +44,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SaveMode;
 
 /**
  * Drives a corpus of FHIR JSON through the layout and back, and asserts that what comes out is
@@ -79,13 +81,18 @@ public final class RoundTripHarness {
 
   private final boolean excludeContainedResources;
 
+  /** Where the stored dataset is written as Parquet and read back from, if anywhere. */
+  @Nullable private final Path persistence;
+
   private RoundTripHarness(
       @Nonnull final SchemaConfiguration configuration,
       final boolean excludePrimitiveMetadata,
-      final boolean excludeContainedResources) {
+      final boolean excludeContainedResources,
+      @Nullable final Path persistence) {
     this.configuration = configuration;
     this.excludePrimitiveMetadata = excludePrimitiveMetadata;
     this.excludeContainedResources = excludeContainedResources;
+    this.persistence = persistence;
   }
 
   /**
@@ -96,7 +103,7 @@ public final class RoundTripHarness {
    */
   @Nonnull
   public static RoundTripHarness unconditional() {
-    return new RoundTripHarness(SchemaConfiguration.builder().build(), false, false);
+    return new RoundTripHarness(SchemaConfiguration.builder().build(), false, false, null);
   }
 
   /**
@@ -107,7 +114,7 @@ public final class RoundTripHarness {
    */
   @Nonnull
   public static RoundTripHarness excludingPrimitiveMetadata() {
-    return new RoundTripHarness(SchemaConfiguration.builder().build(), true, false);
+    return new RoundTripHarness(SchemaConfiguration.builder().build(), true, false, null);
   }
 
   /**
@@ -120,7 +127,7 @@ public final class RoundTripHarness {
   public RoundTripHarness withConfiguration(
       @Nonnull final SchemaConfiguration schemaConfiguration) {
     return new RoundTripHarness(
-        schemaConfiguration, excludePrimitiveMetadata, excludeContainedResources);
+        schemaConfiguration, excludePrimitiveMetadata, excludeContainedResources, persistence);
   }
 
   /**
@@ -138,7 +145,25 @@ public final class RoundTripHarness {
    */
   @Nonnull
   public RoundTripHarness excludingContainedResources() {
-    return new RoundTripHarness(configuration, excludePrimitiveMetadata, true);
+    return new RoundTripHarness(configuration, excludePrimitiveMetadata, true, persistence);
+  }
+
+  /**
+   * Returns a harness that writes the stored dataset to Parquet and reads it back before returning
+   * it to JSON.
+   *
+   * <p>Without this the round trip never leaves memory, and what it proves is the transform and the
+   * serialiser rather than the layout: a type or an order that Parquet does not preserve would pass
+   * it. The schema read back is also asserted to be the schema written, less nullability, which
+   * Parquet does not carry.
+   *
+   * @param directory the directory to write under, one subdirectory per resource type
+   * @return the harness
+   */
+  @Nonnull
+  public RoundTripHarness persistingTo(@Nonnull final Path directory) {
+    return new RoundTripHarness(
+        configuration, excludePrimitiveMetadata, excludeContainedResources, directory);
   }
 
   /**
@@ -198,11 +223,31 @@ public final class RoundTripHarness {
   @Nonnull
   private List<String> roundTrip(@Nonnull final String resourceType, @Nonnull final Path corpus) {
     final ResourceTransformer transformer = TransformFixtures.transformer(configuration);
-    final Dataset<Row> stored =
+    final Dataset<Row> transformed =
         transformer.read(TransformFixtures.spark(), resourceType, corpus.toString());
+    final Dataset<Row> stored =
+        persistence == null ? transformed : persisted(resourceType, transformed, persistence);
     return ResourceSerialiser.of(TransformFixtures.DEFINITIONS)
         .serialise(resourceType, stored)
         .collectAsList();
+  }
+
+  /** Writes a stored dataset to Parquet and returns what reading it back yields. */
+  @Nonnull
+  private static Dataset<Row> persisted(
+      @Nonnull final String resourceType,
+      @Nonnull final Dataset<Row> stored,
+      @Nonnull final Path directory) {
+    final String location = directory.resolve(resourceType).toString();
+    stored.write().mode(SaveMode.Overwrite).parquet(location);
+    final Dataset<Row> persisted = TransformFixtures.spark().read().parquet(location);
+    // The catalog form carries names, order and types, and not nullability, which a Parquet read
+    // reports as nullable throughout.
+    assertEquals(
+        stored.schema().catalogString(),
+        persisted.schema().catalogString(),
+        "the schema read back from Parquet is not the schema written");
+    return persisted;
   }
 
   /** Reads a file of newline-delimited JSON, ignoring the blank lines a corpus may end with. */
