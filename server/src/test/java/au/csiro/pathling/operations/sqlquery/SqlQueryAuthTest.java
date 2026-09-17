@@ -24,6 +24,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.config.AuthorizationConfiguration;
+import au.csiro.pathling.config.ExternalTableConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.config.SqlQueryConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
@@ -61,8 +62,9 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
  * {@link LibraryReferenceResolver}, and {@link SqlDependencyResolver} with authorisation enabled.
  * Verifies the metadata-resource authorisation matrix: a stored ViewDefinition dependency (resolved
  * by canonical URL) requires {@code ViewDefinition} READ, a stored SQLView dependency requires
- * {@code Library} READ, the per-projected-resource READ still applies at each leaf, and a
- * request-supplied (inline) view requires no metadata READ.
+ * {@code Library} READ, the per-projected-resource READ still applies at each leaf, a
+ * request-supplied (inline) view requires no metadata READ, and a configured external table
+ * requires no READ authority at all while waiving none for the FHIR dependencies alongside it.
  *
  * @author John Grimes
  */
@@ -71,6 +73,7 @@ class SqlQueryAuthTest {
 
   private static final String PV_URL = "https://example.org/ViewDefinition/pv";
   private static final String BASE_URL = "https://example.org/Library/base";
+  private static final String TABLE_URL = "https://example.org/data/refsets";
 
   @Autowired private SparkSession spark;
   @Autowired private FhirEncoders fhirEncoders;
@@ -93,7 +96,13 @@ class SqlQueryAuthTest {
     final AuthorizationConfiguration auth = new AuthorizationConfiguration();
     auth.setEnabled(true);
     serverConfiguration.setAuth(auth);
-    serverConfiguration.setSqlQuery(new SqlQueryConfiguration());
+    final SqlQueryConfiguration sqlQuery = new SqlQueryConfiguration();
+    final ExternalTableConfiguration table = new ExternalTableConfiguration();
+    table.setUrl(TABLE_URL);
+    table.setPath("/data/refsets");
+    table.setFormat("parquet");
+    sqlQuery.setExternalTables(List.of(table));
+    serverConfiguration.setSqlQuery(sqlQuery);
 
     final ViewResolver viewResolver =
         new ViewResolver(dataSource, fhirEncoders, serverConfiguration, fhirContext);
@@ -192,6 +201,37 @@ class SqlQueryAuthTest {
     assertThat(libraryReferenceResolver.resolve(new Reference("Library/base"))).isNotNull();
   }
 
+  @Test
+  void externalTableDependencyRequiresNoReadAuthority() {
+    // A configured external table is resolved from configuration, never from storage, so the
+    // operation authority alone is enough: no pathling:read:* authority is held here.
+    setSecurityContext("pathling:sql-run");
+    final ResolvedDependencyGraph graph =
+        resolver.resolve(sqlQuery(TABLE_URL), SuppliedArtefacts.empty());
+
+    assertThat(graph.getOrderedNodes()).singleElement().isInstanceOf(ResolvedExternalTable.class);
+  }
+
+  @Test
+  void externalTableWaivesNoAuthorityForFhirDependenciesAlongsideIt() {
+    when(dataSource.read("ViewDefinition"))
+        .thenReturn(viewDefinitionDataset(simpleViewDefinition("pv", PV_URL, "Patient")));
+    final ParsedSqlQuery join =
+        sqlQuery(
+            "SELECT * FROM pv JOIN t ON pv.id = t.id",
+            new ViewArtifactReference("pv", PV_URL),
+            new ViewArtifactReference("t", TABLE_URL));
+
+    // The stored ViewDefinition keeps its metadata READ requirement when joined to a table.
+    setSecurityContext("pathling:sql-run", "pathling:read:Patient");
+    assertThatThrownBy(() -> resolver.resolve(join, SuppliedArtefacts.empty()))
+        .isInstanceOf(AccessDeniedError.class)
+        .hasMessageContaining("ViewDefinition");
+
+    setSecurityContext("pathling:sql-run", "pathling:read:ViewDefinition", "pathling:read:Patient");
+    assertThatNoException().isThrownBy(() -> resolver.resolve(join, SuppliedArtefacts.empty()));
+  }
+
   // ---------------------------------------------------------------------------
   // Helpers.
   // ---------------------------------------------------------------------------
@@ -210,11 +250,14 @@ class SqlQueryAuthTest {
 
   @Nonnull
   private static ParsedSqlQuery sqlQuery(@Nonnull final String resource) {
+    return sqlQuery("SELECT * FROM t", new ViewArtifactReference("t", resource));
+  }
+
+  @Nonnull
+  private static ParsedSqlQuery sqlQuery(
+      @Nonnull final String sql, @Nonnull final ViewArtifactReference... references) {
     return new ParsedSqlQuery(
-        "SELECT * FROM t",
-        List.of(new ViewArtifactReference("t", resource)),
-        List.of(),
-        SqlLibraryParser.SQL_QUERY_TYPE_CODE);
+        sql, List.of(references), List.of(), SqlLibraryParser.SQL_QUERY_TYPE_CODE);
   }
 
   private void setSecurityContext(final String... authorities) {

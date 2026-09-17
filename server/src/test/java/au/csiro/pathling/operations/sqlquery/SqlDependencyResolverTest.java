@@ -26,6 +26,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.config.AuthorizationConfiguration;
+import au.csiro.pathling.config.ExternalTableConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.config.SqlQueryConfiguration;
 import au.csiro.pathling.operations.sql.SuppliedArtefact;
@@ -45,8 +46,9 @@ import org.junit.jupiter.api.Test;
 /**
  * Unit tests for {@link SqlDependencyResolver} covering canonical-URL resolution, the resolved
  * graph shape for a {@code SQLQuery -> SQLView -> ViewDefinition} chain, supplied-artefact
- * precedence and traversal, diamond de-duplication (including bare-url vs {@code url|version}), and
- * the structural rejections (cycles, depth, ambiguity, not-found, and wrong-typed dependencies).
+ * precedence and traversal, diamond de-duplication (including bare-url vs {@code url|version}),
+ * configured external tables, and the structural rejections (cycles, depth, ambiguity, not-found,
+ * and wrong-typed dependencies).
  *
  * @author John Grimes
  */
@@ -54,6 +56,10 @@ class SqlDependencyResolverTest {
 
   private static final String PATIENT_VIEW_URL =
       SqlLibraryFixtures.viewDefinitionUrl("patient-view");
+
+  private static final String TABLE_URL = "https://example.org/data/cohorts";
+
+  private static final String TABLE_PATH = "file:///data/reference/cohorts";
 
   private ViewResolver viewResolver;
   private LibraryReferenceResolver libraryReferenceResolver;
@@ -292,6 +298,183 @@ class SqlDependencyResolverTest {
   }
 
   // ---------------------------------------------------------------------------
+  // Configured external tables (spec 060 US1).
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void resolvesAConfiguredExternalTableByUrl() {
+    configureExternalTable(TABLE_URL, TABLE_PATH, "parquet");
+
+    final ResolvedDependencyGraph graph =
+        resolver.resolve(sqlQuery("SELECT * FROM c", "c", TABLE_URL), SuppliedArtefacts.empty());
+
+    assertThat(graph.getTopLevelKeysByLabel()).containsEntry("c", TABLE_URL);
+    final ResolvedDependency node = graph.getNodesByKey().get(TABLE_URL);
+    assertThat(node).isInstanceOf(ResolvedExternalTable.class);
+    final ResolvedExternalTable table = (ResolvedExternalTable) node;
+    assertThat(table.getCanonicalKey()).isEqualTo(TABLE_URL);
+    assertThat(table.getPath()).isEqualTo(TABLE_PATH);
+    assertThat(table.getFormat()).isEqualTo("parquet");
+  }
+
+  @Test
+  void resolvesTheSameExternalTableUnderTwoLabelsOnce() {
+    // The table is keyed by its bare URL, so two labels over it share one leaf and the SQL can join
+    // the table to itself.
+    configureExternalTable(TABLE_URL, TABLE_PATH, "delta");
+
+    final ResolvedDependencyGraph graph =
+        resolver.resolve(
+            sqlQueryWithDeps(
+                "SELECT * FROM a JOIN b ON a.k = b.k", Map.of("a", TABLE_URL, "b", TABLE_URL)),
+            SuppliedArtefacts.empty());
+
+    assertThat(graph.getOrderedNodes()).hasSize(1);
+    assertThat(graph.getTopLevelKeysByLabel())
+        .containsEntry("a", TABLE_URL)
+        .containsEntry("b", TABLE_URL);
+  }
+
+  @Test
+  void rejectsAnExternalTableBeyondTheDepthLimit() {
+    // A table leaf counts towards the depth like any other leaf: a SQLView at depth 1 referencing
+    // the table places it at depth 2, over a limit of 1.
+    serverConfiguration.getSqlQuery().setMaxDependencyDepth(1);
+    configureExternalTable(TABLE_URL, TABLE_PATH, "delta");
+    final String viewUrl = SqlLibraryFixtures.sqlViewUrl("over-table");
+    stubSqlView(viewUrl, "SELECT * FROM c", "c", TABLE_URL);
+
+    assertThatThrownBy(
+            () ->
+                resolver.resolve(
+                    sqlQuery("SELECT * FROM v", "v", viewUrl), SuppliedArtefacts.empty()))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContainingAll("deeper", "1", TABLE_URL);
+  }
+
+  // ---------------------------------------------------------------------------
+  // External tables beneath SQLViews (spec 060 US2).
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void resolvesAConfiguredExternalTableBeneathASuppliedSqlView() {
+    // The table is a leaf of the SQLView, so it is ordered before the view and the view's child
+    // map binds the label to the table's bare URL.
+    configureExternalTable(TABLE_URL, TABLE_PATH, "delta");
+    final String viewUrl = SqlLibraryFixtures.sqlViewUrl("cohort-view");
+    final Library suppliedSqlView =
+        SqlLibraryFixtures.sqlViewWithUrl(
+            viewUrl, "SELECT family_name, cohort FROM cohort", "cohort", TABLE_URL);
+
+    final ResolvedDependencyGraph graph =
+        resolver.resolve(
+            sqlQuery("SELECT * FROM cv", "cv", viewUrl),
+            SuppliedArtefacts.of(
+                List.of(SuppliedArtefact.ofSqlView(viewUrl, null, suppliedSqlView))));
+
+    assertThat(graph.getOrderedNodes()).hasSize(2);
+    assertThat(graph.getOrderedNodes().get(0)).isInstanceOf(ResolvedExternalTable.class);
+    assertThat(graph.getOrderedNodes().get(0).getCanonicalKey()).isEqualTo(TABLE_URL);
+    assertThat(graph.getOrderedNodes().get(1).getCanonicalKey()).isEqualTo(viewUrl);
+    final ResolvedSqlView sqlView = (ResolvedSqlView) graph.getNodesByKey().get(viewUrl);
+    assertThat(sqlView.getChildKeysByLabel()).containsExactly(Map.entry("cohort", TABLE_URL));
+  }
+
+  @Test
+  void resolvesADiamondOverAnExternalTableToASingleTableNode() {
+    // Two SQLViews reach the same table under different labels; the table is keyed by its URL and
+    // so is resolved once and shared by both arms.
+    configureExternalTable(TABLE_URL, TABLE_PATH, "parquet");
+    final String leftUrl = SqlLibraryFixtures.sqlViewUrl("left");
+    final String rightUrl = SqlLibraryFixtures.sqlViewUrl("right");
+    stubSqlView(leftUrl, "SELECT * FROM c", "c", TABLE_URL);
+    stubSqlView(rightUrl, "SELECT * FROM t", "t", TABLE_URL);
+
+    final ResolvedDependencyGraph graph =
+        resolver.resolve(
+            sqlQueryWithDeps("SELECT * FROM l JOIN r", Map.of("l", leftUrl, "r", rightUrl)),
+            SuppliedArtefacts.empty());
+
+    assertThat(graph.getOrderedNodes()).hasSize(3);
+    assertThat(graph.getOrderedNodes().get(0)).isInstanceOf(ResolvedExternalTable.class);
+    assertThat(graph.getOrderedNodes().get(0).getCanonicalKey()).isEqualTo(TABLE_URL);
+    final ResolvedSqlView left = (ResolvedSqlView) graph.getNodesByKey().get(leftUrl);
+    final ResolvedSqlView right = (ResolvedSqlView) graph.getNodesByKey().get(rightUrl);
+    assertThat(left.getChildKeysByLabel()).containsEntry("c", TABLE_URL);
+    assertThat(right.getChildKeysByLabel()).containsEntry("t", TABLE_URL);
+    assertThat(graph.getNodesByKey().get(TABLE_URL))
+        .isSameAs(graph.getOrderedNodes().get(0))
+        .isInstanceOf(ResolvedExternalTable.class);
+  }
+
+  // ---------------------------------------------------------------------------
+  // External table faults (spec 060 US3): version pins, collisions and context precedence.
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void rejectsAVersionPinnedReferenceToAnExternalTableAsNotFound() {
+    // Tables carry no version, so a pinned reference can never mean one; with nothing stored under
+    // that URL either, the reference is not found.
+    configureExternalTable(TABLE_URL, TABLE_PATH, "delta");
+
+    assertThatThrownBy(
+            () ->
+                resolver.resolve(
+                    sqlQuery("SELECT * FROM c", "c", TABLE_URL + "|2"), SuppliedArtefacts.empty()))
+        .isInstanceOf(ResourceNotFoundException.class)
+        .hasMessageContainingAll("'c'", TABLE_URL + "|2")
+        .hasMessageEndingWith(
+            "no ViewDefinition, SQLView or external table matches that canonical URL");
+  }
+
+  @Test
+  void rejectsAUrlMatchingAnExternalTableAndAStoredViewDefinitionAsAmbiguous() {
+    configureExternalTable(TABLE_URL, TABLE_PATH, "delta");
+    stubStoredViewDefinition(TABLE_URL, TABLE_URL, "Patient");
+
+    assertThatThrownBy(
+            () ->
+                resolver.resolve(
+                    sqlQuery("SELECT * FROM c", "c", TABLE_URL), SuppliedArtefacts.empty()))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContainingAll(
+            "'c'", TABLE_URL, "is ambiguous", "external table", "ViewDefinition")
+        .hasMessageNotContaining("SQLView");
+  }
+
+  @Test
+  void rejectsAUrlMatchingAnExternalTableAndAStoredSqlViewAsAmbiguous() {
+    configureExternalTable(TABLE_URL, TABLE_PATH, "delta");
+    stubSqlView(TABLE_URL, "SELECT * FROM pv", "pv", PATIENT_VIEW_URL);
+
+    assertThatThrownBy(
+            () ->
+                resolver.resolve(
+                    sqlQuery("SELECT * FROM c", "c", TABLE_URL), SuppliedArtefacts.empty()))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContainingAll("'c'", TABLE_URL, "is ambiguous", "external table", "SQLView")
+        .hasMessageNotContaining("ViewDefinition");
+  }
+
+  @Test
+  void prefersASuppliedViewDefinitionOverAnExternalTableWithTheSameUrl() {
+    // A context artefact outranks both configuration and storage, and neither is consulted.
+    configureExternalTable(TABLE_URL, TABLE_PATH, "delta");
+    final FhirView supplied = fhirView("Patient");
+
+    final ResolvedDependencyGraph graph =
+        resolver.resolve(
+            sqlQuery("SELECT * FROM c", "c", TABLE_URL),
+            SuppliedArtefacts.ofViews(Map.of(TABLE_URL, supplied)));
+
+    assertThat(graph.getOrderedNodes()).hasSize(1);
+    final ResolvedDependency node = graph.getNodesByKey().get(TABLE_URL);
+    assertThat(node).isInstanceOf(ResolvedViewDefinition.class);
+    assertThat(((ResolvedViewDefinition) node).getView()).isSameAs(supplied);
+    verifyNoInteractions(viewResolver, libraryReferenceResolver);
+  }
+
+  // ---------------------------------------------------------------------------
   // Cycles and depth (keyed by canonical identity).
   // ---------------------------------------------------------------------------
 
@@ -346,15 +529,16 @@ class SqlDependencyResolverTest {
   // ---------------------------------------------------------------------------
 
   @Test
-  void reportsNotFoundWhenNeitherAViewDefinitionNorASqlViewMatches() {
+  void reportsNotFoundWhenNothingMatches() {
     final String missingUrl = SqlLibraryFixtures.viewDefinitionUrl("missing");
 
     assertThatThrownBy(
             () ->
                 resolver.resolve(sqlQuery("SELECT 1", "x", missingUrl), SuppliedArtefacts.empty()))
         .isInstanceOf(ResourceNotFoundException.class)
-        .hasMessageContaining("x")
-        .hasMessageContaining(missingUrl);
+        .hasMessageContainingAll("'x'", missingUrl)
+        .hasMessageEndingWith(
+            "no ViewDefinition, SQLView or external table matches that canonical URL");
   }
 
   @Test
@@ -366,9 +550,8 @@ class SqlDependencyResolverTest {
     assertThatThrownBy(
             () -> resolver.resolve(sqlQuery("SELECT 1", "c", clashUrl), SuppliedArtefacts.empty()))
         .isInstanceOf(InvalidRequestException.class)
-        .hasMessageContaining("ambiguous")
-        .hasMessageContaining("c")
-        .hasMessageContaining(clashUrl);
+        .hasMessageContainingAll("is ambiguous", "'c'", clashUrl, "ViewDefinition", "SQLView")
+        .hasMessageNotContaining("external table");
   }
 
   @Test
@@ -406,6 +589,22 @@ class SqlDependencyResolverTest {
     dependenciesByLabel.forEach(
         (label, resource) -> references.add(new ViewArtifactReference(label, resource)));
     return new ParsedSqlQuery(sql, references, List.of(), SqlLibraryParser.SQL_QUERY_TYPE_CODE);
+  }
+
+  /**
+   * Adds one external table to the configuration and rebuilds the resolver, since the resolver
+   * indexes the configured tables when it is constructed.
+   */
+  private void configureExternalTable(
+      @Nonnull final String url, @Nonnull final String path, @Nonnull final String format) {
+    final ExternalTableConfiguration table = new ExternalTableConfiguration();
+    table.setUrl(url);
+    table.setPath(path);
+    table.setFormat(format);
+    serverConfiguration.getSqlQuery().getExternalTables().add(table);
+    resolver =
+        new SqlDependencyResolver(
+            viewResolver, libraryReferenceResolver, new SqlLibraryParser(), serverConfiguration);
   }
 
   /**

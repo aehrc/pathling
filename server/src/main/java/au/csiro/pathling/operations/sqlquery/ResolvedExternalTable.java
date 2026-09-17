@@ -18,24 +18,24 @@
 package au.csiro.pathling.operations.sqlquery;
 
 import jakarta.annotation.Nonnull;
+import lombok.Value;
 
 /**
- * A resolved node in a SQL on FHIR dependency graph: a {@link ResolvedViewDefinition} leaf, a
- * {@link ResolvedExternalTable} leaf or a {@link ResolvedSqlView}. Each node is identified by a
- * stable canonical key that is the basis of its request-scoped temp-view name and of diamond
- * deduplication.
+ * A resolved leaf node for an operator-configured external table. The table is read directly from
+ * its storage path by Spark rather than projected from FHIR resources, declares no further
+ * dependencies and carries no version, so it is always a leaf of the dependency graph.
  *
  * @author John Grimes
  */
-public interface ResolvedDependency {
+@Value
+public class ResolvedExternalTable implements ResolvedDependency {
 
-  /**
-   * Returns the stable canonical identity of the resolved resource. Two references to the same
-   * resource share a key, so a node is materialised only once per request, and the key cannot
-   * collide with a different resource even when both are reached under the same table label.
-   *
-   * @return the canonical key
-   */
-  @Nonnull
-  String getCanonicalKey();
+  /** The configured canonical URL, verbatim. External tables have no version. */
+  @Nonnull String canonicalKey;
+
+  /** The storage location of the table, used only by the Spark read. */
+  @Nonnull String path;
+
+  /** The Spark data source name ({@code delta} or {@code parquet}), used only by the Spark read. */
+  @Nonnull String format;
 }

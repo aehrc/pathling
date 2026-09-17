@@ -199,6 +199,23 @@ public final class SqlOperationError {
   }
 
   /**
+   * Builds a {@code 500 Internal Server Error} carrying {@code issue.code = processing} and no
+   * expression, for a server-side fault such as an external table that cannot be read.
+   *
+   * <p>No cause is attached, deliberately. {@code ErrorHandlingInterceptor} unwraps an {@code
+   * InternalErrorException} to its cause and reprocesses that instead, which would discard this
+   * message and its {@code OperationOutcome}; with no cause the exception passes through unchanged.
+   * Callers that hold an underlying exception should log it before throwing.
+   *
+   * @param message the diagnostics message
+   * @return the exception to throw
+   */
+  @Nonnull
+  public static BaseServerResponseException internalError(@Nonnull final String message) {
+    return of(500, List.of(issue(IssueType.PROCESSING, null, message)));
+  }
+
+  /**
    * Builds a single error-severity {@code OperationOutcome} issue.
    *
    * @param code the {@code issue.code} to report

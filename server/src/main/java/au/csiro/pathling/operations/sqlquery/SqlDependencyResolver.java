@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.operations.sqlquery;
 
+import au.csiro.pathling.config.ExternalTableConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.operations.sql.SuppliedArtefact;
 import au.csiro.pathling.operations.sql.SuppliedArtefacts;
@@ -30,6 +31,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.hl7.fhir.r4.model.Library;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -47,10 +50,11 @@ import org.springframework.stereotype.Component;
  *
  * <ol>
  *   <li>prefers a request-supplied view whose URL matches;
- *   <li>otherwise searches stored {@code ViewDefinition}s by url, then {@code SQLView Library}s by
- *       url;
- *   <li>rejects a URL that matches both a ViewDefinition and a SQLView as ambiguous, and a URL that
- *       matches neither as not found - each naming the label and the reference.
+ *   <li>otherwise matches the bare URL (a reference carrying no version) against the external
+ *       tables the operator has configured, and searches stored {@code ViewDefinition}s by url and
+ *       {@code SQLView Library}s by url;
+ *   <li>rejects a URL that matches more than one of those three sources as ambiguous, and a URL
+ *       that matches nothing as not found - each naming the label and the reference.
  * </ol>
  *
  * <p>The resolution memoises by the resolved canonical key (the matched resource's url plus its
@@ -73,13 +77,17 @@ public class SqlDependencyResolver {
 
   @Nonnull private final ServerConfiguration serverConfiguration;
 
+  /** The operator-configured external tables, indexed by their canonical URL. */
+  @Nonnull private final Map<String, ExternalTableConfiguration> externalTablesByUrl;
+
   /**
    * Constructs a new SqlDependencyResolver.
    *
    * @param viewResolver resolves ViewDefinition leaves by url, preferring request-supplied views
    * @param libraryReferenceResolver resolves a SQLView Library by canonical url from storage
    * @param libraryParser the shared parser for SQLView Libraries
-   * @param serverConfiguration the server configuration (auth toggle and the dependency depth cap)
+   * @param serverConfiguration the server configuration (auth toggle, the dependency depth cap and
+   *     the configured external tables)
    */
   @Autowired
   public SqlDependencyResolver(
@@ -91,6 +99,12 @@ public class SqlDependencyResolver {
     this.libraryReferenceResolver = libraryReferenceResolver;
     this.libraryParser = libraryParser;
     this.serverConfiguration = serverConfiguration;
+    // URL uniqueness is enforced by Bean Validation at bind time, so the keys cannot collide.
+    this.externalTablesByUrl =
+        serverConfiguration.getSqlQuery().getExternalTables().stream()
+            .collect(
+                Collectors.toUnmodifiableMap(
+                    ExternalTableConfiguration::getUrl, Function.identity()));
   }
 
   /**
@@ -101,7 +115,8 @@ public class SqlDependencyResolver {
    * @return the resolved dependency graph, topologically ordered
    * @throws InvalidRequestException if a reference is ambiguous, a cycle or depth-limit breach is
    *     detected, or a dependency is a malformed or wrong-typed resource
-   * @throws ResourceNotFoundException if a reference matches no stored ViewDefinition or SQLView
+   * @throws ResourceNotFoundException if a reference matches no ViewDefinition, SQLView or external
+   *     table
    */
   @Nonnull
   public ResolvedDependencyGraph resolve(
@@ -123,7 +138,8 @@ public class SqlDependencyResolver {
    * @return the resolved dependency graph, topologically ordered
    * @throws InvalidRequestException if a reference is ambiguous, a cycle or depth-limit breach is
    *     detected, or a dependency is a malformed or wrong-typed resource
-   * @throws ResourceNotFoundException if a reference matches no stored ViewDefinition or SQLView
+   * @throws ResourceNotFoundException if a reference matches no ViewDefinition, SQLView or external
+   *     table
    */
   @Nonnull
   public ResolvedDependencyGraph resolve(
@@ -162,9 +178,10 @@ public class SqlDependencyResolver {
 
   /**
    * Resolves a single reference into the canonical key of its node, registering it if new. A
-   * request-supplied artefact wins; otherwise the canonical url is matched against stored
-   * ViewDefinitions then SQLView Libraries, rejecting an ambiguous match (both types) and a
-   * not-found match (neither type).
+   * request-supplied artefact wins; otherwise the canonical url is matched against the configured
+   * external tables (only when the reference carries no version), stored ViewDefinitions and
+   * SQLView Libraries, rejecting an ambiguous match (more than one source) and a not-found match
+   * (nothing).
    */
   @Nonnull
   private String resolveReference(
@@ -208,19 +225,41 @@ public class SqlDependencyResolver {
           nodesByKey);
     }
 
-    // Search stored ViewDefinitions, then stored SQLView Libraries, both by url.
+    // A configured external table matches the bare url only: tables have no version, so a pinned
+    // reference can never mean one. Storage is still searched so that a URL bound to a table and
+    // also stored as an artefact is reported as ambiguous rather than one side silently winning.
+    // The stored lookups enforce their metadata read checks only once they find a match.
+    final ExternalTableConfiguration externalTable =
+        canonical.getVersion() == null ? externalTablesByUrl.get(canonical.getUrl()) : null;
     final Optional<ResolvedViewDefinition> storedViewDefinition =
         viewResolver.resolveStoredViewDefinition(reference);
     final Optional<Library> sqlViewLibrary =
         libraryReferenceResolver.tryResolveSqlViewLibrary(reference.getCanonicalUrl());
 
-    if (storedViewDefinition.isPresent() && sqlViewLibrary.isPresent()) {
+    final List<String> matchedKinds = new ArrayList<>(3);
+    if (externalTable != null) {
+      matchedKinds.add("an external table");
+    }
+    if (storedViewDefinition.isPresent()) {
+      matchedKinds.add("a ViewDefinition");
+    }
+    if (sqlViewLibrary.isPresent()) {
+      matchedKinds.add("a SQLView");
+    }
+    if (matchedKinds.size() > 1) {
       throw new InvalidRequestException(
           "The dependency for label '"
               + reference.getLabel()
               + "' (reference '"
               + reference.getCanonicalUrl()
-              + "') is ambiguous: the canonical URL matches both a ViewDefinition and a SQLView");
+              + "') is ambiguous: the canonical URL matches "
+              + describeKinds(matchedKinds));
+    }
+    if (externalTable != null) {
+      return registerLeaf(
+          new ResolvedExternalTable(
+              externalTable.getUrl(), externalTable.getPath(), externalTable.getFormat()),
+          nodesByKey);
     }
     if (storedViewDefinition.isPresent()) {
       return registerLeaf(storedViewDefinition.get(), nodesByKey);
@@ -242,13 +281,24 @@ public class SqlDependencyResolver {
             + reference.getLabel()
             + "' with reference '"
             + reference.getCanonicalUrl()
-            + "': no ViewDefinition or SQLView matches that canonical URL");
+            + "': no ViewDefinition, SQLView or external table matches that canonical URL");
   }
 
-  /** Registers a resolved ViewDefinition leaf (deduplicating diamonds) and returns its key. */
+  /** Joins two or more matched kinds into prose: "both X and Y" for two, "X, Y and Z" for three. */
+  @Nonnull
+  private static String describeKinds(@Nonnull final List<String> kinds) {
+    final String last = kinds.get(kinds.size() - 1);
+    final String head = String.join(", ", kinds.subList(0, kinds.size() - 1));
+    return (kinds.size() == 2 ? "both " : "") + head + " and " + last;
+  }
+
+  /**
+   * Registers a resolved leaf (a ViewDefinition or an external table), deduplicating diamonds, and
+   * returns its key.
+   */
   @Nonnull
   private String registerLeaf(
-      @Nonnull final ResolvedViewDefinition leaf,
+      @Nonnull final ResolvedDependency leaf,
       @Nonnull final Map<String, ResolvedDependency> nodesByKey) {
     nodesByKey.putIfAbsent(leaf.getCanonicalKey(), leaf);
     return leaf.getCanonicalKey();
