@@ -207,36 +207,27 @@ current `name` element, matching `name.select(use | given)`.
 
 The `name` argument must be a string literal.
 
-:::caution Traced columns cannot be passed directly to Spark aggregate functions
+:::info
 
-This constraint applies only when using the `fhirPathToColumn` (Python
-`fhirpath_to_column`, R `pathling_fhirpath_to_column`) API. It does not affect
-FHIRPath functions such as `count()`, nor the `extract` operation,
-ViewDefinitions or SQL on FHIR queries.
+A column returned by `fhirPathToColumn` (`fhirpath_to_column` in Python,
+`pathling_fhirpath_to_column` in R) that contains `trace()` cannot be passed
+directly to a Spark aggregate function such as `sum` or `collect_list`. Spark
+treats the expression as non-deterministic because of its side effects and
+rejects it with `AGGREGATE_FUNCTION_WITH_NONDETERMINISTIC_EXPRESSION`. This
+does not affect FHIRPath functions such as `count()`, `extract`, or
+ViewDefinitions.
 
-Because `trace()` has side effects, Spark treats the resulting expression as
-non-deterministic and rejects it as a direct argument to a SQL aggregate
-function (`sum`, `count`, `avg`, `min`, `max`, `collect_list`, `collect_set`,
-…) with:
-
-```
-AGGREGATE_FUNCTION_WITH_NONDETERMINISTIC_EXPRESSION
-```
-
-To aggregate over a traced expression, first add it to the DataFrame as a
-named column, then aggregate that column in a separate step. The trace still
-fires for every row.
+To aggregate over such a column, project it first and aggregate the projected
+column. The trace still fires for every row.
 
 ```python
-from pyspark.sql import functions as F
-
 given_count = pc.fhirpath_to_column("Patient", "name.trace('t').given.count()")
 
-# Fails with AGGREGATE_FUNCTION_WITH_NONDETERMINISTIC_EXPRESSION.
-patients.agg(F.sum(given_count)).show()
+# Fails.
+patients.agg(F.sum(given_count))
 
-# Works: the traced expression is projected before it is aggregated.
-patients.withColumn("given_count", given_count).agg(F.sum("given_count")).show()
+# Works.
+patients.withColumn("given_count", given_count).agg(F.sum("given_count"))
 ```
 
 :::
