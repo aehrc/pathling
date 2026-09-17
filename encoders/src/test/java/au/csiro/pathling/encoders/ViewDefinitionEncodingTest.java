@@ -38,10 +38,13 @@ import au.csiro.pathling.encoders.ViewDefinitionResource.TagComponent;
 import au.csiro.pathling.encoders.ViewDefinitionResource.WhereComponent;
 import au.csiro.pathling.encoders.datatypes.R4DataTypeMappings;
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.context.api.AddProfileTagEnum;
 import ca.uhn.fhir.parser.IParser;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -53,9 +56,15 @@ import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.StringType;
 import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.r4.model.BooleanType;
+import org.hl7.fhir.r4.model.CanonicalType;
 import org.hl7.fhir.r4.model.CodeType;
+import org.hl7.fhir.r4.model.CodeableConcept;
+import org.hl7.fhir.r4.model.ContactDetail;
+import org.hl7.fhir.r4.model.Identifier;
 import org.hl7.fhir.r4.model.IntegerType;
+import org.hl7.fhir.r4.model.RelatedArtifact;
 import org.hl7.fhir.r4.model.UriType;
+import org.hl7.fhir.r4.model.UsageContext;
 import org.json.JSONException;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -78,6 +87,50 @@ class ViewDefinitionEncodingTest {
   private static SchemaConverter schemaConverterL0;
   private static SchemaConverter schemaConverterL2;
 
+  private static final Path FULL_METADATA_FIXTURE =
+      Path.of("src/test/resources/viewdefinitions/FullMetadata.json");
+
+  /**
+   * The root elements of the ViewDefinition StructureDefinition, in specification order, as they
+   * appear in a serialised resource that populates every one of them.
+   */
+  private static final List<String> SPECIFICATION_ELEMENT_ORDER =
+      List.of(
+          "resourceType",
+          "id",
+          "url",
+          "identifier",
+          "version",
+          "versionAlgorithmString",
+          "name",
+          "title",
+          "status",
+          "experimental",
+          "date",
+          "publisher",
+          "contact",
+          "description",
+          "useContext",
+          "jurisdiction",
+          "purpose",
+          "copyright",
+          "copyrightLabel",
+          "approvalDate",
+          "lastReviewDate",
+          "effectivePeriod",
+          "topic",
+          "author",
+          "editor",
+          "reviewer",
+          "endorser",
+          "relatedArtifact",
+          "resource",
+          "profile",
+          "fhirVersion",
+          "constant",
+          "select",
+          "where");
+
   @BeforeAll
   static void setUp() {
     spark =
@@ -93,6 +146,9 @@ class ViewDefinitionEncodingTest {
     // Create a FhirContext and register the custom ViewDefinition resource type.
     fhirContext = FhirContext.forR4();
     fhirContext.registerCustomType(ViewDefinitionResource.class);
+    // HAPI adds a meta.profile tag when it encodes a custom resource type. That tag is not part of
+    // the resource being round-tripped, so it is suppressed here to keep the comparisons exact.
+    fhirContext.setAddProfileTagWhenEncoding(AddProfileTagEnum.NEVER);
 
     // Create encoders with the custom FhirContext at different nesting levels.
     // Note: Extensions must be enabled for schema matching between SchemaConverter and
@@ -136,6 +192,43 @@ class ViewDefinitionEncodingTest {
     assertTrue(schema.getFieldIndex("select").isDefined());
     assertTrue(schema.getFieldIndex("where").isDefined());
     assertTrue(schema.getFieldIndex("constant").isDefined());
+  }
+
+  @Test
+  void testSchemaHasEveryRootElementField() {
+    final StructType schema = schemaConverterL0.resourceSchema(ViewDefinitionResource.class);
+
+    // Every root element of the specification must have a column, with the versionAlgorithm choice
+    // expanded into one column per permitted type.
+    final List<String> expected =
+        List.of(
+            "identifier",
+            "versionAlgorithmString",
+            "versionAlgorithmCoding",
+            "title",
+            "experimental",
+            "date",
+            "publisher",
+            "contact",
+            "description",
+            "useContext",
+            "jurisdiction",
+            "purpose",
+            "copyright",
+            "copyrightLabel",
+            "approvalDate",
+            "lastReviewDate",
+            "effectivePeriod",
+            "topic",
+            "author",
+            "editor",
+            "reviewer",
+            "endorser",
+            "relatedArtifact",
+            "profile");
+    final List<String> missing =
+        expected.stream().filter(field -> schema.getFieldIndex(field).isEmpty()).toList();
+    assertEquals(List.of(), missing, "Schema is missing columns for root elements");
   }
 
   @Test
@@ -611,8 +704,40 @@ class ViewDefinitionEncodingTest {
           "Round-trip failed for: " + file.getFileName(),
           originalJson,
           decodedJson,
-          JSONCompareMode.STRICT_ORDER);
+          JSONCompareMode.STRICT);
     }
+  }
+
+  /**
+   * Parsing and serialising the full metadata fixture without Spark isolates the HAPI parser, which
+   * discards any element that the resource class does not declare.
+   */
+  @Test
+  void testParserRetainsEveryRootElement() throws IOException, JSONException {
+    final String originalJson = Files.readString(FULL_METADATA_FIXTURE);
+    final IParser parser = fhirContext.newJsonParser();
+    final ViewDefinitionResource parsed =
+        parser.parseResource(ViewDefinitionResource.class, originalJson);
+
+    final String serialised = parser.encodeResourceToString(parsed);
+    JSONAssert.assertEquals(originalJson, serialised, JSONCompareMode.NON_EXTENSIBLE);
+  }
+
+  /**
+   * The serialised element order follows the field declaration order of the resource class, which
+   * must match the specification.
+   */
+  @Test
+  void testSerialisedRootElementOrderFollowsSpecification() throws IOException {
+    final IParser parser = fhirContext.newJsonParser();
+    final ViewDefinitionResource parsed =
+        parser.parseResource(ViewDefinitionResource.class, Files.readString(FULL_METADATA_FIXTURE));
+    final String serialised = parser.encodeResourceToString(parsed);
+
+    // Jackson preserves insertion order, which org.json does not.
+    final List<String> actualOrder = new ArrayList<>();
+    new ObjectMapper().readTree(serialised).fieldNames().forEachRemaining(actualOrder::add);
+    assertEquals(SPECIFICATION_ELEMENT_ORDER, actualOrder);
   }
 
   // ========== TEST DATA FACTORY METHODS ==========
@@ -971,5 +1096,86 @@ class ViewDefinitionEncodingTest {
     emptyElements.setUrlElement(new UriType());
     emptyElements.setVersionElement(new org.hl7.fhir.r4.model.StringType());
     assertTrue(emptyElements.isEmpty());
+  }
+
+  /**
+   * copy() must duplicate every root element, including the repeating complex elements, so the copy
+   * serialises to the same JSON as the original and is independent of it.
+   */
+  @Test
+  void testCopyRetainsEveryRootElement() throws IOException, JSONException {
+    final String originalJson = Files.readString(FULL_METADATA_FIXTURE);
+    final IParser parser = fhirContext.newJsonParser();
+    final ViewDefinitionResource original =
+        parser.parseResource(ViewDefinitionResource.class, originalJson);
+
+    final ViewDefinitionResource copy = (ViewDefinitionResource) original.copy();
+
+    // The class does not override equalsDeep, so the serialised form is the meaningful comparison.
+    JSONAssert.assertEquals(
+        originalJson, parser.encodeResourceToString(copy), JSONCompareMode.NON_EXTENSIBLE);
+
+    // Mutating a repeating element on the copy must not affect the original.
+    copy.getIdentifier().clear();
+    copy.getContact().clear();
+    assertFalse(copy.hasIdentifier());
+    assertFalse(copy.hasContact());
+    JSONAssert.assertEquals(
+        originalJson, parser.encodeResourceToString(original), JSONCompareMode.NON_EXTENSIBLE);
+  }
+
+  /**
+   * The repeating root elements follow the HAPI convention: the getter on an unpopulated resource
+   * returns an empty, mutable list, and the has-method reports false until an item is added.
+   */
+  @Test
+  void testRepeatingRootElementsAreLazilyInitialised() {
+    final ViewDefinitionResource view = new ViewDefinitionResource();
+
+    assertTrue(view.getIdentifier().isEmpty());
+    assertTrue(view.getContact().isEmpty());
+    assertTrue(view.getUseContext().isEmpty());
+    assertTrue(view.getJurisdiction().isEmpty());
+    assertTrue(view.getTopic().isEmpty());
+    assertTrue(view.getAuthor().isEmpty());
+    assertTrue(view.getEditor().isEmpty());
+    assertTrue(view.getReviewer().isEmpty());
+    assertTrue(view.getEndorser().isEmpty());
+    assertTrue(view.getRelatedArtifact().isEmpty());
+    assertTrue(view.getProfile().isEmpty());
+    assertFalse(view.hasIdentifier());
+    assertFalse(view.hasContact());
+    assertFalse(view.hasUseContext());
+    assertFalse(view.hasJurisdiction());
+    assertFalse(view.hasTopic());
+    assertFalse(view.hasAuthor());
+    assertFalse(view.hasEditor());
+    assertFalse(view.hasReviewer());
+    assertFalse(view.hasEndorser());
+    assertFalse(view.hasRelatedArtifact());
+    assertFalse(view.hasProfile());
+
+    view.getIdentifier().add(new Identifier().setValue("view-1"));
+    view.getContact().add(new ContactDetail().setName("Team"));
+    view.getUseContext().add(new UsageContext());
+    view.getJurisdiction().add(new CodeableConcept().setText("AU"));
+    view.getTopic().add(new CodeableConcept().setText("Demographics"));
+    view.getAuthor().add(new ContactDetail().setName("Author"));
+    view.getEditor().add(new ContactDetail().setName("Editor"));
+    view.getReviewer().add(new ContactDetail().setName("Reviewer"));
+    view.getEndorser().add(new ContactDetail().setName("Endorser"));
+    view.getRelatedArtifact().add(new RelatedArtifact().setDisplay("Spec"));
+    view.getProfile().add(new CanonicalType("http://example.org/profile"));
+    assertTrue(view.hasIdentifier());
+    assertTrue(view.hasContact());
+    assertTrue(view.hasUseContext());
+    assertTrue(view.hasJurisdiction());
+    assertTrue(view.hasTopic());
+    assertTrue(view.hasAuthor());
+    assertTrue(view.hasEditor());
+    assertTrue(view.hasReviewer());
+    assertTrue(view.hasEndorser());
+    assertTrue(view.hasRelatedArtifact());
+    assertTrue(view.hasProfile());
   }
 }

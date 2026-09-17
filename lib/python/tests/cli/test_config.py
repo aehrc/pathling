@@ -281,6 +281,8 @@ def test_unknown_top_level_key_warns(tmp_path):
 
     assert any("unknown-key" in message for message in warnings)
     assert any("Valid keys" in message for message in warnings)
+    # Every valid top-level key is named, including the package registry.
+    assert any("package-registry" in message for message in warnings)
 
 
 def test_unknown_auth_key_warns(tmp_path):
@@ -1144,3 +1146,24 @@ def test_config_driven_store_matches_flag_driven(tmp_path, monkeypatch):
     )
 
     assert from_config.tx_store == from_flag.tx_store
+
+
+# ========== The package registry key (059) ==========
+
+
+def test_package_registry_key_resolves(tmp_path):
+    """The top-level package-registry key resolves into the configuration."""
+    path = _write_config(
+        tmp_path, 'package-registry = "https://packages.simplifier.net"\n'
+    )
+
+    config = resolve_config(config_path=path)
+
+    assert config.package_registry == "https://packages.simplifier.net"
+
+
+def test_package_registry_absent_is_none(tmp_path, monkeypatch):
+    """Without the key, no registry is held and the library default applies."""
+    config = resolve_config(**_isolated_defaults(monkeypatch, tmp_path))
+
+    assert config.package_registry is None

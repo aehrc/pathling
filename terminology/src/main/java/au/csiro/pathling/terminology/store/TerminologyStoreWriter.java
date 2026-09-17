@@ -155,7 +155,7 @@ public class TerminologyStoreWriter {
       rows.add(manifestRow(entry));
     }
     final Dataset<Row> data = spark.createDataFrame(rows, TerminologyStoreSchema.manifestSchema());
-    writeTable(data, MANIFEST, mode, List.of());
+    writeManifestRows(data, mode, null);
   }
 
   /**
@@ -170,9 +170,9 @@ public class TerminologyStoreWriter {
       final Dataset<Row> data =
           spark.createDataFrame(
               List.of(manifestRow(entry)), TerminologyStoreSchema.manifestSchema());
-      replaceWhere(
+      writeManifestRows(
           data,
-          MANIFEST,
+          SaveMode.Overwrite,
           COLUMN_CANONICAL_URL
               + " = '"
               + entry.getCanonicalUrl()
@@ -183,15 +183,37 @@ public class TerminologyStoreWriter {
     }
   }
 
+  /**
+   * Writes rows into the manifest, allowing the manifest schema to gain columns that a store
+   * written by an earlier version of Pathling does not have. Schema drift on content tables remains
+   * a failure.
+   */
+  private void writeManifestRows(
+      @Nonnull final Dataset<Row> data,
+      @Nonnull final SaveMode mode,
+      @Nullable final String condition) {
+    var writer = data.write().format(DELTA_FORMAT).mode(mode).option("mergeSchema", "true");
+    if (condition != null) {
+      writer = writer.option("replaceWhere", condition);
+    }
+    writer.save(TerminologyStoreSchema.tablePath(storagePath, MANIFEST));
+  }
+
   @Nonnull
   private static Row manifestRow(@Nonnull final ManifestEntry entry) {
+    final PackageVerification verification = entry.getPackageVerification();
     return RowFactory.create(
         entry.getStoreFormatVersion(),
         entry.getEntryType(),
         entry.getCanonicalUrl(),
         entry.getVersion(),
         entry.getSource(),
-        entry.getImportedAt() == null ? null : Timestamp.from(entry.getImportedAt()));
+        entry.getImportedAt() == null ? null : Timestamp.from(entry.getImportedAt()),
+        entry.getSourceSha256(),
+        entry.getPackageName(),
+        entry.getPackageVersion(),
+        verification == null ? null : verification.getCode(),
+        entry.getPackageRegistry());
   }
 
   /** Builds a SQL predicate matching a nullable version. */
