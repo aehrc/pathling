@@ -26,6 +26,8 @@ Author: John Grimes.
 
 import glob
 import os
+import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
@@ -33,6 +35,7 @@ import pathling
 import pathling.context as context_module
 from pathling.cli.config import CliConfig, TxAuth, TxStore
 from pathling.cli.session import (
+    _apply_log_level,
     _build_quiet_spark,
     _create_pathling_context,
     public_namespace,
@@ -181,6 +184,11 @@ class _FakeSpark:
 def _capture_create(monkeypatch) -> dict:
     """Replaces the session builder and PathlingContext.create with capturers.
 
+    The fake session only backs the quiet log-level path (``setLogLevel``);
+    the verbose path needs a real JVM, so these tests run with
+    ``verbose=False`` - the log level is orthogonal to parameter threading,
+    and real-session logging behaviour is covered below.
+
     :param monkeypatch: the pytest monkeypatch fixture.
     :return: a dict populated with the keyword arguments passed to
              ``PathlingContext.create``.
@@ -209,7 +217,7 @@ def test_local_mode_threads_store_parameters(monkeypatch):
     """
     captured = _capture_create(monkeypatch)
     config = CliConfig(
-        verbose=True,
+        verbose=False,
         tx_store=TxStore(
             path="/data/tx-store",
             default_snomed_edition="32506021000036107",
@@ -231,7 +239,7 @@ def test_local_mode_threads_dialect_aliases(monkeypatch):
     """A configured dialect alias table reaches ``PathlingContext.create``."""
     captured = _capture_create(monkeypatch)
     config = CliConfig(
-        verbose=True,
+        verbose=False,
         tx_store=TxStore(
             path="/data/tx-store",
             dialect_aliases={"en-NZ": "271000210107"},
@@ -246,7 +254,7 @@ def test_local_mode_threads_dialect_aliases(monkeypatch):
 def test_local_mode_omits_cache_size_when_unset(monkeypatch):
     """An unset expansion-cache-size is not passed, leaving the library default."""
     captured = _capture_create(monkeypatch)
-    config = CliConfig(verbose=True, tx_store=TxStore(path="/data/tx-store"))
+    config = CliConfig(verbose=False, tx_store=TxStore(path="/data/tx-store"))
 
     _create_pathling_context(config)
 
@@ -261,7 +269,7 @@ def test_local_mode_ignores_configured_auth(monkeypatch):
     """A store wins over configured auth: no auth reaches the local session."""
     captured = _capture_create(monkeypatch)
     config = CliConfig(
-        verbose=True,
+        verbose=False,
         tx_store=TxStore(path="/data/tx-store"),
         tx_auth=TxAuth(
             client_id="c", token_endpoint="https://auth/token", client_secret="s"
@@ -278,7 +286,7 @@ def test_remote_mode_passes_existing_parameters_unchanged(monkeypatch):
     """With no store, the existing remote parameters are passed unchanged."""
     captured = _capture_create(monkeypatch)
     config = CliConfig(
-        verbose=True,
+        verbose=False,
         tx_server="https://tx.example/fhir",
         tx_auth=TxAuth(
             client_id="c", token_endpoint="https://auth/token", client_secret="s"
@@ -292,6 +300,64 @@ def test_remote_mode_passes_existing_parameters_unchanged(monkeypatch):
     assert captured["client_id"] == "c"
     # Local-mode parameters are absent in remote mode.
     assert "terminology_mode" not in captured or captured["terminology_mode"] != "local"
+
+
+# ========== Verbose/quiet Spark log levels (#2691) ==========
+
+# Distinct markers so each assertion can only match its own emitted record.
+_VERBOSE_MARKER = "pathling-cli-verbose-probe-9d2f"
+_QUIET_MARKER = "pathling-cli-quiet-probe-9d2f"
+
+
+def _run_logging_probe(verbose: bool, marker: str):
+    """Runs the logging probe in a fresh JVM subprocess.
+
+    A subprocess is required: log4j2's console appender binds its own handle
+    to the process stderr when the Spark session starts, so in-process
+    file-descriptor redirection (e.g. pytest's capfd) cannot capture its
+    output. Capturing the child's real stderr is what makes the assertion a
+    genuine "reaches stderr" check.
+
+    :param verbose: whether the probe applies the ``--verbose`` log level.
+    :param marker: the marker string the probe emits in its INFO record.
+    :return: the completed subprocess.
+    """
+    package_dir = os.path.dirname(
+        os.path.dirname(os.path.abspath(pathling.__file__))
+    )
+    env = dict(os.environ)
+    env["PYTHONPATH"] = package_dir + os.pathsep + env.get("PYTHONPATH", "")
+    probe = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logging_probe.py")
+    return subprocess.run(
+        [sys.executable, probe, "verbose" if verbose else "quiet", marker],
+        capture_output=True,
+        text=True,
+        env=env,
+        timeout=600,
+    )
+
+
+def test_verbose_mode_surfaces_pathling_info_logging():
+    """With --verbose, an INFO record from Pathling's logger namespace reaches
+    stderr.
+
+    Runs against a real local Spark session: the previous mock-based tests
+    could not detect that ``setLogLevel("INFO")`` never took effect on the
+    Spark version the CLI depends on (#2691).
+    """
+    result = _run_logging_probe(verbose=True, marker=_VERBOSE_MARKER)
+
+    assert result.returncode == 0, result.stderr[-2000:]
+    assert _VERBOSE_MARKER in result.stderr
+
+
+def test_quiet_mode_hides_pathling_info_logging():
+    """Without --verbose, an INFO record from Pathling's logger namespace does
+    not reach stderr."""
+    result = _run_logging_probe(verbose=False, marker=_QUIET_MARKER)
+
+    assert result.returncode == 0, result.stderr[-2000:]
+    assert _QUIET_MARKER not in result.stderr
 
 
 # ========== Public namespace helper ==========
