@@ -17,11 +17,11 @@
 
 package au.csiro.pathling.schema;
 
-import au.csiro.pathling.definition.FhirType;
 import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Stream;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * The names of the fields the storage layout owns, and the rule that positions them.
@@ -187,9 +187,9 @@ public final class LayoutFields {
    */
   @Nonnull
   public static List<String> annotationNames(
-      @Nonnull final String fieldName, @Nonnull final FhirType type) {
+      @Nonnull final String fieldName, @Nonnull final FHIRDefinedType type) {
     final String code = type.toCode();
-    if (FhirType.DECIMAL.toCode().equals(code)) {
+    if (FHIRDefinedType.DECIMAL.toCode().equals(code)) {
       return List.of(numericAnnotationName(fieldName));
     }
     if (RANGE_ANNOTATED.contains(code)) {
@@ -212,7 +212,7 @@ public final class LayoutFields {
    */
   @Nonnull
   public static List<String> siblingNames(
-      @Nonnull final String fieldName, @Nonnull final FhirType type) {
+      @Nonnull final String fieldName, @Nonnull final FHIRDefinedType type) {
     final Stream<String> group =
         PrimitiveTypes.isPrimitive(type) ? Stream.of(metadataGroupName(fieldName)) : Stream.empty();
     return Stream.concat(group, annotationNames(fieldName, type).stream()).toList();

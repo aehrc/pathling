@@ -17,7 +17,6 @@
 
 package au.csiro.pathling.io.transform;
 
-import au.csiro.pathling.definition.FhirType;
 import jakarta.annotation.Nonnull;
 import java.util.Map;
 import java.util.Optional;
@@ -25,6 +24,7 @@ import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.ArrayType;
 import org.apache.spark.sql.types.DataType;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * The storage of a primitive value, which fails where the value contradicts its declared type
@@ -77,7 +77,7 @@ final class PrimitiveValues {
   @Nonnull
   static Column storedValue(
       @Nonnull final Column source,
-      @Nonnull final FhirType type,
+      @Nonnull final FHIRDefinedType type,
       @Nonnull final DataType target,
       @Nonnull final String path) {
     if (target instanceof final ArrayType array) {
@@ -85,7 +85,7 @@ final class PrimitiveValues {
           source, value -> storedValue(value, type, array.elementType(), path));
     }
     final Column stored =
-        FhirType.DECIMAL.equals(type)
+        FHIRDefinedType.DECIMAL.equals(type)
             ? DecimalTransform.storedValue(source, target)
             : source.try_cast(target);
     return Optional.ofNullable(LEXICAL_FORMS.get(type.toCode()))

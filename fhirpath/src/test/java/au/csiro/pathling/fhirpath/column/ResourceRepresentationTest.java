@@ -24,7 +24,6 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 
-import au.csiro.pathling.definition.FhirType;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import java.util.Optional;
 import org.apache.spark.sql.Column;
@@ -35,6 +34,7 @@ import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -183,7 +183,8 @@ class ResourceRepresentationTest {
 
     final ResourceRepresentation root = ResourceRepresentation.withIdColumn();
     // STRING type should be handled without special processing
-    final ColumnRepresentation genderRep = root.traverse("gender", Optional.of(FhirType.CODE));
+    final ColumnRepresentation genderRep =
+        root.traverse("gender", Optional.of(FHIRDefinedType.CODE));
 
     final String result = dataset.select(genderRep.getValue()).first().getString(0);
     assertEquals("male", result);
@@ -194,7 +195,7 @@ class ResourceRepresentationTest {
     final ResourceRepresentation root = ResourceRepresentation.withIdColumn();
     // BASE64BINARY should use special handling
     final ColumnRepresentation binaryRep =
-        root.traverse("data", Optional.of(FhirType.BASE64BINARY));
+        root.traverse("data", Optional.of(FHIRDefinedType.BASE64BINARY));
 
     // The result should be a representation (we can't easily test binary conversion without data)
     assertNotNull(binaryRep);

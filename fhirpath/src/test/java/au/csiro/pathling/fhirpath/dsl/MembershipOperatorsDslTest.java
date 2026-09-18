@@ -17,10 +17,10 @@
 
 package au.csiro.pathling.fhirpath.dsl;
 
-import au.csiro.pathling.definition.FhirType;
 import au.csiro.pathling.test.dsl.FhirPathDslTestBase;
 import au.csiro.pathling.test.dsl.FhirPathTest;
 import java.util.stream.Stream;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.junit.jupiter.api.DynamicTest;
 
 public class MembershipOperatorsDslTest extends FhirPathDslTestBase {
@@ -156,7 +156,9 @@ public class MembershipOperatorsDslTest extends FhirPathDslTestBase {
   public Stream<DynamicTest> complexTypeMembership() {
     return builder()
         .withSubject(
-            sb -> sb.element("name", b -> b.fhirType(FhirType.HUMANNAME).string("family", "Smith")))
+            sb ->
+                sb.element(
+                    "name", b -> b.fhirType(FHIRDefinedType.HUMANNAME).string("family", "Smith")))
         .testError(
             "Unsupported equality for complex types",
             "name in name",
@@ -178,7 +180,9 @@ public class MembershipOperatorsDslTest extends FhirPathDslTestBase {
                         "http://loinc.org|8480-6||'Systolic blood pressure'",
                         "http://loinc.org|8867-4||'Heart rate'",
                         "http://loinc.org|8462-4||'Diastolic blood pressure'")
-                    .element("name", b -> b.fhirType(FhirType.HUMANNAME).string("family", "Smith")))
+                    .element(
+                        "name",
+                        b -> b.fhirType(FHIRDefinedType.HUMANNAME).string("family", "Smith")))
         .group("Cross type membership")
         .testFalse("10 in oneString", "Integer in String one")
         .testFalse("'true' in manyBoolean", "String in boolean one")

@@ -21,7 +21,6 @@ import static au.csiro.pathling.fhirpath.literal.StringLiteral.unescapeFhirPathS
 import static au.csiro.pathling.utilities.Strings.unSingleQuote;
 
 import au.csiro.pathling.annotations.UsedByReflection;
-import au.csiro.pathling.definition.FhirType;
 import au.csiro.pathling.definition.NodeDefinition;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
@@ -39,6 +38,7 @@ import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.Base64BinaryType;
 import org.hl7.fhir.r4.model.CodeType;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.IdType;
 import org.hl7.fhir.r4.model.OidType;
 import org.hl7.fhir.r4.model.StringType;
@@ -66,7 +66,7 @@ public class StringCollection extends Collection
   protected StringCollection(
       @Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
-      @Nonnull final Optional<FhirType> fhirType,
+      @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final Optional<? extends NodeDefinition> definition,
       @Nonnull final Optional<Column> extensionMapColumn) {
     super(columnRepresentation, type, fhirType, definition, extensionMapColumn);
@@ -82,7 +82,7 @@ public class StringCollection extends Collection
   @Nonnull
   public static StringCollection build(
       @Nonnull final ColumnRepresentation columnRepresentation,
-      @Nonnull final FhirType fhirDefinedType) {
+      @Nonnull final FHIRDefinedType fhirDefinedType) {
     return new StringCollection(
         columnRepresentation,
         Optional.of(FhirPathType.STRING),
@@ -99,7 +99,7 @@ public class StringCollection extends Collection
    */
   @Nonnull
   public static StringCollection build(@Nonnull final ColumnRepresentation columnRepresentation) {
-    return build(columnRepresentation, FhirType.STRING);
+    return build(columnRepresentation, FHIRDefinedType.STRING);
   }
 
   /**
@@ -146,7 +146,7 @@ public class StringCollection extends Collection
    */
   @Nonnull
   public static StringCollection fromValue(@Nonnull final String value) {
-    return fromValue(value, FhirType.STRING);
+    return fromValue(value, FHIRDefinedType.STRING);
   }
 
   /**
@@ -158,7 +158,7 @@ public class StringCollection extends Collection
    */
   @Nonnull
   public static StringCollection fromValue(
-      @Nonnull final String value, @Nonnull final FhirType fhirDefinedType) {
+      @Nonnull final String value, @Nonnull final FHIRDefinedType fhirDefinedType) {
     return StringCollection.build(DefaultRepresentation.literal(value), fhirDefinedType);
   }
 
@@ -173,7 +173,7 @@ public class StringCollection extends Collection
   public static StringCollection fromValue(@Nonnull final Base64BinaryType value) {
     // special case for Base64BinaryType, as it needs to be decoded
     return StringCollection.build(
-        DefaultRepresentation.literal(value.getValue()), FhirType.BASE64BINARY);
+        DefaultRepresentation.literal(value.getValue()), FHIRDefinedType.BASE64BINARY);
   }
 
   /**
@@ -185,7 +185,7 @@ public class StringCollection extends Collection
   @UsedByReflection
   @Nonnull
   public static StringCollection fromValue(@Nonnull final CodeType value) {
-    return StringCollection.fromValue(value.getValueAsString(), FhirType.CODE);
+    return StringCollection.fromValue(value.getValueAsString(), FHIRDefinedType.CODE);
   }
 
   /**
@@ -197,7 +197,7 @@ public class StringCollection extends Collection
   @UsedByReflection
   @Nonnull
   public static StringCollection fromValue(@Nonnull final IdType value) {
-    return StringCollection.fromValue(value.getValueAsString(), FhirType.ID);
+    return StringCollection.fromValue(value.getValueAsString(), FHIRDefinedType.ID);
   }
 
   /**
@@ -209,7 +209,7 @@ public class StringCollection extends Collection
   @UsedByReflection
   @Nonnull
   public static StringCollection fromValue(@Nonnull final OidType value) {
-    return StringCollection.fromValue(value.getValueAsString(), FhirType.OID);
+    return StringCollection.fromValue(value.getValueAsString(), FHIRDefinedType.OID);
   }
 
   /**
@@ -221,7 +221,7 @@ public class StringCollection extends Collection
   @UsedByReflection
   @Nonnull
   public static StringCollection fromValue(@Nonnull final UriType value) {
-    return StringCollection.fromValue(value.getValueAsString(), FhirType.URI);
+    return StringCollection.fromValue(value.getValueAsString(), FHIRDefinedType.URI);
   }
 
   /**
@@ -233,7 +233,7 @@ public class StringCollection extends Collection
   @UsedByReflection
   @Nonnull
   public static StringCollection fromValue(@Nonnull final org.hl7.fhir.r4.model.UrlType value) {
-    return StringCollection.fromValue(value.getValueAsString(), FhirType.URL);
+    return StringCollection.fromValue(value.getValueAsString(), FHIRDefinedType.URL);
   }
 
   /**
@@ -245,7 +245,7 @@ public class StringCollection extends Collection
   @UsedByReflection
   @Nonnull
   public static StringCollection fromValue(@Nonnull final UuidType value) {
-    return StringCollection.fromValue(value.getValueAsString(), FhirType.UUID);
+    return StringCollection.fromValue(value.getValueAsString(), FHIRDefinedType.UUID);
   }
 
   /**
@@ -258,7 +258,7 @@ public class StringCollection extends Collection
   @Nonnull
   public static StringCollection fromValue(
       @Nonnull final org.hl7.fhir.r4.model.CanonicalType value) {
-    return StringCollection.fromValue(value.getValueAsString(), FhirType.CANONICAL);
+    return StringCollection.fromValue(value.getValueAsString(), FHIRDefinedType.CANONICAL);
   }
 
   // fromValue for MarkdownType
@@ -273,7 +273,7 @@ public class StringCollection extends Collection
   @Nonnull
   public static StringCollection fromValue(
       @Nonnull final org.hl7.fhir.r4.model.MarkdownType value) {
-    return StringCollection.fromValue(value.getValueAsString(), FhirType.MARKDOWN);
+    return StringCollection.fromValue(value.getValueAsString(), FHIRDefinedType.MARKDOWN);
   }
 
   /**
@@ -340,7 +340,7 @@ public class StringCollection extends Collection
   public Column toExternalValue() {
     // special case to convert base64String back to Binary
     return getFhirType()
-        .filter(FhirType.BASE64BINARY::equals)
+        .filter(FHIRDefinedType.BASE64BINARY::equals)
         .map(
             t ->
                 new DefaultRepresentation(getColumnValue())

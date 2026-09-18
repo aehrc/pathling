@@ -21,7 +21,6 @@ import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.struct;
 
 import au.csiro.pathling.definition.ElementDefinition;
-import au.csiro.pathling.definition.FhirType;
 import au.csiro.pathling.definition.NodeDefinition;
 import au.csiro.pathling.definition.defaults.DefaultCompositeDefinition;
 import au.csiro.pathling.definition.defaults.DefaultPrimitiveDefinition;
@@ -46,6 +45,7 @@ import java.util.Optional;
 import java.util.function.Function;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.types.DataTypes;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * Represents a FHIRPath expression which refers to an element of type Quantity.
@@ -66,12 +66,12 @@ public class QuantityCollection extends Collection implements Comparable, String
     return DefaultCompositeDefinition.of(
         name,
         List.of(
-            DefaultPrimitiveDefinition.single("value", FhirType.DECIMAL),
-            DefaultPrimitiveDefinition.single("unit", FhirType.STRING),
-            DefaultPrimitiveDefinition.single("system", FhirType.URI),
-            DefaultPrimitiveDefinition.single("code", FhirType.CODE)),
+            DefaultPrimitiveDefinition.single("value", FHIRDefinedType.DECIMAL),
+            DefaultPrimitiveDefinition.single("unit", FHIRDefinedType.STRING),
+            DefaultPrimitiveDefinition.single("system", FHIRDefinedType.URI),
+            DefaultPrimitiveDefinition.single("code", FHIRDefinedType.CODE)),
         cardinality,
-        FhirType.QUANTITY);
+        FHIRDefinedType.QUANTITY);
   }
 
   private static final ElementDefinition LITERAL_DEFINITION = createDefinition("", 1);
@@ -88,7 +88,7 @@ public class QuantityCollection extends Collection implements Comparable, String
   public QuantityCollection(
       @Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
-      @Nonnull final Optional<FhirType> fhirType,
+      @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final Optional<? extends NodeDefinition> definition,
       @Nonnull final Optional<Column> extensionMapColumn) {
     super(columnRepresentation, type, fhirType, definition, extensionMapColumn);
@@ -108,7 +108,7 @@ public class QuantityCollection extends Collection implements Comparable, String
     return new QuantityCollection(
         columnRepresentation,
         Optional.of(FhirPathType.QUANTITY),
-        Optional.of(FhirType.QUANTITY),
+        Optional.of(FHIRDefinedType.QUANTITY),
         definition,
         Optional.empty());
   }

@@ -19,7 +19,6 @@ package au.csiro.pathling.schema;
 
 import au.csiro.pathling.definition.DefinitionContext;
 import au.csiro.pathling.definition.ElementDefinition;
-import au.csiro.pathling.definition.FhirType;
 import jakarta.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -32,6 +31,7 @@ import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.Metadata;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * Derives the schema of a resource table from the FHIR definitions.
@@ -172,14 +172,15 @@ public final class SchemaBuilder {
    * reach it.
    */
   private boolean withinDenseBounds(@Nonnull final LayoutEntry entry) {
-    final Optional<FhirType> type = entry.getElement().flatMap(ElementDefinition::getFhirType);
-    if (type.filter(FhirType.EXTENSION::equals).isPresent()) {
+    final Optional<FHIRDefinedType> type =
+        entry.getElement().flatMap(ElementDefinition::getFhirType);
+    if (type.filter(FHIRDefinedType.EXTENSION::equals).isPresent()) {
       return enableExtensions;
     }
     if (entry.isFromOpenChoice()) {
       // An open choice may take any type the specification allows, which is a structure of
       // unusable width unless the expansion is restricted.
-      return type.map(FhirType::toCode).filter(enabledOpenTypes::contains).isPresent();
+      return type.map(FHIRDefinedType::toCode).filter(enabledOpenTypes::contains).isPresent();
     }
     return true;
   }
@@ -191,7 +192,7 @@ public final class SchemaBuilder {
       @Nonnull final Optional<SchemaPruner> observed,
       @Nonnull final Map<Object, Integer> path) {
     final ElementDefinition element = entry.getElement().orElseThrow();
-    final FhirType type = element.getFhirType().orElseThrow();
+    final FHIRDefinedType type = element.getFhirType().orElseThrow();
     final Optional<DataType> primitive = PrimitiveTypes.storageTypeOf(type);
     if (primitive.isPresent()) {
       return primitive;
@@ -210,7 +211,7 @@ public final class SchemaBuilder {
   private Optional<StructType> structureType(
       @Nonnull final DefinitionCanonicalStructure child,
       @Nonnull final ElementDefinition element,
-      @Nonnull final FhirType type,
+      @Nonnull final FHIRDefinedType type,
       @Nonnull final String name,
       @Nonnull final Optional<SchemaPruner> observed,
       @Nonnull final Map<Object, Integer> path) {
@@ -240,10 +241,10 @@ public final class SchemaBuilder {
    * assigner of an identifier carried by a reference out of the schema.
    */
   private boolean withinNestingBound(
-      @Nonnull final FhirType type,
+      @Nonnull final FHIRDefinedType type,
       @Nonnull final Object identity,
       @Nonnull final Map<Object, Integer> path) {
-    final int bound = FhirType.REFERENCE.equals(type) ? 0 : maxNestingLevel;
+    final int bound = FHIRDefinedType.REFERENCE.equals(type) ? 0 : maxNestingLevel;
     return path.getOrDefault(identity, 0) <= bound;
   }
 

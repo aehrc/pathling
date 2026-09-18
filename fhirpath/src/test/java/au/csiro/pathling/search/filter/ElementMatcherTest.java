@@ -24,7 +24,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import au.csiro.pathling.definition.FhirType;
 import au.csiro.pathling.fhirpath.FhirPathQuantity;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import au.csiro.pathling.search.InvalidModifierException;
@@ -38,6 +37,7 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -77,7 +77,7 @@ class ElementMatcherTest {
   void testTokenMatcher(final String element, final String searchValue, final boolean expected) {
     final Dataset<Row> df = spark.createDataset(List.of(element), Encoders.STRING()).toDF("value");
 
-    final TokenMatcher matcher = new TokenMatcher(FhirType.CODE);
+    final TokenMatcher matcher = new TokenMatcher(FHIRDefinedType.CODE);
     final Column result = matcher.match(col("value"), searchValue);
 
     final boolean actual = df.select(result).first().getBoolean(0);
@@ -357,7 +357,7 @@ class ElementMatcherTest {
     final Dataset<Row> df = spark.createDataset(List.of(element), Encoders.DECIMAL()).toDF("value");
 
     // Use DECIMAL type for the existing tests (range-based semantics for eq/ne)
-    final NumberMatcher matcher = new NumberMatcher(FhirType.DECIMAL);
+    final NumberMatcher matcher = new NumberMatcher(FHIRDefinedType.DECIMAL);
     final Column result = matcher.match(col("value"), searchValue);
 
     final boolean actual = df.select(result).first().getBoolean(0);
@@ -409,7 +409,7 @@ class ElementMatcherTest {
     final Dataset<Row> df = spark.createDataset(List.of(element), Encoders.INT()).toDF("value");
 
     // Use INTEGER type for integer tests (exact match semantics for eq/ne)
-    final NumberMatcher matcher = new NumberMatcher(FhirType.INTEGER);
+    final NumberMatcher matcher = new NumberMatcher(FHIRDefinedType.INTEGER);
     final Column result = matcher.match(col("value"), searchValue);
 
     final boolean actual = df.select(result).first().getBoolean(0);
@@ -567,7 +567,7 @@ class ElementMatcherTest {
             .createDataset(List.of(1), Encoders.INT())
             .select(struct(systemCol.as("system"), lit(code).as("code")).as("coding"));
 
-    final TokenMatcher matcher = new TokenMatcher(FhirType.CODING);
+    final TokenMatcher matcher = new TokenMatcher(FHIRDefinedType.CODING);
     final Column result = matcher.match(col("coding"), searchValue);
 
     final boolean actual = df.select(result).first().getBoolean(0);
@@ -604,7 +604,7 @@ class ElementMatcherTest {
             .createDataset(List.of(1), Encoders.INT())
             .select(struct(systemCol.as("system"), lit(value).as("value")).as("identifier"));
 
-    final TokenMatcher matcher = new TokenMatcher(FhirType.IDENTIFIER);
+    final TokenMatcher matcher = new TokenMatcher(FHIRDefinedType.IDENTIFIER);
     final Column result = matcher.match(col("identifier"), searchValue);
 
     final boolean actual = df.select(result).first().getBoolean(0);
@@ -632,7 +632,7 @@ class ElementMatcherTest {
             .createDataset(List.of(1), Encoders.INT())
             .select(struct(lit(value).as("value")).as("telecom"));
 
-    final TokenMatcher matcher = new TokenMatcher(FhirType.CONTACTPOINT);
+    final TokenMatcher matcher = new TokenMatcher(FHIRDefinedType.CONTACTPOINT);
     final Column result = matcher.match(col("telecom"), searchValue);
 
     final boolean actual = df.select(result).first().getBoolean(0);
@@ -659,7 +659,7 @@ class ElementMatcherTest {
     final Dataset<Row> df =
         spark.createDataset(List.of(element), Encoders.BOOLEAN()).toDF("active");
 
-    final TokenMatcher matcher = new TokenMatcher(FhirType.BOOLEAN);
+    final TokenMatcher matcher = new TokenMatcher(FHIRDefinedType.BOOLEAN);
     final Column result = matcher.match(col("active"), searchValue);
 
     final boolean actual = df.select(result).first().getBoolean(0);
@@ -726,7 +726,7 @@ class ElementMatcherTest {
             .createDataset(List.of(1), Encoders.INT())
             .select(struct(codingArray.as("coding")).as("codeableConcept"));
 
-    final TokenMatcher matcher = new TokenMatcher(FhirType.CODEABLECONCEPT);
+    final TokenMatcher matcher = new TokenMatcher(FHIRDefinedType.CODEABLECONCEPT);
     final Column result = matcher.match(col("codeableConcept"), searchValue);
 
     final boolean actual = df.select(result).first().getBoolean(0);
@@ -1158,9 +1158,9 @@ class ElementMatcherTest {
             .select(struct(lit("Patient/123").as("reference")).as("ref"));
 
     final SearchFilter normalFilter =
-        SearchParameterType.REFERENCE.createFilter(null, FhirType.REFERENCE);
+        SearchParameterType.REFERENCE.createFilter(null, FHIRDefinedType.REFERENCE);
     final SearchFilter negatedFilter =
-        SearchParameterType.REFERENCE.createFilter("not", FhirType.REFERENCE);
+        SearchParameterType.REFERENCE.createFilter("not", FHIRDefinedType.REFERENCE);
 
     final Column normalCol =
         normalFilter.buildFilter(
@@ -1185,7 +1185,7 @@ class ElementMatcherTest {
             .select(struct(lit("Patient/123").as("reference")).as("ref"));
 
     final SearchFilter filter =
-        SearchParameterType.REFERENCE.createFilter("Patient", FhirType.REFERENCE);
+        SearchParameterType.REFERENCE.createFilter("Patient", FHIRDefinedType.REFERENCE);
     final Column filterCol =
         filter.buildFilter(
             new au.csiro.pathling.fhirpath.column.DefaultRepresentation(col("ref")),
@@ -1204,7 +1204,7 @@ class ElementMatcherTest {
             .select(struct(lit("Patient/123").as("reference")).as("ref"));
 
     final SearchFilter filter =
-        SearchParameterType.REFERENCE.createFilter("Patient", FhirType.REFERENCE);
+        SearchParameterType.REFERENCE.createFilter("Patient", FHIRDefinedType.REFERENCE);
     final Column filterCol =
         filter.buildFilter(
             new au.csiro.pathling.fhirpath.column.DefaultRepresentation(col("ref")),
@@ -1219,7 +1219,7 @@ class ElementMatcherTest {
     // An unrecognised modifier should throw InvalidModifierException.
     assertThrows(
         InvalidModifierException.class,
-        () -> SearchParameterType.REFERENCE.createFilter("exact", FhirType.REFERENCE));
+        () -> SearchParameterType.REFERENCE.createFilter("exact", FHIRDefinedType.REFERENCE));
   }
 
   // ========== UriMatcher tests (exact matching) ==========
@@ -1335,8 +1335,10 @@ class ElementMatcherTest {
     final Dataset<Row> df =
         spark.createDataset(List.of("http://example.org"), Encoders.STRING()).toDF("value");
 
-    final SearchFilter normalFilter = SearchParameterType.URI.createFilter(null, FhirType.URI);
-    final SearchFilter negatedFilter = SearchParameterType.URI.createFilter("not", FhirType.URI);
+    final SearchFilter normalFilter =
+        SearchParameterType.URI.createFilter(null, FHIRDefinedType.URI);
+    final SearchFilter negatedFilter =
+        SearchParameterType.URI.createFilter("not", FHIRDefinedType.URI);
 
     final Column normalCol =
         normalFilter.buildFilter(
@@ -1360,7 +1362,7 @@ class ElementMatcherTest {
             .createDataset(List.of("http://example.org/fhir/ValueSet/123"), Encoders.STRING())
             .toDF("value");
 
-    final SearchFilter filter = SearchParameterType.URI.createFilter("below", FhirType.URI);
+    final SearchFilter filter = SearchParameterType.URI.createFilter("below", FHIRDefinedType.URI);
     final Column filterCol =
         filter.buildFilter(
             new au.csiro.pathling.fhirpath.column.DefaultRepresentation(col("value")),
@@ -1375,7 +1377,7 @@ class ElementMatcherTest {
     final Dataset<Row> df =
         spark.createDataset(List.of("http://example.org/fhir"), Encoders.STRING()).toDF("value");
 
-    final SearchFilter filter = SearchParameterType.URI.createFilter("above", FhirType.URI);
+    final SearchFilter filter = SearchParameterType.URI.createFilter("above", FHIRDefinedType.URI);
     final Column filterCol =
         filter.buildFilter(
             new au.csiro.pathling.fhirpath.column.DefaultRepresentation(col("value")),
@@ -1389,7 +1391,7 @@ class ElementMatcherTest {
     // The :exact modifier is not supported for URI search parameters.
     assertThrows(
         InvalidModifierException.class,
-        () -> SearchParameterType.URI.createFilter("exact", FhirType.URI));
+        () -> SearchParameterType.URI.createFilter("exact", FHIRDefinedType.URI));
   }
 
   @Test
@@ -1397,6 +1399,6 @@ class ElementMatcherTest {
     // The :contains modifier is not supported for URI search parameters.
     assertThrows(
         InvalidModifierException.class,
-        () -> SearchParameterType.URI.createFilter("contains", FhirType.URI));
+        () -> SearchParameterType.URI.createFilter("contains", FHIRDefinedType.URI));
   }
 }

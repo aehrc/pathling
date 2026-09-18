@@ -20,10 +20,10 @@ package au.csiro.pathling.definition.defaults;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import au.csiro.pathling.definition.DefinitionContext;
-import au.csiro.pathling.definition.FhirType;
 import au.csiro.pathling.definition.ResourceDefinition;
 import java.util.List;
 import java.util.Optional;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.junit.jupiter.api.Test;
 
 class DefaultDefinitionContextTest {
@@ -34,18 +34,18 @@ class DefaultDefinitionContextTest {
     final ResourceDefinition rs =
         DefaultResourceDefinition.of(
             DefaultResourceTag.of("Test"),
-            DefaultPrimitiveDefinition.single("name", FhirType.STRING),
-            DefaultPrimitiveDefinition.single("age", FhirType.INTEGER),
+            DefaultPrimitiveDefinition.single("name", FHIRDefinedType.STRING),
+            DefaultPrimitiveDefinition.single("age", FHIRDefinedType.INTEGER),
             DefaultCompositeDefinition.backbone(
                 "address",
                 List.of(
-                    DefaultPrimitiveDefinition.single("street", FhirType.STRING),
-                    DefaultPrimitiveDefinition.single("city", FhirType.STRING),
-                    DefaultPrimitiveDefinition.single("zip", FhirType.STRING)),
+                    DefaultPrimitiveDefinition.single("street", FHIRDefinedType.STRING),
+                    DefaultPrimitiveDefinition.single("city", FHIRDefinedType.STRING),
+                    DefaultPrimitiveDefinition.single("zip", FHIRDefinedType.STRING)),
                 1));
 
     assertEquals(
-        Optional.of(DefaultPrimitiveDefinition.single("age", FhirType.INTEGER)),
+        Optional.of(DefaultPrimitiveDefinition.single("age", FHIRDefinedType.INTEGER)),
         rs.getChildElement("age"));
 
     final DefinitionContext ctx = DefaultDefinitionContext.of(rs);

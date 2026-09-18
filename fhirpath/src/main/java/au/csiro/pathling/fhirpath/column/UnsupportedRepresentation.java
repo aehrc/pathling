@@ -17,13 +17,13 @@
 
 package au.csiro.pathling.fhirpath.column;
 
-import au.csiro.pathling.definition.FhirType;
 import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import java.util.function.UnaryOperator;
 import lombok.AllArgsConstructor;
 import org.apache.spark.sql.Column;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * Used when a collection does not have a representation that can be expressed within a Spark
@@ -72,7 +72,7 @@ public class UnsupportedRepresentation extends ColumnRepresentation {
 
   @Override
   public @Nonnull ColumnRepresentation traverse(
-      @Nonnull final String fieldName, @Nonnull final Optional<FhirType> fhirType) {
+      @Nonnull final String fieldName, @Nonnull final Optional<FHIRDefinedType> fhirType) {
     return traverse(fieldName);
   }
 

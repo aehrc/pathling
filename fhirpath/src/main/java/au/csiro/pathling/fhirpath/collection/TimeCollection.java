@@ -18,7 +18,6 @@
 package au.csiro.pathling.fhirpath.collection;
 
 import au.csiro.pathling.annotations.UsedByReflection;
-import au.csiro.pathling.definition.FhirType;
 import au.csiro.pathling.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.FhirPathTime;
 import au.csiro.pathling.fhirpath.FhirPathType;
@@ -33,6 +32,7 @@ import jakarta.annotation.Nonnull;
 import java.text.ParseException;
 import java.util.Optional;
 import org.apache.spark.sql.Column;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.TimeType;
 
 /**
@@ -55,7 +55,7 @@ public class TimeCollection extends Collection
   protected TimeCollection(
       @Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
-      @Nonnull final Optional<FhirType> fhirType,
+      @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final Optional<? extends NodeDefinition> definition,
       @Nonnull final Optional<Column> extensionMapColumn) {
     super(columnRepresentation, type, fhirType, definition, extensionMapColumn);
@@ -75,7 +75,7 @@ public class TimeCollection extends Collection
     return new TimeCollection(
         columnRepresentation,
         Optional.of(FhirPathType.TIME),
-        Optional.of(FhirType.TIME),
+        Optional.of(FHIRDefinedType.TIME),
         definition,
         Optional.empty());
   }

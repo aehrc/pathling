@@ -17,12 +17,12 @@
 
 package au.csiro.pathling.schema;
 
-import au.csiro.pathling.definition.FhirType;
 import jakarta.annotation.Nonnull;
 import java.util.Map;
 import java.util.Optional;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * The storage type of each FHIR primitive type.
@@ -71,7 +71,7 @@ public final class PrimitiveTypes {
    * @return the storage type, or empty where the type is not a primitive
    */
   @Nonnull
-  public static Optional<DataType> storageTypeOf(@Nonnull final FhirType type) {
+  public static Optional<DataType> storageTypeOf(@Nonnull final FHIRDefinedType type) {
     return Optional.ofNullable(TYPES.get(type.toCode()));
   }
 
@@ -82,7 +82,7 @@ public final class PrimitiveTypes {
    * @param type the FHIR type
    * @return true where the type is a primitive
    */
-  public static boolean isPrimitive(@Nonnull final FhirType type) {
+  public static boolean isPrimitive(@Nonnull final FHIRDefinedType type) {
     return TYPES.containsKey(type.toCode());
   }
 }

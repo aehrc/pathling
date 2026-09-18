@@ -19,11 +19,11 @@ package au.csiro.pathling.definition.defaults;
 
 import au.csiro.pathling.definition.ChildDefinition;
 import au.csiro.pathling.definition.ElementDefinition;
-import au.csiro.pathling.definition.FhirType;
 import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.Optional;
 import lombok.Value;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * The default implementation of a composite data type allowing for explicit definition of its
@@ -34,13 +34,24 @@ public class DefaultCompositeDefinition implements ElementDefinition {
 
   String name;
   List<ChildDefinition> children;
-  int maxCardinality;
-  FhirType type;
+  int cardinality;
+  FHIRDefinedType type;
 
   @Override
   @Nonnull
   public String getElementName() {
     return name;
+  }
+
+  /**
+   * The field keeps the name it had before the interface declared this method, so that the accessor
+   * Lombok derives from it stays the one the existing callers use.
+   *
+   * @return the maximum number of values this element may hold
+   */
+  @Override
+  public int getMaxCardinality() {
+    return cardinality;
   }
 
   @Override
@@ -51,7 +62,7 @@ public class DefaultCompositeDefinition implements ElementDefinition {
 
   @Override
   @Nonnull
-  public Optional<FhirType> getFhirType() {
+  public Optional<FHIRDefinedType> getFhirType() {
     return Optional.of(type);
   }
 
@@ -60,14 +71,15 @@ public class DefaultCompositeDefinition implements ElementDefinition {
    *
    * @param name the element name
    * @param children the child definitions
-   * @param maxCardinality the maximum cardinality
+   * @param cardinality the cardinality
    * @return a new DefaultCompositeDefinition for a backbone element
    */
   @Nonnull
   public static DefaultCompositeDefinition backbone(
       @Nonnull final String name,
       @Nonnull final List<ChildDefinition> children,
-      final int maxCardinality) {
-    return new DefaultCompositeDefinition(name, children, maxCardinality, FhirType.BACKBONEELEMENT);
+      final int cardinality) {
+    return new DefaultCompositeDefinition(
+        name, children, cardinality, FHIRDefinedType.BACKBONEELEMENT);
   }
 }

@@ -17,10 +17,10 @@
 
 package au.csiro.pathling.search.filter;
 
-import au.csiro.pathling.definition.FhirType;
 import au.csiro.pathling.search.InvalidModifierException;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * Factory interface for creating search filters for a specific search parameter type.
@@ -44,5 +44,5 @@ public interface MatcherFactory {
    * @throws InvalidModifierException if the modifier is not supported for this type
    */
   @Nonnull
-  SearchFilter createFilter(@Nullable String modifier, @Nonnull FhirType fhirType);
+  SearchFilter createFilter(@Nullable String modifier, @Nonnull FHIRDefinedType fhirType);
 }

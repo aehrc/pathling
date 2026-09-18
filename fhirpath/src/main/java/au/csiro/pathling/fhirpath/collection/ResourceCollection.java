@@ -20,13 +20,11 @@ package au.csiro.pathling.fhirpath.collection;
 import static org.apache.spark.sql.functions.concat;
 import static org.apache.spark.sql.functions.lit;
 
-import au.csiro.pathling.definition.FhirType;
 import au.csiro.pathling.definition.NodeDefinition;
 import au.csiro.pathling.definition.ResourceDefinition;
 import au.csiro.pathling.definition.fhir.FhirDefinitionContext;
 import au.csiro.pathling.encoders.ExtensionSupport;
 import au.csiro.pathling.fhirpath.FhirPathType;
-import au.csiro.pathling.fhirpath.FhirTypes;
 import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import ca.uhn.fhir.context.FhirContext;
@@ -34,6 +32,8 @@ import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import lombok.Getter;
 import org.apache.spark.sql.Column;
+import org.hl7.fhir.exceptions.FHIRException;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
@@ -59,7 +59,7 @@ public class ResourceCollection extends Collection {
   protected ResourceCollection(
       @Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
-      @Nonnull final Optional<FhirType> fhirType,
+      @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final Optional<? extends NodeDefinition> definition,
       @Nonnull final ResourceDefinition resourceDefinition) {
     super(
@@ -87,7 +87,7 @@ public class ResourceCollection extends Collection {
   private ResourceCollection(
       @Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
-      @Nonnull final Optional<FhirType> fhirType,
+      @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final Optional<? extends NodeDefinition> definition,
       @Nonnull final ResourceDefinition resourceDefinition,
       @Nonnull final Optional<Column> extensionMapColumn) {
@@ -96,13 +96,17 @@ public class ResourceCollection extends Collection {
   }
 
   @Nonnull
-  private static Optional<FhirType> getFhirType(@Nonnull final ResourceType resourceType) {
+  private static Optional<FHIRDefinedType> getFhirType(@Nonnull final ResourceType resourceType) {
     return getFhirType(resourceType.toCode());
   }
 
   @Nonnull
-  private static Optional<FhirType> getFhirType(@Nonnull final String resourceCode) {
-    return FhirTypes.resolve(resourceCode);
+  private static Optional<FHIRDefinedType> getFhirType(@Nonnull final String resourceCode) {
+    try {
+      return Optional.ofNullable(FHIRDefinedType.fromCode(resourceCode));
+    } catch (final FHIRException e) {
+      return Optional.empty();
+    }
   }
 
   /**
@@ -214,7 +218,8 @@ public class ResourceCollection extends Collection {
   @Nonnull
   public Collection getKeyCollection() {
     final String prefix = resourceDefinition.getResourceCode() + "/";
-    final ColumnRepresentation idColumn = getColumn().traverse("id", Optional.of(FhirType.STRING));
+    final ColumnRepresentation idColumn =
+        getColumn().traverse("id", Optional.of(FHIRDefinedType.STRING));
     return StringCollection.build(idColumn.transform(id -> concat(lit(prefix), id)));
   }
 

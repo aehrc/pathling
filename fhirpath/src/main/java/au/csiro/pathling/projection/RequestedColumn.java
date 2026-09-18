@@ -17,11 +17,11 @@
 
 package au.csiro.pathling.projection;
 
-import au.csiro.pathling.definition.FhirType;
 import au.csiro.pathling.fhirpath.FhirPath;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import org.apache.spark.sql.types.DataType;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * Information about a column that has been requested to be included in a projection.
@@ -39,7 +39,7 @@ public record RequestedColumn(
     @Nonnull FhirPath path,
     @Nonnull String name,
     boolean collection,
-    @Nonnull Optional<FhirType> type,
+    @Nonnull Optional<FHIRDefinedType> type,
     @Nonnull Optional<DataType> sqlType) {
 
   @Nonnull

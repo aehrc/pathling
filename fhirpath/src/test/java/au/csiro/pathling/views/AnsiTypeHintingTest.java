@@ -570,7 +570,7 @@ class AnsiTypeHintingTest {
         assertThrows(UnsupportedOperationException.class, () -> evalView(view));
     assertEquals(
         "Column 'value' with path 'code.coding.first()': cannot obtain value for non-primitive "
-            + "collection of FHIR type: Coding",
+            + "collection of FHIR type: CODING",
         ex.getMessage());
   }
 
@@ -581,7 +581,7 @@ class AnsiTypeHintingTest {
         assertThrows(UnsupportedOperationException.class, () -> evalView(view));
     assertEquals(
         "Column 'value' with path 'code.coding': cannot obtain value for non-primitive "
-            + "collection of FHIR type: Coding",
+            + "collection of FHIR type: CODING",
         ex.getMessage());
   }
 }

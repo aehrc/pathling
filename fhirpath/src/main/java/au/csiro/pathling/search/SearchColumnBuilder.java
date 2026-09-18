@@ -19,7 +19,6 @@ package au.csiro.pathling.search;
 
 import static org.apache.spark.sql.functions.lit;
 
-import au.csiro.pathling.definition.FhirType;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.evaluation.CrossResourceStrategy;
@@ -39,6 +38,7 @@ import java.util.Map;
 import java.util.stream.Stream;
 import lombok.Value;
 import org.apache.spark.sql.Column;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
@@ -89,10 +89,10 @@ public class SearchColumnBuilder {
    *
    * @see <a href="https://hl7.org/fhir/search.html#string">String Search</a>
    */
-  private static final Map<FhirType, List<String>> COMPLEX_TYPE_STRING_SUBFIELDS =
+  private static final Map<FHIRDefinedType, List<String>> COMPLEX_TYPE_STRING_SUBFIELDS =
       Map.of(
-          FhirType.HUMANNAME, List.of("family", "given", "text", "prefix", "suffix"),
-          FhirType.ADDRESS,
+          FHIRDefinedType.HUMANNAME, List.of("family", "given", "text", "prefix", "suffix"),
+          FHIRDefinedType.ADDRESS,
               List.of("text", "line", "city", "district", "state", "postalCode", "country"));
 
   /** The FHIR context for resource definitions. */
@@ -301,7 +301,7 @@ public class SearchColumnBuilder {
     final Collection result = evaluator.evaluate(fhirPath);
 
     // Get FHIR type from collection - fail if not available.
-    final FhirType fhirType =
+    final FHIRDefinedType fhirType =
         result
             .getFhirType()
             .orElseThrow(
@@ -353,7 +353,7 @@ public class SearchColumnBuilder {
   private SearchFilter getFilterForType(
       @Nonnull final SearchParameterType type,
       @Nullable final String modifier,
-      @Nonnull final FhirType fhirType) {
+      @Nonnull final FHIRDefinedType fhirType) {
 
     // Validate FHIR type is allowed for this search parameter type
     if (!type.isAllowedFhirType(fhirType)) {

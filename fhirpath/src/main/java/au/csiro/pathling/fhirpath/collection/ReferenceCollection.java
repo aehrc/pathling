@@ -17,7 +17,6 @@
 
 package au.csiro.pathling.fhirpath.collection;
 
-import au.csiro.pathling.definition.FhirType;
 import au.csiro.pathling.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.TypeSpecifier;
@@ -28,6 +27,7 @@ import au.csiro.pathling.search.filter.FhirFieldNames;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import org.apache.spark.sql.Column;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * Represents a collection of Reference elements.
@@ -51,7 +51,7 @@ public class ReferenceCollection extends Collection {
   protected ReferenceCollection(
       @Nonnull final ColumnRepresentation column,
       @Nonnull final Optional<FhirPathType> type,
-      @Nonnull final Optional<FhirType> fhirType,
+      @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final Optional<? extends NodeDefinition> definition,
       @Nonnull final Optional<Column> extensionMapColumn) {
     super(column, type, fhirType, definition, extensionMapColumn);
@@ -85,7 +85,7 @@ public class ReferenceCollection extends Collection {
   @Nonnull
   private ColumnTransform keyFilter(@Nonnull final String pattern) {
     return col ->
-        col.traverse(FhirFieldNames.REFERENCE, Optional.of(FhirType.STRING)).like(pattern);
+        col.traverse(FhirFieldNames.REFERENCE, Optional.of(FHIRDefinedType.STRING)).like(pattern);
   }
 
   /**

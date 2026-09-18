@@ -24,6 +24,7 @@ import au.csiro.pathling.definition.defaults.DefaultPrimitiveDefinition;
 import au.csiro.pathling.definition.fhir.FhirDefinitionContext;
 import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -88,11 +89,11 @@ class ElementDefinitionTest {
 
   @Test
   void reportsTheCardinalityOfAnExplicitlyDefinedElement() {
-    assertFalse(DefaultPrimitiveDefinition.single("family", FhirType.STRING).isRepeating());
+    assertFalse(DefaultPrimitiveDefinition.single("family", FHIRDefinedType.STRING).isRepeating());
     assertEquals(
-        1, DefaultPrimitiveDefinition.single("family", FhirType.STRING).getMaxCardinality());
-    assertTrue(DefaultPrimitiveDefinition.of("given", FhirType.STRING, -1).isRepeating());
+        1, DefaultPrimitiveDefinition.single("family", FHIRDefinedType.STRING).getMaxCardinality());
+    assertTrue(DefaultPrimitiveDefinition.of("given", FHIRDefinedType.STRING, -1).isRepeating());
     assertEquals(
-        -1, DefaultPrimitiveDefinition.of("given", FhirType.STRING, -1).getMaxCardinality());
+        -1, DefaultPrimitiveDefinition.of("given", FHIRDefinedType.STRING, -1).getMaxCardinality());
   }
 }

@@ -19,7 +19,6 @@ package au.csiro.pathling.io.transform;
 
 import au.csiro.pathling.definition.DefinitionContext;
 import au.csiro.pathling.definition.ElementDefinition;
-import au.csiro.pathling.definition.FhirType;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.schema.DefinitionCanonicalStructure;
 import au.csiro.pathling.schema.LayoutEntry;
@@ -46,6 +45,7 @@ import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * Reads FHIR JSON and transforms it into the definition-derived schema (R-008).
@@ -250,7 +250,7 @@ public final class ResourceTransformer {
       @Nonnull final DataType observed,
       @Nonnull final String path) {
     final ElementDefinition element = entry.getElement().orElseThrow();
-    final FhirType type = element.getFhirType().orElseThrow();
+    final FHIRDefinedType type = element.getFhirType().orElseThrow();
     if (PrimitiveTypes.isPrimitive(type)) {
       // Every primitive arrives as text, so the definitions are what turn it back into a number or
       // a boolean, and what decide whether the text is one.

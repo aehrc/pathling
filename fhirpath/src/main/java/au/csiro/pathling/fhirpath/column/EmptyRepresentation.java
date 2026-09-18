@@ -19,11 +19,11 @@ package au.csiro.pathling.fhirpath.column;
 
 import static org.apache.spark.sql.functions.lit;
 
-import au.csiro.pathling.definition.FhirType;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import java.util.function.UnaryOperator;
 import org.apache.spark.sql.Column;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * A column representation that represents an empty/null value. Unlike {@link
@@ -96,7 +96,7 @@ public class EmptyRepresentation extends ColumnRepresentation {
   @Override
   @Nonnull
   public ColumnRepresentation traverse(
-      @Nonnull final String fieldName, @Nonnull final Optional<FhirType> fhirType) {
+      @Nonnull final String fieldName, @Nonnull final Optional<FHIRDefinedType> fhirType) {
     // Traversing an empty representation returns another empty representation
     return this;
   }

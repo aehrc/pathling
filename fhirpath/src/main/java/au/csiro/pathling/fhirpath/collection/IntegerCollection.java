@@ -20,7 +20,6 @@ package au.csiro.pathling.fhirpath.collection;
 import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 
 import au.csiro.pathling.annotations.UsedByReflection;
-import au.csiro.pathling.definition.FhirType;
 import au.csiro.pathling.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
@@ -36,6 +35,7 @@ import java.util.Set;
 import java.util.function.Function;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.types.DataTypes;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.IntegerType;
 import org.hl7.fhir.r4.model.PositiveIntType;
 import org.hl7.fhir.r4.model.UnsignedIntType;
@@ -48,8 +48,8 @@ import org.hl7.fhir.r4.model.UnsignedIntType;
 public class IntegerCollection extends Collection
     implements Comparable, Numeric, StringCoercible, Materializable {
 
-  private static final Set<FhirType> INTEGER_TYPES =
-      Set.of(FhirType.INTEGER, FhirType.UNSIGNEDINT, FhirType.POSITIVEINT);
+  private static final Set<FHIRDefinedType> INTEGER_TYPES =
+      Set.of(FHIRDefinedType.INTEGER, FHIRDefinedType.UNSIGNEDINT, FHIRDefinedType.POSITIVEINT);
 
   private static final ImmutableSet<Class<? extends Comparable>> COMPARABLE_TYPES =
       ImmutableSet.of(IntegerCollection.class, DecimalCollection.class);
@@ -66,7 +66,7 @@ public class IntegerCollection extends Collection
   protected IntegerCollection(
       @Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
-      @Nonnull final Optional<FhirType> fhirType,
+      @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final Optional<? extends NodeDefinition> definition,
       @Nonnull final Optional<Column> extensionMapColumn) {
     super(columnRepresentation, type, fhirType, definition, extensionMapColumn);
@@ -92,7 +92,7 @@ public class IntegerCollection extends Collection
     return new IntegerCollection(
         columnRepresentation,
         Optional.of(FhirPathType.INTEGER),
-        Optional.of(FhirType.INTEGER),
+        Optional.of(FHIRDefinedType.INTEGER),
         definition,
         Optional.empty());
   }
@@ -247,7 +247,7 @@ public class IntegerCollection extends Collection
   public boolean convertibleTo(@Nonnull final Collection other) {
     return other
         .getFhirType()
-        .filter(t -> FhirType.DECIMAL.equals(t) || FhirType.QUANTITY.equals(t))
+        .filter(t -> t == FHIRDefinedType.DECIMAL || t == FHIRDefinedType.QUANTITY)
         .map(t -> true)
         .orElseGet(() -> super.convertibleTo(other));
   }

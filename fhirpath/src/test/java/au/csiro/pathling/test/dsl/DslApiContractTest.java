@@ -19,10 +19,10 @@ package au.csiro.pathling.test.dsl;
 
 import static au.csiro.pathling.test.dsl.TypeInfoExpectation.toTypeInfo;
 
-import au.csiro.pathling.definition.FhirType;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Patient;
 import org.junit.jupiter.api.DynamicTest;
 
@@ -81,7 +81,7 @@ public class DslApiContractTest extends FhirPathDslTestBase {
                     .elementArray(
                         "people", p1 -> p1.string("name", "Alice"), p2 -> p2.string("name", "Bob"))
                     .element("ref", r -> r.fhirReference().string("reference", "Patient/1"))
-                    .element("typed", t -> t.fhirType(FhirType.QUANTITY))
+                    .element("typed", t -> t.fhirType(FHIRDefinedType.QUANTITY))
                     .element("chosen", c -> c.choice("value")))
         .group("assertion surface")
         .testEquals("test", "singleString", "testEquals with a scalar expectation")

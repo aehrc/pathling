@@ -17,7 +17,6 @@
 
 package au.csiro.pathling.fhirpath;
 
-import au.csiro.pathling.definition.FhirType;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.CodingCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
@@ -39,6 +38,7 @@ import java.util.Optional;
 import lombok.Getter;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * Represents one of the types defined within the FHIRPath specification.
@@ -49,34 +49,39 @@ import org.apache.spark.sql.types.DataTypes;
 public enum FhirPathType {
 
   /** Boolean FHIRPath type. */
-  BOOLEAN("Boolean", DataTypes.BooleanType, BooleanCollection.class, FhirType.BOOLEAN),
+  BOOLEAN("Boolean", DataTypes.BooleanType, BooleanCollection.class, FHIRDefinedType.BOOLEAN),
 
   /** String FHIRPath type. */
-  STRING("String", DataTypes.StringType, StringCollection.class, FhirType.STRING),
+  STRING("String", DataTypes.StringType, StringCollection.class, FHIRDefinedType.STRING),
 
   /** Integer FHIRPath type. */
-  INTEGER("Integer", DataTypes.IntegerType, IntegerCollection.class, FhirType.INTEGER),
+  INTEGER("Integer", DataTypes.IntegerType, IntegerCollection.class, FHIRDefinedType.INTEGER),
 
   /** Decimal FHIRPath type. */
-  DECIMAL("Decimal", DecimalCollection.getDecimalType(), DecimalCollection.class, FhirType.DECIMAL),
+  DECIMAL(
+      "Decimal",
+      DecimalCollection.getDecimalType(),
+      DecimalCollection.class,
+      FHIRDefinedType.DECIMAL),
 
   /** Date FHIRPath type. */
-  DATE("Date", DataTypes.StringType, DateCollection.class, FhirType.DATE),
+  DATE("Date", DataTypes.StringType, DateCollection.class, FHIRDefinedType.DATE),
 
   /** DateTime FHIRPath type. */
-  DATETIME("DateTime", DataTypes.StringType, DateTimeCollection.class, FhirType.DATETIME),
+  DATETIME("DateTime", DataTypes.StringType, DateTimeCollection.class, FHIRDefinedType.DATETIME),
 
   /** Time FHIRPath type. */
-  TIME("Time", DataTypes.StringType, TimeCollection.class, FhirType.TIME),
+  TIME("Time", DataTypes.StringType, TimeCollection.class, FHIRDefinedType.TIME),
 
   /** Coding FHIRPath type. */
-  CODING("Coding", CodingSchema.codingStructType(), CodingCollection.class, FhirType.CODING),
+  CODING("Coding", CodingSchema.codingStructType(), CodingCollection.class, FHIRDefinedType.CODING),
 
   /** Quantity FHIRPath type. */
-  QUANTITY("Quantity", QuantityEncoding.dataType(), QuantityCollection.class, FhirType.QUANTITY),
+  QUANTITY(
+      "Quantity", QuantityEncoding.dataType(), QuantityCollection.class, FHIRDefinedType.QUANTITY),
 
   /** Nothing FHIRPath type (empty collection). */
-  NOTHING("Nothing", DataTypes.NullType, EmptyCollection.class, FhirType.NULL);
+  NOTHING("Nothing", DataTypes.NullType, EmptyCollection.class, FHIRDefinedType.NULL);
 
   @Nonnull private final String typeSpecifier;
 
@@ -84,40 +89,40 @@ public enum FhirPathType {
 
   @Nonnull private final Class<? extends Collection> collectionClass;
 
-  @Nonnull private final FhirType defaultFhirType;
+  @Nonnull private final FHIRDefinedType defaultFhirType;
 
   // Maps FHIR types to FhirPathType
   @Nonnull
-  private static final Map<FhirType, FhirPathType> FHIR_TYPE_TO_FHIR_PATH_TYPE =
-      new ImmutableMap.Builder<FhirType, FhirPathType>()
-          .put(FhirType.BOOLEAN, BOOLEAN)
-          .put(FhirType.STRING, STRING)
-          .put(FhirType.URI, STRING)
-          .put(FhirType.URL, STRING)
-          .put(FhirType.CANONICAL, STRING)
-          .put(FhirType.CODE, STRING)
-          .put(FhirType.OID, STRING)
-          .put(FhirType.ID, STRING)
-          .put(FhirType.UUID, STRING)
-          .put(FhirType.MARKDOWN, STRING)
-          .put(FhirType.BASE64BINARY, STRING)
-          .put(FhirType.INTEGER, INTEGER)
-          .put(FhirType.UNSIGNEDINT, INTEGER)
-          .put(FhirType.POSITIVEINT, INTEGER)
-          .put(FhirType.DECIMAL, DECIMAL)
-          .put(FhirType.DATE, DATE)
-          .put(FhirType.DATETIME, DATETIME)
-          .put(FhirType.INSTANT, DATETIME)
-          .put(FhirType.TIME, TIME)
-          .put(FhirType.CODING, CODING)
-          .put(FhirType.QUANTITY, QUANTITY)
+  private static final Map<FHIRDefinedType, FhirPathType> FHIR_TYPE_TO_FHIR_PATH_TYPE =
+      new ImmutableMap.Builder<FHIRDefinedType, FhirPathType>()
+          .put(FHIRDefinedType.BOOLEAN, BOOLEAN)
+          .put(FHIRDefinedType.STRING, STRING)
+          .put(FHIRDefinedType.URI, STRING)
+          .put(FHIRDefinedType.URL, STRING)
+          .put(FHIRDefinedType.CANONICAL, STRING)
+          .put(FHIRDefinedType.CODE, STRING)
+          .put(FHIRDefinedType.OID, STRING)
+          .put(FHIRDefinedType.ID, STRING)
+          .put(FHIRDefinedType.UUID, STRING)
+          .put(FHIRDefinedType.MARKDOWN, STRING)
+          .put(FHIRDefinedType.BASE64BINARY, STRING)
+          .put(FHIRDefinedType.INTEGER, INTEGER)
+          .put(FHIRDefinedType.UNSIGNEDINT, INTEGER)
+          .put(FHIRDefinedType.POSITIVEINT, INTEGER)
+          .put(FHIRDefinedType.DECIMAL, DECIMAL)
+          .put(FHIRDefinedType.DATE, DATE)
+          .put(FHIRDefinedType.DATETIME, DATETIME)
+          .put(FHIRDefinedType.INSTANT, DATETIME)
+          .put(FHIRDefinedType.TIME, TIME)
+          .put(FHIRDefinedType.CODING, CODING)
+          .put(FHIRDefinedType.QUANTITY, QUANTITY)
           .build();
 
   FhirPathType(
       @Nonnull final String typeSpecifier,
       @Nonnull final DataType sqlDataType,
       @Nonnull final Class<? extends Collection> collectionClass,
-      @Nonnull final FhirType defaultFhirType) {
+      @Nonnull final FHIRDefinedType defaultFhirType) {
     this.typeSpecifier = typeSpecifier;
     this.sqlDataType = sqlDataType;
     this.collectionClass = collectionClass;
@@ -142,12 +147,12 @@ public enum FhirPathType {
   /**
    * Gets the FhirPathType for a given FHIR type.
    *
-   * @param fhirType a {@link FhirType}
+   * @param fhirType a {@link FHIRDefinedType}
    * @return the corresponding {@link FhirPathType} according to the rules of automatic conversion
    *     within the FHIR spec
    */
   @Nonnull
-  public static Optional<FhirPathType> forFhirType(@Nonnull final FhirType fhirType) {
+  public static Optional<FhirPathType> forFhirType(@Nonnull final FHIRDefinedType fhirType) {
     return Optional.ofNullable(FHIR_TYPE_TO_FHIR_PATH_TYPE.get(fhirType));
   }
 
@@ -157,7 +162,7 @@ public enum FhirPathType {
    * @return a list of FHIR types that correspond to this FhirPathType
    */
   @Nonnull
-  public List<FhirType> getFhirTypes() {
+  public List<FHIRDefinedType> getFhirTypes() {
     // This method is currently returning an empty list
     return FHIR_TYPE_TO_FHIR_PATH_TYPE.entrySet().stream()
         .filter(entry -> entry.getValue() == this)

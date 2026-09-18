@@ -17,7 +17,6 @@
 
 package au.csiro.pathling.fhirpath.collection;
 
-import au.csiro.pathling.definition.FhirType;
 import au.csiro.pathling.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
@@ -30,6 +29,7 @@ import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import java.util.function.Function;
 import org.apache.spark.sql.Column;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /** Represents an empty collection. */
 public class EmptyCollection extends Collection
@@ -55,7 +55,7 @@ public class EmptyCollection extends Collection
   protected EmptyCollection(
       @Nonnull final ColumnRepresentation column,
       @Nonnull final Optional<FhirPathType> type,
-      @Nonnull final Optional<FhirType> fhirType,
+      @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final Optional<? extends NodeDefinition> definition,
       @Nonnull final Optional<Column> extensionMapColumn) {
     super(column, type, fhirType, definition, extensionMapColumn);

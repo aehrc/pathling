@@ -18,7 +18,6 @@
 package au.csiro.pathling.io.transform;
 
 import au.csiro.pathling.definition.ElementDefinition;
-import au.csiro.pathling.definition.FhirType;
 import au.csiro.pathling.schema.DefinitionCanonicalStructure;
 import au.csiro.pathling.schema.LayoutEntry;
 import jakarta.annotation.Nonnull;
@@ -30,6 +29,7 @@ import org.apache.spark.sql.types.ArrayType;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * Finds the content the bounds configured for the dense mode would drop (FR-017).
@@ -145,8 +145,9 @@ public final class BoundsCheck {
    */
   @Nonnull
   private static String boundThatDropsIt(@Nonnull final LayoutEntry entry) {
-    final Optional<FhirType> type = entry.getElement().flatMap(ElementDefinition::getFhirType);
-    if (type.filter(FhirType.EXTENSION::equals).isPresent()) {
+    final Optional<FHIRDefinedType> type =
+        entry.getElement().flatMap(ElementDefinition::getFhirType);
+    if (type.filter(FHIRDefinedType.EXTENSION::equals).isPresent()) {
       return "extensions are not carried by this schema";
     }
     if (entry.isFromOpenChoice()) {

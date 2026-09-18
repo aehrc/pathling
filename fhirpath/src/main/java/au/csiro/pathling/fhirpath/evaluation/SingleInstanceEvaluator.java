@@ -18,7 +18,6 @@
 package au.csiro.pathling.fhirpath.evaluation;
 
 import au.csiro.pathling.config.FhirpathConfiguration;
-import au.csiro.pathling.definition.FhirType;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.ListTraceCollector;
@@ -269,7 +268,7 @@ public class SingleInstanceEvaluator {
     // Prefer the FHIR defined type code (e.g., "HumanName", "code", "string").
     return collection
         .getFhirType()
-        .map(FhirType::toCode)
+        .map(org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType::toCode)
         .orElseGet(
             () -> collection.getType().map(FhirPathType::getTypeSpecifier).orElse("unknown"));
   }

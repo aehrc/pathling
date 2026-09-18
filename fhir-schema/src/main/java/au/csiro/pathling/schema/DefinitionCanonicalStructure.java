@@ -21,7 +21,6 @@ import au.csiro.pathling.definition.ChildDefinition;
 import au.csiro.pathling.definition.ChoiceDefinition;
 import au.csiro.pathling.definition.DefinitionContext;
 import au.csiro.pathling.definition.ElementDefinition;
-import au.csiro.pathling.definition.FhirType;
 import au.csiro.pathling.definition.NodeDefinition;
 import au.csiro.pathling.utilities.CanonicalStructure;
 import jakarta.annotation.Nonnull;
@@ -31,6 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * The canonical structure of the stored layout, taken from the FHIR definitions.
@@ -246,7 +246,7 @@ public final class DefinitionCanonicalStructure implements CanonicalStructure {
       // Contained resources are not represented in this layout.
       return;
     }
-    final Optional<FhirType> type = element.getFhirType();
+    final Optional<FHIRDefinedType> type = element.getFhirType();
     if (type.isEmpty()) {
       // An element the definitions do not give a type cannot be represented.
       return;

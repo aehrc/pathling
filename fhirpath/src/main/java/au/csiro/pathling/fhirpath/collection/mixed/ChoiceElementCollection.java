@@ -19,7 +19,6 @@ package au.csiro.pathling.fhirpath.collection.mixed;
 
 import au.csiro.pathling.definition.ChoiceDefinition;
 import au.csiro.pathling.definition.ElementDefinition;
-import au.csiro.pathling.definition.FhirType;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.TypeSpecifier;
@@ -32,6 +31,7 @@ import java.util.List;
 import java.util.Optional;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /** A collection representing a choice element in FHIR. */
 @Value
@@ -77,19 +77,19 @@ public class ChoiceElementCollection extends MixedCollection implements Material
   }
 
   @Nonnull
-  private Collection resolveFhirType(@Nonnull final FhirType fhirType) {
+  private Collection resolveFhirType(@Nonnull final FHIRDefinedType fhirType) {
     return resolveElement(choiceDefinition.getChildByType(fhirType.toCode()));
   }
 
   @Nonnull
   private Collection resolveSystemType(@Nonnull final FhirPathType fhirpathType) {
 
-    // find the list of FhirTypes that match this FhirPathType
-    final List<FhirType> fhirPathTypes = fhirpathType.getFhirTypes();
-    // find the element definitions that match the FhirTypes in this choice element
+    // find the list of FHIRDefinedTypes that match this FhirPathType
+    final List<FHIRDefinedType> fhirPathTypes = fhirpathType.getFhirTypes();
+    // find the element definitions that match the FHIRDefinedTypes in this choice element
     final ElementDefinition[] selectedTypes =
         fhirPathTypes.stream()
-            .map(FhirType::toCode)
+            .map(FHIRDefinedType::toCode)
             .flatMap(ft -> choiceDefinition.getChildByType(ft).stream())
             .toArray(ElementDefinition[]::new);
 

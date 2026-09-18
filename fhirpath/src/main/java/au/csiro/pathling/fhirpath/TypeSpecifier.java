@@ -17,7 +17,6 @@
 
 package au.csiro.pathling.fhirpath;
 
-import au.csiro.pathling.definition.FhirType;
 import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.Map;
@@ -25,6 +24,7 @@ import java.util.Optional;
 import java.util.function.Predicate;
 import lombok.Value;
 import org.hl7.fhir.exceptions.FHIRException;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
@@ -115,11 +115,11 @@ public class TypeSpecifier {
    * @throws IllegalStateException if this type specifier is not a FHIR type
    */
   @Nonnull
-  public FhirType toFhirType() {
+  public FHIRDefinedType toFhirType() {
     if (!isFhirType()) {
       throw new IllegalStateException("Not a FHIR type: " + this);
     }
-    return FhirType.of(typeName);
+    return FHIRDefinedType.fromCode(typeName);
   }
 
   /**
@@ -165,7 +165,11 @@ public class TypeSpecifier {
   }
 
   private static boolean isValidFhirType(final String typeName) {
-    return FhirTypes.resolve(typeName).isPresent();
+    try {
+      return FHIRDefinedType.fromCode(typeName) != null;
+    } catch (final FHIRException e) {
+      return false;
+    }
   }
 
   private static boolean isValidSystemType(final String typeName) {

@@ -20,7 +20,6 @@ package au.csiro.pathling.definition.fhir;
 import static au.csiro.pathling.utilities.Functions.maybeCast;
 
 import au.csiro.pathling.definition.ChildDefinition;
-import au.csiro.pathling.definition.FhirType;
 import au.csiro.pathling.definition.NodeDefinition;
 import ca.uhn.fhir.context.BaseRuntimeChildDefinition;
 import ca.uhn.fhir.context.BaseRuntimeElementCompositeDefinition;
@@ -34,6 +33,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.tuple.Pair;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * Common behaviour for all node definitions.
@@ -134,23 +134,21 @@ abstract class BaseFhirNodeDefinition<D extends BaseRuntimeElementDefinition<?>>
   }
 
   @Nonnull
-  public Optional<FhirType> getFhirType() {
+  public Optional<FHIRDefinedType> getFhirType() {
     return getFhirTypeFromElementDefinition(elementDefinition);
   }
 
   @Nonnull
-  public static Optional<FhirType> getFhirTypeFromElementDefinition(
+  public static Optional<FHIRDefinedType> getFhirTypeFromElementDefinition(
       @Nonnull final BaseRuntimeElementDefinition<?> elementDefinition) {
-    // The type code is taken from the HAPI annotation as it stands, so that a type the R4
-    // enumeration does not contain is reported rather than rejected.
     final Class<?> elementClass = elementDefinition.getImplementingClass();
     return Optional.ofNullable(elementClass.getAnnotation(DatatypeDef.class))
         .map(DatatypeDef::name)
-        .map(FhirType::of)
+        .map(FHIRDefinedType::fromCode)
         // special case for backbone elements
         .or(
             () ->
                 Optional.ofNullable(elementClass.getAnnotation(Block.class))
-                    .map(t -> FhirType.BACKBONEELEMENT));
+                    .map(t -> FHIRDefinedType.BACKBONEELEMENT));
   }
 }

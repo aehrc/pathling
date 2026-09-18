@@ -19,7 +19,6 @@ package au.csiro.pathling.io.egress;
 
 import au.csiro.pathling.definition.DefinitionContext;
 import au.csiro.pathling.definition.ElementDefinition;
-import au.csiro.pathling.definition.FhirType;
 import au.csiro.pathling.io.transform.DecimalTransform;
 import au.csiro.pathling.schema.DefinitionCanonicalStructure;
 import au.csiro.pathling.schema.LayoutEntry;
@@ -38,6 +37,7 @@ import org.apache.spark.sql.types.ArrayType;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * Writes resources stored in this layout back out as FHIR JSON (FR-016, FR-019).
@@ -146,9 +146,9 @@ public final class ResourceSerialiser {
       return EmptyPruning.array(
           functions.transform(stored, element -> value(node, entry, element, array.elementType())));
     }
-    final FhirType fhirType =
+    final FHIRDefinedType fhirType =
         entry.getElement().flatMap(ElementDefinition::getFhirType).orElseThrow();
-    if (FhirType.DECIMAL.equals(fhirType)) {
+    if (FHIRDefinedType.DECIMAL.equals(fhirType)) {
       return DecimalTransform.markedValue(stored);
     }
     if (PrimitiveTypes.isPrimitive(fhirType)) {

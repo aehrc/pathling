@@ -460,7 +460,7 @@ class SearchColumnBuilderTest {
 
   @Test
   void uriSearch_fhirDefinedTypeUri_createsFilter() {
-    // CarePlan.instantiatesUri resolves to FhirType.URI. Verifies that the search column
+    // CarePlan.instantiatesUri resolves to FHIRDefinedType.URI. Verifies that the search column
     // builder can create a filter for a URI-type search parameter with this FHIR type.
     final ObjectDataSource dataSource = createCarePlanDataSource();
     final Dataset<Row> dataset = dataSource.read("CarePlan");
@@ -494,7 +494,7 @@ class SearchColumnBuilderTest {
 
   @Test
   void uriSearch_fhirDefinedTypeUrl_createsFilter() {
-    // CapabilityStatement.url resolves to FhirType.URL. Verifies that the search column
+    // CapabilityStatement.url resolves to FHIRDefinedType.URL. Verifies that the search column
     // builder can create a filter for a URI-type search parameter with this FHIR type.
     final ObjectDataSource dataSource = createCapabilityStatementDataSource();
     final Dataset<Row> dataset = dataSource.read("CapabilityStatement");

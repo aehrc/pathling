@@ -19,11 +19,11 @@ package au.csiro.pathling.definition.defaults;
 
 import au.csiro.pathling.definition.ChildDefinition;
 import au.csiro.pathling.definition.ElementDefinition;
-import au.csiro.pathling.definition.FhirType;
 import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.Optional;
 import lombok.Value;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * The default implementation of a primitive data type allowing for explicit definition of its
@@ -40,18 +40,29 @@ public class DefaultPrimitiveDefinition implements ElementDefinition {
    * @return a new DefaultPrimitiveDefinition with cardinality 1
    */
   @Nonnull
-  public static DefaultPrimitiveDefinition single(final String name, final FhirType type) {
+  public static DefaultPrimitiveDefinition single(final String name, final FHIRDefinedType type) {
     return new DefaultPrimitiveDefinition(name, type, 1);
   }
 
   String name;
-  FhirType type;
-  int maxCardinality;
+  FHIRDefinedType type;
+  int cardinality;
 
   @Override
   @Nonnull
   public String getElementName() {
     return name;
+  }
+
+  /**
+   * The field keeps the name it had before the interface declared this method, so that the accessor
+   * Lombok derives from it stays the one the existing callers use.
+   *
+   * @return the maximum number of values this element may hold
+   */
+  @Override
+  public int getMaxCardinality() {
+    return cardinality;
   }
 
   @Override
@@ -68,7 +79,7 @@ public class DefaultPrimitiveDefinition implements ElementDefinition {
 
   @Override
   @Nonnull
-  public Optional<FhirType> getFhirType() {
+  public Optional<FHIRDefinedType> getFhirType() {
     return Optional.of(type);
   }
 }

@@ -22,7 +22,6 @@ import static java.util.Objects.nonNull;
 import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.definition.ChildDefinition;
-import au.csiro.pathling.definition.FhirType;
 import au.csiro.pathling.definition.ResourceDefinition;
 import au.csiro.pathling.definition.defaults.DefaultChoiceDefinition;
 import au.csiro.pathling.definition.defaults.DefaultCompositeDefinition;
@@ -68,6 +67,7 @@ import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.DecimalType;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.Yaml;
@@ -99,25 +99,15 @@ public class YamlSupport {
         throws IOException {
       if (nonNull(fhirLiteral.getLiteral())) {
         @Nonnull final String literalValue = requireNonNull(fhirLiteral.getLiteral());
-        final FhirType literalType = fhirLiteral.getType();
-        if (FhirType.NULL.equals(literalType)) {
-          gen.writeNull();
-        } else if (FhirType.INTEGER.equals(literalType)
-            || FhirType.DECIMAL.equals(literalType)
-            || FhirType.BOOLEAN.equals(literalType)) {
-          gen.writeRawValue(literalValue);
-        } else if (FhirType.TIME.equals(literalType)
-            || FhirType.DATE.equals(literalType)
-            || FhirType.DATETIME.equals(literalType)) {
-          gen.writeString(literalValue);
-        } else if (FhirType.STRING.equals(literalType)) {
-          gen.writeString(StringCollection.parseStringLiteral(literalValue));
-        } else if (FhirType.CODING.equals(literalType)) {
-          writeCoding(literalValue, gen);
-        } else if (FhirType.QUANTITY.equals(literalType)) {
-          writeQuantity(literalValue, gen);
-        } else {
-          throw new IllegalArgumentException("Unsupported FHIR type: " + literalType);
+        switch (fhirLiteral.getType()) {
+          case NULL -> gen.writeNull();
+          case INTEGER, DECIMAL, BOOLEAN -> gen.writeRawValue(literalValue);
+          case TIME, DATE, DATETIME -> gen.writeString(literalValue);
+          case STRING -> gen.writeString(StringCollection.parseStringLiteral(literalValue));
+          case CODING -> writeCoding(literalValue, gen);
+          case QUANTITY -> writeQuantity(literalValue, gen);
+          default ->
+              throw new IllegalArgumentException("Unsupported FHIR type: " + fhirLiteral.getType());
         }
       } else {
         gen.writeNull();
@@ -181,7 +171,7 @@ public class YamlSupport {
     public FhirConstructor() {
       super(new LoaderOptions());
       // Register a generic handler for FHIR types
-      for (final FhirType type : FHIR_TO_SQL.keySet()) {
+      for (final FHIRDefinedType type : FHIR_TO_SQL.keySet()) {
         this.yamlConstructors.put(
             new Tag(FhirTypedLiteral.toTag(type)), new ConstructFhirTypedLiteral(type));
       }
@@ -190,7 +180,7 @@ public class YamlSupport {
     @AllArgsConstructor
     private static class ConstructFhirTypedLiteral extends AbstractConstruct {
 
-      private final FhirType type;
+      private final FHIRDefinedType type;
 
       @Override
       public Object construct(final Node node) {
@@ -219,20 +209,20 @@ public class YamlSupport {
     }
   }
 
-  private static final Map<FhirType, DataType> FHIR_TO_SQL =
+  private static final Map<FHIRDefinedType, DataType> FHIR_TO_SQL =
       Map.ofEntries(
-          Map.entry(FhirType.STRING, DataTypes.StringType),
-          Map.entry(FhirType.URI, DataTypes.StringType),
-          Map.entry(FhirType.CODE, DataTypes.StringType),
-          Map.entry(FhirType.INTEGER, DataTypes.IntegerType),
-          Map.entry(FhirType.BOOLEAN, DataTypes.BooleanType),
-          Map.entry(FhirType.DECIMAL, DecimalCollection.DECIMAL_TYPE),
-          Map.entry(FhirType.CODING, CodingSchema.codingStructType()),
-          Map.entry(FhirType.QUANTITY, QuantityEncoding.dataType()),
-          Map.entry(FhirType.TIME, DataTypes.StringType),
-          Map.entry(FhirType.DATETIME, DataTypes.StringType),
-          Map.entry(FhirType.DATE, DataTypes.StringType),
-          Map.entry(FhirType.NULL, DataTypes.NullType));
+          Map.entry(FHIRDefinedType.STRING, DataTypes.StringType),
+          Map.entry(FHIRDefinedType.URI, DataTypes.StringType),
+          Map.entry(FHIRDefinedType.CODE, DataTypes.StringType),
+          Map.entry(FHIRDefinedType.INTEGER, DataTypes.IntegerType),
+          Map.entry(FHIRDefinedType.BOOLEAN, DataTypes.BooleanType),
+          Map.entry(FHIRDefinedType.DECIMAL, DecimalCollection.DECIMAL_TYPE),
+          Map.entry(FHIRDefinedType.CODING, CodingSchema.codingStructType()),
+          Map.entry(FHIRDefinedType.QUANTITY, QuantityEncoding.dataType()),
+          Map.entry(FHIRDefinedType.TIME, DataTypes.StringType),
+          Map.entry(FHIRDefinedType.DATETIME, DataTypes.StringType),
+          Map.entry(FHIRDefinedType.DATE, DataTypes.StringType),
+          Map.entry(FHIRDefinedType.NULL, DataTypes.NullType));
 
   public static final Yaml YAML = new Yaml(new FhirConstructor(), new FhirRepresenter());
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
@@ -318,13 +308,12 @@ public class YamlSupport {
     }
 
     try {
-      if (FhirType.CODING.equals(typedLiteral.getType())) {
-        return CodingCollection.fromLiteral(typedLiteral.getLiteral()).getColumnValue();
-      } else if (FhirType.QUANTITY.equals(typedLiteral.getType())) {
-        return QuantityCollection.fromLiteral(typedLiteral.getLiteral()).getColumnValue();
-      } else {
-        throw new IllegalArgumentException("Unsupported FHIR type: " + typedLiteral.getType());
-      }
+      return switch (typedLiteral.getType()) {
+        case CODING -> CodingCollection.fromLiteral(typedLiteral.getLiteral()).getColumnValue();
+        case QUANTITY -> QuantityCollection.fromLiteral(typedLiteral.getLiteral()).getColumnValue();
+        default ->
+            throw new IllegalArgumentException("Unsupported FHIR type: " + typedLiteral.getType());
+      };
     } catch (final Exception e) {
       throw new IllegalArgumentException("Failed to convert typed literal: " + typedLiteral, e);
     }
@@ -377,8 +366,8 @@ public class YamlSupport {
         DefaultResourceTag.of(resourceCode),
         Stream.concat(
                 Stream.of(
-                        DefaultPrimitiveDefinition.single("id", FhirType.STRING),
-                        DefaultPrimitiveDefinition.single("id_versioned", FhirType.STRING))
+                        DefaultPrimitiveDefinition.single("id", FHIRDefinedType.STRING),
+                        DefaultPrimitiveDefinition.single("id_versioned", FHIRDefinedType.STRING))
                     .filter(field -> !definedFieldNames.contains(field.getName())),
                 definedFields.stream())
             .toList());
@@ -460,28 +449,28 @@ public class YamlSupport {
   private static ChildDefinition elementFromValue(
       @Nonnull final String key, @Nullable final Object value, final int cardinality) {
     if (isNull(value)) {
-      return DefaultPrimitiveDefinition.of(key, FhirType.NULL, cardinality);
+      return DefaultPrimitiveDefinition.of(key, FHIRDefinedType.NULL, cardinality);
     } else if (value instanceof final FhirTypedLiteral typedLiteral) {
-      // Use the FhirType directly from the typed literal
-      if (FhirType.CODING.equals(typedLiteral.getType())) {
+      // Use the FHIRDefinedType directly from the typed literal
+      if (typedLiteral.getType() == FHIRDefinedType.CODING) {
         return CodingCollection.createDefinition(key, cardinality);
-      } else if (FhirType.QUANTITY.equals(typedLiteral.getType())) {
+      } else if (typedLiteral.getType() == FHIRDefinedType.QUANTITY) {
         return QuantityCollection.createDefinition(key, cardinality);
       } else {
         return DefaultPrimitiveDefinition.of(key, typedLiteral.getType(), cardinality);
       }
     } else if (value instanceof String) {
-      return DefaultPrimitiveDefinition.of(key, FhirType.STRING, cardinality);
+      return DefaultPrimitiveDefinition.of(key, FHIRDefinedType.STRING, cardinality);
     } else if (value instanceof Integer) {
-      return DefaultPrimitiveDefinition.of(key, FhirType.INTEGER, cardinality);
+      return DefaultPrimitiveDefinition.of(key, FHIRDefinedType.INTEGER, cardinality);
     } else if (value instanceof Boolean) {
-      return DefaultPrimitiveDefinition.of(key, FhirType.BOOLEAN, cardinality);
+      return DefaultPrimitiveDefinition.of(key, FHIRDefinedType.BOOLEAN, cardinality);
     } else if (value instanceof Double) {
-      return DefaultPrimitiveDefinition.of(key, FhirType.DECIMAL, cardinality);
+      return DefaultPrimitiveDefinition.of(key, FHIRDefinedType.DECIMAL, cardinality);
     } else if (value instanceof final Map<?, ?> map) {
       return Optional.ofNullable(map.get(FHIR_TYPE_ANNOTATION))
           .map(Object::toString)
-          .map(FhirType::of)
+          .map(FHIRDefinedType::fromCode)
           .map(
               fhirType ->
                   DefaultCompositeDefinition.of(
@@ -521,7 +510,7 @@ public class YamlSupport {
         return Stream.of(
             new StructField(
                 primitiveDefinition.getName(),
-                primitiveDefinition.getMaxCardinality() < 0
+                primitiveDefinition.getCardinality() < 0
                     ? new ArrayType(elementType, true)
                     : elementType,
                 true,
@@ -537,7 +526,7 @@ public class YamlSupport {
         return Stream.of(
             new StructField(
                 compositeDefinition.getName(),
-                compositeDefinition.getMaxCardinality() < 0
+                compositeDefinition.getCardinality() < 0
                     ? new ArrayType(elementType, true)
                     : elementType,
                 true,

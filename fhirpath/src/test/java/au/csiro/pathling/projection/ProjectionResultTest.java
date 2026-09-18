@@ -20,7 +20,6 @@ package au.csiro.pathling.projection;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import au.csiro.pathling.definition.FhirType;
 import au.csiro.pathling.fhirpath.collection.CodingCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.DecimalCollection;
@@ -37,6 +36,7 @@ import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.junit.jupiter.api.Test;
 
 class ProjectionResultTest {
@@ -45,7 +45,7 @@ class ProjectionResultTest {
   private static ProjectedColumn column(
       @Nonnull final String name,
       final boolean isCollection,
-      @Nonnull final Optional<FhirType> fhirType,
+      @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final Optional<DataType> sqlType) {
     final RequestedColumn requested =
         new RequestedColumn(new Traversal(name), name, isCollection, fhirType, sqlType);
@@ -70,7 +70,10 @@ class ProjectionResultTest {
     final ProjectionResult result =
         resultOf(
             column(
-                "amount", false, Optional.of(FhirType.INTEGER), Optional.of(DataTypes.LongType)));
+                "amount",
+                false,
+                Optional.of(FHIRDefinedType.INTEGER),
+                Optional.of(DataTypes.LongType)));
     final StructType schema = result.getSqlType();
     assertEquals(
         new StructType(
@@ -84,7 +87,7 @@ class ProjectionResultTest {
   @Test
   void usesExplicitFhirType() {
     final ProjectionResult result =
-        resultOf(column("name", false, Optional.of(FhirType.STRING), Optional.empty()));
+        resultOf(column("name", false, Optional.of(FHIRDefinedType.STRING), Optional.empty()));
     final StructType schema = result.getSqlType();
     assertEquals(DataTypes.StringType, schema.fields()[0].dataType());
     assertEquals("name", schema.fields()[0].name());
@@ -93,7 +96,7 @@ class ProjectionResultTest {
   @Test
   void wrapsCollectionFieldsInArrayType() {
     final ProjectionResult result =
-        resultOf(column("ids", true, Optional.of(FhirType.INTEGER), Optional.empty()));
+        resultOf(column("ids", true, Optional.of(FHIRDefinedType.INTEGER), Optional.empty()));
     final StructType schema = result.getSqlType();
     assertEquals(DataTypes.createArrayType(DataTypes.IntegerType), schema.fields()[0].dataType());
   }
@@ -110,9 +113,9 @@ class ProjectionResultTest {
   void preservesDeclarationOrderForMultipleColumns() {
     final ProjectionResult result =
         resultOf(
-            column("linkId", false, Optional.of(FhirType.STRING), Optional.empty()),
-            column("count", false, Optional.of(FhirType.INTEGER), Optional.empty()),
-            column("active", true, Optional.of(FhirType.BOOLEAN), Optional.empty()));
+            column("linkId", false, Optional.of(FHIRDefinedType.STRING), Optional.empty()),
+            column("count", false, Optional.of(FHIRDefinedType.INTEGER), Optional.empty()),
+            column("active", true, Optional.of(FHIRDefinedType.BOOLEAN), Optional.empty()));
     final StructType schema = result.getSqlType();
     assertEquals(3, schema.fields().length);
     assertEquals("linkId", schema.fields()[0].name());
@@ -126,12 +129,12 @@ class ProjectionResultTest {
   @Test
   void handlesComplexFhirTypes() {
     final StructType codingSchema =
-        resultOf(column("code", false, Optional.of(FhirType.CODING), Optional.empty()))
+        resultOf(column("code", false, Optional.of(FHIRDefinedType.CODING), Optional.empty()))
             .getSqlType();
     assertEquals(CodingSchema.codingStructType(), codingSchema.fields()[0].dataType());
 
     final StructType quantitySchema =
-        resultOf(column("amount", false, Optional.of(FhirType.QUANTITY), Optional.empty()))
+        resultOf(column("amount", false, Optional.of(FHIRDefinedType.QUANTITY), Optional.empty()))
             .getSqlType();
     assertEquals(QuantityEncoding.dataType(), quantitySchema.fields()[0].dataType());
   }
@@ -140,7 +143,8 @@ class ProjectionResultTest {
   void base64BinaryMapsToStringType() {
     // Previously mapped incorrectly to BinaryType; FHIR base64Binary is encoded as StringType.
     final ProjectionResult result =
-        resultOf(column("data", false, Optional.of(FhirType.BASE64BINARY), Optional.empty()));
+        resultOf(
+            column("data", false, Optional.of(FHIRDefinedType.BASE64BINARY), Optional.empty()));
     assertEquals(DataTypes.StringType, result.getSqlType().fields()[0].dataType());
   }
 
@@ -148,7 +152,7 @@ class ProjectionResultTest {
   void decimalMapsToDecimalType() {
     // Previously mapped incorrectly to StringType; FHIR decimal is encoded as DecimalType.
     final ProjectionResult result =
-        resultOf(column("amount", false, Optional.of(FhirType.DECIMAL), Optional.empty()));
+        resultOf(column("amount", false, Optional.of(FHIRDefinedType.DECIMAL), Optional.empty()));
     assertEquals(DecimalCollection.getDecimalType(), result.getSqlType().fields()[0].dataType());
   }
 
@@ -156,7 +160,8 @@ class ProjectionResultTest {
   void instantMapsToStringType() {
     // Previously mapped incorrectly to TimestampType; FHIR instant is encoded as StringType.
     final ProjectionResult result =
-        resultOf(column("timestamp", false, Optional.of(FhirType.INSTANT), Optional.empty()));
+        resultOf(
+            column("timestamp", false, Optional.of(FHIRDefinedType.INSTANT), Optional.empty()));
     assertEquals(DataTypes.StringType, result.getSqlType().fields()[0].dataType());
   }
 
