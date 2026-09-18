@@ -58,17 +58,4 @@ class FhirResourceDefinition extends BaseFhirNodeDefinition<RuntimeResourceDefin
     super(definition);
     this.resourceTag = FhirResourceTag.of(resourceCode, resourceType);
   }
-
-  /**
-   * Creates a FhirResourceDefinition from a standard FHIR ResourceType.
-   *
-   * @param resourceType the ResourceType that describes this resource
-   * @param definition the HAPI RuntimeResourceDefinition for this resource
-   */
-  public FhirResourceDefinition(
-      @Nonnull final ResourceType resourceType,
-      @Nonnull final RuntimeResourceDefinition definition) {
-    super(definition);
-    this.resourceTag = FhirResourceTag.of(resourceType);
-  }
 }

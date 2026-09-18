@@ -22,44 +22,36 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 import au.csiro.pathling.definition.ChildDefinition;
+import au.csiro.pathling.definition.DefinitionContext;
 import au.csiro.pathling.definition.ElementDefinition;
-import au.csiro.pathling.test.SpringBootUnitTest;
 import ca.uhn.fhir.context.FhirContext;
-import lombok.extern.slf4j.Slf4j;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
-import org.hl7.fhir.r4.model.Patient;
+import jakarta.annotation.Nonnull;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 
-@SpringBootUnitTest
-@Slf4j
+/**
+ * Tests that a reference resolves to a {@link FhirReferenceDefinition}, whichever route reaches it:
+ * directly, through a choice, or through the open choice of an extension.
+ */
 class NodeDefinitionTest {
 
-  @Autowired FhirContext fhirContext;
+  @Nonnull
+  private static final DefinitionContext DEFINITIONS =
+      FhirDefinitionContext.of(FhirContext.forR4());
 
   @Test
-  void testSimpleReference() {
-    // Test that choice with reference type returns the correct type of definition.
-    final FhirResourceDefinition conditionDefinition =
-        new FhirResourceDefinition(
-            ResourceType.CONDITION,
-            fhirContext.getResourceDefinition(ResourceType.CONDITION.toCode()));
-
+  void resolvesAPlainReferenceElement() {
     final ChildDefinition referenceDefinition =
-        conditionDefinition.getChildElement("subject").orElseThrow();
+        DEFINITIONS.findResourceDefinition("Condition").getChildElement("subject").orElseThrow();
     assertInstanceOf(FhirReferenceDefinition.class, referenceDefinition);
   }
 
   @Test
-  void testReferenceInChoiceValue() {
-    // Test that choice with reference type returns the correct type of definition.
-    final FhirResourceDefinition observationDefinition =
-        new FhirResourceDefinition(
-            ResourceType.MEDICATIONDISPENSE,
-            fhirContext.getResourceDefinition(ResourceType.MEDICATIONDISPENSE.toCode()));
-
+  void resolvesAReferenceVariantOfAChoice() {
     final ChildDefinition medicationValue =
-        observationDefinition.getChildElement("medication").orElseThrow();
+        DEFINITIONS
+            .findResourceDefinition("MedicationDispense")
+            .getChildElement("medication")
+            .orElseThrow();
     assertInstanceOf(FhirChoiceDefinition.class, medicationValue);
     final ElementDefinition referenceDefinition =
         ((FhirChoiceDefinition) medicationValue).getChildByType("Reference").orElseThrow();
@@ -68,15 +60,10 @@ class NodeDefinitionTest {
   }
 
   @Test
-  void testReferenceInExtensionValue() {
-    // Test that choice with reference type returns the correct type of definition in extension.
-    final FhirResourceDefinition patientDefinition =
-        new FhirResourceDefinition(
-            ResourceType.PATIENT, fhirContext.getResourceDefinition(Patient.class));
-
-    // Test that choice with reference type returns the correct type of definition in extension.
+  void resolvesAReferenceVariantOfAnExtensionsOpenChoice() {
     final ElementDefinition referenceDefinition =
-        patientDefinition
+        DEFINITIONS
+            .findResourceDefinition("Patient")
             .getChildElement("extension")
             .flatMap(extension -> extension.getChildElement("value"))
             .flatMap(maybeCast(FhirChoiceDefinition.class))

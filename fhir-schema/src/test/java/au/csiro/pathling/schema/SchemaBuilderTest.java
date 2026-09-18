@@ -158,7 +158,7 @@ class SchemaBuilderTest {
     assertTrue(extension.contains("url"));
     // The nesting bound is zero here, so an extension carries no extensions of its own.
     assertFalse(extension.contains("extension"));
-    // An open choice expands only to the types that are enabled, and there are fifty-nine of them.
+    // An open choice expands only to the types that are enabled, and there are twelve of them.
     assertTrue(extension.contains("valueString"));
     assertFalse(extension.contains("valueUuid"));
   }
