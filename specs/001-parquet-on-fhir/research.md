@@ -62,6 +62,18 @@ Delta 4.0.0 against Spark source 4.0.2, and are recorded in full in
   the cost but risks permanence); keeping the old encoders usable in tests
   (fixture *construction* migrates gradually but the data is then unreadable by
   the engine, so nothing is actually gained).
+- **Addendum — the first alternative is adopted for the transition.** The
+  decision above holds as an *end state*: on completion the engine reads only the
+  new layout. It does not hold for the path there. From M2 the engine reads both,
+  selected from the resolved schema, which is what lets the engine be rewritten
+  behind a green build and makes the switch a writer flip. The stated objection —
+  that carrying two conventions risks permanence — is answered by naming the
+  sunset rather than by refusing the alternative: T100e removes the previous
+  reader in M6, T100f settles FR-053's end-state wording, and decision 51 records
+  the arms as a deliberate trade. The consequence above also softens: the test
+  estate no longer has to move in one step, because the dense dimension carries
+  the suite while the pruned one is switched on. See decisions 47, 48 and 51, and
+  the addendum to 40.
 
 ---
 
@@ -98,12 +110,22 @@ Delta 4.0.0 against Spark source 4.0.2, and are recorded in full in
   - Traversal *into* any fallback fails for every candidate type. That is not a
     defect but the reason the tolerant expression must be emitted at every
     traversal step rather than only where absence is suspected.
-- **Residual risk**: `RuntimeReplaceable.dataType` delegates to `replacement`, so
-  a path that probes `dataType` before the child is resolved would force the
-  replacement early. Every built-in `RuntimeReplaceable` carries the same
-  exposure and the default `resolved` guard covers the normal paths, but it is
-  not testable from PySpark and needs a JVM test over an unresolved child. This
-  is the one measurement that could send the design to R-017's option C.
+- **Residual risk — measured, and it does not materialise.**
+  `RuntimeReplaceable.dataType` delegates to `replacement`, so a path that probes
+  `dataType` before the child is resolved would force the replacement early.
+  Every built-in `RuntimeReplaceable` carries the same exposure, but it is not
+  testable from PySpark and needed a JVM test over an unresolved child. T009a ran
+  that test as a throwaway spike: across twenty runs spanning eleven plan shapes
+  and two child constructions, nothing forced the replacement before the child
+  resolved,
+  nothing threw, and every plan optimised to the shape a statically written
+  traversal would produce. The design stays on R-017's option D. See
+  `evidence/t009a-analyzer-gate.md` — which also records the three construction
+  choices T038e must repeat, and one trap: under Spark 4's `ColumnNode` API the
+  child an engine hands over is a `ColumnNodeExpression`, which reports
+  `resolved == true` while still wrapping an unresolved node, so a caller cannot
+  read anything into `resolved()` at construction time. The wrapper does not
+  reach the analyzer, so this is not a hazard inside the expression itself.
 - **Alternatives considered**: the static empty collection — untyped, `void` in
   SQL — which was the earlier decision here and was **changed** because it cannot
   meet the schema-agnostic column contract: a statically pruned column is only
@@ -319,6 +341,20 @@ Delta 4.0.0 against Spark source 4.0.2, and are recorded in full in
   append to a transactional table fails outright.
 - **Gate**: measure merge cost over a realistic file count on object storage;
   the result can force a fallback for raw files.
+- **Gate outcome (T119, `evidence/merge-cost.md`)**: **narrowed, not
+  discharged.** For Delta the gate does not bite, schema resolution being flat
+  at a few milliseconds across the sweep. For raw Parquet the local measurement
+  establishes the shape of the curve but not the wall clock on object storage,
+  because no such harness exists in this repository; T134c carries that as a
+  follow-up, so the fallback this gate contemplates remains open rather than
+  ruled out. What the measurement did settle is the **shape of the opt-out**:
+  it must be a *supplied schema*, never `mergeSchema=false`, which was measured
+  returning as few as 6 of 24 leaf columns silently. A supplied schema is safe
+  only while it covers the union of the files, and that union is what a merge
+  produces — so supply stops the merge being paid on every read, it does not
+  avoid paying it once. It also identified lazy per-resource-type resolution
+  (T118b) as the larger lever, since `FileSource.buildResourceMap` multiplies
+  the per-type cost by the number of types before any query runs.
 
 ## R-016 Reconciling collections whose SQL shapes differ
 

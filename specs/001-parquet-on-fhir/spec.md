@@ -42,8 +42,14 @@ Driver 5 is why the encoder is replaced rather than modified.
 A user loads FHIR JSON through the library and the data is written in the
 Parquet on FHIR layout: decimals as lexical strings with a numeric annotation,
 primitive ids and extensions in `_field` groups, extensions inline, dates
-carrying range annotations, and quantities carrying a magnitude-preserving
-canonical annotation.
+carrying range annotations, and quantities carrying both the specification's
+canonical annotation and a magnitude-preserving one beside it.
+
+**Staged.** M1 delivers the lexical decimals, the inline extensions and the
+strictness switch. Every annotation, and the population of the `_field` groups,
+land in M5 — so scenarios 1, 2 and 4 below are met in part at M1 and in full at
+the end of M5. FR-021's staging note, FR-017's carve-out and decision 49 record
+why; nothing here is descoped.
 
 **Why this priority**: Every other story reads what this one writes. The layout
 is the object of the change.
@@ -55,15 +61,19 @@ against the specification, without any FHIRPath evaluation.
 
 1. **Given** a resource carrying a decimal, **When** it is stored and read back,
    **Then** the stored value is the lexical form from the source and a numeric
-   annotation accompanies it.
+   annotation accompanies it. *(The annotation is staged to M5; the lexical form
+   is M1.)*
 2. **Given** a resource carrying an extension on a primitive element, **When** it
    is stored, **Then** the extension appears in the `_field` group beside that
-   element.
+   element. *(Staged to M5. Until then the group is derived but not populated,
+   and the dropped content is detectable rather than silent — FR-017's
+   carve-out.)*
 3. **Given** a resource carrying an extension on a complex element, **When** it is
    stored, **Then** the extension appears inline on that element and no
    root-level extension map or field-id column is emitted.
-4. **Given** a quantity, **When** it is stored, **Then** a canonical annotation
-   accompanies it whose precision preserves magnitude across unit conversion.
+4. **Given** a quantity, **When** it is stored, **Then** the specification's
+   canonical annotation accompanies it, followed by a second annotation whose
+   precision preserves magnitude across unit conversion. *(Staged to M5.)*
 5. **Given** content the definition set does not describe, **When** it is loaded
    with the strictness switch set to fail, **Then** an error names the content
    rather than dropping it silently.
@@ -97,7 +107,9 @@ FHIRPath evaluation involved.
    content is detectable rather than silently lost.
 4. **Given** a pruned schema, **When** conformant input is round-tripped,
    **Then** the guarantee holds unconditionally, without reference to those
-   bounds.
+   bounds. *(Until M5 this excludes primitive id and extension content, per
+   FR-017's carve-out; the exclusion is asserted rather than incidental, and
+   T078c removes it.)*
 
 ---
 
@@ -305,17 +317,21 @@ resolves no Spark Catalyst dependency, enforced by the build.
 - **FR-001**: The system MUST store FHIR data in a layout conforming to the
   Parquet on FHIR specification, with the deviations recorded in FR-002 to
   FR-005.
-- **FR-002**: Decimals MUST be stored in their lexical form as text, accompanied
+- **FR-002**: (Annotation staged to M5.) Decimals MUST be stored in their lexical form as text, accompanied
   by a numeric annotation.
-- **FR-003**: Primitive element ids and extensions MUST be stored in the
+- **FR-003**: (Primitive metadata group staged to M5; see FR-017's carve-out.) Primitive element ids and extensions MUST be stored in the
   specification's `_field` groups; extensions on complex elements MUST be stored
   inline. The previous root-level extension map and per-composite field id MUST
   NOT be emitted.
-- **FR-004**: Dates MUST carry the specification's range annotations.
-- **FR-005**: Quantities MUST carry a canonical annotation whose precision
-  preserves magnitude across unit conversion. The specification's own canonical
-  annotation MUST NOT be emitted, because its fixed-point type makes quantities
-  differing by orders of magnitude compare equal.
+- **FR-004**: (Staged to M5.) Dates MUST carry the specification's range annotations.
+- **FR-005**: (Staged to M5.) Quantities MUST carry two canonical annotations: the
+  specification's own, at the fixed-point type the specification gives it, for
+  interchange; and, immediately after it, a second annotation whose precision
+  preserves magnitude across unit conversion. The second exists because the
+  fixed-point type makes quantities differing by orders of magnitude compare
+  equal, which no engine can compare on; the first exists because a consumer
+  reading the specification's layout must find the specification's annotation
+  under the specification's name.
 - **FR-006**: `contained` resources MUST NOT be represented, and their presence
   MUST be detected and governed by the strictness switch.
 - **FR-007**: `Bundle` MUST NOT be stored as a resource type.
@@ -339,9 +355,10 @@ resolves no Spark Catalyst dependency, enforced by the build.
   than pre-expanded.
 - **FR-014**: The definition abstraction MUST expose cardinality sufficient to
   determine whether an element is singular or repeating.
-- **FR-015**: The definition abstraction MUST NOT report types as a
-  version-specific enumeration, and MUST be able to represent a type code that
-  enumeration does not contain.
+- **FR-015**: *Withdrawn by decision 67.* The definition abstraction reports a
+  type as a value of the R4 enumeration, as it did before this programme.
+  Representing a type code that enumeration does not contain belongs to whatever
+  delivers a provider for another version or for profiles.
 
 ### Losslessness
 
@@ -352,6 +369,15 @@ resolves no Spark Catalyst dependency, enforced by the build.
 - **FR-017**: On a pruned schema the guarantee in FR-016 MUST be unconditional.
   On a dense schema it MUST hold within the configured nesting, extension and
   open-type bounds, and content those bounds would drop MUST be detectable.
+
+  **Carve-out, until the primitive metadata group is populated.** Primitive
+  element ids and extensions are not stored before M5 — the group is part of the
+  derived schema from Phase 3, but the transform does not populate it, so on a
+  pruned schema it prunes away and on a dense one it is present and null — so the pruned-schema guarantee
+  excludes that content until then, and the exclusion MUST be detectable rather
+  than silent, on the same terms the dense-schema clause sets. This is the
+  deliberate cost of deferring FR-003's metadata group past the flip; it is
+  recorded as decision 49 and closed by T078c.
 - **FR-018**: Content the definition set does not describe MUST be governed by a
   configurable switch offering ignore or fail. Silent truncation MUST NOT occur.
 - **FR-019**: Export MUST omit an absent element entirely rather than emitting a
@@ -362,12 +388,22 @@ resolves no Spark Catalyst dependency, enforced by the build.
 ### Annotations
 
 - **FR-021**: The decimal, date and quantity annotations MUST be emitted by
-  default, each individually disableable.
+  default, each kind individually disableable. **Staged.** The layout ships
+  annotation-free at the flip and each kind lands afterwards, so this requirement
+  is met progressively and in full only at the end of M5. FR-022 is what makes
+  the staging safe, and decision 50 records it. A kind carried in more than one
+  field — the date range's two bounds, the quantity's two canonical forms — is
+  one kind and is governed by one switch.
 - **FR-022**: The engine MUST compute correctly when any or all annotations are
   absent, using an annotation only as a fast path. An annotation MUST NOT be
   required for correctness.
 - **FR-023**: Whether an annotation is used MUST be decided from the schema
-  rather than per row.
+  rather than per row. *That half is staged to M5, because it presupposes that an
+  annotation exists to choose.* The same rule governs the layout normalisation
+  the engine performs, and **that half binds from M2**: which layout a column is
+  read as MUST be settled from the resolved schema, never per row. That normalisation happens at one
+  site, the traversal expression, so that no code above it is written twice and
+  removing it later touches one file (decision 55).
 
 ### Query engine
 
@@ -398,7 +434,9 @@ resolves no Spark Catalyst dependency, enforced by the build.
   column. If a precomputed key proves necessary for join performance it MUST be
   expressed as an annotation, and the engine MUST work without it.
 - **FR-034**: The engine MUST be able to navigate to a primitive element's id
-  and extensions.
+  and extensions. **Deferred to M5**, with FR-003's writing half, per decision 49.
+  The previous layout cannot represent this content and the engine cannot
+  navigate it today, so deferring it regresses nothing.
 - **FR-035**: Query-time decimal precision MUST remain as it is today, and the
   cap MUST be documented.
 - **FR-036**: Unnesting MUST NOT be implemented in a way that reduces a read to
@@ -443,6 +481,12 @@ after the schema-binding decision and belong to this section.
 - **FR-037**: File-based sources MUST determine the layout of the data they read
   and reject an unsupported layout at read time, naming the resource type, the
   detected layout, the expected layout and the remedy.
+- **FR-037a**: File-based sinks MUST determine the layout of the target they
+  write into and reject an unsupported layout before any schema merge is
+  attempted, with the same message. Schema merging on append and upsert is
+  enabled by FR-042, so without this a write into a target holding an earlier
+  layout either fails with a storage-layer schema error or, where no type
+  conflicts, succeeds and leaves one table carrying both layouts.
 - **FR-038**: Detection MUST be structural and MUST NOT require file access
   beyond the schema metadata the read already obtains.
 - **FR-039**: A sparse but conforming schema, and a schema carrying no marker
@@ -488,8 +532,13 @@ after the schema-binding decision and belong to this section.
   FR-049 are scoped to the definition, schema-derivation and encoding code, and
   do not reach the evaluation path. Satisfying FR-054 and FR-056 by adding to
   the toolkit is therefore permitted.
-- **FR-053**: On completion, the query engine MUST read only the new layout.
-  Reading both layouts concurrently is NOT required.
+- **FR-053**: On completion, the query engine MUST read only the new layout. It
+  MAY retain a reader for the previous layout until that reader is removed in M6,
+  which is what keeps the build green while the engine is converted and makes the
+  switch reversible until then. **This wording is provisional**: T100f settles it
+  before M6 opens, and T049a may bear on it, since a source boundary that routes
+  earlier-layout data rather than refusing it would make the previous-layout
+  reader a product feature rather than transitional scaffolding.
 
 ### Key Entities
 
@@ -516,7 +565,11 @@ after the schema-binding decision and belong to this section.
 - **SC-001**: A round trip over the FHIR R4 specification examples and a Synthea
   corpus produces semantically equal resources for 100% of conformant input,
   including decimals with trailing zeros, exponent notation, a leading sign, a
-  very small magnitude and forty significant digits.
+  very small magnitude and forty significant digits. Until M5 this is measured
+  with primitive id and extension content excluded, because the metadata group is
+  not populated before then and the R4 examples carry such content; the exclusion
+  is asserted in the harness rather than incidental (T076, T077), and T078c
+  removes it and restores the criterion unconditionally.
 - **SC-002**: The FHIRPath test suite, both conformance baselines and the
   SQL-on-FHIR compliance suite pass over data in the new layout, in the pruned
   schema mode, with a curated subset also passing in the dense mode.
@@ -529,7 +582,8 @@ after the schema-binding decision and belong to this section.
   table.
 - **SC-006**: Reading data written by an earlier release fails at read time with
   a message naming the resource type, the detected layout and the remedy, for
-  every file-based source.
+  every file-based source; writing into such a dataset fails the same way, for
+  every file-based sink.
 - **SC-007**: Encode, decode and query execution are each measured separately
   against a baseline captured before any change, with planning time measured
   separately from execution time. No outcome is required; the measurement is.
@@ -543,8 +597,9 @@ after the schema-binding decision and belong to this section.
 
 ## Assumptions
 
-- The FHIR version in scope is R4, as today. The definition abstraction is
-  prepared for other versions but no other provider is delivered.
+- The FHIR version in scope is R4, as today. The definition abstraction is not
+  prepared for other versions: it reports R4 types (decision 67), and no other
+  provider is delivered.
 - Profiles are out of scope. The definition abstraction is prepared for a
   provider backed by structure definitions, but none is delivered.
 - The server catches up separately, pinned to the last library release before
@@ -566,8 +621,14 @@ after the schema-binding decision and belong to this section.
   bridge, is deferred: what becomes of it depends on what the data-migration
   tooling turns out to need, since that tooling may have to use it. The new
   encoding is built alongside it.
-- The engine reads only the new layout on completion. The test estate therefore
-  moves in one step rather than incrementally.
+- The engine reads only the new layout **on completion**, and may read both
+  while it is being converted. The test estate therefore moves incrementally,
+  along two independent dimensions in the test framework: how much of the layout
+  a schema carries, and which conventions its fields follow. The earlier form of
+  this assumption — that the engine reads only the new layout throughout, and so
+  the test estate moves in one step — is what made a red window look
+  unavoidable. It was applied to the transition when it constrains only the end
+  state. See decision 40's addendum.
 - The strictness switch, the schema mode and the per-annotation toggles are
   configuration on a **new** surface beside the existing encoding configuration,
   not on it. The existing configuration class sits in the module FR-051 protects,

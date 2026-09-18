@@ -23,9 +23,10 @@ No public signature is removed or narrowed.
 | Option | Meaning | Default |
 | --- | --- | --- |
 | Schema mode | Whether the stored schema is fitted to the data or comprises every defined element. | Fitted |
-| Strictness | Whether content outside the definition set is ignored or raises an error. | *Chosen at implementation; must be stated in the documentation.* |
+| Strictness | Whether content outside the definition set is ignored or raises an error. | Ignored — failing is the opt-in (decision 44) |
 | Annotation toggles | Enable or disable each annotation individually. | All enabled |
 | Layout detection opt-out | Per source, for conforming data the detector cannot classify. | Detection enabled |
+| Read schema supply | Per source. Supplies the schema a read uses instead of merging every file's. | Unset, so schemas are merged |
 
 All are surfaced in Java, Python and R.
 
@@ -51,6 +52,13 @@ layout, the expected layout and the remedy.
 This is the intended improvement, but it is a behaviour change and belongs in
 the release notes. The per-source opt-out exists for conforming data the
 detector cannot classify.
+
+### Writing into a dataset written by an earlier release now fails
+
+Sinks classify the target's layout before merging into it. Previously an append
+into such a table either failed with a storage-layer schema error or, where no
+column types conflicted, succeeded and left one table carrying two layouts. It
+is now rejected with the same message a read gives.
 
 ### A column expression stays valid over any conformant schema
 
@@ -101,8 +109,15 @@ resources as files preserves the lexical form exactly.
 
 Reading a dataset of raw files merges their schemas by default, because
 otherwise the first file's schema wins and the rest are silently null-filled.
-Merging reads every file's metadata, which costs time on large datasets; it can
-be disabled where the files are known to be uniform.
+Merging reads every file's metadata, which costs time on large datasets.
+
+**The way to avoid that cost is to supply a schema, not to switch merging off.**
+There is deliberately no boolean for it. Switching merging off was measured
+returning as few as 6 of 24 leaf columns on a divergent corpus, silently, so it
+is a trap rather than a choice. A supplied schema is safe only while it covers
+the union of every file's columns; supply one narrower and columns are dropped
+just as silently, merely deterministically. The workable pattern is to merge
+once and persist the result, or to take the writer's schema, and supply that.
 
 Appending to a transactional table merges the schema, so a batch carrying new
 elements widens the table rather than failing.

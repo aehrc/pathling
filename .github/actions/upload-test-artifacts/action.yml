@@ -58,7 +58,9 @@ runs:
         name: jars
         path: |
           utilities/target/utilities-*.jar
+          fhir-schema/target/fhir-schema-*.jar
           encoders/target/encoders-*.jar
+          io/target/io-*.jar
           terminology/target/terminology-*.jar
           fhirpath/target/fhirpath-*.jar
           library-api/target/library-api-*.jar

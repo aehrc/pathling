@@ -1,0 +1,376 @@
+######## MODE: catalyst child (UnresolvedAttribute) ########
+
+================ present / select ================
+--- analyzed ---
+Project [spikeresolveornull(s#5, b, StringType) AS spikeresolveornull(s)#6]
++- Project [struct(b, cast(id#0L as string), c, true, n, struct(b, cast(id#0L as string))) AS s#5]
+   +- Range (0, 3, step=1, splits=Some(2))
+
+--- optimized ---
+Project [cast(id#0L as string) AS spikeresolveornull(s)#6]
++- Range (0, 3, step=1, splits=Some(2))
+
+--- schema --- struct<spikeresolveornull(s):string>
+--- rows --- [[0], [1], [2]]
+--- replacement forcings ---
+    replacement forced for 'b': child=AttributeReference, childResolved=true
+
+================ absent / select ================
+--- analyzed ---
+Project [spikeresolveornull(s#15, missing, StringType) AS spikeresolveornull(s)#16]
++- Project [struct(b, cast(id#10L as string), c, true, n, struct(b, cast(id#10L as string))) AS s#15]
+   +- Range (0, 3, step=1, splits=Some(2))
+
+--- optimized ---
+Project [null AS spikeresolveornull(s)#16]
++- Range (0, 3, step=1, splits=Some(2))
+
+--- schema --- struct<spikeresolveornull(s):string>
+--- rows --- [[null], [null], [null]]
+--- replacement forcings ---
+    replacement forced for 'missing': child=AttributeReference, childResolved=true
+
+================ present / filter ================
+--- analyzed ---
+Filter (spikeresolveornull(s#25, b, StringType) = 1)
++- Project [struct(b, cast(id#20L as string), c, true, n, struct(b, cast(id#20L as string))) AS s#25]
+   +- Range (0, 3, step=1, splits=Some(2))
+
+--- optimized ---
+Project [struct(b, cast(id#20L as string), c, true, n, struct(b, cast(id#20L as string))) AS s#25]
++- Filter (cast(id#20L as string) = 1)
+   +- Range (0, 3, step=1, splits=Some(2))
+
+--- schema --- struct<s:struct<b:string,c:boolean,n:struct<b:string>>>
+--- rows --- [[[1,true,[1]]]]
+--- replacement forcings ---
+    replacement forced for 'b': child=AttributeReference, childResolved=true
+
+================ present / groupBy ================
+--- analyzed ---
+Aggregate [spikeresolveornull(s#34, b, StringType)], [spikeresolveornull(s#34, b, StringType) AS g#35, count(1) AS n#36L]
++- Project [struct(b, cast(id#29L as string), c, true, n, struct(b, cast(id#29L as string))) AS s#34]
+   +- Range (0, 3, step=1, splits=Some(2))
+
+--- optimized ---
+Aggregate [_groupingexpression#39], [_groupingexpression#39 AS g#35, count(1) AS n#36L]
++- Project [cast(id#29L as string) AS _groupingexpression#39]
+   +- Range (0, 3, step=1, splits=Some(2))
+
+--- schema --- struct<g:string,n:bigint>
+--- rows --- [[0,1], [1,1], [2,1]]
+--- replacement forcings ---
+    replacement forced for 'b': child=AttributeReference, childResolved=true
+    replacement forced for 'b': child=AttributeReference, childResolved=true
+
+================ present / orderBy ================
+--- analyzed ---
+Sort [spikeresolveornull(s#52, b, StringType) ASC NULLS FIRST], true
++- Project [struct(b, cast(id#47L as string), c, true, n, struct(b, cast(id#47L as string))) AS s#52]
+   +- Range (0, 3, step=1, splits=Some(2))
+
+--- optimized ---
+Sort [s#52.b ASC NULLS FIRST], true
++- Project [struct(b, cast(id#47L as string), c, true, n, struct(b, cast(id#47L as string))) AS s#52]
+   +- Range (0, 3, step=1, splits=Some(2))
+
+--- schema --- struct<s:struct<b:string,c:boolean,n:struct<b:string>>>
+--- rows --- [[[0,true,[0]]], [[1,true,[1]]], [[2,true,[2]]]]
+--- replacement forcings ---
+    replacement forced for 'b': child=AttributeReference, childResolved=true
+
+================ absent / groupBy ================
+--- analyzed ---
+Aggregate [spikeresolveornull(s#61, missing, StringType)], [spikeresolveornull(s#61, missing, StringType) AS g#62, count(1) AS n#63L]
++- Project [struct(b, cast(id#56L as string), c, true, n, struct(b, cast(id#56L as string))) AS s#61]
+   +- Range (0, 3, step=1, splits=Some(2))
+
+--- optimized ---
+Aggregate [0], [null AS g#62, count(1) AS n#63L]
++- Project
+   +- Range (0, 3, step=1, splits=Some(2))
+
+--- schema --- struct<g:string,n:bigint>
+--- rows --- [[null,3]]
+--- replacement forcings ---
+    replacement forced for 'missing': child=AttributeReference, childResolved=true
+    replacement forced for 'missing': child=AttributeReference, childResolved=true
+
+================ nested present-over-present ================
+--- analyzed ---
+Project [spikeresolveornull(spikeresolveornull(s#79, n, StructField(b,StringType,true)), b, StringType) AS spikeresolveornull(spikeresolveornull(s))#80]
++- Project [struct(b, cast(id#74L as string), c, true, n, struct(b, cast(id#74L as string))) AS s#79]
+   +- Range (0, 3, step=1, splits=Some(2))
+
+--- optimized ---
+Project [cast(id#74L as string) AS spikeresolveornull(spikeresolveornull(s))#80]
++- Range (0, 3, step=1, splits=Some(2))
+
+--- schema --- struct<spikeresolveornull(spikeresolveornull(s)):string>
+--- rows --- [[0], [1], [2]]
+--- replacement forcings ---
+    replacement forced for 'n': child=AttributeReference, childResolved=true
+    replacement forced for 'b': child=SpikeResolveOrNull, childResolved=true
+
+================ nested present-over-absent-struct ================
+--- analyzed ---
+Project [spikeresolveornull(spikeresolveornull(s#89, missing, StructField(b,StringType,true)), b, StringType) AS spikeresolveornull(spikeresolveornull(s))#90]
++- Project [struct(b, cast(id#84L as string), c, true, n, struct(b, cast(id#84L as string))) AS s#89]
+   +- Range (0, 3, step=1, splits=Some(2))
+
+--- optimized ---
+Project [null AS spikeresolveornull(spikeresolveornull(s))#90]
++- Range (0, 3, step=1, splits=Some(2))
+
+--- schema --- struct<spikeresolveornull(spikeresolveornull(s)):string>
+--- rows --- [[null], [null], [null]]
+--- replacement forcings ---
+    replacement forced for 'missing': child=AttributeReference, childResolved=true
+    replacement forced for 'b': child=SpikeResolveOrNull, childResolved=true
+
+================ nested present-over-absent-void ================
+--- analyzed ---
+Project [spikeresolveornull(spikeresolveornull(s#99, missing, NullType), b, StringType) AS spikeresolveornull(spikeresolveornull(s))#100]
++- Project [struct(b, cast(id#94L as string), c, true, n, struct(b, cast(id#94L as string))) AS s#99]
+   +- Range (0, 3, step=1, splits=Some(2))
+
+--- optimized ---
+Project [null AS spikeresolveornull(spikeresolveornull(s))#100]
++- Range (0, 3, step=1, splits=Some(2))
+
+--- schema --- struct<spikeresolveornull(spikeresolveornull(s)):string>
+--- rows --- [[null], [null], [null]]
+--- replacement forcings ---
+    replacement forced for 'missing': child=AttributeReference, childResolved=true
+    replacement forced for 'b': child=SpikeResolveOrNull, childResolved=true
+
+================ transform lambda / present ================
+--- analyzed ---
+Project [transform(arr#113, lambdafunction(spikeresolveornull(lambda x#114, b, StringType), lambda x#114, false)) AS transform(arr, lambdafunction(spikeresolveornull(namedlambdavariable()), namedlambdavariable()))#115]
++- Project [array(struct(b, cast(id#110L as string), c, true)) AS arr#113]
+   +- Range (0, 3, step=1, splits=Some(2))
+
+--- optimized ---
+Project [transform(array(struct(b, cast(id#110L as string), c, true)), lambdafunction(lambda x#114.b, lambda x#114, false)) AS transform(arr, lambdafunction(spikeresolveornull(namedlambdavariable()), namedlambdavariable()))#115]
++- Range (0, 3, step=1, splits=Some(2))
+
+--- schema --- struct<transform(arr, lambdafunction(spikeresolveornull(namedlambdavariable()), namedlambdavariable())):array<string>>
+--- rows --- [[ArraySeq(0)], [ArraySeq(1)], [ArraySeq(2)]]
+--- replacement forcings ---
+    replacement forced for 'b': child=NamedLambdaVariable, childResolved=true
+
+================ transform lambda / absent ================
+--- analyzed ---
+Project [transform(arr#128, lambdafunction(spikeresolveornull(lambda x#129, missing, StringType), lambda x#129, false)) AS transform(arr, lambdafunction(spikeresolveornull(namedlambdavariable()), namedlambdavariable()))#130]
++- Project [array(struct(b, cast(id#125L as string), c, true)) AS arr#128]
+   +- Range (0, 3, step=1, splits=Some(2))
+
+--- optimized ---
+Project [transform(array(struct(b, cast(id#125L as string), c, true)), lambdafunction(null, lambda x#129, false)) AS transform(arr, lambdafunction(spikeresolveornull(namedlambdavariable()), namedlambdavariable()))#130]
++- Range (0, 3, step=1, splits=Some(2))
+
+--- schema --- struct<transform(arr, lambdafunction(spikeresolveornull(namedlambdavariable()), namedlambdavariable())):array<string>>
+--- rows --- [[ArraySeq(null)], [ArraySeq(null)], [ArraySeq(null)]]
+--- replacement forcings ---
+    replacement forced for 'missing': child=NamedLambdaVariable, childResolved=true
+
+================ VERDICT (catalyst child (UnresolvedAttribute)) ================
+PASS: no scenario probed dataType before the child resolved.
+    [control] child=ColumnNodeExpression, resolved=true
+present optimized:
+Project [cast(id#134L as string) AS spikeresolveornull(s)#140]
++- Range (0, 3, step=1, splits=Some(2))
+
+    [control] child=ColumnNodeExpression, resolved=true
+absent optimized:
+Project [null AS spikeresolveornull(s)#150]
++- Range (0, 3, step=1, splits=Some(2))
+
+
+######## MODE: column-api child (ColumnNodeExpression) ########
+
+================ present / select ================
+    [control] child=ColumnNodeExpression, resolved=true
+--- analyzed ---
+Project [spikeresolveornull(s#159, b, StringType) AS spikeresolveornull(s)#160]
++- Project [struct(b, cast(id#154L as string), c, true, n, struct(b, cast(id#154L as string))) AS s#159]
+   +- Range (0, 3, step=1, splits=Some(2))
+
+--- optimized ---
+Project [cast(id#154L as string) AS spikeresolveornull(s)#160]
++- Range (0, 3, step=1, splits=Some(2))
+
+--- schema --- struct<spikeresolveornull(s):string>
+--- rows --- [[0], [1], [2]]
+--- replacement forcings ---
+    replacement forced for 'b': child=AttributeReference, childResolved=true
+
+================ absent / select ================
+    [control] child=ColumnNodeExpression, resolved=true
+--- analyzed ---
+Project [spikeresolveornull(s#169, missing, StringType) AS spikeresolveornull(s)#170]
++- Project [struct(b, cast(id#164L as string), c, true, n, struct(b, cast(id#164L as string))) AS s#169]
+   +- Range (0, 3, step=1, splits=Some(2))
+
+--- optimized ---
+Project [null AS spikeresolveornull(s)#170]
++- Range (0, 3, step=1, splits=Some(2))
+
+--- schema --- struct<spikeresolveornull(s):string>
+--- rows --- [[null], [null], [null]]
+--- replacement forcings ---
+    replacement forced for 'missing': child=AttributeReference, childResolved=true
+
+================ present / filter ================
+    [control] child=ColumnNodeExpression, resolved=true
+--- analyzed ---
+Filter (spikeresolveornull(s#179, b, StringType) = 1)
++- Project [struct(b, cast(id#174L as string), c, true, n, struct(b, cast(id#174L as string))) AS s#179]
+   +- Range (0, 3, step=1, splits=Some(2))
+
+--- optimized ---
+Project [struct(b, cast(id#174L as string), c, true, n, struct(b, cast(id#174L as string))) AS s#179]
++- Filter (cast(id#174L as string) = 1)
+   +- Range (0, 3, step=1, splits=Some(2))
+
+--- schema --- struct<s:struct<b:string,c:boolean,n:struct<b:string>>>
+--- rows --- [[[1,true,[1]]]]
+--- replacement forcings ---
+    replacement forced for 'b': child=AttributeReference, childResolved=true
+
+================ present / groupBy ================
+    [control] child=ColumnNodeExpression, resolved=true
+--- analyzed ---
+Aggregate [spikeresolveornull(s#188, b, StringType)], [spikeresolveornull(s#188, b, StringType) AS g#189, count(1) AS n#190L]
++- Project [struct(b, cast(id#183L as string), c, true, n, struct(b, cast(id#183L as string))) AS s#188]
+   +- Range (0, 3, step=1, splits=Some(2))
+
+--- optimized ---
+Aggregate [_groupingexpression#193], [_groupingexpression#193 AS g#189, count(1) AS n#190L]
++- Project [cast(id#183L as string) AS _groupingexpression#193]
+   +- Range (0, 3, step=1, splits=Some(2))
+
+--- schema --- struct<g:string,n:bigint>
+--- rows --- [[0,1], [1,1], [2,1]]
+--- replacement forcings ---
+    replacement forced for 'b': child=AttributeReference, childResolved=true
+    replacement forced for 'b': child=AttributeReference, childResolved=true
+
+================ present / orderBy ================
+    [control] child=ColumnNodeExpression, resolved=true
+--- analyzed ---
+Sort [spikeresolveornull(s#206, b, StringType) ASC NULLS FIRST], true
++- Project [struct(b, cast(id#201L as string), c, true, n, struct(b, cast(id#201L as string))) AS s#206]
+   +- Range (0, 3, step=1, splits=Some(2))
+
+--- optimized ---
+Sort [s#206.b ASC NULLS FIRST], true
++- Project [struct(b, cast(id#201L as string), c, true, n, struct(b, cast(id#201L as string))) AS s#206]
+   +- Range (0, 3, step=1, splits=Some(2))
+
+--- schema --- struct<s:struct<b:string,c:boolean,n:struct<b:string>>>
+--- rows --- [[[0,true,[0]]], [[1,true,[1]]], [[2,true,[2]]]]
+--- replacement forcings ---
+    replacement forced for 'b': child=AttributeReference, childResolved=true
+
+================ absent / groupBy ================
+    [control] child=ColumnNodeExpression, resolved=true
+--- analyzed ---
+Aggregate [spikeresolveornull(s#215, missing, StringType)], [spikeresolveornull(s#215, missing, StringType) AS g#216, count(1) AS n#217L]
++- Project [struct(b, cast(id#210L as string), c, true, n, struct(b, cast(id#210L as string))) AS s#215]
+   +- Range (0, 3, step=1, splits=Some(2))
+
+--- optimized ---
+Aggregate [0], [null AS g#216, count(1) AS n#217L]
++- Project
+   +- Range (0, 3, step=1, splits=Some(2))
+
+--- schema --- struct<g:string,n:bigint>
+--- rows --- [[null,3]]
+--- replacement forcings ---
+    replacement forced for 'missing': child=AttributeReference, childResolved=true
+    replacement forced for 'missing': child=AttributeReference, childResolved=true
+
+================ nested present-over-present ================
+    [control] child=ColumnNodeExpression, resolved=true
+--- analyzed ---
+Project [spikeresolveornull(spikeresolveornull(s#233, n, StructField(b,StringType,true)), b, StringType) AS spikeresolveornull(spikeresolveornull(s))#234]
++- Project [struct(b, cast(id#228L as string), c, true, n, struct(b, cast(id#228L as string))) AS s#233]
+   +- Range (0, 3, step=1, splits=Some(2))
+
+--- optimized ---
+Project [cast(id#228L as string) AS spikeresolveornull(spikeresolveornull(s))#234]
++- Range (0, 3, step=1, splits=Some(2))
+
+--- schema --- struct<spikeresolveornull(spikeresolveornull(s)):string>
+--- rows --- [[0], [1], [2]]
+--- replacement forcings ---
+    replacement forced for 'n': child=AttributeReference, childResolved=true
+    replacement forced for 'b': child=SpikeResolveOrNull, childResolved=true
+
+================ nested present-over-absent-struct ================
+    [control] child=ColumnNodeExpression, resolved=true
+--- analyzed ---
+Project [spikeresolveornull(spikeresolveornull(s#243, missing, StructField(b,StringType,true)), b, StringType) AS spikeresolveornull(spikeresolveornull(s))#244]
++- Project [struct(b, cast(id#238L as string), c, true, n, struct(b, cast(id#238L as string))) AS s#243]
+   +- Range (0, 3, step=1, splits=Some(2))
+
+--- optimized ---
+Project [null AS spikeresolveornull(spikeresolveornull(s))#244]
++- Range (0, 3, step=1, splits=Some(2))
+
+--- schema --- struct<spikeresolveornull(spikeresolveornull(s)):string>
+--- rows --- [[null], [null], [null]]
+--- replacement forcings ---
+    replacement forced for 'missing': child=AttributeReference, childResolved=true
+    replacement forced for 'b': child=SpikeResolveOrNull, childResolved=true
+
+================ nested present-over-absent-void ================
+    [control] child=ColumnNodeExpression, resolved=true
+--- analyzed ---
+Project [spikeresolveornull(spikeresolveornull(s#253, missing, NullType), b, StringType) AS spikeresolveornull(spikeresolveornull(s))#254]
++- Project [struct(b, cast(id#248L as string), c, true, n, struct(b, cast(id#248L as string))) AS s#253]
+   +- Range (0, 3, step=1, splits=Some(2))
+
+--- optimized ---
+Project [null AS spikeresolveornull(spikeresolveornull(s))#254]
++- Range (0, 3, step=1, splits=Some(2))
+
+--- schema --- struct<spikeresolveornull(spikeresolveornull(s)):string>
+--- rows --- [[null], [null], [null]]
+--- replacement forcings ---
+    replacement forced for 'missing': child=AttributeReference, childResolved=true
+    replacement forced for 'b': child=SpikeResolveOrNull, childResolved=true
+
+================ transform lambda / present ================
+--- analyzed ---
+Project [transform(arr#267, lambdafunction(spikeresolveornull(lambda x#268, b, StringType), lambda x#268, false)) AS transform(arr, lambdafunction(spikeresolveornull(namedlambdavariable()), namedlambdavariable()))#269]
++- Project [array(struct(b, cast(id#264L as string), c, true)) AS arr#267]
+   +- Range (0, 3, step=1, splits=Some(2))
+
+--- optimized ---
+Project [transform(array(struct(b, cast(id#264L as string), c, true)), lambdafunction(lambda x#268.b, lambda x#268, false)) AS transform(arr, lambdafunction(spikeresolveornull(namedlambdavariable()), namedlambdavariable()))#269]
++- Range (0, 3, step=1, splits=Some(2))
+
+--- schema --- struct<transform(arr, lambdafunction(spikeresolveornull(namedlambdavariable()), namedlambdavariable())):array<string>>
+--- rows --- [[ArraySeq(0)], [ArraySeq(1)], [ArraySeq(2)]]
+--- replacement forcings ---
+    replacement forced for 'b': child=NamedLambdaVariable, childResolved=true
+
+================ transform lambda / absent ================
+--- analyzed ---
+Project [transform(arr#282, lambdafunction(spikeresolveornull(lambda x#283, missing, StringType), lambda x#283, false)) AS transform(arr, lambdafunction(spikeresolveornull(namedlambdavariable()), namedlambdavariable()))#284]
++- Project [array(struct(b, cast(id#279L as string), c, true)) AS arr#282]
+   +- Range (0, 3, step=1, splits=Some(2))
+
+--- optimized ---
+Project [transform(array(struct(b, cast(id#279L as string), c, true)), lambdafunction(null, lambda x#283, false)) AS transform(arr, lambdafunction(spikeresolveornull(namedlambdavariable()), namedlambdavariable()))#284]
++- Range (0, 3, step=1, splits=Some(2))
+
+--- schema --- struct<transform(arr, lambdafunction(spikeresolveornull(namedlambdavariable()), namedlambdavariable())):array<string>>
+--- rows --- [[ArraySeq(null)], [ArraySeq(null)], [ArraySeq(null)]]
+--- replacement forcings ---
+    replacement forced for 'missing': child=NamedLambdaVariable, childResolved=true
+
+================ VERDICT (column-api child (ColumnNodeExpression)) ================
+PASS: no scenario probed dataType before the child resolved.

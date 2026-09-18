@@ -17,9 +17,9 @@
 
 package au.csiro.pathling.test.yaml.resolver;
 
-import au.csiro.pathling.fhirpath.definition.defaults.DefaultDefinitionContext;
-import au.csiro.pathling.fhirpath.definition.defaults.DefaultResourceDefinition;
-import au.csiro.pathling.fhirpath.definition.defaults.DefaultResourceTag;
+import au.csiro.pathling.definition.defaults.DefaultDefinitionContext;
+import au.csiro.pathling.definition.defaults.DefaultResourceDefinition;
+import au.csiro.pathling.definition.defaults.DefaultResourceTag;
 import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluator;
 import au.csiro.pathling.fhirpath.evaluation.DefinitionResourceResolver;
 import au.csiro.pathling.fhirpath.evaluation.ResourceResolver;
