@@ -91,8 +91,8 @@ cardinality before it can drive schema derivation.
 
 A `StructureDefinition`-backed implementation — which would make profiles and
 non-R4 versions loadable as data — is a **non-goal** of this programme. The
-interface is de-R4'd so that such an implementation can be added later without
-breaking it.
+interface keeps reporting R4 types; freeing it from R4 is left to whatever adds
+such an implementation (decision 67 in the specification's evidence).
 
 ## Losslessness contract
 
@@ -212,7 +212,7 @@ with item 1.
 | 2 | `coding-schema-by-name` | Defensive; correct under both layouts. |
 | 3 | `source-schema-detection` | `ParquetSource` / `DeltaSource` / `CatalogSource` reject unknown layouts with an actionable error. Correct against today's code. |
 | 4 | `reference-join-coverage` | Portable JSON coverage for the join machinery, before its conventions change. |
-| 5 | `definition-context-widening` | Child enumeration, cardinality, de-R4 the interface. |
+| 5 | `definition-context-widening` | Child enumeration and cardinality. |
 | 6 | `fhir-schema-builder` | Sever the `CustomCoder` hook; the builder moves to `fhir-schema`; pruning. |
 | 7 | `pof-schema-conventions` | The layout itself, plus the convention consumers above. |
 | 8 | `json-ingest` | Category A, including `Dataset<String>` and bundles. |

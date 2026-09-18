@@ -142,7 +142,7 @@ behaviour changes.
 - [x] T006 [P] Create the `io` module with `io/pom.xml`, depending on `fhir-schema` and `spark-sql`.
 - [x] T007 [P] Add a build rule to `io/pom.xml` failing on any `org.apache.spark.sql.catalyst` import, and prove the rule works by violating it deliberately on the empty module. T126 re-checks it against real code.
 - [x] T008 Add both modules to `<modules>` in `pom.xml` in build order, and to the dependency list in `library-runtime/pom.xml` so the Python and R libraries ship them.
-- [x] T009 Add `fhir-schema` and `io` as dependencies of `fhirpath` in `fhirpath/pom.xml`. `encoders/pom.xml` is not modified.
+- [x] T009 Add `fhir-schema` as a dependency of `fhirpath` in `fhirpath/pom.xml`. `io` is added only when the engine's tests first need data in the new layout (decision 67). `encoders/pom.xml` is not modified.
 - [x] T009a **Spike, and the gate on the whole approach.** Build a throwaway `RuntimeReplaceable` over an _unresolved_ attribute and confirm it survives the analyzer — that nothing probes `dataType` before the child resolves. Discard the code; T038a is the durable test. Run it here rather than in Phase 7 because it is the programme's largest unknown and costs a day, so the answer is worth having while M1 still has planning time. **On failure**: the design falls back to the unbound column representation in R-017 option C, and T038e, T038l, T110, T113a and T113b are rewritten against it before M2 opens. FR-055 to FR-058 are unaffected either way.
 
 **Checkpoint**: Modules exist and are empty; the boundary is enforced; the baseline is captured; the analyzer risk is resolved.
@@ -159,13 +159,13 @@ schema derivation. Pure motion first, then widening.
 - [x] T012 Verify the motion by reviewing the test diff: it must contain only package declarations and import statements. This is the test for T010–T011.
 - [x] T013 Test child enumeration in `fhir-schema/src/test/java/au/csiro/pathling/definition/NodeDefinitionTest.java` — children of a resource, a backbone element and a complex type, asserting order and completeness against the FHIR definitions, and a choice element appearing once as a choice rather than pre-expanded.
 - [x] T014 Test cardinality in `fhir-schema/src/test/java/au/csiro/pathling/definition/ElementDefinitionTest.java` — singular, repeating, and choice elements.
-- [x] T015 Test that a type code outside the R4 enumeration is representable, and that both implementations agree on enumeration and cardinality for the same resource, in `fhir-schema/src/test/java/au/csiro/pathling/definition/DefinitionContextAgreementTest.java`.
+- [x] T015 Test that both implementations agree on enumeration and cardinality for the same resource, in `fhir-schema/src/test/java/au/csiro/pathling/definition/DefinitionContextAgreementTest.java`, and that every element the R4 definitions describe reports its type, in `fhir-schema/src/test/java/au/csiro/pathling/definition/FhirTypeCoverageTest.java`.
 - [x] T016 Add child enumeration to `fhir-schema/src/main/java/au/csiro/pathling/definition/NodeDefinition.java`, implemented from the children the HAPI-backed implementation already obtains rather than asking a second time.
 - [x] T017 Add cardinality to `fhir-schema/src/main/java/au/csiro/pathling/definition/ElementDefinition.java`.
-- [x] T018 Replace the R4 enumeration in the reported type with a module-local representation in `fhir-schema/src/main/java/au/csiro/pathling/definition/ElementDefinition.java`, mapping the R4 enumeration onto it in the HAPI-backed implementation.
-- [x] T019 Convert the call sites in `fhirpath/src/main/java/au/csiro/pathling/fhirpath/` to the new type, keeping dispatch typed rather than degrading to string comparison. The engine continues to read cardinality from the Spark schema in this phase.
+- [x] T018 *Withdrawn by decision 67.* The reported type stays the R4 enumeration; no module-local representation is introduced.
+- [x] T019 *Withdrawn by decision 67.* The engine's call sites are unchanged beyond T011's imports. The engine continues to read cardinality from the Spark schema in this phase.
 
-**Checkpoint**: Definitions live below the engine and report children, cardinality and a version-independent type.
+**Checkpoint**: Definitions live below the engine and report children and cardinality. The engine differs from `main` only in its imports.
 
 ---
 
@@ -785,7 +785,7 @@ trusting the numbering.
 | FR-012 Types and cardinality never from data                                                                         | T028                                                                                                                                                                               |
 | FR-013 Child enumeration                                                                                             | T013, T016                                                                                                                                                                         |
 | FR-014 Cardinality exposed                                                                                           | T014, T017                                                                                                                                                                         |
-| FR-015 Version-independent type representation                                                                       | T015, T018                                                                                                                                                                         |
+| FR-015 Withdrawn (decision 67)                                                                                       | —                                                                                                                                                                                  |
 | FR-016 Round-trip equality                                                                                           | T071, T076, T077, T078d                                                                                                                                                            |
 | FR-017 Unconditional on pruned, bounded and detectable on dense                                                      | T057b, T067a, T078a, T078b (M1, under the primitive-metadata carve-out), T078c (M5, closing it)                                                                                    |
 | FR-018 Strictness switch                                                                                             | T057, T057c, T059a, T067                                                                                                                                                           |

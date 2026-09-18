@@ -160,7 +160,8 @@ benchmark/                          # JMH baseline and comparison.
 
 **Structure Decision**: Additive. Build order becomes
 `utilities -> fhir-schema -> {encoders, io} -> terminology -> fhirpath -> library-api`,
-with `fhirpath` depending on `fhir-schema`, `io` and `encoders`. `encoders` is
+with `fhirpath` depending on `fhir-schema` and `encoders`, and on `io` from the
+milestone whose engine tests first need data in the new layout (decision 67). `encoders` is
 neither renamed nor split, and its encoding implementation is not modified — it
 gains only two query-time expressions, which FR-052 permits — so `-pl encoders`
 and its published

@@ -1164,3 +1164,49 @@ content the layout does not yet write. It is recorded because no decision said
 so, and because a caller reading positions across the source and the stored
 data needs to know that ignoring can move them. Setting the switch to fail is
 the remedy for a caller who cannot accept that.
+
+## 67. The definitions report R4 types, and the engine is left alone
+
+FR-015 had the definition abstraction report a type as a module-local value
+rather than as the R4 enumeration, so that a type code R4 does not contain would
+be representable. T018 introduced that value as `FhirType`, and T019 converted
+the engine to it. The requirement is withdrawn and both are undone: the
+abstraction reports `FHIRDefinedType`, and `fhirpath` differs from the baseline only
+in the imports T010–T011 changed and its dependency on `fhir-schema`.
+
+**Nothing in this programme needed it.** A provider for another version or for
+profiles is a non-goal, so every type the abstraction reports comes from HAPI's R4
+model. That was checked rather than assumed: walking every element reachable from
+every R4 resource, 825 element definitions including each type a choice can take,
+finds no `@DatatypeDef` name the enumeration does not contain. The only use of a
+code outside R4 was the test that proved FR-015 held. `FhirTypeCoverageTest` now
+pins the opposite property through the abstraction itself, because a dense schema
+visits every element and would fail derivation outright if R4's model ever
+declared a type its own enumeration lacks.
+
+**The cost was out of proportion to that.** T019 touched about fifty files in the
+engine: the collection hierarchy, the type system, search, the view executor and
+the YAML and DSL test support. Its dispatch on a non-enum value also cost the
+compiler's help, turning `TokenMatcher`'s `switch` into an equality chain and
+admitting a misspelt `FhirType.of(...)`. A milestone that is meant to leave the
+engine's behaviour unchanged is easier to review when the engine's diff is
+visibly only motion.
+
+**One semantic difference, unreachable here.** `FHIRDefinedType.NULL.toCode()`
+returns Java `null`, where `FhirType.NULL.toCode()` returned `"null"`, so
+`PrimitiveTypes.isPrimitive` would throw rather than answer for that sentinel.
+Nothing reaches it: the HAPI-backed definitions report an absent type as an empty
+`Optional` and never as the sentinel, and the sentinel's only users are in the
+engine, which does not derive schemas. A provider that reports it would have to
+be written to say "no type" the way the abstraction already does.
+
+**What it defers.** Whatever delivers a non-R4 or profile-backed provider will
+have to introduce a version-neutral type then, and by then `fhir-schema` and `io`
+consume the reported type as well as `fhirpath`. That is accepted: the change is
+mechanical, and it will be made against a real second provider rather than a
+hypothetical one.
+
+**The engine's dependency on `io` is removed with it.** T009 added `io` to
+`fhirpath` ahead of any use, on the grounds that the engine's tests must
+eventually write data in the new layout (R-002). Nothing in M1 does, so the
+dependency is added by the milestone whose tests first need it.

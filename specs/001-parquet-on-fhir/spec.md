@@ -355,9 +355,10 @@ resolves no Spark Catalyst dependency, enforced by the build.
   than pre-expanded.
 - **FR-014**: The definition abstraction MUST expose cardinality sufficient to
   determine whether an element is singular or repeating.
-- **FR-015**: The definition abstraction MUST NOT report types as a
-  version-specific enumeration, and MUST be able to represent a type code that
-  enumeration does not contain.
+- **FR-015**: *Withdrawn by decision 67.* The definition abstraction reports a
+  type as a value of the R4 enumeration, as it did before this programme.
+  Representing a type code that enumeration does not contain belongs to whatever
+  delivers a provider for another version or for profiles.
 
 ### Losslessness
 
@@ -596,8 +597,9 @@ after the schema-binding decision and belong to this section.
 
 ## Assumptions
 
-- The FHIR version in scope is R4, as today. The definition abstraction is
-  prepared for other versions but no other provider is delivered.
+- The FHIR version in scope is R4, as today. The definition abstraction is not
+  prepared for other versions: it reports R4 types (decision 67), and no other
+  provider is delivered.
 - Profiles are out of scope. The definition abstraction is prepared for a
   provider backed by structure definitions, but none is delivered.
 - The server catches up separately, pinned to the last library release before
