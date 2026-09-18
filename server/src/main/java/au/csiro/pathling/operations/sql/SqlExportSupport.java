@@ -43,6 +43,7 @@ import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -211,14 +212,18 @@ public class SqlExportSupport {
     key.append("subjects=[").append(subjects).append("]");
 
     if (request.clientTrackingId() != null) {
-      key.append("|clientTrackingId=").append(request.clientTrackingId());
+      key.append("|clientTrackingId=").append(encode(request.clientTrackingId()));
     }
     key.append("|format=").append(request.format());
     key.append("|header=").append(request.includeHeader());
 
     if (!request.patientIds().isEmpty()) {
       key.append("|patientIds=[")
-          .append(request.patientIds().stream().sorted().collect(Collectors.joining(",")))
+          .append(
+              request.patientIds().stream()
+                  .sorted()
+                  .map(SqlExportSupport::encode)
+                  .collect(Collectors.joining(",")))
           .append("]");
     }
     if (request.since() != null) {
@@ -231,22 +236,57 @@ public class SqlExportSupport {
    * Renders one subject as a deterministic description for the cache key. A SQL subject is
    * described by its resolved SQL and bindings, and a view subject by its parsed projection, so two
    * kick-offs that would produce different data never share a job.
+   *
+   * <p>Every free-text component is {@link #encode(String) encoded} so that client-controlled
+   * values cannot forge the structural delimiters (':', ',', '=') and shift the parse of the key -
+   * see issue #2768.
    */
   @Nonnull
   private static String describe(@Nonnull final SubjectInput subject) {
-    final StringBuilder description = new StringBuilder(subject.name()).append(':');
-    description.append(subject.kind()).append(':');
+    final StringBuilder description = new StringBuilder(encode(subject.name()));
+    description.append(':').append(subject.kind().name());
     final PreparedSqlQuery prepared = subject.preparedQuery();
     if (prepared != null) {
       description
-          .append(prepared.getRequest().getParsedQuery().getSql())
           .append(':')
-          .append(prepared.getRequest().getParameterBindings())
+          .append(encode(prepared.getRequest().getParsedQuery().getSql()))
           .append(':')
-          .append(prepared.getDependencyGraph().getTopLevelKeysByLabel());
+          .append(encodeEntries(prepared.getRequest().getParameterBindings()))
+          .append(':')
+          .append(encodeEntries(prepared.getDependencyGraph().getTopLevelKeysByLabel()));
     } else {
-      description.append(Objects.requireNonNull(subject.view()).toString());
+      description.append(':').append(encode(Objects.requireNonNull(subject.view()).toString()));
     }
     return description.toString();
+  }
+
+  /**
+   * Encodes one cache-key component unambiguously: the character length, a ':' separator, then the
+   * raw value. Because a reader always knows exactly how many characters belong to the component,
+   * no value - however crafted - can forge a structural delimiter and shift the parse of the key,
+   * so two structurally different requests can never render to the same key.
+   *
+   * @param value the component value
+   * @return the encoded component
+   */
+  @Nonnull
+  private static String encode(@Nonnull final String value) {
+    return value.length() + ":" + value;
+  }
+
+  /**
+   * Renders a map of cache-key components unambiguously: entries sorted by key, with each key and
+   * value individually {@link #encode(String) encoded}. Sorting also keeps the key stable across
+   * map iteration orders, so identical kick-offs deduplicate onto the same job.
+   *
+   * @param entries the map entries to render
+   * @return the encoded map rendering
+   */
+  @Nonnull
+  private static String encodeEntries(@Nonnull final Map<String, ?> entries) {
+    return entries.entrySet().stream()
+        .sorted(Map.Entry.comparingByKey())
+        .map(entry -> encode(entry.getKey()) + "=" + encode(String.valueOf(entry.getValue())))
+        .collect(Collectors.joining(","));
   }
 }
