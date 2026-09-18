@@ -29,11 +29,32 @@ Pathling neither sets nor requires any particular value for this flag.
 When you create a `PathlingContext` within your Spark application, it will
 detect the presence of an existing `SparkSession` and use it. If there is no
 existing session, it will create one for you with some sensible default
-configuration. You can override this default configuration by passing
-a `SparkSession` object to the `PathlingContext` constructor.
+configuration. You can override this default configuration with the `spark_conf`
+parameter of `PathlingContext.create`.
 
 This can be useful if you want to set other Spark configuration, for example to
-increase the available memory.
+increase the available memory for a local terminology store:
+
+```python
+from pathling import PathlingContext
+
+pc = PathlingContext.create(
+    spark_conf={"spark.driver.memory": "8g"},
+    terminology_mode="local",
+    terminology_storage_path="/data/tx-store",
+)
+```
+
+:::warning
+Most Spark settings, including `spark.driver.memory`, only take effect when the
+driver JVM launches. In local mode the driver JVM is already running by the time
+`PathlingContext.create` applies the configuration, so `spark.driver.memory`
+set here has no effect unless the Python process itself is launched with the
+`SPARK_DRIVER_MEMORY` environment variable (or via `spark-submit`).
+:::
+
+If you need full control over how the session is set up, you can still build
+the `SparkSession` yourself and pass it to `PathlingContext.create`.
 
 The session that you provide must have the Pathling library API on the
 classpath. You can also optionally enable [Delta Lake](https://delta.io/)

@@ -22,12 +22,17 @@ Author: John Grimes.
 
 # noinspection PyPackageRequirements
 
+import warnings
 from typing import TYPE_CHECKING, Dict, Optional, Sequence
 
 from py4j.java_gateway import JavaObject
 from pyspark.sql import Column, DataFrame, SparkSession
 
-from pathling._spark_defaults import managed_spark_defaults
+from pathling._spark_defaults import (
+    managed_spark_defaults,
+    merge_spark_conf,
+    validate_spark_conf,
+)
 from pathling.fhir import MimeType
 
 if TYPE_CHECKING:
@@ -126,6 +131,7 @@ class PathlingContext:
     def create(
         cls,
         spark: Optional[SparkSession] = None,
+        spark_conf: Optional[Dict[str, str]] = None,
         max_nesting_level: Optional[int] = 3,
         enable_extensions: Optional[bool] = False,
         enabled_open_types: Optional[Sequence[str]] = (
@@ -187,12 +193,19 @@ class PathlingContext:
         it will be reused - and it is assumed that the Pathling library API JAR is already on the
         classpath. If you are running your own cluster, make sure it is on the list of packages.
 
-        If a SparkSession is provided, it needs to include the Pathling library API JAR on its
-        classpath. You can get the path for the JAR (which is bundled with the Python package)
-        using the `pathling.etc.find_jar` method.
+        If a SparkSession is provided, it must already have the Pathling library runtime and
+        Delta Lake packages on its classpath, for example via the ``spark.jars.packages``
+        coordinates from :func:`pathling._spark_defaults.managed_spark_defaults`.
 
         :param spark: a pre-configured :class:`SparkSession` instance, use this if you need to
                control the way that the session is set up
+        :param spark_conf: extra Spark configuration entries to apply when Pathling builds a
+               new SparkSession, e.g. ``{"spark.driver.memory": "8g"}``. Keys must begin with
+               ``spark.`` and values must be strings. The entries are merged with Pathling's
+               managed defaults with the same protection as the CLI's ``--spark-conf`` flag,
+               so a managed key such as ``spark.jars.packages`` cannot be silently clobbered.
+               Cannot be combined with ``spark``: most Spark settings only take effect when
+               the JVM launches, so they cannot be applied to a session that already exists.
         :param max_nesting_level: controls the maximum depth of nested element data that is encoded
                upon import. This affects certain elements within FHIR resources that contain
                recursive references, e.g. `QuestionnaireResponse.item
@@ -280,6 +293,23 @@ class PathlingContext:
             raise ValueError(
                 "terminology_storage_path is required when terminology_mode is 'local'"
             )
+        # spark_conf only takes effect when Pathling builds a new SparkSession:
+        # most Spark settings (e.g. driver memory) are JVM-launch-time only and
+        # cannot be applied to a session that already exists.
+        if spark_conf is not None:
+            if spark is not None:
+                raise ValueError(
+                    "spark_conf cannot be used together with 'spark': the supplied "
+                    "SparkSession already exists, so the configuration could not "
+                    "take effect. Omit 'spark' to let Pathling build the session, "
+                    "or apply the configuration to your session yourself."
+                )
+            if SparkSession.getActiveSession() is not None:
+                raise ValueError(
+                    "spark_conf has no effect when an already-active SparkSession "
+                    "would be reused: stop the active session first, or apply the "
+                    "configuration to it yourself."
+                )
 
         def _new_spark_session():
             extra_configs = {}
@@ -289,6 +319,18 @@ class PathlingContext:
                 extra_configs["spark.driver.extraJavaOptions"] = (
                     f"-agentlib:jdwp=transport=dt_socket,server=y,"
                     f"suspend={suspend_option},address={debug_port}"
+                )
+            if spark_conf is not None:
+                # Validate the user map and merge it with the managed defaults
+                # using the same protection as the CLI's --spark-conf flag, so
+                # a managed key (e.g. spark.jars.packages) cannot be clobbered.
+                # Applied last so an explicit spark_conf entry wins for the same
+                # key, mirroring the CLI's user-overlay-last convention.
+                extra_configs.update(
+                    merge_spark_conf(
+                        validate_spark_conf(spark_conf),
+                        on_warning=warnings.warn,
+                    )
                 )
             return _build_spark_session(extra_configs)
 
