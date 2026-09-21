@@ -28,11 +28,16 @@ import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.util.CustomObjectDataSource;
 import jakarta.annotation.Nonnull;
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import org.apache.commons.io.FileUtils;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Attachment;
@@ -134,6 +139,12 @@ public class SqlViewTestConfiguration {
    */
   public static final String AGE_MIDDLE_ID = "age-middle";
 
+  /**
+   * The id of a SQLView whose body carries a subquery over its own declared dependency, used by the
+   * issue 2759 regression test.
+   */
+  public static final String SUBQUERY_PATIENTS_ID = "subquery-patients";
+
   @Primary
   @Bean
   @Nonnull
@@ -175,10 +186,45 @@ public class SqlViewTestConfiguration {
             Map.of("patient_view", PATIENT_VIEW_URL)));
     resources.add(
         sqlView(AGE_MIDDLE_ID, "SELECT age FROM age", Map.of("age", libraryUrl(AGE_SOURCE_ID))));
+    resources.add(
+        sqlView(
+            SUBQUERY_PATIENTS_ID,
+            "SELECT id, family_name FROM ap WHERE family_name >= (SELECT min(family_name) FROM ap)",
+            Map.of("ap", libraryUrl(ACTIVE_PATIENTS_ID))));
     resources.add(patient("p1", "Smith"));
     resources.add(patient("p2", "Johnson"));
     resources.add(patient("p3", "Williams"));
-    return new CustomObjectDataSource(sparkSession, pathlingContext, fhirEncoders, resources);
+    final CustomObjectDataSource source =
+        new CustomObjectDataSource(sparkSession, pathlingContext, fhirEncoders, resources);
+    replacePatientsWithFileBacked(sparkSession, source);
+    return source;
+  }
+
+  /**
+   * Replaces the source's Patient dataset in place with one read back from a Parquet file, so that
+   * a ViewDefinition leaf's plan carries a {@code LogicalRelation} as it does in production against
+   * the Delta warehouse. Built from an in-memory dataset alone it would carry a {@code
+   * LocalRelation}, which the analysed-plan trust gate in {@link SqlValidator} does not police,
+   * leaving the ITs unable to observe it.
+   *
+   * <p>The file is written to a freshly created temporary directory, so the location does not
+   * depend on the working directory and two application contexts loading this configuration
+   * concurrently (as failsafe's parallel forks would) cannot collide. The directory is removed on
+   * JVM exit.
+   */
+  private static void replacePatientsWithFileBacked(
+      @Nonnull final SparkSession sparkSession, @Nonnull final CustomObjectDataSource source) {
+    final Path directory;
+    try {
+      directory = Files.createTempDirectory("pathling-sqlview-it-");
+    } catch (final IOException e) {
+      throw new UncheckedIOException("Unable to create a directory for the Patient fixture", e);
+    }
+    Runtime.getRuntime()
+        .addShutdownHook(new Thread(() -> FileUtils.deleteQuietly(directory.toFile())));
+    final String parquetPath = directory.resolve("Patient.parquet").toString();
+    source.read("Patient").write().parquet(parquetPath);
+    source.dataset("Patient", sparkSession.read().parquet(parquetPath));
   }
 
   @Nonnull
