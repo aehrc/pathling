@@ -28,13 +28,16 @@ import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.util.CustomObjectDataSource;
 import jakarta.annotation.Nonnull;
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import org.apache.spark.sql.SaveMode;
+import org.apache.commons.io.FileUtils;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Attachment;
@@ -202,13 +205,25 @@ public class SqlViewTestConfiguration {
    * a ViewDefinition leaf's plan carries a {@code LogicalRelation} as it does in production against
    * the Delta warehouse. Built from an in-memory dataset alone it would carry a {@code
    * LocalRelation}, which the analysed-plan trust gate in {@link SqlValidator} does not police,
-   * leaving the ITs unable to observe it. The file is written under the module's build output, so
-   * {@code mvn clean} disposes of it.
+   * leaving the ITs unable to observe it.
+   *
+   * <p>The file is written to a freshly created temporary directory, so the location does not
+   * depend on the working directory and two application contexts loading this configuration
+   * concurrently (as failsafe's parallel forks would) cannot collide. The directory is removed on
+   * JVM exit.
    */
   private static void replacePatientsWithFileBacked(
       @Nonnull final SparkSession sparkSession, @Nonnull final CustomObjectDataSource source) {
-    final String parquetPath = Path.of("target", "sqlview-it", "Patient.parquet").toString();
-    source.read("Patient").write().mode(SaveMode.Overwrite).parquet(parquetPath);
+    final Path directory;
+    try {
+      directory = Files.createTempDirectory("pathling-sqlview-it-");
+    } catch (final IOException e) {
+      throw new UncheckedIOException("Unable to create a directory for the Patient fixture", e);
+    }
+    Runtime.getRuntime()
+        .addShutdownHook(new Thread(() -> FileUtils.deleteQuietly(directory.toFile())));
+    final String parquetPath = directory.resolve("Patient.parquet").toString();
+    source.read("Patient").write().parquet(parquetPath);
     source.dataset("Patient", sparkSession.read().parquet(parquetPath));
   }
 
