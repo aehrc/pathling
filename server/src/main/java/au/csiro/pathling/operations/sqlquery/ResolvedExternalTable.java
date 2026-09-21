@@ -38,4 +38,16 @@ public class ResolvedExternalTable implements ResolvedDependency {
 
   /** The Spark data source name ({@code delta} or {@code parquet}), used only by the Spark read. */
   @Nonnull String format;
+
+  /**
+   * An external table's rows come from the location it is pointed at, read as the configured
+   * format, both of which the operator can change while the canonical URL stays as it was.
+   *
+   * @return the content description
+   */
+  @Override
+  @Nonnull
+  public String describeContent() {
+    return "external-table:" + format + ':' + path;
+  }
 }
