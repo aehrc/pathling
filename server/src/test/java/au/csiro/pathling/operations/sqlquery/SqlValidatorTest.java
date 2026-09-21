@@ -23,13 +23,17 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import jakarta.annotation.Nonnull;
+import java.nio.file.Path;
 import java.util.Set;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.catalyst.parser.ParseException;
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
 import org.apache.spark.sql.catalyst.plans.logical.WithWindowDefinition;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -690,7 +694,7 @@ class SqlValidatorTest {
     // Build a dataset whose plan contains a Pathling ScalaUDF (decimal_to_literal),
     // simulating what FhirViewExecutor produces when the view's FHIRPath uses one
     // of these helpers.
-    final org.apache.spark.sql.Dataset<org.apache.spark.sql.Row> viewBacking =
+    final Dataset<Row> viewBacking =
         sparkSession.sql("SELECT decimal_to_literal(CAST(1.5 AS DECIMAL(10, 2)), 1) AS literal");
     viewBacking.createOrReplaceTempView(VIEW_NAME);
 
@@ -699,8 +703,7 @@ class SqlValidatorTest {
     final String userSql = "SELECT literal FROM " + VIEW_NAME;
     assertThatCode(() -> validate(userSql, VIEW_NAME)).doesNotThrowAnyException();
 
-    final org.apache.spark.sql.catalyst.plans.logical.LogicalPlan analyzed =
-        sparkSession.sql(userSql).queryExecution().analyzed();
+    final LogicalPlan analyzed = sparkSession.sql(userSql).queryExecution().analyzed();
     assertThatCode(() -> sqlValidator.validateAnalyzed(analyzed, Set.of(VIEW_NAME)))
         .doesNotThrowAnyException();
   }
@@ -716,8 +719,7 @@ class SqlValidatorTest {
   // -------------------------------------------------------------------------
 
   @Test
-  void permitsLogicalRelationUnderTempViewRegisteredWithMixedCaseName(
-      @org.junit.jupiter.api.io.TempDir final java.nio.file.Path tmp) {
+  void permitsLogicalRelationUnderTempViewRegisteredWithMixedCaseName(@TempDir final Path tmp) {
     // A parquet file produces a LogicalRelation in the analyzed plan, so the
     // trust window must extend through the SubqueryAlias to allow the read.
     final String parquetPath = tmp.resolve("data").toString();
@@ -731,12 +733,95 @@ class SqlValidatorTest {
     try {
       // Spark accepts either case in user SQL and resolves to the same temp view; the
       // SubqueryAlias name in the analyzed plan is the lowercased form.
-      final org.apache.spark.sql.catalyst.plans.logical.LogicalPlan analyzed =
+      final LogicalPlan analyzed =
           sparkSession.sql("SELECT id FROM " + mixedCaseName).queryExecution().analyzed();
       assertThatCode(() -> sqlValidator.validateAnalyzed(analyzed, Set.of(mixedCaseName)))
           .doesNotThrowAnyException();
     } finally {
       sparkSession.catalog().dropTempView(mixedCaseName);
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Issue 2759: a SQLView body may contain a subquery over one of its own
+  // declared dependencies. When an enclosing query reaches that view, the
+  // subquery's plan sits beneath the view's trusted SubqueryAlias, but is
+  // reachable only through an expression rather than through plan children.
+  // Trust therefore has to follow the expression tree as well, otherwise the
+  // nested view's own child relation is rejected at the enclosing query's
+  // check even though it passed its own at materialisation time.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void permitsSubqueryOverNestedViewsOwnDependency(@TempDir final Path tmp) {
+    final String parquetPath = tmp.resolve("data").toString();
+    sparkSession.range(3).toDF("id").write().mode("overwrite").parquet(parquetPath);
+
+    // Mirrors the executor's graph: 'child' is the leaf's temp view, 'parent' is the
+    // SQLView node materialised over it, whose SQL carries a subquery over 'child'.
+    final String childName = "sqlquery_2759_child";
+    final String parentName = "sqlquery_2759_parent";
+    sparkSession.read().parquet(parquetPath).createOrReplaceTempView(childName);
+
+    try {
+      final Dataset<Row> parent =
+          sparkSession.sql(
+              "SELECT id FROM "
+                  + childName
+                  + " WHERE id >= (SELECT min(id) FROM "
+                  + childName
+                  + ")");
+      // The node's own check, run by the executor when it materialises the node, passes
+      // because the node's declared child is in its set.
+      assertThatCode(
+              () ->
+                  sqlValidator.validateAnalyzed(
+                      parent.queryExecution().analyzed(), Set.of(childName)))
+          .doesNotThrowAnyException();
+      parent.createOrReplaceTempView(parentName);
+
+      // The enclosing query declares only the parent. The child's relation is reached
+      // through the subquery inside the parent's already-vetted plan, so it is trusted.
+      final LogicalPlan analyzed =
+          sparkSession.sql("SELECT id FROM " + parentName).queryExecution().analyzed();
+      assertThatCode(() -> sqlValidator.validateAnalyzed(analyzed, Set.of(parentName)))
+          .doesNotThrowAnyException();
+    } finally {
+      sparkSession.catalog().dropTempView(parentName);
+      sparkSession.catalog().dropTempView(childName);
+    }
+  }
+
+  @Test
+  void rejectsSubqueryOverUnregisteredRelationOutsideTrustedAlias(@TempDir final Path tmp) {
+    // The control for the test above: a subquery that is not itself inside a trusted
+    // alias gains no trust from one appearing elsewhere in the query, so a relation it
+    // reads that was never registered for this request is still rejected.
+    final String parquetPath = tmp.resolve("data").toString();
+    sparkSession.range(3).toDF("id").write().mode("overwrite").parquet(parquetPath);
+
+    final String registeredName = "sqlquery_2759_registered";
+    final String unregisteredName = "sqlquery_2759_unregistered";
+    sparkSession.read().parquet(parquetPath).createOrReplaceTempView(registeredName);
+    sparkSession.read().parquet(parquetPath).createOrReplaceTempView(unregisteredName);
+
+    try {
+      final LogicalPlan analyzed =
+          sparkSession
+              .sql(
+                  "SELECT id FROM "
+                      + registeredName
+                      + " WHERE id >= (SELECT min(id) FROM "
+                      + unregisteredName
+                      + ")")
+              .queryExecution()
+              .analyzed();
+      assertThatThrownBy(() -> sqlValidator.validateAnalyzed(analyzed, Set.of(registeredName)))
+          .isInstanceOf(InvalidRequestException.class)
+          .hasMessageContaining("unauthorised data source");
+    } finally {
+      sparkSession.catalog().dropTempView(unregisteredName);
+      sparkSession.catalog().dropTempView(registeredName);
     }
   }
 
