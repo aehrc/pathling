@@ -55,8 +55,13 @@ public class TerminologyConfiguration implements Serializable {
   /** Selects the terminology evaluation backend. Defaults to {@link TerminologyMode#SERVER}. */
   @NotNull @Builder.Default private TerminologyMode mode = TerminologyMode.SERVER;
 
-  /** Local-mode settings; required when {@link #mode} is {@link TerminologyMode#LOCAL}. */
-  @Nullable @Valid private LocalTerminologyConfiguration local;
+  /**
+   * Local-mode settings; a storage path is required when {@link #mode} is {@link
+   * TerminologyMode#LOCAL}. Defaults to an empty block, like the other nested blocks, so that a
+   * property binder has an instance to populate.
+   */
+  @NotNull @Valid @Builder.Default
+  private LocalTerminologyConfiguration local = LocalTerminologyConfiguration.builder().build();
 
   /**
    * The endpoint of a FHIR terminology service (R4) that the server can use to resolve terminology
