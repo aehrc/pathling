@@ -35,7 +35,6 @@ import pathling
 import pathling.context as context_module
 from pathling.cli.config import CliConfig, TxAuth, TxStore
 from pathling.cli.session import (
-    _apply_log_level,
     _build_quiet_spark,
     _create_pathling_context,
     public_namespace,
@@ -322,9 +321,7 @@ def _run_logging_probe(verbose: bool, marker: str):
     :param marker: the marker string the probe emits in its INFO record.
     :return: the completed subprocess.
     """
-    package_dir = os.path.dirname(
-        os.path.dirname(os.path.abspath(pathling.__file__))
-    )
+    package_dir = os.path.dirname(os.path.dirname(os.path.abspath(pathling.__file__)))
     env = dict(os.environ)
     env["PYTHONPATH"] = package_dir + os.pathsep + env.get("PYTHONPATH", "")
     probe = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logging_probe.py")
