@@ -43,9 +43,10 @@ import org.springframework.boot.context.properties.source.MapConfigurationProper
 import org.springframework.validation.beanvalidation.SpringValidatorAdapter;
 
 /**
- * Unit tests for {@link SqlQueryConfiguration}, covering the {@code maxDependencyDepth} default and
- * its {@code @Min(1)} validation, guarding against the reintroduction of a server-side row cap or
- * query timeout, and the Bean Validation rules for {@code externalTables}.
+ * Unit tests for {@link SqlQueryConfiguration}, covering the {@code maxDependencyDepth} and {@code
+ * valueSetMaxMembers} defaults and their {@code @Min(1)} validation, guarding against the
+ * reintroduction of a server-side row cap or query timeout, and the Bean Validation rules for
+ * {@code externalTables}.
  *
  * @author John Grimes
  */
@@ -59,10 +60,11 @@ class SqlQueryConfigurationTest {
   }
 
   @Test
-  void exposesOnlyTheDependencyDepthAndExternalTableSettings() {
-    // The dependency-depth limit is the only resource limit this configuration carries. A row cap
-    // silently truncates results and a wall-clock timeout aborts legitimate long-running work, so
-    // neither may return: this test fails if a new setting is added here.
+  void exposesOnlyTheDependencyDepthExternalTableAndValueSetSizeSettings() {
+    // The dependency-depth limit and the value set membership cap are the only resource limits this
+    // configuration carries. A row cap silently truncates results and a wall-clock timeout aborts
+    // legitimate long-running work, so neither may return: this test fails if a new setting is
+    // added here.
     final Set<String> declaredSettings =
         Arrays.stream(SqlQueryConfiguration.class.getDeclaredFields())
             .filter(field -> !field.isSynthetic())
@@ -70,7 +72,8 @@ class SqlQueryConfigurationTest {
             .map(Field::getName)
             .collect(Collectors.toSet());
 
-    assertThat(declaredSettings).containsExactlyInAnyOrder("maxDependencyDepth", "externalTables");
+    assertThat(declaredSettings)
+        .containsExactlyInAnyOrder("maxDependencyDepth", "externalTables", "valueSetMaxMembers");
   }
 
   @Test
@@ -110,6 +113,37 @@ class SqlQueryConfigurationTest {
     final Set<ConstraintViolation<SqlQueryConfiguration>> violations = validator.validate(config);
 
     assertThat(violations).isNotEmpty();
+  }
+
+  // -------------------------------------------------------------------------
+  // Value set membership cap
+  // -------------------------------------------------------------------------
+
+  @Test
+  void defaultValueSetMaxMembersIsOneHundredThousand() {
+    // The cap bounds the memory a single value set relation may take; the default admits every
+    // realistic clinical value set while still rejecting an unbounded expansion.
+    assertThat(new SqlQueryConfiguration().getValueSetMaxMembers()).isEqualTo(100_000);
+  }
+
+  @Test
+  void acceptsValueSetMaxMembersOfOne() {
+    final SqlQueryConfiguration config = new SqlQueryConfiguration();
+    config.setValueSetMaxMembers(1);
+
+    assertThat(validator.validate(config)).isEmpty();
+  }
+
+  @Test
+  void rejectsZeroValueSetMaxMembers() {
+    // A cap of zero would reject every non-empty value set, defeating the feature entirely.
+    final SqlQueryConfiguration config = new SqlQueryConfiguration();
+    config.setValueSetMaxMembers(0);
+
+    final Set<ConstraintViolation<SqlQueryConfiguration>> violations = validator.validate(config);
+
+    assertThat(violations).hasSize(1);
+    assertThat(violations.iterator().next().getPropertyPath()).hasToString("valueSetMaxMembers");
   }
 
   // -------------------------------------------------------------------------

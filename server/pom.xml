@@ -114,6 +114,13 @@
     </dependency>
     <dependency>
       <groupId>au.csiro.pathling</groupId>
+      <artifactId>terminology</artifactId>
+      <version>${pathling.version}</version>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>au.csiro.pathling</groupId>
       <artifactId>test-data</artifactId>
       <version>${pathling.testDataVersion}</version>
       <scope>test</scope>
