@@ -31,10 +31,13 @@ import au.csiro.pathling.operations.sqlquery.ResolvedDependency;
 import au.csiro.pathling.operations.sqlquery.ResolvedDependencyGraph;
 import au.csiro.pathling.operations.sqlquery.ResolvedExternalTable;
 import au.csiro.pathling.operations.sqlquery.ResolvedSqlView;
+import au.csiro.pathling.operations.sqlquery.ResolvedValueSet;
 import au.csiro.pathling.operations.sqlquery.ResolvedViewDefinition;
 import au.csiro.pathling.operations.sqlquery.SqlLibraryParser;
 import au.csiro.pathling.operations.sqlquery.SqlQueryOutputFormat;
 import au.csiro.pathling.operations.sqlquery.SqlQueryRequest;
+import au.csiro.pathling.terminology.expand.ValueSetExpansion;
+import au.csiro.pathling.terminology.expand.ValueSetMember;
 import au.csiro.pathling.views.FhirView;
 import jakarta.annotation.Nonnull;
 import java.util.LinkedHashMap;
@@ -146,6 +149,21 @@ class SqlExportSupportTest {
     assertThat(second).isNotEqualTo(first);
   }
 
+  // A value set leaf's rows are its members, so two kick-offs that inline different memberships at
+  // the one canonical URL would export different rows and must not share a job (spec 061, US3
+  // scenario 5).
+  @Test
+  void aDifferentValueSetMembershipAtTheSameUrlProducesADifferentKey() {
+    final String first =
+        support.computeCacheKeyComponent(
+            requestOver(valueSetGraph(member("22298006"), member("I21"))));
+    final String second =
+        support.computeCacheKeyComponent(
+            requestOver(valueSetGraph(member("22298006"), member("73211009"))));
+
+    assertThat(second).isNotEqualTo(first);
+  }
+
   // -------------------------------------------------------------------------
   // Kick-offs that really are the same.
   // -------------------------------------------------------------------------
@@ -186,6 +204,20 @@ class SqlExportSupportTest {
     final String descending = support.computeCacheKeyComponent(requestOver(twoLabelGraph(true)));
 
     assertThat(descending).isEqualTo(ascending);
+  }
+
+  // Two separately resolved copies of one membership describe themselves identically, so a
+  // repeated kick-off still deduplicates onto the job that is already running.
+  @Test
+  void anIdenticalValueSetMembershipProducesTheSameKey() {
+    final String first =
+        support.computeCacheKeyComponent(
+            requestOver(valueSetGraph(member("22298006"), member("I21"))));
+    final String second =
+        support.computeCacheKeyComponent(
+            requestOver(valueSetGraph(member("22298006"), member("I21"))));
+
+    assertThat(second).isEqualTo(first);
   }
 
   // A dependency swapped for a different resource is a different request even when both bodies
@@ -230,6 +262,20 @@ class SqlExportSupportTest {
   private static ResolvedDependencyGraph externalTableGraph(
       @Nonnull final String path, @Nonnull final String format) {
     return graph(Map.of("crit_a", VIEW_URL), new ResolvedExternalTable(VIEW_URL, path, format));
+  }
+
+  /** A graph whose single dependency is a value set holding the given members. */
+  @Nonnull
+  private static ResolvedDependencyGraph valueSetGraph(@Nonnull final ValueSetMember... members) {
+    final ValueSetExpansion expansion =
+        new ValueSetExpansion(VIEW_URL, null, null, null, List.of(), List.of(members));
+    return graph(Map.of("crit_a", VIEW_URL), new ResolvedValueSet(VIEW_URL, expansion));
+  }
+
+  /** A SNOMED CT member with the given code and no display or inactive flag. */
+  @Nonnull
+  private static ValueSetMember member(@Nonnull final String code) {
+    return new ValueSetMember("http://snomed.info/sct", null, code, null, null);
   }
 
   /**

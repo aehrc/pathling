@@ -48,6 +48,9 @@ import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.PublicationStatus;
 import org.hl7.fhir.r4.model.Library;
+import org.hl7.fhir.r4.model.OperationOutcome;
+import org.hl7.fhir.r4.model.OperationOutcome.IssueSeverity;
+import org.hl7.fhir.r4.model.OperationOutcome.IssueType;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.RelatedArtifact;
 import org.hl7.fhir.r4.model.RelatedArtifact.RelatedArtifactType;
@@ -80,11 +83,14 @@ import org.springframework.test.web.reactive.server.EntityExchangeResult;
  * context} ValueSet carrying an expansion is used as-is and outranks the terminology server, is
  * matched to a pinned dependency only when its version agrees, is expanded through a {@code POST
  * $expand} when it carries only a compose, and is rejected when unmatched or when it shares a URL
- * with another entry.
+ * with another entry. Follows User Story 3: the value set resolves through a stored SQLView in both
+ * operations, an export job expands it once for all of its subjects, a value set fault rejects the
+ * kick-off before any job exists, two kick-offs inlining different memberships are two jobs, and
+ * the {@code patient} filter reaches the FHIR view but never the value set.
  *
- * <p>Backed by {@link SqlValueSetTestConfiguration} for the stored ViewDefinition and the Condition
- * data. The terminology server's HTTP response cache is disabled so that every expansion reaches
- * WireMock and can be verified.
+ * <p>Backed by {@link SqlValueSetTestConfiguration} for the stored ViewDefinition and SQLView, the
+ * Condition data and the Patients. The terminology server's HTTP response cache is disabled so that
+ * every expansion reaches WireMock and can be verified.
  *
  * @author John Grimes
  */
@@ -96,10 +102,16 @@ import org.springframework.test.web.reactive.server.EntityExchangeResult;
 class SqlValueSetIT extends AbstractAsyncExportIT {
 
   /** The canonical URL of the cardiovascular disease value set of the specification's example. */
-  static final String CVD_URL = "http://example.org/ValueSet/cardiovascular-disease";
+  static final String CVD_URL = SqlValueSetTestConfiguration.CVD_URL;
 
   /** The pinned version of the cardiovascular disease value set. */
-  static final String CVD_VERSION = "2026";
+  static final String CVD_VERSION = SqlValueSetTestConfiguration.CVD_VERSION;
+
+  /** The canonical URL of a value set the terminology server does not hold. */
+  static final String MISSING_URL = "http://example.org/ValueSet/does-not-exist";
+
+  /** The canonical URL of a value set the terminology server holds but cannot expand. */
+  static final String BROKEN_URL = "http://example.org/ValueSet/broken";
 
   /** The canonical URL of a value set whose expansion has no members. */
   static final String EMPTY_URL = "http://example.org/ValueSet/empty";
@@ -432,6 +444,193 @@ class SqlValueSetIT extends AbstractAsyncExportIT {
   }
 
   // -------------------------------------------------------------------------
+  // US3 scenario 1: a SQLQuery over a stored SQLView that depends on the value set.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void sqlQueryOverAStoredSqlViewReflectsTheMembership() {
+    final String body = postOk(parametersJson(queryOverStoredSqlView()));
+
+    assertThat(rowsOf(body, "patient_id", "code"))
+        .containsExactly(
+            "Patient/p1/" + SqlValueSetTestConfiguration.MYOCARDIAL_INFARCTION,
+            "Patient/p3/" + SqlValueSetTestConfiguration.MYOCARDIAL_INFARCTION);
+    assertThat(expandRequests()).hasSize(1);
+  }
+
+  // -------------------------------------------------------------------------
+  // US3 scenario 2: the stored SQLView as an export subject.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void exportsTheStoredSqlViewAsASubject() throws InterruptedException {
+    final Map<String, Object> body =
+        parameters(
+            subject(
+                nameOf("cvd"),
+                simpleParam(
+                    "subjectCanonical",
+                    "valueCanonical",
+                    SqlValueSetTestConfiguration.CVD_CONDITIONS_URL)),
+            simpleParam("_format", "valueString", SqlQueryOutputFormat.NDJSON.getCode()));
+
+    final Map<String, Object> manifest = exportToCompletion(systemLevelUri(), body);
+
+    assertThat(findParamValue(manifest, "status", "valueCode")).isEqualTo("completed");
+    final List<Map<String, Object>> outputs = paramsByName(manifest, "output");
+    assertThat(outputs).hasSize(1);
+    assertThat(rowsOf(downloadAll(outputs.get(0)), "patient_id", "code"))
+        .containsExactlyInAnyOrder(
+            "Patient/p1/" + SqlValueSetTestConfiguration.MYOCARDIAL_INFARCTION,
+            "Patient/p3/" + SqlValueSetTestConfiguration.MYOCARDIAL_INFARCTION);
+  }
+
+  // -------------------------------------------------------------------------
+  // US3 scenario 3: two subjects reaching one value set expand it once and agree.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void exportWithTwoSubjectsReachingTheValueSetExpandsItOnce() throws InterruptedException {
+    // The SQLView reaches the value set through its own dependencies, and the inline SQLQuery
+    // reaches it directly, under the same pinned canonical.
+    final Map<String, Object> body =
+        parameters(
+            subject(
+                nameOf("stored"),
+                simpleParam(
+                    "subjectCanonical",
+                    "valueCanonical",
+                    SqlValueSetTestConfiguration.CVD_CONDITIONS_URL)),
+            subject(
+                nameOf("inline"),
+                resourcePart(
+                    "subjectResource", resourceMap(semiJoinQuery(CVD_URL + "|" + CVD_VERSION)))),
+            simpleParam("_format", "valueString", SqlQueryOutputFormat.NDJSON.getCode()));
+
+    final Map<String, Object> manifest = exportToCompletion(systemLevelUri(), body);
+
+    assertThat(expandRequests()).hasSize(1);
+    final List<Map<String, Object>> outputs = paramsByName(manifest, "output");
+    assertThat(outputs).hasSize(2);
+    final List<String> expected =
+        List.of(
+            "Patient/p1/" + SqlValueSetTestConfiguration.MYOCARDIAL_INFARCTION,
+            "Patient/p3/" + SqlValueSetTestConfiguration.MYOCARDIAL_INFARCTION);
+    assertThat(rowsOf(downloadAll(outputNamed(outputs, "stored")), "patient_id", "code"))
+        .containsExactlyInAnyOrderElementsOf(expected);
+    assertThat(rowsOf(downloadAll(outputNamed(outputs, "inline")), "patient_id", "code"))
+        .containsExactlyInAnyOrderElementsOf(expected);
+  }
+
+  // -------------------------------------------------------------------------
+  // US3 scenario 4: a value set fault rejects the kick-off and creates no job.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void kickOffWithAnUnresolvableValueSetIsA404AndCreatesNoJob() {
+    stubExpansionFailure(MISSING_URL, 404, "ValueSet not found");
+    final int jobsBefore = jobCount();
+
+    final String body =
+        kickOffExpectStatus(
+            parameters(
+                subject(
+                    nameOf("inline"),
+                    resourcePart("subjectResource", resourceMap(semiJoinQuery(MISSING_URL))))),
+            404);
+
+    assertThat(body)
+        .contains("cvd_codes", MISSING_URL)
+        .contains("no ViewDefinition, SQLView, external table or value set matches");
+    assertThat(jobCount()).as("A rejected kick-off must not register a job").isEqualTo(jobsBefore);
+  }
+
+  @Test
+  void kickOffWithAnUndeterminableValueSetIsA422AndCreatesNoJob() {
+    stubExpansionFailure(BROKEN_URL, 422, "Unable to expand: too many codes");
+    final int jobsBefore = jobCount();
+
+    final String body =
+        kickOffExpectStatus(
+            parameters(
+                subject(
+                    nameOf("inline"),
+                    resourcePart("subjectResource", resourceMap(semiJoinQuery(BROKEN_URL))))),
+            422);
+
+    assertThat(body).contains("cvd_codes", BROKEN_URL, "could not be determined", "too many codes");
+    assertThat(jobCount()).as("A rejected kick-off must not register a job").isEqualTo(jobsBefore);
+  }
+
+  // -------------------------------------------------------------------------
+  // US3 scenario 5: kick-offs differing only in the inline ValueSet are two jobs.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void kickOffsDifferingOnlyInTheInlineValueSetAreTwoJobs() throws InterruptedException {
+    final ValueSet diabetes = suppliedValueSet(CVD_URL, CVD_VERSION);
+    diabetes
+        .getExpansion()
+        .addContains()
+        .setSystem(SqlValueSetTestConfiguration.SNOMED)
+        .setCode(SqlValueSetTestConfiguration.DIABETES_MELLITUS);
+    final Map<String, Object> cardiovascular = exportOverInlineValueSet(cvdExpansion());
+    final Map<String, Object> alternative = exportOverInlineValueSet(diabetes);
+
+    final String firstStatusUrl = contentLocationOf(systemLevelUri(), cardiovascular);
+    final String secondStatusUrl = contentLocationOf(systemLevelUri(), alternative);
+    assertThat(secondStatusUrl)
+        .as("A kick-off inlining a different membership must get its own job")
+        .isNotEqualTo(firstStatusUrl);
+
+    // Each job ran the membership its own request supplied.
+    final Map<String, Object> firstManifest = exportToCompletion(systemLevelUri(), cardiovascular);
+    assertThat(
+            rowsOf(
+                downloadAll(outputNamed(paramsByName(firstManifest, "output"), "inline")),
+                "patient_id",
+                "code"))
+        .containsExactlyInAnyOrder(
+            "Patient/p1/" + SqlValueSetTestConfiguration.MYOCARDIAL_INFARCTION,
+            "Patient/p3/" + SqlValueSetTestConfiguration.MYOCARDIAL_INFARCTION);
+    final Map<String, Object> secondManifest = exportToCompletion(systemLevelUri(), alternative);
+    assertThat(
+            rowsOf(
+                downloadAll(outputNamed(paramsByName(secondManifest, "output"), "inline")),
+                "patient_id",
+                "code"))
+        .containsExactly("Patient/p2/" + SqlValueSetTestConfiguration.DIABETES_MELLITUS);
+    assertThat(expandRequests()).isEmpty();
+  }
+
+  // -------------------------------------------------------------------------
+  // US3 scenario 6: the patient filter narrows the FHIR side of the join and never the value set.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void patientFilterNarrowsTheJoinThroughTheView() {
+    final String body =
+        postOk(parametersJson(queryOverStoredSqlView(), referencePart("patient", "Patient/p3")));
+
+    assertThat(rowsOf(body, "patient_id", "code"))
+        .containsExactly("Patient/p3/" + SqlValueSetTestConfiguration.MYOCARDIAL_INFARCTION);
+  }
+
+  @Test
+  void patientFilterLeavesTheValueSetItselfUntouched() {
+    final Library library =
+        sqlQueryLibrary(
+            "SELECT * FROM cvd_codes ORDER BY code",
+            Map.of("cvd_codes", CVD_URL + "|" + CVD_VERSION));
+
+    final String body = postOk(parametersJson(library, referencePart("patient", "Patient/p3")));
+
+    assertThat(rows(body))
+        .extracting(row -> row.get("code"))
+        .containsExactly(SqlValueSetTestConfiguration.MYOCARDIAL_INFARCTION, "I21");
+  }
+
+  // -------------------------------------------------------------------------
   // Fixtures
   // -------------------------------------------------------------------------
 
@@ -543,6 +742,28 @@ class SqlValueSetIT extends AbstractAsyncExportIT {
     return wireMockServer.findAll(postRequestedFor(urlPathEqualTo(EXPAND_PATH)));
   }
 
+  /**
+   * Stubs {@code $expand} for the given canonical URL to fail with the given status and an
+   * OperationOutcome carrying the given diagnostics.
+   */
+  private void stubExpansionFailure(
+      @Nonnull final String url, final int status, @Nonnull final String diagnostics) {
+    final OperationOutcome outcome = new OperationOutcome();
+    outcome
+        .addIssue()
+        .setSeverity(IssueSeverity.ERROR)
+        .setCode(status == 404 ? IssueType.NOTFOUND : IssueType.PROCESSING)
+        .setDiagnostics(diagnostics);
+    wireMockServer.stubFor(
+        get(urlPathEqualTo(EXPAND_PATH))
+            .withQueryParam("url", equalTo(url))
+            .willReturn(
+                aResponse()
+                    .withStatus(status)
+                    .withHeader("Content-Type", FHIR_JSON)
+                    .withBody(jsonParser.encodeResourceToString(outcome))));
+  }
+
   // -------------------------------------------------------------------------
   // Request helpers
   // -------------------------------------------------------------------------
@@ -578,6 +799,78 @@ class SqlValueSetIT extends AbstractAsyncExportIT {
   List<String> rowsOf(
       @Nonnull final String body, @Nonnull final String first, @Nonnull final String second) {
     return rows(body).stream().map(row -> row.get(first) + "/" + row.get(second)).toList();
+  }
+
+  /**
+   * Builds a SQLQuery selecting everything from the stored SQLView that depends on the value set.
+   */
+  @Nonnull
+  Library queryOverStoredSqlView() {
+    return sqlQueryLibrary(
+        "SELECT * FROM cvd ORDER BY patient_id",
+        Map.of("cvd", SqlValueSetTestConfiguration.CVD_CONDITIONS_URL));
+  }
+
+  /**
+   * Builds an export body whose one subject is the inline semi-join over the pinned value set, with
+   * the given ValueSet supplied through {@code context}.
+   */
+  @Nonnull
+  Map<String, Object> exportOverInlineValueSet(@Nonnull final ValueSet supplied) {
+    return parameters(
+        subject(
+            nameOf("inline"),
+            resourcePart(
+                "subjectResource", resourceMap(semiJoinQuery(CVD_URL + "|" + CVD_VERSION)))),
+        resourcePart("context", resourceMap(supplied)),
+        simpleParam("_format", "valueString", SqlQueryOutputFormat.NDJSON.getCode()));
+  }
+
+  /** The {@code name} part of an export subject. */
+  @Nonnull
+  Map<String, Object> nameOf(@Nonnull final String name) {
+    return simpleParam("name", "valueString", name);
+  }
+
+  /** The manifest output with the given name. */
+  @Nonnull
+  static Map<String, Object> outputNamed(
+      @Nonnull final List<Map<String, Object>> outputs, @Nonnull final String name) {
+    return outputs.stream()
+        .filter(output -> name.equals(partValue(output, "name", "valueString")))
+        .findFirst()
+        .orElseThrow(() -> new AssertionError("No output named " + name));
+  }
+
+  /** Kicks off an export expected to be rejected, asserting the status and no status URL. */
+  @Nonnull
+  String kickOffExpectStatus(@Nonnull final Map<String, Object> body, final int status) {
+    final byte[] payload =
+        kickOff(systemLevelUri(), body)
+            .expectStatus()
+            .isEqualTo(status)
+            .expectHeader()
+            .doesNotExist("Content-Location")
+            .expectBody()
+            .returnResult()
+            .getResponseBodyContent();
+    return payload == null ? "" : new String(payload, StandardCharsets.UTF_8);
+  }
+
+  /** The number of jobs the {@code $jobs} listing currently holds. */
+  int jobCount() {
+    final byte[] body =
+        webTestClient
+            .get()
+            .uri("http://localhost:" + port + "/fhir/$jobs")
+            .header("Accept", "application/fhir+json")
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody()
+            .returnResult()
+            .getResponseBodyContent();
+    return paramsByName(parse(body), "job").size();
   }
 
   @Nonnull
