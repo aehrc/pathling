@@ -34,6 +34,9 @@ import ca.uhn.fhir.parser.IParser;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.github.tomakehurst.wiremock.verification.LoggedRequest;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.ToNumberPolicy;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.nio.charset.StandardCharsets;
@@ -51,6 +54,7 @@ import org.hl7.fhir.r4.model.Library;
 import org.hl7.fhir.r4.model.OperationOutcome;
 import org.hl7.fhir.r4.model.OperationOutcome.IssueSeverity;
 import org.hl7.fhir.r4.model.OperationOutcome.IssueType;
+import org.hl7.fhir.r4.model.OperationOutcome.OperationOutcomeIssueComponent;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.RelatedArtifact;
 import org.hl7.fhir.r4.model.RelatedArtifact.RelatedArtifactType;
@@ -86,7 +90,10 @@ import org.springframework.test.web.reactive.server.EntityExchangeResult;
  * with another entry. Follows User Story 3: the value set resolves through a stored SQLView in both
  * operations, an export job expands it once for all of its subjects, a value set fault rejects the
  * kick-off before any job exists, two kick-offs inlining different memberships are two jobs, and
- * the {@code patient} filter reaches the FHIR view but never the value set.
+ * the {@code patient} filter reaches the FHIR view but never the value set. Follows User Story 4:
+ * every fault carries its specified status and an issue naming the label, the canonical URL and the
+ * reason, on both operations, with no job created on {@code $sql-export}; the unreachable server is
+ * covered by {@link SqlValueSetUnreachableIT}, since the server URL is fixed per context.
  *
  * <p>Backed by {@link SqlValueSetTestConfiguration} for the stored ViewDefinition and SQLView, the
  * Condition data and the Patients. The terminology server's HTTP response cache is disabled so that
@@ -116,6 +123,15 @@ class SqlValueSetIT extends AbstractAsyncExportIT {
   /** The canonical URL of a value set whose expansion has no members. */
   static final String EMPTY_URL = "http://example.org/ValueSet/empty";
 
+  /** The canonical URL of a value set whose first expansion page already exceeds the cap. */
+  static final String LARGE_URL = "http://example.org/ValueSet/large";
+
+  /**
+   * The membership cap configured for this class: the cardiovascular disease value set sits exactly
+   * at it, so every success scenario also proves that a membership at the cap is accepted.
+   */
+  static final int MAX_MEMBERS = 2;
+
   /** The ICD-10 system URI. */
   static final String ICD10 = "http://hl7.org/fhir/sid/icd-10";
 
@@ -129,6 +145,10 @@ class SqlValueSetIT extends AbstractAsyncExportIT {
   static final String EXPAND_PATH = "/fhir/ValueSet/$expand";
 
   private static final String FHIR_JSON = "application/fhir+json";
+
+  /** Parses encoded resources into maps with whole numbers kept as longs. */
+  private static final Gson RESOURCE_GSON =
+      new GsonBuilder().setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE).create();
 
   private static WireMockServer wireMockServer;
 
@@ -158,6 +178,7 @@ class SqlValueSetIT extends AbstractAsyncExportIT {
         "pathling.terminology.serverUrl",
         () -> "http://localhost:" + wireMockServer.port() + "/fhir");
     registry.add("pathling.terminology.cache.enabled", () -> "false");
+    registry.add("pathling.sqlQuery.valueSetMaxMembers", () -> String.valueOf(MAX_MEMBERS));
   }
 
   @BeforeEach
@@ -631,6 +652,308 @@ class SqlValueSetIT extends AbstractAsyncExportIT {
   }
 
   // -------------------------------------------------------------------------
+  // US4 scenario 1: a canonical nothing resolves is a 404 naming the label and the reference.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void unresolvableValueSetIsA404NamingTheLabelAndTheReference() {
+    stubExpansionFailure(MISSING_URL, 404, "ValueSet not found");
+
+    final String body = postExpectStatus(parametersJson(semiJoinQuery(MISSING_URL)), 404);
+
+    assertThat(singleIssue(body).getDiagnostics())
+        .isEqualTo(
+            "Failed to resolve the dependency for label 'cvd_codes' with reference"
+                + " 'http://example.org/ValueSet/does-not-exist': no ViewDefinition, SQLView,"
+                + " external table or value set matches that canonical URL");
+  }
+
+  // -------------------------------------------------------------------------
+  // US4 scenario 2: a value set the server cannot expand is a 422 carrying its diagnostics.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void undeterminableValueSetIsA422CarryingTheServersDiagnostics() {
+    stubExpansionFailure(BROKEN_URL, 422, "Unable to expand: too many codes");
+
+    final String body = postExpectStatus(parametersJson(semiJoinQuery(BROKEN_URL)), 422);
+
+    assertIssue(
+        body,
+        SubjectResolver.SUBJECT_EXPRESSION,
+        "The membership of the value set for label 'cvd_codes' (canonical URL"
+            + " 'http://example.org/ValueSet/broken') could not be determined: the terminology"
+            + " server returned HTTP 422: Unable to expand: too many codes");
+  }
+
+  // -------------------------------------------------------------------------
+  // US4 scenario 3: a membership over the cap is a 422 naming the maximum, after one page only.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void membershipOverTheCapIsA422NamingTheMaximumAfterOnePage() {
+    // The first page holds three of a reported five members, which already exceeds the cap of two;
+    // the second page must never be requested.
+    stubExpansion(LARGE_URL, null, largeExpansionFirstPage());
+    final Library library =
+        sqlQueryLibrary("SELECT * FROM cvd_codes", Map.of("cvd_codes", LARGE_URL));
+
+    final String body = postExpectStatus(parametersJson(library), 422);
+
+    assertIssue(
+        body,
+        SubjectResolver.SUBJECT_EXPRESSION,
+        "The value set for label 'cvd_codes' (canonical URL 'http://example.org/ValueSet/large')"
+            + " has more than the maximum of 2 members permitted by"
+            + " pathling.sqlQuery.valueSetMaxMembers");
+    assertThat(expandRequests()).as("No page beyond the one revealing the excess").hasSize(1);
+  }
+
+  @Test
+  void membershipExactlyAtTheCapIsAccepted() {
+    final Library library =
+        sqlQueryLibrary(
+            "SELECT code FROM cvd_codes ORDER BY code",
+            Map.of("cvd_codes", CVD_URL + "|" + CVD_VERSION));
+
+    final String body = postOk(parametersJson(library));
+
+    assertThat(rows(body)).hasSize(MAX_MEMBERS);
+  }
+
+  // -------------------------------------------------------------------------
+  // US4 scenario 4: a supplied expansion with an offset, or a total over its entries, is
+  // incomplete.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void suppliedExpansionWithAnOffsetIsA422NamingTheContext() {
+    final ValueSet supplied = suppliedValueSet(CVD_URL, null);
+    supplied.getExpansion().setOffset(0);
+    supplied
+        .getExpansion()
+        .addContains()
+        .setSystem(SqlValueSetTestConfiguration.SNOMED)
+        .setCode(SqlValueSetTestConfiguration.MYOCARDIAL_INFARCTION);
+
+    final String body =
+        postExpectStatus(
+            parametersJson(selectFromCvdCodes(), resourcePart("context", resourceMap(supplied))),
+            422);
+
+    assertIssue(
+        body,
+        SuppliedArtefacts.CONTEXT_EXPRESSION,
+        "The membership of the supplied value set for label 'cvd_codes' (canonical URL"
+            + " 'http://example.org/ValueSet/cardiovascular-disease') could not be determined: the"
+            + " expansion is incomplete: it carries an offset");
+    assertThat(expandRequests()).isEmpty();
+  }
+
+  @Test
+  void suppliedExpansionWithTotalOverItsEntriesIsA422NamingTheContext() {
+    final ValueSet supplied = suppliedValueSet(CVD_URL, null);
+    supplied.getExpansion().setTotal(5);
+    supplied
+        .getExpansion()
+        .addContains()
+        .setSystem(SqlValueSetTestConfiguration.SNOMED)
+        .setCode(SqlValueSetTestConfiguration.MYOCARDIAL_INFARCTION);
+    supplied.getExpansion().addContains().setSystem(ICD10).setCode("I21");
+
+    final String body =
+        postExpectStatus(
+            parametersJson(selectFromCvdCodes(), resourcePart("context", resourceMap(supplied))),
+            422);
+
+    assertIssue(
+        body,
+        SuppliedArtefacts.CONTEXT_EXPRESSION,
+        "The membership of the supplied value set for label 'cvd_codes' (canonical URL"
+            + " 'http://example.org/ValueSet/cardiovascular-disease') could not be determined: the"
+            + " expansion is incomplete: total 5 exceeds 2 entries");
+  }
+
+  // -------------------------------------------------------------------------
+  // US4 scenario 5: a supplied entry lacking code, or lacking system, does not identify a member.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void suppliedEntryWithoutCodeIsA422NamingTheContext() {
+    final ValueSet supplied = suppliedValueSet(CVD_URL, null);
+    supplied.getExpansion().addContains().setSystem(SqlValueSetTestConfiguration.SNOMED);
+
+    final String body =
+        postExpectStatus(
+            parametersJson(selectFromCvdCodes(), resourcePart("context", resourceMap(supplied))),
+            422);
+
+    assertIssue(
+        body,
+        SuppliedArtefacts.CONTEXT_EXPRESSION,
+        "The membership of the supplied value set for label 'cvd_codes' (canonical URL"
+            + " 'http://example.org/ValueSet/cardiovascular-disease') could not be determined: an"
+            + " entry does not identify a member: no code");
+  }
+
+  @Test
+  void suppliedEntryWithoutSystemIsA422NamingTheContextAndTheCode() {
+    final ValueSet supplied = suppliedValueSet(CVD_URL, null);
+    supplied
+        .getExpansion()
+        .addContains()
+        .setCode(SqlValueSetTestConfiguration.MYOCARDIAL_INFARCTION);
+
+    final String body =
+        postExpectStatus(
+            parametersJson(selectFromCvdCodes(), resourcePart("context", resourceMap(supplied))),
+            422);
+
+    assertIssue(
+        body,
+        SuppliedArtefacts.CONTEXT_EXPRESSION,
+        "The membership of the supplied value set for label 'cvd_codes' (canonical URL"
+            + " 'http://example.org/ValueSet/cardiovascular-disease') could not be determined: an"
+            + " entry does not identify a member: no system for code '"
+            + SqlValueSetTestConfiguration.MYOCARDIAL_INFARCTION
+            + "'");
+  }
+
+  // -------------------------------------------------------------------------
+  // US4 scenario 6: a supplied ValueSet with neither expansion nor compose defines no membership.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void suppliedValueSetWithNeitherExpansionNorComposeIsA422NamingTheContext() {
+    final ValueSet supplied = suppliedValueSet(CVD_URL, null);
+
+    final String body =
+        postExpectStatus(
+            parametersJson(selectFromCvdCodes(), resourcePart("context", resourceMap(supplied))),
+            422);
+
+    assertIssue(
+        body,
+        SuppliedArtefacts.CONTEXT_EXPRESSION,
+        "The supplied value set for label 'cvd_codes' (canonical URL"
+            + " 'http://example.org/ValueSet/cardiovascular-disease') defines no membership: it"
+            + " carries neither an expansion nor a compose");
+    assertThat(expandRequests()).isEmpty();
+  }
+
+  // -------------------------------------------------------------------------
+  // US4 scenario 7: a supplied ValueSet without a url is a 400, as for any context entry.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void suppliedValueSetWithoutAUrlIsA400() {
+    final ValueSet supplied = suppliedValueSet(CVD_URL, null);
+    supplied.setUrl(null);
+    supplied
+        .getExpansion()
+        .addContains()
+        .setSystem(SqlValueSetTestConfiguration.SNOMED)
+        .setCode(SqlValueSetTestConfiguration.MYOCARDIAL_INFARCTION);
+
+    final String body =
+        postExpectStatus(
+            parametersJson(selectFromCvdCodes(), resourcePart("context", resourceMap(supplied))),
+            400);
+
+    assertIssue(
+        body,
+        SuppliedArtefacts.CONTEXT_EXPRESSION,
+        "A 'context' ValueSet must carry a url, since entries are matched to dependencies by"
+            + " canonical URL.");
+  }
+
+  // -------------------------------------------------------------------------
+  // US4 scenario 9: the same faults on a $sql-export kick-off, with no job created. The 404 case
+  // is kickOffWithAnUnresolvableValueSetIsA404AndCreatesNoJob above.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void kickOffOverTheCapIsA422NamingTheMaximumAndCreatesNoJob() {
+    stubExpansion(LARGE_URL, null, largeExpansionFirstPage());
+    final Library library =
+        sqlQueryLibrary("SELECT * FROM cvd_codes", Map.of("cvd_codes", LARGE_URL));
+    final int jobsBefore = jobCount();
+
+    final String body =
+        kickOffExpectStatus(
+            parameters(
+                subject(nameOf("inline"), resourcePart("subjectResource", resourceMap(library)))),
+            422);
+
+    assertIssue(
+        body,
+        SubjectResolver.SUBJECT_EXPRESSION,
+        "The value set for label 'cvd_codes' (canonical URL 'http://example.org/ValueSet/large')"
+            + " has more than the maximum of 2 members permitted by"
+            + " pathling.sqlQuery.valueSetMaxMembers");
+    assertThat(expandRequests()).hasSize(1);
+    assertThat(jobCount()).as("A rejected kick-off must not register a job").isEqualTo(jobsBefore);
+  }
+
+  @Test
+  void kickOffWithAnIncompleteSuppliedExpansionIsA422AndCreatesNoJob() {
+    final ValueSet supplied = suppliedValueSet(CVD_URL, null);
+    supplied.getExpansion().setOffset(0);
+    supplied
+        .getExpansion()
+        .addContains()
+        .setSystem(SqlValueSetTestConfiguration.SNOMED)
+        .setCode(SqlValueSetTestConfiguration.MYOCARDIAL_INFARCTION);
+    final int jobsBefore = jobCount();
+
+    final String body =
+        kickOffExpectStatus(
+            parameters(
+                subject(
+                    nameOf("inline"),
+                    resourcePart("subjectResource", resourceMap(selectFromCvdCodes()))),
+                resourcePart("context", resourceMap(supplied))),
+            422);
+
+    assertIssue(
+        body,
+        SuppliedArtefacts.CONTEXT_EXPRESSION,
+        "The membership of the supplied value set for label 'cvd_codes' (canonical URL"
+            + " 'http://example.org/ValueSet/cardiovascular-disease') could not be determined: the"
+            + " expansion is incomplete: it carries an offset");
+    assertThat(expandRequests()).isEmpty();
+    assertThat(jobCount()).as("A rejected kick-off must not register a job").isEqualTo(jobsBefore);
+  }
+
+  // -------------------------------------------------------------------------
+  // US4 scenario 10: the value set is reachable by its declared label and nothing else.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void namingTheValueSetByAnUndeclaredIdentifierIsA400() {
+    final Library library =
+        sqlQueryLibrary(
+            "SELECT * FROM cardiovascular", Map.of("cvd_codes", CVD_URL + "|" + CVD_VERSION));
+
+    final String body = postExpectStatus(parametersJson(library), 400);
+
+    assertThat(singleIssue(body).getDiagnostics())
+        .isEqualTo("SQL references an undeclared table: cardiovascular");
+  }
+
+  @Test
+  void namingADataSourceShortNameIsA400() {
+    final Library library =
+        sqlQueryLibrary(
+            "SELECT * FROM Condition", Map.of("cvd_codes", CVD_URL + "|" + CVD_VERSION));
+
+    final String body = postExpectStatus(parametersJson(library), 400);
+
+    assertThat(singleIssue(body).getDiagnostics())
+        .isEqualTo("SQL references an undeclared table: Condition");
+  }
+
+  // -------------------------------------------------------------------------
   // Fixtures
   // -------------------------------------------------------------------------
 
@@ -675,6 +998,25 @@ class SqlValueSetIT extends AbstractAsyncExportIT {
     final ValueSet valueSet = new ValueSet();
     valueSet.setUrl(EMPTY_URL);
     valueSet.getExpansion().setTotal(0);
+    return valueSet;
+  }
+
+  /**
+   * The first page of an expansion reporting five members and carrying three, one more than the
+   * cap, so that the excess is known before any second page is fetched.
+   */
+  @Nonnull
+  private static ValueSet largeExpansionFirstPage() {
+    final ValueSet valueSet = new ValueSet();
+    valueSet.setUrl(LARGE_URL);
+    final ValueSetExpansionComponent expansion = valueSet.getExpansion();
+    expansion.setTotal(5);
+    for (int i = 1; i <= MAX_MEMBERS + 1; i++) {
+      expansion
+          .addContains()
+          .setSystem(SqlValueSetTestConfiguration.SNOMED)
+          .setCode(String.valueOf(i));
+    }
     return valueSet;
   }
 
@@ -811,6 +1153,34 @@ class SqlValueSetIT extends AbstractAsyncExportIT {
         Map.of("cvd", SqlValueSetTestConfiguration.CVD_CONDITIONS_URL));
   }
 
+  /** Builds a SQLQuery selecting the whole relation of the unpinned cardiovascular value set. */
+  @Nonnull
+  Library selectFromCvdCodes() {
+    return sqlQueryLibrary("SELECT * FROM cvd_codes", Map.of("cvd_codes", CVD_URL));
+  }
+
+  /** Parses an error body as an OperationOutcome and returns its single issue. */
+  @Nonnull
+  OperationOutcomeIssueComponent singleIssue(@Nonnull final String body) {
+    final OperationOutcome outcome = (OperationOutcome) jsonParser.parseResource(body);
+    assertThat(outcome.getIssue()).hasSize(1);
+    return outcome.getIssueFirstRep();
+  }
+
+  /**
+   * Asserts that an error body carries exactly one issue with the given expression and diagnostics.
+   */
+  void assertIssue(
+      @Nonnull final String body,
+      @Nonnull final String expression,
+      @Nonnull final String diagnostics) {
+    final OperationOutcomeIssueComponent issue = singleIssue(body);
+    assertThat(issue.getExpression())
+        .extracting(value -> value.getValue())
+        .containsExactly(expression);
+    assertThat(issue.getDiagnostics()).isEqualTo(diagnostics);
+  }
+
   /**
    * Builds an export body whose one subject is the inline semi-join over the pinned value set, with
    * the given ValueSet supplied through {@code context}.
@@ -936,11 +1306,16 @@ class SqlValueSetIT extends AbstractAsyncExportIT {
     return library;
   }
 
-  /** Encodes a resource as the generic JSON map the Gson-built request bodies carry. */
+  /**
+   * Encodes a resource as the generic JSON map the Gson-built request bodies carry. Whole numbers
+   * are kept as longs rather than Gson's default doubles, so that an {@code offset} or {@code
+   * total} of a supplied expansion reaches the server as the integer FHIR requires and not as
+   * {@code 0.0}.
+   */
   @Nonnull
   @SuppressWarnings("unchecked")
   Map<String, Object> resourceMap(@Nonnull final org.hl7.fhir.r4.model.Resource resource) {
-    return gson.fromJson(jsonParser.encodeResourceToString(resource), Map.class);
+    return RESOURCE_GSON.fromJson(jsonParser.encodeResourceToString(resource), Map.class);
   }
 
   /**
