@@ -104,7 +104,7 @@ public class SqlQueryExecutor {
    * @param request the parsed and validated request
    * @param graph the resolved dependency graph the SQL references
    * @param dataSource the data source backing FhirView execution
-   * @param requestId the HAPI per-request id used to namespace temp view names
+   * @param requestId the HAPI per-request id, used for logging and correlation
    * @param consumer terminal consumer of the result dataset
    */
   public void execute(

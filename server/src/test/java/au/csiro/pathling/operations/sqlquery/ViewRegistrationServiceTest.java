@@ -49,7 +49,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
 
 /**
- * Tests for {@link ViewRegistrationService}, with particular attention to the request-id
+ * Tests for {@link ViewRegistrationService}, with particular attention to the random
  * namespacing that prevents concurrent {@code $sql-run} requests from clobbering one another's
  * temporary views in Spark's session-global catalog, and to the reading of configured external
  * tables.
@@ -150,6 +150,30 @@ class ViewRegistrationServiceTest {
     final String left = ViewRegistrationService.resolveTempViewName("req1", "ViewDefinition/a");
     final String right = ViewRegistrationService.resolveTempViewName("req1", "ViewDefinition/b");
     assertThat(left).isNotEqualTo(right);
+  }
+
+  @Test
+  void registerDatasetNamespacesWithRandomIdNotRequestId() {
+    // Issue 2770: the caller controls the request id through X-Request-ID, so the registered
+    // temp view name must not embed it - otherwise a caller could predict the name and forge a
+    // SubqueryAlias the analysed-plan trust gate would accept. The request id is kept for
+    // logging and correlation only.
+    final Dataset<Row> dataset = singleColumnDataset("value", List.of("x"));
+    final String viewName = service.registerDataset("patients", dataset, "attackerChosenId");
+    try {
+      assertThat(viewName).startsWith("sqlquery_").doesNotContain("attackerChosenId");
+      // A fresh namespace is minted per registration, so concurrent requests can never
+      // clobber one another's views.
+      final String otherViewName =
+          service.registerDataset("patients", dataset, "attackerChosenId");
+      try {
+        assertThat(otherViewName).isNotEqualTo(viewName);
+      } finally {
+        service.dropViews(List.of(otherViewName));
+      }
+    } finally {
+      service.dropViews(List.of(viewName));
+    }
   }
 
   // ---------------------------------------------------------------------------

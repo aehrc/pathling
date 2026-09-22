@@ -589,8 +589,8 @@ public class SqlValidator {
    * <p>The comparison is case-insensitive because Spark normalises identifiers when resolving SQL
    * references against the catalog (default {@code spark.sql.caseSensitive=false}). The {@link
    * SubqueryAlias} synthesised by {@code ResolveRelations} therefore carries a lowercased name even
-   * when the temp view was registered with mixed case (HAPI's request ids, used to scope the temp
-   * view names, are mixed-case alphanumerics). Without this case-insensitive match, every {@link
+   * when the temp view was registered with mixed case (the identifier segment of a temp view name is
+   * used verbatim for bare-word identifiers). Without this case-insensitive match, every {@link
    * LogicalRelation} reachable through a request-scoped temp view would be rejected even though it
    * is the legitimate backing for a registered view.
    */
