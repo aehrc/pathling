@@ -21,14 +21,16 @@ import au.csiro.pathling.views.FhirView;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import org.hl7.fhir.r4.model.Library;
+import org.hl7.fhir.r4.model.ValueSet;
 
 /**
  * One entry of the repeating {@code context} parameter: a supporting artefact supplied inline for a
  * dependency the server cannot resolve, identified by the canonical URL it satisfies.
  *
- * <p>An entry is either a parsed {@code ViewDefinition}, which is a leaf of the dependency graph,
- * or a {@code SQLView} {@code Library}, whose own dependencies are traversed in turn so a chain of
- * supplied artefacts resolves.
+ * <p>An entry is one of a parsed {@code ViewDefinition}, which is a leaf of the dependency graph; a
+ * {@code SQLView} {@code Library}, whose own dependencies are traversed in turn so a chain of
+ * supplied artefacts resolves; or a {@code ValueSet}, a leaf whose membership is taken from its
+ * expansion where it carries one and otherwise computed from its compose.
  *
  * @author John Grimes
  */
@@ -42,15 +44,19 @@ public class SuppliedArtefact {
 
   @Nullable private final Library sqlView;
 
+  @Nullable private final ValueSet valueSet;
+
   private SuppliedArtefact(
       @Nonnull final String url,
       @Nullable final String version,
       @Nullable final FhirView view,
-      @Nullable final Library sqlView) {
+      @Nullable final Library sqlView,
+      @Nullable final ValueSet valueSet) {
     this.url = url;
     this.version = version;
     this.view = view;
     this.sqlView = sqlView;
+    this.valueSet = valueSet;
   }
 
   /**
@@ -64,7 +70,7 @@ public class SuppliedArtefact {
   @Nonnull
   public static SuppliedArtefact ofView(
       @Nonnull final String url, @Nullable final String version, @Nonnull final FhirView view) {
-    return new SuppliedArtefact(url, version, view, null);
+    return new SuppliedArtefact(url, version, view, null, null);
   }
 
   /**
@@ -78,7 +84,21 @@ public class SuppliedArtefact {
   @Nonnull
   public static SuppliedArtefact ofSqlView(
       @Nonnull final String url, @Nullable final String version, @Nonnull final Library sqlView) {
-    return new SuppliedArtefact(url, version, null, sqlView);
+    return new SuppliedArtefact(url, version, null, sqlView, null);
+  }
+
+  /**
+   * Creates an entry backed by a supplied {@code ValueSet}.
+   *
+   * @param url the canonical URL the entry satisfies
+   * @param version the entry's version, or null when it declares none
+   * @param valueSet the ValueSet resource
+   * @return the entry
+   */
+  @Nonnull
+  public static SuppliedArtefact ofValueSet(
+      @Nonnull final String url, @Nullable final String version, @Nonnull final ValueSet valueSet) {
+    return new SuppliedArtefact(url, version, null, null, valueSet);
   }
 
   /**
@@ -102,8 +122,7 @@ public class SuppliedArtefact {
   }
 
   /**
-   * Indicates whether this entry is a supplied {@code ViewDefinition} rather than a {@code
-   * SQLView}.
+   * Indicates whether this entry is a supplied {@code ViewDefinition}.
    *
    * @return true if the entry is a ViewDefinition
    */
@@ -112,10 +131,28 @@ public class SuppliedArtefact {
   }
 
   /**
+   * Indicates whether this entry is a supplied {@code SQLView} {@code Library}.
+   *
+   * @return true if the entry is a SQLView
+   */
+  public boolean isSqlView() {
+    return sqlView != null;
+  }
+
+  /**
+   * Indicates whether this entry is a supplied {@code ValueSet}.
+   *
+   * @return true if the entry is a ValueSet
+   */
+  public boolean isValueSet() {
+    return valueSet != null;
+  }
+
+  /**
    * Returns the parsed view backing this entry.
    *
    * @return the parsed view
-   * @throws IllegalStateException if this entry is a SQLView rather than a ViewDefinition
+   * @throws IllegalStateException if this entry is not a ViewDefinition
    */
   @Nonnull
   public FhirView getView() {
@@ -130,7 +167,7 @@ public class SuppliedArtefact {
    * Returns the SQLView Library backing this entry.
    *
    * @return the SQLView Library
-   * @throws IllegalStateException if this entry is a ViewDefinition rather than a SQLView
+   * @throws IllegalStateException if this entry is not a SQLView
    */
   @Nonnull
   public Library getSqlView() {
@@ -138,6 +175,20 @@ public class SuppliedArtefact {
       throw new IllegalStateException("Supplied artefact '%s' is not a SQLView".formatted(url));
     }
     return sqlView;
+  }
+
+  /**
+   * Returns the ValueSet resource backing this entry.
+   *
+   * @return the ValueSet
+   * @throws IllegalStateException if this entry is not a ValueSet
+   */
+  @Nonnull
+  public ValueSet getValueSet() {
+    if (valueSet == null) {
+      throw new IllegalStateException("Supplied artefact '%s' is not a ValueSet".formatted(url));
+    }
+    return valueSet;
   }
 
   /**
