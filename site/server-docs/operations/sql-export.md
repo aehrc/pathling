@@ -29,22 +29,22 @@ rejected rather than answered synchronously.
 
 ## Parameters
 
-| Name                       | Cardinality | Type       | Description                                                                                        |
-| -------------------------- | ----------- | ---------- | -------------------------------------------------------------------------------------------------- |
-| `subject`                  | 1..\*       | (parts)    | One repetition per artefact to export, in any mixture of kinds. Each produces exactly one output.  |
-| `subject.name`             | 0..1        | string     | The output name. Falls back to the artefact's own `name`, then to a generated one. Must be unique. |
-| `subject.subjectCanonical` | 0..1        | canonical  | The subject's canonical URL, honouring a `\|version` pin.                                          |
-| `subject.subjectReference` | 0..1        | Reference  | A relative reference naming its type: `ViewDefinition/[id]` or `Library/[id]`.                     |
-| `subject.subjectResource`  | 0..1        | Resource   | An inline ViewDefinition, SQLQuery or SQLView.                                                     |
-| `subject.parameters`       | 0..1        | Parameters | Runtime bindings, for a SQL subject only. Every declared parameter must be bound.                  |
-| `context`                  | 0..\*       | Resource   | Job-wide inline supporting artefacts, matched by canonical URL. These produce no output.           |
-| `clientTrackingId`         | 0..1        | string     | Echoed in the completion manifest.                                                                 |
-| `_format`                  | 0..1        | code       | `ndjson` (default), `csv` or `parquet`.                                                            |
-| `header`                   | 0..1        | boolean    | Include the header row in CSV output. Defaults to `true`.                                          |
-| `patient`                  | 0..\*       | Reference  | Applies to every subject in the job.                                                               |
-| `group`                    | 0..\*       | Reference  | Applies to every subject in the job.                                                               |
-| `_since`                   | 0..1        | instant    | Applies to every subject in the job.                                                               |
-| `source`                   | 0..1        | string     | **Not supported**: an external data source. Supplying it is rejected with a `400`.                 |
+| Name                       | Cardinality | Type       | Description                                                                                                                    |
+| -------------------------- | ----------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `subject`                  | 1..\*       | (parts)    | One repetition per artefact to export, in any mixture of kinds. Each produces exactly one output.                              |
+| `subject.name`             | 0..1        | string     | The output name. Falls back to the artefact's own `name`, then to a generated one. Must be unique.                             |
+| `subject.subjectCanonical` | 0..1        | canonical  | The subject's canonical URL, honouring a `\|version` pin.                                                                      |
+| `subject.subjectReference` | 0..1        | Reference  | A relative reference naming its type: `ViewDefinition/[id]` or `Library/[id]`.                                                 |
+| `subject.subjectResource`  | 0..1        | Resource   | An inline ViewDefinition, SQLQuery or SQLView.                                                                                 |
+| `subject.parameters`       | 0..1        | Parameters | Runtime bindings, for a SQL subject only. Every declared parameter must be bound.                                              |
+| `context`                  | 0..\*       | Resource   | Job-wide inline supporting artefacts (ViewDefinition, SQLView or ValueSet), matched by canonical URL. These produce no output. |
+| `clientTrackingId`         | 0..1        | string     | Echoed in the completion manifest.                                                                                             |
+| `_format`                  | 0..1        | code       | `ndjson` (default), `csv` or `parquet`.                                                                                        |
+| `header`                   | 0..1        | boolean    | Include the header row in CSV output. Defaults to `true`.                                                                      |
+| `patient`                  | 0..\*       | Reference  | Applies to every subject in the job.                                                                                           |
+| `group`                    | 0..\*       | Reference  | Applies to every subject in the job.                                                                                           |
+| `_since`                   | 0..1        | instant    | Applies to every subject in the job.                                                                                           |
+| `source`                   | 0..1        | string     | **Not supported**: an external data source. Supplying it is rejected with a `400`.                                             |
 
 Exactly one naming form must be supplied per `subject` repetition. `_limit` is
 not offered: an export writes the whole result set.
@@ -59,9 +59,15 @@ meaningless for a bulk file set, and is refused as `invalid`.
   the job began, so concurrent writes are invisible to it. The snapshot covers
   the warehouse only: a configured
   [external table](../configuration#sql-query) is outside it and is read at its
-  current state when the subject that references it is materialised.
+  current state when the subject that references it is materialised. A
+  [value set](sql-run#value-sets) is outside it too, but is fixed differently:
+  its membership is obtained at kick-off and does not change for the life of
+  the job.
 - **One resolution per canonical URL.** Dependency resolution is memoised
-  across the job, so an artefact several subjects share is resolved once.
+  across the job, so an artefact several subjects share is resolved once. A
+  value set reached by several subjects, under several labels or through
+  several SQLViews is expanded once, and every subject sees the same
+  membership.
 - **One output per subject.** The manifest carries exactly one `output` per
   `subject`, correlated by `name`. There is no ordering guarantee.
 - **Validated at kick-off, as far as the request alone allows.** Every subject
@@ -69,12 +75,22 @@ meaningless for a bulk file set, and is refused as `invalid`.
   problem found that way is reported in one `OperationOutcome` with no job
   created. That covers malformed subjects, unresolvable canonicals and
   references, colliding names, unbound parameters and SQL that fails the
-  server's own validator. It does not cover faults only Spark's analyser can
-  find, such as an unresolved column or an unknown function; those fail the job
-  and are reported at its result URL, as described under
-  [Status codes](#status-codes).
+  server's own validator. It also covers every value set fault: a canonical
+  that nothing resolves, a membership that cannot be determined, an expansion
+  over the configured maximum, or a supplied ValueSet that is incomplete, all
+  reject the kick-off with the same status and issue as on `$sql-run`, in the
+  one outcome with the request's other faults. It does not cover faults only
+  Spark's analyser can find, such as an unresolved column or an unknown
+  function; those fail the job and are reported at its result URL, as described
+  under [Status codes](#status-codes).
 - **All or nothing.** A subject that fails fails the whole job, and its partial
   files are removed rather than offered for download.
+
+The `patient`, `group` and `_since` filters apply to the FHIR data every subject
+reads; they do not reach a value set, which contributes every member to each
+subject, so a join to it is constrained only through the FHIR side. Two
+kick-offs that are identical except for the membership of a `context` ValueSet
+they inline are two jobs, not one shared job.
 
 ## Asynchronous flow
 
@@ -166,13 +182,14 @@ per file, all under the one `name`.
 
 ## Status codes
 
-| Status                      | Condition                                                                                                                                    |
-| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `202 Accepted`              | The job was accepted; poll the `Content-Location` URL.                                                                                       |
-| `400 Bad Request`           | A missing `Prefer` header or a `GET`; no `subject`; a malformed subject; colliding names; `_limit`; `source`.                                |
-| `404 Not Found`             | A subject's canonical or reference resolves to nothing; the status URL of a cancelled job.                                                   |
-| `422 Unprocessable Entity`  | A subject is of no admitted kind, or is conformant but cannot be processed; on the result URL, a subject whose SQL Spark's analyser rejects. |
-| `500 Internal Server Error` | An unexpected fault, or - on the result URL - the job's failure outcome for any other cause.                                                 |
+| Status                      | Condition                                                                                                                                                                                                                  |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `202 Accepted`              | The job was accepted; poll the `Content-Location` URL.                                                                                                                                                                     |
+| `400 Bad Request`           | A missing `Prefer` header or a `GET`; no `subject`; a malformed subject; colliding names; `_limit`; `source`.                                                                                                              |
+| `404 Not Found`             | A subject's canonical or reference resolves to nothing; a dependency matches no ViewDefinition, SQLView, external table or value set; the status URL of a cancelled job.                                                   |
+| `422 Unprocessable Entity`  | A subject is of no admitted kind, or is conformant but cannot be processed; on the result URL, a subject whose SQL Spark's analyser rejects.                                                                               |
+| `422 Unprocessable Entity`  | A value set's membership cannot be determined, exceeds `pathling.sqlQuery.valueSetMaxMembers`, or is supplied as an incomplete `expansion`; the conditions and issue text are those of [`$sql-run`](sql-run#status-codes). |
+| `500 Internal Server Error` | An unexpected fault, or - on the result URL - the job's failure outcome for any other cause.                                                                                                                               |
 
 A subject whose `parameters` part leaves a parameter its Library declares
 unbound is refused at kick-off with a `400`, before any job is created: the
