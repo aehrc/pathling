@@ -32,15 +32,21 @@ import au.csiro.pathling.terminology.expand.ValueSetExpansion;
 import au.csiro.pathling.terminology.expand.ValueSetExpansionException;
 import au.csiro.pathling.terminology.expand.ValueSetMember;
 import au.csiro.pathling.terminology.local.index.ConceptDictionary;
+import au.csiro.pathling.terminology.store.DenseIdOrder;
+import au.csiro.pathling.terminology.store.SnomedRf2Importer;
 import au.csiro.pathling.test.FhirFixtures;
 import au.csiro.pathling.test.NoNetworkExtension;
 import au.csiro.pathling.test.Rf2Mini;
 import jakarta.annotation.Nonnull;
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.ValueSet;
 import org.hl7.fhir.r4.model.ValueSet.ConceptSetComponent;
 import org.junit.jupiter.api.BeforeAll;
@@ -67,8 +73,16 @@ class LocalTerminologyServiceExpandTest {
   private static final String ANIMAL_SPECIES_VERSION =
       FhirFixtures.ANIMAL_SPECIES + "|" + FhirFixtures.VERSION;
 
+  /**
+   * The edition/version URI of a second international edition whose effectiveTime is the same as
+   * the base fixture release's, which makes an unversioned SNOMED CT reference ambiguous.
+   */
+  private static final String OVERSEAS_EDITION_VERSION =
+      "http://snomed.info/sct/32506021000036107/version/20230601";
+
   private static TerminologyService snomedService;
   private static TerminologyService fhirService;
+  private static TerminologyService ambiguousService;
   private static ConceptDictionary dictionary;
 
   @BeforeAll
@@ -84,6 +98,50 @@ class LocalTerminologyServiceExpandTest {
     snomedService = new LocalTerminologyService(configuration, Map.of());
     fhirService = FhirTerminologyFixture.service();
     dictionary = LocalTerminologyFixture.indexes().dictionary();
+    final TerminologyConfiguration ambiguousConfiguration =
+        TerminologyConfiguration.builder()
+            .mode(TerminologyMode.LOCAL)
+            .local(
+                LocalTerminologyConfiguration.builder().storagePath(ambiguousStorePath()).build())
+            .build();
+    ambiguousService = new LocalTerminologyService(ambiguousConfiguration, Map.of());
+  }
+
+  /**
+   * Builds a store that holds the same release twice under two different international editions
+   * with the same effectiveTime, so that no default version can be selected for an unversioned
+   * SNOMED CT reference.
+   */
+  @Nonnull
+  private static String ambiguousStorePath() {
+    final SparkSession spark =
+        SparkSession.builder()
+            .appName("LocalTerminologyServiceExpandAmbiguous")
+            .master("local[2]")
+            .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
+            .config(
+                "spark.sql.catalog.spark_catalog",
+                "org.apache.spark.sql.delta.catalog.DeltaCatalog")
+            .config("spark.sql.shuffle.partitions", "2")
+            .config("spark.driver.bindAddress", "localhost")
+            .config("spark.driver.host", "localhost")
+            .config("spark.ui.enabled", "false")
+            .getOrCreate();
+    final String path;
+    try {
+      path = Files.createTempDirectory("rf2-ambiguous-store").resolve("store").toString();
+    } catch (final IOException e) {
+      throw new UncheckedIOException(e);
+    }
+    final SnomedRf2Importer importer = new SnomedRf2Importer(spark, path);
+    importer.importFrom(Rf2Mini.baseRelease().toString(), null);
+    // The overridden edition is not international, so a default dialect must be named for it.
+    importer.importFrom(
+        Rf2Mini.baseRelease().toString(),
+        OVERSEAS_EDITION_VERSION,
+        DenseIdOrder.CODE_ORDER,
+        "en-US");
+    return path;
   }
 
   @Nonnull
@@ -342,5 +400,75 @@ class LocalTerminologyServiceExpandTest {
     assertTrue(byCanonical.isPresent());
     assertTrue(byCanonical.get().getMembers().isEmpty());
     assertTrue(snomedService.expand(supplied, NO_LIMIT).getMembers().isEmpty());
+  }
+
+  @Test
+  void reportsMalformedEclAsExpansionFailure() {
+    final String url =
+        Rf2Mini.SNOMED_URI
+            + "?fhir_vs=ecl/"
+            + URLEncoder.encode("malformed (", StandardCharsets.UTF_8);
+
+    final ValueSetExpansionException e =
+        assertThrows(
+            ValueSetExpansionException.class, () -> snomedService.expand(url, null, NO_LIMIT));
+
+    assertTrue(e.getMessage().contains("Invalid ECL expression"), e.getMessage());
+  }
+
+  @Test
+  void reportsUnsupportedEclConstructAsExpansionFailure() {
+    final String url =
+        Rf2Mini.SNOMED_URI
+            + "?fhir_vs=ecl/"
+            + URLEncoder.encode(
+                "<< " + Rf2Mini.DIABETES + " {{ + HISTORY-MIN }}", StandardCharsets.UTF_8);
+
+    final ValueSetExpansionException e =
+        assertThrows(
+            ValueSetExpansionException.class, () -> snomedService.expand(url, null, NO_LIMIT));
+
+    assertTrue(e.getMessage().contains("Unsupported ECL construct"), e.getMessage());
+  }
+
+  @Test
+  void reportsMalformedVclAsExpansionFailure() {
+    final String url =
+        "http://fhir.org/VCL?v1=" + URLEncoder.encode("(unclosed", StandardCharsets.UTF_8);
+
+    final ValueSetExpansionException e =
+        assertThrows(
+            ValueSetExpansionException.class, () -> snomedService.expand(url, null, NO_LIMIT));
+
+    assertTrue(e.getMessage().contains("Invalid VCL expression"), e.getMessage());
+  }
+
+  @Test
+  void reportsAmbiguousDefaultEditionAsExpansionFailure() {
+    final ValueSetExpansionException e =
+        assertThrows(
+            ValueSetExpansionException.class,
+            () -> ambiguousService.expand(Rf2Mini.SNOMED_URI + "?fhir_vs", null, NO_LIMIT));
+
+    assertTrue(e.getMessage().contains("edition"), e.getMessage());
+    assertTrue(e.getMessage().contains(Rf2Mini.SNOMED_URI), e.getMessage());
+  }
+
+  @Test
+  void reportsAmbiguousDefaultEditionForSuppliedComposeAsExpansionFailure() {
+    final ValueSet supplied = valueSet("http://example.org/ValueSet/supplied");
+    supplied
+        .getCompose()
+        .addInclude()
+        .setSystem(Rf2Mini.SNOMED_URI)
+        .addConcept()
+        .setCode(Rf2Mini.DIABETES);
+
+    final ValueSetExpansionException e =
+        assertThrows(
+            ValueSetExpansionException.class, () -> ambiguousService.expand(supplied, NO_LIMIT));
+
+    assertTrue(e.getMessage().contains("edition"), e.getMessage());
+    assertTrue(e.getMessage().contains(Rf2Mini.SNOMED_URI), e.getMessage());
   }
 }

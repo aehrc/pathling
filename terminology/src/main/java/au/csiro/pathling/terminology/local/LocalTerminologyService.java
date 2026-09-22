@@ -19,6 +19,8 @@ package au.csiro.pathling.terminology.local;
 
 import au.csiro.pathling.config.LocalTerminologyConfiguration;
 import au.csiro.pathling.config.TerminologyConfiguration;
+import au.csiro.pathling.ecl.EclParseException;
+import au.csiro.pathling.ecl.UnsupportedEclConstructError;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.expand.ExpansionLimitExceededException;
 import au.csiro.pathling.terminology.expand.ValueSetExpansion;
@@ -31,6 +33,7 @@ import au.csiro.pathling.terminology.local.index.Description;
 import au.csiro.pathling.terminology.local.index.HierarchyIndex;
 import au.csiro.pathling.terminology.local.index.RelationshipIndex;
 import au.csiro.pathling.terminology.store.TerminologyStoreReader;
+import au.csiro.pathling.vcl.VclParseException;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.io.Closeable;
@@ -45,6 +48,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.BooleanType;
@@ -355,19 +359,22 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
     }
     ensureInitialised();
     final String key = version == null ? url : url + "|" + version;
-    final Optional<ResolvedValueSet> resolved = valueSetResolver.resolve(key);
+    final Optional<ResolvedValueSet> resolved =
+        membershipFault(() -> valueSetResolver.resolve(key));
     if (resolved.isEmpty()) {
       return Optional.empty();
     }
     final ResolvedValueSet valueSet = resolved.get();
     final CodeSystemIndexes indexes = indexesFor(valueSet.getSystemVersionId());
     final RoaringBitmap members =
-        expansionCache.get(
-            key,
-            valueSet.getSystemVersionId(),
+        membershipFault(
             () ->
-                new VclEvaluator(indexes, valueSet.getSystemUrl())
-                    .evaluate(valueSet.getExpression()));
+                expansionCache.get(
+                    key,
+                    valueSet.getSystemVersionId(),
+                    () ->
+                        new VclEvaluator(indexes, valueSet.getSystemUrl())
+                            .evaluate(valueSet.getExpression())));
     return Optional.of(toExpansion(url, version, valueSet, indexes, members, maxMembers));
   }
 
@@ -396,15 +403,14 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
     }
     ensureInitialised();
     final ComposeResult compose =
-        valueSetResolver
-            .translate(valueSet)
+        membershipFault(() -> valueSetResolver.translate(valueSet))
             .orElseThrow(
                 () ->
                     new ValueSetExpansionException(
                         "the compose defines no membership the local store can evaluate"));
     final String systemVersionId =
-        valueSetResolver
-            .resolveCodeSystemVersion(compose.getSystemUrl(), null)
+        membershipFault(
+                () -> valueSetResolver.resolveCodeSystemVersion(compose.getSystemUrl(), null))
             .orElseThrow(
                 () ->
                     new ValueSetExpansionException(
@@ -414,7 +420,10 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
     final CodeSystemIndexes indexes = indexesFor(systemVersionId);
     // A supplied resource is evaluated once and not cached, since nothing else can reference it.
     final RoaringBitmap members =
-        new VclEvaluator(indexes, compose.getSystemUrl()).evaluate(compose.getExpression());
+        membershipFault(
+            () ->
+                new VclEvaluator(indexes, compose.getSystemUrl())
+                    .evaluate(compose.getExpression()));
     final ResolvedValueSet resolved =
         new ResolvedValueSet(systemVersionId, compose.getSystemUrl(), compose.getExpression());
     return toExpansion(
@@ -424,6 +433,29 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
         indexes,
         members,
         maxMembers);
+  }
+
+  /**
+   * Runs a step that determines the membership of a value set, mapping the faults that describe the
+   * value set itself onto {@link ValueSetExpansionException}. A malformed ECL or VCL expression, an
+   * unsupported ECL construct, or an ambiguous default version are faults of the value set whose
+   * membership cannot be determined, not internal failures, so the reason the store rejected the
+   * expression is carried to the caller rather than surfacing as a generic error.
+   *
+   * @param step the membership-determination step to run
+   * @param <T> the type of the step's result
+   * @return the step's result
+   */
+  @Nonnull
+  private static <T> T membershipFault(@Nonnull final Supplier<T> step) {
+    try {
+      return step.get();
+    } catch (final EclParseException
+        | UnsupportedEclConstructError
+        | VclParseException
+        | AmbiguousVersionException e) {
+      throw new ValueSetExpansionException(e.getMessage(), e);
+    }
   }
 
   /**
