@@ -21,6 +21,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.terminology.expand.ValueSetExpansion;
+import au.csiro.pathling.terminology.expand.ValueSetMember;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
@@ -51,8 +53,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 /**
  * Tests for {@link ViewRegistrationService}, with particular attention to the request-id
  * namespacing that prevents concurrent {@code $sql-run} requests from clobbering one another's
- * temporary views in Spark's session-global catalog, and to the reading of configured external
- * tables.
+ * temporary views in Spark's session-global catalog, to the reading of configured external tables,
+ * and to the fixed five-column relation built for a value set.
  *
  * @author John Grimes
  */
@@ -270,6 +272,80 @@ class ViewRegistrationServiceTest {
                 .map(row -> row.getString(0) + "/" + row.getString(1))
                 .toList())
         .containsExactlyInAnyOrder("Smith/A", "Williams/B");
+  }
+
+  // ---------------------------------------------------------------------------
+  // Value set materialisation (spec 061 US1).
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void buildValueSetYieldsTheFiveColumnsInOrderWithTheirTypesAndNullability() {
+    final Dataset<Row> result = service.buildValueSet(valueSet(member("22298006", null, null)));
+
+    final StructField[] fields = result.schema().fields();
+    assertThat(fields)
+        .extracting(StructField::name)
+        .containsExactly("system", "version", "code", "display", "inactive");
+    assertThat(fields)
+        .extracting(StructField::dataType)
+        .containsExactly(
+            DataTypes.StringType,
+            DataTypes.StringType,
+            DataTypes.StringType,
+            DataTypes.StringType,
+            DataTypes.BooleanType);
+    assertThat(fields)
+        .extracting(StructField::nullable)
+        .containsExactly(false, true, false, true, true);
+  }
+
+  @Test
+  void buildValueSetYieldsOneRowPerMemberPreservingNulls() {
+    final Dataset<Row> result =
+        service.buildValueSet(
+            valueSet(
+                member("22298006", "Myocardial infarction", null),
+                member("73211009", null, true),
+                member("38341003", "Hypertension", false)));
+
+    final List<Row> rows = result.collectAsList();
+    assertThat(rows).hasSize(3);
+    assertThat(rows.get(0).getString(0)).isEqualTo("http://snomed.info/sct");
+    assertThat(rows.get(0).getString(1)).isEqualTo("20260131");
+    assertThat(rows.get(0).getString(2)).isEqualTo("22298006");
+    assertThat(rows.get(0).getString(3)).isEqualTo("Myocardial infarction");
+    assertThat(rows.get(0).isNullAt(4)).isTrue();
+    assertThat(rows.get(1).isNullAt(3)).isTrue();
+    assertThat(rows.get(1).getBoolean(4)).isTrue();
+    assertThat(rows.get(2).getBoolean(4)).isFalse();
+  }
+
+  @Test
+  void buildValueSetYieldsAnEmptyDatasetWithTheSchemaForAnEmptyMembership() {
+    final Dataset<Row> result = service.buildValueSet(valueSet());
+
+    assertThat(result.schema().fieldNames())
+        .containsExactly("system", "version", "code", "display", "inactive");
+    assertThat(result.collectAsList()).isEmpty();
+  }
+
+  @Nonnull
+  private static ResolvedValueSet valueSet(@Nonnull final ValueSetMember... members) {
+    return new ResolvedValueSet(
+        "http://example.org/ValueSet/cvd|2026",
+        new ValueSetExpansion(
+            "http://example.org/ValueSet/cvd",
+            "2026",
+            null,
+            null,
+            List.of("http://snomed.info/sct|20260131"),
+            Arrays.asList(members)));
+  }
+
+  @Nonnull
+  private static ValueSetMember member(
+      @Nonnull final String code, final String display, final Boolean inactive) {
+    return new ValueSetMember("http://snomed.info/sct", "20260131", code, display, inactive);
   }
 
   // ---------------------------------------------------------------------------

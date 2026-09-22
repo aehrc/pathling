@@ -23,6 +23,8 @@ import static org.mockito.Mockito.mock;
 
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.io.source.DataSource;
+import au.csiro.pathling.terminology.expand.ValueSetExpansion;
+import au.csiro.pathling.terminology.expand.ValueSetMember;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
@@ -64,6 +66,8 @@ import scala.jdk.javaapi.CollectionConverters;
  *   <li>That a configured external table leaf is materialised under its request-scoped temp view
  *       and so passes the analysed-plan check, while naming the same data by path is still rejected
  *       (spec 060 US1).
+ *   <li>That a value set leaf is materialised as its five-column relation under its request-scoped
+ *       temp view, so the top-level SQL can select from its label (spec 061 US1).
  * </ul>
  *
  * @author John Grimes
@@ -284,6 +288,49 @@ class SqlQueryExecutorTest {
         List.of(table),
         Map.of("t", table.getCanonicalKey()),
         Map.of(table.getCanonicalKey(), table));
+  }
+
+  // -------------------------------------------------------------------------
+  // Value set leaves: materialised as the five-column relation under the label.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void executesAQueryOverAValueSetLeaf() {
+    final ResolvedValueSet valueSet =
+        new ResolvedValueSet(
+            "http://example.org/ValueSet/cvd|2026",
+            new ValueSetExpansion(
+                "http://example.org/ValueSet/cvd",
+                "2026",
+                null,
+                null,
+                List.of(),
+                List.of(
+                    new ValueSetMember(
+                        "http://snomed.info/sct", "20260131", "22298006", "MI", null),
+                    new ValueSetMember(
+                        "http://hl7.org/fhir/sid/icd-10", null, "I21", null, true))));
+    final AtomicReference<List<Row>> rows = new AtomicReference<>();
+
+    newExecutor()
+        .execute(
+            request(
+                "SELECT system, version, code, display, inactive FROM t ORDER BY code",
+                null,
+                valueSet.getCanonicalKey()),
+            new ResolvedDependencyGraph(
+                List.of(valueSet),
+                Map.of("t", valueSet.getCanonicalKey()),
+                Map.of(valueSet.getCanonicalKey(), valueSet)),
+            mock(DataSource.class),
+            REQUEST_ID,
+            dataset -> rows.set(dataset.collectAsList()));
+
+    assertThat(rows.get()).extracting(row -> row.getString(2)).containsExactly("22298006", "I21");
+    assertThat(rows.get().get(0).getString(1)).isEqualTo("20260131");
+    assertThat(rows.get().get(0).isNullAt(4)).isTrue();
+    assertThat(rows.get().get(1).isNullAt(1)).isTrue();
+    assertThat(rows.get().get(1).getBoolean(4)).isTrue();
   }
 
   // -------------------------------------------------------------------------
