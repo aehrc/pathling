@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.operations.sqlquery;
 
+import static au.csiro.pathling.operations.sql.SuppliedArtefacts.CONTEXT_EXPRESSION;
 import static java.util.Objects.requireNonNullElse;
 
 import au.csiro.pathling.config.ServerConfiguration;
@@ -25,6 +26,7 @@ import au.csiro.pathling.config.TerminologyMode;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.operations.sql.SqlOperationError;
 import au.csiro.pathling.operations.sql.SubjectResolver;
+import au.csiro.pathling.operations.sql.SuppliedArtefact;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.expand.ExpansionLimitExceededException;
 import au.csiro.pathling.terminology.expand.ValueSetExpansion;
@@ -34,14 +36,16 @@ import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
+import org.hl7.fhir.r4.model.ValueSet;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
- * Resolves a value set dependency to its membership through the server's configured terminology
- * layer, producing the {@link ResolvedValueSet} leaf the dependency graph registers. The
- * terminology layer is whatever {@code pathling.terminology} configures: a FHIR terminology server
- * expanded through {@code $expand}, or the local terminology store.
+ * Resolves a value set dependency to its membership, producing the {@link ResolvedValueSet} leaf
+ * the dependency graph registers. Membership comes from a {@code context} ValueSet where the
+ * request supplies one - its expansion used as-is, or its compose expanded - and otherwise from the
+ * server's configured terminology layer, whatever {@code pathling.terminology} configures: a FHIR
+ * terminology server expanded through {@code $expand}, or the local terminology store.
  *
  * <p>This is the one place that separates a value set that cannot be resolved (an empty result,
  * which the dependency resolver reports as not found) from one that resolves but whose membership
@@ -119,11 +123,63 @@ public class ValueSetMembershipResolver {
     } catch (final ExpansionLimitExceededException e) {
       throw limitExceeded(SubjectResolver.SUBJECT_EXPRESSION, reference, url, e);
     } catch (final ValueSetExpansionException e) {
-      throw undeterminable(SubjectResolver.SUBJECT_EXPRESSION, reference, url, e);
+      throw undeterminable(SubjectResolver.SUBJECT_EXPRESSION, reference, url, e.getMessage());
     }
     return expansion.map(
         resolved ->
             resolved(CanonicalReference.key(url, canonical.getVersion()), resolved, source));
+  }
+
+  /**
+   * Resolves a dependency satisfied by a {@code context} ValueSet to its membership. A resource
+   * carrying an {@code expansion} supplies the membership as-is, without consulting the terminology
+   * layer; one carrying only a {@code compose} is expanded by the terminology layer; one carrying
+   * neither defines no membership.
+   *
+   * <p>The returned node is keyed by the supplied resource's canonical ({@code url} plus its
+   * version where it declares one), as a supplied ViewDefinition is.
+   *
+   * @param reference the dependency reference, whose label names the relation in the SQL
+   * @param artefact the supplied entry, which must be a ValueSet
+   * @return the resolved value set
+   * @throws UnprocessableEntityException if the resource defines no membership, its expansion is
+   *     incomplete or has an entry that does not identify a member, its compose cannot be expanded
+   *     (including when terminology is disabled), or the membership exceeds the configured maximum
+   *     number of members
+   */
+  @Nonnull
+  public ResolvedValueSet resolveSupplied(
+      @Nonnull final ViewArtifactReference reference, @Nonnull final SuppliedArtefact artefact) {
+    final ValueSet valueSet = artefact.getValueSet();
+    final String url = artefact.getUrl();
+    final ValueSetExpansion expansion;
+    try {
+      if (valueSet.hasExpansion()) {
+        expansion = ValueSetExpansion.fromResource(valueSet, maxMembers);
+      } else if (!valueSet.hasCompose()) {
+        throw SqlOperationError.unprocessable(
+            CONTEXT_EXPRESSION,
+            "The supplied value set for label '"
+                + reference.getLabel()
+                + "' (canonical URL '"
+                + url
+                + "') defines no membership: it carries neither an expansion nor a compose");
+      } else if (terminologyService == null) {
+        throw undeterminable(
+            CONTEXT_EXPRESSION,
+            reference,
+            url,
+            "the value set carries only a compose and terminology is disabled");
+      } else {
+        expansion = terminologyService.expand(valueSet, maxMembers);
+      }
+    } catch (final ExpansionLimitExceededException e) {
+      throw limitExceeded(CONTEXT_EXPRESSION, reference, url, e);
+    } catch (final ValueSetExpansionException e) {
+      throw undeterminable(CONTEXT_EXPRESSION, reference, url, e.getMessage());
+    }
+    return resolved(
+        CanonicalReference.key(url, artefact.getVersion()), expansion, CONTEXT_EXPRESSION);
   }
 
   /**
@@ -182,12 +238,12 @@ public class ValueSetMembershipResolver {
 
   /**
    * Builds the {@code 422} for a value set that resolves but whose membership cannot be determined,
-   * carrying the terminology layer's reason.
+   * carrying the reason.
    *
    * @param expression the parameter at fault
    * @param reference the dependency reference
    * @param url the canonical URL of the value set
-   * @param cause the failure
+   * @param reason why the membership could not be determined
    * @return the exception to throw
    */
   @Nonnull
@@ -195,7 +251,7 @@ public class ValueSetMembershipResolver {
       @Nonnull final String expression,
       @Nonnull final ViewArtifactReference reference,
       @Nonnull final String url,
-      @Nonnull final ValueSetExpansionException cause) {
+      @Nonnull final String reason) {
     return SqlOperationError.unprocessable(
         expression,
         "The membership of the value set for label '"
@@ -203,6 +259,6 @@ public class ValueSetMembershipResolver {
             + "' (canonical URL '"
             + url
             + "') could not be determined: "
-            + cause.getMessage());
+            + reason);
   }
 }
