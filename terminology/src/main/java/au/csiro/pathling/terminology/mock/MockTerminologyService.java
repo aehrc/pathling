@@ -22,7 +22,10 @@ import static org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence.EQUIVALENT
 import static org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence.RELATEDTO;
 
 import au.csiro.pathling.terminology.TerminologyService;
+import au.csiro.pathling.terminology.expand.ExpansionLimitExceededException;
 import au.csiro.pathling.terminology.expand.ValueSetExpansion;
+import au.csiro.pathling.terminology.expand.ValueSetExpansionException;
+import au.csiro.pathling.terminology.expand.ValueSetMember;
 import com.google.common.collect.ImmutableMap;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -98,6 +101,13 @@ public class MockTerminologyService implements TerminologyService {
       return members.contains(SystemAndCode.of(coding));
     }
 
+    @Nonnull
+    List<ValueSetMember> members() {
+      return members.stream()
+          .map(member -> new ValueSetMember(member.system(), null, member.code(), null, null))
+          .toList();
+    }
+
     public static final ValueSet EMPTY = new ValueSet();
   }
 
@@ -148,14 +158,27 @@ public class MockTerminologyService implements TerminologyService {
   @Override
   public Optional<ValueSetExpansion> expand(
       @Nonnull final String url, @Nullable final String version, final int maxMembers) {
-    throw new UnsupportedOperationException("Not yet implemented");
+    final ValueSet valueSet = valueSets.get(url);
+    if (valueSet == null) {
+      return Optional.empty();
+    }
+    final List<ValueSetMember> members = valueSet.members();
+    if (members.size() > maxMembers) {
+      throw new ExpansionLimitExceededException(maxMembers);
+    }
+    return Optional.of(
+        new ValueSetExpansion(url, version, null, null, Collections.emptyList(), members));
   }
 
   @Nonnull
   @Override
   public ValueSetExpansion expand(
       @Nonnull final org.hl7.fhir.r4.model.ValueSet valueSet, final int maxMembers) {
-    throw new UnsupportedOperationException("Not yet implemented");
+    if (valueSet.hasExpansion()) {
+      return ValueSetExpansion.fromResource(valueSet, maxMembers);
+    }
+    throw new ValueSetExpansionException(
+        "the mock terminology service can only expand a value set that carries an expansion");
   }
 
   @Nonnull

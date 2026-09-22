@@ -22,8 +22,11 @@ import jakarta.annotation.Nullable;
 import java.io.Serial;
 import java.io.Serializable;
 import java.util.List;
+import java.util.Objects;
 import lombok.Value;
 import org.hl7.fhir.r4.model.ValueSet;
+import org.hl7.fhir.r4.model.ValueSet.ValueSetExpansionComponent;
+import org.hl7.fhir.r4.model.ValueSet.ValueSetExpansionParameterComponent;
 
 /**
  * The membership of one value set at one resolution, with the provenance of that resolution.
@@ -34,6 +37,9 @@ import org.hl7.fhir.r4.model.ValueSet;
 public class ValueSetExpansion implements Serializable {
 
   @Serial private static final long serialVersionUID = -7429066236106257364L;
+
+  /** The name of the expansion parameter that records a code system version. */
+  private static final String VERSION_PARAMETER = "version";
 
   /** The canonical URL of the value set. */
   @Nonnull String url;
@@ -62,13 +68,90 @@ public class ValueSetExpansion implements Serializable {
    * @param valueSet the value set resource
    * @param maxMembers the largest membership the caller will accept
    * @return the membership
-   * @throws ValueSetExpansionException if the resource carries no expansion, the expansion is
-   *     incomplete, or an entry does not identify a member
+   * @throws ValueSetExpansionException if the resource carries no url or no expansion, the
+   *     expansion is incomplete, or an entry does not identify a member
    * @throws ExpansionLimitExceededException if the membership exceeds {@code maxMembers}
    */
   @Nonnull
   public static ValueSetExpansion fromResource(
       @Nonnull final ValueSet valueSet, final int maxMembers) {
-    throw new UnsupportedOperationException("Not yet implemented");
+    if (!valueSet.hasExpansion()) {
+      throw new ValueSetExpansionException("the value set carries no expansion");
+    }
+    final ValueSetExpansionComponent expansion = valueSet.getExpansion();
+    if (expansion.hasOffset()) {
+      throw new ValueSetExpansionException("the expansion is incomplete: it carries an offset");
+    }
+    final ExpansionAccumulator accumulator = new ExpansionAccumulator(maxMembers);
+    final int visited = accumulator.addContains(expansion.getContains());
+    if (expansion.hasTotal() && expansion.getTotal() > visited) {
+      throw new ValueSetExpansionException(
+          "the expansion is incomplete: total "
+              + expansion.getTotal()
+              + " exceeds "
+              + visited
+              + " entries");
+    }
+    accumulator.checkLimit();
+    return new ValueSetExpansion(
+        urlOf(valueSet),
+        valueSet.hasVersion() ? valueSet.getVersion() : null,
+        identifierOf(expansion),
+        timestampOf(expansion),
+        codeSystemVersionsOf(expansion),
+        accumulator.members());
+  }
+
+  /**
+   * Returns the canonical URL of a value set resource.
+   *
+   * @param valueSet the resource
+   * @return the url
+   * @throws ValueSetExpansionException if the resource carries no url
+   */
+  @Nonnull
+  static String urlOf(@Nonnull final ValueSet valueSet) {
+    if (!valueSet.hasUrl()) {
+      throw new ValueSetExpansionException("the value set carries no url");
+    }
+    return valueSet.getUrl();
+  }
+
+  /**
+   * Returns the identifier recorded by an expansion, or null.
+   *
+   * @param expansion the expansion
+   * @return the identifier
+   */
+  @Nullable
+  static String identifierOf(@Nonnull final ValueSetExpansionComponent expansion) {
+    return expansion.hasIdentifier() ? expansion.getIdentifier() : null;
+  }
+
+  /**
+   * Returns the timestamp recorded by an expansion as a FHIR dateTime string, or null.
+   *
+   * @param expansion the expansion
+   * @return the timestamp
+   */
+  @Nullable
+  static String timestampOf(@Nonnull final ValueSetExpansionComponent expansion) {
+    return expansion.hasTimestamp() ? expansion.getTimestampElement().getValueAsString() : null;
+  }
+
+  /**
+   * Returns the code system versions recorded by an expansion's {@code version} parameters.
+   *
+   * @param expansion the expansion
+   * @return the {@code system|version} strings, in parameter order
+   */
+  @Nonnull
+  static List<String> codeSystemVersionsOf(@Nonnull final ValueSetExpansionComponent expansion) {
+    return expansion.getParameter().stream()
+        .filter(parameter -> VERSION_PARAMETER.equals(parameter.getName()))
+        .filter(ValueSetExpansionParameterComponent::hasValue)
+        .map(parameter -> parameter.getValue().primitiveValue())
+        .filter(Objects::nonNull)
+        .toList();
   }
 }

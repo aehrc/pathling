@@ -20,7 +20,10 @@ package au.csiro.pathling.terminology.local;
 import au.csiro.pathling.config.LocalTerminologyConfiguration;
 import au.csiro.pathling.config.TerminologyConfiguration;
 import au.csiro.pathling.terminology.TerminologyService;
+import au.csiro.pathling.terminology.expand.ExpansionLimitExceededException;
 import au.csiro.pathling.terminology.expand.ValueSetExpansion;
+import au.csiro.pathling.terminology.expand.ValueSetExpansionException;
+import au.csiro.pathling.terminology.expand.ValueSetMember;
 import au.csiro.pathling.terminology.local.index.CodeSystemIndexes;
 import au.csiro.pathling.terminology.local.index.ConceptDictionary;
 import au.csiro.pathling.terminology.local.index.ConceptMapIndex;
@@ -50,6 +53,7 @@ import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.DateTimeType;
 import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.ValueSet;
+import org.hl7.fhir.r4.model.ValueSet.ConceptSetComponent;
 import org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence;
 import org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome;
 import org.roaringbitmap.IntConsumer;
@@ -339,13 +343,131 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
   @Override
   public Optional<ValueSetExpansion> expand(
       @Nonnull final String url, @Nullable final String version, final int maxMembers) {
-    throw new UnsupportedOperationException("Not yet implemented");
+    if (version != null && url.indexOf('?') >= 0) {
+      // An implicit value set URL carries its version in its base, so a pinned version cannot be
+      // applied to it and is not silently ignored.
+      throw new ValueSetExpansionException(
+          "cannot determine which version to use: '"
+              + url
+              + "' is an implicit value set URL that carries its own version, so version '"
+              + version
+              + "' cannot be applied to it");
+    }
+    ensureInitialised();
+    final String key = version == null ? url : url + "|" + version;
+    final Optional<ResolvedValueSet> resolved = valueSetResolver.resolve(key);
+    if (resolved.isEmpty()) {
+      return Optional.empty();
+    }
+    final ResolvedValueSet valueSet = resolved.get();
+    final CodeSystemIndexes indexes = indexesFor(valueSet.getSystemVersionId());
+    final RoaringBitmap members =
+        expansionCache.get(
+            key,
+            valueSet.getSystemVersionId(),
+            () ->
+                new VclEvaluator(indexes, valueSet.getSystemUrl())
+                    .evaluate(valueSet.getExpression()));
+    return Optional.of(toExpansion(url, version, valueSet, indexes, members, maxMembers));
   }
 
   @Nonnull
   @Override
   public ValueSetExpansion expand(@Nonnull final ValueSet valueSet, final int maxMembers) {
-    throw new UnsupportedOperationException("Not yet implemented");
+    if (valueSet.hasExpansion()) {
+      return ValueSetExpansion.fromResource(valueSet, maxMembers);
+    }
+    if (!valueSet.hasCompose()) {
+      throw new ValueSetExpansionException(
+          "the value set carries neither an expansion nor a compose");
+    }
+    if (!valueSet.hasUrl()) {
+      throw new ValueSetExpansionException("the value set carries no url");
+    }
+    final Set<String> systems = new TreeSet<>();
+    for (final ConceptSetComponent include : valueSet.getCompose().getInclude()) {
+      if (include.hasSystem()) {
+        systems.add(include.getSystem());
+      }
+    }
+    if (systems.size() > 1) {
+      throw new ValueSetExpansionException(
+          "the compose spans several code systems (" + String.join(", ", systems) + ")");
+    }
+    ensureInitialised();
+    final ComposeResult compose =
+        valueSetResolver
+            .translate(valueSet)
+            .orElseThrow(
+                () ->
+                    new ValueSetExpansionException(
+                        "the compose defines no membership the local store can evaluate"));
+    final String systemVersionId =
+        valueSetResolver
+            .resolveCodeSystemVersion(compose.getSystemUrl(), null)
+            .orElseThrow(
+                () ->
+                    new ValueSetExpansionException(
+                        "code system '"
+                            + compose.getSystemUrl()
+                            + "' is not in the local terminology store"));
+    final CodeSystemIndexes indexes = indexesFor(systemVersionId);
+    // A supplied resource is evaluated once and not cached, since nothing else can reference it.
+    final RoaringBitmap members =
+        new VclEvaluator(indexes, compose.getSystemUrl()).evaluate(compose.getExpression());
+    final ResolvedValueSet resolved =
+        new ResolvedValueSet(systemVersionId, compose.getSystemUrl(), compose.getExpression());
+    return toExpansion(
+        valueSet.getUrl(),
+        valueSet.hasVersion() ? valueSet.getVersion() : null,
+        resolved,
+        indexes,
+        members,
+        maxMembers);
+  }
+
+  /**
+   * Builds the expansion of an evaluated value set, with one member per concept in the bitmap in
+   * ascending code order.
+   *
+   * @param url the canonical URL of the value set
+   * @param version the version of the value set, or null
+   * @param valueSet the resolved value set the bitmap was evaluated for
+   * @param indexes the indexes of the code system version the bitmap addresses
+   * @param members the members, by dense identifier
+   * @param maxMembers the largest membership the caller will accept
+   * @return the expansion
+   * @throws ExpansionLimitExceededException if the bitmap holds more than {@code maxMembers}
+   */
+  @Nonnull
+  private ValueSetExpansion toExpansion(
+      @Nonnull final String url,
+      @Nullable final String version,
+      @Nonnull final ResolvedValueSet valueSet,
+      @Nonnull final CodeSystemIndexes indexes,
+      @Nonnull final RoaringBitmap members,
+      final int maxMembers) {
+    if (members.getCardinality() > maxMembers) {
+      throw new ExpansionLimitExceededException(maxMembers);
+    }
+    final String systemUrl = valueSet.getSystemUrl();
+    final String systemVersion =
+        valueSetResolver.versionOf(valueSet.getSystemVersionId()).orElse(null);
+    final ConceptDictionary dictionary = indexes.dictionary();
+    final List<ValueSetMember> result = new ArrayList<>(members.getCardinality());
+    for (final int dense : byConceptCode(members, dictionary)) {
+      result.add(
+          new ValueSetMember(
+              systemUrl,
+              systemVersion,
+              dictionary.code(dense),
+              dictionary.display(dense),
+              dictionary.isActive(dense) ? null : Boolean.TRUE));
+    }
+    final String codeSystemVersion =
+        systemVersion == null ? systemUrl : systemUrl + "|" + systemVersion;
+    return new ValueSetExpansion(
+        url, version, null, null, List.of(codeSystemVersion), Collections.unmodifiableList(result));
   }
 
   /**

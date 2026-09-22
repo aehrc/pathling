@@ -18,7 +18,6 @@
 package au.csiro.pathling.terminology.expand;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -26,6 +25,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.List;
+import org.hl7.fhir.r4.model.DateTimeType;
+import org.hl7.fhir.r4.model.IntegerType;
 import org.hl7.fhir.r4.model.UriType;
 import org.hl7.fhir.r4.model.ValueSet;
 import org.hl7.fhir.r4.model.ValueSet.ValueSetExpansionComponent;
@@ -300,14 +301,14 @@ class ValueSetExpansionTest {
     valueSet.setVersion("2026");
     final ValueSetExpansionComponent expansion = valueSet.getExpansion();
     expansion.setIdentifier("urn:uuid:8e1c5a3e-3d0a-4f4b-9b6f-7f1f0a2b3c4d");
-    expansion.setTimestampElement(new org.hl7.fhir.r4.model.DateTimeType("2026-09-22T10:00:00Z"));
+    expansion.setTimestampElement(new DateTimeType("2026-09-22T10:00:00Z"));
     expansion
         .addParameter()
         .setName("version")
         .setValue(
             new UriType(SNOMED + "|http://snomed.info/sct/900000000000207008/version/20260101"));
     expansion.addParameter().setName("version").setValue(new UriType(ICD10 + "|2019"));
-    expansion.addParameter().setName("count").setValue(new org.hl7.fhir.r4.model.IntegerType(1));
+    expansion.addParameter().setName("count").setValue(new IntegerType(1));
 
     final ValueSetExpansion result = ValueSetExpansion.fromResource(valueSet, NO_LIMIT);
 
@@ -335,9 +336,13 @@ class ValueSetExpansionTest {
 
   @Test
   void returnsEmptyMembersForEmptyExpansion() {
-    final ValueSetExpansion result = ValueSetExpansion.fromResource(valueSet(), NO_LIMIT);
+    // An expansion always carries a timestamp, so an empty one is still present on the resource.
+    final ValueSet valueSet = valueSet();
+    valueSet.getExpansion().setTimestampElement(new DateTimeType("2026-09-22T10:00:00Z"));
+
+    final ValueSetExpansion result = ValueSetExpansion.fromResource(valueSet, NO_LIMIT);
 
     assertTrue(result.getMembers().isEmpty());
-    assertFalse(result.getMembers().contains(null));
+    assertEquals(0, result.getMembers().size());
   }
 }
