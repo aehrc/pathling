@@ -59,6 +59,8 @@ import org.hl7.fhir.r4.model.Enumerations.PublicationStatus;
 import org.hl7.fhir.r4.model.Library;
 import org.hl7.fhir.r4.model.RelatedArtifact;
 import org.hl7.fhir.r4.model.RelatedArtifact.RelatedArtifactType;
+import org.hl7.fhir.r4.model.ValueSet;
+import org.hl7.fhir.r4.model.ValueSet.ConceptSetComponent;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -79,7 +81,8 @@ import org.springframework.test.web.reactive.server.EntityExchangeResult;
  * LOCAL terminology mode over a store built from the {@code rf2-mini} SNOMED CT fixture. Covers
  * User Story 1 scenario 3: the relation carries the SNOMED CT system, the store's version URI, the
  * stored displays and the inactive flag, and a semi-join to a SNOMED CT implicit value set keeps
- * the expected conditions.
+ * the expected conditions. Covers User Story 2 scenario 5: a {@code context} ValueSet carrying only
+ * a compose is evaluated by the store.
  *
  * <p>The store is imported once per class into a temporary directory before the application context
  * starts, since the local terminology service opens the store at context creation. The fixture
@@ -284,6 +287,39 @@ class SqlValueSetLocalIT extends AbstractAsyncExportIT {
         .containsExactly(
             "Patient/p1/" + Rf2Mini.TYPE2_DIABETES,
             "Patient/p2/" + Rf2Mini.TYPE2_WITH_COMPLICATION);
+  }
+
+  // -------------------------------------------------------------------------
+  // US2 scenario 5: a compose-only supplied ValueSet is evaluated by the store.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void composeOnlySuppliedValueSetIsEvaluatedByTheStore() {
+    final String url = "http://example.org/ValueSet/supplied-compose";
+    final ValueSet supplied = new ValueSet();
+    supplied.setUrl(url);
+    final ConceptSetComponent include = supplied.getCompose().addInclude();
+    include.setSystem(Rf2Mini.SNOMED_URI);
+    include.addConcept().setCode(Rf2Mini.HYPERTENSION);
+    include.addConcept().setCode(Rf2Mini.TYPE2_DIABETES);
+    final Library library =
+        sqlQueryLibrary(
+            "SELECT system, version, code, display, inactive FROM supplied_codes ORDER BY code",
+            Map.of("supplied_codes", url));
+
+    final String body =
+        postOk(parametersJson(library, resourcePart("context", resourceMap(supplied))));
+
+    final List<Map<String, Object>> rows = rows(body);
+    assertThat(rows)
+        .extracting(row -> row.get("code"))
+        .containsExactly(Rf2Mini.TYPE2_DIABETES, Rf2Mini.HYPERTENSION);
+    for (final Map<String, Object> row : rows) {
+      assertThat(row).containsEntry("system", Rf2Mini.SNOMED_URI);
+      assertThat(row).containsEntry("version", Rf2Mini.VERSION_20230601);
+      assertThat(row.get("display")).isEqualTo(display((String) row.get("code")));
+      assertThat(row.get("inactive")).isNull();
+    }
   }
 
   // -------------------------------------------------------------------------
