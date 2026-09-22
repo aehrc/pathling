@@ -159,7 +159,9 @@ public class ValueSetMembershipResolver {
       } else if (!valueSet.hasCompose()) {
         throw SqlOperationError.unprocessable(
             CONTEXT_EXPRESSION,
-            "The supplied value set for label '"
+            "The "
+                + subjectOf(CONTEXT_EXPRESSION)
+                + " for label '"
                 + reference.getLabel()
                 + "' (canonical URL '"
                 + url
@@ -211,6 +213,19 @@ public class ValueSetMembershipResolver {
   }
 
   /**
+   * Names the value set at fault in an issue: a {@code context} entry is the "supplied value set",
+   * so that a fault in what the request carried reads differently from one in what the terminology
+   * layer returned for a canonical.
+   *
+   * @param expression the parameter at fault
+   * @return the noun for the issue text, without its article
+   */
+  @Nonnull
+  private static String subjectOf(@Nonnull final String expression) {
+    return CONTEXT_EXPRESSION.equals(expression) ? "supplied value set" : "value set";
+  }
+
+  /**
    * Builds the {@code 422} for a value set whose membership exceeds the configured maximum.
    *
    * @param expression the parameter at fault
@@ -227,7 +242,9 @@ public class ValueSetMembershipResolver {
       @Nonnull final ExpansionLimitExceededException cause) {
     return SqlOperationError.unprocessable(
         expression,
-        "The value set for label '"
+        "The "
+            + subjectOf(expression)
+            + " for label '"
             + reference.getLabel()
             + "' (canonical URL '"
             + url
@@ -238,7 +255,8 @@ public class ValueSetMembershipResolver {
 
   /**
    * Builds the {@code 422} for a value set that resolves but whose membership cannot be determined,
-   * carrying the reason.
+   * carrying the reason. The reason is relayed exactly as the terminology layer gave it, which for
+   * an unreachable server names its configured URL and nothing else.
    *
    * @param expression the parameter at fault
    * @param reference the dependency reference
@@ -254,7 +272,9 @@ public class ValueSetMembershipResolver {
       @Nonnull final String reason) {
     return SqlOperationError.unprocessable(
         expression,
-        "The membership of the value set for label '"
+        "The membership of the "
+            + subjectOf(expression)
+            + " for label '"
             + reference.getLabel()
             + "' (canonical URL '"
             + url

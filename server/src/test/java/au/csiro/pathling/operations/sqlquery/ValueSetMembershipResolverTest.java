@@ -23,7 +23,10 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.config.ServerConfiguration;
@@ -39,12 +42,15 @@ import au.csiro.pathling.terminology.expand.ValueSetExpansion;
 import au.csiro.pathling.terminology.expand.ValueSetExpansionException;
 import au.csiro.pathling.terminology.expand.ValueSetMember;
 import au.csiro.pathling.util.LogCapture;
+import ca.uhn.fhir.rest.client.exceptions.FhirClientConnectionException;
 import ca.uhn.fhir.rest.server.exceptions.UnprocessableEntityException;
 import jakarta.annotation.Nonnull;
+import java.net.ConnectException;
 import java.util.List;
 import java.util.Optional;
 import org.hl7.fhir.r4.model.OperationOutcome;
 import org.hl7.fhir.r4.model.OperationOutcome.IssueType;
+import org.hl7.fhir.r4.model.OperationOutcome.OperationOutcomeIssueComponent;
 import org.hl7.fhir.r4.model.ValueSet;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -306,6 +312,200 @@ class ValueSetMembershipResolverTest {
   }
 
   // ---------------------------------------------------------------------------
+  // Fault contract (US4): the exact issue text and expression of every fault.
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void notFoundIsAnEmptyResultAfterExactlyOneExpansionAttempt() {
+    // The 404 text belongs to SqlDependencyResolver, which reports an empty result as not found;
+    // this collaborator only guarantees that it asked the terminology layer once and said nothing.
+    when(terminologyService.expand(URL, null, MAX_MEMBERS)).thenReturn(Optional.empty());
+
+    assertThat(resolver().resolveCanonical(reference(URL), CanonicalReference.parse(URL)))
+        .isEmpty();
+    verify(terminologyService, times(1)).expand(URL, null, MAX_MEMBERS);
+    verifyNoMoreInteractions(terminologyService);
+  }
+
+  @Test
+  void serverErrorIssueCarriesTheLabelUrlAndDiagnosticsVerbatim() {
+    when(terminologyService.expand(URL, null, MAX_MEMBERS))
+        .thenThrow(
+            new ValueSetExpansionException(
+                "the terminology server returned HTTP 422: Unable to expand: too many codes"));
+
+    assertThatThrownBy(
+            () -> resolver().resolveCanonical(reference(URL), CanonicalReference.parse(URL)))
+        .isInstanceOf(UnprocessableEntityException.class)
+        .satisfies(
+            thrown ->
+                assertIssue(
+                    thrown,
+                    SubjectResolver.SUBJECT_EXPRESSION,
+                    "The membership of the value set for label 'cvd_codes' (canonical URL"
+                        + " 'http://example.org/ValueSet/cardiovascular-disease') could not be"
+                        + " determined: the terminology server returned HTTP 422: Unable to expand:"
+                        + " too many codes"));
+  }
+
+  @Test
+  void unreachableServerIssueNamesOnlyTheConfiguredUrl() {
+    // The core reports an unreachable server with its configured URL only; the resolver relays that
+    // reason and must not append the cause, which names the host, port and socket failure.
+    when(terminologyService.expand(URL, null, MAX_MEMBERS))
+        .thenThrow(
+            new ValueSetExpansionException(
+                "terminology server http://tx.example.org/fhir could not be reached",
+                new FhirClientConnectionException(
+                    new ConnectException("Connection refused: tx.example.org/10.0.0.7:8080"))));
+
+    assertThatThrownBy(
+            () -> resolver().resolveCanonical(reference(URL), CanonicalReference.parse(URL)))
+        .isInstanceOf(UnprocessableEntityException.class)
+        .satisfies(
+            thrown ->
+                assertIssue(
+                    thrown,
+                    SubjectResolver.SUBJECT_EXPRESSION,
+                    "The membership of the value set for label 'cvd_codes' (canonical URL"
+                        + " 'http://example.org/ValueSet/cardiovascular-disease') could not be"
+                        + " determined: terminology server http://tx.example.org/fhir could not be"
+                        + " reached"))
+        .satisfies(
+            thrown ->
+                assertThat(diagnosticsOf(thrown))
+                    .doesNotContain("Connection refused", "10.0.0.7", "8080", "ConnectException"));
+  }
+
+  @Test
+  void capIssueNamesTheLabelUrlAndTheConfiguredMaximum() {
+    when(terminologyService.expand(URL, null, MAX_MEMBERS))
+        .thenThrow(new ExpansionLimitExceededException(MAX_MEMBERS));
+
+    assertThatThrownBy(
+            () -> resolver().resolveCanonical(reference(URL), CanonicalReference.parse(URL)))
+        .isInstanceOf(UnprocessableEntityException.class)
+        .satisfies(
+            thrown ->
+                assertIssue(
+                    thrown,
+                    SubjectResolver.SUBJECT_EXPRESSION,
+                    "The value set for label 'cvd_codes' (canonical URL"
+                        + " 'http://example.org/ValueSet/cardiovascular-disease') has more than the"
+                        + " maximum of 250 members permitted by"
+                        + " pathling.sqlQuery.valueSetMaxMembers"));
+  }
+
+  @Test
+  void suppliedExpansionWithAnOffsetIsReportedAsIncompleteAgainstTheContext() {
+    final ValueSet supplied = suppliedValueSet(null);
+    supplied.getExpansion().setOffset(0);
+    supplied.getExpansion().addContains().setSystem("http://snomed.info/sct").setCode("22298006");
+
+    assertThatThrownBy(() -> resolver().resolveSupplied(reference(URL), artefact(supplied)))
+        .isInstanceOf(UnprocessableEntityException.class)
+        .satisfies(
+            thrown ->
+                assertIssue(
+                    thrown,
+                    SuppliedArtefacts.CONTEXT_EXPRESSION,
+                    "The membership of the supplied value set for label 'cvd_codes' (canonical URL"
+                        + " 'http://example.org/ValueSet/cardiovascular-disease') could not be"
+                        + " determined: the expansion is incomplete: it carries an offset"));
+    verifyNoInteractions(terminologyService);
+  }
+
+  @Test
+  void suppliedExpansionWithTotalOverItsEntriesIsReportedAsIncomplete() {
+    final ValueSet supplied = suppliedValueSet(null);
+    supplied.getExpansion().setTotal(5);
+    supplied.getExpansion().addContains().setSystem("http://snomed.info/sct").setCode("1");
+    supplied.getExpansion().addContains().setSystem("http://snomed.info/sct").setCode("2");
+
+    assertThatThrownBy(() -> resolver().resolveSupplied(reference(URL), artefact(supplied)))
+        .isInstanceOf(UnprocessableEntityException.class)
+        .satisfies(
+            thrown ->
+                assertIssue(
+                    thrown,
+                    SuppliedArtefacts.CONTEXT_EXPRESSION,
+                    "The membership of the supplied value set for label 'cvd_codes' (canonical URL"
+                        + " 'http://example.org/ValueSet/cardiovascular-disease') could not be"
+                        + " determined: the expansion is incomplete: total 5 exceeds 2 entries"));
+  }
+
+  @Test
+  void suppliedEntryWithoutCodeIsReportedAsNotIdentifyingAMember() {
+    final ValueSet supplied = suppliedValueSet(null);
+    supplied.getExpansion().addContains().setSystem("http://snomed.info/sct");
+
+    assertThatThrownBy(() -> resolver().resolveSupplied(reference(URL), artefact(supplied)))
+        .isInstanceOf(UnprocessableEntityException.class)
+        .satisfies(
+            thrown ->
+                assertIssue(
+                    thrown,
+                    SuppliedArtefacts.CONTEXT_EXPRESSION,
+                    "The membership of the supplied value set for label 'cvd_codes' (canonical URL"
+                        + " 'http://example.org/ValueSet/cardiovascular-disease') could not be"
+                        + " determined: an entry does not identify a member: no code"));
+  }
+
+  @Test
+  void suppliedEntryWithoutSystemIsReportedNamingTheCode() {
+    final ValueSet supplied = suppliedValueSet(null);
+    supplied.getExpansion().addContains().setCode("22298006");
+
+    assertThatThrownBy(() -> resolver().resolveSupplied(reference(URL), artefact(supplied)))
+        .isInstanceOf(UnprocessableEntityException.class)
+        .satisfies(
+            thrown ->
+                assertIssue(
+                    thrown,
+                    SuppliedArtefacts.CONTEXT_EXPRESSION,
+                    "The membership of the supplied value set for label 'cvd_codes' (canonical URL"
+                        + " 'http://example.org/ValueSet/cardiovascular-disease') could not be"
+                        + " determined: an entry does not identify a member: no system for code"
+                        + " '22298006'"));
+  }
+
+  @Test
+  void suppliedValueSetWithNeitherExpansionNorComposeDefinesNoMembership() {
+    final ValueSet supplied = suppliedValueSet(null);
+
+    assertThatThrownBy(() -> resolver().resolveSupplied(reference(URL), artefact(supplied)))
+        .isInstanceOf(UnprocessableEntityException.class)
+        .satisfies(
+            thrown ->
+                assertIssue(
+                    thrown,
+                    SuppliedArtefacts.CONTEXT_EXPRESSION,
+                    "The supplied value set for label 'cvd_codes' (canonical URL"
+                        + " 'http://example.org/ValueSet/cardiovascular-disease') defines no"
+                        + " membership: it carries neither an expansion nor a compose"));
+  }
+
+  @Test
+  void suppliedExpansionOverTheCapNamesTheSuppliedValueSetAndTheMaximum() {
+    serverConfiguration.getSqlQuery().setValueSetMaxMembers(1);
+    final ValueSet supplied = suppliedValueSet(null);
+    supplied.getExpansion().addContains().setSystem("http://snomed.info/sct").setCode("1");
+    supplied.getExpansion().addContains().setSystem("http://snomed.info/sct").setCode("2");
+
+    assertThatThrownBy(() -> resolver().resolveSupplied(reference(URL), artefact(supplied)))
+        .isInstanceOf(UnprocessableEntityException.class)
+        .satisfies(
+            thrown ->
+                assertIssue(
+                    thrown,
+                    SuppliedArtefacts.CONTEXT_EXPRESSION,
+                    "The supplied value set for label 'cvd_codes' (canonical URL"
+                        + " 'http://example.org/ValueSet/cardiovascular-disease') has more than the"
+                        + " maximum of 1 members permitted by"
+                        + " pathling.sqlQuery.valueSetMaxMembers"));
+  }
+
+  // ---------------------------------------------------------------------------
   // Helpers.
   // ---------------------------------------------------------------------------
 
@@ -361,5 +561,32 @@ class ValueSetMembershipResolverTest {
     assertThat(outcome.getIssueFirstRep().getExpression())
         .extracting(expression -> expression.getValue())
         .containsExactly(SuppliedArtefacts.CONTEXT_EXPRESSION);
+  }
+
+  /**
+   * Asserts that the exception carries exactly one invalid issue with the given expression, whose
+   * diagnostics and exception message both equal the given text verbatim.
+   */
+  private static void assertIssue(
+      @Nonnull final Throwable thrown,
+      @Nonnull final String expression,
+      @Nonnull final String diagnostics) {
+    final UnprocessableEntityException exception = (UnprocessableEntityException) thrown;
+    final OperationOutcome outcome = (OperationOutcome) exception.getOperationOutcome();
+    assertThat(outcome.getIssue()).hasSize(1);
+    final OperationOutcomeIssueComponent issue = outcome.getIssueFirstRep();
+    assertThat(issue.getCode()).isEqualTo(IssueType.INVALID);
+    assertThat(issue.getExpression())
+        .extracting(value -> value.getValue())
+        .containsExactly(expression);
+    assertThat(issue.getDiagnostics()).isEqualTo(diagnostics);
+    assertThat(exception.getMessage()).isEqualTo(diagnostics);
+  }
+
+  /** The diagnostics of the exception's single issue. */
+  @Nonnull
+  private static String diagnosticsOf(@Nonnull final Throwable thrown) {
+    final UnprocessableEntityException exception = (UnprocessableEntityException) thrown;
+    return ((OperationOutcome) exception.getOperationOutcome()).getIssueFirstRep().getDiagnostics();
   }
 }
