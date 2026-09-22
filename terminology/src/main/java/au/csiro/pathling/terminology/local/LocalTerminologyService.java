@@ -20,6 +20,7 @@ package au.csiro.pathling.terminology.local;
 import au.csiro.pathling.config.LocalTerminologyConfiguration;
 import au.csiro.pathling.config.TerminologyConfiguration;
 import au.csiro.pathling.terminology.TerminologyService;
+import au.csiro.pathling.terminology.expand.ValueSetExpansion;
 import au.csiro.pathling.terminology.local.index.CodeSystemIndexes;
 import au.csiro.pathling.terminology.local.index.ConceptDictionary;
 import au.csiro.pathling.terminology.local.index.ConceptMapIndex;
@@ -48,6 +49,7 @@ import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.DateTimeType;
 import org.hl7.fhir.r4.model.StringType;
+import org.hl7.fhir.r4.model.ValueSet;
 import org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence;
 import org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome;
 import org.roaringbitmap.IntConsumer;
@@ -331,6 +333,19 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
       return Collections.emptyList();
     }
     return buildLookup(coding.getSystem(), indexes, dense, propertyCode, acceptLanguage);
+  }
+
+  @Nonnull
+  @Override
+  public Optional<ValueSetExpansion> expand(
+      @Nonnull final String url, @Nullable final String version, final int maxMembers) {
+    throw new UnsupportedOperationException("Not yet implemented");
+  }
+
+  @Nonnull
+  @Override
+  public ValueSetExpansion expand(@Nonnull final ValueSet valueSet, final int maxMembers) {
+    throw new UnsupportedOperationException("Not yet implemented");
   }
 
   /**

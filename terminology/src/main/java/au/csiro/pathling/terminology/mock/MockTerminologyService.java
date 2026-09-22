@@ -22,6 +22,7 @@ import static org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence.EQUIVALENT
 import static org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence.RELATEDTO;
 
 import au.csiro.pathling.terminology.TerminologyService;
+import au.csiro.pathling.terminology.expand.ValueSetExpansion;
 import com.google.common.collect.ImmutableMap;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -30,6 +31,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -140,6 +142,20 @@ public class MockTerminologyService implements TerminologyService {
   @Override
   public boolean validateCode(@Nonnull final String codeSystemUrl, @Nonnull final Coding coding) {
     return valueSets.getOrDefault(codeSystemUrl, ValueSet.EMPTY).contains(coding);
+  }
+
+  @Nonnull
+  @Override
+  public Optional<ValueSetExpansion> expand(
+      @Nonnull final String url, @Nullable final String version, final int maxMembers) {
+    throw new UnsupportedOperationException("Not yet implemented");
+  }
+
+  @Nonnull
+  @Override
+  public ValueSetExpansion expand(
+      @Nonnull final org.hl7.fhir.r4.model.ValueSet valueSet, final int maxMembers) {
+    throw new UnsupportedOperationException("Not yet implemented");
   }
 
   @Nonnull
