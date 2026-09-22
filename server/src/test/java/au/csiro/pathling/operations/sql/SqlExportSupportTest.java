@@ -41,6 +41,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -292,5 +293,162 @@ class SqlExportSupportTest {
         false,
         Set.of(),
         null);
+  }
+
+  // -------------------------------------------------------------------------
+  // Delimiter-forging resistance (aehrc/pathling#2768).
+  // -------------------------------------------------------------------------
+
+  // Every test in this section fails against the pre-fix rendering and passes with the encoding
+  // applied: reverting just the main source must turn each of them red.
+  @Test
+  void sqlCannotForgeSubjectBoundaries() {
+    // Regression test for issue #2768. Before the fix, subject descriptions were rendered as
+    // "name:kind:sql:bindings:topLevelKeysByLabel" with unescaped delimiters, joined by ",".
+    // Request A has two subjects; request B has a single subject whose SQL embeds the exact
+    // renderer grammar (",", ":", "{", "}", "="), so both requests rendered to the same key and
+    // B's kick-off was deduplicated onto A's job. (In the real exploit the payload sits after a
+    // "--" line comment so the SQL stays valid; the string-level ambiguity is what this tests.)
+    final SqlExportRequest twoSubjects =
+        requestWith(sqlSubject("s1", "SELECT 1"), sqlSubject("s2", "SELECT 2"));
+    final SqlExportRequest forgedSingleSubject =
+        requestWith(sqlSubject("s1", "SELECT 1:{}:{},s2:SQL_QUERY:SELECT 2"));
+
+    assertThat(support.computeCacheKeyComponent(twoSubjects))
+        .isNotEqualTo(support.computeCacheKeyComponent(forgedSingleSubject));
+  }
+
+  @Test
+  void topLevelKeysCannotForgeMapBoundaries() {
+    // The same delimiter-forging class applied to the label->key map: a map renders its entries
+    // joined by ", " without escaping, so one entry whose value contains ", " renders exactly
+    // like two entries. Without encoding these two label mappings share a key.
+    final SqlExportRequest oneEntry =
+        requestWith(
+            sqlSubjectWithLabels(
+                "s1",
+                "SELECT * FROM lbl",
+                Map.of(
+                    "lbl",
+                    "https://example.org/Library/v1, other=https://example.org/Library/v2")));
+    final Map<String, String> twoEntries = new LinkedHashMap<>();
+    twoEntries.put("lbl", "https://example.org/Library/v1");
+    twoEntries.put("other", "https://example.org/Library/v2");
+    final SqlExportRequest twoEntryRequest =
+        requestWith(sqlSubjectWithLabels("s1", "SELECT * FROM lbl", twoEntries));
+
+    assertThat(support.computeCacheKeyComponent(oneEntry))
+        .isNotEqualTo(support.computeCacheKeyComponent(twoEntryRequest));
+  }
+
+  @Test
+  void dependencyChildWiringCannotForgeMapBoundaries() {
+    // describeContent renders the label->child-key mapping with the same unescaped "{k=v, ...}"
+    // grammar: one entry whose value contains ", " renders exactly like two entries. These two
+    // closures wire the SQLView's label to different children but rendered to the same key
+    // before the fix.
+    final String oneEntry =
+        support.computeCacheKeyComponent(
+            requestOver(
+                graph(
+                    Map.of("crit_a", VIEW_URL),
+                    new ResolvedSqlView(
+                        VIEW_URL,
+                        "SELECT * FROM crit_b",
+                        Map.of("crit_b", "https://x/one, crit_c=https://x/two")))));
+    final Map<String, String> twoEntries = new LinkedHashMap<>();
+    twoEntries.put("crit_b", "https://x/one");
+    twoEntries.put("crit_c", "https://x/two");
+    final String twoEntryLabels =
+        support.computeCacheKeyComponent(
+            requestOver(
+                graph(
+                    Map.of("crit_a", VIEW_URL),
+                    new ResolvedSqlView(VIEW_URL, "SELECT * FROM crit_b", twoEntries))));
+
+    assertThat(twoEntryLabels).isNotEqualTo(oneEntry);
+  }
+
+  @Test
+  void clientTrackingIdIsLengthPrefixedInTheKey() {
+    // The tracking id is a client-controlled free-text section: it is length-prefixed so that
+    // whatever delimiters it contains, it cannot be mistaken for the neighbouring sections.
+    final String key = support.computeCacheKeyComponent(requestWithTrackingId("abc|format=csv"));
+
+    assertThat(key).contains("|clientTrackingId=14:abc|format=csv");
+  }
+
+  @Test
+  void mapIterationOrderDoesNotChangeKey() {
+    // Bindings and label maps render sorted, so identical kick-offs deduplicate regardless of the
+    // map implementation's iteration order.
+    final Map<String, Object> bindingsInsertion = new LinkedHashMap<>();
+    bindingsInsertion.put("b", 2);
+    bindingsInsertion.put("a", 1);
+    final Map<String, Object> bindingsSorted = new TreeMap<>(bindingsInsertion);
+    final SqlExportRequest first = requestWith(sqlSubject("s1", "SELECT 1", bindingsInsertion));
+    final SqlExportRequest second = requestWith(sqlSubject("s1", "SELECT 1", bindingsSorted));
+
+    assertThat(support.computeCacheKeyComponent(first))
+        .isEqualTo(support.computeCacheKeyComponent(second));
+  }
+
+  @Nonnull
+  private static SqlExportRequest requestWith(@Nonnull final SubjectInput... subjects) {
+    return new SqlExportRequest(
+        "http://localhost/fhir/$sql-export",
+        "http://localhost/fhir",
+        List.of(subjects),
+        null,
+        SqlExportFormat.NDJSON,
+        false,
+        Set.of(),
+        null);
+  }
+
+  @Nonnull
+  private static SqlExportRequest requestWithTrackingId(@Nonnull final String trackingId) {
+    return new SqlExportRequest(
+        "http://localhost/fhir/$sql-export",
+        "http://localhost/fhir",
+        List.of(sqlSubject("s1", "SELECT 1 AS n")),
+        trackingId,
+        SqlExportFormat.NDJSON,
+        false,
+        Set.of(),
+        null);
+  }
+
+  @Nonnull
+  private static SubjectInput sqlSubject(@Nonnull final String name, @Nonnull final String sql) {
+    return sqlSubject(name, sql, Map.<String, Object>of());
+  }
+
+  @Nonnull
+  private static SubjectInput sqlSubject(
+      @Nonnull final String name,
+      @Nonnull final String sql,
+      @Nonnull final Map<String, Object> bindings) {
+    final ParsedSqlQuery parsed =
+        new ParsedSqlQuery(sql, List.of(), List.of(), SqlLibraryParser.SQL_QUERY_TYPE_CODE);
+    final SqlQueryRequest request =
+        new SqlQueryRequest(parsed, SqlQueryOutputFormat.NDJSON, false, null, bindings);
+    final ResolvedDependencyGraph graph =
+        new ResolvedDependencyGraph(List.of(), Map.of(), Map.of());
+    return SubjectInput.ofSql(SubjectKind.SQL_QUERY, name, new PreparedSqlQuery(request, graph));
+  }
+
+  @Nonnull
+  private static SubjectInput sqlSubjectWithLabels(
+      @Nonnull final String name,
+      @Nonnull final String sql,
+      @Nonnull final Map<String, String> topLevelKeysByLabel) {
+    final ParsedSqlQuery parsed =
+        new ParsedSqlQuery(sql, List.of(), List.of(), SqlLibraryParser.SQL_QUERY_TYPE_CODE);
+    final SqlQueryRequest request =
+        new SqlQueryRequest(parsed, SqlQueryOutputFormat.NDJSON, false, null, Map.of());
+    final ResolvedDependencyGraph graph =
+        new ResolvedDependencyGraph(List.of(), topLevelKeysByLabel, Map.of());
+    return SubjectInput.ofSql(SubjectKind.SQL_QUERY, name, new PreparedSqlQuery(request, graph));
   }
 }
