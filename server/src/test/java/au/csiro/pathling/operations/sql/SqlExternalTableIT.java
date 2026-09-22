@@ -301,7 +301,8 @@ class SqlExternalTableIT extends AbstractAsyncExportIT {
     final String body = postExpectStatus(parametersJson(library), 404);
 
     assertThat(body)
-        .contains("no ViewDefinition, SQLView or external table matches that canonical URL");
+        .contains(
+            "no ViewDefinition, SQLView, external table or value set matches that canonical URL");
   }
 
   @Test
