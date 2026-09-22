@@ -75,8 +75,19 @@ public class ServerConfiguration {
 
   @Valid @NotNull private EncodingConfiguration encoding = EncodingConfiguration.builder().build();
 
+  /**
+   * The local block is given an empty default so that {@code pathling.terminology.local.*}
+   * properties have an instance to bind into: the configuration classes are built with Lombok
+   * builders and carry no no-arg constructor, so the property binder cannot create the nested block
+   * itself and would otherwise leave it null. An empty block is inert in server mode, and in local
+   * mode the class-level validation on {@link TerminologyConfiguration} still requires the storage
+   * path.
+   */
   @Valid @NotNull
-  private TerminologyConfiguration terminology = TerminologyConfiguration.builder().build();
+  private TerminologyConfiguration terminology =
+      TerminologyConfiguration.builder()
+          .local(LocalTerminologyConfiguration.builder().build())
+          .build();
 
   @Valid @NotNull private AuthorizationConfiguration auth;
 
