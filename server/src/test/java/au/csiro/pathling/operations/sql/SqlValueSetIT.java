@@ -23,6 +23,8 @@ import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.post;
+import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -46,10 +48,12 @@ import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.PublicationStatus;
 import org.hl7.fhir.r4.model.Library;
+import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.RelatedArtifact;
 import org.hl7.fhir.r4.model.RelatedArtifact.RelatedArtifactType;
 import org.hl7.fhir.r4.model.UriType;
 import org.hl7.fhir.r4.model.ValueSet;
+import org.hl7.fhir.r4.model.ValueSet.ConceptSetComponent;
 import org.hl7.fhir.r4.model.ValueSet.ValueSetExpansionComponent;
 import org.hl7.fhir.r4.model.ValueSet.ValueSetExpansionContainsComponent;
 import org.junit.jupiter.api.AfterAll;
@@ -72,7 +76,11 @@ import org.springframework.test.web.reactive.server.EntityExchangeResult;
  * SERVER terminology mode over a WireMock terminology server. Follows User Story 1 of the feature:
  * a SQLQuery semi-joins a stored Condition ViewDefinition to a value set resolved through {@code
  * $expand}, selects the relation itself, describes it, and expands a pinned and an unpinned
- * reference with exactly the parameters the specification permits.
+ * reference with exactly the parameters the specification permits. Follows User Story 2: a {@code
+ * context} ValueSet carrying an expansion is used as-is and outranks the terminology server, is
+ * matched to a pinned dependency only when its version agrees, is expanded through a {@code POST
+ * $expand} when it carries only a compose, and is rejected when unmatched or when it shares a URL
+ * with another entry.
  *
  * <p>Backed by {@link SqlValueSetTestConfiguration} for the stored ViewDefinition and the Condition
  * data. The terminology server's HTTP response cache is disabled so that every expansion reaches
@@ -250,6 +258,180 @@ class SqlValueSetIT extends AbstractAsyncExportIT {
   }
 
   // -------------------------------------------------------------------------
+  // US2 scenario 1: a supplied expansion is used and the terminology server is not consulted.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void suppliedExpansionIsUsedWithoutAnyExpandRequest() {
+    final String body =
+        postOk(
+            parametersJson(
+                semiJoinQuery(CVD_URL + "|" + CVD_VERSION),
+                resourcePart("context", resourceMap(cvdExpansion()))));
+
+    assertThat(rowsOf(body, "patient_id", "code"))
+        .containsExactly(
+            "Patient/p1/" + SqlValueSetTestConfiguration.MYOCARDIAL_INFARCTION,
+            "Patient/p3/" + SqlValueSetTestConfiguration.MYOCARDIAL_INFARCTION);
+    assertThat(expandRequests()).isEmpty();
+    assertThat(postExpandRequests()).isEmpty();
+  }
+
+  // -------------------------------------------------------------------------
+  // US2 scenario 2: a supplied expansion outranks a canonical the server could resolve.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void suppliedExpansionOutranksAResolvableCanonical() {
+    // The server-side expansion of CVD_URL would hold the myocardial infarction and I21 members;
+    // the supplied one names diabetes instead, and it is the supplied membership that is used.
+    final ValueSet supplied = suppliedValueSet(CVD_URL, null);
+    supplied
+        .getExpansion()
+        .addContains()
+        .setSystem(SqlValueSetTestConfiguration.SNOMED)
+        .setCode(SqlValueSetTestConfiguration.DIABETES_MELLITUS);
+
+    final String body =
+        postOk(
+            parametersJson(semiJoinQuery(CVD_URL), resourcePart("context", resourceMap(supplied))));
+
+    assertThat(rowsOf(body, "patient_id", "code"))
+        .containsExactly("Patient/p2/" + SqlValueSetTestConfiguration.DIABETES_MELLITUS);
+    assertThat(expandRequests()).isEmpty();
+  }
+
+  // -------------------------------------------------------------------------
+  // US2 scenario 3: a pinned dependency matches a supplied ValueSet only when versions agree.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void pinnedDependencyMatchesASuppliedValueSetWithTheSameVersion() {
+    final ValueSet supplied = suppliedValueSet(CVD_URL, CVD_VERSION);
+    supplied
+        .getExpansion()
+        .addContains()
+        .setSystem(SqlValueSetTestConfiguration.SNOMED)
+        .setCode(SqlValueSetTestConfiguration.DIABETES_MELLITUS);
+
+    final String body =
+        postOk(
+            parametersJson(
+                semiJoinQuery(CVD_URL + "|" + CVD_VERSION),
+                resourcePart("context", resourceMap(supplied))));
+
+    assertThat(rowsOf(body, "patient_id", "code"))
+        .containsExactly("Patient/p2/" + SqlValueSetTestConfiguration.DIABETES_MELLITUS);
+    assertThat(expandRequests()).isEmpty();
+  }
+
+  @Test
+  void pinnedDependencyIgnoresASuppliedValueSetAtAnotherVersionAndConsultsTheServer() {
+    // The supplied 2025 ValueSet satisfies the dependency pinned to 2025 only; the dependency
+    // pinned to 2026 falls through to the terminology server, which is asked for 2026.
+    final ValueSet supplied = suppliedValueSet(CVD_URL, "2025");
+    supplied
+        .getExpansion()
+        .addContains()
+        .setSystem(SqlValueSetTestConfiguration.SNOMED)
+        .setCode("OLD-2025");
+    final Map<String, String> dependencies = new LinkedHashMap<>();
+    dependencies.put("cvd_codes", CVD_URL + "|" + CVD_VERSION);
+    dependencies.put("old_codes", CVD_URL + "|2025");
+    final Library library =
+        sqlQueryLibrary(
+            "SELECT code FROM cvd_codes UNION ALL SELECT code FROM old_codes ORDER BY code",
+            dependencies);
+
+    final String body =
+        postOk(parametersJson(library, resourcePart("context", resourceMap(supplied))));
+
+    assertThat(rows(body))
+        .extracting(row -> row.get("code"))
+        .containsExactly(SqlValueSetTestConfiguration.MYOCARDIAL_INFARCTION, "I21", "OLD-2025");
+    final List<LoggedRequest> requests = expandRequests();
+    assertThat(requests).hasSize(1);
+    assertThat(requests.get(0).queryParameter("valueSetVersion").firstValue())
+        .isEqualTo(CVD_VERSION);
+  }
+
+  // -------------------------------------------------------------------------
+  // US2 scenario 4: a compose-only ValueSet is expanded through one POST $expand.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void composeOnlyValueSetIsExpandedThroughOnePostCarryingTheResource() {
+    stubPostExpansion(cvdExpansion());
+    final ValueSet supplied = suppliedValueSet(CVD_URL, CVD_VERSION);
+    final ConceptSetComponent include = supplied.getCompose().addInclude();
+    include.setSystem(SqlValueSetTestConfiguration.SNOMED);
+    include.addConcept().setCode(SqlValueSetTestConfiguration.MYOCARDIAL_INFARCTION);
+
+    final String body =
+        postOk(
+            parametersJson(
+                semiJoinQuery(CVD_URL + "|" + CVD_VERSION),
+                resourcePart("context", resourceMap(supplied))));
+
+    assertThat(rowsOf(body, "patient_id", "code"))
+        .containsExactly(
+            "Patient/p1/" + SqlValueSetTestConfiguration.MYOCARDIAL_INFARCTION,
+            "Patient/p3/" + SqlValueSetTestConfiguration.MYOCARDIAL_INFARCTION);
+    assertThat(expandRequests()).isEmpty();
+    final List<LoggedRequest> posts = postExpandRequests();
+    assertThat(posts).hasSize(1);
+    final Parameters sent = (Parameters) jsonParser.parseResource(posts.get(0).getBodyAsString());
+    assertThat(sent.getParameter())
+        .extracting(Parameters.ParametersParameterComponent::getName)
+        .containsExactly("valueSet", "count", "offset");
+    final ValueSet sentValueSet = (ValueSet) sent.getParameter().get(0).getResource();
+    assertThat(sentValueSet.getUrl()).isEqualTo(CVD_URL);
+    assertThat(sentValueSet.getCompose().getIncludeFirstRep().getConceptFirstRep().getCode())
+        .isEqualTo(SqlValueSetTestConfiguration.MYOCARDIAL_INFARCTION);
+  }
+
+  // -------------------------------------------------------------------------
+  // US2 scenario 6: a supplied ValueSet matching no dependency is a 400.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void unmatchedSuppliedValueSetIsRejected() {
+    final ValueSet unrelated = suppliedValueSet("http://example.org/ValueSet/unrelated", null);
+    unrelated
+        .getExpansion()
+        .addContains()
+        .setSystem(SqlValueSetTestConfiguration.SNOMED)
+        .setCode(SqlValueSetTestConfiguration.MYOCARDIAL_INFARCTION);
+
+    final String body =
+        postExpectStatus(
+            parametersJson(
+                semiJoinQuery(CVD_URL + "|" + CVD_VERSION),
+                resourcePart("context", resourceMap(unrelated))),
+            400);
+
+    assertThat(body)
+        .contains("match no dependency of any subject", "http://example.org/ValueSet/unrelated");
+  }
+
+  // -------------------------------------------------------------------------
+  // US2 scenario 7: two context entries sharing a URL are a 400, whatever their kinds.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void aViewDefinitionAndAValueSetSharingAUrlAreRejected() {
+    final String body =
+        postExpectStatus(
+            parametersJson(
+                semiJoinQuery(CVD_URL + "|" + CVD_VERSION),
+                resourcePart("context", viewDefinitionAt(CVD_URL)),
+                resourcePart("context", resourceMap(cvdExpansion()))),
+            400);
+
+    assertThat(body).contains("share the canonical URL", CVD_URL);
+  }
+
+  // -------------------------------------------------------------------------
   // Fixtures
   // -------------------------------------------------------------------------
 
@@ -297,6 +479,34 @@ class SqlValueSetIT extends AbstractAsyncExportIT {
     return valueSet;
   }
 
+  /** A ValueSet resource carrying the given URL and version and no content, for a context entry. */
+  @Nonnull
+  private static ValueSet suppliedValueSet(
+      @Nonnull final String url, @Nullable final String version) {
+    final ValueSet valueSet = new ValueSet();
+    valueSet.setUrl(url);
+    valueSet.setVersion(version);
+    return valueSet;
+  }
+
+  /** A minimal ViewDefinition over Condition at the given URL, as a generic JSON map. */
+  @Nonnull
+  private static Map<String, Object> viewDefinitionAt(@Nonnull final String url) {
+    return Map.of(
+        "resourceType",
+        "ViewDefinition",
+        "url",
+        url,
+        "name",
+        "colliding_view",
+        "status",
+        "active",
+        "resource",
+        "Condition",
+        "select",
+        List.of(Map.of("column", List.of(Map.of("name", "id", "path", "id")))));
+  }
+
   /** Stubs {@code $expand} for the given canonical URL and, where non-null, pinned version. */
   private void stubExpansion(
       @Nonnull final String url, @Nullable final String version, @Nonnull final ValueSet response) {
@@ -315,6 +525,22 @@ class SqlValueSetIT extends AbstractAsyncExportIT {
   @Nonnull
   private static List<LoggedRequest> expandRequests() {
     return wireMockServer.findAll(getRequestedFor(urlPathEqualTo(EXPAND_PATH)));
+  }
+
+  /** Stubs {@code POST $expand} to return the given expansion for any supplied resource. */
+  private void stubPostExpansion(@Nonnull final ValueSet response) {
+    wireMockServer.stubFor(
+        post(urlPathEqualTo(EXPAND_PATH))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", FHIR_JSON)
+                    .withBody(jsonParser.encodeResourceToString(response))));
+  }
+
+  @Nonnull
+  private static List<LoggedRequest> postExpandRequests() {
+    return wireMockServer.findAll(postRequestedFor(urlPathEqualTo(EXPAND_PATH)));
   }
 
   // -------------------------------------------------------------------------
