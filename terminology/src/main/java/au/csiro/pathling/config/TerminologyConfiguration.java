@@ -146,8 +146,10 @@ public class TerminologyConfiguration implements Serializable {
     public boolean isValid(
         final TerminologyConfiguration value, final ConstraintValidatorContext context) {
       if (TerminologyMode.LOCAL.equals(value.getMode())) {
-        // The block always exists now, so only its storage path decides local-mode validity.
-        return !value.getLocal().getStoragePath().isBlank();
+        // The block always exists now, but the path is optional so that LOCAL mode without one is
+        // rejected as a constraint violation rather than failing inside the validator.
+        final String storagePath = value.getLocal().getStoragePath();
+        return storagePath != null && !storagePath.isBlank();
       }
       return true;
     }
