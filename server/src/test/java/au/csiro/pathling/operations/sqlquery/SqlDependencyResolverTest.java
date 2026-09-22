@@ -22,6 +22,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
@@ -31,6 +34,8 @@ import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.config.SqlQueryConfiguration;
 import au.csiro.pathling.operations.sql.SuppliedArtefact;
 import au.csiro.pathling.operations.sql.SuppliedArtefacts;
+import au.csiro.pathling.terminology.expand.ValueSetExpansion;
+import au.csiro.pathling.terminology.expand.ValueSetMember;
 import au.csiro.pathling.views.FhirView;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
@@ -47,8 +52,9 @@ import org.junit.jupiter.api.Test;
  * Unit tests for {@link SqlDependencyResolver} covering canonical-URL resolution, the resolved
  * graph shape for a {@code SQLQuery -> SQLView -> ViewDefinition} chain, supplied-artefact
  * precedence and traversal, diamond de-duplication (including bare-url vs {@code url|version}),
- * configured external tables, and the structural rejections (cycles, depth, ambiguity, not-found,
- * and wrong-typed dependencies).
+ * configured external tables, value sets resolved through the terminology layer as a last resort,
+ * and the structural rejections (cycles, depth, ambiguity, not-found, and wrong-typed
+ * dependencies).
  *
  * @author John Grimes
  */
@@ -61,8 +67,11 @@ class SqlDependencyResolverTest {
 
   private static final String TABLE_PATH = "file:///data/reference/cohorts";
 
+  private static final String VALUE_SET_URL = "http://example.org/ValueSet/cardiovascular-disease";
+
   private ViewResolver viewResolver;
   private LibraryReferenceResolver libraryReferenceResolver;
+  private ValueSetMembershipResolver valueSetResolver;
   private ServerConfiguration serverConfiguration;
   private SqlDependencyResolver resolver;
 
@@ -70,14 +79,14 @@ class SqlDependencyResolverTest {
   void setUp() {
     viewResolver = mock(ViewResolver.class);
     libraryReferenceResolver = mock(LibraryReferenceResolver.class);
+    valueSetResolver = mock(ValueSetMembershipResolver.class);
+    when(valueSetResolver.resolveCanonical(any(), any())).thenReturn(Optional.empty());
     serverConfiguration = new ServerConfiguration();
     final AuthorizationConfiguration auth = new AuthorizationConfiguration();
     auth.setEnabled(false);
     serverConfiguration.setAuth(auth);
     serverConfiguration.setSqlQuery(new SqlQueryConfiguration());
-    resolver =
-        new SqlDependencyResolver(
-            viewResolver, libraryReferenceResolver, new SqlLibraryParser(), serverConfiguration);
+    resolver = newResolver();
   }
 
   // ---------------------------------------------------------------------------
@@ -424,7 +433,7 @@ class SqlDependencyResolverTest {
         .isInstanceOf(ResourceNotFoundException.class)
         .hasMessageContainingAll("'c'", TABLE_URL + "|2")
         .hasMessageEndingWith(
-            "no ViewDefinition, SQLView or external table matches that canonical URL");
+            "no ViewDefinition, SQLView, external table or value set matches that canonical URL");
   }
 
   @Test
@@ -538,7 +547,10 @@ class SqlDependencyResolverTest {
         .isInstanceOf(ResourceNotFoundException.class)
         .hasMessageContainingAll("'x'", missingUrl)
         .hasMessageEndingWith(
-            "no ViewDefinition, SQLView or external table matches that canonical URL");
+            "no ViewDefinition, SQLView, external table or value set matches that canonical URL");
+    verify(valueSetResolver)
+        .resolveCanonical(
+            argThat(ref -> ref != null && missingUrl.equals(ref.getCanonicalUrl())), any());
   }
 
   @Test
@@ -568,6 +580,128 @@ class SqlDependencyResolverTest {
         .isInstanceOf(InvalidRequestException.class)
         .hasMessageContaining("sql-query")
         .hasMessageContaining("SQLView");
+  }
+
+  // ---------------------------------------------------------------------------
+  // Value sets through the terminology layer (spec 061 US1).
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void resolvesAnUnmatchedUrlAsAValueSetLeaf() {
+    // Nothing supplied, configured or stored matches, so the reference is passed to the membership
+    // resolver, which returns a leaf that is registered under its key.
+    final ResolvedValueSet valueSet = stubValueSet(VALUE_SET_URL + "|2026");
+
+    final ResolvedDependencyGraph graph =
+        resolver.resolve(
+            sqlQuery("SELECT * FROM cvd", "cvd", VALUE_SET_URL + "|2026"),
+            SuppliedArtefacts.empty());
+
+    assertThat(graph.getOrderedNodes()).containsExactly(valueSet);
+    assertThat(graph.getTopLevelKeysByLabel()).containsEntry("cvd", VALUE_SET_URL + "|2026");
+    verify(valueSetResolver)
+        .resolveCanonical(
+            argThat(ref -> ref != null && "cvd".equals(ref.getLabel())),
+            argThat(
+                canonical ->
+                    canonical != null
+                        && VALUE_SET_URL.equals(canonical.getUrl())
+                        && "2026".equals(canonical.getVersion())));
+  }
+
+  @Test
+  void neverConsultsTheTerminologyLayerForAStoredViewDefinition() {
+    stubStoredViewDefinition(PATIENT_VIEW_URL, PATIENT_VIEW_URL, "Patient");
+
+    resolver.resolve(sqlQuery("SELECT * FROM p", "p", PATIENT_VIEW_URL), SuppliedArtefacts.empty());
+
+    verifyNoInteractions(valueSetResolver);
+  }
+
+  @Test
+  void neverConsultsTheTerminologyLayerForAStoredSqlViewOrAnExternalTable() {
+    final String baseUrl = SqlLibraryFixtures.sqlViewUrl("base");
+    stubSqlView(baseUrl, "SELECT * FROM pv", "pv", PATIENT_VIEW_URL);
+    stubStoredViewDefinition(PATIENT_VIEW_URL, PATIENT_VIEW_URL, "Patient");
+    configureExternalTable(TABLE_URL, TABLE_PATH, "delta");
+
+    resolver.resolve(
+        sqlQueryWithDeps("SELECT * FROM b JOIN c", Map.of("b", baseUrl, "c", TABLE_URL)),
+        SuppliedArtefacts.empty());
+
+    verifyNoInteractions(valueSetResolver);
+  }
+
+  @Test
+  void reusesAValueSetNodeReachedTwiceUnderTheSameReferenceWithoutASecondExpansion() {
+    // A diamond over a value set: two SQLViews reach it under the same reference string, and it is
+    // resolved and expanded exactly once.
+    stubValueSet(VALUE_SET_URL);
+    final String leftUrl = SqlLibraryFixtures.sqlViewUrl("left");
+    final String rightUrl = SqlLibraryFixtures.sqlViewUrl("right");
+    stubSqlView(leftUrl, "SELECT * FROM v", "v", VALUE_SET_URL);
+    stubSqlView(rightUrl, "SELECT * FROM w", "w", VALUE_SET_URL);
+
+    final ResolvedDependencyGraph graph =
+        resolver.resolve(
+            sqlQueryWithDeps("SELECT * FROM l JOIN r", Map.of("l", leftUrl, "r", rightUrl)),
+            SuppliedArtefacts.empty());
+
+    assertThat(graph.getOrderedNodes()).hasSize(3);
+    assertThat(graph.getNodesByKey().get(VALUE_SET_URL)).isInstanceOf(ResolvedValueSet.class);
+    verify(valueSetResolver, times(1)).resolveCanonical(any(), any());
+  }
+
+  @Test
+  void resolvesTheSameValueSetUnderTwoLabelsOnce() {
+    stubValueSet(VALUE_SET_URL);
+
+    final ResolvedDependencyGraph graph =
+        resolver.resolve(
+            sqlQueryWithDeps(
+                "SELECT * FROM a JOIN b ON a.code = b.code",
+                Map.of("a", VALUE_SET_URL, "b", VALUE_SET_URL)),
+            SuppliedArtefacts.empty());
+
+    assertThat(graph.getOrderedNodes()).hasSize(1);
+    assertThat(graph.getTopLevelKeysByLabel())
+        .containsEntry("a", VALUE_SET_URL)
+        .containsEntry("b", VALUE_SET_URL);
+    verify(valueSetResolver, times(1)).resolveCanonical(any(), any());
+  }
+
+  @Test
+  void treatsAPinnedAndAnUnpinnedReferenceToOneValueSetAsTwoNodes() {
+    // The matching algorithm memoises by the canonical as written, so the two strings are two
+    // relations even though they may name one membership.
+    stubValueSet(VALUE_SET_URL);
+    stubValueSet(VALUE_SET_URL + "|2026");
+
+    final ResolvedDependencyGraph graph =
+        resolver.resolve(
+            sqlQueryWithDeps(
+                "SELECT * FROM a JOIN b", Map.of("a", VALUE_SET_URL, "b", VALUE_SET_URL + "|2026")),
+            SuppliedArtefacts.empty());
+
+    assertThat(graph.getOrderedNodes()).hasSize(2);
+    assertThat(graph.getNodesByKey()).containsKeys(VALUE_SET_URL, VALUE_SET_URL + "|2026");
+    verify(valueSetResolver, times(2)).resolveCanonical(any(), any());
+  }
+
+  @Test
+  void rejectsAValueSetBeyondTheDepthLimit() {
+    serverConfiguration.getSqlQuery().setMaxDependencyDepth(1);
+    stubValueSet(VALUE_SET_URL);
+    final String viewUrl = SqlLibraryFixtures.sqlViewUrl("over-value-set");
+    stubSqlView(viewUrl, "SELECT * FROM v", "v", VALUE_SET_URL);
+
+    assertThatThrownBy(
+            () ->
+                resolver.resolve(
+                    sqlQuery("SELECT * FROM x", "x", viewUrl), SuppliedArtefacts.empty()))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContainingAll("deeper", "1", VALUE_SET_URL);
+    verify(valueSetResolver, never()).resolveCanonical(any(), any());
   }
 
   // ---------------------------------------------------------------------------
@@ -602,9 +736,42 @@ class SqlDependencyResolverTest {
     table.setPath(path);
     table.setFormat(format);
     serverConfiguration.getSqlQuery().getExternalTables().add(table);
-    resolver =
-        new SqlDependencyResolver(
-            viewResolver, libraryReferenceResolver, new SqlLibraryParser(), serverConfiguration);
+    resolver = newResolver();
+  }
+
+  /** Builds a resolver over the current mocks and configuration. */
+  @Nonnull
+  private SqlDependencyResolver newResolver() {
+    return new SqlDependencyResolver(
+        viewResolver,
+        libraryReferenceResolver,
+        valueSetResolver,
+        new SqlLibraryParser(),
+        serverConfiguration);
+  }
+
+  /**
+   * Stubs the membership resolver to resolve the given canonical (as written) to a value set leaf
+   * with one member, keyed by that canonical, and returns the leaf.
+   */
+  @Nonnull
+  private ResolvedValueSet stubValueSet(@Nonnull final String canonical) {
+    final CanonicalReference parsed = CanonicalReference.parse(canonical);
+    final ResolvedValueSet leaf =
+        new ResolvedValueSet(
+            canonical,
+            new ValueSetExpansion(
+                parsed.getUrl(),
+                parsed.getVersion(),
+                null,
+                null,
+                List.of(),
+                List.of(
+                    new ValueSetMember("http://snomed.info/sct", null, "22298006", null, null))));
+    when(valueSetResolver.resolveCanonical(
+            argThat(ref -> ref != null && canonical.equals(ref.getCanonicalUrl())), any()))
+        .thenReturn(Optional.of(leaf));
+    return leaf;
   }
 
   /**

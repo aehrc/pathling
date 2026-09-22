@@ -110,7 +110,11 @@ class SqlQueryAuthTest {
         new LibraryReferenceResolver(readExecutor, dataSource, fhirEncoders, serverConfiguration);
     resolver =
         new SqlDependencyResolver(
-            viewResolver, libraryReferenceResolver, new SqlLibraryParser(), serverConfiguration);
+            viewResolver,
+            libraryReferenceResolver,
+            mock(ValueSetMembershipResolver.class),
+            new SqlLibraryParser(),
+            serverConfiguration);
   }
 
   @AfterEach
