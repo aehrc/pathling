@@ -17,6 +17,9 @@
 
 package au.csiro.pathling.operations.sql;
 
+import static au.csiro.pathling.operations.sqlquery.SqlLibraryParser.LIBRARY_TYPE_SYSTEM;
+import static au.csiro.pathling.operations.sqlquery.SqlLibraryParser.SQL_VIEW_TYPE_CODE;
+
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.ViewDefinitionResource;
 import au.csiro.pathling.encoders.ViewDefinitionResource.ColumnComponent;
@@ -26,13 +29,22 @@ import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.test.Rf2Mini;
 import au.csiro.pathling.util.CustomObjectDataSource;
 import jakarta.annotation.Nonnull;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.instance.model.api.IBaseResource;
+import org.hl7.fhir.r4.model.Attachment;
 import org.hl7.fhir.r4.model.CodeType;
+import org.hl7.fhir.r4.model.CodeableConcept;
+import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Condition;
+import org.hl7.fhir.r4.model.Enumerations.PublicationStatus;
+import org.hl7.fhir.r4.model.Library;
+import org.hl7.fhir.r4.model.Patient;
 import org.hl7.fhir.r4.model.Reference;
+import org.hl7.fhir.r4.model.RelatedArtifact;
+import org.hl7.fhir.r4.model.RelatedArtifact.RelatedArtifactType;
 import org.hl7.fhir.r4.model.StringType;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
@@ -40,13 +52,18 @@ import org.springframework.context.annotation.Primary;
 
 /**
  * Test configuration backing the value set integration tests, substituting an in-memory data source
- * that holds a stored ViewDefinition over {@code Condition} and the Condition data it projects.
+ * that holds a stored ViewDefinition over {@code Condition}, a stored SQLView that semi-joins it to
+ * the cardiovascular disease value set, the Condition data they project and the Patients those
+ * Conditions belong to.
  *
- * <p>The stored graph is a single {@code ViewDefinition/condition-view} projecting {@code id},
- * {@code patient_id}, {@code system} and {@code code} from each Condition's first coding. The
- * Conditions carry two groups of codes: the SNOMED CT codes of the specification's cardiovascular
- * disease example, which the SERVER-mode test resolves through a stubbed terminology server, and
- * synthetic {@code rf2-mini} concepts, which the LOCAL-mode test resolves through a local store.
+ * <p>The stored graph is {@code ViewDefinition/condition-view}, projecting {@code id}, {@code
+ * patient_id}, {@code system} and {@code code} from each Condition's first coding, and {@code
+ * Library/cvd-conditions}, a SQLView keeping the rows of that view whose code is a member of the
+ * cardiovascular disease value set. The Conditions carry two groups of codes: the SNOMED CT codes
+ * of the specification's cardiovascular disease example, which the SERVER-mode test resolves
+ * through a stubbed terminology server, and synthetic {@code rf2-mini} concepts, which the
+ * LOCAL-mode test resolves through a local store. The Patients exist so that the {@code patient}
+ * filter can name them.
  *
  * @author John Grimes
  */
@@ -72,6 +89,19 @@ public class SqlValueSetTestConfiguration {
   /** A SNOMED CT code for diabetes mellitus, not a member of the cardiovascular disease example. */
   public static final String DIABETES_MELLITUS = "73211009";
 
+  /** The canonical URL of the cardiovascular disease value set of the specification's example. */
+  public static final String CVD_URL = "http://example.org/ValueSet/cardiovascular-disease";
+
+  /** The pinned version of the cardiovascular disease value set. */
+  public static final String CVD_VERSION = "2026";
+
+  /** The logical id of the stored SQLView semi-joining the Condition view to the value set. */
+  public static final String CVD_CONDITIONS_ID = "cvd-conditions";
+
+  /** The canonical URL of the stored SQLView semi-joining the Condition view to the value set. */
+  public static final String CVD_CONDITIONS_URL =
+      "https://pathling.csiro.au/test/Library/" + CVD_CONDITIONS_ID;
+
   /**
    * Substitutes the server's data source with an in-memory one holding the stored ViewDefinition
    * and the Condition data.
@@ -90,6 +120,10 @@ public class SqlValueSetTestConfiguration {
       @Nonnull final FhirEncoders fhirEncoders) {
     final List<IBaseResource> resources = new ArrayList<>();
     resources.add(conditionView());
+    resources.add(cvdConditions());
+    resources.add(patient("p1"));
+    resources.add(patient("p2"));
+    resources.add(patient("p3"));
     // The specification's example: two myocardial infarctions on different patients and one
     // diabetes, so a semi-join to the cardiovascular disease value set keeps exactly two rows.
     resources.add(condition("c1", "p1", MYOCARDIAL_INFARCTION));
@@ -122,6 +156,41 @@ public class SqlValueSetTestConfiguration {
     return view;
   }
 
+  /**
+   * Builds the stored SQLView that keeps the Condition view's rows whose code is a member of the
+   * cardiovascular disease value set, pinned to its version.
+   */
+  @Nonnull
+  private static Library cvdConditions() {
+    final Library library = new Library();
+    library.setId(CVD_CONDITIONS_ID);
+    library.setUrl(CVD_CONDITIONS_URL);
+    library.setStatus(PublicationStatus.ACTIVE);
+    library.setType(
+        new CodeableConcept()
+            .addCoding(new Coding().setSystem(LIBRARY_TYPE_SYSTEM).setCode(SQL_VIEW_TYPE_CODE)));
+    final Attachment content = new Attachment();
+    content.setContentType("application/sql");
+    content.setData(
+        ("SELECT conditions.patient_id, conditions.code FROM conditions"
+                + " WHERE EXISTS (SELECT 1 FROM cvd_codes"
+                + " WHERE cvd_codes.system = conditions.system"
+                + " AND cvd_codes.code = conditions.code)")
+            .getBytes(StandardCharsets.UTF_8));
+    library.addContent(content);
+    library.addRelatedArtifact(
+        new RelatedArtifact()
+            .setType(RelatedArtifactType.DEPENDSON)
+            .setLabel("conditions")
+            .setResource(CONDITION_VIEW_URL));
+    library.addRelatedArtifact(
+        new RelatedArtifact()
+            .setType(RelatedArtifactType.DEPENDSON)
+            .setLabel("cvd_codes")
+            .setResource(CVD_URL + "|" + CVD_VERSION));
+    return library;
+  }
+
   /** Builds a ViewDefinition column with the given name and path. */
   @Nonnull
   private static ColumnComponent column(@Nonnull final String name, @Nonnull final String path) {
@@ -140,5 +209,13 @@ public class SqlValueSetTestConfiguration {
     condition.setSubject(new Reference("Patient/" + patientId));
     condition.getCode().addCoding().setSystem(SNOMED).setCode(code);
     return condition;
+  }
+
+  /** Builds a Patient with the given id, so that the {@code patient} filter can resolve it. */
+  @Nonnull
+  private static Patient patient(@Nonnull final String id) {
+    final Patient patient = new Patient();
+    patient.setId(id);
+    return patient;
   }
 }
