@@ -29,8 +29,10 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
+import au.csiro.pathling.config.LocalTerminologyConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.config.TerminologyConfiguration;
+import au.csiro.pathling.config.TerminologyMode;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.operations.sql.SubjectResolver;
 import au.csiro.pathling.operations.sql.SuppliedArtefact;
@@ -44,13 +46,16 @@ import au.csiro.pathling.terminology.expand.ValueSetMember;
 import au.csiro.pathling.util.LogCapture;
 import ca.uhn.fhir.rest.client.exceptions.FhirClientConnectionException;
 import ca.uhn.fhir.rest.server.exceptions.UnprocessableEntityException;
+import ch.qos.logback.classic.Level;
 import jakarta.annotation.Nonnull;
 import java.net.ConnectException;
 import java.util.List;
 import java.util.Optional;
+import org.hl7.fhir.r4.model.DateTimeType;
 import org.hl7.fhir.r4.model.OperationOutcome;
 import org.hl7.fhir.r4.model.OperationOutcome.IssueType;
 import org.hl7.fhir.r4.model.OperationOutcome.OperationOutcomeIssueComponent;
+import org.hl7.fhir.r4.model.UriType;
 import org.hl7.fhir.r4.model.ValueSet;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -60,7 +65,8 @@ import org.junit.jupiter.api.Test;
  * arguments passed to {@code expand}, the node built from an expansion, the not-found and disabled
  * short circuits, the translation of the two expansion exceptions into a 422 that names the label,
  * the canonical URL and the reason, and the handling of a supplied {@code context} ValueSet, whose
- * expansion is used as-is and whose compose is expanded by the service.
+ * expansion is used as-is and whose compose is expanded by the service, and the provenance line
+ * logged once for every membership resolved, naming its source.
  *
  * @author John Grimes
  */
@@ -71,6 +77,18 @@ class ValueSetMembershipResolverTest {
   private static final String LABEL = "cvd_codes";
 
   private static final int MAX_MEMBERS = 250;
+
+  private static final String SERVER_URL = "http://tx.example.org/fhir";
+
+  private static final String EXPANSION_IDENTIFIER =
+      "urn:uuid:5b7c1a1e-2f34-4d6a-9c3e-8e2f6a1b0c9d";
+
+  private static final String EXPANSION_TIMESTAMP = "2026-01-31T10:15:30+10:00";
+
+  private static final String SNOMED_VERSION =
+      "http://snomed.info/sct|http://snomed.info/sct/32506021000036107/version/20260131";
+
+  private static final String LOINC_VERSION = "http://loinc.org|2.80";
 
   private static final ValueSetMember MEMBER =
       new ValueSetMember(
@@ -294,21 +312,97 @@ class ValueSetMembershipResolverTest {
         .satisfies(ValueSetMembershipResolverTest::assertContextInvalidIssue);
   }
 
+  // ---------------------------------------------------------------------------
+  // Provenance (US5): one INFO line per resolution, naming the source.
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void logsTheTerminologyServerUrlAsTheSourceOfACanonicalInServerMode() {
+    serverConfiguration.setTerminology(
+        TerminologyConfiguration.builder().serverUrl(SERVER_URL).build());
+    when(terminologyService.expand(URL, "2026", MAX_MEMBERS))
+        .thenReturn(
+            Optional.of(
+                new ValueSetExpansion(
+                    URL,
+                    "2026.1",
+                    EXPANSION_IDENTIFIER,
+                    EXPANSION_TIMESTAMP,
+                    List.of(SNOMED_VERSION, LOINC_VERSION),
+                    List.of(MEMBER))));
+
+    try (LogCapture capture = LogCapture.forClass(ValueSetMembershipResolver.class)) {
+      resolver()
+          .resolveCanonical(reference(URL + "|2026"), CanonicalReference.parse(URL + "|2026"));
+
+      assertSingleProvenanceLine(
+          capture,
+          "Resolved value set '"
+              + URL
+              + "' (version 2026.1) from "
+              + SERVER_URL
+              + ": 1 members; expansion "
+              + EXPANSION_IDENTIFIER
+              + " at "
+              + EXPANSION_TIMESTAMP
+              + "; code systems ["
+              + SNOMED_VERSION
+              + ", "
+              + LOINC_VERSION
+              + "]");
+    }
+  }
+
+  @Test
+  void logsTheLocalStoreAsTheSourceOfACanonicalInLocalModeWithNoneForAbsentValues() {
+    serverConfiguration.setTerminology(
+        TerminologyConfiguration.builder()
+            .mode(TerminologyMode.LOCAL)
+            .local(LocalTerminologyConfiguration.builder().storagePath("/data/terminology").build())
+            .build());
+    when(terminologyService.expand(URL, null, MAX_MEMBERS))
+        .thenReturn(
+            Optional.of(new ValueSetExpansion(URL, null, null, null, List.of(), List.of())));
+
+    try (LogCapture capture = LogCapture.forClass(ValueSetMembershipResolver.class)) {
+      resolver().resolveCanonical(reference(URL), CanonicalReference.parse(URL));
+
+      assertSingleProvenanceLine(
+          capture,
+          "Resolved value set '"
+              + URL
+              + "' (version none) from local store: 0 members; expansion none at none; code"
+              + " systems []");
+    }
+  }
+
   @Test
   void logsTheContextParameterAsTheSourceOfASuppliedValueSet() {
     final ValueSet supplied = suppliedValueSet("2026");
+    supplied.getExpansion().setIdentifier(EXPANSION_IDENTIFIER);
+    supplied.getExpansion().setTimestampElement(new DateTimeType(EXPANSION_TIMESTAMP));
+    supplied.getExpansion().addParameter().setName("version").setValue(new UriType(SNOMED_VERSION));
     supplied.getExpansion().addContains().setSystem("http://snomed.info/sct").setCode("22298006");
+    supplied.getExpansion().addContains().setSystem("http://snomed.info/sct").setCode("57054005");
 
     try (LogCapture capture = LogCapture.forClass(ValueSetMembershipResolver.class)) {
       resolver().resolveSupplied(reference(URL + "|2026"), artefact(supplied));
 
-      assertThat(capture.events())
-          .singleElement()
-          .extracting(event -> event.getFormattedMessage())
-          .asString()
-          .contains(
-              "'" + URL + "'", "from " + SuppliedArtefacts.CONTEXT_EXPRESSION + ":", "1 members");
+      assertSingleProvenanceLine(
+          capture,
+          "Resolved value set '"
+              + URL
+              + "' (version 2026) from "
+              + SuppliedArtefacts.CONTEXT_EXPRESSION
+              + ": 2 members; expansion "
+              + EXPANSION_IDENTIFIER
+              + " at "
+              + EXPANSION_TIMESTAMP
+              + "; code systems ["
+              + SNOMED_VERSION
+              + "]");
     }
+    verifyNoInteractions(terminologyService);
   }
 
   // ---------------------------------------------------------------------------
@@ -588,5 +682,20 @@ class ValueSetMembershipResolverTest {
   private static String diagnosticsOf(@Nonnull final Throwable thrown) {
     final UnprocessableEntityException exception = (UnprocessableEntityException) thrown;
     return ((OperationOutcome) exception.getOperationOutcome()).getIssueFirstRep().getDiagnostics();
+  }
+
+  /**
+   * Asserts that the capture holds exactly one event, at INFO, whose formatted message is the given
+   * provenance line verbatim.
+   */
+  private static void assertSingleProvenanceLine(
+      @Nonnull final LogCapture capture, @Nonnull final String line) {
+    assertThat(capture.events())
+        .singleElement()
+        .satisfies(
+            event -> {
+              assertThat(event.getLevel()).isEqualTo(Level.INFO);
+              assertThat(event.getFormattedMessage()).isEqualTo(line);
+            });
   }
 }
