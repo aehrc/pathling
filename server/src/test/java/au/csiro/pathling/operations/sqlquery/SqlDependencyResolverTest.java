@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -45,6 +46,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.hl7.fhir.r4.model.Library;
+import org.hl7.fhir.r4.model.ValueSet;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -53,8 +55,8 @@ import org.junit.jupiter.api.Test;
  * graph shape for a {@code SQLQuery -> SQLView -> ViewDefinition} chain, supplied-artefact
  * precedence and traversal, diamond de-duplication (including bare-url vs {@code url|version}),
  * configured external tables, value sets resolved through the terminology layer as a last resort,
- * and the structural rejections (cycles, depth, ambiguity, not-found, and wrong-typed
- * dependencies).
+ * value sets supplied inline through {@code context}, and the structural rejections (cycles, depth,
+ * ambiguity, not-found, and wrong-typed dependencies).
  *
  * @author John Grimes
  */
@@ -705,6 +707,93 @@ class SqlDependencyResolverTest {
   }
 
   // ---------------------------------------------------------------------------
+  // Supplied ValueSets (spec 061 US2).
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void resolvesASuppliedValueSetAsALeafThroughTheMembershipResolver() {
+    final SuppliedArtefact supplied = suppliedValueSet("2026");
+    final ResolvedValueSet leaf = stubSuppliedValueSet(supplied, VALUE_SET_URL + "|2026");
+
+    final ResolvedDependencyGraph graph =
+        resolver.resolve(
+            sqlQuery("SELECT * FROM cvd", "cvd", VALUE_SET_URL + "|2026"),
+            SuppliedArtefacts.of(List.of(supplied)));
+
+    assertThat(graph.getOrderedNodes()).containsExactly(leaf);
+    assertThat(graph.getTopLevelKeysByLabel()).containsEntry("cvd", VALUE_SET_URL + "|2026");
+    verify(valueSetResolver)
+        .resolveSupplied(argThat(ref -> ref != null && "cvd".equals(ref.getLabel())), eq(supplied));
+    verify(valueSetResolver, never()).resolveCanonical(any(), any());
+  }
+
+  @Test
+  void prefersASuppliedValueSetOverAStoredViewDefinitionWithTheSameUrl() {
+    // A context artefact outranks storage, and neither stored lookup is consulted for that URL.
+    stubStoredViewDefinition(VALUE_SET_URL, VALUE_SET_URL, "Condition");
+    final SuppliedArtefact supplied = suppliedValueSet(null);
+    stubSuppliedValueSet(supplied, VALUE_SET_URL);
+
+    final ResolvedDependencyGraph graph =
+        resolver.resolve(
+            sqlQuery("SELECT * FROM cvd", "cvd", VALUE_SET_URL),
+            SuppliedArtefacts.of(List.of(supplied)));
+
+    assertThat(graph.getOrderedNodes()).hasSize(1);
+    assertThat(graph.getNodesByKey().get(VALUE_SET_URL)).isInstanceOf(ResolvedValueSet.class);
+    verifyNoInteractions(viewResolver, libraryReferenceResolver);
+  }
+
+  @Test
+  void matchesAPinnedDependencyToASuppliedValueSetOnlyWhenTheVersionsAgree() {
+    final SuppliedArtefact wrongVersion = suppliedValueSet("2025");
+    stubSuppliedValueSet(wrongVersion, VALUE_SET_URL + "|2025");
+    final ResolvedValueSet canonical = stubValueSet(VALUE_SET_URL + "|2026");
+
+    final ResolvedDependencyGraph fellThrough =
+        resolver.resolve(
+            sqlQuery("SELECT * FROM cvd", "cvd", VALUE_SET_URL + "|2026"),
+            SuppliedArtefacts.of(List.of(wrongVersion)));
+
+    assertThat(fellThrough.getOrderedNodes()).containsExactly(canonical);
+    verify(valueSetResolver, never()).resolveSupplied(any(), any());
+    verify(valueSetResolver).resolveCanonical(any(), any());
+
+    final SuppliedArtefact rightVersion = suppliedValueSet("2026");
+    final ResolvedValueSet suppliedLeaf =
+        stubSuppliedValueSet(rightVersion, VALUE_SET_URL + "|2026");
+
+    final ResolvedDependencyGraph matched =
+        resolver.resolve(
+            sqlQuery("SELECT * FROM cvd", "cvd", VALUE_SET_URL + "|2026"),
+            SuppliedArtefacts.of(List.of(rightVersion)));
+
+    assertThat(matched.getOrderedNodes()).containsExactly(suppliedLeaf);
+    verify(valueSetResolver).resolveSupplied(any(), eq(rightVersion));
+  }
+
+  @Test
+  void resolvesASuppliedValueSetReachedUnderTwoLabelsOnce() {
+    // A compose-only supplied ValueSet is expanded by the terminology layer, so the node is reused
+    // rather than the artefact being resolved again for the second label.
+    final SuppliedArtefact supplied = suppliedValueSet(null);
+    stubSuppliedValueSet(supplied, VALUE_SET_URL);
+
+    final ResolvedDependencyGraph graph =
+        resolver.resolve(
+            sqlQueryWithDeps(
+                "SELECT * FROM a JOIN b ON a.code = b.code",
+                Map.of("a", VALUE_SET_URL, "b", VALUE_SET_URL)),
+            SuppliedArtefacts.of(List.of(supplied)));
+
+    assertThat(graph.getOrderedNodes()).hasSize(1);
+    assertThat(graph.getTopLevelKeysByLabel())
+        .containsEntry("a", VALUE_SET_URL)
+        .containsEntry("b", VALUE_SET_URL);
+    verify(valueSetResolver, times(1)).resolveSupplied(any(), any());
+  }
+
+  // ---------------------------------------------------------------------------
   // Helpers.
   // ---------------------------------------------------------------------------
 
@@ -771,6 +860,38 @@ class SqlDependencyResolverTest {
     when(valueSetResolver.resolveCanonical(
             argThat(ref -> ref != null && canonical.equals(ref.getCanonicalUrl())), any()))
         .thenReturn(Optional.of(leaf));
+    return leaf;
+  }
+
+  /** Builds a context entry for a ValueSet at {@link #VALUE_SET_URL} with the given version. */
+  @Nonnull
+  private static SuppliedArtefact suppliedValueSet(final String version) {
+    final ValueSet valueSet = new ValueSet();
+    valueSet.setUrl(VALUE_SET_URL);
+    valueSet.setVersion(version);
+    valueSet.getExpansion().addContains().setSystem("http://snomed.info/sct").setCode("22298006");
+    return SuppliedArtefact.ofValueSet(VALUE_SET_URL, version, valueSet);
+  }
+
+  /**
+   * Stubs the membership resolver to resolve the given supplied artefact to a value set leaf with
+   * one member under the given key, and returns the leaf.
+   */
+  @Nonnull
+  private ResolvedValueSet stubSuppliedValueSet(
+      @Nonnull final SuppliedArtefact supplied, @Nonnull final String key) {
+    final ResolvedValueSet leaf =
+        new ResolvedValueSet(
+            key,
+            new ValueSetExpansion(
+                supplied.getUrl(),
+                supplied.getVersion(),
+                null,
+                null,
+                List.of(),
+                List.of(
+                    new ValueSetMember("http://snomed.info/sct", null, "22298006", null, null))));
+    when(valueSetResolver.resolveSupplied(any(), eq(supplied))).thenReturn(leaf);
     return leaf;
   }
 
