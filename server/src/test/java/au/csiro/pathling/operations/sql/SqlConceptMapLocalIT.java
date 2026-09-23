@@ -36,6 +36,7 @@ import au.csiro.pathling.util.DirectoryCleanup;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URI;
@@ -47,7 +48,9 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -87,15 +90,21 @@ import org.springframework.test.web.reactive.server.EntityExchangeResult;
  * relation itself give the same rows as in SERVER mode. Covers scenarios 5 and 6: a pinned
  * reference reads that version and an unpinned one the latest. Covers scenario 14: a pinned
  * reference to a concept map, or to a value set, imported at a canonical URL that carries a query
- * resolves as that artefact.
+ * resolves as that artefact. Covers User Story 4 scenarios 1-5: each of the four SNOMED CT implicit
+ * concept maps holds one row per association row, with the store's displays and the relationship
+ * THO defines; a concept with three POSSIBLY EQUIVALENT TO targets has three rows; the version
+ * comes from an edition/version base or, for a bare base, is the store's default; and a reference
+ * set outside the four is not found.
  *
  * <p>The store is imported once per class into a temporary directory before the application context
- * starts, since the local terminology service opens the store at context creation. It holds the
- * worked example as versions {@code 2026} and {@code 2025} (the latter with an edited diabetes
- * target, so that the rows show which version was read), a copy of version {@code 2026} at a
- * canonical URL with a query, and a value set at another such URL. The fixture release is extracted
- * from the {@code terminology} test-jar, whose resources are not directly addressable as a
- * filesystem path.
+ * starts, since the local terminology service opens the store at context creation. It holds a copy
+ * of the base SNOMED CT release whose association reference set gains REPLACED BY, POSSIBLY
+ * EQUIVALENT TO and ALTERNATIVE rows beside its SAME AS rows, the unmodified later release (the
+ * store's default version, holding SAME AS rows only), the worked example as versions {@code 2026}
+ * and {@code 2025} (the latter with an edited diabetes target, so that the rows show which version
+ * was read), a copy of version {@code 2026} at a canonical URL with a query, and a value set at
+ * another such URL. The fixture releases are extracted from the {@code terminology} test-jar, whose
+ * resources are not directly addressable as a filesystem path.
  *
  * <p>Backed by {@link SqlConceptMapTestConfiguration} for the stored ViewDefinition and the
  * Condition data.
@@ -118,6 +127,33 @@ class SqlConceptMapLocalIT extends AbstractAsyncExportIT {
   /** The canonical URL, carrying a query, of a value set imported as version {@code 2026}. */
   static final String VALUE_SET_WITH_QUERY_URL = "http://example.org/ValueSet/x?edition=au";
 
+  /** The SAME AS association reference set, the only one the base release ships rows for. */
+  static final String SAME_AS = Rf2Mini.SAME_AS_REFSET;
+
+  /** The REPLACED BY association reference set. */
+  static final String REPLACED_BY = "900000000000526001";
+
+  /** The POSSIBLY EQUIVALENT TO association reference set. */
+  static final String POSSIBLY_EQUIVALENT_TO = "900000000000523009";
+
+  /** The ALTERNATIVE association reference set. */
+  static final String ALTERNATIVE = "900000000000530003";
+
+  /** The MOVED FROM association reference set, for which THO defines no implicit concept map. */
+  static final String MOVED_FROM = "900000000000497000";
+
+  /** An association target that is not in the release's concept dictionary. */
+  static final String ABSENT = "9999999003";
+
+  /** The store's display of {@link Rf2Mini#TYPE2_DIABETES}. */
+  static final String T2DM = "Type 2 diabetes mellitus";
+
+  /** The relationship of the SAME AS and REPLACED BY implicit maps. */
+  static final String EQUIVALENT = "equivalent";
+
+  /** The relationship of the POSSIBLY EQUIVALENT TO and ALTERNATIVE implicit maps. */
+  static final String RELATED_TO = "related-to";
+
   @TempDir static Path storeDir;
 
   @Autowired private FhirContext fhirContext;
@@ -135,8 +171,8 @@ class SqlConceptMapLocalIT extends AbstractAsyncExportIT {
   }
 
   /**
-   * Imports the base rf2-mini release and the FHIR terminology resources into a store under the
-   * temp directory.
+   * Imports the extended copy of the base rf2-mini release, the unmodified later release and the
+   * FHIR terminology resources into a store under the temp directory.
    *
    * <p>Tomcat's URL stream handler factory is registered before Spark starts, as {@link
    * SqlValueSetLocalIT} explains, so that the server context can still start its web server.
@@ -144,6 +180,8 @@ class SqlConceptMapLocalIT extends AbstractAsyncExportIT {
   @Nonnull
   private static String importStore() {
     final Path release = extractRelease("international-20230601");
+    appendAssociationRows(release);
+    final Path laterRelease = extractRelease("international-20240601");
     final Path resources = writeResources();
     final String storagePath = storeDir.resolve("store").toString();
     TomcatURLStreamHandlerFactory.register();
@@ -156,9 +194,70 @@ class SqlConceptMapLocalIT extends AbstractAsyncExportIT {
                 "spark.sql.catalog.spark_catalog",
                 "org.apache.spark.sql.delta.catalog.DeltaCatalog")
             .getOrCreate();
-    new SnomedRf2Importer(spark, storagePath).importFrom(release.toString(), null);
+    final SnomedRf2Importer snomedImporter = new SnomedRf2Importer(spark, storagePath);
+    snomedImporter.importFrom(release.toString(), null);
+    snomedImporter.importFrom(laterRelease.toString(), null);
     new FhirTerminologyImporter(spark, storagePath).importFrom(resources.toString(), false, null);
     return storagePath;
+  }
+
+  /**
+   * Appends REPLACED BY, POSSIBLY EQUIVALENT TO and ALTERNATIVE rows to the association reference
+   * set file of an extracted base release, beside its SAME AS rows, as the terminology module's
+   * implicit concept map test does. The rows are written out of code order, and one POSSIBLY
+   * EQUIVALENT TO concept has three targets, one of which is not in the concept dictionary.
+   */
+  private static void appendAssociationRows(@Nonnull final Path release) {
+    final List<String> rows =
+        List.of(
+            associationRow("340", REPLACED_BY, Rf2Mini.ASSOCIATED_FILLER_2, Rf2Mini.DIABETES),
+            associationRow("341", REPLACED_BY, Rf2Mini.DIABETES_INACTIVE, Rf2Mini.TYPE2_DIABETES),
+            associationRow("342", POSSIBLY_EQUIVALENT_TO, Rf2Mini.GESTATIONAL_DIABETES, ABSENT),
+            associationRow(
+                "343",
+                POSSIBLY_EQUIVALENT_TO,
+                Rf2Mini.GESTATIONAL_DIABETES,
+                Rf2Mini.TYPE2_WITH_COMPLICATION),
+            associationRow(
+                "344",
+                POSSIBLY_EQUIVALENT_TO,
+                Rf2Mini.GESTATIONAL_DIABETES,
+                Rf2Mini.TYPE1_DIABETES),
+            associationRow("345", ALTERNATIVE, Rf2Mini.HYPERTENSION, Rf2Mini.DISORDER),
+            associationRow("346", ALTERNATIVE, Rf2Mini.DIABETES_INACTIVE, Rf2Mini.DIABETES));
+    try (Stream<Path> paths = Files.walk(release)) {
+      final Path file =
+          paths
+              .filter(path -> path.getFileName().toString().startsWith("der2_cRefset_Association"))
+              .min(Comparator.naturalOrder())
+              .orElseThrow(() -> new IllegalStateException("No association reference set file"));
+      final List<String> lines = new ArrayList<>(Files.readAllLines(file));
+      lines.addAll(rows);
+      Files.write(file, lines);
+    } catch (final IOException e) {
+      throw new UncheckedIOException("Unable to extend the association reference set", e);
+    }
+  }
+
+  /**
+   * Builds an active association reference set row of the base release, whose member identifier
+   * ends in the given hexadecimal suffix.
+   */
+  @Nonnull
+  private static String associationRow(
+      @Nonnull final String idSuffix,
+      @Nonnull final String refset,
+      @Nonnull final String referenced,
+      @Nonnull final String target) {
+    return String.join(
+        "\t",
+        "00000000-0000-4000-8000-000000000" + idSuffix,
+        "20230601",
+        "1",
+        Rf2Mini.CORE_MODULE,
+        refset,
+        referenced,
+        target);
   }
 
   /**
@@ -347,8 +446,190 @@ class SqlConceptMapLocalIT extends AbstractAsyncExportIT {
   }
 
   // -------------------------------------------------------------------------
+  // US4 scenarios 1-3: the four SNOMED CT implicit concept maps.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void sameAsImplicitMapHoldsOneEquivalentRowPerAssociationRow() {
+    assertThat(implicitRows(Rf2Mini.VERSION_20230601, SAME_AS))
+        .containsExactly(
+            row(Rf2Mini.DIABETES_INACTIVE, "Diabetes", Rf2Mini.TYPE2_DIABETES, T2DM, EQUIVALENT),
+            row(
+                Rf2Mini.ASSOCIATED_FILLER_1,
+                "Mini diabetes subtype 86",
+                Rf2Mini.TYPE2_DIABETES,
+                T2DM,
+                EQUIVALENT),
+            row(
+                Rf2Mini.ASSOCIATED_FILLER_2,
+                "Mini other disorder 36",
+                Rf2Mini.TYPE2_DIABETES,
+                T2DM,
+                EQUIVALENT),
+            row(
+                Rf2Mini.ASSOCIATED_FILLER_3,
+                "Mini other disorder 56",
+                Rf2Mini.TYPE2_DIABETES,
+                T2DM,
+                EQUIVALENT));
+  }
+
+  @Test
+  void replacedByImplicitMapHoldsOneEquivalentRowPerAssociationRow() {
+    assertThat(implicitRows(Rf2Mini.VERSION_20230601, REPLACED_BY))
+        .containsExactly(
+            row(Rf2Mini.DIABETES_INACTIVE, "Diabetes", Rf2Mini.TYPE2_DIABETES, T2DM, EQUIVALENT),
+            row(
+                Rf2Mini.ASSOCIATED_FILLER_2,
+                "Mini other disorder 36",
+                Rf2Mini.DIABETES,
+                "Diabetes mellitus",
+                EQUIVALENT));
+  }
+
+  @Test
+  void possiblyEquivalentToImplicitMapHoldsARowForEachOfThreeTargets() {
+    // One concept has three targets, one of which is not in the dictionary and has no display.
+    final String gestational = "Gestational diabetes mellitus";
+    assertThat(implicitRows(Rf2Mini.VERSION_20230601, POSSIBLY_EQUIVALENT_TO))
+        .containsExactly(
+            row(
+                Rf2Mini.GESTATIONAL_DIABETES,
+                gestational,
+                Rf2Mini.TYPE1_DIABETES,
+                "Type 1 diabetes mellitus",
+                RELATED_TO),
+            row(
+                Rf2Mini.GESTATIONAL_DIABETES,
+                gestational,
+                Rf2Mini.TYPE2_WITH_COMPLICATION,
+                "Type 2 diabetes mellitus with complication",
+                RELATED_TO),
+            row(Rf2Mini.GESTATIONAL_DIABETES, gestational, ABSENT, null, RELATED_TO));
+  }
+
+  @Test
+  void alternativeImplicitMapHoldsOneRelatedToRowPerAssociationRow() {
+    assertThat(implicitRows(Rf2Mini.VERSION_20230601, ALTERNATIVE))
+        .containsExactly(
+            row(
+                Rf2Mini.HYPERTENSION,
+                "Hypertensive disorder",
+                Rf2Mini.DISORDER,
+                "Mini disorder",
+                RELATED_TO),
+            row(
+                Rf2Mini.DIABETES_INACTIVE,
+                "Diabetes",
+                Rf2Mini.DIABETES,
+                "Diabetes mellitus",
+                RELATED_TO));
+  }
+
+  // -------------------------------------------------------------------------
+  // US4 scenario 4: the version comes from the base of the URL.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void editionVersionBaseSelectsThatVersion() {
+    // The later release holds SAME AS rows only, so its REPLACED BY map is empty.
+    assertThat(implicitRows(Rf2Mini.VERSION_20230601, REPLACED_BY)).hasSize(2);
+    assertThat(implicitRows(Rf2Mini.VERSION_20240601, REPLACED_BY)).isEmpty();
+  }
+
+  @Test
+  void bareBaseSelectsTheDefaultVersion() {
+    // The later release is the store's default SNOMED CT version: its SAME AS rows carry its
+    // version URI (which implicitRows asserts), and it holds no REPLACED BY rows.
+    assertThat(implicitRows(Rf2Mini.SNOMED_URI, SAME_AS)).hasSize(4);
+    assertThat(implicitRows(Rf2Mini.SNOMED_URI, REPLACED_BY)).isEmpty();
+  }
+
+  // -------------------------------------------------------------------------
+  // US4 scenario 5: a reference set outside the four.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void implicitMapOverAnotherReferenceSetIsNotFound() {
+    final String url = implicitUrl(Rf2Mini.SNOMED_URI, MOVED_FROM);
+
+    final String body =
+        postExpectStatus(parametersJson(sqlQueryLibrary("SELECT 1", Map.of("moved", url))), 404);
+
+    assertThat(body)
+        .contains(
+            "Failed to resolve the dependency for label 'moved' with reference '"
+                + url
+                + "': no ViewDefinition, SQLView, external table, concept map or value set matches"
+                + " that canonical URL")
+        .doesNotContain("local terminology mode");
+  }
+
+  // -------------------------------------------------------------------------
   // Helpers
   // -------------------------------------------------------------------------
+
+  /**
+   * Reads the relation of the implicit concept map over the given reference set at the given SNOMED
+   * CT base, asserting that every row has SNOMED CT as both systems and the resolved version URI as
+   * both versions, and returns each row as {@code
+   * <source_code>/<source_display>/<target_code>/<target_display>/<relationship>}, ordered by
+   * source code and then target code.
+   */
+  @Nonnull
+  private List<String> implicitRows(@Nonnull final String base, @Nonnull final String refset) {
+    // A bare base resolves to the store's default version, the later release.
+    final String version = Rf2Mini.SNOMED_URI.equals(base) ? Rf2Mini.VERSION_20240601 : base;
+    final List<Map<String, Object>> rows =
+        rows(
+            postOk(
+                parametersJson(
+                    sqlQueryLibrary(
+                        "SELECT * FROM implicit_map ORDER BY source_code, target_code",
+                        Map.of("implicit_map", implicitUrl(base, refset))))));
+    for (final Map<String, Object> row : rows) {
+      assertThat(row)
+          .containsEntry("source_system", Rf2Mini.SNOMED_URI)
+          .containsEntry("target_system", Rf2Mini.SNOMED_URI)
+          .containsEntry("source_version", version)
+          .containsEntry("target_version", version);
+    }
+    return rows.stream()
+        .map(
+            row ->
+                row(
+                    (String) row.get("source_code"),
+                    (String) row.get("source_display"),
+                    (String) row.get("target_code"),
+                    (String) row.get("target_display"),
+                    (String) row.get("relationship")))
+        .toList();
+  }
+
+  /** Formats one implicit map row as {@link #implicitRows} returns it, a null as {@code null}. */
+  @Nonnull
+  private static String row(
+      @Nullable final String sourceCode,
+      @Nullable final String sourceDisplay,
+      @Nullable final String targetCode,
+      @Nullable final String targetDisplay,
+      @Nullable final String relationship) {
+    return sourceCode
+        + "/"
+        + sourceDisplay
+        + "/"
+        + targetCode
+        + "/"
+        + targetDisplay
+        + "/"
+        + relationship;
+  }
+
+  /** Builds the implicit concept map URL over a reference set at a SNOMED CT base. */
+  @Nonnull
+  private static String implicitUrl(@Nonnull final String base, @Nonnull final String refset) {
+    return base + "?fhir_cm=" + refset;
+  }
 
   /** Asserts that the relation of the given reference holds the worked example's three rows. */
   private void assertWorkedExampleRows(@Nonnull final String canonical) {
@@ -413,10 +694,13 @@ class SqlConceptMapLocalIT extends AbstractAsyncExportIT {
         Map.of("sct_to_icd10", conceptMapCanonical));
   }
 
-  /** Parses each NDJSON row of a response body into a map, in response order. */
+  /** Parses each NDJSON row of a response body into a map, in response order; none if blank. */
   @Nonnull
   @SuppressWarnings("unchecked")
   List<Map<String, Object>> rows(@Nonnull final String body) {
+    if (body.isBlank()) {
+      return List.of();
+    }
     return Arrays.stream(body.trim().split("\n"))
         .map(line -> (Map<String, Object>) gson.fromJson(line, Map.class))
         .toList();
@@ -451,6 +735,24 @@ class SqlConceptMapLocalIT extends AbstractAsyncExportIT {
             .returnResult();
     return new String(
         Objects.requireNonNull(result.getResponseBodyContent()), StandardCharsets.UTF_8);
+  }
+
+  @Nonnull
+  String postExpectStatus(@Nonnull final String body, final int status) {
+    final EntityExchangeResult<byte[]> result =
+        webTestClient
+            .post()
+            .uri("http://localhost:" + port + "/fhir/$sql-run")
+            .header("Content-Type", "application/fhir+json")
+            .header("Accept", SqlQueryOutputFormat.NDJSON.getContentType())
+            .bodyValue(body)
+            .exchange()
+            .expectStatus()
+            .isEqualTo(status)
+            .expectBody()
+            .returnResult();
+    final byte[] payload = result.getResponseBodyContent();
+    return payload == null ? "" : new String(payload, StandardCharsets.UTF_8);
   }
 
   /** Builds an inline SQLQuery Library with the given depends-on dependencies (label to URL). */
