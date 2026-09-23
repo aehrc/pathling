@@ -56,8 +56,10 @@ import org.springframework.stereotype.Component;
  *       tables the operator has configured, and searches stored {@code ViewDefinition}s by url and
  *       {@code SQLView Library}s by url;
  *   <li>rejects a URL that matches more than one of those three sources as ambiguous;
- *   <li>otherwise, as a last resort, asks the configured terminology layer to resolve the URL as a
- *       value set, whose membership becomes a five-column relation under the label;
+ *   <li>otherwise, as a last resort, unless the URL's grammar marks it as a SNOMED CT implicit
+ *       concept map (a SNOMED CT base with a {@code fhir_cm} query), asks the configured
+ *       terminology layer to resolve the URL as a value set, whose membership becomes a five-column
+ *       relation under the label;
  *   <li>otherwise, unless the URL's grammar marks it as an implicit value set (a SNOMED CT base
  *       with a {@code fhir_vs} query, or a {@code http://fhir.org/VCL} URL), asks the terminology
  *       layer to resolve it as a concept map, whose mappings become a nine-column relation under
@@ -86,6 +88,14 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class SqlDependencyResolver {
+
+  /**
+   * The detail of the {@code 404} for a dependency that nothing matches, completing the sentence
+   * {@link #dependencyFailure} begins.
+   */
+  static final String NOT_FOUND_DETAIL =
+      "no ViewDefinition, SQLView, external table, concept map or value set matches that canonical"
+          + " URL";
 
   @Nonnull private final ViewResolver viewResolver;
 
@@ -220,8 +230,9 @@ public class SqlDependencyResolver {
    * ConceptMap; otherwise the canonical url is matched against the configured external tables (only
    * when the reference carries no version), stored ViewDefinitions and SQLView Libraries, rejecting
    * an ambiguous match (more than one source). A reference matching none of those is passed to the
-   * terminology layer as a value set and then, unless its URL is an implicit value set, as a
-   * concept map, and is not found only when those too yield nothing.
+   * terminology layer as a value set, unless its URL is a SNOMED CT implicit concept map, and then,
+   * unless its URL is an implicit value set, as a concept map, and is not found only when those too
+   * yield nothing.
    */
   @Nonnull
   private String resolveReference(
@@ -343,10 +354,15 @@ public class SqlDependencyResolver {
     if (nodesByKey.containsKey(terminologyKey)) {
       return terminologyKey;
     }
-    final Optional<ResolvedValueSet> valueSet =
-        valueSetMembershipResolver.resolveCanonical(reference, canonical);
-    if (valueSet.isPresent()) {
-      return registerLeaf(valueSet.get(), nodesByKey);
+    // A SNOMED CT implicit concept map URL names a concept map by its grammar, so it cannot be a
+    // value set and the value set lookup would be wasted; the concept map lookup raises the
+    // not-found for it itself.
+    if (!ImplicitTerminologyUrls.isImplicitConceptMap(canonical.getUrl())) {
+      final Optional<ResolvedValueSet> valueSet =
+          valueSetMembershipResolver.resolveCanonical(reference, canonical);
+      if (valueSet.isPresent()) {
+        return registerLeaf(valueSet.get(), nodesByKey);
+      }
     }
     // An implicit value set URL names a value set by its grammar, so it cannot be a concept map and
     // the concept map lookup would be wasted.
@@ -387,11 +403,7 @@ public class SqlDependencyResolver {
    */
   @Nonnull
   static ResourceNotFoundException notFound(@Nonnull final ViewArtifactReference reference) {
-    return new ResourceNotFoundException(
-        dependencyFailure(
-            reference,
-            "no ViewDefinition, SQLView, external table, concept map or value set matches that"
-                + " canonical URL"));
+    return new ResourceNotFoundException(dependencyFailure(reference, NOT_FOUND_DETAIL));
   }
 
   /** Joins two or more matched kinds into prose: "both X and Y" for two, "X, Y and Z" for three. */

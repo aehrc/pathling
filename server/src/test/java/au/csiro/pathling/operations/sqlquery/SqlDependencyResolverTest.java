@@ -791,6 +791,37 @@ class SqlDependencyResolverTest {
   }
 
   @Test
+  void resolvesASnomedImplicitConceptMapUrlWithoutAValueSetLookup() {
+    // A fhir_cm URL names a concept map by its grammar, so it goes straight to the concept map
+    // lookup.
+    final String url = "http://snomed.info/sct?fhir_cm=900000000000526001";
+    final ResolvedConceptMap conceptMap = stubConceptMap(url);
+
+    final ResolvedDependencyGraph graph =
+        resolver.resolve(sqlQuery("SELECT * FROM r", "r", url), SuppliedArtefacts.empty());
+
+    assertThat(graph.getOrderedNodes()).containsExactly(conceptMap);
+    verify(valueSetResolver, never()).resolveCanonical(any(), any());
+  }
+
+  @Test
+  void propagatesTheNotFoundTheConceptMapResolverRaisesForASnomedImplicitConceptMapUrl() {
+    final String url = "http://snomed.info/sct?fhir_cm=900000000000497000";
+    final ResourceNotFoundException notFound =
+        new ResourceNotFoundException("raised by the concept map resolver");
+    when(conceptMapResolver.resolveCanonical(any(), any())).thenThrow(notFound);
+
+    assertThatThrownBy(
+            () -> resolver.resolve(sqlQuery("SELECT 1", "moved", url), SuppliedArtefacts.empty()))
+        .isSameAs(notFound);
+    verify(valueSetResolver, never()).resolveCanonical(any(), any());
+    verify(conceptMapResolver)
+        .resolveCanonical(
+            argThat(ref -> ref != null && "moved".equals(ref.getLabel())),
+            argThat(canonical -> canonical != null && url.equals(canonical.getUrl())));
+  }
+
+  @Test
   void reusesAConceptMapNodeReachedTwiceUnderTheSameReferenceWithoutASecondLookup() {
     // A diamond over a concept map: two SQLViews reach it under the same reference string, and
     // neither terminology lookup runs a second time.

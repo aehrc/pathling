@@ -29,6 +29,7 @@ import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.config.TerminologyConfiguration;
+import au.csiro.pathling.config.TerminologyMode;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.operations.sql.SuppliedArtefact;
 import au.csiro.pathling.operations.sql.SuppliedArtefacts;
@@ -38,6 +39,7 @@ import au.csiro.pathling.terminology.conceptmap.ConceptMapContent;
 import au.csiro.pathling.terminology.conceptmap.ConceptMapRelationship;
 import au.csiro.pathling.terminology.conceptmap.ConceptMapping;
 import au.csiro.pathling.util.LogCapture;
+import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
 import ca.uhn.fhir.rest.server.exceptions.UnprocessableEntityException;
 import ch.qos.logback.classic.Level;
 import jakarta.annotation.Nonnull;
@@ -66,6 +68,19 @@ class ConceptMapResolverTest {
   private static final String LABEL = "sct_to_icd10";
 
   private static final int MAX_MAPPINGS = 250;
+
+  private static final String IMPLICIT_URL = "http://snomed.info/sct?fhir_cm=900000000000526001";
+
+  private static final String IMPLICIT_LABEL = "replaced_by";
+
+  /** The shared not-found sentence for {@link #IMPLICIT_URL} under {@link #IMPLICIT_LABEL}. */
+  private static final String IMPLICIT_NOT_FOUND =
+      "Failed to resolve the dependency for label '"
+          + IMPLICIT_LABEL
+          + "' with reference '"
+          + IMPLICIT_URL
+          + "': no ViewDefinition, SQLView, external table, concept map or value set matches that"
+          + " canonical URL";
 
   private static final ConceptMapping MAPPING =
       new ConceptMapping(
@@ -154,6 +169,68 @@ class ConceptMapResolverTest {
     assertThat(resolver().resolveCanonical(reference(URL), CanonicalReference.parse(URL)))
         .isEmpty();
     verifyNoInteractions(terminologyService);
+  }
+
+  // ---------------------------------------------------------------------------
+  // A SNOMED CT implicit concept map URL.
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void implicitConceptMapNotFoundInLocalModeIsA404WithTheSharedSentence() {
+    serverConfiguration.setTerminology(
+        TerminologyConfiguration.builder().mode(TerminologyMode.LOCAL).build());
+    when(terminologyService.readConceptMap(IMPLICIT_URL, null, MAX_MAPPINGS))
+        .thenReturn(Optional.empty());
+
+    assertThatThrownBy(
+            () ->
+                resolver()
+                    .resolveCanonical(implicitReference(), CanonicalReference.parse(IMPLICIT_URL)))
+        .isInstanceOf(ResourceNotFoundException.class)
+        .hasMessage(IMPLICIT_NOT_FOUND);
+    verify(terminologyService).readConceptMap(IMPLICIT_URL, null, MAX_MAPPINGS);
+  }
+
+  @Test
+  void implicitConceptMapNotFoundInServerModeIsA404NamingLocalMode() {
+    serverConfiguration.setTerminology(
+        TerminologyConfiguration.builder().mode(TerminologyMode.SERVER).build());
+    when(terminologyService.readConceptMap(IMPLICIT_URL, null, MAX_MAPPINGS))
+        .thenReturn(Optional.empty());
+
+    assertThatThrownBy(
+            () ->
+                resolver()
+                    .resolveCanonical(implicitReference(), CanonicalReference.parse(IMPLICIT_URL)))
+        .isInstanceOf(ResourceNotFoundException.class)
+        .hasMessage(
+            IMPLICIT_NOT_FOUND
+                + "; SNOMED CT implicit concept maps are resolved only in local terminology mode");
+  }
+
+  @Test
+  void implicitConceptMapWithTerminologyDisabledIsA404WithTheSharedSentence() {
+    serverConfiguration.setTerminology(TerminologyConfiguration.builder().enabled(false).build());
+
+    assertThatThrownBy(
+            () ->
+                resolver()
+                    .resolveCanonical(implicitReference(), CanonicalReference.parse(IMPLICIT_URL)))
+        .isInstanceOf(ResourceNotFoundException.class)
+        .hasMessage(IMPLICIT_NOT_FOUND);
+    verifyNoInteractions(terminologyService);
+  }
+
+  @Test
+  void resolvesAnImplicitConceptMapTheServiceReturns() {
+    when(terminologyService.readConceptMap(IMPLICIT_URL, null, MAX_MAPPINGS))
+        .thenReturn(Optional.of(new ConceptMapContent(IMPLICIT_URL, null, List.of(MAPPING))));
+
+    final Optional<ResolvedConceptMap> resolved =
+        resolver().resolveCanonical(implicitReference(), CanonicalReference.parse(IMPLICIT_URL));
+
+    assertThat(resolved).isPresent();
+    assertThat(resolved.get().getCanonicalKey()).isEqualTo(IMPLICIT_URL);
   }
 
   // ---------------------------------------------------------------------------
@@ -255,6 +332,11 @@ class ConceptMapResolverTest {
   @Nonnull
   private static ViewArtifactReference reference(@Nonnull final String canonical) {
     return new ViewArtifactReference(LABEL, canonical);
+  }
+
+  @Nonnull
+  private static ViewArtifactReference implicitReference() {
+    return new ViewArtifactReference(IMPLICIT_LABEL, IMPLICIT_URL);
   }
 
   @Nonnull
