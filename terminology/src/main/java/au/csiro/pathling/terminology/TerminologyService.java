@@ -19,6 +19,9 @@ package au.csiro.pathling.terminology;
 
 import au.csiro.pathling.fhir.ParametersUtils.DesignationPart;
 import au.csiro.pathling.fhirpath.encoding.ImmutableCoding;
+import au.csiro.pathling.terminology.expand.ExpansionLimitExceededException;
+import au.csiro.pathling.terminology.expand.ValueSetExpansion;
+import au.csiro.pathling.terminology.expand.ValueSetExpansionException;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.io.Serial;
@@ -30,6 +33,7 @@ import lombok.Value;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.Type;
+import org.hl7.fhir.r4.model.ValueSet;
 import org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence;
 import org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome;
 
@@ -149,6 +153,33 @@ public interface TerminologyService {
       @Nonnull final Coding coding, @Nullable final String propertyCode) {
     return lookup(coding, propertyCode, null);
   }
+
+  /**
+   * Expands a value set identified by canonical URL to its membership.
+   *
+   * @param url the canonical URL of the value set, without a version suffix
+   * @param version the value set version to expand, or null for the source's default
+   * @param maxMembers the largest membership the caller will accept
+   * @return the expansion, or empty if the canonical URL cannot be resolved
+   * @throws ValueSetExpansionException if the value set resolves but its membership cannot be
+   *     determined, including when the terminology source cannot be reached
+   * @throws ExpansionLimitExceededException if the membership exceeds {@code maxMembers}
+   */
+  @Nonnull
+  Optional<ValueSetExpansion> expand(@Nonnull String url, @Nullable String version, int maxMembers);
+
+  /**
+   * Expands a value set supplied as a resource. Where the resource carries an expansion, that
+   * expansion is the membership; otherwise its compose is expanded.
+   *
+   * @param valueSet the value set resource
+   * @param maxMembers the largest membership the caller will accept
+   * @return the expansion
+   * @throws ValueSetExpansionException if the membership cannot be determined
+   * @throws ExpansionLimitExceededException if the membership exceeds {@code maxMembers}
+   */
+  @Nonnull
+  ValueSetExpansion expand(@Nonnull ValueSet valueSet, int maxMembers);
 
   /** Common interface for properties and designations. */
   interface PropertyOrDesignation extends Serializable {
