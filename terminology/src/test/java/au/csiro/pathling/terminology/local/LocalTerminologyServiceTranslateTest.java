@@ -30,19 +30,13 @@ import au.csiro.pathling.test.FhirFixtures;
 import au.csiro.pathling.test.NoNetworkExtension;
 import au.csiro.pathling.test.Rf2Mini;
 import jakarta.annotation.Nonnull;
-import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence;
@@ -128,20 +122,22 @@ class LocalTerminologyServiceTranslateTest {
    */
   @Nonnull
   private static String importExtendedRelease(@Nonnull final Path work) {
-    final Path release = copyOfBaseRelease(work.resolve("release"));
-    appendAssociationRows(
-        release,
-        List.of(
-            associationRow(
-                "00000000-0000-4000-8000-00000000032f",
-                AMBIGUOUS_CONCEPT,
-                Rf2Mini.TYPE2_WITH_COMPLICATION),
-            associationRow(
-                "00000000-0000-4000-8000-000000000330", AMBIGUOUS_CONCEPT, Rf2Mini.TYPE1_DIABETES),
-            associationRow(
-                "00000000-0000-4000-8000-000000000331",
-                AMBIGUOUS_CONCEPT,
-                Rf2Mini.TYPE2_DIABETES)));
+    final Path release =
+        Rf2MiniReleaseCopy.withAssociationRows(
+            work.resolve("release"),
+            List.of(
+                associationRow(
+                    "00000000-0000-4000-8000-00000000032f",
+                    AMBIGUOUS_CONCEPT,
+                    Rf2Mini.TYPE2_WITH_COMPLICATION),
+                associationRow(
+                    "00000000-0000-4000-8000-000000000330",
+                    AMBIGUOUS_CONCEPT,
+                    Rf2Mini.TYPE1_DIABETES),
+                associationRow(
+                    "00000000-0000-4000-8000-000000000331",
+                    AMBIGUOUS_CONCEPT,
+                    Rf2Mini.TYPE2_DIABETES)));
     final SparkSession spark =
         SparkSession.builder()
             .appName("LocalTerminologyServiceTranslateTest")
@@ -164,51 +160,7 @@ class LocalTerminologyServiceTranslateTest {
   @Nonnull
   private static String associationRow(
       @Nonnull final String id, @Nonnull final String referenced, @Nonnull final String target) {
-    return String.join(
-        "\t",
-        id,
-        "20230601",
-        "1",
-        Rf2Mini.CORE_MODULE,
-        POSSIBLY_EQUIVALENT_TO_REFSET,
-        referenced,
-        target);
-  }
-
-  /** Copies the base release into a directory. */
-  @Nonnull
-  private static Path copyOfBaseRelease(@Nonnull final Path release) {
-    try (final Stream<Path> paths = Files.walk(Rf2Mini.baseRelease())) {
-      for (final Path source : paths.sorted().toList()) {
-        final Path target = release.resolve(Rf2Mini.baseRelease().relativize(source).toString());
-        if (Files.isDirectory(source)) {
-          Files.createDirectories(target);
-        } else {
-          Files.createDirectories(target.getParent());
-          Files.copy(source, target);
-        }
-      }
-    } catch (final IOException e) {
-      throw new UncheckedIOException(e);
-    }
-    return release;
-  }
-
-  /** Appends data rows to the release's association reference set file. */
-  private static void appendAssociationRows(
-      @Nonnull final Path release, @Nonnull final List<String> rows) {
-    try (final Stream<Path> paths = Files.walk(release)) {
-      final Path file =
-          paths
-              .filter(path -> path.getFileName().toString().startsWith("der2_cRefset_Association"))
-              .min(Comparator.naturalOrder())
-              .orElseThrow(() -> new IllegalStateException("No association reference set file"));
-      final List<String> lines = new ArrayList<>(Files.readAllLines(file));
-      lines.addAll(rows);
-      Files.write(file, lines);
-    } catch (final IOException e) {
-      throw new UncheckedIOException(e);
-    }
+    return Rf2MiniReleaseCopy.associationRow(id, POSSIBLY_EQUIVALENT_TO_REFSET, referenced, target);
   }
 
   private static Coding species(final String code) {
