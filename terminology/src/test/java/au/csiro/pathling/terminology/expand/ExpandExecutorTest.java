@@ -38,6 +38,7 @@ import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
+import com.github.tomakehurst.wiremock.http.Fault;
 import com.github.tomakehurst.wiremock.http.QueryParameter;
 import com.github.tomakehurst.wiremock.verification.LoggedRequest;
 import jakarta.annotation.Nonnull;
@@ -62,6 +63,8 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 /**
  * Tests for {@link ExpandExecutor} over a WireMock terminology server: paging by returned count,
@@ -447,6 +450,92 @@ class ExpandExecutorTest {
     assertTrue(e.getMessage().contains(unreachable), e.getMessage());
     assertTrue(e.getMessage().contains("could not be reached"), e.getMessage());
     client.close();
+  }
+
+  @ParameterizedTest
+  @ValueSource(ints = {400, 422, 500, 501})
+  void firstPageFailureIsLookupExceptionCarryingReason(final int status) {
+    stubOutcome(status, outcome("The server cannot answer"));
+
+    final ValueSetLookupException e =
+        assertThrows(ValueSetLookupException.class, () -> executor.expand(URL, null, NO_LIMIT));
+
+    assertFalse(e.isServerUnreachable());
+    assertEquals(
+        "the terminology server returned HTTP " + status + ": The server cannot answer",
+        e.getMessage());
+  }
+
+  @Test
+  void firstPageConnectionFailureIsLookupExceptionMarkedUnreachable() throws IOException {
+    final String unreachable;
+    try (final java.net.ServerSocket socket = new java.net.ServerSocket(0)) {
+      unreachable = "http://localhost:" + socket.getLocalPort() + "/fhir";
+    }
+    final TerminologyClient client = buildClient(unreachable);
+    final ExpandExecutor unreachableExecutor = new ExpandExecutor(client);
+
+    final ValueSetLookupException e =
+        assertThrows(
+            ValueSetLookupException.class, () -> unreachableExecutor.expand(URL, null, NO_LIMIT));
+
+    assertTrue(e.isServerUnreachable());
+    assertEquals("terminology server " + unreachable + " could not be reached", e.getMessage());
+    client.close();
+  }
+
+  @Test
+  void laterPageFailureIsNotLookupException() {
+    stubPage(0, page(5, 0, "1", "2", "3"));
+    wireMockServer.stubFor(
+        get(urlPathEqualTo(EXPAND_PATH))
+            .withQueryParam("offset", equalTo("3"))
+            .willReturn(
+                aResponse()
+                    .withStatus(500)
+                    .withHeader("Content-Type", FHIR_JSON)
+                    .withBody(encode(outcome("Later page failed")))));
+
+    final ValueSetExpansionException e =
+        assertThrows(ValueSetExpansionException.class, () -> executor.expand(URL, null, NO_LIMIT));
+
+    assertFalse(e instanceof ValueSetLookupException, e.getClass().getName());
+    assertTrue(e.getMessage().contains("Later page failed"), e.getMessage());
+  }
+
+  @Test
+  void laterPageConnectionFailureIsNotLookupException() {
+    stubPage(0, page(5, 0, "1", "2", "3"));
+    wireMockServer.stubFor(
+        get(urlPathEqualTo(EXPAND_PATH))
+            .withQueryParam("offset", equalTo("3"))
+            .willReturn(aResponse().withFault(Fault.CONNECTION_RESET_BY_PEER)));
+
+    final ValueSetExpansionException e =
+        assertThrows(ValueSetExpansionException.class, () -> executor.expand(URL, null, NO_LIMIT));
+
+    assertFalse(e instanceof ValueSetLookupException, e.getClass().getName());
+    assertTrue(e.getMessage().contains("could not be reached"), e.getMessage());
+  }
+
+  @Test
+  void suppliedResourceFailureIsNotLookupException() {
+    final ValueSet supplied = new ValueSet();
+    supplied.setUrl(URL);
+    supplied.getCompose().addInclude().setSystem(SNOMED).addConcept().setCode("22298006");
+    wireMockServer.stubFor(
+        post(urlPathEqualTo(EXPAND_PATH))
+            .willReturn(
+                aResponse()
+                    .withStatus(422)
+                    .withHeader("Content-Type", FHIR_JSON)
+                    .withBody(encode(outcome("Cannot expand the supplied value set")))));
+
+    final ValueSetExpansionException e =
+        assertThrows(ValueSetExpansionException.class, () -> executor.expand(supplied, NO_LIMIT));
+
+    assertFalse(e instanceof ValueSetLookupException, e.getClass().getName());
+    assertTrue(e.getMessage().contains("Cannot expand the supplied value set"), e.getMessage());
   }
 
   @Test
