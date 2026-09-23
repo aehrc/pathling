@@ -405,6 +405,50 @@ class ValueSetMembershipResolverTest {
     verifyNoInteractions(terminologyService);
   }
 
+  @Test
+  void logsTheContextParameterAndTheExpandingSourceForASuppliedCompose() {
+    // A supplied compose defines the value set but the terminology layer computes its membership,
+    // so the provenance line names both.
+    serverConfiguration.setTerminology(
+        TerminologyConfiguration.builder().serverUrl(SERVER_URL).build());
+    final ValueSet supplied = suppliedValueSet(null);
+    supplied
+        .getCompose()
+        .addInclude()
+        .setSystem("http://snomed.info/sct")
+        .addConcept()
+        .setCode("1");
+    when(terminologyService.expand(supplied, MAX_MEMBERS))
+        .thenReturn(
+            new ValueSetExpansion(
+                URL,
+                null,
+                EXPANSION_IDENTIFIER,
+                EXPANSION_TIMESTAMP,
+                List.of(SNOMED_VERSION),
+                List.of(MEMBER)));
+
+    try (LogCapture capture = LogCapture.forClass(ValueSetMembershipResolver.class)) {
+      resolver().resolveSupplied(reference(URL), artefact(supplied));
+
+      assertSingleProvenanceLine(
+          capture,
+          "Resolved value set '"
+              + URL
+              + "' (version none) from "
+              + SuppliedArtefacts.CONTEXT_EXPRESSION
+              + ", expanded by "
+              + SERVER_URL
+              + ": 1 members; expansion "
+              + EXPANSION_IDENTIFIER
+              + " at "
+              + EXPANSION_TIMESTAMP
+              + "; code systems ["
+              + SNOMED_VERSION
+              + "]");
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // Fault contract (US4): the exact issue text and expression of every fault.
   // ---------------------------------------------------------------------------

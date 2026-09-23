@@ -205,8 +205,11 @@ These settings govern the resolution of a query's dependency graph, for both
   referenced as a SQLQuery or SQLView dependency may have. Must be at least
   `1`. A value set with exactly this many members is accepted; one with more is
   rejected with a `422` naming the label, the canonical URL and the maximum,
-  before any SQL runs, and in `SERVER` mode no expansion page beyond the one
-  that reveals the excess is fetched.
+  before any SQL runs. In `SERVER` mode an expansion page whose `total` exceeds
+  the maximum is rejected at once, without fetching further pages. The `total`
+  is trusted for this even though abstract entries, which contribute no member,
+  are counted in it. Where no `total` is reported, no page beyond the one that
+  reveals the excess is fetched.
 
 `N` is a zero-based index. The list is validated at startup: every entry must
 have a non-blank `url` that contains no `|` and is unique among the configured

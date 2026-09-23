@@ -138,17 +138,21 @@ exposed under the label as a relation with exactly these columns:
 | Column     | Type      | Nullable | Content                                                                                 |
 | ---------- | --------- | -------- | --------------------------------------------------------------------------------------- |
 | `system`   | `string`  | no       | The code system canonical URL.                                                          |
-| `version`  | `string`  | yes      | The code system version the membership was determined against.                          |
+| `version`  | `string`  | yes      | The code system version recorded against the member, where the source records one.      |
 | `code`     | `string`  | no       | The member code.                                                                        |
 | `display`  | `string`  | yes      | The display text, where the source records one.                                         |
 | `inactive` | `boolean` | yes      | `true` for an inactive member, `false` only where an expansion says so, otherwise null. |
 
 Rows are unique on (`system`, `version`, `code`). Where the membership comes
 from a FHIR expansion, every non-abstract `contains` entry at any depth of
-nesting contributes a row, and abstract entries contribute none. A pinned
-reference is expanded at that version and no other; an unpinned one leaves the
-choice of version to the terminology layer. `DESCRIBE <label>` lists the five
-columns as it does for any other dependency.
+nesting contributes a row, and abstract entries contribute none. `version` is
+taken from the entry's own `version` only. A terminology server that records
+code system versions once for the whole expansion, as Ontoserver does in its
+`version` and `used-codesystem` parameters, leaves the column null; the version
+the membership was computed against then appears only in the provenance line
+logged for the request. A pinned reference is expanded at that version and no
+other; an unpinned one leaves the choice of version to the terminology layer.
+`DESCRIBE <label>` lists the five columns as it does for any other dependency.
 
 The value set is reached only through its label, so the SQL never names a
 canonical URL or a terminology server. The usual idioms are a semi-join, which
