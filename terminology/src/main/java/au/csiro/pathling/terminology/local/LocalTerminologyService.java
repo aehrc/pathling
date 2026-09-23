@@ -233,12 +233,13 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
   /**
    * Translates through a SNOMED association reference set, forward or reversed.
    *
-   * <p>The reversed direction returns its matches ordered by concept code. The association map is
+   * <p>Both directions return their matches ordered by concept code. The association map is
    * iterated in the store's physical row order, which is an implementation detail that follows from
    * the join strategy the importer's optimiser happened to choose, so emitting in that order would
    * let how the store was written show through in a result a caller can see. This is the same rule
-   * as {@link #byConceptCode}. The forward direction returns at most one match, because a concept
-   * has at most one association target, so there is nothing there to order.
+   * as {@link #byConceptCode}. A concept may have several targets (commonly in POSSIBLY EQUIVALENT
+   * TO and ALTERNATIVE), and the forward direction returns every one of them in the code order the
+   * index already holds them in; the reversed direction matches a concept on any of its targets.
    */
   @Nonnull
   private List<Translation> translateSnomedAssociation(
@@ -258,21 +259,24 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
       return Collections.emptyList();
     }
     final CodeSystemIndexes indexes = indexesFor(systemVersionId.get());
-    final Map<Integer, String> associations = indexes.refsets().associationTargets(refsetId);
+    final Map<Integer, List<String>> associations = indexes.refsets().associationTargets(refsetId);
     final ConceptDictionary dictionary = indexes.dictionary();
     final List<Translation> translations = new ArrayList<>();
     if (reverse) {
-      // Find the referenced concepts whose association target is the requested code.
-      for (final Map.Entry<Integer, String> entry : associations.entrySet()) {
-        if (coding.getCode().equals(entry.getValue())) {
+      // Find the referenced concepts any of whose association targets is the requested code.
+      for (final Map.Entry<Integer, List<String>> entry : associations.entrySet()) {
+        if (entry.getValue().contains(coding.getCode())) {
           translations.add(snomedTranslation(dictionary.code(entry.getKey())));
         }
       }
       translations.sort(Comparator.comparing(translation -> translation.getConcept().getCode()));
     } else {
       final Integer dense = dictionary.denseId(coding.getCode());
-      if (dense != null && associations.containsKey(dense)) {
-        translations.add(snomedTranslation(associations.get(dense)));
+      final List<String> targets = dense == null ? null : associations.get(dense);
+      if (targets != null) {
+        for (final String target : targets) {
+          translations.add(snomedTranslation(target));
+        }
       }
     }
     return translations;
