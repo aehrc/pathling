@@ -1,8 +1,8 @@
 ---
 name: implement-pathling
 description: >
-    End-to-end implementation of a FHIRPath feature in Pathling, from a GitHub issue to a pull request
-    ready for final review. Invoke as /implement-pathling <issue-number>.
+  End-to-end implementation of a FHIRPath feature in Pathling, from a GitHub issue to a pull request
+  ready for final review. Invoke as /implement-pathling <issue-number>.
 disable-model-invocation: true
 ---
 
@@ -39,11 +39,11 @@ This skill **stops at the PR**. It does not merge, and does not wait for CI.
 
 Three reference files carry the material that is only needed at one point in the run:
 
-| File                                | Read at                                         |
-| ----------------------------------- | ----------------------------------------------- |
-| `references/build-and-verify.md`    | Step 7, and again after review fixes in Step 10 |
-| `references/commit-and-pr.md`       | Steps 9, 10 and 11                              |
-| `references/openspec-escalation.md` | Only when the Step 4 design gate fires          |
+| File | Read at |
+|---|---|
+| `references/build-and-verify.md` | Step 7, and again after review fixes in Step 10 |
+| `references/commit-and-pr.md` | Steps 9, 10 and 11 |
+| `references/openspec-escalation.md` | Only when the Step 4 design gate fires |
 
 ---
 
@@ -63,15 +63,15 @@ Resolve `<base>` to the `--base` value, or `origin/main` if `--base` was not giv
 
 Gate behaviour by mode:
 
-| Gate                                         | Interactive                                                                                                         | `--unattended`                                                                                         |
-| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| Issue not actionable (Step 1)                | Report what was found, wait for the user to redefine scope or confirm                                               | **Abort** with the finding                                                                             |
-| Branch already exists (Step 2)               | Report what exists, wait for the user to choose resume/rename/delete                                                | **Abort** with a report of what exists                                                                 |
-| Spec ambiguity (Step 3)                      | Present findings, wait                                                                                              | **Abort** with the ambiguity report                                                                    |
-| Design (Step 4)                              | Draft an OpenSpec change, wait                                                                                      | **Abort** with the drafted change in place                                                             |
-| Test matrix review (Step 6)                  | Present matrix, wait for review                                                                                     | Proceed with the matrix as designed, excluding any case flagged uncertain from the generated test code |
-| Review triage (Step 10)                      | Ask about findings needing judgment; an escalation decides whether the PR opens now or the change is reworked first | Apply what is clear-cut, leave the rest unapplied, open the PR anyway, and list them                   |
-| Uncertain test case pending (before Step 11) | Does not occur — Step 6 already resolved matrix uncertainty when it was presented for review                        | **Abort** before pushing, with the uncertain case(s), the same as the Step 3 ambiguity report          |
+| Gate | Interactive | `--unattended` |
+|---|---|---|
+| Issue not actionable (Step 1) | Report what was found, wait for the user to redefine scope or confirm | **Abort** with the finding |
+| Branch already exists (Step 2) | Report what exists, wait for the user to choose resume/rename/delete | **Abort** with a report of what exists |
+| Spec ambiguity (Step 3) | Present findings, wait | **Abort** with the ambiguity report |
+| Design (Step 4) | Draft an OpenSpec change, wait | **Abort** with the drafted change in place |
+| Test matrix review (Step 6) | Present matrix, wait for review | Proceed with the matrix as designed, excluding any case flagged uncertain from the generated test code |
+| Review triage (Step 10) | Ask about findings needing judgment; an escalation decides whether the PR opens now or the change is reworked first | Apply what is clear-cut, leave the rest unapplied, open the PR anyway, and list them |
+| Uncertain test case pending (before Step 11) | Does not occur — Step 6 already resolved matrix uncertainty when it was presented for review | **Abort** before pushing, with the uncertain case(s), the same as the Step 3 ambiguity report |
 
 "Abort" means: stop, leave the branch and commits in place, and return a report naming the gate and
 the decision needed. Do not guess past a gate.
@@ -119,7 +119,7 @@ one in a command, check that it is a valid FHIRPath identifier (`^[A-Za-z_][A-Za
 named "function" doesn't match, that is itself a finding to report (the issue is not scoping a real
 function), not a value to search for.
 
-Ask whether the function is _registered_, which means an `@FhirPathFunction`-annotated declaration
+Ask whether the function is *registered*, which means an `@FhirPathFunction`-annotated declaration
 whose method name is the FHIRPath name — not whether the name appears somewhere in the package. A
 bare substring search answers the wrong question: `contains` occurs in three provider files, all of
 it Javadoc prose and one unrelated `List.contains` call, while no `contains()` function exists. That

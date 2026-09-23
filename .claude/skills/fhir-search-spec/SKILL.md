@@ -1,15 +1,15 @@
 ---
 name: fhir-search-spec
 description: >
-    FHIR RESTful search specification expert with access to the official HL7 search specification
-    text and the formal SearchParameter registry. Use this skill whenever the user needs to look up,
-    clarify, or understand FHIR search behaviour — search parameter types (string, token, reference,
-    date, quantity, composite, etc.), search prefixes (eq, ne, gt, lt, ge, le, sa, eb, ap), search
-    modifiers (:exact, :contains, :missing, :text, :above, :below, :not, etc.), chaining, reverse
-    chaining (_has), includes (_include, _revinclude), or the standard SearchParameter definitions
-    for a given resource type. Trigger this skill when implementing or reviewing FHIR search
-    behaviour, resolving ambiguity about a search parameter's type or FHIRPath expression, or
-    answering "what does the spec say about X search behaviour?" questions.
+  FHIR RESTful search specification expert with access to the official HL7 search specification
+  text and the formal SearchParameter registry. Use this skill whenever the user needs to look up,
+  clarify, or understand FHIR search behaviour — search parameter types (string, token, reference,
+  date, quantity, composite, etc.), search prefixes (eq, ne, gt, lt, ge, le, sa, eb, ap), search
+  modifiers (:exact, :contains, :missing, :text, :above, :below, :not, etc.), chaining, reverse
+  chaining (_has), includes (_include, _revinclude), or the standard SearchParameter definitions
+  for a given resource type. Trigger this skill when implementing or reviewing FHIR search
+  behaviour, resolving ambiguity about a search parameter's type or FHIRPath expression, or
+  answering "what does the spec say about X search behaviour?" questions.
 ---
 
 # FHIR Search Specification Expert

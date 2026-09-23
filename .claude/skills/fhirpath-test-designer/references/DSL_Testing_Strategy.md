@@ -31,12 +31,12 @@ tests focus on what makes that function unique.
 
 For any FHIRPath function, systematically consider these dimensions:
 
-| Dimension    | Partitions                                                                                                                                      | Source                   |
-| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
-| Emptiness    | `{}` literal, typed-empty field, computed empty (e.g. `where(false)`), and — distinctly — an absent element, whose path does not resolve at all | FHIR + FHIRPath          |
-| Element type | Primitive, complex/backbone, choice type, Extension                                                                                             | FHIR type system         |
-| Cardinality  | 0..1 (singular) vs 0..* (non-singular)                                                                                                          | FHIR element definitions |
-| Nesting      | Flat, nested, recursive (if applicable)                                                                                                         | FHIR resource structure  |
+| Dimension | Partitions | Source |
+|---|---|---|
+| Emptiness | `{}` literal, typed-empty field, computed empty (e.g. `where(false)`), and — distinctly — an absent element, whose path does not resolve at all | FHIR + FHIRPath |
+| Element type | Primitive, complex/backbone, choice type, Extension | FHIR type system |
+| Cardinality | 0..1 (singular) vs 0..* (non-singular) | FHIR element definitions |
+| Nesting | Flat, nested, recursive (if applicable) | FHIR resource structure |
 
 Not every dimension is relevant for every function. The spec and the function's
 signature determine which dimensions apply.
@@ -79,16 +79,16 @@ include a test matrix in the spec artifact as part of the acceptance criteria:
 ```markdown
 ## Test Matrix
 
-| Test case            | Dimension(s)            | Expression                | Expected |
-| -------------------- | ----------------------- | ------------------------- | -------- |
-| Basic usage          | Core semantics          | `items.fn()`              | [a,b,c]  |
-| Empty literal        | Emptiness: literal      | `{}.fn()`                 | {}       |
-| Typed-empty field    | Emptiness: typed null   | `emptyItems.fn()`         | {}       |
-| Computed empty       | Emptiness: computed     | `items.where(false).fn()` | {}       |
-| Singular primitive   | Cardinality: 0..1       | `fn(gender)`              | 'male'   |
-| Non-singular complex | Cardinality: 0..*       | `fn(name)`                | [n1,n2]  |
-| Choice type          | Element type: choice    | `fn(value)`               | ...      |
-| Extension            | Element type: Extension | `fn(extension)`           | ...      |
+| Test case           | Dimension(s)          | Expression            | Expected |
+|---------------------|-----------------------|-----------------------|----------|
+| Basic usage         | Core semantics        | `items.fn()`          | [a,b,c]  |
+| Empty literal       | Emptiness: literal    | `{}.fn()`             | {}       |
+| Typed-empty field   | Emptiness: typed null | `emptyItems.fn()`     | {}       |
+| Computed empty      | Emptiness: computed   | `items.where(false).fn()` | {}   |
+| Singular primitive  | Cardinality: 0..1     | `fn(gender)`          | 'male'   |
+| Non-singular complex| Cardinality: 0..*     | `fn(name)`            | [n1,n2]  |
+| Choice type         | Element type: choice  | `fn(value)`           | ...      |
+| Extension           | Element type: Extension | `fn(extension)` | ...      |
 ```
 
 During verification (`opsx:verify`), check that each row in the test matrix
@@ -98,17 +98,17 @@ has a corresponding DSL test case.
 
 The test builder supports all partitions through its API:
 
-| Dimension              | Builder support                                                                                                                                                                                       |
-| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `{}` literal           | Used directly in FHIRPath expression: `{}.fn()`                                                                                                                                                       |
-| Typed-empty primitive  | `sb.stringEmpty("field")`, `sb.integerEmpty("field")`, etc. — the field is **present**, carrying a typed null                                                                                         |
-| Empty complex element  | `sb.elementEmpty("field")` — the field is **present**, carrying a null value. This is not an absent field                                                                                             |
-| Absent element         | No builder support: omit the field entirely. The path then does not resolve, which is a different condition from returning empty — see gotcha 7 in `SKILL.md`                                         |
-| Computed empty         | Use filtering expressions: `field.where(false)`                                                                                                                                                       |
-| Singular primitive     | `sb.string("field", "value")`                                                                                                                                                                         |
-| Non-singular primitive | `sb.stringArray("field", "a", "b")`                                                                                                                                                                   |
-| Complex element        | `sb.element("field", e -> e.string(...))`                                                                                                                                                             |
-| Complex array          | `sb.elementArray("field", e -> ..., e -> ...)`                                                                                                                                                        |
-| Choice type            | `sb.element("field", e -> e.choice("value").string(...))`                                                                                                                                             |
-| Extension              | No map-based builder support — extensions are accessed by URL and serialised as HAPI does, which the synthetic subject cannot express. Use `withResource` with a real resource carrying the extension |
-| Real FHIR resource     | `builder().withResource(new Patient()...)`                                                                                                                                                            |
+| Dimension | Builder support |
+|---|---|
+| `{}` literal | Used directly in FHIRPath expression: `{}.fn()` |
+| Typed-empty primitive | `sb.stringEmpty("field")`, `sb.integerEmpty("field")`, etc. — the field is **present**, carrying a typed null |
+| Empty complex element | `sb.elementEmpty("field")` — the field is **present**, carrying a null value. This is not an absent field |
+| Absent element | No builder support: omit the field entirely. The path then does not resolve, which is a different condition from returning empty — see gotcha 7 in `SKILL.md` |
+| Computed empty | Use filtering expressions: `field.where(false)` |
+| Singular primitive | `sb.string("field", "value")` |
+| Non-singular primitive | `sb.stringArray("field", "a", "b")` |
+| Complex element | `sb.element("field", e -> e.string(...))` |
+| Complex array | `sb.elementArray("field", e -> ..., e -> ...)` |
+| Choice type | `sb.element("field", e -> e.choice("value").string(...))` |
+| Extension | No map-based builder support — extensions are accessed by URL and serialised as HAPI does, which the synthetic subject cannot express. Use `withResource` with a real resource carrying the extension |
+| Real FHIR resource | `builder().withResource(new Patient()...)` |

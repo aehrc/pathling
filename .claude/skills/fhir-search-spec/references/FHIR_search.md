@@ -9,11 +9,11 @@ This page is part of the FHIR Specification (v4.0.1: R4 - Mixed [Normative](http
 ## 3.1.1 <span id="3.1.1"></span> Search
 
 |                                                                                                                        |                                                                             |                                                                                                                                       |
-| ---------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+|------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------|
 | <a href="http://www.hl7.org/Special/committees/fiwg/index.cfm" data-_target="blank">FHIR Infrastructure</a> Work Group | [Maturity Level](https://hl7.org/fhir/R4/versions.html#maturity): Normative | [Standards Status](https://hl7.org/fhir/R4/versions.html#std-process): [Normative](https://hl7.org/fhir/R4/versions.html#std-process) |
 
 |     |                                                                                                                                                                                           |
-| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|-----|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 |     | This page has been approved as part of an [ANSI](https://www.ansi.org/) standard. See the [Infrastructure](https://hl7.org/fhir/R4/ansi-infrastructure.html) Package for further details. |
 
 Searching for resources is fundamental to the mechanics of FHIR. Search operations traverse through an existing set of resources filtering by parameters supplied to the search operation. The text below describes the FHIR search framework, starting with simple cases moving to the more complex. Implementers need only implement the amount of complexity that they require for their implementations.
@@ -182,10 +182,10 @@ The search parameters [\_tag](https://hl7.org/fhir/R4/resource.html#simple-tags)
 
 searches for all Condition resources with the tag:
 
-```json
+``` json
 {
-    "system": "http://acme.org/codes",
-    "code": "needs-review"
+  "system" : "http://acme.org/codes",
+  "code" : "needs-review"
 }
 ```
 
@@ -217,7 +217,7 @@ Servers are not required to implement any of the standard search parameters (exc
 Each search parameter is defined by a type that specifies how the search parameter behaves. These are the defined parameter types:
 
 |                                                            |                                                                                                                                                                                                                                                                                                          |
-| ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | [number](https://hl7.org/fhir/R4/search.html#number)       | Search parameter SHALL be a number (a whole number, or a decimal).                                                                                                                                                                                                                                       |
 | [date](https://hl7.org/fhir/R4/search.html#date)           | Search parameter is on a date/time. The date format is the standard XML format, though other formats may be supported.                                                                                                                                                                                   |
 | [string](https://hl7.org/fhir/R4/search.html#string)       | Search parameter is a simple string, like a name part. Search is case-insensitive and accent-insensitive. May match just the start of a string. String parameters may contain spaces.                                                                                                                    |
@@ -347,7 +347,7 @@ The proper use of these ranges is discussed further below.
 Searching on a simple numerical value in a resource. Examples:
 
 |                      |                                                                                                                                        |
-| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+|----------------------|----------------------------------------------------------------------------------------------------------------------------------------|
 | `[parameter]=100`    | Values that equal 100, to 3 significant figures precision, so this is actually searching for values in the range \[99.5 ... 100.5)     |
 | `[parameter]=100.00` | Values that equal 100, to 5 significant figures precision, so this is actually searching for values in the range \[99.995 ... 100.005) |
 | `[parameter]=1e2`    | Values that equal 100, to 1 significant figures precision, so this is actually searching for values in the range \[95 ... 105)         |
@@ -400,7 +400,7 @@ Technically, this is any of the [date](https://hl7.org/fhir/R4/datatypes.html#da
 Date parameters may be used with the following data types:
 
 |                                                             |                                                                                                                                                                                                                                                                                                                                        |
-| ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|-------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | [date](https://hl7.org/fhir/R4/datatypes.html#date)         | The range of the value is the day, month, or year as specified                                                                                                                                                                                                                                                                         |
 | [dateTime](https://hl7.org/fhir/R4/datatypes.html#dateTime) | The range of the value as defined above; e.g. For example, the date 2013-01-10 specifies all the time from 00:00 on 10-Jan 2013 to immediately before 00:00 on 11-Jan 2013                                                                                                                                                             |
 | [instant](https://hl7.org/fhir/R4/datatypes.html#instant)   | An instant is considered a fixed point in time with an interval smaller than the precision of the system, i.e. an interval with an effective width of 0                                                                                                                                                                                |
@@ -485,8 +485,8 @@ Implicitly, a missing lower boundary is "less than" any actual date. A missing u
 Other notes:
 
 - When the date parameter is not fully specified, matches against it are based on the behavior of intervals, where:
-    - Dates with only the year specified are equivalent to an interval that starts at the first instant of January 1st to the last instant of December 31st, e.g. 2000 is equivalent to an interval of \[2000-01-01T00:00, 2000-12-31T23:59\].
-    - Dates with the year and month are equivalent to an interval that starts at the first instant of the first day of the month and ends on the last instant of the last day of the month, e.g. 2000-04 is equivalent to an interval of \[2000-04-01T00:00, 2000-04-30T23:59\].
+  - Dates with only the year specified are equivalent to an interval that starts at the first instant of January 1st to the last instant of December 31st, e.g. 2000 is equivalent to an interval of \[2000-01-01T00:00, 2000-12-31T23:59\].
+  - Dates with the year and month are equivalent to an interval that starts at the first instant of the first day of the month and ends on the last instant of the last day of the month, e.g. 2000-04 is equivalent to an interval of \[2000-04-01T00:00, 2000-04-30T23:59\].
 - Where possible, the system should correct for time zones when performing queries. Dates do not have time zones, and time zones should not be considered. Where both search parameters and resource element date times do not have time zones, the servers local time zone should be assumed.
 
 To search for all the procedures in a patient compartment that occurred over a 2-year period:
@@ -512,7 +512,7 @@ For a simple string search, a string parameter serves as the input for a search 
 Examples:
 
 |                                     |                                                                                                                                                                    |
-| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+|-------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `[base]/Patient?given=eve`          | Any patients with a name containing a given part with "eve" at the start of the name. This would include patients with the given name "Eve", "Evelyn".             |
 | `[base]/Patient?given:contains=eve` | Any patients with a name with a given part containing "eve" at any position. This would include patients with the given name "Eve", "Evelyn", and also "Severine". |
 | `[base]/Patient?given:exact=Eve`    | Any patients with a name with a given part that is exactly "Eve". Note: This would not include patients with the given name "eve" or "EVE".                        |
@@ -563,33 +563,33 @@ Notes:
 
 - The namespace URI and code both must be [escaped](https://hl7.org/fhir/R4/search.html#escaping) correctly. If a system is not applicable (e.g. an element of type [uri](https://hl7.org/fhir/R4/datatypes.html#uri), then just the form \[parameter\]=\[code\] is used.
 - For token parameters on elements of type [ContactPoint](https://hl7.org/fhir/R4/datatypes.html#ContactPoint), [uri](https://hl7.org/fhir/R4/datatypes.html#uri), or [boolean](https://hl7.org/fhir/R4/datatypes.html#boolean), the presence of the pipe symbol SHALL NOT be used - only the `[parameter]=[code]` form is allowed
--
+- 
 
 Token search parameters are used for the following data types:
 
-|                                                                           |                               |                             |                                                                                                                                                                                                                    |
-| ------------------------------------------------------------------------- | ----------------------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Data Type**                                                             | **URI**                       | **Code**                    | **Comments**                                                                                                                                                                                                       |
-| [Coding](https://hl7.org/fhir/R4/datatypes.html#Coding)                   | Coding.system                 | Coding.code                 |                                                                                                                                                                                                                    |
-| [CodeableConcept](https://hl7.org/fhir/R4/datatypes.html#CodeableConcept) | CodeableConcept.coding.system | CodeableConcept.coding.code | Matches against any coding in the CodeableConcept                                                                                                                                                                  |
-| [Identifier](https://hl7.org/fhir/R4/datatypes.html#Identifier)           | Identifier.system             | Identifier.value            | Clients can search by `type` not `system` using the :of-type modifier, see below. To search on a CDA `II.root` - which may appear in either `Identifier.system` or `Identifier.value`, use the syntax `identifier= | [root],[root]` |
-| [ContactPoint](https://hl7.org/fhir/R4/datatypes.html#ContactPoint)       |                               | ContactPoint.value          | At the discretion of the server, token searches on ContactPoint may use special handling, such as ignoring punctuation, performing partial searches etc.                                                           |
-| [code](https://hl7.org/fhir/R4/datatypes.html#code)                       | (implicit)                    | code                        | the system is defined in the value set (though it's not usually needed)                                                                                                                                            |
-| [boolean](https://hl7.org/fhir/R4/datatypes.html#boolean)                 |                               | boolean                     | The implicit system for boolean values is [http://hl7.org/fhir/special-values](https://hl7.org/fhir/R4/valueset-special-values.html) but this is never actually used                                               |
-| [uri](https://hl7.org/fhir/R4/datatypes.html#uri)                         |                               | uri                         |                                                                                                                                                                                                                    |
-| [string](https://hl7.org/fhir/R4/datatypes.html#string)                   | n/a                           | string                      | Token is sometimes used for string to indicate that exact matching is the correct default search strategy                                                                                                          |
+|                                                                           |                               |                             |                                                                                                                                                                                                                                   |
+|---------------------------------------------------------------------------|-------------------------------|-----------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **Data Type**                                                             | **URI**                       | **Code**                    | **Comments**                                                                                                                                                                                                                      |
+| [Coding](https://hl7.org/fhir/R4/datatypes.html#Coding)                   | Coding.system                 | Coding.code                 |                                                                                                                                                                                                                                   |
+| [CodeableConcept](https://hl7.org/fhir/R4/datatypes.html#CodeableConcept) | CodeableConcept.coding.system | CodeableConcept.coding.code | Matches against any coding in the CodeableConcept                                                                                                                                                                                 |
+| [Identifier](https://hl7.org/fhir/R4/datatypes.html#Identifier)           | Identifier.system             | Identifier.value            | Clients can search by `type` not `system` using the :of-type modifier, see below. To search on a CDA `II.root` - which may appear in either `Identifier.system` or `Identifier.value`, use the syntax `identifier=|[root],[root]` |
+| [ContactPoint](https://hl7.org/fhir/R4/datatypes.html#ContactPoint)       |                               | ContactPoint.value          | At the discretion of the server, token searches on ContactPoint may use special handling, such as ignoring punctuation, performing partial searches etc.                                                                          |
+| [code](https://hl7.org/fhir/R4/datatypes.html#code)                       | (implicit)                    | code                        | the system is defined in the value set (though it's not usually needed)                                                                                                                                                           |
+| [boolean](https://hl7.org/fhir/R4/datatypes.html#boolean)                 |                               | boolean                     | The implicit system for boolean values is [http://hl7.org/fhir/special-values](https://hl7.org/fhir/R4/valueset-special-values.html) but this is never actually used                                                              |
+| [uri](https://hl7.org/fhir/R4/datatypes.html#uri)                         |                               | uri                         |                                                                                                                                                                                                                                   |
+| [string](https://hl7.org/fhir/R4/datatypes.html#string)                   | n/a                           | string                      | Token is sometimes used for string to indicate that exact matching is the correct default search strategy                                                                                                                         |
 
 Note: The use of token search parameters for boolean fields: the boolean values "true" and "false" are also represented as formal codes in the [Special Values](https://hl7.org/fhir/R4/valueset-special-values.html) code system, which is useful when boolean values need to be represented in a [Coding](https://hl7.org/fhir/R4/datatypes.html#coding) data type. The namespace for these codes is http://hl7.org/fhir/special-values, though there is usually no reason to use this, as a simple true or false is sufficient.
 
 **Modifiers:**
 
 |                                        |                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|----------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **Modifier**                           | **Use**                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| `:text`                                | The search parameter is processed as a string that searches text associated with the code/value - either _CodeableConcept.text_, _Coding.display_, or _Identifier.type.text_. In this case, the search functions as a [normal string search](https://hl7.org/fhir/R4/search.html#string)                                                                                                                                                                       |
+| `:text`                                | The search parameter is processed as a string that searches text associated with the code/value - either *CodeableConcept.text*, *Coding.display*, or *Identifier.type.text*. In this case, the search functions as a [normal string search](https://hl7.org/fhir/R4/search.html#string)                                                                                                                                                                       |
 | `:not`                                 | Reverse the code matching described in the paragraph above: return all resources that do not have a matching item. Note that this includes resources that have no value for the parameter - e.g. ?gender:not=male includes all patients that do not have gender = male, including patients that do not have a gender at all                                                                                                                                    |
-| `:above`<span id="subsumption"></span> | The search parameter is a concept with the form `[system]                                                                                                                                                                                                                                                                                                                                                                                                      | [code]`, and the search parameter tests whether the coding in a resource [subsumes](https://hl7.org/fhir/R4/codesystem.html#subsumption) the specified search code. For example, the search concept has an is-a relationship with the coding in the resource, and this includes the coding itself. |
-| `:below`                               | the search parameter is a concept with the form `[system]                                                                                                                                                                                                                                                                                                                                                                                                      | [code]`, and the search parameter tests whether the coding in a resource is subsumed by the specified search code. For example, the coding in the resource has an is-a relationship with the search concept, and this includes the coding itself.                                                  |
+| `:above`<span id="subsumption"></span> | The search parameter is a concept with the form `[system]|[code]`, and the search parameter tests whether the coding in a resource [subsumes](https://hl7.org/fhir/R4/codesystem.html#subsumption) the specified search code. For example, the search concept has an is-a relationship with the coding in the resource, and this includes the coding itself.                                                                                                   |
+| `:below`                               | the search parameter is a concept with the form `[system]|[code]`, and the search parameter tests whether the coding in a resource is subsumed by the specified search code. For example, the coding in the resource has an is-a relationship with the search concept, and this includes the coding itself.                                                                                                                                                    |
 | `:in`                                  | The search parameter is a URI (relative or absolute) that identifies a value set, and the search parameter tests whether the coding is in the specified [value set](https://hl7.org/fhir/R4/valueset.html). The reference may be literal (to an address where the value set can be found) or logical (a reference to ValueSet.url). If the server can treat the reference as a literal URL, it does, else it tries to match known logical ValueSet.url values. |
 | `:not-in`                              | The search parameter is a URI (relative or absolute) that identifies a value set, and the search parameter tests whether the coding is not in the specified value set.                                                                                                                                                                                                                                                                                         |
 | `:of-type`                             | The search parameter has the format system\|code\|value, where the system and code refer to a `Identifier.type.coding.system` and `.code`, and match if any of the type codes match. All 3 parts must be present                                                                                                                                                                                                                                               |
@@ -732,7 +732,7 @@ The search processor may choose to perform a search based on [canonical units](h
 
 #### 3.1.1.4.12 reference
 
-A reference parameter refers to [references between resources](https://hl7.org/fhir/R4/references.html). For example, find all Conditions where the subject reference is a particular patient, where the patient is selected by name or identifier. The interpretation of a _reference_ parameter is either:
+A reference parameter refers to [references between resources](https://hl7.org/fhir/R4/references.html). For example, find all Conditions where the subject reference is a particular patient, where the patient is selected by name or identifier. The interpretation of a *reference* parameter is either:
 
 - **`[parameter]=[id]`** the logical \[id\] of a resource using a local reference (i.e. a relative reference)
 - **`[parameter]=[type]/[id]`** the logical \[id\] of a resource of a specified type using a local reference (i.e. a relative reference), for when the reference can point to different types of resources (e.g. [Observation.subject](https://hl7.org/fhir/R4/observation-definitions.html#Observation.subject))
@@ -832,7 +832,7 @@ Servers indicate that :above/:below is supported on a search parameter by defini
 
 #### 3.1.1.4.15 Chained parameters
 
-In order to save a client from performing a series of search operations, reference parameters may be "chained" by appending them with a period (`.`) followed by the name of a search parameter defined for the target resource. This can be done recursively, following a logical path through a graph of related resources, separated by `.`. For instance, given that the resource [DiagnosticReport](https://hl7.org/fhir/R4/diagnosticreport.html) has a search parameter named _subject_, which is usually a reference to a [Patient](https://hl7.org/fhir/R4/patient.html) resource, and the Patient resource includes a parameter _name_ which searches on patient name, then the search
+In order to save a client from performing a series of search operations, reference parameters may be "chained" by appending them with a period (`.`) followed by the name of a search parameter defined for the target resource. This can be done recursively, following a logical path through a graph of related resources, separated by `.`. For instance, given that the resource [DiagnosticReport](https://hl7.org/fhir/R4/diagnosticreport.html) has a search parameter named *subject*, which is usually a reference to a [Patient](https://hl7.org/fhir/R4/patient.html) resource, and the Patient resource includes a parameter *name* which searches on patient name, then the search
 
      GET [base]/DiagnosticReport?subject.name=peter
 
@@ -880,7 +880,7 @@ AND parameters and OR parameters may also be combined, for example: `/Patient?la
 
 This approach allows for simple combinations of and/or values, but doesn't allow a search based on a pair of values, such as all observations with a sodium value \>150 mmol/L (particularly as the end criteria of a chained search), or searching on Group.characteristic where you need find a combination of key/value, not an intersection of separate matches on key and value. Another example is spatial coordinates when doing geographical searches.
 
-To allow these searches, a resource may also specify _composite_ parameters that take sequences of single values that match other defined parameters as an argument. The matching parameter of each component in such a sequence is documented in the definition of the parameter. These sequences are formed by joining the single values with a `$`. Note: This sequence is a single value and itself can be composed into a set of values, so that, for example, multiple matching characteristic-value parameters can be specified as `GET [base]/Group?characteristic-value=gender$mixed,owner$Eve`.
+To allow these searches, a resource may also specify *composite* parameters that take sequences of single values that match other defined parameters as an argument. The matching parameter of each component in such a sequence is documented in the definition of the parameter. These sequences are formed by joining the single values with a `$`. Note: This sequence is a single value and itself can be composed into a set of values, so that, for example, multiple matching characteristic-value parameters can be specified as `GET [base]/Group?characteristic-value=gender$mixed,owner$Eve`.
 
 Note: Modifiers are not used on composite parameters.
 
@@ -925,17 +925,17 @@ Consider the case of searching for all AllergyIntolerance resources:
 
 This search will only return resources that have a value for clinicalStatus:
 
-```json
+``` json
 {
-    "resourceType": "AllergyIntolerance",
-    "clinicalStatus": {
-        "coding": [
-            {
-                "system": "http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical",
-                "code": "active"
-            }
-        ]
-    }
+  "resourceType" : "AllergyIntolerance",
+   "clinicalStatus": {
+    "coding": [
+      {
+        "system": "http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical",
+        "code": "active"
+      }
+    ]
+  }
 }
 ```
 
@@ -1093,7 +1093,7 @@ Note that `Bundle.total` represents the total number of matches, not how many re
 Providing a precise number of matching resources may be onerous for the server, depending on how the server is designed. To help reduce the server load, a client can provide the parameter `_total` to indicate it's preference with regard to the total, which can have one of the following values:
 
 |          |                                                                                                |
-| -------- | ---------------------------------------------------------------------------------------------- |
+|----------|------------------------------------------------------------------------------------------------|
 | none     | There is no need to populate the total count; the client will not use it                       |
 | estimate | A rough estimate of the number of matching resources is sufficient                             |
 | accurate | The client requests that the server provide an exact total of the number of matching resources |
@@ -1134,7 +1134,7 @@ The first search requests all matching MedicationRequests, to include any patien
 Parameter values for both `_include` and `_revinclude` have three parts, separated by a `:` character:
 
 1.  The name of the source resource from which the join comes
-2.  The name of the search parameter which must be of type _reference_
+2.  The name of the search parameter which must be of type *reference*
 3.  (Optional) A specific of type of target resource (for when the search parameter refers to multiple possible target types)
 
 `_include` and `_revinclude` parameters do not include multiple values. Instead, the parameters are repeated for each different include criteria.
@@ -1186,7 +1186,7 @@ When contained resources are being returned, the server should return either the
 
 When returning a container resource, the server simply puts this in the search results:
 
-```xml
+``` xml
 <Bundle>
   ...
   <entry>
@@ -1214,7 +1214,7 @@ In the case of returning container resources, the server SHALL populate the entr
 
 If the return type is the contained resource, this must be done slightly differently:
 
-```xml
+``` xml
 <Bundle>
   ...
   <entry>
@@ -1266,7 +1266,7 @@ The client can request the server to return only a portion of the resources by u
 The `_summary` parameter requests the server to return a subset of the resource. It can contain one of the following values:
 
 |                                                            |                                                                                                                                                                                                                                                                                                                       |
-| ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | [true](https://hl7.org/fhir/R4/search.html#summary-true)   | Return a limited subset of elements from the resource. This subset SHOULD consist solely of all supported elements that are marked as "summary" in the base definition of the resource(s) (see [ElementDefinition.isSummary](https://hl7.org/fhir/R4/elementdefinition-definitions.html#ElementDefinition.isSummary)) |
 | [text](https://hl7.org/fhir/R4/search.html#summary-text)   | Return only the "text" element, the 'id' element, the 'meta' element, and only top-level mandatory elements                                                                                                                                                                                                           |
 | [data](https://hl7.org/fhir/R4/search.html#summary-data)   | Remove the text element                                                                                                                                                                                                                                                                                               |
@@ -1299,7 +1299,7 @@ Servers are not obliged to return just the requested elements. Servers SHOULD al
 
 Where a search specifies a non-deterministic sort, the search algorithm may generate a ranking score to indicate which resources meet the specified criteria better than others. The server can return this score in [entry.score](https://hl7.org/fhir/R4/bundle-definitions.html#Bundle.entry.score):
 
-```xml
+``` xml
   <entry>
     <score value=".45"/>
     <Patient>
@@ -1318,7 +1318,7 @@ In order to allow the client to be confident about what search parameters were u
 
 In the case of a RESTful search, these parameters are encoded in the self link in the bundle that is returned:
 
-```xml
+``` xml
   <link>
     <relation value="self"/>
     <url value="http://example.org/Patient?name=peter"/>
@@ -1334,7 +1334,7 @@ In other respects, servers have considerable discretion with regards to supporti
 - Servers may choose how many results to return, though the client can use `_count` as above
 - Servers can choose how to sort the return results, though they SHOULD honor the `_sort` parameter.
 
----
+------------------------------------------------------------------------
 
 <span id="advanced"></span> <span id="query"></span>
 
@@ -1365,7 +1365,7 @@ Performing a search operation does not change the set of resources on the server
 ### 3.1.1.9 Summary Tables
 
 |                                                                       |                                                      |                                                                                          |                                                  |
-| --------------------------------------------------------------------- | ---------------------------------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------ |
+|-----------------------------------------------------------------------|------------------------------------------------------|------------------------------------------------------------------------------------------|--------------------------------------------------|
 | Common Parameters defined for all resources:                          |                                                      |                                                                                          |                                                  |
 | **Name**                                                              | **Type**                                             | **Description**                                                                          | **Paths**                                        |
 | [`_id`](https://hl7.org/fhir/R4/search.html#id)                       | [token](https://hl7.org/fhir/R4/search.html#token)   | Resource id (not a full URL)                                                             | Resource.id                                      |
@@ -1390,7 +1390,7 @@ Performing a search operation does not change the set of resources on the server
 Cross-map between search parameter types and Data types:
 
 |                                                                           |                                                          |                                                      |                                                                |                                                              |                                                    |                                                          |                                                                                      |
-| ------------------------------------------------------------------------- | -------------------------------------------------------- | ---------------------------------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------ | -------------------------------------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+|---------------------------------------------------------------------------|----------------------------------------------------------|------------------------------------------------------|----------------------------------------------------------------|--------------------------------------------------------------|----------------------------------------------------|----------------------------------------------------------|--------------------------------------------------------------------------------------|
 | **Data Type**                                                             | **[number](https://hl7.org/fhir/R4/search.html#number)** | **[date](https://hl7.org/fhir/R4/search.html#date)** | **[reference](https://hl7.org/fhir/R4/search.html#reference)** | **[quantity](https://hl7.org/fhir/R4/search.html#quantity)** | **[uri](https://hl7.org/fhir/R4/search.html#uri)** | **[string](https://hl7.org/fhir/R4/search.html#string)** | **[token](https://hl7.org/fhir/R4/search.html#token)**                               |
 | **Primitive Types**                                                       |                                                          |                                                      |                                                                |                                                              |                                                    |                                                          |                                                                                      |
 | [base64Binary](https://hl7.org/fhir/R4/datatypes.html#base64Binary)       | Not used in search                                       |                                                      |                                                                |                                                              |                                                    |                                                          |                                                                                      |

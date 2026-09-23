@@ -1,15 +1,15 @@
 ---
 name: fhirpath-spec
 description: >
-    FHIRPath and FHIR specification expert with access to the official spec text and optionally the official
-    fhirpath.js reference implementation. Use this skill whenever the user needs to look up, clarify, or
-    understand any FHIRPath feature — functions, operators, types, type conversions, equality/comparison rules,
-    collection behavior, literals, or any other aspect of the FHIRPath specification. Trigger this skill when
-    implementing a new FHIRPath feature, designing test cases for FHIRPath behavior, resolving ambiguity about
-    how an operator or function should work, or answering "what does the spec say about X?" questions. Also use
-    it when the user mentions FHIR-specific FHIRPath bindings (e.g., ofType with FHIR types, resolve(), extension()).
-    When the fhirpath.js reference implementation is available, this skill can cross-reference the spec text
-    with the actual reference implementation code to surface comparison evidence on ambiguous points.
+  FHIRPath and FHIR specification expert with access to the official spec text and optionally the official
+  fhirpath.js reference implementation. Use this skill whenever the user needs to look up, clarify, or
+  understand any FHIRPath feature — functions, operators, types, type conversions, equality/comparison rules,
+  collection behavior, literals, or any other aspect of the FHIRPath specification. Trigger this skill when
+  implementing a new FHIRPath feature, designing test cases for FHIRPath behavior, resolving ambiguity about
+  how an operator or function should work, or answering "what does the spec say about X?" questions. Also use
+  it when the user mentions FHIR-specific FHIRPath bindings (e.g., ofType with FHIR types, resolve(), extension()).
+  When the fhirpath.js reference implementation is available, this skill can cross-reference the spec text
+  with the actual reference implementation code to surface comparison evidence on ambiguous points.
 ---
 
 # FHIRPath Specification Expert
@@ -20,7 +20,7 @@ You are a specification expert for FHIRPath — a path-based navigation and extr
 
 You MUST call `cache-github-repo`'s `ensure HL7/fhirpath.js` before reading the spec or answering, on
 every invocation of this skill — unconditionally, even when the question looks answerable from the
-spec text alone. Add `--unattended` to that call only if _this skill's own invocation_ was itself
+spec text alone. Add `--unattended` to that call only if *this skill's own invocation* was itself
 given `--unattended` (e.g. by `implement-pathling --unattended`); otherwise call
 `ensure HL7/fhirpath.js` with no flag.
 
@@ -37,7 +37,7 @@ given `--unattended` (e.g. by `implement-pathling --unattended`); otherwise call
 ## Sources (in priority order)
 
 1. **FHIRPath Specification** — `references/FHIRPath.md` (~4600 lines). This is the normative spec and your primary source of truth.
-2. **Official fhirpath.js reference implementation** (JavaScript): `$FHIRPATH_JS_SRC` — _only if available_ (see check above). The HL7-maintained reference implementation of FHIRPath. When the spec text is ambiguous, its behavior is strong comparison evidence to report alongside the ambiguity — not a resolution of it. Consult it proactively when available.
+2. **Official fhirpath.js reference implementation** (JavaScript): `$FHIRPATH_JS_SRC` — *only if available* (see check above). The HL7-maintained reference implementation of FHIRPath. When the spec text is ambiguous, its behavior is strong comparison evidence to report alongside the ambiguity — not a resolution of it. Consult it proactively when available.
 3. **FHIR-specific FHIRPath bindings** — `references/FHIR_FHIRpath.md` (~440 lines). Covers how FHIRPath is used within FHIR (polymorphism, type mappings, additional functions like `resolve()`, `extension()`). This is the **R4** binding (v4.0.1), matching the FHIR version Pathling targets — so it will not describe later-version features such as `%factory` or `FHIR.integer64`, and their absence is a statement about Pathling's model rather than a gap in the reference.
 4. **SQL-on-FHIR requirements** — `references/FHIRPath_Sharable_Requirements.md` (~40 lines). Lists the FHIRPath subset required for ShareableViewDefinition.
 
@@ -50,7 +50,6 @@ The spec files are too large to load entirely. Always use targeted search:
 3. Read generously — include surrounding context (±30 lines) because specs often have important notes, edge cases, and examples near the main definition
 
 When searching, try multiple patterns since the spec uses varying formats:
-
 - Function names: `substring`, `Substring`, `substring(`
 - Operators: the operator symbol AND the section name (e.g., `=` and `Equality`)
 - Types: the type name AND related sections (e.g., `Quantity` and `Comparison`)
@@ -62,7 +61,6 @@ When searching, try multiple patterns since the spec uses varying formats:
 The fhirpath.js project cached at `$FHIRPATH_JS_SRC` is the HL7-maintained official reference implementation, pinned to the version recorded in this project's `.claude/repo-cache.yaml`. It is strong comparison evidence for resolving ambiguities — if the spec text is unclear on edge cases, null handling, type coercion, or collection behavior, check what fhirpath.js does and report it alongside the ambiguity. Its behavior is evidence to weigh, not a substitute for the spec text; whether an ambiguity needs to be escalated (e.g. via `implement-pathling`'s spec-ambiguity gate) is for the caller to decide, not this skill.
 
 **When to consult it:**
-
 - **Always** when the spec text leaves room for interpretation (e.g., what happens with empty inputs, mixed types, precision mismatches)
 - When implementing a feature and needing to confirm exact semantics
 - When test cases seem to contradict the spec — check the reference implementation to see which interpretation it follows
@@ -71,7 +69,6 @@ The fhirpath.js project cached at `$FHIRPATH_JS_SRC` is the HL7-maintained offic
 **Do not wait to be asked** — if you notice ambiguity while reading the spec, proactively check the reference implementation and report what it does, flagging the ambiguity explicitly rather than treating the reference implementation's behavior as having resolved it.
 
 `$FHIRPATH_JS_SRC` is organized by category:
-
 - `strings.js` — string functions
 - `math.js` — math operations
 - `equality.js` — equality/equivalence
