@@ -22,6 +22,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -33,30 +34,44 @@ import au.csiro.pathling.config.AuthorizationConfiguration;
 import au.csiro.pathling.config.ExternalTableConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.config.SqlQueryConfiguration;
+import au.csiro.pathling.operations.sql.SubjectResolver;
 import au.csiro.pathling.operations.sql.SuppliedArtefact;
 import au.csiro.pathling.operations.sql.SuppliedArtefacts;
+import au.csiro.pathling.terminology.conceptmap.ConceptMapContent;
+import au.csiro.pathling.terminology.conceptmap.ConceptMapRelationship;
+import au.csiro.pathling.terminology.conceptmap.ConceptMapping;
 import au.csiro.pathling.terminology.expand.ValueSetExpansion;
 import au.csiro.pathling.terminology.expand.ValueSetMember;
 import au.csiro.pathling.views.FhirView;
+import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
+import ca.uhn.fhir.rest.server.exceptions.UnprocessableEntityException;
 import jakarta.annotation.Nonnull;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import org.hl7.fhir.r4.model.ConceptMap;
 import org.hl7.fhir.r4.model.Library;
+import org.hl7.fhir.r4.model.OperationOutcome;
+import org.hl7.fhir.r4.model.OperationOutcome.IssueType;
+import org.hl7.fhir.r4.model.OperationOutcome.OperationOutcomeIssueComponent;
 import org.hl7.fhir.r4.model.ValueSet;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.InOrder;
 
 /**
  * Unit tests for {@link SqlDependencyResolver} covering canonical-URL resolution, the resolved
  * graph shape for a {@code SQLQuery -> SQLView -> ViewDefinition} chain, supplied-artefact
  * precedence and traversal, diamond de-duplication (including bare-url vs {@code url|version}),
- * configured external tables, value sets resolved through the terminology layer as a last resort,
- * value sets supplied inline through {@code context}, and the structural rejections (cycles, depth,
- * ambiguity, not-found, and wrong-typed dependencies).
+ * configured external tables, value sets and then concept maps resolved through the terminology
+ * layer as a last resort, the found, absent and unknown outcomes of those lookups and the kept
+ * failures they report, value sets supplied inline through {@code context}, and the structural
+ * rejections (cycles, depth, ambiguity, not-found, and wrong-typed dependencies).
  *
  * @author John Grimes
  */
@@ -71,9 +86,16 @@ class SqlDependencyResolverTest {
 
   private static final String VALUE_SET_URL = "http://example.org/ValueSet/cardiovascular-disease";
 
+  private static final String CONCEPT_MAP_URL = "http://example.org/ConceptMap/sct-to-icd10";
+
+  private static final String VALUE_SET_ISSUE = "expanding it as a value set failed";
+
+  private static final String CONCEPT_MAP_ISSUE = "searching for it as a concept map failed";
+
   private ViewResolver viewResolver;
   private LibraryReferenceResolver libraryReferenceResolver;
   private ValueSetMembershipResolver valueSetResolver;
+  private ConceptMapResolver conceptMapResolver;
   private ServerConfiguration serverConfiguration;
   private SqlDependencyResolver resolver;
 
@@ -83,6 +105,8 @@ class SqlDependencyResolverTest {
     libraryReferenceResolver = mock(LibraryReferenceResolver.class);
     valueSetResolver = mock(ValueSetMembershipResolver.class);
     when(valueSetResolver.resolveCanonical(any(), any())).thenReturn(Optional.empty());
+    conceptMapResolver = mock(ConceptMapResolver.class);
+    when(conceptMapResolver.resolveCanonical(any(), any())).thenReturn(Optional.empty());
     serverConfiguration = new ServerConfiguration();
     final AuthorizationConfiguration auth = new AuthorizationConfiguration();
     auth.setEnabled(false);
@@ -435,7 +459,8 @@ class SqlDependencyResolverTest {
         .isInstanceOf(ResourceNotFoundException.class)
         .hasMessageContainingAll("'c'", TABLE_URL + "|2")
         .hasMessageEndingWith(
-            "no ViewDefinition, SQLView, external table or value set matches that canonical URL");
+            "no ViewDefinition, SQLView, external table, concept map or value set matches that"
+                + " canonical URL");
   }
 
   @Test
@@ -548,9 +573,15 @@ class SqlDependencyResolverTest {
                 resolver.resolve(sqlQuery("SELECT 1", "x", missingUrl), SuppliedArtefacts.empty()))
         .isInstanceOf(ResourceNotFoundException.class)
         .hasMessageContainingAll("'x'", missingUrl)
-        .hasMessageEndingWith(
-            "no ViewDefinition, SQLView, external table or value set matches that canonical URL");
+        .hasMessage(
+            "Failed to resolve the dependency for label 'x' with reference '"
+                + missingUrl
+                + "': no ViewDefinition, SQLView, external table, concept map or value set matches"
+                + " that canonical URL");
     verify(valueSetResolver)
+        .resolveCanonical(
+            argThat(ref -> ref != null && missingUrl.equals(ref.getCanonicalUrl())), any());
+    verify(conceptMapResolver)
         .resolveCanonical(
             argThat(ref -> ref != null && missingUrl.equals(ref.getCanonicalUrl())), any());
   }
@@ -609,6 +640,7 @@ class SqlDependencyResolverTest {
                     canonical != null
                         && VALUE_SET_URL.equals(canonical.getUrl())
                         && "2026".equals(canonical.getVersion())));
+    verify(conceptMapResolver, never()).resolveCanonical(any(), any());
   }
 
   @Test
@@ -617,7 +649,7 @@ class SqlDependencyResolverTest {
 
     resolver.resolve(sqlQuery("SELECT * FROM p", "p", PATIENT_VIEW_URL), SuppliedArtefacts.empty());
 
-    verifyNoInteractions(valueSetResolver);
+    verifyNoInteractions(valueSetResolver, conceptMapResolver);
   }
 
   @Test
@@ -631,7 +663,7 @@ class SqlDependencyResolverTest {
         sqlQueryWithDeps("SELECT * FROM b JOIN c", Map.of("b", baseUrl, "c", TABLE_URL)),
         SuppliedArtefacts.empty());
 
-    verifyNoInteractions(valueSetResolver);
+    verifyNoInteractions(valueSetResolver, conceptMapResolver);
   }
 
   @Test
@@ -704,6 +736,265 @@ class SqlDependencyResolverTest {
         .isInstanceOf(InvalidRequestException.class)
         .hasMessageContainingAll("deeper", "1", VALUE_SET_URL);
     verify(valueSetResolver, never()).resolveCanonical(any(), any());
+  }
+
+  // ---------------------------------------------------------------------------
+  // Concept maps through the terminology layer (spec 062 US1).
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void resolvesAnUnmatchedUrlThatIsNoValueSetAsAConceptMapLeaf() {
+    // The value set lookup runs first and finds nothing, so the reference falls through to the
+    // concept map lookup, whose leaf is registered under the reference as written.
+    final ResolvedConceptMap conceptMap = stubConceptMap(CONCEPT_MAP_URL + "|2026");
+
+    final ResolvedDependencyGraph graph =
+        resolver.resolve(
+            sqlQuery("SELECT * FROM m", "m", CONCEPT_MAP_URL + "|2026"), SuppliedArtefacts.empty());
+
+    assertThat(graph.getOrderedNodes()).containsExactly(conceptMap);
+    assertThat(graph.getTopLevelKeysByLabel()).containsEntry("m", CONCEPT_MAP_URL + "|2026");
+    final InOrder order = inOrder(valueSetResolver, conceptMapResolver);
+    order
+        .verify(valueSetResolver)
+        .resolveCanonical(
+            argThat(ref -> ref != null && "m".equals(ref.getLabel())),
+            argThat(
+                canonical ->
+                    canonical != null
+                        && CONCEPT_MAP_URL.equals(canonical.getUrl())
+                        && "2026".equals(canonical.getVersion())));
+    order
+        .verify(conceptMapResolver)
+        .resolveCanonical(
+            argThat(ref -> ref != null && "m".equals(ref.getLabel())),
+            argThat(
+                canonical ->
+                    canonical != null
+                        && CONCEPT_MAP_URL.equals(canonical.getUrl())
+                        && "2026".equals(canonical.getVersion())));
+  }
+
+  @Test
+  void neverLooksUpAnImplicitSnomedValueSetUrlAsAConceptMap() {
+    final String url = "http://snomed.info/sct?fhir_vs=isa/73211009";
+
+    assertThatThrownBy(
+            () -> resolver.resolve(sqlQuery("SELECT 1", "t2", url), SuppliedArtefacts.empty()))
+        .isInstanceOf(ResourceNotFoundException.class)
+        .hasMessageContainingAll("'t2'", url);
+    verify(valueSetResolver).resolveCanonical(any(), any());
+    verify(conceptMapResolver, never()).resolveCanonical(any(), any());
+  }
+
+  @Test
+  void neverLooksUpAVclValueSetUrlAsAConceptMap() {
+    final String url =
+        "http://fhir.org/VCL?v1="
+            + URLEncoder.encode("(http://snomed.info/sct)inactive = true", StandardCharsets.UTF_8);
+
+    assertThatThrownBy(
+            () -> resolver.resolve(sqlQuery("SELECT 1", "vcl", url), SuppliedArtefacts.empty()))
+        .isInstanceOf(ResourceNotFoundException.class)
+        .hasMessageContainingAll("'vcl'", url);
+    verify(valueSetResolver).resolveCanonical(any(), any());
+    verify(conceptMapResolver, never()).resolveCanonical(any(), any());
+  }
+
+  @Test
+  void resolvesASnomedImplicitConceptMapUrlWithoutAValueSetLookup() {
+    // A fhir_cm URL names a concept map by its grammar, so it goes straight to the concept map
+    // lookup.
+    final String url = "http://snomed.info/sct?fhir_cm=900000000000526001";
+    final ResolvedConceptMap conceptMap = stubConceptMap(url);
+
+    final ResolvedDependencyGraph graph =
+        resolver.resolve(sqlQuery("SELECT * FROM r", "r", url), SuppliedArtefacts.empty());
+
+    assertThat(graph.getOrderedNodes()).containsExactly(conceptMap);
+    verify(valueSetResolver, never()).resolveCanonical(any(), any());
+  }
+
+  @Test
+  void propagatesTheNotFoundTheConceptMapResolverRaisesForASnomedImplicitConceptMapUrl() {
+    final String url = "http://snomed.info/sct?fhir_cm=900000000000497000";
+    final ResourceNotFoundException notFound =
+        new ResourceNotFoundException("raised by the concept map resolver");
+    when(conceptMapResolver.resolveCanonical(any(), any())).thenThrow(notFound);
+
+    assertThatThrownBy(
+            () -> resolver.resolve(sqlQuery("SELECT 1", "moved", url), SuppliedArtefacts.empty()))
+        .isSameAs(notFound);
+    verify(valueSetResolver, never()).resolveCanonical(any(), any());
+    verify(conceptMapResolver)
+        .resolveCanonical(
+            argThat(ref -> ref != null && "moved".equals(ref.getLabel())),
+            argThat(canonical -> canonical != null && url.equals(canonical.getUrl())));
+  }
+
+  @Test
+  void reusesAConceptMapNodeReachedTwiceUnderTheSameReferenceWithoutASecondLookup() {
+    // A diamond over a concept map: two SQLViews reach it under the same reference string, and
+    // neither terminology lookup runs a second time.
+    stubConceptMap(CONCEPT_MAP_URL);
+    final String leftUrl = SqlLibraryFixtures.sqlViewUrl("left");
+    final String rightUrl = SqlLibraryFixtures.sqlViewUrl("right");
+    stubSqlView(leftUrl, "SELECT * FROM v", "v", CONCEPT_MAP_URL);
+    stubSqlView(rightUrl, "SELECT * FROM w", "w", CONCEPT_MAP_URL);
+
+    final ResolvedDependencyGraph graph =
+        resolver.resolve(
+            sqlQueryWithDeps("SELECT * FROM l JOIN r", Map.of("l", leftUrl, "r", rightUrl)),
+            SuppliedArtefacts.empty());
+
+    assertThat(graph.getOrderedNodes()).hasSize(3);
+    assertThat(graph.getNodesByKey().get(CONCEPT_MAP_URL)).isInstanceOf(ResolvedConceptMap.class);
+    verify(valueSetResolver, times(1)).resolveCanonical(any(), any());
+    verify(conceptMapResolver, times(1)).resolveCanonical(any(), any());
+  }
+
+  @Test
+  void resolvesTheSameConceptMapUnderTwoLabelsOnce() {
+    stubConceptMap(CONCEPT_MAP_URL);
+
+    final ResolvedDependencyGraph graph =
+        resolver.resolve(
+            sqlQueryWithDeps(
+                "SELECT * FROM a JOIN b ON a.source_code = b.target_code",
+                Map.of("a", CONCEPT_MAP_URL, "b", CONCEPT_MAP_URL)),
+            SuppliedArtefacts.empty());
+
+    assertThat(graph.getOrderedNodes()).hasSize(1);
+    assertThat(graph.getTopLevelKeysByLabel())
+        .containsEntry("a", CONCEPT_MAP_URL)
+        .containsEntry("b", CONCEPT_MAP_URL);
+    verify(valueSetResolver, times(1)).resolveCanonical(any(), any());
+    verify(conceptMapResolver, times(1)).resolveCanonical(any(), any());
+  }
+
+  @Test
+  void rejectsAConceptMapBeyondTheDepthLimit() {
+    serverConfiguration.getSqlQuery().setMaxDependencyDepth(1);
+    stubConceptMap(CONCEPT_MAP_URL);
+    final String viewUrl = SqlLibraryFixtures.sqlViewUrl("over-concept-map");
+    stubSqlView(viewUrl, "SELECT * FROM m", "m", CONCEPT_MAP_URL);
+
+    assertThatThrownBy(
+            () ->
+                resolver.resolve(
+                    sqlQuery("SELECT * FROM x", "x", viewUrl), SuppliedArtefacts.empty()))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContainingAll("deeper", "1", CONCEPT_MAP_URL);
+    verify(valueSetResolver, never()).resolveCanonical(any(), any());
+    verify(conceptMapResolver, never()).resolveCanonical(any(), any());
+  }
+
+  // ---------------------------------------------------------------------------
+  // Outcomes of the terminology lookups (spec 062 US5): found, absent and unknown.
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void discardsAnIndeterminateValueSetLookupWhenAConceptMapIsFound() {
+    stubIndeterminateValueSet(VALUE_SET_ISSUE);
+    final ResolvedConceptMap conceptMap = stubConceptMap(CONCEPT_MAP_URL);
+
+    final ResolvedDependencyGraph graph =
+        resolver.resolve(
+            sqlQuery("SELECT * FROM m", "m", CONCEPT_MAP_URL), SuppliedArtefacts.empty());
+
+    assertThat(graph.getOrderedNodes()).containsExactly(conceptMap);
+  }
+
+  @Test
+  void reportsAnIndeterminateValueSetLookupWhenNoConceptMapIsFound() {
+    stubIndeterminateValueSet(VALUE_SET_ISSUE);
+
+    assertThatThrownBy(
+            () ->
+                resolver.resolve(
+                    sqlQuery("SELECT * FROM m", "m", CONCEPT_MAP_URL), SuppliedArtefacts.empty()))
+        .isInstanceOf(UnprocessableEntityException.class)
+        .satisfies(thrown -> assertKeptIssues(thrown, VALUE_SET_ISSUE));
+  }
+
+  @Test
+  void reportsBothIndeterminateLookupsInOne422ValueSetFirst() {
+    stubIndeterminateValueSet(VALUE_SET_ISSUE);
+    stubIndeterminateConceptMap(CONCEPT_MAP_ISSUE);
+
+    assertThatThrownBy(
+            () ->
+                resolver.resolve(
+                    sqlQuery("SELECT * FROM m", "m", CONCEPT_MAP_URL), SuppliedArtefacts.empty()))
+        .isInstanceOf(UnprocessableEntityException.class)
+        .satisfies(thrown -> assertKeptIssues(thrown, VALUE_SET_ISSUE, CONCEPT_MAP_ISSUE));
+  }
+
+  @Test
+  void reportsAnIndeterminateConceptMapLookupAfterAnAbsentValueSet() {
+    stubIndeterminateConceptMap(CONCEPT_MAP_ISSUE);
+
+    assertThatThrownBy(
+            () ->
+                resolver.resolve(
+                    sqlQuery("SELECT * FROM m", "m", CONCEPT_MAP_URL), SuppliedArtefacts.empty()))
+        .isInstanceOf(UnprocessableEntityException.class)
+        .satisfies(thrown -> assertKeptIssues(thrown, CONCEPT_MAP_ISSUE));
+  }
+
+  @Test
+  void reportsAFaultInAFoundConceptMapAloneDiscardingTheKeptValueSetIssue() {
+    stubIndeterminateValueSet(VALUE_SET_ISSUE);
+    final UnprocessableEntityException fault =
+        new UnprocessableEntityException("raised by the concept map resolver");
+    when(conceptMapResolver.resolveCanonical(any(), any())).thenThrow(fault);
+
+    assertThatThrownBy(
+            () ->
+                resolver.resolve(
+                    sqlQuery("SELECT * FROM m", "m", CONCEPT_MAP_URL), SuppliedArtefacts.empty()))
+        .isSameAs(fault);
+  }
+
+  @Test
+  void reportsAnUndeterminableConceptMapVersionAloneDiscardingTheKeptValueSetIssue() {
+    stubIndeterminateValueSet(VALUE_SET_ISSUE);
+    final ResourceNotFoundException fault =
+        new ResourceNotFoundException("raised by the concept map resolver");
+    when(conceptMapResolver.resolveCanonical(any(), any())).thenThrow(fault);
+
+    assertThatThrownBy(
+            () ->
+                resolver.resolve(
+                    sqlQuery("SELECT * FROM m", "m", CONCEPT_MAP_URL), SuppliedArtefacts.empty()))
+        .isSameAs(fault);
+  }
+
+  @Test
+  void propagatesAPlain422FromTheValueSetLookupWithoutAConceptMapLookup() {
+    // An unreachable server, or a fault in a value set that was found, ends resolution at once.
+    final UnprocessableEntityException fault =
+        new UnprocessableEntityException("raised by the membership resolver");
+    when(valueSetResolver.resolveCanonical(any(), any())).thenThrow(fault);
+
+    assertThatThrownBy(
+            () ->
+                resolver.resolve(
+                    sqlQuery("SELECT * FROM m", "m", CONCEPT_MAP_URL), SuppliedArtefacts.empty()))
+        .isSameAs(fault);
+    verify(conceptMapResolver, never()).resolveCanonical(any(), any());
+  }
+
+  @Test
+  void reportsAnIndeterminateImplicitValueSetLookupWithoutAConceptMapLookup() {
+    final String url = "http://snomed.info/sct?fhir_vs=isa/73211009";
+    stubIndeterminateValueSet(VALUE_SET_ISSUE);
+
+    assertThatThrownBy(
+            () -> resolver.resolve(sqlQuery("SELECT 1", "t2", url), SuppliedArtefacts.empty()))
+        .isInstanceOf(UnprocessableEntityException.class)
+        .satisfies(thrown -> assertKeptIssues(thrown, VALUE_SET_ISSUE));
+    verify(conceptMapResolver, never()).resolveCanonical(any(), any());
   }
 
   // ---------------------------------------------------------------------------
@@ -794,8 +1085,132 @@ class SqlDependencyResolverTest {
   }
 
   // ---------------------------------------------------------------------------
+  // Supplied ConceptMaps (spec 062 US2).
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void resolvesASuppliedConceptMapAsALeafThroughTheConceptMapResolver() {
+    final SuppliedArtefact supplied = suppliedConceptMap("2026");
+    final ResolvedConceptMap leaf = stubSuppliedConceptMap(supplied, CONCEPT_MAP_URL + "|2026");
+
+    final ResolvedDependencyGraph graph =
+        resolver.resolve(
+            sqlQuery("SELECT * FROM cm", "cm", CONCEPT_MAP_URL + "|2026"),
+            SuppliedArtefacts.of(List.of(supplied)));
+
+    assertThat(graph.getOrderedNodes()).containsExactly(leaf);
+    assertThat(graph.getTopLevelKeysByLabel()).containsEntry("cm", CONCEPT_MAP_URL + "|2026");
+    verify(conceptMapResolver)
+        .resolveSupplied(argThat(ref -> ref != null && "cm".equals(ref.getLabel())), eq(supplied));
+    verify(conceptMapResolver, never()).resolveCanonical(any(), any());
+    verifyNoInteractions(valueSetResolver);
+  }
+
+  @Test
+  void prefersASuppliedConceptMapOverAStoredViewDefinitionWithTheSameUrl() {
+    stubStoredViewDefinition(CONCEPT_MAP_URL, CONCEPT_MAP_URL, "Condition");
+    final SuppliedArtefact supplied = suppliedConceptMap(null);
+    stubSuppliedConceptMap(supplied, CONCEPT_MAP_URL);
+
+    final ResolvedDependencyGraph graph =
+        resolver.resolve(
+            sqlQuery("SELECT * FROM cm", "cm", CONCEPT_MAP_URL),
+            SuppliedArtefacts.of(List.of(supplied)));
+
+    assertThat(graph.getOrderedNodes()).hasSize(1);
+    assertThat(graph.getNodesByKey().get(CONCEPT_MAP_URL)).isInstanceOf(ResolvedConceptMap.class);
+    verifyNoInteractions(viewResolver, libraryReferenceResolver);
+  }
+
+  @Test
+  void matchesAPinnedDependencyToASuppliedConceptMapOnlyWhenTheVersionsAgree() {
+    final SuppliedArtefact wrongVersion = suppliedConceptMap("2025");
+    stubSuppliedConceptMap(wrongVersion, CONCEPT_MAP_URL + "|2025");
+    final ResolvedConceptMap canonical = stubConceptMap(CONCEPT_MAP_URL + "|2026");
+
+    final ResolvedDependencyGraph fellThrough =
+        resolver.resolve(
+            sqlQuery("SELECT * FROM cm", "cm", CONCEPT_MAP_URL + "|2026"),
+            SuppliedArtefacts.of(List.of(wrongVersion)));
+
+    assertThat(fellThrough.getOrderedNodes()).containsExactly(canonical);
+    verify(conceptMapResolver, never()).resolveSupplied(any(), any());
+    verify(valueSetResolver).resolveCanonical(any(), any());
+    verify(conceptMapResolver).resolveCanonical(any(), any());
+
+    final SuppliedArtefact rightVersion = suppliedConceptMap("2026");
+    final ResolvedConceptMap suppliedLeaf =
+        stubSuppliedConceptMap(rightVersion, CONCEPT_MAP_URL + "|2026");
+
+    final ResolvedDependencyGraph matched =
+        resolver.resolve(
+            sqlQuery("SELECT * FROM cm", "cm", CONCEPT_MAP_URL + "|2026"),
+            SuppliedArtefacts.of(List.of(rightVersion)));
+
+    assertThat(matched.getOrderedNodes()).containsExactly(suppliedLeaf);
+    verify(conceptMapResolver).resolveSupplied(any(), eq(rightVersion));
+  }
+
+  @Test
+  void resolvesASuppliedConceptMapReachedUnderTwoLabelsOnce() {
+    final SuppliedArtefact supplied = suppliedConceptMap(null);
+    stubSuppliedConceptMap(supplied, CONCEPT_MAP_URL);
+
+    final ResolvedDependencyGraph graph =
+        resolver.resolve(
+            sqlQueryWithDeps(
+                "SELECT * FROM a JOIN b ON a.source_code = b.source_code",
+                Map.of("a", CONCEPT_MAP_URL, "b", CONCEPT_MAP_URL)),
+            SuppliedArtefacts.of(List.of(supplied)));
+
+    assertThat(graph.getOrderedNodes()).hasSize(1);
+    assertThat(graph.getTopLevelKeysByLabel())
+        .containsEntry("a", CONCEPT_MAP_URL)
+        .containsEntry("b", CONCEPT_MAP_URL);
+    verify(conceptMapResolver, times(1)).resolveSupplied(any(), any());
+  }
+
+  // ---------------------------------------------------------------------------
   // Helpers.
   // ---------------------------------------------------------------------------
+
+  /** Stubs the value set lookup as indeterminate, carrying one issue with the given text. */
+  private void stubIndeterminateValueSet(@Nonnull final String diagnostics) {
+    when(valueSetResolver.resolveCanonical(any(), any()))
+        .thenThrow(
+            new IndeterminateLookupException(SubjectResolver.SUBJECT_EXPRESSION, diagnostics));
+  }
+
+  /** Stubs the concept map lookup as indeterminate, carrying one issue with the given text. */
+  private void stubIndeterminateConceptMap(@Nonnull final String diagnostics) {
+    when(conceptMapResolver.resolveCanonical(any(), any()))
+        .thenThrow(
+            new IndeterminateLookupException(SubjectResolver.SUBJECT_EXPRESSION, diagnostics));
+  }
+
+  /**
+   * Asserts that the exception is a 422 whose outcome carries exactly the given kept issues, in
+   * order, each an invalid issue at the subject expression, and that it is not itself a single
+   * indeterminate lookup.
+   */
+  private static void assertKeptIssues(
+      @Nonnull final Throwable thrown, @Nonnull final String... diagnostics) {
+    final BaseServerResponseException exception = (BaseServerResponseException) thrown;
+    assertThat(exception.getStatusCode()).isEqualTo(422);
+    assertThat(exception).isNotInstanceOf(IndeterminateLookupException.class);
+    final OperationOutcome outcome = (OperationOutcome) exception.getOperationOutcome();
+    assertThat(outcome.getIssue())
+        .extracting(OperationOutcomeIssueComponent::getDiagnostics)
+        .containsExactly(diagnostics);
+    assertThat(outcome.getIssue())
+        .allSatisfy(
+            issue -> {
+              assertThat(issue.getCode()).isEqualTo(IssueType.INVALID);
+              assertThat(issue.getExpression())
+                  .extracting(value -> value.getValue())
+                  .containsExactly(SubjectResolver.SUBJECT_EXPRESSION);
+            });
+  }
 
   /** Builds a top-level SQLQuery ParsedSqlQuery with one dependency. */
   @Nonnull
@@ -835,6 +1250,7 @@ class SqlDependencyResolverTest {
         viewResolver,
         libraryReferenceResolver,
         valueSetResolver,
+        conceptMapResolver,
         new SqlLibraryParser(),
         serverConfiguration);
   }
@@ -858,6 +1274,36 @@ class SqlDependencyResolverTest {
                 List.of(
                     new ValueSetMember("http://snomed.info/sct", null, "22298006", null, null))));
     when(valueSetResolver.resolveCanonical(
+            argThat(ref -> ref != null && canonical.equals(ref.getCanonicalUrl())), any()))
+        .thenReturn(Optional.of(leaf));
+    return leaf;
+  }
+
+  /**
+   * Stubs the concept map resolver to resolve the given canonical (as written) to a concept map
+   * leaf with one mapping, keyed by that canonical, and returns the leaf.
+   */
+  @Nonnull
+  private ResolvedConceptMap stubConceptMap(@Nonnull final String canonical) {
+    final CanonicalReference parsed = CanonicalReference.parse(canonical);
+    final ResolvedConceptMap leaf =
+        new ResolvedConceptMap(
+            canonical,
+            new ConceptMapContent(
+                parsed.getUrl(),
+                parsed.getVersion(),
+                List.of(
+                    new ConceptMapping(
+                        "http://snomed.info/sct",
+                        null,
+                        "22298006",
+                        null,
+                        "http://hl7.org/fhir/sid/icd-10",
+                        null,
+                        "I21",
+                        null,
+                        ConceptMapRelationship.EQUIVALENT))));
+    when(conceptMapResolver.resolveCanonical(
             argThat(ref -> ref != null && canonical.equals(ref.getCanonicalUrl())), any()))
         .thenReturn(Optional.of(leaf));
     return leaf;
@@ -892,6 +1338,29 @@ class SqlDependencyResolverTest {
                 List.of(
                     new ValueSetMember("http://snomed.info/sct", null, "22298006", null, null))));
     when(valueSetResolver.resolveSupplied(any(), eq(supplied))).thenReturn(leaf);
+    return leaf;
+  }
+
+  /** Builds a context entry for a ConceptMap at {@link #CONCEPT_MAP_URL} with the given version. */
+  @Nonnull
+  private static SuppliedArtefact suppliedConceptMap(final String version) {
+    final ConceptMap conceptMap = new ConceptMap();
+    conceptMap.setUrl(CONCEPT_MAP_URL);
+    conceptMap.setVersion(version);
+    return SuppliedArtefact.ofConceptMap(CONCEPT_MAP_URL, version, conceptMap);
+  }
+
+  /**
+   * Stubs the concept map resolver to resolve the given supplied artefact to a concept map leaf
+   * with no mappings under the given key, and returns the leaf.
+   */
+  @Nonnull
+  private ResolvedConceptMap stubSuppliedConceptMap(
+      @Nonnull final SuppliedArtefact supplied, @Nonnull final String key) {
+    final ResolvedConceptMap leaf =
+        new ResolvedConceptMap(
+            key, new ConceptMapContent(supplied.getUrl(), supplied.getVersion(), List.of()));
+    when(conceptMapResolver.resolveSupplied(any(), eq(supplied))).thenReturn(leaf);
     return leaf;
   }
 

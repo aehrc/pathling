@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.operations.sql;
 
+import static au.csiro.pathling.operations.sql.SqlConceptMapTestConfiguration.SCT_TO_ICD10_URL;
 import static au.csiro.pathling.operations.sqlquery.SqlLibraryParser.LIBRARY_TYPE_SYSTEM;
 import static au.csiro.pathling.operations.sqlquery.SqlLibraryParser.SQL_QUERY_TYPE_CODE;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -51,27 +52,36 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
 /**
- * Integration test for User Story 4 scenario 8 of value set dependencies (spec 061): the configured
- * terminology server cannot be reached. A value set dependency not supplied inline is then a {@code
- * 422} naming the label, the reference and the configured server URL, and nothing more about the
- * server or the failure, on both {@code $sql-run} and a {@code $sql-export} kick-off, which creates
- * no job.
+ * Integration test for User Story 5 scenario 14 of concept map dependencies (spec 062): the
+ * configured terminology server cannot be reached. A concept map dependency and a value set
+ * dependency not supplied inline are then each a {@code 422} naming the label, the reference and
+ * the configured server URL, without calling the dependency a value set or a concept map and
+ * without anything more about the server or the failure, on both {@code $sql-run} and a {@code
+ * $sql-export} kick-off, which creates no job. That no ConceptMap search follows the failed value
+ * set lookup is proven by {@code SqlDependencyResolverTest}.
  *
- * <p>A separate class from {@link SqlValueSetIT} because {@code pathling.terminology.serverUrl} is
- * fixed for the life of the application context: the URL here points at a port that was free when
- * the context started and that nothing listens on. Client retries are disabled so the request fails
- * on its first connection attempt.
+ * <p>A separate class from {@link SqlConceptMapIT} because {@code pathling.terminology.serverUrl}
+ * is fixed for the life of the application context: the URL here points at a port that was free
+ * when the context started and that nothing listens on. Client retries are disabled so the request
+ * fails on its first connection attempt.
  *
- * <p>Backed by {@link SqlValueSetTestConfiguration} for the stored ViewDefinition and the Condition
- * data.
+ * <p>Backed by {@link SqlConceptMapTestConfiguration} for the stored ViewDefinition and the
+ * Condition data.
  *
  * @author John Grimes
  */
 @Tag("IntegrationTest")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles({"integration-test"})
-@Import(SqlValueSetTestConfiguration.class)
-class SqlValueSetUnreachableIT extends AbstractAsyncExportIT {
+@Import(SqlConceptMapTestConfiguration.class)
+class SqlConceptMapUnreachableIT extends AbstractAsyncExportIT {
+
+  /** The pinned concept map reference of the worked example. */
+  private static final String CONCEPT_MAP_REFERENCE = SCT_TO_ICD10_URL + "|2026";
+
+  /** The canonical URL of the cardiovascular disease value set of feature 061's example. */
+  private static final String VALUE_SET_REFERENCE =
+      "http://example.org/ValueSet/cardiovascular-disease";
 
   /** The configured terminology server URL, on a port nothing listens on. */
   private static String serverUrl;
@@ -108,20 +118,35 @@ class SqlValueSetUnreachableIT extends AbstractAsyncExportIT {
   }
 
   @Test
-  void unreachableServerIsA422NamingTheValueSetAndTheConfiguredUrlOnly() {
+  void conceptMapDependencyIsA422NamingOnlyTheConfiguredUrl() {
     final String body =
-        postExpectStatus(
-            parametersJson(
-                sqlQueryLibrary(
-                    "SELECT * FROM cvd_codes",
-                    Map.of("cvd_codes", SqlValueSetTestConfiguration.CVD_URL))),
-            422);
+        postExpectStatus(parametersJson(selectAll("sct_to_icd10", CONCEPT_MAP_REFERENCE)), 422);
 
-    assertUnreachableIssue(body);
+    assertUnreachableIssue(body, "sct_to_icd10", CONCEPT_MAP_REFERENCE);
   }
 
   @Test
-  void kickOffAgainstAnUnreachableServerIsA422AndCreatesNoJob() {
+  void valueSetDependencyIsA422NamingOnlyTheConfiguredUrl() {
+    final String body =
+        postExpectStatus(parametersJson(selectAll("cvd_codes", VALUE_SET_REFERENCE)), 422);
+
+    assertUnreachableIssue(body, "cvd_codes", VALUE_SET_REFERENCE);
+  }
+
+  @Test
+  void kickOffWithAConceptMapDependencyIsA422AndCreatesNoJob() {
+    assertKickOffRejected("sct_to_icd10", CONCEPT_MAP_REFERENCE);
+  }
+
+  @Test
+  void kickOffWithAValueSetDependencyIsA422AndCreatesNoJob() {
+    assertKickOffRejected("cvd_codes", VALUE_SET_REFERENCE);
+  }
+
+  /**
+   * Kicks off an export over the given dependency, asserting the rejection and that no job exists.
+   */
+  private void assertKickOffRejected(@Nonnull final String label, @Nonnull final String reference) {
     final int jobsBefore = jobCount();
 
     final byte[] payload =
@@ -130,12 +155,7 @@ class SqlValueSetUnreachableIT extends AbstractAsyncExportIT {
                 parameters(
                     subject(
                         simpleParam("name", "valueString", "inline"),
-                        resourcePart(
-                            "subjectResource",
-                            resourceMap(
-                                sqlQueryLibrary(
-                                    "SELECT * FROM cvd_codes",
-                                    Map.of("cvd_codes", SqlValueSetTestConfiguration.CVD_URL)))))))
+                        resourcePart("subjectResource", resourceMap(selectAll(label, reference))))))
             .expectStatus()
             .isEqualTo(422)
             .expectHeader()
@@ -145,7 +165,9 @@ class SqlValueSetUnreachableIT extends AbstractAsyncExportIT {
             .getResponseBodyContent();
 
     assertUnreachableIssue(
-        new String(payload == null ? new byte[0] : payload, StandardCharsets.UTF_8));
+        new String(payload == null ? new byte[0] : payload, StandardCharsets.UTF_8),
+        label,
+        reference);
     assertThat(jobCount()).as("A rejected kick-off must not register a job").isEqualTo(jobsBefore);
   }
 
@@ -153,7 +175,8 @@ class SqlValueSetUnreachableIT extends AbstractAsyncExportIT {
    * Asserts the single issue names the subject, the label, the reference and the configured server
    * URL, and discloses nothing else about the server or the connection failure.
    */
-  private void assertUnreachableIssue(@Nonnull final String body) {
+  private void assertUnreachableIssue(
+      @Nonnull final String body, @Nonnull final String label, @Nonnull final String reference) {
     final OperationOutcome outcome = (OperationOutcome) jsonParser.parseResource(body);
     assertThat(outcome.getIssue()).hasSize(1);
     final OperationOutcomeIssueComponent issue = outcome.getIssueFirstRep();
@@ -162,8 +185,10 @@ class SqlValueSetUnreachableIT extends AbstractAsyncExportIT {
         .containsExactly(SubjectResolver.SUBJECT_EXPRESSION);
     assertThat(issue.getDiagnostics())
         .isEqualTo(
-            "Failed to resolve the dependency for label 'cvd_codes' with reference '"
-                + SqlValueSetTestConfiguration.CVD_URL
+            "Failed to resolve the dependency for label '"
+                + label
+                + "' with reference '"
+                + reference
                 + "': terminology server "
                 + serverUrl
                 + " could not be reached");
@@ -210,10 +235,9 @@ class SqlValueSetUnreachableIT extends AbstractAsyncExportIT {
     return payload == null ? "" : new String(payload, StandardCharsets.UTF_8);
   }
 
-  /** Builds an inline SQLQuery Library with the given depends-on dependencies (label to URL). */
+  /** Builds an inline SQLQuery Library selecting everything from one dependency. */
   @Nonnull
-  private static Library sqlQueryLibrary(
-      @Nonnull final String sql, @Nonnull final Map<String, String> dependenciesByLabel) {
+  private static Library selectAll(@Nonnull final String label, @Nonnull final String reference) {
     final Library library = new Library();
     library.setStatus(PublicationStatus.ACTIVE);
     library.setType(
@@ -221,15 +245,13 @@ class SqlValueSetUnreachableIT extends AbstractAsyncExportIT {
             .addCoding(new Coding().setSystem(LIBRARY_TYPE_SYSTEM).setCode(SQL_QUERY_TYPE_CODE)));
     final Attachment content = new Attachment();
     content.setContentType("application/sql");
-    content.setData(sql.getBytes(StandardCharsets.UTF_8));
+    content.setData(("SELECT * FROM " + label).getBytes(StandardCharsets.UTF_8));
     library.addContent(content);
-    dependenciesByLabel.forEach(
-        (label, resource) ->
-            library.addRelatedArtifact(
-                new RelatedArtifact()
-                    .setType(RelatedArtifactType.DEPENDSON)
-                    .setLabel(label)
-                    .setResource(resource)));
+    library.addRelatedArtifact(
+        new RelatedArtifact()
+            .setType(RelatedArtifactType.DEPENDSON)
+            .setLabel(label)
+            .setResource(reference));
     return library;
   }
 

@@ -21,6 +21,7 @@ import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.operations.sql.SqlOperationError;
+import au.csiro.pathling.terminology.conceptmap.ConceptMapping;
 import au.csiro.pathling.terminology.expand.ValueSetMember;
 import au.csiro.pathling.views.FhirView;
 import au.csiro.pathling.views.FhirViewExecutor;
@@ -75,6 +76,27 @@ public class ViewRegistrationService {
             DataTypes.createStructField("code", DataTypes.StringType, false),
             DataTypes.createStructField("display", DataTypes.StringType, true),
             DataTypes.createStructField("inactive", DataTypes.BooleanType, true)
+          });
+
+  /**
+   * The fixed schema of a concept map relation: {@code source_system} and {@code source_code}
+   * identify the source of a mapping and are never null; every other column is null where the map
+   * records nothing, and the three target columns other than the system and version are null on a
+   * row stating that the source code has no mapping. Every column takes the default type mapping
+   * for the FHIR {@code uri}, {@code string} and {@code code} types.
+   */
+  static final StructType CONCEPT_MAP_SCHEMA =
+      DataTypes.createStructType(
+          new StructField[] {
+            DataTypes.createStructField("source_system", DataTypes.StringType, false),
+            DataTypes.createStructField("source_version", DataTypes.StringType, true),
+            DataTypes.createStructField("source_code", DataTypes.StringType, false),
+            DataTypes.createStructField("source_display", DataTypes.StringType, true),
+            DataTypes.createStructField("target_system", DataTypes.StringType, true),
+            DataTypes.createStructField("target_version", DataTypes.StringType, true),
+            DataTypes.createStructField("target_code", DataTypes.StringType, true),
+            DataTypes.createStructField("target_display", DataTypes.StringType, true),
+            DataTypes.createStructField("relationship", DataTypes.StringType, true)
           });
 
   @Nonnull private final SparkSession sparkSession;
@@ -226,6 +248,38 @@ public class ViewRegistrationService {
     final List<Row> rows =
         node.getExpansion().getMembers().stream().map(ViewRegistrationService::memberRow).toList();
     return sparkSession.createDataFrame(rows, VALUE_SET_SCHEMA);
+  }
+
+  /**
+   * Builds the dataset for a resolved concept map leaf: a local relation with one row per mapping
+   * in content order, under the fixed nine-column schema. The result is not registered; the caller
+   * registers it. Concept maps are bounded by {@code pathling.sqlQuery.conceptMapMaxMappings}, so
+   * the relation is small enough to hold locally and Spark's own broadcast threshold covers the
+   * join.
+   *
+   * @param node the resolved concept map
+   * @return the relation
+   */
+  @Nonnull
+  public Dataset<Row> buildConceptMap(@Nonnull final ResolvedConceptMap node) {
+    final List<Row> rows =
+        node.getContent().getMappings().stream().map(ViewRegistrationService::mappingRow).toList();
+    return sparkSession.createDataFrame(rows, CONCEPT_MAP_SCHEMA);
+  }
+
+  /** Renders one mapping as a row of the concept map relation. */
+  @Nonnull
+  private static Row mappingRow(@Nonnull final ConceptMapping mapping) {
+    return RowFactory.create(
+        mapping.getSourceSystem(),
+        mapping.getSourceVersion(),
+        mapping.getSourceCode(),
+        mapping.getSourceDisplay(),
+        mapping.getTargetSystem(),
+        mapping.getTargetVersion(),
+        mapping.getTargetCode(),
+        mapping.getTargetDisplay(),
+        mapping.getRelationship());
   }
 
   /** Renders one member as a row of the value set relation. */

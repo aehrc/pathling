@@ -21,6 +21,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.terminology.conceptmap.ConceptMapContent;
+import au.csiro.pathling.terminology.conceptmap.ConceptMapRelationship;
+import au.csiro.pathling.terminology.conceptmap.ConceptMapping;
 import au.csiro.pathling.terminology.expand.ValueSetExpansion;
 import au.csiro.pathling.terminology.expand.ValueSetMember;
 import au.csiro.pathling.test.SpringBootUnitTest;
@@ -346,6 +349,109 @@ class ViewRegistrationServiceTest {
   private static ValueSetMember member(
       @Nonnull final String code, final String display, final Boolean inactive) {
     return new ValueSetMember("http://snomed.info/sct", "20260131", code, display, inactive);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Concept map materialisation (spec 062 US1).
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void buildConceptMapYieldsTheNineStringColumnsInOrderWithTheirNullability() {
+    final Dataset<Row> result = service.buildConceptMap(conceptMap(mapping("22298006", "I21")));
+
+    final StructField[] fields = result.schema().fields();
+    assertThat(fields)
+        .extracting(StructField::name)
+        .containsExactly(
+            "source_system",
+            "source_version",
+            "source_code",
+            "source_display",
+            "target_system",
+            "target_version",
+            "target_code",
+            "target_display",
+            "relationship");
+    assertThat(fields).extracting(StructField::dataType).containsOnly(DataTypes.StringType);
+    assertThat(fields)
+        .extracting(StructField::nullable)
+        .containsExactly(false, true, false, true, true, true, true, true, true);
+  }
+
+  @Test
+  void buildConceptMapYieldsOneRowPerMappingPreservingNulls() {
+    final ConceptMapping noMapping =
+        new ConceptMapping(
+            "http://snomed.info/sct",
+            null,
+            "102499006",
+            "Fit and well",
+            "http://hl7.org/fhir/sid/icd-10",
+            "2019",
+            null,
+            null,
+            null);
+    final Dataset<Row> result =
+        service.buildConceptMap(conceptMap(mapping("22298006", "I21"), noMapping));
+
+    final List<Row> rows = result.collectAsList();
+    assertThat(rows).hasSize(2);
+    assertThat(rows.get(0).getString(0)).isEqualTo("http://snomed.info/sct");
+    assertThat(rows.get(0).getString(1)).isEqualTo("20260131");
+    assertThat(rows.get(0).getString(2)).isEqualTo("22298006");
+    assertThat(rows.get(0).getString(3)).isEqualTo("Source 22298006");
+    assertThat(rows.get(0).getString(4)).isEqualTo("http://hl7.org/fhir/sid/icd-10");
+    assertThat(rows.get(0).getString(5)).isEqualTo("2019");
+    assertThat(rows.get(0).getString(6)).isEqualTo("I21");
+    assertThat(rows.get(0).getString(7)).isEqualTo("Target I21");
+    assertThat(rows.get(0).getString(8)).isEqualTo(ConceptMapRelationship.EQUIVALENT);
+    assertThat(rows.get(1).isNullAt(1)).isTrue();
+    assertThat(rows.get(1).getString(2)).isEqualTo("102499006");
+    assertThat(rows.get(1).getString(5)).isEqualTo("2019");
+    assertThat(rows.get(1).isNullAt(6)).isTrue();
+    assertThat(rows.get(1).isNullAt(7)).isTrue();
+    assertThat(rows.get(1).isNullAt(8)).isTrue();
+  }
+
+  @Test
+  void buildConceptMapYieldsAnEmptyDatasetWithTheSchemaForAnEmptyContent() {
+    final Dataset<Row> result = service.buildConceptMap(conceptMap());
+
+    assertThat(result.schema().fieldNames())
+        .containsExactly(
+            "source_system",
+            "source_version",
+            "source_code",
+            "source_display",
+            "target_system",
+            "target_version",
+            "target_code",
+            "target_display",
+            "relationship");
+    assertThat(result.collectAsList()).isEmpty();
+  }
+
+  @Nonnull
+  private static ResolvedConceptMap conceptMap(@Nonnull final ConceptMapping... mappings) {
+    return new ResolvedConceptMap(
+        "http://example.org/ConceptMap/sct-to-icd10|2026",
+        new ConceptMapContent(
+            "http://example.org/ConceptMap/sct-to-icd10", "2026", Arrays.asList(mappings)));
+  }
+
+  @Nonnull
+  private static ConceptMapping mapping(
+      @Nonnull final String sourceCode, @Nonnull final String targetCode) {
+    return new ConceptMapping(
+        "http://snomed.info/sct",
+        "20260131",
+        sourceCode,
+        "Source " + sourceCode,
+        "http://hl7.org/fhir/sid/icd-10",
+        "2019",
+        targetCode,
+        "Target " + targetCode,
+        ConceptMapRelationship.EQUIVALENT);
   }
 
   // ---------------------------------------------------------------------------
