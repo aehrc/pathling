@@ -82,18 +82,15 @@ public class ConceptMapContent implements Serializable {
   @Nonnull
   public static ConceptMapContent fromResource(
       @Nonnull final ConceptMap conceptMap, final int maxMappings) {
-    if (!conceptMap.hasUrl()) {
+    final String url = valueOf(conceptMap.getUrl());
+    if (url == null) {
       throw new IllegalArgumentException("The concept map carries no url");
     }
     final List<ConceptMapping> rows = new ArrayList<>();
     for (final ConceptMapGroupComponent group : conceptMap.getGroup()) {
       addGroup(group, rows);
     }
-    return fromMappings(
-        conceptMap.getUrl(),
-        conceptMap.hasVersion() ? conceptMap.getVersion() : null,
-        rows,
-        maxMappings);
+    return fromMappings(url, valueOf(conceptMap.getVersion()), rows, maxMappings);
   }
 
   /**
@@ -128,36 +125,42 @@ public class ConceptMapContent implements Serializable {
   /** Appends the rows of one group, in document order. */
   private static void addGroup(
       @Nonnull final ConceptMapGroupComponent group, @Nonnull final List<ConceptMapping> rows) {
-    if (!group.hasSource()) {
+    // Each primitive is tested by its value, as HAPI reports an element that carries only an
+    // extension as present while giving it no value.
+    final String source = valueOf(group.getSource());
+    if (source == null) {
       throw new ConceptMapContentException("a group has no source system");
     }
+    final String explicitSourceVersion = valueOf(group.getSourceVersion());
     final String sourceSystem;
     final String sourceVersion;
-    if (group.hasSourceVersion()) {
-      sourceSystem = group.getSource();
-      sourceVersion = group.getSourceVersion();
+    if (explicitSourceVersion != null) {
+      sourceSystem = source;
+      sourceVersion = explicitSourceVersion;
     } else {
-      sourceSystem = systemOf(group.getSource());
-      sourceVersion = versionOf(group.getSource());
+      sourceSystem = systemOf(source);
+      sourceVersion = versionOf(source);
     }
+    final String targetUri = valueOf(group.getTarget());
+    final String explicitTargetVersion = valueOf(group.getTargetVersion());
     final String targetSystem;
     final String targetVersion;
-    if (!group.hasTarget()) {
+    if (targetUri == null) {
       targetSystem = null;
       targetVersion = null;
-    } else if (group.hasTargetVersion()) {
-      targetSystem = group.getTarget();
-      targetVersion = group.getTargetVersion();
+    } else if (explicitTargetVersion != null) {
+      targetSystem = targetUri;
+      targetVersion = explicitTargetVersion;
     } else {
-      targetSystem = systemOf(group.getTarget());
-      targetVersion = versionOf(group.getTarget());
+      targetSystem = systemOf(targetUri);
+      targetVersion = versionOf(targetUri);
     }
     for (final SourceElementComponent element : group.getElement()) {
-      if (!element.hasCode()) {
+      final String sourceCode = valueOf(element.getCode());
+      if (sourceCode == null) {
         throw new ConceptMapContentException("an element has no code");
       }
-      final String sourceCode = element.getCode();
-      final String sourceDisplay = element.hasDisplay() ? element.getDisplay() : null;
+      final String sourceDisplay = valueOf(element.getDisplay());
       for (final TargetElementComponent target : element.getTarget()) {
         rows.add(
             row(
@@ -190,11 +193,12 @@ public class ConceptMapContent implements Serializable {
       throw new ConceptMapContentException(
           "the mapping for source code '" + sourceCode + "' has products");
     }
-    if (!target.hasEquivalence()) {
+    final ConceptMapEquivalence equivalence = target.getEquivalence();
+    if (equivalence == null) {
       throw new ConceptMapContentException(
           "the mapping for source code '" + sourceCode + "' has no equivalence");
     }
-    if (target.getEquivalence() == ConceptMapEquivalence.UNMATCHED) {
+    if (equivalence == ConceptMapEquivalence.UNMATCHED) {
       // The map states that the source code has no mapping; any code the target carries is not
       // exposed, as in the official R4 to R5 conversion.
       return new ConceptMapping(
@@ -208,7 +212,8 @@ public class ConceptMapContent implements Serializable {
           null,
           null);
     }
-    if (!target.hasCode()) {
+    final String targetCode = valueOf(target.getCode());
+    if (targetCode == null) {
       throw new ConceptMapContentException(
           "the mapping for source code '" + sourceCode + "' has no target code");
     }
@@ -219,9 +224,18 @@ public class ConceptMapContent implements Serializable {
         sourceDisplay,
         targetSystem,
         targetVersion,
-        target.getCode(),
-        target.hasDisplay() ? target.getDisplay() : null,
-        ConceptMapRelationship.of(target.getEquivalence()));
+        targetCode,
+        valueOf(target.getDisplay()),
+        ConceptMapRelationship.of(equivalence));
+  }
+
+  /**
+   * Returns the value of a string primitive, or null where it has none or only whitespace, which is
+   * what HAPI reports as absent.
+   */
+  @Nullable
+  private static String valueOf(@Nullable final String value) {
+    return value == null || value.isBlank() ? null : value;
   }
 
   /** Returns the part of a canonical reference before its first {@code |}, or all of it. */
