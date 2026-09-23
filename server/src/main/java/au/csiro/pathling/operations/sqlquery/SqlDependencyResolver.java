@@ -21,6 +21,7 @@ import au.csiro.pathling.config.ExternalTableConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.operations.sql.SuppliedArtefact;
 import au.csiro.pathling.operations.sql.SuppliedArtefacts;
+import au.csiro.pathling.terminology.ImplicitTerminologyUrls;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
 import jakarta.annotation.Nonnull;
@@ -57,22 +58,29 @@ import org.springframework.stereotype.Component;
  *   <li>rejects a URL that matches more than one of those three sources as ambiguous;
  *   <li>otherwise, as a last resort, asks the configured terminology layer to resolve the URL as a
  *       value set, whose membership becomes a five-column relation under the label;
+ *   <li>otherwise, unless the URL's grammar marks it as an implicit value set (a SNOMED CT base
+ *       with a {@code fhir_vs} query, or a {@code http://fhir.org/VCL} URL), asks the terminology
+ *       layer to resolve it as a concept map, whose mappings become a nine-column relation under
+ *       the label;
  *   <li>rejects a URL that matches nothing, the terminology layer included, as not found - each
  *       failure naming the label and the reference.
  * </ol>
  *
  * <p>The terminology layer is consulted last so that view dependencies never pay a terminology
- * round trip, and a stored or configured artefact sharing a value set's URL wins without the
- * collision being detected: that is an operator-side condition, not a request fault.
+ * round trip, and a stored or configured artefact sharing a value set's or a concept map's URL wins
+ * without the collision being detected: that is an operator-side condition, not a request fault.
+ * The value set lookup precedes the concept map lookup so that a value set that expands costs no
+ * concept map request; a URL the terminology layer holds as both is a content error that is
+ * likewise not detected, and the value set wins.
  *
  * <p>The resolution memoises by the resolved canonical key (the matched resource's url plus its
  * version, else the bare url), so a node referenced from more than one place (a diamond) -
  * including a bare-url reference and a {@code url|version} reference to the same stored resource -
- * is resolved once and shared. A value set is keyed by the reference canonical as written, so it is
- * expanded once per distinct reference string in the job. A reference encountered while it is
- * already on the resolution stack is a cycle and is rejected, as is a graph that nests deeper than
- * the configured {@code maxDependencyDepth}. All such failures are reported before any Spark
- * execution.
+ * is resolved once and shared. A value set or a concept map is keyed by the reference canonical as
+ * written, so each distinct reference string in the job is looked up in the terminology layer once,
+ * whichever kind it turns out to be. A reference encountered while it is already on the resolution
+ * stack is a cycle and is rejected, as is a graph that nests deeper than the configured {@code
+ * maxDependencyDepth}. All such failures are reported before any Spark execution.
  *
  * @author John Grimes
  */
@@ -84,6 +92,8 @@ public class SqlDependencyResolver {
   @Nonnull private final LibraryReferenceResolver libraryReferenceResolver;
 
   @Nonnull private final ValueSetMembershipResolver valueSetMembershipResolver;
+
+  @Nonnull private final ConceptMapResolver conceptMapResolver;
 
   @Nonnull private final SqlLibraryParser libraryParser;
 
@@ -99,6 +109,7 @@ public class SqlDependencyResolver {
    * @param libraryReferenceResolver resolves a SQLView Library by canonical url from storage
    * @param valueSetMembershipResolver resolves a value set leaf from a supplied ValueSet or through
    *     the terminology layer
+   * @param conceptMapResolver resolves a concept map leaf through the terminology layer
    * @param libraryParser the shared parser for SQLView Libraries
    * @param serverConfiguration the server configuration (auth toggle, the dependency depth cap and
    *     the configured external tables)
@@ -108,11 +119,13 @@ public class SqlDependencyResolver {
       @Nonnull final ViewResolver viewResolver,
       @Nonnull final LibraryReferenceResolver libraryReferenceResolver,
       @Nonnull final ValueSetMembershipResolver valueSetMembershipResolver,
+      @Nonnull final ConceptMapResolver conceptMapResolver,
       @Nonnull final SqlLibraryParser libraryParser,
       @Nonnull final ServerConfiguration serverConfiguration) {
     this.viewResolver = viewResolver;
     this.libraryReferenceResolver = libraryReferenceResolver;
     this.valueSetMembershipResolver = valueSetMembershipResolver;
+    this.conceptMapResolver = conceptMapResolver;
     this.libraryParser = libraryParser;
     this.serverConfiguration = serverConfiguration;
     // URL uniqueness is enforced by Bean Validation at bind time, so the keys cannot collide.
@@ -132,7 +145,7 @@ public class SqlDependencyResolver {
    * @throws InvalidRequestException if a reference is ambiguous, a cycle or depth-limit breach is
    *     detected, or a dependency is a malformed or wrong-typed resource
    * @throws ResourceNotFoundException if a reference matches no ViewDefinition, SQLView, external
-   *     table or value set
+   *     table, concept map or value set
    * @throws ca.uhn.fhir.rest.server.exceptions.UnprocessableEntityException if a value set,
    *     supplied or resolved, has a membership that cannot be determined or exceeds the configured
    *     maximum
@@ -158,7 +171,7 @@ public class SqlDependencyResolver {
    * @throws InvalidRequestException if a reference is ambiguous, a cycle or depth-limit breach is
    *     detected, or a dependency is a malformed or wrong-typed resource
    * @throws ResourceNotFoundException if a reference matches no ViewDefinition, SQLView, external
-   *     table or value set
+   *     table, concept map or value set
    * @throws ca.uhn.fhir.rest.server.exceptions.UnprocessableEntityException if a value set,
    *     supplied or resolved, has a membership that cannot be determined or exceeds the configured
    *     maximum
@@ -204,7 +217,8 @@ public class SqlDependencyResolver {
    * the canonical url is matched against the configured external tables (only when the reference
    * carries no version), stored ViewDefinitions and SQLView Libraries, rejecting an ambiguous match
    * (more than one source). A reference matching none of those is passed to the terminology layer
-   * as a value set, and is not found only when that too yields nothing.
+   * as a value set and then, unless its URL is an implicit value set, as a concept map, and is not
+   * found only when those too yield nothing.
    */
   @Nonnull
   private String resolveReference(
@@ -309,26 +323,65 @@ public class SqlDependencyResolver {
           nodesByKey);
     }
 
-    // Nothing supplied, configured or stored matches, so the reference is a value set if anything.
-    // A node already reached under the same reference string is reused, so the value set is
-    // expanded once per distinct reference in the job even though the stored lookups above run
-    // again for each occurrence.
-    final String valueSetKey = CanonicalReference.key(canonical.getUrl(), canonical.getVersion());
-    if (nodesByKey.containsKey(valueSetKey)) {
-      return valueSetKey;
+    // Nothing supplied, configured or stored matches, so the reference is a value set or a concept
+    // map if anything. A node already reached under the same reference string is reused, so the
+    // terminology layer is consulted once per distinct reference in the job, whichever kind the
+    // reference turns out to be, even though the stored lookups above run again for each
+    // occurrence.
+    final String terminologyKey =
+        CanonicalReference.key(canonical.getUrl(), canonical.getVersion());
+    if (nodesByKey.containsKey(terminologyKey)) {
+      return terminologyKey;
     }
     final Optional<ResolvedValueSet> valueSet =
         valueSetMembershipResolver.resolveCanonical(reference, canonical);
     if (valueSet.isPresent()) {
       return registerLeaf(valueSet.get(), nodesByKey);
     }
-    throw new ResourceNotFoundException(
-        "Failed to resolve the dependency for label '"
-            + reference.getLabel()
-            + "' with reference '"
-            + reference.getCanonicalUrl()
-            + "': no ViewDefinition, SQLView, external table or value set matches that canonical"
-            + " URL");
+    // An implicit value set URL names a value set by its grammar, so it cannot be a concept map and
+    // the concept map lookup would be wasted.
+    if (!ImplicitTerminologyUrls.isImplicitValueSet(canonical.getUrl())) {
+      final Optional<ResolvedConceptMap> conceptMap =
+          conceptMapResolver.resolveCanonical(reference, canonical);
+      if (conceptMap.isPresent()) {
+        return registerLeaf(conceptMap.get(), nodesByKey);
+      }
+    }
+    throw notFound(reference);
+  }
+
+  /**
+   * Builds the text of an issue about a dependency that could not be resolved: the prefix naming
+   * the label and the reference that every such issue shares, followed by the given detail.
+   *
+   * @param reference the dependency reference
+   * @param detail what went wrong, as a clause completing the sentence
+   * @return the issue text
+   */
+  @Nonnull
+  static String dependencyFailure(
+      @Nonnull final ViewArtifactReference reference, @Nonnull final String detail) {
+    return "Failed to resolve the dependency for label '"
+        + reference.getLabel()
+        + "' with reference '"
+        + reference.getCanonicalUrl()
+        + "': "
+        + detail;
+  }
+
+  /**
+   * Builds the {@code 404} for a dependency that nothing matches, the terminology layer included.
+   *
+   * @param reference the dependency reference
+   * @return the exception to throw
+   */
+  @Nonnull
+  static ResourceNotFoundException notFound(@Nonnull final ViewArtifactReference reference) {
+    return new ResourceNotFoundException(
+        dependencyFailure(
+            reference,
+            "no ViewDefinition, SQLView, external table, concept map or value set matches that"
+                + " canonical URL"));
   }
 
   /** Joins two or more matched kinds into prose: "both X and Y" for two, "X, Y and Z" for three. */
@@ -340,8 +393,8 @@ public class SqlDependencyResolver {
   }
 
   /**
-   * Registers a resolved leaf (a ViewDefinition, an external table or a value set), deduplicating
-   * diamonds, and returns its key.
+   * Registers a resolved leaf (a ViewDefinition, an external table, a value set or a concept map),
+   * deduplicating diamonds, and returns its key.
    */
   @Nonnull
   private String registerLeaf(

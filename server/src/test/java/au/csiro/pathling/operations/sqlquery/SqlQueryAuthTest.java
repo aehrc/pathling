@@ -121,6 +121,7 @@ class SqlQueryAuthTest {
             viewResolver,
             libraryReferenceResolver,
             valueSetMembershipResolver,
+            mock(ConceptMapResolver.class),
             new SqlLibraryParser(),
             serverConfiguration);
   }

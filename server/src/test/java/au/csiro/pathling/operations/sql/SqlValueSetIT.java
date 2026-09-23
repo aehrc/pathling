@@ -562,7 +562,7 @@ class SqlValueSetIT extends AbstractAsyncExportIT {
 
     assertThat(body)
         .contains("cvd_codes", MISSING_URL)
-        .contains("no ViewDefinition, SQLView, external table or value set matches");
+        .contains("no ViewDefinition, SQLView, external table, concept map or value set matches");
     assertThat(jobCount()).as("A rejected kick-off must not register a job").isEqualTo(jobsBefore);
   }
 
@@ -665,7 +665,7 @@ class SqlValueSetIT extends AbstractAsyncExportIT {
         .isEqualTo(
             "Failed to resolve the dependency for label 'cvd_codes' with reference"
                 + " 'http://example.org/ValueSet/does-not-exist': no ViewDefinition, SQLView,"
-                + " external table or value set matches that canonical URL");
+                + " external table, concept map or value set matches that canonical URL");
   }
 
   // -------------------------------------------------------------------------
