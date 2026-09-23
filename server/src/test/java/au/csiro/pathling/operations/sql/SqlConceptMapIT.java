@@ -103,6 +103,11 @@ import org.springframework.test.web.reactive.server.EntityExchangeResult;
  * <p>Also proves that value set dependencies are unaffected: a value set that expands makes no
  * ConceptMap request, and neither does an implicit value set URL whose expansion fails.
  *
+ * <p>Follows User Story 2 for a ConceptMap supplied as {@code context}: it is used without any
+ * request to the terminology server, outranks a canonical the server could resolve, is matched to a
+ * pinned dependency only when the versions agree, and is rejected with a {@code 400} when it
+ * matches no dependency, shares its URL with another entry, or carries no URL.
+ *
  * <p>Backed by {@link SqlConceptMapTestConfiguration} for the stored ViewDefinition, the Condition
  * data and the Patients. The terminology server's HTTP response cache is disabled so that every
  * request reaches WireMock and can be verified.
@@ -166,6 +171,9 @@ class SqlConceptMapIT extends AbstractAsyncExportIT {
           "target_code",
           "target_display",
           "relationship");
+
+  /** The canonical URL of a concept map the terminology server does not hold. */
+  static final String LOCAL_ONLY_URL = "http://example.org/ConceptMap/local-only";
 
   /** The path of the {@code $expand} operation under the WireMock base. */
   static final String EXPAND_PATH = "/fhir/ValueSet/$expand";
@@ -598,6 +606,165 @@ class SqlConceptMapIT extends AbstractAsyncExportIT {
   }
 
   // -------------------------------------------------------------------------
+  // US2 scenario 1: a supplied concept map is used and the terminology layer is not consulted.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void suppliedConceptMapIsUsedWithoutAnyTerminologyRequest() {
+    final ConceptMap supplied = workedExample2026();
+    supplied.setId((String) null);
+    supplied.setUrl(LOCAL_ONLY_URL);
+
+    final String body =
+        postOk(
+            parametersJson(
+                selectTargets(LOCAL_ONLY_URL), resourcePart("context", resourceMap(supplied))));
+
+    assertThat(rowsOf(body, "source_code", "target_code"))
+        .containsExactly(
+            FIT_AND_WELL + "/null", MYOCARDIAL_INFARCTION + "/I21", DIABETES_MELLITUS + "/E14");
+    assertThat(wireMockServer.findAll(anyRequestedFor(anyUrl())))
+        .as("No request to the terminology server")
+        .isEmpty();
+  }
+
+  // -------------------------------------------------------------------------
+  // US2 scenario 2: a supplied concept map outranks a canonical the server could resolve.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void suppliedConceptMapOutranksAResolvableCanonical() {
+    // The server holds version 2026 of the worked example, whose diabetes target is E14; the
+    // supplied copy maps diabetes to E11 instead, and it is the supplied content that is used.
+    final ConceptMap supplied = editedWorkedExample(VERSION_2026);
+
+    final String body =
+        postOk(
+            parametersJson(
+                selectTargets(SCT_TO_ICD10_URL + "|" + VERSION_2026),
+                resourcePart("context", resourceMap(supplied))));
+
+    assertThat(rowsOf(body, "source_code", "target_code"))
+        .containsExactly(
+            FIT_AND_WELL + "/null",
+            MYOCARDIAL_INFARCTION + "/I21",
+            DIABETES_MELLITUS + "/" + EDITED_2025_TARGET);
+    assertThat(wireMockServer.findAll(anyRequestedFor(anyUrl())))
+        .as("No request to the terminology server")
+        .isEmpty();
+  }
+
+  // -------------------------------------------------------------------------
+  // US2 scenario 3: a pinned dependency matches a supplied map only when the versions agree.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void pinnedDependencyMatchesASuppliedConceptMapWithTheSameVersion() {
+    final ConceptMap supplied = editedWorkedExample(VERSION_2025);
+
+    final String body =
+        postOk(
+            parametersJson(
+                selectTargets(SCT_TO_ICD10_URL + "|" + VERSION_2025),
+                resourcePart("context", resourceMap(supplied))));
+
+    assertThat(rowsOf(body, "source_code", "target_code"))
+        .contains(DIABETES_MELLITUS + "/" + EDITED_2025_TARGET);
+    assertThat(conceptMapRequests()).isEmpty();
+    assertThat(expandRequests(SCT_TO_ICD10_URL)).isEmpty();
+  }
+
+  @Test
+  void pinnedDependencyIgnoresASuppliedConceptMapAtAnotherVersionAndConsultsTheServer() {
+    // The supplied 2025 map satisfies the dependency pinned to 2025 only; the dependency pinned to
+    // 2026 falls through to the terminology server, which is asked for 2026.
+    final ConceptMap supplied = editedWorkedExample(VERSION_2025);
+    final Map<String, String> dependencies = new LinkedHashMap<>();
+    dependencies.put("latest_map", SCT_TO_ICD10_URL + "|" + VERSION_2026);
+    dependencies.put("earlier_map", SCT_TO_ICD10_URL + "|" + VERSION_2025);
+    final Library library =
+        sqlQueryLibrary(
+            "SELECT 'latest' AS source, target_code FROM latest_map"
+                + " WHERE source_code = '"
+                + DIABETES_MELLITUS
+                + "' UNION ALL SELECT 'earlier' AS source, target_code FROM earlier_map"
+                + " WHERE source_code = '"
+                + DIABETES_MELLITUS
+                + "' ORDER BY source",
+            dependencies);
+
+    final String body =
+        postOk(parametersJson(library, resourcePart("context", resourceMap(supplied))));
+
+    assertThat(rowsOf(body, "source", "target_code"))
+        .containsExactly("earlier/" + EDITED_2025_TARGET, "latest/E14");
+    assertSingleConceptMapResolution(SCT_TO_ICD10_URL, VERSION_2026, ID_2026);
+  }
+
+  // -------------------------------------------------------------------------
+  // US2 scenario 5: a supplied concept map matching no dependency is a 400.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void unmatchedSuppliedConceptMapIsRejected() {
+    final ConceptMap unrelated = conceptMap(LOCAL_ONLY_URL, "1");
+
+    final String body =
+        postExpectStatus(
+            parametersJson(
+                selectTargets(SCT_TO_ICD10_URL + "|" + VERSION_2026),
+                resourcePart("context", resourceMap(unrelated))),
+            400);
+
+    assertThat(body).contains("match no dependency of any subject", LOCAL_ONLY_URL);
+  }
+
+  // -------------------------------------------------------------------------
+  // US2 scenario 6: a ValueSet and a ConceptMap sharing a URL are a 400.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void aValueSetAndAConceptMapSharingAUrlAreRejected() {
+    final ValueSet valueSet = new ValueSet();
+    valueSet.setUrl(SCT_TO_ICD10_URL);
+    valueSet.getExpansion().addContains().setSystem(SNOMED).setCode(MYOCARDIAL_INFARCTION);
+
+    final String body =
+        postExpectStatus(
+            parametersJson(
+                selectTargets(SCT_TO_ICD10_URL),
+                resourcePart("context", resourceMap(valueSet)),
+                resourcePart("context", resourceMap(editedWorkedExample(VERSION_2026)))),
+            400);
+
+    assertThat(body).contains("share the canonical URL", SCT_TO_ICD10_URL);
+    assertThat(wireMockServer.findAll(anyRequestedFor(anyUrl()))).isEmpty();
+  }
+
+  // -------------------------------------------------------------------------
+  // US2 scenario 7: a supplied concept map without a url is a 400.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void suppliedConceptMapWithoutAUrlIsRejected() {
+    final ConceptMap supplied = editedWorkedExample(VERSION_2026);
+    supplied.setUrl(null);
+
+    final String body =
+        postExpectStatus(
+            parametersJson(
+                selectTargets(SCT_TO_ICD10_URL + "|" + VERSION_2026),
+                resourcePart("context", resourceMap(supplied))),
+            400);
+
+    assertThat(body)
+        .contains(
+            "A 'context' ConceptMap must carry a url, since entries are matched to dependencies by"
+                + " canonical URL.");
+    assertThat(wireMockServer.findAll(anyRequestedFor(anyUrl()))).isEmpty();
+  }
+
+  // -------------------------------------------------------------------------
   // Fixtures
   // -------------------------------------------------------------------------
 
@@ -624,6 +791,19 @@ class SqlConceptMapIT extends AbstractAsyncExportIT {
         .orElseThrow()
         .getTargetFirstRep()
         .setCode(EDITED_2025_TARGET);
+    return conceptMap;
+  }
+
+  /**
+   * A copy of the worked example at the given version, as a client would supply it, whose diabetes
+   * element maps to {@link #EDITED_2025_TARGET} so that the rows show the supplied content was
+   * used.
+   */
+  @Nonnull
+  private ConceptMap editedWorkedExample(@Nonnull final String version) {
+    final ConceptMap conceptMap = workedExample2025();
+    conceptMap.setId((String) null);
+    conceptMap.setVersion(version);
     return conceptMap;
   }
 
