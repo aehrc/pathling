@@ -248,7 +248,7 @@ stored SQLView matches is resolved through the terminology layer, first as a
 value set and then, only where no value set is found, as a concept map. Two
 kinds of URL skip one of these lookups, because their grammar already says
 what they are: an implicit value set URL - a SNOMED CT base
-(`http://snomed.info/sct`, or an edition or version URI) with a `fhir_vs`
+(`http://snomed.info/sct`, or an edition and version URI) with a `fhir_vs`
 query, or a `http://fhir.org/VCL?...` URL - is never looked up as a concept
 map, and a SNOMED CT base with a `fhir_cm` query is never looked up as a value
 set. A URL held as both a value set and a concept map resolves as the value
@@ -304,10 +304,14 @@ reference set, so a concept with three POSSIBLY EQUIVALENT TO targets has three
 rows. Both systems are `http://snomed.info/sct`, both versions are the version
 URI of the SNOMED CT release the rows come from, and the displays are the
 store's; a target the store has no display for has a null `target_display`.
-An edition or version URI in place of the bare `http://snomed.info/sct` base
-selects that release, and the bare base selects the store's default. A
-`fhir_cm` URL naming any other reference set, or selecting a release the store
-does not hold, is a `404`. A `|version` pin on a `fhir_cm` URL is a `422`, since
+An edition and version URI
+(`http://snomed.info/sct/[moduleId]/version/[yyyymmdd]`) in place of the bare
+`http://snomed.info/sct` base selects that release, and the bare base selects
+the store's default. An edition URI without a version is not a SNOMED CT base,
+so a `fhir_cm` URL on one is not an implicit map and, unless a ConceptMap is
+held at that exact URL, is a `404`. A `fhir_cm` URL naming any other reference
+set, or selecting a release the store does not hold, is a `404`. A `|version`
+pin on a `fhir_cm` URL is a `422`, since
 such a URL carries its version in its base; a pin on any other URL, whether or
 not it carries a query, is looked up with its pin.
 

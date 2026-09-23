@@ -239,8 +239,9 @@ resolves to exactly that version of the map. An unpinned reference to a map
 held in several versions resolves to the latest, compared as the local
 terminology store compares code system versions (eight-digit dates as dates,
 SemVer versions by SemVer precedence, anything else segment by segment); where
-no latest can be determined, as for versions `a` and `b`, the request is a
-`404` stating that the version to use cannot be determined.
+no latest can be determined, as for versions `1.0.0+build1` and `1.0.0+build2`,
+whose build metadata takes no part in SemVer precedence, the request is a `404`
+stating that the version to use cannot be determined.
 
 The mappings are exposed under the label as a relation with exactly these
 columns:
