@@ -19,9 +19,15 @@ package au.csiro.pathling.terminology;
 
 import au.csiro.pathling.fhir.ParametersUtils.DesignationPart;
 import au.csiro.pathling.fhirpath.encoding.ImmutableCoding;
+import au.csiro.pathling.terminology.conceptmap.ConceptMapContent;
+import au.csiro.pathling.terminology.conceptmap.ConceptMapContentException;
+import au.csiro.pathling.terminology.conceptmap.ConceptMapLimitExceededException;
+import au.csiro.pathling.terminology.conceptmap.ConceptMapLookupException;
+import au.csiro.pathling.terminology.conceptmap.ConceptMapVersionException;
 import au.csiro.pathling.terminology.expand.ExpansionLimitExceededException;
 import au.csiro.pathling.terminology.expand.ValueSetExpansion;
 import au.csiro.pathling.terminology.expand.ValueSetExpansionException;
+import au.csiro.pathling.terminology.expand.ValueSetLookupException;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.io.Serial;
@@ -163,6 +169,9 @@ public interface TerminologyService {
    * @return the expansion, or empty if the canonical URL cannot be resolved
    * @throws ValueSetExpansionException if the value set resolves but its membership cannot be
    *     determined, including when the terminology source cannot be reached
+   * @throws ValueSetLookupException if, in SERVER mode, the terminology server answers the first
+   *     page of the expansion with a failure status other than 404, or cannot be reached for it, so
+   *     that it is unknown whether the URL is a value set
    * @throws ExpansionLimitExceededException if the membership exceeds {@code maxMembers}
    */
   @Nonnull
@@ -180,6 +189,24 @@ public interface TerminologyService {
    */
   @Nonnull
   ValueSetExpansion expand(@Nonnull ValueSet valueSet, int maxMembers);
+
+  /**
+   * Reads a concept map by canonical URL and converts it to the rows of a concept map relation.
+   *
+   * @param url the canonical URL of the concept map, without a version suffix
+   * @param version the version to read, or null for the latest the source holds
+   * @param maxMappings the largest number of rows the caller will accept
+   * @return the content, or empty where the source holds no concept map at the URL
+   * @throws ConceptMapContentException if the map resolves but its content cannot be represented,
+   *     or the source fails
+   * @throws ConceptMapLimitExceededException if the map has more than {@code maxMappings} rows
+   * @throws ConceptMapVersionException if the version to use cannot be determined
+   * @throws ConceptMapLookupException if, in SERVER mode, the ConceptMap search fails with a server
+   *     error other than 501 or the server cannot be reached
+   */
+  @Nonnull
+  Optional<ConceptMapContent> readConceptMap(
+      @Nonnull String url, @Nullable String version, int maxMappings);
 
   /** Common interface for properties and designations. */
   interface PropertyOrDesignation extends Serializable {
