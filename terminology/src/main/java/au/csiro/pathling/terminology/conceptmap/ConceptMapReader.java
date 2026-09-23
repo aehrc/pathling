@@ -161,14 +161,18 @@ public class ConceptMapReader {
               + version);
     }
     try {
-      final ConceptMap latest =
+      // The candidates are resolved as holders whose string form is their version, so that a
+      // resolution message listing them names versions rather than resources.
+      final VersionedConceptMapSummary latest =
           versionResolver.getLatestOfVersions(
-              candidates, candidate -> candidate.hasVersion() ? candidate.getVersion() : null, url);
+              candidates.stream().map(VersionedConceptMapSummary::new).toList(),
+              VersionedConceptMapSummary::getVersion,
+              url);
       if (latest == null) {
         throw new ConceptMapVersionException(
             "unable to determine the latest version of the ConceptMaps with the URL " + url);
       }
-      return latest;
+      return latest.getSummary();
     } catch (final AmbiguousVersionException e) {
       throw new ConceptMapVersionException(e.getMessage(), e);
     }

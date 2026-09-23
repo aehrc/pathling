@@ -321,7 +321,8 @@ class ConceptMapReaderTest {
     final ConceptMapVersionException e =
         assertThrows(ConceptMapVersionException.class, () -> reader.read(URL, null, NO_LIMIT));
 
-    assertTrue(e.getMessage().contains("a version was missing"), e.getMessage());
+    // The candidates are named by their versions, not by the resources that carry them.
+    assertTrue(e.getMessage().endsWith("a version was missing: [2026, null]"), e.getMessage());
     assertTrue(readRequests().isEmpty());
   }
 
