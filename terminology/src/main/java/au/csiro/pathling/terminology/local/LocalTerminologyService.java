@@ -21,6 +21,7 @@ import au.csiro.pathling.config.LocalTerminologyConfiguration;
 import au.csiro.pathling.config.TerminologyConfiguration;
 import au.csiro.pathling.ecl.EclParseException;
 import au.csiro.pathling.ecl.UnsupportedEclConstructError;
+import au.csiro.pathling.terminology.ImplicitTerminologyUrls;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.conceptmap.ConceptMapContent;
 import au.csiro.pathling.terminology.expand.ExpansionLimitExceededException;
@@ -349,9 +350,10 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
   @Override
   public Optional<ValueSetExpansion> expand(
       @Nonnull final String url, @Nullable final String version, final int maxMembers) {
-    if (version != null && url.indexOf('?') >= 0) {
+    if (version != null && ImplicitTerminologyUrls.isImplicitValueSet(url)) {
       // An implicit value set URL carries its version in its base, so a pinned version cannot be
-      // applied to it and is not silently ignored.
+      // applied to it and is not silently ignored. Any other URL, whether or not it carries a
+      // query, is resolved with its pin as an explicit value set.
       throw new ValueSetExpansionException(
           "cannot determine which version to use: '"
               + url
