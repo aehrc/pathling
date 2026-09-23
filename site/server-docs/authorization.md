@@ -124,6 +124,17 @@ to nor waives the requirements of the dependencies alongside it; a ViewDefinitio
 joined to a value set still requires `read` authority for the resource type it
 projects.
 
+A [concept map](operations/sql-run#concept-maps) referenced as a dependency of
+a SQL subject also requires only the operation authority. Its mappings come
+from the terminology layer, or from a ConceptMap supplied in the request's
+`context`, and never from FHIR data held by the server, so no resource-type
+`read` authority is checked for it: a token holding `pathling:sql-run` alone can
+run a SQLQuery whose only dependency is a concept map. Like a value set, the
+concept map neither adds to nor waives the requirements of the dependencies
+alongside it; a ViewDefinition translated through a concept map still requires
+`read` authority for the resource type it projects, and a token without the
+operation authority is refused as for any other request.
+
 ### Job ownership
 
 Asynchronous jobs are owned by the token subject that started them. When

@@ -302,7 +302,8 @@ class SqlExternalTableIT extends AbstractAsyncExportIT {
 
     assertThat(body)
         .contains(
-            "no ViewDefinition, SQLView, external table or value set matches that canonical URL");
+            "no ViewDefinition, SQLView, external table, concept map or value set matches that"
+                + " canonical URL");
   }
 
   @Test
