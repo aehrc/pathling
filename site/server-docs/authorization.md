@@ -114,6 +114,16 @@ dependencies alongside it are unaffected: a ViewDefinition or SQLView joined to
 an external table keeps its own resource-type read requirements, and the
 storage read checks below.
 
+A [value set](operations/sql-run#value-sets) referenced as a dependency of a
+SQL subject likewise requires only the operation authority. Its membership
+comes from the terminology layer, or from a ValueSet supplied in the request's
+`context`, rather than from FHIR data held by the server, so no resource-type
+`read` authority is checked for it: a token holding `pathling:sql-run` alone can
+run a SQLQuery whose only dependency is a value set. The value set neither adds
+to nor waives the requirements of the dependencies alongside it; a ViewDefinition
+joined to a value set still requires `read` authority for the resource type it
+projects.
+
 ### Job ownership
 
 Asynchronous jobs are owned by the token subject that started them. When

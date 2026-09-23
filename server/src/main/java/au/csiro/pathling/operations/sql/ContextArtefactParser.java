@@ -31,6 +31,7 @@ import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Library;
 import org.hl7.fhir.r4.model.OperationOutcome.IssueType;
+import org.hl7.fhir.r4.model.ValueSet;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -38,10 +39,13 @@ import org.springframework.stereotype.Component;
  * Parses the repeating {@code context} parameter into {@link SuppliedArtefacts}, the inline
  * supporting artefacts a request offers for dependencies the server cannot resolve.
  *
- * <p>Only a {@code ViewDefinition} or a {@code SQLView} {@code Library} can back a dependency, and
- * an entry must carry a {@code url}, since it is matched by canonical URL and one without a URL can
- * never match anything. A supplied ViewDefinition is validated semantically here, so a malformed or
- * unsatisfiable view is reported at request time rather than part-way through execution.
+ * <p>Only a {@code ViewDefinition}, a {@code SQLView} {@code Library} or a {@code ValueSet} can
+ * back a dependency, and an entry must carry a {@code url}, since it is matched by canonical URL
+ * and one without a URL can never match anything. A supplied ViewDefinition is validated
+ * semantically here, so a malformed or unsatisfiable view is reported at request time rather than
+ * part-way through execution. A supplied ValueSet is not inspected here: whether it defines a
+ * membership is decided at resolution, where the dependency's label is known and can be named in
+ * the outcome.
  *
  * @author John Grimes
  */
@@ -96,17 +100,22 @@ public class ContextArtefactParser {
         throw SqlOperationError.badRequest(
             IssueType.INVALID,
             CONTEXT_EXPRESSION,
-            "A 'context' Library must conform to the SQLView profile; only a ViewDefinition or a"
-                + " SQLView can back a dependency.");
+            "A 'context' Library must conform to the SQLView profile; only a ViewDefinition, a"
+                + " SQLView or a ValueSet can back a dependency.");
       }
       final String url = requireUrl(library.getUrl(), "SQLView");
       return SuppliedArtefact.ofSqlView(url, library.getVersion(), library);
     }
+    if (entry instanceof final ValueSet valueSet) {
+      final String url = requireUrl(valueSet.getUrl(), "ValueSet");
+      return SuppliedArtefact.ofValueSet(url, valueSet.getVersion(), valueSet);
+    }
     throw SqlOperationError.badRequest(
         IssueType.INVALID,
         CONTEXT_EXPRESSION,
-        "A 'context' entry must be a ViewDefinition or a SQLView Library, but a %s was supplied."
-            .formatted(entry.fhirType()));
+        "A 'context' entry must be a ViewDefinition, a SQLView Library or a ValueSet, but a %s was"
+                .formatted(entry.fhirType())
+            + " supplied.");
   }
 
   /** Rejects an entry with no canonical URL, which can never match a dependency reference. */

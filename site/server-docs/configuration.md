@@ -200,6 +200,16 @@ These settings govern the resolution of a query's dependency graph, for both
   Spark as declared, so declare it accurately: a Parquet directory declared
   `delta` fails to read, but a Delta table declared `parquet` is read as its
   raw data files, including those superseded by later commits.
+- `pathling.sqlQuery.valueSetMaxMembers` - (default: `100000`) The maximum
+  number of members a single [value set](./operations/sql-run#value-sets)
+  referenced as a SQLQuery or SQLView dependency may have. Must be at least
+  `1`. A value set with exactly this many members is accepted; one with more is
+  rejected with a `422` naming the label, the canonical URL and the maximum,
+  before any SQL runs. In `SERVER` mode an expansion page whose `total` exceeds
+  the maximum is rejected at once, without fetching further pages. The `total`
+  is trusted for this even though abstract entries, which contribute no member,
+  are counted in it. Where no `total` is reported, no page beyond the one that
+  reveals the excess is fetched.
 
 `N` is a zero-based index. The list is validated at startup: every entry must
 have a non-blank `url` that contains no `|` and is unique among the configured
@@ -208,6 +218,22 @@ server from starting, with a failure naming the offending property. No path is
 probed at startup, so an unreachable or not-yet-written table does not stop the
 server; each table is read at its current state on every request that
 references it.
+
+A value set dependency takes its membership from the terminology layer
+configured under [terminology service](#terminology-service), according to
+`pathling.terminology.mode`. In `SERVER` mode (the default) the value set is
+expanded through `ValueSet/$expand` on `pathling.terminology.serverUrl`, paged
+in requests of 10,000 entries until the expansion is complete, and the request
+carries only the canonical URL, the pinned version where the reference has one,
+and the paging controls. The client and authentication settings below apply to
+those requests as to any other, but expansions are not held in the terminology
+result cache, since each is resolved once per request or job in any case. In
+`LOCAL` mode membership is computed by the local terminology store at
+`pathling.terminology.local.storagePath`. With
+`pathling.terminology.enabled` set to `false`, a value set dependency that is
+not supplied inline as a `context` ValueSet with an `expansion` is a `404`,
+since the canonical cannot be resolved, and a `context` ValueSet carrying only a
+`compose` is a `422`, since nothing can expand it.
 
 ### Encoding
 
