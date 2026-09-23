@@ -18,6 +18,7 @@
 package au.csiro.pathling.operations.sqlquery;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.isNull;
@@ -29,22 +30,32 @@ import static org.mockito.Mockito.when;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.config.TerminologyConfiguration;
 import au.csiro.pathling.library.PathlingContext;
+import au.csiro.pathling.operations.sql.SuppliedArtefact;
+import au.csiro.pathling.operations.sql.SuppliedArtefacts;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.terminology.conceptmap.ConceptMapContent;
 import au.csiro.pathling.terminology.conceptmap.ConceptMapRelationship;
 import au.csiro.pathling.terminology.conceptmap.ConceptMapping;
+import au.csiro.pathling.util.LogCapture;
+import ca.uhn.fhir.rest.server.exceptions.UnprocessableEntityException;
+import ch.qos.logback.classic.Level;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.List;
 import java.util.Optional;
+import org.hl7.fhir.r4.model.ConceptMap;
+import org.hl7.fhir.r4.model.ConceptMap.ConceptMapGroupComponent;
+import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
+import org.hl7.fhir.r4.model.OperationOutcome;
+import org.hl7.fhir.r4.model.OperationOutcome.IssueType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 /**
  * Unit tests for {@link ConceptMapResolver} over a mocked {@link TerminologyService}: the arguments
- * passed to {@code readConceptMap}, the node built from the content it returns, and the not-found
- * and disabled short circuits.
+ * passed to {@code readConceptMap}, the node built from the content it returns, the not-found and
+ * disabled short circuits, and a supplied concept map converted without the terminology layer.
  *
  * @author John Grimes
  */
@@ -146,6 +157,93 @@ class ConceptMapResolverTest {
   }
 
   // ---------------------------------------------------------------------------
+  // A supplied concept map.
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void resolvesASuppliedConceptMapFromTheResourceWithoutCallingTheService() {
+    final ConceptMap conceptMap = suppliedConceptMap("2026");
+
+    final ResolvedConceptMap resolved =
+        resolver().resolveSupplied(reference(URL + "|2026"), artefact(conceptMap));
+
+    assertThat(resolved.getContent())
+        .isEqualTo(ConceptMapContent.fromResource(conceptMap, MAX_MAPPINGS));
+    assertThat(resolved.getContent().getMappings()).hasSize(2);
+    verifyNoInteractions(terminologyService);
+  }
+
+  @Test
+  void keysASuppliedConceptMapByItsUrlAndVersion() {
+    final ResolvedConceptMap resolved =
+        resolver().resolveSupplied(reference(URL), artefact(suppliedConceptMap("2026")));
+
+    assertThat(resolved.getCanonicalKey()).isEqualTo(URL + "|2026");
+  }
+
+  @Test
+  void keysAnUnversionedSuppliedConceptMapByItsUrl() {
+    final ResolvedConceptMap resolved =
+        resolver().resolveSupplied(reference(URL), artefact(suppliedConceptMap(null)));
+
+    assertThat(resolved.getCanonicalKey()).isEqualTo(URL);
+  }
+
+  @Test
+  void resolvesASuppliedConceptMapWhenTerminologyIsDisabled() {
+    serverConfiguration.setTerminology(TerminologyConfiguration.builder().enabled(false).build());
+    final ConceptMap conceptMap = suppliedConceptMap("2026");
+
+    final ResolvedConceptMap resolved =
+        resolver().resolveSupplied(reference(URL), artefact(conceptMap));
+
+    assertThat(resolved.getContent())
+        .isEqualTo(ConceptMapContent.fromResource(conceptMap, MAX_MAPPINGS));
+    verifyNoInteractions(terminologyService);
+  }
+
+  @Test
+  void logsTheProvenanceOfASuppliedConceptMapAsTheContext() {
+    try (LogCapture capture = LogCapture.forClass(ConceptMapResolver.class)) {
+      resolver().resolveSupplied(reference(URL), artefact(suppliedConceptMap("2026")));
+
+      assertThat(capture.events())
+          .singleElement()
+          .satisfies(
+              event -> {
+                assertThat(event.getLevel()).isEqualTo(Level.INFO);
+                assertThat(event.getFormattedMessage())
+                    .isEqualTo(
+                        "Resolved concept map '"
+                            + URL
+                            + "' (version 2026) from context: 2 mappings");
+              });
+    }
+  }
+
+  @Test
+  void reportsUnrepresentableSuppliedContentAsA422AtTheContext() {
+    final ConceptMap conceptMap = suppliedConceptMap("2026");
+    conceptMap.getGroupFirstRep().setSource(null);
+
+    assertThatThrownBy(() -> resolver().resolveSupplied(reference(URL), artefact(conceptMap)))
+        .isInstanceOf(UnprocessableEntityException.class)
+        .hasMessageContainingAll(LABEL, URL, "a group has no source system")
+        .satisfies(ConceptMapResolverTest::assertContextInvalidIssue);
+  }
+
+  @Test
+  void reportsASuppliedConceptMapOverTheCapAsA422AtTheContext() {
+    serverConfiguration.getSqlQuery().setConceptMapMaxMappings(1);
+
+    assertThatThrownBy(
+            () -> resolver().resolveSupplied(reference(URL), artefact(suppliedConceptMap("2026"))))
+        .isInstanceOf(UnprocessableEntityException.class)
+        .hasMessageContainingAll(LABEL, URL, "pathling.sqlQuery.conceptMapMaxMappings", "1")
+        .satisfies(ConceptMapResolverTest::assertContextInvalidIssue);
+  }
+
+  // ---------------------------------------------------------------------------
   // Helpers.
   // ---------------------------------------------------------------------------
 
@@ -162,5 +260,46 @@ class ConceptMapResolverTest {
   @Nonnull
   private static ConceptMapContent content(@Nullable final String version) {
     return new ConceptMapContent(URL, version, List.of(MAPPING));
+  }
+
+  /** A supplied ConceptMap with one mapped target and one unmatched target. */
+  @Nonnull
+  private static ConceptMap suppliedConceptMap(@Nullable final String version) {
+    final ConceptMap conceptMap = new ConceptMap();
+    conceptMap.setUrl(URL);
+    conceptMap.setVersion(version);
+    final ConceptMapGroupComponent group = conceptMap.addGroup();
+    group.setSource("http://snomed.info/sct");
+    group.setTarget("http://hl7.org/fhir/sid/icd-10");
+    group
+        .addElement()
+        .setCode("22298006")
+        .setDisplay("Myocardial infarction")
+        .addTarget()
+        .setCode("I21.9")
+        .setDisplay("Acute myocardial infarction, unspecified")
+        .setEquivalence(ConceptMapEquivalence.EQUIVALENT);
+    group
+        .addElement()
+        .setCode("38341003")
+        .addTarget()
+        .setEquivalence(ConceptMapEquivalence.UNMATCHED);
+    return conceptMap;
+  }
+
+  @Nonnull
+  private static SuppliedArtefact artefact(@Nonnull final ConceptMap conceptMap) {
+    return SuppliedArtefact.ofConceptMap(conceptMap.getUrl(), conceptMap.getVersion(), conceptMap);
+  }
+
+  /** Asserts that the exception carries one invalid issue whose expression is the context. */
+  private static void assertContextInvalidIssue(@Nonnull final Throwable thrown) {
+    final UnprocessableEntityException exception = (UnprocessableEntityException) thrown;
+    final OperationOutcome outcome = (OperationOutcome) exception.getOperationOutcome();
+    assertThat(outcome.getIssue()).hasSize(1);
+    assertThat(outcome.getIssueFirstRep().getCode()).isEqualTo(IssueType.INVALID);
+    assertThat(outcome.getIssueFirstRep().getExpression())
+        .extracting(expression -> expression.getValue())
+        .containsExactly(SuppliedArtefacts.CONTEXT_EXPRESSION);
   }
 }
