@@ -18,6 +18,8 @@
 package au.csiro.pathling.operations.sqlquery;
 
 import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.operations.sql.SqlOperationError;
+import au.csiro.pathling.operations.sql.SubjectResolver;
 import au.csiro.pathling.operations.sql.SuppliedArtefact;
 import au.csiro.pathling.operations.sql.SuppliedArtefacts;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
@@ -237,7 +239,8 @@ public class SqlDependencyResolver {
           resolutionStack,
           nodesByKey);
     }
-    throw new ResourceNotFoundException(
+    throw SqlOperationError.notFound(
+        SubjectResolver.SUBJECT_EXPRESSION,
         "Failed to resolve the dependency for label '"
             + reference.getLabel()
             + "' with reference '"
