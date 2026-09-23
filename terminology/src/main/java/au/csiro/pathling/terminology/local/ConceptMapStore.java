@@ -30,7 +30,6 @@ import jakarta.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import org.apache.commons.lang3.tuple.Pair;
 import org.hl7.fhir.r4.model.ConceptMap;
 
 /**
@@ -74,36 +73,39 @@ public final class ConceptMapStore {
       @Nonnull final String url,
       @Nullable final String version,
       @Nonnull final VersionResolver versionResolver) {
-    // Each candidate pairs the version a map was imported under with its resource JSON.
-    final List<Pair<String, String>> candidates = new ArrayList<>();
+    final List<VersionedConceptMapJson> candidates = new ArrayList<>();
     reader.readTableIfPresent(
         CONCEPT_MAP,
         row -> {
-          final String json = row.getString(COLUMN_RESOURCE_JSON);
-          if (url.equals(row.getString(COLUMN_CANONICAL_URL)) && json != null) {
-            candidates.add(Pair.of(row.getString(COLUMN_VERSION), json));
+          if (url.equals(row.getString(COLUMN_CANONICAL_URL))) {
+            final String json = row.getString(COLUMN_RESOURCE_JSON);
+            if (json != null) {
+              candidates.add(new VersionedConceptMapJson(row.getString(COLUMN_VERSION), json));
+            }
           }
         });
     if (candidates.isEmpty()) {
       return Optional.empty();
     }
-    final Pair<String, String> chosen;
+    final VersionedConceptMapJson chosen;
     if (version != null) {
       chosen =
           candidates.stream()
-              .filter(candidate -> version.equals(candidate.getLeft()))
+              .filter(candidate -> version.equals(candidate.getVersion()))
               .findFirst()
               .orElse(null);
     } else if (candidates.size() == 1) {
       chosen = candidates.get(0);
     } else {
       try {
-        chosen = versionResolver.getLatestOfVersions(candidates, Pair::getLeft, url);
+        chosen =
+            versionResolver.getLatestOfVersions(
+                candidates, VersionedConceptMapJson::getVersion, url);
       } catch (final AmbiguousVersionException e) {
         throw new ConceptMapVersionException(e.getMessage(), e);
       }
     }
-    return Optional.ofNullable(chosen).map(candidate -> parse(candidate.getRight()));
+    return Optional.ofNullable(chosen).map(candidate -> parse(candidate.getJson()));
   }
 
   @Nonnull
