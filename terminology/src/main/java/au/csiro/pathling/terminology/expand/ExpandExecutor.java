@@ -45,8 +45,10 @@ import org.hl7.fhir.r4.model.ValueSet.ValueSetExpansionContainsComponent;
  * yields a complete membership. Paging stops when the offset reaches the expansion's {@code total},
  * or where no total is reported, when a page returns fewer entries than requested or none. The
  * members of every page pass through the same flattening as a supplied expansion, deduplicated
- * across pages, and the caller's limit is checked after each page so that no page beyond the one
- * that reveals the excess is fetched.
+ * across pages. A page whose {@code total} exceeds the caller's limit is rejected at once, without
+ * fetching the rest, so an oversized expansion costs one request; {@code total} is trusted for this
+ * even though abstract or duplicate entries would contribute no member. Otherwise the limit is
+ * checked after each page so that no page beyond the one that reveals the excess is fetched.
  *
  * @author John Grimes
  */
@@ -161,6 +163,9 @@ public class ExpandExecutor {
         first = page;
       }
       final ValueSetExpansionComponent expansion = page.getExpansion();
+      if (expansion.hasTotal() && expansion.getTotal() > maxMembers) {
+        throw new ExpansionLimitExceededException(maxMembers);
+      }
       final List<ValueSetExpansionContainsComponent> entries = expansion.getContains();
       accumulator.addContains(entries);
       accumulator.checkLimit();
@@ -211,7 +216,7 @@ public class ExpandExecutor {
   }
 
   /**
-   * Builds the exception for a server response that is not a success, carrying the diagnostics of
+   * Builds the exception for a server response that is not a success, carrying the reason given by
    * the response's OperationOutcome where it has one and the HTTP status otherwise.
    *
    * @param e the response exception
@@ -220,26 +225,41 @@ public class ExpandExecutor {
   @Nonnull
   private static ValueSetExpansionException serverFailure(
       @Nonnull final BaseServerResponseException e) {
-    final String diagnostics = diagnosticsOf(e.getOperationOutcome());
+    final String reasons = reasonsOf(e.getOperationOutcome());
     final String reason =
-        diagnostics.isEmpty()
-            ? "the terminology server returned HTTP " + e.getStatusCode() + ": " + e.getMessage()
-            : "the terminology server returned HTTP " + e.getStatusCode() + ": " + diagnostics;
+        "the terminology server returned HTTP "
+            + e.getStatusCode()
+            + ": "
+            + (reasons.isEmpty() ? e.getMessage() : reasons);
     return new ValueSetExpansionException(reason, e);
   }
 
   /**
-   * Joins the diagnostics of an OperationOutcome's issues, or returns an empty string where there
-   * is no outcome or no diagnostics.
+   * Joins the reasons of an OperationOutcome's issues, or returns an empty string where there is no
+   * outcome or no issue gives a reason. An issue's reason is its {@code diagnostics}, or where it
+   * has none, its {@code details.text}: servers such as Ontoserver report the reason only in the
+   * latter.
    */
   @Nonnull
-  private static String diagnosticsOf(@Nullable final IBaseOperationOutcome outcome) {
+  private static String reasonsOf(@Nullable final IBaseOperationOutcome outcome) {
     if (!(outcome instanceof final OperationOutcome operationOutcome)) {
       return "";
     }
     return operationOutcome.getIssue().stream()
-        .filter(OperationOutcome.OperationOutcomeIssueComponent::hasDiagnostics)
-        .map(OperationOutcome.OperationOutcomeIssueComponent::getDiagnostics)
+        .map(ExpandExecutor::reasonOf)
+        .flatMap(Optional::stream)
         .collect(Collectors.joining("; "));
+  }
+
+  /** Returns an issue's diagnostics, falling back to its details text. */
+  @Nonnull
+  private static Optional<String> reasonOf(
+      @Nonnull final OperationOutcome.OperationOutcomeIssueComponent issue) {
+    if (issue.hasDiagnostics()) {
+      return Optional.of(issue.getDiagnostics());
+    }
+    return issue.getDetails().hasText()
+        ? Optional.of(issue.getDetails().getText())
+        : Optional.empty();
   }
 }
