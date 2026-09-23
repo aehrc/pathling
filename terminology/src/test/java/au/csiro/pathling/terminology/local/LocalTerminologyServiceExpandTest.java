@@ -55,8 +55,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 /**
  * Service-level tests for value set expansion in local mode: SNOMED CT implicit value sets over the
- * rf2-mini store, explicit value sets over the animal-species store, pinned versions, the member
- * limit, and supplied resources carrying a compose or an expansion.
+ * rf2-mini store, explicit value sets over the animal-species store, pinned versions (including on
+ * a canonical URL that carries a query), the member limit, and supplied resources carrying a
+ * compose or an expansion.
  *
  * @author John Grimes
  */
@@ -73,6 +74,9 @@ class LocalTerminologyServiceExpandTest {
   private static final String ANIMAL_SPECIES_VERSION =
       FhirFixtures.ANIMAL_SPECIES + "|" + FhirFixtures.VERSION;
 
+  /** The start of the message that rejects a version pin on an implicit value set URL. */
+  private static final String PIN_REJECTION = "cannot determine which version to use";
+
   /**
    * The edition/version URI of a second international edition whose effectiveTime is the same as
    * the base fixture release's, which makes an unversioned SNOMED CT reference ambiguous.
@@ -82,6 +86,7 @@ class LocalTerminologyServiceExpandTest {
 
   private static TerminologyService snomedService;
   private static TerminologyService fhirService;
+  private static TerminologyService importedService;
   private static TerminologyService ambiguousService;
   private static ConceptDictionary dictionary;
 
@@ -97,6 +102,7 @@ class LocalTerminologyServiceExpandTest {
             .build();
     snomedService = new LocalTerminologyService(configuration, Map.of());
     fhirService = FhirTerminologyFixture.service();
+    importedService = ConceptMapTerminologyFixture.service();
     dictionary = LocalTerminologyFixture.indexes().dictionary();
     final TerminologyConfiguration ambiguousConfiguration =
         TerminologyConfiguration.builder()
@@ -253,7 +259,58 @@ class LocalTerminologyServiceExpandTest {
             ValueSetExpansionException.class,
             () -> snomedService.expand(ISA_DIABETES, "20230601", NO_LIMIT));
 
-    assertTrue(e.getMessage().contains("version"), e.getMessage());
+    assertTrue(e.getMessage().contains(PIN_REJECTION), e.getMessage());
+    assertTrue(e.getMessage().contains(ISA_DIABETES), e.getMessage());
+  }
+
+  @Test
+  void rejectsPinnedVersionOnVersionedEditionImplicitUrl() {
+    final String url = Rf2Mini.VERSION_20230601 + "?fhir_vs=isa/" + Rf2Mini.DIABETES;
+
+    final ValueSetExpansionException e =
+        assertThrows(
+            ValueSetExpansionException.class,
+            () -> snomedService.expand(url, "20230601", NO_LIMIT));
+
+    assertTrue(e.getMessage().contains(PIN_REJECTION), e.getMessage());
+  }
+
+  @Test
+  void rejectsPinnedVersionOnVclUrl() {
+    final ValueSetExpansionException e =
+        assertThrows(
+            ValueSetExpansionException.class,
+            () -> snomedService.expand(INACTIVE_ONLY, "1", NO_LIMIT));
+
+    assertTrue(e.getMessage().contains(PIN_REJECTION), e.getMessage());
+  }
+
+  @Test
+  void expandsPinnedExplicitValueSetWhoseUrlCarriesAQuery() {
+    final ValueSetExpansion expansion =
+        importedService
+            .expand(ConceptMapTerminologyFixture.VALUE_SET_WITH_QUERY, "2026", NO_LIMIT)
+            .orElseThrow();
+
+    assertEquals(ConceptMapTerminologyFixture.VALUE_SET_WITH_QUERY, expansion.getUrl());
+    assertEquals("2026", expansion.getVersion());
+    assertEquals(List.of(Rf2Mini.DIABETES, Rf2Mini.TYPE1_DIABETES), codes(expansion));
+  }
+
+  @Test
+  void returnsEmptyForPinnedExplicitValueSetWhoseUrlCarriesAQueryAtAnotherVersion() {
+    assertTrue(
+        importedService
+            .expand(ConceptMapTerminologyFixture.VALUE_SET_WITH_QUERY, "2025", NO_LIMIT)
+            .isEmpty());
+  }
+
+  @Test
+  void returnsEmptyForPinnedSnomedConceptMapUrl() {
+    assertTrue(
+        snomedService
+            .expand(Rf2Mini.SNOMED_URI + "?fhir_cm=900000000000526001", "20230601", NO_LIMIT)
+            .isEmpty());
   }
 
   @Test

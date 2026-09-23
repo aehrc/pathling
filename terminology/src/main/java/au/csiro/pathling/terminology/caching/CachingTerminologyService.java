@@ -29,8 +29,11 @@ import au.csiro.pathling.terminology.TerminologyOperation;
 import au.csiro.pathling.terminology.TerminologyParameters;
 import au.csiro.pathling.terminology.TerminologyResult;
 import au.csiro.pathling.terminology.TranslationList;
+import au.csiro.pathling.terminology.conceptmap.ConceptMapContent;
+import au.csiro.pathling.terminology.conceptmap.ConceptMapReader;
 import au.csiro.pathling.terminology.expand.ExpandExecutor;
 import au.csiro.pathling.terminology.expand.ValueSetExpansion;
+import au.csiro.pathling.terminology.local.VersionResolver;
 import au.csiro.pathling.terminology.lookup.LookupExecutor;
 import au.csiro.pathling.terminology.lookup.LookupParameters;
 import au.csiro.pathling.terminology.subsumes.SubsumesExecutor;
@@ -173,6 +176,17 @@ public abstract class CachingTerminologyService extends BaseTerminologyService {
   @Override
   public ValueSetExpansion expand(@Nonnull final ValueSet valueSet, final int maxMembers) {
     return new ExpandExecutor(terminologyClient).expand(valueSet, maxMembers);
+  }
+
+  // Concept maps are not held in the terminology cache either, for the same reasons as expansions:
+  // a content can run to the caller's limit of mappings, and the caller resolves each concept map
+  // once per job. The HTTP response cache still applies to the search and read the reader issues.
+  @Nonnull
+  @Override
+  public Optional<ConceptMapContent> readConceptMap(
+      @Nonnull final String url, @Nullable final String version, final int maxMappings) {
+    return new ConceptMapReader(terminologyClient, new VersionResolver(null))
+        .read(url, version, maxMappings);
   }
 
   /**

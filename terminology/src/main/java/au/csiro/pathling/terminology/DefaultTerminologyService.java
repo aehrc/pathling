@@ -21,8 +21,11 @@ import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhirpath.encoding.ImmutableCoding;
+import au.csiro.pathling.terminology.conceptmap.ConceptMapContent;
+import au.csiro.pathling.terminology.conceptmap.ConceptMapReader;
 import au.csiro.pathling.terminology.expand.ExpandExecutor;
 import au.csiro.pathling.terminology.expand.ValueSetExpansion;
+import au.csiro.pathling.terminology.local.VersionResolver;
 import au.csiro.pathling.terminology.lookup.LookupExecutor;
 import au.csiro.pathling.terminology.lookup.LookupParameters;
 import au.csiro.pathling.terminology.subsumes.SubsumesExecutor;
@@ -117,6 +120,14 @@ public class DefaultTerminologyService extends BaseTerminologyService {
   @Override
   public ValueSetExpansion expand(@Nonnull final ValueSet valueSet, final int maxMembers) {
     return new ExpandExecutor(terminologyClient).expand(valueSet, maxMembers);
+  }
+
+  @Nonnull
+  @Override
+  public Optional<ConceptMapContent> readConceptMap(
+      @Nonnull final String url, @Nullable final String version, final int maxMappings) {
+    return new ConceptMapReader(terminologyClient, new VersionResolver(null))
+        .read(url, version, maxMappings);
   }
 
   @Nonnull

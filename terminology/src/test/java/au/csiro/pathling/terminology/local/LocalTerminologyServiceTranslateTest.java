@@ -25,25 +25,36 @@ import au.csiro.pathling.config.TerminologyConfiguration;
 import au.csiro.pathling.config.TerminologyMode;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyService.Translation;
+import au.csiro.pathling.terminology.store.SnomedRf2Importer;
 import au.csiro.pathling.test.FhirFixtures;
 import au.csiro.pathling.test.NoNetworkExtension;
 import au.csiro.pathling.test.Rf2Mini;
+import jakarta.annotation.Nonnull;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.io.TempDir;
 
 /**
  * Tests local {@code translate}: explicit imported ConceptMaps (forward, reverse, target-scoped,
  * with equivalences preserved), the unknown-content fallback, and SNOMED implicit concept maps
  * derived from association reference sets.
+ *
+ * <p>The shared fixture's only association reference set is SAME AS, in which every referenced
+ * concept has one target. The tests of a concept with several targets therefore run against a
+ * second store, imported from a copy of the base release whose association file gains a POSSIBLY
+ * EQUIVALENT TO referenced concept with three targets.
  *
  * <p>The ordering assertions here pin the contract, but they do not by themselves prove the service
  * imposes it, because this store's reference set rows already happen to be laid out in code order.
@@ -59,21 +70,97 @@ class LocalTerminologyServiceTranslateTest {
   private static final String SAME_AS_CONCEPT_MAP =
       Rf2Mini.SNOMED_URI + "?fhir_cm=" + Rf2Mini.SAME_AS_REFSET;
 
+  /** The POSSIBLY EQUIVALENT TO association reference set, which the extended release copy adds. */
+  private static final String POSSIBLY_EQUIVALENT_TO_REFSET = "900000000000523009";
+
+  private static final String POSSIBLY_EQUIVALENT_TO_CONCEPT_MAP =
+      Rf2Mini.SNOMED_URI + "?fhir_cm=" + POSSIBLY_EQUIVALENT_TO_REFSET;
+
+  /** The concept the extended release copy gives several POSSIBLY EQUIVALENT TO targets. */
+  private static final String AMBIGUOUS_CONCEPT = Rf2Mini.GESTATIONAL_DIABETES;
+
+  /**
+   * The targets of {@link #AMBIGUOUS_CONCEPT} in code order, which is not the order the extended
+   * release copy writes their rows in.
+   */
+  private static final List<String> AMBIGUOUS_TARGETS_IN_CODE_ORDER =
+      List.of(Rf2Mini.TYPE1_DIABETES, Rf2Mini.TYPE2_DIABETES, Rf2Mini.TYPE2_WITH_COMPLICATION);
+
   private static TerminologyService fhirService;
   private static TerminologyService snomedService;
+  private static LocalTerminologyService extendedService;
 
   @BeforeAll
-  static void setUp() {
+  static void setUp(@TempDir final Path work) {
     fhirService = FhirTerminologyFixture.service();
-    final TerminologyConfiguration snomedConfig =
+    snomedService = serviceOver(LocalTerminologyFixture.storagePath());
+    extendedService = serviceOver(importExtendedRelease(work));
+  }
+
+  @AfterAll
+  static void tearDown() {
+    if (extendedService != null) {
+      extendedService.close();
+      extendedService = null;
+    }
+  }
+
+  @Nonnull
+  private static LocalTerminologyService serviceOver(@Nonnull final String storagePath) {
+    final TerminologyConfiguration configuration =
         TerminologyConfiguration.builder()
             .mode(TerminologyMode.LOCAL)
-            .local(
-                LocalTerminologyConfiguration.builder()
-                    .storagePath(LocalTerminologyFixture.storagePath())
-                    .build())
+            .local(LocalTerminologyConfiguration.builder().storagePath(storagePath).build())
             .build();
-    snomedService = new LocalTerminologyService(snomedConfig, Map.of());
+    return new LocalTerminologyService(configuration, Map.of());
+  }
+
+  /**
+   * Imports a copy of the base release whose association reference set file gains three POSSIBLY
+   * EQUIVALENT TO rows for {@link #AMBIGUOUS_CONCEPT}, written out of code order, and returns the
+   * path of the store.
+   */
+  @Nonnull
+  private static String importExtendedRelease(@Nonnull final Path work) {
+    final Path release =
+        Rf2MiniReleaseCopy.withAssociationRows(
+            work.resolve("release"),
+            List.of(
+                associationRow(
+                    "00000000-0000-4000-8000-00000000032f",
+                    AMBIGUOUS_CONCEPT,
+                    Rf2Mini.TYPE2_WITH_COMPLICATION),
+                associationRow(
+                    "00000000-0000-4000-8000-000000000330",
+                    AMBIGUOUS_CONCEPT,
+                    Rf2Mini.TYPE1_DIABETES),
+                associationRow(
+                    "00000000-0000-4000-8000-000000000331",
+                    AMBIGUOUS_CONCEPT,
+                    Rf2Mini.TYPE2_DIABETES)));
+    final SparkSession spark =
+        SparkSession.builder()
+            .appName("LocalTerminologyServiceTranslateTest")
+            .master("local[2]")
+            .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
+            .config(
+                "spark.sql.catalog.spark_catalog",
+                "org.apache.spark.sql.delta.catalog.DeltaCatalog")
+            .config("spark.sql.shuffle.partitions", "2")
+            .config("spark.driver.bindAddress", "localhost")
+            .config("spark.driver.host", "localhost")
+            .config("spark.ui.enabled", "false")
+            .getOrCreate();
+    final String store = work.resolve("store").toString();
+    new SnomedRf2Importer(spark, store).importFrom(release.toString(), null);
+    return store;
+  }
+
+  /** An active POSSIBLY EQUIVALENT TO association row of the base release. */
+  @Nonnull
+  private static String associationRow(
+      @Nonnull final String id, @Nonnull final String referenced, @Nonnull final String target) {
+    return Rf2MiniReleaseCopy.associationRow(id, POSSIBLY_EQUIVALENT_TO_REFSET, referenced, target);
   }
 
   private static Coding species(final String code) {
@@ -219,5 +306,51 @@ class LocalTerminologyServiceTranslateTest {
     final Coding loinc = new Coding().setSystem("http://loinc.org").setCode("1234-5");
     assertTrue(snomedService.translate(loinc, SAME_AS_CONCEPT_MAP, false, null).isEmpty());
     assertTrue(snomedService.translate(loinc, SAME_AS_CONCEPT_MAP, true, null).isEmpty());
+  }
+
+  @Test
+  void translatesEveryTargetOfAnAssociationForward() {
+    // The concept has three POSSIBLY EQUIVALENT TO targets, and all of them come back in ascending
+    // code order, whatever order their rows were written in.
+    final List<Translation> result =
+        extendedService.translate(
+            snomed(AMBIGUOUS_CONCEPT), POSSIBLY_EQUIVALENT_TO_CONCEPT_MAP, false, null);
+    assertEquals(AMBIGUOUS_TARGETS_IN_CODE_ORDER, orderedTargetCodes(result));
+    assertTrue(
+        result.stream().allMatch(t -> Rf2Mini.SNOMED_URI.equals(t.getConcept().getSystem())));
+  }
+
+  @Test
+  void reverseTranslationMatchesAnyTargetOfAnAssociation() {
+    // Each of the three targets translates back to the one concept associated with it.
+    for (final String target : AMBIGUOUS_TARGETS_IN_CODE_ORDER) {
+      final List<Translation> result =
+          extendedService.translate(snomed(target), POSSIBLY_EQUIVALENT_TO_CONCEPT_MAP, true, null);
+      assertEquals(List.of(AMBIGUOUS_CONCEPT), orderedTargetCodes(result), target);
+    }
+  }
+
+  @Test
+  void extendedStoreKeepsTheSingleTargetAssociations() {
+    // The added rows belong to another reference set, so SAME AS answers exactly as it does from
+    // the shared fixture store, forward and in reverse.
+    final List<Translation> forward =
+        extendedService.translate(
+            snomed(Rf2Mini.DIABETES_INACTIVE), SAME_AS_CONCEPT_MAP, false, null);
+    assertEquals(List.of(Rf2Mini.TYPE2_DIABETES), orderedTargetCodes(forward));
+    final List<Translation> reverse =
+        extendedService.translate(snomed(Rf2Mini.TYPE2_DIABETES), SAME_AS_CONCEPT_MAP, true, null);
+    assertEquals(
+        List.of(
+            Rf2Mini.DIABETES_INACTIVE,
+            Rf2Mini.ASSOCIATED_FILLER_1,
+            Rf2Mini.ASSOCIATED_FILLER_2,
+            Rf2Mini.ASSOCIATED_FILLER_3),
+        orderedTargetCodes(reverse));
+    // The SAME AS map does not see the POSSIBLY EQUIVALENT TO rows.
+    assertTrue(
+        extendedService
+            .translate(snomed(AMBIGUOUS_CONCEPT), SAME_AS_CONCEPT_MAP, false, null)
+            .isEmpty());
   }
 }

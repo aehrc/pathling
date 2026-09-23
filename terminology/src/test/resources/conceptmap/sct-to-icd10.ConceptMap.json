@@ -1,0 +1,56 @@
+{
+  "resourceType": "ConceptMap",
+  "id": "sct-to-icd10",
+  "url": "http://example.org/ConceptMap/sct-to-icd10",
+  "version": "2026",
+  "name": "SnomedCtToIcd10",
+  "title": "SNOMED CT to ICD-10",
+  "status": "active",
+  "experimental": true,
+  "date": "2026-01-01",
+  "publisher": "Example Organisation",
+  "description": "The worked example of the concept map dependencies feature: three SNOMED CT concepts mapped to ICD-10, one of which has no mapping.",
+  "sourceUri": "http://snomed.info/sct?fhir_vs",
+  "targetUri": "http://hl7.org/fhir/sid/icd-10?fhir_vs",
+  "group": [
+    {
+      "source": "http://snomed.info/sct",
+      "target": "http://hl7.org/fhir/sid/icd-10",
+      "targetVersion": "2019",
+      "element": [
+        {
+          "code": "22298006",
+          "display": "Myocardial infarction",
+          "target": [
+            {
+              "code": "I21",
+              "display": "Acute myocardial infarction",
+              "equivalence": "equivalent"
+            }
+          ]
+        },
+        {
+          "code": "73211009",
+          "display": "Diabetes mellitus",
+          "target": [
+            {
+              "code": "E14",
+              "display": "Unspecified diabetes mellitus",
+              "equivalence": "narrower",
+              "comment": "ICD-10 E14 covers only diabetes mellitus whose type is not specified."
+            }
+          ]
+        },
+        {
+          "code": "102499006",
+          "display": "Fit and well",
+          "target": [
+            {
+              "equivalence": "unmatched"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
