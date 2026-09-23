@@ -34,6 +34,7 @@ import au.csiro.pathling.config.AuthorizationConfiguration;
 import au.csiro.pathling.config.ExternalTableConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.config.SqlQueryConfiguration;
+import au.csiro.pathling.operations.sql.SubjectResolver;
 import au.csiro.pathling.operations.sql.SuppliedArtefact;
 import au.csiro.pathling.operations.sql.SuppliedArtefacts;
 import au.csiro.pathling.terminology.conceptmap.ConceptMapContent;
@@ -42,8 +43,10 @@ import au.csiro.pathling.terminology.conceptmap.ConceptMapping;
 import au.csiro.pathling.terminology.expand.ValueSetExpansion;
 import au.csiro.pathling.terminology.expand.ValueSetMember;
 import au.csiro.pathling.views.FhirView;
+import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
+import ca.uhn.fhir.rest.server.exceptions.UnprocessableEntityException;
 import jakarta.annotation.Nonnull;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -53,6 +56,9 @@ import java.util.Map;
 import java.util.Optional;
 import org.hl7.fhir.r4.model.ConceptMap;
 import org.hl7.fhir.r4.model.Library;
+import org.hl7.fhir.r4.model.OperationOutcome;
+import org.hl7.fhir.r4.model.OperationOutcome.IssueType;
+import org.hl7.fhir.r4.model.OperationOutcome.OperationOutcomeIssueComponent;
 import org.hl7.fhir.r4.model.ValueSet;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -63,7 +69,8 @@ import org.mockito.InOrder;
  * graph shape for a {@code SQLQuery -> SQLView -> ViewDefinition} chain, supplied-artefact
  * precedence and traversal, diamond de-duplication (including bare-url vs {@code url|version}),
  * configured external tables, value sets and then concept maps resolved through the terminology
- * layer as a last resort, value sets supplied inline through {@code context}, and the structural
+ * layer as a last resort, the found, absent and unknown outcomes of those lookups and the kept
+ * failures they report, value sets supplied inline through {@code context}, and the structural
  * rejections (cycles, depth, ambiguity, not-found, and wrong-typed dependencies).
  *
  * @author John Grimes
@@ -80,6 +87,10 @@ class SqlDependencyResolverTest {
   private static final String VALUE_SET_URL = "http://example.org/ValueSet/cardiovascular-disease";
 
   private static final String CONCEPT_MAP_URL = "http://example.org/ConceptMap/sct-to-icd10";
+
+  private static final String VALUE_SET_ISSUE = "expanding it as a value set failed";
+
+  private static final String CONCEPT_MAP_ISSUE = "searching for it as a concept map failed";
 
   private ViewResolver viewResolver;
   private LibraryReferenceResolver libraryReferenceResolver;
@@ -879,6 +890,114 @@ class SqlDependencyResolverTest {
   }
 
   // ---------------------------------------------------------------------------
+  // Outcomes of the terminology lookups (spec 062 US5): found, absent and unknown.
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void discardsAnIndeterminateValueSetLookupWhenAConceptMapIsFound() {
+    stubIndeterminateValueSet(VALUE_SET_ISSUE);
+    final ResolvedConceptMap conceptMap = stubConceptMap(CONCEPT_MAP_URL);
+
+    final ResolvedDependencyGraph graph =
+        resolver.resolve(
+            sqlQuery("SELECT * FROM m", "m", CONCEPT_MAP_URL), SuppliedArtefacts.empty());
+
+    assertThat(graph.getOrderedNodes()).containsExactly(conceptMap);
+  }
+
+  @Test
+  void reportsAnIndeterminateValueSetLookupWhenNoConceptMapIsFound() {
+    stubIndeterminateValueSet(VALUE_SET_ISSUE);
+
+    assertThatThrownBy(
+            () ->
+                resolver.resolve(
+                    sqlQuery("SELECT * FROM m", "m", CONCEPT_MAP_URL), SuppliedArtefacts.empty()))
+        .isInstanceOf(UnprocessableEntityException.class)
+        .satisfies(thrown -> assertKeptIssues(thrown, VALUE_SET_ISSUE));
+  }
+
+  @Test
+  void reportsBothIndeterminateLookupsInOne422ValueSetFirst() {
+    stubIndeterminateValueSet(VALUE_SET_ISSUE);
+    stubIndeterminateConceptMap(CONCEPT_MAP_ISSUE);
+
+    assertThatThrownBy(
+            () ->
+                resolver.resolve(
+                    sqlQuery("SELECT * FROM m", "m", CONCEPT_MAP_URL), SuppliedArtefacts.empty()))
+        .isInstanceOf(UnprocessableEntityException.class)
+        .satisfies(thrown -> assertKeptIssues(thrown, VALUE_SET_ISSUE, CONCEPT_MAP_ISSUE));
+  }
+
+  @Test
+  void reportsAnIndeterminateConceptMapLookupAfterAnAbsentValueSet() {
+    stubIndeterminateConceptMap(CONCEPT_MAP_ISSUE);
+
+    assertThatThrownBy(
+            () ->
+                resolver.resolve(
+                    sqlQuery("SELECT * FROM m", "m", CONCEPT_MAP_URL), SuppliedArtefacts.empty()))
+        .isInstanceOf(UnprocessableEntityException.class)
+        .satisfies(thrown -> assertKeptIssues(thrown, CONCEPT_MAP_ISSUE));
+  }
+
+  @Test
+  void reportsAFaultInAFoundConceptMapAloneDiscardingTheKeptValueSetIssue() {
+    stubIndeterminateValueSet(VALUE_SET_ISSUE);
+    final UnprocessableEntityException fault =
+        new UnprocessableEntityException("raised by the concept map resolver");
+    when(conceptMapResolver.resolveCanonical(any(), any())).thenThrow(fault);
+
+    assertThatThrownBy(
+            () ->
+                resolver.resolve(
+                    sqlQuery("SELECT * FROM m", "m", CONCEPT_MAP_URL), SuppliedArtefacts.empty()))
+        .isSameAs(fault);
+  }
+
+  @Test
+  void reportsAnUndeterminableConceptMapVersionAloneDiscardingTheKeptValueSetIssue() {
+    stubIndeterminateValueSet(VALUE_SET_ISSUE);
+    final ResourceNotFoundException fault =
+        new ResourceNotFoundException("raised by the concept map resolver");
+    when(conceptMapResolver.resolveCanonical(any(), any())).thenThrow(fault);
+
+    assertThatThrownBy(
+            () ->
+                resolver.resolve(
+                    sqlQuery("SELECT * FROM m", "m", CONCEPT_MAP_URL), SuppliedArtefacts.empty()))
+        .isSameAs(fault);
+  }
+
+  @Test
+  void propagatesAPlain422FromTheValueSetLookupWithoutAConceptMapLookup() {
+    // An unreachable server, or a fault in a value set that was found, ends resolution at once.
+    final UnprocessableEntityException fault =
+        new UnprocessableEntityException("raised by the membership resolver");
+    when(valueSetResolver.resolveCanonical(any(), any())).thenThrow(fault);
+
+    assertThatThrownBy(
+            () ->
+                resolver.resolve(
+                    sqlQuery("SELECT * FROM m", "m", CONCEPT_MAP_URL), SuppliedArtefacts.empty()))
+        .isSameAs(fault);
+    verify(conceptMapResolver, never()).resolveCanonical(any(), any());
+  }
+
+  @Test
+  void reportsAnIndeterminateImplicitValueSetLookupWithoutAConceptMapLookup() {
+    final String url = "http://snomed.info/sct?fhir_vs=isa/73211009";
+    stubIndeterminateValueSet(VALUE_SET_ISSUE);
+
+    assertThatThrownBy(
+            () -> resolver.resolve(sqlQuery("SELECT 1", "t2", url), SuppliedArtefacts.empty()))
+        .isInstanceOf(UnprocessableEntityException.class)
+        .satisfies(thrown -> assertKeptIssues(thrown, VALUE_SET_ISSUE));
+    verify(conceptMapResolver, never()).resolveCanonical(any(), any());
+  }
+
+  // ---------------------------------------------------------------------------
   // Supplied ValueSets (spec 061 US2).
   // ---------------------------------------------------------------------------
 
@@ -1054,6 +1173,44 @@ class SqlDependencyResolverTest {
   // ---------------------------------------------------------------------------
   // Helpers.
   // ---------------------------------------------------------------------------
+
+  /** Stubs the value set lookup as indeterminate, carrying one issue with the given text. */
+  private void stubIndeterminateValueSet(@Nonnull final String diagnostics) {
+    when(valueSetResolver.resolveCanonical(any(), any()))
+        .thenThrow(
+            new IndeterminateLookupException(SubjectResolver.SUBJECT_EXPRESSION, diagnostics));
+  }
+
+  /** Stubs the concept map lookup as indeterminate, carrying one issue with the given text. */
+  private void stubIndeterminateConceptMap(@Nonnull final String diagnostics) {
+    when(conceptMapResolver.resolveCanonical(any(), any()))
+        .thenThrow(
+            new IndeterminateLookupException(SubjectResolver.SUBJECT_EXPRESSION, diagnostics));
+  }
+
+  /**
+   * Asserts that the exception is a 422 whose outcome carries exactly the given kept issues, in
+   * order, each an invalid issue at the subject expression, and that it is not itself a single
+   * indeterminate lookup.
+   */
+  private static void assertKeptIssues(
+      @Nonnull final Throwable thrown, @Nonnull final String... diagnostics) {
+    final BaseServerResponseException exception = (BaseServerResponseException) thrown;
+    assertThat(exception.getStatusCode()).isEqualTo(422);
+    assertThat(exception).isNotInstanceOf(IndeterminateLookupException.class);
+    final OperationOutcome outcome = (OperationOutcome) exception.getOperationOutcome();
+    assertThat(outcome.getIssue())
+        .extracting(OperationOutcomeIssueComponent::getDiagnostics)
+        .containsExactly(diagnostics);
+    assertThat(outcome.getIssue())
+        .allSatisfy(
+            issue -> {
+              assertThat(issue.getCode()).isEqualTo(IssueType.INVALID);
+              assertThat(issue.getExpression())
+                  .extracting(value -> value.getValue())
+                  .containsExactly(SubjectResolver.SUBJECT_EXPRESSION);
+            });
+  }
 
   /** Builds a top-level SQLQuery ParsedSqlQuery with one dependency. */
   @Nonnull

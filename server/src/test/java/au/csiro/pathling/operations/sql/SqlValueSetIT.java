@@ -579,7 +579,12 @@ class SqlValueSetIT extends AbstractAsyncExportIT {
                     resourcePart("subjectResource", resourceMap(semiJoinQuery(BROKEN_URL))))),
             422);
 
-    assertThat(body).contains("cvd_codes", BROKEN_URL, "could not be determined", "too many codes");
+    assertIssue(
+        body,
+        SubjectResolver.SUBJECT_EXPRESSION,
+        "Failed to resolve the dependency for label 'cvd_codes' with reference"
+            + " 'http://example.org/ValueSet/broken': expanding it as a value set failed: the"
+            + " terminology server returned HTTP 422: Unable to expand: too many codes");
     assertThat(jobCount()).as("A rejected kick-off must not register a job").isEqualTo(jobsBefore);
   }
 
@@ -681,9 +686,9 @@ class SqlValueSetIT extends AbstractAsyncExportIT {
     assertIssue(
         body,
         SubjectResolver.SUBJECT_EXPRESSION,
-        "The membership of the value set for label 'cvd_codes' (canonical URL"
-            + " 'http://example.org/ValueSet/broken') could not be determined: the terminology"
-            + " server returned HTTP 422: Unable to expand: too many codes");
+        "Failed to resolve the dependency for label 'cvd_codes' with reference"
+            + " 'http://example.org/ValueSet/broken': expanding it as a value set failed: the"
+            + " terminology server returned HTTP 422: Unable to expand: too many codes");
   }
 
   // -------------------------------------------------------------------------

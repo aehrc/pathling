@@ -19,6 +19,7 @@ package au.csiro.pathling.operations.sqlquery;
 
 import au.csiro.pathling.config.ExternalTableConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.operations.sql.SqlOperationError;
 import au.csiro.pathling.operations.sql.SuppliedArtefact;
 import au.csiro.pathling.operations.sql.SuppliedArtefacts;
 import au.csiro.pathling.terminology.ImplicitTerminologyUrls;
@@ -35,6 +36,7 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.hl7.fhir.r4.model.Library;
+import org.hl7.fhir.r4.model.OperationOutcome.OperationOutcomeIssueComponent;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -68,6 +70,15 @@ import org.springframework.stereotype.Component;
  *       failure naming the label and the reference.
  * </ol>
  *
+ * <p>Each terminology lookup has one of three outcomes. <em>Found</em>: the node is registered and
+ * resolution stops; a fault in what was found is reported as it is. <em>Absent</em>: the next
+ * lookup runs. <em>Unknown</em>: the terminology server failed in a way that leaves unknown whether
+ * the URL is of the kind looked up, signalled by an {@link IndeterminateLookupException}; its issue
+ * is kept and the next lookup runs. Kept issues are discarded when a later lookup finds the
+ * dependency; where none does, they are reported together as one {@code 422}, in lookup order, in
+ * place of the not-found. A terminology server that cannot be reached during the value set lookup
+ * ends resolution with a {@code 422}, since the concept map lookup would go to the same server.
+ *
  * <p>The terminology layer is consulted last so that view dependencies never pay a terminology
  * round trip, and a stored or configured artefact sharing a value set's or a concept map's URL wins
  * without the collision being detected: that is an operator-side condition, not a request fault.
@@ -96,6 +107,9 @@ public class SqlDependencyResolver {
   static final String NOT_FOUND_DETAIL =
       "no ViewDefinition, SQLView, external table, concept map or value set matches that canonical"
           + " URL";
+
+  /** The status of a dependency that no lookup resolved after one or more kept failures. */
+  private static final int UNPROCESSABLE_ENTITY = 422;
 
   @Nonnull private final ViewResolver viewResolver;
 
@@ -156,11 +170,14 @@ public class SqlDependencyResolver {
    * @throws InvalidRequestException if a reference is ambiguous, a cycle or depth-limit breach is
    *     detected, or a dependency is a malformed or wrong-typed resource
    * @throws ResourceNotFoundException if a reference matches no ViewDefinition, SQLView, external
-   *     table, concept map or value set
+   *     table, concept map or value set, or the version of a concept map to use cannot be
+   *     determined
    * @throws ca.uhn.fhir.rest.server.exceptions.UnprocessableEntityException if a value set,
    *     supplied or resolved, has a membership that cannot be determined or exceeds the configured
-   *     maximum, or a supplied concept map carries content the relation cannot represent or more
-   *     mappings than the configured maximum
+   *     maximum; a concept map, supplied or resolved, has mappings that cannot be determined or
+   *     more than the configured maximum; the terminology server cannot be reached during the value
+   *     set lookup; or no lookup resolves a reference and at least one terminology lookup failed,
+   *     in which case it carries one issue per failed lookup, in lookup order
    */
   @Nonnull
   public ResolvedDependencyGraph resolve(
@@ -183,11 +200,14 @@ public class SqlDependencyResolver {
    * @throws InvalidRequestException if a reference is ambiguous, a cycle or depth-limit breach is
    *     detected, or a dependency is a malformed or wrong-typed resource
    * @throws ResourceNotFoundException if a reference matches no ViewDefinition, SQLView, external
-   *     table, concept map or value set
+   *     table, concept map or value set, or the version of a concept map to use cannot be
+   *     determined
    * @throws ca.uhn.fhir.rest.server.exceptions.UnprocessableEntityException if a value set,
    *     supplied or resolved, has a membership that cannot be determined or exceeds the configured
-   *     maximum, or a supplied concept map carries content the relation cannot represent or more
-   *     mappings than the configured maximum
+   *     maximum; a concept map, supplied or resolved, has mappings that cannot be determined or
+   *     more than the configured maximum; the terminology server cannot be reached during the value
+   *     set lookup; or no lookup resolves a reference and at least one terminology lookup failed,
+   *     in which case it carries one issue per failed lookup, in lookup order
    */
   @Nonnull
   public ResolvedDependencyGraph resolve(
@@ -233,6 +253,11 @@ public class SqlDependencyResolver {
    * terminology layer as a value set, unless its URL is a SNOMED CT implicit concept map, and then,
    * unless its URL is an implicit value set, as a concept map, and is not found only when those too
    * yield nothing.
+   *
+   * <p>Each terminology lookup is found (the node is registered and any kept issue discarded),
+   * absent (the next lookup runs) or unknown (an {@link IndeterminateLookupException} whose issue
+   * is kept while the next lookup runs). A reference that no lookup finds is a {@code 422} carrying
+   * the kept issues in lookup order where there are any, and a {@code 404} otherwise.
    */
   @Nonnull
   private String resolveReference(
@@ -354,24 +379,39 @@ public class SqlDependencyResolver {
     if (nodesByKey.containsKey(terminologyKey)) {
       return terminologyKey;
     }
+    // A lookup whose outcome is unknown does not end resolution: its issue is kept, discarded if a
+    // later lookup registers a node, and otherwise reported in lookup order in place of the 404,
+    // whose sentence would be false.
+    final List<OperationOutcomeIssueComponent> keptIssues = new ArrayList<>(2);
     // A SNOMED CT implicit concept map URL names a concept map by its grammar, so it cannot be a
     // value set and the value set lookup would be wasted; the concept map lookup raises the
     // not-found for it itself.
     if (!ImplicitTerminologyUrls.isImplicitConceptMap(canonical.getUrl())) {
-      final Optional<ResolvedValueSet> valueSet =
-          valueSetMembershipResolver.resolveCanonical(reference, canonical);
-      if (valueSet.isPresent()) {
-        return registerLeaf(valueSet.get(), nodesByKey);
+      try {
+        final Optional<ResolvedValueSet> valueSet =
+            valueSetMembershipResolver.resolveCanonical(reference, canonical);
+        if (valueSet.isPresent()) {
+          return registerLeaf(valueSet.get(), nodesByKey);
+        }
+      } catch (final IndeterminateLookupException e) {
+        keptIssues.add(e.getIssue());
       }
     }
     // An implicit value set URL names a value set by its grammar, so it cannot be a concept map and
     // the concept map lookup would be wasted.
     if (!ImplicitTerminologyUrls.isImplicitValueSet(canonical.getUrl())) {
-      final Optional<ResolvedConceptMap> conceptMap =
-          conceptMapResolver.resolveCanonical(reference, canonical);
-      if (conceptMap.isPresent()) {
-        return registerLeaf(conceptMap.get(), nodesByKey);
+      try {
+        final Optional<ResolvedConceptMap> conceptMap =
+            conceptMapResolver.resolveCanonical(reference, canonical);
+        if (conceptMap.isPresent()) {
+          return registerLeaf(conceptMap.get(), nodesByKey);
+        }
+      } catch (final IndeterminateLookupException e) {
+        keptIssues.add(e.getIssue());
       }
+    }
+    if (!keptIssues.isEmpty()) {
+      throw SqlOperationError.of(UNPROCESSABLE_ENTITY, keptIssues);
     }
     throw notFound(reference);
   }

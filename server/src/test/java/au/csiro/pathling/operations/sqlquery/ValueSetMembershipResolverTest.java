@@ -42,6 +42,7 @@ import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.terminology.expand.ExpansionLimitExceededException;
 import au.csiro.pathling.terminology.expand.ValueSetExpansion;
 import au.csiro.pathling.terminology.expand.ValueSetExpansionException;
+import au.csiro.pathling.terminology.expand.ValueSetLookupException;
 import au.csiro.pathling.terminology.expand.ValueSetMember;
 import au.csiro.pathling.util.LogCapture;
 import ca.uhn.fhir.rest.client.exceptions.FhirClientConnectionException;
@@ -64,9 +65,10 @@ import org.junit.jupiter.api.Test;
  * Unit tests for {@link ValueSetMembershipResolver} over a mocked {@link TerminologyService}: the
  * arguments passed to {@code expand}, the node built from an expansion, the not-found and disabled
  * short circuits, the translation of the two expansion exceptions into a 422 that names the label,
- * the canonical URL and the reason, and the handling of a supplied {@code context} ValueSet, whose
- * expansion is used as-is and whose compose is expanded by the service, and the provenance line
- * logged once for every membership resolved, naming its source.
+ * the canonical URL and the reason, a failed first page reported as an indeterminate lookup or,
+ * where the server cannot be reached, a 422 that ends resolution, and the handling of a supplied
+ * {@code context} ValueSet, whose expansion is used as-is and whose compose is expanded by the
+ * service, and the provenance line logged once for every membership resolved, naming its source.
  *
  * @author John Grimes
  */
@@ -475,6 +477,7 @@ class ValueSetMembershipResolverTest {
     assertThatThrownBy(
             () -> resolver().resolveCanonical(reference(URL), CanonicalReference.parse(URL)))
         .isInstanceOf(UnprocessableEntityException.class)
+        .isNotInstanceOf(IndeterminateLookupException.class)
         .satisfies(
             thrown ->
                 assertIssue(
@@ -488,8 +491,10 @@ class ValueSetMembershipResolverTest {
 
   @Test
   void unreachableServerIssueNamesOnlyTheConfiguredUrl() {
-    // The core reports an unreachable server with its configured URL only; the resolver relays that
-    // reason and must not append the cause, which names the host, port and socket failure.
+    // A plain expansion failure is a fault in a value set that has been found (a later page, say),
+    // so it keeps 061's text. The core reports an unreachable server with its configured URL only;
+    // the resolver relays that reason and must not append the cause, which names the host, port
+    // and socket failure.
     when(terminologyService.expand(URL, null, MAX_MEMBERS))
         .thenThrow(
             new ValueSetExpansionException(
@@ -509,6 +514,64 @@ class ValueSetMembershipResolverTest {
                         + " 'http://example.org/ValueSet/cardiovascular-disease') could not be"
                         + " determined: terminology server http://tx.example.org/fhir could not be"
                         + " reached"))
+        .satisfies(
+            thrown ->
+                assertThat(diagnosticsOf(thrown))
+                    .doesNotContain("Connection refused", "10.0.0.7", "8080", "ConnectException"));
+  }
+
+  @Test
+  void aFailedFirstPageIsAnIndeterminateLookupNamingTheOperationThatFailed() {
+    when(terminologyService.expand(URL, "2026", MAX_MEMBERS))
+        .thenThrow(
+            new ValueSetLookupException(
+                "the terminology server returned HTTP 422: Unable to expand: not a ValueSet",
+                new UnprocessableEntityException("Unable to expand: not a ValueSet"),
+                false));
+
+    assertThatThrownBy(
+            () ->
+                resolver()
+                    .resolveCanonical(
+                        reference(URL + "|2026"), CanonicalReference.parse(URL + "|2026")))
+        .isInstanceOf(IndeterminateLookupException.class)
+        .satisfies(
+            thrown ->
+                assertIssue(
+                    thrown,
+                    SubjectResolver.SUBJECT_EXPRESSION,
+                    "Failed to resolve the dependency for label 'cvd_codes' with reference"
+                        + " 'http://example.org/ValueSet/cardiovascular-disease|2026': expanding it"
+                        + " as a value set failed: the terminology server returned HTTP 422: Unable"
+                        + " to expand: not a ValueSet"))
+        .satisfies(
+            thrown ->
+                assertThat(((IndeterminateLookupException) thrown).getIssue().getDiagnostics())
+                    .isEqualTo(diagnosticsOf(thrown)));
+  }
+
+  @Test
+  void anUnreachableServerAtTheFirstPageEndsResolutionNamingOnlyTheConfiguredUrl() {
+    when(terminologyService.expand(URL, null, MAX_MEMBERS))
+        .thenThrow(
+            new ValueSetLookupException(
+                "terminology server http://tx.example.org/fhir could not be reached",
+                new FhirClientConnectionException(
+                    new ConnectException("Connection refused: tx.example.org/10.0.0.7:8080")),
+                true));
+
+    assertThatThrownBy(
+            () -> resolver().resolveCanonical(reference(URL), CanonicalReference.parse(URL)))
+        .isInstanceOf(UnprocessableEntityException.class)
+        .isNotInstanceOf(IndeterminateLookupException.class)
+        .satisfies(
+            thrown ->
+                assertIssue(
+                    thrown,
+                    SubjectResolver.SUBJECT_EXPRESSION,
+                    "Failed to resolve the dependency for label 'cvd_codes' with reference"
+                        + " 'http://example.org/ValueSet/cardiovascular-disease': terminology"
+                        + " server http://tx.example.org/fhir could not be reached"))
         .satisfies(
             thrown ->
                 assertThat(diagnosticsOf(thrown))

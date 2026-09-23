@@ -31,6 +31,7 @@ import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.expand.ExpansionLimitExceededException;
 import au.csiro.pathling.terminology.expand.ValueSetExpansion;
 import au.csiro.pathling.terminology.expand.ValueSetExpansionException;
+import au.csiro.pathling.terminology.expand.ValueSetLookupException;
 import ca.uhn.fhir.rest.server.exceptions.UnprocessableEntityException;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -49,9 +50,12 @@ import org.springframework.stereotype.Component;
  *
  * <p>This is the one place that separates a value set that cannot be resolved (an empty result,
  * which the dependency resolver reports as not found) from one that resolves but whose membership
- * cannot be determined (a {@code 422} naming the label, the canonical URL and the reason), that
- * applies the {@code pathling.sqlQuery.valueSetMaxMembers} cap, that short-circuits when
- * terminology is disabled, and that logs the provenance of every membership resolved.
+ * cannot be determined (a {@code 422} naming the label, the canonical URL and the reason) and from
+ * a lookup whose outcome is unknown because the terminology server failed before returning any part
+ * of the expansion (an {@link IndeterminateLookupException}, or a {@code 422} that ends resolution
+ * where the server cannot be reached), that applies the {@code
+ * pathling.sqlQuery.valueSetMaxMembers} cap, that short-circuits when terminology is disabled, and
+ * that logs the provenance of every membership resolved.
  *
  * @author John Grimes
  */
@@ -64,6 +68,9 @@ public class ValueSetMembershipResolver {
 
   /** Stands in for an absent value in the provenance line. */
   private static final String NONE = "none";
+
+  /** Introduces the reason in the issue for a failed first page of a canonical expansion. */
+  private static final String EXPANSION_FAILED_DETAIL = "expanding it as a value set failed: ";
 
   /** The terminology service, or null where terminology is disabled in configuration. */
   @Nullable private final TerminologyService terminologyService;
@@ -103,12 +110,23 @@ public class ValueSetMembershipResolver {
    * terminology layer resolved, so that a second reference to the same string within a job reuses
    * it without a second expansion.
    *
+   * <p>A failure of the first page of the expansion leaves unknown whether the canonical names a
+   * value set at all, so its issue names the operation that failed rather than the kind of the
+   * dependency. Where the terminology server answered with a failure status, it is thrown as an
+   * {@link IndeterminateLookupException}, which the dependency resolver keeps while it tries the
+   * concept map lookup. Where the server could not be reached, it is a plain {@code 422} carrying
+   * the reason alone, which ends resolution, since the concept map lookup would go to the same
+   * server.
+   *
    * @param reference the dependency reference, whose label names the relation in the SQL
    * @param canonical the parsed canonical of the reference
    * @return the resolved value set, or empty where the terminology layer cannot resolve the
    *     canonical or terminology is disabled
-   * @throws UnprocessableEntityException if the value set resolves but its membership cannot be
-   *     determined, or exceeds the configured maximum number of members
+   * @throws IndeterminateLookupException if the terminology server answered the first page of the
+   *     expansion with a failure status other than {@code 404}
+   * @throws UnprocessableEntityException if the terminology server could not be reached, or the
+   *     value set resolves but its membership cannot be determined or exceeds the configured
+   *     maximum number of members
    */
   @Nonnull
   public Optional<ResolvedValueSet> resolveCanonical(
@@ -120,6 +138,16 @@ public class ValueSetMembershipResolver {
     final Optional<ValueSetExpansion> expansion;
     try {
       expansion = terminologyService.expand(url, canonical.getVersion(), maxMembers);
+    } catch (final ValueSetLookupException e) {
+      if (e.isServerUnreachable()) {
+        throw SqlOperationError.unprocessable(
+            SubjectResolver.SUBJECT_EXPRESSION,
+            SqlDependencyResolver.dependencyFailure(reference, e.getMessage()));
+      }
+      throw new IndeterminateLookupException(
+          SubjectResolver.SUBJECT_EXPRESSION,
+          SqlDependencyResolver.dependencyFailure(
+              reference, EXPANSION_FAILED_DETAIL + e.getMessage()));
     } catch (final ExpansionLimitExceededException e) {
       throw limitExceeded(SubjectResolver.SUBJECT_EXPRESSION, reference, url, e);
     } catch (final ValueSetExpansionException e) {

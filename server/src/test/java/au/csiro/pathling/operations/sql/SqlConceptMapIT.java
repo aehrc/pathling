@@ -120,6 +120,12 @@ import org.springframework.test.web.reactive.server.EntityExchangeResult;
  * server's ConceptMap search does not return is a {@code 404} stating that such maps are resolved
  * only in local terminology mode, and no value set expansion is attempted for it.
  *
+ * <p>Follows User Story 5: every fault has its specified status and exact issue text, on {@code
+ * $sql-run} and, for a representative set, on a {@code $sql-export} kick-off that creates no job;
+ * and a failure of either terminology lookup is kept rather than ending resolution, so that a
+ * concept map at a URL whose {@code $expand} fails still resolves, and a URL that neither lookup
+ * resolves reports every kept failure in lookup order.
+ *
  * <p>Backed by {@link SqlConceptMapTestConfiguration} for the stored ViewDefinition and SQLView,
  * the Condition data and the Patients. The terminology server's HTTP response cache is disabled so
  * that every request reaches WireMock and can be verified.
@@ -190,6 +196,33 @@ class SqlConceptMapIT extends AbstractAsyncExportIT {
   /** The canonical URL of a concept map that nothing holds. */
   static final String MISSING_URL = "http://example.org/ConceptMap/does-not-exist";
 
+  /** The canonical URL of a concept map whose content the relation cannot represent. */
+  static final String FAULTY_URL = "http://example.org/ConceptMap/faulty";
+
+  /** The configured {@code pathling.sqlQuery.conceptMapMaxMappings}, above every fixture's size. */
+  static final int MAX_MAPPINGS = 20;
+
+  /** The {@code 404} sentence for {@link #MISSING_URL} under the label {@code sct_to_icd10}. */
+  static final String MISSING_NOT_FOUND =
+      "Failed to resolve the dependency for label 'sct_to_icd10' with reference '"
+          + MISSING_URL
+          + "': no ViewDefinition, SQLView, external table, concept map or value set matches that"
+          + " canonical URL";
+
+  /** The kept value set issue of the contract's example. */
+  static final String KEPT_VALUE_SET_ISSUE =
+      "Failed to resolve the dependency for label 'sct_to_icd10' with reference '"
+          + SCT_TO_ICD10_URL
+          + "|2026': expanding it as a value set failed: the terminology server returned HTTP 422:"
+          + " Unable to expand: not a ValueSet";
+
+  /** The kept concept map issue of the contract's example. */
+  static final String KEPT_CONCEPT_MAP_ISSUE =
+      "Failed to resolve the dependency for label 'sct_to_icd10' with reference '"
+          + SCT_TO_ICD10_URL
+          + "|2026': searching for it as a concept map failed: the terminology server returned"
+          + " HTTP 500: boom";
+
   /** A SNOMED CT implicit concept map URL, over the REPLACED BY association reference set. */
   static final String IMPLICIT_CONCEPT_MAP_URL = SNOMED + "?fhir_cm=900000000000526001";
 
@@ -239,6 +272,7 @@ class SqlConceptMapIT extends AbstractAsyncExportIT {
         "pathling.terminology.serverUrl",
         () -> "http://localhost:" + wireMockServer.port() + "/fhir");
     registry.add("pathling.terminology.cache.enabled", () -> "false");
+    registry.add("pathling.sqlQuery.conceptMapMaxMappings", () -> String.valueOf(MAX_MAPPINGS));
   }
 
   @BeforeEach
@@ -616,8 +650,15 @@ class SqlConceptMapIT extends AbstractAsyncExportIT {
   void implicitSnomedValueSetWhoseExpansionFailsIsA422WithNoConceptMapSearch() {
     stubExpansionFailure(IMPLICIT_SNOMED_URL, 500, "boom");
 
-    postExpectStatus(parametersJson(selectAll("t2dm", IMPLICIT_SNOMED_URL)), 422);
+    final String body =
+        postExpectStatus(parametersJson(selectAll("t2dm", IMPLICIT_SNOMED_URL)), 422);
 
+    assertIssues(
+        body,
+        "Failed to resolve the dependency for label 't2dm' with reference '"
+            + IMPLICIT_SNOMED_URL
+            + "': expanding it as a value set failed: the terminology server returned HTTP 500:"
+            + " boom");
     assertThat(conceptMapRequests()).isEmpty();
   }
 
@@ -625,8 +666,14 @@ class SqlConceptMapIT extends AbstractAsyncExportIT {
   void vclValueSetWhoseExpansionFailsIsA422WithNoConceptMapSearch() {
     stubExpansionFailure(VCL_URL, 400, "Unable to expand");
 
-    postExpectStatus(parametersJson(selectAll("inactive_codes", VCL_URL)), 422);
+    final String body = postExpectStatus(parametersJson(selectAll("inactive_codes", VCL_URL)), 422);
 
+    assertIssues(
+        body,
+        "Failed to resolve the dependency for label 'inactive_codes' with reference '"
+            + VCL_URL
+            + "': expanding it as a value set failed: the terminology server returned HTTP 400:"
+            + " Unable to expand");
     assertThat(conceptMapRequests()).isEmpty();
   }
 
@@ -896,9 +943,7 @@ class SqlConceptMapIT extends AbstractAsyncExportIT {
                     resourcePart("subjectResource", resourceMap(selectTargets(MISSING_URL))))),
             404);
 
-    assertThat(body)
-        .contains("sct_to_icd10", MISSING_URL)
-        .contains("no ViewDefinition, SQLView, external table, concept map or value set matches");
+    assertIssues(body, MISSING_NOT_FOUND);
     assertThat(jobCount()).as("A rejected kick-off must not register a job").isEqualTo(jobsBefore);
   }
 
@@ -927,11 +972,328 @@ class SqlConceptMapIT extends AbstractAsyncExportIT {
                 resourcePart("context", resourceMap(supplied))),
             422);
 
-    assertThat(body)
-        .contains("sct_to_icd10", SCT_TO_ICD10_URL, "cannot be represented as a relation")
-        .contains(DIABETES_MELLITUS, "dependsOn");
+    assertIssues(
+        body,
+        "The mappings of the supplied concept map for label 'sct_to_icd10' (canonical URL '"
+            + SCT_TO_ICD10_URL
+            + "') could not be determined: the mapping for source code '"
+            + DIABETES_MELLITUS
+            + "' depends on other elements (dependsOn)");
     assertThat(jobCount()).as("A rejected kick-off must not register a job").isEqualTo(jobsBefore);
     assertThat(wireMockServer.findAll(anyRequestedFor(anyUrl()))).isEmpty();
+  }
+
+  // -------------------------------------------------------------------------
+  // US5 scenario 1: a URL nothing resolves is a 404 naming the label and the reference.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void unresolvableDependencyIsA404WithTheSharedSentence() {
+    stubSearch(MISSING_URL, null, searchset());
+
+    final String body = postExpectStatus(parametersJson(selectTargets(MISSING_URL)), 404);
+
+    assertIssues(body, MISSING_NOT_FOUND);
+    assertThat(expandRequests(MISSING_URL)).as("One $expand of the URL").hasSize(1);
+    assertThat(searchRequests()).as("One ConceptMap search").hasSize(1);
+  }
+
+  // -------------------------------------------------------------------------
+  // US5 scenarios 2-4: content the relation cannot represent is a 422 naming the fault.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void groupWithoutASourceIsA422() {
+    final ConceptMap conceptMap = faultyMap();
+    conceptMap.getGroupFirstRep().setSource(null);
+
+    assertUnrepresentable(conceptMap, "a group has no source system");
+  }
+
+  @Test
+  void targetWithDependsOnIsA422NamingTheSourceCodeAndTheElement() {
+    final ConceptMap conceptMap = faultyMap();
+    conceptMap
+        .getGroupFirstRep()
+        .getElementFirstRep()
+        .getTargetFirstRep()
+        .addDependsOn()
+        .setProperty("http://example.org/property/severity")
+        .setValue("severe");
+
+    assertUnrepresentable(
+        conceptMap,
+        "the mapping for source code '"
+            + DIABETES_MELLITUS
+            + "' depends on other elements"
+            + " (dependsOn)");
+  }
+
+  @Test
+  void targetWithAProductIsA422NamingTheSourceCodeAndTheElement() {
+    final ConceptMap conceptMap = faultyMap();
+    conceptMap
+        .getGroupFirstRep()
+        .getElementFirstRep()
+        .getTargetFirstRep()
+        .addProduct()
+        .setProperty("http://example.org/property/laterality")
+        .setValue("left");
+
+    assertUnrepresentable(
+        conceptMap, "the mapping for source code '" + DIABETES_MELLITUS + "' has products");
+  }
+
+  @Test
+  void elementWithoutACodeIsA422() {
+    final ConceptMap conceptMap = faultyMap();
+    conceptMap.getGroupFirstRep().getElementFirstRep().setCode(null);
+
+    assertUnrepresentable(conceptMap, "an element has no code");
+  }
+
+  @Test
+  void matchedTargetWithoutACodeIsA422() {
+    final ConceptMap conceptMap = faultyMap();
+    conceptMap.getGroupFirstRep().getElementFirstRep().getTargetFirstRep().setCode(null);
+
+    assertUnrepresentable(
+        conceptMap, "the mapping for source code '" + DIABETES_MELLITUS + "' has no target code");
+  }
+
+  @Test
+  void targetWithoutAnEquivalenceIsA422() {
+    final ConceptMap conceptMap = faultyMap();
+    conceptMap.getGroupFirstRep().getElementFirstRep().getTargetFirstRep().setEquivalence(null);
+
+    assertUnrepresentable(
+        conceptMap, "the mapping for source code '" + DIABETES_MELLITUS + "' has no equivalence");
+  }
+
+  // -------------------------------------------------------------------------
+  // US5 scenario 5: a concept map over the configured maximum is a 422 naming the maximum.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void conceptMapOverTheCapIsA422NamingTheMaximum() {
+    stubMap(oversizedMap(), "oversized");
+
+    final String body = postExpectStatus(parametersJson(selectAll("big", FAULTY_URL)), 422);
+
+    assertIssues(body, capIssue("big"));
+  }
+
+  // -------------------------------------------------------------------------
+  // US5 scenario 6: a version that cannot be determined is a 404.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void unpinnedReferenceWithNoDeterminableLatestIsA404() {
+    stubSearch(
+        FAULTY_URL,
+        null,
+        searchset(
+            summaryOf(conceptMap(FAULTY_URL, "draft"), "draft-a"),
+            summaryOf(conceptMap(FAULTY_URL, "draft"), "draft-b")));
+
+    final String body = postExpectStatus(parametersJson(selectAll("drafts", FAULTY_URL)), 404);
+
+    assertIssues(
+        body,
+        "Failed to resolve the dependency for label 'drafts' with reference '"
+            + FAULTY_URL
+            + "': the version to use cannot be determined: Found more than one resource with the"
+            + " URL "
+            + FAULTY_URL
+            + " and the same version segments: draft");
+    assertThat(conceptMapRequests()).as("No read of either version").hasSize(1);
+  }
+
+  @Test
+  void pinnedReferenceMatchingTwoResourcesIsA404() {
+    stubSearch(
+        FAULTY_URL,
+        "1",
+        searchset(
+            summaryOf(conceptMap(FAULTY_URL, "1"), "first"),
+            summaryOf(conceptMap(FAULTY_URL, "1"), "second")));
+
+    final String body =
+        postExpectStatus(parametersJson(selectAll("pinned", FAULTY_URL + "|1")), 404);
+
+    assertIssues(
+        body,
+        "Failed to resolve the dependency for label 'pinned' with reference '"
+            + FAULTY_URL
+            + "|1': the version to use cannot be determined: found 2 ConceptMaps with the URL "
+            + FAULTY_URL
+            + " and version 1");
+    assertThat(conceptMapRequests()).as("No read of either resource").hasSize(1);
+  }
+
+  // -------------------------------------------------------------------------
+  // US5 scenarios 7 and 8: the outcome of a failed ConceptMap search after an absent value set.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void searchAnsweredWithAServerErrorIsA422NamingTheOperationThatFailed() {
+    stubSearchFailure(MISSING_URL, 500, "boom");
+
+    final String body = postExpectStatus(parametersJson(selectTargets(MISSING_URL)), 422);
+
+    assertIssues(
+        body,
+        "Failed to resolve the dependency for label 'sct_to_icd10' with reference '"
+            + MISSING_URL
+            + "': searching for it as a concept map failed: the terminology server returned HTTP"
+            + " 500: boom");
+    assertThat(body).doesNotContain("localhost", String.valueOf(wireMockServer.port()));
+  }
+
+  @Test
+  void searchAnsweredWithAClientErrorIsTheSharedNotFound() {
+    stubSearchFailure(MISSING_URL, 400, "Unknown search parameter");
+
+    final String body = postExpectStatus(parametersJson(selectTargets(MISSING_URL)), 404);
+
+    assertIssues(body, MISSING_NOT_FOUND);
+  }
+
+  @Test
+  void searchAnsweredNotImplementedIsTheSharedNotFound() {
+    stubSearchFailure(MISSING_URL, 501, "ConceptMap search is not supported");
+
+    final String body = postExpectStatus(parametersJson(selectTargets(MISSING_URL)), 404);
+
+    assertIssues(body, MISSING_NOT_FOUND);
+  }
+
+  // -------------------------------------------------------------------------
+  // US5 scenario 10: the faults above reject a $sql-export kick-off and create no job.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void kickOffWithAConceptMapCarryingDependsOnIsA422AndCreatesNoJob() {
+    final ConceptMap conceptMap = faultyMap();
+    conceptMap
+        .getGroupFirstRep()
+        .getElementFirstRep()
+        .getTargetFirstRep()
+        .addDependsOn()
+        .setProperty("http://example.org/property/severity")
+        .setValue("severe");
+    stubMap(conceptMap, "faulty");
+    final int jobsBefore = jobCount();
+
+    final String body =
+        kickOffExpectStatus(
+            parameters(
+                subject(
+                    nameOf("inline"),
+                    resourcePart("subjectResource", resourceMap(selectAll("faulty", FAULTY_URL))))),
+            422);
+
+    assertIssues(
+        body,
+        unrepresentableIssue(
+            "faulty",
+            "the mapping for source code '"
+                + DIABETES_MELLITUS
+                + "' depends on other elements (dependsOn)"));
+    assertThat(jobCount()).as("A rejected kick-off must not register a job").isEqualTo(jobsBefore);
+  }
+
+  @Test
+  void kickOffWithAConceptMapOverTheCapIsA422AndCreatesNoJob() {
+    stubMap(oversizedMap(), "oversized");
+    final int jobsBefore = jobCount();
+
+    final String body =
+        kickOffExpectStatus(
+            parameters(
+                subject(
+                    nameOf("inline"),
+                    resourcePart("subjectResource", resourceMap(selectAll("big", FAULTY_URL))))),
+            422);
+
+    assertIssues(body, capIssue("big"));
+    assertThat(jobCount()).as("A rejected kick-off must not register a job").isEqualTo(jobsBefore);
+  }
+
+  // -------------------------------------------------------------------------
+  // US5 scenario 11: naming the map by anything but its label is rejected as today.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void referringToTheMapByAnythingButItsLabelIsA400() {
+    final Library library =
+        sqlQueryLibrary(
+            "SELECT * FROM icd_map", Map.of("sct_to_icd10", SCT_TO_ICD10_URL + "|" + VERSION_2026));
+
+    final String body = postExpectStatus(parametersJson(library), 400);
+
+    assertThat(body).contains("icd_map");
+  }
+
+  // -------------------------------------------------------------------------
+  // US5 scenario 13: a failed $expand is kept while the ConceptMap search runs.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void conceptMapResolvesWhateverFailureStatusItsExpansionIsAnsweredWith() {
+    for (final int status : List.of(400, 422, 500)) {
+      wireMockServer.resetRequests();
+      stubExpansionFailure(SCT_TO_ICD10_URL, status, "Unable to expand: not a ValueSet");
+
+      final String body = postOk(parametersJson(leftJoinQuery(SCT_TO_ICD10_URL + "|2026")));
+
+      assertThat(rowsOf(body, "patient_id", "target_code"))
+          .as("Rows after an $expand answered %d", status)
+          .containsExactlyElementsOf(TRANSLATED_ROWS);
+      assertThat(readRequests(ID_2026)).as("One read after %d", status).hasSize(1);
+    }
+  }
+
+  @Test
+  void failedExpansionAndAnEmptySearchIsA422WithTheValueSetIssue() {
+    stubExpansionFailure(SCT_TO_ICD10_URL, 422, "Unable to expand: not a ValueSet");
+    stubSearch(SCT_TO_ICD10_URL, VERSION_2026, searchset());
+
+    final String body =
+        postExpectStatus(parametersJson(selectTargets(SCT_TO_ICD10_URL + "|2026")), 422);
+
+    assertIssues(body, KEPT_VALUE_SET_ISSUE);
+  }
+
+  @Test
+  void failedExpansionAndAFailedSearchIsOne422CarryingBothIssuesValueSetFirst() {
+    stubExpansionFailure(SCT_TO_ICD10_URL, 422, "Unable to expand: not a ValueSet");
+    stubSearchFailure(SCT_TO_ICD10_URL, 500, "boom");
+
+    final String body =
+        postExpectStatus(parametersJson(selectTargets(SCT_TO_ICD10_URL + "|2026")), 422);
+
+    assertIssues(body, KEPT_VALUE_SET_ISSUE, KEPT_CONCEPT_MAP_ISSUE);
+  }
+
+  @Test
+  void kickOffWithAFailedExpansionAndAFailedSearchIsOne422CarryingBothIssuesAndNoJob() {
+    stubExpansionFailure(SCT_TO_ICD10_URL, 422, "Unable to expand: not a ValueSet");
+    stubSearchFailure(SCT_TO_ICD10_URL, 500, "boom");
+    final int jobsBefore = jobCount();
+
+    final String body =
+        kickOffExpectStatus(
+            parameters(
+                subject(
+                    nameOf("inline"),
+                    resourcePart(
+                        "subjectResource",
+                        resourceMap(selectTargets(SCT_TO_ICD10_URL + "|" + VERSION_2026))))),
+            422);
+
+    assertIssues(body, KEPT_VALUE_SET_ISSUE, KEPT_CONCEPT_MAP_ISSUE);
+    assertThat(jobCount()).as("A rejected kick-off must not register a job").isEqualTo(jobsBefore);
   }
 
   // -------------------------------------------------------------------------
@@ -1212,6 +1574,113 @@ class SqlConceptMapIT extends AbstractAsyncExportIT {
                     .withStatus(status)
                     .withHeader("Content-Type", FHIR_JSON)
                     .withBody(jsonParser.encodeResourceToString(outcome))));
+  }
+
+  /**
+   * A concept map at {@link #FAULTY_URL} with one valid element and target, which each fault test
+   * breaks in one place.
+   */
+  @Nonnull
+  private static ConceptMap faultyMap() {
+    final ConceptMap conceptMap = conceptMap(FAULTY_URL, "1");
+    conceptMap
+        .addGroup()
+        .setSource(SNOMED)
+        .setTarget(ICD10)
+        .addElement()
+        .setCode(DIABETES_MELLITUS)
+        .addTarget()
+        .setCode("E14")
+        .setEquivalence(ConceptMapEquivalence.EQUIVALENT);
+    return conceptMap;
+  }
+
+  /** A concept map at {@link #FAULTY_URL} with one more mapping than {@link #MAX_MAPPINGS}. */
+  @Nonnull
+  private static ConceptMap oversizedMap() {
+    final ConceptMap conceptMap = conceptMap(FAULTY_URL, "1");
+    final ConceptMapGroupComponent group = conceptMap.addGroup().setSource(SNOMED).setTarget(ICD10);
+    for (int i = 0; i <= MAX_MAPPINGS; i++) {
+      group
+          .addElement()
+          .setCode(String.valueOf(1000 + i))
+          .addTarget()
+          .setCode("Z" + i)
+          .setEquivalence(ConceptMapEquivalence.EQUIVALENT);
+    }
+    return conceptMap;
+  }
+
+  /** The issue for a concept map at {@link #FAULTY_URL} whose mappings cannot be determined. */
+  @Nonnull
+  private static String unrepresentableIssue(
+      @Nonnull final String label, @Nonnull final String reason) {
+    return "The mappings of the concept map for label '"
+        + label
+        + "' (canonical URL '"
+        + FAULTY_URL
+        + "') could not be determined: "
+        + reason;
+  }
+
+  /** The issue for a concept map at {@link #FAULTY_URL} over the configured maximum. */
+  @Nonnull
+  private static String capIssue(@Nonnull final String label) {
+    return "The concept map for label '"
+        + label
+        + "' (canonical URL '"
+        + FAULTY_URL
+        + "') has more than the maximum of "
+        + MAX_MAPPINGS
+        + " mappings permitted by pathling.sqlQuery.conceptMapMaxMappings";
+  }
+
+  /**
+   * Stubs the given concept map at {@link #FAULTY_URL}, runs a query over it and asserts the {@code
+   * 422} naming the label, the URL and the reason.
+   */
+  private void assertUnrepresentable(
+      @Nonnull final ConceptMap conceptMap, @Nonnull final String reason) {
+    stubMap(conceptMap, "faulty");
+
+    final String body = postExpectStatus(parametersJson(selectAll("faulty", FAULTY_URL)), 422);
+
+    assertIssues(body, unrepresentableIssue("faulty", reason));
+  }
+
+  /** Stubs the ConceptMap summary search for the given URL to fail with the given status. */
+  private void stubSearchFailure(
+      @Nonnull final String url, final int status, @Nonnull final String diagnostics) {
+    final OperationOutcome outcome = new OperationOutcome();
+    outcome
+        .addIssue()
+        .setSeverity(IssueSeverity.ERROR)
+        .setCode(IssueType.PROCESSING)
+        .setDiagnostics(diagnostics);
+    wireMockServer.stubFor(
+        get(urlPathEqualTo(CONCEPT_MAP_PATH))
+            .withQueryParam("url", equalTo(url))
+            .willReturn(
+                aResponse()
+                    .withStatus(status)
+                    .withHeader("Content-Type", FHIR_JSON)
+                    .withBody(jsonParser.encodeResourceToString(outcome))));
+  }
+
+  /** The diagnostics of each issue of the OperationOutcome a response body carries, in order. */
+  @Nonnull
+  private List<String> diagnosticsOf(@Nonnull final String body) {
+    final OperationOutcome outcome = jsonParser.parseResource(OperationOutcome.class, body);
+    return outcome.getIssue().stream()
+        .map(OperationOutcome.OperationOutcomeIssueComponent::getDiagnostics)
+        .toList();
+  }
+
+  /**
+   * Asserts that the response body's OperationOutcome carries exactly the given issues, in order.
+   */
+  private void assertIssues(@Nonnull final String body, @Nonnull final String... diagnostics) {
+    assertThat(diagnosticsOf(body)).containsExactly(diagnostics);
   }
 
   // -------------------------------------------------------------------------
