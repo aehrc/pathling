@@ -64,6 +64,8 @@ import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.ConceptMap;
 import org.hl7.fhir.r4.model.Enumerations.PublicationStatus;
 import org.hl7.fhir.r4.model.Library;
+import org.hl7.fhir.r4.model.OperationOutcome;
+import org.hl7.fhir.r4.model.OperationOutcome.OperationOutcomeIssueComponent;
 import org.hl7.fhir.r4.model.RelatedArtifact;
 import org.hl7.fhir.r4.model.RelatedArtifact.RelatedArtifactType;
 import org.hl7.fhir.r4.model.Resource;
@@ -563,6 +565,30 @@ class SqlConceptMapLocalIT extends AbstractAsyncExportIT {
                 + "': no ViewDefinition, SQLView, external table, concept map or value set matches"
                 + " that canonical URL")
         .doesNotContain("local terminology mode");
+  }
+
+  // -------------------------------------------------------------------------
+  // US5 scenario 9: a pinned SNOMED CT implicit concept map URL.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void pinnedImplicitMapIsA422StatingThatTheVersionCannotBeDetermined() {
+    final String url = implicitUrl(Rf2Mini.SNOMED_URI, SAME_AS);
+
+    final String body =
+        postExpectStatus(
+            parametersJson(
+                sqlQueryLibrary("SELECT * FROM same_as", Map.of("same_as", url + "|20230601"))),
+            422);
+
+    final OperationOutcome outcome = jsonParser.parseResource(OperationOutcome.class, body);
+    assertThat(outcome.getIssue())
+        .extracting(OperationOutcomeIssueComponent::getDiagnostics)
+        .containsExactly(
+            "The mappings of the concept map for label 'same_as' (canonical URL '"
+                + url
+                + "') could not be determined: cannot determine which version to use: an implicit"
+                + " concept map URL carries its version in its base");
   }
 
   // -------------------------------------------------------------------------
