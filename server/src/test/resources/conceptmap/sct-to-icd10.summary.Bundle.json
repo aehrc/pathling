@@ -1,0 +1,41 @@
+{
+  "resourceType": "Bundle",
+  "id": "sct-to-icd10-summary",
+  "type": "searchset",
+  "total": 1,
+  "link": [
+    {
+      "relation": "self",
+      "url": "ConceptMap?url=http%3A%2F%2Fexample.org%2FConceptMap%2Fsct-to-icd10&version=2026&_summary=true"
+    }
+  ],
+  "entry": [
+    {
+      "fullUrl": "http://tx.example.org/fhir/ConceptMap/sct-to-icd10",
+      "resource": {
+        "resourceType": "ConceptMap",
+        "id": "sct-to-icd10",
+        "meta": {
+          "tag": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationValue",
+              "code": "SUBSETTED",
+              "display": "subsetted"
+            }
+          ]
+        },
+        "url": "http://example.org/ConceptMap/sct-to-icd10",
+        "version": "2026",
+        "name": "SnomedCtToIcd10",
+        "title": "SNOMED CT to ICD-10",
+        "status": "active",
+        "experimental": true,
+        "date": "2026-01-01",
+        "publisher": "Example Organisation"
+      },
+      "search": {
+        "mode": "match"
+      }
+    }
+  ]
+}
