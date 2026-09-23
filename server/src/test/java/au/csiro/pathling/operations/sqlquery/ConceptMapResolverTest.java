@@ -31,19 +31,26 @@ import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.config.TerminologyConfiguration;
 import au.csiro.pathling.config.TerminologyMode;
 import au.csiro.pathling.library.PathlingContext;
+import au.csiro.pathling.operations.sql.SubjectResolver;
 import au.csiro.pathling.operations.sql.SuppliedArtefact;
 import au.csiro.pathling.operations.sql.SuppliedArtefacts;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.terminology.conceptmap.ConceptMapContent;
+import au.csiro.pathling.terminology.conceptmap.ConceptMapContentException;
+import au.csiro.pathling.terminology.conceptmap.ConceptMapLimitExceededException;
+import au.csiro.pathling.terminology.conceptmap.ConceptMapLookupException;
 import au.csiro.pathling.terminology.conceptmap.ConceptMapRelationship;
+import au.csiro.pathling.terminology.conceptmap.ConceptMapVersionException;
 import au.csiro.pathling.terminology.conceptmap.ConceptMapping;
 import au.csiro.pathling.util.LogCapture;
+import ca.uhn.fhir.rest.client.exceptions.FhirClientConnectionException;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
 import ca.uhn.fhir.rest.server.exceptions.UnprocessableEntityException;
 import ch.qos.logback.classic.Level;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.net.ConnectException;
 import java.util.List;
 import java.util.Optional;
 import org.hl7.fhir.r4.model.ConceptMap;
@@ -51,13 +58,15 @@ import org.hl7.fhir.r4.model.ConceptMap.ConceptMapGroupComponent;
 import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
 import org.hl7.fhir.r4.model.OperationOutcome;
 import org.hl7.fhir.r4.model.OperationOutcome.IssueType;
+import org.hl7.fhir.r4.model.OperationOutcome.OperationOutcomeIssueComponent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 /**
  * Unit tests for {@link ConceptMapResolver} over a mocked {@link TerminologyService}: the arguments
  * passed to {@code readConceptMap}, the node built from the content it returns, the not-found and
- * disabled short circuits, and a supplied concept map converted without the terminology layer.
+ * disabled short circuits, a supplied concept map converted without the terminology layer, and the
+ * exact status, issue text and expression of every fault the terminology layer reports.
  *
  * @author John Grimes
  */
@@ -305,8 +314,15 @@ class ConceptMapResolverTest {
 
     assertThatThrownBy(() -> resolver().resolveSupplied(reference(URL), artefact(conceptMap)))
         .isInstanceOf(UnprocessableEntityException.class)
-        .hasMessageContainingAll(LABEL, URL, "a group has no source system")
-        .satisfies(ConceptMapResolverTest::assertContextInvalidIssue);
+        .isNotInstanceOf(IndeterminateLookupException.class)
+        .satisfies(
+            thrown ->
+                assertIssue(
+                    thrown,
+                    SuppliedArtefacts.CONTEXT_EXPRESSION,
+                    "The mappings of the supplied concept map for label 'sct_to_icd10' (canonical"
+                        + " URL 'http://example.org/ConceptMap/sct-to-icd10') could not be"
+                        + " determined: a group has no source system"));
   }
 
   @Test
@@ -316,8 +332,203 @@ class ConceptMapResolverTest {
     assertThatThrownBy(
             () -> resolver().resolveSupplied(reference(URL), artefact(suppliedConceptMap("2026"))))
         .isInstanceOf(UnprocessableEntityException.class)
-        .hasMessageContainingAll(LABEL, URL, "pathling.sqlQuery.conceptMapMaxMappings", "1")
-        .satisfies(ConceptMapResolverTest::assertContextInvalidIssue);
+        .satisfies(
+            thrown ->
+                assertIssue(
+                    thrown,
+                    SuppliedArtefacts.CONTEXT_EXPRESSION,
+                    "The supplied concept map for label 'sct_to_icd10' (canonical URL"
+                        + " 'http://example.org/ConceptMap/sct-to-icd10') has more than the maximum"
+                        + " of 1 mappings permitted by pathling.sqlQuery.conceptMapMaxMappings"));
+  }
+
+  // ---------------------------------------------------------------------------
+  // Fault contract (US5): the exact issue text and expression of every fault.
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void unrepresentableContentFromTheTerminologyLayerIsA422AtTheSubject() {
+    when(terminologyService.readConceptMap(URL, "2026", MAX_MAPPINGS))
+        .thenThrow(
+            new ConceptMapContentException(
+                "the mapping for source code '73211009' depends on other elements (dependsOn)"));
+
+    assertThatThrownBy(
+            () ->
+                resolver()
+                    .resolveCanonical(
+                        reference(URL + "|2026"), CanonicalReference.parse(URL + "|2026")))
+        .isInstanceOf(UnprocessableEntityException.class)
+        .isNotInstanceOf(IndeterminateLookupException.class)
+        .satisfies(
+            thrown ->
+                assertIssue(
+                    thrown,
+                    SubjectResolver.SUBJECT_EXPRESSION,
+                    "The mappings of the concept map for label 'sct_to_icd10' (canonical URL"
+                        + " 'http://example.org/ConceptMap/sct-to-icd10') could not be determined:"
+                        + " the mapping for source code '73211009' depends on other elements"
+                        + " (dependsOn)"));
+  }
+
+  @Test
+  void aChosenConceptMapThatCannotBeReadIsA422CarryingTheServersReasonOnly() {
+    when(terminologyService.readConceptMap(URL, null, MAX_MAPPINGS))
+        .thenThrow(
+            new ConceptMapContentException(
+                "terminology server http://tx.example.org/fhir could not be reached",
+                new FhirClientConnectionException(
+                    new ConnectException("Connection refused: tx.example.org/10.0.0.7:8080"))));
+
+    assertThatThrownBy(
+            () -> resolver().resolveCanonical(reference(URL), CanonicalReference.parse(URL)))
+        .isInstanceOf(UnprocessableEntityException.class)
+        .isNotInstanceOf(IndeterminateLookupException.class)
+        .satisfies(
+            thrown ->
+                assertIssue(
+                    thrown,
+                    SubjectResolver.SUBJECT_EXPRESSION,
+                    "The mappings of the concept map for label 'sct_to_icd10' (canonical URL"
+                        + " 'http://example.org/ConceptMap/sct-to-icd10') could not be determined:"
+                        + " terminology server http://tx.example.org/fhir could not be reached"))
+        .satisfies(
+            thrown ->
+                assertThat(diagnosticsOf(thrown))
+                    .doesNotContain("Connection refused", "10.0.0.7", "8080", "ConnectException"));
+  }
+
+  @Test
+  void aConceptMapOverTheCapFromTheTerminologyLayerIsA422AtTheSubject() {
+    when(terminologyService.readConceptMap(URL, null, MAX_MAPPINGS))
+        .thenThrow(new ConceptMapLimitExceededException(MAX_MAPPINGS));
+
+    assertThatThrownBy(
+            () -> resolver().resolveCanonical(reference(URL), CanonicalReference.parse(URL)))
+        .isInstanceOf(UnprocessableEntityException.class)
+        .satisfies(
+            thrown ->
+                assertIssue(
+                    thrown,
+                    SubjectResolver.SUBJECT_EXPRESSION,
+                    "The concept map for label 'sct_to_icd10' (canonical URL"
+                        + " 'http://example.org/ConceptMap/sct-to-icd10') has more than the maximum"
+                        + " of 250 mappings permitted by pathling.sqlQuery.conceptMapMaxMappings"));
+  }
+
+  @Test
+  void anUndeterminableVersionIsA404NamingTheLabelTheReferenceAndTheReason() {
+    when(terminologyService.readConceptMap(URL, null, MAX_MAPPINGS))
+        .thenThrow(
+            new ConceptMapVersionException(
+                "unable to determine the latest version of the ConceptMaps with the URL " + URL));
+
+    assertThatThrownBy(
+            () -> resolver().resolveCanonical(reference(URL), CanonicalReference.parse(URL)))
+        .isInstanceOf(ResourceNotFoundException.class)
+        .hasMessage(
+            "Failed to resolve the dependency for label 'sct_to_icd10' with reference"
+                + " 'http://example.org/ConceptMap/sct-to-icd10': the version to use cannot be"
+                + " determined: unable to determine the latest version of the ConceptMaps with the"
+                + " URL http://example.org/ConceptMap/sct-to-icd10");
+  }
+
+  @Test
+  void aFailedSearchIsAnIndeterminateLookupNamingTheOperationThatFailed() {
+    when(terminologyService.readConceptMap(URL, "2026", MAX_MAPPINGS))
+        .thenThrow(new ConceptMapLookupException("the terminology server returned HTTP 500: boom"));
+
+    assertThatThrownBy(
+            () ->
+                resolver()
+                    .resolveCanonical(
+                        reference(URL + "|2026"), CanonicalReference.parse(URL + "|2026")))
+        .isInstanceOf(IndeterminateLookupException.class)
+        .satisfies(
+            thrown ->
+                assertIssue(
+                    thrown,
+                    SubjectResolver.SUBJECT_EXPRESSION,
+                    "Failed to resolve the dependency for label 'sct_to_icd10' with reference"
+                        + " 'http://example.org/ConceptMap/sct-to-icd10|2026': searching for it as"
+                        + " a concept map failed: the terminology server returned HTTP 500: boom"))
+        .satisfies(
+            thrown ->
+                assertThat(((IndeterminateLookupException) thrown).getIssue().getDiagnostics())
+                    .isEqualTo(diagnosticsOf(thrown)));
+  }
+
+  @Test
+  void anUnreachableServerDuringTheSearchNamesOnlyTheConfiguredUrl() {
+    when(terminologyService.readConceptMap(URL, null, MAX_MAPPINGS))
+        .thenThrow(
+            new ConceptMapLookupException(
+                "terminology server http://tx.example.org/fhir could not be reached",
+                new FhirClientConnectionException(
+                    new ConnectException("Connection refused: tx.example.org/10.0.0.7:8080"))));
+
+    assertThatThrownBy(
+            () -> resolver().resolveCanonical(reference(URL), CanonicalReference.parse(URL)))
+        .isInstanceOf(IndeterminateLookupException.class)
+        .satisfies(
+            thrown ->
+                assertIssue(
+                    thrown,
+                    SubjectResolver.SUBJECT_EXPRESSION,
+                    "Failed to resolve the dependency for label 'sct_to_icd10' with reference"
+                        + " 'http://example.org/ConceptMap/sct-to-icd10': searching for it as a"
+                        + " concept map failed: terminology server http://tx.example.org/fhir could"
+                        + " not be reached"))
+        .satisfies(
+            thrown ->
+                assertThat(diagnosticsOf(thrown))
+                    .doesNotContain("Connection refused", "10.0.0.7", "8080", "ConnectException"));
+  }
+
+  @Test
+  void aFailedSearchForAnImplicitConceptMapIsIndeterminateRatherThanNotFound() {
+    when(terminologyService.readConceptMap(IMPLICIT_URL, null, MAX_MAPPINGS))
+        .thenThrow(new ConceptMapLookupException("the terminology server returned HTTP 503: down"));
+
+    assertThatThrownBy(
+            () ->
+                resolver()
+                    .resolveCanonical(implicitReference(), CanonicalReference.parse(IMPLICIT_URL)))
+        .isInstanceOf(IndeterminateLookupException.class)
+        .hasMessage(
+            "Failed to resolve the dependency for label 'replaced_by' with reference '"
+                + IMPLICIT_URL
+                + "': searching for it as a concept map failed: the terminology server returned"
+                + " HTTP 503: down");
+  }
+
+  @Test
+  void aPinnedImplicitConceptMapInLocalModeIsA422AtTheSubject() {
+    serverConfiguration.setTerminology(
+        TerminologyConfiguration.builder().mode(TerminologyMode.LOCAL).build());
+    when(terminologyService.readConceptMap(IMPLICIT_URL, "20260131", MAX_MAPPINGS))
+        .thenThrow(
+            new ConceptMapContentException(
+                "cannot determine which version to use: an implicit concept map URL carries its"
+                    + " version in its base"));
+
+    assertThatThrownBy(
+            () ->
+                resolver()
+                    .resolveCanonical(
+                        new ViewArtifactReference(IMPLICIT_LABEL, IMPLICIT_URL + "|20260131"),
+                        CanonicalReference.parse(IMPLICIT_URL + "|20260131")))
+        .isInstanceOf(UnprocessableEntityException.class)
+        .isNotInstanceOf(IndeterminateLookupException.class)
+        .satisfies(
+            thrown ->
+                assertIssue(
+                    thrown,
+                    SubjectResolver.SUBJECT_EXPRESSION,
+                    "The mappings of the concept map for label 'replaced_by' (canonical URL '"
+                        + IMPLICIT_URL
+                        + "') could not be determined: cannot determine which version to use: an"
+                        + " implicit concept map URL carries its version in its base"));
   }
 
   // ---------------------------------------------------------------------------
@@ -374,14 +585,30 @@ class ConceptMapResolverTest {
     return SuppliedArtefact.ofConceptMap(conceptMap.getUrl(), conceptMap.getVersion(), conceptMap);
   }
 
-  /** Asserts that the exception carries one invalid issue whose expression is the context. */
-  private static void assertContextInvalidIssue(@Nonnull final Throwable thrown) {
+  /**
+   * Asserts that the exception carries exactly one invalid issue with the given expression, whose
+   * diagnostics and exception message both equal the given text verbatim.
+   */
+  private static void assertIssue(
+      @Nonnull final Throwable thrown,
+      @Nonnull final String expression,
+      @Nonnull final String diagnostics) {
     final UnprocessableEntityException exception = (UnprocessableEntityException) thrown;
     final OperationOutcome outcome = (OperationOutcome) exception.getOperationOutcome();
     assertThat(outcome.getIssue()).hasSize(1);
-    assertThat(outcome.getIssueFirstRep().getCode()).isEqualTo(IssueType.INVALID);
-    assertThat(outcome.getIssueFirstRep().getExpression())
-        .extracting(expression -> expression.getValue())
-        .containsExactly(SuppliedArtefacts.CONTEXT_EXPRESSION);
+    final OperationOutcomeIssueComponent issue = outcome.getIssueFirstRep();
+    assertThat(issue.getCode()).isEqualTo(IssueType.INVALID);
+    assertThat(issue.getExpression())
+        .extracting(value -> value.getValue())
+        .containsExactly(expression);
+    assertThat(issue.getDiagnostics()).isEqualTo(diagnostics);
+    assertThat(exception.getMessage()).isEqualTo(diagnostics);
+  }
+
+  /** The diagnostics of the exception's single issue. */
+  @Nonnull
+  private static String diagnosticsOf(@Nonnull final Throwable thrown) {
+    final UnprocessableEntityException exception = (UnprocessableEntityException) thrown;
+    return ((OperationOutcome) exception.getOperationOutcome()).getIssueFirstRep().getDiagnostics();
   }
 }

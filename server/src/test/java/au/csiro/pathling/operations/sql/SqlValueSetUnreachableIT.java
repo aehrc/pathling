@@ -53,9 +53,9 @@ import org.springframework.test.context.DynamicPropertySource;
 /**
  * Integration test for User Story 4 scenario 8 of value set dependencies (spec 061): the configured
  * terminology server cannot be reached. A value set dependency not supplied inline is then a {@code
- * 422} naming the label, the canonical URL and the configured server URL, and nothing more about
- * the server or the failure, on both {@code $sql-run} and a {@code $sql-export} kick-off, which
- * creates no job.
+ * 422} naming the label, the reference and the configured server URL, and nothing more about the
+ * server or the failure, on both {@code $sql-run} and a {@code $sql-export} kick-off, which creates
+ * no job.
  *
  * <p>A separate class from {@link SqlValueSetIT} because {@code pathling.terminology.serverUrl} is
  * fixed for the life of the application context: the URL here points at a port that was free when
@@ -150,8 +150,8 @@ class SqlValueSetUnreachableIT extends AbstractAsyncExportIT {
   }
 
   /**
-   * Asserts the single issue names the subject, the label, the canonical URL and the configured
-   * server URL, and discloses nothing else about the server or the connection failure.
+   * Asserts the single issue names the subject, the label, the reference and the configured server
+   * URL, and discloses nothing else about the server or the connection failure.
    */
   private void assertUnreachableIssue(@Nonnull final String body) {
     final OperationOutcome outcome = (OperationOutcome) jsonParser.parseResource(body);
@@ -162,9 +162,9 @@ class SqlValueSetUnreachableIT extends AbstractAsyncExportIT {
         .containsExactly(SubjectResolver.SUBJECT_EXPRESSION);
     assertThat(issue.getDiagnostics())
         .isEqualTo(
-            "The membership of the value set for label 'cvd_codes' (canonical URL '"
+            "Failed to resolve the dependency for label 'cvd_codes' with reference '"
                 + SqlValueSetTestConfiguration.CVD_URL
-                + "') could not be determined: terminology server "
+                + "': terminology server "
                 + serverUrl
                 + " could not be reached");
     assertThat(body)

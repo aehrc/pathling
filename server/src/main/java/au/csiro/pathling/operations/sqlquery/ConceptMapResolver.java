@@ -25,12 +25,15 @@ import au.csiro.pathling.config.TerminologyConfiguration;
 import au.csiro.pathling.config.TerminologyMode;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.operations.sql.SqlOperationError;
+import au.csiro.pathling.operations.sql.SubjectResolver;
 import au.csiro.pathling.operations.sql.SuppliedArtefact;
 import au.csiro.pathling.terminology.ImplicitTerminologyUrls;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.conceptmap.ConceptMapContent;
 import au.csiro.pathling.terminology.conceptmap.ConceptMapContentException;
 import au.csiro.pathling.terminology.conceptmap.ConceptMapLimitExceededException;
+import au.csiro.pathling.terminology.conceptmap.ConceptMapLookupException;
+import au.csiro.pathling.terminology.conceptmap.ConceptMapVersionException;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
 import ca.uhn.fhir.rest.server.exceptions.UnprocessableEntityException;
 import jakarta.annotation.Nonnull;
@@ -57,6 +60,14 @@ import org.springframework.stereotype.Component;
  * unresolved SNOMED CT implicit concept map URL, and that logs the provenance of every concept map
  * resolved.
  *
+ * <p>It is also the one place that maps the terminology layer's concept map faults to issues:
+ * content the relation cannot represent, a chosen map that cannot be read and a map over the cap
+ * are {@code 422}s naming the label and the canonical URL; a version that cannot be determined is a
+ * {@code 404} naming the label and the reference; and a ConceptMap search that fails is an {@link
+ * IndeterminateLookupException}, whose issue names the operation that failed rather than the kind
+ * of the dependency, which is not known. Every reason is relayed exactly as the terminology layer
+ * gave it, which names the terminology server by its configured URL and nothing else.
+ *
  * @author John Grimes
  */
 @Slf4j
@@ -75,6 +86,12 @@ public class ConceptMapResolver {
    */
   private static final String LOCAL_MODE_ONLY_DETAIL =
       "SNOMED CT implicit concept maps are resolved only in local terminology mode";
+
+  /** Introduces the reason in the {@code 404} for a concept map whose version is undeterminable. */
+  private static final String VERSION_DETAIL = "the version to use cannot be determined: ";
+
+  /** Introduces the reason in the issue for a failed ConceptMap search. */
+  private static final String SEARCH_FAILED_DETAIL = "searching for it as a concept map failed: ";
 
   /** The terminology service, or null where terminology is disabled in configuration. */
   @Nullable private final TerminologyService terminologyService;
@@ -128,21 +145,38 @@ public class ConceptMapResolver {
    * @return the resolved concept map, or empty where the terminology layer holds no concept map at
    *     the canonical or terminology is disabled
    * @throws ResourceNotFoundException if the URL is a SNOMED CT implicit concept map URL and no
-   *     concept map is resolved for it
+   *     concept map is resolved for it, or the version to use cannot be determined
+   * @throws IndeterminateLookupException if the ConceptMap search fails, so that whether the
+   *     canonical names a concept map is unknown
+   * @throws UnprocessableEntityException if the concept map resolves but its content cannot be
+   *     represented or read, or it has more mappings than the configured maximum
    */
   @Nonnull
   public Optional<ResolvedConceptMap> resolveCanonical(
       @Nonnull final ViewArtifactReference reference, @Nonnull final CanonicalReference canonical) {
     final String url = canonical.getUrl();
+    final Optional<ConceptMapContent> content;
+    try {
+      content =
+          terminologyService == null
+              ? Optional.empty()
+              : terminologyService.readConceptMap(url, canonical.getVersion(), maxMappings);
+    } catch (final ConceptMapLookupException e) {
+      throw new IndeterminateLookupException(
+          SubjectResolver.SUBJECT_EXPRESSION,
+          SqlDependencyResolver.dependencyFailure(
+              reference, SEARCH_FAILED_DETAIL + e.getMessage()));
+    } catch (final ConceptMapVersionException e) {
+      throw new ResourceNotFoundException(
+          SqlDependencyResolver.dependencyFailure(reference, VERSION_DETAIL + e.getMessage()));
+    } catch (final ConceptMapLimitExceededException e) {
+      throw limitExceeded(SubjectResolver.SUBJECT_EXPRESSION, reference, url, e);
+    } catch (final ConceptMapContentException e) {
+      throw undeterminable(SubjectResolver.SUBJECT_EXPRESSION, reference, url, e.getMessage());
+    }
     final Optional<ResolvedConceptMap> resolved =
-        terminologyService == null
-            ? Optional.empty()
-            : terminologyService
-                .readConceptMap(url, canonical.getVersion(), maxMappings)
-                .map(
-                    content ->
-                        resolved(
-                            CanonicalReference.key(url, canonical.getVersion()), content, source));
+        content.map(
+            found -> resolved(CanonicalReference.key(url, canonical.getVersion()), found, source));
     if (resolved.isEmpty() && ImplicitTerminologyUrls.isImplicitConceptMap(url)) {
       throw serverMode
           ? new ResourceNotFoundException(
@@ -179,7 +213,7 @@ public class ConceptMapResolver {
     } catch (final ConceptMapLimitExceededException e) {
       throw limitExceeded(CONTEXT_EXPRESSION, reference, url, e);
     } catch (final ConceptMapContentException e) {
-      throw unrepresentable(CONTEXT_EXPRESSION, reference, url, e.getMessage());
+      throw undeterminable(CONTEXT_EXPRESSION, reference, url, e.getMessage());
     }
     return resolved(
         CanonicalReference.key(url, artefact.getVersion()), content, CONTEXT_EXPRESSION);
@@ -227,30 +261,32 @@ public class ConceptMapResolver {
   }
 
   /**
-   * Builds the {@code 422} for a concept map whose content the relation cannot represent, carrying
-   * the reason.
+   * Builds the {@code 422} for a concept map that resolves but whose mappings cannot be determined:
+   * its content cannot be represented as the rows of the relation, or the chosen map could not be
+   * read. The reason is relayed exactly as the terminology layer gave it, which for an unreachable
+   * server names its configured URL and nothing else.
    *
    * @param expression the parameter at fault
    * @param reference the dependency reference
    * @param url the canonical URL of the concept map
-   * @param reason why the content cannot be represented
+   * @param reason why the mappings could not be determined
    * @return the exception to throw
    */
   @Nonnull
-  private static UnprocessableEntityException unrepresentable(
+  private static UnprocessableEntityException undeterminable(
       @Nonnull final String expression,
       @Nonnull final ViewArtifactReference reference,
       @Nonnull final String url,
       @Nonnull final String reason) {
     return SqlOperationError.unprocessable(
         expression,
-        "The "
+        "The mappings of the "
             + subjectOf(expression)
             + " for label '"
             + reference.getLabel()
             + "' (canonical URL '"
             + url
-            + "') cannot be represented as a relation: "
+            + "') could not be determined: "
             + reason);
   }
 
