@@ -22,6 +22,7 @@ import au.csiro.pathling.config.TerminologyConfiguration;
 import au.csiro.pathling.ecl.EclParseException;
 import au.csiro.pathling.ecl.UnsupportedEclConstructError;
 import au.csiro.pathling.terminology.TerminologyService;
+import au.csiro.pathling.terminology.conceptmap.ConceptMapContent;
 import au.csiro.pathling.terminology.expand.ExpansionLimitExceededException;
 import au.csiro.pathling.terminology.expand.ValueSetExpansion;
 import au.csiro.pathling.terminology.expand.ValueSetExpansionException;
@@ -117,6 +118,7 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
 
   private volatile boolean initialised;
   private TerminologyStoreReader reader;
+  private VersionResolver versionResolver;
   private ValueSetResolver valueSetResolver;
   private ExpansionCache expansionCache;
   private ConceptMapIndex conceptMapIndex;
@@ -433,6 +435,15 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
         indexes,
         members,
         maxMembers);
+  }
+
+  @Nonnull
+  @Override
+  public Optional<ConceptMapContent> readConceptMap(
+      @Nonnull final String url, @Nullable final String version, final int maxMappings) {
+    ensureInitialised();
+    return ConceptMapStore.resolve(reader, url, version, versionResolver)
+        .map(conceptMap -> ConceptMapContent.fromResource(conceptMap, maxMappings));
   }
 
   /**
@@ -976,6 +987,7 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
   public synchronized void close() {
     indexesCache.clear();
     reader = null;
+    versionResolver = null;
     valueSetResolver = null;
     expansionCache = null;
     conceptMapIndex = null;
@@ -1004,7 +1016,7 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
           Objects.requireNonNull(local.getStoragePath(), "A terminology storage path is required");
       log.debug("Opening local terminology store: {}", storagePath);
       reader = TerminologyStoreReader.open(storagePath, hadoopConfiguration);
-      final VersionResolver versionResolver = new VersionResolver(local.getDefaultSnomedEdition());
+      versionResolver = new VersionResolver(local.getDefaultSnomedEdition());
       valueSetResolver =
           new ValueSetResolver(
               CodeSystemEntry.loadCatalogue(reader),
