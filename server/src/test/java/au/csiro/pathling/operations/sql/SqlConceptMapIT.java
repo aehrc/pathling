@@ -116,6 +116,10 @@ import org.springframework.test.web.reactive.server.EntityExchangeResult;
  * filter narrows the FHIR side of a join and never the map, and a translation combines with a value
  * set semi-join.
  *
+ * <p>Follows User Story 4 scenario 6: a SNOMED CT implicit concept map URL that the terminology
+ * server's ConceptMap search does not return is a {@code 404} stating that such maps are resolved
+ * only in local terminology mode, and no value set expansion is attempted for it.
+ *
  * <p>Backed by {@link SqlConceptMapTestConfiguration} for the stored ViewDefinition and SQLView,
  * the Condition data and the Patients. The terminology server's HTTP response cache is disabled so
  * that every request reaches WireMock and can be verified.
@@ -185,6 +189,9 @@ class SqlConceptMapIT extends AbstractAsyncExportIT {
 
   /** The canonical URL of a concept map that nothing holds. */
   static final String MISSING_URL = "http://example.org/ConceptMap/does-not-exist";
+
+  /** A SNOMED CT implicit concept map URL, over the REPLACED BY association reference set. */
+  static final String IMPLICIT_CONCEPT_MAP_URL = SNOMED + "?fhir_cm=900000000000526001";
 
   /**
    * The {@code patient_id}/{@code target_code} rows of the worked example's translation of the four
@@ -621,6 +628,30 @@ class SqlConceptMapIT extends AbstractAsyncExportIT {
     postExpectStatus(parametersJson(selectAll("inactive_codes", VCL_URL)), 422);
 
     assertThat(conceptMapRequests()).isEmpty();
+  }
+
+  // -------------------------------------------------------------------------
+  // US4 scenario 6: a SNOMED CT implicit concept map URL in SERVER mode.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void implicitSnomedConceptMapNotReturnedByTheSearchIsA404NamingLocalModeWithNoExpansion() {
+    stubSearch(IMPLICIT_CONCEPT_MAP_URL, null, searchset());
+
+    final String body =
+        postExpectStatus(parametersJson(selectAll("replaced_by", IMPLICIT_CONCEPT_MAP_URL)), 404);
+
+    assertThat(body)
+        .contains(
+            "Failed to resolve the dependency for label 'replaced_by' with reference '"
+                + IMPLICIT_CONCEPT_MAP_URL
+                + "': no ViewDefinition, SQLView, external table, concept map or value set matches"
+                + " that canonical URL; SNOMED CT implicit concept maps are resolved only in local"
+                + " terminology mode");
+    assertThat(wireMockServer.findAll(getRequestedFor(urlPathEqualTo(EXPAND_PATH))))
+        .as("No value set expansion of a fhir_cm URL")
+        .isEmpty();
+    assertThat(searchRequests()).as("One ConceptMap search").hasSize(1);
   }
 
   // -------------------------------------------------------------------------
