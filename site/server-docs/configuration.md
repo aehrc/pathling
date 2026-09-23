@@ -210,6 +210,14 @@ These settings govern the resolution of a query's dependency graph, for both
   is trusted for this even though abstract entries, which contribute no member,
   are counted in it. Where no `total` is reported, no page beyond the one that
   reveals the excess is fetched.
+- `pathling.sqlQuery.conceptMapMaxMappings` - (default: `100000`) The maximum
+  number of rows a single [concept map](./operations/sql-run#concept-maps)
+  referenced as a SQLQuery or SQLView dependency may have, counted after
+  duplicate mappings are removed. Must be at least `1`. A concept map with
+  exactly this many rows is accepted; one with more is rejected with a `422`
+  naming the label, the canonical URL and the maximum, before any SQL runs. The
+  limit applies equally to a map from the terminology layer and to one
+  supplied as a `context` ConceptMap.
 
 `N` is a zero-based index. The list is validated at startup: every entry must
 have a non-blank `url` that contains no `|` and is unique among the configured
@@ -234,6 +242,79 @@ result cache, since each is resolved once per request or job in any case. In
 not supplied inline as a `context` ValueSet with an `expansion` is a `404`,
 since the canonical cannot be resolved, and a `context` ValueSet carrying only a
 `compose` is a `422`, since nothing can expand it.
+
+A dependency that no `context` entry, external table, stored ViewDefinition or
+stored SQLView matches is resolved through the terminology layer, first as a
+value set and then, only where no value set is found, as a concept map. Two
+kinds of URL skip one of these lookups, because their grammar already says
+what they are: an implicit value set URL - a SNOMED CT base
+(`http://snomed.info/sct`, or an edition or version URI) with a `fhir_vs`
+query, or a `http://fhir.org/VCL?...` URL - is never looked up as a concept
+map, and a SNOMED CT base with a `fhir_cm` query is never looked up as a value
+set. A URL held as both a value set and a concept map resolves as the value
+set, and the collision is not detected, since a canonical URL should be
+globally unique.
+
+Each lookup either finds the artefact, finds that there is none, or cannot
+tell. A lookup that cannot tell because the terminology server failed does not
+end resolution: its failure is kept and the next lookup runs. If the concept
+map lookup then finds a map, the kept failure is discarded; if nothing is
+found, the request is a `422` carrying one issue per kept failure, in lookup
+order, each naming the operation that failed and the server's reason. A
+terminology server that cannot be reached during the value set lookup ends
+resolution at once with a `422`, since the concept map lookup would fail the
+same way. Where every lookup finds nothing, the request is a `404`.
+
+In `SERVER` mode the value set lookup is the `ValueSet/$expand` described
+above: a `404` means that there is no value set at the URL, and any other
+failure status on the first page means that the lookup cannot tell. A concept
+map dependency therefore costs one `$expand` of its URL before its concept map
+lookup, and a value set that expands costs no ConceptMap request. The concept
+map lookup is a search of the terminology server's ConceptMap resources:
+`GET [serverUrl]/ConceptMap?url=[url]&_summary=true`, adding `&version=[pin]`
+where the reference is pinned and following `next` links, and then one read,
+`GET [serverUrl]/ConceptMap/[id]`, of the map chosen. Where several versions
+match an unpinned reference, the latest is chosen from the summaries, so the
+content of the versions not used is never retrieved. An empty search, any
+`4xx` status or `501` means that there is no concept map at the URL; any other
+`5xx` status, or a server that cannot be reached, means that the lookup cannot
+tell. Concept maps are not held in the terminology result cache, since each is
+resolved once per request or job in any case. A SNOMED CT `fhir_cm` URL is not
+expanded but is searched for like any other concept map. Pathling synthesises
+SNOMED CT implicit concept maps only from the local store, so a `fhir_cm` URL
+that the search does not return is a `404` stating that such maps are resolved
+only in local terminology mode.
+
+In `LOCAL` mode concept maps come from the local terminology store at
+`pathling.terminology.local.storagePath`, from two sources:
+
+- the ConceptMap resources imported into the store (see
+  [local terminology mode](/docs/libraries/terminology/local)), matched by
+  canonical URL and version under the same pinned and unpinned rules as in
+  `SERVER` mode; and
+- the SNOMED CT implicit concept maps that HL7 Terminology (THO) defines over
+  four association reference sets, named by
+  `http://snomed.info/sct?fhir_cm=[refsetId]`: SAME AS (`900000000000527005`)
+  and REPLACED BY (`900000000000526001`), whose rows have the `relationship`
+  `equivalent`, and POSSIBLY EQUIVALENT TO (`900000000000523009`) and
+  ALTERNATIVE (`900000000000530003`), whose rows have `related-to`.
+
+An implicit map holds one row for every active association row of its
+reference set, so a concept with three POSSIBLY EQUIVALENT TO targets has three
+rows. Both systems are `http://snomed.info/sct`, both versions are the version
+URI of the SNOMED CT release the rows come from, and the displays are the
+store's; a target the store has no display for has a null `target_display`.
+An edition or version URI in place of the bare `http://snomed.info/sct` base
+selects that release, and the bare base selects the store's default. A
+`fhir_cm` URL naming any other reference set, or selecting a release the store
+does not hold, is a `404`. A `|version` pin on a `fhir_cm` URL is a `422`, since
+such a URL carries its version in its base; a pin on any other URL, whether or
+not it carries a query, is looked up with its pin.
+
+With `pathling.terminology.enabled` set to `false`, a concept map dependency
+that is not supplied inline as a `context` ConceptMap is a `404`, since the
+canonical cannot be resolved; a `context` ConceptMap works as usual, since it
+is converted without the terminology layer.
 
 ### Encoding
 

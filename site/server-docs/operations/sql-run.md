@@ -40,21 +40,21 @@ server; supplying a resource-valued parameter over `GET` is rejected with a
 
 ## Parameters
 
-| Name               | Cardinality | Type       | Description                                                                                                                             |
-| ------------------ | ----------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `subjectCanonical` | 0..1        | canonical  | The subject's canonical URL, honouring a `\|version` pin. Matched against both `ViewDefinition.url` and `Library.url`.                  |
-| `subjectReference` | 0..1        | Reference  | A relative reference naming its type: `ViewDefinition/[id]` or `Library/[id]`.                                                          |
-| `subjectResource`  | 0..1        | Resource   | An inline ViewDefinition, SQLQuery or SQLView.                                                                                          |
-| `parameters`       | 0..1        | Parameters | Runtime bindings for a SQL subject. Every `Library.parameter` declaration must be bound by an entry matching it in name and type.       |
-| `context`          | 0..\*       | Resource   | Inline supporting artefacts (ViewDefinition, SQLView or ValueSet) for dependencies the server cannot resolve. Matched by canonical URL. |
-| `resource`         | 0..\*       | string     | FHIR resources to project instead of server data, for a ViewDefinition subject. Each is a serialised resource or a Bundle to unwrap.    |
-| `_format`          | 0..1        | code       | Output format; see below. Takes precedence over the `Accept` header.                                                                    |
-| `header`           | 0..1        | boolean    | Include the header row in CSV output. Defaults to `true`.                                                                               |
-| `_limit`           | 0..1        | integer    | Maximum rows to return. When omitted, the whole result is returned.                                                                     |
-| `patient`          | 0..\*       | Reference  | Restricts the data the subject reads to these patients' compartments.                                                                   |
-| `group`            | 0..\*       | Reference  | Restricts the data the subject reads to these groups' member patients.                                                                  |
-| `_since`           | 0..1        | instant    | Restricts to resources updated at or after this instant.                                                                                |
-| `source`           | 0..1        | string     | **Not supported**: an external data source. Supplying it is rejected with a `400`.                                                      |
+| Name               | Cardinality | Type       | Description                                                                                                                                         |
+| ------------------ | ----------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `subjectCanonical` | 0..1        | canonical  | The subject's canonical URL, honouring a `\|version` pin. Matched against both `ViewDefinition.url` and `Library.url`.                              |
+| `subjectReference` | 0..1        | Reference  | A relative reference naming its type: `ViewDefinition/[id]` or `Library/[id]`.                                                                      |
+| `subjectResource`  | 0..1        | Resource   | An inline ViewDefinition, SQLQuery or SQLView.                                                                                                      |
+| `parameters`       | 0..1        | Parameters | Runtime bindings for a SQL subject. Every `Library.parameter` declaration must be bound by an entry matching it in name and type.                   |
+| `context`          | 0..\*       | Resource   | Inline supporting artefacts (ViewDefinition, SQLView, ValueSet or ConceptMap) for dependencies the server cannot resolve. Matched by canonical URL. |
+| `resource`         | 0..\*       | string     | FHIR resources to project instead of server data, for a ViewDefinition subject. Each is a serialised resource or a Bundle to unwrap.                |
+| `_format`          | 0..1        | code       | Output format; see below. Takes precedence over the `Accept` header.                                                                                |
+| `header`           | 0..1        | boolean    | Include the header row in CSV output. Defaults to `true`.                                                                                           |
+| `_limit`           | 0..1        | integer    | Maximum rows to return. When omitted, the whole result is returned.                                                                                 |
+| `patient`          | 0..\*       | Reference  | Restricts the data the subject reads to these patients' compartments.                                                                               |
+| `group`            | 0..\*       | Reference  | Restricts the data the subject reads to these groups' member patients.                                                                              |
+| `_since`           | 0..1        | instant    | Restricts to resources updated at or after this instant.                                                                                            |
+| `source`           | 0..1        | string     | **Not supported**: an external data source. Supplying it is rejected with a `400`.                                                                  |
 
 Exactly one of `subjectCanonical`, `subjectReference` and `subjectResource`
 must be supplied; naming none, or more than one, is a `400`.
@@ -104,8 +104,8 @@ it outranks server resolution generally. `DESCRIBE <label>` lists the table's
 columns just as it does for any other dependency.
 
 The `patient`, `group` and `_since` filters restrict the FHIR data the subject
-reads; they do not filter an external table or a value set, whose rows are
-constrained only by the SQL that joins them.
+reads; they do not filter an external table, a value set or a concept map,
+whose rows are constrained only by the SQL that joins them.
 
 ### Value sets
 
@@ -123,13 +123,15 @@ form as a view dependency: an absolute canonical URL, optionally pinned with
 }
 ```
 
-A canonical URL is treated as a value set only as a last resort: a `context`
+A canonical URL is treated as a value set only late in resolution: a `context`
 entry, a configured external table, a stored ViewDefinition and a stored SQLView
 are all tried first, in that order of precedence, and the terminology layer is
-asked only when none of them matches. A URL that the terminology layer cannot
-resolve either is a `404` naming the label and the reference. A stored or
-configured artefact that happens to share a value set's URL therefore wins
-silently; that is an operator-side collision, not a request fault.
+asked only when none of them matches. Where the terminology layer holds no
+value set at the URL, it is asked for a [concept map](#concept-maps) at the same
+URL. A URL that it cannot resolve as either is a `404` naming the label and the
+reference. A stored or configured artefact that happens to share a value set's
+URL therefore wins silently; that is an operator-side collision, not a request
+fault.
 
 Membership comes from the terminology layer the server is configured with -
 `$expand` on a FHIR terminology server, or the local terminology store - and is
@@ -209,6 +211,187 @@ expansion identifier and timestamp where the source records them, and the code
 system versions, so a result can be traced to the membership it was computed
 against.
 
+### Concept maps
+
+A `relatedArtifact` may also name a concept map, so that the SQL can translate
+a code into another code system with an ordinary join rather than writing the
+mappings into the SQL by hand or routing the question through a ViewDefinition
+that calls `translate()`. The declaration takes the same form as a value set
+dependency: an absolute canonical URL, optionally pinned with `|version`, and a
+`label`:
+
+```json
+{
+    "type": "depends-on",
+    "resource": "http://example.org/ConceptMap/sct-to-icd10|2026",
+    "label": "sct_to_icd10"
+}
+```
+
+A canonical URL is looked up as a concept map after every other source has
+been tried: a `context` entry, a configured external table, a stored
+ViewDefinition, a stored SQLView and then the terminology layer as a value set.
+Only where none of them matches is the terminology layer asked for a concept
+map. How each terminology mode supplies concept maps, and which URLs skip one
+of the two terminology lookups, is described under
+[SQL query configuration](../configuration#sql-query). A pinned reference
+resolves to exactly that version of the map. An unpinned reference to a map
+held in several versions resolves to the latest, compared as the local
+terminology store compares code system versions (eight-digit dates as dates,
+SemVer versions by SemVer precedence, anything else segment by segment); where
+no latest can be determined, as for versions `a` and `b`, the request is a
+`404` stating that the version to use cannot be determined.
+
+The mappings are exposed under the label as a relation with exactly these
+columns:
+
+| Column           | Type     | Nullable | Content                                                                                   |
+| ---------------- | -------- | -------- | ----------------------------------------------------------------------------------------- |
+| `source_system`  | `string` | no       | The code system canonical URL of the source code.                                         |
+| `source_version` | `string` | yes      | The code system version the mapping was authored against, where the map records one.      |
+| `source_code`    | `string` | no       | The source code.                                                                          |
+| `source_display` | `string` | yes      | The display text for the source code, where the map records one.                          |
+| `target_system`  | `string` | yes      | The code system canonical URL the mapping translates into, where the map names one.       |
+| `target_version` | `string` | yes      | The version of the target code system, where the map records one.                         |
+| `target_code`    | `string` | yes      | The target code; null where the map states that the source code has no mapping.           |
+| `target_display` | `string` | yes      | The display text for the target code, where the map records one.                          |
+| `relationship`   | `string` | yes      | How the source relates to the target; null where the map states that there is no mapping. |
+
+Each `group.element.target` whose `equivalence` is not `unmatched` contributes
+one row, populated from the group's `source` and `target`, the element's `code`
+and `display` and the target's `code` and `display`. An element with at least
+one `unmatched` target also contributes one _no-mapping_ row, which carries the
+group's target system and version but a null `target_code`, `target_display`
+and `relationship`; a code carried by an `unmatched` target is not exposed.
+`source_version` and `target_version` come from `group.sourceVersion` and
+`group.targetVersion`; where the version element is absent and the URI in
+`group.source` or `group.target` carries a `|version` suffix, the suffix is
+split off into the version column, so that both columns compare directly with a
+`Coding.system` and `Coding.version` projected from FHIR data. A group without a
+`target` is accepted and its rows have a null `target_system` and
+`target_version`. An element with no targets contributes no rows, and a map
+with no mappings yields a relation with no rows rather than an error.
+
+Rows are unique on every column except the two displays, two nulls counting as
+equal; where a map lists an element twice in a group, or gives an element two
+targets with the same code and equivalence, the relation holds one row carrying
+the displays of the first occurrence. `DESCRIBE <label>` lists the nine columns
+as it does for any other dependency.
+
+Pathling holds R4 resources, whose targets carry an `equivalence` rather than
+the `relationship` the SQL on FHIR specification defines, so `relationship` is
+converted as the official R4 to R5 conversion of ConceptMap does:
+
+| R4 `equivalence`          | `relationship`                   |
+| ------------------------- | -------------------------------- |
+| `equal`, `equivalent`     | `equivalent`                     |
+| `wider`, `subsumes`       | `source-is-narrower-than-target` |
+| `narrower`, `specializes` | `source-is-broader-than-target`  |
+| `relatedto`, `inexact`    | `related-to`                     |
+| `disjoint`                | `not-related-to`                 |
+| `unmatched`               | a no-mapping row                 |
+
+Translation needs the target columns, so it is a join rather than a semi-join,
+and a `LEFT JOIN` keeps the FHIR rows the map does not translate:
+
+```sql
+SELECT conditions.patient_id,
+       conditions.code,
+       sct_to_icd10.target_code,
+       sct_to_icd10.relationship
+FROM conditions
+LEFT JOIN sct_to_icd10
+  ON sct_to_icd10.source_system = conditions.system
+ AND sct_to_icd10.source_code = conditions.code
+ AND (sct_to_icd10.relationship IS NULL
+      OR sct_to_icd10.relationship <> 'not-related-to')
+```
+
+A `relationship` of `not-related-to` asserts that the target is _not_ a
+translation of the source, yet the row carries a target code, so a query that
+translates should exclude it. The exclusion belongs in the `ON` clause, since in
+`WHERE` it would also drop the rows the `LEFT JOIN` was written to keep, and it
+must admit null, since a no-mapping row has no `relationship`.
+
+After the join, each FHIR row falls into one of three cases, told apart by which
+columns are null:
+
+- a translated row has a `target_code`;
+- a row the map states has no mapping has `source_code` populated and
+  `target_code` null; and
+- a row the map is silent about, because its code or its whole code system is
+  absent from the map, has every column of the relation null.
+
+A FHIR row can match several mappings, where the map gives its code several
+targets or targets in several code systems, and is then returned once per
+mapping; a `target_system` predicate selects one target code system, and
+`relationship = 'equivalent'` keeps only exact translations. Because the relation
+has two sides, the same map also translates in the reverse direction: a join on
+`target_system` and `target_code` that selects `source_code` needs no second
+artefact, although several source codes commonly map to one target, so it
+multiplies rows more readily:
+
+```sql
+SELECT conditions.patient_id, sct_to_icd10.source_code
+FROM conditions
+JOIN sct_to_icd10
+  ON sct_to_icd10.target_system = conditions.system
+ AND sct_to_icd10.target_code = conditions.code
+```
+
+A translated code can be tested against a value set by semi-joining the target
+columns to a value set relation:
+
+```sql
+SELECT conditions.patient_id, sct_to_icd10.target_code
+FROM conditions
+JOIN sct_to_icd10
+  ON sct_to_icd10.source_system = conditions.system
+ AND sct_to_icd10.source_code = conditions.code
+ AND sct_to_icd10.relationship = 'equivalent'
+WHERE EXISTS (
+  SELECT 1 FROM cvd_codes
+  WHERE cvd_codes.system = sct_to_icd10.target_system
+    AND cvd_codes.code = sct_to_icd10.target_code
+)
+```
+
+`group.unmapped` is not applied: the relation carries the map's explicit
+mappings only, unlike the `$translate` operation, which applies the default. A
+query that wants unmapped codes passed through writes it itself, as
+`COALESCE(sct_to_icd10.target_code, conditions.code)`.
+
+A map whose content no flat row can represent is rejected with a `422` before
+any SQL runs, rather than exposed incompletely: a group without a `source`, a
+target carrying `dependsOn` or `product`, an element without a `code`, a target
+without a `code` whose equivalence is not `unmatched`, and a target without an
+`equivalence`. The issue names the label, the canonical URL, the fault and,
+where there is one, the source code of the mapping at fault.
+
+A `context` entry may be a ConceptMap, matched to a dependency by `url` and,
+where the dependency is pinned, by an equal `version`, under the same rules as
+any other supplied artefact. It must carry a `url`, and it outranks anything the
+server could resolve for that URL. A supplied ConceptMap is converted to rows
+as-is, without consulting the terminology layer, so it works even with
+terminology disabled, and it is subject to the same rules and rejections as a
+map from the terminology layer; a fault in it names `context` in the issue's
+`expression`. Two `context` entries sharing a `url` are a `400`, whatever their
+kinds.
+
+Each concept map canonical, as written, is resolved once per request, before
+any SQL executes, and every reference to it - under several labels, or through
+several SQLViews - sees the same mappings; a pinned and an unpinned reference to
+the same URL are two canonicals and two relations. The mappings are current at
+the time of the request. A map with more rows than
+[`pathling.sqlQuery.conceptMapMaxMappings`](../configuration#sql-query) is a
+`422` naming the label, the URL and the maximum. Every resolution is logged at
+`INFO` with the canonical URL, the version resolved (or `none`), the source -
+`context`, the terminology server's URL or `local store` - and the row count:
+
+```
+Resolved concept map 'http://example.org/ConceptMap/sct-to-icd10' (version 2026) from https://tx.example.org/fhir: 3 mappings
+```
+
 ## Examples
 
 Run a stored view over `GET`, as CSV:
@@ -282,17 +465,24 @@ GET [base]/$sql-run?subjectReference=ViewDefinition/demographics&patient=Patient
 
 ## Status codes
 
-| Status                      | Condition                                                                                                                                                                                                                                                                                                |
-| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `200 OK`                    | Successful execution, in the negotiated format.                                                                                                                                                                                                                                                          |
-| `400 Bad Request`           | No subject or more than one; an inapplicable conditional parameter; an unsupported `_format`; `source`; an unresolvable filter value.                                                                                                                                                                    |
-| `404 Not Found`             | The subject's canonical or reference resolves to nothing, or a dependency matches no ViewDefinition, SQLView, external table or value set.                                                                                                                                                               |
-| `422 Unprocessable Entity`  | The subject is of no admitted kind, or is conformant but cannot be processed (for example a column type `_format=fhir` cannot express).                                                                                                                                                                  |
-| `422 Unprocessable Entity`  | A value set resolves but its membership cannot be determined: the terminology server returns an error or cannot be reached, the local store cannot evaluate the compose, or a supplied ValueSet has neither an `expansion` nor a `compose`. The issue names the label, the canonical URL and the reason. |
-| `422 Unprocessable Entity`  | A value set's membership exceeds `pathling.sqlQuery.valueSetMaxMembers`; the issue names the label, the canonical URL and the maximum.                                                                                                                                                                   |
-| `422 Unprocessable Entity`  | A supplied ValueSet's `expansion` is incomplete (carries an `offset`, or a `total` greater than its entry count) or has an entry that does not identify a member; the issue names `context`.                                                                                                             |
-| `500 Internal Server Error` | An unexpected execution or infrastructure fault.                                                                                                                                                                                                                                                         |
-| `500 Internal Server Error` | A configured external table cannot be read; the issue names the table's `url` and never its storage path.                                                                                                                                                                                                |
+| Status                      | Condition                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `200 OK`                    | Successful execution, in the negotiated format.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `400 Bad Request`           | No subject or more than one; an inapplicable conditional parameter; an unsupported `_format`; `source`; an unresolvable filter value; a `context` entry, of any kind, without a `url`, sharing its `url` with another entry, or matching no dependency.                                                                                                                                                                                                                                                                                                        |
+| `404 Not Found`             | The subject's canonical or reference resolves to nothing, or a dependency matches no ViewDefinition, SQLView, external table, concept map or value set. The issue names the label and the reference.                                                                                                                                                                                                                                                                                                                                                           |
+| `404 Not Found`             | In `SERVER` terminology mode, a SNOMED CT implicit concept map URL (`http://snomed.info/sct?fhir_cm=...`) that the terminology server's ConceptMap search does not return; the issue adds that such maps are resolved only in local terminology mode.                                                                                                                                                                                                                                                                                                          |
+| `404 Not Found`             | An unpinned concept map held in several versions with no determinable latest, or a pinned one held twice at that version; the issue states that the version to use cannot be determined, and why.                                                                                                                                                                                                                                                                                                                                                              |
+| `422 Unprocessable Entity`  | The subject is of no admitted kind, or is conformant but cannot be processed (for example a column type `_format=fhir` cannot express).                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `422 Unprocessable Entity`  | A value set is found but its membership cannot be determined: a later page of its expansion fails, the terminology layer cannot expand a supplied ValueSet's `compose`, the local store cannot evaluate the compose, or a supplied ValueSet has neither an `expansion` nor a `compose`. The issue names the label, the canonical URL and the reason.                                                                                                                                                                                                           |
+| `422 Unprocessable Entity`  | A value set's membership exceeds `pathling.sqlQuery.valueSetMaxMembers`; the issue names the label, the canonical URL and the maximum.                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `422 Unprocessable Entity`  | A supplied ValueSet's `expansion` is incomplete (carries an `offset`, or a `total` greater than its entry count) or has an entry that does not identify a member; the issue names `context`.                                                                                                                                                                                                                                                                                                                                                                   |
+| `422 Unprocessable Entity`  | In `SERVER` terminology mode, nothing resolves a dependency and at least one terminology lookup had an unknown outcome: `$expand` of the URL was answered with a failure status other than `404` before any part of an expansion was returned, or the ConceptMap search was answered with a `5xx` other than `501` or could not reach the server. There is one issue per failed lookup, value set first, each naming the label, the reference, the operation that failed and the server's reason, without calling the dependency a value set or a concept map. |
+| `422 Unprocessable Entity`  | In `SERVER` terminology mode, the terminology server cannot be reached while a dependency is looked up as a value set; the issue names the label, the reference and the configured server URL, and no ConceptMap search is attempted.                                                                                                                                                                                                                                                                                                                          |
+| `422 Unprocessable Entity`  | A concept map is found but carries content the relation cannot represent (see [Concept maps](#concept-maps)), or, in `SERVER` terminology mode, cannot be read once chosen; the issue names the label, the canonical URL and the reason.                                                                                                                                                                                                                                                                                                                       |
+| `422 Unprocessable Entity`  | A concept map has more rows than `pathling.sqlQuery.conceptMapMaxMappings`; the issue names the label, the canonical URL and the maximum.                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `422 Unprocessable Entity`  | In `LOCAL` terminology mode, a SNOMED CT implicit concept map URL carrying a `\|version` pin, which cannot apply since such a URL carries its version in its base.                                                                                                                                                                                                                                                                                                                                                                                             |
+| `500 Internal Server Error` | An unexpected execution or infrastructure fault.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `500 Internal Server Error` | A configured external table cannot be read; the issue names the table's `url` and never its storage path.                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 
 Every 4xx and 5xx response carries an
 [OperationOutcome](https://hl7.org/fhir/R4/operationoutcome.html) whose issues
@@ -333,7 +523,7 @@ The operation is enabled by `pathling.operations.sqlRunEnabled` (default
 `true`) and guarded by the `pathling:sql-run` authority. Running a subject also
 requires `read` authority for the resource type it projects, and reading a
 stored subject requires `read` authority for `ViewDefinition` or `Library`. A
-value set dependency requires only the operation authority. See
+value set or concept map dependency requires only the operation authority. See
 [authorization](../authorization.md).
 
 ## Python client
