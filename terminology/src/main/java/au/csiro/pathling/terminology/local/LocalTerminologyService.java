@@ -105,6 +105,59 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
 
   private static final String SNOMED_URI = "http://snomed.info/sct";
 
+  /**
+   * The association reference sets that can be used as SNOMED CT implicit concept maps, and the
+   * relationship each one asserts between a member and its target.
+   *
+   * @see <a href="https://terminology.hl7.org/en/SNOMEDCT.html#snomed-ct-implicit-concept-maps">
+   *     SNOMED CT implicit concept maps (THO)</a>
+   */
+  private static final Map<String, ConceptMapEquivalence> IMPLICIT_CONCEPT_MAP_RELATIONSHIPS =
+      Map.of(
+          // POSSIBLY EQUIVALENT TO.
+          "900000000000523009", ConceptMapEquivalence.INEXACT,
+          // REPLACED BY.
+          "900000000000526001", ConceptMapEquivalence.EQUIVALENT,
+          // SAME AS.
+          "900000000000527005", ConceptMapEquivalence.EQUAL,
+          // ALTERNATIVE.
+          "900000000000530003", ConceptMapEquivalence.INEXACT);
+
+  /**
+   * The reference set every simple map reference set descends from. THO defines each of them as an
+   * implicit concept map too.
+   */
+  private static final String SIMPLE_MAP_TYPE = "900000000000496009";
+
+  /**
+   * The simple maps Ontoserver supports as implicit concept maps, and the code system of each one's
+   * targets. RF2 does not record the system a simple map maps into, so this table is what supplies
+   * it, and following Ontoserver keeps local translations identical to remote ones. The target of
+   * any other simple map has no system. These maps are accepted wherever they sit in the hierarchy,
+   * because current releases have moved CTV3 out from under {@link #SIMPLE_MAP_TYPE}, and
+   * Ontoserver still translates it.
+   *
+   * @see <a href="https://ontoserver.csiro.au/docs/6.23.0/api-fhir-conceptmap.html">Ontoserver
+   *     implicit concept maps</a>
+   */
+  private static final Map<String, String> SIMPLE_MAP_TARGET_SYSTEMS =
+      Map.of(
+          // ICD-O simple map.
+          "446608001", "http://hl7.org/fhir/sid/icd-o-3",
+          // CTV3 simple map.
+          "900000000000497000", "http://read.info/ctv3",
+          // ARTG identifier simple map, in SNOMED CT-AU.
+          "11000168105", "https://www.tga.gov.au/australian-register-therapeutic-goods");
+
+  /**
+   * The simple maps whose translations Ontoserver reports with an equivalence other than inexact,
+   * which is the equivalence of every other simple map.
+   */
+  private static final Map<String, ConceptMapEquivalence> SIMPLE_MAP_EQUIVALENCES =
+      Map.of(
+          // CTV3 simple map.
+          "900000000000497000", ConceptMapEquivalence.EQUIVALENT);
+
   private volatile boolean initialised;
   private TerminologyStoreReader reader;
   private ValueSetResolver valueSetResolver;
@@ -190,7 +243,7 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
     final String refsetId = snomedImplicitConceptMap(conceptMapUrl);
     final List<Translation> translations =
         refsetId != null
-            ? translateSnomedAssociation(conceptMapUrl, coding, refsetId, reverse)
+            ? translateSnomedImplicitConceptMap(conceptMapUrl, coding, refsetId, reverse)
             : conceptMapIndex.translate(
                 conceptMapUrl, coding.getSystem(), coding.getCode(), reverse);
     if (target == null || target.isEmpty()) {
@@ -204,8 +257,10 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
   }
 
   /**
-   * Returns the reference set identifier of a SNOMED implicit concept map URL ({@code
-   * ?fhir_cm=[refsetId]}), or null if the URL is not a SNOMED implicit concept map.
+   * Returns the reference set identifier of a URL in the SNOMED implicit concept map form ({@code
+   * ?fhir_cm=[refsetId]}), or null if the URL is not in that form. Whether the reference set is one
+   * that can be used as an implicit concept map is decided by {@link
+   * #translateSnomedImplicitConceptMap}.
    */
   @Nullable
   private static String snomedImplicitConceptMap(@Nonnull final String conceptMapUrl) {
@@ -218,22 +273,34 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
   }
 
   /**
-   * Translates through a SNOMED association reference set, forward or reversed.
+   * Translates through a SNOMED CT implicit concept map, forward or reversed.
    *
-   * <p>The reversed direction returns its matches ordered by concept code. The association map is
-   * iterated in the store's physical row order, which is an implementation detail that follows from
-   * the join strategy the importer's optimiser happened to choose, so emitting in that order would
-   * let how the store was written show through in a result a caller can see. This is the same rule
-   * as {@link #byConceptCode}. The forward direction returns at most one match, because a concept
-   * has at most one association target, so there is nothing there to order.
+   * <p>THO defines two kinds of implicit concept map. An association reference set in {@link
+   * #IMPLICIT_CONCEPT_MAP_RELATIONSHIPS} maps concepts to concepts, and every translation carries
+   * the relationship defined for its reference set. Each of those relationships is its own inverse,
+   * so the reversed direction carries it unchanged. A simple map reference set, one that descends
+   * from {@link #SIMPLE_MAP_TYPE} in the resolved version or is named in {@link
+   * #SIMPLE_MAP_TARGET_SYSTEMS}, maps concepts to codes in another system. Its translations are
+   * inexact unless {@link #SIMPLE_MAP_EQUIVALENCES} says otherwise, in either direction. Its
+   * targets are in the system named in {@link #SIMPLE_MAP_TARGET_SYSTEMS}, and have no system where
+   * the map is not named there. Reversed, the coding must be in that system where one is known, and
+   * is matched on its code alone where none is. Any other reference set is unknown content and
+   * translates to nothing, even where it has targets.
+   *
+   * <p>Both directions return their matches ordered by code. The target map is iterated in the
+   * store's physical row order, which is an implementation detail that follows from the join
+   * strategy the importer's optimiser happened to choose, so emitting in that order would let how
+   * the store was written show through in a result a caller can see. This is the same rule as
+   * {@link #byConceptCode}.
    */
   @Nonnull
-  private List<Translation> translateSnomedAssociation(
+  private List<Translation> translateSnomedImplicitConceptMap(
       @Nonnull final String conceptMapUrl,
       @Nonnull final Coding coding,
       @Nonnull final String refsetId,
       final boolean reverse) {
-    if (!SNOMED_URI.equals(coding.getSystem())) {
+    // The source of either kind of map is always a SNOMED CT concept.
+    if (!reverse && !SNOMED_URI.equals(coding.getSystem())) {
       return Collections.emptyList();
     }
     final int base = conceptMapUrl.indexOf('?');
@@ -245,30 +312,62 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
       return Collections.emptyList();
     }
     final CodeSystemIndexes indexes = indexesFor(systemVersionId.get());
-    final Map<Integer, String> associations = indexes.refsets().associationTargets(refsetId);
     final ConceptDictionary dictionary = indexes.dictionary();
-    final List<Translation> translations = new ArrayList<>();
+
+    final ConceptMapEquivalence equivalence;
+    @Nullable final String targetSystem;
+    final ConceptMapEquivalence associationRelationship =
+        IMPLICIT_CONCEPT_MAP_RELATIONSHIPS.get(refsetId);
+    if (associationRelationship != null) {
+      equivalence = associationRelationship;
+      targetSystem = SNOMED_URI;
+    } else if (SIMPLE_MAP_TARGET_SYSTEMS.containsKey(refsetId) || isSimpleMap(indexes, refsetId)) {
+      equivalence = SIMPLE_MAP_EQUIVALENCES.getOrDefault(refsetId, ConceptMapEquivalence.INEXACT);
+      targetSystem = SIMPLE_MAP_TARGET_SYSTEMS.get(refsetId);
+    } else {
+      return Collections.emptyList();
+    }
+    // Reversed, the coding is a target, so it must be in the target system where one is known.
+    if (reverse && targetSystem != null && !targetSystem.equals(coding.getSystem())) {
+      return Collections.emptyList();
+    }
+
+    final Map<Integer, List<String>> targets = indexes.refsets().targets(refsetId);
+    final List<String> codes = new ArrayList<>();
     if (reverse) {
-      // Find the referenced concepts whose association target is the requested code.
-      for (final Map.Entry<Integer, String> entry : associations.entrySet()) {
-        if (coding.getCode().equals(entry.getValue())) {
-          translations.add(snomedTranslation(dictionary.code(entry.getKey())));
+      // Find the referenced concepts that have the requested code among their targets.
+      for (final Map.Entry<Integer, List<String>> entry : targets.entrySet()) {
+        if (entry.getValue().contains(coding.getCode())) {
+          codes.add(dictionary.code(entry.getKey()));
         }
       }
-      translations.sort(Comparator.comparing(translation -> translation.getConcept().getCode()));
     } else {
       final Integer dense = dictionary.denseId(coding.getCode());
-      if (dense != null && associations.containsKey(dense)) {
-        translations.add(snomedTranslation(associations.get(dense)));
+      if (dense != null) {
+        codes.addAll(targets.getOrDefault(dense, List.of()));
       }
     }
-    return translations;
+    Collections.sort(codes);
+    final String resultSystem = reverse ? SNOMED_URI : targetSystem;
+    return codes.stream()
+        .map(
+            code -> Translation.of(equivalence, new Coding().setSystem(resultSystem).setCode(code)))
+        .toList();
   }
 
-  @Nonnull
-  private static Translation snomedTranslation(@Nonnull final String code) {
-    return Translation.of(
-        ConceptMapEquivalence.EQUAL, new Coding().setSystem(SNOMED_URI).setCode(code));
+  /**
+   * Returns whether a reference set is a simple map reference set in a code system version: whether
+   * it descends from {@link #SIMPLE_MAP_TYPE}.
+   */
+  private static boolean isSimpleMap(
+      @Nonnull final CodeSystemIndexes indexes, @Nonnull final String refsetId) {
+    final ConceptDictionary dictionary = indexes.dictionary();
+    final Integer simpleMapType = dictionary.denseId(SIMPLE_MAP_TYPE);
+    final Integer refset = dictionary.denseId(refsetId);
+    return simpleMapType != null
+        && refset != null
+        && !simpleMapType.equals(refset)
+        && indexes.hierarchy().subsumes(simpleMapType, refset);
   }
 
   @Nonnull

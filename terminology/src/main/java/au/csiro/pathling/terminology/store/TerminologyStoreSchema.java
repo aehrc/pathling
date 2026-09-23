@@ -91,6 +91,21 @@ public final class TerminologyStoreSchema {
   /** The manifest column recording when the entry was imported. */
   public static final String COLUMN_IMPORTED_AT = "imported_at";
 
+  /** The manifest column recording the SHA-256 of the source file bytes. */
+  public static final String COLUMN_SOURCE_SHA256 = "source_sha256";
+
+  /** The manifest column recording the name of the package the entry was imported from. */
+  public static final String COLUMN_PACKAGE_NAME = "package_name";
+
+  /** The manifest column recording the version of the package the entry was imported from. */
+  public static final String COLUMN_PACKAGE_VERSION = "package_version";
+
+  /** The manifest column recording the registry verification outcome of the package. */
+  public static final String COLUMN_PACKAGE_VERIFICATION = "package_verification";
+
+  /** The manifest column recording the registry that vouched for the package bytes. */
+  public static final String COLUMN_PACKAGE_REGISTRY = "package_registry";
+
   /**
    * The stable identifier of a code system version, a hash of its URL and version. This is the
    * partition column of every content table so that versions coexist and replace atomically.
@@ -184,7 +199,10 @@ public final class TerminologyStoreSchema {
   /** The dense identifier of a reference set member's referenced concept. */
   public static final String COLUMN_REFERENCED_DENSE_ID = "referenced_dense_id";
 
-  /** The association target code of a reference set member (drives {@code ?fhir_cm}). */
+  /**
+   * The target of a reference set member: the target concept of an association, or the map target
+   * of a simple map (drives {@code ?fhir_cm}).
+   */
   public static final String COLUMN_TARGET_CODE = "target_code";
 
   /** The full R4 resource JSON of an imported ValueSet or ConceptMap. */
@@ -254,6 +272,11 @@ public final class TerminologyStoreSchema {
         .add(COLUMN_CANONICAL_URL, DataTypes.StringType, false)
         .add(COLUMN_VERSION, DataTypes.StringType, true)
         .add(COLUMN_SOURCE, DataTypes.StringType, true)
-        .add(COLUMN_IMPORTED_AT, DataTypes.TimestampType, true);
+        .add(COLUMN_IMPORTED_AT, DataTypes.TimestampType, true)
+        .add(COLUMN_SOURCE_SHA256, DataTypes.StringType, true)
+        .add(COLUMN_PACKAGE_NAME, DataTypes.StringType, true)
+        .add(COLUMN_PACKAGE_VERSION, DataTypes.StringType, true)
+        .add(COLUMN_PACKAGE_VERIFICATION, DataTypes.StringType, true)
+        .add(COLUMN_PACKAGE_REGISTRY, DataTypes.StringType, true);
   }
 }

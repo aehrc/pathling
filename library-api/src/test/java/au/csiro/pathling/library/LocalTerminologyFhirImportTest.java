@@ -23,14 +23,27 @@ import static au.csiro.pathling.sql.Terminology.translate;
 import static org.apache.spark.sql.functions.lit;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.config.LocalTerminologyConfiguration;
 import au.csiro.pathling.config.TerminologyConfiguration;
 import au.csiro.pathling.config.TerminologyMode;
+import au.csiro.pathling.library.terminology.FhirImportOptions;
 import au.csiro.pathling.terminology.local.LocalTerminologyServiceFactory;
+import au.csiro.pathling.terminology.store.ManifestEntry;
+import au.csiro.pathling.terminology.store.PackageVerification;
+import au.csiro.pathling.terminology.store.TerminologyStoreReader;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Stream;
+import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
+import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
+import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -119,5 +132,74 @@ class LocalTerminologyFhirImportTest {
         evaluate(translate(species("dog"), CONCEPT_MAP, false, null)).getList(0);
     assertEquals(1, matches.size());
     assertEquals(CATEGORY, matches.get(0).getString(matches.get(0).fieldIndex("system")));
+  }
+
+  @Test
+  void optionsOverloadPassesVerifyPackageFalse(@TempDir final Path dir) throws Exception {
+    final Path archive = buildPackage(dir);
+    final String packageStore = dir.resolve("package-store").toString();
+
+    PathlingContext.builder(spark)
+        .build()
+        .importFhirTerminology(
+            archive.toString(),
+            packageStore,
+            FhirImportOptions.builder().verifyPackage(false).build());
+
+    final List<ManifestEntry> manifest =
+        TerminologyStoreReader.open(packageStore, Map.of()).readManifest();
+    assertFalse(manifest.isEmpty());
+    for (final ManifestEntry entry : manifest) {
+      // The caller declined the check, so no registry was consulted and the store says so.
+      assertEquals(PackageVerification.SKIPPED, entry.getPackageVerification());
+      assertNull(entry.getPackageRegistry());
+    }
+  }
+
+  @Test
+  void nullOptionsAreAccepted(@TempDir final Path dir) {
+    final String directoryStore = dir.resolve("directory-store").toString();
+
+    PathlingContext.builder(spark)
+        .build()
+        .importFhirTerminology(fixturePath(), directoryStore, null);
+
+    final List<ManifestEntry> manifest =
+        TerminologyStoreReader.open(directoryStore, Map.of()).readManifest();
+    assertFalse(manifest.isEmpty());
+    // A directory source has no package identity and no verification outcome at all.
+    assertNull(manifest.get(0).getPackageVerification());
+    assertNull(manifest.get(0).getSourceSha256());
+  }
+
+  /** Builds a FHIR NPM package from the fixture resources, so no network or registry is needed. */
+  private static Path buildPackage(final Path directory) throws Exception {
+    final Path archive = directory.resolve("fixtures.tgz");
+    try (TarArchiveOutputStream tar =
+        new TarArchiveOutputStream(
+            new GzipCompressorOutputStream(Files.newOutputStream(archive)))) {
+      tar.setLongFileMode(TarArchiveOutputStream.LONGFILE_POSIX);
+      writeEntry(
+          tar,
+          "package/package.json",
+          "{\"name\":\"example.fhir.animals\",\"version\":\"1.0.0\"}"
+              .getBytes(StandardCharsets.UTF_8));
+      try (Stream<Path> files = Files.list(Path.of(fixturePath()))) {
+        for (final Path file : files.filter(p -> p.toString().endsWith(".json")).toList()) {
+          writeEntry(tar, "package/" + file.getFileName(), Files.readAllBytes(file));
+        }
+      }
+    }
+    return archive;
+  }
+
+  private static void writeEntry(
+      final TarArchiveOutputStream tar, final String name, final byte[] content) throws Exception {
+    final TarArchiveEntry entry = new TarArchiveEntry(name);
+    entry.setSize(content.length);
+    tar.putArchiveEntry(entry);
+    final OutputStream out = tar;
+    out.write(content);
+    tar.closeArchiveEntry();
   }
 }

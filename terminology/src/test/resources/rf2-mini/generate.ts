@@ -114,6 +114,10 @@ const IS_A = "116680003"; // Is a (attribute).
 const FINDING_SITE = "363698007"; // Finding site (attribute).
 const ASSOCIATED_MORPHOLOGY = "116676008"; // Associated morphology (attribute).
 const SAME_AS_REFSET = "900000000000527005"; // SAME AS association reference set.
+const REPLACED_BY_REFSET = "900000000000526001"; // REPLACED BY association reference set.
+const POSSIBLY_EQUIVALENT_TO_REFSET = "900000000000523009"; // POSSIBLY EQUIVALENT TO.
+const ALTERNATIVE_REFSET = "900000000000530003"; // ALTERNATIVE association reference set.
+const WAS_A_REFSET = "900000000000528000"; // WAS A association reference set.
 
 const EFFECTIVE_TIME_V1 = "20230601";
 const EFFECTIVE_TIME_V2 = "20240601";
@@ -370,6 +374,33 @@ const associationMembers: AssociationMember[] = [
   { refset: SAME_AS_REFSET, referenced: fillerDiabetes[85], target: type2 },
   // DISORDER_FILLER_36, code 1139006.
   { refset: SAME_AS_REFSET, referenced: fillerDisorder[35], target: type2 },
+  // One source per remaining association reference set that can be used as an implicit concept
+  // map, so that the relationship each one carries is observable. The POSSIBLY EQUIVALENT TO source
+  // has two targets, as an ambiguous inactive concept does in a real release, written with the
+  // higher code first so that nothing downstream can take their order from this file.
+  // DIABETES_FILLER_1, code 1014004.
+  { refset: REPLACED_BY_REFSET, referenced: fillerDiabetes[0], target: type1 },
+  // DIABETES_FILLER_2, code 1015003.
+  {
+    refset: POSSIBLY_EQUIVALENT_TO_REFSET,
+    referenced: fillerDiabetes[1],
+    target: type2,
+  },
+  {
+    refset: POSSIBLY_EQUIVALENT_TO_REFSET,
+    referenced: fillerDiabetes[1],
+    target: type1,
+  },
+  // DIABETES_FILLER_3, code 1016002.
+  {
+    refset: ALTERNATIVE_REFSET,
+    referenced: fillerDiabetes[2],
+    target: gestational,
+  },
+  // WAS A carries association targets but is not one of the reference sets that can be used as an
+  // implicit concept map, so translating through it must find nothing. DIABETES_FILLER_4, code
+  // 1017006.
+  { refset: WAS_A_REFSET, referenced: fillerDiabetes[3], target: diabetes },
 ];
 
 // --- RF2 line assembly. ---

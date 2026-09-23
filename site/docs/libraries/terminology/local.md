@@ -272,6 +272,198 @@ version of that CodeSystem and advises re-running the import. Because content is
 keyed by system version, re-running with a corrected source fully replaces the
 partial version and repairs the store.
 
+### Provenance and verification
+
+Every import records the provenance of what it loaded in the store's
+`manifest` table, a Delta table under the store root. There is one row per
+imported CodeSystem, ValueSet or ConceptMap, keyed by canonical URL and
+version; re-importing replaces the row, so a row always describes the most
+recent import of that content. Every row written by a single import carries the
+same provenance values.
+
+| Column                 | Type      | Null | Meaning                                                                                                                                                                                             |
+| ---------------------- | --------- | ---- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `store_format_version` | int       | no   | The store layout version, always `1`.                                                                                                                                                               |
+| `entry_type`           | string    | no   | `code_system`, `value_set` or `concept_map`.                                                                                                                                                        |
+| `canonical_url`        | string    | no   | The canonical URL of the imported resource.                                                                                                                                                         |
+| `version`              | string    | yes  | Its version, where the resource declares one.                                                                                                                                                       |
+| `source`               | string    | yes  | The source path, as passed to the import.                                                                                                                                                           |
+| `imported_at`          | timestamp | yes  | When the import wrote the row.                                                                                                                                                                      |
+| `source_sha256`        | string    | yes  | The SHA-256 of the source file's bytes, as 64 lowercase hexadecimal characters. Null for a directory source, which has no single set of bytes, and for rows written before provenance was recorded. |
+| `package_name`         | string    | yes  | The `name` from the package's `package.json`. Null unless the source is a FHIR NPM package that declares one.                                                                                       |
+| `package_version`      | string    | yes  | The `version` from the package's `package.json`, with the same nullability as `package_name`.                                                                                                       |
+| `package_verification` | string    | yes  | `verified`, `unverified` or `skipped`. Null when the source was not a package.                                                                                                                      |
+| `package_registry`     | string    | yes  | The registry that vouched for the bytes, with any trailing slash removed. Set only when `package_verification` is `verified`.                                                                       |
+
+The store format version is unchanged by the last five columns, so a store
+built before they were recorded opens, answers queries and accepts new imports
+without migration, its existing rows reading back as null; and a store carrying
+them opens with the preceding version of Pathling, which ignores them.
+
+The SHA-256 is taken from the bytes the import already reads, so it adds no
+further pass over an archive, and it covers the whole file: it agrees with
+`shasum -a 256` run on the same file. Where a publisher gives a SHA-256 out of
+band, for example in an NCTS syndication feed entry, `source_sha256` can be
+compared with it directly. This is the only fingerprint available for an RF2
+release or an unpublished package, neither of which has a registry checksum.
+
+#### What is checked against the registry
+
+FHIR package registries implement the npm registry protocol:
+`GET {registry}/{name}` returns a listing of every published version, and a
+version may carry `dist.shasum`, the SHA-1 of the tarball the registry
+distributes. When the source of a FHIR terminology import is a package (`.tgz`
+or `.tar.gz`), the import reads the name and version from the package's
+`package.json`, fetches that listing, and compares the `dist.shasum` published
+for that version, case-insensitively, with the SHA-1 of the tarball in hand.
+
+The check applies to packages only. An RF2 release, a directory of JSON files
+and a single JSON file are not distributed through a package registry, so no
+registry is consulted for them, no verification warning is raised, and
+`package_verification` and `package_registry` are left null. That holds for a
+directory even when it contains a `package.json`. The check is made at import
+time, against the bytes being read; nothing is re-checked when the store is
+later opened for querying.
+
+The outcome recorded in `package_verification` is one of:
+
+- `verified`: the registry published a `shasum` for the version and it equals
+  the tarball's SHA-1. `package_registry` names the registry consulted.
+- `unverified`: the source was a package, but no comparison could be made. The
+  import warns with the reason and proceeds, and `package_registry` is null.
+  The reasons are: the package has no `package.json`, or it declares no name or
+  version, in which case no registry is contacted at all; the registry could
+  not be reached, or did not answer within the timeout; it answered with an
+  error status, or with something that is not a version listing; it does not
+  list the package, or does not list the version; or it lists the version
+  without a `shasum`. A registry that cannot answer is not evidence that the
+  bytes are wrong, so none of these fails the import.
+- `skipped`: the source was a package and verification was turned off. No
+  registry is contacted, and the package name and version are still recorded.
+- null: the source was not a package.
+
+A published checksum that differs is the only outcome that fails the import.
+The failure comes before any table or manifest row is written, so a store that
+did not exist beforehand is not created, and an existing store is left as it
+was. The message names the package, the version, the registry, the expected
+SHA-1 and the SHA-1 of the source in hand, and how to import the package
+anyway:
+
+```text
+The package hl7.terminology.r4 6.5.0 does not match the registry checksum published by https://packages.fhir.org: expected SHA-1 8a7a096866b9b6e96e288ce8d72bf99aa31714a3 but the source has SHA-1 3b1f0f16d6f0e14a29b0a4ba3a0b0e9d7c5a1f42. The source may be corrupt or tampered with; import it anyway by turning off the verifyPackage option.
+```
+
+The library logs the outcome: a verified package at `INFO`, naming the package,
+its version, the registry and the SHA-1; an unverified one at `WARN`, naming
+the reason. Both appear wherever logging for `au.csiro.pathling` is enabled at
+that level. The CLI runs the library at `WARN`, so `--verbose` shows the reason
+for an unverified package; the verified outcome is reported on the completion
+line instead.
+
+#### Importing offline, and choosing a registry
+
+Verification is on by default and can be turned off for a single import, which
+is how a package is imported with no network access, or a package that was
+never published to a registry. The registry can also be pointed elsewhere, for
+instance at Simplifier for a package that `packages.fhir.org` does not mirror.
+The default registry is `https://packages.fhir.org`, and a trailing slash on a
+supplied URL makes no difference. Both settings are accepted for a source that
+is not a package, where they have no effect.
+
+<Tabs>
+<TabItem value="python" label="Python">
+
+```python
+pc.import_fhir_terminology(
+    "/data/my-own-package.tgz", "/data/tx-store", verify_package=False
+)
+pc.import_fhir_terminology(
+    "/data/hl7.terminology.r4-6.5.0.tgz",
+    "/data/tx-store",
+    package_registry="https://packages.simplifier.net",
+)
+```
+
+</TabItem>
+<TabItem value="r" label="R">
+
+```r
+pathling_import_fhir_terminology(
+  pc, "/data/my-own-package.tgz", "/data/tx-store",
+  verify_package = FALSE
+)
+pathling_import_fhir_terminology(
+  pc, "/data/hl7.terminology.tgz", "/data/tx-store",
+  package_registry = "https://packages.simplifier.net"
+)
+```
+
+</TabItem>
+<TabItem value="cli" label="CLI">
+
+```bash
+pathling import-fhir-terminology --no-verify \
+  /data/my-own-package.tgz /data/tx-store
+pathling import-fhir-terminology \
+  --package-registry https://packages.simplifier.net \
+  /data/hl7.terminology.tgz /data/tx-store
+```
+
+A registry used routinely can be recorded once as the top-level
+`package-registry` config key, and the outcome of the check is reported on the
+completion line of each import. See the
+[command line interface documentation](../cli#terminology-import-commands).
+
+</TabItem>
+</Tabs>
+
+In Java, both are set on `FhirImportOptions`, passed to
+`PathlingContext.importFhirTerminology`.
+
+#### Comparing two stores
+
+Two environments that imported the same content can be compared by reading both
+manifests and taking the rows that appear in one and not in the other. An empty
+result means the two imported byte-identical sources.
+
+<Tabs>
+<TabItem value="python" label="Python">
+
+```python
+from pyspark.sql import SparkSession
+
+spark = SparkSession.builder.getOrCreate()
+columns = [
+    "canonical_url",
+    "version",
+    "source_sha256",
+    "package_verification",
+    "package_registry",
+]
+a = spark.read.format("delta").load("/env-a/tx-store/manifest").select(columns)
+b = spark.read.format("delta").load("/env-b/tx-store/manifest").select(columns)
+a.exceptAll(b).union(b.exceptAll(a)).show(truncate=False)
+```
+
+</TabItem>
+<TabItem value="r" label="R">
+
+```r
+library(dplyr)
+
+sc <- pathling_spark(pc)
+a <- spark_read_delta(sc, name = "manifest_a", path = "/env-a/tx-store/manifest") %>%
+        select(canonical_url, version, source_sha256, package_verification,
+               package_registry)
+b <- spark_read_delta(sc, name = "manifest_b", path = "/env-b/tx-store/manifest") %>%
+        select(canonical_url, version, source_sha256, package_verification,
+               package_registry)
+union_all(setdiff(a, b), setdiff(b, a)) %>% collect()
+```
+
+</TabItem>
+</Tabs>
+
 ## Querying in local mode
 
 Create a context configured for local mode by setting the terminology mode to
@@ -533,16 +725,16 @@ Local `member_of` resolves three kinds of value set reference, and local
 content the store does not hold yields the same "unknown content" results as
 remote mode rather than an error.
 
-| Reference                             | Form                                               |
-| ------------------------------------- | -------------------------------------------------- |
-| An imported FHIR ValueSet             | its canonical URL, optionally with `\|version`     |
-| Every SNOMED CT concept               | `http://snomed.info/sct?fhir_vs`                   |
-| A SNOMED CT reference set             | `http://snomed.info/sct?fhir_vs=refset/[refsetId]` |
-| A SNOMED CT subtype hierarchy         | `http://snomed.info/sct?fhir_vs=isa/[conceptId]`   |
-| A SNOMED CT ECL expression            | `http://snomed.info/sct?fhir_vs=ecl/[expression]`  |
-| A VCL expression                      | `http://fhir.org/VCL?v1=[expression]`              |
-| An imported FHIR ConceptMap           | its canonical URL                                  |
-| A SNOMED CT association reference set | `http://snomed.info/sct?fhir_cm=[refsetId]`        |
+| Reference                        | Form                                               |
+| -------------------------------- | -------------------------------------------------- |
+| An imported FHIR ValueSet        | its canonical URL, optionally with `\|version`     |
+| Every SNOMED CT concept          | `http://snomed.info/sct?fhir_vs`                   |
+| A SNOMED CT reference set        | `http://snomed.info/sct?fhir_vs=refset/[refsetId]` |
+| A SNOMED CT subtype hierarchy    | `http://snomed.info/sct?fhir_vs=isa/[conceptId]`   |
+| A SNOMED CT ECL expression       | `http://snomed.info/sct?fhir_vs=ecl/[expression]`  |
+| A VCL expression                 | `http://fhir.org/VCL?v1=[expression]`              |
+| An imported FHIR ConceptMap      | its canonical URL                                  |
+| A SNOMED CT implicit concept map | `http://snomed.info/sct?fhir_cm=[refsetId]`        |
 
 The `isa/` form is the subtype hierarchy including the named concept itself, so
 it is equivalent to `ecl/<<[conceptId]`. Every SNOMED form is also accepted on an
@@ -550,6 +742,48 @@ edition and version qualified URI, for example
 `http://snomed.info/sct/32506021000036107/version/20250630?fhir_vs=ecl/...`,
 which evaluates against that version rather than the store default. Any other
 `fhir_vs` value is treated as unknown content.
+
+A SNOMED CT implicit concept map is either one of the four association
+reference sets or a simple map reference set, which are the two kinds
+[THO defines as implicit concept maps](https://terminology.hl7.org/en/SNOMEDCT.html#snomed-ct-implicit-concept-maps).
+Each translation through an association reference set carries the equivalence
+defined for that reference set, in either direction:
+
+| Reference set          | Identifier           | Equivalence  |
+| ---------------------- | -------------------- | ------------ |
+| POSSIBLY EQUIVALENT TO | `900000000000523009` | `inexact`    |
+| REPLACED BY            | `900000000000526001` | `equivalent` |
+| SAME AS                | `900000000000527005` | `equal`      |
+| ALTERNATIVE            | `900000000000530003` | `inexact`    |
+
+A simple map reference set is any reference set that descends from
+`900000000000496009 |Simple map type reference set|` in the release, or one of
+the three simple maps in the table below, which Ontoserver also supports. It maps
+SNOMED CT concepts to codes in another code system. RF2 does not say which code
+system a map's targets belong to, so the target system is taken from the same
+table Ontoserver uses, along with the equivalence it reports, in either
+direction:
+
+| Simple map | Identifier           | Target system                                                  | Equivalence  |
+| ---------- | -------------------- | -------------------------------------------------------------- | ------------ |
+| ICD-O      | `446608001`          | `http://hl7.org/fhir/sid/icd-o-3`                              | `inexact`    |
+| CTV3       | `900000000000497000` | `http://read.info/ctv3`                                        | `equivalent` |
+| ARTG       | `11000168105`        | `https://www.tga.gov.au/australian-register-therapeutic-goods` | `inexact`    |
+
+CTV3 is accepted even though current releases no longer place it under the
+simple map type. A translation through any other simple map is `inexact`, and
+its target is returned as a code with no system. In the reverse direction, the
+coding being translated must be in the map's target system where the table names
+one, and is matched on its code alone where it does not. The extended and
+complex maps, such as the ICD-10 map, are not simple maps and are not translated.
+
+A concept with more than one target, such as an ambiguous concept that is
+possibly equivalent to several others, translates to all of them. Any other
+`fhir_cm` reference set, including other association reference sets such as WAS
+A, is treated as unknown content.
+
+A store imported by Pathling 9.9 holds no simple map targets, so translation
+through a simple map finds nothing until the release is imported again.
 
 The expression carried by an `ecl/` or `v1=` URL is percent-decoded before it is
 parsed, so it must be percent-encoded when the URL is built. For ECL,

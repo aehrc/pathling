@@ -392,6 +392,51 @@ pathling import-snomed --default-dialect en-GB /data/rf2.zip /data/tx-store
 FHIR NPM package (`.tgz`), and imports CodeSystems of any size with bounded
 memory (for example, the multi-gigabyte OMOP vocabulary CodeSystem).
 
+A package source is checked against the checksum its registry publishes before
+anything is written: the import reads the package name and version from the
+package's `package.json`, fetches the registry's version listing, and compares
+the SHA-1 the registry publishes for that version with the SHA-1 of the tarball
+in hand. A package whose checksum differs fails the import with exit code 1,
+leaves the store unchanged, and reports the expected and computed SHA-1
+followed by `Re-run with --no-verify to import it anyway.` Where no comparison
+can be made, because the registry publishes no checksum for the version, does
+not list it, or cannot be reached, the import warns and proceeds. See
+[provenance and verification](terminology/local#provenance-and-verification)
+for what the store records.
+
+Two options control the check. Both apply only when `SOURCE` is a `.tgz` or
+`.tar.gz`; for any other source they are accepted and have no effect.
+
+- `--no-verify` imports without consulting a registry. Use it for an offline
+  import, or a package that was never published to a registry.
+- `--package-registry URL` names the registry to check against. The flag
+  overrides the `package-registry` config key (see
+  [configuration file](#configuration-file)), which overrides the default of
+  `https://packages.fhir.org`.
+
+`import-snomed` takes neither option, since an RF2 release is not distributed
+through a package registry.
+
+Each command prints one completion line naming what was imported, from where
+and into where, such as `Imported FHIR terminology from SRC into STORE`,
+followed by what the store recorded of the source:
+
+| Case                          | Suffix on the completion line                                                                      |
+| ----------------------------- | -------------------------------------------------------------------------------------------------- |
+| Directory source              | none                                                                                               |
+| RF2 `.zip` or JSON file       | `(sha256 HEX)`                                                                                     |
+| Package, verified             | `(verified NAME VERSION against REGISTRY; sha256 HEX)`                                             |
+| Package, not verified         | `(NAME VERSION not verified against a registry; re-run with --verbose for the reason; sha256 HEX)` |
+| Package, verification skipped | `(NAME VERSION, verification skipped; sha256 HEX)`                                                 |
+
+A directory has no single set of bytes to fingerprint, so it carries no hash
+and no verification statement. Where the package declares no name or version,
+`NAME VERSION` is replaced by the word `package`, giving
+`(package not verified against a registry; …)` and
+`(package verification skipped; …)`. The reason a package was not verified is
+in the library's warning log, which `--verbose` shows, as for every other
+import message.
+
 An RF2 source given to `import-snomed` must be
 [self-contained](terminology/local#rf2-sources-must-be-self-contained): rows
 referencing concepts the source does not itself ship are dropped, which is the
@@ -473,6 +518,7 @@ Defaults for the global options can be set in a TOML file at
 ```toml
 tx-server = "https://tx.example.org/fhir"
 fhir-version = "R4"
+package-registry = "https://packages.simplifier.net"
 
 [terminology-auth]
 client-id = "my-client"
@@ -503,6 +549,12 @@ table selects [local terminology mode](#local-terminology-mode); its tuning keys
 are config-file only, while the store path can also be set with `--tx-store`,
 and `default-dialect` with the `import-snomed` command's `--default-dialect`
 flag.
+
+The optional `package-registry` key names the FHIR package registry that
+`import-fhir-terminology` checks a package against, and is overridden by
+`--package-registry`. It is a top-level key rather than part of `[tx-store]`,
+because it concerns where a package was distributed from rather than the store
+the package is imported into.
 
 ### Spark configuration
 

@@ -77,7 +77,12 @@ class PathlingContextLocalModeTest {
                     "http://snomed.info/sct",
                     "http://snomed.info/sct/900000000000207008/version/20250101",
                     "rf2.zip",
-                    Instant.now())),
+                    Instant.now(),
+                    null,
+                    null,
+                    null,
+                    null,
+                    null)),
             SaveMode.Append);
     return store;
   }
