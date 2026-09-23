@@ -65,8 +65,24 @@ public final class ImplicitTerminologyUrls {
    * @return true if the URL names an implicit concept map
    */
   public static boolean isImplicitConceptMap(@Nonnull final String url) {
+    return implicitConceptMapRefset(url) != null;
+  }
+
+  /**
+   * Returns the reference set that an implicit concept map URL names in its {@code fhir_cm}
+   * parameter, by the same grammar as {@link #isImplicitConceptMap}: a URL that it classifies as an
+   * implicit concept map always yields its reference set here, whichever SNOMED CT base it has.
+   *
+   * @param url the URL
+   * @return the reference set identifier, which may be empty, or null if the URL does not name an
+   *     implicit concept map
+   */
+  @Nullable
+  public static String implicitConceptMapRefset(@Nonnull final String url) {
     final String query = snomedQuery(url);
-    return query != null && query.startsWith(CONCEPT_MAP_PARAMETER);
+    return query != null && query.startsWith(CONCEPT_MAP_PARAMETER)
+        ? query.substring(CONCEPT_MAP_PARAMETER.length())
+        : null;
   }
 
   /**

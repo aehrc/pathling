@@ -65,7 +65,9 @@ import org.junit.jupiter.api.io.TempDir;
  * release whose association file gains further REPLACED BY, POSSIBLY EQUIVALENT TO and ALTERNATIVE
  * rows, written out of code order, together with the unmodified later release. The store's default
  * SNOMED CT version is therefore the later release, and the extended rows are reached through the
- * base release's edition/version URI.
+ * base release's edition/version URI. The extended copy is imported a second time under an
+ * experimental ({@code xsct}) edition/version URI, which sorts below every production release and
+ * so leaves the default unchanged.
  *
  * @author John Grimes
  */
@@ -88,6 +90,14 @@ class LocalTerminologyServiceConceptMapTest {
   /** An edition/version URI that the implicit map store does not hold. */
   private static final String UNHELD_VERSION =
       "http://snomed.info/sct/900000000000207008/version/20990101";
+
+  /** The experimental edition/version URI under which the extended copy is imported again. */
+  private static final String XSCT_VERSION =
+      "http://snomed.info/xsct/900000000000207008/version/20230601";
+
+  /** An experimental edition/version URI that the implicit map store does not hold. */
+  private static final String UNHELD_XSCT_VERSION =
+      "http://snomed.info/xsct/900000000000207008/version/20990101";
 
   private static TerminologyService service;
   private static LocalTerminologyService implicitService;
@@ -411,6 +421,57 @@ class LocalTerminologyServiceConceptMapTest {
   }
 
   @Test
+  void experimentalBaseSelectsThatRelease() {
+    final ConceptMapContent content = readImplicit(XSCT_VERSION, REPLACED_BY);
+
+    assertEquals(XSCT_VERSION, content.getVersion());
+    assertEquals(
+        List.of(
+            row(
+                XSCT_VERSION,
+                Rf2Mini.DIABETES_INACTIVE,
+                "Diabetes",
+                Rf2Mini.TYPE2_DIABETES,
+                "Type 2 diabetes mellitus",
+                ConceptMapRelationship.EQUIVALENT),
+            row(
+                XSCT_VERSION,
+                Rf2Mini.REPLACED_BY_SOURCE,
+                "Mini diabetes subtype 1",
+                Rf2Mini.TYPE1_DIABETES,
+                "Type 1 diabetes mellitus",
+                ConceptMapRelationship.EQUIVALENT),
+            row(
+                XSCT_VERSION,
+                Rf2Mini.ASSOCIATED_FILLER_2,
+                "Mini other disorder 36",
+                Rf2Mini.DIABETES,
+                "Diabetes mellitus",
+                ConceptMapRelationship.EQUIVALENT)),
+        content.getMappings());
+  }
+
+  @Test
+  void unheldExperimentalBaseReturnsEmpty() {
+    assertTrue(
+        implicitService
+            .readConceptMap(implicitUrl(UNHELD_XSCT_VERSION, REPLACED_BY), null, NO_LIMIT)
+            .isEmpty());
+  }
+
+  @Test
+  void experimentalBaseWithOtherReferenceSetReturnsEmpty() {
+    assertTrue(
+        implicitService
+            .readConceptMap(implicitUrl(XSCT_VERSION, MOVED_FROM), null, NO_LIMIT)
+            .isEmpty());
+    assertTrue(
+        implicitService
+            .readConceptMap(implicitUrl(XSCT_VERSION, "12345"), null, NO_LIMIT)
+            .isEmpty());
+  }
+
+  @Test
   void storeWithoutSnomedCtReturnsEmpty() {
     assertTrue(
         FhirTerminologyFixture.service()
@@ -557,6 +618,7 @@ class LocalTerminologyServiceConceptMapTest {
     final SnomedRf2Importer importer = new SnomedRf2Importer(spark, store);
     importer.importFrom(release.toString(), null);
     importer.importFrom(Rf2Mini.releasePath("international-20240601").toString(), null);
+    importer.importFrom(release.toString(), XSCT_VERSION);
     return store;
   }
 
