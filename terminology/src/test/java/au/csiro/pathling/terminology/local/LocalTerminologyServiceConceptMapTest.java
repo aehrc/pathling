@@ -18,6 +18,7 @@
 package au.csiro.pathling.terminology.local;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -31,15 +32,21 @@ import au.csiro.pathling.terminology.conceptmap.ConceptMapLimitExceededException
 import au.csiro.pathling.terminology.conceptmap.ConceptMapRelationship;
 import au.csiro.pathling.terminology.conceptmap.ConceptMapVersionException;
 import au.csiro.pathling.terminology.conceptmap.ConceptMapping;
+import au.csiro.pathling.terminology.store.FhirTerminologyImporter;
 import au.csiro.pathling.terminology.store.SnomedRf2Importer;
 import au.csiro.pathling.test.NoNetworkExtension;
 import au.csiro.pathling.test.Rf2Mini;
+import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.parser.IParser;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import org.apache.spark.sql.SparkSession;
+import org.hl7.fhir.r4.model.ConceptMap;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -165,6 +172,38 @@ class LocalTerminologyServiceConceptMapTest {
             () -> service.readConceptMap(ConceptMapTerminologyFixture.AMBIGUOUS, null, NO_LIMIT));
 
     assertTrue(e.getMessage().contains(ConceptMapTerminologyFixture.AMBIGUOUS), e.getMessage());
+  }
+
+  @Test
+  void versionMissingMessageNamesNoResourceContent(@TempDir final Path work) throws IOException {
+    // The worked example imported as version 2026 and again at the same URL without a version.
+    final IParser parser = FhirContext.forR4().newJsonParser();
+    final ConceptMap unversioned = ConceptMapTerminologyFixture.conceptMap2026().copy();
+    unversioned.setVersion(null);
+    final Path resources = Files.createDirectory(work.resolve("resources"));
+    Files.writeString(
+        resources.resolve("sct-to-icd10-2026.json"),
+        parser.encodeResourceToString(ConceptMapTerminologyFixture.conceptMap2026()));
+    Files.writeString(
+        resources.resolve("sct-to-icd10-none.json"), parser.encodeResourceToString(unversioned));
+    final String store = work.resolve("store").toString();
+    new SnomedRf2Importer(SparkSession.active(), store)
+        .importFrom(Rf2Mini.baseRelease().toString(), null);
+    new FhirTerminologyImporter(SparkSession.active(), store)
+        .importFrom(resources.toString(), false, null);
+
+    try (final LocalTerminologyService unversionedService = serviceOver(store)) {
+      final ConceptMapVersionException e =
+          assertThrows(
+              ConceptMapVersionException.class,
+              () ->
+                  unversionedService.readConceptMap(
+                      ConceptMapTerminologyFixture.SCT_TO_ICD10, null, NO_LIMIT));
+
+      assertTrue(e.getMessage().contains("a version was missing"), e.getMessage());
+      assertFalse(e.getMessage().contains("resourceType"), e.getMessage());
+      assertFalse(e.getMessage().contains("{"), e.getMessage());
+    }
   }
 
   @Test
