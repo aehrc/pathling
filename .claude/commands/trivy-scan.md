@@ -110,11 +110,6 @@ inconsistently between environments. Generating an effective POM flattens all
 concrete versions, giving Trivy unambiguous input. The CI workflow does the
 same via the `effective-pom: "true"` input on the `trivy-scan` action.
 
-The `dependency:resolve` call ahead of the scan matters. Trivy looks for each
-dependency POM in the local Maven repository first and only then falls back to
-Maven Central, which rate-limits with a 30 minute block. Resolving first keeps
-the scan entirely local. The CI workflow does the same.
-
 The `server/.trivyignore` contains suppressions for Spark runtime transitive
 dependencies and server-specific libraries.
 
@@ -122,7 +117,6 @@ Working directory: repository root.
 
 ```bash
 mkdir -p .trivy-effective/server
-mvn --batch-mode --quiet -f server/pom.xml dependency:resolve
 mvn --batch-mode --quiet -f server/pom.xml \
   help:effective-pom -Doutput="$PWD/.trivy-effective/server/pom.xml"
 TRIVY_IGNOREFILE="$PWD/server/.trivyignore" trivy repo .trivy-effective/server \

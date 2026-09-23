@@ -29,6 +29,7 @@ import au.csiro.pathling.config.AuthorizationConfiguration;
 import au.csiro.pathling.config.ExternalTableConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.config.SqlQueryConfiguration;
+import au.csiro.pathling.operations.sql.SubjectResolver;
 import au.csiro.pathling.operations.sql.SuppliedArtefact;
 import au.csiro.pathling.operations.sql.SuppliedArtefacts;
 import au.csiro.pathling.views.FhirView;
@@ -40,6 +41,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.hl7.fhir.r4.model.Library;
+import org.hl7.fhir.r4.model.OperationOutcome;
+import org.hl7.fhir.r4.model.OperationOutcome.IssueType;
+import org.hl7.fhir.r4.model.OperationOutcome.OperationOutcomeIssueComponent;
+import org.hl7.fhir.r4.model.StringType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -532,13 +537,28 @@ class SqlDependencyResolverTest {
   void reportsNotFoundWhenNothingMatches() {
     final String missingUrl = SqlLibraryFixtures.viewDefinitionUrl("missing");
 
+    // The outcome names the subject as the parameter at fault, as every other SQL operation 4xx
+    // does, rather than leaving the client with a bare message.
     assertThatThrownBy(
             () ->
                 resolver.resolve(sqlQuery("SELECT 1", "x", missingUrl), SuppliedArtefacts.empty()))
         .isInstanceOf(ResourceNotFoundException.class)
         .hasMessageContainingAll("'x'", missingUrl)
         .hasMessageEndingWith(
-            "no ViewDefinition, SQLView or external table matches that canonical URL");
+            "no ViewDefinition, SQLView or external table matches that canonical URL")
+        .satisfies(
+            e -> {
+              final OperationOutcome outcome =
+                  (OperationOutcome) ((ResourceNotFoundException) e).getOperationOutcome();
+              assertThat(outcome).isNotNull();
+              assertThat(outcome.getIssue()).hasSize(1);
+              final OperationOutcomeIssueComponent issue = outcome.getIssueFirstRep();
+              assertThat(issue.getCode()).isEqualTo(IssueType.NOTFOUND);
+              assertThat(issue.getExpression())
+                  .extracting(StringType::getValue)
+                  .containsExactly(SubjectResolver.SUBJECT_EXPRESSION);
+              assertThat(issue.getDiagnostics()).contains(missingUrl);
+            });
   }
 
   @Test
