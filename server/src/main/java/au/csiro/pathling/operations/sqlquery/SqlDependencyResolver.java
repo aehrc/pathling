@@ -49,20 +49,30 @@ import org.springframework.stereotype.Component;
  * resolver:
  *
  * <ol>
- *   <li>prefers a request-supplied view whose URL matches;
+ *   <li>prefers a request-supplied artefact whose URL matches: a ViewDefinition or a ValueSet is a
+ *       leaf, and a SQLView is traversed in turn;
  *   <li>otherwise matches the bare URL (a reference carrying no version) against the external
  *       tables the operator has configured, and searches stored {@code ViewDefinition}s by url and
  *       {@code SQLView Library}s by url;
- *   <li>rejects a URL that matches more than one of those three sources as ambiguous, and a URL
- *       that matches nothing as not found - each naming the label and the reference.
+ *   <li>rejects a URL that matches more than one of those three sources as ambiguous;
+ *   <li>otherwise, as a last resort, asks the configured terminology layer to resolve the URL as a
+ *       value set, whose membership becomes a five-column relation under the label;
+ *   <li>rejects a URL that matches nothing, the terminology layer included, as not found - each
+ *       failure naming the label and the reference.
  * </ol>
+ *
+ * <p>The terminology layer is consulted last so that view dependencies never pay a terminology
+ * round trip, and a stored or configured artefact sharing a value set's URL wins without the
+ * collision being detected: that is an operator-side condition, not a request fault.
  *
  * <p>The resolution memoises by the resolved canonical key (the matched resource's url plus its
  * version, else the bare url), so a node referenced from more than one place (a diamond) -
  * including a bare-url reference and a {@code url|version} reference to the same stored resource -
- * is resolved once and shared. A reference encountered while it is already on the resolution stack
- * is a cycle and is rejected, as is a graph that nests deeper than the configured {@code
- * maxDependencyDepth}. All such failures are reported before any Spark execution.
+ * is resolved once and shared. A value set is keyed by the reference canonical as written, so it is
+ * expanded once per distinct reference string in the job. A reference encountered while it is
+ * already on the resolution stack is a cycle and is rejected, as is a graph that nests deeper than
+ * the configured {@code maxDependencyDepth}. All such failures are reported before any Spark
+ * execution.
  *
  * @author John Grimes
  */
@@ -72,6 +82,8 @@ public class SqlDependencyResolver {
   @Nonnull private final ViewResolver viewResolver;
 
   @Nonnull private final LibraryReferenceResolver libraryReferenceResolver;
+
+  @Nonnull private final ValueSetMembershipResolver valueSetMembershipResolver;
 
   @Nonnull private final SqlLibraryParser libraryParser;
 
@@ -83,8 +95,10 @@ public class SqlDependencyResolver {
   /**
    * Constructs a new SqlDependencyResolver.
    *
-   * @param viewResolver resolves ViewDefinition leaves by url, preferring request-supplied views
+   * @param viewResolver resolves ViewDefinition leaves by url from storage
    * @param libraryReferenceResolver resolves a SQLView Library by canonical url from storage
+   * @param valueSetMembershipResolver resolves a value set leaf from a supplied ValueSet or through
+   *     the terminology layer
    * @param libraryParser the shared parser for SQLView Libraries
    * @param serverConfiguration the server configuration (auth toggle, the dependency depth cap and
    *     the configured external tables)
@@ -93,10 +107,12 @@ public class SqlDependencyResolver {
   public SqlDependencyResolver(
       @Nonnull final ViewResolver viewResolver,
       @Nonnull final LibraryReferenceResolver libraryReferenceResolver,
+      @Nonnull final ValueSetMembershipResolver valueSetMembershipResolver,
       @Nonnull final SqlLibraryParser libraryParser,
       @Nonnull final ServerConfiguration serverConfiguration) {
     this.viewResolver = viewResolver;
     this.libraryReferenceResolver = libraryReferenceResolver;
+    this.valueSetMembershipResolver = valueSetMembershipResolver;
     this.libraryParser = libraryParser;
     this.serverConfiguration = serverConfiguration;
     // URL uniqueness is enforced by Bean Validation at bind time, so the keys cannot collide.
@@ -115,8 +131,11 @@ public class SqlDependencyResolver {
    * @return the resolved dependency graph, topologically ordered
    * @throws InvalidRequestException if a reference is ambiguous, a cycle or depth-limit breach is
    *     detected, or a dependency is a malformed or wrong-typed resource
-   * @throws ResourceNotFoundException if a reference matches no ViewDefinition, SQLView or external
-   *     table
+   * @throws ResourceNotFoundException if a reference matches no ViewDefinition, SQLView, external
+   *     table or value set
+   * @throws ca.uhn.fhir.rest.server.exceptions.UnprocessableEntityException if a value set,
+   *     supplied or resolved, has a membership that cannot be determined or exceeds the configured
+   *     maximum
    */
   @Nonnull
   public ResolvedDependencyGraph resolve(
@@ -138,8 +157,11 @@ public class SqlDependencyResolver {
    * @return the resolved dependency graph, topologically ordered
    * @throws InvalidRequestException if a reference is ambiguous, a cycle or depth-limit breach is
    *     detected, or a dependency is a malformed or wrong-typed resource
-   * @throws ResourceNotFoundException if a reference matches no ViewDefinition, SQLView or external
-   *     table
+   * @throws ResourceNotFoundException if a reference matches no ViewDefinition, SQLView, external
+   *     table or value set
+   * @throws ca.uhn.fhir.rest.server.exceptions.UnprocessableEntityException if a value set,
+   *     supplied or resolved, has a membership that cannot be determined or exceeds the configured
+   *     maximum
    */
   @Nonnull
   public ResolvedDependencyGraph resolve(
@@ -178,10 +200,11 @@ public class SqlDependencyResolver {
 
   /**
    * Resolves a single reference into the canonical key of its node, registering it if new. A
-   * request-supplied artefact wins; otherwise the canonical url is matched against the configured
-   * external tables (only when the reference carries no version), stored ViewDefinitions and
-   * SQLView Libraries, rejecting an ambiguous match (more than one source) and a not-found match
-   * (nothing).
+   * request-supplied artefact wins, whether a ViewDefinition, a SQLView or a ValueSet; otherwise
+   * the canonical url is matched against the configured external tables (only when the reference
+   * carries no version), stored ViewDefinitions and SQLView Libraries, rejecting an ambiguous match
+   * (more than one source). A reference matching none of those is passed to the terminology layer
+   * as a value set, and is not found only when that too yields nothing.
    */
   @Nonnull
   private String resolveReference(
@@ -203,7 +226,9 @@ public class SqlDependencyResolver {
     }
 
     // A request-supplied artefact, matched by url and agreeing version, outranks storage. A
-    // supplied SQLView is traversed in turn, so a chain of supplied artefacts resolves.
+    // supplied SQLView is traversed in turn, so a chain of supplied artefacts resolves. A supplied
+    // ValueSet is a leaf; a node already registered under its key is reused, so a compose-only
+    // ValueSet reached under two labels is expanded once.
     final CanonicalReference canonical = CanonicalReference.parse(reference.getCanonicalUrl());
     final Optional<SuppliedArtefact> suppliedArtefact =
         supplied.match(canonical.getUrl(), canonical.getVersion());
@@ -213,6 +238,13 @@ public class SqlDependencyResolver {
       if (artefact.isView()) {
         return registerLeaf(
             new ResolvedViewDefinition(suppliedKey, artefact.getView()), nodesByKey);
+      }
+      if (artefact.isValueSet()) {
+        if (nodesByKey.containsKey(suppliedKey)) {
+          return suppliedKey;
+        }
+        return registerLeaf(
+            valueSetMembershipResolver.resolveSupplied(reference, artefact), nodesByKey);
       }
       return resolveSqlView(
           artefact.getSqlView(),
@@ -276,12 +308,27 @@ public class SqlDependencyResolver {
           resolutionStack,
           nodesByKey);
     }
+
+    // Nothing supplied, configured or stored matches, so the reference is a value set if anything.
+    // A node already reached under the same reference string is reused, so the value set is
+    // expanded once per distinct reference in the job even though the stored lookups above run
+    // again for each occurrence.
+    final String valueSetKey = CanonicalReference.key(canonical.getUrl(), canonical.getVersion());
+    if (nodesByKey.containsKey(valueSetKey)) {
+      return valueSetKey;
+    }
+    final Optional<ResolvedValueSet> valueSet =
+        valueSetMembershipResolver.resolveCanonical(reference, canonical);
+    if (valueSet.isPresent()) {
+      return registerLeaf(valueSet.get(), nodesByKey);
+    }
     throw new ResourceNotFoundException(
         "Failed to resolve the dependency for label '"
             + reference.getLabel()
             + "' with reference '"
             + reference.getCanonicalUrl()
-            + "': no ViewDefinition, SQLView or external table matches that canonical URL");
+            + "': no ViewDefinition, SQLView, external table or value set matches that canonical"
+            + " URL");
   }
 
   /** Joins two or more matched kinds into prose: "both X and Y" for two, "X, Y and Z" for three. */
@@ -293,8 +340,8 @@ public class SqlDependencyResolver {
   }
 
   /**
-   * Registers a resolved leaf (a ViewDefinition or an external table), deduplicating diamonds, and
-   * returns its key.
+   * Registers a resolved leaf (a ViewDefinition, an external table or a value set), deduplicating
+   * diamonds, and returns its key.
    */
   @Nonnull
   private String registerLeaf(

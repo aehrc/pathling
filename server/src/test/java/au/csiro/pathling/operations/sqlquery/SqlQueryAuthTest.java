@@ -20,6 +20,7 @@ package au.csiro.pathling.operations.sqlquery;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -35,12 +36,15 @@ import au.csiro.pathling.errors.AccessDeniedError;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.operations.sql.SuppliedArtefacts;
 import au.csiro.pathling.read.ReadExecutor;
+import au.csiro.pathling.terminology.expand.ValueSetExpansion;
+import au.csiro.pathling.terminology.expand.ValueSetMember;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.views.FhirView;
 import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -63,8 +67,9 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
  * Verifies the metadata-resource authorisation matrix: a stored ViewDefinition dependency (resolved
  * by canonical URL) requires {@code ViewDefinition} READ, a stored SQLView dependency requires
  * {@code Library} READ, the per-projected-resource READ still applies at each leaf, a
- * request-supplied (inline) view requires no metadata READ, and a configured external table
- * requires no READ authority at all while waiving none for the FHIR dependencies alongside it.
+ * request-supplied (inline) view requires no metadata READ, and a configured external table or a
+ * value set requires no READ authority at all while waiving none for the FHIR dependencies
+ * alongside it.
  *
  * @author John Grimes
  */
@@ -74,6 +79,7 @@ class SqlQueryAuthTest {
   private static final String PV_URL = "https://example.org/ViewDefinition/pv";
   private static final String BASE_URL = "https://example.org/Library/base";
   private static final String TABLE_URL = "https://example.org/data/refsets";
+  private static final String VALUE_SET_URL = "https://example.org/ValueSet/cvd";
 
   @Autowired private SparkSession spark;
   @Autowired private FhirEncoders fhirEncoders;
@@ -83,6 +89,7 @@ class SqlQueryAuthTest {
   private DataSource dataSource;
   private LibraryReferenceResolver libraryReferenceResolver;
   private SqlDependencyResolver resolver;
+  private ValueSetMembershipResolver valueSetMembershipResolver;
 
   @BeforeEach
   void setUp() {
@@ -108,9 +115,14 @@ class SqlQueryAuthTest {
         new ViewResolver(dataSource, fhirEncoders, serverConfiguration, fhirContext);
     libraryReferenceResolver =
         new LibraryReferenceResolver(readExecutor, dataSource, fhirEncoders, serverConfiguration);
+    valueSetMembershipResolver = mock(ValueSetMembershipResolver.class);
     resolver =
         new SqlDependencyResolver(
-            viewResolver, libraryReferenceResolver, new SqlLibraryParser(), serverConfiguration);
+            viewResolver,
+            libraryReferenceResolver,
+            valueSetMembershipResolver,
+            new SqlLibraryParser(),
+            serverConfiguration);
   }
 
   @AfterEach
@@ -232,6 +244,49 @@ class SqlQueryAuthTest {
     assertThatNoException().isThrownBy(() -> resolver.resolve(join, SuppliedArtefacts.empty()));
   }
 
+  @Test
+  void valueSetDependencyRequiresNoReadAuthority() {
+    // A value set is resolved through the terminology layer, never read from storage as a FHIR
+    // resource, so the operation authority alone is enough: no pathling:read:* authority is held.
+    stubValueSet();
+    setSecurityContext("pathling:sql-run");
+    final ResolvedDependencyGraph graph =
+        resolver.resolve(sqlQuery(VALUE_SET_URL), SuppliedArtefacts.empty());
+
+    assertThat(graph.getOrderedNodes()).singleElement().isInstanceOf(ResolvedValueSet.class);
+  }
+
+  @Test
+  void valueSetWaivesNoAuthorityForFhirDependenciesAlongsideIt() {
+    stubValueSet();
+    when(dataSource.read("ViewDefinition"))
+        .thenReturn(viewDefinitionDataset(simpleViewDefinition("pv", PV_URL, "Patient")));
+    final ParsedSqlQuery join =
+        sqlQuery(
+            "SELECT * FROM pv WHERE pv.id IN (SELECT code FROM vs)",
+            new ViewArtifactReference("pv", PV_URL),
+            new ViewArtifactReference("vs", VALUE_SET_URL));
+
+    // The stored ViewDefinition keeps its metadata and projected-resource READ requirements when
+    // joined to a value set; the value set adds none and removes none.
+    setSecurityContext("pathling:sql-run", "pathling:read:Patient");
+    assertThatThrownBy(() -> resolver.resolve(join, SuppliedArtefacts.empty()))
+        .isInstanceOf(AccessDeniedError.class)
+        .hasMessageContaining("ViewDefinition");
+
+    setSecurityContext("pathling:sql-run", "pathling:read:ViewDefinition");
+    assertThatThrownBy(() -> resolver.resolve(join, SuppliedArtefacts.empty()))
+        .isInstanceOf(AccessDeniedError.class)
+        .hasMessageContaining("Patient");
+
+    setSecurityContext("pathling:sql-run", "pathling:read:ViewDefinition", "pathling:read:Patient");
+    final ResolvedDependencyGraph graph = resolver.resolve(join, SuppliedArtefacts.empty());
+    assertThat(graph.getOrderedNodes())
+        .hasSize(2)
+        .anySatisfy(node -> assertThat(node).isInstanceOf(ResolvedViewDefinition.class))
+        .anySatisfy(node -> assertThat(node).isInstanceOf(ResolvedValueSet.class));
+  }
+
   // ---------------------------------------------------------------------------
   // Helpers.
   // ---------------------------------------------------------------------------
@@ -246,6 +301,27 @@ class SqlQueryAuthTest {
   @Nonnull
   private Dataset<Row> libraryDataset(@Nonnull final Library... libraries) {
     return spark.createDataset(List.of(libraries), fhirEncoders.of("Library")).toDF();
+  }
+
+  /**
+   * Makes the membership resolver answer the value set canonical with a one-member expansion, as
+   * the terminology layer would; the resolver itself performs no authority check.
+   */
+  private void stubValueSet() {
+    when(valueSetMembershipResolver.resolveCanonical(any(), any()))
+        .thenReturn(
+            Optional.of(
+                new ResolvedValueSet(
+                    VALUE_SET_URL,
+                    new ValueSetExpansion(
+                        VALUE_SET_URL,
+                        null,
+                        null,
+                        null,
+                        List.of(),
+                        List.of(
+                            new ValueSetMember(
+                                "http://snomed.info/sct", null, "22298006", null, null))))));
   }
 
   @Nonnull
