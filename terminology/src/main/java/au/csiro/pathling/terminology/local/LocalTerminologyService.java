@@ -459,9 +459,11 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
   @Override
   public Optional<ConceptMapContent> readConceptMap(
       @Nonnull final String url, @Nullable final String version, final int maxMappings) {
-    if (ImplicitTerminologyUrls.isImplicitConceptMap(url)) {
-      return readSnomedImplicitConceptMap(
-          url, Objects.requireNonNull(snomedImplicitConceptMap(url)), version, maxMappings);
+    // One grammar both classifies the URL and yields its reference set, so that every base it
+    // accepts, including an experimental (xsct) edition/version URI, is read here.
+    final String implicitRefset = ImplicitTerminologyUrls.implicitConceptMapRefset(url);
+    if (implicitRefset != null) {
+      return readSnomedImplicitConceptMap(url, implicitRefset, version, maxMappings);
     }
     ensureInitialised();
     return ConceptMapStore.resolve(reader, url, version, versionResolver)
