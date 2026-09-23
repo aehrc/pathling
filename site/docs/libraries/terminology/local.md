@@ -758,8 +758,9 @@ reference set, in either direction:
 
 A concept with more than one target, such as an ambiguous concept that is
 possibly equivalent to several others, translates to all of them. Any other
-`fhir_cm` reference set, including other association reference sets such as WAS
-A, is treated as unknown content.
+`fhir_cm` reference set is treated as unknown content. This includes other
+association reference sets such as WAS A, and simple map reference sets such as
+the CTV3 map `900000000000497000`, which local mode does not support.
 
 The expression carried by an `ecl/` or `v1=` URL is percent-decoded before it is
 parsed, so it must be percent-encoded when the URL is built. For ECL,

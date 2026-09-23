@@ -222,8 +222,9 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
   }
 
   /**
-   * Returns the reference set identifier of a SNOMED implicit concept map URL ({@code
-   * ?fhir_cm=[refsetId]}), or null if the URL is not a SNOMED implicit concept map.
+   * Returns the reference set identifier of a URL in the SNOMED implicit concept map form ({@code
+   * ?fhir_cm=[refsetId]}), or null if the URL is not in that form. Whether the reference set is one
+   * that can be used as an implicit concept map is decided by {@link #translateSnomedAssociation}.
    */
   @Nullable
   private static String snomedImplicitConceptMap(@Nonnull final String conceptMapUrl) {
