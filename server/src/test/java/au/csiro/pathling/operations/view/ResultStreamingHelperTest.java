@@ -251,12 +251,36 @@ class ResultStreamingHelperTest {
   // ---------------------------------------------------------------------------
 
   @Test
-  void writeCsvHeaderEmitsCommaSeparatedColumnNames() throws Exception {
+  void streamsCsvHeaderBeforeTheRowsWhenRequested() throws Exception {
+    final List<Row> rows = List.of(RowFactory.create(1, "alice"));
     final ByteArrayOutputStream out = new ByteArrayOutputStream();
 
-    helper.writeCsvHeader(out, List.of("id", "name", "active"));
+    helper.streamCsv(out, rows.iterator(), idNameSchema(), true);
 
-    assertThat(out.toString(StandardCharsets.UTF_8)).startsWith("id,name,active");
+    assertThat(out.toString(StandardCharsets.UTF_8).lines()).containsExactly("id,name", "1,alice");
+  }
+
+  @Test
+  void streamsCsvHeaderAloneForAnEmptyResult() throws Exception {
+    // An empty result is still a well-formed CSV document, and the header names its columns.
+    final ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+    helper.streamCsv(out, List.<Row>of().iterator(), idNameSchema(), true);
+
+    assertThat(out.toString(StandardCharsets.UTF_8).lines()).containsExactly("id,name");
+  }
+
+  @Test
+  void streamsCsvWritesNothingWhenTheFirstRowFails() {
+    // Evaluation of the result happens when the first row is requested. A failure there must leave
+    // the output untouched, so that the caller can still report it with an error status rather than
+    // a 200 that carries only the header.
+    final ByteArrayOutputStream out = new ByteArrayOutputStream();
+    final IllegalStateException failure = new IllegalStateException("evaluation failed");
+
+    assertThatThrownBy(() -> helper.streamCsv(out, failingIterator(failure), idNameSchema(), true))
+        .isSameAs(failure);
+    assertThat(out.size()).isZero();
   }
 
   @Test
@@ -265,7 +289,7 @@ class ResultStreamingHelperTest {
     final List<Row> rows = List.of(RowFactory.create(1, "alice"), RowFactory.create(2, "bob"));
     final ByteArrayOutputStream out = new ByteArrayOutputStream();
 
-    helper.streamCsv(out, rows.iterator(), schema);
+    helper.streamCsv(out, rows.iterator(), schema, false);
 
     final String body = out.toString(StandardCharsets.UTF_8);
     assertThat(body).contains("1,alice").contains("2,bob");
@@ -277,7 +301,7 @@ class ResultStreamingHelperTest {
     final List<Row> rows = List.of(RowFactory.create(1, "smith, john"));
     final ByteArrayOutputStream out = new ByteArrayOutputStream();
 
-    helper.streamCsv(out, rows.iterator(), schema);
+    helper.streamCsv(out, rows.iterator(), schema, false);
 
     assertThat(out.toString(StandardCharsets.UTF_8)).contains("\"smith, john\"");
   }
@@ -478,7 +502,7 @@ class ResultStreamingHelperTest {
             LocalDateTime.parse("2020-01-01T12:00:00"), Duration.ofHours(1), Period.ofYears(1));
     final ByteArrayOutputStream out = new ByteArrayOutputStream();
 
-    helper.streamCsv(out, rows.iterator(), schema);
+    helper.streamCsv(out, rows.iterator(), schema, false);
 
     assertThat(out.toString(StandardCharsets.UTF_8).trim()).isEqualTo("2020-01-01T12:00,PT1H,P1Y");
   }
@@ -625,5 +649,23 @@ class ResultStreamingHelperTest {
     assertThat(json.get("ts_ntz").getAsString()).isEqualTo(timestamp);
     assertThat(json.get("dt").getAsString()).isEqualTo(dayTime);
     assertThat(json.get("ym").getAsString()).isEqualTo(yearMonth);
+  }
+
+  /**
+   * Builds a row iterator whose first {@code hasNext()} throws the given failure, standing in for a
+   * Spark result that fails while its first partition is evaluated.
+   */
+  private static Iterator<Row> failingIterator(final RuntimeException failure) {
+    return new Iterator<>() {
+      @Override
+      public boolean hasNext() {
+        throw failure;
+      }
+
+      @Override
+      public Row next() {
+        throw failure;
+      }
+    };
   }
 }
