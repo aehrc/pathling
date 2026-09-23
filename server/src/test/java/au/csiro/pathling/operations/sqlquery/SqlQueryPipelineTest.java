@@ -86,17 +86,16 @@ class SqlQueryPipelineTest {
     final FhirView suppliedView = mock(FhirView.class);
     final SuppliedArtefacts supplied =
         SuppliedArtefacts.ofViews(Map.of("patient-view", suppliedView));
-    when(requestParser.parse(eq(library), eq("ndjson"), any(), any(), any(), any()))
-        .thenReturn(request);
+    when(requestParser.parse(eq(library), eq("ndjson"), any(), any(), any())).thenReturn(request);
     when(dependencyResolver.resolve(eq(request.getParsedQuery()), eq(supplied), any()))
         .thenReturn(graph);
 
     final PreparedSqlQuery prepared =
-        pipeline.prepare(library, "ndjson", null, null, null, null, supplied);
+        pipeline.prepare(library, "ndjson", null, null, null, supplied);
 
     assertThat(prepared.getRequest()).isSameAs(request);
     assertThat(prepared.getDependencyGraph()).isSameAs(graph);
-    verify(requestParser).parse(eq(library), eq("ndjson"), any(), any(), any(), any());
+    verify(requestParser).parse(eq(library), eq("ndjson"), any(), any(), any());
     verify(dependencyResolver).resolve(eq(request.getParsedQuery()), eq(supplied), any());
   }
 
@@ -106,10 +105,10 @@ class SqlQueryPipelineTest {
   void prepareThreadsTheSharedMemoisationMapToTheResolver() {
     final Map<String, ResolvedDependency> shared = new java.util.LinkedHashMap<>();
     final SuppliedArtefacts supplied = SuppliedArtefacts.empty();
-    when(requestParser.parse(eq(library), any(), any(), any(), any(), any())).thenReturn(request);
+    when(requestParser.parse(eq(library), any(), any(), any(), any())).thenReturn(request);
     when(dependencyResolver.resolve(request.getParsedQuery(), supplied, shared)).thenReturn(graph);
 
-    pipeline.prepare(library, null, null, null, null, null, supplied, shared);
+    pipeline.prepare(library, null, null, null, null, supplied, shared);
 
     verify(dependencyResolver).resolve(request.getParsedQuery(), supplied, shared);
   }

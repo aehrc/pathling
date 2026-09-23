@@ -258,7 +258,6 @@ public class SqlRunProvider {
           pipeline.prepare(
               subject.asLibrary(),
               outputFormat.getCode(),
-              null,
               new BooleanType(header),
               limit,
               parameters,

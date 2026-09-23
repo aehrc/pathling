@@ -89,7 +89,6 @@ public class SqlQueryRequestParser {
    *
    * @param queryResource the inline Library resource carrying the SQLQuery
    * @param format the explicit {@code _format} parameter, if any
-   * @param acceptHeader the HTTP {@code Accept} header value, used as a fallback for {@code format}
    * @param includeHeader whether to include a CSV header row; {@code null} defaults to {@code true}
    * @param limit optional row cap
    * @param parameters runtime parameter bindings as a {@code Parameters} resource
@@ -102,7 +101,6 @@ public class SqlQueryRequestParser {
   public SqlQueryRequest parse(
       @Nonnull final IBaseResource queryResource,
       @Nullable final String format,
-      @Nullable final String acceptHeader,
       @Nullable final BooleanType includeHeader,
       @Nullable final IntegerType limit,
       @Nullable final Parameters parameters) {
@@ -126,7 +124,7 @@ public class SqlQueryRequestParser {
         parsedQuery.getViewReferences().size(),
         parsedQuery.getDeclaredParameters().size());
 
-    final SqlQueryOutputFormat outputFormat = selectOutputFormat(format, acceptHeader);
+    final SqlQueryOutputFormat outputFormat = SqlQueryOutputFormat.fromStringStrict(format);
     final boolean shouldIncludeHeader = includeHeader == null || includeHeader.booleanValue();
     final Integer limitValue =
         (limit != null && limit.getValue() != null) ? limit.getValue() : null;
@@ -144,17 +142,6 @@ public class SqlQueryRequestParser {
     }
     throw new InvalidRequestException(
         "Expected a Library resource but received: " + resource.fhirType());
-  }
-
-  @Nonnull
-  private SqlQueryOutputFormat selectOutputFormat(
-      @Nullable final String format, @Nullable final String acceptHeader) {
-    // An explicit _format parameter is parsed strictly (an unsupported value is rejected), while
-    // Accept-header negotiation remains lenient and falls back to NDJSON.
-    if (format != null && !format.isBlank()) {
-      return SqlQueryOutputFormat.fromStringStrict(format);
-    }
-    return SqlQueryOutputFormat.fromAcceptHeader(acceptHeader);
   }
 
   /**

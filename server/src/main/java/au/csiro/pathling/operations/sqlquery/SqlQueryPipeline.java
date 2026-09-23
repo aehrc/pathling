@@ -81,7 +81,6 @@ public class SqlQueryPipeline {
    *
    * @param library the SQLQuery Library resource (inline or already resolved from a reference)
    * @param format the explicit {@code _format} parameter, if any
-   * @param acceptHeader the HTTP {@code Accept} header value, used as a fallback for {@code format}
    * @param includeHeader whether to include a CSV header row; {@code null} defaults to {@code true}
    * @param limit optional row cap
    * @param parameters runtime parameter bindings as a {@code Parameters} resource
@@ -93,20 +92,12 @@ public class SqlQueryPipeline {
   public PreparedSqlQuery prepare(
       @Nonnull final IBaseResource library,
       @Nullable final String format,
-      @Nullable final String acceptHeader,
       @Nullable final BooleanType includeHeader,
       @Nullable final IntegerType limit,
       @Nullable final Parameters parameters,
       @Nonnull final SuppliedArtefacts supplied) {
     return prepare(
-        library,
-        format,
-        acceptHeader,
-        includeHeader,
-        limit,
-        parameters,
-        supplied,
-        new LinkedHashMap<>());
+        library, format, includeHeader, limit, parameters, supplied, new LinkedHashMap<>());
   }
 
   /**
@@ -115,7 +106,6 @@ public class SqlQueryPipeline {
    *
    * @param library the SQLQuery or SQLView Library resource
    * @param format the explicit {@code _format} parameter, if any
-   * @param acceptHeader the HTTP {@code Accept} header value, used as a fallback for {@code format}
    * @param includeHeader whether to include a CSV header row; {@code null} defaults to {@code true}
    * @param limit optional row cap
    * @param parameters runtime parameter bindings as a {@code Parameters} resource
@@ -128,14 +118,13 @@ public class SqlQueryPipeline {
   public PreparedSqlQuery prepare(
       @Nonnull final IBaseResource library,
       @Nullable final String format,
-      @Nullable final String acceptHeader,
       @Nullable final BooleanType includeHeader,
       @Nullable final IntegerType limit,
       @Nullable final Parameters parameters,
       @Nonnull final SuppliedArtefacts supplied,
       @Nonnull final Map<String, ResolvedDependency> nodesByKey) {
     final SqlQueryRequest request =
-        requestParser.parse(library, format, acceptHeader, includeHeader, limit, parameters);
+        requestParser.parse(library, format, includeHeader, limit, parameters);
     final ResolvedDependencyGraph dependencyGraph =
         dependencyResolver.resolve(request.getParsedQuery(), supplied, nodesByKey);
     return new PreparedSqlQuery(request, dependencyGraph);

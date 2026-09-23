@@ -257,8 +257,7 @@ public class SqlExportRequestParser {
       @Nonnull final Map<String, ResolvedDependency> nodesByKey) {
     try {
       final PreparedSqlQuery prepared =
-          pipeline.prepare(
-              subject.asLibrary(), null, null, null, null, bindings, supplied, nodesByKey);
+          pipeline.prepare(subject.asLibrary(), null, null, null, bindings, supplied, nodesByKey);
       pipeline.validateStatically(prepared);
       return prepared;
     } catch (final InvalidRequestException e) {

@@ -142,7 +142,7 @@ class SqlRunProviderTest {
   @Test
   void reportsAnUndeclaredBindingAgainstTheParametersPart() {
     stubSubject(SubjectKind.SQL_QUERY);
-    when(pipeline.prepare(any(), any(), any(), any(), any(), any(), any()))
+    when(pipeline.prepare(any(), any(), any(), any(), any(), any()))
         .thenThrow(
             new InvalidRequestException(
                 "Parameter 'nosuch' is not declared in the SQLQuery Library's parameter list"));
@@ -158,7 +158,7 @@ class SqlRunProviderTest {
   @Test
   void reportsAMistypedBindingAgainstTheParametersPart() {
     stubSubject(SubjectKind.SQL_QUERY);
-    when(pipeline.prepare(any(), any(), any(), any(), any(), any(), any()))
+    when(pipeline.prepare(any(), any(), any(), any(), any(), any()))
         .thenThrow(new InvalidRequestException("Parameter 'count' expects an integer"));
 
     final BaseServerResponseException exception =
@@ -172,7 +172,7 @@ class SqlRunProviderTest {
   @Test
   void leavesAFailureUnlabelledWhenNoBindingsWereSupplied() {
     stubSubject(SubjectKind.SQL_QUERY);
-    when(pipeline.prepare(any(), any(), any(), any(), any(), any(), any()))
+    when(pipeline.prepare(any(), any(), any(), any(), any(), any()))
         .thenThrow(new InvalidRequestException("Cycle detected in the dependency graph"));
 
     final BaseServerResponseException exception = catchServerException(() -> run(builder()));
@@ -186,7 +186,7 @@ class SqlRunProviderTest {
   @Test
   void preservesAnOutcomeAFailureAlreadyCarries() {
     stubSubject(SubjectKind.SQL_QUERY);
-    when(pipeline.prepare(any(), any(), any(), any(), any(), any(), any()))
+    when(pipeline.prepare(any(), any(), any(), any(), any(), any()))
         .thenThrow(
             SqlOperationError.badRequest(
                 IssueType.NOTSUPPORTED, "subject", "The SQL uses an unsupported construct."));
@@ -216,7 +216,7 @@ class SqlRunProviderTest {
   void acceptsParametersForASqlSubjectAndResourcesForAView() {
     stubSubject(SubjectKind.SQL_QUERY);
     run(builder().parameters(new Parameters()));
-    verify(pipeline).prepare(any(), any(), any(), any(), any(), any(), any());
+    verify(pipeline).prepare(any(), any(), any(), any(), any(), any());
 
     stubSubject(SubjectKind.VIEW_DEFINITION);
     run(builder().inlineResources(List.of("{\"resourceType\":\"Patient\"}")));
@@ -246,7 +246,7 @@ class SqlRunProviderTest {
 
     run(builder().source("  "));
 
-    verify(pipeline).prepare(any(), any(), any(), any(), any(), any(), any());
+    verify(pipeline).prepare(any(), any(), any(), any(), any(), any());
   }
 
   // A resource-carrying parameter cannot be expressed in a query string, so a GET naming one is
@@ -297,7 +297,7 @@ class SqlRunProviderTest {
     run(builder().format("csv"));
 
     verify(pipeline)
-        .prepare(any(), org.mockito.ArgumentMatchers.eq("csv"), any(), any(), any(), any(), any());
+        .prepare(any(), org.mockito.ArgumentMatchers.eq("csv"), any(), any(), any(), any());
   }
 
   // ---------------------------------------------------------------------------
@@ -406,7 +406,7 @@ class SqlRunProviderTest {
     run(builder().context(List.of(new Library())));
 
     final org.mockito.InOrder inOrder = org.mockito.Mockito.inOrder(pipeline, artefacts);
-    inOrder.verify(pipeline).prepare(any(), any(), any(), any(), any(), any(), any());
+    inOrder.verify(pipeline).prepare(any(), any(), any(), any(), any(), any());
     inOrder.verify(artefacts).checkAllMatched();
   }
 
@@ -422,7 +422,7 @@ class SqlRunProviderTest {
     run(builder());
 
     verify(viewExecutionHelper).streamView(any(), any(), any(), anyBooleanValue(), any(), any());
-    verify(pipeline, never()).prepare(any(), any(), any(), any(), any(), any(), any());
+    verify(pipeline, never()).prepare(any(), any(), any(), any(), any(), any());
   }
 
   // A SQL subject goes to the SQL pipeline and never to the FhirView engine.
@@ -433,7 +433,7 @@ class SqlRunProviderTest {
 
     run(builder());
 
-    verify(pipeline).prepare(any(), any(), any(), any(), any(), any(), any());
+    verify(pipeline).prepare(any(), any(), any(), any(), any(), any());
     verify(viewExecutionHelper, never())
         .streamView(any(), any(), any(), anyBooleanValue(), any(), any());
   }
