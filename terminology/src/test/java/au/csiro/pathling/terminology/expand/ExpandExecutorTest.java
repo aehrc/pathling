@@ -360,13 +360,7 @@ class ExpandExecutorTest {
 
   @Test
   void returnsEmptyForNotFound() {
-    wireMockServer.stubFor(
-        get(urlPathEqualTo(EXPAND_PATH))
-            .willReturn(
-                aResponse()
-                    .withStatus(404)
-                    .withHeader("Content-Type", FHIR_JSON)
-                    .withBody(encode(outcome("Unable to find ValueSet")))));
+    stubOutcome(404, outcome("Unable to find ValueSet"));
 
     final Optional<ValueSetExpansion> result = executor.expand(URL, null, NO_LIMIT);
 
@@ -375,13 +369,7 @@ class ExpandExecutorTest {
 
   @Test
   void mapsUnprocessableEntityWithOutcomeToExceptionCarryingDiagnostics() {
-    wireMockServer.stubFor(
-        get(urlPathEqualTo(EXPAND_PATH))
-            .willReturn(
-                aResponse()
-                    .withStatus(422)
-                    .withHeader("Content-Type", FHIR_JSON)
-                    .withBody(encode(outcome("The value set is too large to expand")))));
+    stubOutcome(422, outcome("The value set is too large to expand"));
 
     final ValueSetExpansionException e =
         assertThrows(ValueSetExpansionException.class, () -> executor.expand(URL, null, NO_LIMIT));
@@ -463,8 +451,9 @@ class ExpandExecutorTest {
 
   @Test
   void stopsAfterPageThatRevealsExcess() {
-    stubPage(0, page(6, 0, "1", "2", "3"));
-    stubPage(3, page(6, 3, "4", "5", "6"));
+    // With no total reported, the excess is revealed only by the entries accumulated.
+    stubPage(0, page(null, 0, "1", "2", "3"));
+    stubPage(3, page(null, 3, "4", "5", "6"));
 
     final ExpansionLimitExceededException e =
         assertThrows(ExpansionLimitExceededException.class, () -> executor.expand(URL, null, 2));

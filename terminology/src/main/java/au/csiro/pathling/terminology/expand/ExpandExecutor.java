@@ -258,7 +258,7 @@ public class ExpandExecutor {
     if (issue.hasDiagnostics()) {
       return Optional.of(issue.getDiagnostics());
     }
-    return issue.getDetails().hasText()
+    return issue.hasDetails() && issue.getDetails().hasText()
         ? Optional.of(issue.getDetails().getText())
         : Optional.empty();
   }
