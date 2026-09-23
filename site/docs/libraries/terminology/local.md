@@ -725,16 +725,16 @@ Local `member_of` resolves three kinds of value set reference, and local
 content the store does not hold yields the same "unknown content" results as
 remote mode rather than an error.
 
-| Reference                             | Form                                               |
-| ------------------------------------- | -------------------------------------------------- |
-| An imported FHIR ValueSet             | its canonical URL, optionally with `\|version`     |
-| Every SNOMED CT concept               | `http://snomed.info/sct?fhir_vs`                   |
-| A SNOMED CT reference set             | `http://snomed.info/sct?fhir_vs=refset/[refsetId]` |
-| A SNOMED CT subtype hierarchy         | `http://snomed.info/sct?fhir_vs=isa/[conceptId]`   |
-| A SNOMED CT ECL expression            | `http://snomed.info/sct?fhir_vs=ecl/[expression]`  |
-| A VCL expression                      | `http://fhir.org/VCL?v1=[expression]`              |
-| An imported FHIR ConceptMap           | its canonical URL                                  |
-| A SNOMED CT association reference set | `http://snomed.info/sct?fhir_cm=[refsetId]`        |
+| Reference                        | Form                                               |
+| -------------------------------- | -------------------------------------------------- |
+| An imported FHIR ValueSet        | its canonical URL, optionally with `\|version`     |
+| Every SNOMED CT concept          | `http://snomed.info/sct?fhir_vs`                   |
+| A SNOMED CT reference set        | `http://snomed.info/sct?fhir_vs=refset/[refsetId]` |
+| A SNOMED CT subtype hierarchy    | `http://snomed.info/sct?fhir_vs=isa/[conceptId]`   |
+| A SNOMED CT ECL expression       | `http://snomed.info/sct?fhir_vs=ecl/[expression]`  |
+| A VCL expression                 | `http://fhir.org/VCL?v1=[expression]`              |
+| An imported FHIR ConceptMap      | its canonical URL                                  |
+| A SNOMED CT implicit concept map | `http://snomed.info/sct?fhir_cm=[refsetId]`        |
 
 The `isa/` form is the subtype hierarchy including the named concept itself, so
 it is equivalent to `ecl/<<[conceptId]`. Every SNOMED form is also accepted on an
@@ -742,6 +742,24 @@ edition and version qualified URI, for example
 `http://snomed.info/sct/32506021000036107/version/20250630?fhir_vs=ecl/...`,
 which evaluates against that version rather than the store default. Any other
 `fhir_vs` value is treated as unknown content.
+
+A SNOMED CT implicit concept map is one of the four association reference sets
+that
+[THO defines as implicit concept maps](https://terminology.hl7.org/en/SNOMEDCT.html#snomed-ct-implicit-concept-maps),
+and each translation through it carries the equivalence defined for that
+reference set, in either direction:
+
+| Reference set          | Identifier           | Equivalence  |
+| ---------------------- | -------------------- | ------------ |
+| POSSIBLY EQUIVALENT TO | `900000000000523009` | `inexact`    |
+| REPLACED BY            | `900000000000526001` | `equivalent` |
+| SAME AS                | `900000000000527005` | `equal`      |
+| ALTERNATIVE            | `900000000000530003` | `inexact`    |
+
+A concept with more than one target, such as an ambiguous concept that is
+possibly equivalent to several others, translates to all of them. Any other
+`fhir_cm` reference set, including other association reference sets such as WAS
+A, is treated as unknown content.
 
 The expression carried by an `ecl/` or `v1=` URL is percent-decoded before it is
 parsed, so it must be percent-encoded when the URL is built. For ECL,

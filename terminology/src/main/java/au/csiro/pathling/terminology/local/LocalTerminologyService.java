@@ -105,6 +105,24 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
 
   private static final String SNOMED_URI = "http://snomed.info/sct";
 
+  /**
+   * The association reference sets that can be used as SNOMED CT implicit concept maps, and the
+   * relationship each one asserts between a member and its target.
+   *
+   * @see <a href="https://terminology.hl7.org/en/SNOMEDCT.html#snomed-ct-implicit-concept-maps">
+   *     SNOMED CT implicit concept maps (THO)</a>
+   */
+  private static final Map<String, ConceptMapEquivalence> IMPLICIT_CONCEPT_MAP_RELATIONSHIPS =
+      Map.of(
+          // POSSIBLY EQUIVALENT TO.
+          "900000000000523009", ConceptMapEquivalence.INEXACT,
+          // REPLACED BY.
+          "900000000000526001", ConceptMapEquivalence.EQUIVALENT,
+          // SAME AS.
+          "900000000000527005", ConceptMapEquivalence.EQUAL,
+          // ALTERNATIVE.
+          "900000000000530003", ConceptMapEquivalence.INEXACT);
+
   private volatile boolean initialised;
   private TerminologyStoreReader reader;
   private ValueSetResolver valueSetResolver;
@@ -220,12 +238,17 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
   /**
    * Translates through a SNOMED association reference set, forward or reversed.
    *
-   * <p>The reversed direction returns its matches ordered by concept code. The association map is
+   * <p>Only the reference sets in {@link #IMPLICIT_CONCEPT_MAP_RELATIONSHIPS} are implicit concept
+   * maps, and every translation carries the relationship defined for its reference set. Each of
+   * those relationships is its own inverse, so the reversed direction carries it unchanged. Any
+   * other reference set is unknown content and translates to nothing, even where it has association
+   * targets.
+   *
+   * <p>Both directions return their matches ordered by concept code. The association map is
    * iterated in the store's physical row order, which is an implementation detail that follows from
    * the join strategy the importer's optimiser happened to choose, so emitting in that order would
    * let how the store was written show through in a result a caller can see. This is the same rule
-   * as {@link #byConceptCode}. The forward direction returns at most one match, because a concept
-   * has at most one association target, so there is nothing there to order.
+   * as {@link #byConceptCode}.
    */
   @Nonnull
   private List<Translation> translateSnomedAssociation(
@@ -233,7 +256,8 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
       @Nonnull final Coding coding,
       @Nonnull final String refsetId,
       final boolean reverse) {
-    if (!SNOMED_URI.equals(coding.getSystem())) {
+    final ConceptMapEquivalence relationship = IMPLICIT_CONCEPT_MAP_RELATIONSHIPS.get(refsetId);
+    if (relationship == null || !SNOMED_URI.equals(coding.getSystem())) {
       return Collections.emptyList();
     }
     final int base = conceptMapUrl.indexOf('?');
@@ -245,30 +269,26 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
       return Collections.emptyList();
     }
     final CodeSystemIndexes indexes = indexesFor(systemVersionId.get());
-    final Map<Integer, String> associations = indexes.refsets().associationTargets(refsetId);
+    final Map<Integer, List<String>> associations = indexes.refsets().associationTargets(refsetId);
     final ConceptDictionary dictionary = indexes.dictionary();
-    final List<Translation> translations = new ArrayList<>();
+    final List<String> codes = new ArrayList<>();
     if (reverse) {
-      // Find the referenced concepts whose association target is the requested code.
-      for (final Map.Entry<Integer, String> entry : associations.entrySet()) {
-        if (coding.getCode().equals(entry.getValue())) {
-          translations.add(snomedTranslation(dictionary.code(entry.getKey())));
+      // Find the referenced concepts that have the requested code among their targets.
+      for (final Map.Entry<Integer, List<String>> entry : associations.entrySet()) {
+        if (entry.getValue().contains(coding.getCode())) {
+          codes.add(dictionary.code(entry.getKey()));
         }
       }
-      translations.sort(Comparator.comparing(translation -> translation.getConcept().getCode()));
     } else {
       final Integer dense = dictionary.denseId(coding.getCode());
-      if (dense != null && associations.containsKey(dense)) {
-        translations.add(snomedTranslation(associations.get(dense)));
+      if (dense != null) {
+        codes.addAll(associations.getOrDefault(dense, List.of()));
       }
     }
-    return translations;
-  }
-
-  @Nonnull
-  private static Translation snomedTranslation(@Nonnull final String code) {
-    return Translation.of(
-        ConceptMapEquivalence.EQUAL, new Coding().setSystem(SNOMED_URI).setCode(code));
+    Collections.sort(codes);
+    return codes.stream()
+        .map(code -> Translation.of(relationship, new Coding().setSystem(SNOMED_URI).setCode(code)))
+        .toList();
   }
 
   @Nonnull

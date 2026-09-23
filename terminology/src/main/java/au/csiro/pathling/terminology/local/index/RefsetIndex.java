@@ -25,7 +25,9 @@ import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.REFSET_
 
 import au.csiro.pathling.terminology.store.TerminologyStoreReader;
 import jakarta.annotation.Nonnull;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.roaringbitmap.RoaringBitmap;
 
@@ -38,11 +40,11 @@ import org.roaringbitmap.RoaringBitmap;
 public final class RefsetIndex {
 
   @Nonnull private final Map<String, RoaringBitmap> members;
-  @Nonnull private final Map<String, Map<Integer, String>> associationTargets;
+  @Nonnull private final Map<String, Map<Integer, List<String>>> associationTargets;
 
   private RefsetIndex(
       @Nonnull final Map<String, RoaringBitmap> members,
-      @Nonnull final Map<String, Map<Integer, String>> associationTargets) {
+      @Nonnull final Map<String, Map<Integer, List<String>>> associationTargets) {
     this.members = members;
     this.associationTargets = associationTargets;
   }
@@ -58,7 +60,7 @@ public final class RefsetIndex {
   public static RefsetIndex load(
       @Nonnull final TerminologyStoreReader reader, @Nonnull final String systemVersionId) {
     final Map<String, RoaringBitmap> members = new HashMap<>();
-    final Map<String, Map<Integer, String>> associationTargets = new HashMap<>();
+    final Map<String, Map<Integer, List<String>>> associationTargets = new HashMap<>();
     reader.readTable(
         REFSET_MEMBER,
         row -> {
@@ -72,7 +74,8 @@ public final class RefsetIndex {
           if (target != null) {
             associationTargets
                 .computeIfAbsent(refset, k -> new HashMap<>())
-                .put(referenced, target);
+                .computeIfAbsent(referenced, k -> new ArrayList<>(1))
+                .add(target);
           }
         });
     return new RefsetIndex(members, associationTargets);
@@ -92,17 +95,19 @@ public final class RefsetIndex {
 
   /**
    * Returns the association targets of a reference set as a map from referenced concept dense
-   * identifier to the target code.
+   * identifier to the codes of its targets. A concept can have more than one target, as an
+   * ambiguous inactive concept does in POSSIBLY EQUIVALENT TO.
    *
-   * <p>The iteration order of the map is unspecified. A caller that turns these entries into a
-   * result it hands back must impose its own order, because the order rows were read in is a
-   * property of how the store happened to be written rather than of the reference set.
+   * <p>The iteration order of the map, and of each concept's targets, is unspecified. A caller that
+   * turns these entries into a result it hands back must impose its own order, because the order
+   * rows were read in is a property of how the store happened to be written rather than of the
+   * reference set.
    *
    * @param refsetCode the reference set identifier
    * @return the association target map, empty if the reference set has no targets
    */
   @Nonnull
-  public Map<Integer, String> associationTargets(@Nonnull final String refsetCode) {
+  public Map<Integer, List<String>> associationTargets(@Nonnull final String refsetCode) {
     return associationTargets.getOrDefault(refsetCode, Map.of());
   }
 }
