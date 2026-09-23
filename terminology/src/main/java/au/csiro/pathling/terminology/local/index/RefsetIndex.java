@@ -33,20 +33,21 @@ import org.roaringbitmap.RoaringBitmap;
 
 /**
  * The reference set membership index for one code system version: which concepts belong to each
- * reference set, and the association targets that drive SNOMED implicit concept maps.
+ * reference set, and the targets of the association and simple map reference sets that drive SNOMED
+ * implicit concept maps.
  *
  * @author John Grimes
  */
 public final class RefsetIndex {
 
   @Nonnull private final Map<String, RoaringBitmap> members;
-  @Nonnull private final Map<String, Map<Integer, List<String>>> associationTargets;
+  @Nonnull private final Map<String, Map<Integer, List<String>>> targets;
 
   private RefsetIndex(
       @Nonnull final Map<String, RoaringBitmap> members,
-      @Nonnull final Map<String, Map<Integer, List<String>>> associationTargets) {
+      @Nonnull final Map<String, Map<Integer, List<String>>> targets) {
     this.members = members;
-    this.associationTargets = associationTargets;
+    this.targets = targets;
   }
 
   /**
@@ -60,7 +61,7 @@ public final class RefsetIndex {
   public static RefsetIndex load(
       @Nonnull final TerminologyStoreReader reader, @Nonnull final String systemVersionId) {
     final Map<String, RoaringBitmap> members = new HashMap<>();
-    final Map<String, Map<Integer, List<String>>> associationTargets = new HashMap<>();
+    final Map<String, Map<Integer, List<String>>> targets = new HashMap<>();
     reader.readTable(
         REFSET_MEMBER,
         row -> {
@@ -72,13 +73,13 @@ public final class RefsetIndex {
           members.computeIfAbsent(refset, k -> new RoaringBitmap()).add(referenced);
           final String target = row.getString(COLUMN_TARGET_CODE);
           if (target != null) {
-            associationTargets
+            targets
                 .computeIfAbsent(refset, k -> new HashMap<>())
                 .computeIfAbsent(referenced, k -> new ArrayList<>(1))
                 .add(target);
           }
         });
-    return new RefsetIndex(members, associationTargets);
+    return new RefsetIndex(members, targets);
   }
 
   /**
@@ -94,9 +95,10 @@ public final class RefsetIndex {
   }
 
   /**
-   * Returns the association targets of a reference set as a map from referenced concept dense
-   * identifier to the codes of its targets. A concept can have more than one target, as an
-   * ambiguous inactive concept does in POSSIBLY EQUIVALENT TO.
+   * Returns the targets of a reference set as a map from referenced concept dense identifier to the
+   * codes of its targets: SNOMED CT concepts for an association reference set, codes in another
+   * code system for a simple map. A concept can have more than one target, as an ambiguous inactive
+   * concept does in POSSIBLY EQUIVALENT TO.
    *
    * <p>The iteration order of the map, and of each concept's targets, is unspecified. A caller that
    * turns these entries into a result it hands back must impose its own order, because the order
@@ -104,10 +106,10 @@ public final class RefsetIndex {
    * reference set.
    *
    * @param refsetCode the reference set identifier
-   * @return the association target map, empty if the reference set has no targets
+   * @return the target map, empty if the reference set has no targets
    */
   @Nonnull
-  public Map<Integer, List<String>> associationTargets(@Nonnull final String refsetCode) {
-    return associationTargets.getOrDefault(refsetCode, Map.of());
+  public Map<Integer, List<String>> targets(@Nonnull final String refsetCode) {
+    return targets.getOrDefault(refsetCode, Map.of());
   }
 }

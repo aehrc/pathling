@@ -743,11 +743,11 @@ edition and version qualified URI, for example
 which evaluates against that version rather than the store default. Any other
 `fhir_vs` value is treated as unknown content.
 
-A SNOMED CT implicit concept map is one of the four association reference sets
-that
-[THO defines as implicit concept maps](https://terminology.hl7.org/en/SNOMEDCT.html#snomed-ct-implicit-concept-maps),
-and each translation through it carries the equivalence defined for that
-reference set, in either direction:
+A SNOMED CT implicit concept map is either one of the four association
+reference sets or a simple map reference set, which are the two kinds
+[THO defines as implicit concept maps](https://terminology.hl7.org/en/SNOMEDCT.html#snomed-ct-implicit-concept-maps).
+Each translation through an association reference set carries the equivalence
+defined for that reference set, in either direction:
 
 | Reference set          | Identifier           | Equivalence  |
 | ---------------------- | -------------------- | ------------ |
@@ -756,11 +756,34 @@ reference set, in either direction:
 | SAME AS                | `900000000000527005` | `equal`      |
 | ALTERNATIVE            | `900000000000530003` | `inexact`    |
 
+A simple map reference set is any reference set that descends from
+`900000000000496009 |Simple map type reference set|` in the release, or one of
+the three simple maps in the table below, which Ontoserver also supports. It maps
+SNOMED CT concepts to codes in another code system. RF2 does not say which code
+system a map's targets belong to, so the target system is taken from the same
+table Ontoserver uses, along with the equivalence it reports, in either
+direction:
+
+| Simple map | Identifier           | Target system                                                  | Equivalence  |
+| ---------- | -------------------- | -------------------------------------------------------------- | ------------ |
+| ICD-O      | `446608001`          | `http://hl7.org/fhir/sid/icd-o-3`                              | `inexact`    |
+| CTV3       | `900000000000497000` | `http://read.info/ctv3`                                        | `equivalent` |
+| ARTG       | `11000168105`        | `https://www.tga.gov.au/australian-register-therapeutic-goods` | `inexact`    |
+
+CTV3 is accepted even though current releases no longer place it under the
+simple map type. A translation through any other simple map is `inexact`, and
+its target is returned as a code with no system. In the reverse direction, the
+coding being translated must be in the map's target system where the table names
+one, and is matched on its code alone where it does not. The extended and
+complex maps, such as the ICD-10 map, are not simple maps and are not translated.
+
 A concept with more than one target, such as an ambiguous concept that is
 possibly equivalent to several others, translates to all of them. Any other
-`fhir_cm` reference set is treated as unknown content. This includes other
-association reference sets such as WAS A, and simple map reference sets such as
-the CTV3 map `900000000000497000`, which local mode does not support.
+`fhir_cm` reference set, including other association reference sets such as WAS
+A, is treated as unknown content.
+
+A store imported by Pathling 9.9 holds no simple map targets, so translation
+through a simple map finds nothing until the release is imported again.
 
 The expression carried by an `ecl/` or `v1=` URL is percent-decoded before it is
 parsed, so it must be percent-encoded when the URL is built. For ECL,
