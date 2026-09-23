@@ -25,12 +25,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.List;
+import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.ConceptMap;
 import org.hl7.fhir.r4.model.ConceptMap.ConceptMapGroupComponent;
 import org.hl7.fhir.r4.model.ConceptMap.ConceptMapGroupUnmappedMode;
 import org.hl7.fhir.r4.model.ConceptMap.SourceElementComponent;
 import org.hl7.fhir.r4.model.ConceptMap.TargetElementComponent;
 import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
+import org.hl7.fhir.r4.model.PrimitiveType;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -136,6 +138,131 @@ class ConceptMapContentTest {
         targetCode,
         targetDisplay,
         relationship);
+  }
+
+  /**
+   * Gives a primitive a data absent reason extension and no value, as the parser does for valid R4
+   * JSON such as {@code "_code": {"extension": [...]}}.
+   */
+  private static void absent(@Nonnull final PrimitiveType<?> primitive) {
+    primitive.setValueAsString(null);
+    primitive.addExtension(
+        "http://hl7.org/fhir/StructureDefinition/data-absent-reason", new CodeType("unknown"));
+  }
+
+  @Test
+  void rejectsElementWithExtensionOnlyCode() {
+    final ConceptMap conceptMap = singleMapping("I21", ConceptMapEquivalence.EQUIVALENT);
+    absent(conceptMap.getGroupFirstRep().getElementFirstRep().getCodeElement());
+
+    final ConceptMapContentException e =
+        assertThrows(
+            ConceptMapContentException.class,
+            () -> ConceptMapContent.fromResource(conceptMap, NO_LIMIT));
+
+    assertEquals("an element has no code", e.getMessage());
+  }
+
+  @Test
+  void rejectsTargetWithExtensionOnlyEquivalence() {
+    final ConceptMap conceptMap = singleMapping("I21", ConceptMapEquivalence.EQUIVALENT);
+    absent(
+        conceptMap
+            .getGroupFirstRep()
+            .getElementFirstRep()
+            .getTargetFirstRep()
+            .getEquivalenceElement());
+
+    final ConceptMapContentException e =
+        assertThrows(
+            ConceptMapContentException.class,
+            () -> ConceptMapContent.fromResource(conceptMap, NO_LIMIT));
+
+    assertEquals("the mapping for source code '22298006' has no equivalence", e.getMessage());
+  }
+
+  @Test
+  void rejectsGroupWithExtensionOnlySource() {
+    final ConceptMap conceptMap = singleMapping("I21", ConceptMapEquivalence.EQUIVALENT);
+    absent(conceptMap.getGroupFirstRep().getSourceElement());
+
+    final ConceptMapContentException e =
+        assertThrows(
+            ConceptMapContentException.class,
+            () -> ConceptMapContent.fromResource(conceptMap, NO_LIMIT));
+
+    assertEquals("a group has no source system", e.getMessage());
+  }
+
+  @Test
+  void rejectsMappedTargetWithExtensionOnlyCode() {
+    final ConceptMap conceptMap = singleMapping("I21", ConceptMapEquivalence.NARROWER);
+    absent(conceptMap.getGroupFirstRep().getElementFirstRep().getTargetFirstRep().getCodeElement());
+
+    final ConceptMapContentException e =
+        assertThrows(
+            ConceptMapContentException.class,
+            () -> ConceptMapContent.fromResource(conceptMap, NO_LIMIT));
+
+    assertEquals("the mapping for source code '22298006' has no target code", e.getMessage());
+  }
+
+  @Test
+  void unmatchedWithExtensionOnlyCodeIsNoMappingRow() {
+    final ConceptMap conceptMap = singleMapping("I21", ConceptMapEquivalence.UNMATCHED);
+    absent(conceptMap.getGroupFirstRep().getElementFirstRep().getTargetFirstRep().getCodeElement());
+
+    final ConceptMapContent content = ConceptMapContent.fromResource(conceptMap, NO_LIMIT);
+
+    assertEquals(List.of(mapping(null, null, null)), content.getMappings());
+  }
+
+  @Test
+  void groupWithExtensionOnlyTargetIsGroupWithoutTarget() {
+    final ConceptMap conceptMap = singleMapping("I21", ConceptMapEquivalence.EQUIVALENT);
+    absent(conceptMap.getGroupFirstRep().getTargetElement());
+
+    final ConceptMapping row =
+        ConceptMapContent.fromResource(conceptMap, NO_LIMIT).getMappings().get(0);
+
+    // As for a group without a target, the target version is not reported without a system.
+    assertNull(row.getTargetSystem());
+    assertNull(row.getTargetVersion());
+    assertEquals("I21", row.getTargetCode());
+  }
+
+  @Test
+  void extensionOnlyDisplaysAndVersionsAreAbsent() {
+    final ConceptMap conceptMap = conceptMap();
+    final ConceptMapGroupComponent group = group(conceptMap, SNOMED + "|20230601", ICD10 + "|2019");
+    absent(group.getSourceVersionElement());
+    absent(group.getTargetVersionElement());
+    final SourceElementComponent element = element(group, "22298006", "Myocardial infarction");
+    absent(element.getDisplayElement());
+    final TargetElementComponent target =
+        target(element, "I21", "Acute myocardial infarction", ConceptMapEquivalence.EQUIVALENT);
+    absent(target.getDisplayElement());
+    absent(conceptMap.getVersionElement());
+
+    final ConceptMapContent content = ConceptMapContent.fromResource(conceptMap, NO_LIMIT);
+
+    assertNull(content.getVersion());
+    final ConceptMapping row = content.getMappings().get(0);
+    assertEquals(SNOMED, row.getSourceSystem());
+    assertEquals("20230601", row.getSourceVersion());
+    assertEquals(ICD10, row.getTargetSystem());
+    assertEquals("2019", row.getTargetVersion());
+    assertNull(row.getSourceDisplay());
+    assertNull(row.getTargetDisplay());
+  }
+
+  @Test
+  void rejectsResourceWithExtensionOnlyUrl() {
+    final ConceptMap conceptMap = singleMapping("I21", ConceptMapEquivalence.EQUIVALENT);
+    absent(conceptMap.getUrlElement());
+
+    assertThrows(
+        IllegalArgumentException.class, () -> ConceptMapContent.fromResource(conceptMap, NO_LIMIT));
   }
 
   @ParameterizedTest
