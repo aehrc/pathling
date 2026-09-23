@@ -390,6 +390,48 @@ class ExpandExecutorTest {
   }
 
   @Test
+  void mapsOutcomeWithOnlyDetailsTextToExceptionCarryingText() {
+    // Ontoserver reports the reason in issue.details.text and leaves diagnostics empty.
+    final OperationOutcome outcome = new OperationOutcome();
+    outcome
+        .addIssue()
+        .setSeverity(IssueSeverity.ERROR)
+        .setCode(IssueType.INVALID)
+        .getDetails()
+        .setText("The SNOMED CT ECL expression is invalid");
+    stubOutcome(422, outcome);
+
+    final ValueSetExpansionException e =
+        assertThrows(ValueSetExpansionException.class, () -> executor.expand(URL, null, NO_LIMIT));
+
+    assertEquals(
+        "the terminology server returned HTTP 422: The SNOMED CT ECL expression is invalid",
+        e.getMessage());
+  }
+
+  @Test
+  void prefersDiagnosticsOverDetailsTextWithinAnIssue() {
+    // An issue carrying both contributes its diagnostics only; the other issue, carrying only
+    // details.text, contributes that.
+    final OperationOutcome outcome = outcome("First diagnostics");
+    outcome.getIssueFirstRep().getDetails().setText("First details");
+    outcome
+        .addIssue()
+        .setSeverity(IssueSeverity.ERROR)
+        .setCode(IssueType.INVALID)
+        .getDetails()
+        .setText("Second details");
+    stubOutcome(422, outcome);
+
+    final ValueSetExpansionException e =
+        assertThrows(ValueSetExpansionException.class, () -> executor.expand(URL, null, NO_LIMIT));
+
+    assertTrue(e.getMessage().contains("First diagnostics"), e.getMessage());
+    assertTrue(e.getMessage().contains("Second details"), e.getMessage());
+    assertFalse(e.getMessage().contains("First details"), e.getMessage());
+  }
+
+  @Test
   void mapsServerErrorWithoutOutcomeToExceptionNamingStatus() {
     wireMockServer.stubFor(
         get(urlPathEqualTo(EXPAND_PATH)).willReturn(aResponse().withStatus(500).withBody("boom")));
@@ -432,6 +474,20 @@ class ExpandExecutorTest {
   }
 
   @Test
+  void rejectsOnFirstPageWhoseTotalExceedsLimit() {
+    // The first page holds fewer entries than the limit, but its total announces more members than
+    // the limit permits, so no further page is requested.
+    stubPage(0, page(6, 0, "1", "2"));
+    stubPage(2, page(6, 2, "3", "4", "5", "6"));
+
+    final ExpansionLimitExceededException e =
+        assertThrows(ExpansionLimitExceededException.class, () -> executor.expand(URL, null, 5));
+
+    assertEquals(5, e.getLimit());
+    assertEquals(1, expandRequests().size());
+  }
+
+  @Test
   void acceptsExactlyMaxMembersAcrossPages() {
     stubPage(0, page(4, 0, "1", "2"));
     stubPage(2, page(4, 2, "3", "4"));
@@ -451,6 +507,16 @@ class ExpandExecutorTest {
         assertThrows(ValueSetExpansionException.class, () -> executor.expand(URL, null, NO_LIMIT));
 
     assertTrue(e.getMessage().contains("no expansion"), e.getMessage());
+  }
+
+  private static void stubOutcome(final int status, @Nonnull final OperationOutcome outcome) {
+    wireMockServer.stubFor(
+        get(urlPathEqualTo(EXPAND_PATH))
+            .willReturn(
+                aResponse()
+                    .withStatus(status)
+                    .withHeader("Content-Type", FHIR_JSON)
+                    .withBody(encode(outcome))));
   }
 
   @Nonnull
