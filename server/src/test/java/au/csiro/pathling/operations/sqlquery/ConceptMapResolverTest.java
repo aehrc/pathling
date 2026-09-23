@@ -308,6 +308,73 @@ class ConceptMapResolverTest {
   }
 
   @Test
+  void logsTheProvenanceOfACanonicalResolvedInServerModeAsTheConfiguredServerUrl() {
+    // The version logged is the one the terminology layer resolved, not the one pinned.
+    serverConfiguration.setTerminology(
+        TerminologyConfiguration.builder()
+            .mode(TerminologyMode.SERVER)
+            .serverUrl("http://tx.example.org/fhir")
+            .build());
+    when(terminologyService.readConceptMap(URL, "2026", MAX_MAPPINGS))
+        .thenReturn(Optional.of(content("2026.1")));
+
+    try (LogCapture capture = LogCapture.forClass(ConceptMapResolver.class)) {
+      resolver()
+          .resolveCanonical(reference(URL + "|2026"), CanonicalReference.parse(URL + "|2026"));
+
+      assertThat(capture.events())
+          .singleElement()
+          .satisfies(
+              event -> {
+                assertThat(event.getLevel()).isEqualTo(Level.INFO);
+                assertThat(event.getFormattedMessage())
+                    .isEqualTo(
+                        "Resolved concept map '"
+                            + URL
+                            + "' (version 2026.1) from http://tx.example.org/fhir: 1 mappings");
+              });
+    }
+  }
+
+  @Test
+  void logsTheProvenanceOfAnUnversionedCanonicalResolvedInLocalModeAsTheLocalStore() {
+    serverConfiguration.setTerminology(
+        TerminologyConfiguration.builder()
+            .mode(TerminologyMode.LOCAL)
+            .serverUrl("http://tx.example.org/fhir")
+            .build());
+    when(terminologyService.readConceptMap(URL, null, MAX_MAPPINGS))
+        .thenReturn(Optional.of(content(null)));
+
+    try (LogCapture capture = LogCapture.forClass(ConceptMapResolver.class)) {
+      resolver().resolveCanonical(reference(URL), CanonicalReference.parse(URL));
+
+      assertThat(capture.events())
+          .singleElement()
+          .satisfies(
+              event -> {
+                assertThat(event.getLevel()).isEqualTo(Level.INFO);
+                assertThat(event.getFormattedMessage())
+                    .isEqualTo(
+                        "Resolved concept map '"
+                            + URL
+                            + "' (version none) from local store: 1 mappings");
+              });
+    }
+  }
+
+  @Test
+  void logsNothingWhenNoConceptMapIsResolved() {
+    when(terminologyService.readConceptMap(URL, null, MAX_MAPPINGS)).thenReturn(Optional.empty());
+
+    try (LogCapture capture = LogCapture.forClass(ConceptMapResolver.class)) {
+      resolver().resolveCanonical(reference(URL), CanonicalReference.parse(URL));
+
+      assertThat(capture.events()).isEmpty();
+    }
+  }
+
+  @Test
   void reportsUnrepresentableSuppliedContentAsA422AtTheContext() {
     final ConceptMap conceptMap = suppliedConceptMap("2026");
     conceptMap.getGroupFirstRep().setSource(null);
