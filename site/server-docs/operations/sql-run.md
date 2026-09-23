@@ -204,8 +204,10 @@ membership is current at the time of the request; a change on the terminology
 server between two requests is seen by the second. A membership larger than
 [`pathling.sqlQuery.valueSetMaxMembers`](../configuration#sql-query) is a `422`
 naming the label, the URL and the maximum. Every resolution is logged at `INFO`
-with the canonical URL, the version resolved, the source and the member count,
-so a result can be traced to the membership it was computed against.
+with the canonical URL, the version resolved, the source, the member count, the
+expansion identifier and timestamp where the source records them, and the code
+system versions, so a result can be traced to the membership it was computed
+against.
 
 ## Examples
 
