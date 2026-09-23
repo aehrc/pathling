@@ -29,6 +29,8 @@ import au.csiro.pathling.terminology.TerminologyOperation;
 import au.csiro.pathling.terminology.TerminologyParameters;
 import au.csiro.pathling.terminology.TerminologyResult;
 import au.csiro.pathling.terminology.TranslationList;
+import au.csiro.pathling.terminology.expand.ExpandExecutor;
+import au.csiro.pathling.terminology.expand.ValueSetExpansion;
 import au.csiro.pathling.terminology.lookup.LookupExecutor;
 import au.csiro.pathling.terminology.lookup.LookupParameters;
 import au.csiro.pathling.terminology.subsumes.SubsumesExecutor;
@@ -50,6 +52,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.ValueSet;
 import org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome;
 import org.infinispan.Cache;
 import org.infinispan.manager.EmbeddedCacheManager;
@@ -153,6 +156,23 @@ public abstract class CachingTerminologyService extends BaseTerminologyService {
         new LookupParameters(ImmutableCoding.of(coding), property, acceptLanguage);
     final LookupExecutor executor = new LookupExecutor(terminologyClient, parameters);
     return getFromCache(lookupCache, parameters, executor);
+  }
+
+  // Expansions are not held in the terminology cache. A membership can run to the caller's limit
+  // of members, so an entry would be large, and the caller already resolves each value set once
+  // per job. The HTTP response cache still applies to the GET requests the executor issues for a
+  // canonical URL.
+  @Nonnull
+  @Override
+  public Optional<ValueSetExpansion> expand(
+      @Nonnull final String url, @Nullable final String version, final int maxMembers) {
+    return new ExpandExecutor(terminologyClient).expand(url, version, maxMembers);
+  }
+
+  @Nonnull
+  @Override
+  public ValueSetExpansion expand(@Nonnull final ValueSet valueSet, final int maxMembers) {
+    return new ExpandExecutor(terminologyClient).expand(valueSet, maxMembers);
   }
 
   /**
