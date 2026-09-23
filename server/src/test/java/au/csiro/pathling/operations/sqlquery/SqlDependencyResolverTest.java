@@ -51,6 +51,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import org.hl7.fhir.r4.model.ConceptMap;
 import org.hl7.fhir.r4.model.Library;
 import org.hl7.fhir.r4.model.ValueSet;
 import org.junit.jupiter.api.BeforeEach;
@@ -934,6 +935,92 @@ class SqlDependencyResolverTest {
   }
 
   // ---------------------------------------------------------------------------
+  // Supplied ConceptMaps (spec 062 US2).
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void resolvesASuppliedConceptMapAsALeafThroughTheConceptMapResolver() {
+    final SuppliedArtefact supplied = suppliedConceptMap("2026");
+    final ResolvedConceptMap leaf = stubSuppliedConceptMap(supplied, CONCEPT_MAP_URL + "|2026");
+
+    final ResolvedDependencyGraph graph =
+        resolver.resolve(
+            sqlQuery("SELECT * FROM cm", "cm", CONCEPT_MAP_URL + "|2026"),
+            SuppliedArtefacts.of(List.of(supplied)));
+
+    assertThat(graph.getOrderedNodes()).containsExactly(leaf);
+    assertThat(graph.getTopLevelKeysByLabel()).containsEntry("cm", CONCEPT_MAP_URL + "|2026");
+    verify(conceptMapResolver)
+        .resolveSupplied(argThat(ref -> ref != null && "cm".equals(ref.getLabel())), eq(supplied));
+    verify(conceptMapResolver, never()).resolveCanonical(any(), any());
+    verifyNoInteractions(valueSetResolver);
+  }
+
+  @Test
+  void prefersASuppliedConceptMapOverAStoredViewDefinitionWithTheSameUrl() {
+    stubStoredViewDefinition(CONCEPT_MAP_URL, CONCEPT_MAP_URL, "Condition");
+    final SuppliedArtefact supplied = suppliedConceptMap(null);
+    stubSuppliedConceptMap(supplied, CONCEPT_MAP_URL);
+
+    final ResolvedDependencyGraph graph =
+        resolver.resolve(
+            sqlQuery("SELECT * FROM cm", "cm", CONCEPT_MAP_URL),
+            SuppliedArtefacts.of(List.of(supplied)));
+
+    assertThat(graph.getOrderedNodes()).hasSize(1);
+    assertThat(graph.getNodesByKey().get(CONCEPT_MAP_URL)).isInstanceOf(ResolvedConceptMap.class);
+    verifyNoInteractions(viewResolver, libraryReferenceResolver);
+  }
+
+  @Test
+  void matchesAPinnedDependencyToASuppliedConceptMapOnlyWhenTheVersionsAgree() {
+    final SuppliedArtefact wrongVersion = suppliedConceptMap("2025");
+    stubSuppliedConceptMap(wrongVersion, CONCEPT_MAP_URL + "|2025");
+    final ResolvedConceptMap canonical = stubConceptMap(CONCEPT_MAP_URL + "|2026");
+
+    final ResolvedDependencyGraph fellThrough =
+        resolver.resolve(
+            sqlQuery("SELECT * FROM cm", "cm", CONCEPT_MAP_URL + "|2026"),
+            SuppliedArtefacts.of(List.of(wrongVersion)));
+
+    assertThat(fellThrough.getOrderedNodes()).containsExactly(canonical);
+    verify(conceptMapResolver, never()).resolveSupplied(any(), any());
+    verify(valueSetResolver).resolveCanonical(any(), any());
+    verify(conceptMapResolver).resolveCanonical(any(), any());
+
+    final SuppliedArtefact rightVersion = suppliedConceptMap("2026");
+    final ResolvedConceptMap suppliedLeaf =
+        stubSuppliedConceptMap(rightVersion, CONCEPT_MAP_URL + "|2026");
+
+    final ResolvedDependencyGraph matched =
+        resolver.resolve(
+            sqlQuery("SELECT * FROM cm", "cm", CONCEPT_MAP_URL + "|2026"),
+            SuppliedArtefacts.of(List.of(rightVersion)));
+
+    assertThat(matched.getOrderedNodes()).containsExactly(suppliedLeaf);
+    verify(conceptMapResolver).resolveSupplied(any(), eq(rightVersion));
+  }
+
+  @Test
+  void resolvesASuppliedConceptMapReachedUnderTwoLabelsOnce() {
+    final SuppliedArtefact supplied = suppliedConceptMap(null);
+    stubSuppliedConceptMap(supplied, CONCEPT_MAP_URL);
+
+    final ResolvedDependencyGraph graph =
+        resolver.resolve(
+            sqlQueryWithDeps(
+                "SELECT * FROM a JOIN b ON a.source_code = b.source_code",
+                Map.of("a", CONCEPT_MAP_URL, "b", CONCEPT_MAP_URL)),
+            SuppliedArtefacts.of(List.of(supplied)));
+
+    assertThat(graph.getOrderedNodes()).hasSize(1);
+    assertThat(graph.getTopLevelKeysByLabel())
+        .containsEntry("a", CONCEPT_MAP_URL)
+        .containsEntry("b", CONCEPT_MAP_URL);
+    verify(conceptMapResolver, times(1)).resolveSupplied(any(), any());
+  }
+
+  // ---------------------------------------------------------------------------
   // Helpers.
   // ---------------------------------------------------------------------------
 
@@ -1063,6 +1150,29 @@ class SqlDependencyResolverTest {
                 List.of(
                     new ValueSetMember("http://snomed.info/sct", null, "22298006", null, null))));
     when(valueSetResolver.resolveSupplied(any(), eq(supplied))).thenReturn(leaf);
+    return leaf;
+  }
+
+  /** Builds a context entry for a ConceptMap at {@link #CONCEPT_MAP_URL} with the given version. */
+  @Nonnull
+  private static SuppliedArtefact suppliedConceptMap(final String version) {
+    final ConceptMap conceptMap = new ConceptMap();
+    conceptMap.setUrl(CONCEPT_MAP_URL);
+    conceptMap.setVersion(version);
+    return SuppliedArtefact.ofConceptMap(CONCEPT_MAP_URL, version, conceptMap);
+  }
+
+  /**
+   * Stubs the concept map resolver to resolve the given supplied artefact to a concept map leaf
+   * with no mappings under the given key, and returns the leaf.
+   */
+  @Nonnull
+  private ResolvedConceptMap stubSuppliedConceptMap(
+      @Nonnull final SuppliedArtefact supplied, @Nonnull final String key) {
+    final ResolvedConceptMap leaf =
+        new ResolvedConceptMap(
+            key, new ConceptMapContent(supplied.getUrl(), supplied.getVersion(), List.of()));
+    when(conceptMapResolver.resolveSupplied(any(), eq(supplied))).thenReturn(leaf);
     return leaf;
   }
 

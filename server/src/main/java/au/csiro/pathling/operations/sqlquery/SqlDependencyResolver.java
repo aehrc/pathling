@@ -50,8 +50,8 @@ import org.springframework.stereotype.Component;
  * resolver:
  *
  * <ol>
- *   <li>prefers a request-supplied artefact whose URL matches: a ViewDefinition or a ValueSet is a
- *       leaf, and a SQLView is traversed in turn;
+ *   <li>prefers a request-supplied artefact whose URL matches: a ViewDefinition, a ValueSet or a
+ *       ConceptMap is a leaf, and a SQLView is traversed in turn;
  *   <li>otherwise matches the bare URL (a reference carrying no version) against the external
  *       tables the operator has configured, and searches stored {@code ViewDefinition}s by url and
  *       {@code SQLView Library}s by url;
@@ -109,7 +109,8 @@ public class SqlDependencyResolver {
    * @param libraryReferenceResolver resolves a SQLView Library by canonical url from storage
    * @param valueSetMembershipResolver resolves a value set leaf from a supplied ValueSet or through
    *     the terminology layer
-   * @param conceptMapResolver resolves a concept map leaf through the terminology layer
+   * @param conceptMapResolver resolves a concept map leaf from a supplied ConceptMap or through the
+   *     terminology layer
    * @param libraryParser the shared parser for SQLView Libraries
    * @param serverConfiguration the server configuration (auth toggle, the dependency depth cap and
    *     the configured external tables)
@@ -148,7 +149,8 @@ public class SqlDependencyResolver {
    *     table, concept map or value set
    * @throws ca.uhn.fhir.rest.server.exceptions.UnprocessableEntityException if a value set,
    *     supplied or resolved, has a membership that cannot be determined or exceeds the configured
-   *     maximum
+   *     maximum, or a supplied concept map carries content the relation cannot represent or more
+   *     mappings than the configured maximum
    */
   @Nonnull
   public ResolvedDependencyGraph resolve(
@@ -174,7 +176,8 @@ public class SqlDependencyResolver {
    *     table, concept map or value set
    * @throws ca.uhn.fhir.rest.server.exceptions.UnprocessableEntityException if a value set,
    *     supplied or resolved, has a membership that cannot be determined or exceeds the configured
-   *     maximum
+   *     maximum, or a supplied concept map carries content the relation cannot represent or more
+   *     mappings than the configured maximum
    */
   @Nonnull
   public ResolvedDependencyGraph resolve(
@@ -213,12 +216,12 @@ public class SqlDependencyResolver {
 
   /**
    * Resolves a single reference into the canonical key of its node, registering it if new. A
-   * request-supplied artefact wins, whether a ViewDefinition, a SQLView or a ValueSet; otherwise
-   * the canonical url is matched against the configured external tables (only when the reference
-   * carries no version), stored ViewDefinitions and SQLView Libraries, rejecting an ambiguous match
-   * (more than one source). A reference matching none of those is passed to the terminology layer
-   * as a value set and then, unless its URL is an implicit value set, as a concept map, and is not
-   * found only when those too yield nothing.
+   * request-supplied artefact wins, whether a ViewDefinition, a SQLView, a ValueSet or a
+   * ConceptMap; otherwise the canonical url is matched against the configured external tables (only
+   * when the reference carries no version), stored ViewDefinitions and SQLView Libraries, rejecting
+   * an ambiguous match (more than one source). A reference matching none of those is passed to the
+   * terminology layer as a value set and then, unless its URL is an implicit value set, as a
+   * concept map, and is not found only when those too yield nothing.
    */
   @Nonnull
   private String resolveReference(
@@ -241,8 +244,9 @@ public class SqlDependencyResolver {
 
     // A request-supplied artefact, matched by url and agreeing version, outranks storage. A
     // supplied SQLView is traversed in turn, so a chain of supplied artefacts resolves. A supplied
-    // ValueSet is a leaf; a node already registered under its key is reused, so a compose-only
-    // ValueSet reached under two labels is expanded once.
+    // ValueSet or ConceptMap is a leaf; a node already registered under its key is reused, so a
+    // compose-only ValueSet reached under two labels is expanded once, and a ConceptMap reached
+    // under two labels is converted once.
     final CanonicalReference canonical = CanonicalReference.parse(reference.getCanonicalUrl());
     final Optional<SuppliedArtefact> suppliedArtefact =
         supplied.match(canonical.getUrl(), canonical.getVersion());
@@ -259,6 +263,12 @@ public class SqlDependencyResolver {
         }
         return registerLeaf(
             valueSetMembershipResolver.resolveSupplied(reference, artefact), nodesByKey);
+      }
+      if (artefact.isConceptMap()) {
+        if (nodesByKey.containsKey(suppliedKey)) {
+          return suppliedKey;
+        }
+        return registerLeaf(conceptMapResolver.resolveSupplied(reference, artefact), nodesByKey);
       }
       return resolveSqlView(
           artefact.getSqlView(),

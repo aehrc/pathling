@@ -17,32 +17,40 @@
 
 package au.csiro.pathling.operations.sqlquery;
 
+import static au.csiro.pathling.operations.sql.SuppliedArtefacts.CONTEXT_EXPRESSION;
 import static java.util.Objects.requireNonNullElse;
 
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.config.TerminologyConfiguration;
 import au.csiro.pathling.config.TerminologyMode;
 import au.csiro.pathling.library.PathlingContext;
+import au.csiro.pathling.operations.sql.SqlOperationError;
+import au.csiro.pathling.operations.sql.SuppliedArtefact;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.conceptmap.ConceptMapContent;
+import au.csiro.pathling.terminology.conceptmap.ConceptMapContentException;
+import au.csiro.pathling.terminology.conceptmap.ConceptMapLimitExceededException;
+import ca.uhn.fhir.rest.server.exceptions.UnprocessableEntityException;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
+import org.hl7.fhir.r4.model.ConceptMap;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
  * Resolves a concept map dependency to its mappings, producing the {@link ResolvedConceptMap} leaf
- * the dependency graph registers. Mappings come from the server's configured terminology layer,
- * whatever {@code pathling.terminology} configures: a FHIR terminology server searched for
- * ConceptMap resources by canonical URL, or the local terminology store.
+ * the dependency graph registers. Mappings come from a ConceptMap supplied as {@code context},
+ * converted directly, or otherwise from the server's configured terminology layer, whatever {@code
+ * pathling.terminology} configures: a FHIR terminology server searched for ConceptMap resources by
+ * canonical URL, or the local terminology store.
  *
- * <p>The dependency resolver consults this collaborator only once the value set lookup has found
- * nothing, so it is the last source a canonical reference reaches. This is the one place that
- * applies the {@code pathling.sqlQuery.conceptMapMaxMappings} cap to a concept map, that
- * short-circuits when terminology is disabled, and that logs the provenance of every concept map
- * resolved.
+ * <p>The dependency resolver consults this collaborator for a canonical reference only once the
+ * value set lookup has found nothing, so it is the last source a canonical reference reaches. This
+ * is the one place that applies the {@code pathling.sqlQuery.conceptMapMaxMappings} cap to a
+ * concept map, that short-circuits when terminology is disabled, and that logs the provenance of
+ * every concept map resolved.
  *
  * @author John Grimes
  */
@@ -113,6 +121,106 @@ public class ConceptMapResolver {
         .map(
             content ->
                 resolved(CanonicalReference.key(url, canonical.getVersion()), content, source));
+  }
+
+  /**
+   * Resolves a dependency satisfied by a {@code context} ConceptMap to its mappings, converting the
+   * resource directly without consulting the terminology layer, so that it resolves even where
+   * terminology is disabled.
+   *
+   * <p>The returned node is keyed by the supplied resource's canonical ({@code url} plus its
+   * version where it declares one), as a supplied ViewDefinition or ValueSet is.
+   *
+   * @param reference the dependency reference, whose label names the relation in the SQL
+   * @param artefact the supplied entry, which must be a ConceptMap
+   * @return the resolved concept map
+   * @throws UnprocessableEntityException if the resource carries content the relation cannot
+   *     represent, or more mappings than the configured maximum
+   */
+  @Nonnull
+  public ResolvedConceptMap resolveSupplied(
+      @Nonnull final ViewArtifactReference reference, @Nonnull final SuppliedArtefact artefact) {
+    final ConceptMap conceptMap = artefact.getConceptMap();
+    final String url = artefact.getUrl();
+    final ConceptMapContent content;
+    try {
+      content = ConceptMapContent.fromResource(conceptMap, maxMappings);
+    } catch (final ConceptMapLimitExceededException e) {
+      throw limitExceeded(CONTEXT_EXPRESSION, reference, url, e);
+    } catch (final ConceptMapContentException e) {
+      throw unrepresentable(CONTEXT_EXPRESSION, reference, url, e.getMessage());
+    }
+    return resolved(
+        CanonicalReference.key(url, artefact.getVersion()), content, CONTEXT_EXPRESSION);
+  }
+
+  /**
+   * Names the concept map at fault in an issue: a {@code context} entry is the "supplied concept
+   * map", so that a fault in what the request carried reads differently from one in what the
+   * terminology layer returned for a canonical.
+   *
+   * @param expression the parameter at fault
+   * @return the noun for the issue text, without its article
+   */
+  @Nonnull
+  private static String subjectOf(@Nonnull final String expression) {
+    return CONTEXT_EXPRESSION.equals(expression) ? "supplied concept map" : "concept map";
+  }
+
+  /**
+   * Builds the {@code 422} for a concept map with more mappings than the configured maximum.
+   *
+   * @param expression the parameter at fault
+   * @param reference the dependency reference
+   * @param url the canonical URL of the concept map
+   * @param cause the limit breach
+   * @return the exception to throw
+   */
+  @Nonnull
+  private static UnprocessableEntityException limitExceeded(
+      @Nonnull final String expression,
+      @Nonnull final ViewArtifactReference reference,
+      @Nonnull final String url,
+      @Nonnull final ConceptMapLimitExceededException cause) {
+    return SqlOperationError.unprocessable(
+        expression,
+        "The "
+            + subjectOf(expression)
+            + " for label '"
+            + reference.getLabel()
+            + "' (canonical URL '"
+            + url
+            + "') has more than the maximum of "
+            + cause.getLimit()
+            + " mappings permitted by pathling.sqlQuery.conceptMapMaxMappings");
+  }
+
+  /**
+   * Builds the {@code 422} for a concept map whose content the relation cannot represent, carrying
+   * the reason.
+   *
+   * @param expression the parameter at fault
+   * @param reference the dependency reference
+   * @param url the canonical URL of the concept map
+   * @param reason why the content cannot be represented
+   * @return the exception to throw
+   */
+  @Nonnull
+  private static UnprocessableEntityException unrepresentable(
+      @Nonnull final String expression,
+      @Nonnull final ViewArtifactReference reference,
+      @Nonnull final String url,
+      @Nonnull final String reason) {
+    return SqlOperationError.unprocessable(
+        expression,
+        "The "
+            + subjectOf(expression)
+            + " for label '"
+            + reference.getLabel()
+            + "' (canonical URL '"
+            + url
+            + "') cannot be represented as a relation: "
+            + reason);
   }
 
   /**
