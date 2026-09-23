@@ -153,9 +153,11 @@ public class ValueSetMembershipResolver {
     final ValueSet valueSet = artefact.getValueSet();
     final String url = artefact.getUrl();
     final ValueSetExpansion expansion;
+    final String provenance;
     try {
       if (valueSet.hasExpansion()) {
         expansion = ValueSetExpansion.fromResource(valueSet, maxMembers);
+        provenance = CONTEXT_EXPRESSION;
       } else if (!valueSet.hasCompose()) {
         throw SqlOperationError.unprocessable(
             CONTEXT_EXPRESSION,
@@ -174,14 +176,14 @@ public class ValueSetMembershipResolver {
             "the value set carries only a compose and terminology is disabled");
       } else {
         expansion = terminologyService.expand(valueSet, maxMembers);
+        provenance = CONTEXT_EXPRESSION + ", expanded by " + source;
       }
     } catch (final ExpansionLimitExceededException e) {
       throw limitExceeded(CONTEXT_EXPRESSION, reference, url, e);
     } catch (final ValueSetExpansionException e) {
       throw undeterminable(CONTEXT_EXPRESSION, reference, url, e.getMessage());
     }
-    return resolved(
-        CanonicalReference.key(url, artefact.getVersion()), expansion, CONTEXT_EXPRESSION);
+    return resolved(CanonicalReference.key(url, artefact.getVersion()), expansion, provenance);
   }
 
   /**
