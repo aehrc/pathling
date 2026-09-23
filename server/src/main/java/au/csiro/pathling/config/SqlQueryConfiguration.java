@@ -31,8 +31,8 @@ import lombok.ToString;
 /**
  * Configuration for the SQL query operations. Bounds the resolution of a query's dependency graph,
  * which happens before any query execution, declares the external tables that a query may reference
- * alongside stored ViewDefinitions and SQLViews, and caps the size of a value set membership a
- * query may depend on.
+ * alongside stored ViewDefinitions and SQLViews, and caps the size of a value set membership or a
+ * concept map a query may depend on.
  *
  * @author John Grimes
  */
@@ -66,6 +66,16 @@ public class SqlQueryConfiguration {
    */
   @Min(1)
   private int valueSetMaxMembers = 100_000;
+
+  /**
+   * The maximum number of mappings a single concept map dependency may resolve to. A concept map is
+   * read in full at kick-off and held as a local relation for the life of the job, so this cap
+   * bounds the memory one dependency may take. A concept map whose deduplicated rows exceed it is
+   * rejected before any SQL runs. The default admits every realistic clinical concept map while
+   * still rejecting an unbounded one.
+   */
+  @Min(1)
+  private int conceptMapMaxMappings = 100_000;
 
   /**
    * Checks that no two external tables share a URL, since a reference could otherwise resolve to

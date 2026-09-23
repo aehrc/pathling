@@ -22,12 +22,13 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 
 import au.csiro.pathling.views.FhirView;
+import org.hl7.fhir.r4.model.ConceptMap;
 import org.hl7.fhir.r4.model.Library;
 import org.hl7.fhir.r4.model.ValueSet;
 import org.junit.jupiter.api.Test;
 
 /**
- * Unit tests for {@link SuppliedArtefact}, covering the three backing kinds a {@code context} entry
+ * Unit tests for {@link SuppliedArtefact}, covering the four backing kinds a {@code context} entry
  * may take and the guards on their accessors.
  *
  * @author John Grimes
@@ -35,6 +36,8 @@ import org.junit.jupiter.api.Test;
 class SuppliedArtefactTest {
 
   private static final String URL = "http://example.org/ValueSet/cvd";
+
+  private static final String CONCEPT_MAP_URL = "http://example.org/ConceptMap/sct-to-icd10";
 
   @Test
   void ofValueSetReportsOnlyIsValueSet() {
@@ -58,6 +61,7 @@ class SuppliedArtefactTest {
     assertThat(artefact.isView()).isTrue();
     assertThat(artefact.isSqlView()).isFalse();
     assertThat(artefact.isValueSet()).isFalse();
+    assertThat(artefact.isConceptMap()).isFalse();
   }
 
   @Test
@@ -67,6 +71,7 @@ class SuppliedArtefactTest {
     assertThat(artefact.isSqlView()).isTrue();
     assertThat(artefact.isView()).isFalse();
     assertThat(artefact.isValueSet()).isFalse();
+    assertThat(artefact.isConceptMap()).isFalse();
   }
 
   @Test
@@ -96,6 +101,69 @@ class SuppliedArtefactTest {
     assertThatThrownBy(artefact::getSqlView)
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining(URL)
+        .hasMessageContaining("SQLView");
+  }
+
+  @Test
+  void ofConceptMapReportsOnlyIsConceptMap() {
+    final ConceptMap conceptMap = new ConceptMap();
+    conceptMap.setUrl(CONCEPT_MAP_URL);
+
+    final SuppliedArtefact artefact =
+        SuppliedArtefact.ofConceptMap(CONCEPT_MAP_URL, "2026", conceptMap);
+
+    assertThat(artefact.isConceptMap()).isTrue();
+    assertThat(artefact.isValueSet()).isFalse();
+    assertThat(artefact.isView()).isFalse();
+    assertThat(artefact.isSqlView()).isFalse();
+    assertThat(artefact.getUrl()).isEqualTo(CONCEPT_MAP_URL);
+    assertThat(artefact.getVersion()).isEqualTo("2026");
+    assertThat(artefact.getConceptMap()).isSameAs(conceptMap);
+  }
+
+  @Test
+  void ofValueSetIsNotAConceptMap() {
+    assertThat(SuppliedArtefact.ofValueSet(URL, null, new ValueSet()).isConceptMap()).isFalse();
+  }
+
+  @Test
+  void getConceptMapOnAValueSetThrows() {
+    final SuppliedArtefact artefact = SuppliedArtefact.ofValueSet(URL, null, new ValueSet());
+
+    assertThatThrownBy(artefact::getConceptMap)
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining(URL)
+        .hasMessageContaining("ConceptMap");
+  }
+
+  @Test
+  void getConceptMapOnAViewThrows() {
+    final SuppliedArtefact artefact = SuppliedArtefact.ofView(URL, null, mock(FhirView.class));
+
+    assertThatThrownBy(artefact::getConceptMap).isInstanceOf(IllegalStateException.class);
+  }
+
+  @Test
+  void getConceptMapOnASqlViewThrows() {
+    final SuppliedArtefact artefact = SuppliedArtefact.ofSqlView(URL, null, new Library());
+
+    assertThatThrownBy(artefact::getConceptMap).isInstanceOf(IllegalStateException.class);
+  }
+
+  @Test
+  void otherGettersOnAConceptMapThrow() {
+    final SuppliedArtefact artefact =
+        SuppliedArtefact.ofConceptMap(CONCEPT_MAP_URL, null, new ConceptMap());
+
+    assertThatThrownBy(artefact::getValueSet)
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining(CONCEPT_MAP_URL)
+        .hasMessageContaining("ValueSet");
+    assertThatThrownBy(artefact::getView)
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("ViewDefinition");
+    assertThatThrownBy(artefact::getSqlView)
+        .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("SQLView");
   }
 }
