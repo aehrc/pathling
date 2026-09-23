@@ -274,6 +274,19 @@ class ConceptMapReaderTest {
   }
 
   @Test
+  void pinnedAnsweredOnlyWithAnotherVersionIsEmpty() {
+    // A server that ignores the version search parameter returns the maps of every version.
+    stubSearch(searchset(summary("map-2025", URL, "2025")));
+    stubRead(full("map-2025", "2025", "I22"));
+
+    final Optional<ConceptMapContent> result = reader.read(URL, "2026", NO_LIMIT);
+
+    assertTrue(result.isEmpty());
+    assertEquals("2026", queryValue(searchRequests().get(0), "version"));
+    assertTrue(readRequests().isEmpty());
+  }
+
+  @Test
   void unpinnedSeveralVersionsReadsTheLatestOnly() {
     final ConceptMap map2026 = full("map-2026", "2026", "I21");
     stubSearch(searchset(summary("map-2025", URL, "2025"), summary("map-2026", URL, "2026")));

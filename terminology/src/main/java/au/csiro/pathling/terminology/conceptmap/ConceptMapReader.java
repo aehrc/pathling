@@ -103,8 +103,9 @@ public class ConceptMapReader {
   /**
    * Searches for summaries of the ConceptMap resources at a URL, following every {@code next} link.
    *
-   * @return the summaries whose {@code url} equals the request exactly, in the order the server
-   *     returned them
+   * @return the summaries whose {@code url} equals the request exactly and, when a version is
+   *     pinned, whose {@code version} equals the pin, in the order the server returned them; a
+   *     server that ignores the {@code version} search parameter so contributes no other version
    */
   @Nonnull
   private List<ConceptMap> search(@Nonnull final String url, @Nullable final String version) {
@@ -116,7 +117,8 @@ public class ConceptMapReader {
       while (true) {
         for (final BundleEntryComponent entry : page.getEntry()) {
           if (entry.getResource() instanceof final ConceptMap conceptMap
-              && url.equals(conceptMap.getUrl())) {
+              && url.equals(conceptMap.getUrl())
+              && (version == null || version.equals(conceptMap.getVersion()))) {
             matches.add(conceptMap);
           }
         }
