@@ -20,6 +20,7 @@ package au.csiro.pathling.operations.sql;
 import au.csiro.pathling.views.FhirView;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import org.hl7.fhir.r4.model.ConceptMap;
 import org.hl7.fhir.r4.model.Library;
 import org.hl7.fhir.r4.model.ValueSet;
 
@@ -29,8 +30,9 @@ import org.hl7.fhir.r4.model.ValueSet;
  *
  * <p>An entry is one of a parsed {@code ViewDefinition}, which is a leaf of the dependency graph; a
  * {@code SQLView} {@code Library}, whose own dependencies are traversed in turn so a chain of
- * supplied artefacts resolves; or a {@code ValueSet}, a leaf whose membership is taken from its
- * expansion where it carries one and otherwise computed from its compose.
+ * supplied artefacts resolves; a {@code ValueSet}, a leaf whose membership is taken from its
+ * expansion where it carries one and otherwise computed from its compose; or a {@code ConceptMap},
+ * a leaf whose mappings are converted from the resource without the terminology layer.
  *
  * @author John Grimes
  */
@@ -46,17 +48,21 @@ public class SuppliedArtefact {
 
   @Nullable private final ValueSet valueSet;
 
+  @Nullable private final ConceptMap conceptMap;
+
   private SuppliedArtefact(
       @Nonnull final String url,
       @Nullable final String version,
       @Nullable final FhirView view,
       @Nullable final Library sqlView,
-      @Nullable final ValueSet valueSet) {
+      @Nullable final ValueSet valueSet,
+      @Nullable final ConceptMap conceptMap) {
     this.url = url;
     this.version = version;
     this.view = view;
     this.sqlView = sqlView;
     this.valueSet = valueSet;
+    this.conceptMap = conceptMap;
   }
 
   /**
@@ -70,7 +76,7 @@ public class SuppliedArtefact {
   @Nonnull
   public static SuppliedArtefact ofView(
       @Nonnull final String url, @Nullable final String version, @Nonnull final FhirView view) {
-    return new SuppliedArtefact(url, version, view, null, null);
+    return new SuppliedArtefact(url, version, view, null, null, null);
   }
 
   /**
@@ -84,7 +90,7 @@ public class SuppliedArtefact {
   @Nonnull
   public static SuppliedArtefact ofSqlView(
       @Nonnull final String url, @Nullable final String version, @Nonnull final Library sqlView) {
-    return new SuppliedArtefact(url, version, null, sqlView, null);
+    return new SuppliedArtefact(url, version, null, sqlView, null, null);
   }
 
   /**
@@ -98,7 +104,23 @@ public class SuppliedArtefact {
   @Nonnull
   public static SuppliedArtefact ofValueSet(
       @Nonnull final String url, @Nullable final String version, @Nonnull final ValueSet valueSet) {
-    return new SuppliedArtefact(url, version, null, null, valueSet);
+    return new SuppliedArtefact(url, version, null, null, valueSet, null);
+  }
+
+  /**
+   * Creates an entry backed by a supplied {@code ConceptMap}.
+   *
+   * @param url the canonical URL the entry satisfies
+   * @param version the entry's version, or null when it declares none
+   * @param conceptMap the ConceptMap resource
+   * @return the entry
+   */
+  @Nonnull
+  public static SuppliedArtefact ofConceptMap(
+      @Nonnull final String url,
+      @Nullable final String version,
+      @Nonnull final ConceptMap conceptMap) {
+    return new SuppliedArtefact(url, version, null, null, null, conceptMap);
   }
 
   /**
@@ -149,6 +171,15 @@ public class SuppliedArtefact {
   }
 
   /**
+   * Indicates whether this entry is a supplied {@code ConceptMap}.
+   *
+   * @return true if the entry is a ConceptMap
+   */
+  public boolean isConceptMap() {
+    return conceptMap != null;
+  }
+
+  /**
    * Returns the parsed view backing this entry.
    *
    * @return the parsed view
@@ -189,6 +220,20 @@ public class SuppliedArtefact {
       throw new IllegalStateException("Supplied artefact '%s' is not a ValueSet".formatted(url));
     }
     return valueSet;
+  }
+
+  /**
+   * Returns the ConceptMap resource backing this entry.
+   *
+   * @return the ConceptMap
+   * @throws IllegalStateException if this entry is not a ConceptMap
+   */
+  @Nonnull
+  public ConceptMap getConceptMap() {
+    if (conceptMap == null) {
+      throw new IllegalStateException("Supplied artefact '%s' is not a ConceptMap".formatted(url));
+    }
+    return conceptMap;
   }
 
   /**
