@@ -17,6 +17,9 @@
 
 package au.csiro.pathling.operations.sql;
 
+import static au.csiro.pathling.operations.sqlquery.SqlLibraryParser.LIBRARY_TYPE_SYSTEM;
+import static au.csiro.pathling.operations.sqlquery.SqlLibraryParser.SQL_VIEW_TYPE_CODE;
+
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.ViewDefinitionResource;
 import au.csiro.pathling.encoders.ViewDefinitionResource.ColumnComponent;
@@ -34,11 +37,18 @@ import java.util.ArrayList;
 import java.util.List;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.instance.model.api.IBaseResource;
+import org.hl7.fhir.r4.model.Attachment;
 import org.hl7.fhir.r4.model.CodeType;
+import org.hl7.fhir.r4.model.CodeableConcept;
+import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.ConceptMap;
 import org.hl7.fhir.r4.model.Condition;
+import org.hl7.fhir.r4.model.Enumerations.PublicationStatus;
+import org.hl7.fhir.r4.model.Library;
 import org.hl7.fhir.r4.model.Patient;
 import org.hl7.fhir.r4.model.Reference;
+import org.hl7.fhir.r4.model.RelatedArtifact;
+import org.hl7.fhir.r4.model.RelatedArtifact.RelatedArtifactType;
 import org.hl7.fhir.r4.model.StringType;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
@@ -47,13 +57,18 @@ import org.springframework.context.annotation.Primary;
 /**
  * Test configuration backing the concept map integration tests, substituting an in-memory data
  * source that holds the stored ViewDefinition over {@code Condition} of the specification's worked
- * example, the four Conditions it projects and the Patients they belong to.
+ * example, a stored SQLView translating it through the worked example concept map, the four
+ * Conditions it projects and the Patients they belong to.
  *
  * <p>The stored ViewDefinition projects {@code id}, {@code patient_id}, {@code system}, {@code
  * version} and {@code code} from each Condition's first coding. The Conditions are those of the
  * worked example: {@code p1} has myocardial infarction and {@code p3} diabetes mellitus, both of
  * which the worked example concept map translates; {@code p2} is already coded in ICD-10, so the
  * map is silent about it; and {@code p4} is fit and well, which the map states has no mapping.
+ *
+ * <p>The stored SQLView, {@code Library/translated-conditions}, left-joins that ViewDefinition to
+ * version {@code 2026} of the worked example concept map, projecting {@code id}, {@code
+ * patient_id}, {@code code}, {@code target_system}, {@code target_code} and {@code relationship}.
  *
  * @author John Grimes
  */
@@ -90,9 +105,16 @@ public class SqlConceptMapTestConfiguration {
   /** The classpath location of the worked example concept map. */
   private static final String CONCEPT_MAP_RESOURCE = "/conceptmap/sct-to-icd10.ConceptMap.json";
 
+  /** The logical id of the stored SQLView translating the Condition view through the map. */
+  public static final String TRANSLATED_CONDITIONS_ID = "translated-conditions";
+
+  /** The canonical URL of the stored SQLView translating the Condition view through the map. */
+  public static final String TRANSLATED_CONDITIONS_URL =
+      "https://pathling.csiro.au/test/Library/" + TRANSLATED_CONDITIONS_ID;
+
   /**
    * Substitutes the server's data source with an in-memory one holding the stored ViewDefinition,
-   * the Condition data and the Patients.
+   * the stored SQLView, the Condition data and the Patients.
    *
    * @param sparkSession the Spark session
    * @param pathlingContext the Pathling context
@@ -108,6 +130,7 @@ public class SqlConceptMapTestConfiguration {
       @Nonnull final FhirEncoders fhirEncoders) {
     final List<IBaseResource> resources = new ArrayList<>();
     resources.add(conditionView());
+    resources.add(translatedConditions());
     for (final String patientId : List.of("p1", "p2", "p3", "p4")) {
       resources.add(patient(patientId));
     }
@@ -158,6 +181,46 @@ public class SqlConceptMapTestConfiguration {
     select.getColumn().add(column("code", "code.coding.first().code"));
     view.getSelect().add(select);
     return view;
+  }
+
+  /**
+   * Builds the stored SQLView that left-joins the Condition view to version {@code 2026} of the
+   * worked example concept map on system and code, as the specification's worked example does.
+   */
+  @Nonnull
+  private static Library translatedConditions() {
+    final Library library = new Library();
+    library.setId(TRANSLATED_CONDITIONS_ID);
+    library.setUrl(TRANSLATED_CONDITIONS_URL);
+    library.setStatus(PublicationStatus.ACTIVE);
+    library.setType(
+        new CodeableConcept()
+            .addCoding(new Coding().setSystem(LIBRARY_TYPE_SYSTEM).setCode(SQL_VIEW_TYPE_CODE)));
+    final Attachment content = new Attachment();
+    content.setContentType("application/sql");
+    content.setData(
+        ("SELECT conditions.id, conditions.patient_id, conditions.code,"
+                + " sct_to_icd10.target_system, sct_to_icd10.target_code,"
+                + " sct_to_icd10.relationship"
+                + " FROM conditions"
+                + " LEFT JOIN sct_to_icd10"
+                + " ON sct_to_icd10.source_system = conditions.system"
+                + " AND sct_to_icd10.source_code = conditions.code"
+                + " AND (sct_to_icd10.relationship IS NULL"
+                + " OR sct_to_icd10.relationship <> 'not-related-to')")
+            .getBytes(StandardCharsets.UTF_8));
+    library.addContent(content);
+    library.addRelatedArtifact(
+        new RelatedArtifact()
+            .setType(RelatedArtifactType.DEPENDSON)
+            .setLabel("conditions")
+            .setResource(CONDITION_VIEW_URL));
+    library.addRelatedArtifact(
+        new RelatedArtifact()
+            .setType(RelatedArtifactType.DEPENDSON)
+            .setLabel("sct_to_icd10")
+            .setResource(SCT_TO_ICD10_URL + "|2026"));
+    return library;
   }
 
   /** Builds a ViewDefinition column with the given name and path. */
