@@ -24,6 +24,7 @@ import static au.csiro.pathling.operations.sql.SqlConceptMapTestConfiguration.IC
 import static au.csiro.pathling.operations.sql.SqlConceptMapTestConfiguration.MYOCARDIAL_INFARCTION;
 import static au.csiro.pathling.operations.sql.SqlConceptMapTestConfiguration.SCT_TO_ICD10_URL;
 import static au.csiro.pathling.operations.sql.SqlConceptMapTestConfiguration.SNOMED;
+import static au.csiro.pathling.operations.sql.SqlConceptMapTestConfiguration.TRANSLATED_CONDITIONS_URL;
 import static au.csiro.pathling.operations.sqlquery.SqlLibraryParser.LIBRARY_TYPE_SYSTEM;
 import static au.csiro.pathling.operations.sqlquery.SqlLibraryParser.SQL_QUERY_TYPE_CODE;
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
@@ -108,9 +109,16 @@ import org.springframework.test.web.reactive.server.EntityExchangeResult;
  * pinned dependency only when the versions agree, and is rejected with a {@code 400} when it
  * matches no dependency, shares its URL with another entry, or carries no URL.
  *
- * <p>Backed by {@link SqlConceptMapTestConfiguration} for the stored ViewDefinition, the Condition
- * data and the Patients. The terminology server's HTTP response cache is disabled so that every
- * request reaches WireMock and can be verified.
+ * <p>Follows User Story 3 for concept maps reached through a stored SQLView and in export jobs: a
+ * SQLQuery over the SQLView translates, the SQLView exports as a subject, two subjects reaching the
+ * map resolve it once and agree, a kick-off whose map is missing or unrepresentable is rejected
+ * before any job exists, two kick-offs inlining different maps are two jobs, the {@code patient}
+ * filter narrows the FHIR side of a join and never the map, and a translation combines with a value
+ * set semi-join.
+ *
+ * <p>Backed by {@link SqlConceptMapTestConfiguration} for the stored ViewDefinition and SQLView,
+ * the Condition data and the Patients. The terminology server's HTTP response cache is disabled so
+ * that every request reaches WireMock and can be verified.
  *
  * @author John Grimes
  */
@@ -174,6 +182,16 @@ class SqlConceptMapIT extends AbstractAsyncExportIT {
 
   /** The canonical URL of a concept map the terminology server does not hold. */
   static final String LOCAL_ONLY_URL = "http://example.org/ConceptMap/local-only";
+
+  /** The canonical URL of a concept map that nothing holds. */
+  static final String MISSING_URL = "http://example.org/ConceptMap/does-not-exist";
+
+  /**
+   * The {@code patient_id}/{@code target_code} rows of the worked example's translation of the four
+   * Conditions, in Condition order.
+   */
+  static final List<String> TRANSLATED_ROWS =
+      List.of("Patient/p1/I21", "Patient/p2/null", "Patient/p3/E14", "Patient/p4/null");
 
   /** The path of the {@code $expand} operation under the WireMock base. */
   static final String EXPAND_PATH = "/fhir/ValueSet/$expand";
@@ -765,6 +783,237 @@ class SqlConceptMapIT extends AbstractAsyncExportIT {
   }
 
   // -------------------------------------------------------------------------
+  // US3 scenario 1: a SQLQuery over a stored SQLView that depends on the concept map.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void sqlQueryOverAStoredSqlViewReflectsTheMappings() {
+    final String body = postOk(parametersJson(queryOverStoredSqlView()));
+
+    assertThat(rowsOf(body, "patient_id", "target_code"))
+        .containsExactlyElementsOf(TRANSLATED_ROWS);
+    assertSingleConceptMapResolution(SCT_TO_ICD10_URL, VERSION_2026, ID_2026);
+  }
+
+  // -------------------------------------------------------------------------
+  // US3 scenario 2: the stored SQLView as an export subject.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void exportsTheStoredSqlViewAsASubject() throws InterruptedException {
+    final Map<String, Object> body =
+        parameters(
+            subject(
+                nameOf("translated"),
+                simpleParam("subjectCanonical", "valueCanonical", TRANSLATED_CONDITIONS_URL)),
+            simpleParam("_format", "valueString", SqlQueryOutputFormat.NDJSON.getCode()));
+
+    final Map<String, Object> manifest = exportToCompletion(systemLevelUri(), body);
+
+    assertThat(findParamValue(manifest, "status", "valueCode")).isEqualTo("completed");
+    final List<Map<String, Object>> outputs = paramsByName(manifest, "output");
+    assertThat(outputs).hasSize(1);
+    assertThat(rowsOf(downloadAll(outputs.get(0)), "patient_id", "target_code"))
+        .containsExactlyInAnyOrderElementsOf(TRANSLATED_ROWS);
+  }
+
+  // -------------------------------------------------------------------------
+  // US3 scenario 3: two subjects reaching one concept map resolve it once and agree.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void exportWithTwoSubjectsReachingTheConceptMapResolvesItOnce() throws InterruptedException {
+    // The SQLView reaches the concept map through its own dependencies, and the inline SQLQuery
+    // reaches it directly, under the same pinned canonical.
+    final Map<String, Object> body =
+        parameters(
+            subject(
+                nameOf("stored"),
+                simpleParam("subjectCanonical", "valueCanonical", TRANSLATED_CONDITIONS_URL)),
+            subject(
+                nameOf("inline"),
+                resourcePart(
+                    "subjectResource",
+                    resourceMap(leftJoinQuery(SCT_TO_ICD10_URL + "|" + VERSION_2026)))),
+            simpleParam("_format", "valueString", SqlQueryOutputFormat.NDJSON.getCode()));
+
+    final Map<String, Object> manifest = exportToCompletion(systemLevelUri(), body);
+
+    assertSingleConceptMapResolution(SCT_TO_ICD10_URL, VERSION_2026, ID_2026);
+    final List<Map<String, Object>> outputs = paramsByName(manifest, "output");
+    assertThat(outputs).hasSize(2);
+    assertThat(rowsOf(downloadAll(outputNamed(outputs, "stored")), "patient_id", "target_code"))
+        .containsExactlyInAnyOrderElementsOf(TRANSLATED_ROWS);
+    assertThat(rowsOf(downloadAll(outputNamed(outputs, "inline")), "patient_id", "target_code"))
+        .containsExactlyInAnyOrderElementsOf(TRANSLATED_ROWS);
+  }
+
+  // -------------------------------------------------------------------------
+  // US3 scenario 4: a concept map fault rejects the kick-off and creates no job.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void kickOffWithAnUnresolvableConceptMapIsA404AndCreatesNoJob() {
+    stubSearch(MISSING_URL, null, searchset());
+    final int jobsBefore = jobCount();
+
+    final String body =
+        kickOffExpectStatus(
+            parameters(
+                subject(
+                    nameOf("inline"),
+                    resourcePart("subjectResource", resourceMap(selectTargets(MISSING_URL))))),
+            404);
+
+    assertThat(body)
+        .contains("sct_to_icd10", MISSING_URL)
+        .contains("no ViewDefinition, SQLView, external table, concept map or value set matches");
+    assertThat(jobCount()).as("A rejected kick-off must not register a job").isEqualTo(jobsBefore);
+  }
+
+  @Test
+  void kickOffWithAnUnrepresentableConceptMapIsA422AndCreatesNoJob() {
+    // The supplied copy's diabetes target depends on another element, which no flat row can carry.
+    final ConceptMap supplied = editedWorkedExample(VERSION_2026);
+    supplied.getGroupFirstRep().getElement().stream()
+        .filter(element -> DIABETES_MELLITUS.equals(element.getCode()))
+        .findFirst()
+        .orElseThrow()
+        .getTargetFirstRep()
+        .addDependsOn()
+        .setProperty("http://example.org/property/severity")
+        .setValue("severe");
+    final int jobsBefore = jobCount();
+
+    final String body =
+        kickOffExpectStatus(
+            parameters(
+                subject(
+                    nameOf("inline"),
+                    resourcePart(
+                        "subjectResource",
+                        resourceMap(selectTargets(SCT_TO_ICD10_URL + "|" + VERSION_2026)))),
+                resourcePart("context", resourceMap(supplied))),
+            422);
+
+    assertThat(body)
+        .contains("sct_to_icd10", SCT_TO_ICD10_URL, "cannot be represented as a relation")
+        .contains(DIABETES_MELLITUS, "dependsOn");
+    assertThat(jobCount()).as("A rejected kick-off must not register a job").isEqualTo(jobsBefore);
+    assertThat(wireMockServer.findAll(anyRequestedFor(anyUrl()))).isEmpty();
+  }
+
+  // -------------------------------------------------------------------------
+  // US3 scenario 5: kick-offs differing only in the inline ConceptMap are two jobs.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void kickOffsDifferingOnlyInTheInlineConceptMapAreTwoJobs() throws InterruptedException {
+    final ConceptMap original = workedExample2026();
+    original.setId((String) null);
+    original.setUrl(LOCAL_ONLY_URL);
+    final ConceptMap edited = editedWorkedExample(VERSION_2026);
+    edited.setUrl(LOCAL_ONLY_URL);
+    final Map<String, Object> first = exportOverInlineConceptMap(original);
+    final Map<String, Object> second = exportOverInlineConceptMap(edited);
+
+    final String firstStatusUrl = contentLocationOf(systemLevelUri(), first);
+    final String secondStatusUrl = contentLocationOf(systemLevelUri(), second);
+    assertThat(secondStatusUrl)
+        .as("A kick-off inlining a different concept map must get its own job")
+        .isNotEqualTo(firstStatusUrl);
+
+    // Each job ran the mappings its own request supplied.
+    final Map<String, Object> firstManifest = exportToCompletion(systemLevelUri(), first);
+    assertThat(
+            rowsOf(
+                downloadAll(outputNamed(paramsByName(firstManifest, "output"), "inline")),
+                "source_code",
+                "target_code"))
+        .containsExactlyInAnyOrder(
+            FIT_AND_WELL + "/null", MYOCARDIAL_INFARCTION + "/I21", DIABETES_MELLITUS + "/E14");
+    final Map<String, Object> secondManifest = exportToCompletion(systemLevelUri(), second);
+    assertThat(
+            rowsOf(
+                downloadAll(outputNamed(paramsByName(secondManifest, "output"), "inline")),
+                "source_code",
+                "target_code"))
+        .containsExactlyInAnyOrder(
+            FIT_AND_WELL + "/null",
+            MYOCARDIAL_INFARCTION + "/I21",
+            DIABETES_MELLITUS + "/" + EDITED_2025_TARGET);
+    assertThat(wireMockServer.findAll(anyRequestedFor(anyUrl())))
+        .as("No request to the terminology server")
+        .isEmpty();
+  }
+
+  // -------------------------------------------------------------------------
+  // US3 scenario 6: the patient filter narrows the FHIR side of the join and never the map.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void patientFilterNarrowsTheJoinThroughTheView() {
+    final String body =
+        postOk(parametersJson(queryOverStoredSqlView(), referencePart("patient", "Patient/p3")));
+
+    assertThat(rowsOf(body, "patient_id", "target_code")).containsExactly("Patient/p3/E14");
+  }
+
+  @Test
+  void patientFilterLeavesTheConceptMapItselfUntouched() {
+    final Library library =
+        sqlQueryLibrary(
+            "SELECT * FROM sct_to_icd10 ORDER BY source_code",
+            Map.of("sct_to_icd10", SCT_TO_ICD10_URL + "|" + VERSION_2026));
+
+    final String body = postOk(parametersJson(library, referencePart("patient", "Patient/p3")));
+
+    assertThat(rowsOf(body, "source_code", "target_code"))
+        .containsExactly(
+            FIT_AND_WELL + "/null", MYOCARDIAL_INFARCTION + "/I21", DIABETES_MELLITUS + "/E14");
+  }
+
+  // -------------------------------------------------------------------------
+  // US3 scenario 7: a translation combined with a value set semi-join on the target columns.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void translationSemiJoinedToAValueSetKeepsTheEquivalentMember() {
+    stubExpansion(CVD_URL, cvdExpansion());
+
+    final String body = postOk(parametersJson(translatedCardiovascularQuery()));
+
+    assertThat(rowsOf(body, "patient_id", "target_code")).containsExactly("Patient/p1/I21");
+    assertCombinedResolution();
+  }
+
+  @Test
+  void exportOfTheSqlViewAndTheCombinedQueryResolvesEachTerminologyArtefactOnce()
+      throws InterruptedException {
+    stubExpansion(CVD_URL, cvdExpansion());
+    final Map<String, Object> body =
+        parameters(
+            subject(
+                nameOf("stored"),
+                simpleParam("subjectCanonical", "valueCanonical", TRANSLATED_CONDITIONS_URL)),
+            subject(
+                nameOf("combined"),
+                resourcePart("subjectResource", resourceMap(translatedCardiovascularQuery()))),
+            simpleParam("_format", "valueString", SqlQueryOutputFormat.NDJSON.getCode()));
+
+    final Map<String, Object> manifest = exportToCompletion(systemLevelUri(), body);
+
+    assertThat(findParamValue(manifest, "status", "valueCode")).isEqualTo("completed");
+    final List<Map<String, Object>> outputs = paramsByName(manifest, "output");
+    assertThat(outputs).hasSize(2);
+    assertThat(rowsOf(downloadAll(outputNamed(outputs, "stored")), "patient_id", "target_code"))
+        .containsExactlyInAnyOrderElementsOf(TRANSLATED_ROWS);
+    assertThat(rowsOf(downloadAll(outputNamed(outputs, "combined")), "patient_id", "target_code"))
+        .containsExactly("Patient/p1/I21");
+    assertCombinedResolution();
+  }
+
+  // -------------------------------------------------------------------------
   // Fixtures
   // -------------------------------------------------------------------------
 
@@ -1021,6 +1270,26 @@ class SqlConceptMapIT extends AbstractAsyncExportIT {
     return sqlQueryLibrary("SELECT * FROM " + label, Map.of(label, canonical));
   }
 
+  /**
+   * Asserts the requests one resolution each of the value set and the concept map makes: one {@code
+   * $expand} of the value set, and for the map one {@code $expand}, one pinned summary search and
+   * one read, with no ConceptMap request for the value set.
+   */
+  private static void assertCombinedResolution() {
+    assertThat(expandRequests(CVD_URL)).as("One $expand of the value set").hasSize(1);
+    assertThat(expandRequests(SCT_TO_ICD10_URL)).as("One $expand of the map's URL").hasSize(1);
+    final List<LoggedRequest> searches = searchRequests();
+    assertThat(searches).as("One summary search").hasSize(1);
+    assertThat(searches.get(0).queryParameter("url").firstValue()).isEqualTo(SCT_TO_ICD10_URL);
+    assertThat(searches.get(0).queryParameter("version").firstValue()).isEqualTo(VERSION_2026);
+    assertThat(readRequests(ID_2026)).as("One read of the map").hasSize(1);
+    assertThat(conceptMapRequests())
+        .as("No ConceptMap request for the value set")
+        .noneMatch(request -> request.queryParameter("url").containsValue(CVD_URL))
+        .hasSize(2);
+    assertThat(wireMockServer.findAll(anyRequestedFor(anyUrl()))).as("No other request").hasSize(4);
+  }
+
   /** Maps each row's source code to its relationship, rendering a null relationship as "null". */
   @Nonnull
   private static Map<Object, String> relationshipsOf(
@@ -1048,6 +1317,99 @@ class SqlConceptMapIT extends AbstractAsyncExportIT {
   List<String> rowsOf(
       @Nonnull final String body, @Nonnull final String first, @Nonnull final String second) {
     return rows(body).stream().map(row -> row.get(first) + "/" + row.get(second)).toList();
+  }
+
+  /** Builds a SQLQuery selecting everything from the stored SQLView that depends on the map. */
+  @Nonnull
+  Library queryOverStoredSqlView() {
+    return sqlQueryLibrary(
+        "SELECT * FROM translated ORDER BY id", Map.of("translated", TRANSLATED_CONDITIONS_URL));
+  }
+
+  /**
+   * Builds the SQLQuery of quickstart scenario 6: each condition is translated through the pinned
+   * concept map where the relationship is {@code equivalent}, and the translation is kept only
+   * where its target system and code are members of the cardiovascular disease value set.
+   */
+  @Nonnull
+  Library translatedCardiovascularQuery() {
+    final Map<String, String> dependencies = new LinkedHashMap<>();
+    dependencies.put("conditions", SqlConceptMapTestConfiguration.CONDITION_VIEW_URL);
+    dependencies.put("sct_to_icd10", SCT_TO_ICD10_URL + "|" + VERSION_2026);
+    dependencies.put("cvd_codes", CVD_URL);
+    return sqlQueryLibrary(
+        "SELECT conditions.patient_id, sct_to_icd10.target_code"
+            + " FROM conditions"
+            + " JOIN sct_to_icd10"
+            + " ON sct_to_icd10.source_system = conditions.system"
+            + " AND sct_to_icd10.source_code = conditions.code"
+            + " AND sct_to_icd10.relationship = 'equivalent'"
+            + " WHERE EXISTS (SELECT 1 FROM cvd_codes"
+            + " WHERE cvd_codes.system = sct_to_icd10.target_system"
+            + " AND cvd_codes.code = sct_to_icd10.target_code)"
+            + " ORDER BY conditions.id",
+        dependencies);
+  }
+
+  /**
+   * Builds an export body whose one subject selects the source and target codes of the concept map
+   * at {@link #LOCAL_ONLY_URL}, with the given ConceptMap supplied through {@code context}.
+   */
+  @Nonnull
+  Map<String, Object> exportOverInlineConceptMap(@Nonnull final ConceptMap supplied) {
+    return parameters(
+        subject(
+            nameOf("inline"),
+            resourcePart("subjectResource", resourceMap(selectTargets(LOCAL_ONLY_URL)))),
+        resourcePart("context", resourceMap(supplied)),
+        simpleParam("_format", "valueString", SqlQueryOutputFormat.NDJSON.getCode()));
+  }
+
+  /** The {@code name} part of an export subject. */
+  @Nonnull
+  Map<String, Object> nameOf(@Nonnull final String name) {
+    return simpleParam("name", "valueString", name);
+  }
+
+  /** The manifest output with the given name. */
+  @Nonnull
+  static Map<String, Object> outputNamed(
+      @Nonnull final List<Map<String, Object>> outputs, @Nonnull final String name) {
+    return outputs.stream()
+        .filter(output -> name.equals(partValue(output, "name", "valueString")))
+        .findFirst()
+        .orElseThrow(() -> new AssertionError("No output named " + name));
+  }
+
+  /** Kicks off an export expected to be rejected, asserting the status and no status URL. */
+  @Nonnull
+  String kickOffExpectStatus(@Nonnull final Map<String, Object> body, final int status) {
+    final byte[] payload =
+        kickOff(systemLevelUri(), body)
+            .expectStatus()
+            .isEqualTo(status)
+            .expectHeader()
+            .doesNotExist("Content-Location")
+            .expectBody()
+            .returnResult()
+            .getResponseBodyContent();
+    return payload == null ? "" : new String(payload, StandardCharsets.UTF_8);
+  }
+
+  /** The number of jobs the {@code $jobs} listing currently holds. */
+  int jobCount() {
+    final byte[] body =
+        webTestClient
+            .get()
+            .uri("http://localhost:" + port + "/fhir/$jobs")
+            .header("Accept", "application/fhir+json")
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody()
+            .returnResult()
+            .getResponseBodyContent();
+    return paramsByName(parse(body), "job").size();
   }
 
   @Nonnull
