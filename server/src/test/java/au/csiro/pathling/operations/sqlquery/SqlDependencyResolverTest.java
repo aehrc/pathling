@@ -228,7 +228,8 @@ class SqlDependencyResolverTest {
     final ResolvedDependencyGraph graph =
         resolver.resolve(
             sqlQuery("SELECT * FROM p", "p", PATIENT_VIEW_URL),
-            SuppliedArtefacts.ofViews(Map.of(PATIENT_VIEW_URL, supplied)));
+            SuppliedArtefacts.of(
+                List.of(SuppliedArtefact.ofView(PATIENT_VIEW_URL, null, supplied))));
 
     final ResolvedViewDefinition node =
         (ResolvedViewDefinition) graph.getNodesByKey().get(PATIENT_VIEW_URL);
@@ -289,7 +290,7 @@ class SqlDependencyResolverTest {
   void sharesResolvedNodesAcrossQueriesWhenTheNodeMapIsShared() {
     final FhirView supplied = fhirView("Patient");
     final SuppliedArtefacts artefacts =
-        SuppliedArtefacts.ofViews(Map.of(PATIENT_VIEW_URL, supplied));
+        SuppliedArtefacts.of(List.of(SuppliedArtefact.ofView(PATIENT_VIEW_URL, null, supplied)));
     final Map<String, ResolvedDependency> shared = new java.util.LinkedHashMap<>();
 
     final ResolvedDependencyGraph first =
@@ -470,7 +471,7 @@ class SqlDependencyResolverTest {
     final ResolvedDependencyGraph graph =
         resolver.resolve(
             sqlQuery("SELECT * FROM c", "c", TABLE_URL),
-            SuppliedArtefacts.ofViews(Map.of(TABLE_URL, supplied)));
+            SuppliedArtefacts.of(List.of(SuppliedArtefact.ofView(TABLE_URL, null, supplied))));
 
     assertThat(graph.getOrderedNodes()).hasSize(1);
     final ResolvedDependency node = graph.getNodesByKey().get(TABLE_URL);
