@@ -25,11 +25,11 @@ import au.csiro.pathling.definition.NodeDefinition;
 import au.csiro.pathling.utilities.CanonicalStructure;
 import jakarta.annotation.Nonnull;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
@@ -49,6 +49,10 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * tree is infinite and the depth needed is set by whatever asks. Memoised on the identity of the
  * definition, not on the FHIR type code, because every backbone element reports the same code while
  * describing different children.
+ *
+ * <p>A structure is not thread-safe. Each tree is built for one call, used on the thread that makes
+ * it while a query is planned, and then discarded, so neither the expansion nor the memo is
+ * guarded.
  */
 public final class DefinitionCanonicalStructure implements CanonicalStructure {
 
@@ -94,7 +98,7 @@ public final class DefinitionCanonicalStructure implements CanonicalStructure {
   @Nonnull
   public static DefinitionCanonicalStructure of(
       @Nonnull final NodeDefinition node, final boolean resource) {
-    final Map<Object, DefinitionCanonicalStructure> memo = new ConcurrentHashMap<>();
+    final Map<Object, DefinitionCanonicalStructure> memo = new HashMap<>();
     final DefinitionCanonicalStructure structure =
         new DefinitionCanonicalStructure(node, resource, memo);
     memo.put(node.getTypeIdentity(), structure);
@@ -159,9 +163,10 @@ public final class DefinitionCanonicalStructure implements CanonicalStructure {
   @Nonnull
   public Optional<LayoutEntry> entry(@Nonnull final String name) {
     if (index.isEmpty()) {
-      final Map<String, LayoutEntry> byName = new LinkedHashMap<>();
-      entries().forEach(entry -> byName.put(entry.getName(), entry));
-      index = Optional.of(byName);
+      index =
+          Optional.of(
+              entries().stream()
+                  .collect(Collectors.toUnmodifiableMap(LayoutEntry::getName, entry -> entry)));
     }
     return Optional.ofNullable(index.orElseThrow().get(name));
   }
