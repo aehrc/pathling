@@ -254,8 +254,9 @@ test.describe("SQL on FHIR page - SQL query mode", () => {
     ).toBeVisible();
     await expect(page.getByText("Runtime parameter values")).toBeHidden();
 
-    // The dependency heading reads "Views" rather than "Tables".
-    await expect(page.getByText("Views", { exact: true })).toBeVisible();
+    // Every dependency is listed under a single heading, since a stored
+    // Library does not say which kind of artefact each reference names.
+    await expect(page.getByText("Dependencies", { exact: true })).toBeVisible();
 
     await page.getByRole("combobox", { name: /output format/i }).click();
     await page.getByRole("option", { name: "csv" }).click();
@@ -358,6 +359,102 @@ test.describe("SQL on FHIR page - SQL query mode", () => {
       ?.find((p) => p.name === "parameters")
       ?.resource?.parameter?.find((p) => p.name === "period_end");
     expect(bound?.valueDate).toBe("2025-06-30");
+  });
+
+  test("executes an inline query joining a value set and a concept map", async ({
+    page,
+  }) => {
+    await mockMetadata(page);
+    await mockSqlQueryLibraries(
+      page,
+      mockEmptySqlQueryLibraryBundle,
+      mockEmptySqlViewLibraryBundle,
+    );
+    await mockViewDefinitions(page);
+
+    let runBody: string | null = null;
+    await page.route(/\/\$sql-run/, async (route) => {
+      runBody = route.request().postData();
+      await route.fulfill({
+        status: 200,
+        contentType: "text/csv",
+        body: mockSqlQueryRunCsv,
+      });
+    });
+
+    await page.goto("/admin/sql-on-fhir");
+    await selectSqlQueryMode(page);
+    await page.getByRole("tab", { name: /provide sql/i }).click();
+
+    await page
+      .getByRole("textbox", { name: /^sql$/i })
+      .fill(
+        "SELECT p.id FROM patients p JOIN cvd_codes c ON c.code = p.code JOIN sct_to_icd10 m ON m.source_code = p.code",
+      );
+    await page.getByRole("button", { name: /add view/i }).click();
+    await page
+      .getByRole("textbox", { name: /label for view 1/i })
+      .fill("patients");
+    await page.getByRole("combobox", { name: /source for view 1/i }).click();
+    await page.getByRole("option", { name: "Patient Demographics" }).click();
+
+    // Terminology dependencies are typed as canonical URLs, one pinned to a
+    // version.
+    const addTerminology = page.getByRole("button", {
+      name: /add value set or concept map/i,
+    });
+    await addTerminology.click();
+    await page
+      .getByRole("textbox", { name: "Label for terminology 1" })
+      .fill("cvd_codes");
+    await page
+      .getByRole("textbox", { name: "Canonical URL for terminology 1" })
+      .fill("http://example.org/ValueSet/cvd|2026");
+    await addTerminology.click();
+    await page
+      .getByRole("textbox", { name: "Label for terminology 2" })
+      .fill("sct_to_icd10");
+
+    // A terminology row without a URL names nothing, so Execute is gated.
+    const executeButton = page.getByRole("button", { name: /^execute$/i });
+    await expect(executeButton).toBeDisabled();
+    await page
+      .getByRole("textbox", { name: "Canonical URL for terminology 2" })
+      .fill("http://example.org/ConceptMap/sct-to-icd10");
+    await expect(executeButton).toBeEnabled();
+
+    await page.getByRole("combobox", { name: /output format/i }).click();
+    await page.getByRole("option", { name: "csv" }).click();
+    await executeButton.click();
+    await expect(page.getByText("2 rows")).toBeVisible();
+
+    // The inline Library declares the view and both terminology artefacts as
+    // dependencies, in form order.
+    expect(runBody).not.toBeNull();
+    const sent = JSON.parse(runBody as unknown as string) as {
+      parameter?: Array<{
+        name?: string;
+        resource?: { relatedArtifact?: unknown[] };
+      }>;
+    };
+    const subject = sent.parameter?.find((p) => p.name === "subjectResource");
+    expect(subject?.resource?.relatedArtifact).toEqual([
+      {
+        type: "depends-on",
+        label: "patients",
+        resource: expect.any(String),
+      },
+      {
+        type: "depends-on",
+        label: "cvd_codes",
+        resource: "http://example.org/ValueSet/cvd|2026",
+      },
+      {
+        type: "depends-on",
+        label: "sct_to_icd10",
+        resource: "http://example.org/ConceptMap/sct-to-icd10",
+      },
+    ]);
   });
 
   test("saves an inline Library and switches to the picker", async ({
@@ -467,5 +564,53 @@ test.describe("SQL on FHIR page - SQL query mode", () => {
     await expect(
       page.getByText(/sql contains a disallowed operation/i),
     ).toBeVisible();
+  });
+
+  test("names the dependency when a terminology URL does not resolve", async ({
+    page,
+  }) => {
+    await mockMetadata(page);
+    await mockSqlQueryLibraries(
+      page,
+      mockEmptySqlQueryLibraryBundle,
+      mockEmptySqlViewLibraryBundle,
+    );
+    await mockViewDefinitions(page);
+
+    // The server answers an unresolvable canonical with a 404 whose
+    // OperationOutcome names the label and the reference.
+    const diagnostics =
+      "Failed to resolve the dependency for label 'cvd_codes' with reference 'http://example.org/ValueSet/typo'";
+    await page.route(/\/\$sql-run/, async (route) => {
+      await route.fulfill({
+        status: 404,
+        contentType: "application/fhir+json",
+        body: JSON.stringify({
+          resourceType: "OperationOutcome",
+          issue: [{ severity: "error", code: "not-found", diagnostics }],
+        }),
+      });
+    });
+
+    await page.goto("/admin/sql-on-fhir");
+    await selectSqlQueryMode(page);
+    await page.getByRole("tab", { name: /provide sql/i }).click();
+    await page
+      .getByRole("textbox", { name: /^sql$/i })
+      .fill("SELECT * FROM cvd_codes");
+    await page
+      .getByRole("button", { name: /add value set or concept map/i })
+      .click();
+    await page
+      .getByRole("textbox", { name: "Label for terminology 1" })
+      .fill("cvd_codes");
+    await page
+      .getByRole("textbox", { name: "Canonical URL for terminology 1" })
+      .fill("http://example.org/ValueSet/typo");
+    await page.getByRole("button", { name: /^execute$/i }).click();
+
+    // The diagnostic is shown in place of a generic "not found" message.
+    await expect(page.getByText(diagnostics)).toBeVisible();
+    await expect(page.getByText("Resource not found")).toBeHidden();
   });
 });
