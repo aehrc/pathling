@@ -145,7 +145,8 @@ export async function search(
  * @param options - Read options including resource type and ID.
  * @returns The requested FHIR resource.
  * @throws {UnauthorizedError} When the request receives a 401 response.
- * @throws {NotFoundError} When the resource does not exist.
+ * @throws {OperationOutcomeError} When the response carries an OperationOutcome.
+ * @throws {NotFoundError} When the resource does not exist and no OperationOutcome is returned.
  * @throws {Error} For other non-successful responses.
  *
  * @example
@@ -216,7 +217,8 @@ export async function create(
  * @param options - Update options including resource type, ID, and the updated resource.
  * @returns The updated FHIR resource.
  * @throws {UnauthorizedError} When the request receives a 401 response.
- * @throws {NotFoundError} When the resource does not exist.
+ * @throws {OperationOutcomeError} When the response carries an OperationOutcome.
+ * @throws {NotFoundError} When the resource does not exist and no OperationOutcome is returned.
  * @throws {Error} For other non-successful responses.
  *
  * @example
@@ -254,7 +256,8 @@ export async function update(
  * @param baseUrl - The FHIR server base URL.
  * @param options - Delete options including resource type and ID.
  * @throws {UnauthorizedError} When the request receives a 401 response.
- * @throws {NotFoundError} When the resource does not exist.
+ * @throws {OperationOutcomeError} When the response carries an OperationOutcome.
+ * @throws {NotFoundError} When the resource does not exist and no OperationOutcome is returned.
  * @throws {Error} For other non-successful responses.
  *
  * @example
