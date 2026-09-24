@@ -99,14 +99,15 @@ import org.springframework.test.web.reactive.server.EntityExchangeResult;
  * set outside the four is not found.
  *
  * <p>The store is imported once per class into a temporary directory before the application context
- * starts, since the local terminology service opens the store at context creation. It holds a copy
- * of the base SNOMED CT release whose association reference set gains REPLACED BY, POSSIBLY
- * EQUIVALENT TO and ALTERNATIVE rows beside its SAME AS rows, the unmodified later release (the
- * store's default version, holding SAME AS rows only), the worked example as versions {@code 2026}
- * and {@code 2025} (the latter with an edited diabetes target, so that the rows show which version
- * was read), a copy of version {@code 2026} at a canonical URL with a query, and a value set at
- * another such URL. The fixture releases are extracted from the {@code terminology} test-jar, whose
- * resources are not directly addressable as a filesystem path.
+ * starts, since the local terminology service opens the store at context creation. Both fixture
+ * releases ship one REPLACED BY, POSSIBLY EQUIVALENT TO and ALTERNATIVE source concept beside their
+ * SAME AS rows. The store holds a copy of the base release whose association reference set gains
+ * further REPLACED BY, POSSIBLY EQUIVALENT TO and ALTERNATIVE rows, the unmodified later release
+ * (the store's default version, holding only the fixture's rows), the worked example as versions
+ * {@code 2026} and {@code 2025} (the latter with an edited diabetes target, so that the rows show
+ * which version was read), a copy of version {@code 2026} at a canonical URL with a query, and a
+ * value set at another such URL. The fixture releases are extracted from the {@code terminology}
+ * test-jar, whose resources are not directly addressable as a filesystem path.
  *
  * <p>Backed by {@link SqlConceptMapTestConfiguration} for the stored ViewDefinition and the
  * Condition data.
@@ -129,17 +130,17 @@ class SqlConceptMapLocalIT extends AbstractAsyncExportIT {
   /** The canonical URL, carrying a query, of a value set imported as version {@code 2026}. */
   static final String VALUE_SET_WITH_QUERY_URL = "http://example.org/ValueSet/x?edition=au";
 
-  /** The SAME AS association reference set, the only one the base release ships rows for. */
+  /** The SAME AS association reference set. */
   static final String SAME_AS = Rf2Mini.SAME_AS_REFSET;
 
   /** The REPLACED BY association reference set. */
-  static final String REPLACED_BY = "900000000000526001";
+  static final String REPLACED_BY = Rf2Mini.REPLACED_BY_REFSET;
 
   /** The POSSIBLY EQUIVALENT TO association reference set. */
-  static final String POSSIBLY_EQUIVALENT_TO = "900000000000523009";
+  static final String POSSIBLY_EQUIVALENT_TO = Rf2Mini.POSSIBLY_EQUIVALENT_TO_REFSET;
 
   /** The ALTERNATIVE association reference set. */
-  static final String ALTERNATIVE = "900000000000530003";
+  static final String ALTERNATIVE = Rf2Mini.ALTERNATIVE_REFSET;
 
   /** The MOVED FROM association reference set, for which THO defines no implicit concept map. */
   static final String MOVED_FROM = "900000000000497000";
@@ -150,11 +151,25 @@ class SqlConceptMapLocalIT extends AbstractAsyncExportIT {
   /** The store's display of {@link Rf2Mini#TYPE2_DIABETES}. */
   static final String T2DM = "Type 2 diabetes mellitus";
 
+  /** The store's display of {@link Rf2Mini#TYPE1_DIABETES}. */
+  static final String T1DM = "Type 1 diabetes mellitus";
+
   /** The relationship of the SAME AS and REPLACED BY implicit maps. */
   static final String EQUIVALENT = "equivalent";
 
   /** The relationship of the POSSIBLY EQUIVALENT TO and ALTERNATIVE implicit maps. */
   static final String RELATED_TO = "related-to";
+
+  /**
+   * The REPLACED BY row that both fixture releases ship, and the only one the later release has.
+   */
+  static final String FIXTURE_REPLACED_BY_ROW =
+      row(
+          Rf2Mini.REPLACED_BY_SOURCE,
+          "Mini diabetes subtype 1",
+          Rf2Mini.TYPE1_DIABETES,
+          T1DM,
+          EQUIVALENT);
 
   @TempDir static Path storeDir;
 
@@ -481,6 +496,7 @@ class SqlConceptMapLocalIT extends AbstractAsyncExportIT {
     assertThat(implicitRows(Rf2Mini.VERSION_20230601, REPLACED_BY))
         .containsExactly(
             row(Rf2Mini.DIABETES_INACTIVE, "Diabetes", Rf2Mini.TYPE2_DIABETES, T2DM, EQUIVALENT),
+            FIXTURE_REPLACED_BY_ROW,
             row(
                 Rf2Mini.ASSOCIATED_FILLER_2,
                 "Mini other disorder 36",
@@ -491,15 +507,17 @@ class SqlConceptMapLocalIT extends AbstractAsyncExportIT {
 
   @Test
   void possiblyEquivalentToImplicitMapHoldsARowForEachOfThreeTargets() {
-    // One concept has three targets, one of which is not in the dictionary and has no display.
+    // One concept has three targets, one of which is not in the dictionary and has no display. The
+    // fixture's own source concept has two more.
     final String gestational = "Gestational diabetes mellitus";
+    final String fixtureSource = "Mini diabetes subtype 2";
     assertThat(implicitRows(Rf2Mini.VERSION_20230601, POSSIBLY_EQUIVALENT_TO))
         .containsExactly(
             row(
                 Rf2Mini.GESTATIONAL_DIABETES,
                 gestational,
                 Rf2Mini.TYPE1_DIABETES,
-                "Type 1 diabetes mellitus",
+                T1DM,
                 RELATED_TO),
             row(
                 Rf2Mini.GESTATIONAL_DIABETES,
@@ -507,7 +525,19 @@ class SqlConceptMapLocalIT extends AbstractAsyncExportIT {
                 Rf2Mini.TYPE2_WITH_COMPLICATION,
                 "Type 2 diabetes mellitus with complication",
                 RELATED_TO),
-            row(Rf2Mini.GESTATIONAL_DIABETES, gestational, ABSENT, null, RELATED_TO));
+            row(Rf2Mini.GESTATIONAL_DIABETES, gestational, ABSENT, null, RELATED_TO),
+            row(
+                Rf2Mini.POSSIBLY_EQUIVALENT_TO_SOURCE,
+                fixtureSource,
+                Rf2Mini.TYPE1_DIABETES,
+                T1DM,
+                RELATED_TO),
+            row(
+                Rf2Mini.POSSIBLY_EQUIVALENT_TO_SOURCE,
+                fixtureSource,
+                Rf2Mini.TYPE2_DIABETES,
+                T2DM,
+                RELATED_TO));
   }
 
   @Test
@@ -525,6 +555,12 @@ class SqlConceptMapLocalIT extends AbstractAsyncExportIT {
                 "Diabetes",
                 Rf2Mini.DIABETES,
                 "Diabetes mellitus",
+                RELATED_TO),
+            row(
+                Rf2Mini.ALTERNATIVE_SOURCE,
+                "Mini diabetes subtype 3",
+                Rf2Mini.GESTATIONAL_DIABETES,
+                "Gestational diabetes mellitus",
                 RELATED_TO));
   }
 
@@ -534,17 +570,20 @@ class SqlConceptMapLocalIT extends AbstractAsyncExportIT {
 
   @Test
   void editionVersionBaseSelectsThatVersion() {
-    // The later release holds SAME AS rows only, so its REPLACED BY map is empty.
-    assertThat(implicitRows(Rf2Mini.VERSION_20230601, REPLACED_BY)).hasSize(2);
-    assertThat(implicitRows(Rf2Mini.VERSION_20240601, REPLACED_BY)).isEmpty();
+    // Only the base release gains the appended REPLACED BY rows; the later release holds the
+    // fixture's single row.
+    assertThat(implicitRows(Rf2Mini.VERSION_20230601, REPLACED_BY)).hasSize(3);
+    assertThat(implicitRows(Rf2Mini.VERSION_20240601, REPLACED_BY))
+        .containsExactly(FIXTURE_REPLACED_BY_ROW);
   }
 
   @Test
   void bareBaseSelectsTheDefaultVersion() {
-    // The later release is the store's default SNOMED CT version: its SAME AS rows carry its
-    // version URI (which implicitRows asserts), and it holds no REPLACED BY rows.
+    // The later release is the store's default SNOMED CT version: its rows carry its version URI
+    // (which implicitRows asserts), and it holds only the fixture's REPLACED BY row.
     assertThat(implicitRows(Rf2Mini.SNOMED_URI, SAME_AS)).hasSize(4);
-    assertThat(implicitRows(Rf2Mini.SNOMED_URI, REPLACED_BY)).isEmpty();
+    assertThat(implicitRows(Rf2Mini.SNOMED_URI, REPLACED_BY))
+        .containsExactly(FIXTURE_REPLACED_BY_ROW);
   }
 
   // -------------------------------------------------------------------------
