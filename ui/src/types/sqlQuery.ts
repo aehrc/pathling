@@ -64,16 +64,16 @@ export interface SourceOption {
 
 /**
  * A `relatedArtifact` entry on a SQLQuery Library, expressed in form-state
- * terms. A row binds a SQL table label to a chosen stored source by the
- * source's canonical URL, which is emitted verbatim as
- * `relatedArtifact.resource` on save.
+ * terms. A row binds a SQL table label to a canonical URL - chosen from the
+ * stored sources for a view row, or typed for a value set or concept map row -
+ * which is emitted as `relatedArtifact.resource` on save.
  */
 export interface SqlQueryRelatedArtifact {
   /** Stable identifier for use as a React `key`. */
   rowId: string;
   /** Table name referenced by the SQL. */
   label: string;
-  /** Canonical URL of the chosen source; empty until a source is picked. */
+  /** Canonical URL of the dependency; empty until one is picked or typed. */
   referenceUrl: string;
 }
 
@@ -115,7 +115,7 @@ export interface SqlQueryLibrarySummary {
   url?: string;
   /** Decoded SQL text from `Library.content[0].data`. */
   sql: string;
-  /** Related-artifact entries with label and ViewDefinition reference. */
+  /** Related-artifact entries with label and dependency reference. */
   relatedArtifacts: Array<{ label: string; reference: string }>;
   /** Declared parameters extracted from `Library.parameter`. */
   parameters: Array<{ name: string; type: SqlQueryParameterType }>;

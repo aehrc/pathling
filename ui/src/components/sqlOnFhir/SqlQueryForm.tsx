@@ -107,6 +107,7 @@ export function SqlQueryForm({
   const [title, setTitle] = useState<string>("");
   const [sql, setSql] = useState<string>("");
   const [tables, setTables] = useState<SqlQueryRelatedArtifact[]>([]);
+  const [terminology, setTerminology] = useState<SqlQueryRelatedArtifact[]>([]);
   const [parameters, setParameters] = useState<SqlQueryParameterDeclaration[]>([]);
 
   // Runtime bindings, output format and execution options.
@@ -142,7 +143,7 @@ export function SqlQueryForm({
     setBindings((prev) => ({ ...prev, [name]: value }));
   };
 
-  const inlineInput = { title, sql, tables, parameters };
+  const inlineInput = { title, sql, tables, terminology, parameters };
 
   const baseRequestOptions = () => {
     // The result card shows at most 10 rows as a preview, so cap the request
@@ -289,6 +290,8 @@ export function SqlQueryForm({
                 onSqlChange={setSql}
                 tables={tables}
                 onTablesChange={setTables}
+                terminology={terminology}
+                onTerminologyChange={setTerminology}
                 parameters={parameters}
                 onParametersChange={setParameters}
                 duplicateNames={duplicateParameterNames}
