@@ -11,8 +11,15 @@ The core of Pathling consists of the following modules, which inherit from the
 main `pom.xml` in the root of the repository:
 
 - `utilities` - Utility functions used by different components of Pathling.
+- `fhir-schema` - An abstraction over the FHIR definitions, and the derivation
+  of the Spark schemas of the stored layout from them. It may use only the Spark
+  SQL API, not internal Catalyst API.
 - `encoders` - Encoders for transforming [FHIR](https://hl7.org/fhir/) data into
   Spark Datasets.
+- `io` - Reading and writing FHIR JSON in the
+  [Parquet on FHIR](specs/001-parquet-on-fhir/spec.md) storage layout, as
+  dataset transformations. Like `fhir-schema`, it may not use internal Catalyst
+  API.
 - `terminology` - Terminology operations from Spark, either through
   a [FHIR terminology server](https://hl7.org/fhir/terminology-service.html)
   or a locally imported terminology store.
@@ -48,7 +55,9 @@ the main `pom.xml`:
 ```mermaid
 graph TD
     utilities[utilities<br/>Utility functions]
+    fhir-schema[fhir-schema<br/>FHIR definitions and schemas]
     encoders[encoders<br/>FHIR data encoders]
+    io[io<br/>Parquet on FHIR layout]
     terminology[terminology<br/>FHIR terminology server]
     fhirpath[fhirpath<br/>FHIRPath engine]
     library-api[library-api<br/>Language library API]
@@ -61,15 +70,20 @@ graph TD
     ui[ui<br/>Admin UI]
     test-data[test-data<br/>Test data generation]
 
+    fhir-schema --> utilities
     encoders --> utilities
+    io --> fhir-schema
     terminology --> utilities
     terminology --> encoders
     fhirpath --> terminology
+    fhirpath --> fhir-schema
     library-api --> utilities
     library-api --> encoders
     library-api --> terminology
     library-api --> fhirpath
     library-runtime --> library-api
+    library-runtime --> fhir-schema
+    library-runtime --> io
     python --> library-runtime
     r --> library-runtime
     server --> library-runtime
@@ -90,7 +104,9 @@ The core libraries are defined as the modules that contribute to building the
 library runtime artifact. These are:
 
 - `utilities`
+- `fhir-schema`
 - `encoders`
+- `io`
 - `terminology`
 - `fhirpath`
 - `library-api`

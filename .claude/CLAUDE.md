@@ -4,7 +4,8 @@ Two independently versioned projects in one repository:
 
 - **The library** — root `pom.xml`. FHIR analytics on Apache Spark. Build order matters:
   `utilities → encoders → terminology → fhirpath → library-api → library-runtime`, with
-  `lib/python` and `lib/R` wrapping `library-runtime`.
+  `fhir-schema` between `utilities` and `fhirpath`, `io` built on `fhir-schema` and bundled
+  directly by `library-runtime`, and `lib/python` and `lib/R` wrapping `library-runtime`.
 - **The server** — `server/pom.xml`. A FHIR server, **not** a child of the root POM. It depends on
   `library-runtime` as a published artifact, so library changes reach it only after
   `mvn install -pl library-runtime -am`.
