@@ -21,7 +21,6 @@ import au.csiro.pathling.definition.ChildDefinition;
 import au.csiro.pathling.definition.ResourceDefinition;
 import jakarta.annotation.Nonnull;
 import java.util.List;
-import java.util.Optional;
 import lombok.Value;
 
 /**
@@ -33,12 +32,6 @@ public class DefaultResourceDefinition implements ResourceDefinition {
 
   @Nonnull DefaultResourceTag resourceTag;
   @Nonnull List<ChildDefinition> children;
-
-  @Override
-  @Nonnull
-  public Optional<ChildDefinition> getChildElement(@Nonnull final String name) {
-    return children.stream().filter(child -> child.getName().equals(name)).findFirst();
-  }
 
   /**
    * Creates a new DefaultResourceDefinition with the given resource tag and children.

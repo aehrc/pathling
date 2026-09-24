@@ -20,6 +20,7 @@ package au.csiro.pathling.definition.defaults;
 import au.csiro.pathling.definition.ChildDefinition;
 import au.csiro.pathling.definition.ElementDefinition;
 import jakarta.annotation.Nonnull;
+import java.util.List;
 import java.util.Optional;
 import lombok.Value;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
@@ -53,10 +54,27 @@ public class DefaultPrimitiveDefinition implements ElementDefinition {
     return name;
   }
 
+  /**
+   * The field keeps the name it had before the interface declared this method, so that the accessor
+   * Lombok derives from it stays the one the existing callers use.
+   *
+   * @return the maximum number of values this element may hold
+   */
+  @Override
+  public int getMaxCardinality() {
+    return cardinality;
+  }
+
   @Override
   @Nonnull
   public Optional<ChildDefinition> getChildElement(@Nonnull final String name) {
     return Optional.empty();
+  }
+
+  @Override
+  @Nonnull
+  public List<ChildDefinition> getChildren() {
+    return List.of();
   }
 
   @Override

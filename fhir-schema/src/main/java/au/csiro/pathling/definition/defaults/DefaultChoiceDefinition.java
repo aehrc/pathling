@@ -24,7 +24,6 @@ import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.Optional;
 import lombok.Value;
-import org.apache.commons.lang3.StringUtils;
 
 /**
  * The default implementation of a choice data type allowing for explicit definition of its possible
@@ -54,7 +53,8 @@ public class DefaultChoiceDefinition implements ChoiceDefinition {
   @Override
   @Nonnull
   public Optional<ElementDefinition> getChildByType(@Nonnull final String type) {
-    return getChildElement(name + StringUtils.capitalize(type)).map(ElementDefinition.class::cast);
+    return getChildElement(ChoiceDefinition.columnName(name, type))
+        .map(ElementDefinition.class::cast);
   }
 
   @Nonnull
@@ -66,16 +66,10 @@ public class DefaultChoiceDefinition implements ChoiceDefinition {
         .toList();
   }
 
-  /**
-   * Returns the child element with the specified name, if it exists in the list of choices. This
-   * method is used to find a specific type option within this choice element.
-   *
-   * @param name the name of the child element to find
-   * @return the child element, if it exists
-   */
   @Override
   @Nonnull
-  public Optional<ChildDefinition> getChildElement(@Nonnull final String name) {
-    return choices.stream().filter(child -> child.getName().equals(name)).findFirst();
+  public List<ChildDefinition> getChildren() {
+    // The children of a choice are the types it can take.
+    return choices;
   }
 }

@@ -20,9 +20,24 @@ package au.csiro.pathling.definition;
 import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.Optional;
+import org.apache.commons.lang3.StringUtils;
 
 /** Represents a choice child elements in a FHIR-like schema. */
 public interface ChoiceDefinition extends ChildDefinition {
+
+  /**
+   * Returns the column name a choice takes for a given type, e.g. the choice "value" and the type
+   * "string" yield "valueString". Both implementations of this interface expand a choice into one
+   * column per type by this rule, so it is stated once here rather than in each.
+   *
+   * @param name the base name of the choice
+   * @param type the type the choice takes
+   * @return the column name for that type
+   */
+  @Nonnull
+  static String columnName(@Nonnull final String name, @Nonnull final String type) {
+    return name + StringUtils.capitalize(type);
+  }
 
   /**
    * Returns the child element definition for the given type, if it exists.

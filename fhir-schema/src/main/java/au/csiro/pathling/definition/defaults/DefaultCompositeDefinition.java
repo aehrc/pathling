@@ -43,10 +43,15 @@ public class DefaultCompositeDefinition implements ElementDefinition {
     return name;
   }
 
+  /**
+   * The field keeps the name it had before the interface declared this method, so that the accessor
+   * Lombok derives from it stays the one the existing callers use.
+   *
+   * @return the maximum number of values this element may hold
+   */
   @Override
-  @Nonnull
-  public Optional<ChildDefinition> getChildElement(@Nonnull final String name) {
-    return children.stream().filter(child -> child.getName().equals(name)).findFirst();
+  public int getMaxCardinality() {
+    return cardinality;
   }
 
   @Override

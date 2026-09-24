@@ -24,7 +24,7 @@ import ca.uhn.fhir.context.RuntimeChildChoiceDefinition;
 import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.Optional;
-import org.apache.commons.lang3.StringUtils;
+import org.hl7.fhir.instance.model.api.IBase;
 
 /**
  * Represents the definition of an element that can be represented by multiple different data types.
@@ -34,23 +34,13 @@ import org.apache.commons.lang3.StringUtils;
  */
 class FhirChoiceDefinition implements ChoiceDefinition {
 
+  /** The type every resource a choice can target is carried as. */
+  @Nonnull private static final String REFERENCE_TYPE = "Reference";
+
   @Nonnull private final RuntimeChildChoiceDefinition childDefinition;
 
   protected FhirChoiceDefinition(@Nonnull final RuntimeChildChoiceDefinition childDefinition) {
     this.childDefinition = childDefinition;
-  }
-
-  /**
-   * Returns the column name for a given type.
-   *
-   * @param elementName the name of the parent element
-   * @param type the type of the child element
-   * @return the column name
-   */
-  @Nonnull
-  public static String getColumnName(
-      @Nonnull final String elementName, @Nonnull final String type) {
-    return elementName + StringUtils.capitalize(type);
   }
 
   @Nonnull
@@ -65,6 +55,13 @@ class FhirChoiceDefinition implements ChoiceDefinition {
     return getChildByElementName(name).map(e -> e);
   }
 
+  @Nonnull
+  @Override
+  public List<ChildDefinition> getChildren() {
+    // The children of a choice are the types it can take.
+    return getAllChildTypes().stream().map(ChildDefinition.class::cast).toList();
+  }
+
   /**
    * Returns the child element definition for the given type, if it exists.
    *
@@ -73,16 +70,53 @@ class FhirChoiceDefinition implements ChoiceDefinition {
    */
   @Nonnull
   public Optional<ElementDefinition> getChildByType(@Nonnull final String type) {
-    final String key = FhirChoiceDefinition.getColumnName(getName(), type);
+    final String key = ChoiceDefinition.columnName(getName(), type);
     return getChildByElementName(key);
   }
 
   @Nonnull
   @Override
   public List<ElementDefinition> getAllChildTypes() {
-    return childDefinition.getValidChildNames().stream()
+    // The order comes from the declared list of types, which is the type list of the child
+    // annotation and so is declaration order verbatim. It deliberately does not come from the set
+    // of valid child names, which is hash ordered: that order is neither reproducible by another
+    // implementation nor stable across an upgrade of the definition library, and the order of an
+    // expansion is part of the type of every structure that carries the choice.
+    return childDefinition.getChoices().stream()
+        .map(this::nameOfDeclaredType)
+        .distinct()
         .flatMap(name -> getChildByElementName(name).stream())
         .toList();
+  }
+
+  /**
+   * Returns the name a declared type takes within this choice.
+   *
+   * <p>A type the choice can reference is declared as the resource it targets, and every such
+   * target is carried by the same reference. They therefore share one name, which {@link
+   * #getAllChildTypes()} reduces to a single variant at the position of the first target declared.
+   * The definition library also accepts an alias per target and an alias for an untyped resource,
+   * but no FHIR instance can populate one, so naming them would put columns into every stored
+   * structure that carries the choice which nothing could ever fill.
+   *
+   * <p>A type that is not a reference target takes the name the definition library gives it. A type
+   * the library maps to no name is neither, and so is an inconsistency in the definitions rather
+   * than a name to be invented: inventing one would produce a variant that resolves to nothing, and
+   * the mistake would be invisible.
+   */
+  @Nonnull
+  private String nameOfDeclaredType(@Nonnull final Class<? extends IBase> type) {
+    if (childDefinition.getResourceTypes().contains(type)) {
+      return ChoiceDefinition.columnName(getName(), REFERENCE_TYPE);
+    }
+    return Optional.ofNullable(childDefinition.getChildNameByDatatype(type))
+        .orElseThrow(
+            () ->
+                new IllegalStateException(
+                    "The definitions give the type "
+                        + type.getName()
+                        + " no name within the choice "
+                        + getName()));
   }
 
   /**

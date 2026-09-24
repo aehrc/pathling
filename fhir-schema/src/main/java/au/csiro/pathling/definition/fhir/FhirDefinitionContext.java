@@ -36,6 +36,7 @@ import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import lombok.Value;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.hl7.fhir.r4.model.Extension;
 
 /**
  * The definition context that encapsulates a {@link FhirContext} and provides access to all FHIR
@@ -49,11 +50,13 @@ public class FhirDefinitionContext implements DefinitionContext {
   @Override
   @Nonnull
   public ResourceDefinition findResourceDefinition(@Nonnull final String resourceCode) {
-    // Try to resolve to a standard ResourceType, but allow custom types (like ViewDefinition).
-    final Optional<ResourceType> resourceType = tryGetResourceType(resourceCode);
+    // Resolving the resource code to a tag allows custom types (like ViewDefinition) as well as
+    // standard ones, and is also where FhirResourceTag itself resolves the code.
+    final FhirResourceTag resourceTag = FhirResourceTag.of(resourceCode);
     final RuntimeResourceDefinition hapiDefinition =
         fhirContext.getResourceDefinition(resourceCode);
-    return new FhirResourceDefinition(resourceCode, resourceType, requireNonNull(hapiDefinition));
+    return new FhirResourceDefinition(
+        resourceCode, resourceTag.getResourceType(), requireNonNull(hapiDefinition));
   }
 
   /**
@@ -64,27 +67,7 @@ public class FhirDefinitionContext implements DefinitionContext {
    */
   @Nonnull
   public ResourceDefinition findResourceDefinition(@Nonnull final ResourceType resourceType) {
-    final String resourceCode = resourceType.toCode();
-    final RuntimeResourceDefinition hapiDefinition =
-        fhirContext.getResourceDefinition(resourceCode);
-    return new FhirResourceDefinition(
-        resourceCode, Optional.of(resourceType), requireNonNull(hapiDefinition));
-  }
-
-  /**
-   * Attempts to resolve a resource code to a standard FHIR ResourceType.
-   *
-   * @param resourceCode the resource code to resolve
-   * @return the ResourceType if it's a standard type, otherwise empty
-   */
-  @Nonnull
-  private static Optional<ResourceType> tryGetResourceType(@Nonnull final String resourceCode) {
-    try {
-      return Optional.of(ResourceType.fromCode(resourceCode));
-    } catch (final org.hl7.fhir.exceptions.FHIRException e) {
-      // Custom resource type not in the standard FHIR specification.
-      return Optional.empty();
-    }
+    return findResourceDefinition(resourceType.toCode());
   }
 
   /**
@@ -113,6 +96,17 @@ public class FhirDefinitionContext implements DefinitionContext {
       @Nonnull final String elementName) {
 
     if (childDefinition.getValidChildNames().contains(elementName)) {
+      if (childDefinition instanceof RuntimeChildExtension) {
+        // An extension child cannot be resolved by name, because HAPI resolves every extension
+        // child against the name of the plain "extension" element and so fails on a modifier
+        // extension. The Extension type is taken from the child definition instead.
+        return Optional.of(
+            new FhirElementDefinition(
+                requireNonNull(
+                    childDefinition.getChildElementDefinitionByDatatype(Extension.class)),
+                childDefinition,
+                elementName));
+      }
       final BaseRuntimeElementDefinition<?> elementDefinition =
           childDefinition.getChildByName(elementName);
       if (childDefinition instanceof final RuntimeChildResourceDefinition rctd) {

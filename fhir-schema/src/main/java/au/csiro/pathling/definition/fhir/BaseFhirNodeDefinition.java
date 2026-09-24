@@ -28,10 +28,10 @@ import ca.uhn.fhir.context.RuntimeChildChoiceDefinition;
 import ca.uhn.fhir.model.api.annotation.Block;
 import ca.uhn.fhir.model.api.annotation.DatatypeDef;
 import jakarta.annotation.Nonnull;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import org.apache.commons.lang3.tuple.Pair;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
@@ -46,27 +46,32 @@ abstract class BaseFhirNodeDefinition<D extends BaseRuntimeElementDefinition<?>>
 
   @Nonnull protected final D elementDefinition;
 
+  @Nonnull final List<BaseRuntimeChildDefinition> hapiChildren;
+
   @Nonnull final Map<String, RuntimeChildChoiceDefinition> nestedChildElementsByName;
 
   protected BaseFhirNodeDefinition(@Nonnull final D elementDefinition) {
     this.elementDefinition = elementDefinition;
 
-    // Create a stream of all the definitions of the children of this element.
+    // Capture the definitions of all the children of this element. They serve both the resolution
+    // of a qualified choice name below and the enumeration of children, so they are obtained from
+    // HAPI once rather than once per question.
     @SuppressWarnings("unchecked")
-    final Stream<BaseRuntimeChildDefinition> allChildren =
+    final List<BaseRuntimeChildDefinition> allChildren =
         Optional.of(elementDefinition)
             // Cast to composite element definition, and if it is one then get its children.
             .flatMap(maybeCast(BaseRuntimeElementCompositeDefinition.class))
             .stream()
-            .flatMap(
+            .<BaseRuntimeChildDefinition>flatMap(
                 compElementDef ->
-                    ((java.util.List<BaseRuntimeChildDefinition>) compElementDef.getChildren())
-                        .stream());
+                    ((List<BaseRuntimeChildDefinition>) compElementDef.getChildren()).stream())
+            .toList();
+    hapiChildren = allChildren;
 
     // Create a map of all the qualified choice children by name. This is used to resolve the
     // correct child definition when a qualified choice element is traversed.
     nestedChildElementsByName =
-        allChildren
+        allChildren.stream()
             // Filter out non-choice children, then cast to choice definitions.
             .filter(FhirDefinitionContext::isChildChoiceDefinition)
             .map(RuntimeChildChoiceDefinition.class::cast)
@@ -76,6 +81,16 @@ abstract class BaseFhirNodeDefinition<D extends BaseRuntimeElementDefinition<?>>
                     choiceDef.getValidChildNames().stream().map(n -> Pair.of(n, choiceDef)))
             // Collect the pairs into a map.
             .collect(Collectors.toUnmodifiableMap(Pair::getLeft, Pair::getRight));
+  }
+
+  @Override
+  @Nonnull
+  public List<ChildDefinition> getChildren() {
+    // A choice is built from its unqualified element name, so that it appears once as a choice
+    // rather than once per type it can take.
+    return hapiChildren.stream()
+        .flatMap(child -> FhirDefinitionContext.build(child, child.getElementName()).stream())
+        .toList();
   }
 
   @Override
@@ -107,6 +122,15 @@ abstract class BaseFhirNodeDefinition<D extends BaseRuntimeElementDefinition<?>>
   @Override
   public boolean isFhirDefinition() {
     return true;
+  }
+
+  @Override
+  @Nonnull
+  public Object getTypeIdentity() {
+    // The implementing class is the identity of the type: HAPI gives each backbone element its own
+    // class, so two backbone elements of the same resource are distinguished, while a complex type
+    // reached by several paths is recognised as the one type it is.
+    return elementDefinition.getImplementingClass();
   }
 
   @Nonnull

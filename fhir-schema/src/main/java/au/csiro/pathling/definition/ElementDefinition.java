@@ -42,6 +42,24 @@ public interface ElementDefinition extends ChildDefinition {
   Optional<FHIRDefinedType> getFhirType();
 
   /**
+   * Gets the maximum number of values this element may hold, where a negative value indicates that
+   * it is unbounded.
+   *
+   * @return the maximum cardinality of this element
+   */
+  int getMaxCardinality();
+
+  /**
+   * Checks whether this element may hold more than one value, and is therefore stored as an array
+   * rather than as a scalar.
+   *
+   * @return true if this element may repeat, false otherwise
+   */
+  default boolean isRepeating() {
+    return getMaxCardinality() < 0 || getMaxCardinality() > 1;
+  }
+
+  /**
    * Checks if this element is a choice element.
    *
    * @return true if this element is a choice element, false otherwise
