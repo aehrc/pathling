@@ -565,4 +565,52 @@ test.describe("SQL on FHIR page - SQL query mode", () => {
       page.getByText(/sql contains a disallowed operation/i),
     ).toBeVisible();
   });
+
+  test("names the dependency when a terminology URL does not resolve", async ({
+    page,
+  }) => {
+    await mockMetadata(page);
+    await mockSqlQueryLibraries(
+      page,
+      mockEmptySqlQueryLibraryBundle,
+      mockEmptySqlViewLibraryBundle,
+    );
+    await mockViewDefinitions(page);
+
+    // The server answers an unresolvable canonical with a 404 whose
+    // OperationOutcome names the label and the reference.
+    const diagnostics =
+      "Failed to resolve the dependency for label 'cvd_codes' with reference 'http://example.org/ValueSet/typo'";
+    await page.route(/\/\$sql-run/, async (route) => {
+      await route.fulfill({
+        status: 404,
+        contentType: "application/fhir+json",
+        body: JSON.stringify({
+          resourceType: "OperationOutcome",
+          issue: [{ severity: "error", code: "not-found", diagnostics }],
+        }),
+      });
+    });
+
+    await page.goto("/admin/sql-on-fhir");
+    await selectSqlQueryMode(page);
+    await page.getByRole("tab", { name: /provide sql/i }).click();
+    await page
+      .getByRole("textbox", { name: /^sql$/i })
+      .fill("SELECT * FROM cvd_codes");
+    await page
+      .getByRole("button", { name: /add value set or concept map/i })
+      .click();
+    await page
+      .getByRole("textbox", { name: "Label for terminology 1" })
+      .fill("cvd_codes");
+    await page
+      .getByRole("textbox", { name: "Canonical URL for terminology 1" })
+      .fill("http://example.org/ValueSet/typo");
+    await page.getByRole("button", { name: /^execute$/i }).click();
+
+    // The diagnostic is shown in place of a generic "not found" message.
+    await expect(page.getByText(diagnostics)).toBeVisible();
+    await expect(page.getByText("Resource not found")).toBeHidden();
+  });
 });
