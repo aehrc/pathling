@@ -332,12 +332,8 @@ export function SqlQueryInlineTab({
           Terminology
         </FieldLabel>
         <FieldGuidance>
-          Each row maps a label to the canonical URL of a value set or concept map, resolved through
-          the server&apos;s terminology service. Pin a version with `|version`, e.g.
-          `http://example.org/ValueSet/cvd|2026`. A value set is queried as a table of `system`,
-          `version`, `code`, `display` and `inactive`; a concept map as `source_system`,
-          `source_version`, `source_code`, `source_display`, `target_system`, `target_version`,
-          `target_code`, `target_display` and `relationship`.
+          Each row maps a label to the canonical URL of a value set or concept map, optionally
+          pinned with `|version`.
         </FieldGuidance>
         <Flex direction="column" gap="2" mt="1">
           {terminology.map((row, index) => (
