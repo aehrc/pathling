@@ -20,6 +20,8 @@ package au.csiro.pathling.operations.sql;
 import static au.csiro.pathling.operations.sqlquery.SqlLibraryParser.LIBRARY_TYPE_SYSTEM;
 import static au.csiro.pathling.operations.sqlquery.SqlLibraryParser.SQL_QUERY_TYPE_CODE;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
@@ -29,6 +31,15 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpRequest.BodyPublishers;
+import java.net.http.HttpResponse;
+import java.net.http.HttpResponse.BodyHandlers;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -38,6 +49,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Attachment;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
@@ -98,6 +110,8 @@ class SqlRunProviderIT {
   @Autowired WebTestClient webTestClient;
 
   @Autowired private FhirContext fhirContext;
+
+  @Autowired private SparkSession sparkSession;
 
   private IParser jsonParser;
 
@@ -526,12 +540,100 @@ class SqlRunProviderIT {
   }
 
   // -------------------------------------------------------------------------
+  // Evaluation failures.
+  // -------------------------------------------------------------------------
+
+  // A view projecting a singular column over a Patient with two names fails when Spark evaluates
+  // the row, not when the query is planned. Nothing may be written before that evaluation, or the
+  // response is committed as a 200 and the failure can no longer be reported. The status is the one
+  // the export path uses for the same failure.
+  @ParameterizedTest
+  @ValueSource(strings = {"csv", "ndjson", "json"})
+  void reportsAViewEvaluationFailureBeforeTheFirstRowAsABadRequest(final String format) {
+    final String body =
+        postExpectStatus(
+            inlineViewRequest(format, null, patient("bad", "Smith", "Jones")),
+            400,
+            "application/fhir+json");
+
+    assertThat(body).contains("OperationOutcome").contains("single element");
+  }
+
+  // The scenario in the report: a limit large enough to reach the failing resource. A limited
+  // result is gathered into a single partition, so every row that could be returned is evaluated
+  // before the first is available, and a failure anywhere in it is reported with a status.
+  @Test
+  void reportsAViewEvaluationFailureAfterAGoodRowAsABadRequestWhenLimited() {
+    final String body =
+        postExpectStatus(
+            inlineViewRequest("csv", 1000, patient("good", "Smith"), patient("bad", "A", "B")),
+            400,
+            "application/fhir+json");
+
+    assertThat(body).contains("OperationOutcome").contains("single element");
+  }
+
+  // The same holds for a SQL subject, which reaches the response through a different streamer.
+  @ParameterizedTest
+  @ValueSource(strings = {"csv", "ndjson", "json", "fhir"})
+  void reportsASqlEvaluationFailureBeforeTheFirstRowAsABadRequest(final String format) {
+    final String body =
+        postExpectStatus(
+            inlineSqlQueryRequest(
+                "SELECT id, raise_error('evaluation failed') AS failure FROM adh", format),
+            400,
+            "application/fhir+json");
+
+    assertThat(body).contains("OperationOutcome").contains("evaluation failed");
+  }
+
+  // Without a limit, rows are fetched one partition at a time, so a failure in a later partition
+  // happens after earlier rows have been sent and the 200 is already committed. The response must
+  // then be cut off without its terminating chunk, so that the client sees a failed transfer
+  // rather than a complete result that is silently missing rows.
+  @Test
+  void abortsTheResponseWhenEvaluationFailsAfterRowsHaveBeenSent() throws Exception {
+    // The two resources are placed in separate partitions only when Spark has more than one.
+    assumeThat(sparkSession.sparkContext().defaultParallelism()).isGreaterThan(1);
+    final HttpRequest request =
+        HttpRequest.newBuilder(URI.create("http://localhost:" + port + PATH))
+            .header("Content-Type", "application/fhir+json")
+            .POST(
+                BodyPublishers.ofString(
+                    inlineViewRequest(
+                        "csv", null, patient("good", "Smith"), patient("bad", "A", "B"))))
+            .build();
+    final ByteArrayOutputStream received = new ByteArrayOutputStream();
+    try (final HttpClient client =
+        HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build()) {
+      final HttpResponse<InputStream> response = client.send(request, BodyHandlers.ofInputStream());
+
+      // The status was committed with the first row.
+      assertThat(response.statusCode()).isEqualTo(200);
+      try (final InputStream body = response.body()) {
+        assertThatThrownBy(() -> body.transferTo(received)).isInstanceOf(IOException.class);
+      }
+    }
+    // The rows sent before the failure arrived, but the transfer did not complete.
+    assertThat(received.toString(StandardCharsets.UTF_8)).contains("good,Smith");
+  }
+
+  // -------------------------------------------------------------------------
   // Helpers.
   // -------------------------------------------------------------------------
 
   /** Builds a POST body carrying an inline SQLQuery Library over the ad-hoc view as its context. */
   @Nonnull
   private String inlineSqlQueryRequest(@Nonnull final String sql) {
+    return inlineSqlQueryRequest(sql, SqlRunFormat.NDJSON.getCode());
+  }
+
+  /**
+   * Builds a POST body carrying an inline SQLQuery Library over the ad-hoc view as its context, in
+   * the given output format.
+   */
+  @Nonnull
+  private String inlineSqlQueryRequest(@Nonnull final String sql, @Nonnull final String format) {
     final Map<String, Object> parameters = new LinkedHashMap<>();
     parameters.put("resourceType", "Parameters");
     parameters.put(
@@ -541,8 +643,59 @@ class SqlRunProviderIT {
                 "subjectResource",
                 jsonParser.encodeResourceToString(sqlQueryLibrary(sql, "adh", AD_HOC_VIEW_URL))),
             resourceParameter("context", adHocViewJson()),
-            stringParameter("_format", SqlRunFormat.NDJSON.getCode())));
+            stringParameter("_format", format)));
     return GSON.toJson(parameters);
+  }
+
+  /**
+   * Builds a POST body carrying an inline ViewDefinition that projects each Patient's id and a
+   * singular family name, over the given inline Patients. A Patient with more than one name fails
+   * that projection when its row is evaluated.
+   */
+  @Nonnull
+  private String inlineViewRequest(
+      @Nonnull final String format, @Nullable final Integer limit, final Patient... patients) {
+    final Map<String, Object> view = new LinkedHashMap<>();
+    view.put("resourceType", "ViewDefinition");
+    view.put("status", "active");
+    view.put("resource", "Patient");
+    view.put(
+        "select",
+        List.of(
+            Map.of(
+                "column",
+                List.of(
+                    Map.of("name", "id", "path", "id"),
+                    Map.of("name", "family", "path", "name.family")))));
+
+    final List<Map<String, Object>> parts = new ArrayList<>();
+    parts.add(resourceParameter("subjectResource", GSON.toJson(view)));
+    parts.add(stringParameter("_format", format));
+    if (limit != null) {
+      final Map<String, Object> limitParameter = new LinkedHashMap<>();
+      limitParameter.put("name", "_limit");
+      limitParameter.put("valueInteger", limit);
+      parts.add(limitParameter);
+    }
+    for (final Patient patient : patients) {
+      parts.add(stringParameter("resource", jsonParser.encodeResourceToString(patient)));
+    }
+
+    final Map<String, Object> parameters = new LinkedHashMap<>();
+    parameters.put("resourceType", "Parameters");
+    parameters.put("parameter", parts);
+    return GSON.toJson(parameters);
+  }
+
+  /** Builds a Patient with the given id and one name per given family name. */
+  @Nonnull
+  private static Patient patient(@Nonnull final String id, @Nonnull final String... families) {
+    final Patient patient = new Patient();
+    patient.setId(id);
+    for (final String family : families) {
+      patient.addName().setFamily(family);
+    }
+    return patient;
   }
 
   /** Builds a POST body naming a stored Library subject and the requested output format. */

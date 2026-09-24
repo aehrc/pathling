@@ -29,7 +29,6 @@ import au.csiro.pathling.read.ReadExecutor;
 import au.csiro.pathling.security.PathlingAuthority;
 import au.csiro.pathling.security.ResourceAccess.AccessType;
 import au.csiro.pathling.security.SecurityAspect;
-import au.csiro.pathling.views.Column;
 import au.csiro.pathling.views.FhirView;
 import au.csiro.pathling.views.FhirViewExecutor;
 import au.csiro.pathling.views.ViewDefinitionGson;
@@ -306,9 +305,6 @@ public class ViewExecutionHelper {
     // Build the data source.
     final DataSource dataSource = buildDataSource(inlineResources, patientIds, groupIds, since);
 
-    // Get column names from the view for CSV header.
-    final List<String> columnNames = view.getAllColumns().map(Column::getName).toList();
-
     // Set response headers for streaming.
     response.setContentType(outputFormat.getContentType());
     response.setCharacterEncoding(StandardCharsets.UTF_8.name());
@@ -316,16 +312,8 @@ public class ViewExecutionHelper {
 
     try {
       final OutputStream outputStream = response.getOutputStream();
-
-      // For CSV with header, write header immediately to minimise TTFB.
-      if (outputFormat == ViewOutputFormat.CSV && shouldIncludeHeader) {
-        streamingHelper.writeCsvHeader(outputStream, columnNames);
-        outputStream.flush();
-      }
-
-      // Execute the view query and stream results.
-      executeAndStreamResults(view, dataSource, limit, outputFormat, outputStream);
-
+      executeAndStreamResults(
+          view, dataSource, limit, outputFormat, shouldIncludeHeader, outputStream);
       outputStream.flush();
     } catch (final IOException e) {
       log.error("Error streaming view results", e);
@@ -333,12 +321,17 @@ public class ViewExecutionHelper {
     }
   }
 
-  /** Executes the view query and streams results to the output stream. */
+  /**
+   * Executes the view query and streams results to the output stream, which must not have been
+   * written to, so that a failure in evaluating the first row can still be reported with an error
+   * status.
+   */
   private void executeAndStreamResults(
       @Nonnull final FhirView view,
       @Nonnull final DataSource dataSource,
       @Nullable final IntegerType limit,
       @Nonnull final ViewOutputFormat outputFormat,
+      final boolean includeHeader,
       @Nonnull final OutputStream outputStream)
       throws IOException {
 
@@ -369,7 +362,7 @@ public class ViewExecutionHelper {
     switch (outputFormat) {
       case NDJSON -> streamingHelper.streamNdjson(outputStream, iterator, schema);
       case JSON -> streamingHelper.writeJson(outputStream, iterator, schema);
-      default -> streamingHelper.streamCsv(outputStream, iterator, schema);
+      default -> streamingHelper.streamCsv(outputStream, iterator, schema, includeHeader);
     }
   }
 
@@ -408,15 +401,7 @@ public class ViewExecutionHelper {
 
     try {
       final OutputStream outputStream = response.getOutputStream();
-
-      // For CSV with header, write the header immediately to minimise time to first byte.
-      if (outputFormat == ViewOutputFormat.CSV && includeHeader) {
-        streamingHelper.writeCsvHeader(
-            outputStream, view.getAllColumns().map(Column::getName).toList());
-        outputStream.flush();
-      }
-
-      executeAndStreamResults(view, dataSource, limit, outputFormat, outputStream);
+      executeAndStreamResults(view, dataSource, limit, outputFormat, includeHeader, outputStream);
       outputStream.flush();
     } catch (final IOException e) {
       log.error("Error streaming view results", e);
