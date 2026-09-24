@@ -51,6 +51,7 @@ jobs:
       matrix:
         module:
           - utilities
+          - fhir-schema
           - encoders
           - terminology
           - fhirpath

@@ -39,6 +39,10 @@
       <groupId>au.csiro.pathling</groupId>
       <artifactId>terminology</artifactId>
     </dependency>
+    <dependency>
+      <groupId>au.csiro.pathling</groupId>
+      <artifactId>fhir-schema</artifactId>
+    </dependency>
 
     <!-- Apache Spark -->
     <dependency>

@@ -21,13 +21,13 @@ import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.struct;
 import static org.apache.spark.sql.functions.when;
 
+import au.csiro.pathling.definition.ElementDefinition;
+import au.csiro.pathling.definition.NodeDefinition;
+import au.csiro.pathling.definition.defaults.DefaultCompositeDefinition;
+import au.csiro.pathling.definition.defaults.DefaultPrimitiveDefinition;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.EmptyCollection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
-import au.csiro.pathling.fhirpath.definition.ElementDefinition;
-import au.csiro.pathling.fhirpath.definition.NodeDefinition;
-import au.csiro.pathling.fhirpath.definition.defaults.DefaultCompositeDefinition;
-import au.csiro.pathling.fhirpath.definition.defaults.DefaultPrimitiveDefinition;
 import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.Optional;

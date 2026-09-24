@@ -31,6 +31,7 @@ jobs:
             core:
               - 'pom.xml'
               - 'utilities/**'
+              - 'fhir-schema/**'
               - 'encoders/**'
               - 'terminology/**'
               - 'fhirpath/**'
@@ -87,6 +88,7 @@ jobs:
           name: jars
           path: |
             utilities/target/utilities-*.jar
+            fhir-schema/target/fhir-schema-*.jar
             encoders/target/encoders-*.jar
             terminology/target/terminology-*.jar
             fhirpath/target/fhirpath-*.jar
@@ -107,6 +109,7 @@ jobs:
       matrix:
         module:
           - utilities
+          - fhir-schema
           - encoders
           - terminology
           - fhirpath

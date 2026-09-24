@@ -20,13 +20,13 @@ package au.csiro.pathling.fhirpath.collection;
 import static org.apache.spark.sql.functions.concat;
 import static org.apache.spark.sql.functions.lit;
 
+import au.csiro.pathling.definition.NodeDefinition;
+import au.csiro.pathling.definition.ResourceDefinition;
+import au.csiro.pathling.definition.fhir.FhirDefinitionContext;
 import au.csiro.pathling.encoders.ExtensionSupport;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
-import au.csiro.pathling.fhirpath.definition.NodeDefinition;
-import au.csiro.pathling.fhirpath.definition.ResourceDefinition;
-import au.csiro.pathling.fhirpath.definition.fhir.FhirDefinitionContext;
 import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;

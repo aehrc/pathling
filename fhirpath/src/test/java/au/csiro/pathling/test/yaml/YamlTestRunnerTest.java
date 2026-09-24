@@ -23,13 +23,13 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import au.csiro.pathling.definition.ChildDefinition;
+import au.csiro.pathling.definition.defaults.DefaultDefinitionContext;
+import au.csiro.pathling.definition.defaults.DefaultResourceDefinition;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
-import au.csiro.pathling.fhirpath.definition.ChildDefinition;
-import au.csiro.pathling.fhirpath.definition.defaults.DefaultDefinitionContext;
-import au.csiro.pathling.fhirpath.definition.defaults.DefaultResourceDefinition;
 import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluator;
 import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluatorBuilder;
 import au.csiro.pathling.fhirpath.evaluation.DefinitionResourceResolver;

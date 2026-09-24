@@ -17,12 +17,12 @@
 
 package au.csiro.pathling.fhirpath.collection;
 
+import au.csiro.pathling.definition.ChildDefinition;
+import au.csiro.pathling.definition.NodeDefinition;
 import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
-import au.csiro.pathling.fhirpath.definition.ChildDefinition;
-import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import org.apache.spark.sql.Column;

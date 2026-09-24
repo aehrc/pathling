@@ -19,6 +19,7 @@ package au.csiro.pathling.fhirpath.collection;
 
 import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 
+import au.csiro.pathling.definition.NodeDefinition;
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPathType;
@@ -30,7 +31,6 @@ import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.comparison.ColumnComparator;
 import au.csiro.pathling.fhirpath.comparison.Comparable;
 import au.csiro.pathling.fhirpath.comparison.DecimalComparator;
-import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.sql.misc.DecimalToLiteral;
 import jakarta.annotation.Nonnull;
 import java.math.BigDecimal;
