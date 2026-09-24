@@ -249,7 +249,9 @@ export function SqlQueryInlineTab({
       </Box>
 
       <Box>
-        <FieldLabel mb="1">Views</FieldLabel>
+        <FieldLabel mb="1" optional>
+          Views
+        </FieldLabel>
         {tables.length === 0 && (
           <FieldGuidance>
             Each view maps a label to a stored ViewDefinition or SQLView. The query needs at least
