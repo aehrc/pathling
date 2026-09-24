@@ -60,14 +60,14 @@ import org.junit.jupiter.api.io.TempDir;
  * agreement with {@link ConceptMapContent#fromResource}, unknown URLs, undeterminable versions and
  * unrepresentable content.
  *
- * <p>SNOMED CT implicit maps ({@code ?fhir_cm=}): the base release's only association reference set
- * is SAME AS, so these run against a second store imported from a copy of the base release whose
- * association file gains REPLACED BY, POSSIBLY EQUIVALENT TO and ALTERNATIVE rows, written out of
- * code order, together with the unmodified later release, which holds SAME AS rows only. The
- * store's default SNOMED CT version is therefore the later release, and the extended rows are
- * reached through the base release's edition/version URI. The extended copy is imported a second
- * time under an experimental ({@code xsct}) edition/version URI, which sorts below every production
- * release and so leaves the default unchanged.
+ * <p>SNOMED CT implicit maps ({@code ?fhir_cm=}): the base release has one row or two in each
+ * association reference set, so these run against a second store imported from a copy of the base
+ * release whose association file gains further REPLACED BY, POSSIBLY EQUIVALENT TO and ALTERNATIVE
+ * rows, written out of code order, together with the unmodified later release. The store's default
+ * SNOMED CT version is therefore the later release, and the extended rows are reached through the
+ * base release's edition/version URI. The extended copy is imported a second time under an
+ * experimental ({@code xsct}) edition/version URI, which sorts below every production release and
+ * so leaves the default unchanged.
  *
  * @author John Grimes
  */
@@ -282,6 +282,13 @@ class LocalTerminologyServiceConceptMapTest {
                 ConceptMapRelationship.EQUIVALENT),
             row(
                 v,
+                Rf2Mini.REPLACED_BY_SOURCE,
+                "Mini diabetes subtype 1",
+                Rf2Mini.TYPE1_DIABETES,
+                "Type 1 diabetes mellitus",
+                ConceptMapRelationship.EQUIVALENT),
+            row(
+                v,
                 Rf2Mini.ASSOCIATED_FILLER_2,
                 "Mini other disorder 36",
                 Rf2Mini.DIABETES,
@@ -292,8 +299,8 @@ class LocalTerminologyServiceConceptMapTest {
 
   @Test
   void possiblyEquivalentToYieldsEveryTargetOfAConcept() {
-    // The concept has three targets, written out of code order, one of which is not in the
-    // dictionary and so has no display.
+    // One concept has three targets, written out of code order, one of which is not in the
+    // dictionary and so has no display. The base release's own source has two more.
     final ConceptMapContent content =
         readImplicit(Rf2Mini.VERSION_20230601, POSSIBLY_EQUIVALENT_TO);
 
@@ -316,7 +323,21 @@ class LocalTerminologyServiceConceptMapTest {
                 Rf2Mini.TYPE2_WITH_COMPLICATION,
                 "Type 2 diabetes mellitus with complication",
                 relatedTo),
-            row(v, Rf2Mini.GESTATIONAL_DIABETES, gestational, ABSENT_CONCEPT, null, relatedTo)),
+            row(v, Rf2Mini.GESTATIONAL_DIABETES, gestational, ABSENT_CONCEPT, null, relatedTo),
+            row(
+                v,
+                Rf2Mini.POSSIBLY_EQUIVALENT_TO_SOURCE,
+                "Mini diabetes subtype 2",
+                Rf2Mini.TYPE1_DIABETES,
+                "Type 1 diabetes mellitus",
+                relatedTo),
+            row(
+                v,
+                Rf2Mini.POSSIBLY_EQUIVALENT_TO_SOURCE,
+                "Mini diabetes subtype 2",
+                Rf2Mini.TYPE2_DIABETES,
+                "Type 2 diabetes mellitus",
+                relatedTo)),
         content.getMappings());
   }
 
@@ -340,6 +361,13 @@ class LocalTerminologyServiceConceptMapTest {
                 "Diabetes",
                 Rf2Mini.DIABETES,
                 "Diabetes mellitus",
+                ConceptMapRelationship.RELATED_TO),
+            row(
+                v,
+                Rf2Mini.ALTERNATIVE_SOURCE,
+                "Mini diabetes subtype 3",
+                Rf2Mini.GESTATIONAL_DIABETES,
+                "Gestational diabetes mellitus",
                 ConceptMapRelationship.RELATED_TO)),
         content.getMappings());
   }
@@ -356,8 +384,8 @@ class LocalTerminologyServiceConceptMapTest {
 
   @Test
   void bareBaseSelectsTheDefaultVersion() {
-    // The default is the later release, whose SAME AS rows carry its version URI and which holds
-    // no REPLACED BY rows at all.
+    // The default is the later release, whose rows carry its version URI and which holds only the
+    // one REPLACED BY row of the unextended fixture.
     final ConceptMapContent sameAs = readImplicit(Rf2Mini.SNOMED_URI, SAME_AS);
     assertEquals(Rf2Mini.VERSION_20240601, sameAs.getVersion());
     assertEquals(4, sameAs.getMappings().size());
@@ -370,13 +398,18 @@ class LocalTerminologyServiceConceptMapTest {
 
     final ConceptMapContent replacedBy = readImplicit(Rf2Mini.SNOMED_URI, REPLACED_BY);
     assertEquals(Rf2Mini.VERSION_20240601, replacedBy.getVersion());
-    assertTrue(replacedBy.getMappings().isEmpty());
+    assertEquals(
+        List.of(Rf2Mini.REPLACED_BY_SOURCE),
+        replacedBy.getMappings().stream().map(ConceptMapping::getSourceCode).toList());
+    assertTrue(
+        replacedBy.getMappings().stream()
+            .allMatch(mapping -> Rf2Mini.VERSION_20240601.equals(mapping.getSourceVersion())));
   }
 
   @Test
   void editionVersionBaseSelectsThatVersion() {
-    assertEquals(2, readImplicit(Rf2Mini.VERSION_20230601, REPLACED_BY).getMappings().size());
-    assertTrue(readImplicit(Rf2Mini.VERSION_20240601, REPLACED_BY).getMappings().isEmpty());
+    assertEquals(3, readImplicit(Rf2Mini.VERSION_20230601, REPLACED_BY).getMappings().size());
+    assertEquals(1, readImplicit(Rf2Mini.VERSION_20240601, REPLACED_BY).getMappings().size());
   }
 
   @Test
@@ -400,6 +433,13 @@ class LocalTerminologyServiceConceptMapTest {
                 "Diabetes",
                 Rf2Mini.TYPE2_DIABETES,
                 "Type 2 diabetes mellitus",
+                ConceptMapRelationship.EQUIVALENT),
+            row(
+                XSCT_VERSION,
+                Rf2Mini.REPLACED_BY_SOURCE,
+                "Mini diabetes subtype 1",
+                Rf2Mini.TYPE1_DIABETES,
+                "Type 1 diabetes mellitus",
                 ConceptMapRelationship.EQUIVALENT),
             row(
                 XSCT_VERSION,
