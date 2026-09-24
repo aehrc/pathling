@@ -133,7 +133,7 @@ class ViewRegistrationServiceTest {
   }
 
   @Test
-  void registerDatasetNamespacesWithRandomId() {
+  void registerDatasetNamespacesWithRandomIdNotRequestId() {
     // Issue 2770: the caller controls the request id through X-Request-ID, so the temp view name
     // is namespaced with a server-generated random id the caller can never predict or forge.
     // Registering the same identifier twice must produce two distinct names.

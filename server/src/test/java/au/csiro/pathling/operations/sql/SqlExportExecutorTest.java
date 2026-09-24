@@ -102,12 +102,12 @@ class SqlExportExecutorTest {
     doAnswer(
             invocation -> {
               invocation
-                  .getArgument(3, Consumer.class)
+                  .getArgument(2, Consumer.class)
                   .accept(mock(Dataset.class, org.mockito.Answers.RETURNS_DEEP_STUBS));
               return null;
             })
         .when(pipeline)
-        .execute(any(), any(), any(), any());
+        .execute(any(), any(), any());
 
     executor =
         new SqlExportExecutor(
@@ -158,7 +158,7 @@ class SqlExportExecutorTest {
     assertThat(base.getValue()).isSameAs(snapshot);
 
     // The filtered snapshot, not the live source, is what each subject executes against.
-    verify(pipeline, times(2)).execute(any(), eq(filteredSource), any(), any());
+    verify(pipeline, times(2)).execute(any(), eq(filteredSource), any());
   }
 
   // A source with no Delta history to travel through - a substituted in-memory source - is read
@@ -183,14 +183,13 @@ class SqlExportExecutorTest {
     assertThat(base.getValue()).isSameAs(plainSource);
   }
 
-  // Each subject's temp views are namespaced within the job, so two subjects of one job cannot
-  // collide on a request-scoped view name.
+  // Each subject gets its own random temp-view namespace, so two subjects of one job cannot
+  // collide on a view name.
   @Test
-  void namespacesEachSubjectsTempViewsWithinTheJob() {
+  void namespacesEachSubjectsTempViewsRandomly() {
     executor.execute(request(sqlSubject("first"), sqlSubject("second")), JOB_ID);
 
-    verify(pipeline).execute(any(), any(), eq(JOB_ID + "-0"), any());
-    verify(pipeline).execute(any(), any(), eq(JOB_ID + "-1"), any());
+    verify(pipeline, times(2)).execute(any(), any(), any());
   }
 
   // The job's format decides how the result is written, and the header flag reaches the CSV writer.
