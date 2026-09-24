@@ -335,8 +335,7 @@ export function SqlQueryInlineTab({
           Terminology
         </FieldLabel>
         <FieldGuidance>
-          Each row maps a label to the canonical URL of a value set or concept map, optionally
-          pinned with `|version`.
+          Each row maps a label to the canonical URL of a value set or concept map.
         </FieldGuidance>
         <Flex direction="column" gap="2" mt="1">
           {terminology.map((row, index) => (
