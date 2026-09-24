@@ -33,12 +33,6 @@ public class SqlQueryRequest {
   /** The decoded SQLQuery Library: SQL text, view references, declared parameters. */
   @Nonnull ParsedSqlQuery parsedQuery;
 
-  /** The selected output format, after applying {@code _format} / {@code Accept} fallback. */
-  @Nonnull SqlQueryOutputFormat outputFormat;
-
-  /** Whether to include a header row when emitting CSV. */
-  boolean includeHeader;
-
   /** Optional row cap; {@code null} means no cap. */
   @Nullable Integer limit;
 

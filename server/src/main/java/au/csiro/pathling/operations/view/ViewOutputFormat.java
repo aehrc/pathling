@@ -25,7 +25,7 @@ import java.util.Optional;
 import lombok.Getter;
 
 /**
- * Output format options for the ViewDefinition run operation.
+ * Output format options for a ViewDefinition subject of the {@code $sql-run} operation.
  *
  * @author John Grimes
  */

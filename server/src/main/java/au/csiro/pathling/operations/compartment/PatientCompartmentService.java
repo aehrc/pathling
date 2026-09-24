@@ -112,47 +112,6 @@ public class PatientCompartmentService {
   }
 
   /**
-   * Build a Spark filter Column for compartment membership. This method is for simple cases where
-   * the filter doesn't require FHIRPath evaluation (e.g., Patient resources).
-   *
-   * <p>For non-Patient resources that may have complex FHIRPath expressions in their compartment
-   * paths, use {@link #filterByPatientCompartment} instead.
-   *
-   * @param resourceType the resource type
-   * @param patientIds the patient IDs to filter by (empty set means all patients in compartment)
-   * @return Spark Column for filtering
-   */
-  @Nonnull
-  public Column buildPatientFilter(
-      @Nonnull final String resourceType, @Nonnull final Set<String> patientIds) {
-    // Handle Patient resource specially - no FHIRPath evaluation needed.
-    if (PATIENT_RESOURCE_TYPE.equals(resourceType)) {
-      if (patientIds.isEmpty()) {
-        // All patients - no filter needed.
-        return lit(true);
-      } else {
-        // Filter to specific patient IDs.
-        return col("id").isin(patientIds.toArray());
-      }
-    }
-
-    // For non-Patient resources without DataSource, we can't evaluate FHIRPath properly.
-    // Return a filter that matches nothing (this shouldn't normally be called for such cases).
-    final List<String> paths = getPatientCompartmentPaths(resourceType);
-    if (paths.isEmpty()) {
-      return lit(false);
-    }
-
-    // Fall back to simple column-based filtering for backward compatibility.
-    // This will only work for simple paths without FHIRPath functions.
-    log.warn(
-        "buildPatientFilter called without DataSource for resource type {} - "
-            + "FHIRPath expressions in compartment paths will not be evaluated correctly",
-        resourceType);
-    return buildSimpleFilter(paths, patientIds);
-  }
-
-  /**
    * Filter a dataset to only include resources in the Patient compartment. This method uses a
    * semi-join approach that avoids collecting IDs into driver memory, making it suitable for large
    * datasets.
@@ -286,31 +245,6 @@ public class PatientCompartmentService {
       log.warn("Failed to evaluate FHIRPath for compartment path '{}': {}", path, e.getMessage());
       return null;
     }
-  }
-
-  /**
-   * Build a simple column-based filter without FHIRPath evaluation. This is used for backward
-   * compatibility when no DataSource is provided.
-   *
-   * @param paths the compartment paths to filter on
-   * @param patientIds the patient IDs to filter by
-   * @return a Spark Column filter expression
-   */
-  @Nonnull
-  private Column buildSimpleFilter(
-      @Nonnull final List<String> paths, @Nonnull final Set<String> patientIds) {
-    Column filter = lit(false);
-    for (final String path : paths) {
-      final String refColumn = path + ".reference";
-      if (patientIds.isEmpty()) {
-        filter = filter.or(col(refColumn).startsWith(PATIENT_REF_PREFIX));
-      } else {
-        final String[] patientRefs =
-            patientIds.stream().map(id -> PATIENT_REF_PREFIX + id).toArray(String[]::new);
-        filter = filter.or(col(refColumn).isin((Object[]) patientRefs));
-      }
-    }
-    return filter;
   }
 
   /**

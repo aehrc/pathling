@@ -87,7 +87,7 @@ class SqlExportRequestParserTest {
         .thenReturn(new ResolvedFilters(Set.of(), null, List.of()));
     when(contextParser.parse(any())).thenReturn(SuppliedArtefacts.empty());
     when(viewValidator.parse(any(), any())).thenReturn(mock(FhirView.class));
-    when(pipeline.prepare(any(), any(), any(), any(), any(), any(), any()))
+    when(pipeline.prepare(any(), any(), any(), any(), any()))
         .thenReturn(mock(PreparedSqlQuery.class));
   }
 
@@ -183,9 +183,7 @@ class SqlExportRequestParserTest {
                 canonicalPart("https://example.org/q"),
                 resourcePart("parameters", bindings))));
 
-    verify(pipeline)
-        .prepare(
-            any(), any(), any(), any(), org.mockito.ArgumentMatchers.eq(bindings), any(), any());
+    verify(pipeline).prepare(any(), any(), org.mockito.ArgumentMatchers.eq(bindings), any(), any());
   }
 
   // A binding failure reported by the pipeline without an outcome of its own is relabelled onto
@@ -193,7 +191,7 @@ class SqlExportRequestParserTest {
   @Test
   void reportsABindingFailureAgainstTheParametersPart() {
     stubSubject(SubjectKind.SQL_QUERY);
-    when(pipeline.prepare(any(), any(), any(), any(), any(), any(), any()))
+    when(pipeline.prepare(any(), any(), any(), any(), any()))
         .thenThrow(new InvalidRequestException("Unknown parameter 'nope'"));
 
     final BaseServerResponseException exception =
@@ -274,8 +272,7 @@ class SqlExportRequestParserTest {
     verify(contextParser).parse(any());
     verify(artefacts).checkAllMatched();
     verify(pipeline, org.mockito.Mockito.times(2))
-        .prepare(
-            any(), any(), any(), any(), any(), org.mockito.ArgumentMatchers.eq(artefacts), any());
+        .prepare(any(), any(), any(), org.mockito.ArgumentMatchers.eq(artefacts), any());
   }
 
   // Dependency resolution is memoised across the job, so every subject shares one node map and a
@@ -291,7 +288,7 @@ class SqlExportRequestParserTest {
 
     final var captor = org.mockito.ArgumentCaptor.forClass(Map.class);
     verify(pipeline, org.mockito.Mockito.times(2))
-        .prepare(any(), any(), any(), any(), any(), any(), captor.capture());
+        .prepare(any(), any(), any(), any(), captor.capture());
     assertThat(captor.getAllValues().get(0)).isSameAs(captor.getAllValues().get(1));
   }
 

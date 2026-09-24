@@ -254,14 +254,7 @@ public class SqlRunProvider {
 
     final PreparedSqlQuery prepared;
     try {
-      prepared =
-          pipeline.prepare(
-              subject.asLibrary(),
-              outputFormat.getCode(),
-              new BooleanType(header),
-              limit,
-              parameters,
-              supplied);
+      prepared = pipeline.prepare(subject.asLibrary(), limit, parameters, supplied);
     } catch (final InvalidRequestException e) {
       // A 400 raised while preparing a subject that supplied bindings is about those bindings, and
       // is relabelled onto the part at fault - the same rule the export applies at kick-off.

@@ -88,8 +88,6 @@ public class SqlQueryRequestParser {
    * Parses the raw inputs into a validated {@link SqlQueryRequest}.
    *
    * @param queryResource the inline Library resource carrying the SQLQuery
-   * @param format the explicit {@code _format} parameter, if any
-   * @param includeHeader whether to include a CSV header row; {@code null} defaults to {@code true}
    * @param limit optional row cap
    * @param parameters runtime parameter bindings as a {@code Parameters} resource
    * @return the validated request
@@ -97,11 +95,8 @@ public class SqlQueryRequestParser {
    *     where a parameter the Library declares has no runtime binding
    */
   @Nonnull
-  @SuppressWarnings("java:S107")
   public SqlQueryRequest parse(
       @Nonnull final IBaseResource queryResource,
-      @Nullable final String format,
-      @Nullable final BooleanType includeHeader,
       @Nullable final IntegerType limit,
       @Nullable final Parameters parameters) {
 
@@ -124,15 +119,12 @@ public class SqlQueryRequestParser {
         parsedQuery.getViewReferences().size(),
         parsedQuery.getDeclaredParameters().size());
 
-    final SqlQueryOutputFormat outputFormat = SqlQueryOutputFormat.fromStringStrict(format);
-    final boolean shouldIncludeHeader = includeHeader == null || includeHeader.booleanValue();
     final Integer limitValue =
         (limit != null && limit.getValue() != null) ? limit.getValue() : null;
     final Map<String, Object> parameterBindings =
         bindParameters(parameters, parsedQuery.getDeclaredParameters());
 
-    return new SqlQueryRequest(
-        parsedQuery, outputFormat, shouldIncludeHeader, limitValue, parameterBindings);
+    return new SqlQueryRequest(parsedQuery, limitValue, parameterBindings);
   }
 
   @Nonnull
