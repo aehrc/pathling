@@ -104,14 +104,12 @@ public class SqlQueryExecutor {
    * @param request the parsed and validated request
    * @param graph the resolved dependency graph the SQL references
    * @param dataSource the data source backing FhirView execution
-   * @param requestId the HAPI per-request id used to namespace temp view names
    * @param consumer terminal consumer of the result dataset
    */
   public void execute(
       @Nonnull final SqlQueryRequest request,
       @Nonnull final ResolvedDependencyGraph graph,
       @Nonnull final DataSource dataSource,
-      @Nonnull final String requestId,
       @Nonnull final Consumer<Dataset<Row>> consumer) {
 
     validateStatically(request, graph);
@@ -119,7 +117,7 @@ public class SqlQueryExecutor {
     final Map<String, String> registeredByKey = new LinkedHashMap<>();
     try {
       for (final ResolvedDependency node : graph.getOrderedNodes()) {
-        materialiseNode(node, dataSource, requestId, registeredByKey);
+        materialiseNode(node, dataSource, registeredByKey);
       }
 
       final Map<String, String> topLevelViews =
@@ -154,7 +152,6 @@ public class SqlQueryExecutor {
   private void materialiseNode(
       @Nonnull final ResolvedDependency node,
       @Nonnull final DataSource dataSource,
-      @Nonnull final String requestId,
       @Nonnull final Map<String, String> registeredByKey) {
     final Dataset<Row> dataset;
     if (node instanceof final ResolvedViewDefinition viewDefinition) {
@@ -172,7 +169,7 @@ public class SqlQueryExecutor {
           "Unsupported dependency node type: " + node.getClass().getSimpleName());
     }
     final String tempViewName =
-        viewRegistrationService.registerDataset(node.getCanonicalKey(), dataset, requestId);
+        viewRegistrationService.registerDataset(node.getCanonicalKey(), dataset);
     registeredByKey.put(node.getCanonicalKey(), tempViewName);
     log.debug(
         "Materialised temp view '{}' for dependency '{}'", tempViewName, node.getCanonicalKey());

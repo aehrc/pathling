@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import au.csiro.pathling.test.SpringBootUnitTest;
+import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import jakarta.annotation.Nonnull;
 import java.nio.file.Path;
@@ -49,6 +50,8 @@ class SqlValidatorTest {
   @Autowired private SqlValidator sqlValidator;
 
   @Autowired private SparkSession sparkSession;
+
+  @Autowired private FhirContext fhirContext;
 
   @AfterEach
   void dropView() {

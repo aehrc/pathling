@@ -49,7 +49,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
 
 /**
- * Tests for {@link ViewRegistrationService}, with particular attention to the request-id
+ * Tests for {@link ViewRegistrationService}, with particular attention to the random
  * namespacing that prevents concurrent {@code $sql-run} requests from clobbering one another's
  * temporary views in Spark's session-global catalog, and to the reading of configured external
  * tables.
@@ -77,36 +77,16 @@ class ViewRegistrationServiceTest {
   // ---------------------------------------------------------------------------
 
   @Test
-  void resolveTempViewNamePrefixesRequestIdAndLabel() {
-    assertThat(ViewRegistrationService.resolveTempViewName("abc123", "patients"))
-        .isEqualTo("sqlquery_abc123_patients");
+  void resolveTempViewNamePrefixesNamespaceAndLabel() {
+    assertThat(ViewRegistrationService.resolveTempViewName("v9f3a1c", "patients"))
+        .isEqualTo("sqlquery_v9f3a1c_patients");
   }
 
   @Test
-  void resolveTempViewNameStripsUnsafeCharactersFromRequestId() {
-    // X-Request-ID may carry arbitrary characters; the resulting identifier must remain a
-    // legal Spark temp view name.
-    assertThat(ViewRegistrationService.resolveTempViewName("req-A:b/c", "patients"))
-        .isEqualTo("sqlquery_reqAbc_patients");
-  }
-
-  @Test
-  void resolveTempViewNameProducesDistinctNamesForDistinctRequestIds() {
-    final String a = ViewRegistrationService.resolveTempViewName("requestA", "patients");
-    final String b = ViewRegistrationService.resolveTempViewName("requestB", "patients");
+  void resolveTempViewNameProducesDistinctNamesForDistinctNamespaces() {
+    final String a = ViewRegistrationService.resolveTempViewName("v9f3a1c", "patients");
+    final String b = ViewRegistrationService.resolveTempViewName("v7e2b4d", "patients");
     assertThat(a).isNotEqualTo(b);
-  }
-
-  @Test
-  void resolveTempViewNameFallsBackToHashWhenSanitisedRequestIdIsEmpty() {
-    // A request id consisting only of unsafe characters would otherwise sanitise to an empty
-    // string and produce the same prefix for every such request (sqlquery__patients), defeating
-    // the namespacing fix.
-    final String dashes = ViewRegistrationService.resolveTempViewName("---", "patients");
-    final String slashes = ViewRegistrationService.resolveTempViewName("///", "patients");
-    assertThat(dashes).startsWith("sqlquery_r").endsWith("_patients");
-    assertThat(slashes).startsWith("sqlquery_r").endsWith("_patients");
-    assertThat(dashes).isNotEqualTo(slashes);
   }
 
   @Test
@@ -114,8 +94,8 @@ class ViewRegistrationServiceTest {
     // The temp view name is keyed by the resolved resource's canonical key, so a key carrying a
     // slash and dash (ViewDefinition/patient-view) is sanitised into a legal Spark identifier.
     final String name =
-        ViewRegistrationService.resolveTempViewName("req1", "ViewDefinition/patient-view");
-    assertThat(name).startsWith("sqlquery_req1_").doesNotContain("/").doesNotContain("-");
+        ViewRegistrationService.resolveTempViewName("v9f3a1c", "ViewDefinition/patient-view");
+    assertThat(name).startsWith("sqlquery_v9f3a1c_").doesNotContain("/").doesNotContain("-");
   }
 
   @Test
@@ -124,9 +104,9 @@ class ViewRegistrationServiceTest {
     // dots, and version pipe must all sanitise into a legal Spark identifier.
     final String name =
         ViewRegistrationService.resolveTempViewName(
-            "req1", "https://example.org/ViewDefinition/Patients|2");
+            "v9f3a1c", "https://example.org/ViewDefinition/Patients|2");
     assertThat(name)
-        .startsWith("sqlquery_req1_")
+        .startsWith("sqlquery_v9f3a1c_")
         .doesNotContain("/")
         .doesNotContain(":")
         .doesNotContain(".")
@@ -137,9 +117,9 @@ class ViewRegistrationServiceTest {
   void resolveTempViewNameGivesDistinctNamesToDistinctCanonicalUrlKeys() {
     // A bare-url key and a url|version key must not collapse to the same temp view name.
     final String bare =
-        ViewRegistrationService.resolveTempViewName("req1", "https://example.org/V");
+        ViewRegistrationService.resolveTempViewName("v9f3a1c", "https://example.org/V");
     final String versioned =
-        ViewRegistrationService.resolveTempViewName("req1", "https://example.org/V|2");
+        ViewRegistrationService.resolveTempViewName("v9f3a1c", "https://example.org/V|2");
     assertThat(bare).isNotEqualTo(versioned);
   }
 
@@ -147,9 +127,32 @@ class ViewRegistrationServiceTest {
   void resolveTempViewNameGivesDistinctNamesToDistinctKeys() {
     // Two nodes that happen to share a label but resolve to different resources are keyed by their
     // distinct canonical keys, so their temp views never collide.
-    final String left = ViewRegistrationService.resolveTempViewName("req1", "ViewDefinition/a");
-    final String right = ViewRegistrationService.resolveTempViewName("req1", "ViewDefinition/b");
+    final String left = ViewRegistrationService.resolveTempViewName("v9f3a1c", "ViewDefinition/a");
+    final String right =
+        ViewRegistrationService.resolveTempViewName("v9f3a1c", "ViewDefinition/b");
     assertThat(left).isNotEqualTo(right);
+  }
+
+  @Test
+  void registerDatasetNamespacesWithRandomIdNotRequestId() {
+    // Issue 2770: the caller controls the request id through X-Request-ID, so the temp view name
+    // is namespaced with a server-generated random id the caller can never predict or forge.
+    // Registering the same identifier twice must produce two distinct names.
+    final Dataset<Row> dataset = singleColumnDataset("value", List.of("x"));
+    final String viewName = service.registerDataset("patients", dataset);
+    try {
+      assertThat(viewName).startsWith("sqlquery_v");
+      // A fresh namespace is minted per registration, so concurrent requests can never
+      // clobber one another's views.
+      final String otherViewName = service.registerDataset("patients", dataset);
+      try {
+        assertThat(otherViewName).startsWith("sqlquery_v").isNotEqualTo(viewName);
+      } finally {
+        service.dropViews(List.of(otherViewName));
+      }
+    } finally {
+      service.dropViews(List.of(viewName));
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -163,7 +166,7 @@ class ViewRegistrationServiceTest {
     // before running, so the SQLView observes the child's rows.
     final Dataset<Row> childData = singleColumnDataset("value", List.of("x", "y"));
     final String childKey = "ViewDefinition/child";
-    final String childViewName = service.registerDataset(childKey, childData, "req1");
+    final String childViewName = service.registerDataset(childKey, childData);
     try {
       final ResolvedSqlView node =
           new ResolvedSqlView("Library/parent", "SELECT value FROM t", Map.of("t", childKey));
@@ -279,9 +282,10 @@ class ViewRegistrationServiceTest {
   @Test
   void rewriteSqlSubstitutesLabelsWithViewNames() {
     final String rewritten =
-        service.rewriteSql("SELECT * FROM patients", Map.of("patients", "sqlquery_req1_patients"));
+        service.rewriteSql(
+            "SELECT * FROM patients", Map.of("patients", "sqlquery_v9f3a1c_patients"));
     // The unaliased reference gains "AS patients" so the label still names a table.
-    assertThat(rewritten).isEqualTo("SELECT * FROM sqlquery_req1_patients AS patients");
+    assertThat(rewritten).isEqualTo("SELECT * FROM sqlquery_v9f3a1c_patients AS patients");
   }
 
   @Test
@@ -291,9 +295,9 @@ class ViewRegistrationServiceTest {
     final String rewritten =
         service.rewriteSql(
             "SELECT * FROM patients JOIN patients_archive ON patients.id = patients_archive.id",
-            Map.of("patients", "sqlquery_req1_patients"));
+            Map.of("patients", "sqlquery_v9f3a1c_patients"));
     assertThat(rewritten)
-        .contains("FROM sqlquery_req1_patients AS patients JOIN patients_archive")
+        .contains("FROM sqlquery_v9f3a1c_patients AS patients JOIN patients_archive")
         // The qualifiers are column references, so they keep the names the query author wrote.
         .contains("ON patients.id = patients_archive.id");
   }
@@ -303,11 +307,11 @@ class ViewRegistrationServiceTest {
     final String rewritten =
         service.rewriteSql(
             "SELECT * FROM obs JOIN obs_summary ON obs.id = obs_summary.id",
-            Map.of("obs", "sqlquery_req1_obs", "obs_summary", "sqlquery_req1_obs_summary"));
+            Map.of("obs", "sqlquery_v9f3a1c_obs", "obs_summary", "sqlquery_v9f3a1c_obs_summary"));
     // The longer label is rewritten cleanly; the shorter label only matches the bare token.
     assertThat(rewritten)
-        .contains("FROM sqlquery_req1_obs ")
-        .contains("JOIN sqlquery_req1_obs_summary ");
+        .contains("FROM sqlquery_v9f3a1c_obs ")
+        .contains("JOIN sqlquery_v9f3a1c_obs_summary ");
   }
 
   @Test
@@ -315,9 +319,9 @@ class ViewRegistrationServiceTest {
     final String rewritten =
         service.rewriteSql(
             "SELECT * FROM patients WHERE name = 'patients'",
-            Map.of("patients", "sqlquery_req1_patients"));
+            Map.of("patients", "sqlquery_v9f3a1c_patients"));
     assertThat(rewritten)
-        .isEqualTo("SELECT * FROM sqlquery_req1_patients AS patients WHERE name = 'patients'");
+        .isEqualTo("SELECT * FROM sqlquery_v9f3a1c_patients AS patients WHERE name = 'patients'");
   }
 
   @Test
@@ -325,10 +329,10 @@ class ViewRegistrationServiceTest {
     final String rewritten =
         service.rewriteSql(
             "SELECT * FROM patients WHERE note = \"patients are interesting\"",
-            Map.of("patients", "sqlquery_req1_patients"));
+            Map.of("patients", "sqlquery_v9f3a1c_patients"));
     assertThat(rewritten)
         .isEqualTo(
-            "SELECT * FROM sqlquery_req1_patients AS patients WHERE note = \"patients are"
+            "SELECT * FROM sqlquery_v9f3a1c_patients AS patients WHERE note = \"patients are"
                 + " interesting\"");
   }
 
@@ -337,10 +341,11 @@ class ViewRegistrationServiceTest {
     final String rewritten =
         service.rewriteSql(
             "SELECT * FROM patients -- patients comment\nWHERE x = 1",
-            Map.of("patients", "sqlquery_req1_patients"));
+            Map.of("patients", "sqlquery_v9f3a1c_patients"));
     assertThat(rewritten)
         .isEqualTo(
-            "SELECT * FROM sqlquery_req1_patients AS patients -- patients comment\nWHERE x = 1");
+            "SELECT * FROM sqlquery_v9f3a1c_patients AS patients -- patients comment\n"
+                + "WHERE x = 1");
   }
 
   @Test
@@ -348,9 +353,9 @@ class ViewRegistrationServiceTest {
     final String rewritten =
         service.rewriteSql(
             "SELECT /* patients in here */ * FROM patients",
-            Map.of("patients", "sqlquery_req1_patients"));
+            Map.of("patients", "sqlquery_v9f3a1c_patients"));
     assertThat(rewritten)
-        .isEqualTo("SELECT /* patients in here */ * FROM sqlquery_req1_patients AS patients");
+        .isEqualTo("SELECT /* patients in here */ * FROM sqlquery_v9f3a1c_patients AS patients");
   }
 
   @Test
@@ -360,18 +365,18 @@ class ViewRegistrationServiceTest {
     final String rewritten =
         service.rewriteSql(
             "SELECT * FROM patients WHERE label = 'pat''s patients'",
-            Map.of("patients", "sqlquery_req1_patients"));
+            Map.of("patients", "sqlquery_v9f3a1c_patients"));
     assertThat(rewritten)
         .isEqualTo(
-            "SELECT * FROM sqlquery_req1_patients AS patients WHERE label = 'pat''s patients'");
+            "SELECT * FROM sqlquery_v9f3a1c_patients AS patients WHERE label = 'pat''s patients'");
   }
 
   @Test
   void rewriteSqlRewritesBacktickQuotedLabel() {
     final String rewritten =
         service.rewriteSql(
-            "SELECT * FROM `patients`", Map.of("patients", "sqlquery_req1_patients"));
-    assertThat(rewritten).isEqualTo("SELECT * FROM sqlquery_req1_patients AS patients");
+            "SELECT * FROM `patients`", Map.of("patients", "sqlquery_v9f3a1c_patients"));
+    assertThat(rewritten).isEqualTo("SELECT * FROM sqlquery_v9f3a1c_patients AS patients");
   }
 
   @Test
@@ -379,9 +384,9 @@ class ViewRegistrationServiceTest {
     final String rewritten =
         service.rewriteSql(
             "SELECT * FROM patients WHERE `random col` = 'x'",
-            Map.of("patients", "sqlquery_req1_patients"));
+            Map.of("patients", "sqlquery_v9f3a1c_patients"));
     assertThat(rewritten)
-        .isEqualTo("SELECT * FROM sqlquery_req1_patients AS patients WHERE `random col` = 'x'");
+        .isEqualTo("SELECT * FROM sqlquery_v9f3a1c_patients AS patients WHERE `random col` = 'x'");
   }
 
   @Test
@@ -390,8 +395,8 @@ class ViewRegistrationServiceTest {
     // shares its name and occupies a different namespace, so only the relation reference is
     // substituted.
     final String rewritten =
-        service.rewriteSql("SELECT t.age FROM age AS t", Map.of("age", "sqlquery_req1_age"));
-    assertThat(rewritten).isEqualTo("SELECT t.age FROM sqlquery_req1_age AS t");
+        service.rewriteSql("SELECT t.age FROM age AS t", Map.of("age", "sqlquery_v9f3a1c_age"));
+    assertThat(rewritten).isEqualTo("SELECT t.age FROM sqlquery_v9f3a1c_age AS t");
   }
 
   // ---------------------------------------------------------------------------
@@ -400,8 +405,8 @@ class ViewRegistrationServiceTest {
 
   /**
    * Regression test for two concurrent requests registering a view under the same label. Without
-   * request-id namespacing, the second {@code createOrReplaceTempView} call would overwrite the
-   * first, so request A would observe request B's data. With namespacing, each request resolves a
+   * random namespacing, the second {@code createOrReplaceTempView} call would overwrite the first,
+   * so request A would observe request B's data. With namespacing, each registration resolves a
    * distinct temp view name and the two queries remain isolated.
    */
   @Test
@@ -411,10 +416,8 @@ class ViewRegistrationServiceTest {
 
     final ExecutorService executor = Executors.newFixedThreadPool(2);
     try {
-      final Callable<List<String>> taskA =
-          () -> runRegisterAndRead("requestA", "patients", datasetA);
-      final Callable<List<String>> taskB =
-          () -> runRegisterAndRead("requestB", "patients", datasetB);
+      final Callable<List<String>> taskA = () -> runRegisterAndRead("patients", datasetA);
+      final Callable<List<String>> taskB = () -> runRegisterAndRead("patients", datasetB);
 
       final Future<List<String>> futureA = executor.submit(taskA);
       final Future<List<String>> futureB = executor.submit(taskB);
@@ -433,9 +436,8 @@ class ViewRegistrationServiceTest {
    * Reads back the registered view through SQL and then drops it, so the test exercises the same
    * register / query / drop sequence the production code performs for a single request.
    */
-  private List<String> runRegisterAndRead(
-      final String requestId, final String label, final Dataset<Row> dataset) {
-    final String tempViewName = service.registerDataset(label, dataset, requestId);
+  private List<String> runRegisterAndRead(final String label, final Dataset<Row> dataset) {
+    final String tempViewName = service.registerDataset(label, dataset);
     try {
       final String rewrittenSql =
           service.rewriteSql("SELECT value FROM " + label, Map.of(label, tempViewName));

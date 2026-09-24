@@ -136,15 +136,13 @@ public class SqlQueryPipeline {
    *
    * @param prepared the prepared query
    * @param dataSource the data source backing FhirView execution (filtered for the export filters)
-   * @param requestId the HAPI per-request id used to namespace temp view names
    * @param consumer terminal consumer of the result dataset
    */
   public void execute(
       @Nonnull final PreparedSqlQuery prepared,
       @Nonnull final DataSource dataSource,
-      @Nonnull final String requestId,
       @Nonnull final Consumer<Dataset<Row>> consumer) {
     executor.execute(
-        prepared.getRequest(), prepared.getDependencyGraph(), dataSource, requestId, consumer);
+        prepared.getRequest(), prepared.getDependencyGraph(), dataSource, consumer);
   }
 }

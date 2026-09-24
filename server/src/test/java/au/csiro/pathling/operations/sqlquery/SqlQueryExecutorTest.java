@@ -216,7 +216,6 @@ class SqlQueryExecutorTest {
               request(SELF_CONTAINED_SQL, null),
               new ResolvedDependencyGraph(List.of(), Map.of(), Map.of()),
               mock(DataSource.class),
-              REQUEST_ID,
               dataset -> groupInsideConsumer.set(currentJobGroup()));
 
       assertThat(groupInsideConsumer.get()).isEqualTo(ambientJobGroup);
@@ -242,7 +241,6 @@ class SqlQueryExecutorTest {
             request("SELECT * FROM t ORDER BY id", null, table.getCanonicalKey()),
             graphOf(table),
             mock(DataSource.class),
-            REQUEST_ID,
             dataset -> rows.set(dataset.collectAsList()));
 
     assertThat(rows.get()).extracting(row -> row.getInt(0)).containsExactly(1, 2);
@@ -260,7 +258,7 @@ class SqlQueryExecutorTest {
             () ->
                 newExecutor()
                     .execute(
-                        byPath, graphOf(table), mock(DataSource.class), REQUEST_ID, dataset -> {}))
+                        byPath, graphOf(table), mock(DataSource.class), dataset -> {}))
         .isInstanceOf(InvalidRequestException.class)
         .hasMessageContaining("SQL references an undeclared table");
   }
@@ -300,7 +298,6 @@ class SqlQueryExecutorTest {
             request(sql, limit),
             new ResolvedDependencyGraph(List.of(), Map.of(), Map.of()),
             mock(DataSource.class),
-            REQUEST_ID,
             dataset -> consumedPlan.set(dataset.queryExecution().analyzed()));
     return Objects.requireNonNull(consumedPlan.get());
   }

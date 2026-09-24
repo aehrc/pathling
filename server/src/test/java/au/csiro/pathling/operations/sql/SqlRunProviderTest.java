@@ -740,7 +740,6 @@ class SqlRunProviderTest {
       when(servletRequest.getHeader("Accept")).thenReturn(null);
       when(details.getRequestType()).thenReturn(method);
       when(details.getParameters()).thenReturn(queryParameters);
-      when(details.getRequestId()).thenReturn("req-1");
       when(details.getResource()).thenReturn(body());
       return details;
     }
