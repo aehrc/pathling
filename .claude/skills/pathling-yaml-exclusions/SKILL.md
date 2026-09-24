@@ -1,24 +1,24 @@
 ---
 name: pathling-yaml-exclusions
 description: >
-    Manage the YAML conformance-test exclusion baselines at
-    fhirpath/src/test/resources/fhirpath-js/config.yaml and fhirpath-ptl/config.yaml. Use this skill
-    when a newly implemented FHIRPath feature makes previously-excluded conformance cases pass, when
-    the build fails with "Excluded test passed when expected outcome was ...", when auditing the
-    baseline for stale or mislabelled entries, or when deciding how to record a case that Pathling
-    cannot yet handle. Trigger on phrases like "exclusion", "excluded test", "config.yaml",
-    "known failures", "conformance baseline", "YamlReferenceImplTest", "YamlFhirPathTest", or any
-    request to remove, narrow, or reclassify a test exclusion.
+  Manage the YAML conformance-test exclusion baselines at
+  fhirpath/src/test/resources/fhirpath-js/config.yaml and fhirpath-ptl/config.yaml. Use this skill
+  when a newly implemented FHIRPath feature makes previously-excluded conformance cases pass, when
+  the build fails with "Excluded test passed when expected outcome was ...", when auditing the
+  baseline for stale or mislabelled entries, or when deciding how to record a case that Pathling
+  cannot yet handle. Trigger on phrases like "exclusion", "excluded test", "config.yaml",
+  "known failures", "conformance baseline", "YamlReferenceImplTest", "YamlFhirPathTest", or any
+  request to remove, narrow, or reclassify a test exclusion.
 ---
 
 # Pathling YAML test exclusions
 
 Pathling runs two YAML conformance suites, each with its own exclusion baseline:
 
-| Test class              | Config                     | Corpus                                |
-| ----------------------- | -------------------------- | ------------------------------------- |
-| `YamlReferenceImplTest` | `fhirpath-js/config.yaml`  | The fhirpath.js reference test corpus |
-| `YamlFhirPathTest`      | `fhirpath-ptl/config.yaml` | Pathling's own cases                  |
+| Test class | Config | Corpus |
+|---|---|---|
+| `YamlReferenceImplTest` | `fhirpath-js/config.yaml` | The fhirpath.js reference test corpus |
+| `YamlFhirPathTest` | `fhirpath-ptl/config.yaml` | Pathling's own cases |
 
 An exclusion is not a mute button. It is an **assertion about how a case currently fails**.
 
@@ -35,12 +35,12 @@ That is the machine-checkable done-signal for feature work: implement a feature,
 exclusion it obsoletes turns the build red until it is cleaned up. You cannot silently leave a
 stale exclusion behind.
 
-| `outcome`                      | Meaning                                             | Build fails when                                     |
-| ------------------------------ | --------------------------------------------------- | ---------------------------------------------------- |
-| `error` (default)              | The case throws an exception                        | It passes, or fails an assertion instead of throwing |
-| `failure`                      | The case runs but produces the wrong result         | It passes, or throws instead of failing              |
-| `pass`                         | The case passes, but is excluded for another reason | It fails or throws                                   |
-| _explicitly null_ (`outcome:`) | The case is **not run at all**                      | Never — unverified                                   |
+| `outcome` | Meaning | Build fails when |
+|---|---|---|
+| `error` (default) | The case throws an exception | It passes, or fails an assertion instead of throwing |
+| `failure` | The case runs but produces the wrong result | It passes, or throws instead of failing |
+| `pass` | The case passes, but is excluded for another reason | It fails or throws |
+| *explicitly null* (`outcome:`) | The case is **not run at all** | Never — unverified |
 
 Prefer `error` or `failure`. An explicitly-null `outcome` opts the case out of verification
 entirely, which is how baselines rot. Use it only when running the case is itself the problem
@@ -53,18 +53,18 @@ entirely, which is how baselines rot. Use it only when running the case is itsel
 
 ```yaml
 excludeSet:
-    - title: Global exclusions # required
-      comment: | # optional
-          Why this block exists.
-      exclude:
-          - title: Unsupported resources # required
-            type: feature # convention only — see taxonomy below
-            id: "#2418" # issue this is tracked under
-            outcome: failure # defaults to "error"
-            comment: | # why, and what would resolve it
-                ...
-            expression: # matcher — see below
-                - "^StructureDefinition"
+  - title: Global exclusions        # required
+    comment: |                      # optional
+      Why this block exists.
+    exclude:
+      - title: Unsupported resources # required
+        type: feature                # convention only — see taxonomy below
+        id: "#2418"                  # issue this is tracked under
+        outcome: failure             # defaults to "error"
+        comment: |                   # why, and what would resolve it
+          ...
+        expression:                  # matcher — see below
+          - "^StructureDefinition"
 ```
 
 ### Matchers
@@ -72,12 +72,12 @@ excludeSet:
 A rule may carry several matchers; they are **OR**-ed. A case is excluded by the **first** rule
 whose matchers match it.
 
-| Matcher             | Semantics                                                                 |
-| ------------------- | ------------------------------------------------------------------------- |
-| `any: [...]`        | **Substring** match against the case's expression **or** its description  |
+| Matcher | Semantics |
+|---|---|
+| `any: [...]` | **Substring** match against the case's expression **or** its description |
 | `expression: [...]` | **Regex**, unanchored (find, not full match), against the expression only |
-| `function: [...]`   | Matches by function name                                                  |
-| `spel: [...]`       | SpEL predicate over the case                                              |
+| `function: [...]` | Matches by function name |
+| `spel: [...]` | SpEL predicate over the case |
 
 Prefer `any` with a complete expression string for surgical exclusions — it is the easiest to
 verify and the hardest to over-match. Reach for `expression` regexes only when a genuine family
@@ -105,18 +105,18 @@ to test whether a rule is still earning its place.
 
 `type` is a free-form string with no validation. Current usage in `fhirpath-js/config.yaml`:
 
-| `type`        | Count | Meaning                                                       |
-| ------------- | ----- | ------------------------------------------------------------- |
-| `feature`     | 23    | Capability not yet implemented                                |
-| `new-feature` | 9     | Synonym for `feature` — **being retired**                     |
-| `bug`         | 5     | Pathling defect; the case should pass                         |
-| `wontfix`     | 23    | Pathling deliberately diverges, or the case itself is invalid |
+| `type` | Count | Meaning |
+|---|---|---|
+| `feature` | 23 | Capability not yet implemented |
+| `new-feature` | 9 | Synonym for `feature` — **being retired** |
+| `bug` | 5 | Pathling defect; the case should pass |
+| `wontfix` | 23 | Pathling deliberately diverges, or the case itself is invalid |
 
 **Use `feature`, not `new-feature`.** When you touch a block containing `new-feature`, migrate it.
 
 `wontfix` deserves scrutiny. It currently absorbs two different things: genuinely invalid test
 cases, and unimplemented capabilities mislabelled as invalid. For example a `wontfix` block titled
-_"Parse error — not valid FHIRPath syntax"_ contains `('a'|'b'|'c').join(',')`,
+*"Parse error — not valid FHIRPath syntax"* contains `('a'|'b'|'c').join(',')`,
 `(1|2|3).sum()` and `(1|2|3).aggregate($this+$total, 0)` — all valid FHIRPath, and all really
 `feature` gaps. If a `wontfix` entry you encounter is actually a capability gap, reclassify it and
 give it an issue id.
@@ -142,12 +142,12 @@ explicitly in your report rather than concluding there was nothing to do.
 
 ### 2. Decide, per rule
 
-| Decision       | When                                                                                                                                                                           |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **REMOVE**     | Every case the rule matches now passes                                                                                                                                         |
-| **NARROW**     | The matcher is over-broad — some cases pass now, others still legitimately fail. Rewrite it, preferring `any` with exact expressions, so it catches only the residual failures |
-| **RECLASSIFY** | The residual failure is real but recorded under the wrong `type`, or the `outcome` changed (a case that used to throw now returns a wrong result → `error` becomes `failure`)  |
-| **KEEP**       | The rule describes a real gap unrelated to this change                                                                                                                         |
+| Decision | When |
+|---|---|
+| **REMOVE** | Every case the rule matches now passes |
+| **NARROW** | The matcher is over-broad — some cases pass now, others still legitimately fail. Rewrite it, preferring `any` with exact expressions, so it catches only the residual failures |
+| **RECLASSIFY** | The residual failure is real but recorded under the wrong `type`, or the `outcome` changed (a case that used to throw now returns a wrong result → `error` becomes `failure`) |
+| **KEEP** | The rule describes a real gap unrelated to this change |
 
 ### 3. Verify
 
@@ -159,7 +159,7 @@ mvn test -pl fhirpath -Dtest=YamlFhirPathTest
 
 Both must be 0 failures, 0 errors. Two failure modes to read correctly:
 
-- _"Excluded test passed when expected outcome was error"_ → the rule is now obsolete for that
+- *"Excluded test passed when expected outcome was error"* → the rule is now obsolete for that
   case. REMOVE or NARROW it.
 - A plain failure on a case you just un-excluded → the feature does not actually cover it. Restore
   the exclusion (NARROW it) and say which cases remain, or fix the implementation.
@@ -197,7 +197,7 @@ output, not a claim that it is green. If the sweep found nothing in scope, repor
 ## Do not
 
 - Add an exclusion to turn a red build green when the cause is a regression in your own change.
-  An exclusion records a _pre-existing_ gap.
+  An exclusion records a *pre-existing* gap.
 - Widen an existing matcher to swallow a new failure. Add a separate, narrower rule instead, so
   the two gaps stay independently trackable.
 - Rely on `glob`, `desc`, or `exclusionsOnly` (see above).

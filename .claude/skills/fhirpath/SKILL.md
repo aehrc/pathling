@@ -1,18 +1,18 @@
 ---
 name: fhirpath
 description: >
-    Condensed working reference for writing FHIRPath expressions — syntax, function signatures,
-    operator precedence, date/time arithmetic, and common patterns. Use this skill when writing or
-    reading a FHIRPath expression, navigating FHIR resource trees, filtering collections, or writing
-    FHIR invariants. Trigger keywords include "FHIRPath", "path expression", "FHIR navigation",
-    "where()", "select()", "exists()", "ofType()", "resolve()", "FHIR invariant", "collection
-    filtering". For questions about what the specification *requires* — exact semantics, empty
-    propagation, coercion, precision, error conditions — use the `fhirpath-spec` skill instead.
+  Condensed working reference for writing FHIRPath expressions — syntax, function signatures,
+  operator precedence, date/time arithmetic, and common patterns. Use this skill when writing or
+  reading a FHIRPath expression, navigating FHIR resource trees, filtering collections, or writing
+  FHIR invariants. Trigger keywords include "FHIRPath", "path expression", "FHIR navigation",
+  "where()", "select()", "exists()", "ofType()", "resolve()", "FHIR invariant", "collection
+  filtering". For questions about what the specification *requires* — exact semantics, empty
+  propagation, coercion, precision, error conditions — use the `fhirpath-spec` skill instead.
 ---
 
 # FHIRPath
 
-A condensed reference for _writing_ FHIRPath expressions. Use it to orient quickly or to recall a
+A condensed reference for *writing* FHIRPath expressions. Use it to orient quickly or to recall a
 signature.
 
 It is a summary, not a source of truth. When exact semantics matter — empty propagation, coercion,

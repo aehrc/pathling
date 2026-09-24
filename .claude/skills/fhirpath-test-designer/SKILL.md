@@ -1,14 +1,14 @@
 ---
 name: fhirpath-test-designer
 description: >
-    Design and generate comprehensive FHIRPath test suites using input domain partitioning and
-    Pathling's DSL test framework. Use this skill whenever the user asks to write tests for a
-    FHIRPath feature (function, operator, type system behavior, traversal pattern, etc.), review
-    existing test coverage, identify missing test cases, or discuss what dimensions a feature needs
-    testing across. Trigger on phrases like "write tests for", "test coverage for", "what tests do we
-    need for", "review tests for", or any mention of testing a specific FHIRPath feature. Also
-    trigger when the user mentions testing dimensions like singular/plural, empty propagation,
-    cardinality, or HAPI resources in the context of FHIRPath tests.
+  Design and generate comprehensive FHIRPath test suites using input domain partitioning and
+  Pathling's DSL test framework. Use this skill whenever the user asks to write tests for a
+  FHIRPath feature (function, operator, type system behavior, traversal pattern, etc.), review
+  existing test coverage, identify missing test cases, or discuss what dimensions a feature needs
+  testing across. Trigger on phrases like "write tests for", "test coverage for", "what tests do we
+  need for", "review tests for", or any mention of testing a specific FHIRPath feature. Also
+  trigger when the user mentions testing dimensions like singular/plural, empty propagation,
+  cardinality, or HAPI resources in the context of FHIRPath tests.
 ---
 
 # FHIRPath Test Designer
@@ -56,14 +56,14 @@ Apply input domain partitioning. The driving question:
 
 > What inputs can this function receive, and what does the spec say should happen for each?
 
-| Dimension          | Partitions                                                                       | When relevant                                               |
-| ------------------ | -------------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| **Core semantics** | Spec examples, basic behaviour                                                   | Always                                                      |
-| **Emptiness**      | `{}` literal, typed-empty field (`stringEmpty`), computed empty (`where(false)`) | Always, for anything accepting collections                  |
-| **Cardinality**    | Singular value vs array                                                          | Whenever the function reads model fields — see below        |
-| **Element type**   | Primitive, complex/backbone, choice type                                         | When the function accepts general `Element` input           |
-| **Nesting**        | Flat, nested, deeply nested                                                      | When the function involves traversal                        |
-| **FHIR encoding**  | Real resource via `withResource`                                                 | When behaviour depends on genuine FHIR encoding — see below |
+| Dimension | Partitions | When relevant |
+|---|---|---|
+| **Core semantics** | Spec examples, basic behaviour | Always |
+| **Emptiness** | `{}` literal, typed-empty field (`stringEmpty`), computed empty (`where(false)`) | Always, for anything accepting collections |
+| **Cardinality** | Singular value vs array | Whenever the function reads model fields — see below |
+| **Element type** | Primitive, complex/backbone, choice type | When the function accepts general `Element` input |
+| **Nesting** | Flat, nested, deeply nested | When the function involves traversal |
+| **FHIR encoding** | Real resource via `withResource` | When behaviour depends on genuine FHIR encoding — see below |
 
 **Cardinality deserves special attention.** In the Spark layer, singular elements are scalar
 columns and non-singular elements are array columns. A function correct on a scalar column can
@@ -97,19 +97,18 @@ straight to Phase 3 without waiting:
 ```markdown
 ## Test matrix for `functionName()`
 
-| #   | Test case                   | Dimension      | Expression                              | Expected | Subject  |
-| --- | --------------------------- | -------------- | --------------------------------------- | -------- | -------- |
-| 1   | Spec example                | Core semantics | `'abc'.fn()`                            | `'ABC'`  | literal  |
-| 2   | Empty literal               | Emptiness      | `{}.fn()`                               | `{}`     | literal  |
-| 3   | Typed-empty field           | Emptiness      | `emptyString.fn()`                      | `{}`     | subject  |
-| 4   | Singular field              | Cardinality    | `singleString.fn()`                     | `'V'`    | subject  |
-| 5   | Array field, one item       | Cardinality    | `arrayOfOne.fn()`                       | `'V'`    | subject  |
-| 6   | Array field, multiple items | Core semantics | `stringArray.fn()`                      | error    | subject  |
-| 7   | Choice type                 | Element type   | `Observation.value.ofType(string).fn()` | ...      | resource |
+| # | Test case | Dimension | Expression | Expected | Subject |
+|---|-----------|-----------|------------|----------|---------|
+| 1 | Spec example | Core semantics | `'abc'.fn()` | `'ABC'` | literal |
+| 2 | Empty literal | Emptiness | `{}.fn()` | `{}` | literal |
+| 3 | Typed-empty field | Emptiness | `emptyString.fn()` | `{}` | subject |
+| 4 | Singular field | Cardinality | `singleString.fn()` | `'V'` | subject |
+| 5 | Array field, one item | Cardinality | `arrayOfOne.fn()` | `'V'` | subject |
+| 6 | Array field, multiple items | Core semantics | `stringArray.fn()` | error | subject |
+| 7 | Choice type | Element type | `Observation.value.ofType(string).fn()` | ... | resource |
 ```
 
 Rules:
-
 - Vary one dimension at a time; hold the others constant
 - Combination tests only where the spec implies dimensions interact
 - Do not combinatorially explode independent dimensions
@@ -166,25 +165,25 @@ public class StringFunctionsDslTest extends FhirPathDslTestBase {
 
 ### Subject methods
 
-| Method                             | Notes                                                                                                       |
-| ---------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `withSubject(sb -> ...)`           | Map-based synthetic resource. Fields are accessed **bare** — `stringArray.first()`, no resource-type prefix |
-| `withSubject(Map<String, Object>)` | Pre-built model map                                                                                         |
-| `withResource(IBaseResource)`      | Real HAPI resource. Expressions are normally **resource-prefixed** — `Patient.name.given`                   |
+| Method | Notes |
+|---|---|
+| `withSubject(sb -> ...)` | Map-based synthetic resource. Fields are accessed **bare** — `stringArray.first()`, no resource-type prefix |
+| `withSubject(Map<String, Object>)` | Pre-built model map |
+| `withResource(IBaseResource)` | Real HAPI resource. Expressions are normally **resource-prefixed** — `Patient.name.given` |
 
 ### Assertions — a description is mandatory on every one
 
-| Method       | Signature                                                                                   |
-| ------------ | ------------------------------------------------------------------------------------------- |
-| `testEquals` | `(Object expected, String expression, String description)`                                  |
-| `testTrue`   | `(String expression, String description)`                                                   |
-| `testFalse`  | `(String expression, String description)`                                                   |
-| `testEmpty`  | `(String expression, String description)`                                                   |
-| `testError`  | `(String expression, String description)` — any error                                       |
-| `testError`  | `(String errorMessage, String expression, String description)` — specific message           |
-| `group`      | `(String groupName)` — prefixes subsequent descriptions as `group - description`            |
-| `test`       | `(String description, tc -> tc.expression(...).expectResult(...))` — low-level escape hatch |
-| `build`      | Terminates the chain, returns `Stream<DynamicTest>`                                         |
+| Method | Signature |
+|---|---|
+| `testEquals` | `(Object expected, String expression, String description)` |
+| `testTrue` | `(String expression, String description)` |
+| `testFalse` | `(String expression, String description)` |
+| `testEmpty` | `(String expression, String description)` |
+| `testError` | `(String expression, String description)` — any error |
+| `testError` | `(String errorMessage, String expression, String description)` — specific message |
+| `group` | `(String groupName)` — prefixes subsequent descriptions as `group - description` |
+| `test` | `(String description, tc -> tc.expression(...).expectResult(...))` — low-level escape hatch |
+| `build` | Terminates the chain, returns `Stream<DynamicTest>` |
 
 There are **no** overloads without a description. `testEquals(expected, expression)` does not
 compile.
@@ -193,18 +192,18 @@ compile.
 
 Each type has a value form, an empty form, and an array form:
 
-| Type     | Value                  | Empty              | Array                          |
-| -------- | ---------------------- | ------------------ | ------------------------------ |
-| String   | `string(n, v)`         | `stringEmpty(n)`   | `stringArray(n, ...)`          |
-| Integer  | `integer(n, v)`        | `integerEmpty(n)`  | `integerArray(n, ...)`         |
-| Decimal  | `decimal(n, v)`        | `decimalEmpty(n)`  | `decimalArray(n, ...)`         |
-| Boolean  | `bool(n, v)`           | `boolEmpty(n)`     | `boolArray(n, ...)`            |
-| Date     | `date(n, v)`           | `dateEmpty(n)`     | `dateArray(n, ...)`            |
-| DateTime | `dateTime(n, v)`       | `dateTimeEmpty(n)` | `dateTimeArray(n, ...)`        |
-| Time     | `time(n, v)`           | `timeEmpty(n)`     | `timeArray(n, ...)`            |
-| Coding   | `coding(n, v)`         | `codingEmpty(n)`   | `codingArray(n, ...)`          |
-| Quantity | `quantity(n, v)`       | `quantityEmpty(n)` | `quantityArray(n, ...)`        |
-| Complex  | `element(n, b -> ...)` | `elementEmpty(n)`  | `elementArray(n, b1, b2, ...)` |
+| Type | Value | Empty | Array |
+|---|---|---|---|
+| String | `string(n, v)` | `stringEmpty(n)` | `stringArray(n, ...)` |
+| Integer | `integer(n, v)` | `integerEmpty(n)` | `integerArray(n, ...)` |
+| Decimal | `decimal(n, v)` | `decimalEmpty(n)` | `decimalArray(n, ...)` |
+| Boolean | `bool(n, v)` | `boolEmpty(n)` | `boolArray(n, ...)` |
+| Date | `date(n, v)` | `dateEmpty(n)` | `dateArray(n, ...)` |
+| DateTime | `dateTime(n, v)` | `dateTimeEmpty(n)` | `dateTimeArray(n, ...)` |
+| Time | `time(n, v)` | `timeEmpty(n)` | `timeArray(n, ...)` |
+| Coding | `coding(n, v)` | `codingEmpty(n)` | `codingArray(n, ...)` |
+| Quantity | `quantity(n, v)` | `quantityEmpty(n)` | `quantityArray(n, ...)` |
+| Complex | `element(n, b -> ...)` | `elementEmpty(n)` | `elementArray(n, b1, b2, ...)` |
 
 `elementEmpty(n)` creates field `n` carrying a null value — the field is present. It is **not** an
 absent field; no builder method produces one (see gotcha 7).
@@ -225,7 +224,7 @@ These are the ways generated tests actually break:
 
 1. **One subject per method.** `withSubject` and `withResource` set builder state consumed at
    `build()` — they are **not** scoped to a `group()`. Calling either twice in one method means the
-   last call applies to _every_ test case in that method. If two tests need different subjects,
+   last call applies to *every* test case in that method. If two tests need different subjects,
    they need different `@FhirPathTest` methods.
 2. **`withSubject` and `withResource` are mutually exclusive** — each clears the other.
 3. **The map-based subject's resource type is always `Test`.** Resource-prefixed expressions like
@@ -257,10 +256,10 @@ mvn spotless:apply -pl fhirpath                                  # format
 1. Run Phase 1 for the function under test.
 2. Build the matrix as if writing from scratch.
 3. Compare against the existing tests and report:
-    - **Missing dimensions** — matrix rows with no corresponding test
-    - **Incorrect expectations** — assertions that contradict the spec
-    - **Redundant tests** — several tests covering one dimension without adding value
-    - **Missing FHIR-encoding coverage** — features needing `withResource` that only use `withSubject`
+   - **Missing dimensions** — matrix rows with no corresponding test
+   - **Incorrect expectations** — assertions that contradict the spec
+   - **Redundant tests** — several tests covering one dimension without adding value
+   - **Missing FHIR-encoding coverage** — features needing `withResource` that only use `withSubject`
 
 ## What not to test
 

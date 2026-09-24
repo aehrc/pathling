@@ -31,7 +31,7 @@ All are recorded in `.claude/CLAUDE.md`; they matter at this step specifically.
 - **Stale upstream modules produce nonsense errors.** `cannot access java.util.List` and similar
   from `-pl fhirpath` mean `utilities`, `encoders`, or `terminology` are stale, not that the code
   is broken. Rebuild them with `-am`. If `-am` alone does not clear it — `Unresolved compilation
-problem: log cannot be resolved` at runtime, for instance — add `clean`.
+  problem: log cannot be resolved` at runtime, for instance — add `clean`.
 
 - **The last rung needs the `sql-on-fhir` submodule.** `mvn test -pl fhirpath` runs
   `FhirViewShareableComplianceTest`, which reads the corpus from the `sql-on-fhir/` submodule, so it

@@ -10,8 +10,8 @@ This page is part of the FHIR Specification (v4.0.1: R4 - Mixed [Normative](http
 
 ## 2.9 <span id="2.9"> </span> FHIRPath
 
-|                                                                                                                        |                                                                             |                                                                                                                                       |
-| ---------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                                                                                                                |                                                                             |                                                                                                                                       |
+|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------|
 | <a href="http://www.hl7.org/Special/committees/fiwg/index.cfm" data-_target="blank">FHIR Infrastructure</a> Work Group | [Maturity Level](https://hl7.org/fhir/R4/versions.html#maturity): Normative | [Standards Status](https://hl7.org/fhir/R4/versions.html#std-process): [Normative](https://hl7.org/fhir/R4/versions.html#std-process) |
 
 The FHIR Specification uses [FHIRPath (release 2)](http://hl7.org/fhirpath/r2) for path-based navigation and extraction. FHIRPath is a separate specification published at [http://hl7.org/fhirpath](http://hl7.org/fhirpath/r2) in order to support wider re-use across multiple specifications.
@@ -49,7 +49,7 @@ More specifically:
 
 For [choice elements](https://hl7.org/fhir/R4/formats.html#choice), where elements can be one of multiple types, e.g. `Patient.deceased[x]`. In actual instances these will be present as either `Patient.deceasedBoolean` or `Patient.deceasedDateTime`. In FHIRPath, choice elements are labeled according to the name without the '\[x\]' suffix, and children can be explicitly treated as a specific type using the `as` operation:
 
-```fhirpath
+``` fhirpath
 (Observation.value as Quantity).unit
 ```
 
@@ -78,7 +78,7 @@ Understanding the primitive types is critical: FHIR.string is a different type t
 The evaluation engine will automatically convert the value of FHIR types representing primitives to FHIRPath types when they are used in expressions according to the following mapping:
 
 | FHIR primitive type                                                                                        | FHIRPath type               |
-| ---------------------------------------------------------------------------------------------------------- | --------------------------- |
+|------------------------------------------------------------------------------------------------------------|-----------------------------|
 | FHIR.boolean                                                                                               | System.Boolean              |
 | FHIR.string, FHIR.uri, FHIR.code, FHIR.oid, FHIR.id, FHIR.uuid, FHIR.sid, FHIR.markdown, FHIR.base64Binary | System.String               |
 | FHIR.integer, FHIR.unsignedInt, FHIR.positiveInt                                                           | System.Integer              |
@@ -87,16 +87,16 @@ The evaluation engine will automatically convert the value of FHIR types represe
 | FHIR.time                                                                                                  | System.Time                 |
 | FHIR.Quantity                                                                                              | System.Quantity (see below) |
 
-Since FHIR primitives may contain extensions, so that the following expressions are _not_ mutually exclusive:
+Since FHIR primitives may contain extensions, so that the following expressions are *not* mutually exclusive:
 
-```fhirpath
+``` fhirpath
 Patient.name.given = 'Ewout'         // value of Patient.name.given as a string
 Patient.name.given.extension.first().value = true   // extension of the primitive value
 ```
 
 The automatic conversion means that in most respects, a FHIR primitive can generally be treated as if it was the equivalent FHIRPath system type. The primary exception is the is() operation, where the difference is explicit:
 
-```fhirpath
+``` fhirpath
 Patient.name.given.is(FHIR.string);
 Patient.name.given.is(System.string).not();
 Patient.name.given.getValue().is(System.string);
@@ -104,7 +104,7 @@ Patient.name.given.getValue().is(System.string);
 
 As shown, all FHIR primitives have the operation `getValue()` defined (see below) for the few edge cases where the automatic conversion isn't appropriate. Note that as() does not have such restrictions - both of the following are valid:
 
-```fhirpath
+``` fhirpath
 Patient.name.given.as(FHIR.string);
 Patient.name.given.as(System.string);
 ```
@@ -118,7 +118,7 @@ The Mapping from FHIR Quantity to FHIRPath System.Quantity can only be applied i
 As part of the mapping, time-valued UCUM units are mapped to the [calendar duration units](http://hl7.org/fhirpath/R2/index.html#time-valued-quantities) defined in FHIRPath, according to the following map:
 
 |     |        |
-| --- | ------ |
+|-----|--------|
 | a   | year   |
 | mo  | month  |
 | d   | day    |
@@ -165,7 +165,7 @@ Return the underlying system value for the FHIR primitive (see discussion above)
 
 When FHIRPath statements are used in an invariant, the log contents should be added to the error message constructed when the invariant is violated. For example:
 
-```fhirpath
+``` fhirpath
 "SHALL have a local reference if the resource is provided inline (url: height; ids: length,weight)"
 
   from
@@ -176,7 +176,7 @@ When FHIRPath statements are used in an invariant, the log contents should be ad
 
 The FHIRPath specification adds an additional parameter to the trace() function, a selection expression that can be used to shape what is logged for the collection that is traced. E.g.
 
-```fhirpath
+``` fhirpath
   contained.where(criteria).trace('ids', type().name+"/"+id).process...
 ```
 
@@ -222,7 +222,7 @@ Note that implementations are encouraged to make use of a terminology service to
 
 For example:
 
-```fhirpath
+``` fhirpath
 Observation.component.where(code.memberOf('http://hl7.org/fhir/ValueSet/observation-vitalsignresult'))
 ```
 
@@ -272,7 +272,7 @@ The FHIR specification adds support for additional environment variables:
 
 The following environmental values are set for all contexts:
 
-```fhirpath
+``` fhirpath
 %sct        // (string) url for snomed ct
 %loinc      // (string) url for loinc
 %"vs-[name]" // (string) full url for the provided HL7 value set with id [name]
@@ -284,7 +284,7 @@ The following environmental values are set for all contexts:
 
 For example:
 
-```fhirpath
+``` fhirpath
 Observation.component.where(code.memberOf(%"vs-observation-vitalsignresult"))
 ```
 
@@ -292,7 +292,7 @@ This expression returns components that have a code that is a member of the obse
 
 > **Implementation Note:** Implementation Guides are allowed to define their own externals, and implementers should provide some appropriate configuration framework to allow these constants to be provided to the evaluation engine at run-time. E.g.:
 >
-> ```fhirpath
+> ``` fhirpath
 > %"us-zip" = '[0-9]{5}(-[0-9]{4}){0,1}'
 > ```
 
@@ -309,11 +309,11 @@ This page documents a restricted subset of the [FHIRPath language](http://hl7.or
 - All statements SHALL start with the name of the context element (e.g. on a Patient resource, Patient.contact.name.), or SHALL be simply "\$this" to refer to the element that has focus
 - Operators SHALL NOT be used
 - Only the following functions may be used:
-    - .resolve()
-    - .extension("url")
-    - .ofType(type)
+  - .resolve()
+  - .extension("url")
+  - .ofType(type)
 
-    All other functions SHALL NOT be used
+  All other functions SHALL NOT be used
 
 These rules exist to keep processing the path simple to support use of the path by processors that are not backed by a full FHIRPath implementation.
 
@@ -333,7 +333,7 @@ In order to support terminological reasoning in FHIRPath statements, FHIR define
 
 Summary:
 
-```fhirpath
+``` fhirpath
 %terminologes.expand(valueSet, params) : ValueSet
 %terminologies.lookup(coded, params) : Parameters
 %terminologies.validateVS(valueSet, coded, params) : Parameters
@@ -344,7 +344,7 @@ Summary:
 
 **expand**
 
-```fhirpath
+``` fhirpath
 %terminologes.expand(valueSet, params) : ValueSet
 ```
 
@@ -359,7 +359,7 @@ Parameters:
 
 **lookup**
 
-```fhirpath
+``` fhirpath
 %terminologies.lookup(coded, params) : Parameters
 ```
 
@@ -374,7 +374,7 @@ Parameters:
 
 **validateVS**
 
-```fhirpath
+``` fhirpath
 %terminologies.validateVS(valueSet, coded, params) : Parameters
 ```
 
@@ -390,7 +390,7 @@ Parameters:
 
 **validateCS**
 
-```fhirpath
+``` fhirpath
 %terminologies.validateCS(codeSystem, coded, params) : Parameters
 ```
 
@@ -406,7 +406,7 @@ Parameters:
 
 **subsumes**
 
-```fhirpath
+``` fhirpath
 %terminologies.subsumes(system, coded1, coded2, params) : code
 ```
 
@@ -423,7 +423,7 @@ Parameters:
 
 **translate**
 
-```fhirpath
+``` fhirpath
 %terminologies.translate(conceptMap, coded, params) : Parameters
 ```
 

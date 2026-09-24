@@ -1,14 +1,14 @@
 ---
 name: cache-github-repo
 description: >
-    Clone and locally cache a pinned version of a GitHub repository for fast, deterministic access by
-    other skills — for example a reference implementation consulted for spec cross-checking. Manages a
-    tracked per-project config file mapping `org/repo` to a pinned version, and a version-keyed local
-    cache shared across projects. Invoke directly to set or change a pin
-    (`configure org/repo [--version ref]`), or let another skill delegate to it to make sure a pinned
-    repo is available (`ensure org/repo [--unattended]`). Trigger on phrases like "cache this repo",
-    "pin a reference implementation", "configure the version of X to use", or when a skill needs a
-    stable local copy of an external GitHub repository.
+  Clone and locally cache a pinned version of a GitHub repository for fast, deterministic access by
+  other skills — for example a reference implementation consulted for spec cross-checking. Manages a
+  tracked per-project config file mapping `org/repo` to a pinned version, and a version-keyed local
+  cache shared across projects. Invoke directly to set or change a pin
+  (`configure org/repo [--version ref]`), or let another skill delegate to it to make sure a pinned
+  repo is available (`ensure org/repo [--unattended]`). Trigger on phrases like "cache this repo",
+  "pin a reference implementation", "configure the version of X to use", or when a skill needs a
+  stable local copy of an external GitHub repository.
 argument-hint: <ensure|configure> <org/repo> [--version <ref>] [--unattended]
 allowed-tools: Bash, AskUserQuestion
 ---
@@ -57,17 +57,17 @@ dispatched subagent or an unattended pipeline has no one to answer it.
 1. Resolve the project root (`git rev-parse --show-toplevel`, or `$PWD` if not inside a git repo) and
    read `.claude/repo-cache.yaml` there. Look up `<org/repo>`.
 2. **Entry missing:**
-    - `--unattended` literally passed as an argument to this invocation → fail immediately. Report:
-      `"<org/repo> has no configured version — run '/cache-github-repo configure <org/repo>' first"` and
-      stop. Do not guess a version, do not attempt to ask.
-    - Otherwise → run the `configure` steps below for this repo, then continue. This includes when the
-      current session has some general "auto mode"/"operate autonomously" disposition — that governs
-      tool-permission friction, not whether a human can answer a question, and does not satisfy the
-      `--unattended` condition above. Only the literal flag does.
+   - `--unattended` literally passed as an argument to this invocation → fail immediately. Report:
+     `"<org/repo> has no configured version — run '/cache-github-repo configure <org/repo>' first"` and
+     stop. Do not guess a version, do not attempt to ask.
+   - Otherwise → run the `configure` steps below for this repo, then continue. This includes when the
+     current session has some general "auto mode"/"operate autonomously" disposition — that governs
+     tool-permission friction, not whether a human can answer a question, and does not satisfy the
+     `--unattended` condition above. Only the literal flag does.
 3. **Entry present** → let `VERSION` be the recorded value. Compute
    `CACHE_DIR=~/.cache/claude-skills/github-repo-cache/<org>/<repo>/<version>`.
-    - `$CACHE_DIR/.git` exists → already cached. Report `$CACHE_DIR` and stop.
-    - Missing → clone it (see "Cloning a pinned ref" below), then report `$CACHE_DIR`.
+   - `$CACHE_DIR/.git` exists → already cached. Report `$CACHE_DIR` and stop.
+   - Missing → clone it (see "Cloning a pinned ref" below), then report `$CACHE_DIR`.
 
 ## Mode: `configure <org/repo> [--version <ref>]`
 
@@ -76,27 +76,24 @@ the entry is missing.
 
 1. If `--version <ref>` was given, use it as `VERSION` and skip to step 3.
 2. Otherwise, find the candidates:
+   ```bash
+   git ls-remote --tags --sort=-v:refname "https://github.com/<org>/<repo>.git" | head -5
+   ```
+   Present the most recent tag as "latest stable" and `main` as the alternative. You MUST NOT pick one
+   and write the config yourself, even under an "auto mode"/"proceed autonomously" disposition — wait
+   for the user's choice (e.g. via `AskUserQuestion`) first. If the network call fails, say so and ask
+   the user to supply a ref directly instead of guessing.
 
-    ```bash
-    git ls-remote --tags --sort=-v:refname "https://github.com/<org>/<repo>.git" | head -5
-    ```
-
-    Present the most recent tag as "latest stable" and `main` as the alternative. You MUST NOT pick one
-    and write the config yourself, even under an "auto mode"/"proceed autonomously" disposition — wait
-    for the user's choice (e.g. via `AskUserQuestion`) first. If the network call fails, say so and ask
-    the user to supply a ref directly instead of guessing.
-
-    Whichever is chosen, record a reference that stays fixed across future runs:
-    - A tag → record the tag name. This is a deliberate trade-off, not a claim that the tag can never
-      move: a maintainer could in principle recreate or reassign one, but for a maintained upstream
-      release tag that's atypical, and `5.1.0` is far more useful to a reader of
-      `.claude/repo-cache.yaml` than a bare SHA. Readability wins here.
-    - `main` (or any branch) → resolve it to its current commit SHA
-      (`git ls-remote https://github.com/<org>/<repo>.git main`) and record **the SHA**, not the
-      branch name. A branch moves on every commit by design — a far more frequent failure mode than a
-      maintained tag being reassigned — so recording the branch name would silently re-resolve to a
-      different commit on every future run, defeating the point of pinning.
-
+   Whichever is chosen, record a reference that stays fixed across future runs:
+   - A tag → record the tag name. This is a deliberate trade-off, not a claim that the tag can never
+     move: a maintainer could in principle recreate or reassign one, but for a maintained upstream
+     release tag that's atypical, and `5.1.0` is far more useful to a reader of
+     `.claude/repo-cache.yaml` than a bare SHA. Readability wins here.
+   - `main` (or any branch) → resolve it to its current commit SHA
+     (`git ls-remote https://github.com/<org>/<repo>.git main`) and record **the SHA**, not the
+     branch name. A branch moves on every commit by design — a far more frequent failure mode than a
+     maintained tag being reassigned — so recording the branch name would silently re-resolve to a
+     different commit on every future run, defeating the point of pinning.
 3. Write `<org/repo>: <VERSION>` into `.claude/repo-cache.yaml` at the project root, creating the
    file if it doesn't exist and updating the entry in place if the key is already present.
 4. Clone it immediately (see below) so the project is usable right away rather than deferring the

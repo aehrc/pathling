@@ -1,13 +1,13 @@
 ---
 name: pathling-fhirpath-review
 description: >
-    Review a FHIRPath implementation change in Pathling against a correctness rubric covering
-    collection semantics, empty propagation, column cardinality, type coercion, error-vs-empty
-    behaviour, spec fidelity, and test coverage. Use this skill when reviewing a branch, diff, or PR
-    that adds or changes a FHIRPath function, operator, or evaluation behaviour, or when the user asks
-    for a correctness review of FHIRPath work. Trigger on phrases like "review this FHIRPath change",
-    "review the diff", "check this implementation", "is this correct", or a review request naming a
-    FHIRPath function or operator.
+  Review a FHIRPath implementation change in Pathling against a correctness rubric covering
+  collection semantics, empty propagation, column cardinality, type coercion, error-vs-empty
+  behaviour, spec fidelity, and test coverage. Use this skill when reviewing a branch, diff, or PR
+  that adds or changes a FHIRPath function, operator, or evaluation behaviour, or when the user asks
+  for a correctness review of FHIRPath work. Trigger on phrases like "review this FHIRPath change",
+  "review the diff", "check this implementation", "is this correct", or a review request naming a
+  FHIRPath function or operator.
 ---
 
 # Pathling FHIRPath review
@@ -71,7 +71,7 @@ field behaves the same as an absent one where the spec says it should.
 - Date/time **partial precision**: differing precision alone does not make a comparison empty.
   Components are compared in order, and a difference found before the coarser operand runs out of
   precision gives a definite answer — `@2018-03-01 > @2018-01-01` is true, `@2012-01 = @2013` is
-  false. The result is empty only when the precisions _differ_ and the values are equal up to the
+  false. The result is empty only when the precisions *differ* and the values are equal up to the
   coarser one, as in `@2018-03 > @2018-03-01` or `@2012-01 = @2012` — equal values at matching
   precision are simply equal, so `@2012 = @2012` is true. Applies to `=` as well as `<`/`>`; both
   directions of this have caused regressions before
@@ -136,11 +136,11 @@ exclusions that became obsolete, but not exclusions that are now over-broad. See
 
 ## Severity
 
-| Severity      | Meaning                                                                                                                                                |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Critical**  | Wrong results, spec violation, crash, or a regression in existing behaviour                                                                            |
+| Severity | Meaning |
+|---|---|
+| **Critical** | Wrong results, spec violation, crash, or a regression in existing behaviour |
 | **Important** | A real gap that will bite: an unhandled input shape, a missing test for behaviour the change claims to support, an annotation or registration omission |
-| **Minor**     | Naming, structure, or convention issues with no behavioural consequence                                                                                |
+| **Minor** | Naming, structure, or convention issues with no behavioural consequence |
 
 ## What not to flag
 

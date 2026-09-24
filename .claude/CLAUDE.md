@@ -45,7 +45,7 @@ Tests:
 
 - **The YAML exclusion baseline polices itself.** Excluded conformance cases are still executed and
   asserted to fail in the recorded way. After implementing a feature, `Excluded test passed when
-expected outcome was error` is the expected, correct signal that an exclusion is now obsolete —
+  expected outcome was error` is the expected, correct signal that an exclusion is now obsolete —
   not a test failure to work around. See the `pathling-yaml-exclusions` skill.
 - **Two exclusion-config fields and one system property do nothing**: an exclude block's `glob` (so
   every block applies to every case file), a rule's `desc` matcher, and the `exclusionsOnly` system
@@ -69,18 +69,18 @@ different matter — changes there are inherited by every later feature.
 
 Use these skills rather than duplicating their content here:
 
-| Skill                      | For                                                                                                         |
-| -------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `implement-pathling`       | Driving a FHIRPath issue to a PR (`/implement-pathling <issue>`)                                            |
-| `fhirpath-spec`            | The FHIRPath spec and its FHIR bindings — the ground truth on semantics                                     |
-| `cache-github-repo`        | Pin and locally cache a GitHub repo, e.g. the fhirpath.js reference implementation `fhirpath-spec` consults |
-| `fhirpath`                 | Quick reference for writing expressions; defers to `fhirpath-spec` on semantics                             |
-| `fhirpath-test-designer`   | Test matrices and the DSL test surface                                                                      |
-| `pathling-yaml-exclusions` | The conformance exclusion baselines                                                                         |
-| `pathling-fhirpath-review` | Correctness review of a FHIRPath change                                                                     |
-| `fhir-search-spec`         | FHIR RESTful search parameters, prefixes, and modifiers                                                     |
-| `sql-on-fhir`              | The SQL-on-FHIR view specification                                                                          |
-| `spark-catalyst`           | Spark internals when touching column generation                                                             |
+| Skill | For |
+|---|---|
+| `implement-pathling` | Driving a FHIRPath issue to a PR (`/implement-pathling <issue>`) |
+| `fhirpath-spec` | The FHIRPath spec and its FHIR bindings — the ground truth on semantics |
+| `cache-github-repo` | Pin and locally cache a GitHub repo, e.g. the fhirpath.js reference implementation `fhirpath-spec` consults |
+| `fhirpath` | Quick reference for writing expressions; defers to `fhirpath-spec` on semantics |
+| `fhirpath-test-designer` | Test matrices and the DSL test surface |
+| `pathling-yaml-exclusions` | The conformance exclusion baselines |
+| `pathling-fhirpath-review` | Correctness review of a FHIRPath change |
+| `fhir-search-spec` | FHIR RESTful search parameters, prefixes, and modifiers |
+| `sql-on-fhir` | The SQL-on-FHIR view specification |
+| `spark-catalyst` | Spark internals when touching column generation |
 
 ## Conventions
 
