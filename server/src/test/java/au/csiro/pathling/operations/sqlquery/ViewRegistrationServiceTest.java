@@ -128,7 +128,8 @@ class ViewRegistrationServiceTest {
     // Two nodes that happen to share a label but resolve to different resources are keyed by their
     // distinct canonical keys, so their temp views never collide.
     final String left = ViewRegistrationService.resolveTempViewName("v9f3a1c", "ViewDefinition/a");
-    final String right = ViewRegistrationService.resolveTempViewName("v9f3a1c", "ViewDefinition/b");
+    final String right =
+        ViewRegistrationService.resolveTempViewName("v9f3a1c", "ViewDefinition/b");
     assertThat(left).isNotEqualTo(right);
   }
 
@@ -281,7 +282,8 @@ class ViewRegistrationServiceTest {
   @Test
   void rewriteSqlSubstitutesLabelsWithViewNames() {
     final String rewritten =
-        service.rewriteSql("SELECT * FROM patients", Map.of("patients", "sqlquery_v9f3a1c_patients"));
+        service.rewriteSql(
+            "SELECT * FROM patients", Map.of("patients", "sqlquery_v9f3a1c_patients"));
     // The unaliased reference gains "AS patients" so the label still names a table.
     assertThat(rewritten).isEqualTo("SELECT * FROM sqlquery_v9f3a1c_patients AS patients");
   }
@@ -342,7 +344,8 @@ class ViewRegistrationServiceTest {
             Map.of("patients", "sqlquery_v9f3a1c_patients"));
     assertThat(rewritten)
         .isEqualTo(
-            "SELECT * FROM sqlquery_v9f3a1c_patients AS patients -- patients comment\nWHERE x = 1");
+            "SELECT * FROM sqlquery_v9f3a1c_patients AS patients -- patients comment\n"
+                + "WHERE x = 1");
   }
 
   @Test
