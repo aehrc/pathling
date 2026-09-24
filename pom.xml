@@ -1047,6 +1047,7 @@
                   <exclude>.github/**</exclude>
                   <exclude>.mvn/**</exclude>
                   <exclude>.claude/**</exclude>
+                  <exclude>specs/**</exclude>
                   <exclude>.opencode/**</exclude>
                   <exclude>mvnw</exclude>
                   <exclude>mvnw.cmd</exclude>

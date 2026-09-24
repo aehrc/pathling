@@ -41,6 +41,20 @@ Tooling:
   is not configurable via settings.json, so this is the only sane convention to standardise on. The
   `implement-pathling` skill's `--worktree` flag uses this path, and it is gitignored.
 
+- **Specifications live under `specs/`**, tracked, one `NNN-short-name` directory per spec with
+  `archive/` holding the implemented ones. This overrides the `ssh:spec` and `ssh:build` skills,
+  which default to a gitignored `.local/specs/` — read and write `specs/` here instead. Each spec
+  carries an `evidence/` subdirectory with the measurements its decisions rest on and runnable
+  reproductions, because requirements that exist only because a measurement ruled out the obvious
+  alternative cannot be revisited once the evidence is lost. `specs/README.md` documents the
+  layout. This supersedes `openspec/` for work of this kind.
+
+- **Per-branch scratch work lives under `.local/work/<branch-name>/`**, relative to the checkout
+  root — working notes, throwaway scripts, captured output and anything else that belongs to the
+  branch but not to the repository. `/.local/` is gitignored, so nothing under it can be committed
+  by accident. Keeping it keyed by branch means a worktree and the main checkout never mix one
+  issue's working files into another's.
+
 Tests:
 
 - **The YAML exclusion baseline polices itself.** Excluded conformance cases are still executed and
