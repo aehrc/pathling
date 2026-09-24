@@ -21,6 +21,11 @@ import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhirpath.encoding.ImmutableCoding;
+import au.csiro.pathling.terminology.conceptmap.ConceptMapContent;
+import au.csiro.pathling.terminology.conceptmap.ConceptMapReader;
+import au.csiro.pathling.terminology.expand.ExpandExecutor;
+import au.csiro.pathling.terminology.expand.ValueSetExpansion;
+import au.csiro.pathling.terminology.local.VersionResolver;
 import au.csiro.pathling.terminology.lookup.LookupExecutor;
 import au.csiro.pathling.terminology.lookup.LookupParameters;
 import au.csiro.pathling.terminology.subsumes.SubsumesExecutor;
@@ -37,6 +42,7 @@ import java.io.Closeable;
 import java.util.List;
 import java.util.Optional;
 import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.ValueSet;
 import org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome;
 
 /**
@@ -101,6 +107,27 @@ public class DefaultTerminologyService extends BaseTerminologyService {
         new LookupParameters(ImmutableCoding.of(coding), property, acceptLanguage);
     final LookupExecutor executor = new LookupExecutor(terminologyClient, parameters);
     return requireNonNull(execute(executor));
+  }
+
+  @Nonnull
+  @Override
+  public Optional<ValueSetExpansion> expand(
+      @Nonnull final String url, @Nullable final String version, final int maxMembers) {
+    return new ExpandExecutor(terminologyClient).expand(url, version, maxMembers);
+  }
+
+  @Nonnull
+  @Override
+  public ValueSetExpansion expand(@Nonnull final ValueSet valueSet, final int maxMembers) {
+    return new ExpandExecutor(terminologyClient).expand(valueSet, maxMembers);
+  }
+
+  @Nonnull
+  @Override
+  public Optional<ConceptMapContent> readConceptMap(
+      @Nonnull final String url, @Nullable final String version, final int maxMappings) {
+    return new ConceptMapReader(terminologyClient, new VersionResolver(null))
+        .read(url, version, maxMappings);
   }
 
   @Nonnull

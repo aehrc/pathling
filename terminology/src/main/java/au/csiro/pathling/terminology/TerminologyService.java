@@ -19,6 +19,15 @@ package au.csiro.pathling.terminology;
 
 import au.csiro.pathling.fhir.ParametersUtils.DesignationPart;
 import au.csiro.pathling.fhirpath.encoding.ImmutableCoding;
+import au.csiro.pathling.terminology.conceptmap.ConceptMapContent;
+import au.csiro.pathling.terminology.conceptmap.ConceptMapContentException;
+import au.csiro.pathling.terminology.conceptmap.ConceptMapLimitExceededException;
+import au.csiro.pathling.terminology.conceptmap.ConceptMapLookupException;
+import au.csiro.pathling.terminology.conceptmap.ConceptMapVersionException;
+import au.csiro.pathling.terminology.expand.ExpansionLimitExceededException;
+import au.csiro.pathling.terminology.expand.ValueSetExpansion;
+import au.csiro.pathling.terminology.expand.ValueSetExpansionException;
+import au.csiro.pathling.terminology.expand.ValueSetLookupException;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.io.Serial;
@@ -30,6 +39,7 @@ import lombok.Value;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.Type;
+import org.hl7.fhir.r4.model.ValueSet;
 import org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence;
 import org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome;
 
@@ -149,6 +159,54 @@ public interface TerminologyService {
       @Nonnull final Coding coding, @Nullable final String propertyCode) {
     return lookup(coding, propertyCode, null);
   }
+
+  /**
+   * Expands a value set identified by canonical URL to its membership.
+   *
+   * @param url the canonical URL of the value set, without a version suffix
+   * @param version the value set version to expand, or null for the source's default
+   * @param maxMembers the largest membership the caller will accept
+   * @return the expansion, or empty if the canonical URL cannot be resolved
+   * @throws ValueSetExpansionException if the value set resolves but its membership cannot be
+   *     determined, including when the terminology source cannot be reached
+   * @throws ValueSetLookupException if, in SERVER mode, the terminology server answers the first
+   *     page of the expansion with a failure status other than 404, or cannot be reached for it, so
+   *     that it is unknown whether the URL is a value set
+   * @throws ExpansionLimitExceededException if the membership exceeds {@code maxMembers}
+   */
+  @Nonnull
+  Optional<ValueSetExpansion> expand(@Nonnull String url, @Nullable String version, int maxMembers);
+
+  /**
+   * Expands a value set supplied as a resource. Where the resource carries an expansion, that
+   * expansion is the membership; otherwise its compose is expanded.
+   *
+   * @param valueSet the value set resource
+   * @param maxMembers the largest membership the caller will accept
+   * @return the expansion
+   * @throws ValueSetExpansionException if the membership cannot be determined
+   * @throws ExpansionLimitExceededException if the membership exceeds {@code maxMembers}
+   */
+  @Nonnull
+  ValueSetExpansion expand(@Nonnull ValueSet valueSet, int maxMembers);
+
+  /**
+   * Reads a concept map by canonical URL and converts it to the rows of a concept map relation.
+   *
+   * @param url the canonical URL of the concept map, without a version suffix
+   * @param version the version to read, or null for the latest the source holds
+   * @param maxMappings the largest number of rows the caller will accept
+   * @return the content, or empty where the source holds no concept map at the URL
+   * @throws ConceptMapContentException if the map resolves but its content cannot be represented,
+   *     or the source fails
+   * @throws ConceptMapLimitExceededException if the map has more than {@code maxMappings} rows
+   * @throws ConceptMapVersionException if the version to use cannot be determined
+   * @throws ConceptMapLookupException if, in SERVER mode, the ConceptMap search fails with a server
+   *     error other than 501 or the server cannot be reached
+   */
+  @Nonnull
+  Optional<ConceptMapContent> readConceptMap(
+      @Nonnull String url, @Nullable String version, int maxMappings);
 
   /** Common interface for properties and designations. */
   interface PropertyOrDesignation extends Serializable {

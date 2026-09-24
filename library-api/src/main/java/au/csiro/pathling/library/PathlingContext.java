@@ -57,7 +57,6 @@ import jakarta.annotation.Nullable;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -945,8 +944,7 @@ public class PathlingContext {
     warnAboutIgnoredServerSettings(configuration);
 
     // The local block and storage path are guaranteed present by configuration validation.
-    final String storagePath =
-        Objects.requireNonNull(Objects.requireNonNull(configuration.getLocal()).getStoragePath());
+    final String storagePath = configuration.getLocal().getStoragePath();
     final Map<String, String> hadoopConfiguration =
         snapshotHadoopConfiguration(spark.sessionState().newHadoopConf());
 
