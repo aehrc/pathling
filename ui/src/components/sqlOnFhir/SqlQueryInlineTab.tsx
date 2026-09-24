@@ -246,10 +246,6 @@ export function SqlQueryInlineTab({
           style={{ fontFamily: "monospace" }}
           aria-label="SQL"
         />
-        <FieldGuidance>
-          The SQL is encoded as Base64 in `Library.content[0].data`. The plain text is also kept in
-          the `sql-text` extension.
-        </FieldGuidance>
       </Box>
 
       <Box>
@@ -397,8 +393,7 @@ export function SqlQueryInlineTab({
         </FieldLabel>
         {parameters.length === 0 && (
           <FieldGuidance>
-            Declare the parameters the SQL binds, and the value to bind on this run. Each becomes a
-            `Library.parameter` entry with `use=in`; values are never saved.
+            Declare the parameters the SQL binds, and the value to bind on this run.
           </FieldGuidance>
         )}
         <Flex direction="column" gap="2" mt="1">

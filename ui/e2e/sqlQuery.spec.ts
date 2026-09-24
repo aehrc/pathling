@@ -29,7 +29,7 @@ import {
   mockEmptySqlViewLibraryBundle,
   mockSqlQueryLibrary1,
   mockSqlQueryLibraryBundle,
-  mockSqlQueryRunCsv,
+  mockSqlQueryRunNdjson,
   mockSqlQueryRunOperationOutcome,
   mockSqlViewLibrary1,
   mockSqlViewLibraryBundle,
@@ -105,16 +105,16 @@ async function mockViewDefinitions(page: Page) {
 }
 
 /**
- * Mocks the `$sql-run` endpoint with a CSV response.
+ * Mocks the `$sql-run` endpoint with an NDJSON response.
  *
  * @param page - The Playwright Page to attach the route to.
  */
-async function mockSqlQueryRunCsvResponse(page: Page) {
+async function mockSqlQueryRunNdjsonResponse(page: Page) {
   await page.route(/\/\$sql-run/, async (route) => {
     await route.fulfill({
       status: 200,
-      contentType: "text/csv",
-      body: mockSqlQueryRunCsv,
+      contentType: "application/x-ndjson",
+      body: mockSqlQueryRunNdjson,
     });
   });
 }
@@ -176,7 +176,7 @@ test.describe("SQL on FHIR page - SQL query mode", () => {
     await mockMetadata(page);
     await mockSqlQueryLibraries(page);
     await mockViewDefinitions(page);
-    await mockSqlQueryRunCsvResponse(page);
+    await mockSqlQueryRunNdjsonResponse(page);
 
     await page.goto("/admin/sql-on-fhir");
     await selectSqlQueryMode(page);
@@ -206,11 +206,6 @@ test.describe("SQL on FHIR page - SQL query mode", () => {
     await patientId.fill("");
     await expect(executeButton).toBeDisabled();
     await patientId.fill("Patient/pat-1");
-
-    // Switch the format to CSV so the response branch is deterministic.
-    await page.getByRole("combobox", { name: /output format/i }).click();
-    await page.getByRole("option", { name: "csv" }).click();
-
     await executeButton.click();
 
     await expect(page.getByText("2 rows")).toBeVisible();
@@ -235,8 +230,8 @@ test.describe("SQL on FHIR page - SQL query mode", () => {
       runUrl = route.request().url();
       await route.fulfill({
         status: 200,
-        contentType: "text/csv",
-        body: mockSqlQueryRunCsv,
+        contentType: "application/x-ndjson",
+        body: mockSqlQueryRunNdjson,
       });
     });
 
@@ -257,9 +252,6 @@ test.describe("SQL on FHIR page - SQL query mode", () => {
     // Every dependency is listed under a single heading, since a stored
     // Library does not say which kind of artefact each reference names.
     await expect(page.getByText("Dependencies", { exact: true })).toBeVisible();
-
-    await page.getByRole("combobox", { name: /output format/i }).click();
-    await page.getByRole("option", { name: "csv" }).click();
 
     await page.getByRole("button", { name: /^execute$/i }).click();
 
@@ -286,8 +278,8 @@ test.describe("SQL on FHIR page - SQL query mode", () => {
       runBody = route.request().postData();
       await route.fulfill({
         status: 200,
-        contentType: "text/csv",
-        body: mockSqlQueryRunCsv,
+        contentType: "application/x-ndjson",
+        body: mockSqlQueryRunNdjson,
       });
     });
 
@@ -337,10 +329,6 @@ test.describe("SQL on FHIR page - SQL query mode", () => {
     await periodEnd.fill("2025-06-30");
     await expect(executeButton).toBeEnabled();
 
-    // Use CSV output so the result rendering is deterministic.
-    await page.getByRole("combobox", { name: /output format/i }).click();
-    await page.getByRole("option", { name: "csv" }).click();
-
     await executeButton.click();
 
     await expect(page.getByText("2 rows")).toBeVisible();
@@ -377,8 +365,8 @@ test.describe("SQL on FHIR page - SQL query mode", () => {
       runBody = route.request().postData();
       await route.fulfill({
         status: 200,
-        contentType: "text/csv",
-        body: mockSqlQueryRunCsv,
+        contentType: "application/x-ndjson",
+        body: mockSqlQueryRunNdjson,
       });
     });
 
@@ -423,8 +411,6 @@ test.describe("SQL on FHIR page - SQL query mode", () => {
       .fill("http://example.org/ConceptMap/sct-to-icd10");
     await expect(executeButton).toBeEnabled();
 
-    await page.getByRole("combobox", { name: /output format/i }).click();
-    await page.getByRole("option", { name: "csv" }).click();
     await executeButton.click();
     await expect(page.getByText("2 rows")).toBeVisible();
 

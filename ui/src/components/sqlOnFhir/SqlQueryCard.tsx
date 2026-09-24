@@ -19,8 +19,8 @@
  * Result card for a single SQL query execution.
  *
  * Mirrors the lifecycle pattern of `ViewCard`: each card mounts, kicks off
- * its own `$sql-run` request via `useSqlRun`, and renders the
- * format-appropriate result body when complete.
+ * its own `$sql-run` request via `useSqlRun` for a preview of the first
+ * rows, and renders them when complete.
  *
  * @author John Grimes
  */
@@ -59,6 +59,9 @@ interface SqlQueryExportEntry {
   createdAt: Date;
 }
 
+/** The number of rows requested and shown as a preview. */
+const PREVIEW_ROWS = 10;
+
 interface SqlQueryCardProps {
   /** The SQL query job describing the request. */
   job: SqlQueryJob;
@@ -83,11 +86,8 @@ export function SqlQueryCard({ job, onClose }: Readonly<SqlQueryCardProps>) {
   const isError = status === "error";
   const canClose = isComplete || isError;
 
-  // The export affordance appears once a run has returned data: rows for a tabular result, or a
-  // file for a non-previewable binary (Parquet) result.
-  const hasRows =
-    result !== undefined &&
-    (result.kind === "binary" || (result.kind === "tabular" && result.rows.length > 0));
+  // The export affordance appears once a run has returned rows.
+  const hasRows = result !== undefined && result.rows.length > 0;
 
   // Mount-time execution: kick off the request once when the card lands
   // in idle state. Using the status as the trigger plays nicely with React
@@ -96,9 +96,7 @@ export function SqlQueryCard({ job, onClose }: Readonly<SqlQueryCardProps>) {
     if (status === "idle") {
       execute({
         subject: toSubjectSource(job.request),
-        format: job.request.format,
-        limit: job.request.limit,
-        header: job.request.header,
+        limit: PREVIEW_ROWS,
         bindings: job.request.bindings,
         parameterTypes: job.request.parameterTypes,
       });
@@ -214,8 +212,7 @@ interface SqlQueryResultBodyProps {
 }
 
 /**
- * Renders the body for a successful SQL query response, branching on the
- * result kind.
+ * Renders the body for a successful SQL query response.
  *
  * @param props - The component props.
  * @param props.result - The successful execution result.
@@ -223,15 +220,6 @@ interface SqlQueryResultBodyProps {
  * @returns The result body.
  */
 function SqlQueryResultBody({ result, sql }: Readonly<SqlQueryResultBodyProps>) {
-  if (result.kind === "binary") {
-    return (
-      <Text size="2" color="gray">
-        Parquet results cannot be previewed. Use the Export control below to download the full
-        result set.
-      </Text>
-    );
-  }
-
   if (result.rows.length === 0) {
     return (
       <Text size="2" color="gray">
@@ -240,7 +228,7 @@ function SqlQueryResultBody({ result, sql }: Readonly<SqlQueryResultBodyProps>) 
     );
   }
 
-  const previewRows = result.rows.slice(0, 10);
+  const previewRows = result.rows.slice(0, PREVIEW_ROWS);
 
   return (
     <Flex direction="column" gap="3">
