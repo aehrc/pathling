@@ -21,7 +21,6 @@ import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.Optional;
 import lombok.Getter;
 
@@ -65,20 +64,6 @@ public enum SqlQueryOutputFormat {
   private static final SqlQueryOutputFormat DEFAULT_FORMAT = NDJSON;
 
   /**
-   * Parses a format string into a SqlQueryOutputFormat.
-   *
-   * @param format the format string to parse, or null for default
-   * @return the corresponding format, defaulting to NDJSON
-   */
-  @Nonnull
-  public static SqlQueryOutputFormat fromString(@Nullable final String format) {
-    if (isNullOrBlank(format)) {
-      return DEFAULT_FORMAT;
-    }
-    return matchFormat(format).orElse(DEFAULT_FORMAT);
-  }
-
-  /**
    * Parses an explicit {@code _format} parameter value strictly. A null or blank value maps to the
    * default (NDJSON); a non-blank value that matches no supported code or media type is rejected.
    *
@@ -113,68 +98,8 @@ public enum SqlQueryOutputFormat {
         .findFirst();
   }
 
-  /**
-   * Parses an HTTP Accept header into a SqlQueryOutputFormat. Supports quality values (e.g.,
-   * "text/csv;q=0.9, application/x-ndjson;q=1.0") and returns the format with the highest quality
-   * value that matches a supported content type.
-   *
-   * @param acceptHeader the Accept header value, or null for default
-   * @return the corresponding format, defaulting to NDJSON
-   */
-  @Nonnull
-  public static SqlQueryOutputFormat fromAcceptHeader(@Nullable final String acceptHeader) {
-    if (isNullOrBlank(acceptHeader)) {
-      return DEFAULT_FORMAT;
-    }
-
-    return Arrays.stream(acceptHeader.split(","))
-        .map(SqlQueryOutputFormat::parseMediaType)
-        .sorted(Comparator.comparingDouble(MediaType::quality).reversed())
-        .map(mt -> matchContentType(mt.type()))
-        .flatMap(Optional::stream)
-        .findFirst()
-        .orElse(DEFAULT_FORMAT);
-  }
-
   /** Checks if a string is null or blank. */
   private static boolean isNullOrBlank(@Nullable final String value) {
     return value == null || value.isBlank();
   }
-
-  /** Matches a content type string against supported formats. */
-  @Nonnull
-  private static Optional<SqlQueryOutputFormat> matchContentType(
-      @Nonnull final String contentType) {
-    if ("*/*".equals(contentType)) {
-      return Optional.of(DEFAULT_FORMAT);
-    }
-    return Arrays.stream(values()).filter(f -> f.contentType.equals(contentType)).findFirst();
-  }
-
-  /** Parses a single media type entry from an Accept header (e.g., "text/csv;q=0.9"). */
-  @Nonnull
-  private static MediaType parseMediaType(@Nonnull final String mediaTypeString) {
-    final String[] parts = mediaTypeString.split(";");
-    final String type = parts[0].trim().toLowerCase();
-    final double quality = extractQualityValue(parts);
-    return new MediaType(type, quality);
-  }
-
-  /** Extracts the quality value from media type parameters, defaulting to 1.0. */
-  private static double extractQualityValue(@Nonnull final String[] parts) {
-    for (int i = 1; i < parts.length; i++) {
-      final String param = parts[i].trim();
-      if (param.startsWith("q=")) {
-        try {
-          return Double.parseDouble(param.substring(2).trim());
-        } catch (final NumberFormatException e) {
-          return 1.0;
-        }
-      }
-    }
-    return 1.0;
-  }
-
-  /** Represents a parsed media type with its quality value. */
-  private record MediaType(@Nonnull String type, double quality) {}
 }

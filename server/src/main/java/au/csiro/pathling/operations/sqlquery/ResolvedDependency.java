@@ -20,9 +20,10 @@ package au.csiro.pathling.operations.sqlquery;
 import jakarta.annotation.Nonnull;
 
 /**
- * A resolved node in a SQL on FHIR dependency graph: either a {@link ResolvedViewDefinition} leaf
- * or a {@link ResolvedSqlView}. Each node is identified by a stable canonical key that is the basis
- * of its request-scoped temp-view name and of diamond deduplication.
+ * A resolved node in a SQL on FHIR dependency graph: a {@link ResolvedViewDefinition} leaf, a
+ * {@link ResolvedExternalTable} leaf or a {@link ResolvedSqlView}. Each node is identified by a
+ * stable canonical key that is the basis of its request-scoped temp-view name and of diamond
+ * deduplication.
  *
  * @author John Grimes
  */
@@ -37,4 +38,15 @@ public interface ResolvedDependency {
    */
   @Nonnull
   String getCanonicalKey();
+
+  /**
+   * Returns a deterministic description of everything about this node that decides the rows it
+   * produces. Two nodes sharing a canonical key but differing in content - which happens whenever a
+   * client inlines a different body at a canonical URL it has used before - must describe
+   * themselves differently, so that a caller keying on the resolved graph can tell them apart.
+   *
+   * @return the content description
+   */
+  @Nonnull
+  String describeContent();
 }

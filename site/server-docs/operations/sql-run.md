@@ -91,6 +91,22 @@ that matches no dependency of the subject is a `400`: it usually means a URL
 was mistyped, and ignoring it would run the request against different artefacts
 than the client intended.
 
+A `relatedArtifact` may also name an
+[external table](../configuration#sql-query) configured by the operator, by
+the `url` it was configured under. The reference takes the same form as a
+ViewDefinition dependency, and the SQL reaches the table only through the
+declared `label`, which obeys the usual rule (`^[A-Za-z][A-Za-z0-9_]*$`,
+unique within the Library). An external table has no version, so a reference
+carrying a `|version` pin never matches one. A URL that matches both a
+configured table and a stored ViewDefinition or SQLView is ambiguous and is a
+`400` naming the label; a `context` entry with that URL outranks the table, as
+it outranks server resolution generally. `DESCRIBE <label>` lists the table's
+columns just as it does for any other dependency.
+
+The `patient`, `group` and `_since` filters restrict the FHIR data the subject
+reads; they do not filter an external table, whose rows are constrained only by
+the SQL that joins it.
+
 ## Examples
 
 Run a stored view over `GET`, as CSV:
@@ -171,6 +187,7 @@ GET [base]/$sql-run?subjectReference=ViewDefinition/demographics&patient=Patient
 | `404 Not Found`             | The subject's canonical or reference resolves to nothing, or a dependency cannot be resolved.                                           |
 | `422 Unprocessable Entity`  | The subject is of no admitted kind, or is conformant but cannot be processed (for example a column type `_format=fhir` cannot express). |
 | `500 Internal Server Error` | An unexpected execution or infrastructure fault.                                                                                        |
+| `500 Internal Server Error` | A configured external table cannot be read; the issue names the table's `url` and never its storage path.                               |
 
 Every 4xx and 5xx response carries an
 [OperationOutcome](https://hl7.org/fhir/R4/operationoutcome.html) whose issues
@@ -196,6 +213,19 @@ analysis, so a reported line and column position can differ from the position
 in the submitted text, and a qualified suggestion can name one of those
 internal views. Only table references are replaced, so a column, alias or
 function that happens to share a label's name is left as submitted.
+
+A fault that only appears when rows are evaluated - for example a column
+declared as singular that yields more than one value for some resource - is
+reported the same way as it is by `$sql-export`: `400` for a failure raised by
+the query itself, `500` for anything else. The result is streamed, so this is
+only possible while no rows have been sent. Rows are evaluated in batches, and
+the first batch is evaluated before anything is written; with `_limit`,
+`_format=json` or `_format=parquet`, every row that could be returned is
+evaluated first. Without `_limit`, a failure in a later batch can arrive after
+the `200` status and the earlier rows. The server then closes the connection
+without completing the response, so an HTTP/1.1 client reports an incomplete
+transfer rather than a result that is silently missing rows. Use `$sql-export`
+to have every failure reported as a status.
 
 ## Conformance
 

@@ -101,6 +101,19 @@ class SqlQueryResultStreamerTest {
   }
 
   @Test
+  void csvWithHeaderLeavesResponseUncommittedWhenEvaluationFails() {
+    // A result that fails during evaluation must fail before the header is written, so that the
+    // response is still free to carry an error status instead of a committed 200.
+    final MockHttpServletResponse response = new MockHttpServletResponse();
+    final Dataset<Row> failing = spark.range(2).selectExpr("id", "raise_error('boom') AS failure");
+
+    assertThatThrownBy(() -> streamer.stream(failing, SqlQueryOutputFormat.CSV, true, response))
+        .hasStackTraceContaining("boom");
+    assertThat(response.isCommitted()).isFalse();
+    assertThat(response.getContentAsByteArray()).isEmpty();
+  }
+
+  @Test
   void streamsFhirParametersResource() {
     final MockHttpServletResponse response = new MockHttpServletResponse();
     streamer.stream(twoRowDataset(), SqlQueryOutputFormat.FHIR, false, response);
