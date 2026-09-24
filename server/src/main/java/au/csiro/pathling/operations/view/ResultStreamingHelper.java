@@ -127,7 +127,7 @@ public class ResultStreamingHelper {
       final boolean includeHeader)
       throws IOException {
     // Requesting the first row evaluates the result up to that row, and must precede the header.
-    iterator.hasNext();
+    boolean hasNext = iterator.hasNext();
 
     final CSVFormat format =
         includeHeader
@@ -137,10 +137,11 @@ public class ResultStreamingHelper {
     // The printer writes the header, if any, when it is constructed.
     final CSVPrinter printer = new CSVPrinter(writer, format);
 
-    while (iterator.hasNext()) {
+    while (hasNext) {
       final Row row = iterator.next();
       printer.printRecord(rowToList(row, schema));
       printer.flush();
+      hasNext = iterator.hasNext();
     }
     printer.flush();
   }
