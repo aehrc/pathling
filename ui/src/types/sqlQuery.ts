@@ -22,16 +22,6 @@
  */
 
 /**
- * Output formats accepted by the `$sql-run` operation.
- */
-export type SqlQueryOutputFormat =
-  | "ndjson"
-  | "csv"
-  | "json"
-  | "parquet"
-  | "fhir";
-
-/**
  * FHIR primitive types supported as runtime parameter values in the UI.
  *
  * The server's request parser handles a wider range of types, but the UI
@@ -165,12 +155,6 @@ export interface SqlQueryLibrary {
  * supplied.
  */
 export interface SqlQueryExecutionOptions {
-  /** Output format (defaults to ndjson on the server when omitted). */
-  format?: SqlQueryOutputFormat;
-  /** Maximum number of rows to return. */
-  limit?: number;
-  /** Whether to include a header row when format is `csv`. */
-  header?: boolean;
   /** Values bound to the parameters, keyed by declared parameter name. */
   bindings?: SqlQueryRuntimeBindings;
   /**
@@ -202,37 +186,14 @@ export type SqlQueryRequest =
     });
 
 /**
- * Successful tabular result from a `$sql-run` execution.
+ * Successful result from a `$sql-run` execution, parsed from NDJSON.
  */
-export interface SqlQueryTabularResult {
-  /** Discriminator. */
-  kind: "tabular";
-  /** Output format that produced this result. */
-  format: Exclude<SqlQueryOutputFormat, "parquet">;
+export interface SqlQueryResult {
   /** Column names in display order. */
   columns: string[];
   /** Parsed result rows. */
   rows: Record<string, unknown>[];
-  /** Raw response body, retained for download. */
-  rawBody: Blob;
 }
-
-/**
- * Successful binary (parquet) result from a `$sql-run` execution.
- */
-export interface SqlQueryBinaryResult {
-  /** Discriminator. */
-  kind: "binary";
-  /** Output format that produced this result. */
-  format: "parquet";
-  /** Response body as a Blob, ready for download. */
-  blob: Blob;
-}
-
-/**
- * Either form of successful result.
- */
-export type SqlQueryResult = SqlQueryTabularResult | SqlQueryBinaryResult;
 
 /**
  * Active or completed SQL query job tracked in the page's job list.
@@ -259,10 +220,8 @@ export interface SaveSqlQueryLibraryResult {
 }
 
 /**
- * Output formats accepted by the asynchronous `$sql-export` operation.
- *
- * Narrower than {@link SqlQueryOutputFormat}: an export writes bulk files, so it offers only the
- * file-friendly formats.
+ * Output formats accepted by the asynchronous `$sql-export` operation, limited to
+ * file-friendly formats because an export writes bulk files.
  */
 export type SqlQueryExportFormat = "ndjson" | "csv" | "parquet";
 

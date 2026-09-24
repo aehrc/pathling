@@ -29,7 +29,7 @@ import {
   mockCapabilityStatement,
   mockSqlQueryLibrary1,
   mockSqlQueryLibraryBundle,
-  mockSqlQueryRunCsv,
+  mockSqlQueryRunNdjson,
   mockViewDefinitionBundle,
 } from "./fixtures/fhirData";
 
@@ -73,8 +73,8 @@ async function mockBaseEndpoints(page: Page) {
   await page.route(/\/\$sql-run/, async (route) => {
     await route.fulfill({
       status: 200,
-      contentType: "text/csv",
-      body: mockSqlQueryRunCsv,
+      contentType: "application/x-ndjson",
+      body: mockSqlQueryRunNdjson,
     });
   });
 }
@@ -155,11 +155,6 @@ async function runStoredQuery(page: Page) {
   await page
     .getByRole("textbox", { name: /runtime value for patient_id/i })
     .fill("Patient/pat-1");
-
-  // Use CSV so the response branch is deterministic and returns rows.
-  await page.getByRole("combobox", { name: /output format/i }).click();
-  await page.getByRole("option", { name: "csv" }).click();
-
   await page.getByRole("button", { name: /^execute$/i }).click();
 }
 
