@@ -82,6 +82,7 @@ describe("buildInlineSqlQueryLibrary", () => {
           referenceUrl: "https://example.org/ViewDefinition/patients",
         },
       ],
+      terminology: [],
       parameters: [
         { rowId: "p1", name: "patient_id", type: "string", value: "pat-1" },
       ],
@@ -122,6 +123,7 @@ describe("buildInlineSqlQueryLibrary", () => {
       title: "Period query",
       sql: "SELECT 1",
       tables: [],
+      terminology: [],
       parameters: [row("period_end", "date", "2025-06-30")],
     });
 
@@ -143,6 +145,7 @@ describe("buildInlineSqlQueryLibrary", () => {
       title: "Query",
       sql: "SELECT 1",
       tables: [],
+      terminology: [],
       parameters: [
         row("", "string", "unbound value"),
         row("period_end", "date", "2025-06-30"),
@@ -174,6 +177,7 @@ describe("buildInlineSqlQueryLibrary", () => {
           referenceUrl: "https://pathling.example/Library/ObservationPeriod",
         },
       ],
+      terminology: [],
       parameters: [],
     });
 
@@ -192,11 +196,60 @@ describe("buildInlineSqlQueryLibrary", () => {
     ]);
   });
 
+  // Terminology rows are dependencies like any other: each emits a
+  // relatedArtifact after the view rows, carrying the typed canonical URL -
+  // including a `|version` pin - with surrounding whitespace removed. The
+  // server decides whether the URL names a value set or a concept map.
+  it("emits terminology rows as relatedArtifacts after the views", () => {
+    const library = buildInlineSqlQueryLibrary({
+      sql: "SELECT 1",
+      tables: [
+        {
+          rowId: "r1",
+          label: "conditions",
+          referenceUrl: "https://example.org/ViewDefinition/conditions",
+        },
+      ],
+      terminology: [
+        {
+          rowId: "t1",
+          label: "cvd_codes",
+          referenceUrl: " http://example.org/ValueSet/cvd|2026 ",
+        },
+        {
+          rowId: "t2",
+          label: "sct_to_icd10",
+          referenceUrl: "http://example.org/ConceptMap/sct-to-icd10",
+        },
+      ],
+      parameters: [],
+    });
+
+    expect(library.relatedArtifact).toEqual([
+      {
+        type: "depends-on",
+        label: "conditions",
+        resource: "https://example.org/ViewDefinition/conditions",
+      },
+      {
+        type: "depends-on",
+        label: "cvd_codes",
+        resource: "http://example.org/ValueSet/cvd|2026",
+      },
+      {
+        type: "depends-on",
+        label: "sct_to_icd10",
+        resource: "http://example.org/ConceptMap/sct-to-icd10",
+      },
+    ]);
+  });
+
   // Empty title and url do not introduce empty slots on the resource.
   it("omits empty title and url", () => {
     const library = buildInlineSqlQueryLibrary({
       sql: "SELECT 1",
       tables: [],
+      terminology: [],
       parameters: [],
     });
     expect(library.title).toBeUndefined();
@@ -214,6 +267,7 @@ describe("buildInlineSqlQueryLibrary", () => {
       title: "Patients By Condition",
       sql: "SELECT 1",
       tables: [],
+      terminology: [],
       parameters: [],
     });
     expect(library.title).toBe("Patients By Condition");
@@ -234,18 +288,76 @@ describe("canExecuteInlineForm", () => {
             referenceUrl: "https://example.org/V",
           },
         ],
+        terminology: [],
         parameters: [],
       }),
     ).toBe(false);
   });
 
-  // Zero views prevents execution because the server requires at least
-  // one related artefact.
-  it("returns false when there are no views", () => {
+  // Zero dependencies prevents execution because the server requires at
+  // least one related artefact.
+  it("returns false when there are no dependencies", () => {
     expect(
       canExecuteInlineForm({
         sql: "SELECT 1",
         tables: [],
+        terminology: [],
+        parameters: [],
+      }),
+    ).toBe(false);
+  });
+
+  // A terminology dependency alone satisfies the minimum, so a query can
+  // inspect a value set expansion or a concept map without joining any view.
+  it("returns true with a terminology dependency and no views", () => {
+    expect(
+      canExecuteInlineForm({
+        sql: "SELECT * FROM cvd_codes",
+        tables: [],
+        terminology: [
+          {
+            rowId: "t1",
+            label: "cvd_codes",
+            referenceUrl: "http://example.org/ValueSet/cvd",
+          },
+        ],
+        parameters: [],
+      }),
+    ).toBe(true);
+  });
+
+  // A terminology row with a blank label is incomplete.
+  it("returns false when a terminology row has no label", () => {
+    expect(
+      canExecuteInlineForm({
+        sql: "SELECT 1",
+        tables: [],
+        terminology: [
+          {
+            rowId: "t1",
+            label: " ",
+            referenceUrl: "http://example.org/ValueSet/cvd",
+          },
+        ],
+        parameters: [],
+      }),
+    ).toBe(false);
+  });
+
+  // A terminology row whose URL is only whitespace names nothing, so it is
+  // incomplete even alongside a valid view row.
+  it("returns false when a terminology row has a blank url", () => {
+    expect(
+      canExecuteInlineForm({
+        sql: "SELECT 1",
+        tables: [
+          {
+            rowId: "r1",
+            label: "patients",
+            referenceUrl: "https://example.org/V",
+          },
+        ],
+        terminology: [{ rowId: "t1", label: "cvd_codes", referenceUrl: "  " }],
         parameters: [],
       }),
     ).toBe(false);
@@ -259,6 +371,7 @@ describe("canExecuteInlineForm", () => {
         tables: [
           { rowId: "r1", label: "", referenceUrl: "https://example.org/V" },
         ],
+        terminology: [],
         parameters: [],
       }),
     ).toBe(false);
@@ -270,6 +383,7 @@ describe("canExecuteInlineForm", () => {
       canExecuteInlineForm({
         sql: "SELECT 1",
         tables: [{ rowId: "r1", label: "patients", referenceUrl: "" }],
+        terminology: [],
         parameters: [],
       }),
     ).toBe(false);
@@ -287,6 +401,7 @@ describe("canExecuteInlineForm", () => {
             referenceUrl: "https://example.org/Library/lib1",
           },
         ],
+        terminology: [],
         parameters: [],
       }),
     ).toBe(true);
@@ -306,6 +421,7 @@ describe("canSaveInlineForm", () => {
             referenceUrl: "https://example.org/V",
           },
         ],
+        terminology: [],
         parameters: [],
       }),
     ).toBe(false);
@@ -323,6 +439,7 @@ describe("canSaveInlineForm", () => {
             referenceUrl: "https://example.org/V",
           },
         ],
+        terminology: [],
         parameters: [],
       }),
     ).toBe(true);

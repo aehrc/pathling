@@ -55,6 +55,8 @@ export interface BuildInlineLibraryInput {
   sql: string;
   /** View rows (related artefacts) configured by the user. */
   tables: SqlQueryRelatedArtifact[];
+  /** Terminology rows (value set or concept map related artefacts). */
+  terminology: SqlQueryRelatedArtifact[];
   /** Declared runtime parameters. */
   parameters: SqlQueryParameterDeclaration[];
 }
@@ -75,6 +77,7 @@ export interface BuildInlineLibraryInput {
  * buildInlineSqlQueryLibrary({
  *   sql: "SELECT 1",
  *   tables: [],
+ *   terminology: [],
  *   parameters: [],
  * });
  */
@@ -107,13 +110,16 @@ export function buildInlineSqlQueryLibrary(
     library.url = trimmedUrl;
   }
 
-  if (input.tables.length > 0) {
-    library.relatedArtifact = input.tables.map((table) => ({
+  // Views and terminology are both `depends-on` artefacts referenced by
+  // canonical URL; the server decides what each URL resolves to, so the two
+  // lists are distinguished only in the form. A typed terminology URL is
+  // trimmed, since stray whitespace would name a different canonical.
+  const dependencies = [...input.tables, ...input.terminology];
+  if (dependencies.length > 0) {
+    library.relatedArtifact = dependencies.map((dependency) => ({
       type: "depends-on" as const,
-      label: table.label,
-      // The source is referenced by its canonical URL, matched against the
-      // referenced resource's `url` on the server.
-      resource: table.referenceUrl,
+      label: dependency.label,
+      resource: dependency.referenceUrl.trim(),
     }));
   }
 
@@ -163,7 +169,9 @@ export function extractRequestSql(request: SqlQueryRequest): string {
  * execute a query.
  *
  * The server requires a Library with non-empty SQL and at least one
- * related artefact; the form blocks the Execute button otherwise.
+ * related artefact, which may be a view or a value set or concept map; the
+ * form blocks the Execute button otherwise. Every row must name both a
+ * label and a canonical URL.
  *
  * @param input - The authored state to validate.
  * @returns Whether Execute should be enabled.
@@ -172,13 +180,13 @@ export function canExecuteInlineForm(input: BuildInlineLibraryInput): boolean {
   if (input.sql.trim().length === 0) {
     return false;
   }
-  if (input.tables.length === 0) {
+  const dependencies = [...input.tables, ...input.terminology];
+  if (dependencies.length === 0) {
     return false;
   }
-  if (input.tables.some((t) => t.label.trim() === "" || !t.referenceUrl)) {
-    return false;
-  }
-  return true;
+  return dependencies.every(
+    (d) => d.label.trim() !== "" && d.referenceUrl.trim() !== "",
+  );
 }
 
 /**
