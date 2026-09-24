@@ -23,9 +23,9 @@ import java.util.Map;
 import lombok.Value;
 
 /**
- * The validated, normalised inputs to a single {@code $sql-run} invocation. Produced by {@link
- * SqlQueryRequestParser} from the raw HTTP-level parameters and consumed by the downstream resolver
- * / executor / streamer pipeline.
+ * The validated, normalised inputs to the evaluation of one SQL subject of {@code $sql-run} or
+ * {@code $sql-export}. Produced by {@link SqlQueryRequestParser} and consumed by the dependency
+ * resolver and the executor.
  */
 @Value
 public class SqlQueryRequest {
