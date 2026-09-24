@@ -53,6 +53,7 @@ jobs:
           - utilities
           - fhir-schema
           - encoders
+          - io
           - terminology
           - fhirpath
           - library-api

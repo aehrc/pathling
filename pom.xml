@@ -116,6 +116,7 @@
     <module>utilities</module>
     <module>fhir-schema</module>
     <module>encoders</module>
+    <module>io</module>
     <module>terminology</module>
     <module>fhirpath</module>
     <module>library-api</module>
@@ -182,6 +183,23 @@
       <dependency>
         <groupId>au.csiro.pathling</groupId>
         <artifactId>fhir-schema</artifactId>
+        <version>${project.version}</version>
+        <type>test-jar</type>
+      </dependency>
+      <dependency>
+        <groupId>au.csiro.pathling</groupId>
+        <artifactId>io</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>au.csiro.pathling</groupId>
+        <artifactId>io</artifactId>
+        <version>${project.version}</version>
+        <classifier>sources</classifier>
+      </dependency>
+      <dependency>
+        <groupId>au.csiro.pathling</groupId>
+        <artifactId>io</artifactId>
         <version>${project.version}</version>
         <type>test-jar</type>
       </dependency>

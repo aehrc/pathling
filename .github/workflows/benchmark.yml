@@ -83,7 +83,7 @@ jobs:
             -Dpackaging=pom
 
           # Install modules in dependency order.
-          for MODULE in utilities fhir-schema encoders terminology fhirpath library-api library-runtime; do
+          for MODULE in utilities fhir-schema encoders io terminology fhirpath library-api library-runtime; do
             # Install main JAR.
             mvn install:install-file \
               -Dfile=jars/$MODULE/target/$MODULE-$VERSION.jar \
