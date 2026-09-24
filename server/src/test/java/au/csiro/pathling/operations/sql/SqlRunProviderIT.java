@@ -603,15 +603,16 @@ class SqlRunProviderIT {
                     inlineViewRequest(
                         "csv", null, patient("good", "Smith"), patient("bad", "A", "B"))))
             .build();
-    final HttpClient client = HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build();
-
-    final HttpResponse<InputStream> response = client.send(request, BodyHandlers.ofInputStream());
-
-    // The status was committed with the first row.
-    assertThat(response.statusCode()).isEqualTo(200);
     final ByteArrayOutputStream received = new ByteArrayOutputStream();
-    try (final InputStream body = response.body()) {
-      assertThatThrownBy(() -> body.transferTo(received)).isInstanceOf(IOException.class);
+    try (final HttpClient client =
+        HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build()) {
+      final HttpResponse<InputStream> response = client.send(request, BodyHandlers.ofInputStream());
+
+      // The status was committed with the first row.
+      assertThat(response.statusCode()).isEqualTo(200);
+      try (final InputStream body = response.body()) {
+        assertThatThrownBy(() -> body.transferTo(received)).isInstanceOf(IOException.class);
+      }
     }
     // The rows sent before the failure arrived, but the transfer did not complete.
     assertThat(received.toString(StandardCharsets.UTF_8)).contains("good,Smith");
