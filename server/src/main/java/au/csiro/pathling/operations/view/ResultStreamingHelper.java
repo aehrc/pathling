@@ -62,6 +62,17 @@ import scala.jdk.javaapi.CollectionConverters;
 /**
  * Shared utility methods for streaming query results in different formats (NDJSON, CSV, JSON). Used
  * by both {@link ViewExecutionHelper} and the {@code $sql-run} operation.
+ *
+ * <p>A Spark result is evaluated when its rows are requested, so a result that fails during
+ * evaluation throws from the iterator. None of these methods writes to the output stream before the
+ * iterator has been asked for its first row, so that a failure there leaves the response
+ * uncommitted and the caller free to report it with an error status. Callers must not write to the
+ * stream beforehand either. A failure after rows have been written cannot change the committed
+ * status. It propagates to the servlet container, which closes the connection without completing
+ * the response, so that an HTTP/1.1 client sees an incomplete transfer rather than a truncated
+ * result it could take for a complete one.
+ *
+ * @author John Grimes
  */
 public class ResultStreamingHelper {
 
@@ -74,28 +85,6 @@ public class ResultStreamingHelper {
    */
   public ResultStreamingHelper(@Nonnull final Gson gson) {
     this.gson = gson;
-  }
-
-  /**
-   * Writes the CSV header row.
-   *
-   * @param outputStream the output stream to write to
-   * @param columnNames the column names for the header
-   * @throws IOException if writing fails
-   */
-  public void writeCsvHeader(
-      @Nonnull final OutputStream outputStream, @Nonnull final List<String> columnNames)
-      throws IOException {
-    final OutputStreamWriter writer = new OutputStreamWriter(outputStream, StandardCharsets.UTF_8);
-    final CSVPrinter printer =
-        new CSVPrinter(
-            writer,
-            CSVFormat.DEFAULT
-                .builder()
-                .setHeader(columnNames.toArray(String[]::new))
-                .setSkipHeaderRecord(false)
-                .build());
-    printer.flush();
   }
 
   /**
@@ -121,26 +110,40 @@ public class ResultStreamingHelper {
   }
 
   /**
-   * Streams results as CSV. The header is written separately for TTFB optimisation.
+   * Streams results as CSV, preceded by a header row naming the columns of the schema when one is
+   * requested.
    *
    * @param outputStream the output stream to write to
    * @param iterator the row iterator
    * @param schema the result schema
+   * @param includeHeader whether to write a header row, which is written even when there are no
+   *     rows
    * @throws IOException if writing fails
    */
   public void streamCsv(
       @Nonnull final OutputStream outputStream,
       @Nonnull final Iterator<Row> iterator,
-      @Nonnull final StructType schema)
+      @Nonnull final StructType schema,
+      final boolean includeHeader)
       throws IOException {
-    final OutputStreamWriter writer = new OutputStreamWriter(outputStream, StandardCharsets.UTF_8);
-    final CSVPrinter printer = new CSVPrinter(writer, CSVFormat.DEFAULT);
+    // Requesting the first row evaluates the result up to that row, and must precede the header.
+    boolean hasNext = iterator.hasNext();
 
-    while (iterator.hasNext()) {
+    final CSVFormat format =
+        includeHeader
+            ? CSVFormat.DEFAULT.builder().setHeader(schema.fieldNames()).build()
+            : CSVFormat.DEFAULT;
+    final OutputStreamWriter writer = new OutputStreamWriter(outputStream, StandardCharsets.UTF_8);
+    // The printer writes the header, if any, when it is constructed.
+    final CSVPrinter printer = new CSVPrinter(writer, format);
+
+    while (hasNext) {
       final Row row = iterator.next();
       printer.printRecord(rowToList(row, schema));
       printer.flush();
+      hasNext = iterator.hasNext();
     }
+    printer.flush();
   }
 
   /**

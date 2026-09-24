@@ -35,7 +35,6 @@ import au.csiro.pathling.operations.sqlquery.ResolvedSqlView;
 import au.csiro.pathling.operations.sqlquery.ResolvedValueSet;
 import au.csiro.pathling.operations.sqlquery.ResolvedViewDefinition;
 import au.csiro.pathling.operations.sqlquery.SqlLibraryParser;
-import au.csiro.pathling.operations.sqlquery.SqlQueryOutputFormat;
 import au.csiro.pathling.operations.sqlquery.SqlQueryRequest;
 import au.csiro.pathling.terminology.conceptmap.ConceptMapContent;
 import au.csiro.pathling.terminology.conceptmap.ConceptMapping;
@@ -395,8 +394,7 @@ class SqlExportSupportTest {
     final ParsedSqlQuery parsed =
         new ParsedSqlQuery(SUBJECT_SQL, List.of(), List.of(), SqlLibraryParser.SQL_QUERY_TYPE_CODE);
     final PreparedSqlQuery prepared =
-        new PreparedSqlQuery(
-            new SqlQueryRequest(parsed, SqlQueryOutputFormat.NDJSON, false, null, Map.of()), graph);
+        new PreparedSqlQuery(new SqlQueryRequest(parsed, null, Map.of()), graph);
     return new SqlExportRequest(
         "http://localhost/fhir/$sql-export",
         "http://localhost/fhir",

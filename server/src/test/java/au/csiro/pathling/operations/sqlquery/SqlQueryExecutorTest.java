@@ -444,8 +444,6 @@ class SqlQueryExecutorTest {
   private static SqlQueryRequest request(@Nonnull final String sql, @Nullable final Integer limit) {
     return new SqlQueryRequest(
         new ParsedSqlQuery(sql, List.of(), List.of(), SqlLibraryParser.SQL_QUERY_TYPE_CODE),
-        SqlQueryOutputFormat.NDJSON,
-        /* includeHeader= */ true,
         limit,
         Map.of());
   }
@@ -460,8 +458,6 @@ class SqlQueryExecutorTest {
             List.of(new ViewArtifactReference("t", resource)),
             List.of(),
             SqlLibraryParser.SQL_QUERY_TYPE_CODE),
-        SqlQueryOutputFormat.NDJSON,
-        /* includeHeader= */ true,
         limit,
         Map.of());
   }

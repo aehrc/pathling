@@ -510,6 +510,19 @@ in the submitted text, and a qualified suggestion can name one of those
 internal views. Only table references are replaced, so a column, alias or
 function that happens to share a label's name is left as submitted.
 
+A fault that only appears when rows are evaluated - for example a column
+declared as singular that yields more than one value for some resource - is
+reported the same way as it is by `$sql-export`: `400` for a failure raised by
+the query itself, `500` for anything else. The result is streamed, so this is
+only possible while no rows have been sent. Rows are evaluated in batches, and
+the first batch is evaluated before anything is written; with `_limit`,
+`_format=json` or `_format=parquet`, every row that could be returned is
+evaluated first. Without `_limit`, a failure in a later batch can arrive after
+the `200` status and the earlier rows. The server then closes the connection
+without completing the response, so an HTTP/1.1 client reports an incomplete
+transfer rather than a result that is silently missing rows. Use `$sql-export`
+to have every failure reported as a status.
+
 ## Conformance
 
 The operation declares the spec canonical
