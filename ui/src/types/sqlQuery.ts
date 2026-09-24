@@ -57,7 +57,7 @@ export interface SourceOption {
   name: string;
   /**
    * Canonical URL the dependency reference resolves against. A source with no
-   * URL cannot be referenced and is shown disabled in the picker.
+   * URL cannot be referenced and is not offered in the picker.
    */
   url?: string;
 }

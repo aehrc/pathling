@@ -20,6 +20,7 @@ package au.csiro.pathling.operations.sqlquery;
 import au.csiro.pathling.config.ExternalTableConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.operations.sql.SqlOperationError;
+import au.csiro.pathling.operations.sql.SubjectResolver;
 import au.csiro.pathling.operations.sql.SuppliedArtefact;
 import au.csiro.pathling.operations.sql.SuppliedArtefacts;
 import au.csiro.pathling.terminology.ImplicitTerminologyUrls;
@@ -443,7 +444,8 @@ public class SqlDependencyResolver {
    */
   @Nonnull
   static ResourceNotFoundException notFound(@Nonnull final ViewArtifactReference reference) {
-    return new ResourceNotFoundException(dependencyFailure(reference, NOT_FOUND_DETAIL));
+    return SqlOperationError.notFound(
+        SubjectResolver.SUBJECT_EXPRESSION, dependencyFailure(reference, NOT_FOUND_DETAIL));
   }
 
   /** Joins two or more matched kinds into prose: "both X and Y" for two, "X, Y and Z" for three. */

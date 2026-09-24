@@ -59,6 +59,7 @@ import org.hl7.fhir.r4.model.Library;
 import org.hl7.fhir.r4.model.OperationOutcome;
 import org.hl7.fhir.r4.model.OperationOutcome.IssueType;
 import org.hl7.fhir.r4.model.OperationOutcome.OperationOutcomeIssueComponent;
+import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.ValueSet;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -568,6 +569,8 @@ class SqlDependencyResolverTest {
   void reportsNotFoundWhenNothingMatches() {
     final String missingUrl = SqlLibraryFixtures.viewDefinitionUrl("missing");
 
+    // The outcome names the subject as the parameter at fault, as every other SQL operation 4xx
+    // does, rather than leaving the client with a bare message.
     assertThatThrownBy(
             () ->
                 resolver.resolve(sqlQuery("SELECT 1", "x", missingUrl), SuppliedArtefacts.empty()))
@@ -577,7 +580,20 @@ class SqlDependencyResolverTest {
             "Failed to resolve the dependency for label 'x' with reference '"
                 + missingUrl
                 + "': no ViewDefinition, SQLView, external table, concept map or value set matches"
-                + " that canonical URL");
+                + " that canonical URL")
+        .satisfies(
+            e -> {
+              final OperationOutcome outcome =
+                  (OperationOutcome) ((ResourceNotFoundException) e).getOperationOutcome();
+              assertThat(outcome).isNotNull();
+              assertThat(outcome.getIssue()).hasSize(1);
+              final OperationOutcomeIssueComponent issue = outcome.getIssueFirstRep();
+              assertThat(issue.getCode()).isEqualTo(IssueType.NOTFOUND);
+              assertThat(issue.getExpression())
+                  .extracting(StringType::getValue)
+                  .containsExactly(SubjectResolver.SUBJECT_EXPRESSION);
+              assertThat(issue.getDiagnostics()).contains(missingUrl);
+            });
     verify(valueSetResolver)
         .resolveCanonical(
             argThat(ref -> ref != null && missingUrl.equals(ref.getCanonicalUrl())), any());

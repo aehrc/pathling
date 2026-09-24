@@ -19,8 +19,8 @@
  * Tests for the SqlQueryInlineTab component.
  *
  * Verifies the "Views" editor, the grouped source selector binding each source
- * by its canonical URL, the row update on selection, the disabled state for
- * URL-less sources, and the "source not found" surfacing of an unmatched stored
+ * by its canonical URL, the row update on selection, the hiding of URL-less
+ * sources, and the "source not found" surfacing of an unmatched stored
  * reference. Also verifies the "Terminology" editor, whose rows bind a label to
  * a typed value set or concept map canonical URL, and that a parameter row
  * describes its parameter completely - name, type, value and remove - with no
@@ -179,19 +179,44 @@ describe("SqlQueryInlineTab", () => {
     ]);
   });
 
-  // A source with no canonical URL is rendered disabled with an explanation and
-  // cannot be selected, since it could never satisfy a canonical reference.
-  it("disables a URL-less source with an explanation and prevents selecting it", async () => {
-    const { user, onTablesChange } = renderTab({ tables: [EMPTY_ROW] });
+  // A source with no canonical URL could never satisfy a canonical reference,
+  // so it is not listed at all.
+  it("hides a URL-less source from the selector", async () => {
+    const { user } = renderTab({ tables: [EMPTY_ROW] });
 
     await user.click(screen.getByRole("combobox", { name: /source for view 1/i }));
 
-    const draftOption = screen.getByRole("option", { name: /Draft lab observations/i });
-    expect(draftOption).toHaveAttribute("aria-disabled", "true");
-    expect(screen.getByText(/No canonical URL/i)).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Patient Demographics" })).toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: /Draft lab observations/i })).toBeNull();
+    expect(screen.queryByText(/Draft lab observations/i)).toBeNull();
+    expect(screen.queryByText(/No canonical URL/i)).toBeNull();
+  });
 
-    await user.click(draftOption);
-    expect(onTablesChange).not.toHaveBeenCalled();
+  // A group whose sources all lack a URL is omitted, heading included.
+  it("omits a group heading when none of its sources has a URL", async () => {
+    const { user } = renderTab({
+      tables: [EMPTY_ROW],
+      viewDefinitions: [{ id: "draft-obs", name: "Draft lab observations", url: undefined }],
+    });
+
+    await user.click(screen.getByRole("combobox", { name: /source for view 1/i }));
+
+    expect(screen.queryByText("View definitions")).toBeNull();
+    expect(screen.getByText("SQL views")).toBeInTheDocument();
+  });
+
+  // Sources that all lack a URL leave nothing to reference, so the selector
+  // falls back to its empty state.
+  it("disables the selector when no source has a URL", () => {
+    renderTab({
+      tables: [EMPTY_ROW],
+      viewDefinitions: [{ id: "draft-obs", name: "Draft lab observations", url: undefined }],
+      sqlViews: [{ id: "draft-sql", name: "Draft SQL view", url: undefined }],
+    });
+
+    const combobox = screen.getByRole("combobox", { name: /source for view 1/i });
+    expect(combobox).toBeDisabled();
+    expect(combobox).toHaveTextContent(/nothing to reference/i);
   });
 
   // When editing a stored query, a saved URL that matches no known source is
