@@ -16,8 +16,8 @@
  */
 
 /**
- * "Provide SQL" tab body for the SQL query form: SQL editor, views editor
- * and parameters editor.
+ * "Provide SQL" tab body for the SQL query form: SQL editor, views editor,
+ * terminology editor and parameters editor.
  *
  * @author John Grimes
  */
@@ -102,6 +102,10 @@ interface SqlQueryInlineTabProps {
   tables: SqlQueryRelatedArtifact[];
   /** Callback fired when the view rows change. */
   onTablesChange: (tables: SqlQueryRelatedArtifact[]) => void;
+  /** Configured terminology rows (related artefacts). */
+  terminology: SqlQueryRelatedArtifact[];
+  /** Callback fired when the terminology rows change. */
+  onTerminologyChange: (terminology: SqlQueryRelatedArtifact[]) => void;
   /** Configured declared parameters. */
   parameters: SqlQueryParameterDeclaration[];
   /** Callback fired when the parameters list changes. */
@@ -126,6 +130,8 @@ interface SqlQueryInlineTabProps {
  * @param props.onSqlChange - Callback fired when the SQL changes.
  * @param props.tables - Configured view rows (related artefacts).
  * @param props.onTablesChange - Callback fired when the view rows change.
+ * @param props.terminology - Configured terminology rows (related artefacts).
+ * @param props.onTerminologyChange - Callback fired when the terminology rows change.
  * @param props.parameters - Configured declared parameters.
  * @param props.onParametersChange - Callback fired when the parameters list changes.
  * @param props.duplicateNames - Parameter names declared by more than one row.
@@ -141,6 +147,8 @@ export function SqlQueryInlineTab({
   onSqlChange,
   tables,
   onTablesChange,
+  terminology,
+  onTerminologyChange,
   parameters,
   onParametersChange,
   duplicateNames,
@@ -170,6 +178,21 @@ export function SqlQueryInlineTab({
 
   const handleUpdateTable = (rowId: string, update: Partial<SqlQueryRelatedArtifact>) => {
     onTablesChange(tables.map((t) => (t.rowId === rowId ? { ...t, ...update } : t)));
+  };
+
+  const handleAddTerminology = () => {
+    onTerminologyChange([
+      ...terminology,
+      { rowId: crypto.randomUUID(), label: "", referenceUrl: "" },
+    ]);
+  };
+
+  const handleRemoveTerminology = (rowId: string) => {
+    onTerminologyChange(terminology.filter((t) => t.rowId !== rowId));
+  };
+
+  const handleUpdateTerminology = (rowId: string, update: Partial<SqlQueryRelatedArtifact>) => {
+    onTerminologyChange(terminology.map((t) => (t.rowId === rowId ? { ...t, ...update } : t)));
   };
 
   const handleAddParameter = () => {
@@ -226,10 +249,13 @@ export function SqlQueryInlineTab({
       </Box>
 
       <Box>
-        <FieldLabel mb="1">Views</FieldLabel>
+        <FieldLabel mb="1" optional>
+          Views
+        </FieldLabel>
         {tables.length === 0 && (
           <FieldGuidance>
-            Add at least one view; each maps a label to a stored ViewDefinition or SQLView.
+            Each view maps a label to a stored ViewDefinition or SQLView. The query needs at least
+            one view or terminology dependency.
           </FieldGuidance>
         )}
         <Flex direction="column" gap="2" mt="1">
@@ -296,6 +322,67 @@ export function SqlQueryInlineTab({
           <Button size="2" variant="soft" onClick={handleAddTable} disabled={disabled}>
             <PlusIcon />
             Add view
+          </Button>
+        </Box>
+      </Box>
+
+      <Box>
+        <FieldLabel mb="1" optional>
+          Terminology
+        </FieldLabel>
+        <FieldGuidance>
+          Each row maps a label to the canonical URL of a value set or concept map.
+        </FieldGuidance>
+        <Flex direction="column" gap="2" mt="1">
+          {terminology.map((row, index) => (
+            <Flex key={row.rowId} gap="2" align="end" wrap="wrap">
+              <Box style={{ flex: 1, minWidth: "10rem" }}>
+                {index === 0 && (
+                  <Text size="1" color="gray" as="div" mb="1">
+                    Label
+                  </Text>
+                )}
+                <TextField.Root
+                  value={row.label}
+                  placeholder="e.g. cvd_codes"
+                  onChange={(e) => handleUpdateTerminology(row.rowId, { label: e.target.value })}
+                  disabled={disabled}
+                  aria-label={`Label for terminology ${index + 1}`}
+                />
+              </Box>
+              <Box style={{ flex: 2, minWidth: "16rem" }}>
+                {index === 0 && (
+                  <Text size="1" color="gray" as="div" mb="1">
+                    Canonical URL
+                  </Text>
+                )}
+                <TextField.Root
+                  value={row.referenceUrl}
+                  placeholder="e.g. http://example.org/ValueSet/cvd"
+                  onChange={(e) =>
+                    handleUpdateTerminology(row.rowId, { referenceUrl: e.target.value })
+                  }
+                  disabled={disabled}
+                  aria-label={`Canonical URL for terminology ${index + 1}`}
+                />
+              </Box>
+              <IconButton
+                size="2"
+                variant="soft"
+                color="gray"
+                aria-label={`Remove terminology ${index + 1}`}
+                onClick={() => handleRemoveTerminology(row.rowId)}
+                disabled={disabled}
+              >
+                <TrashIcon />
+              </IconButton>
+            </Flex>
+          ))}
+        </Flex>
+        <Box mt="2">
+          <Button size="2" variant="soft" onClick={handleAddTerminology} disabled={disabled}>
+            <PlusIcon />
+            Add value set or concept map
           </Button>
         </Box>
       </Box>

@@ -21,6 +21,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.terminology.conceptmap.ConceptMapContent;
+import au.csiro.pathling.terminology.conceptmap.ConceptMapRelationship;
+import au.csiro.pathling.terminology.conceptmap.ConceptMapping;
+import au.csiro.pathling.terminology.expand.ValueSetExpansion;
+import au.csiro.pathling.terminology.expand.ValueSetMember;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
@@ -51,8 +56,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 /**
  * Tests for {@link ViewRegistrationService}, with particular attention to the request-id
  * namespacing that prevents concurrent {@code $sql-run} requests from clobbering one another's
- * temporary views in Spark's session-global catalog, and to the reading of configured external
- * tables.
+ * temporary views in Spark's session-global catalog, to the reading of configured external tables,
+ * and to the fixed five-column relation built for a value set.
  *
  * @author John Grimes
  */
@@ -270,6 +275,183 @@ class ViewRegistrationServiceTest {
                 .map(row -> row.getString(0) + "/" + row.getString(1))
                 .toList())
         .containsExactlyInAnyOrder("Smith/A", "Williams/B");
+  }
+
+  // ---------------------------------------------------------------------------
+  // Value set materialisation (spec 061 US1).
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void buildValueSetYieldsTheFiveColumnsInOrderWithTheirTypesAndNullability() {
+    final Dataset<Row> result = service.buildValueSet(valueSet(member("22298006", null, null)));
+
+    final StructField[] fields = result.schema().fields();
+    assertThat(fields)
+        .extracting(StructField::name)
+        .containsExactly("system", "version", "code", "display", "inactive");
+    assertThat(fields)
+        .extracting(StructField::dataType)
+        .containsExactly(
+            DataTypes.StringType,
+            DataTypes.StringType,
+            DataTypes.StringType,
+            DataTypes.StringType,
+            DataTypes.BooleanType);
+    assertThat(fields)
+        .extracting(StructField::nullable)
+        .containsExactly(false, true, false, true, true);
+  }
+
+  @Test
+  void buildValueSetYieldsOneRowPerMemberPreservingNulls() {
+    final Dataset<Row> result =
+        service.buildValueSet(
+            valueSet(
+                member("22298006", "Myocardial infarction", null),
+                member("73211009", null, true),
+                member("38341003", "Hypertension", false)));
+
+    final List<Row> rows = result.collectAsList();
+    assertThat(rows).hasSize(3);
+    assertThat(rows.get(0).getString(0)).isEqualTo("http://snomed.info/sct");
+    assertThat(rows.get(0).getString(1)).isEqualTo("20260131");
+    assertThat(rows.get(0).getString(2)).isEqualTo("22298006");
+    assertThat(rows.get(0).getString(3)).isEqualTo("Myocardial infarction");
+    assertThat(rows.get(0).isNullAt(4)).isTrue();
+    assertThat(rows.get(1).isNullAt(3)).isTrue();
+    assertThat(rows.get(1).getBoolean(4)).isTrue();
+    assertThat(rows.get(2).getBoolean(4)).isFalse();
+  }
+
+  @Test
+  void buildValueSetYieldsAnEmptyDatasetWithTheSchemaForAnEmptyMembership() {
+    final Dataset<Row> result = service.buildValueSet(valueSet());
+
+    assertThat(result.schema().fieldNames())
+        .containsExactly("system", "version", "code", "display", "inactive");
+    assertThat(result.collectAsList()).isEmpty();
+  }
+
+  @Nonnull
+  private static ResolvedValueSet valueSet(@Nonnull final ValueSetMember... members) {
+    return new ResolvedValueSet(
+        "http://example.org/ValueSet/cvd|2026",
+        new ValueSetExpansion(
+            "http://example.org/ValueSet/cvd",
+            "2026",
+            null,
+            null,
+            List.of("http://snomed.info/sct|20260131"),
+            Arrays.asList(members)));
+  }
+
+  @Nonnull
+  private static ValueSetMember member(
+      @Nonnull final String code, final String display, final Boolean inactive) {
+    return new ValueSetMember("http://snomed.info/sct", "20260131", code, display, inactive);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Concept map materialisation (spec 062 US1).
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void buildConceptMapYieldsTheNineStringColumnsInOrderWithTheirNullability() {
+    final Dataset<Row> result = service.buildConceptMap(conceptMap(mapping("22298006", "I21")));
+
+    final StructField[] fields = result.schema().fields();
+    assertThat(fields)
+        .extracting(StructField::name)
+        .containsExactly(
+            "source_system",
+            "source_version",
+            "source_code",
+            "source_display",
+            "target_system",
+            "target_version",
+            "target_code",
+            "target_display",
+            "relationship");
+    assertThat(fields).extracting(StructField::dataType).containsOnly(DataTypes.StringType);
+    assertThat(fields)
+        .extracting(StructField::nullable)
+        .containsExactly(false, true, false, true, true, true, true, true, true);
+  }
+
+  @Test
+  void buildConceptMapYieldsOneRowPerMappingPreservingNulls() {
+    final ConceptMapping noMapping =
+        new ConceptMapping(
+            "http://snomed.info/sct",
+            null,
+            "102499006",
+            "Fit and well",
+            "http://hl7.org/fhir/sid/icd-10",
+            "2019",
+            null,
+            null,
+            null);
+    final Dataset<Row> result =
+        service.buildConceptMap(conceptMap(mapping("22298006", "I21"), noMapping));
+
+    final List<Row> rows = result.collectAsList();
+    assertThat(rows).hasSize(2);
+    assertThat(rows.get(0).getString(0)).isEqualTo("http://snomed.info/sct");
+    assertThat(rows.get(0).getString(1)).isEqualTo("20260131");
+    assertThat(rows.get(0).getString(2)).isEqualTo("22298006");
+    assertThat(rows.get(0).getString(3)).isEqualTo("Source 22298006");
+    assertThat(rows.get(0).getString(4)).isEqualTo("http://hl7.org/fhir/sid/icd-10");
+    assertThat(rows.get(0).getString(5)).isEqualTo("2019");
+    assertThat(rows.get(0).getString(6)).isEqualTo("I21");
+    assertThat(rows.get(0).getString(7)).isEqualTo("Target I21");
+    assertThat(rows.get(0).getString(8)).isEqualTo(ConceptMapRelationship.EQUIVALENT);
+    assertThat(rows.get(1).isNullAt(1)).isTrue();
+    assertThat(rows.get(1).getString(2)).isEqualTo("102499006");
+    assertThat(rows.get(1).getString(5)).isEqualTo("2019");
+    assertThat(rows.get(1).isNullAt(6)).isTrue();
+    assertThat(rows.get(1).isNullAt(7)).isTrue();
+    assertThat(rows.get(1).isNullAt(8)).isTrue();
+  }
+
+  @Test
+  void buildConceptMapYieldsAnEmptyDatasetWithTheSchemaForAnEmptyContent() {
+    final Dataset<Row> result = service.buildConceptMap(conceptMap());
+
+    assertThat(result.schema().fieldNames())
+        .containsExactly(
+            "source_system",
+            "source_version",
+            "source_code",
+            "source_display",
+            "target_system",
+            "target_version",
+            "target_code",
+            "target_display",
+            "relationship");
+    assertThat(result.collectAsList()).isEmpty();
+  }
+
+  @Nonnull
+  private static ResolvedConceptMap conceptMap(@Nonnull final ConceptMapping... mappings) {
+    return new ResolvedConceptMap(
+        "http://example.org/ConceptMap/sct-to-icd10|2026",
+        new ConceptMapContent(
+            "http://example.org/ConceptMap/sct-to-icd10", "2026", Arrays.asList(mappings)));
+  }
+
+  @Nonnull
+  private static ConceptMapping mapping(
+      @Nonnull final String sourceCode, @Nonnull final String targetCode) {
+    return new ConceptMapping(
+        "http://snomed.info/sct",
+        "20260131",
+        sourceCode,
+        "Source " + sourceCode,
+        "http://hl7.org/fhir/sid/icd-10",
+        "2019",
+        targetCode,
+        "Target " + targetCode,
+        ConceptMapRelationship.EQUIVALENT);
   }
 
   // ---------------------------------------------------------------------------

@@ -105,6 +105,7 @@ export function SqlQueryForm({
   const [title, setTitle] = useState<string>("");
   const [sql, setSql] = useState<string>("");
   const [tables, setTables] = useState<SqlQueryRelatedArtifact[]>([]);
+  const [terminology, setTerminology] = useState<SqlQueryRelatedArtifact[]>([]);
   const [parameters, setParameters] = useState<SqlQueryParameterDeclaration[]>([]);
 
   // Runtime bindings.
@@ -137,7 +138,7 @@ export function SqlQueryForm({
     setBindings((prev) => ({ ...prev, [name]: value }));
   };
 
-  const inlineInput = { title, sql, tables, parameters };
+  const inlineInput = { title, sql, tables, terminology, parameters };
 
   const baseRequestOptions = () => {
     // The inline tab's rows carry their own values, so they are the source of
@@ -272,6 +273,8 @@ export function SqlQueryForm({
                 onSqlChange={setSql}
                 tables={tables}
                 onTablesChange={setTables}
+                terminology={terminology}
+                onTerminologyChange={setTerminology}
                 parameters={parameters}
                 onParametersChange={setParameters}
                 duplicateNames={duplicateParameterNames}

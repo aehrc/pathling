@@ -37,11 +37,12 @@ import org.springframework.stereotype.Component;
  * lifecycle. The only piece of the pipeline that touches Spark.
  *
  * <p>Each node of the graph is materialised in topological order: a {@code ViewDefinition} leaf is
- * executed as a view, an external table leaf is read from its configured path, and a {@code
- * SQLView} node's SQL is rewritten against the temp views of its already-materialised children,
- * validated, and run. The top-level SQL is then rewritten against its own direct dependencies' temp
- * views and run. Every node's SQL is validated statically before execution and against its analysed
- * plan during execution.
+ * executed as a view, an external table leaf is read from its configured path, a value set leaf is
+ * built as a local relation of its members, a concept map leaf is built as a local relation of its
+ * mappings, and a {@code SQLView} node's SQL is rewritten against the temp views of its
+ * already-materialised children, validated, and run. The top-level SQL is then rewritten against
+ * its own direct dependencies' temp views and run. Every node's SQL is validated statically before
+ * execution and against its analysed plan during execution.
  *
  * @author John Grimes
  */
@@ -146,9 +147,10 @@ public class SqlQueryExecutor {
   /**
    * Materialises a single graph node as a request-scoped temp view, recording its name by canonical
    * key. A {@code ViewDefinition} leaf is executed against the data source, an external table leaf
-   * is read from its configured path, and a {@code SQLView} node's analysed plan is validated
+   * is read from its configured path, a value set leaf is built from its membership, a concept map
+   * leaf is built from its mappings, and a {@code SQLView} node's analysed plan is validated
    * against its own children's temp views before registration, so it cannot reach an unauthorised
-   * data source. Neither leaf kind needs that check: a leaf's relation is exposed only through the
+   * data source. No leaf kind needs that check: a leaf's relation is exposed only through the
    * trusted alias registered here, which is what the parent's own analysed-plan check accepts.
    */
   private void materialiseNode(
@@ -161,6 +163,10 @@ public class SqlQueryExecutor {
       dataset = viewRegistrationService.buildViewDefinition(viewDefinition.getView(), dataSource);
     } else if (node instanceof final ResolvedExternalTable externalTable) {
       dataset = viewRegistrationService.buildExternalTable(externalTable);
+    } else if (node instanceof final ResolvedValueSet valueSet) {
+      dataset = viewRegistrationService.buildValueSet(valueSet);
+    } else if (node instanceof final ResolvedConceptMap conceptMap) {
+      dataset = viewRegistrationService.buildConceptMap(conceptMap);
     } else if (node instanceof final ResolvedSqlView sqlView) {
       dataset = viewRegistrationService.buildSqlView(sqlView, registeredByKey);
       final Set<String> childViewNames =

@@ -21,9 +21,11 @@
  * Verifies the "Views" editor, the grouped source selector binding each source
  * by its canonical URL, the row update on selection, the hiding of URL-less
  * sources, and the "source not found" surfacing of an unmatched stored
- * reference. Also verifies that a parameter row describes its parameter
- * completely - name, type, value and remove - with no default-value field, and
- * that invalid values and duplicate names are marked on the row.
+ * reference. Also verifies the "Terminology" editor, whose rows bind a label to
+ * a typed value set or concept map canonical URL, and that a parameter row
+ * describes its parameter completely - name, type, value and remove - with no
+ * default-value field, and that invalid values and duplicate names are marked
+ * on the row.
  *
  * @author John Grimes
  */
@@ -57,6 +59,7 @@ const SQL_VIEWS: SourceOption[] = [
  *
  * @param overrides - Props to override on the defaults.
  * @param overrides.tables - The view rows to render.
+ * @param overrides.terminology - The terminology rows to render.
  * @param overrides.parameters - The parameter rows to render.
  * @param overrides.duplicateNames - Parameter names declared by more than one row.
  * @param overrides.viewDefinitions - Available ViewDefinition options.
@@ -66,6 +69,7 @@ const SQL_VIEWS: SourceOption[] = [
 function renderTab(
   overrides: {
     tables?: SqlQueryRelatedArtifact[];
+    terminology?: SqlQueryRelatedArtifact[];
     parameters?: SqlQueryParameterDeclaration[];
     duplicateNames?: ReadonlySet<string>;
     viewDefinitions?: SourceOption[];
@@ -74,6 +78,7 @@ function renderTab(
 ) {
   const user = userEvent.setup();
   const onTablesChange = vi.fn();
+  const onTerminologyChange = vi.fn();
   const onParametersChange = vi.fn();
   render(
     <SqlQueryInlineTab
@@ -83,6 +88,8 @@ function renderTab(
       onSqlChange={vi.fn()}
       tables={overrides.tables ?? []}
       onTablesChange={onTablesChange}
+      terminology={overrides.terminology ?? []}
+      onTerminologyChange={onTerminologyChange}
       parameters={overrides.parameters ?? []}
       onParametersChange={onParametersChange}
       duplicateNames={overrides.duplicateNames ?? new Set()}
@@ -90,7 +97,7 @@ function renderTab(
       sqlViews={overrides.sqlViews ?? SQL_VIEWS}
     />,
   );
-  return { user, onTablesChange, onParametersChange };
+  return { user, onTablesChange, onTerminologyChange, onParametersChange };
 }
 
 /**
@@ -234,6 +241,76 @@ describe("SqlQueryInlineTab", () => {
     const combobox = screen.getByRole("combobox", { name: /source for view 1/i });
     expect(combobox).toBeDisabled();
     expect(combobox).toHaveTextContent(/nothing to reference/i);
+  });
+});
+
+describe("SqlQueryInlineTab terminology rows", () => {
+  const VALUE_SET_URL = "http://example.org/ValueSet/cvd|2026";
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  // Adding a terminology row appends an empty row, leaving the view rows
+  // untouched: terminology is kept apart from the view picker because its
+  // canonical URL is typed rather than chosen from stored artefacts.
+  it("adds an empty terminology row", async () => {
+    const { user, onTerminologyChange, onTablesChange } = renderTab();
+
+    await user.click(screen.getByRole("button", { name: /add value set or concept map/i }));
+
+    expect(onTerminologyChange).toHaveBeenCalledWith([
+      expect.objectContaining({ label: "", referenceUrl: "" }),
+    ]);
+    expect(onTablesChange).not.toHaveBeenCalled();
+  });
+
+  // A row is edited through free-text label and canonical URL fields.
+  it("renders label, canonical url and remove controls for a row", () => {
+    renderTab({
+      terminology: [{ rowId: "t1", label: "cvd_codes", referenceUrl: VALUE_SET_URL }],
+    });
+
+    expect(screen.getByRole("textbox", { name: "Label for terminology 1" })).toHaveValue(
+      "cvd_codes",
+    );
+    expect(screen.getByRole("textbox", { name: "Canonical URL for terminology 1" })).toHaveValue(
+      VALUE_SET_URL,
+    );
+    expect(screen.getByRole("button", { name: "Remove terminology 1" })).toBeInTheDocument();
+  });
+
+  // Typing a URL updates only the row being edited.
+  it("reports the typed canonical url against the row", async () => {
+    const { user, onTerminologyChange } = renderTab({
+      terminology: [
+        { rowId: "t1", label: "cvd_codes", referenceUrl: "" },
+        { rowId: "t2", label: "sct_to_icd10", referenceUrl: "" },
+      ],
+    });
+
+    await user.type(screen.getByRole("textbox", { name: "Canonical URL for terminology 2" }), "h");
+
+    expect(onTerminologyChange).toHaveBeenCalledWith([
+      { rowId: "t1", label: "cvd_codes", referenceUrl: "" },
+      { rowId: "t2", label: "sct_to_icd10", referenceUrl: "h" },
+    ]);
+  });
+
+  // Removing a row drops only that row.
+  it("removes a terminology row", async () => {
+    const { user, onTerminologyChange } = renderTab({
+      terminology: [
+        { rowId: "t1", label: "cvd_codes", referenceUrl: VALUE_SET_URL },
+        { rowId: "t2", label: "sct_to_icd10", referenceUrl: "" },
+      ],
+    });
+
+    await user.click(screen.getByRole("button", { name: "Remove terminology 1" }));
+
+    expect(onTerminologyChange).toHaveBeenCalledWith([
+      { rowId: "t2", label: "sct_to_icd10", referenceUrl: "" },
+    ]);
   });
 });
 
