@@ -81,9 +81,7 @@ describe("useSqlRun", () => {
     await waitFor(() => expect(result.current.status).toBe("success"));
     expect(mockSqlRunStored).toHaveBeenCalledWith("http://localhost:8080/fhir", {
       reference: "ViewDefinition/v",
-      format: undefined,
       limit: 10,
-      header: undefined,
       patientIds: undefined,
       groupIds: undefined,
       since: undefined,
@@ -130,19 +128,18 @@ describe("useSqlRun", () => {
     );
   });
 
-  it("parses the response in the requested format", async () => {
-    mockSqlRunStored.mockResolvedValue(new Response("id,name\np1,Alice\n", { status: 200 }));
+  it("parses the NDJSON response into columns and rows", async () => {
+    mockSqlRunStored.mockResolvedValue(
+      new Response('{"id":"p1","name":"Alice"}\n', { status: 200 }),
+    );
     const { result } = renderHook(() => useSqlRun(), { wrapper });
 
     result.current.execute({
       subject: { kind: "reference", reference: "ViewDefinition/v" },
-      format: "csv",
     });
 
     await waitFor(() => expect(result.current.status).toBe("success"));
-    expect(result.current.result).toMatchObject({
-      kind: "tabular",
-      format: "csv",
+    expect(result.current.result).toEqual({
       columns: ["id", "name"],
       rows: [{ id: "p1", name: "Alice" }],
     });
