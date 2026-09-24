@@ -40,13 +40,15 @@ public class ResolvedViewDefinition implements ResolvedDependency {
   @Nonnull FhirView view;
 
   /**
-   * A ViewDefinition's rows are entirely decided by its parsed projection.
+   * A ViewDefinition's rows are entirely decided by its parsed projection, which is length-prefixed
+   * (see {@link ResolvedDependency#encode(String)}) so that the projection text cannot forge the
+   * boundary of this description, whatever delimiters it contains.
    *
    * @return the content description
    */
   @Override
   @Nonnull
   public String describeContent() {
-    return "view-definition:" + view;
+    return "view-definition:" + ResolvedDependency.encode(view.toString());
   }
 }
