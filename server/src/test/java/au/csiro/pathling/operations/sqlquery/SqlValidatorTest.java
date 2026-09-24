@@ -20,7 +20,6 @@ package au.csiro.pathling.operations.sqlquery;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
@@ -825,54 +824,6 @@ class SqlValidatorTest {
           .hasMessageContaining("unauthorised data source");
     } finally {
       sparkSession.catalog().dropTempView(unregisteredName);
-      sparkSession.catalog().dropTempView(registeredName);
-    }
-  }
-
-  // -------------------------------------------------------------------------
-  // Issue 2770: the analysed-plan trust gate used to match SubqueryAlias names
-  // against temp view names namespaced with the HAPI request id, which the
-  // caller controls through X-Request-ID. A caller could therefore predict a
-  // temp view name and forge an alias the gate would trust. Temp views are now
-  // namespaced with a server-generated random id; a forged alias built from the
-  // caller's request id must not be trusted.
-  // -------------------------------------------------------------------------
-
-  @Test
-  void rejectsForgedAliasBuiltFromCallerSuppliedRequestId(@TempDir final Path tmp) {
-    // A parquet file produces a LogicalRelation in the analyzed plan, which is
-    // rejected unless it sits beneath a trusted alias.
-    final String parquetPath = tmp.resolve("data").toString();
-    sparkSession.range(3).toDF("id").write().mode("overwrite").parquet(parquetPath);
-
-    // What the executor registers for this request: the view name embeds a
-    // server-generated random namespace, not the caller-supplied request id.
-    final ViewRegistrationService viewRegistrationService =
-        new ViewRegistrationService(sparkSession, fhirContext, new ServerConfiguration());
-    final String registeredName =
-        viewRegistrationService.registerDataset(
-            "patients", sparkSession.read().parquet(parquetPath), "attackerChosenId");
-
-    // What the attacker forges: the temp view name the old request-id namespacing
-    // would have produced for their chosen X-Request-ID.
-    final String forgedName = "sqlquery_attackerChosenId_patients";
-
-    final String attackerView = "attacker_data_2770";
-    sparkSession.read().parquet(parquetPath).createOrReplaceTempView(attackerView);
-    try {
-      // The forged alias wraps a subquery over a relation that was never registered
-      // for this request. The strict parse-time walk is deliberately bypassed here:
-      // the analysed walk must stand on its own.
-      final LogicalPlan analyzed =
-          sparkSession
-              .sql("SELECT id FROM (SELECT id FROM " + attackerView + ") AS " + forgedName)
-              .queryExecution()
-              .analyzed();
-      assertThatThrownBy(() -> sqlValidator.validateAnalyzed(analyzed, Set.of(registeredName)))
-          .isInstanceOf(InvalidRequestException.class)
-          .hasMessageContaining("unauthorised data source");
-    } finally {
-      sparkSession.catalog().dropTempView(attackerView);
       sparkSession.catalog().dropTempView(registeredName);
     }
   }

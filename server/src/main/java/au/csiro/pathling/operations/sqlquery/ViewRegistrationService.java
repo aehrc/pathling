@@ -54,7 +54,7 @@ public class ViewRegistrationService {
 
   private static final String VIEW_NAME_PREFIX = "sqlquery_";
 
-  private static final Pattern UNSAFE_REQUEST_ID_CHARS = Pattern.compile("\\W");
+  private static final Pattern UNSAFE_IDENTIFIER_CHARS = Pattern.compile("\\W");
 
   @Nonnull private final SparkSession sparkSession;
 
@@ -87,26 +87,16 @@ public class ViewRegistrationService {
    * <p>The view name is namespaced with a server-generated random id, never the caller-supplied
    * request id: HAPI takes the request id verbatim from the caller's {@code X-Request-ID} header,
    * so namespacing views with it would let a caller predict temp view names and forge a {@code
-   * SubqueryAlias} that the analysed-plan trust gate would accept (issue 2770). The request id is
-   * kept for logging and correlation only.
+   * SubqueryAlias} that the analysed-plan trust gate would accept (issue 2770).
    *
    * @param identifier the canonical key (or label) the temp view materialises
    * @param dataset the dataset to register
-   * @param requestId the HAPI per-request id, used for logging and correlation only
    * @return the registered temp view name
    */
   @Nonnull
-  String registerDataset(
-      @Nonnull final String identifier,
-      @Nonnull final Dataset<Row> dataset,
-      @Nonnull final String requestId) {
+  String registerDataset(@Nonnull final String identifier, @Nonnull final Dataset<Row> dataset) {
     final String tempViewName = resolveTempViewName(newViewNamespace(), identifier);
     dataset.createOrReplaceTempView(tempViewName);
-    log.debug(
-        "Registered temp view '{}' for request '{}' (identifier '{}')",
-        tempViewName,
-        requestId,
-        identifier);
     return tempViewName;
   }
 
@@ -253,9 +243,10 @@ public class ViewRegistrationService {
    * dependency's canonical key (the production case, so a shared node materialises once and labels
    * cannot collide across nodes) or, for the existing single-level tests, a bare table label.
    *
-   * <p>Both the namespace and the identifier are sanitised so that the resulting Spark temp view
-   * name is a legal identifier (canonical keys such as {@code ViewDefinition/patient-view} can
-   * carry slashes and dashes).
+   * <p>The namespace is always a server-generated random id ({@code v} followed by hex digits), so
+   * it needs no sanitising. The identifier is sanitised so that the resulting Spark temp view name
+   * is a legal identifier (canonical keys such as {@code ViewDefinition/patient-view} can carry
+   * slashes and dashes).
    *
    * @param namespace the server-generated random namespace for this view
    * @param identifier the canonical key (or label) the temp view materialises
@@ -264,22 +255,7 @@ public class ViewRegistrationService {
   @Nonnull
   static String resolveTempViewName(
       @Nonnull final String namespace, @Nonnull final String identifier) {
-    return VIEW_NAME_PREFIX + sanitiseNamespace(namespace) + "_" + sanitiseIdentifier(identifier);
-  }
-
-  /**
-   * Strips characters that aren't valid in a Spark identifier. Falls back to a hash of the original
-   * input when the result would otherwise be empty (e.g. a namespace consisting only of dashes,
-   * which would collide with another all-special-chars namespace and reintroduce the temp-view
-   * clobbering this namespacing exists to prevent).
-   */
-  @Nonnull
-  private static String sanitiseNamespace(@Nonnull final String namespace) {
-    final String sanitised = UNSAFE_REQUEST_ID_CHARS.matcher(namespace).replaceAll("");
-    if (!sanitised.isEmpty()) {
-      return sanitised;
-    }
-    return "r" + Integer.toUnsignedString(namespace.hashCode(), 16);
+    return VIEW_NAME_PREFIX + namespace + "_" + sanitiseIdentifier(identifier);
   }
 
   /**
@@ -291,10 +267,10 @@ public class ViewRegistrationService {
    */
   @Nonnull
   private static String sanitiseIdentifier(@Nonnull final String identifier) {
-    if (!UNSAFE_REQUEST_ID_CHARS.matcher(identifier).find()) {
+    if (!UNSAFE_IDENTIFIER_CHARS.matcher(identifier).find()) {
       return identifier;
     }
-    final String cleaned = UNSAFE_REQUEST_ID_CHARS.matcher(identifier).replaceAll("_");
+    final String cleaned = UNSAFE_IDENTIFIER_CHARS.matcher(identifier).replaceAll("_");
     return cleaned + "_" + Integer.toUnsignedString(identifier.hashCode(), 16);
   }
 }
