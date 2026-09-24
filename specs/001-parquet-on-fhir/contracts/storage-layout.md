@@ -1,0 +1,160 @@
+# Contract: Storage layout
+
+The contract for anyone reading Pathling-written Parquet or Delta files
+directly, with their own SQL or another Parquet on FHIR implementation. This
+replaces the published schema documentation at
+`site/docs/libraries/io/schema.md`.
+
+## Conformance
+
+Files conform to the [Parquet on FHIR](https://github.com/aehrc/parquet-on-fhir)
+specification, which requires only that `resourceType` be present and states
+that a consuming application SHALL tolerate the absence of any other field.
+
+Deviations, all permitted by the specification:
+
+| Area | What Pathling does |
+| --- | --- |
+| Decimals | Text plus the specification's numeric annotation. The text is numerically equal to the source, not in the source's lexical form (decision 68). |
+| Primitive ids and extensions | The specification's `_field` groups. |
+| Extensions on complex elements | Inline `extension` groups. |
+| Date ranges | The specification's start and end annotations. |
+| Quantity canonicalisation | **Addition.** The specification's `__<field>_canonical` is emitted at the type the specification gives it, followed immediately by `__<field>_canonical_exact`, which carries the same canonicalisation at a precision that preserves magnitude. Both are present, in that order, **from M5** — the layout ships
+annotation-free at the flip and each annotation kind lands afterwards (FR-021,
+decision 50). The names, types and positions below are fixed from Phase 3 and do
+not change when the values arrive. The second exists because the specification's fixed-point type makes quantities differing by orders of magnitude compare equal, which the engine cannot compare on; the first is what an interchange consumer reads. Non-standard annotations are permitted. Raised upstream; `_canonical_exact` is withdrawn if the specification adopts a magnitude-preserving representation. |
+| `contained` | Not represented. Reported as a warning, never silently dropped. |
+| `Bundle` | Never stored as a resource type. Accepted as a transport carrier and exploded to per-type tables. |
+
+### The two quantity annotations
+
+A quantity carries `__<field>_canonical` and then `__<field>_canonical_exact`,
+in that order, once annotations are emitted in M5. The order is fixed rather than incidental: field order is part of
+the type, so a consumer comparing structures positionally depends on it, and an
+interchange consumer reading the specification's layout finds the
+specification's annotation first.
+
+`__<field>_canonical` is the specification's annotation and carries what the
+specification says it carries. `__<field>_canonical_exact` is Pathling's, and
+carries the same canonicalisation without the fixed scale. Its stored shape is
+settled with the encoder rather than here, under one constraint: it carries the
+**canonicalised unit code alongside the value**. Canonicalisation maps to a base
+unit, and a value without that unit makes one metre and one second compare
+equal, so a single value is not sufficient. The previous Pathling layout used
+two fields for exactly this reason.
+
+## The schema is fitted to the data
+
+**This is by design, not a defect.** A resource table carries only the elements
+the data populates. Two consequences for a direct consumer:
+
+- A column you expect may be absent, because nothing in the data populated it.
+  Absence means "not present in this dataset", never "not part of FHIR".
+- The shape of a complex element reflects the data, so the same query over two
+  datasets may see structures of different widths.
+
+A dense schema comprising every element the definitions describe is available as
+an option, bounded by the configured nesting depth, extension and open-type
+settings. It arrives in M6, after the annotations and the primitive metadata
+group; the fitted schema is the only one the releases before it write (decision
+69).
+
+Element **types and cardinality never vary with the data**: they come from the
+FHIR definitions. A repeating element is an array column whether the data
+carried one value or a thousand.
+
+## Files within a table may differ
+
+As new elements first appear in incoming data, later files carry columns earlier
+files do not. Read the dataset with schema merging enabled, which Pathling's own
+sources do by default. A transactional table handles this through its log and
+needs nothing extra.
+
+## Caution for direct consumers: unnesting a repeated element
+
+If you write your own query that unnests a repeated element and projects only a
+single leaf of it, and some files in the table lack that leaf, **those rows
+disappear silently**. Not an error — fewer rows.
+
+The cause is in the Parquet reader rather than in the data: an array's shape is
+reconstructed from the repetition levels of the leaves actually read, and a leaf
+missing from a file carries none, so the array reads as null and unnesting it
+yields nothing.
+
+Three ways to avoid it, in order of preference:
+
+1. Project at least one leaf that every file carries, alongside the one you
+   want. Any present sibling restores the array's shape.
+2. Unnest the whole element and project its leaves from the unnested rows.
+3. Disable nested schema pruning for the query, which is correct but reads every
+   leaf of every structure touched.
+
+Pathling's own engine is not affected: it unnests whole elements and never
+reduces a read to a single leaf.
+
+## Round trip
+
+For conformant input, `JSON -> storage -> JSON` returns a semantically equal
+resource: object key order ignored, array order significant, numbers compared
+**numerically**. Decimals are stored as text because the specification stores
+them that way, not to preserve the source's lexical form, which is not
+preserved on any path (decision 68).
+
+It holds on a fitted schema subject to the exceptions below, and on a dense
+schema additionally within the configured nesting, extension and open-type
+settings.
+
+Not covered. The first two are reported; the rest are not: `contained`
+resources; content the definition set does not describe or contradicts;
+primitive element ids and extensions, until M5; decimal lexical form — trailing zeros,
+exponent notation as written, and precision beyond a double; `base64Binary`
+whitespace, which FHIR permits and which decoding and re-encoding canonicalises
+away; a conformant value dropped because a sibling value re-typed its column;
+and content the dense bounds drop.
+
+Where excluded content was an element's only content, the element is written as
+an empty object rather than dropped from its array if anything else read with it
+keeps its column, and is omitted if nothing does. Either way the document is not
+conformant FHIR. Primitive ids and extensions are the exception to that
+condition: a primitive the source carried only as its metadata group, in the
+outer shape FHIR gives the group, is stored as a null of its declared type, so
+the structure holding it is kept and written as an empty object whatever other
+conformant documents are read with it (decision 72). A group in another shape
+keeps nothing, and that includes a conformant group that another document read
+with it re-typed, so the structure it alone kept then falls back to the
+condition above. The released encoder also keeps a metadata-only structure where
+the primitive is singular, and drops it where the primitive repeats, because the
+parser it reads through discards an `_x` array with no `x` array beside it. For
+conformant input that is the only source of an empty object, and a repeating
+primitive's positional nulls are likewise written without the `_x` array they
+align with. Both are kept on purpose until M5 (decision 71 and its addendum).
+
+## Data written by earlier releases
+
+Not readable as this layout, and not upgradable in place. The previous layout
+carries a field identifier, a root-level extension map, a decimal scale column, a
+versioned identifier column and canonicalised quantity fields, and stores
+decimals as a fixed-point type where this layout stores text. (`base64Binary`
+is binary in both layouts, so it is not among the differences.) The type change is
+not additive: a transactional table refuses the merge, and only a destructive
+replace gets past it.
+
+Pathling's sources detect the previous layout and reject it at read time, naming
+the resource type, the detected layout and the remedy. Its sinks do the same for
+the target they write into, before any schema merge is attempted, so a write
+into a dataset written by an earlier release cannot quietly leave one table
+carrying both layouts. The check can be disabled per source for the case where
+conforming data cannot be classified.
+
+**Provisional, pending T049a.** The query engine itself retains a reader for the
+previous layout from M2 until it is removed in M7, which is what lets the engine
+be converted behind a green build. Whether the *source boundary* keeps refusing
+earlier-layout data, refuses by default but routes under the existing opt-out, or
+routes outright is not yet settled. Only the first is described above; the other
+two would make this section's opening sentence false, so it is not to be
+published until T049a is answered.
+
+Migration of data at rest is separate work: a version gate by default, and an
+opt-in rewrite tool built from the retained previous implementation. A migrated
+warehouse does not carry the round-trip guarantee — the previous layout had
+already truncated long decimals and dropped `contained`. A re-imported one does.
