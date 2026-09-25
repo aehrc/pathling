@@ -2511,6 +2511,18 @@ layout's extension struct keeps `_fid`.
   it. The engine's present call sites apply columns to the table itself. T110
   emits the reference at every root element, so it must check whether any
   engine call site hits this case.
+- **The server's `_filter` search.** T110's check found one call site that
+  hits the dropped-column case. `applyFhirPathFilters` in
+  `server/.../search/SearchExecutor.java` selects `id` before it filters with
+  a FHIRPath column. Under the tolerant root reference, every element beneath
+  that selection is absent, so `_filter` would silently return no rows once
+  the server adopts this library. It is dealt with at M4, when the public API
+  is ported, by filtering before selecting. No engine site in `fhirpath` or
+  `library-api` hits the case.
+- **A column applied to a projected dataset.** `fhirPathToColumn` and
+  `searchToColumn`, and their Python and R equivalents, hand the column to the
+  caller. A caller who applies it to a dataset that has already dropped the
+  columns it reads now gets a null, where Spark used to add the column back.
 
 ### The construction, as confirmed by the owner (2026-09-25)
 
