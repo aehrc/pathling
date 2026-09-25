@@ -20,10 +20,13 @@ package au.csiro.pathling.test.yaml.resolver;
 import au.csiro.pathling.fhirpath.evaluation.CrossResourceStrategy;
 import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluator;
 import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluatorBuilder;
+import au.csiro.pathling.test.layout.LayoutDatasets;
+import au.csiro.pathling.test.layout.TestLayout;
 import ca.uhn.fhir.parser.IParser;
 import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.function.Function;
+import lombok.AllArgsConstructor;
 import lombok.Value;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -33,12 +36,28 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 /**
  * Factory for creating DatasetEvaluator instances from FHIR JSON resources. This implementation
  * handles the parsing and conversion of FHIR resources into a format suitable for FHIRPath
- * expression evaluation using flat schema.
+ * expression evaluation using flat schema, in the layout the {@link TestLayout} dimension selects
+ * (T034). On the new layout the JSON is read through the new-layout transform as it stands, instead
+ * of being parsed and encoded with the FHIR encoders.
  */
-@Value(staticConstructor = "of")
+@Value
+@AllArgsConstructor(staticName = "of")
 public class FhirResolverFactory implements Function<RuntimeContext, DatasetEvaluator> {
 
   @Nonnull String resourceJson;
+
+  @Nonnull TestLayout layout;
+
+  /**
+   * Returns a factory over a resource, in the active test layout.
+   *
+   * @param resourceJson the resource to evaluate against, as FHIR JSON
+   * @return the factory
+   */
+  @Nonnull
+  public static FhirResolverFactory of(@Nonnull final String resourceJson) {
+    return of(resourceJson, TestLayout.active());
+  }
 
   @Override
   @Nonnull
@@ -47,11 +66,21 @@ public class FhirResolverFactory implements Function<RuntimeContext, DatasetEval
     final IBaseResource resource = jsonParser.parseResource(resourceJson);
     final ResourceType resourceType = ResourceType.fromCode(resource.fhirType());
 
-    // Create flat dataset using FHIR encoders
+    // Create flat dataset using FHIR encoders, or read the JSON through the new-layout transform.
     final Dataset<Row> resourceDS =
-        rt.getSpark()
-            .createDataset(List.of(resource), rt.getFhirEncoders().of(resource.fhirType()))
-            .toDF();
+        layout.isPof()
+            ? LayoutDatasets.fromJson(
+                rt.getSpark(),
+                rt.getFhirEncoders(),
+                layout,
+                resource.fhirType(),
+                List.of(resourceJson))
+            : LayoutDatasets.fromResources(
+                rt.getSpark(),
+                rt.getFhirEncoders(),
+                layout,
+                resource.fhirType(),
+                List.of(resource));
 
     // Build DatasetEvaluator using the builder
     // Use EMPTY strategy for cross-resource references to return empty collections
