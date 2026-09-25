@@ -23,6 +23,7 @@ import java.util.Optional;
 import java.util.function.UnaryOperator;
 import lombok.AllArgsConstructor;
 import org.apache.spark.sql.Column;
+import org.apache.spark.sql.types.DataType;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
@@ -73,6 +74,14 @@ public class UnsupportedRepresentation extends ColumnRepresentation {
   @Override
   public @Nonnull ColumnRepresentation traverse(
       @Nonnull final String fieldName, @Nonnull final Optional<FHIRDefinedType> fhirType) {
+    return traverse(fieldName);
+  }
+
+  @Override
+  public @Nonnull ColumnRepresentation traverse(
+      @Nonnull final String fieldName,
+      @Nonnull final Optional<FHIRDefinedType> fhirType,
+      @Nonnull final DataType fallback) {
     return traverse(fieldName);
   }
 

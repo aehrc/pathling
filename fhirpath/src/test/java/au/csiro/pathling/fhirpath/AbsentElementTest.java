@@ -46,13 +46,15 @@ import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.ContactPoint;
 import org.hl7.fhir.r4.model.Enumerations.AdministrativeGender;
+import org.hl7.fhir.r4.model.Enumerations.PublicationStatus;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.Observation;
 import org.hl7.fhir.r4.model.Observation.ObservationComponentComponent;
 import org.hl7.fhir.r4.model.Patient;
 import org.hl7.fhir.r4.model.Quantity;
+import org.hl7.fhir.r4.model.Questionnaire;
+import org.hl7.fhir.r4.model.Questionnaire.QuestionnaireItemType;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
@@ -70,8 +72,8 @@ import org.springframework.beans.factory.annotation.Autowired;
  * written with, and once with chosen elements removed from the schema, as they are from a pruned
  * table. The removed elements are never populated in the source, so every answer over the pruned
  * schema is the answer over the full schema. Each case is therefore run twice. The run over the
- * full schema is the control, and passes before T110; the run over the pruned schema is the test,
- * and is tagged {@code pending-T110} until T110 lands.
+ * full schema is the control, and passed before T110; the run over the pruned schema is the test,
+ * and passes since T110.
  *
  * <p>The cases cover a missing top-level column and a missing nested field, each at singular and
  * repeating cardinality, for primitive and complex elements.
@@ -102,6 +104,10 @@ class AbsentElementTest {
 
   private PrunedSchemaReader observations;
 
+  private PrunedSchemaReader questionnaires;
+
+  private PrunedSchemaReader itemlessQuestionnaires;
+
   @BeforeAll
   void setUp() {
     patients =
@@ -111,6 +117,14 @@ class AbsentElementTest {
         PrunedSchemaReader.write(
             encode("Observation", observation1(), observation2()),
             tempDir.resolve("Observation").toString());
+    questionnaires =
+        PrunedSchemaReader.write(
+            encode("Questionnaire", questionnaire1(), questionnaire2()),
+            tempDir.resolve("Questionnaire").toString());
+    itemlessQuestionnaires =
+        PrunedSchemaReader.write(
+            encode("Questionnaire", questionnaire2()),
+            tempDir.resolve("ItemlessQuestionnaire").toString());
   }
 
   // T101: traversal to an element the definitions describe but the schema lacks yields empty.
@@ -145,7 +159,6 @@ class AbsentElementTest {
     assertEmpty(patients.read(), expression);
   }
 
-  @Tag("pending-T110")
   @ParameterizedTest(name = "{1} with {0} absent from the schema")
   @MethodSource("absentPatientElements")
   void traversalToAbsentElementIsEmpty(
@@ -264,7 +277,6 @@ class AbsentElementTest {
     assertEmpty(observations.read(), "Observation", expression);
   }
 
-  @Tag("pending-T110")
   @ParameterizedTest(name = "{1} with {0} absent from the schema")
   @MethodSource("absentChoiceVariants")
   void absentChoiceVariantIsEmpty(
@@ -307,6 +319,56 @@ class AbsentElementTest {
         .containsExactlyInAnyOrder(expected1, expected2);
   }
 
+  // T110a: recursive traversal stops where it reaches an element absent from the schema, and
+  // yields what it collected up to there.
+
+  @Nonnull
+  Stream<Arguments> absentRecursionRoots() {
+    return Stream.of(
+        arguments("repeat(item)"), arguments("repeatAll(item)"), arguments("item.repeat(item)"));
+  }
+
+  @ParameterizedTest(name = "{0} over the full schema")
+  @MethodSource("absentRecursionRoots")
+  void recursionFromUnpopulatedRootOverFullSchema(@Nonnull final String expression) {
+    assertEmpty(itemlessQuestionnaires.read(), "Questionnaire", expression);
+  }
+
+  @ParameterizedTest(name = "{0} with item absent from the schema")
+  @MethodSource("absentRecursionRoots")
+  void recursionFromAbsentRootIsEmpty(@Nonnull final String expression) {
+    assertEmpty(itemlessQuestionnaires.readWithout("item"), "Questionnaire", expression);
+  }
+
+  @Nonnull
+  Stream<Arguments> recursionsBesideAbsentLevels() {
+    return Stream.of(
+        arguments("repeat(item).linkId.count()", "q1=1", "q2=0"),
+        arguments("repeatAll(item).linkId.count()", "q1=1", "q2=0"),
+        arguments("repeat(item | item.item).linkId.count()", "q1=1", "q2=0"),
+        arguments("repeat(item).enableWhen.count()", "q1=0", "q2=0"));
+  }
+
+  @ParameterizedTest(name = "{0} over the full schema")
+  @MethodSource("recursionsBesideAbsentLevels")
+  void recursionBesideUnpopulatedLevelOverFullSchema(
+      @Nonnull final String expression,
+      @Nonnull final String expected1,
+      @Nonnull final String expected2) {
+    assertThat(evaluate(questionnaires.read(), "Questionnaire", expression))
+        .containsExactlyInAnyOrder(expected1, expected2);
+  }
+
+  @ParameterizedTest(name = "{0} with item.enableWhen absent from the schema")
+  @MethodSource("recursionsBesideAbsentLevels")
+  void recursionBesideAbsentLevelCollectsThePopulatedOnes(
+      @Nonnull final String expression,
+      @Nonnull final String expected1,
+      @Nonnull final String expected2) {
+    assertThat(evaluate(questionnaires.readWithout("item.enableWhen"), "Questionnaire", expression))
+        .containsExactlyInAnyOrder(expected1, expected2);
+  }
+
   // T104: combining an absent element with a populated one succeeds (FR-027).
 
   @Nonnull
@@ -342,7 +404,6 @@ class AbsentElementTest {
         .containsExactlyInAnyOrder(expected1, expected2);
   }
 
-  @Tag("pending-T110")
   @ParameterizedTest(name = "{0} with the absent elements absent from the schema")
   @MethodSource("combinationsWithAbsentElements")
   void combinationWithAbsentElementSucceeds(
@@ -462,6 +523,23 @@ class AbsentElementTest {
     patient.addName().addGiven("Cal");
     patient.addName().addGiven("Dan");
     return patient;
+  }
+
+  @Nonnull
+  private static Questionnaire questionnaire1() {
+    final Questionnaire questionnaire = new Questionnaire();
+    questionnaire.setId("q1");
+    questionnaire.setStatus(PublicationStatus.ACTIVE);
+    questionnaire.addItem().setLinkId("1").setType(QuestionnaireItemType.DISPLAY);
+    return questionnaire;
+  }
+
+  @Nonnull
+  private static Questionnaire questionnaire2() {
+    final Questionnaire questionnaire = new Questionnaire();
+    questionnaire.setId("q2");
+    questionnaire.setStatus(PublicationStatus.ACTIVE);
+    return questionnaire;
   }
 
   @Nonnull

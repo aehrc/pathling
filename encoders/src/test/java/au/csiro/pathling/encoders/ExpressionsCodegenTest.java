@@ -24,7 +24,6 @@ package au.csiro.pathling.encoders;
 
 import static au.csiro.pathling.encoders.ValueFunctions.ifArray;
 import static au.csiro.pathling.encoders.ValueFunctions.ifArray2;
-import static au.csiro.pathling.encoders.ValueFunctions.nullIfMissingField;
 import static au.csiro.pathling.encoders.ValueFunctions.unnest;
 import static au.csiro.pathling.encoders.ValueFunctions.variantTransformTree;
 import static au.csiro.pathling.encoders.ValueFunctions.variantUnwrap;
@@ -562,72 +561,6 @@ public class ExpressionsCodegenTest extends ExpressionsBothModesTest {
     assertEquals(
         DataTypes.createArrayType(DataTypes.NullType, false),
         untypedResult.schema().fields()[1].dataType());
-  }
-
-  @Test
-  void testNullIfMissingField() {
-    final Metadata metadata = Metadata.empty();
-
-    final StructType personType =
-        DataTypes.createStructType(
-            new StructField[] {
-              new StructField("name", DataTypes.StringType, true, metadata),
-              new StructField("age", DataTypes.IntegerType, true, metadata)
-            });
-
-    final StructType schema =
-        DataTypes.createStructType(
-            new StructField[] {
-              new StructField("id", DataTypes.IntegerType, true, metadata),
-              new StructField("value", DataTypes.IntegerType, true, metadata),
-              new StructField("person", personType, true, metadata)
-            });
-
-    final List<Row> data =
-        List.of(
-            RowFactory.create(1, 100, RowFactory.create(null, 25)),
-            RowFactory.create(2, 200, RowFactory.create("Bob", null)),
-            RowFactory.create(3, 300, RowFactory.create("Charlie", 30)));
-
-    final Dataset<Row> ds = spark.createDataFrame(data, schema);
-
-    final Dataset<Row> result =
-        ds.withColumn("test_top_level", nullIfMissingField(ds.col("value")))
-            .withColumn("test_nested_exists", nullIfMissingField(ds.col("person.name")))
-            .withColumn("test_struct_field", nullIfMissingField(ds.col("person").getField("age")))
-            .withColumn(
-                "test_missing_address", nullIfMissingField(ds.col("person").getField("address")))
-            .withColumn(
-                "test_missing_email", nullIfMissingField(ds.col("person").getField("email")))
-            .withColumn(
-                "test_missing_salary", nullIfMissingField(ds.col("person").getField("salary")));
-
-    final List<Row> results = result.collectAsList();
-    assertEquals(3, results.size());
-
-    // Row 1: person.name is null, person.age is 25.
-    assertEquals(100, (Integer) results.getFirst().getAs("test_top_level"));
-    assertNull(results.getFirst().getAs("test_nested_exists"));
-    assertEquals(25, (Integer) results.getFirst().getAs("test_struct_field"));
-    assertNull(results.getFirst().getAs("test_missing_address"));
-    assertNull(results.get(0).getAs("test_missing_email"));
-    assertNull(results.get(0).getAs("test_missing_salary"));
-
-    // Row 2: person.name is "Bob", person.age is null.
-    assertEquals(200, (Integer) results.get(1).getAs("test_top_level"));
-    assertEquals("Bob", results.get(1).getAs("test_nested_exists"));
-    assertNull(results.get(1).getAs("test_struct_field"));
-    assertNull(results.get(1).getAs("test_missing_address"));
-    assertNull(results.get(1).getAs("test_missing_email"));
-    assertNull(results.get(1).getAs("test_missing_salary"));
-
-    // Row 3: person.name is "Charlie", person.age is 30.
-    assertEquals(300, (Integer) results.get(2).getAs("test_top_level"));
-    assertEquals("Charlie", results.get(2).getAs("test_nested_exists"));
-    assertEquals(30, (Integer) results.get(2).getAs("test_struct_field"));
-    assertNull(results.get(2).getAs("test_missing_address"));
-    assertNull(results.get(2).getAs("test_missing_email"));
-    assertNull(results.get(2).getAs("test_missing_salary"));
   }
 
   /**

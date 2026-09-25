@@ -44,7 +44,6 @@ import org.hl7.fhir.r4.model.Observation;
 import org.hl7.fhir.r4.model.Questionnaire;
 import org.hl7.fhir.r4.model.Questionnaire.QuestionnaireItemType;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
 import org.junit.jupiter.api.io.TempDir;
@@ -64,8 +63,7 @@ import org.springframework.beans.factory.annotation.Autowired;
  * bound. That bound already omits {@code item.item} from the full schema, so the nested cases use
  * {@code item.enableWhen}, which the full schema carries. The removed elements are never populated
  * in the source, so each view is run twice: over the full schema as the control, which passes
- * before T110, and over the pruned schema, which is tagged {@code pending-T110} until T110 and T113
- * land.
+ * before T110, and over the pruned schema, which passes since T110 and T113.
  *
  * @author Piotr Szul
  */
@@ -240,7 +238,6 @@ class SiblingCombinationTest {
     assertThat(run(questionnaires.read(), selection)).containsExactlyInAnyOrderElementsOf(expected);
   }
 
-  @Tag("pending-T110")
   @ParameterizedTest(name = "{0}, with item.enableWhen absent from the schema")
   @MethodSource("nestedAbsence")
   void siblingCombinationToleratesAbsentNestedElement(
@@ -260,7 +257,6 @@ class SiblingCombinationTest {
     assertThat(run(itemless.read(), selection)).containsExactlyInAnyOrderElementsOf(expected);
   }
 
-  @Tag("pending-T110")
   @ParameterizedTest(name = "{0}, with item absent from the schema")
   @MethodSource("rootAbsence")
   void siblingCombinationToleratesAbsentTopLevelElement(
@@ -318,7 +314,6 @@ class SiblingCombinationTest {
         .containsExactlyInAnyOrderElementsOf(expected);
   }
 
-  @Tag("pending-T110")
   @ParameterizedTest(name = "{1} with {0} absent from the schema")
   @MethodSource("singularAbsence")
   void siblingCombinationToleratesAbsentSingularElement(
