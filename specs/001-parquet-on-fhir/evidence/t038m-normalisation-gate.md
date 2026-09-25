@@ -184,9 +184,9 @@ A replacement cannot conjure `_extension#104`:
 
 **The control shows that the construction is not at fault.** Over a
 hand-built `struct(*)` root, the same unary expression finds the struct and
-resolves. The optimiser also collapses the struct construction to the bare
-column, so the plan reads `_extension#104[lambda x._fid]` directly and pruning
-is unaffected:
+resolves. In this one `Project`-shaped query, the optimiser also collapsed the
+struct construction to the bare column, so the plan reads
+`_extension#104[lambda x._fid]` directly:
 
     Project [id#79, transform(flatten(filter(transform(name#87,
       lambdafunction(_extension#104[lambda x#479._fid], ...)), ...)), ...) AS value#478]
@@ -301,14 +301,35 @@ depend on the spike. It should be raised as a separate defect, not fixed here.
   type while `_fid` must survive for the next step. Either it asserts the weak
   form for extensions, or the branch has to strip `_fid` at a level where
   nothing further can traverse, which the expression cannot know.
-- **Alternative for the owner**: represent the resource root as a struct, such
-  as `struct(*)`, which the optimiser collapses without cost. That would make
-  the unary walk viable and restore decision 55 as written.
+- **Alternative for the owner**: represent the resource root as a struct. That
+  would make the unary walk viable and restore decision 55 as written. The
+  evidence for its cost is thin. In one hand-built control, the optimiser
+  collapsed the struct and read `_extension#104` directly. That control put
+  the struct in a `Project` below the query, built from explicitly named
+  columns. Three things were not tested:
+  - the struct inside lambda bodies;
+  - the struct under `Filter` or `Aggregate`;
+  - the struct as a general representation for the resource root.
+
+  It would also reverse the flat-schema design that `ResourceRepresentation`
+  exists to provide, so it is not free.
 
 T038m is left unticked. Under its own rule, the owner decides the replan
 against decision 47.
 
 ## What this does not answer
+
+- **Plan shapes other than `Project`, for the binary form.** All twelve engine
+  scenarios go through the evaluator into `toIdValueDataset`, so each is a
+  `Project`. None placed the binary node under `Filter`, `Aggregate` or `Sort`,
+  as T009a did for the unary form. The binary form carries one analyzer risk
+  that T009a's form did not. Inside a lambda its two children resolve at
+  different times: the map attribute in `ResolveReferences`, and the lambda
+  variable later, in `ResolveLambdaVariables`. The run found no premature
+  forcing, but only in `Project` shapes. `Filter` is a realistic case, because
+  `SearchColumnBuilder` emits FHIRPath columns into filters. `Aggregate` is
+  where T009a expected canonicalisation to force the replacement. T038a should
+  cover the binary form over a lambda variable under `groupBy` and `filter`.
 
 - **Other discriminators.** The spike normalised only the extension step. It
   says nothing about the decimal, quantity or versioned-key branches, which
