@@ -210,6 +210,38 @@ class AbsentElementTest {
     assertThat(evaluate(layout, "Patient", "name.family.count()")).containsExactly("p1=0");
   }
 
+  // T102: traversal to an element the definitions do not describe yields empty (FR-025, as
+  // amended by decision 76). The engine resolves the name against the definitions before it emits
+  // any column, so the answer does not depend on what the schema carries.
+
+  @Nonnull
+  Stream<Arguments> undescribedPatientElements() {
+    return Stream.of(
+        // At the root, under a repeating parent, under a singular parent, and past an undescribed
+        // step.
+        arguments("undescribed"),
+        arguments("name.undescribed"),
+        arguments("maritalStatus.undescribed"),
+        arguments("undescribed.family"),
+        // Beneath elements the pruned schema lacks, at the root and nested.
+        arguments("telecom.undescribed"),
+        arguments("name.period.undescribed"),
+        // Beside a populated element, in a union.
+        arguments("(name.given | name.undescribed).where($this = 'none')"));
+  }
+
+  @ParameterizedTest(name = "{0} over the full schema")
+  @MethodSource("undescribedPatientElements")
+  void traversalToUndescribedElementIsEmptyOverFullSchema(@Nonnull final String expression) {
+    assertEmpty(patients.read(), expression);
+  }
+
+  @ParameterizedTest(name = "{0} over a pruned schema")
+  @MethodSource("undescribedPatientElements")
+  void traversalToUndescribedElementIsEmptyOverPrunedSchema(@Nonnull final String expression) {
+    assertEmpty(patients.readWithout("active", "telecom", "name.period"), expression);
+  }
+
   // T103: selecting a choice variant absent from the schema yields empty.
 
   @Nonnull
