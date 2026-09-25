@@ -376,9 +376,9 @@ functions that exist. T023 still covers the join itself._
 - [x] T022 [P] Add cases for `resolve()` with `is` and `ofType()` over the T020 fixtures, including a repeating reference whose targets are of different types, and for `getReferenceKey()` composed with `where()`, in `fhirpath/src/test/resources/viewTests/`.
 - [x] T023 [P] Add a case exercising resource-key production and reference-key production together with the join they feed, in `fhirpath/src/test/resources/viewTests/`. The primitives have coverage today; the join does not.
 - [ ] T024 Convert the two tests using direct resource construction in `fhirpath/src/test/java/au/csiro/pathling/fhirpath/dsl/ResolveFunctionDslTest.java` to the declarative model builder, and confirm the class no longer references the HAPI resolver factory.
-- [ ] T025 Confirm every new case passes against unmodified behaviour. A failure is a defect to raise separately, not to fix here.
-- [ ] T026 [P] Add a divergent-schema fixture under `fhirpath/src/test/resources/viewTests/` whose two files deliberately disagree on a leaf of a repeating element, with a view unnesting that element and projecting only that leaf.
-- [ ] T027 Assert against the real engine that the divergent-schema fixture returns resources from both files (FR-036). This pins the unnesting constraint; if it fails, unnesting has been reshaped into a leaf-level read and rows are being lost silently. T027a extends it once tolerant traversal exists.
+- [x] T025 Confirm every new case passes against unmodified behaviour. A failure is a defect to raise separately, not to fix here.
+- [x] T026 [P] Add a divergent-schema fixture under `fhirpath/src/test/resources/viewTests/` whose two files deliberately disagree on a leaf of a repeating element, with a view unnesting that element and projecting only that leaf.
+- [x] T027 Assert against the real engine that the divergent-schema fixture returns resources from both files (FR-036). This pins the unnesting constraint; if it fails, unnesting has been reshaped into a leaf-level read and rows are being lost silently. T027a extends it once tolerant traversal exists.
 
 ### The gate on how far the dispatch arms are built
 
