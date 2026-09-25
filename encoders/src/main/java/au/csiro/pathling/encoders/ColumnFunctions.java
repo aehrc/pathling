@@ -22,9 +22,11 @@
  */
 package au.csiro.pathling.encoders;
 
+import au.csiro.pathling.sql.MergeCast;
 import au.csiro.pathling.sql.ResolveOrNull;
 import au.csiro.pathling.sql.UnresolvedTraverseExtension;
 import au.csiro.pathling.sql.UnresolvedTraverseRootExtension;
+import au.csiro.pathling.utilities.CanonicalStructure;
 import jakarta.annotation.Nonnull;
 import java.util.Arrays;
 import java.util.List;
@@ -149,5 +151,27 @@ public class ColumnFunctions {
   @Nonnull
   public static Column traverseRootExtension() {
     return ExpressionUtils.column(new UnresolvedTraverseRootExtension());
+  }
+
+  /**
+   * Creates the reconciliation expression, which projects one of several operands of the same FHIR
+   * type by name into the recursive field-wise merge of all of their types (FR-056). Every operand
+   * given the same list and canonical structure is projected into the same type.
+   *
+   * @param operands the full, ordered list of operands being reconciled
+   * @param index the position in the list of the operand to project
+   * @param canonical the canonical structure of the operands' element type
+   * @return a Column holding the operand, projected into the merged type
+   */
+  @Nonnull
+  public static Column mergeCast(
+      @Nonnull final List<Column> operands,
+      final int index,
+      @Nonnull final CanonicalStructure canonical) {
+    final Seq<Expression> expressions =
+        scala.jdk.javaapi.CollectionConverters.asScala(
+                operands.stream().map(ExpressionUtils::expression).toList())
+            .toSeq();
+    return ExpressionUtils.column(new MergeCast(expressions, index, canonical));
   }
 }
