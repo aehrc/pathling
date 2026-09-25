@@ -22,6 +22,7 @@
  */
 package au.csiro.pathling.encoders;
 
+import static au.csiro.pathling.encoders.ColumnFunctions.resolveOrNull;
 import static au.csiro.pathling.encoders.ValueFunctions.ifArray;
 import static au.csiro.pathling.encoders.ValueFunctions.ifArray2;
 import static au.csiro.pathling.encoders.ValueFunctions.unnest;
@@ -41,6 +42,7 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.functions;
+import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.Metadata;
 import org.apache.spark.sql.types.StructField;
@@ -53,6 +55,9 @@ import scala.jdk.javaapi.CollectionConverters;
 
 /** Tests for FHIR encoder expressions with whole-stage codegen enabled (default). */
 public class ExpressionsCodegenTest extends ExpressionsBothModesTest {
+
+  /** The fallback of an absent repeating complex element, per FR-055. */
+  private static final DataType ABSENT_ITEMS = DataTypes.createArrayType(DataTypes.NullType);
 
   /** Set up Spark with codegen enabled (the default). */
   @BeforeAll
@@ -459,7 +464,7 @@ public class ExpressionsCodegenTest extends ExpressionsBothModesTest {
             ValueFunctions.transformTree(
                 ds.col("items"),
                 c -> c.getField("linkId"),
-                List.of(c -> unnest(c.getField("item"))),
+                List.of(c -> unnest(resolveOrNull(c, "item", ABSENT_ITEMS))),
                 1));
 
     final List<Row> results = result.collectAsList();
@@ -502,7 +507,7 @@ public class ExpressionsCodegenTest extends ExpressionsBothModesTest {
             ValueFunctions.transformTree(
                 ds.col("items"),
                 c -> c.getField("linkId"),
-                List.of(c -> unnest(c.getField("item")), c -> c),
+                List.of(c -> unnest(resolveOrNull(c, "item", ABSENT_ITEMS)), c -> c),
                 1));
 
     final List<Row> results = result.collectAsList();
@@ -517,10 +522,9 @@ public class ExpressionsCodegenTest extends ExpressionsBothModesTest {
 
   @Test
   void testTransformTreeTypedEmptyFallbackWhenFieldMissing() {
-    // Accessing a struct sub-field that doesn't exist raises FIELD_NOT_FOUND during Catalyst
-    // analysis. This mirrors the production scenario where a repeat traversal exits the encoded
-    // schema: ds.col("root") resolves, but .getField("items") creates an UnresolvedExtractValue
-    // that fails when Spark tries to find "items" in root's struct type.
+    // The tolerant traversal of a struct sub-field that doesn't exist resolves to a null of the
+    // bottom type. This mirrors the production scenario where a repeat traversal starts at an
+    // element absent from the input schema: ds.col("root") resolves, but has no "items" field.
     final Metadata metadata = Metadata.empty();
     final StructType rootStructType =
         DataTypes.createStructType(
@@ -535,28 +539,28 @@ public class ExpressionsCodegenTest extends ExpressionsBothModesTest {
         new StructType(
             new StructField[] {new StructField("linkId", DataTypes.StringType, true, metadata)});
 
-    // With expectedElementType: root FIELD_NOT_FOUND emits Cast([], ArrayType(elementType)).
+    // With expectedElementType: a bottom-typed root emits Cast([], ArrayType(elementType)).
     final Dataset<Row> typedResult =
         ds.withColumn(
             "result",
             ValueFunctions.transformTree(
-                ds.col("root").getField("items"),
+                resolveOrNull(ds.col("root"), "items", ABSENT_ITEMS),
                 c -> c.getField("linkId"),
-                List.of(c -> unnest(c.getField("item"))),
+                List.of(c -> unnest(resolveOrNull(c, "item", ABSENT_ITEMS))),
                 2,
                 false,
                 elementType));
     assertEquals(
         DataTypes.createArrayType(elementType), typedResult.schema().fields()[1].dataType());
 
-    // Without expectedElementType: root FIELD_NOT_FOUND emits untyped CreateArray(Seq.empty).
+    // Without expectedElementType: a bottom-typed root emits untyped CreateArray(Seq.empty).
     final Dataset<Row> untypedResult =
         ds.withColumn(
             "result",
             ValueFunctions.transformTree(
-                ds.col("root").getField("items"),
+                resolveOrNull(ds.col("root"), "items", ABSENT_ITEMS),
                 c -> c.getField("linkId"),
-                List.of(c -> unnest(c.getField("item"))),
+                List.of(c -> unnest(resolveOrNull(c, "item", ABSENT_ITEMS))),
                 2));
     assertEquals(
         DataTypes.createArrayType(DataTypes.NullType, false),
@@ -618,7 +622,7 @@ public class ExpressionsCodegenTest extends ExpressionsBothModesTest {
             variantTransformTree(
                 ds.col("items"),
                 c -> functions.array(c.getField("linkId")),
-                List.of(c -> unnest(c.getField("item"))),
+                List.of(c -> unnest(resolveOrNull(c, "item", ABSENT_ITEMS))),
                 1));
 
     // Flatten the result because each extracted element is Array[String] from the extractor.
@@ -676,7 +680,10 @@ public class ExpressionsCodegenTest extends ExpressionsBothModesTest {
         ds.withColumn(
             "collected",
             variantTransformTree(
-                ds.col("items"), c -> c, List.of(c -> unnest(c.getField("item"))), 1));
+                ds.col("items"),
+                c -> c,
+                List.of(c -> unnest(resolveOrNull(c, "item", ABSENT_ITEMS))),
+                1));
 
     final List<Row> results = result.collectAsList();
     assertEquals(1, results.size());

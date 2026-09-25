@@ -504,9 +504,9 @@ object UnresolvedColumnOrNull {
  * (`au.csiro.pathling.sql.ResolveOrNull`) gives an absent complex element (FR-055), and the one the
  * tolerant table-column reference gives an absent element at the resource root, so a step that
  * walks off the input schema has nothing left to descend into. The check is made on the resolved
- * step, so it depends on no exception being thrown during analysis (T110a). A traversal built from
- * a direct field reference, rather than the tolerant expression, throws FIELD_NOT_FOUND where it
- * walks off the schema instead, and that is caught and treated in the same way.
+ * step, so it depends on no exception being thrown during analysis (T110a). Traversals must
+ * therefore be built from the tolerant expression: a direct field reference that walks off the
+ * schema fails with FIELD_NOT_FOUND.
  *
  * '''Depth Limiting:''' The `level` parameter (maxDepth) controls recursion depth to prevent
  * infinite loops in self-referential structures. The depth counter only decrements when
@@ -563,17 +563,9 @@ case class UnresolvedTransformTree(node: Expression,
         CreateArray(Seq.empty)
     }
 
-    // The engine's traversals are tolerant, so they resolve to the bottom type where they walk off
-    // the input schema, and the check below stops them. A traversal built from a direct field
-    // reference instead throws FIELD_NOT_FOUND when it walks off the schema, and this catch stops
-    // it. Only the Catalyst resolution call f(node) is expected to throw here. Other operations
-    // (extractor, traversal construction) propagate errors normally.
-    val newValue = try {
-      f(node)
-    } catch {
-      case e: AnalysisException if e.errorClass.contains("FIELD_NOT_FOUND") =>
-        return emptyResult
-    }
+    // The traversals are tolerant, so a step that walks off the input schema resolves to the bottom
+    // type rather than failing, and the check below stops it.
+    val newValue = f(node)
 
     if (newValue.resolved && UnresolvedTransformTree.isBottom(newValue.dataType)) {
       // The step resolved to the fallback of an absent element, so there is nothing to descend

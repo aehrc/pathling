@@ -27,7 +27,7 @@ import au.csiro.pathling.encoders.UnresolvedTransformTree
 import au.csiro.pathling.encoders.ValueFunctions.{transformTree, unnest, variantTransformTree}
 import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.types._
-import org.apache.spark.sql.{Column, DataFrame, functions => F}
+import org.apache.spark.sql.{AnalysisException, Column, DataFrame, functions => F}
 import org.junit.jupiter.api.Assertions._
 import org.junit.jupiter.api.Test
 
@@ -35,12 +35,10 @@ import java.util.function.UnaryOperator
 
 /**
  * Tests that the recursive tree traversal stops where a tolerant traversal step resolves to the
- * fallback of an absent element (T110a), rather than where a direct field reference throws.
+ * fallback of an absent element (T110a). That is its only termination signal.
  *
  * The traversals are built as the engine builds them after T110: every step is the tolerant
- * traversal expression, and the root is the tolerant table-column reference. Where the same shape
- * can also be traversed with direct field references, whose termination is the FIELD_NOT_FOUND
- * catch, the two are compared, so that the new signal is shown to give the same rows.
+ * traversal expression, and the root is the tolerant table-column reference.
  */
 class TransformTreeTerminationTest extends SparkSessionSupport {
 
@@ -70,16 +68,22 @@ class TransformTreeTerminationTest extends SparkSessionSupport {
   private def tolerantItems: Column = columnOrNull("items", Bottom)
 
   @Test
-  def stopsWhereTheStepFallsBackWithTheRowsTheCatchGave(): Unit = {
-    val tolerant = nested.select(
+  def stopsWhereTheStepFallsBack(): Unit = {
+    val result = nested.select(
       transformTree(tolerantItems, tolerantLinkId, java.util.List.of(tolerantItem), 1)
         .alias("linkIds"))
-    val direct = nested.select(
-      transformTree(F.col("items"), op(_.getField("linkId")),
-        java.util.List.of(op(c => unnest(c.getField("item")))), 1).alias("linkIds"))
 
-    assertEquals(Seq("[ArraySeq(1, 2, 3)]"), rows(tolerant))
-    assertEquals(rows(direct), rows(tolerant))
+    assertEquals(Seq("[ArraySeq(1, 2, 3)]"), rows(result))
+  }
+
+  @Test
+  def aDirectFieldReferenceThatWalksOffTheSchemaFails(): Unit = {
+    // There is no catch: a traversal must be built from the tolerant expression to stop.
+    // The error is raised when the column is resolved, which is when it is selected.
+    val error = assertThrows(classOf[AnalysisException], () => nested.select(
+      transformTree(F.col("items"), op(_.getField("linkId")),
+        java.util.List.of(op(c => unnest(c.getField("item")))), 1).alias("linkIds")).collect())
+    assertEquals("FIELD_NOT_FOUND", error.getCondition)
   }
 
   @Test
