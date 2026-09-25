@@ -25,7 +25,7 @@ package au.csiro.pathling.sql
 import au.csiro.pathling.encoders.ColumnFunctions.{columnOrNull, resolveOrNull, traverseExtension, traverseRootExtension}
 import org.apache.spark.SparkException
 import org.apache.spark.sql.catalyst.analysis.UnresolvedAttribute
-import org.apache.spark.sql.catalyst.expressions.{AttributeReference, Expression, GetStructField}
+import org.apache.spark.sql.catalyst.expressions.{AttributeReference, Expression, GetArrayStructFields, GetStructField, Literal}
 import org.apache.spark.sql.execution.FileSourceScanExec
 import org.apache.spark.sql.execution.adaptive.AdaptiveSparkPlanHelper
 import org.apache.spark.sql.types._
@@ -278,6 +278,126 @@ class ResolveOrNullTest extends SparkSessionSupport with AdaptiveSparkPlanHelper
   }
 
   // -----------------------------------------------------------------------------------------------
+  // T038b: a direct field reference where the input carries the field, and a typed null where not.
+  // -----------------------------------------------------------------------------------------------
+
+  @Test
+  def presentFieldBecomesDirectFieldReference(): Unit = {
+    val singular = structs.select(sb)
+    assertEquals(Seq("[w]", "[y]"), rows(singular))
+    assertTrue(optimisedExpressions(singular).exists {
+      case field: GetStructField =>
+        field.child.isInstanceOf[AttributeReference] && field.extractFieldName == "b"
+      case _ => false
+    }, singular.queryExecution.optimizedPlan.toString)
+
+    val repeating = structs.select(resolveOrNull(F.col("arr"), "b", ArrayType(StringType)))
+    assertEquals(Seq("[ArraySeq(q, s)]", "[ArraySeq(u)]"), rows(repeating))
+    assertTrue(optimisedExpressions(repeating).exists {
+      case GetArrayStructFields(_: AttributeReference, field, _, _, _) => field.name == "b"
+      case _ => false
+    }, repeating.queryExecution.optimizedPlan.toString)
+    assertEquals(ArrayType(StringType), repeating.schema.head.dataType)
+  }
+
+  @Test
+  def absentFieldBecomesNullOfDeclaredType(): Unit = {
+    for ((fallback, data) <- Seq(
+      StringType -> narrowStructs.select(sb),
+      IntegerType -> narrowStructs.select(resolveOrNull(F.col("s"), "b", IntegerType)),
+      ArrayType(StringType) ->
+        narrowStructs.select(resolveOrNull(F.col("arr"), "b", ArrayType(StringType))))) {
+      assertEquals(Seq("[null]", "[null]"), rows(data))
+      assertEquals(fallback, data.schema.head.dataType)
+      assertTrue(optimisedExpressions(data).exists {
+        case Literal(null, dataType) => dataType == fallback
+        case _ => false
+      }, data.queryExecution.optimizedPlan.toString)
+    }
+  }
+
+  // -----------------------------------------------------------------------------------------------
+  // T038c: the fallback types of FR-055.
+  // -----------------------------------------------------------------------------------------------
+
+  private val SingularPrimitive: DataType = StringType
+  private val RepeatingPrimitive: DataType = ArrayType(StringType)
+  private val SingularComplex: DataType = NullType
+  private val RepeatingComplex: DataType = ArrayType(NullType)
+
+  private def missing(fallback: DataType): Column = resolveOrNull(F.col("s"), "missing", fallback)
+
+  @Test
+  def fallbackTypesFollowFr055(): Unit = {
+    for (fallback <- Seq(SingularPrimitive, RepeatingPrimitive, SingularComplex, RepeatingComplex)) {
+      val result = structs.select(missing(fallback).alias("m"))
+      assertEquals(fallback, result.schema("m").dataType)
+      assertEquals(Seq("[null]", "[null]"), rows(result))
+    }
+  }
+
+  @Test
+  def repeatingFallbackSurvivesTransform(): Unit = {
+    // The engine wraps every repeating element in `transform`, which needs an array type.
+    for (fallback <- Seq(RepeatingPrimitive, RepeatingComplex)) {
+      assertEquals(Seq("[null]", "[null]"),
+        rows(structs.select(F.transform(missing(fallback), x => x))))
+    }
+    // Bare `void` is not an array, so it does not survive.
+    val error = assertThrows(classOf[AnalysisException],
+      () => structs.select(F.transform(missing(SingularComplex), x => x)).collect())
+    assertTrue(error.getCondition.startsWith("DATATYPE_MISMATCH"), error.getCondition)
+  }
+
+  @Test
+  def complexFallbackCombinesWithPopulatedStructure(): Unit = {
+    // The bottom type widens to the populated structure, singular and repeating.
+    val singular = structs.select(F.coalesce(missing(SingularComplex), F.col("s")).alias("c"))
+    assertEquals(Seq("[[x,y]]", "[[z,w]]"), rows(singular))
+    assertEquals(structs.schema("s").dataType, singular.schema("c").dataType)
+    val repeating = structs.select(F.concat(missing(RepeatingComplex), F.col("arr")).alias("c"))
+    assertEquals(structs.schema("arr").dataType, repeating.schema("c").dataType)
+    val combined = structs.select(
+      F.concat(F.coalesce(missing(RepeatingComplex), F.array()), F.col("arr")).alias("c"))
+    assertEquals(Seq("[ArraySeq([p,q], [r,s])]", "[ArraySeq([t,u])]"), rows(combined))
+
+    // A concrete minimal structure does not combine with a wider one (FR-027).
+    val minimal = StructType(Seq(StructField("a", StringType)))
+    val singularError = assertThrows(classOf[AnalysisException],
+      () => structs.select(F.coalesce(missing(minimal), F.col("s"))).collect())
+    assertTrue(singularError.getCondition.startsWith("DATATYPE_MISMATCH"),
+      singularError.getCondition)
+    val repeatingError = assertThrows(classOf[AnalysisException],
+      () => structs.select(F.concat(missing(ArrayType(minimal)), F.col("arr"))).collect())
+    assertTrue(repeatingError.getCondition.startsWith("DATATYPE_MISMATCH"),
+      repeatingError.getCondition)
+  }
+
+  // -----------------------------------------------------------------------------------------------
+  // T038d: pruning is identical to a direct field reference (finding 14).
+  // -----------------------------------------------------------------------------------------------
+
+  @Test
+  def prunesIdenticallyToDirectFieldReference(): Unit = {
+    val pairs: Seq[(DataFrame, DataFrame)] = Seq(
+      structs.select(sb) -> structs.select(F.col("s.b")),
+      structs.select(resolveOrNull(F.col("arr"), "b", ArrayType(StringType))) ->
+        structs.select(F.col("arr.b")),
+      structs.filter(sb === "y").select(F.col("id")) ->
+        structs.filter(F.col("s.b") === "y").select(F.col("id")),
+      structs.select(F.transform(F.col("arr"), x => resolveOrNull(x, "b", StringType))) ->
+        structs.select(F.transform(F.col("arr"), x => x.getField("b"))),
+      // Over a structure lacking the field, the fallback reads nothing, as a literal would.
+      narrowStructs.select(sb) -> narrowStructs.select(F.lit(null).cast(StringType)))
+    for ((tolerant, direct) <- pairs) {
+      assertEquals(readSchema(direct), readSchema(tolerant))
+    }
+    assertEquals("struct<s:struct<b:string>>", readSchema(structs.select(sb)))
+    // The control: the comparison can fail, because a plan reading another field differs.
+    assertNotEquals(readSchema(structs.select(F.col("s.a"))), readSchema(structs.select(sb)))
+  }
+
+  // -----------------------------------------------------------------------------------------------
   // T038a, decision 75: extension traversal over the parent, on both layouts.
   // -----------------------------------------------------------------------------------------------
 
@@ -438,6 +558,17 @@ class ResolveOrNullTest extends SparkSessionSupport with AdaptiveSparkPlanHelper
   // -----------------------------------------------------------------------------------------------
   // Helpers.
   // -----------------------------------------------------------------------------------------------
+
+  private def optimisedExpressions(df: DataFrame): Seq[Expression] =
+    df.queryExecution.optimizedPlan.expressions.flatMap(_.collect { case e => e })
+
+  /** Executes the plan and returns the schema its file scan read. */
+  private def readSchema(df: DataFrame): String = {
+    df.collect()
+    val scans = collect(df.queryExecution.executedPlan) { case scan: FileSourceScanExec => scan }
+    assertEquals(1, scans.size, df.queryExecution.executedPlan.toString)
+    scans.head.metadata("ReadSchema")
+  }
 
   private def strip(row: String): String = row.stripPrefix("[").stripSuffix("]")
 
