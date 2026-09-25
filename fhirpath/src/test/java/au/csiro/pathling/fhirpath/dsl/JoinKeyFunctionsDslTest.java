@@ -61,6 +61,11 @@ public class JoinKeyFunctionsDslTest extends FhirPathDslTestBase {
                         "patientReference",
                         ref -> ref.fhirType(REFERENCE).string("reference", "Patient/patient-123"))
                     .element(
+                        "versionedReference",
+                        ref ->
+                            ref.fhirType(REFERENCE)
+                                .string("reference", "Patient/patient-123/_history/3"))
+                    .element(
                         "observationReference",
                         ref -> ref.fhirType(REFERENCE).string("reference", "Observation/obs-456"))
                     .element(
@@ -120,6 +125,20 @@ public class JoinKeyFunctionsDslTest extends FhirPathDslTestBase {
         .testEmpty(
             "observationReference.getReferenceKey(Patient)",
             "getReferenceKey() with non-matching type returns empty for Observation")
+        .group("getReferenceKey() function with versioned references")
+        .testEquals(
+            "Patient/patient-123",
+            "versionedReference.getReferenceKey()",
+            "getReferenceKey() strips the /_history version so a versioned reference joins its"
+                + " target's resource key")
+        .testEquals(
+            "Patient/patient-123",
+            "versionedReference.getReferenceKey(Patient)",
+            "getReferenceKey(Patient) strips the /_history version for a matching typed reference")
+        .testEmpty(
+            "versionedReference.getReferenceKey(Observation)",
+            "getReferenceKey(Observation) with non-matching type returns empty for a versioned"
+                + " reference")
         .group("getReferenceKey() function error cases")
         .testError(
             "nonReference.getReferenceKey()",
@@ -130,6 +149,35 @@ public class JoinKeyFunctionsDslTest extends FhirPathDslTestBase {
         .testError(
             "patientReference.getReferenceKey(Patient, 'extra')",
             "getReferenceKey() throws an error when called with more than one parameter")
+        .build();
+  }
+
+  @FhirPathTest
+  public Stream<DynamicTest> testVersionedReferenceKeyMatchesResourceKey() {
+    // This test demonstrates issue #2797: a versioned reference (e.g.
+    // Patient/p2/_history/3) names a specific version of a resource. getReferenceKey() strips the
+    // /_history version so the reference key matches the target's (unversioned) resource key and
+    // the referencing resource does not silently drop out of SQL-on-FHIR joins.
+    return builder()
+        .withSubject(
+            sb ->
+                sb.string("resourceType", "Observation")
+                    .string("id", "o1")
+                    .element(
+                        "subject",
+                        ref ->
+                            ref.fhirType(REFERENCE)
+                                .string("reference", "Patient/p2/_history/3")))
+        .group("getReferenceKey() with versioned reference")
+        .testEquals(
+            "Patient/p2",
+            "subject.getReferenceKey()",
+            "getReferenceKey() strips the /_history version from a versioned reference")
+        .testEquals(
+            "Patient/p2",
+            "subject.getReferenceKey(Patient)",
+            "getReferenceKey(Patient) strips the /_history version from a versioned reference of"
+                + " matching type")
         .build();
   }
 

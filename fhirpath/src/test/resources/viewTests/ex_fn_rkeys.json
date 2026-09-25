@@ -13,6 +13,9 @@
         },
         {
           "reference": "CarePlan/123"
+        },
+        {
+          "reference": "ServiceRequest/789/_history/2"
         }
       ]
     }
@@ -64,6 +67,9 @@
         },
         {
           "rid": "CarePlan/123"
+        },
+        {
+          "rid": "ServiceRequest/789"
         }
       ]
     },
@@ -86,6 +92,34 @@
       "expect": [
         {
           "rid": "CarePlan/123"
+        }
+      ]
+    },
+    {
+      "title": "get reference key with resource param strips _history version",
+      "view": {
+        "resource": "Observation",
+        "select": [
+          {
+            "forEach": "basedOn.where(getReferenceKey(ServiceRequest).exists())",
+            "column": [
+              {
+                "name": "rid",
+                "path": "getReferenceKey(ServiceRequest)"
+              }
+            ]
+          }
+        ]
+      },
+      "expect": [
+        {
+          "rid": "ServiceRequest/123"
+        },
+        {
+          "rid": "https://example.org/fhir/ServiceRequest/456"
+        },
+        {
+          "rid": "ServiceRequest/789"
         }
       ]
     }

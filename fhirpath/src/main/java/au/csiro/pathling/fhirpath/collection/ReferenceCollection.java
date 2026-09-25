@@ -17,6 +17,8 @@
 
 package au.csiro.pathling.fhirpath.collection;
 
+import static org.apache.spark.sql.functions.regexp_replace;
+
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
@@ -60,6 +62,12 @@ public class ReferenceCollection extends Collection {
   /**
    * Gets a collection containing the keys of the references.
    *
+   * <p>The returned reference keys are normalised so they can be joined to resource keys: a
+   * trailing {@code /_history/<version>} segment is stripped from the reference string, because
+   * {@link ResourceCollection#getKeyCollection()} builds resource keys from the plain resource
+   * {@code id}. This matches the SQL on FHIR requirement that a reference key equals the resource
+   * key of the referenced resource.
+   *
    * @param typeSpecifier The type specifier to filter by
    * @return a {@link Collection} containing the keys of the references in this collection, suitable
    *     for joining with resource keys
@@ -74,12 +82,28 @@ public class ReferenceCollection extends Collection {
         .map(this::keyFilter)
         // Apply the filter to the reference column.
         .map(this::filter)
-        // Return a StringCollection of the reference elements.s
+        // Return a StringCollection of the reference elements.
         .flatMap(c -> c.traverse(FhirFieldNames.REFERENCE))
         // If no type was specified, return the reference column as is.
         .or(() -> this.traverse(FhirFieldNames.REFERENCE))
+        // Strip the version from versioned references so they join to resource keys.
+        .map(this::stripVersionFromKey)
         // If the reference column is not present, return an empty collection.
         .orElse(EmptyCollection.getInstance());
+  }
+
+  /**
+   * Strips a trailing {@code /_history/<version>} segment from the reference strings in this
+   * collection, so that a versioned reference joins to its target's resource key.
+   *
+   * @param referenceKeys the collection of reference keys
+   * @return the collection with versioned references normalised
+   */
+  @Nonnull
+  private Collection stripVersionFromKey(@Nonnull final Collection referenceKeys) {
+    final ColumnRepresentation normalisedKeys =
+        referenceKeys.getColumn().map(col -> regexp_replace(col, "/_history/[^/]+$", ""));
+    return referenceKeys.copyWith(normalisedKeys);
   }
 
   @Nonnull
