@@ -136,8 +136,13 @@ SQL-on-FHIR compliance suite over data in the new layout.
 3. **Given** a Coding column narrower than the canonical layout, **When** a
    terminology operation is applied, **Then** it reads the fields by name and
    the absent ones are null.
-4. **Given** a reference, **When** `resolve()` is applied, **Then** the referenced
-   resources are returned without relying on a stored versioned-key column.
+4. **Given** a reference, **When** its `getReferenceKey()` is joined to the
+   `getResourceKey()` of the resources it points to, **Then** the referenced
+   resources are joined without relying on a stored versioned-key column, and
+   `resolve()` still reports the target's type for `is` and `ofType()`.
+   *(Decision 73. This scenario assumed a `resolve()` that returns the referenced
+   resource. The engine's `resolve()` returns type information only, and joins
+   go through the key functions.)*
 5. **Given** a quantity with no canonical annotation, **When** it is compared
    across units, **Then** the canonical value is computed and the comparison
    succeeds.

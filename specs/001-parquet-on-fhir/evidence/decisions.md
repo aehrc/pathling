@@ -2240,3 +2240,115 @@ repeating-primitive divergence instead of the one round 5 recorded. T061 carries
 the alignment question. T080d records the change, T080c's cases now assert the
 structure is kept, including where only a repeating primitive's `_x` held it,
 and T076 and T078c say the cascade is gone.
+
+## 73. M2 ports the engine progressively and ends with the `fhirpath` suites on the new layout
+
+M2's objective is that the FHIRPath engine supports the new layout while keeping
+its support for the previous one. It gets there by porting one feature at a time
+behind the normalisation decision 55 places in the traversal expression, and it
+ends with the `fhirpath` module's own suites running on the new layout **by
+default**, and green. The public API still switches in M4, not earlier.
+
+The order is fixed:
+
+1. **T038m first.** The approach depends on whether the traversal expression can
+   normalise the previous layout, above all the `_fid` extension-map lookup
+   inside a `transform` lambda and the self-recursive extension type. If it
+   cannot, the fallback is dispatch in the collection classes (decision 47), and
+   the rest of M2 is replanned against that before any feature is ported.
+2. **Coverage, then absent elements.** T020–T027 and T049a, then the
+   absent-element block. Tolerance of an absent field comes first because every
+   later step reaches the data through it.
+3. **The port**, in this order: decimals, quantity canonicalisation, Coding by
+   name, inline extensions (removing `extensionMapColumn`), reference keys. Each
+   step adds its normalisation branch to the traversal expression. The existing
+   suite stays green on the previous layout, which now reads through the
+   branch, and a small set of new-layout evaluation tests shows the ported
+   feature works there too.
+4. **The switch of the `fhirpath` suites.** A full run on the new layout with
+   the failures sorted by cause (T100h), then T100 and T100g, which move here
+   from M4.
+
+### Why progressive, and not everything at once
+
+Not mainly to avoid a red build: nothing on `issue/2367` reaches `main` until
+the programme merges. The reason is diagnosis. Replacing the fixtures, the schema
+and the engine together turns every failure into three possible causes: a
+fixture, an expected value, or the engine. Normalising the previous layout at the
+traversal point runs the whole existing suite over each ported feature as it
+lands, so every step is small enough to bisect and the regression check comes
+for free. The branches are not throwaway, either: they are how the previous
+layout stays readable until T100e.
+
+The approach has one known weakness, and the plan is built around it. The
+previous layout is dense and bounded, so emulating the new layout on it never
+produces what only real new-layout data produces: columns missing because the
+schema is pruned, one complex type with different shapes at different paths,
+decimals whose scale is set by their text, and extensions on primitive elements.
+"Green on the previous layout" therefore proves the engine on the emulated shape
+only. Two things close the gap. The new-layout evaluation tests added at each
+step are aimed at exactly those four cases. And the new-layout arm of the
+fixtures (T034–T036, T037a) is built early, as an opt-in run that does not gate
+the build, so the number of failures left before the switch is always known.
+
+### What moves
+
+- **The switch of the `fhirpath` suites moves from M4 to M2.** T100 and T100g
+  move whole. T100 already covers only the `fhirpath` module's suites. The
+  `library-api` conversions (T100d) and the Python and R runs (T100b) depend on
+  the public API writing the new layout, and stay in M4.
+- **Phase 10 moves from M2 to M4.** Divergent files read as one dataset and
+  Delta widening on upsert are IO behaviour, not engine work, and they are the
+  only part of M2 a user could observe. M2 now joins the milestones that change
+  nothing a user can see, apart from the two fixes noted below. Phase 10 keeps
+  its number.
+- **Variadic reconciliation stays in M2 until the measurement says otherwise.**
+  It was proposed for M5. But the pruned schema gives one complex type different
+  shapes at different paths as soon as the suites switch, so whatever the switch
+  needs has to land in M2 or be excluded with approval. T100h counts the
+  failures that come from it. What the switch does not need, T104b being the
+  likely case since it pins a defect already on `main`, may then move to M5. That
+  choice is made at T100h and not before.
+- **The previous-layout arm of the fixtures** stays available as an opt-in run
+  after the switch. Until M4 the `library-api`, Python and R suites exercise the
+  previous layout through `PathlingContext`, which still writes it. From M4 a CI
+  job runs the `fhirpath` suites on the previous layout (T100i), so the
+  normalisation stays covered until T100e removes it.
+
+### The rule on existing tests
+
+Existing tests and conformance exclusions stay unchanged throughout M2. Any
+change to one needs the programme owner's approval, per test. Three are known:
+
+- **T110 closes #2625**, so the two `FhirViewExtraTest` exclusions start
+  reporting that an excluded test passed. Removing them in M2 is **approved**.
+- **T111 casts a view column to its declared FHIR type on output.** On the
+  previous layout this should change no output type: a declared `decimal` is
+  already `DECIMAL(32,6)`, which is what `FhirPathType.DECIMAL` maps to. Any
+  existing test whose expected output type does change is listed for approval.
+- **Decimals on the previous layout are normalised too**, so the whole existing
+  suite exercises the new decimal path. The query-time type does not change on
+  either layout (FR-035). The value can change in one respect, the scale. The
+  previous layout keeps the source scale in `_scale`, while the new layout
+  stores the form a double round trip gives. The normalisation carries `_scale`
+  into the text it produces, so no existing test changes during the port. An
+  existing test that renders a decimal as text, `1.50` against `1.5`, may
+  change at the switch, when its fixture is written in the new layout, and is
+  listed for approval then.
+
+Whatever else T100h finds is listed the same way.
+
+### What else it corrects
+
+T020–T022, T088 and T098 assumed a `resolve()` that joins to the target
+resource. The engine's `resolve()` returns type information only, for `is` and
+`ofType` (#2522), and joins go through `getResourceKey()` and
+`getReferenceKey()`. The engine already builds the resource key from the plain
+`id` element, and only the encoder reads the stored versioned id. So those tasks
+are rewritten against the functions that exist, and T098 is reduced to confirming
+that no stored versioned key is read and testing it on the new layout.
+`spec.md`'s US3 acceptance scenario 4 carried the same assumption and is
+restated against the key functions.
+
+_Amends_ decisions 47, 51, 52 and 55 as to where the switch of the test estate
+happens, and supersedes the placement of Phase 10 in M2.
