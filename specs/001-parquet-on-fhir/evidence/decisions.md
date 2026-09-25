@@ -2501,6 +2501,42 @@ layout's extension struct keeps `_fid`.
 - **Fragility.** It depends on analyzer internals: that a node throws where it
   does, and that rules reach it through `mapChildren`. T038d and the
   plan-shape tests in T038a are what show a Spark upgrade has changed that.
+- **A column dropped by a projection beneath the operator.** Found by the
+  toolkit tests. A plain reference to such a column is repaired by
+  `ResolveMissingReferences`, which adds it back to the projection. The
+  tolerant reference is resolved first against the operator's child, where the
+  name is missing, so the catch returns the fallback before that rule runs. The
+  answer is silently wrong, not an error. It reaches root extension traversal
+  too, because that goes through the same reference. `ResolveOrNullTest` pins
+  it. The engine's present call sites apply columns to the table itself. T110
+  emits the reference at every root element, so it must check whether any
+  engine call site hits this case.
+
+### The construction, as confirmed by the owner (2026-09-25)
+
+The toolkit that T038a–e and T038j–l built was confirmed as follows:
+
+- **The root has its own entry point.** `traverseRootExtension()` is separate
+  from `traverseExtension(parent)`. At the root there is no parent expression.
+  The root entry point reaches `extension`, `_fid` and `_extension` through the
+  tolerant table-column reference and decides from the resolved `_fid`.
+- **Three cases, not two.** A parent with an `extension` field resolves to that
+  field. A parent with `_fid` resolves to `_extension[_fid]`. A parent with
+  neither resolves to a null of FR-055's bottom type for a repeating complex
+  element, and it does not reach for `_extension`. FR-054 needs the third case,
+  because on a pruned new-layout table an element that carries no extensions
+  has neither field, and that table has no `_extension` column.
+- **The dropped-column limit** above is accepted, and T110 checks the engine's
+  call sites against it.
+- **`MergeCast` selects the operand it projects by position.** It takes the
+  full ordered operand list, the position of the operand to project, and the
+  canonical structure. It does not take the operand as a separate argument
+  beside the list, which is how T038l's text puts it. With a separate argument,
+  the projected operand would be a second copy of a list member, analysed on
+  its own. Selecting by position means the projected value is always the one
+  the target type was computed from. A caller unifying N operands emits one
+  node per position, each over the same list. T113a does that in
+  `CombiningLogic`.
 
 ### When to revisit
 
