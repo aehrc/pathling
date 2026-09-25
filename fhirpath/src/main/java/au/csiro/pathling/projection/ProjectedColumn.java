@@ -20,11 +20,14 @@ package au.csiro.pathling.projection;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.views.ColumnTag;
 import jakarta.annotation.Nonnull;
 import java.util.Objects;
+import java.util.Optional;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * The result of evaluating a {@link RequestedColumn} as part of a {@link ProjectionClause}.
@@ -36,8 +39,17 @@ public record ProjectedColumn(
     @Nonnull Collection collection, @Nonnull RequestedColumn requestedColumn) {
 
   /**
+   * The one declared FHIR type that is not cast on output. A decimal is output as its literal text,
+   * and a cast would change that (decision 76). {@link #getSqlType()} still reports {@code
+   * DECIMAL(32,6)} for it.
+   */
+  private static final FHIRDefinedType UNCAST_DECLARED_TYPE = FHIRDefinedType.DECIMAL;
+
+  /**
    * Gets the column value from the collection and aliases it with the requested name. If a SQL type
-   * is specified in the requested column, the column value will be cast to that type.
+   * is specified in the requested column, the column value will be cast to that type. Otherwise, if
+   * a FHIR type is declared on the column, the value is cast to the SQL type of that FHIR type
+   * (FR-028), so that a column over an element absent from the input schema has the declared type.
    *
    * @return The column value with the appropriate alias
    */
@@ -83,8 +95,25 @@ public record ProjectedColumn(
     return requestedColumn
         .sqlType()
         .map(rawResult::try_cast)
+        .or(() -> declaredOutputType().map(rawResult::cast))
         .orElse(rawResult)
         .alias(requestedColumn.name());
+  }
+
+  /**
+   * Gets the SQL type that the declared FHIR type of the column gives its output, if a FHIR type is
+   * declared and is one that is cast on output.
+   *
+   * @return the SQL type of the declared FHIR type, as an array for a collection column
+   */
+  @Nonnull
+  private Optional<DataType> declaredOutputType() {
+    return requestedColumn
+        .type()
+        .filter(type -> !UNCAST_DECLARED_TYPE.equals(type))
+        .flatMap(FhirPathType::forFhirType)
+        .map(FhirPathType::getSqlDataType)
+        .map(type -> requestedColumn.collection() ? DataTypes.createArrayType(type) : type);
   }
 
   /**
@@ -130,10 +159,14 @@ public record ProjectedColumn(
             .orElseThrow(
                 () ->
                     new UnsupportedOperationException(
-                        "Cannot derive SQL type for column '"
+                        "Cannot derive the SQL type of column '"
                             + requestedColumn.name()
-                            + "': no sqlType annotation, FHIR type annotation, or resolved"
-                            + " FhirPathType"));
+                            + "' with path '"
+                            + requestedColumn.path().toExpression()
+                            + "', because the path carries no type information. Declare the"
+                            + " column's FHIR type with \"type\", or its SQL type with the '"
+                            + ColumnTag.ANSI_TYPE_TAG
+                            + "' tag."));
     return requestedColumn.collection() ? DataTypes.createArrayType(elementType) : elementType;
   }
 }

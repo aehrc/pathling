@@ -339,9 +339,9 @@ public class Collection implements Equatable {
    */
   @Nonnull
   public Collection traverseElement(@Nonnull final ElementDefinition childDef) {
-    // Invoke the traversal method on the column context to get the new column.
-    final ColumnRepresentation columnRepresentation =
-        getColumn().traverse(childDef.getElementName(), childDef.getFhirType());
+    // Invoke the traversal method on the column context to get the new column. Where the input
+    // schema does not carry the element, the column is a null of the type the definition gives it.
+    final ColumnRepresentation columnRepresentation = getColumn().traverse(childDef);
     // Return a new Collection with the new column and the child definition.
     return Collection.build(columnRepresentation, extensionMapColumn, childDef);
   }
@@ -355,26 +355,14 @@ public class Collection implements Equatable {
   @Nonnull
   protected Optional<Collection> traverseExtension(
       @Nonnull final ElementDefinition extensionDefinition) {
+    // Extension traversal reads the layout from the resolved parent: the inline extension field of
+    // the new layout, or the entry for the parent's field identifier in the extension map column of
+    // the previous one. A collection that carries no extension map has no extensions to reach.
     return getExtensionMapColumn()
         .map(
             em ->
                 Collection.build(
-                    new DefaultRepresentation(em)
-                        .transform(c -> getFid().applyTo(c).removeNulls().getValue())
-                        .removeNulls()
-                        .flatten(),
-                    extensionMapColumn,
-                    extensionDefinition));
-  }
-
-  /**
-   * Gets the field ID column for this collection.
-   *
-   * @return the column representation containing the field ID
-   */
-  @Nonnull
-  protected ColumnRepresentation getFid() {
-    return column.traverse(ExtensionSupport.FID_FIELD_NAME());
+                    getColumn().traverseExtension(), extensionMapColumn, extensionDefinition));
   }
 
   /**

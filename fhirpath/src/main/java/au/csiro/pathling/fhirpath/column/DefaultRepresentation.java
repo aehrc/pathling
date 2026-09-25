@@ -19,6 +19,7 @@ package au.csiro.pathling.fhirpath.column;
 
 import static org.apache.spark.sql.functions.lit;
 
+import au.csiro.pathling.encoders.ColumnFunctions;
 import au.csiro.pathling.encoders.ValueFunctions;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -32,6 +33,8 @@ import lombok.Setter;
 import lombok.ToString;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
+import org.apache.spark.sql.types.DataType;
+import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
@@ -113,29 +116,56 @@ public class DefaultRepresentation extends ColumnRepresentation {
     return copyOf(ValueFunctions.unnest(value));
   }
 
+  /**
+   * Traverses to a field of the structure, or of every structure in the array, that this
+   * representation holds. The field is referenced through the tolerant traversal expression, so the
+   * traversal yields a null of the null type where the input schema does not carry the field.
+   *
+   * @param fieldName the name of the field to traverse to
+   * @return the flattened result of the traversal
+   */
   @Nonnull
   @Override
   public ColumnRepresentation traverse(@Nonnull final String fieldName) {
-    return copyOf(value.getField(fieldName)).removeNulls().flatten();
+    return traverse(fieldName, Optional.empty(), DataTypes.NullType);
   }
 
   @Override
   @Nonnull
   public ColumnRepresentation traverse(
       @Nonnull final String fieldName, @Nonnull final Optional<FHIRDefinedType> fhirType) {
-    @Nullable final FHIRDefinedType resolvedFhirType = fhirType.orElse(null);
-    if (FHIRDefinedType.BASE64BINARY.equals(resolvedFhirType)) {
-      // If the field is a base64Binary, represent it using a BinaryRepresentation.
-      return DefaultRepresentation.fromBinaryColumn(traverse(fieldName).getValue());
-    } else {
-      // Otherwise, use the default representation.
-      return traverse(fieldName);
-    }
+    return traverse(fieldName, fhirType, AbsentElementTypes.singular(fhirType));
   }
 
   @Override
   @Nonnull
+  public ColumnRepresentation traverse(
+      @Nonnull final String fieldName,
+      @Nonnull final Optional<FHIRDefinedType> fhirType,
+      @Nonnull final DataType fallback) {
+    final ColumnRepresentation result =
+        copyOf(ColumnFunctions.resolveOrNull(value, fieldName, fallback)).removeNulls().flatten();
+    @Nullable final FHIRDefinedType resolvedFhirType = fhirType.orElse(null);
+    if (FHIRDefinedType.BASE64BINARY.equals(resolvedFhirType)) {
+      // If the field is a base64Binary, represent it using a BinaryRepresentation.
+      return DefaultRepresentation.fromBinaryColumn(result.getValue());
+    } else {
+      // Otherwise, use the default representation.
+      return result;
+    }
+  }
+
+  /**
+   * Gets a field of the structure, or of every structure in the array, that this representation
+   * holds, without flattening. The field is referenced through the tolerant traversal expression,
+   * so the result is a null of the null type where the input schema does not carry the field.
+   *
+   * @param fieldName the name of the field to get
+   * @return the field, unflattened
+   */
+  @Override
+  @Nonnull
   public ColumnRepresentation getField(@Nonnull final String fieldName) {
-    return copyOf(value.getField(fieldName));
+    return copyOf(ColumnFunctions.resolveOrNull(value, fieldName, DataTypes.NullType));
   }
 }

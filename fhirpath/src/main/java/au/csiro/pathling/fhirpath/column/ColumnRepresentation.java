@@ -31,6 +31,7 @@ import static org.apache.spark.sql.functions.try_element_at;
 import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.definition.ElementDefinition;
+import au.csiro.pathling.encoders.ColumnFunctions;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.Optional;
@@ -180,6 +181,49 @@ public abstract class ColumnRepresentation {
   @Nonnull
   public abstract ColumnRepresentation traverse(
       @Nonnull final String fieldName, @Nonnull final Optional<FHIRDefinedType> fhirType);
+
+  /**
+   * Returns a new {@link ColumnRepresentation} that represents the result of traversing to a nested
+   * field, which yields a null of the given type where the input schema does not carry the field
+   * (FR-054).
+   *
+   * @param fieldName The name of the field to traverse to
+   * @param fhirType The FHIR type of the field
+   * @param fallback The type of the null that stands for the field where it is absent, per FR-055
+   * @return A new {@link ColumnRepresentation} representing the result of the traversal
+   */
+  @Nonnull
+  public abstract ColumnRepresentation traverse(
+      @Nonnull final String fieldName,
+      @Nonnull final Optional<FHIRDefinedType> fhirType,
+      @Nonnull final DataType fallback);
+
+  /**
+   * Returns a new {@link ColumnRepresentation} that represents the result of traversing to the
+   * element with the given definition. Where the input schema does not carry the element, the
+   * result is a null of the type the definition gives it (FR-055).
+   *
+   * @param definition The definition of the element to traverse to
+   * @return A new {@link ColumnRepresentation} representing the result of the traversal
+   */
+  @Nonnull
+  public ColumnRepresentation traverse(@Nonnull final ElementDefinition definition) {
+    return traverse(
+        definition.getElementName(), definition.getFhirType(), AbsentElementTypes.of(definition));
+  }
+
+  /**
+   * Returns a new {@link ColumnRepresentation} that represents the extensions of the elements in
+   * this representation, on either layout: the inline {@code extension} field of the new layout, or
+   * the entry for each element's {@code _fid} in the {@code _extension} column of the previous one
+   * (decision 75). The result is flattened.
+   *
+   * @return A new {@link ColumnRepresentation} representing the extensions
+   */
+  @Nonnull
+  public ColumnRepresentation traverseExtension() {
+    return copyOf(ColumnFunctions.traverseExtension(getValue())).removeNulls().flatten();
+  }
 
   /**
    * Returns a new {@link ColumnRepresentation} that represents the result of traversing to a nested
@@ -705,11 +749,7 @@ public abstract class ColumnRepresentation {
         c ->
             coalesce(
                 Stream.of(definitions)
-                    .map(
-                        ed ->
-                            this.copyOf(c)
-                                .traverse(ed.getElementName(), ed.getFhirType())
-                                .getValue())
+                    .map(ed -> this.copyOf(c).traverse(ed).getValue())
                     .toArray(Column[]::new)));
   }
 }

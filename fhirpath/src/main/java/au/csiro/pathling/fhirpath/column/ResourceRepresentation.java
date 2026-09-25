@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.fhirpath.column;
 
+import au.csiro.pathling.encoders.ColumnFunctions;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import java.util.function.UnaryOperator;
@@ -24,6 +25,8 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
+import org.apache.spark.sql.types.DataType;
+import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
@@ -43,8 +46,8 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  *   <li>{@link #vectorize(UnaryOperator, UnaryOperator)} applies the singular expression and
  *       returns a new ResourceRepresentation (resources are always singular)
  *   <li>{@link #flatten()} returns {@code this} unchanged since resources are already flat
- *   <li>{@link #traverse(String)} returns a {@link DefaultRepresentation} with {@code
- *       col(fieldName)} - subsequent traversals use {@code getField()}
+ *   <li>{@link #traverse(String)} returns a {@link DefaultRepresentation} with a tolerant reference
+ *       to the table column - subsequent traversals use the tolerant traversal expression
  * </ul>
  *
  * <p>Example column generation differences:
@@ -192,15 +195,14 @@ public final class ResourceRepresentation extends ColumnRepresentation {
    * Traverses from the root to a top-level field in the flat schema.
    *
    * <p>Unlike nested schema traversal where we use {@code col("ResourceType").getField(fieldName)},
-   * this method creates a direct column reference using {@code col(fieldName)}.
+   * this method creates a direct reference to the table column. The reference is tolerant: it
+   * yields a null of the null type where the input does not have the column (decision 75).
    *
    * <p>When the existence column has been modified (e.g., via filtering with {@code where()}), the
-   * field access is conditional on the existence column being non-null. For the default case
-   * (existence column is {@code col("id")}), the field is accessed directly without additional null
-   * checks.
+   * field access is conditional on the existence column being non-null.
    *
    * <p>The returned representation is a {@link DefaultRepresentation}, so subsequent traversals
-   * will use the standard {@code getField()} method for nested access.
+   * will use the tolerant traversal expression for nested access.
    *
    * @param fieldName the name of the field to traverse to
    * @return a {@link DefaultRepresentation} wrapping the field access
@@ -208,17 +210,14 @@ public final class ResourceRepresentation extends ColumnRepresentation {
   @Override
   @Nonnull
   public ColumnRepresentation traverse(@Nonnull final String fieldName) {
-    // at the root level, access the field directly via col(fieldName)
-    // removeNulls() filters out NULL values from arrays to match the behavior of
-    // DefaultRepresentation.traverse() - but we don't flatten here
-    return getField(fieldName).removeNulls();
+    return traverse(fieldName, Optional.empty(), DataTypes.NullType);
   }
 
   /**
    * Traverses from the root to a top-level field in the flat schema, with FHIR type awareness.
    *
-   * <p>This method delegates to {@link #traverse(String)} for the actual traversal, then applies
-   * type-specific handling for special FHIR types like base64Binary.
+   * <p>The field is taken to be singular, so where the input does not have the column the result is
+   * a null of the storage type of a primitive, or of the null type otherwise.
    *
    * @param fieldName the name of the field to traverse to
    * @param fhirType the FHIR type of the field
@@ -228,11 +227,33 @@ public final class ResourceRepresentation extends ColumnRepresentation {
   @Nonnull
   public ColumnRepresentation traverse(
       @Nonnull final String fieldName, @Nonnull final Optional<FHIRDefinedType> fhirType) {
+    return traverse(fieldName, fhirType, AbsentElementTypes.singular(fhirType));
+  }
+
+  /**
+   * Traverses from the root to a top-level field in the flat schema, yielding a null of the given
+   * type where the input does not have the column.
+   *
+   * <p>removeNulls() filters out NULL values from arrays to match the behavior of {@link
+   * DefaultRepresentation#traverse(String)}, but the result is not flattened.
+   *
+   * @param fieldName the name of the field to traverse to
+   * @param fhirType the FHIR type of the field
+   * @param fallback the type of the null that stands for the column where it is absent
+   * @return a {@link ColumnRepresentation} for the field, with appropriate type handling
+   */
+  @Override
+  @Nonnull
+  public ColumnRepresentation traverse(
+      @Nonnull final String fieldName,
+      @Nonnull final Optional<FHIRDefinedType> fhirType,
+      @Nonnull final DataType fallback) {
+    final ColumnRepresentation result = getField(fieldName, fallback).removeNulls();
     if (fhirType.filter(FHIRDefinedType.BASE64BINARY::equals).isPresent()) {
-      // If the field is a base64Binary, represent it using binary column handling
-      return DefaultRepresentation.fromBinaryColumn(traverse(fieldName).getValue());
+      // If the field is a base64Binary, represent it using binary column handling.
+      return DefaultRepresentation.fromBinaryColumn(result.getValue());
     }
-    return traverse(fieldName);
+    return result;
   }
 
   /**
@@ -247,7 +268,29 @@ public final class ResourceRepresentation extends ColumnRepresentation {
   @Override
   @Nonnull
   public ColumnRepresentation getField(@Nonnull final String fieldName) {
+    return getField(fieldName, DataTypes.NullType);
+  }
+
+  @Nonnull
+  private ColumnRepresentation getField(
+      @Nonnull final String fieldName, @Nonnull final DataType fallback) {
     return new DefaultRepresentation(
-        functions.when(existenceColumn.isNotNull(), functions.col(fieldName)));
+        functions.when(
+            existenceColumn.isNotNull(), ColumnFunctions.columnOrNull(fieldName, fallback)));
+  }
+
+  /**
+   * Traverses to the extensions of the resource itself, on either layout (decision 75). The
+   * resource's {@code extension}, {@code _fid} and {@code _extension} columns are all reached
+   * through the tolerant table-column reference.
+   *
+   * @return a {@link DefaultRepresentation} holding the extensions of the resource
+   */
+  @Override
+  @Nonnull
+  public ColumnRepresentation traverseExtension() {
+    return new DefaultRepresentation(
+            functions.when(existenceColumn.isNotNull(), ColumnFunctions.traverseRootExtension()))
+        .removeNulls();
   }
 }

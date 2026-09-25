@@ -191,12 +191,6 @@ public class ResourceCollection extends Collection {
 
   @Nonnull
   @Override
-  protected ColumnRepresentation getFid() {
-    return getColumn().traverse(ExtensionSupport.FID_FIELD_NAME());
-  }
-
-  @Nonnull
-  @Override
   public Collection copyWith(@Nonnull final ColumnRepresentation newValue) {
     return new ResourceCollection(
         newValue,

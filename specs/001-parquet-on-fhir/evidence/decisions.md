@@ -683,7 +683,7 @@ per-kind coverage afterwards.
 
 The dispatch arms decision 47 introduces are not a product feature by default.
 Their purpose is to keep the build green while the engine is rewritten, and to
-make the flip a writer flip rather than a migration. T100e removes them in M6.
+make the flip a writer flip rather than a migration. T100e removes them in M7.
 
 This is the cost that replaces the red window, and it is worth naming rather than
 discovering: some of the work in M2 exists to buy a green build and a safe flip,
@@ -701,6 +701,12 @@ rather than an ordinary task. **It has been moved to Phase 7**, at the head of
 M2: it sets the coverage standard for the arms, so settling it in Phase 13 would
 have decided in M4 how work written in M2 should have been tested. Its wiring
 stays in Phase 13.
+
+_Deferred (2026-09-26)._ The owner has moved T049a to the start of M7, to be
+settled with the other migration questions. Until then the arms are treated as
+transitional, which is the default above, and Phase 13 builds the check with a
+provisional default. The earlier text of this decision placed T100e in M6; it is
+in M7, since the dense schema became M6.
 
 ## 52. Three axes, not one, and the test framework carries two of them
 
@@ -2511,6 +2517,18 @@ layout's extension struct keeps `_fid`.
   it. The engine's present call sites apply columns to the table itself. T110
   emits the reference at every root element, so it must check whether any
   engine call site hits this case.
+- **The server's `_filter` search.** T110's check found one call site that
+  hits the dropped-column case. `applyFhirPathFilters` in
+  `server/.../search/SearchExecutor.java` selects `id` before it filters with
+  a FHIRPath column. Under the tolerant root reference, every element beneath
+  that selection is absent, so `_filter` would silently return no rows once
+  the server adopts this library. It is dealt with at M4, when the public API
+  is ported, by filtering before selecting. No engine site in `fhirpath` or
+  `library-api` hits the case.
+- **A column applied to a projected dataset.** `fhirPathToColumn` and
+  `searchToColumn`, and their Python and R equivalents, hand the column to the
+  caller. A caller who applies it to a dataset that has already dropped the
+  columns it reads now gets a null, where Spark used to add the column back.
 
 ### The construction, as confirmed by the owner (2026-09-25)
 
@@ -2551,3 +2569,27 @@ hold. The fallbacks, in order:
 _Amends_ decision 74, withdrawing its tolerant reference and its second child.
 It records the principle that compiled expressions are schema-agnostic, and it
 extends tolerance of absence to the resource root.
+
+## 76. An undescribed element yields empty, and a declared decimal stays a string on output
+
+Both are owner decisions (2026-09-25), prompted by writing T101–T107 test-first.
+
+**FR-025 is amended to match the engine.** FR-025 required traversal to an
+element the definitions do not describe to raise an error. Since `551c2a3050`
+(June 2025), the engine deliberately returns an empty collection, and
+`SystemDslTest` asserts it ("traversal to undefined property returns {}"). The
+requirement now matches that behaviour. T102 tests it over a pruned schema, and
+no existing test changes.
+
+**T111 does not cast a declared `decimal`.** Decision 73 expected the T111 cast
+to change no output type on the previous layout, with `decimal` mapping to
+`DECIMAL(32,6)`. That was wrong. `DecimalCollection.toExternalValue` renders a
+decimal as its literal text, so a view column declared `"type": "decimal"` is
+output as a string today, while `getSqlType()` reports `DECIMAL(32,6)`. Casting
+it would change existing outputs, the SQL-on-FHIR fixtures `fn_boundary` and
+`fhirpath_numbers` among them. So `decimal` is exempt from the cast and stays a
+string. Every other declared type is cast. The disagreement between `getValue()`
+and `getSqlType()` stays for decimal.
+
+_Amends_ FR-025 and decision 73's expectation for T111.
+

@@ -17,8 +17,6 @@
 
 package au.csiro.pathling.views;
 
-import static au.csiro.pathling.UnitTestDependencies.fhirContext;
-import static au.csiro.pathling.UnitTestDependencies.jsonParser;
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 import static au.csiro.pathling.validation.ValidationUtils.ensureValid;
 import static java.util.Objects.nonNull;
@@ -38,6 +36,8 @@ import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.test.SpringBootUnitTest;
+import au.csiro.pathling.test.layout.LayoutDatasets;
+import au.csiro.pathling.test.layout.TestLayout;
 import au.csiro.pathling.utilities.Streams;
 import ca.uhn.fhir.context.FhirContext;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -73,20 +73,16 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.spark.api.java.function.MapFunction;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.api.java.UDF1;
-import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
 import org.apache.spark.sql.expressions.UserDefinedFunction;
 import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.DecimalType;
 import org.apache.spark.sql.types.StringType;
-import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
@@ -373,15 +369,11 @@ abstract class FhirViewTest {
                 mapping(Object::toString, toList())))
         .forEach(
             (resourceType, jsonStrings) -> {
-              final Dataset<String> dataset = spark.createDataset(jsonStrings, Encoders.STRING());
-              final ExpressionEncoder<IBaseResource> encoder = fhirEncoders.of(resourceType);
+              // The layout dimension decides whether the JSON is parsed and encoded, or read
+              // through the new-layout transform as it stands (T035).
               final Dataset<Row> resourceDataset =
-                  dataset
-                      .map(
-                          (MapFunction<String, IBaseResource>)
-                              json -> jsonParser(fhirContext()).parseResource(json),
-                          encoder)
-                      .toDF()
+                  LayoutDatasets.fromJson(
+                          spark, fhirEncoders, TestLayout.active(), resourceType, jsonStrings)
                       .cache();
               result.put(resourceType, resourceDataset);
             });
