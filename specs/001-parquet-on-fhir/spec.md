@@ -512,8 +512,9 @@ resolves no Spark Catalyst dependency, enforced by the build.
 
 - **FR-024**: Traversal to an element the definitions describe but the schema
   does not carry MUST yield an empty collection.
-- **FR-025**: Traversal to an element the definitions do not describe MUST raise
-  an error.
+- **FR-025**: Traversal to an element the definitions do not describe MUST
+  yield an empty collection, as the engine has done since `551c2a3050`
+  (amended by decision 76).
 - **FR-026**: Selecting a choice variant absent from the schema MUST yield an
   empty collection.
 - **FR-027**: Combining an absent element with a populated one MUST succeed

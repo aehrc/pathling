@@ -2551,3 +2551,27 @@ hold. The fallbacks, in order:
 _Amends_ decision 74, withdrawing its tolerant reference and its second child.
 It records the principle that compiled expressions are schema-agnostic, and it
 extends tolerance of absence to the resource root.
+
+## 76. An undescribed element yields empty, and a declared decimal stays a string on output
+
+Both are owner decisions (2026-09-25), prompted by writing T101–T107 test-first.
+
+**FR-025 is amended to match the engine.** FR-025 required traversal to an
+element the definitions do not describe to raise an error. Since `551c2a3050`
+(June 2025), the engine deliberately returns an empty collection, and
+`SystemDslTest` asserts it ("traversal to undefined property returns {}"). The
+requirement now matches that behaviour. T102 tests it over a pruned schema, and
+no existing test changes.
+
+**T111 does not cast a declared `decimal`.** Decision 73 expected the T111 cast
+to change no output type on the previous layout, with `decimal` mapping to
+`DECIMAL(32,6)`. That was wrong. `DecimalCollection.toExternalValue` renders a
+decimal as its literal text, so a view column declared `"type": "decimal"` is
+output as a string today, while `getSqlType()` reports `DECIMAL(32,6)`. Casting
+it would change existing outputs, the SQL-on-FHIR fixtures `fn_boundary` and
+`fhirpath_numbers` among them. So `decimal` is exempt from the cast and stays a
+string. Every other declared type is cast. The disagreement between `getValue()`
+and `getSqlType()` stays for decimal.
+
+_Amends_ FR-025 and decision 73's expectation for T111.
+
