@@ -176,8 +176,10 @@ class ResolveOrNullTest extends SparkSessionSupport with AdaptiveSparkPlanHelper
    * A plain reference is resolved there by `ResolveMissingReferences`, which adds the column back
    * to the projection. The tolerant reference is resolved first against the operator's child, whose
    * output lacks the name, so the catch answers the fallback before that rule can run. The answer
-   * is silently wrong rather than an error. The engine applies its columns to the table itself,
-   * where this does not arise, but a caller of the public API could. This test notices if that
+   * is silently wrong rather than an error. It reaches the root extension traversal too, which
+   * goes through the same reference. The engine's present sites apply their columns to the table
+   * itself, but T110 emits the reference at every root element, so it must establish whether any
+   * engine site meets this; a caller of the public API certainly can. This test notices if that
    * changes.
    */
   @Test
