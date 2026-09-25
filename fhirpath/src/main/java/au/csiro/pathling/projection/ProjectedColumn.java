@@ -24,7 +24,6 @@ import au.csiro.pathling.views.ColumnTag;
 import jakarta.annotation.Nonnull;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
@@ -40,14 +39,11 @@ public record ProjectedColumn(
     @Nonnull Collection collection, @Nonnull RequestedColumn requestedColumn) {
 
   /**
-   * The declared FHIR types that are not cast on output, because the value is output in a form
-   * other than the SQL type of its FHIRPath type, and a cast would change it. A decimal is output
-   * as its literal text (decision 76), a base64Binary value as the bytes it encodes, and an
-   * instant, on the previous layout, as a timestamp. For these, {@link #getSqlType()} still reports
-   * the SQL type of the FHIRPath type.
+   * The one declared FHIR type that is not cast on output. A decimal is output as its literal text,
+   * and a cast would change that (decision 76). {@link #getSqlType()} still reports {@code
+   * DECIMAL(32,6)} for it.
    */
-  private static final Set<FHIRDefinedType> UNCAST_DECLARED_TYPES =
-      Set.of(FHIRDefinedType.DECIMAL, FHIRDefinedType.BASE64BINARY, FHIRDefinedType.INSTANT);
+  private static final FHIRDefinedType UNCAST_DECLARED_TYPE = FHIRDefinedType.DECIMAL;
 
   /**
    * Gets the column value from the collection and aliases it with the requested name. If a SQL type
@@ -114,7 +110,7 @@ public record ProjectedColumn(
   private Optional<DataType> declaredOutputType() {
     return requestedColumn
         .type()
-        .filter(type -> !UNCAST_DECLARED_TYPES.contains(type))
+        .filter(type -> !UNCAST_DECLARED_TYPE.equals(type))
         .flatMap(FhirPathType::forFhirType)
         .map(FhirPathType::getSqlDataType)
         .map(type -> requestedColumn.collection() ? DataTypes.createArrayType(type) : type);
