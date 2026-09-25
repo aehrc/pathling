@@ -26,7 +26,7 @@ import org.apache.spark.SparkException
 import org.apache.spark.sql.AnalysisException
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.analysis.TypeCheckResult.{TypeCheckFailure, TypeCheckSuccess}
-import org.apache.spark.sql.catalyst.analysis.{TypeCheckResult, UnresolvedException}
+import org.apache.spark.sql.catalyst.analysis.{GetViewColumnByNameAndOrdinal, TypeCheckResult, UnresolvedException}
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.{variant => variantExpr}
 import org.apache.spark.sql.catalyst.expressions.codegen.Block._
@@ -494,6 +494,83 @@ case class UnresolvedEmptyArrayIfMissingField(value: Expression)
 
   override def withNewChildrenInternal(newChildren: IndexedSeq[Expression]): Expression =
     UnresolvedEmptyArrayIfMissingField(newChildren.head)
+}
+
+/**
+ * A reference to a table-level column that resolves to a null of the given type when the column is
+ * absent from the input, instead of failing with UNRESOLVED_COLUMN.
+ *
+ * This is the table-level counterpart of [[UnresolvedFallbackIfMissingField]], and it uses the same
+ * mechanism: a catch inside `mapChildren`. A plain unresolved attribute gives nothing to catch,
+ * because the analyzer leaves a missing name unresolved and reports it only in `CheckAnalysis`. So
+ * the column is referenced through `GetViewColumnByNameAndOrdinal`, which the analyzer resolves
+ * against the operator's single child, and which throws INCOMPATIBLE_VIEW_SCHEMA_CHANGE when the
+ * name does not match exactly one attribute. That error is caught and replaced with the fallback.
+ *
+ * The expression is built with no reference to any dataset, so that one column is valid over every
+ * schema (decision 75). It depends on analyzer internals, and it has known limits, which the tests
+ * pin so that a change is noticed:
+ *
+ *  - In a join condition the analyzer asserts that the operator has a single child before it
+ *    resolves the view column, so the query fails with INTERNAL_ERROR even when the column exists.
+ *  - An ambiguous name raises the same error as an absent one, so after a self-join the reference
+ *    resolves to the fallback rather than failing with AMBIGUOUS_REFERENCE.
+ *
+ * @param columnName the name of the table-level column
+ * @param fallback   the type of the null returned when the column is absent
+ */
+case class UnresolvedColumnOrNull(columnName: String, fallback: DataType, value: Expression)
+  extends Expression with UnevaluableCopy with NonSQLExpression {
+
+  def this(columnName: String, fallback: DataType) =
+    this(columnName, fallback,
+      GetViewColumnByNameAndOrdinal(UnresolvedColumnOrNull.SOURCE_NAME, columnName, 0, 1, None))
+
+  override def mapChildren(f: Expression => Expression): Expression = {
+    try {
+      val newValue = f(value)
+      if (newValue.resolved) {
+        newValue
+      } else {
+        copy(value = newValue)
+      }
+    } catch {
+      case e: AnalysisException if e.getCondition == "INCOMPATIBLE_VIEW_SCHEMA_CHANGE" =>
+        Literal(null, fallback)
+    }
+  }
+
+  override def dataType: DataType = throw new UnresolvedException("dataType")
+
+  override def nullable: Boolean = throw new UnresolvedException("nullable")
+
+  override lazy val resolved = false
+
+  override def toString: String = s"columnOrNull($columnName)"
+
+  override def children: Seq[Expression] = value :: Nil
+
+  override def withNewChildrenInternal(newChildren: IndexedSeq[Expression]): Expression =
+    copy(value = newChildren.head)
+}
+
+object UnresolvedColumnOrNull {
+
+  /**
+   * The name reported as the view in the error that signals absence. It is never shown to a user,
+   * because the error is always caught.
+   */
+  val SOURCE_NAME = "pathling_tolerant_column"
+
+  /**
+   * Creates a tolerant reference to a table-level column.
+   *
+   * @param columnName the name of the table-level column
+   * @param fallback   the type of the null returned when the column is absent
+   * @return the tolerant reference
+   */
+  def apply(columnName: String, fallback: DataType): UnresolvedColumnOrNull =
+    new UnresolvedColumnOrNull(columnName, fallback)
 }
 
 /**

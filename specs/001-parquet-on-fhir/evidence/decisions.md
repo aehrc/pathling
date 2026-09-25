@@ -830,6 +830,11 @@ expansion infinite — sufficient because T110 reapplies the expression at every
 subsequent step, but worth proving rather than assuming. If either fails, the
 design reverts to decision 47 as originally written.
 
+_Amended by decision 74_: the premise that the map is a field on the resource
+struct is false, so the extension branch takes the map as a second child, named
+as the `_extension` column, and the extension struct keeps the previous layout's
+type.
+
 _The cost that stays._ A previous-layout decimal is normalised to its lexical
 form and then parsed back, where dispatch in the decimal collection could have
 read the stored numeric directly. The same holds for a stored canonicalised
@@ -2256,6 +2261,8 @@ The order is fixed:
    inside a `transform` lambda and the self-recursive extension type. If it
    cannot, the fallback is dispatch in the collection classes (decision 47), and
    the rest of M2 is replanned against that before any feature is ported.
+   _Outcome, decision 74_: the gate failed on its first question, and the
+   binary form it also tested is taken instead of the fallback.
 2. **Coverage, then absent elements.** T020–T027 and T049a, then the
    absent-element block. Tolerance of an absent field comes first because every
    later step reaches the data through it.
@@ -2352,3 +2359,195 @@ restated against the key functions.
 
 _Amends_ decisions 47, 51, 52 and 55 as to where the switch of the test estate
 happens, and supersedes the placement of Phase 10 in M2.
+
+## 74. The previous layout's extension map is a second child of the traversal expression, named as a column
+
+T038m failed on its first question (`evidence/t038m-normalisation-gate.md`).
+Decision 55 rested on the root extension map being a field on the resource
+struct, so that the expression could walk its own child down to the resource
+root and read the map beside it. The engine has no resource struct. Both
+resolvers build the resource as `ResourceRepresentation.alwaysPresent()`, whose
+value is `lit(true)`, and every resource field is a top-level column. The walk
+from `name.extension` ends at the `name` column, from inside a lambda at the
+lambda variable, and at the root at the literal. The expression cannot name
+`_extension` from inside its replacement either: `CheckAnalysis` rejects an
+unresolved reference there, and a resolved one needs an expression id the
+expression cannot see.
+
+The gate's second question passed, and it passed without the retained handle it
+was written around. The spike supplied the map as a **second child**, and the
+value it supplied was the engine's existing `extensionMapColumn`, which is no
+more than an unqualified reference to the top-level `_extension` column. As a
+child the reference is resolved by the analyzer like any other column,
+including inside a `transform` lambda, where it binds to the outer row. The
+binary form ran in all twelve engine-produced scenarios and gave the same rows
+as the unmodified engine, and the optimiser reduced it to
+`_extension#104[x._fid]`.
+
+So decision 47's fallback is not taken, and decision 55 stands with three
+amendments.
+
+- **The extension branch is binary at every site, not only inside lambdas.**
+  Its second child is `col("_extension")`, supplied by the engine at the
+  traversal site. The other branches stay unary. At the resource root the
+  branch also reads the resource's own `_fid`, which is a top-level column in
+  the same way.
+- **The map is named, not carried.** T094 no longer serves the extension map,
+  and T094a removes `extensionMapColumn` outright rather than deriving the map
+  from a handle. Decision 48's single expression survives; its derivation does
+  not.
+- **The strong same-`dataType` rule does not hold for the extension struct.**
+  Per-level normalisation is sufficient (question 3), but only because `_fid`
+  survives into each level's output, so that the next step can look up the
+  nested extensions. A normalised `extension` element therefore keeps the
+  previous layout's `Extension` type. The rule holds for every leaf reached by
+  further traversal, because each step normalises again. T108 and FR-054 are
+  unaffected: they compare new-layout datasets only.
+
+### What this rests on, and what is still unproven
+
+- **A missing column.** The new layout has no `_extension` column, and a plain
+  `col("_extension")` fails with `UNRESOLVED_COLUMN` before the expression is
+  consulted (the gate's new-layout control).
+  `UnresolvedFallbackIfMissingField` tolerates a missing struct field, not a
+  missing top-level column. The reference therefore needs a tolerant form that
+  resolves to a null map when the column is absent. It must be built on T009a's
+  terms, and it becomes the first item of T038a, before anything is built on it.
+- **Plan shapes.** The spike put the binary node only under `Project`. `Filter`
+  and `Aggregate`, where the two children may resolve at different times inside
+  a lambda, are added to T038a.
+- **An unqualified name.** Where two resources share a plan, `_extension` could
+  be ambiguous. This is no worse than today, since the engine already uses the
+  same unqualified reference, and it is recorded rather than solved.
+
+### The option not taken
+
+Making the resource root a struct would restore the unary form. It rests on one
+hand-built control, and it reverses the flat top-level-column design every
+resolver uses, so it is not pursued.
+
+_Amends_ decisions 48, 55 and 73 as to how the extension map reaches the
+traversal expression, and records the outcome of T038m.
+
+## 75. The compiled expression stays schema-agnostic, and a missing table column is tolerated by a catch
+
+Decision 74 has two parts. Its second part stood: a binary form survives the
+analyzer in every kind of plan. Its first part did not survive the T038a spike
+(`evidence/t038a-root-column-spike.md`). There is no construction on T009a's
+terms that tolerates a missing **table-level** column in every kind of plan.
+
+A struct field is different. `ResolveOrNull` can inspect the resolved parent's
+type and choose between the field and a null. At the resource root there is no
+parent to inspect: the resource is `lit(true)`, and every element is a table
+column. A plain `col("xxx")` gives nothing to catch when the column is missing.
+Neither `coalesce` nor a `RuntimeReplaceable` helps, because both need their
+child resolved before they act (checked on Spark 4.0.1: both report
+`UNRESOLVED_COLUMN`). The expansion of a star or a regex does tolerate absence,
+but Spark refuses it in a grouping key, a sort key and a join condition, even
+when the column exists.
+
+This is not specific to extensions. On a pruned new-layout table, any
+top-level element can be absent.
+
+### The principle
+
+**The compiled FHIRPath expression stays schema-agnostic.** Downstream code
+depends on it: `fhirPathToColumn`, `searchToColumn` and the evaluators all build
+columns with no dataset in hand. The engine does not consult a dataset's schema
+when compiling a column unless that proves necessary. So the option to choose
+from the schema at construction time is not taken.
+
+### The mechanism, for now
+
+A missing table column is tolerated by the `mapChildren` catch. This is the
+pattern `UnresolvedFallbackIfMissingField` already uses for struct fields. The
+column is referenced through a node that throws during resolution when the name
+is missing: in the spike, `GetViewColumnByNameAndOrdinal`, whose
+`INCOMPATIBLE_VIEW_SCHEMA_CHANGE` is caught and replaced with a typed null. The
+spike showed it works in a select, a filter, a grouping key, an aggregate value,
+a sort, and a generator. It is the most opaque of the options, which is what the
+schema-agnostic design needs.
+
+It applies at the resource root, to **every** top-level element, and it is
+emitted from `ResourceRepresentation` just as T110 emits `ResolveOrNull` from
+`DefaultRepresentation`.
+
+### Extensions, under this mechanism
+
+Extension traversal is one expression over the parent, with no second input
+and no flag for the legacy layout:
+
+- if the parent has an `extension` field, which is the new layout, it resolves
+  to that field;
+- otherwise it resolves to `_extension[parent._fid]`, where `_extension` is
+  always the table column.
+
+At the root, `extension` and `_fid` are table columns, reached through the
+catch. If legacy data lacks `_extension`, because it was encoded with
+extensions disabled, extension expressions fail as they do today. The precise
+construction is settled by T038a and T038e within these constraints.
+
+The strong same-`dataType` rule keeps decision 74's one exception. The previous
+layout's extension struct keeps `_fid`.
+
+### Known limits, accepted for now
+
+- **Join condition.** The spike's catch failed with `INTERNAL_ERROR`, an
+  `AssertionError`, in a join condition, even when the column exists. Its cause
+  was not investigated.
+- **Ambiguous name.** After a self-join, the catch returns a null instead of
+  `AMBIGUOUS_REFERENCE`, because ambiguity raises the same error as absence. No
+  current test covers a self-join.
+- **Fragility.** It depends on analyzer internals: that a node throws where it
+  does, and that rules reach it through `mapChildren`. T038d and the
+  plan-shape tests in T038a are what show a Spark upgrade has changed that.
+- **A column dropped by a projection beneath the operator.** Found by the
+  toolkit tests. A plain reference to such a column is repaired by
+  `ResolveMissingReferences`, which adds it back to the projection. The
+  tolerant reference is resolved first against the operator's child, where the
+  name is missing, so the catch returns the fallback before that rule runs. The
+  answer is silently wrong, not an error. It reaches root extension traversal
+  too, because that goes through the same reference. `ResolveOrNullTest` pins
+  it. The engine's present call sites apply columns to the table itself. T110
+  emits the reference at every root element, so it must check whether any
+  engine call site hits this case.
+
+### The construction, as confirmed by the owner (2026-09-25)
+
+The toolkit that T038a–e and T038j–l built was confirmed as follows:
+
+- **The root has its own entry point.** `traverseRootExtension()` is separate
+  from `traverseExtension(parent)`. At the root there is no parent expression.
+  The root entry point reaches `extension`, `_fid` and `_extension` through the
+  tolerant table-column reference and decides from the resolved `_fid`.
+- **Three cases, not two.** A parent with an `extension` field resolves to that
+  field. A parent with `_fid` resolves to `_extension[_fid]`. A parent with
+  neither resolves to a null of FR-055's bottom type for a repeating complex
+  element, and it does not reach for `_extension`. FR-054 needs the third case,
+  because on a pruned new-layout table an element that carries no extensions
+  has neither field, and that table has no `_extension` column.
+- **The dropped-column limit** above is accepted, and T110 checks the engine's
+  call sites against it.
+- **`MergeCast` selects the operand it projects by position.** It takes the
+  full ordered operand list, the position of the operand to project, and the
+  canonical structure. It does not take the operand as a separate argument
+  beside the list, which is how T038l's text puts it. With a separate argument,
+  the projected operand would be a second copy of a list member, analysed on
+  its own. Selecting by position means the projected value is always the one
+  the target type was computed from. A caller unifying N operands emits one
+  node per position, each over the same list. T113a does that in
+  `CombiningLogic`.
+
+### When to revisit
+
+Revisit once there is more evidence on whether a schema-agnostic design can
+hold. The fallbacks, in order:
+
+1. understand and fix the join and ambiguity failures;
+2. a custom analyzer rule, which needs `SparkSessionExtensions`;
+3. building a struct from the root columns, so that the root becomes a parent
+   like any other.
+
+_Amends_ decision 74, withdrawing its tolerant reference and its second child.
+It records the principle that compiled expressions are schema-agnostic, and it
+extends tolerance of absence to the resource root.
