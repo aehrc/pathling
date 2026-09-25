@@ -2428,3 +2428,90 @@ resolver uses, so it is not pursued.
 
 _Amends_ decisions 48, 55 and 73 as to how the extension map reaches the
 traversal expression, and records the outcome of T038m.
+
+## 75. The compiled expression stays schema-agnostic, and a missing table column is tolerated by a catch
+
+Decision 74 has two parts. Its second part stood: a binary form survives the
+analyzer in every kind of plan. Its first part did not survive the T038a spike
+(`evidence/t038a-root-column-spike.md`). There is no construction on T009a's
+terms that tolerates a missing **table-level** column in every kind of plan.
+
+A struct field is different. `ResolveOrNull` can inspect the resolved parent's
+type and choose between the field and a null. At the resource root there is no
+parent to inspect: the resource is `lit(true)`, and every element is a table
+column. A plain `col("xxx")` gives nothing to catch when the column is missing.
+Neither `coalesce` nor a `RuntimeReplaceable` helps, because both need their
+child resolved before they act (checked on Spark 4.0.1: both report
+`UNRESOLVED_COLUMN`). The expansion of a star or a regex does tolerate absence,
+but Spark refuses it in a grouping key, a sort key and a join condition, even
+when the column exists.
+
+This is not specific to extensions. On a pruned new-layout table, any
+top-level element can be absent.
+
+### The principle
+
+**The compiled FHIRPath expression stays schema-agnostic.** Downstream code
+depends on it: `fhirPathToColumn`, `searchToColumn` and the evaluators all build
+columns with no dataset in hand. The engine does not consult a dataset's schema
+when compiling a column unless that proves necessary. So the option to choose
+from the schema at construction time is not taken.
+
+### The mechanism, for now
+
+A missing table column is tolerated by the `mapChildren` catch. This is the
+pattern `UnresolvedFallbackIfMissingField` already uses for struct fields. The
+column is referenced through a node that throws during resolution when the name
+is missing: in the spike, `GetViewColumnByNameAndOrdinal`, whose
+`INCOMPATIBLE_VIEW_SCHEMA_CHANGE` is caught and replaced with a typed null. The
+spike showed it works in a select, a filter, a grouping key, an aggregate value,
+a sort, and a generator. It is the most opaque of the options, which is what the
+schema-agnostic design needs.
+
+It applies at the resource root, to **every** top-level element, and it is
+emitted from `ResourceRepresentation` just as T110 emits `ResolveOrNull` from
+`DefaultRepresentation`.
+
+### Extensions, under this mechanism
+
+Extension traversal is one expression over the parent, with no second input
+and no flag for the legacy layout:
+
+- if the parent has an `extension` field, which is the new layout, it resolves
+  to that field;
+- otherwise it resolves to `_extension[parent._fid]`, where `_extension` is
+  always the table column.
+
+At the root, `extension` and `_fid` are table columns, reached through the
+catch. If legacy data lacks `_extension`, because it was encoded with
+extensions disabled, extension expressions fail as they do today. The precise
+construction is settled by T038a and T038e within these constraints.
+
+The strong same-`dataType` rule keeps decision 74's one exception. The previous
+layout's extension struct keeps `_fid`.
+
+### Known limits, accepted for now
+
+- **Join condition.** The spike's catch failed with `INTERNAL_ERROR`, an
+  `AssertionError`, in a join condition, even when the column exists. Its cause
+  was not investigated.
+- **Ambiguous name.** After a self-join, the catch returns a null instead of
+  `AMBIGUOUS_REFERENCE`, because ambiguity raises the same error as absence. No
+  current test covers a self-join.
+- **Fragility.** It depends on analyzer internals: that a node throws where it
+  does, and that rules reach it through `mapChildren`. T038d and the
+  plan-shape tests in T038a are what show a Spark upgrade has changed that.
+
+### When to revisit
+
+Revisit once there is more evidence on whether a schema-agnostic design can
+hold. The fallbacks, in order:
+
+1. understand and fix the join and ambiguity failures;
+2. a custom analyzer rule, which needs `SparkSessionExtensions`;
+3. building a struct from the root columns, so that the root becomes a parent
+   like any other.
+
+_Amends_ decision 74, withdrawing its tolerant reference and its second child.
+It records the principle that compiled expressions are schema-agnostic, and it
+extends tolerance of absence to the resource root.
