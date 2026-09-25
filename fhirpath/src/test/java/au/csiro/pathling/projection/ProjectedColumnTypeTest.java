@@ -22,7 +22,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.fhirpath.collection.DecimalCollection;
 import au.csiro.pathling.fhirpath.collection.EmptyCollection;
 import au.csiro.pathling.fhirpath.path.Paths.Traversal;
 import au.csiro.pathling.test.SpringBootUnitTest;
@@ -54,7 +53,6 @@ import org.hl7.fhir.r4.model.Questionnaire;
 import org.hl7.fhir.r4.model.Questionnaire.QuestionnaireItemType;
 import org.hl7.fhir.r4.model.StringType;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
@@ -68,10 +66,9 @@ import org.springframework.beans.factory.annotation.Autowired;
  * Tests the type of a view's output column over an element absent from the input schema (FR-028 to
  * FR-030), written ahead of T110 to T112.
  *
- * <p>Each view is run over the full schema, as the control that passes before T110, and over a
- * schema from which the named elements are removed, tagged {@code pending-T110}. The removed
- * elements are never populated in the source, so the pruned run must also return the control's
- * rows.
+ * <p>Each view is run over the full schema, as the control that passed before T110, and over a
+ * schema from which the named elements are removed, which passes since T110. The removed elements
+ * are never populated in the source, so the pruned run must also return the control's rows.
  *
  * @author Piotr Szul
  */
@@ -84,8 +81,6 @@ class ProjectedColumnTypeTest {
   private static final DataType BOOLEAN = DataTypes.BooleanType;
 
   private static final DataType INTEGER = DataTypes.IntegerType;
-
-  private static final DataType DECIMAL = DecimalCollection.getDecimalType();
 
   @Autowired SparkSession spark;
 
@@ -175,7 +170,6 @@ class ProjectedColumnTypeTest {
         run(resourceType, readers.get(resourceType).read(), selection), expectedTypes);
   }
 
-  @Tag("pending-T110")
   @ParameterizedTest(name = "{0} {2} with {1} absent from the schema")
   @MethodSource("declaredTypes")
   void declaredTypeIsAppliedOverAbsentElement(
@@ -186,13 +180,11 @@ class ProjectedColumnTypeTest {
     assertPrunedRunMatchesControl(resourceType, prunedPaths, selection, expectedTypes);
   }
 
-  @Tag("pending-T110")
   @Test
-  void declaredDecimalTypeIsAppliedToOutput() {
-    // A declared decimal is where FR-028 differs from the output today, on either schema: a decimal
-    // is output as its literal text, so the column is a string, while getSqlType() reports the
-    // declared type. T111 casts to the declared type, which brings the two into line. This case is
-    // therefore red over the full schema too, and has no passing control.
+  void declaredDecimalTypeStaysTextOnOutput() {
+    // A declared decimal is exempt from the cast to the declared type (decision 76). A decimal is
+    // output as its literal text, so the column is a string on either schema, while getSqlType()
+    // still reports DECIMAL(32,6).
     final String selection =
         """
         {
@@ -202,10 +194,10 @@ class ProjectedColumnTypeTest {
         }
         """;
     final PrunedSchemaReader reader = readers.get("Observation");
-    assertColumnTypes(run("Observation", reader.read(), selection), Map.of("amount", DECIMAL));
+    assertColumnTypes(run("Observation", reader.read(), selection), Map.of("amount", STRING));
     assertColumnTypes(
         run("Observation", reader.readWithout("valueQuantity"), selection),
-        Map.of("amount", DECIMAL));
+        Map.of("amount", STRING));
   }
 
   // T107: a column declaring no type over an absent primitive carries the definitions' type
@@ -282,7 +274,6 @@ class ProjectedColumnTypeTest {
         run(resourceType, readers.get(resourceType).read(), selection), expectedTypes);
   }
 
-  @Tag("pending-T110")
   @ParameterizedTest(name = "{0} {2} with {1} absent from the schema")
   @MethodSource("definitionTypes")
   void undeclaredColumnOverAbsentPrimitiveCarriesDefinitionType(
@@ -293,7 +284,6 @@ class ProjectedColumnTypeTest {
     assertPrunedRunMatchesControl(resourceType, prunedPaths, selection, expectedTypes);
   }
 
-  @Tag("pending-T110")
   @Test
   void columnWithNoTypeInformationFailsNamingColumnPathAndRemedy() {
     // A column that genuinely carries no type information: an empty collection with no FHIR type,
