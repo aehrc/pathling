@@ -40,6 +40,7 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Enumerations.PublicationStatus;
+import org.hl7.fhir.r4.model.Observation;
 import org.hl7.fhir.r4.model.Questionnaire;
 import org.hl7.fhir.r4.model.Questionnaire.QuestionnaireItemType;
 import org.junit.jupiter.api.BeforeAll;
@@ -86,6 +87,9 @@ class SiblingCombinationTest {
   /** Questionnaires with no items at all. */
   private PrunedSchemaReader itemless;
 
+  /** Observations with no effective period, and a reference range with no low limit. */
+  private PrunedSchemaReader observations;
+
   @BeforeAll
   void setUp() {
     final Questionnaire withItem = questionnaire("q1");
@@ -96,6 +100,13 @@ class SiblingCombinationTest {
     itemless =
         PrunedSchemaReader.write(
             encode(questionnaire("q3"), questionnaire("q4")), tempDir.resolve("root").toString());
+    final Observation observation = new Observation();
+    observation.setId("o1");
+    observation.addReferenceRange().setText("r");
+    observations =
+        PrunedSchemaReader.write(
+            spark.createDataset(List.of(observation), fhirEncoders.of("Observation")).toDF(),
+            tempDir.resolve("Observation").toString());
   }
 
   @Nonnull
@@ -260,28 +271,92 @@ class SiblingCombinationTest {
         .containsExactlyInAnyOrderElementsOf(expected);
   }
 
+  @Nonnull
+  Stream<Arguments> singularAbsence() {
+    return Stream.of(
+        // A singular complex element is the bottom type itself when absent, rather than an array
+        // of it.
+        arguments(
+            "effectivePeriod",
+            """
+            {
+              "forEachOrNull": "effective.ofType(Period)",
+              "select": [
+                { "column": [ { "name": "start", "path": "start" } ] },
+                { "column": [ { "name": "end", "path": "end" } ] }
+              ]
+            }
+            """,
+            List.of("o1|null|null")),
+        arguments(
+            "referenceRange.low",
+            """
+            {
+              "forEach": "referenceRange",
+              "select": [
+                { "column": [ { "name": "text", "path": "text" } ] },
+                {
+                  "forEachOrNull": "low",
+                  "select": [
+                    { "column": [ { "name": "value", "path": "value" } ] },
+                    { "column": [ { "name": "unit", "path": "unit" } ] }
+                  ]
+                }
+              ]
+            }
+            """,
+            List.of("o1|r|null|null")));
+  }
+
+  @ParameterizedTest(name = "{1} over the full schema")
+  @MethodSource("singularAbsence")
+  void singularUnpopulatedElementOverFullSchema(
+      @Nonnull final String prunedPath,
+      @Nonnull final String selection,
+      @Nonnull final List<String> expected) {
+    assertThat(run("Observation", observations.read(), selection))
+        .containsExactlyInAnyOrderElementsOf(expected);
+  }
+
+  @Tag("pending-T110")
+  @ParameterizedTest(name = "{1} with {0} absent from the schema")
+  @MethodSource("singularAbsence")
+  void siblingCombinationToleratesAbsentSingularElement(
+      @Nonnull final String prunedPath,
+      @Nonnull final String selection,
+      @Nonnull final List<String> expected) {
+    assertThat(run("Observation", observations.readWithout(prunedPath), selection))
+        .containsExactlyInAnyOrderElementsOf(expected);
+  }
+
+  @Nonnull
+  private List<String> run(@Nonnull final Dataset<Row> dataset, @Nonnull final String selection) {
+    return run("Questionnaire", dataset, selection);
+  }
+
   /**
-   * Runs a view over the Questionnaire dataset, with an {@code id} column beside the given
-   * selection, and returns each row with its values joined by {@code |}.
+   * Runs a view over the dataset, with an {@code id} column beside the given selection, and returns
+   * each row with its values joined by {@code |}.
    */
   @Nonnull
   private List<String> run(
-      @Nonnull final Dataset<Row> questionnaires, @Nonnull final String selection) {
+      @Nonnull final String resourceType,
+      @Nonnull final Dataset<Row> dataset,
+      @Nonnull final String selection) {
     final String json =
         """
         {
-          "resource": "Questionnaire",
+          "resource": "%s",
           "select": [
             { "column": [ { "name": "id", "path": "id" } ] },
             %s
           ]
         }
         """
-            .formatted(selection);
+            .formatted(resourceType, selection);
     final FhirViewExecutor executor =
         new FhirViewExecutor(
-            fhirEncoders.getContext(),
-            new DatasetDataSource(Map.of("Questionnaire", questionnaires)));
+            fhirEncoders.getContext(), new DatasetDataSource(Map.of(resourceType, dataset)));
     return executor.buildQuery(gson.fromJson(json, FhirView.class)).collectAsList().stream()
         .map(
             row ->
