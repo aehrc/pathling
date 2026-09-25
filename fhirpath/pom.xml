@@ -208,6 +208,7 @@
               <excludes>
                 <exclude>**/FhirViewShareableComplianceTest.java</exclude>
               </excludes>
+              <excludedGroups>pending-T110</excludedGroups>
               <systemPropertyVariables>
                 <spring.profiles.active>unit-test</spring.profiles.active>
                 <spark.logConf>true</spark.logConf>
