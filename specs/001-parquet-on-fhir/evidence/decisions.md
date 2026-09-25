@@ -830,6 +830,11 @@ expansion infinite — sufficient because T110 reapplies the expression at every
 subsequent step, but worth proving rather than assuming. If either fails, the
 design reverts to decision 47 as originally written.
 
+_Amended by decision 74_: the premise that the map is a field on the resource
+struct is false, so the extension branch takes the map as a second child, named
+as the `_extension` column, and the extension struct keeps the previous layout's
+type.
+
 _The cost that stays._ A previous-layout decimal is normalised to its lexical
 form and then parsed back, where dispatch in the decimal collection could have
 read the stored numeric directly. The same holds for a stored canonicalised
@@ -2256,6 +2261,8 @@ The order is fixed:
    inside a `transform` lambda and the self-recursive extension type. If it
    cannot, the fallback is dispatch in the collection classes (decision 47), and
    the rest of M2 is replanned against that before any feature is ported.
+   _Outcome, decision 74_: the gate failed on its first question, and the
+   binary form it also tested is taken instead of the fallback.
 2. **Coverage, then absent elements.** T020–T027 and T049a, then the
    absent-element block. Tolerance of an absent field comes first because every
    later step reaches the data through it.
@@ -2352,3 +2359,72 @@ restated against the key functions.
 
 _Amends_ decisions 47, 51, 52 and 55 as to where the switch of the test estate
 happens, and supersedes the placement of Phase 10 in M2.
+
+## 74. The previous layout's extension map is a second child of the traversal expression, named as a column
+
+T038m failed on its first question (`evidence/t038m-normalisation-gate.md`).
+Decision 55 rested on the root extension map being a field on the resource
+struct, so that the expression could walk its own child down to the resource
+root and read the map beside it. The engine has no resource struct. Both
+resolvers build the resource as `ResourceRepresentation.alwaysPresent()`, whose
+value is `lit(true)`, and every resource field is a top-level column. The walk
+from `name.extension` ends at the `name` column, from inside a lambda at the
+lambda variable, and at the root at the literal. The expression cannot name
+`_extension` from inside its replacement either: `CheckAnalysis` rejects an
+unresolved reference there, and a resolved one needs an expression id the
+expression cannot see.
+
+The gate's second question passed, and it passed without the retained handle it
+was written around. The spike supplied the map as a **second child**, and the
+value it supplied was the engine's existing `extensionMapColumn`, which is no
+more than an unqualified reference to the top-level `_extension` column. As a
+child the reference is resolved by the analyzer like any other column,
+including inside a `transform` lambda, where it binds to the outer row. The
+binary form ran in all twelve engine-produced scenarios and gave the same rows
+as the unmodified engine, and the optimiser reduced it to
+`_extension#104[x._fid]`.
+
+So decision 47's fallback is not taken, and decision 55 stands with three
+amendments.
+
+- **The extension branch is binary at every site, not only inside lambdas.**
+  Its second child is `col("_extension")`, supplied by the engine at the
+  traversal site. The other branches stay unary. At the resource root the
+  branch also reads the resource's own `_fid`, which is a top-level column in
+  the same way.
+- **The map is named, not carried.** T094 no longer serves the extension map,
+  and T094a removes `extensionMapColumn` outright rather than deriving the map
+  from a handle. Decision 48's single expression survives; its derivation does
+  not.
+- **The strong same-`dataType` rule does not hold for the extension struct.**
+  Per-level normalisation is sufficient (question 3), but only because `_fid`
+  survives into each level's output, so that the next step can look up the
+  nested extensions. A normalised `extension` element therefore keeps the
+  previous layout's `Extension` type. The rule holds for every leaf reached by
+  further traversal, because each step normalises again. T108 and FR-054 are
+  unaffected: they compare new-layout datasets only.
+
+### What this rests on, and what is still unproven
+
+- **A missing column.** The new layout has no `_extension` column, and a plain
+  `col("_extension")` fails with `UNRESOLVED_COLUMN` before the expression is
+  consulted (the gate's new-layout control).
+  `UnresolvedFallbackIfMissingField` tolerates a missing struct field, not a
+  missing top-level column. The reference therefore needs a tolerant form that
+  resolves to a null map when the column is absent. It must be built on T009a's
+  terms, and it becomes the first item of T038a, before anything is built on it.
+- **Plan shapes.** The spike put the binary node only under `Project`. `Filter`
+  and `Aggregate`, where the two children may resolve at different times inside
+  a lambda, are added to T038a.
+- **An unqualified name.** Where two resources share a plan, `_extension` could
+  be ambiguous. This is no worse than today, since the engine already uses the
+  same unqualified reference, and it is recorded rather than solved.
+
+### The option not taken
+
+Making the resource root a struct would restore the unary form. It rests on one
+hand-built control, and it reverses the flat top-level-column design every
+resolver uses, so it is not pursued.
+
+_Amends_ decisions 48, 55 and 73 as to how the extension map reaches the
+traversal expression, and records the outcome of T038m.
