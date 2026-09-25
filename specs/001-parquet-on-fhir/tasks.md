@@ -386,7 +386,7 @@ _Moved here from Phase 13. It decides the coverage standard for the Phase 8
 dispatch arms, so it cannot be settled two milestones after they are written.
 Its wiring stays in Phase 13._
 
-- [ ] T049a **Gate.** Settle whether the source boundary refuses earlier-layout data, refuses by default but routes under the existing per-source opt-out, or routes by default. The engine reads both layouts as of Phase 8, so routing is now possible where it was not when US7 was written. The answer decides three things beyond this phase: whether FR-046 stands as written, whether Phase 8's dispatch arms are transitional scaffolding or product code deserving product-grade coverage (decision 51), and what T100e is permitted to delete. Settle it before Phase 8 opens, and therefore well before T039, which is where the answer is wired in.
+- [ ] T049a **Gate.** Settle whether the source boundary refuses earlier-layout data, refuses by default but routes under the existing per-source opt-out, or routes by default. The engine reads both layouts as of Phase 8, so routing is now possible where it was not when US7 was written. The answer decides three things beyond this phase: whether FR-046 stands as written, whether Phase 8's dispatch arms are transitional scaffolding or product code deserving product-grade coverage (decision 51), and what T100e is permitted to delete. Settle it before Phase 8 opens, and therefore well before T039, which is where the answer is wired in. **Deferred by the owner (2026-09-26) to the start of M7**, to be settled with the other migration questions (T100f and FR-053). Until then, work proceeds as the tasks are written: the normalisation branches are transitional, with the coverage they have and T100i's opt-in run from M4. Phase 13 (M4) builds the check with the per-source opt-out as T039–T049 describe, and its default is provisional until this gate is settled.
 
 ### Tolerant traversal and type reconciliation
 
@@ -708,8 +708,9 @@ Phase 12 and must not ship before it._
 _It depends only on Setup, so it can be built at any point; it must not be wired
 in before Phase 12._
 
-_The gate this phase is built to, T049a, is settled in Phase 7. Its answer says
-whether the boundary refuses or routes, and therefore what T039 to T048 assert._
+_The gate this phase is built to, T049a, was deferred to the start of M7. This
+phase builds the check as T039 to T048 describe, with the per-source opt-out,
+and its default is provisional until T049a is settled._
 
 ### Tests ⚠️ write first, confirm failing
 
@@ -1005,7 +1006,7 @@ trusting the numbering.
 | FR-043 Encoding and decoding APIs preserved                                                                          | T070, T081, T080a (M1 provides the `Dataset<String>` entry points they call, decision 70)                                                                                                                                                                                   |
 | FR-044 Bounds options apply to dense only (inert from the flip until M6, decision 69)                                | T031a, T033 (M6)                                                                                                                                                                                                                                                            |
 | FR-045 XML and Bundle ingest preserved                                                                               | T058, T058a, T068, T069, T069a                                                                                                                                                                                                                                              |
-| FR-046 Earlier layouts not read as the new one                                                                       | T049a (settled in Phase 7), T042, T045                                                                                                                                                                                                                                      |
+| FR-046 Earlier layouts not read as the new one                                                                       | T049a (deferred to M7), T042, T045                                                                                                                                                                                                                                         |
 | FR-047 Published layout contract replaced                                                                            | T129                                                                                                                                                                                                                                                                        |
 | FR-048 Dependency ban on the schema module                                                                           | T005, T125                                                                                                                                                                                                                                                                  |
 | FR-049 Import check on the new encoding                                                                              | T007, T126                                                                                                                                                                                                                                                                  |
@@ -1118,7 +1119,7 @@ on the previous layout:
 
 ### Within M4
 
-- T049a was settled in Phase 7. Phase 13 asserts whatever it decided.
+- T049a is deferred to the start of M7. Phase 13 builds the check as written, with a provisional default.
 - Phase 10 (US5) comes first. T114, T115, T117, T117a, T118 and T118a depend on
   M1 for a write path — `io`'s own entry points, since the public API has not
   switched yet — and T116 depends on the absent-element work in M2's Phase 7.

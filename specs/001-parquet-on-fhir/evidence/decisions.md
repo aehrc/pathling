@@ -683,7 +683,7 @@ per-kind coverage afterwards.
 
 The dispatch arms decision 47 introduces are not a product feature by default.
 Their purpose is to keep the build green while the engine is rewritten, and to
-make the flip a writer flip rather than a migration. T100e removes them in M6.
+make the flip a writer flip rather than a migration. T100e removes them in M7.
 
 This is the cost that replaces the red window, and it is worth naming rather than
 discovering: some of the work in M2 exists to buy a green build and a safe flip,
@@ -701,6 +701,12 @@ rather than an ordinary task. **It has been moved to Phase 7**, at the head of
 M2: it sets the coverage standard for the arms, so settling it in Phase 13 would
 have decided in M4 how work written in M2 should have been tested. Its wiring
 stays in Phase 13.
+
+_Deferred (2026-09-26)._ The owner has moved T049a to the start of M7, to be
+settled with the other migration questions. Until then the arms are treated as
+transitional, which is the default above, and Phase 13 builds the check with a
+provisional default. The earlier text of this decision placed T100e in M6; it is
+in M7, since the dense schema became M6.
 
 ## 52. Three axes, not one, and the test framework carries two of them
 
