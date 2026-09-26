@@ -22,7 +22,8 @@
  */
 package au.csiro.pathling.sql
 
-import org.apache.spark.sql.catalyst.expressions.{Expression, GetArrayStructFields, GetStructField, Literal, RuntimeReplaceable}
+import au.csiro.pathling.sql.DecimalNormalisation.{fieldToText, holdsDecimals}
+import org.apache.spark.sql.catalyst.expressions.{ArrayTransform, Expression, GetArrayStructFields, GetStructField, LambdaFunction, Literal, NamedLambdaVariable, RuntimeReplaceable}
 import org.apache.spark.sql.catalyst.trees.UnaryLike
 import org.apache.spark.sql.types.{ArrayType, DataType, StructType}
 
@@ -52,6 +53,15 @@ import org.apache.spark.sql.types.{ArrayType, DataType, StructType}
  * The optimiser replaces the expression with its replacement before any pruning rule runs, so a
  * plan using it prunes exactly as one written with a direct field reference.
  *
+ * The expression is also the one site at which the previous layout is normalised to the new one
+ * (T094b), so that the engine above it sees one layout. Each branch is chosen from the resolved
+ * type of the child, once per schema, and every branch yields the type that the same traversal
+ * yields over the new layout:
+ *
+ *  - a decimal field, which the previous layout stores as a `DECIMAL(32,6)` value beside a
+ *    `_scale` companion, yields its text at the source scale, as [[DecimalNormalisation]]
+ *    describes. The companion is read beside the value, and nothing else is.
+ *
  * @param child     the structure, or array of structures, to take the field from
  * @param fieldName the name of the field
  * @param fallback  the type of the null returned when the field is absent
@@ -60,6 +70,11 @@ case class ResolveOrNull(child: Expression, fieldName: String, fallback: DataTyp
   extends RuntimeReplaceable with UnaryLike[Expression] {
 
   override lazy val replacement: Expression = child.dataType match {
+    case struct: StructType if isDecimal(struct) =>
+      fieldToText(child, struct, fieldName)
+    case ArrayType(struct: StructType, containsNull) if isDecimal(struct) =>
+      val element = NamedLambdaVariable("element", struct, containsNull)
+      ArrayTransform(child, LambdaFunction(fieldToText(element, struct, fieldName), Seq(element)))
     case struct: StructType if struct.fieldNames.contains(fieldName) =>
       GetStructField(child, struct.fieldIndex(fieldName), Some(fieldName))
     case ArrayType(struct: StructType, containsNull) if struct.fieldNames.contains(fieldName) =>
@@ -69,6 +84,9 @@ case class ResolveOrNull(child: Expression, fieldName: String, fallback: DataTyp
     case _ =>
       Literal(null, fallback)
   }
+
+  private def isDecimal(struct: StructType): Boolean =
+    struct.fieldNames.contains(fieldName) && holdsDecimals(struct(fieldName).dataType)
 
   override def prettyName: String = "resolve_or_null"
 

@@ -21,6 +21,7 @@ import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.encoders.ColumnFunctions;
 import au.csiro.pathling.encoders.ValueFunctions;
+import au.csiro.pathling.fhirpath.collection.DecimalCollection;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.Optional;
@@ -149,6 +150,9 @@ public class DefaultRepresentation extends ColumnRepresentation {
     if (FHIRDefinedType.BASE64BINARY.equals(resolvedFhirType)) {
       // If the field is a base64Binary, represent it using a BinaryRepresentation.
       return DefaultRepresentation.fromBinaryColumn(result.getValue());
+    } else if (FHIRDefinedType.DECIMAL.equals(resolvedFhirType)) {
+      // A decimal is traversed to as text on either layout, and decoded for computation.
+      return DecimalCollection.decode(result);
     } else {
       // Otherwise, use the default representation.
       return result;

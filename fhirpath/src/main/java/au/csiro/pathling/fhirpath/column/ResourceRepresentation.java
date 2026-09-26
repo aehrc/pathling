@@ -18,6 +18,7 @@
 package au.csiro.pathling.fhirpath.column;
 
 import au.csiro.pathling.encoders.ColumnFunctions;
+import au.csiro.pathling.fhirpath.collection.DecimalCollection;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import java.util.function.UnaryOperator;
@@ -248,6 +249,12 @@ public final class ResourceRepresentation extends ColumnRepresentation {
       @Nonnull final String fieldName,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final DataType fallback) {
+    if (fhirType.filter(FHIRDefinedType.DECIMAL::equals).isPresent()) {
+      // A decimal is read as text on either layout, with the previous layout's value and scale
+      // columns normalised to it, and decoded for computation.
+      return DecimalCollection.decode(
+          existing(ColumnFunctions.decimalColumnOrNull(fieldName, fallback)).removeNulls());
+    }
     final ColumnRepresentation result = getField(fieldName, fallback).removeNulls();
     if (fhirType.filter(FHIRDefinedType.BASE64BINARY::equals).isPresent()) {
       // If the field is a base64Binary, represent it using binary column handling.
@@ -274,9 +281,13 @@ public final class ResourceRepresentation extends ColumnRepresentation {
   @Nonnull
   private ColumnRepresentation getField(
       @Nonnull final String fieldName, @Nonnull final DataType fallback) {
-    return new DefaultRepresentation(
-        functions.when(
-            existenceColumn.isNotNull(), ColumnFunctions.columnOrNull(fieldName, fallback)));
+    return existing(ColumnFunctions.columnOrNull(fieldName, fallback));
+  }
+
+  /** Makes a reference to a table column conditional on the resource existing. */
+  @Nonnull
+  private ColumnRepresentation existing(@Nonnull final Column column) {
+    return new DefaultRepresentation(functions.when(existenceColumn.isNotNull(), column));
   }
 
   /**

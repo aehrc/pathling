@@ -22,7 +22,7 @@
  */
 package au.csiro.pathling.sql
 
-import au.csiro.pathling.encoders.ColumnFunctions.{columnOrNull, resolveOrNull, traverseExtension, traverseRootExtension}
+import au.csiro.pathling.encoders.ColumnFunctions.{columnOrNull, decimalColumnOrNull, resolveOrNull, traverseExtension, traverseRootExtension}
 import org.apache.spark.SparkException
 import org.apache.spark.sql.catalyst.analysis.UnresolvedAttribute
 import org.apache.spark.sql.catalyst.expressions.{AttributeReference, Expression, GetArrayStructFields, GetStructField, Literal}
@@ -35,7 +35,8 @@ import org.junit.jupiter.api.Test
 
 /**
  * Tests for the tolerant traversal expression, the tolerant table-column reference and extension
- * traversal (T038a to T038d).
+ * traversal (T038a to T038d), and for the traversal expression's normalisation of the previous
+ * layout to the new one (T089a).
  *
  * Every column under test is built with no reference to any dataset, as the engine builds them,
  * and then applied to data read back from Parquet. Where the same column is applied to data that
@@ -555,6 +556,148 @@ class ResolveOrNullTest extends SparkSessionSupport with AdaptiveSparkPlanHelper
       val error = assertThrows(classOf[AnalysisException], () => data.select(traversal).collect())
       assertTrue(error.getCondition.startsWith("UNRESOLVED_COLUMN"), error.getCondition)
     }
+  }
+
+  // -----------------------------------------------------------------------------------------------
+  // T089a, T094b: a previous-layout decimal is normalised to the new layout's text.
+  // -----------------------------------------------------------------------------------------------
+
+  // The previous layout: a decimal is a DECIMAL(32,6) value beside an integer `_scale` companion
+  // holding the scale of the source, at the root, under a singular parent, under a repeating one,
+  // and as a repeating decimal under a repeating parent. The source values are 1.50, 120, 0.1234567
+  // (scale 7, rounded on encoding), 0.25, 1.00E+3 (scale -1) and 3. The second row holds a value
+  // with no scale, as the result of arithmetic has, and a null value.
+  private def previousDecimals: DataFrame = parquet("previousDecimals",
+    """select 'r1' as id, cast(1.50 as decimal(32,6)) as factor, 2 as factor_scale,
+      |  named_struct('latitude', cast(1.50 as decimal(32,6)), 'latitude_scale', 2) as position,
+      |  array(named_struct('value', cast(120 as decimal(32,6)), 'value_scale', 0),
+      |    named_struct('value', cast(0.1234567 as decimal(32,6)), 'value_scale', 7)) as component,
+      |  array(named_struct(
+      |    'sensitivity', array(cast(0.25 as decimal(32,6)), cast(1000 as decimal(32,6))),
+      |    'sensitivity_scale', array(2, -1))) as roc
+      |union all
+      |select 'r2', cast(3 as decimal(32,6)), cast(null as int),
+      |  named_struct('latitude', cast(null as decimal(32,6)), 'latitude_scale', cast(null as int)),
+      |  array(named_struct('value', cast(2.5 as decimal(32,6)), 'value_scale', cast(null as int))),
+      |  array(named_struct('sensitivity', array(cast(3 as decimal(32,6))),
+      |    'sensitivity_scale', cast(null as array<int>)))""".stripMargin)
+
+  // The same values in the new layout, stored as the text that a double round trip gives.
+  private def newDecimals: DataFrame = parquet("newDecimals",
+    """select 'r1' as id, '1.5' as factor, named_struct('latitude', '1.5') as position,
+      |  array(named_struct('value', '120.0'), named_struct('value', '0.1234567')) as component,
+      |  array(named_struct('sensitivity', array('0.25', '1000.0'))) as roc
+      |union all
+      |select 'r2', '3.0', named_struct('latitude', cast(null as string)),
+      |  array(named_struct('value', '2.5')), array(named_struct('sensitivity', array('3.0')))"""
+      .stripMargin)
+
+  // A pruned new-layout table, which carries none of the decimals.
+  private def prunedDecimals: DataFrame = parquet("prunedDecimals",
+    """select 'r1' as id, named_struct('longitude', '2.0') as position,
+      |  array(named_struct('code', 'c')) as component, array(named_struct('code', 'c')) as roc"""
+      .stripMargin)
+
+  private def decimalLayouts: Seq[DataFrame] = Seq(previousDecimals, newDecimals, prunedDecimals)
+
+  private def factor: Column = decimalColumnOrNull("factor", StringType)
+
+  private def latitude: Column = resolveOrNull(F.col("position"), "latitude", StringType)
+
+  private def componentValue: Column =
+    resolveOrNull(F.col("component"), "value", ArrayType(StringType))
+
+  private def sensitivity: Column =
+    resolveOrNull(F.col("roc"), "sensitivity", ArrayType(ArrayType(StringType)))
+
+  private def componentValueInLambda: Column =
+    F.transform(F.col("component"), c => resolveOrNull(c, "value", StringType))
+
+  private def decimalTraversals: Seq[Column] =
+    Seq(factor, latitude, componentValue, sensitivity, componentValueInLambda)
+
+  @Test
+  def decimalTraversalYieldsTheSameTypeOnEveryLayout(): Unit = {
+    // The same-dataType rule: the previous layout, the new layout and the absent fallback agree, at
+    // every cardinality and inside a lambda, and the type is the new layout's text.
+    val expected = Seq(StringType, StringType, ArrayType(StringType), ArrayType(ArrayType(StringType)),
+      ArrayType(StringType))
+    for (data <- decimalLayouts) {
+      val types = data.select(decimalTraversals: _*).schema.fields.map(_.dataType).toSeq
+      assertEquals(expected, types.map(stripNullability))
+    }
+    val previous = previousDecimals.select(decimalTraversals: _*).schema
+    val current = newDecimals.select(decimalTraversals: _*).schema
+    assertEquals(current.fields.map(_.dataType).toSeq, previous.fields.map(_.dataType).toSeq)
+  }
+
+  @Test
+  def previousLayoutDecimalCarriesTheSourceScale(): Unit = {
+    // The text is the value at the source scale, which is capped at the value column's scale of 6,
+    // and a negative scale gives an integer. A value with no scale is rendered at the scale of the
+    // value column, and a null value stays null.
+    assertEquals(
+      Seq("[r1,1.50,1.50,ArraySeq(120, 0.123457),ArraySeq(ArraySeq(0.25, 1000))]",
+        "[r2,3.000000,null,ArraySeq(2.500000),ArraySeq(ArraySeq(3.000000))]"),
+      rows(previousDecimals.select(F.col("id"), factor, latitude, componentValue, sensitivity)))
+    assertEquals(Seq("[r1,ArraySeq(120, 0.123457)]", "[r2,ArraySeq(2.500000)]"),
+      rows(previousDecimals.select(F.col("id"), componentValueInLambda)))
+  }
+
+  @Test
+  def newLayoutDecimalIsTheStoredText(): Unit = {
+    assertEquals(
+      Seq("[r1,1.5,1.5,ArraySeq(120.0, 0.1234567),ArraySeq(ArraySeq(0.25, 1000.0))]",
+        "[r2,3.0,null,ArraySeq(2.5),ArraySeq(ArraySeq(3.0))]"),
+      rows(newDecimals.select(F.col("id"), factor, latitude, componentValue, sensitivity)))
+  }
+
+  @Test
+  def absentDecimalIsNullText(): Unit = {
+    // A repeating decimal absent from every element of its parent falls back to a null array, as
+    // any absent field does.
+    assertEquals(Seq("[r1,null,null,null,null]"),
+      rows(prunedDecimals.select(F.col("id"), factor, latitude, componentValue, sensitivity)))
+  }
+
+  @Test
+  def decimalTextParsesBackToTheStoredValue(): Unit = {
+    // The normalisation loses nothing the value column holds: cast back to the query-time type, the
+    // text is the value that was stored.
+    val decimalType = DecimalType(32, 6)
+    val roundTrip = previousDecimals.select(
+      (latitude.cast(decimalType) === F.col("position.latitude")).alias("singular"),
+      F.forall(F.zip_with(componentValue, F.col("component.value"),
+        (text, value) => text.cast(decimalType) === value), same => same).alias("repeating"))
+    assertEquals(Seq("[null,true]", "[true,true]"), rows(roundTrip))
+  }
+
+  @Test
+  def decimalNormalisationReadsOnlyTheValueAndItsScale(): Unit = {
+    assertEquals("struct<position:struct<latitude:decimal(32,6),latitude_scale:int>>",
+      readSchema(previousDecimals.select(latitude)))
+    assertEquals("struct<component:array<struct<value:decimal(32,6),value_scale:int>>>",
+      readSchema(previousDecimals.select(componentValue)))
+    assertEquals("struct<factor:decimal(32,6),factor_scale:int>",
+      readSchema(previousDecimals.select(factor)))
+    assertEquals("struct<position:struct<latitude:string>>",
+      readSchema(newDecimals.select(latitude)))
+  }
+
+  @Test
+  def decimalWithoutScaleCompanionIsRenderedAtItsOwnScale(): Unit = {
+    // A structure built by the engine, such as a quantity literal, may carry a decimal with no
+    // companion. It is normalised all the same, so that the type does not depend on its origin.
+    val data = parquet("noScale",
+      "select named_struct('value', cast(1.5 as decimal(32,6))) as q")
+    val value = data.select(resolveOrNull(F.col("q"), "value", StringType).alias("v"))
+    assertEquals(StringType, value.schema("v").dataType)
+    assertEquals(Seq("[1.500000]"), rows(value))
+  }
+
+  private def stripNullability(dataType: DataType): DataType = dataType match {
+    case ArrayType(element, _) => ArrayType(stripNullability(element))
+    case other => other
   }
 
   // -----------------------------------------------------------------------------------------------

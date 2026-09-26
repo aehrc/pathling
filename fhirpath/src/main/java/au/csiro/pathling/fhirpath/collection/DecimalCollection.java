@@ -154,6 +154,23 @@ public class DecimalCollection extends Collection
   }
 
   /**
+   * Decodes a stored decimal to the type the engine computes with, {@code DECIMAL(32,6)} (FR-035).
+   *
+   * <p>A decimal is stored as text, in the lexical form of a FHIR decimal, and the traversal
+   * expression normalises the previous layout's decimals to the same text, so this is the one
+   * decoding path for both layouts. A value with more fractional digits than the type holds is
+   * rounded, and one beyond its range is null, as the previous layout's encoder made it. The cast
+   * is a safe one, so the result does not depend on the session's ANSI setting.
+   *
+   * @param stored the stored decimal, or array of decimals, as text
+   * @return the decimal, or array of decimals, as {@code DECIMAL(32,6)}
+   */
+  @Nonnull
+  public static ColumnRepresentation decode(@Nonnull final ColumnRepresentation stored) {
+    return stored.elementTryCast(DECIMAL_TYPE);
+  }
+
+  /**
    * Gets the decimal data type used for representing decimal values in Spark.
    *
    * @return the {@link org.apache.spark.sql.types.DataType} used for representing decimal values in
