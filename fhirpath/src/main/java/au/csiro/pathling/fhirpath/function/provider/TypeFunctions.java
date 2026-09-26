@@ -24,6 +24,7 @@ import au.csiro.pathling.fhirpath.annotations.SqlOnFhirConformance.Profile;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.EmptyCollection;
 import au.csiro.pathling.fhirpath.collection.mixed.ChoiceElementCollection;
+import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.function.FhirPathFunction;
 import jakarta.annotation.Nonnull;
@@ -110,9 +111,10 @@ public class TypeFunctions {
   public static Collection type(@Nonnull final Collection input) {
     // Choice collections require per-row type resolution based on which field is non-null.
     if (input instanceof final ChoiceElementCollection choice) {
+      final ColumnRepresentation parent = choice.getParent().getColumn();
       final UnaryOperator<Column> mapper =
-          TypeInfo.choiceTypeInfoMapper(choice.getChoiceDefinition().getAllChildTypes());
-      final Column mappedValue = choice.getParent().getColumn().transform(mapper).getValue();
+          TypeInfo.choiceTypeInfoMapper(parent, choice.getChoiceDefinition().getAllChildTypes());
+      final Column mappedValue = parent.transform(mapper).getValue();
       return Collection.buildWithDefinition(
           new DefaultRepresentation(mappedValue), TypeInfo.DEFINITION);
     }
