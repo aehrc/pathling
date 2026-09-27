@@ -2593,3 +2593,29 @@ and `getSqlType()` stays for decimal.
 
 _Amends_ FR-025 and decision 73's expectation for T111.
 
+## 77. Quantity canonicalisation is computed from the stored value, and search follows the specification on UCUM
+
+Owner decisions (2026-09-27), prompted by port step 2 (T087, T096, T099).
+
+**Computed from the stored value, on both layouts.** No stored canonical form is
+read any more. On the previous layout the stored value keeps only six fractional
+digits, while the encoder computed its canonical form from the full source value.
+So a value with more digits can compare differently on previous-layout data:
+`0.0000002 kg = 0.2 'mg'` was true and is now false there, and true on the new
+layout. This is accepted as a known divergence until T100e. It keeps one code
+path and normalises the previous layout completely.
+
+**Search canonicalises only a UCUM quantity.** Quantity search compares
+canonical forms only where the stored quantity's system is UCUM, as the FHIR
+search specification says. Otherwise it matches exactly. The released encoder
+computed a canonical form whatever the system, so on data it wrote, `80 kg` with
+system `http://other.org` matched `gt70|http://unitsofmeasure.org|kg`. It no
+longer does. The `ElementMatcherTest` case that pins `false` for it is unchanged:
+its hand-built quantity has no canonical form, so it only ever tested exact
+matching.
+
+**FHIRPath comparison is fixed after the switch.** FHIRPath quantity comparison
+still canonicalises from the code whatever the system, so for a UCUM code under
+another system it disagrees with search. T096b, in M5, makes comparison follow
+the specification too.
+
