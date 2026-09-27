@@ -2565,6 +2565,9 @@ hold. The fallbacks, in order:
 2. a custom analyzer rule, which needs `SparkSessionExtensions`;
 3. building a struct from the root columns, so that the root becomes a parent
    like any other.
+4. an explicit layout flag in the engine, considered for decision 79 and not
+   taken. It becomes worth it if layout-specific branches appear that cannot be
+   decided from the type, or once T045 detects the layout in M4.
 
 _Amends_ decision 74, withdrawing its tolerant reference and its second child.
 It records the principle that compiled expressions are schema-agnostic, and it
@@ -2643,4 +2646,50 @@ removes `_fid` with the previous layout.
 
 _Amends_ decisions 74 and 75, which named the extension structure as the one
 exception.
+
+## 79. On the new layout, extension traversal ignores `_fid` where there is no `_extension`
+
+Owner decision (2026-09-28), prompted by port step 4.
+
+The engine builds its System values, meaning literals and terminology results,
+in the FHIR-shaped structures the previous layout used, and these carry a
+`_fid` that is always null. So does the engine's quantity structure after a
+union rebuilds stored quantities into it. Extension traversal chooses its
+branch from the type, and it read a `_fid` field as the previous layout. So on
+a new-layout table it referenced the `_extension` column, which is not there,
+and the query failed.
+
+The engine's structures are not changed now. Changing them risks regressions
+where literals meet FHIR values, so it waits until after the switch (T124k).
+Instead, `_extension` is reached through the tolerant table-column reference,
+at every extension lookup. Where the column is absent, a lookup by `_fid` finds
+no extensions. On the previous layout nothing changes.
+
+Consequences:
+
+- `.extension` on a System value is empty on both layouts, as it should be,
+  because System types have no extensions. `WithoutExtensionsDefinition`, the
+  workaround step 4 added for `property()`, is removed.
+- **Known limit until T113b.** A union, `combine` or `iif` of two stored
+  quantities on the new layout returns no extensions, although the quantities
+  have them. The rebuild into the engine's structure has already dropped
+  `extension`. This was an error; it is now an empty answer. A test pins it as a
+  known limit, and T113b changes that test when combining keeps FHIR structures.
+- Previous-layout data encoded with extensions disabled has no `_extension`
+  column. `.extension` on it is now empty rather than an error. This relaxes
+  decision 75.
+- The known limits of the tolerant reference (a join condition, a self-join, a
+  column dropped by a projection beneath) now reach `_extension` too.
+
+The rule for the combining functions, which T113b implements, follows the FHIR
+binding. A combination of two FHIR operands keeps FHIR elements. Where a System
+value takes part, the FHIR operand is implicitly converted to the System type,
+which carries no `id` or `extension`. Terminology functions return System
+values.
+
+An explicit layout flag was considered and not taken: it reverses decision 75's
+schema-agnostic principle, needs plumbing to every place that compiles an
+expression, and gives the same answers as this tolerance for every present case.
+
+_Amends_ decision 75.
 
