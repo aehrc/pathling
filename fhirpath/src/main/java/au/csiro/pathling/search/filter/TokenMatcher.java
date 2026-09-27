@@ -25,11 +25,14 @@ import static org.apache.spark.sql.functions.exists;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.lower;
 
+import au.csiro.pathling.encoders.ColumnFunctions;
+import au.csiro.pathling.fhirpath.encoding.CodingSchema;
 import au.csiro.pathling.search.TokenSearchValue;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import java.util.stream.Stream;
 import org.apache.spark.sql.Column;
+import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
@@ -98,7 +101,7 @@ public class TokenMatcher implements ElementMatcher {
    */
   @Nonnull
   private Column matchCoding(@Nonnull final Column element, @Nonnull final TokenSearchValue token) {
-    return matchSystemAndCode(element.getField(SYSTEM), element.getField(CODE), token);
+    return matchSystemAndCode(field(element, SYSTEM), field(element, CODE), token);
   }
 
   /**
@@ -112,11 +115,13 @@ public class TokenMatcher implements ElementMatcher {
   @Nonnull
   private Column matchCodeableConcept(
       @Nonnull final Column element, @Nonnull final TokenSearchValue token) {
-    final Column codingArray = element.getField(CODING);
+    final Column codingArray =
+        ColumnFunctions.resolveOrNull(
+            element, CODING, DataTypes.createArrayType(CodingSchema.DATA_TYPE));
     // Match if ANY coding in the array matches
     return exists(
         codingArray,
-        coding -> matchSystemAndCode(coding.getField(SYSTEM), coding.getField(CODE), token));
+        coding -> matchSystemAndCode(field(coding, SYSTEM), field(coding, CODE), token));
   }
 
   /**
@@ -131,8 +136,8 @@ public class TokenMatcher implements ElementMatcher {
   private Column matchIdentifier(
       @Nonnull final Column element, @Nonnull final TokenSearchValue token) {
     return matchSystemAndCode(
-        element.getField(SYSTEM),
-        element.getField(VALUE), // Identifier uses 'value', not 'code'
+        field(element, SYSTEM),
+        field(element, VALUE), // Identifier uses 'value', not 'code'
         token);
   }
 
@@ -148,7 +153,7 @@ public class TokenMatcher implements ElementMatcher {
   private Column matchContactPoint(
       @Nonnull final Column element, @Nonnull final TokenSearchValue token) {
     // ContactPoint only matches on value - system|code syntax not applicable
-    return element.getField(VALUE).equalTo(lit(token.requiresSimpleCode()));
+    return field(element, VALUE).equalTo(lit(token.requiresSimpleCode()));
   }
 
   /**
@@ -224,5 +229,19 @@ public class TokenMatcher implements ElementMatcher {
         .flatMap(Optional::stream)
         .reduce(Column::and)
         .orElse(lit(true));
+  }
+
+  /**
+   * Reads a string field of the element by name through the tolerant traversal, so that an element
+   * whose structure does not carry the field, such as one pruned to the fields its data populates,
+   * reads it as null (FR-054).
+   *
+   * @param element the element column
+   * @param name the name of the field
+   * @return the field, or a null string where the structure does not carry it
+   */
+  @Nonnull
+  private static Column field(@Nonnull final Column element, @Nonnull final String name) {
+    return ColumnFunctions.resolveOrNull(element, name, DataTypes.StringType);
   }
 }
