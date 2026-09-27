@@ -21,6 +21,7 @@ import static org.apache.spark.sql.functions.callUDF;
 import static org.apache.spark.sql.functions.coalesce;
 import static org.apache.spark.sql.functions.lit;
 
+import au.csiro.pathling.encoders.ColumnFunctions;
 import au.csiro.pathling.fhirpath.FhirPathDateTime;
 import au.csiro.pathling.sql.misc.HighBoundaryForDateTime;
 import au.csiro.pathling.sql.misc.LowBoundaryForDateTime;
@@ -29,6 +30,7 @@ import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import org.apache.spark.sql.Column;
+import org.apache.spark.sql.types.DataTypes;
 
 /**
  * Matches elements using range-based comparisons for date search parameters.
@@ -130,14 +132,16 @@ public class DateMatcher implements ElementMatcher {
 
     if (isPeriodType) {
       // Period: start/end are STRING fields representing dateTime values
-      // Apply UDFs to get precision-aware boundaries, coalesce null to infinity
+      // Apply UDFs to get precision-aware boundaries, coalesce null to infinity. Each bound is read
+      // through the tolerant traversal, so a bound the schema does not carry is open, as a null one
+      // is (FR-024, FR-054).
       resourceLow =
           coalesce(
-              callUDF(LowBoundaryForDateTime.FUNCTION_NAME, element.getField("start")),
+              callUDF(LowBoundaryForDateTime.FUNCTION_NAME, periodBound(element, "start")),
               lit(MIN_TIMESTAMP));
       resourceHigh =
           coalesce(
-              callUDF(HighBoundaryForDateTime.FUNCTION_NAME, element.getField("end")),
+              callUDF(HighBoundaryForDateTime.FUNCTION_NAME, periodBound(element, "end")),
               lit(MAX_TIMESTAMP));
     } else {
       // Scalar date/dateTime/instant: apply UDFs directly to the element
@@ -165,5 +169,10 @@ public class DateMatcher implements ElementMatcher {
       return element.isNotNull().and(comparison);
     }
     return comparison;
+  }
+
+  @Nonnull
+  private static Column periodBound(@Nonnull final Column period, @Nonnull final String bound) {
+    return ColumnFunctions.resolveOrNull(period, bound, DataTypes.StringType);
   }
 }
