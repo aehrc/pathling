@@ -559,6 +559,45 @@ class ResolveOrNullTest extends SparkSessionSupport with AdaptiveSparkPlanHelper
   }
 
   // -----------------------------------------------------------------------------------------------
+  // T089a, T094b: the extension branch. An element's `_fid` is looked up in the resource's root
+  // map, and every leaf reached through the result has the new layout's type.
+  // -----------------------------------------------------------------------------------------------
+
+  private def values(extensions: Column): Column =
+    resolveOrNull(extensions, "valueString", ArrayType(StringType))
+
+  // The leaves reached through extension traversal at the root, under a repeating parent inside a
+  // lambda, and through a nested extension inside a lambda.
+  private def extensionLeaves: Seq[Column] = {
+    val root = traverseRootExtension()
+    Seq(
+      urls(root),
+      values(root),
+      F.transform(F.col("name"), n => urls(traverseExtension(n))),
+      F.transform(F.col("name"), n => values(traverseExtension(n))),
+      F.transform(root, e => urls(traverseExtension(e))),
+      F.transform(root, e => values(traverseExtension(e))))
+  }
+
+  @Test
+  def extensionLeavesHaveTheSameTypeOnEveryLayout(): Unit = {
+    // The extension structure itself keeps `_fid` on the previous layout (decision 78), so the
+    // same-dataType rule is asserted on the leaves reached through it. They agree across the two
+    // layouts and with the absent fallback, which is the pruned table with no extensions at all.
+    // The values on both layouts are pinned by the tests above.
+    val expected = Seq(ArrayType(StringType), ArrayType(StringType),
+      ArrayType(ArrayType(StringType)), ArrayType(ArrayType(StringType)),
+      ArrayType(ArrayType(StringType)), ArrayType(ArrayType(StringType)))
+    for (data <- bothLayouts :+ prunedLayout) {
+      val types = data.select(extensionLeaves: _*).schema.fields.map(_.dataType).toSeq
+      assertEquals(expected, types.map(stripNullability), data.schema.treeString)
+    }
+    val previous = previousLayout.select(extensionLeaves: _*).schema.fields.map(_.dataType).toSeq
+    val current = newLayout.select(extensionLeaves: _*).schema.fields.map(_.dataType).toSeq
+    assertEquals(current.map(stripNullability), previous.map(stripNullability))
+  }
+
+  // -----------------------------------------------------------------------------------------------
   // T089a, T094b: a previous-layout decimal is normalised to the new layout's text.
   // -----------------------------------------------------------------------------------------------
 

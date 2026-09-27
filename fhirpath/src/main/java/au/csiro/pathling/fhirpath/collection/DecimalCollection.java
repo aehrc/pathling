@@ -60,15 +60,13 @@ public class DecimalCollection extends Collection
    * @param fhirPathType the FhirPath type
    * @param fhirType the FHIR type
    * @param definition the node definition
-   * @param extensionMapColumn the extension map column
    */
   protected DecimalCollection(
       @Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> fhirPathType,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
-      @Nonnull final Optional<NodeDefinition> definition,
-      @Nonnull final Optional<Column> extensionMapColumn) {
-    super(columnRepresentation, fhirPathType, fhirType, definition, extensionMapColumn);
+      @Nonnull final Optional<NodeDefinition> definition) {
+    super(columnRepresentation, fhirPathType, fhirType, definition);
   }
 
   /**
@@ -86,8 +84,7 @@ public class DecimalCollection extends Collection
         columnRepresentation,
         Optional.of(FhirPathType.DECIMAL),
         Optional.of(FHIRDefinedType.DECIMAL),
-        definition,
-        Optional.empty());
+        definition);
   }
 
   /**

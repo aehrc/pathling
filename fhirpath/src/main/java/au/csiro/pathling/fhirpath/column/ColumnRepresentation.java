@@ -37,6 +37,7 @@ import jakarta.annotation.Nullable;
 import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.BinaryOperator;
+import java.util.function.Function;
 import java.util.function.UnaryOperator;
 import java.util.stream.Stream;
 import org.apache.spark.sql.Column;
@@ -356,6 +357,23 @@ public abstract class ColumnRepresentation {
     return vectorize(
         c -> functions.filter(c, lambda::apply),
         c -> let(c, x -> when(x.isNotNull().and(lambda.apply(x)), x)));
+  }
+
+  /**
+   * Filters the elements of the current {@link ColumnRepresentation} using a predicate over the
+   * representation of each element.
+   *
+   * <p>The predicate receives each element as a copy of this representation, so a representation
+   * that carries more than its value can hand that on to the element. {@link DecodedRepresentation}
+   * does this, so that an element inside the predicate keeps what was stored for it.
+   *
+   * @param predicate the predicate, over the representation of an element
+   * @return A new {@link ColumnRepresentation} that is filtered
+   */
+  @Nonnull
+  public ColumnRepresentation filterElements(
+      @Nonnull final Function<ColumnRepresentation, Column> predicate) {
+    return filter(element -> predicate.apply(copyOf(element)));
   }
 
   /**

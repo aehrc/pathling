@@ -29,6 +29,7 @@ import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.CodingCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
+import au.csiro.pathling.fhirpath.collection.WithoutExtensionsDefinition;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.function.FhirPathFunction;
@@ -143,13 +144,15 @@ public abstract class TerminologyFunctions {
             .flatten()
             .removeNulls();
 
+    // A Coding returned by the terminology server is built by the engine and has no extensions.
     return Collection.build(
         resultCtx,
         propertyType,
         input
             .getDefinition()
             .flatMap(Functions.maybeCast(ElementDefinition.class))
-            .filter(d -> propertyType == FHIRDefinedType.CODING));
+            .filter(d -> propertyType == FHIRDefinedType.CODING)
+            .map(WithoutExtensionsDefinition::new));
   }
 
   /**

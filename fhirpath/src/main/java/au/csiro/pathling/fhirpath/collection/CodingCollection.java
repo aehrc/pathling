@@ -79,15 +79,13 @@ public class CodingCollection extends Collection implements StringCoercible {
    * @param type the FhirPath type
    * @param fhirType the FHIR type
    * @param definition the node definition
-   * @param extensionMapColumn the extension map column
    */
   protected CodingCollection(
       @Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
-      @Nonnull final Optional<? extends NodeDefinition> definition,
-      @Nonnull final Optional<Column> extensionMapColumn) {
-    super(columnRepresentation, type, fhirType, definition, extensionMapColumn);
+      @Nonnull final Optional<? extends NodeDefinition> definition) {
+    super(columnRepresentation, type, fhirType, definition);
   }
 
   /**
@@ -105,8 +103,7 @@ public class CodingCollection extends Collection implements StringCoercible {
         columnRepresentation,
         Optional.of(FhirPathType.CODING),
         Optional.of(FHIRDefinedType.CODING),
-        definition,
-        Optional.empty());
+        definition);
   }
 
   /**

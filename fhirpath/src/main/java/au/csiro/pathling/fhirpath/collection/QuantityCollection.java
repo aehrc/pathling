@@ -31,6 +31,7 @@ import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.TerminologyConcepts;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
+import au.csiro.pathling.fhirpath.column.DecodedRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.column.QuantityValue;
 import au.csiro.pathling.fhirpath.comparison.ColumnComparator;
@@ -83,15 +84,13 @@ public class QuantityCollection extends Collection implements Comparable, String
    * @param type The FHIRPath type
    * @param fhirType The FHIR type
    * @param definition The FHIR definition
-   * @param extensionMapColumn The extension map column
    */
   public QuantityCollection(
       @Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
-      @Nonnull final Optional<? extends NodeDefinition> definition,
-      @Nonnull final Optional<Column> extensionMapColumn) {
-    super(columnRepresentation, type, fhirType, definition, extensionMapColumn);
+      @Nonnull final Optional<? extends NodeDefinition> definition) {
+    super(columnRepresentation, type, fhirType, definition);
   }
 
   /**
@@ -109,8 +108,7 @@ public class QuantityCollection extends Collection implements Comparable, String
         columnRepresentation,
         Optional.of(FhirPathType.QUANTITY),
         Optional.of(FHIRDefinedType.QUANTITY),
-        definition,
-        Optional.empty());
+        definition);
   }
 
   /**
@@ -164,13 +162,16 @@ public class QuantityCollection extends Collection implements Comparable, String
    * builds itself, such as literals and the results of conversion, are already in the structure it
    * computes with.
    *
+   * <p>The stored quantities are retained beside the decoded ones, because the decoded structure
+   * has a fixed type and cannot carry the new layout's inline extensions (T097).
+   *
    * @param stored the stored quantity, or array of quantities
    * @return the quantity, or array of quantities, in the structure of {@link
    *     QuantityEncoding#dataType()}
    */
   @Nonnull
   public static ColumnRepresentation decode(@Nonnull final ColumnRepresentation stored) {
-    return stored.transform(QuantityEncoding::decodeStored);
+    return new DecodedRepresentation(stored, QuantityEncoding::decodeStored);
   }
 
   /**
