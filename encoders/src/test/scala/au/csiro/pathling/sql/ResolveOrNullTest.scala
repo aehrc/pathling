@@ -566,13 +566,16 @@ class ResolveOrNullTest extends SparkSessionSupport with AdaptiveSparkPlanHelper
   private def values(extensions: Column): Column =
     resolveOrNull(extensions, "valueString", ArrayType(StringType))
 
-  // The leaves reached through extension traversal at the root, under a repeating parent inside a
-  // lambda, and through a nested extension inside a lambda.
+  // The leaves reached through extension traversal at the root, under a repeating parent both
+  // directly and inside a lambda, and through a nested extension inside a lambda.
   private def extensionLeaves: Seq[Column] = {
     val root = traverseRootExtension()
+    val underName = traverseExtension(F.col("name"))
     Seq(
       urls(root),
       values(root),
+      F.transform(underName, e => urls(e)),
+      F.transform(underName, e => values(e)),
       F.transform(F.col("name"), n => urls(traverseExtension(n))),
       F.transform(F.col("name"), n => values(traverseExtension(n))),
       F.transform(root, e => urls(traverseExtension(e))),
@@ -586,6 +589,7 @@ class ResolveOrNullTest extends SparkSessionSupport with AdaptiveSparkPlanHelper
     // layouts and with the absent fallback, which is the pruned table with no extensions at all.
     // The values on both layouts are pinned by the tests above.
     val expected = Seq(ArrayType(StringType), ArrayType(StringType),
+      ArrayType(ArrayType(StringType)), ArrayType(ArrayType(StringType)),
       ArrayType(ArrayType(StringType)), ArrayType(ArrayType(StringType)),
       ArrayType(ArrayType(StringType)), ArrayType(ArrayType(StringType)))
     for (data <- bothLayouts :+ prunedLayout) {
