@@ -937,6 +937,89 @@ class ResolveOrNullTest extends SparkSessionSupport with AdaptiveSparkPlanHelper
   }
 
   // -----------------------------------------------------------------------------------------------
+  // T089a, T094b: a stored versioned key needs no branch. The previous layout stores a versioned
+  // companion beside every id-typed element, and no traversal reaches it, so every leaf already
+  // has the new layout's type and the companion is never read.
+  // -----------------------------------------------------------------------------------------------
+
+  // The previous layout: the resource's id beside `id_versioned`, and id-typed elements under a
+  // singular parent, as `Meta.versionId` is, and under a repeating one, as `ImagingStudy.series.uid`
+  // is, each beside its `_versioned` companion and inside a structure carrying `_fid`.
+  private def previousKeys: DataFrame = parquet("previousKeys",
+    """select 'p1' as id, 'Patient/p1/_history/2' as id_versioned,
+      |  named_struct('versionId', '2', 'versionId_versioned', '2', '_fid', 1) as meta,
+      |  array(named_struct('uid', '1.2.3', 'uid_versioned', '1.2.3', '_fid', 2),
+      |    named_struct('uid', '1.2.4', 'uid_versioned', '1.2.4', '_fid', 3)) as series
+      |union all
+      |select 'p2', 'p2',
+      |  cast(null as struct<versionId: string, versionId_versioned: string, _fid: int>),
+      |  array(named_struct('uid', '1.2.5', 'uid_versioned', '1.2.5', '_fid', 4))""".stripMargin)
+
+  // The same values in the new layout, which stores no versioned key.
+  private def newKeys: DataFrame = parquet("newKeys",
+    """select 'p1' as id, named_struct('versionId', '2') as meta,
+      |  array(named_struct('uid', '1.2.3'), named_struct('uid', '1.2.4')) as series
+      |union all
+      |select 'p2', cast(null as struct<versionId: string>), array(named_struct('uid', '1.2.5'))"""
+      .stripMargin)
+
+  // A pruned new-layout table, which carries neither the version nor the uid.
+  private def prunedKeys: DataFrame = parquet("prunedKeys",
+    """select 'p3' as id, named_struct('lastUpdated', 't') as meta,
+      |  array(named_struct('modality', 'CT')) as series""".stripMargin)
+
+  private def keyTraversals: Seq[Column] = {
+    val series = columnOrNull("series", ArrayType(NullType))
+    Seq(
+      columnOrNull("id", StringType),
+      resolveOrNull(columnOrNull("meta", NullType), "versionId", StringType),
+      resolveOrNull(series, "uid", ArrayType(StringType)),
+      F.transform(series, s => resolveOrNull(s, "uid", StringType)))
+  }
+
+  @Test
+  def keyLeavesHaveTheSameTypeOnEveryLayout(): Unit = {
+    // The same-dataType rule, on the leaves: the previous layout, the new layout and the absent
+    // fallback agree, at the root, under a singular and a repeating parent, and inside a lambda.
+    val expected = Seq(StringType, StringType, ArrayType(StringType), ArrayType(StringType))
+    for (data <- Seq(previousKeys, newKeys, prunedKeys)) {
+      val types = data.select(keyTraversals: _*).schema.fields.map(_.dataType).toSeq
+      assertEquals(expected, types.map(stripNullability), data.schema.treeString)
+    }
+  }
+
+  @Test
+  def storedVersionedKeyChangesNoValue(): Unit = {
+    // The previous layout gives the same values as the new one: the id is the plain id, whatever
+    // the versioned key beside it holds.
+    val expected = Seq("[p1,2,ArraySeq(1.2.3, 1.2.4),ArraySeq(1.2.3, 1.2.4)]",
+      "[p2,null,ArraySeq(1.2.5),ArraySeq(1.2.5)]")
+    assertEquals(expected, rows(previousKeys.select(keyTraversals: _*)))
+    assertEquals(expected, rows(newKeys.select(keyTraversals: _*)))
+    assertEquals(Seq("[p3,null,null,ArraySeq(null)]"), rows(prunedKeys.select(keyTraversals: _*)))
+  }
+
+  @Test
+  def storedVersionedKeyIsNeverRead(): Unit = {
+    // Outside a lambda, the scan reads only the id-typed elements themselves.
+    assertEquals("struct<id:string>", readSchema(previousKeys.select(keyTraversals.head)))
+    assertEquals("struct<meta:struct<versionId:string>>",
+      readSchema(previousKeys.select(keyTraversals(1))))
+    assertEquals("struct<series:array<struct<uid:string>>>",
+      readSchema(previousKeys.select(keyTraversals(2))))
+    // Inside a lambda nested schema pruning does not apply, so the whole structure is scanned, as
+    // it is for any element, but no expression reads a versioned key, as a table column or as a
+    // companion extracted from a structure.
+    val extracted = optimisedExpressions(previousKeys.select(keyTraversals: _*)).collect {
+      case attribute: AttributeReference => attribute.name
+      case field: GetStructField => field.extractFieldName
+      case fields: GetArrayStructFields => fields.field.name
+    }
+    assertTrue(extracted.contains("uid"), extracted.toString)
+    assertFalse(extracted.exists(_.endsWith("_versioned")), extracted.toString)
+  }
+
+  // -----------------------------------------------------------------------------------------------
   // Helpers.
   // -----------------------------------------------------------------------------------------------
 
