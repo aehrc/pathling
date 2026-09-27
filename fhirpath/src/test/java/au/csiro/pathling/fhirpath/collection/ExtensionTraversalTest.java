@@ -264,6 +264,33 @@ class ExtensionTraversalTest {
   }
 
   @Nonnull
+  Stream<Arguments> combinedQuantityCases() {
+    return Stream.of(
+            "(value.ofType(Quantity) | component.value.ofType(Quantity)).extension.url.count()",
+            "value.ofType(Quantity).combine(component.value.ofType(Quantity)).extension.url.count()")
+        .map(Arguments::arguments);
+  }
+
+  /**
+   * Known limit until T113b (decision 79). A union or combination of stored quantities rebuilds
+   * them into the engine's quantity structure, which drops the new layout's inline extensions, so
+   * extension traversal after it is empty on the new layout although the quantities have
+   * extensions. The previous layout reaches them through the structure's {@code _fid}. T113b keeps
+   * the stored structures when two FHIR operands are combined, and changes the new layout's answer
+   * here to the previous layout's. Conditional selection is not covered, because the engine does
+   * not implement {@code iif()}.
+   */
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("combinedQuantityCases")
+  void knownLimitExtensionsOfCombinedQuantitiesAreEmptyOnTheNewLayout(
+      @Nonnull final String expression) {
+    assertThat(evaluate(observations.get("previous"), ResourceType.OBSERVATION, expression))
+        .containsExactlyInAnyOrder("o1=2", "o2=0");
+    assertThat(evaluate(observations.get("pof"), ResourceType.OBSERVATION, expression))
+        .containsExactlyInAnyOrder("o1=0", "o2=0");
+  }
+
+  @Nonnull
   Stream<Arguments> plainQuantityCases() {
     return onBothLayouts(
         arguments("value.ofType(Quantity).extension.exists()", List.of("o3=false")),

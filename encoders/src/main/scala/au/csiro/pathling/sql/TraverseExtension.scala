@@ -23,7 +23,7 @@
 package au.csiro.pathling.sql
 
 import au.csiro.pathling.encoders.{UnevaluableCopy, UnresolvedColumnOrNull}
-import org.apache.spark.sql.catalyst.analysis.{UnresolvedAttribute, UnresolvedException}
+import org.apache.spark.sql.catalyst.analysis.UnresolvedException
 import org.apache.spark.sql.catalyst.expressions.{ArrayTransform, Expression, GetArrayStructFields, GetMapValue, GetStructField, LambdaFunction, Literal, NamedLambdaVariable, NonSQLExpression, RuntimeReplaceable}
 import org.apache.spark.sql.catalyst.trees.BinaryLike
 import org.apache.spark.sql.types.{ArrayType, DataType, NullType, StructType}
@@ -47,12 +47,13 @@ import org.apache.spark.sql.types.{ArrayType, DataType, NullType, StructType}
  * layout: an array of extensions for a singular parent, and an array of such arrays for a
  * repeating one.
  *
- * The `_extension` column is referenced by name only once the parent has shown the previous
- * layout, as an unresolved attribute that the analyzer resolves on a later pass. A
- * `RuntimeReplaceable` cannot hold an unresolved attribute in its replacement (T009a), so the
- * reference is a child of [[ExtensionLookup]] instead. Previous-layout data without `_extension`,
- * which was encoded with extensions disabled, therefore fails with UNRESOLVED_COLUMN, as it does
- * today.
+ * The `_extension` column is referenced by name only once the parent has shown a `_fid`, through
+ * the tolerant table-column reference, which the analyzer resolves on a later pass. A
+ * `RuntimeReplaceable` cannot hold an unresolved reference in its replacement (T009a), so the
+ * reference is a child of [[ExtensionLookup]] instead. Where the table has no `_extension` column
+ * the lookup finds no extensions (decision 79). That is the case for a structure the engine builds
+ * itself, whose `_fid` is always null, over a new-layout table, and for previous-layout data encoded
+ * with extensions disabled.
  */
 object ExtensionTraversal {
 
@@ -82,9 +83,9 @@ object ExtensionTraversal {
       val field = struct.fields(ordinal)
       GetArrayStructFields(parent, field, ordinal, struct.length, containsNull || field.nullable)
     case struct: StructType if has(struct, FID_FIELD) =>
-      ExtensionLookup(parent, UnresolvedAttribute(EXTENSION_MAP_COLUMN))
+      ExtensionLookup(parent, tolerantColumn(EXTENSION_MAP_COLUMN))
     case ArrayType(struct: StructType, _) if has(struct, FID_FIELD) =>
-      ExtensionLookup(parent, UnresolvedAttribute(EXTENSION_MAP_COLUMN))
+      ExtensionLookup(parent, tolerantColumn(EXTENSION_MAP_COLUMN))
     case _ =>
       absent
   }
@@ -99,7 +100,7 @@ object ExtensionTraversal {
     if (isAbsent(fid)) {
       absent
     } else {
-      ExtensionLookup(fid, UnresolvedAttribute(EXTENSION_MAP_COLUMN))
+      ExtensionLookup(fid, tolerantColumn(EXTENSION_MAP_COLUMN))
     }
 
   /**
@@ -118,7 +119,8 @@ object ExtensionTraversal {
   /** Creates a tolerant reference to a table column, falling back to a null of the null type. */
   def tolerantColumn(name: String): Expression = UnresolvedColumnOrNull(name, NullType)
 
-  private def absent: Expression = Literal(null, ABSENT_TYPE)
+  /** The result where there are no extensions to find. */
+  def absent: Expression = Literal(null, ABSENT_TYPE)
 
   private def has(struct: StructType, name: String): Boolean = struct.fieldNames.contains(name)
 }
@@ -248,15 +250,18 @@ case class UnresolvedTraverseRootExtensionByFid(fid: Expression)
  *
  *  - over a structure, the map's entry for its `_fid`;
  *  - over an array of structures, the entry for each element's `_fid`;
- *  - over anything else, which is the resource's own `_fid` at the root, the entry for that value.
+ *  - over anything else, which is the resource's own `_fid` at the root, the entry for that value;
+ *  - where the map is absent from the table, no extensions, whatever the element (decision 79).
  *
  * @param left  the element, or the resource's own `_fid`
- * @param right the extension map, keyed by `_fid`
+ * @param right the extension map, keyed by `_fid`, through the tolerant table-column reference
  */
 case class ExtensionLookup(left: Expression, right: Expression)
   extends RuntimeReplaceable with BinaryLike[Expression] {
 
   override lazy val replacement: Expression = left.dataType match {
+    case _ if ExtensionTraversal.isAbsent(right) =>
+      ExtensionTraversal.absent
     case struct: StructType =>
       GetMapValue(right, fidOf(left, struct))
     case ArrayType(struct: StructType, containsNull) =>

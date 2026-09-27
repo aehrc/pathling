@@ -547,15 +547,53 @@ class ResolveOrNullTest extends SparkSessionSupport with AdaptiveSparkPlanHelper
   }
 
   @Test
-  def previousLayoutWithoutExtensionMapFailsAsToday(): Unit = {
-    // Data encoded with extensions disabled has `_fid` but no `_extension`, and extension
-    // traversal fails there as it does today, rather than answering empty.
+  def previousLayoutWithoutExtensionMapIsEmpty(): Unit = {
+    // Data encoded with extensions disabled has `_fid` but no `_extension`. Since decision 79 the
+    // map is reached through the tolerant table-column reference, so extension traversal there
+    // finds no extensions, at the root and under a parent, rather than failing.
     val data = parquet("noExtensionMap",
       "select 'r1' as id, 1 as _fid, array(named_struct('family', 'F1', '_fid', 2)) as name")
     for (traversal <- Seq(traverseRootExtension(), traverseExtension(F.col("name")))) {
-      val error = assertThrows(classOf[AnalysisException], () => data.select(traversal).collect())
-      assertTrue(error.getCondition.startsWith("UNRESOLVED_COLUMN"), error.getCondition)
+      val result = data.select(traversal.alias("e"))
+      assertEquals(Seq("[null]"), rows(result))
+      assertEquals(ExtensionTraversal.ABSENT_TYPE, result.schema("e").dataType)
     }
+  }
+
+  // -----------------------------------------------------------------------------------------------
+  // Decision 79: `_extension` is reached through the tolerant table-column reference, so a `_fid`
+  // over a table without the map finds no extensions.
+  // -----------------------------------------------------------------------------------------------
+
+  // A structure the engine builds, carrying a `_fid` that is always null.
+  private def engineBuilt: Column =
+    F.struct(F.lit("x").alias("code"), F.lit(null).cast(IntegerType).alias("_fid"))
+
+  @Test
+  def nullFidOverTableWithoutExtensionMapIsEmpty(): Unit = {
+    for (data <- Seq(newLayout, prunedLayout)) {
+      val single = data.select(traverseExtension(engineBuilt).alias("e"))
+      assertEquals(Seq("[null]", "[null]"), rows(single))
+      assertEquals(ExtensionTraversal.ABSENT_TYPE, single.schema("e").dataType)
+      val repeating = data.select(traverseExtension(F.array(engineBuilt, engineBuilt)).alias("e"))
+      assertEquals(Seq("[null]", "[null]"), rows(repeating))
+      assertEquals(ExtensionTraversal.ABSENT_TYPE, repeating.schema("e").dataType)
+      // Inside a lambda, as the engine applies it to a repeating element.
+      val inLambda = data.select(
+        F.transform(F.array(engineBuilt), e => traverseExtension(e)).alias("e"))
+      assertEquals(Seq("[ArraySeq(null)]", "[ArraySeq(null)]"), rows(inLambda))
+    }
+  }
+
+  @Test
+  def nullFidOverTableWithExtensionMapIsUnchanged(): Unit = {
+    // Over the previous layout, the map is present and a null `_fid` has no entry in it, as
+    // before: the result is a null of the map's value type, not the absent fallback.
+    val result = previousLayout.select(traverseExtension(engineBuilt).alias("e"))
+    assertEquals(Seq("[null]", "[null]"), rows(result))
+    assertEquals(
+      previousLayout.schema("_extension").dataType.asInstanceOf[MapType].valueType,
+      result.schema("e").dataType)
   }
 
   // -----------------------------------------------------------------------------------------------
