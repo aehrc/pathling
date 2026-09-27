@@ -2619,3 +2619,28 @@ still canonicalises from the code whatever the system, so for a UCUM code under
 another system it disagrees with search. T096b, in M5, makes comparison follow
 the specification too.
 
+## 78. A previous-layout structure may keep `_fid`, and nothing else may differ
+
+Owner decision (2026-09-27), prompted by port step 2.
+
+The previous layout gives every complex element a `_fid`, which keys its
+extensions in the table-level `_extension` map. Extension traversal needs it on
+that layout (decision 75). Decision 74 made the extension structure an
+exception to the same-`dataType` rule, and step 2's normalised quantity needed
+the same exception. Coding, HumanName, Period and every other structure carry
+`_fid` too, so a named exception per type would recur at every port step.
+
+The rule is therefore stated generally:
+
+- a previous-layout structure may keep `_fid` in addition to the new layout's
+  fields;
+- every leaf reached through it has the new layout's type;
+- nothing else may differ.
+
+Code that treats a whole structure as a value, such as union across layouts,
+reconciles through `MergeCast`, as it must for pruned shapes anyway. T100e
+removes `_fid` with the previous layout.
+
+_Amends_ decisions 74 and 75, which named the extension structure as the one
+exception.
+

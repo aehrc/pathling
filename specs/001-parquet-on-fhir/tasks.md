@@ -499,6 +499,12 @@ layout's shape rather than carrying it forward. That is what keeps T108 and
 FR-054 true. Decision 47 originally had to weaken this across layouts; decision
 55 records why it no longer does._
 
+_**Amended by decision 78**: the rule is stated precisely as follows. A
+previous-layout structure may keep `_fid` in addition to the new layout's
+fields, every leaf reached through it has the new layout's type, and nothing
+else may differ. This applies to every structure, not only the extension
+structure and the quantity._
+
 ### Tests ⚠️ write first, confirm failing
 
 - [ ] T083 [P] [US3] Test that a full canonical Coding structure decodes as it does today, that a `{code, system}` structure decodes with the remaining properties null, and that reordered fields follow names rather than positions, in `terminology/src/test/java/au/csiro/pathling/fhirpath/encoding/CodingSchemaTest.java`.
