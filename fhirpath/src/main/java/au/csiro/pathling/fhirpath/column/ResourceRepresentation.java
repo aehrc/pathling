@@ -268,8 +268,12 @@ public final class ResourceRepresentation extends ColumnRepresentation {
     if (fhirType.filter(FHIRDefinedType.DECIMAL::equals).isPresent()) {
       // A decimal is read as text on either layout, with the previous layout's value and scale
       // columns normalised to it, and decoded for computation.
-      return DecimalCollection.decode(
-          existing(ColumnFunctions.decimalColumnOrNull(fieldName, fallback)).removeNulls());
+      return ElementRepresentation.ofPrimitive(
+          DecimalCollection.decode(
+              existing(ColumnFunctions.decimalColumnOrNull(fieldName, fallback)).removeNulls()),
+          fhirType,
+          this,
+          fieldName);
     }
     if (fhirType.filter(QUANTITY_TYPES::contains).isPresent()) {
       // A quantity is read in the new layout's shape on either layout, with the previous layout's
@@ -286,7 +290,7 @@ public final class ResourceRepresentation extends ColumnRepresentation {
       // If the field is a base64Binary, represent it using binary column handling.
       return DefaultRepresentation.fromBinaryColumn(result.getValue());
     }
-    return result;
+    return ElementRepresentation.ofPrimitive(result, fhirType, this, fieldName);
   }
 
   /**
