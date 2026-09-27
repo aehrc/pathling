@@ -20,16 +20,24 @@ package au.csiro.pathling.fhirpath.encoding;
 import static au.csiro.pathling.sql.SqlFunctions.let;
 import static java.util.Objects.nonNull;
 import static java.util.stream.Collectors.toUnmodifiableMap;
+import static org.apache.spark.sql.functions.callUDF;
+import static org.apache.spark.sql.functions.coalesce;
+import static org.apache.spark.sql.functions.instr;
+import static org.apache.spark.sql.functions.length;
 import static org.apache.spark.sql.functions.lit;
+import static org.apache.spark.sql.functions.regexp_extract;
 import static org.apache.spark.sql.functions.struct;
 import static org.apache.spark.sql.functions.when;
 
+import au.csiro.pathling.encoders.ColumnFunctions;
 import au.csiro.pathling.encoders.QuantitySupport;
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
 import au.csiro.pathling.encoders.terminology.ucum.Ucum;
 import au.csiro.pathling.fhirpath.FhirPathQuantity;
 import au.csiro.pathling.fhirpath.unit.CalendarDurationUnit;
 import au.csiro.pathling.fhirpath.unit.UcumUnit;
+import au.csiro.pathling.sql.misc.CanonicalQuantityCode;
+import au.csiro.pathling.sql.misc.CanonicalQuantityValue;
 import au.csiro.pathling.sql.types.FlexiDecimal;
 import au.csiro.pathling.sql.types.FlexiDecimalSupport;
 import jakarta.annotation.Nonnull;
@@ -43,6 +51,7 @@ import lombok.Value;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
+import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.Metadata;
 import org.apache.spark.sql.types.MetadataBuilder;
@@ -159,6 +168,67 @@ public class QuantityEncoding {
             canonicalizedCode,
             _fid)
         .toStruct();
+  }
+
+  /**
+   * Decodes a stored quantity into the structure the engine computes with, which is the structure
+   * of {@link #dataType()} (T096).
+   *
+   * <p>The stored quantity is the FHIR structure as the traversal expression yields it on either
+   * layout: its value is the text of a decimal, and it carries no canonical form, because the
+   * traversal expression normalises the previous layout's quantities to that shape too (T094b).
+   * Each field is read by name through the tolerant traversal, so a field the schema does not carry
+   * is null. The value is decoded to {@code DECIMAL(32,6)}, as {@link
+   * au.csiro.pathling.fhirpath.collection.DecimalCollection#decode} decodes any decimal, and its
+   * scale is taken from the text. The canonical form is computed from the stored text and code, as
+   * the previous layout's encoder computed it, so that no digit of the value is lost before
+   * canonicalisation. Taking the canonical form from an annotation is T096a.
+   *
+   * <p>A null quantity decodes to null.
+   *
+   * @param stored the stored quantity
+   * @return the quantity, in the structure the engine computes with
+   */
+  @Nonnull
+  public static Column decodeStored(@Nonnull final Column stored) {
+    final Column text = storedField(stored, VALUE_COLUMN, DataTypes.StringType);
+    final Column code = storedField(stored, CODE_COLUMN, DataTypes.StringType);
+    return when(
+            stored.isNotNull(),
+            toStruct(
+                storedField(stored, "id", DataTypes.StringType),
+                text,
+                scaleOf(text),
+                storedField(stored, "comparator", DataTypes.StringType),
+                storedField(stored, UNIT_COLUMN, DataTypes.StringType),
+                storedField(stored, SYSTEM_COLUMN, DataTypes.StringType),
+                code,
+                callUDF(CanonicalQuantityValue.FUNCTION_NAME, text, code),
+                callUDF(CanonicalQuantityCode.FUNCTION_NAME, text, code),
+                storedField(stored, "_fid", DataTypes.IntegerType)))
+        .cast(dataType());
+  }
+
+  @Nonnull
+  private static Column storedField(
+      @Nonnull final Column stored, @Nonnull final String name, @Nonnull final DataType type) {
+    return ColumnFunctions.resolveOrNull(stored, name, type);
+  }
+
+  /**
+   * Computes the scale of the text of a decimal, as {@link BigDecimal#scale()} gives it: the number
+   * of digits after the decimal point, less the exponent where there is one.
+   */
+  @Nonnull
+  private static Column scaleOf(@Nonnull final Column text) {
+    final Column mantissa = regexp_extract(text, "^[^eE]*", 0);
+    final Column exponent =
+        coalesce(
+            regexp_extract(text, "[eE]([-+]?[0-9]+)$", 1).try_cast(DataTypes.IntegerType), lit(0));
+    final Column point = instr(mantissa, ".");
+    final Column fractionDigits =
+        when(point.gt(0), length(mantissa).minus(point)).otherwise(lit(0));
+    return when(text.isNotNull(), fractionDigits.minus(exponent));
   }
 
   /**

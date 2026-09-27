@@ -22,7 +22,7 @@
  */
 package au.csiro.pathling.sql
 
-import au.csiro.pathling.encoders.ColumnFunctions.{columnOrNull, decimalColumnOrNull, resolveOrNull, traverseExtension, traverseRootExtension}
+import au.csiro.pathling.encoders.ColumnFunctions.{columnOrNull, decimalColumnOrNull, quantityColumnOrNull, resolveOrNull, traverseExtension, traverseRootExtension}
 import org.apache.spark.SparkException
 import org.apache.spark.sql.catalyst.analysis.UnresolvedAttribute
 import org.apache.spark.sql.catalyst.expressions.{AttributeReference, Expression, GetArrayStructFields, GetStructField, Literal}
@@ -697,6 +697,161 @@ class ResolveOrNullTest extends SparkSessionSupport with AdaptiveSparkPlanHelper
 
   private def stripNullability(dataType: DataType): DataType = dataType match {
     case ArrayType(element, _) => ArrayType(stripNullability(element))
+    case other => other
+  }
+
+  // -----------------------------------------------------------------------------------------------
+  // T089a, T094b: a previous-layout quantity is normalised to the new layout's shape.
+  // -----------------------------------------------------------------------------------------------
+
+  private val canonicalType = "struct<value:decimal(38,0),scale:int>"
+
+  private val previousQuantityType =
+    "struct<id:string,value:decimal(32,6),value_scale:int,comparator:string,unit:string," +
+      s"system:string,code:string,_value_canonicalized:$canonicalType," +
+      "_code_canonicalized:string,_fid:int>"
+
+  private def previousQuantity(value: String, scale: Int, code: String, canonical: String,
+                               canonicalScale: Int, canonicalCode: String, fid: Int): String =
+    s"""named_struct('id', cast(null as string), 'value', cast($value as decimal(32,6)),
+       |  'value_scale', $scale, 'comparator', cast(null as string), 'unit', '$code',
+       |  'system', 'http://unitsofmeasure.org', 'code', '$code',
+       |  '_value_canonicalized', named_struct('value', cast($canonical as decimal(38,0)),
+       |    'scale', $canonicalScale),
+       |  '_code_canonicalized', '$canonicalCode', '_fid', $fid)""".stripMargin
+
+  // The previous layout: a quantity carries the scale of its value and its canonical form, at the
+  // root and under a repeating parent. The source values are 1.50 g and 500 mg, and the second row
+  // holds a null quantity.
+  private def previousQuantities: DataFrame = parquet("previousQuantities",
+    s"""select 'r1' as id, ${previousQuantity("1.50", 2, "g", "15", 1, "g", 1)} as valueQuantity,
+       |  array(named_struct('valueQuantity',
+       |    ${previousQuantity("500", 0, "mg", "5", 1, "g", 2)})) as component
+       |union all
+       |select 'r2', cast(null as $previousQuantityType),
+       |  array(named_struct('valueQuantity', cast(null as $previousQuantityType)))""".stripMargin)
+
+  // The same values in a new-layout table, pruned to the elements they populate.
+  private def newQuantities: DataFrame = parquet("newQuantities",
+    """select 'r1' as id,
+      |  named_struct('value', '1.5', 'unit', 'g', 'system', 'http://unitsofmeasure.org',
+      |    'code', 'g') as valueQuantity,
+      |  array(named_struct('valueQuantity', named_struct('value', '500', 'unit', 'mg',
+      |    'system', 'http://unitsofmeasure.org', 'code', 'mg'))) as component
+      |union all
+      |select 'r2', cast(null as struct<value:string,unit:string,system:string,code:string>),
+      |  array(named_struct('valueQuantity',
+      |    cast(null as struct<value:string,unit:string,system:string,code:string>)))"""
+      .stripMargin)
+
+  // A pruned new-layout table, which carries no quantities.
+  private def prunedQuantities: DataFrame = parquet("prunedQuantities",
+    "select 'r1' as id, array(named_struct('code', 'c')) as component")
+
+  private def quantityLayouts: Seq[DataFrame] =
+    Seq(previousQuantities, newQuantities, prunedQuantities)
+
+  private def rootQuantity: Column = quantityColumnOrNull("valueQuantity", NullType)
+
+  private def componentQuantity: Column =
+    resolveOrNull(F.col("component"), "valueQuantity", ArrayType(NullType))
+
+  private def componentQuantityInLambda: Column =
+    F.transform(F.col("component"), c => resolveOrNull(c, "valueQuantity", NullType))
+
+  private def quantityLeaves(quantity: Column, repeating: Boolean): Seq[Column] = {
+    val leafType = if (repeating) ArrayType(StringType) else StringType
+    Seq("value", "unit", "system", "code").map(name => resolveOrNull(quantity, name, leafType))
+  }
+
+  private def quantityLeafTraversals: Seq[Column] =
+    quantityLeaves(rootQuantity, repeating = false) ++
+      quantityLeaves(componentQuantity, repeating = true) ++
+      Seq(F.transform(F.col("component"),
+        c => resolveOrNull(resolveOrNull(c, "valueQuantity", NullType), "value", StringType)))
+
+  @Test
+  def quantityLeavesHaveTheSameTypeOnEveryLayout(): Unit = {
+    // The same-dataType rule, on every leaf reached through the quantity: the previous layout, the
+    // new layout and the absent fallback agree, at both cardinalities and inside a lambda.
+    val expected = Seq.fill(4)(StringType) ++ Seq.fill(5)(ArrayType(StringType))
+    for (data <- quantityLayouts) {
+      val types = data.select(quantityLeafTraversals: _*).schema.fields.map(_.dataType).toSeq
+      assertEquals(expected, types.map(stripNullability))
+    }
+  }
+
+  @Test
+  def previousLayoutQuantityTakesTheNewLayoutsShape(): Unit = {
+    // The canonical form and the scale companion are dropped, and the value is its text. The fields
+    // the new layout also has take the new layout's types. The quantity keeps `_fid`, which the
+    // next step needs to look up its extensions, so the structure as a whole cannot equal the new
+    // layout's, just as the extension structure cannot (decisions 74 and 75).
+    val normalised = StructType(Seq(
+      StructField("id", StringType), StructField("value", StringType),
+      StructField("comparator", StringType), StructField("unit", StringType),
+      StructField("system", StringType), StructField("code", StringType),
+      StructField("_fid", IntegerType)))
+    val previous = previousQuantities.select(rootQuantity.alias("root"),
+      componentQuantity.alias("component"), componentQuantityInLambda.alias("lambda")).schema
+    assertEquals(normalised, stripStructNullability(previous("root").dataType))
+    assertEquals(ArrayType(normalised), stripStructNullability(previous("component").dataType))
+    assertEquals(ArrayType(normalised), stripStructNullability(previous("lambda").dataType))
+
+    val current = stripStructNullability(
+      newQuantities.select(rootQuantity.alias("root")).schema("root").dataType)
+      .asInstanceOf[StructType]
+    for (field <- current.fields) {
+      assertEquals(field.dataType, normalised(field.name).dataType, field.name)
+    }
+  }
+
+  @Test
+  def previousLayoutQuantityCarriesTheSourceScale(): Unit = {
+    // A null quantity stays null rather than becoming a structure of nulls.
+    assertEquals(
+      Seq("[r1,[null,1.50,null,g,http://unitsofmeasure.org,g,1]," +
+        "ArraySeq([null,500,null,mg,http://unitsofmeasure.org,mg,2])]",
+        "[r2,null,ArraySeq(null)]"),
+      rows(previousQuantities.select(F.col("id"), rootQuantity, componentQuantity)))
+  }
+
+  @Test
+  def newLayoutQuantityIsTheStoredStructure(): Unit = {
+    assertEquals(
+      Seq("[r1,[1.5,g,http://unitsofmeasure.org,g]," +
+        "ArraySeq([500,mg,http://unitsofmeasure.org,mg])]", "[r2,null,ArraySeq(null)]"),
+      rows(newQuantities.select(F.col("id"), rootQuantity, componentQuantity)))
+  }
+
+  @Test
+  def quantityNormalisationReadsNoCanonicalForm(): Unit = {
+    // A singular quantity is pruned to the fields the normalised structure keeps. Under a
+    // repeating parent the quantity is normalised in a lambda, which nested schema pruning does
+    // not see into, so the whole quantity is read there, as it was before the normalisation.
+    val quantityFields = "id:string,value:decimal(32,6),value_scale:int,comparator:string," +
+      "unit:string,system:string,code:string,_fid:int"
+    assertEquals(s"struct<valueQuantity:struct<$quantityFields>>",
+      readSchema(previousQuantities.select(rootQuantity)))
+    assertEquals(s"struct<component:array<struct<valueQuantity:$previousQuantityType>>>",
+      readSchema(previousQuantities.select(componentQuantity)))
+  }
+
+  @Test
+  def structureWithoutCanonicalFormIsNotAQuantity(): Unit = {
+    // Only the previous layout's discriminator selects the branch: a structure with a decimal value
+    // but no canonical form, such as a Range bound, is traversed as it is stored.
+    val data = parquet("notQuantity",
+      "select named_struct('low', named_struct('value', cast(1.5 as decimal(32,6)))) as range")
+    val low = data.select(resolveOrNull(F.col("range"), "low", NullType).alias("low"))
+    assertEquals(StructType(Seq(StructField("value", DecimalType(32, 6)))),
+      stripStructNullability(low.schema("low").dataType))
+  }
+
+  private def stripStructNullability(dataType: DataType): DataType = dataType match {
+    case ArrayType(element, _) => ArrayType(stripStructNullability(element))
+    case StructType(fields) =>
+      StructType(fields.map(f => StructField(f.name, stripStructNullability(f.dataType))))
     case other => other
   }
 

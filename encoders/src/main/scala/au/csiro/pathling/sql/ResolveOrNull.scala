@@ -23,6 +23,7 @@
 package au.csiro.pathling.sql
 
 import au.csiro.pathling.sql.DecimalNormalisation.{fieldToText, holdsDecimals}
+import au.csiro.pathling.sql.QuantityNormalisation.normalise
 import org.apache.spark.sql.catalyst.expressions.{ArrayTransform, Expression, GetArrayStructFields, GetStructField, LambdaFunction, Literal, NamedLambdaVariable, RuntimeReplaceable}
 import org.apache.spark.sql.catalyst.trees.UnaryLike
 import org.apache.spark.sql.types.{ArrayType, DataType, StructType}
@@ -60,7 +61,12 @@ import org.apache.spark.sql.types.{ArrayType, DataType, StructType}
  *
  *  - a decimal field, which the previous layout stores as a `DECIMAL(32,6)` value beside a
  *    `_scale` companion, yields its text at the source scale, as [[DecimalNormalisation]]
- *    describes. The companion is read beside the value, and nothing else is.
+ *    describes. The companion is read beside the value, and nothing else is;
+ *  - a quantity, which the previous layout stores with its canonical form and the scale of its
+ *    value, yields a structure without them, whose value is its text, as
+ *    [[QuantityNormalisation]] describes. The canonical form is not read. The quantity keeps its
+ *    `_fid`, as the extension structure does, so this branch is the second exception to the rule:
+ *    its leaves have the new layout's types, and the structure itself has one field more.
  *
  * @param child     the structure, or array of structures, to take the field from
  * @param fieldName the name of the field
@@ -76,11 +82,12 @@ case class ResolveOrNull(child: Expression, fieldName: String, fallback: DataTyp
       val element = NamedLambdaVariable("element", struct, containsNull)
       ArrayTransform(child, LambdaFunction(fieldToText(element, struct, fieldName), Seq(element)))
     case struct: StructType if struct.fieldNames.contains(fieldName) =>
-      GetStructField(child, struct.fieldIndex(fieldName), Some(fieldName))
+      normalise(GetStructField(child, struct.fieldIndex(fieldName), Some(fieldName)))
     case ArrayType(struct: StructType, containsNull) if struct.fieldNames.contains(fieldName) =>
       val ordinal = struct.fieldIndex(fieldName)
       val field = struct.fields(ordinal)
-      GetArrayStructFields(child, field, ordinal, struct.length, containsNull || field.nullable)
+      normalise(
+        GetArrayStructFields(child, field, ordinal, struct.length, containsNull || field.nullable))
     case _ =>
       Literal(null, fallback)
   }

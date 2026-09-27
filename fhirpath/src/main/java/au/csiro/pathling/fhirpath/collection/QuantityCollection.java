@@ -156,6 +156,24 @@ public class QuantityCollection extends Collection implements Comparable, String
   }
 
   /**
+   * Decodes stored quantities into the structure the engine computes with, computing the canonical
+   * form of each from the quantity itself (T096, FR-022).
+   *
+   * <p>This is applied at element traversal only, to the quantity as the traversal expression
+   * yields it, which is the new layout's shape on either layout (T094b). Quantities the engine
+   * builds itself, such as literals and the results of conversion, are already in the structure it
+   * computes with.
+   *
+   * @param stored the stored quantity, or array of quantities
+   * @return the quantity, or array of quantities, in the structure of {@link
+   *     QuantityEncoding#dataType()}
+   */
+  @Nonnull
+  public static ColumnRepresentation decode(@Nonnull final ColumnRepresentation stored) {
+    return stored.transform(QuantityEncoding::decodeStored);
+  }
+
+  /**
    * Projects a Coding structure from the coded unit of a single quantity value.
    *
    * <p>The unit name is carried across as the display, as it is the human-readable rendering of the

@@ -19,8 +19,10 @@ package au.csiro.pathling.fhirpath.column;
 
 import au.csiro.pathling.encoders.ColumnFunctions;
 import au.csiro.pathling.fhirpath.collection.DecimalCollection;
+import au.csiro.pathling.fhirpath.collection.QuantityCollection;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.UnaryOperator;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -66,6 +68,20 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  */
 @EqualsAndHashCode(callSuper = false)
 public final class ResourceRepresentation extends ColumnRepresentation {
+
+  /**
+   * Quantity and the types profiled on it, which the previous layout stores with a canonical form
+   * that the traversal normalises away.
+   */
+  private static final Set<FHIRDefinedType> QUANTITY_TYPES =
+      Set.of(
+          FHIRDefinedType.QUANTITY,
+          FHIRDefinedType.AGE,
+          FHIRDefinedType.COUNT,
+          FHIRDefinedType.DISTANCE,
+          FHIRDefinedType.DURATION,
+          FHIRDefinedType.SIMPLEQUANTITY,
+          FHIRDefinedType.MONEYQUANTITY);
 
   /** Default name for the existence column (resource id). */
   public static final String DEFAULT_EXISTENCE_COLUMN = "id";
@@ -254,6 +270,16 @@ public final class ResourceRepresentation extends ColumnRepresentation {
       // columns normalised to it, and decoded for computation.
       return DecimalCollection.decode(
           existing(ColumnFunctions.decimalColumnOrNull(fieldName, fallback)).removeNulls());
+    }
+    if (fhirType.filter(QUANTITY_TYPES::contains).isPresent()) {
+      // A quantity is read in the new layout's shape on either layout, with the previous layout's
+      // canonical form and value scale normalised away. A Quantity is then decoded for computation,
+      // which computes its canonical form.
+      final ColumnRepresentation stored =
+          existing(ColumnFunctions.quantityColumnOrNull(fieldName, fallback)).removeNulls();
+      return fhirType.filter(FHIRDefinedType.QUANTITY::equals).isPresent()
+          ? QuantityCollection.decode(stored)
+          : stored;
     }
     final ColumnRepresentation result = getField(fieldName, fallback).removeNulls();
     if (fhirType.filter(FHIRDefinedType.BASE64BINARY::equals).isPresent()) {
