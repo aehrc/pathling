@@ -17,25 +17,29 @@
 
 package au.csiro.pathling.search.filter;
 
-import static au.csiro.pathling.search.filter.FhirFieldNames.CANONICALIZED_CODE;
-import static au.csiro.pathling.search.filter.FhirFieldNames.CANONICALIZED_VALUE;
 import static au.csiro.pathling.search.filter.FhirFieldNames.CODE;
 import static au.csiro.pathling.search.filter.FhirFieldNames.SYSTEM;
 import static au.csiro.pathling.search.filter.FhirFieldNames.UNIT;
 import static au.csiro.pathling.search.filter.FhirFieldNames.VALUE;
+import static org.apache.spark.sql.functions.callUDF;
 import static org.apache.spark.sql.functions.coalesce;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.when;
 
+import au.csiro.pathling.encoders.ColumnFunctions;
 import au.csiro.pathling.encoders.terminology.ucum.Ucum;
 import au.csiro.pathling.encoders.terminology.ucum.Ucum.ValueWithUnit;
+import au.csiro.pathling.fhirpath.collection.DecimalCollection;
 import au.csiro.pathling.fhirpath.unit.UcumUnit;
+import au.csiro.pathling.sql.misc.CanonicalQuantityCode;
+import au.csiro.pathling.sql.misc.CanonicalQuantityValue;
 import au.csiro.pathling.sql.types.FlexiDecimal;
 import au.csiro.pathling.sql.types.FlexiDecimalSupport;
 import jakarta.annotation.Nonnull;
 import java.math.BigDecimal;
 import java.util.Optional;
 import org.apache.spark.sql.Column;
+import org.apache.spark.sql.types.DataTypes;
 
 /**
  * Matches Quantity elements using FHIR quantity search semantics.
@@ -46,8 +50,13 @@ import org.apache.spark.sql.Column;
  * <p>UCUM Normalization: When the search specifies a UCUM system ({@code
  * http://unitsofmeasure.org}) with a code, the search value and code are canonicalized using the
  * UCUM library. This enables matching across equivalent unit representations (e.g., {@code 1000 mg}
- * matches {@code 1 g}). The comparison uses pre-computed canonical values in the Quantity struct.
- * If canonicalization fails, the matcher falls back to exact value comparison.
+ * matches {@code 1 g}). The canonical form of the element is computed from its value and code, and
+ * only for an element whose system is UCUM (FR-022). If canonicalization fails, the matcher falls
+ * back to exact value comparison.
+ *
+ * <p>Every field of the element is read by name through the tolerant traversal, so the element may
+ * have any shape the definitions allow, including one pruned to the fields it populates, and its
+ * value is decoded from the text it is stored as (FR-054).
  *
  * <p>Supported search formats:
  *
@@ -102,7 +111,7 @@ public class QuantityMatcher implements ElementMatcher {
   private Column matchStandard(
       @Nonnull final Column element, @Nonnull final QuantitySearchValue parsedValue) {
     final Column valueMatch =
-        matchValue(element.getField(VALUE), parsedValue.getNumericValue(), parsedValue.getPrefix());
+        matchValue(value(element), parsedValue.getNumericValue(), parsedValue.getPrefix());
 
     return parsedValue
         .getSystem()
@@ -128,15 +137,15 @@ public class QuantityMatcher implements ElementMatcher {
       @Nonnull final QuantitySearchValue parsedValue,
       @Nonnull final Column valueMatch) {
     return valueMatch
-        .and(element.getField(SYSTEM).equalTo(lit(system)))
-        .and(matchOptionalField(element.getField(CODE), parsedValue.getCode()));
+        .and(field(element, SYSTEM).equalTo(lit(system)))
+        .and(matchOptionalField(field(element, CODE), parsedValue.getCode()));
   }
 
   /**
    * Attempts UCUM-aware matching using canonical values.
    *
    * <p>When the search specifies a UCUM system with a code, this method canonicalizes the search
-   * value and compares against the pre-computed canonical values in the resource's Quantity. This
+   * value and compares against the canonical form computed from the resource's Quantity. This
    * enables matching across equivalent unit representations (e.g., 1000 mg matches 1 g).
    *
    * @param element the Quantity element column
@@ -157,8 +166,9 @@ public class QuantityMatcher implements ElementMatcher {
   /**
    * Builds UCUM-aware match condition with fallback to standard matching.
    *
-   * <p>Canonicalizes the search value using UCUM and compares against pre-computed canonical
-   * values. If canonicalization fails, returns empty to trigger standard matching fallback.
+   * <p>Canonicalizes the search value using UCUM and compares against the canonical form computed
+   * from the element. If canonicalization fails, returns empty to trigger standard matching
+   * fallback.
    */
   @Nonnull
   private Optional<Column> buildUcumMatch(
@@ -189,16 +199,26 @@ public class QuantityMatcher implements ElementMatcher {
       @Nonnull final String code,
       @Nonnull final ValueWithUnit canonical,
       @Nonnull final QuantitySearchValue parsedValue) {
+    // The canonical form of the element is computed from its stored text and code, and only where
+    // the element is a UCUM quantity, because the search asks for a UCUM quantity.
+    final Column text = field(element, VALUE);
+    final Column elementCode = field(element, CODE);
     final Column canonicalMatch =
         when(
-            element.getField(CANONICALIZED_CODE).equalTo(lit(canonical.unit())),
+            field(element, SYSTEM)
+                .equalTo(lit(UcumUnit.UCUM_SYSTEM_URI))
+                .and(
+                    callUDF(CanonicalQuantityCode.FUNCTION_NAME, text, elementCode)
+                        .equalTo(lit(canonical.unit()))),
             matchCanonicalValue(
-                element.getField(CANONICALIZED_VALUE), canonical.value(), parsedValue.getPrefix()));
+                callUDF(CanonicalQuantityValue.FUNCTION_NAME, text, elementCode),
+                canonical.value(),
+                parsedValue.getPrefix()));
 
     final Column standardMatch =
-        matchValue(element.getField(VALUE), parsedValue.getNumericValue(), parsedValue.getPrefix())
-            .and(element.getField(SYSTEM).equalTo(lit(system)))
-            .and(element.getField(CODE).equalTo(lit(code)));
+        matchValue(value(element), parsedValue.getNumericValue(), parsedValue.getPrefix())
+            .and(field(element, SYSTEM).equalTo(lit(system)))
+            .and(elementCode.equalTo(lit(code)));
 
     return coalesce(canonicalMatch, standardMatch);
   }
@@ -225,8 +245,8 @@ public class QuantityMatcher implements ElementMatcher {
    */
   @Nonnull
   private Column matchCodeOrUnit(@Nonnull final Column element, @Nonnull final String code) {
-    return matchFieldOrNull(element.getField(CODE), code)
-        .or(matchFieldOrNull(element.getField(UNIT), code));
+    return matchFieldOrNull(field(element, CODE), code)
+        .or(matchFieldOrNull(field(element, UNIT), code));
   }
 
   /**
@@ -238,6 +258,21 @@ public class QuantityMatcher implements ElementMatcher {
   @Nonnull
   private Column matchFieldOrNull(@Nonnull final Column field, @Nonnull final String value) {
     return coalesce(field.equalTo(lit(value)), lit(false));
+  }
+
+  /**
+   * Reads a text field of the element through the tolerant traversal, so that a field the schema
+   * does not carry is null. The value is read as the text it is stored as on either layout.
+   */
+  @Nonnull
+  private static Column field(@Nonnull final Column element, @Nonnull final String name) {
+    return ColumnFunctions.resolveOrNull(element, name, DataTypes.StringType);
+  }
+
+  /** Reads the value of the element, decoded from its text for computation. */
+  @Nonnull
+  private static Column value(@Nonnull final Column element) {
+    return field(element, VALUE).try_cast(DecimalCollection.getDecimalType());
   }
 
   /**
@@ -261,8 +296,8 @@ public class QuantityMatcher implements ElementMatcher {
   /**
    * Matches canonical value using FlexiDecimal comparison.
    *
-   * <p>The canonicalized value is stored as a FlexiDecimal struct, which requires special
-   * comparison methods to handle the value and scale encoding.
+   * <p>The canonical value is computed as a FlexiDecimal struct, which requires special comparison
+   * methods to handle the value and scale encoding.
    *
    * <p>Note: Range semantics (eq/ne) are simplified for canonical values since the canonicalization
    * process already normalizes values to a consistent form. We use equality comparison for 'eq' and
