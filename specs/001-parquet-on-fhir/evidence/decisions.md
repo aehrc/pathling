@@ -2693,3 +2693,31 @@ expression, and gives the same answers as this tolerance for every present case.
 
 _Amends_ decision 75.
 
+## 80. The same-type rule covers what traversal reaches, and whole structures leave through the layout
+
+Owner decision (2026-09-28), prompted by port step 5.
+
+Previous-layout normalisation runs at the traversal step to a field. A structure
+returned whole is not normalised: on the previous layout `Location.position`
+keeps `DECIMAL(32,6)` values and their `*_scale` companions, and `Meta` keeps
+`versionId_versioned`. Decision 78's "nothing else may differ" therefore covers
+the fields a traversal reaches, not whole structures. Within one table there is
+one layout, so whole structures of both layouts never meet in a query while
+T049a is open.
+
+Two consumers see whole structures, and neither needs anything before the
+switch:
+
+- **`evaluateFhirPath`** renders a complex result as JSON. It must return valid
+  FHIR JSON, so from the switch it goes through the `io` module's layout-to-JSON
+  transform, which adapts the structure recursively (T100j). Before the switch
+  it reads the previous layout and renders as the released version does.
+- **`fhirPathToColumn`** returns the stored structure as a Spark column. Its
+  schema changes at the switch from the previous layout, a Pathling-specific
+  schema, to the new layout, which is a published specification. That change
+  is accepted as user-visible and is documented with the layout contract.
+  Nothing changes before the switch, unless an existing test depends on the
+  previous schema through this API.
+
+_Amends_ decision 78 by stating its scope.
+
