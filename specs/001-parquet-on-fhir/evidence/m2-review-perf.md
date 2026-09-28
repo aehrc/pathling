@@ -44,13 +44,12 @@ decoded structures to the traversal expression:
   The scale is the length of the fraction digits less the exponent, and a null
   text gives a null scale without a separate null check.
 
-Binding the text once, with `SqlFunctions.let` forced onto its higher-order path
-or with Catalyst's `With`, was not done. The first makes the decoding
-interpreted rather than generated code, because higher-order functions fall back
-from code generation. The second rewrites into a `Project`, which does not work
-inside the lambdas of a repeating element. Neither was needed, since removing
-the second normalisation brought the suites back to no code-generation fallbacks
-at all.
+Binding the text once was not tried, either with `SqlFunctions.let` forced onto
+its higher-order path or with Catalyst's `With`. Removing the second
+normalisation already brought both suites back to no code-generation fallbacks,
+so there was nothing left for it to fix. Whether either binding would be safe
+inside the lambdas of a repeating element, and what it would cost, is not
+measured here.
 
 A quantity the engine builds itself, such as a literal or the union of a stored
 quantity with a literal, is not a `DecodedRepresentation`. A field of one is
@@ -89,6 +88,12 @@ the two UCUM functions from the text, where the released version read it from
 the stored `_value_canonicalized` and `_code_canonicalized`. Decision 77 made
 that change, and T096a, in M5, takes the canonical form from an annotation. It
 is not a regression of the traversal.
+
+The reviewer counted 41 characters for the base plan with a different tool;
+`PlanSize` counts the text of `plan.expressions()`, which gives 32 for the same
+plan. The reviewer's own `Bench.java`, run against the fixed jars, gives 54 ms
+for `value.ofType(Quantity).value` on the previous layout and 48 ms on the new
+one, against the reviewer's 47 ms at base and 467 ms before the fix.
 
 ## Suites
 
