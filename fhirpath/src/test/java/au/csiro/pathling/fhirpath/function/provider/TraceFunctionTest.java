@@ -27,6 +27,7 @@ import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.ListTraceCollector;
 import au.csiro.pathling.fhirpath.ListTraceCollector.TraceEntry;
+import au.csiro.pathling.fhirpath.TraceCollectorProxy;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.evaluation.CollectionDataset;
@@ -319,11 +320,15 @@ class TraceFunctionTest {
   class CollectorTests {
 
     private ListTraceCollector collector;
+    private TraceCollectorProxy proxy;
     private DatasetEvaluator collectorEvaluator;
 
     @BeforeEach
     void setUpCollector() {
       collector = new ListTraceCollector();
+      // The collector is reached through a serialisable proxy, as in production, because a query
+      // over stored data serialises the trace expression that holds it.
+      proxy = TraceCollectorProxy.create(collector);
       final ObjectDataSource dataSource =
           new ObjectDataSource(
               spark, encoders, List.of(createPatient1(), createPatient2(), createPatient3()));
@@ -332,8 +337,13 @@ class TraceFunctionTest {
           DatasetEvaluatorBuilder.create(ResourceType.PATIENT, encoders.getContext())
               .withDataset(dataset)
               .withCrossResourceStrategy(CrossResourceStrategy.EMPTY)
-              .withTraceCollector(collector)
+              .withTraceCollector(proxy)
               .build();
+    }
+
+    @AfterEach
+    void closeProxy() {
+      proxy.close();
     }
 
     private void materialize(@Nonnull final String expression) {
