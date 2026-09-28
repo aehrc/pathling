@@ -73,8 +73,29 @@ follows the layout dimension. The `sql-on-fhir` submodule was already
 initialised.
 
 The probes are in `scripts/t100h/`, and their output is in `t100h-pof-gate.txt`
-beside this file. Each is a plain Java program run on the `fhirpath` test
-classpath with the surefire JVM options from the root `pom.xml`.
+beside this file. Each is a plain Java program, run on the `fhirpath` test
+classpath. To rerun them:
+
+1. Build the dependency classpath with
+   `mvn -o dependency:build-classpath -f fhirpath/pom.xml -Dmdep.includeScope=test -Dmdep.outputFile=cp.txt`.
+2. Remove the Pathling jars from `cp.txt`, because the reactor run was `test`,
+   not `install`, so the jars in `~/.m2` are stale.
+3. Put the worktree's `target/classes` and `target/test-classes` for
+   `fhirpath`, `terminology`, `encoders`, `utilities`, `fhir-schema` and `io`
+   ahead of what remains.
+4. Compile with `javac -proc:none`.
+5. Run with the surefire JVM options from the root `pom.xml`: `-Duser.timezone=UTC`,
+   `-Djava.security.manager=allow`,
+   `--add-exports=java.base/sun.nio.ch=ALL-UNNAMED`,
+   `--add-opens=java.base/java.net=ALL-UNNAMED` and
+   `--add-opens=java.base/sun.util.calendar=ALL-UNNAMED`.
+
+Two probes need more than that:
+
+- `TraceProbe` also takes `-Dspark.serializer.extraDebugInfo=false`, and a
+  directory for its Parquet output.
+- `InstantProbe` registers the Pathling UDFs itself, because it has no Spring
+  session.
 
 ## Counts
 
@@ -94,9 +115,11 @@ classpath with the surefire JVM options from the root `pom.xml`.
 - The per-class counts of the two `fhirpath` runs are identical, except for
   `YamlReferenceImplTest`. It skips 920 cases on the default run and 917 under
   `pof`, because the three cases below run there rather than being skipped as
-  excluded. The summary totals differ by 8, 7280 against 7272, but no class
-  accounts for the difference. It lies in how Surefire aggregates the summary,
-  not in which tests run.
+  excluded. The per-class `Tests run` lines in the `fhirpath` section of each
+  log sum to 7296 in both runs. Yet the summaries say 7280 and 7272. So the gap
+  of 8, which has been constant since port step 5, comes from how Surefire
+  aggregates the summary over the failing nested classes, not from which tests
+  run.
 
 ## What the zeros cover
 
@@ -183,7 +206,10 @@ data except a local relation.
 - **Optional, and not a test change.** Adding
   `--add-opens=java.base/sun.security.action=ALL-UNNAMED` to the surefire
   `argLine` would make every future serialisation failure report
-  `Task not serializable` instead of this misleading error.
+  `Task not serializable` instead of this misleading error. A `TraceProbe` run
+  with that flag, and without `extraDebugInfo=false`, confirms it. It reported
+  `Task not serializable`, caused by `NotSerializableException:
+ListTraceCollector`.
 
 ## 7–8. The trace entry count, #2594
 
@@ -281,11 +307,21 @@ options.
     - It needs one test change, of kind (c): `defaultMiscMappings[6]` would expect
       `StringType` and `2023-01-01T12:00:00+10:00`.
     - It needs one main-code fix, of kind (a), for case 10. An `ansi/type` of
-      `TIMESTAMP WITHOUT TIME ZONE` over a string would be cast through
-      `TIMESTAMP` first, so that the offset is applied.
+      `TIMESTAMP WITHOUT TIME ZONE` over a collection whose FHIR type is
+      `instant` would be cast through `TIMESTAMP` first, so that the offset is
+      applied. `DateTimeCollection` already carries `FHIRDefinedType.INSTANT`
+      for this purpose.
+    - **The fix must be scoped to `instant`.** A string of any other type keeps
+      its wall time, and existing tests pin that.
+      `AnsiTypeHintingTest.ansiLegalCasts`, and through it
+      `legalCollectionAnsiCasts`, expects `TIMESTAMP WITHOUT TIME ZONE` over the
+      string `2023-01-01T12:00:00-02:00` to give `2023-01-01T12:00`. So does
+      `TIMESTAMP(3)` over `+02:00`. A `dateTime`, which is text on both
+      layouts, keeps the wall time as well.
     - With that fix, `miscAnsiCasts[2]` is unchanged. The previous layout's
-      answers are unchanged too, because a cast from `TimestampType` to
-      `TIMESTAMP` does nothing.
+      answers are unchanged too: its `instant` is already a `TimestampType`, so
+      the extra cast does nothing, and nothing else is affected. The scoped cast
+      has not been tried.
     - `DateTimeCollection.fromValue(InstantType)`, which builds a timestamp
       literal, and `asStringPath`, which formats a timestamp, would then need
       checking against text.
