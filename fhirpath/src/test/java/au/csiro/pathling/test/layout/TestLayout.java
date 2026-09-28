@@ -24,11 +24,13 @@ import java.util.Properties;
  * The layout dimension of the test framework: which conventions the fields of the test fixtures
  * follow (T037a).
  *
- * <p>The previous layout is the one the existing encoders write, and it is the default. The new
- * layout, Parquet on FHIR, is written by serialising each fixture to FHIR JSON and reading it
- * through the new-layout transform, so the fixtures themselves are unchanged. The layout is chosen
- * with {@code -Dpathling.testLayout=pof} or {@code -Dpathling.testLayout=previous}. Any other value
- * fails rather than falling back to the default, and so does a near miss of the property's name.
+ * <p>The new layout, Parquet on FHIR, is the default since T100g. It is written by serialising each
+ * fixture to FHIR JSON and reading it through the new-layout transform, so the fixtures themselves
+ * are unchanged. The previous layout, the one the existing encoders write, stays available as an
+ * opt-in run, because the normalisation branches it exercises survive until T100e. The layout is
+ * chosen with {@code -Dpathling.testLayout=pof} or {@code -Dpathling.testLayout=previous}. Any
+ * other value fails rather than falling back to the default, and so does a near miss of the
+ * property's name.
  *
  * <p>This is a separate axis from the schema mode ({@link TestSchemaMode}): a schema mode says how
  * much of the layout is present, and a layout says which conventions its fields follow.
@@ -40,10 +42,10 @@ public final class TestLayout {
   /** The system property that selects the layout. */
   @Nonnull public static final String PROPERTY = "pathling.testLayout";
 
-  /** The layout the existing encoders write. It is the default until T100g flips it. */
+  /** The layout the existing encoders write. It is an opt-in run since T100g. */
   @Nonnull public static final TestLayout PREVIOUS = new TestLayout("previous");
 
-  /** The Parquet on FHIR layout, read through the new-layout transform. */
+  /** The Parquet on FHIR layout, read through the new-layout transform. It is the default. */
   @Nonnull public static final TestLayout POF = new TestLayout("pof");
 
   @Nonnull private final String name;
@@ -88,10 +90,10 @@ public final class TestLayout {
    */
   @Nonnull
   public static TestLayout parse(@Nullable final String value) {
-    if (value == null || PREVIOUS.name.equals(value)) {
-      return PREVIOUS;
-    } else if (POF.name.equals(value)) {
+    if (value == null || POF.name.equals(value)) {
       return POF;
+    } else if (PREVIOUS.name.equals(value)) {
+      return PREVIOUS;
     }
     throw new IllegalArgumentException(
         "Unknown test layout '"

@@ -33,9 +33,9 @@ import org.junit.jupiter.params.provider.ValueSource;
 class TestDimensionsTest {
 
   @Test
-  void unsetLayoutIsThePreviousLayout() {
-    assertThat(TestLayout.parse(null)).isSameAs(TestLayout.PREVIOUS);
-    assertThat(TestLayout.fromProperties(new Properties())).isSameAs(TestLayout.PREVIOUS);
+  void unsetLayoutIsTheNewLayout() {
+    assertThat(TestLayout.parse(null)).isSameAs(TestLayout.POF);
+    assertThat(TestLayout.fromProperties(new Properties())).isSameAs(TestLayout.POF);
   }
 
   @Test
