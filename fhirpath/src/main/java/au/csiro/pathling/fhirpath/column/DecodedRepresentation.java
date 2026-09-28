@@ -35,12 +35,13 @@ import org.apache.spark.sql.Column;
  * the type the data gives them. So extension traversal reads the stored elements (T097).
  *
  * <p>An operation that only selects among the elements, such as a filter or taking the first,
- * commutes with decoding. Those operations are applied to the stored elements and keep them. Every
- * other operation, such as a union, acts on the decoded value and yields an ordinary
- * representation, which reaches extensions through the decoded structure's {@code _fid}. That finds
- * them on the previous layout. On the new layout the {@code _fid} is null and the table has no
- * {@code _extension} column, so extension traversal after such an operation fails there with an
- * unresolved column, which is a known limit.
+ * commutes with decoding. Those operations are applied to the stored elements and keep them. So do
+ * the union and combination of two such representations, which merge the stored elements and decode
+ * the result (T113b, decision 79). Every other operation, such as a union with a value the engine
+ * built, acts on the decoded value and yields an ordinary representation, which reaches extensions
+ * through the decoded structure's {@code _fid}. That finds them on the previous layout. On the new
+ * layout the {@code _fid} is null and the table has no {@code _extension} column, so such a value
+ * has no extensions there, as a System value should not.
  *
  * @author Piotr Szul
  */

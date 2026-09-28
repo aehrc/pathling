@@ -34,6 +34,7 @@ import au.csiro.pathling.definition.ElementDefinition;
 import au.csiro.pathling.encoders.ColumnFunctions;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.util.List;
 import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.BinaryOperator;
@@ -758,16 +759,25 @@ public abstract class ColumnRepresentation {
    * Traverses the current {@link ColumnRepresentation} to a selected elements in a choice and
    * returns a new {@link ColumnRepresentation} that is the result of the traversal.
    *
+   * <p>The variants are coalesced, so they must share a type. The whole ordered list of variants is
+   * passed to the unification, rather than folded a pair at a time.
+   *
+   * @param unify the unification of the variants' columns, which returns them in the same order
    * @param definitions The definitions to traverse to
    * @return A new {@link ColumnRepresentation} that is the result of the traversal
    */
   @Nonnull
-  public ColumnRepresentation traverseChoice(@Nonnull final ElementDefinition... definitions) {
+  public ColumnRepresentation traverseChoice(
+      @Nonnull final UnaryOperator<List<Column>> unify,
+      @Nonnull final ElementDefinition... definitions) {
     return transform(
         c ->
             coalesce(
-                Stream.of(definitions)
-                    .map(ed -> this.copyOf(c).traverse(ed).getValue())
+                unify
+                    .apply(
+                        Stream.of(definitions)
+                            .map(ed -> this.copyOf(c).traverse(ed).getValue())
+                            .toList())
                     .toArray(Column[]::new)));
   }
 }

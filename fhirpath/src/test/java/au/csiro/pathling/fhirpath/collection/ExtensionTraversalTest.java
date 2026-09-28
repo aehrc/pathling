@@ -40,6 +40,8 @@ import java.util.stream.Stream;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.types.ArrayType;
+import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.BeforeAll;
@@ -272,22 +274,29 @@ class ExtensionTraversalTest {
   }
 
   /**
-   * Known limit until T113b (decision 79). A union or combination of stored quantities rebuilds
-   * them into the engine's quantity structure, which drops the new layout's inline extensions, so
-   * extension traversal after it is empty on the new layout although the quantities have
-   * extensions. The previous layout reaches them through the structure's {@code _fid}. T113b keeps
-   * the stored structures when two FHIR operands are combined, and changes the new layout's answer
-   * here to the previous layout's. Conditional selection is not covered, because the engine does
-   * not implement {@code iif()}.
+   * A union or combination of two stored quantities keeps the stored structures, reconciled by
+   * name, so extension traversal after it finds the quantities' extensions on both layouts (T113b,
+   * decision 79). The new layout reads them inline, and the previous layout through the stored
+   * structure's {@code _fid}. Before T113b the new layout's answer was empty, because the
+   * combination rebuilt the quantities into the engine's own structure, which has no extensions.
+   * Conditional selection is not covered, because the engine does not implement {@code iif()}.
    */
   @ParameterizedTest(name = "{0}")
   @MethodSource("combinedQuantityCases")
-  void knownLimitExtensionsOfCombinedQuantitiesAreEmptyOnTheNewLayout(
-      @Nonnull final String expression) {
+  void extensionsOfCombinedQuantitiesMatchOnBothLayouts(@Nonnull final String expression) {
+    // Both stored quantities carry inline extensions on the new layout, which is what the
+    // combination must keep (T109).
+    final StructType schema = observations.get("pof").schema();
+    final StructType component =
+        (StructType) ((ArrayType) schema.apply("component").dataType()).elementType();
+    assertThat(((StructType) schema.apply("valueQuantity").dataType()).fieldNames())
+        .contains("extension");
+    assertThat(((StructType) component.apply("valueQuantity").dataType()).fieldNames())
+        .contains("extension");
     assertThat(evaluate(observations.get("previous"), ResourceType.OBSERVATION, expression))
         .containsExactlyInAnyOrder("o1=2", "o2=0");
     assertThat(evaluate(observations.get("pof"), ResourceType.OBSERVATION, expression))
-        .containsExactlyInAnyOrder("o1=0", "o2=0");
+        .containsExactlyInAnyOrder("o1=2", "o2=0");
   }
 
   @Nonnull

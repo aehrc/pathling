@@ -39,6 +39,7 @@ import au.csiro.pathling.fhirpath.comparison.ColumnEquality;
 import au.csiro.pathling.fhirpath.comparison.Equatable;
 import au.csiro.pathling.fhirpath.function.CollectionTransform;
 import au.csiro.pathling.fhirpath.function.ColumnTransform;
+import au.csiro.pathling.schema.PrimitiveTypes;
 import au.csiro.pathling.sql.SqlFunctions;
 import com.google.common.collect.ImmutableMap;
 import jakarta.annotation.Nonnull;
@@ -859,6 +860,39 @@ public class Collection implements Equatable {
       // this most likely is an empty collection or mixed collection
       return this == other;
     }
+  }
+
+  /**
+   * Returns this collection with its values in the SQL type that every collection of its FHIRPath
+   * type shares. This is how the unification entry point unifies the SQL shape of a primitive, once
+   * the FHIR types of the operands have been promoted ({@link
+   * au.csiro.pathling.fhirpath.operator.CombiningLogic#unify}).
+   *
+   * <p>By default the values already have that type.
+   *
+   * @return this collection, with its values in the shared SQL type
+   */
+  @Nonnull
+  public Collection withSharedSqlType() {
+    return this;
+  }
+
+  /**
+   * Returns whether the values of this collection are FHIR structures in the shape the stored data
+   * gives them. The unification entry point reconciles such structures by name, because one FHIR
+   * type can be stored in a different shape at every path (FR-056).
+   *
+   * <p>By default that is every collection of a complex FHIR type. A collection whose values are a
+   * structure the engine builds, rather than the stored one, says otherwise.
+   *
+   * @return true where the values are stored FHIR structures
+   */
+  public boolean holdsStoredStructures() {
+    // The null type, which an empty literal has, is neither a primitive nor a structure.
+    return getFhirType()
+        .filter(fhirType -> fhirType != FHIRDefinedType.NULL)
+        .filter(fhirType -> !PrimitiveTypes.isPrimitive(fhirType))
+        .isPresent();
   }
 
   /**

@@ -178,17 +178,29 @@ public class DecimalCollection extends Collection
   }
 
   /**
-   * Normalizes this decimal collection to use the standard DECIMAL(32,6) type. This ensures type
-   * compatibility when combining decimal values with different precisions.
+   * Returns this collection with its values as {@code DECIMAL(32,6)}, so that decimals of different
+   * precisions share one SQL type and can be held in one array.
+   *
+   * <p>The cast is a safe one, so an out-of-range value yields null rather than raising under ANSI
+   * mode, independent of the session-wide setting. It keeps the cardinality of the collection.
+   *
+   * @return this collection, with its values as {@code DECIMAL(32,6)}
+   */
+  @Override
+  @Nonnull
+  public DecimalCollection withSharedSqlType() {
+    return normalizeDecimalType();
+  }
+
+  /**
+   * Normalizes this decimal collection to use the standard DECIMAL(32,6) type, keeping its
+   * cardinality.
    *
    * @return a new DecimalCollection with normalized decimal type
    */
   @Nonnull
   public DecimalCollection normalizeDecimalType() {
-    // Route through the safe-cast helper so an out-of-range value yields NULL rather than raising
-    // under ANSI mode, independent of the session-wide setting.
-    final Column normalizedArray = getColumn().plural().elementTryCast(DECIMAL_TYPE).getValue();
-    return (DecimalCollection) copyWithColumn(normalizedArray);
+    return copyWith(getColumn().elementTryCast(DECIMAL_TYPE));
   }
 
   @Override

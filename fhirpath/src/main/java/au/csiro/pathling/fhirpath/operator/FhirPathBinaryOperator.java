@@ -21,6 +21,7 @@ import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import jakarta.annotation.Nonnull;
+import java.util.List;
 import org.apache.commons.lang3.tuple.Pair;
 
 /**
@@ -87,13 +88,9 @@ public interface FhirPathBinaryOperator {
   @Nonnull
   static Pair<Collection, Collection> reconcileTypes(
       @Nonnull final Collection left, @Nonnull final Collection right) {
-    // finds if left and right elements can be reconciled to a common type
-    if (right.convertibleTo(left)) {
-      return Pair.of(left, right.castAs(left));
-    } else if (left.convertibleTo(right)) {
-      return Pair.of(left.castAs(right), right);
-    } else {
-      return Pair.of(left, right);
-    }
+    // This is the promotion step of the unification entry point, which every operator reaches
+    // through CombiningLogic.unify rather than calling this directly.
+    final List<Collection> promoted = CombiningLogic.promoteTypes(List.of(left, right));
+    return Pair.of(promoted.get(0), promoted.get(1));
   }
 }

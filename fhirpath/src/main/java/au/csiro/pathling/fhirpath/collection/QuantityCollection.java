@@ -247,6 +247,19 @@ public class QuantityCollection extends Collection implements Comparable, String
     throw new UnsupportedFhirPathFeatureError("Quantity math operations are not supported yet");
   }
 
+  /**
+   * The values of a quantity collection are always the structure the engine computes with, whether
+   * decoded from stored quantities or built by the engine. Where they were decoded, the stored
+   * quantities are held by the {@link DecodedRepresentation}, and the unification entry point
+   * reconciles those instead.
+   *
+   * @return false
+   */
+  @Override
+  public boolean holdsStoredStructures() {
+    return false;
+  }
+
   @Override
   @Nonnull
   public ColumnComparator getComparator() {
