@@ -43,6 +43,7 @@ import au.csiro.pathling.sql.misc.QuantityToLiteral;
 import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.types.DataTypes;
@@ -54,6 +55,21 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * @author John Grimes
  */
 public class QuantityCollection extends Collection implements Comparable, StringCoercible, Numeric {
+
+  /**
+   * Quantity and the types profiled on it. A stored element of any of them is decoded at traversal
+   * into the structure the engine computes with (T096, decision 80), because the previous layout
+   * stores each of them in that structure, with its canonical form and the scale of its value.
+   */
+  public static final Set<FHIRDefinedType> QUANTITY_TYPES =
+      Set.of(
+          FHIRDefinedType.QUANTITY,
+          FHIRDefinedType.AGE,
+          FHIRDefinedType.COUNT,
+          FHIRDefinedType.DISTANCE,
+          FHIRDefinedType.DURATION,
+          FHIRDefinedType.SIMPLEQUANTITY,
+          FHIRDefinedType.MONEYQUANTITY);
 
   /**
    * Creates a definition for a Coding element with the specified name and cardinality.

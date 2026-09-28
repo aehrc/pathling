@@ -155,9 +155,11 @@ public class DefaultRepresentation extends ColumnRepresentation {
       // A decimal is traversed to as text on either layout, and decoded for computation.
       return ElementRepresentation.ofPrimitive(
           DecimalCollection.decode(result), fhirType, this, fieldName);
-    } else if (FHIRDefinedType.QUANTITY.equals(resolvedFhirType)) {
-      // A quantity is traversed to in the new layout's shape on either layout, and decoded for
-      // computation, which computes its canonical form.
+    } else if (resolvedFhirType != null
+        && QuantityCollection.QUANTITY_TYPES.contains(resolvedFhirType)) {
+      // A quantity, of any of the quantity types, is traversed to in the new layout's shape on
+      // either layout, and decoded for computation, which computes its canonical form (decision
+      // 80).
       return QuantityCollection.decode(result);
     } else {
       // Otherwise, use the default representation, retaining the parent of a primitive.
