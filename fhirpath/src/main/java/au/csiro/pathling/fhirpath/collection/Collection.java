@@ -864,9 +864,9 @@ public class Collection implements Equatable {
 
   /**
    * Returns this collection with its values in the SQL type that every collection of its FHIRPath
-   * type shares. This is how the unification entry point unifies the SQL shape of a primitive, once
-   * the FHIR types of the operands have been promoted ({@link
-   * au.csiro.pathling.fhirpath.operator.CombiningLogic#unify}).
+   * type shares. This is applied where unified operands are combined into one array ({@link
+   * au.csiro.pathling.fhirpath.operator.CombiningLogic#prepareArray}), and not where they are only
+   * compared or computed with.
    *
    * <p>By default the values already have that type.
    *

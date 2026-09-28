@@ -269,6 +269,34 @@ class ShapeReconciliationTest {
   }
 
   // -----------------------------------------------------------------------------------------------
+  // Decimals share one SQL type only where they are combined.
+  // -----------------------------------------------------------------------------------------------
+
+  @Nonnull
+  Stream<Arguments> decimalCases() {
+    return onBothLayouts(
+        // Arithmetic keeps the precision of its operands. The quotient is computed at scale 7,
+        // 0.0014975, and then rounded to 0.001498. Casting both operands to DECIMAL(32,6) first
+        // would compute it at scale 6 and give 0.001497.
+        arguments("1.5 / 1001.7", List.of("p1=0.001498", "p2=0.001498")),
+        arguments("(1.5 / 1001.7) = 0.001498", List.of("p1=true", "p2=true")),
+        arguments("(1.5 / 1001.7) > 0.001497", List.of("p1=true", "p2=true")),
+        // A union and a combination hold decimals of different precision in one array.
+        arguments("(1.5 | 1001.75).count()", List.of("p1=2", "p2=2")),
+        arguments("1.5.combine(1001.75).combine(1.5).count()", List.of("p1=3", "p2=3")));
+  }
+
+  @ParameterizedTest(name = "{1} over the {0} layout")
+  @MethodSource("decimalCases")
+  void decimalsShareOneTypeOnlyWhereCombined(
+      @Nonnull final String layout,
+      @Nonnull final String expression,
+      @Nonnull final List<String> expected) {
+    assertThat(evaluate(patients.get(layout), ResourceType.PATIENT, expression))
+        .containsExactlyInAnyOrderElementsOf(expected);
+  }
+
+  // -----------------------------------------------------------------------------------------------
   // T104b: one recursive type met at two depths.
   // -----------------------------------------------------------------------------------------------
 

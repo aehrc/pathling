@@ -2693,6 +2693,34 @@ expression, and gives the same answers as this tolerance for every present case.
 
 _Amends_ decision 75.
 
+### Addendum to 79 — a stored Coding combined with a System Coding keeps its extensions
+
+Owner-confirmed (2026-09-28), prompted by T113b. This is a known deviation from
+the rule above.
+
+A stored Coding combined with a Coding the engine built, such as a literal or a
+terminology result, is reconciled with it by name. It is not converted to the
+System type, so it keeps its `extension`. The engine has no marker that tells a
+stored Coding from one it built: both are plain structures of a Coding type.
+Quantities do have one, because a stored quantity is decoded at traversal and
+keeps the stored value beside the decoded one, so for quantities the rule holds.
+
+Both layouts agree today. The previous layout reaches the stored Coding's
+extensions through its `_fid`, and the new layout reads them inline.
+`ExtensionTraversalTest.storedCodingCombinedWithALiteralKeepsItsExtensions`
+pins the answer on both. Revisit it with T124k, when the engine's structures lose
+`_fid`, since the previous layout's answer rests on it.
+
+### Addendum to 79 — reconciliation applies canonical order only where shapes differ
+
+Owner-confirmed (2026-09-28), prompted by T113a. `MergeCast` leaves operands
+that already share one type as they are, rather than projecting them into a
+canonically ordered copy of that type. There is nothing to reconcile, and a
+structure the canonical order does not fully describe, such as one of the
+previous layout with its `_fid` and scale companions, would otherwise be
+reordered for no reason. FR-057 is amended to match. It was added as a
+precaution, not because a reorder was measured.
+
 ## 80. The same-type rule covers what traversal reaches, and whole structures leave through the layout
 
 Owner decision (2026-09-28), prompted by port step 5.

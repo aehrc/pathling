@@ -69,11 +69,9 @@ public class CombiningLogic {
    * Unifies operands that must share a type: promotes their FHIR types to a common type where one
    * exists, then unifies their SQL shapes (FR-056).
    *
-   * <p>Shape unification takes one of three forms.
+   * <p>Shape unification takes one of two forms.
    *
    * <ul>
-   *   <li>A primitive takes the SQL type every collection of its FHIRPath type shares, which
-   *       reconciles two decimals of different precision.
    *   <li>Where every operand holds stored FHIR structures, each operand is projected by name into
    *       the merged structure of all of them, under the canonical order of the definitions
    *       (FR-057).
@@ -84,6 +82,10 @@ public class CombiningLogic {
    *       operands are then taken as the System values they were decoded to, which already share
    *       the engine's structure.
    * </ul>
+   *
+   * <p>A primitive needs no shape unification here. Two decimals of different precision are given
+   * one SQL type only where they are combined into one array, by {@link #prepareArray}, so that
+   * arithmetic and comparison keep the precision of their operands.
    *
    * <p>Operands whose types cannot be reconciled are returned with their types unpromoted, and it
    * is for the calling site to decide what that means.
@@ -168,8 +170,7 @@ public class CombiningLogic {
   }
 
   @Nonnull
-  private static List<Collection> unifyShapes(@Nonnull final List<Collection> promoted) {
-    final List<Collection> operands = promoted.stream().map(Collection::withSharedSqlType).toList();
+  private static List<Collection> unifyShapes(@Nonnull final List<Collection> operands) {
     if (operands.size() < 2 || !typeEquivalent(operands)) {
       return operands;
     }
@@ -358,16 +359,19 @@ public class CombiningLogic {
   }
 
   /**
-   * Extracts the array column from a collection in a form suitable for combining. The collection
-   * must already have been unified, so that its values share one SQL type with those it is combined
-   * with.
+   * Extracts the array column from a unified collection in a form suitable for combining. A
+   * primitive takes the SQL type every collection of its FHIRPath type shares, which reconciles two
+   * decimals of different precision so that they can be held in one array.
+   *
+   * <p>This is done only where values are combined into one array. Equality, comparison and
+   * arithmetic compute with the operands' own precision, as Spark does.
    *
    * @param collection the collection to extract the array column from
    * @return the array column ready for combining
    */
   @Nonnull
   public static Column prepareArray(@Nonnull final Collection collection) {
-    return collection.getColumn().plural().getValue();
+    return collection.withSharedSqlType().getColumn().plural().getValue();
   }
 
   /**
