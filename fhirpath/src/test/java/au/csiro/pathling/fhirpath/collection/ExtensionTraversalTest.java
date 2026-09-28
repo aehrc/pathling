@@ -299,6 +299,26 @@ class ExtensionTraversalTest {
         .containsExactlyInAnyOrder("o1=2", "o2=0");
   }
 
+  /**
+   * A stored Coding combined with a Coding literal is reconciled with it by name rather than
+   * converted to the engine's Coding structure, so the stored Coding keeps its extensions on both
+   * layouts. The new layout reads them inline, and the previous layout through the stored Coding's
+   * {@code _fid}. The literal has none.
+   */
+  @ParameterizedTest(name = "over the {0} layout")
+  @ValueSource(strings = {"previous", "pof"})
+  void storedCodingCombinedWithALiteralKeepsItsExtensions(@Nonnull final String layout) {
+    final String combined = "(maritalStatus.coding | urn:other|X)";
+    assertThat(evaluate(patients.get(layout), ResourceType.PATIENT, combined + ".count()"))
+        .containsExactlyInAnyOrder("p1=2", "p2=1", "p3=1");
+    assertThat(
+            evaluate(
+                patients.get(layout),
+                ResourceType.PATIENT,
+                combined + ".extension('urn:coding').value.ofType(string)"))
+        .containsExactlyInAnyOrder("p1=ArraySeq(c1)", "p2=null", "p3=null");
+  }
+
   @Nonnull
   Stream<Arguments> plainQuantityCases() {
     return onBothLayouts(

@@ -228,6 +228,16 @@ class ShapeReconciliationTest {
         arguments(
             "value.ofType(Quantity) = component.value.ofType(Quantity)",
             List.of("o1=true", "o2=null")),
+        // Comparison of two stored quantities, which are unified as arrays.
+        arguments(
+            "value.ofType(Quantity) > component.value.ofType(Quantity)",
+            List.of("o1=false", "o2=null")),
+        arguments(
+            "value.ofType(Quantity) >= component.value.ofType(Quantity)",
+            List.of("o1=true", "o2=null")),
+        arguments(
+            "component.value.ofType(Quantity) < value.ofType(Quantity)",
+            List.of("o1=false", "o2=null")),
         // Membership.
         arguments("component.code.coding.first() in code.coding", List.of("o1=true", "o2=null")),
         arguments(
