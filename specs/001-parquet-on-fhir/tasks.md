@@ -33,9 +33,9 @@ user story, so each story can be implemented and tested independently.
 
 ## Milestones
 
-Seven. **M1, M3, M6 and M7 change nothing a user can observe, and M2 nothing
-beyond the two fixes its row names. Each is independently shippable. M4 is the
-only breaking release.** M5 lands as a series
+Seven. **M1, M3, M6 and M7 change nothing a user can observe, and M2 only what
+its row lists, each change approved by the owner. Each is independently
+shippable. M4 is the only breaking release.** M5 lands as a series
 of independent increments: each annotation kind ships on its own, and primitive
 ids and extensions follow them. M6 adds a mode beside the existing one rather
 than changing it, which is why it joins the invisible set.
@@ -49,7 +49,7 @@ what says which tasks are where.
 | Milestone                                                                                 | Phases    | Tasks | Delivers                                                                                                                                                                                                                                                                           | User-visible change                                                                                                                                                                                                                      |
 | ----------------------------------------------------------------------------------------- | --------- | ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **M1 The layout** [#2761](https://github.com/aehrc/pathling/issues/2761)                  | 1–6       | 72    | FHIR JSON to the new layout and back through `io`, losslessly except the exceptions FR-016 lists. No annotations, and the pruned schema mode only. One definition traversal, the canonical structure and the one shared merge. Both risk gates resolved                            | None                                                                                                                                                                                                                                     |
-| **M2 The engine, layout-tolerant** [#2762](https://github.com/aehrc/pathling/issues/2762) | 7–9, 9a   | 64    | The engine reads both layouts, ported one feature at a time behind the traversal expression's normalisation, computes every value without annotations and tolerates a fitted schema. Ends with the `fhirpath` suites running on the new layout by default, and green (decision 73) | None intended. Two fixes reach the public API: T110 closes #2625, and T111 casts a view column to its declared FHIR type, which on the previous layout is expected to change no output type                                              |
+| **M2 The engine, layout-tolerant** [#2762](https://github.com/aehrc/pathling/issues/2762) | 7–9, 9a   | 64    | The engine reads both layouts, ported one feature at a time behind the traversal expression's normalisation, computes every value without annotations and tolerates a fitted schema. Ends with the `fhirpath` suites running on the new layout by default, and green (decision 73) | Owner-approved, previous layout: T110 closes #2625; T111 casts view columns; `instant` is text (81); quantity search and comparison past six digits differ, as does search outside UCUM (77); dropped-column filters find no rows (75)   |
 | **M3 Ingest formats** [#2763](https://github.com/aehrc/pathling/issues/2763)              | 11        | 5     | Bundles and XML on the new path, each round-tripped through the M1 harness                                                                                                                                                                                                         | None                                                                                                                                                                                                                                     |
 | **M4 The flip** [#2764](https://github.com/aehrc/pathling/issues/2764)                    | 10, 12–14 | 36    | Divergent files read as one dataset, the public API writes the new layout, earlier layouts are detected, the layout is documented and the benchmark is recorded                                                                                                                    | The flag day. It includes Phase 10's two sink and source changes: the Delta upsert path widens the target where it used to refuse (T117a, decision 41), and reading raw files merges their schemas with a supplied-schema opt-out (T118) |
 | **M5 The gaps** [#2765](https://github.com/aehrc/pathling/issues/2765)                    | 15–16     | 32    | Annotations emitted and read, one kind at a time; primitive ids and extensions written and navigable                                                                                                                                                                               | Performance, then new capability                                                                                                                                                                                                         |
@@ -88,10 +88,19 @@ structured this way, and what it changes about the review.
 Phase 10 keeps its number although it now sits in M4 after Phase 11: decision
 73 moved it, and phases are not renumbered for the same reason tasks are not.
 
-**M1, M2 and M3 change nothing a user can observe, apart from the two fixes M2's
-row names.** `PathlingContext.encode`, `PathlingContext.decode` and `NdjsonSink`
-keep writing and reading the previous layout throughout; the new path is
-reachable only through `io`'s own entry points and the test estate. This is why
+**M1 and M3 change nothing a user can observe, and M2 only what its row lists.**
+`PathlingContext.encode`, `PathlingContext.decode` and `NdjsonSink` keep writing
+and reading the previous layout throughout; the new path is reachable only
+through `io`'s own entry points and the test estate. The engine reads that
+previous layout through the new layout's branch from M2, though, so M2's changes
+to the engine reach the public API on it. The owner approved each: T110 closes
+#2625, and T111 casts a view column to its declared FHIR type. An `instant` is
+text rather than a timestamp, as a column type and as a value (decision 81).
+Quantity comparison, and `eq` and `gt` search, differ for a value with more than
+six fractional digits, and a quantity outside UCUM no longer matches a UCUM
+search (decision 77). A FHIRPath or search column applied as a filter after a
+`select` that dropped the columns it reads finds no rows, where Spark used to add
+them back (decision 75's known limit). This is why
 T070, T081 and T082 — the public API rewiring — sit in M4 rather than in US1 and
 US2 where the rest of their stories live, and why Phase 10's sink and source
 behaviours moved to M4 beside them (decision 73).

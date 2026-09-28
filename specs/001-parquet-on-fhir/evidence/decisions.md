@@ -2312,9 +2312,9 @@ the build, so the number of failures left before the switch is always known.
   the public API writing the new layout, and stay in M4.
 - **Phase 10 moves from M2 to M4.** Divergent files read as one dataset and
   Delta widening on upsert are IO behaviour, not engine work, and they are the
-  only part of M2 a user could observe. M2 now joins the milestones that change
-  nothing a user can see, apart from the two fixes noted below. Phase 10 keeps
-  its number.
+  only part of M2 a user could observe. M2 was expected to join the milestones
+  that change nothing a user can see, apart from the two fixes noted below.
+  Phase 10 keeps its number.
 - **Variadic reconciliation stays in M2 until the measurement says otherwise.**
   It was proposed for M5. But the pruned schema gives one complex type different
   shapes at different paths as soon as the suites switch, so whatever the switch
@@ -2350,6 +2350,20 @@ change to one needs the programme owner's approval, per test. Three are known:
   listed for approval then.
 
 Whatever else T100h finds is listed the same way.
+
+That expectation did not hold. The previous layout reaches the engine through
+the new layout's branch from M2, and until M4 that is the layout
+`PathlingContext` writes, so the port changes what the public API returns on
+it. Beyond the two fixes, the owner approved each of these:
+
+- an `instant` is text rather than a timestamp, as a column type and as a value
+  (decision 81);
+- quantity comparison, and `eq` and `gt` search, differ for a value with more
+  than six fractional digits, and a quantity outside UCUM no longer matches a
+  UCUM search (decision 77);
+- a FHIRPath or search column applied as a filter after a `select` that dropped
+  the columns it reads finds no rows, where Spark used to add them back
+  (decision 75's known limit).
 
 ### What else it corrects
 
@@ -2747,6 +2761,24 @@ switch:
   Nothing changes before the switch, unless an existing test depends on the
   previous schema through this API.
 
+**Every quantity type is decoded at traversal**, as Quantity is: Age, Count,
+Distance, Duration, SimpleQuantity and MoneyQuantity too. The previous layout
+stores each in the structure the engine computes with, so a whole value of any of
+them keeps the released version's rendering and schema before the switch. One
+difference from the released version remains, from decision 77: the scale and
+canonical form are computed from the value as the traversal yields it. So a whole
+quantity whose value has more than six fractional digits shows the stored
+`value_scale` of six rather than the source's, and a `_value_canonicalized`
+computed from the six digits kept, on the previous layout.
+
+**A field of a decoded quantity is read from the stored quantity.** The decoded
+structure has exactly the type of a stored previous-layout quantity, so the
+traversal expression, which decides from the type alone, took it for stored data
+and normalised it again at every step. Reading the field from the stored
+quantity normalises it once. Search is given the stored quantity for the same
+reason, so that it canonicalises the stored text (decision 77).
+`evidence/m2-review-perf.md` has the measurements.
+
 _Amends_ decision 78 by stating its scope.
 
 
@@ -2796,5 +2828,7 @@ the engine, so the change reaches them. Before it was made, the `library-api`
 suite was run and passed, and the Python and R tests were searched: none asserts
 an instant's type or value.
 
-_Amends_ nothing. It records the query-time type of a primitive that decision 70
-already stores as text.
+_Amends_ decision 73's expectation that M2 changes nothing a user can see
+beyond two fixes, since the change reaches the public API on the previous layout.
+It records the query-time type of a primitive that decision 70 already stores as
+text.
