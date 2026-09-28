@@ -103,11 +103,11 @@ public record ProjectedColumn(
 
   /**
    * Casts a column to the SQL type requested by its tag. An instant cast to a timestamp without a
-   * time zone is cast to a timestamp first. An instant is a point in time, and the new layout holds
-   * it as text carrying its offset, which a direct cast from text would discard, keeping the wall
-   * time instead. Through a timestamp, it gives the point in time in the session time zone, as the
-   * previous layout, which stores an instant as a timestamp, always has. Every other value keeps
-   * the direct cast, so text of any other type keeps its wall time.
+   * time zone is cast to a timestamp first. An instant is a point in time, held as text carrying
+   * its offset on both layouts (decision 81), and a direct cast from text would discard the offset,
+   * keeping the wall time instead. Through a timestamp, it gives the point in time in the session
+   * time zone. Every other value keeps the direct cast, so text of any other type keeps its wall
+   * time.
    *
    * @param value the column to cast
    * @param sqlType the requested SQL type

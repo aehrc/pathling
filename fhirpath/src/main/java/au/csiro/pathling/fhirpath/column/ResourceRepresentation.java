@@ -285,6 +285,15 @@ public final class ResourceRepresentation extends ColumnRepresentation {
           ? QuantityCollection.decode(stored)
           : stored;
     }
+    if (fhirType.filter(FHIRDefinedType.INSTANT::equals).isPresent()) {
+      // An instant is read as text on either layout, with the previous layout's timestamp
+      // normalised to its text in UTC (decision 81).
+      return ElementRepresentation.ofPrimitive(
+          existing(ColumnFunctions.instantColumnOrNull(fieldName, fallback)).removeNulls(),
+          fhirType,
+          this,
+          fieldName);
+    }
     final ColumnRepresentation result = getField(fieldName, fallback).removeNulls();
     if (fhirType.filter(FHIRDefinedType.BASE64BINARY::equals).isPresent()) {
       // If the field is a base64Binary, represent it using binary column handling.

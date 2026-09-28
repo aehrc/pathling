@@ -2750,33 +2750,51 @@ switch:
 _Amends_ decision 78 by stating its scope.
 
 
-## 81. On the new layout, an `instant` is text at query time
+## 81. An `instant` is text at query time, on both layouts
 
-Owner decision (2026-09-28), prompted by T100h.
+Owner decisions (2026-09-28), prompted by T100h. The first version of this
+decision left the previous layout's `instant` a timestamp. The owner revised it
+the same day, so that the engine sees one type.
 
 The previous layout's encoder stores `instant` as a Spark timestamp, which keeps
 the point in time but not the offset. The new layout stores it as text, in its
-lexical form, like `dateTime`. No port step normalised one to the other, because
-decision 47's discriminators do not include the temporal types. The engine keeps
-the new layout's text rather than decoding it to a timestamp at traversal.
+lexical form, like `dateTime`. The engine keeps the new layout's text rather than
+decoding it to a timestamp.
 
-FHIRPath comparison of an instant gives the same answers on both layouts. What
-leaves the engine differs:
+**The previous layout's instant is normalised to text at read time**, by a branch
+of the traversal expression chosen from the resolved schema, as decision 75 and
+the decimal branch do (`InstantNormalisation`). A timestamp-typed field is
+rendered as the point in time in UTC, in ISO 8601 form with a `Z` suffix. Its
+fractional seconds are included only where they are not zero, without trailing
+zeros:
 
-- **An untyped view column** is `TimestampType` on the previous layout and
-  `StringType` on the new one. `AnsiTypeHintingTest`'s instant row expects each
-  layout's answer (owner-approved).
-- **`issued.toString()` and a column declared `instant`** render the previous
-  layout's value in the session time zone without an offset,
-  `2023-01-01 02:00:00`. They render the new layout's value in its lexical form,
-  `2023-01-01T12:00:00+10:00`. This difference is accepted.
+- `2023-01-01T02:00:00Z`;
+- `2023-01-01T02:00:00.123Z`.
+
+The rendering does not depend on the session time zone. The original offset
+cannot be recovered, so UTC is the only faithful form. The previous layout
+stores no other FHIR type as a timestamp.
+
+So the engine sees text instants on both layouts:
+
+- **An untyped view column** is `StringType` on both layouts. Its value is the
+  lexical form on the new layout and the UTC text on the previous one.
+  `AnsiTypeHintingTest`'s instant row expects `StringType`, with each layout's
+  value (owner-approved).
+- **`issued.toString()` and a column declared `instant`** give the same two
+  renderings. The difference between the layouts is accepted.
+- **FHIRPath comparison** gives the same answers on both layouts.
 - **An `ansi/type` of `TIMESTAMP WITHOUT TIME ZONE`** would drop the offset from
   the text and keep the wall time. So an instant is cast to a timestamp first,
   and that gives the point in time in the session time zone on both layouts.
   Text of any other type keeps the direct cast and its wall time, which existing
   tests pin.
 
-The previous layout's answers are unchanged, and stay so until T100e.
+This changes what the previous layout returns, which until now was a timestamp.
+Until M4, the `library-api`, Python and R suites read the previous layout through
+the engine, so the change reaches them. Before it was made, the `library-api`
+suite was run and passed, and the Python and R tests were searched: none asserts
+an instant's type or value.
 
 _Amends_ nothing. It records the query-time type of a primitive that decision 70
 already stores as text.

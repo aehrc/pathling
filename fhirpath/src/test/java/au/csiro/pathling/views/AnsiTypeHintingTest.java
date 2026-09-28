@@ -352,13 +352,12 @@ class AnsiTypeHintingTest {
             false,
             DataTypes.StringType,
             "24.4"),
-        // The new layout holds an instant as text, like a dateTime, and the previous layout as a
-        // timestamp, which keeps no offset (decision 81).
-        TestLayout.active().isPof()
-            ? Arguments.of(
-                "instant", "issued", false, DataTypes.StringType, "2023-01-01T12:00:00+10:00")
-            : Arguments.of(
-                "instant", "issued", false, DataTypes.TimestampType, "2023-01-01 02:00:00.0"),
+        Arguments.of(
+            "instant",
+            "issued",
+            false,
+            DataTypes.StringType,
+            TestLayout.active().isPof() ? "2023-01-01T12:00:00+10:00" : "2023-01-01T02:00:00Z"),
         // there is no way atm to get the original timezone so try UTC
         Arguments.of(
             "dateTime",
