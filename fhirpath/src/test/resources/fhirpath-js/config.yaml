@@ -7,8 +7,11 @@ excludeSet:
       - title: Unsupported resources
         type: feature
         id: "#2418"
-        expression:
-          - "^StructureDefinition"
+        comment: |
+          The previous layout's encoder refuses StructureDefinition. The new layout
+          reads it, so this rule applies to the previous layout only (T100h).
+        spel:
+          - "#testCase.expression matches '^StructureDefinition.*' and !T(au.csiro.pathling.test.layout.TestLayout).active().isPof()"
       - title: "Primitive .id extension not accessible after trace"
         type: bug
         id: "#2580"
@@ -364,6 +367,7 @@ excludeSet:
           - "Observation is Resource"
           - "Observation.value is Element"
           - "Patient.contact is Element"
+          - "StructureDefinition.snapshot.element.type is Element"
   - title: Collections exclusions
     glob: "fhirpath-js/cases/6.4_collections.yaml"
     exclude:
@@ -689,6 +693,7 @@ excludeSet:
           The encoder explicitly skips the recursive 'contains' field within
           ValueSetExpansionContainsComponent (see R4DataTypeMappings.skipField).
           This means nested contains entries are not available in the Spark schema,
-          so repeat(contains) only finds top-level entries.
-        any:
-          - "** testRepeat1"
+          so repeat(contains) only finds top-level entries. The new layout keeps the
+          field, so this rule applies to the previous layout only (T100h).
+        spel:
+          - "#testCase.expression == 'ValueSet.expansion.repeat(contains).count() = 10' and !T(au.csiro.pathling.test.layout.TestLayout).active().isPof()"
