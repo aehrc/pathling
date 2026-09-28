@@ -18,7 +18,6 @@
 package au.csiro.pathling.fhirpath.column;
 
 import au.csiro.pathling.definition.ElementDefinition;
-import au.csiro.pathling.fhirpath.collection.DecimalCollection;
 import au.csiro.pathling.schema.PrimitiveTypes;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
@@ -36,8 +35,9 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * singular complex element the null type, and a repeating complex element an array of the null
  * type.
  *
- * <p>A decimal takes the type the engine computes with, {@code DECIMAL(32,6)}, rather than the text
- * it is stored as, because the query-time type of a decimal does not depend on the layout (FR-035).
+ * <p>A decimal takes the text it is stored as, because the traversal expression normalises the
+ * previous layout's decimals to that text too (T094b), and every branch of the traversal yields the
+ * same type. The engine decodes the text to {@code DECIMAL(32,6)} after traversal (FR-035).
  *
  * @author Piotr Szul
  */
@@ -69,9 +69,6 @@ public class AbsentElementTypes {
 
   @Nonnull
   private static Optional<DataType> primitiveType(@Nonnull final FHIRDefinedType fhirType) {
-    if (FHIRDefinedType.DECIMAL.equals(fhirType)) {
-      return Optional.of(DecimalCollection.getDecimalType());
-    }
     // A type with no code, such as the null type, is not a primitive.
     return Optional.ofNullable(fhirType.toCode())
         .flatMap(code -> PrimitiveTypes.storageTypeOf(fhirType));

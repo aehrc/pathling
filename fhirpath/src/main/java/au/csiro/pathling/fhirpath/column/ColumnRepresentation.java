@@ -34,9 +34,11 @@ import au.csiro.pathling.definition.ElementDefinition;
 import au.csiro.pathling.encoders.ColumnFunctions;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.util.List;
 import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.BinaryOperator;
+import java.util.function.Function;
 import java.util.function.UnaryOperator;
 import java.util.stream.Stream;
 import org.apache.spark.sql.Column;
@@ -356,6 +358,23 @@ public abstract class ColumnRepresentation {
     return vectorize(
         c -> functions.filter(c, lambda::apply),
         c -> let(c, x -> when(x.isNotNull().and(lambda.apply(x)), x)));
+  }
+
+  /**
+   * Filters the elements of the current {@link ColumnRepresentation} using a predicate over the
+   * representation of each element.
+   *
+   * <p>The predicate receives each element as a copy of this representation, so a representation
+   * that carries more than its value can hand that on to the element. {@link DecodedRepresentation}
+   * does this, so that an element inside the predicate keeps what was stored for it.
+   *
+   * @param predicate the predicate, over the representation of an element
+   * @return A new {@link ColumnRepresentation} that is filtered
+   */
+  @Nonnull
+  public ColumnRepresentation filterElements(
+      @Nonnull final Function<ColumnRepresentation, Column> predicate) {
+    return filter(element -> predicate.apply(copyOf(element)));
   }
 
   /**
@@ -740,16 +759,25 @@ public abstract class ColumnRepresentation {
    * Traverses the current {@link ColumnRepresentation} to a selected elements in a choice and
    * returns a new {@link ColumnRepresentation} that is the result of the traversal.
    *
+   * <p>The variants are coalesced, so they must share a type. The whole ordered list of variants is
+   * passed to the unification, rather than folded a pair at a time.
+   *
+   * @param unify the unification of the variants' columns, which returns them in the same order
    * @param definitions The definitions to traverse to
    * @return A new {@link ColumnRepresentation} that is the result of the traversal
    */
   @Nonnull
-  public ColumnRepresentation traverseChoice(@Nonnull final ElementDefinition... definitions) {
+  public ColumnRepresentation traverseChoice(
+      @Nonnull final UnaryOperator<List<Column>> unify,
+      @Nonnull final ElementDefinition... definitions) {
     return transform(
         c ->
             coalesce(
-                Stream.of(definitions)
-                    .map(ed -> this.copyOf(c).traverse(ed).getValue())
+                unify
+                    .apply(
+                        Stream.of(definitions)
+                            .map(ed -> this.copyOf(c).traverse(ed).getValue())
+                            .toList())
                     .toArray(Column[]::new)));
   }
 }

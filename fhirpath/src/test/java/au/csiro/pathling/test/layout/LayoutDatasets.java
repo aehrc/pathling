@@ -42,9 +42,10 @@ import org.hl7.fhir.instance.model.api.IBaseResource;
  * data sources have always done. On the new layout it is read as FHIR JSON through the new-layout
  * transform, which derives the stored schema from the definitions and the data (decision 68). A
  * fixture built as a HAPI object is serialised to JSON first, so the fluent builders survive
- * unchanged. The schema the transform derives is always pruned, which is the only schema mode until
- * M6, and the active {@link TestSchemaMode} is checked so that a request for another mode fails
- * rather than being answered with this one.
+ * unchanged, and versioned references keep their version as the previous layout's encoder keeps it.
+ * The schema the transform derives is always pruned, which is the only schema mode until M6, and
+ * the active {@link TestSchemaMode} is checked so that a request for another mode fails rather than
+ * being answered with this one.
  *
  * @author Piotr Szul
  */
@@ -71,7 +72,11 @@ public final class LayoutDatasets {
       @Nonnull final List<IBaseResource> resources) {
     TestSchemaMode.active();
     if (layout.isPof()) {
+      // HAPI strips the version from a versioned reference by default, which the previous layout's
+      // encoder does not, so the parser is told to keep it and the fixture means the same thing
+      // on both layouts.
       final IParser parser = encoders.getContext().newJsonParser();
+      parser.setStripVersionsFromReferences(false);
       final List<String> json = resources.stream().map(parser::encodeResourceToString).toList();
       return newLayout(spark, encoders, resourceType, json);
     }

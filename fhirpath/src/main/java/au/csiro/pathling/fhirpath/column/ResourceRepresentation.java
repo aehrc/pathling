@@ -18,8 +18,11 @@
 package au.csiro.pathling.fhirpath.column;
 
 import au.csiro.pathling.encoders.ColumnFunctions;
+import au.csiro.pathling.fhirpath.collection.DecimalCollection;
+import au.csiro.pathling.fhirpath.collection.QuantityCollection;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.UnaryOperator;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -65,6 +68,20 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  */
 @EqualsAndHashCode(callSuper = false)
 public final class ResourceRepresentation extends ColumnRepresentation {
+
+  /**
+   * Quantity and the types profiled on it, which the previous layout stores with a canonical form
+   * that the traversal normalises away.
+   */
+  private static final Set<FHIRDefinedType> QUANTITY_TYPES =
+      Set.of(
+          FHIRDefinedType.QUANTITY,
+          FHIRDefinedType.AGE,
+          FHIRDefinedType.COUNT,
+          FHIRDefinedType.DISTANCE,
+          FHIRDefinedType.DURATION,
+          FHIRDefinedType.SIMPLEQUANTITY,
+          FHIRDefinedType.MONEYQUANTITY);
 
   /** Default name for the existence column (resource id). */
   public static final String DEFAULT_EXISTENCE_COLUMN = "id";
@@ -248,12 +265,32 @@ public final class ResourceRepresentation extends ColumnRepresentation {
       @Nonnull final String fieldName,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final DataType fallback) {
+    if (fhirType.filter(FHIRDefinedType.DECIMAL::equals).isPresent()) {
+      // A decimal is read as text on either layout, with the previous layout's value and scale
+      // columns normalised to it, and decoded for computation.
+      return ElementRepresentation.ofPrimitive(
+          DecimalCollection.decode(
+              existing(ColumnFunctions.decimalColumnOrNull(fieldName, fallback)).removeNulls()),
+          fhirType,
+          this,
+          fieldName);
+    }
+    if (fhirType.filter(QUANTITY_TYPES::contains).isPresent()) {
+      // A quantity is read in the new layout's shape on either layout, with the previous layout's
+      // canonical form and value scale normalised away. A Quantity is then decoded for computation,
+      // which computes its canonical form.
+      final ColumnRepresentation stored =
+          existing(ColumnFunctions.quantityColumnOrNull(fieldName, fallback)).removeNulls();
+      return fhirType.filter(FHIRDefinedType.QUANTITY::equals).isPresent()
+          ? QuantityCollection.decode(stored)
+          : stored;
+    }
     final ColumnRepresentation result = getField(fieldName, fallback).removeNulls();
     if (fhirType.filter(FHIRDefinedType.BASE64BINARY::equals).isPresent()) {
       // If the field is a base64Binary, represent it using binary column handling.
       return DefaultRepresentation.fromBinaryColumn(result.getValue());
     }
-    return result;
+    return ElementRepresentation.ofPrimitive(result, fhirType, this, fieldName);
   }
 
   /**
@@ -274,9 +311,13 @@ public final class ResourceRepresentation extends ColumnRepresentation {
   @Nonnull
   private ColumnRepresentation getField(
       @Nonnull final String fieldName, @Nonnull final DataType fallback) {
-    return new DefaultRepresentation(
-        functions.when(
-            existenceColumn.isNotNull(), ColumnFunctions.columnOrNull(fieldName, fallback)));
+    return existing(ColumnFunctions.columnOrNull(fieldName, fallback));
+  }
+
+  /** Makes a reference to a table column conditional on the resource existing. */
+  @Nonnull
+  private ColumnRepresentation existing(@Nonnull final Column column) {
+    return new DefaultRepresentation(functions.when(existenceColumn.isNotNull(), column));
   }
 
   /**

@@ -21,6 +21,8 @@ import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.encoders.ColumnFunctions;
 import au.csiro.pathling.encoders.ValueFunctions;
+import au.csiro.pathling.fhirpath.collection.DecimalCollection;
+import au.csiro.pathling.fhirpath.collection.QuantityCollection;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.Optional;
@@ -149,9 +151,17 @@ public class DefaultRepresentation extends ColumnRepresentation {
     if (FHIRDefinedType.BASE64BINARY.equals(resolvedFhirType)) {
       // If the field is a base64Binary, represent it using a BinaryRepresentation.
       return DefaultRepresentation.fromBinaryColumn(result.getValue());
+    } else if (FHIRDefinedType.DECIMAL.equals(resolvedFhirType)) {
+      // A decimal is traversed to as text on either layout, and decoded for computation.
+      return ElementRepresentation.ofPrimitive(
+          DecimalCollection.decode(result), fhirType, this, fieldName);
+    } else if (FHIRDefinedType.QUANTITY.equals(resolvedFhirType)) {
+      // A quantity is traversed to in the new layout's shape on either layout, and decoded for
+      // computation, which computes its canonical form.
+      return QuantityCollection.decode(result);
     } else {
-      // Otherwise, use the default representation.
-      return result;
+      // Otherwise, use the default representation, retaining the parent of a primitive.
+      return ElementRepresentation.ofPrimitive(result, fhirType, this, fieldName);
     }
   }
 

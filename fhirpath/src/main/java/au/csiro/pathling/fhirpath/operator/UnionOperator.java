@@ -19,7 +19,7 @@ package au.csiro.pathling.fhirpath.operator;
 
 import au.csiro.pathling.fhirpath.collection.Collection;
 import jakarta.annotation.Nonnull;
-import org.apache.spark.sql.Column;
+import java.util.List;
 
 /**
  * Provides the functionality of the union operator within FHIRPath, i.e. {@code |}.
@@ -44,9 +44,8 @@ public class UnionOperator extends SameTypeBinaryOperator {
   @Override
   protected Collection handleOneEmpty(
       @Nonnull final Collection nonEmpty, @Nonnull final BinaryOperatorInput input) {
-    final Column array = CombiningLogic.prepareArray(nonEmpty);
-    final Column deduplicatedArray = CombiningLogic.dedupeArray(array, nonEmpty.getComparator());
-    return nonEmpty.copyWithColumn(deduplicatedArray);
+    // The one operand is unified on its own, which gives a primitive the shared SQL type.
+    return CombiningLogic.dedupe(CombiningLogic.unify(List.of(nonEmpty)).get(0));
   }
 
   @Nonnull
@@ -55,11 +54,7 @@ public class UnionOperator extends SameTypeBinaryOperator {
       @Nonnull final Collection left,
       @Nonnull final Collection right,
       @Nonnull final BinaryOperatorInput input) {
-    final Column leftArray = CombiningLogic.prepareArray(left);
-    final Column rightArray = CombiningLogic.prepareArray(right);
-    final Column unionResult =
-        CombiningLogic.unionArrays(leftArray, rightArray, left.getComparator());
-    return left.copyWithColumn(unionResult);
+    return CombiningLogic.union(left, right);
   }
 
   @Nonnull

@@ -31,7 +31,6 @@ import au.csiro.pathling.fhirpath.comparison.TemporalComparator;
 import jakarta.annotation.Nonnull;
 import java.text.ParseException;
 import java.util.Optional;
-import org.apache.spark.sql.Column;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.TimeType;
 
@@ -50,15 +49,13 @@ public class TimeCollection extends Collection
    * @param type the FHIRPath type of this collection
    * @param fhirType the FHIR defined type of this collection
    * @param definition the node definition for this collection
-   * @param extensionMapColumn the extension map column for this collection
    */
   protected TimeCollection(
       @Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
-      @Nonnull final Optional<? extends NodeDefinition> definition,
-      @Nonnull final Optional<Column> extensionMapColumn) {
-    super(columnRepresentation, type, fhirType, definition, extensionMapColumn);
+      @Nonnull final Optional<? extends NodeDefinition> definition) {
+    super(columnRepresentation, type, fhirType, definition);
   }
 
   /**
@@ -76,8 +73,7 @@ public class TimeCollection extends Collection
         columnRepresentation,
         Optional.of(FhirPathType.TIME),
         Optional.of(FHIRDefinedType.TIME),
-        definition,
-        Optional.empty());
+        definition);
   }
 
   /**

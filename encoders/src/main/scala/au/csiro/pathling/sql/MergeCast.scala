@@ -53,7 +53,7 @@ import scala.util.{Failure, Success, Try}
  *
  * The operands must be all structures or all arrays of structures, apart from those of the bottom
  * type, which combine with either. Operands of any other type must already agree, and are left as
- * they are.
+ * they are. So are operands that all have one type already, whatever it is.
  *
  * @param operands  the full, ordered list of operands being reconciled
  * @param index     the position in the list of the operand this expression projects
@@ -99,7 +99,10 @@ object MergeCast {
    */
   def mergedType(types: Seq[DataType], canonical: CanonicalStructure): DataType = {
     val present = types.filterNot(isAbsent)
-    if (present.isEmpty) {
+    if (present.isEmpty || types.forall(_ == types.head)) {
+      // Operands that already share one type have nothing to reconcile, and are left as they are
+      // rather than reordered. A structure the canonical structure does not fully describe, such
+      // as one of the previous layout, is therefore only changed where it meets another shape.
       types.head
     } else {
       val repeating = types.exists(_.isInstanceOf[ArrayType])

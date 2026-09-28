@@ -61,15 +61,13 @@ public class StringCollection extends Collection
    * @param type the FHIRPath type of this collection
    * @param fhirType the FHIR defined type of this collection
    * @param definition the node definition for this collection
-   * @param extensionMapColumn the extension map column for this collection
    */
   protected StringCollection(
       @Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
-      @Nonnull final Optional<? extends NodeDefinition> definition,
-      @Nonnull final Optional<Column> extensionMapColumn) {
-    super(columnRepresentation, type, fhirType, definition, extensionMapColumn);
+      @Nonnull final Optional<? extends NodeDefinition> definition) {
+    super(columnRepresentation, type, fhirType, definition);
   }
 
   /**
@@ -87,7 +85,6 @@ public class StringCollection extends Collection
         columnRepresentation,
         Optional.of(FhirPathType.STRING),
         Optional.of(fhirDefinedType),
-        Optional.empty(),
         Optional.empty());
   }
 

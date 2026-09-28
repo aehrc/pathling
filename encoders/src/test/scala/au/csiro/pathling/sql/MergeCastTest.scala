@@ -165,6 +165,21 @@ class MergeCastTest extends SparkSessionSupport {
   }
 
   @Test
+  def operandsThatAlreadyAgreeAreLeftAsTheyAre(): Unit = {
+    // Two structures of one type, in an order that is not canonical. There is nothing to
+    // reconcile, so neither is reordered, and the expression reduces to the operands themselves.
+    val agreeing = parquet("agreeing",
+      """select named_struct('given', array('John'), 'family', 'Smith') as x,
+        |  named_struct('given', array('Jane'), 'family', 'Jones') as y""".stripMargin)
+    val Seq(x, y) = all(F.col("x"), F.col("y"))
+    val result = agreeing.select(x.alias("x"), y.alias("y"))
+    assertEquals(typeOf(agreeing, "x"), typeOf(result, "x"))
+    assertEquals(typeOf(agreeing, "y"), typeOf(result, "y"))
+    assertEquals(Seq("given", "family"), elementOf(typeOf(result, "x")).fieldNames.toSeq)
+    assertEquals(Seq("[[ArraySeq(John),Smith],[ArraySeq(Jane),Jones]]"), rows(result))
+  }
+
+  @Test
   def operandsThatCannotBeMergedFailAnalysis(): Unit = {
     // A singular structure and an array of structures have no merged type.
     val mixed = assertThrows(classOf[AnalysisException],

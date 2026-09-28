@@ -47,7 +47,6 @@ public abstract class MixedCollection extends Collection {
         new UnsupportedRepresentation(unsupportedDescription),
         Optional.empty(),
         Optional.empty(),
-        Optional.empty(),
         Optional.empty());
     this.unsupportedDescription = unsupportedDescription;
   }

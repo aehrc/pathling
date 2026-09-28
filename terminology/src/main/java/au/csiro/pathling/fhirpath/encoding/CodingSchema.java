@@ -17,7 +17,6 @@
 
 package au.csiro.pathling.fhirpath.encoding;
 
-import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static org.apache.spark.sql.functions.lit;
 
@@ -84,21 +83,6 @@ public interface CodingSchema {
   /** A {@link StructType} for a Coding. */
   StructType DATA_TYPE = codingStructType();
 
-  /** Index of the system field in the Coding struct. */
-  int SYSTEM_INDEX = DATA_TYPE.fieldIndex(SYSTEM_FIELD);
-
-  /** Index of the version field in the Coding struct. */
-  int VERSION_INDEX = DATA_TYPE.fieldIndex(VERSION_FIELD);
-
-  /** Index of the code field in the Coding struct. */
-  int CODE_INDEX = DATA_TYPE.fieldIndex(CODE_FIELD);
-
-  /** Index of the display field in the Coding struct. */
-  int DISPLAY_INDEX = DATA_TYPE.fieldIndex(DISPLAY_FIELD);
-
-  /** Index of the userSelected field in the Coding struct. */
-  int USER_SELECTED_INDEX = DATA_TYPE.fieldIndex(USER_SELECTED_FIELD);
-
   /**
    * Encodes a Coding to a Row (Spark SQL compatible type).
    *
@@ -123,25 +107,18 @@ public interface CodingSchema {
   }
 
   /**
-   * Decodes a Coding from a Row.
+   * Decodes a Coding from a Row, reading its fields by name against the row's schema, so that a
+   * structure narrower than {@link #DATA_TYPE}, or with its fields in another order, decodes with
+   * its absent fields null (FR-031). A row without a schema is read by the positions of {@link
+   * #DATA_TYPE}. See {@link CodingDecoder}.
    *
    * @param row the row to decode
    * @return the resulting Coding
+   * @throws IllegalArgumentException if the row's structure carries no field a Coding may have
    */
   @Nullable
   static Coding decode(@Nullable final Row row) {
-    if (isNull(row)) {
-      return null;
-    }
-    final Coding coding = new Coding();
-    coding.setSystem(row.getString(SYSTEM_INDEX));
-    coding.setVersion(row.getString(VERSION_INDEX));
-    coding.setCode(row.getString(CODE_INDEX));
-    coding.setDisplay(row.getString(DISPLAY_INDEX));
-    if (!row.isNullAt(USER_SELECTED_INDEX)) {
-      coding.setUserSelected(row.getBoolean(USER_SELECTED_INDEX));
-    }
-    return coding;
+    return CodingDecoder.decodeRow(row);
   }
 
   /**

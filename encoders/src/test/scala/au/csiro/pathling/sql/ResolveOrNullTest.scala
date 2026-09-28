@@ -22,7 +22,7 @@
  */
 package au.csiro.pathling.sql
 
-import au.csiro.pathling.encoders.ColumnFunctions.{columnOrNull, resolveOrNull, traverseExtension, traverseRootExtension}
+import au.csiro.pathling.encoders.ColumnFunctions.{columnOrNull, decimalColumnOrNull, quantityColumnOrNull, resolveOrNull, traverseExtension, traverseRootExtension}
 import org.apache.spark.SparkException
 import org.apache.spark.sql.catalyst.analysis.UnresolvedAttribute
 import org.apache.spark.sql.catalyst.expressions.{AttributeReference, Expression, GetArrayStructFields, GetStructField, Literal}
@@ -35,7 +35,8 @@ import org.junit.jupiter.api.Test
 
 /**
  * Tests for the tolerant traversal expression, the tolerant table-column reference and extension
- * traversal (T038a to T038d).
+ * traversal (T038a to T038d), and for the traversal expression's normalisation of the previous
+ * layout to the new one (T089a).
  *
  * Every column under test is built with no reference to any dataset, as the engine builds them,
  * and then applied to data read back from Parquet. Where the same column is applied to data that
@@ -546,15 +547,476 @@ class ResolveOrNullTest extends SparkSessionSupport with AdaptiveSparkPlanHelper
   }
 
   @Test
-  def previousLayoutWithoutExtensionMapFailsAsToday(): Unit = {
-    // Data encoded with extensions disabled has `_fid` but no `_extension`, and extension
-    // traversal fails there as it does today, rather than answering empty.
+  def previousLayoutWithoutExtensionMapIsEmpty(): Unit = {
+    // Data encoded with extensions disabled has `_fid` but no `_extension`. Since decision 79 the
+    // map is reached through the tolerant table-column reference, so extension traversal there
+    // finds no extensions, at the root and under a parent, rather than failing.
     val data = parquet("noExtensionMap",
       "select 'r1' as id, 1 as _fid, array(named_struct('family', 'F1', '_fid', 2)) as name")
     for (traversal <- Seq(traverseRootExtension(), traverseExtension(F.col("name")))) {
-      val error = assertThrows(classOf[AnalysisException], () => data.select(traversal).collect())
-      assertTrue(error.getCondition.startsWith("UNRESOLVED_COLUMN"), error.getCondition)
+      val result = data.select(traversal.alias("e"))
+      assertEquals(Seq("[null]"), rows(result))
+      assertEquals(ExtensionTraversal.ABSENT_TYPE, result.schema("e").dataType)
     }
+  }
+
+  // -----------------------------------------------------------------------------------------------
+  // Decision 79: `_extension` is reached through the tolerant table-column reference, so a `_fid`
+  // over a table without the map finds no extensions.
+  // -----------------------------------------------------------------------------------------------
+
+  // A structure the engine builds, carrying a `_fid` that is always null.
+  private def engineBuilt: Column =
+    F.struct(F.lit("x").alias("code"), F.lit(null).cast(IntegerType).alias("_fid"))
+
+  @Test
+  def nullFidOverTableWithoutExtensionMapIsEmpty(): Unit = {
+    for (data <- Seq(newLayout, prunedLayout)) {
+      val single = data.select(traverseExtension(engineBuilt).alias("e"))
+      assertEquals(Seq("[null]", "[null]"), rows(single))
+      assertEquals(ExtensionTraversal.ABSENT_TYPE, single.schema("e").dataType)
+      val repeating = data.select(traverseExtension(F.array(engineBuilt, engineBuilt)).alias("e"))
+      assertEquals(Seq("[null]", "[null]"), rows(repeating))
+      assertEquals(ExtensionTraversal.ABSENT_TYPE, repeating.schema("e").dataType)
+      // Inside a lambda, as the engine applies it to a repeating element.
+      val inLambda = data.select(
+        F.transform(F.array(engineBuilt), e => traverseExtension(e)).alias("e"))
+      assertEquals(Seq("[ArraySeq(null)]", "[ArraySeq(null)]"), rows(inLambda))
+    }
+  }
+
+  @Test
+  def nullFidOverTableWithExtensionMapIsUnchanged(): Unit = {
+    // Over the previous layout, the map is present and a null `_fid` has no entry in it, as
+    // before: the result is a null of the map's value type, not the absent fallback.
+    val result = previousLayout.select(traverseExtension(engineBuilt).alias("e"))
+    assertEquals(Seq("[null]", "[null]"), rows(result))
+    assertEquals(
+      previousLayout.schema("_extension").dataType.asInstanceOf[MapType].valueType,
+      result.schema("e").dataType)
+  }
+
+  // -----------------------------------------------------------------------------------------------
+  // T089a, T094b: the extension branch. An element's `_fid` is looked up in the resource's root
+  // map, and every leaf reached through the result has the new layout's type.
+  // -----------------------------------------------------------------------------------------------
+
+  private def values(extensions: Column): Column =
+    resolveOrNull(extensions, "valueString", ArrayType(StringType))
+
+  // The leaves reached through extension traversal at the root, under a repeating parent both
+  // directly and inside a lambda, and through a nested extension inside a lambda.
+  private def extensionLeaves: Seq[Column] = {
+    val root = traverseRootExtension()
+    val underName = traverseExtension(F.col("name"))
+    Seq(
+      urls(root),
+      values(root),
+      F.transform(underName, e => urls(e)),
+      F.transform(underName, e => values(e)),
+      F.transform(F.col("name"), n => urls(traverseExtension(n))),
+      F.transform(F.col("name"), n => values(traverseExtension(n))),
+      F.transform(root, e => urls(traverseExtension(e))),
+      F.transform(root, e => values(traverseExtension(e))))
+  }
+
+  @Test
+  def extensionLeavesHaveTheSameTypeOnEveryLayout(): Unit = {
+    // The extension structure itself keeps `_fid` on the previous layout (decision 78), so the
+    // same-dataType rule is asserted on the leaves reached through it. They agree across the two
+    // layouts and with the absent fallback, which is the pruned table with no extensions at all.
+    // The values on both layouts are pinned by the tests above.
+    val expected = Seq(ArrayType(StringType), ArrayType(StringType),
+      ArrayType(ArrayType(StringType)), ArrayType(ArrayType(StringType)),
+      ArrayType(ArrayType(StringType)), ArrayType(ArrayType(StringType)),
+      ArrayType(ArrayType(StringType)), ArrayType(ArrayType(StringType)))
+    for (data <- bothLayouts :+ prunedLayout) {
+      val types = data.select(extensionLeaves: _*).schema.fields.map(_.dataType).toSeq
+      assertEquals(expected, types.map(stripNullability), data.schema.treeString)
+    }
+    val previous = previousLayout.select(extensionLeaves: _*).schema.fields.map(_.dataType).toSeq
+    val current = newLayout.select(extensionLeaves: _*).schema.fields.map(_.dataType).toSeq
+    assertEquals(current.map(stripNullability), previous.map(stripNullability))
+  }
+
+  // -----------------------------------------------------------------------------------------------
+  // T089a, T094b: a previous-layout decimal is normalised to the new layout's text.
+  // -----------------------------------------------------------------------------------------------
+
+  // The previous layout: a decimal is a DECIMAL(32,6) value beside an integer `_scale` companion
+  // holding the scale of the source, at the root, under a singular parent, under a repeating one,
+  // and as a repeating decimal under a repeating parent. The source values are 1.50, 120, 0.1234567
+  // (scale 7, rounded on encoding), 0.25, 1.00E+3 (scale -1) and 3. The second row holds a value
+  // with no scale, as the result of arithmetic has, and a null value.
+  private def previousDecimals: DataFrame = parquet("previousDecimals",
+    """select 'r1' as id, cast(1.50 as decimal(32,6)) as factor, 2 as factor_scale,
+      |  named_struct('latitude', cast(1.50 as decimal(32,6)), 'latitude_scale', 2) as position,
+      |  array(named_struct('value', cast(120 as decimal(32,6)), 'value_scale', 0),
+      |    named_struct('value', cast(0.1234567 as decimal(32,6)), 'value_scale', 7)) as component,
+      |  array(named_struct(
+      |    'sensitivity', array(cast(0.25 as decimal(32,6)), cast(1000 as decimal(32,6))),
+      |    'sensitivity_scale', array(2, -1))) as roc
+      |union all
+      |select 'r2', cast(3 as decimal(32,6)), cast(null as int),
+      |  named_struct('latitude', cast(null as decimal(32,6)), 'latitude_scale', cast(null as int)),
+      |  array(named_struct('value', cast(2.5 as decimal(32,6)), 'value_scale', cast(null as int))),
+      |  array(named_struct('sensitivity', array(cast(3 as decimal(32,6))),
+      |    'sensitivity_scale', cast(null as array<int>)))""".stripMargin)
+
+  // The same values in the new layout, stored as the text that a double round trip gives.
+  private def newDecimals: DataFrame = parquet("newDecimals",
+    """select 'r1' as id, '1.5' as factor, named_struct('latitude', '1.5') as position,
+      |  array(named_struct('value', '120.0'), named_struct('value', '0.1234567')) as component,
+      |  array(named_struct('sensitivity', array('0.25', '1000.0'))) as roc
+      |union all
+      |select 'r2', '3.0', named_struct('latitude', cast(null as string)),
+      |  array(named_struct('value', '2.5')), array(named_struct('sensitivity', array('3.0')))"""
+      .stripMargin)
+
+  // A pruned new-layout table, which carries none of the decimals.
+  private def prunedDecimals: DataFrame = parquet("prunedDecimals",
+    """select 'r1' as id, named_struct('longitude', '2.0') as position,
+      |  array(named_struct('code', 'c')) as component, array(named_struct('code', 'c')) as roc"""
+      .stripMargin)
+
+  private def decimalLayouts: Seq[DataFrame] = Seq(previousDecimals, newDecimals, prunedDecimals)
+
+  private def factor: Column = decimalColumnOrNull("factor", StringType)
+
+  private def latitude: Column = resolveOrNull(F.col("position"), "latitude", StringType)
+
+  private def componentValue: Column =
+    resolveOrNull(F.col("component"), "value", ArrayType(StringType))
+
+  private def sensitivity: Column =
+    resolveOrNull(F.col("roc"), "sensitivity", ArrayType(ArrayType(StringType)))
+
+  private def componentValueInLambda: Column =
+    F.transform(F.col("component"), c => resolveOrNull(c, "value", StringType))
+
+  private def decimalTraversals: Seq[Column] =
+    Seq(factor, latitude, componentValue, sensitivity, componentValueInLambda)
+
+  @Test
+  def decimalTraversalYieldsTheSameTypeOnEveryLayout(): Unit = {
+    // The same-dataType rule: the previous layout, the new layout and the absent fallback agree, at
+    // every cardinality and inside a lambda, and the type is the new layout's text.
+    val expected = Seq(StringType, StringType, ArrayType(StringType), ArrayType(ArrayType(StringType)),
+      ArrayType(StringType))
+    for (data <- decimalLayouts) {
+      val types = data.select(decimalTraversals: _*).schema.fields.map(_.dataType).toSeq
+      assertEquals(expected, types.map(stripNullability))
+    }
+    val previous = previousDecimals.select(decimalTraversals: _*).schema
+    val current = newDecimals.select(decimalTraversals: _*).schema
+    assertEquals(current.fields.map(_.dataType).toSeq, previous.fields.map(_.dataType).toSeq)
+  }
+
+  @Test
+  def previousLayoutDecimalCarriesTheSourceScale(): Unit = {
+    // The text is the value at the source scale, which is capped at the value column's scale of 6,
+    // and a negative scale gives an integer. A value with no scale is rendered at the scale of the
+    // value column, and a null value stays null.
+    assertEquals(
+      Seq("[r1,1.50,1.50,ArraySeq(120, 0.123457),ArraySeq(ArraySeq(0.25, 1000))]",
+        "[r2,3.000000,null,ArraySeq(2.500000),ArraySeq(ArraySeq(3.000000))]"),
+      rows(previousDecimals.select(F.col("id"), factor, latitude, componentValue, sensitivity)))
+    assertEquals(Seq("[r1,ArraySeq(120, 0.123457)]", "[r2,ArraySeq(2.500000)]"),
+      rows(previousDecimals.select(F.col("id"), componentValueInLambda)))
+  }
+
+  @Test
+  def newLayoutDecimalIsTheStoredText(): Unit = {
+    assertEquals(
+      Seq("[r1,1.5,1.5,ArraySeq(120.0, 0.1234567),ArraySeq(ArraySeq(0.25, 1000.0))]",
+        "[r2,3.0,null,ArraySeq(2.5),ArraySeq(ArraySeq(3.0))]"),
+      rows(newDecimals.select(F.col("id"), factor, latitude, componentValue, sensitivity)))
+  }
+
+  @Test
+  def absentDecimalIsNullText(): Unit = {
+    // A repeating decimal absent from every element of its parent falls back to a null array, as
+    // any absent field does.
+    assertEquals(Seq("[r1,null,null,null,null]"),
+      rows(prunedDecimals.select(F.col("id"), factor, latitude, componentValue, sensitivity)))
+  }
+
+  @Test
+  def decimalTextParsesBackToTheStoredValue(): Unit = {
+    // The normalisation loses nothing the value column holds: cast back to the query-time type, the
+    // text is the value that was stored.
+    val decimalType = DecimalType(32, 6)
+    val roundTrip = previousDecimals.select(
+      (latitude.cast(decimalType) === F.col("position.latitude")).alias("singular"),
+      F.forall(F.zip_with(componentValue, F.col("component.value"),
+        (text, value) => text.cast(decimalType) === value), same => same).alias("repeating"))
+    assertEquals(Seq("[null,true]", "[true,true]"), rows(roundTrip))
+  }
+
+  @Test
+  def decimalNormalisationReadsOnlyTheValueAndItsScale(): Unit = {
+    assertEquals("struct<position:struct<latitude:decimal(32,6),latitude_scale:int>>",
+      readSchema(previousDecimals.select(latitude)))
+    assertEquals("struct<component:array<struct<value:decimal(32,6),value_scale:int>>>",
+      readSchema(previousDecimals.select(componentValue)))
+    assertEquals("struct<factor:decimal(32,6),factor_scale:int>",
+      readSchema(previousDecimals.select(factor)))
+    assertEquals("struct<position:struct<latitude:string>>",
+      readSchema(newDecimals.select(latitude)))
+  }
+
+  @Test
+  def decimalWithoutScaleCompanionIsRenderedAtItsOwnScale(): Unit = {
+    // A structure built by the engine, such as a quantity literal, may carry a decimal with no
+    // companion. It is normalised all the same, so that the type does not depend on its origin.
+    val data = parquet("noScale",
+      "select named_struct('value', cast(1.5 as decimal(32,6))) as q")
+    val value = data.select(resolveOrNull(F.col("q"), "value", StringType).alias("v"))
+    assertEquals(StringType, value.schema("v").dataType)
+    assertEquals(Seq("[1.500000]"), rows(value))
+  }
+
+  private def stripNullability(dataType: DataType): DataType = dataType match {
+    case ArrayType(element, _) => ArrayType(stripNullability(element))
+    case other => other
+  }
+
+  // -----------------------------------------------------------------------------------------------
+  // T089a, T094b: a previous-layout quantity is normalised to the new layout's shape.
+  // -----------------------------------------------------------------------------------------------
+
+  private val canonicalType = "struct<value:decimal(38,0),scale:int>"
+
+  private val previousQuantityType =
+    "struct<id:string,value:decimal(32,6),value_scale:int,comparator:string,unit:string," +
+      s"system:string,code:string,_value_canonicalized:$canonicalType," +
+      "_code_canonicalized:string,_fid:int>"
+
+  private def previousQuantity(value: String, scale: Int, code: String, canonical: String,
+                               canonicalScale: Int, canonicalCode: String, fid: Int): String =
+    s"""named_struct('id', cast(null as string), 'value', cast($value as decimal(32,6)),
+       |  'value_scale', $scale, 'comparator', cast(null as string), 'unit', '$code',
+       |  'system', 'http://unitsofmeasure.org', 'code', '$code',
+       |  '_value_canonicalized', named_struct('value', cast($canonical as decimal(38,0)),
+       |    'scale', $canonicalScale),
+       |  '_code_canonicalized', '$canonicalCode', '_fid', $fid)""".stripMargin
+
+  // The previous layout: a quantity carries the scale of its value and its canonical form, at the
+  // root and under a repeating parent. The source values are 1.50 g and 500 mg, and the second row
+  // holds a null quantity.
+  private def previousQuantities: DataFrame = parquet("previousQuantities",
+    s"""select 'r1' as id, ${previousQuantity("1.50", 2, "g", "15", 1, "g", 1)} as valueQuantity,
+       |  array(named_struct('valueQuantity',
+       |    ${previousQuantity("500", 0, "mg", "5", 1, "g", 2)})) as component
+       |union all
+       |select 'r2', cast(null as $previousQuantityType),
+       |  array(named_struct('valueQuantity', cast(null as $previousQuantityType)))""".stripMargin)
+
+  // The same values in a new-layout table, pruned to the elements they populate.
+  private def newQuantities: DataFrame = parquet("newQuantities",
+    """select 'r1' as id,
+      |  named_struct('value', '1.5', 'unit', 'g', 'system', 'http://unitsofmeasure.org',
+      |    'code', 'g') as valueQuantity,
+      |  array(named_struct('valueQuantity', named_struct('value', '500', 'unit', 'mg',
+      |    'system', 'http://unitsofmeasure.org', 'code', 'mg'))) as component
+      |union all
+      |select 'r2', cast(null as struct<value:string,unit:string,system:string,code:string>),
+      |  array(named_struct('valueQuantity',
+      |    cast(null as struct<value:string,unit:string,system:string,code:string>)))"""
+      .stripMargin)
+
+  // A pruned new-layout table, which carries no quantities.
+  private def prunedQuantities: DataFrame = parquet("prunedQuantities",
+    "select 'r1' as id, array(named_struct('code', 'c')) as component")
+
+  private def quantityLayouts: Seq[DataFrame] =
+    Seq(previousQuantities, newQuantities, prunedQuantities)
+
+  private def rootQuantity: Column = quantityColumnOrNull("valueQuantity", NullType)
+
+  private def componentQuantity: Column =
+    resolveOrNull(F.col("component"), "valueQuantity", ArrayType(NullType))
+
+  private def componentQuantityInLambda: Column =
+    F.transform(F.col("component"), c => resolveOrNull(c, "valueQuantity", NullType))
+
+  private def quantityLeaves(quantity: Column, repeating: Boolean): Seq[Column] = {
+    val leafType = if (repeating) ArrayType(StringType) else StringType
+    Seq("value", "unit", "system", "code").map(name => resolveOrNull(quantity, name, leafType))
+  }
+
+  private def quantityLeafTraversals: Seq[Column] =
+    quantityLeaves(rootQuantity, repeating = false) ++
+      quantityLeaves(componentQuantity, repeating = true) ++
+      Seq(F.transform(F.col("component"),
+        c => resolveOrNull(resolveOrNull(c, "valueQuantity", NullType), "value", StringType)))
+
+  @Test
+  def quantityLeavesHaveTheSameTypeOnEveryLayout(): Unit = {
+    // The same-dataType rule, on every leaf reached through the quantity: the previous layout, the
+    // new layout and the absent fallback agree, at both cardinalities and inside a lambda.
+    val expected = Seq.fill(4)(StringType) ++ Seq.fill(5)(ArrayType(StringType))
+    for (data <- quantityLayouts) {
+      val types = data.select(quantityLeafTraversals: _*).schema.fields.map(_.dataType).toSeq
+      assertEquals(expected, types.map(stripNullability))
+    }
+  }
+
+  @Test
+  def previousLayoutQuantityTakesTheNewLayoutsShape(): Unit = {
+    // The canonical form and the scale companion are dropped, and the value is its text. The fields
+    // the new layout also has take the new layout's types. The quantity keeps `_fid`, which the
+    // next step needs to look up its extensions, so the structure as a whole cannot equal the new
+    // layout's, just as the extension structure cannot (decisions 74 and 75).
+    val normalised = StructType(Seq(
+      StructField("id", StringType), StructField("value", StringType),
+      StructField("comparator", StringType), StructField("unit", StringType),
+      StructField("system", StringType), StructField("code", StringType),
+      StructField("_fid", IntegerType)))
+    val previous = previousQuantities.select(rootQuantity.alias("root"),
+      componentQuantity.alias("component"), componentQuantityInLambda.alias("lambda")).schema
+    assertEquals(normalised, stripStructNullability(previous("root").dataType))
+    assertEquals(ArrayType(normalised), stripStructNullability(previous("component").dataType))
+    assertEquals(ArrayType(normalised), stripStructNullability(previous("lambda").dataType))
+
+    val current = stripStructNullability(
+      newQuantities.select(rootQuantity.alias("root")).schema("root").dataType)
+      .asInstanceOf[StructType]
+    for (field <- current.fields) {
+      assertEquals(field.dataType, normalised(field.name).dataType, field.name)
+    }
+  }
+
+  @Test
+  def previousLayoutQuantityCarriesTheSourceScale(): Unit = {
+    // A null quantity stays null rather than becoming a structure of nulls.
+    assertEquals(
+      Seq("[r1,[null,1.50,null,g,http://unitsofmeasure.org,g,1]," +
+        "ArraySeq([null,500,null,mg,http://unitsofmeasure.org,mg,2])]",
+        "[r2,null,ArraySeq(null)]"),
+      rows(previousQuantities.select(F.col("id"), rootQuantity, componentQuantity)))
+  }
+
+  @Test
+  def newLayoutQuantityIsTheStoredStructure(): Unit = {
+    assertEquals(
+      Seq("[r1,[1.5,g,http://unitsofmeasure.org,g]," +
+        "ArraySeq([500,mg,http://unitsofmeasure.org,mg])]", "[r2,null,ArraySeq(null)]"),
+      rows(newQuantities.select(F.col("id"), rootQuantity, componentQuantity)))
+  }
+
+  @Test
+  def quantityNormalisationReadsNoCanonicalForm(): Unit = {
+    // A singular quantity is pruned to the fields the normalised structure keeps. Under a
+    // repeating parent the quantity is normalised in a lambda, which nested schema pruning does
+    // not see into, so the whole quantity is read there, as it was before the normalisation.
+    val quantityFields = "id:string,value:decimal(32,6),value_scale:int,comparator:string," +
+      "unit:string,system:string,code:string,_fid:int"
+    assertEquals(s"struct<valueQuantity:struct<$quantityFields>>",
+      readSchema(previousQuantities.select(rootQuantity)))
+    assertEquals(s"struct<component:array<struct<valueQuantity:$previousQuantityType>>>",
+      readSchema(previousQuantities.select(componentQuantity)))
+  }
+
+  @Test
+  def structureWithoutCanonicalFormIsNotAQuantity(): Unit = {
+    // Only the previous layout's discriminator selects the branch: a structure with a decimal value
+    // but no canonical form, such as a Range bound, is traversed as it is stored.
+    val data = parquet("notQuantity",
+      "select named_struct('low', named_struct('value', cast(1.5 as decimal(32,6)))) as range")
+    val low = data.select(resolveOrNull(F.col("range"), "low", NullType).alias("low"))
+    assertEquals(StructType(Seq(StructField("value", DecimalType(32, 6)))),
+      stripStructNullability(low.schema("low").dataType))
+  }
+
+  private def stripStructNullability(dataType: DataType): DataType = dataType match {
+    case ArrayType(element, _) => ArrayType(stripStructNullability(element))
+    case StructType(fields) =>
+      StructType(fields.map(f => StructField(f.name, stripStructNullability(f.dataType))))
+    case other => other
+  }
+
+  // -----------------------------------------------------------------------------------------------
+  // T089a, T094b: a stored versioned key needs no branch. The previous layout stores a versioned
+  // companion beside every id-typed element, and no traversal reaches it, so every leaf already
+  // has the new layout's type and the companion is never read.
+  // -----------------------------------------------------------------------------------------------
+
+  // The previous layout: the resource's id beside `id_versioned`, and id-typed elements under a
+  // singular parent, as `Meta.versionId` is, and under a repeating one, as `ImagingStudy.series.uid`
+  // is, each beside its `_versioned` companion and inside a structure carrying `_fid`.
+  private def previousKeys: DataFrame = parquet("previousKeys",
+    """select 'p1' as id, 'Patient/p1/_history/2' as id_versioned,
+      |  named_struct('versionId', '2', 'versionId_versioned', '2', '_fid', 1) as meta,
+      |  array(named_struct('uid', '1.2.3', 'uid_versioned', '1.2.3', '_fid', 2),
+      |    named_struct('uid', '1.2.4', 'uid_versioned', '1.2.4', '_fid', 3)) as series
+      |union all
+      |select 'p2', 'p2',
+      |  cast(null as struct<versionId: string, versionId_versioned: string, _fid: int>),
+      |  array(named_struct('uid', '1.2.5', 'uid_versioned', '1.2.5', '_fid', 4))""".stripMargin)
+
+  // The same values in the new layout, which stores no versioned key.
+  private def newKeys: DataFrame = parquet("newKeys",
+    """select 'p1' as id, named_struct('versionId', '2') as meta,
+      |  array(named_struct('uid', '1.2.3'), named_struct('uid', '1.2.4')) as series
+      |union all
+      |select 'p2', cast(null as struct<versionId: string>), array(named_struct('uid', '1.2.5'))"""
+      .stripMargin)
+
+  // A pruned new-layout table, which carries neither the version nor the uid.
+  private def prunedKeys: DataFrame = parquet("prunedKeys",
+    """select 'p3' as id, named_struct('lastUpdated', 't') as meta,
+      |  array(named_struct('modality', 'CT')) as series""".stripMargin)
+
+  private def keyTraversals: Seq[Column] = {
+    val series = columnOrNull("series", ArrayType(NullType))
+    Seq(
+      columnOrNull("id", StringType),
+      resolveOrNull(columnOrNull("meta", NullType), "versionId", StringType),
+      resolveOrNull(series, "uid", ArrayType(StringType)),
+      F.transform(series, s => resolveOrNull(s, "uid", StringType)))
+  }
+
+  @Test
+  def keyLeavesHaveTheSameTypeOnEveryLayout(): Unit = {
+    // The same-dataType rule, on the leaves: the previous layout, the new layout and the absent
+    // fallback agree, at the root, under a singular and a repeating parent, and inside a lambda.
+    val expected = Seq(StringType, StringType, ArrayType(StringType), ArrayType(StringType))
+    for (data <- Seq(previousKeys, newKeys, prunedKeys)) {
+      val types = data.select(keyTraversals: _*).schema.fields.map(_.dataType).toSeq
+      assertEquals(expected, types.map(stripNullability), data.schema.treeString)
+    }
+  }
+
+  @Test
+  def storedVersionedKeyChangesNoValue(): Unit = {
+    // The previous layout gives the same values as the new one: the id is the plain id, whatever
+    // the versioned key beside it holds.
+    val expected = Seq("[p1,2,ArraySeq(1.2.3, 1.2.4),ArraySeq(1.2.3, 1.2.4)]",
+      "[p2,null,ArraySeq(1.2.5),ArraySeq(1.2.5)]")
+    assertEquals(expected, rows(previousKeys.select(keyTraversals: _*)))
+    assertEquals(expected, rows(newKeys.select(keyTraversals: _*)))
+    assertEquals(Seq("[p3,null,null,ArraySeq(null)]"), rows(prunedKeys.select(keyTraversals: _*)))
+  }
+
+  @Test
+  def storedVersionedKeyIsNeverRead(): Unit = {
+    // Outside a lambda, the scan reads only the id-typed elements themselves.
+    assertEquals("struct<id:string>", readSchema(previousKeys.select(keyTraversals.head)))
+    assertEquals("struct<meta:struct<versionId:string>>",
+      readSchema(previousKeys.select(keyTraversals(1))))
+    assertEquals("struct<series:array<struct<uid:string>>>",
+      readSchema(previousKeys.select(keyTraversals(2))))
+    // Inside a lambda nested schema pruning does not apply, so the whole structure is scanned, as
+    // it is for any element, but no expression reads a versioned key, as a table column or as a
+    // companion extracted from a structure.
+    val extracted = optimisedExpressions(previousKeys.select(keyTraversals: _*)).collect {
+      case attribute: AttributeReference => attribute.name
+      case field: GetStructField => field.extractFieldName
+      case fields: GetArrayStructFields => fields.field.name
+    }
+    assertTrue(extracted.contains("uid"), extracted.toString)
+    assertFalse(extracted.exists(_.endsWith("_versioned")), extracted.toString)
   }
 
   // -----------------------------------------------------------------------------------------------

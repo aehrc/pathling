@@ -2565,6 +2565,9 @@ hold. The fallbacks, in order:
 2. a custom analyzer rule, which needs `SparkSessionExtensions`;
 3. building a struct from the root columns, so that the root becomes a parent
    like any other.
+4. an explicit layout flag in the engine, considered for decision 79 and not
+   taken. It becomes worth it if layout-specific branches appear that cannot be
+   decided from the type, or once T045 detects the layout in M4.
 
 _Amends_ decision 74, withdrawing its tolerant reference and its second child.
 It records the principle that compiled expressions are schema-agnostic, and it
@@ -2592,4 +2595,157 @@ string. Every other declared type is cast. The disagreement between `getValue()`
 and `getSqlType()` stays for decimal.
 
 _Amends_ FR-025 and decision 73's expectation for T111.
+
+## 77. Quantity canonicalisation is computed from the stored value, and search follows the specification on UCUM
+
+Owner decisions (2026-09-27), prompted by port step 2 (T087, T096, T099).
+
+**Computed from the stored value, on both layouts.** No stored canonical form is
+read any more. On the previous layout the stored value keeps only six fractional
+digits, while the encoder computed its canonical form from the full source value.
+So a value with more digits can compare differently on previous-layout data:
+`0.0000002 kg = 0.2 'mg'` was true and is now false there, and true on the new
+layout. This is accepted as a known divergence until T100e. It keeps one code
+path and normalises the previous layout completely.
+
+**Search canonicalises only a UCUM quantity.** Quantity search compares
+canonical forms only where the stored quantity's system is UCUM, as the FHIR
+search specification says. Otherwise it matches exactly. The released encoder
+computed a canonical form whatever the system, so on data it wrote, `80 kg` with
+system `http://other.org` matched `gt70|http://unitsofmeasure.org|kg`. It no
+longer does. The `ElementMatcherTest` case that pins `false` for it is unchanged:
+its hand-built quantity has no canonical form, so it only ever tested exact
+matching.
+
+**FHIRPath comparison is fixed after the switch.** FHIRPath quantity comparison
+still canonicalises from the code whatever the system, so for a UCUM code under
+another system it disagrees with search. T096b, in M5, makes comparison follow
+the specification too.
+
+## 78. A previous-layout structure may keep `_fid`, and nothing else may differ
+
+Owner decision (2026-09-27), prompted by port step 2.
+
+The previous layout gives every complex element a `_fid`, which keys its
+extensions in the table-level `_extension` map. Extension traversal needs it on
+that layout (decision 75). Decision 74 made the extension structure an
+exception to the same-`dataType` rule, and step 2's normalised quantity needed
+the same exception. Coding, HumanName, Period and every other structure carry
+`_fid` too, so a named exception per type would recur at every port step.
+
+The rule is therefore stated generally:
+
+- a previous-layout structure may keep `_fid` in addition to the new layout's
+  fields;
+- every leaf reached through it has the new layout's type;
+- nothing else may differ.
+
+Code that treats a whole structure as a value, such as union across layouts,
+reconciles through `MergeCast`, as it must for pruned shapes anyway. T100e
+removes `_fid` with the previous layout.
+
+_Amends_ decisions 74 and 75, which named the extension structure as the one
+exception.
+
+## 79. On the new layout, extension traversal ignores `_fid` where there is no `_extension`
+
+Owner decision (2026-09-28), prompted by port step 4.
+
+The engine builds its System values, meaning literals and terminology results,
+in the FHIR-shaped structures the previous layout used, and these carry a
+`_fid` that is always null. So does the engine's quantity structure after a
+union rebuilds stored quantities into it. Extension traversal chooses its
+branch from the type, and it read a `_fid` field as the previous layout. So on
+a new-layout table it referenced the `_extension` column, which is not there,
+and the query failed.
+
+The engine's structures are not changed now. Changing them risks regressions
+where literals meet FHIR values, so it waits until after the switch (T124k).
+Instead, `_extension` is reached through the tolerant table-column reference,
+at every extension lookup. Where the column is absent, a lookup by `_fid` finds
+no extensions. On the previous layout nothing changes.
+
+Consequences:
+
+- `.extension` on a System value is empty on both layouts, as it should be,
+  because System types have no extensions. `WithoutExtensionsDefinition`, the
+  workaround step 4 added for `property()`, is removed.
+- **Known limit until T113b.** A union, `combine` or `iif` of two stored
+  quantities on the new layout returns no extensions, although the quantities
+  have them. The rebuild into the engine's structure has already dropped
+  `extension`. This was an error; it is now an empty answer. A test pins it as a
+  known limit, and T113b changes that test when combining keeps FHIR structures.
+- Previous-layout data encoded with extensions disabled has no `_extension`
+  column. `.extension` on it is now empty rather than an error. This relaxes
+  decision 75.
+- The known limits of the tolerant reference (a join condition, a self-join, a
+  column dropped by a projection beneath) now reach `_extension` too.
+
+The rule for the combining functions, which T113b implements, follows the FHIR
+binding. A combination of two FHIR operands keeps FHIR elements. Where a System
+value takes part, the FHIR operand is implicitly converted to the System type,
+which carries no `id` or `extension`. Terminology functions return System
+values.
+
+An explicit layout flag was considered and not taken: it reverses decision 75's
+schema-agnostic principle, needs plumbing to every place that compiles an
+expression, and gives the same answers as this tolerance for every present case.
+
+_Amends_ decision 75.
+
+### Addendum to 79 — a stored Coding combined with a System Coding keeps its extensions
+
+Owner-confirmed (2026-09-28), prompted by T113b. This is a known deviation from
+the rule above.
+
+A stored Coding combined with a Coding the engine built, such as a literal or a
+terminology result, is reconciled with it by name. It is not converted to the
+System type, so it keeps its `extension`. The engine has no marker that tells a
+stored Coding from one it built: both are plain structures of a Coding type.
+Quantities do have one, because a stored quantity is decoded at traversal and
+keeps the stored value beside the decoded one, so for quantities the rule holds.
+
+Both layouts agree today. The previous layout reaches the stored Coding's
+extensions through its `_fid`, and the new layout reads them inline.
+`ExtensionTraversalTest.storedCodingCombinedWithALiteralKeepsItsExtensions`
+pins the answer on both. Revisit it with T124k, when the engine's structures lose
+`_fid`, since the previous layout's answer rests on it.
+
+### Addendum to 79 — reconciliation applies canonical order only where shapes differ
+
+Owner-confirmed (2026-09-28), prompted by T113a. `MergeCast` leaves operands
+that already share one type as they are, rather than projecting them into a
+canonically ordered copy of that type. There is nothing to reconcile, and a
+structure the canonical order does not fully describe, such as one of the
+previous layout with its `_fid` and scale companions, would otherwise be
+reordered for no reason. FR-057 is amended to match. It was added as a
+precaution, not because a reorder was measured.
+
+## 80. The same-type rule covers what traversal reaches, and whole structures leave through the layout
+
+Owner decision (2026-09-28), prompted by port step 5.
+
+Previous-layout normalisation runs at the traversal step to a field. A structure
+returned whole is not normalised: on the previous layout `Location.position`
+keeps `DECIMAL(32,6)` values and their `*_scale` companions, and `Meta` keeps
+`versionId_versioned`. Decision 78's "nothing else may differ" therefore covers
+the fields a traversal reaches, not whole structures. Within one table there is
+one layout, so whole structures of both layouts never meet in a query while
+T049a is open.
+
+Two consumers see whole structures, and neither needs anything before the
+switch:
+
+- **`evaluateFhirPath`** renders a complex result as JSON. It must return valid
+  FHIR JSON, so from the switch it goes through the `io` module's layout-to-JSON
+  transform, which adapts the structure recursively (T100j). Before the switch
+  it reads the previous layout and renders as the released version does.
+- **`fhirPathToColumn`** returns the stored structure as a Spark column. Its
+  schema changes at the switch from the previous layout, a Pathling-specific
+  schema, to the new layout, which is a published specification. That change
+  is accepted as user-visible and is documented with the layout contract.
+  Nothing changes before the switch, unless an existing test depends on the
+  previous schema through this API.
+
+_Amends_ decision 78 by stating its scope.
 

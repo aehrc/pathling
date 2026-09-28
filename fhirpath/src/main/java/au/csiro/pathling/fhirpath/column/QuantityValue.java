@@ -48,6 +48,11 @@ import org.apache.spark.sql.Column;
  * <p>This class centralizes all Quantity-related SQL column operations and provides a unified
  * abstraction through the {@link ValueWithUnit} record.
  *
+ * <p>The wrapped column holds the structure the engine computes with, {@link
+ * QuantityEncoding#dataType()}, so its fields are read directly. A stored quantity is decoded into
+ * that structure when it is traversed to, which computes its canonical form from its value and code
+ * (T096), so the canonical fields read here are computed rather than stored on either layout.
+ *
  * @author Piotr Szul
  */
 public class QuantityValue {

@@ -22,7 +22,9 @@
  */
 package au.csiro.pathling.encoders;
 
+import au.csiro.pathling.sql.DecimalNormalisation;
 import au.csiro.pathling.sql.MergeCast;
+import au.csiro.pathling.sql.QuantityNormalisation;
 import au.csiro.pathling.sql.ResolveOrNull;
 import au.csiro.pathling.sql.UnresolvedTraverseExtension;
 import au.csiro.pathling.sql.UnresolvedTraverseRootExtension;
@@ -125,6 +127,38 @@ public class ColumnFunctions {
   public static Column columnOrNull(
       @Nonnull final String columnName, @Nonnull final DataType fallback) {
     return ExpressionUtils.column(new UnresolvedColumnOrNull(columnName, fallback));
+  }
+
+  /**
+   * Creates a reference to a table-level decimal column that resolves to its text on either layout,
+   * and to a null of the fallback type where the input does not have the column. The previous
+   * layout's {@code DECIMAL(32,6)} value is normalised to its text at the scale of the source,
+   * which is read from the column's {@code _scale} companion (T094b).
+   *
+   * @param columnName the name of the table-level column
+   * @param fallback the type of the null returned when the column is absent
+   * @return a Column that yields the text of the decimal column
+   */
+  @Nonnull
+  public static Column decimalColumnOrNull(
+      @Nonnull final String columnName, @Nonnull final DataType fallback) {
+    return ExpressionUtils.column(DecimalNormalisation.tolerantColumn(columnName, fallback));
+  }
+
+  /**
+   * Creates a reference to a table-level quantity column that resolves to the new layout's shape on
+   * either layout, and to a null of the fallback type where the input does not have the column. The
+   * previous layout's quantity is normalised to a structure without its canonical form, whose value
+   * is its text at the scale of the source (T094b).
+   *
+   * @param columnName the name of the table-level column
+   * @param fallback the type of the null returned when the column is absent
+   * @return a Column that yields the quantity in the new layout's shape
+   */
+  @Nonnull
+  public static Column quantityColumnOrNull(
+      @Nonnull final String columnName, @Nonnull final DataType fallback) {
+    return ExpressionUtils.column(QuantityNormalisation.tolerantColumn(columnName, fallback));
   }
 
   /**

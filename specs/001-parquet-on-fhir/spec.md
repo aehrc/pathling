@@ -575,7 +575,10 @@ after the schema-binding decision and belong to this section.
   positions relative to the element they accompany. Those fields have no
   definition element, so without a stated position two implementations could both
   claim to be canonical and still produce structs that compare positionally
-  wrong, which is the failure this requirement exists to prevent.
+  wrong, which is the failure this requirement exists to prevent. The
+  reconciliation projection applies it only where the operands' shapes differ:
+  operands that already share one type are left as they are (owner-confirmed,
+  decision 79).
 - **FR-058**: The merged type MUST be the recursive field-wise union of the
   inputs, and one implementation MUST serve both FR-056 and the merging of
   divergent file schemas in FR-041.

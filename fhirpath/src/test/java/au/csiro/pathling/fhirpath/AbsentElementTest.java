@@ -319,6 +319,38 @@ class AbsentElementTest {
         .containsExactlyInAnyOrder(expected1, expected2);
   }
 
+  // FR-026: the type of a choice element is read from its variants through the tolerant traversal,
+  // so a variant absent from the schema is taken to be unpopulated rather than failing.
+
+  @Nonnull
+  Stream<Arguments> choiceTypesBesideAbsentVariants() {
+    return Stream.of(
+        arguments("value.type().name", "o1=Quantity", "o2=null"),
+        arguments("component.value.type().name.first()", "o1=Quantity", "o2=null"),
+        arguments("component.where(value.type().name = 'Quantity').count()", "o1=1", "o2=0"));
+  }
+
+  @ParameterizedTest(name = "{0} over the full schema")
+  @MethodSource("choiceTypesBesideAbsentVariants")
+  void choiceTypeOverFullSchema(
+      @Nonnull final String expression,
+      @Nonnull final String expected1,
+      @Nonnull final String expected2) {
+    assertThat(evaluate(observations.read(), "Observation", expression))
+        .containsExactlyInAnyOrder(expected1, expected2);
+  }
+
+  @ParameterizedTest(name = "{0} with valueInteger absent from the schema")
+  @MethodSource("choiceTypesBesideAbsentVariants")
+  void choiceTypeBesideAbsentVariants(
+      @Nonnull final String expression,
+      @Nonnull final String expected1,
+      @Nonnull final String expected2) {
+    final Dataset<Row> pruned = observations.readWithout("valueInteger", "component.valueInteger");
+    assertThat(evaluate(pruned, "Observation", expression))
+        .containsExactlyInAnyOrder(expected1, expected2);
+  }
+
   // T110a: recursive traversal stops where it reaches an element absent from the schema, and
   // yields what it collected up to there.
 
