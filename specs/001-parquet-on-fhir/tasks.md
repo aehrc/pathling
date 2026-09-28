@@ -100,7 +100,9 @@ Quantity comparison, and `eq` and `gt` search, differ for a value with more than
 six fractional digits, and a quantity outside UCUM no longer matches a UCUM
 search (decision 77). A FHIRPath or search column applied as a filter after a
 `select` that dropped the columns it reads finds no rows, where Spark used to add
-them back (decision 75's known limit). This is why
+them back, and one used as a join condition still fails, but with
+`INTERNAL_ERROR` where it used to report `AMBIGUOUS_REFERENCE` (decision 75's
+known limits). This is why
 T070, T081 and T082 — the public API rewiring — sit in M4 rather than in US1 and
 US2 where the rest of their stories live, and why Phase 10's sink and source
 behaviours moved to M4 beside them (decision 73).

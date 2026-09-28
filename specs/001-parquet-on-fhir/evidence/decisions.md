@@ -2363,7 +2363,10 @@ it. Beyond the two fixes, the owner approved each of these:
   UCUM search (decision 77);
 - a FHIRPath or search column applied as a filter after a `select` that dropped
   the columns it reads finds no rows, where Spark used to add them back
-  (decision 75's known limit).
+  (decision 75's known limit);
+- a FHIRPath column used as a join condition still fails, but with
+  `INTERNAL_ERROR` where it used to report `AMBIGUOUS_REFERENCE` (decision 75's
+  join-condition limit).
 
 ### What else it corrects
 
@@ -2514,7 +2517,10 @@ layout's extension struct keeps `_fid`.
 
 - **Join condition.** The spike's catch failed with `INTERNAL_ERROR`, an
   `AssertionError`, in a join condition, even when the column exists. Its cause
-  was not investigated.
+  was not investigated. It reaches the public API on the previous layout from
+  M2: a FHIRPath column used as a join condition, which failed with
+  `AMBIGUOUS_REFERENCE` before, now fails with `INTERNAL_ERROR`. Decision 73's
+  list of visible changes records it.
 - **Ambiguous name.** After a self-join, the catch returns a null instead of
   `AMBIGUOUS_REFERENCE`, because ambiguity raises the same error as absence. No
   current test covers a self-join.
