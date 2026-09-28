@@ -396,29 +396,42 @@ Decision 73 requires the owner's approval for each of these before it is made.
 **All five were approved by the owner on 2026-09-28**, together with option B
 for `instant` (decision 81) and the new layout reading `StructureDefinition`.
 
-Approval 2 is implemented in a form that depends on the layout. The row expects
-the new layout's answer under `pof` and keeps its old expectation under
-`previous`, because the previous layout stays an opt-in run and still stores
-`instant` as a timestamp. Approvals 3 to 5 were checked in the runner on both
+The owner revised the `instant` decision on the same day. Option B stands for the
+new layout. In addition, the previous layout's timestamp is normalised to its
+text in UTC at read time (decision 81), so the engine sees text instants on both
+layouts. Approval 2 was revised to match. The row now expects `StringType` on
+both layouts, with `2023-01-01T12:00:00+10:00` under `pof` and
+`2023-01-01T02:00:00Z` under `previous`. Before the normalisation was made, the
+tests of the other modules were checked:
+
+- the `library-api` suite was run, 168 tests, all green;
+- the Python and R tests were searched, and none asserts an instant's type or
+  value;
+- the server reads `meta.lastUpdated` directly, not through the engine.
+
+No other existing test changed. The previous layout stores no FHIR type other
+than `instant` as a timestamp: in `R4DataTypeMappings`, `InstantType` is the only
+primitive mapped to `TimestampType`.
+
+Approvals 3 to 5 were checked in the runner on both
 layouts: under `pof`, `testTypes[27]` is excluded by #2524 and `[28]` and
 `testFhirR4[218]` pass unexcluded. Under `previous`, `[27]` and `[28]` are
 excluded by #2418 and `[218]` by the `contains` rule.
 
-| #   | Test or exclusion                                                                                                 | Kind        | The change                                                                                                                                                                                                |
-| --- | ----------------------------------------------------------------------------------------------------------------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | `TraceFunctionTest$CollectorTests`, all 7 cases, through the shared `setUpCollector`                              | (c)         | `.withTraceCollector(collector)` becomes `.withTraceCollector(proxy)`, where `proxy = TraceCollectorProxy.create(collector)`, and a new `@AfterEach` calls `proxy.close()`. The assertions are unchanged. |
-| 2   | `AnsiTypeHintingTest.defaultMiscMappings[6]`, the "instant" row of `miscDefaultMappings`. **Only under option B** | (c)         | `Arguments.of("instant", "issued", false, DataTypes.TimestampType, "2023-01-01 02:00:00.0")` becomes `Arguments.of("instant", "issued", false, DataTypes.StringType, "2023-01-01T12:00:00+10:00")`.       |
-| 3   | `fhirpath-js/config.yaml`, rule "Unsupported resources" (#2418)                                                   | (b), narrow | `expression: ["^StructureDefinition"]` becomes the SpEL predicate above, which applies to the previous layout only. Covers `testTypes[27]` and `[28]` under `pof`.                                        |
-| 4   | `fhirpath-js/config.yaml`, rule "Type hierarchy checking not yet implemented" (#2524)                             | (b), add    | `StructureDefinition.snapshot.element.type is Element` is added to `any`, with the rule's existing `outcome: failure`. It applies only under `pof`, where #3 no longer matches first.                     |
-| 5   | `fhirpath-js/config.yaml`, rule "Recursive ValueSet.expansion.contains not encoded"                               | (b), narrow | `any: ["** testRepeat1"]` becomes the SpEL predicate above, which applies to the previous layout only. Covers `testFhirR4[218]`.                                                                          |
+| #   | Test or exclusion                                                                                                               | Kind        | The change                                                                                                                                                                                                                                                 |
+| --- | ------------------------------------------------------------------------------------------------------------------------------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `TraceFunctionTest$CollectorTests`, all 7 cases, through the shared `setUpCollector`                                            | (c)         | `.withTraceCollector(collector)` becomes `.withTraceCollector(proxy)`, where `proxy = TraceCollectorProxy.create(collector)`, and a new `@AfterEach` calls `proxy.close()`. The assertions are unchanged.                                                  |
+| 2   | `AnsiTypeHintingTest.defaultMiscMappings[6]`, the "instant" row of `miscDefaultMappings`, as revised                            | (c)         | `Arguments.of("instant", "issued", false, DataTypes.TimestampType, "2023-01-01 02:00:00.0")` becomes `Arguments.of("instant", "issued", false, DataTypes.StringType, TestLayout.active().isPof() ? "2023-01-01T12:00:00+10:00" : "2023-01-01T02:00:00Z")`. |
+| 6   | `encoders` `TraceExpressionTest.traceDataTypeAndNullableDelegateToChild` and `traceProjectionDataTypeAndNullableDelegateToLeft` | (c)         | `assertFalse(expr.nullable())` becomes `assertTrue(expr.nullable())`. The tests are renamed `traceDataTypeDelegatesToChildAndIsAlwaysNullable` and `traceProjectionDataTypeDelegatesToLeftAndIsAlwaysNullable`, and keep their `dataType` checks.          |
+| 3   | `fhirpath-js/config.yaml`, rule "Unsupported resources" (#2418)                                                                 | (b), narrow | `expression: ["^StructureDefinition"]` becomes the SpEL predicate above, which applies to the previous layout only. Covers `testTypes[27]` and `[28]` under `pof`.                                                                                         |
+| 4   | `fhirpath-js/config.yaml`, rule "Type hierarchy checking not yet implemented" (#2524)                                           | (b), add    | `StructureDefinition.snapshot.element.type is Element` is added to `any`, with the rule's existing `outcome: failure`. It applies only under `pof`, where #3 no longer matches first.                                                                      |
+| 5   | `fhirpath-js/config.yaml`, rule "Recursive ValueSet.expansion.contains not encoded"                                             | (b), narrow | `any: ["** testRepeat1"]` becomes the SpEL predicate above, which applies to the previous layout only. Covers `testFhirR4[218]`.                                                                                                                           |
 
-Two owner decisions are also needed, and they are not test changes:
+The two owner decisions, made on 2026-09-28:
 
-- **The query-time type of `instant`**: option A or option B. Under option A,
-  approval 2 is not needed.
-- **Whether `StructureDefinition` is to be readable on the new layout.** If it
-  is not, approvals 3 and 4 are withdrawn, and the refusal moves to the source
-  boundary.
+- **The query-time type of `instant`** is text on both layouts: option B, with
+  the previous layout normalised at read time (decision 81).
+- **The new layout reads `StructureDefinition`.**
 
 The main-code fixes of kind (a):
 
@@ -427,7 +440,9 @@ The main-code fixes of kind (a):
   said. `TraceExpressionTest.traceDataTypeAndNullableDelegateToChild` and
   `traceProjectionDataTypeAndNullableDelegateToLeft`, in `encoders`, assert
   `assertFalse(expr.nullable())` over a literal child. They predate the branch.
-  So this fix waits for a further approval, and is not committed.
-- **The `instant` fix for cases 9–10** is the `TIMESTAMP WITHOUT TIME ZONE` cast
-  under option B, scoped to `instant`. It is made, and changes no existing
-  test.
+  The change was approved separately, as approval 6, and is made.
+- **The `instant` fix for cases 9–10** has two parts. The first is the
+  `TIMESTAMP WITHOUT TIME ZONE` cast, scoped to `instant`. The second is the
+  read-time normalisation of the previous layout's instant (decision 81),
+  covered by `InstantNormalisationTest`. Both are made. No existing test
+  changes beyond approval 2.
