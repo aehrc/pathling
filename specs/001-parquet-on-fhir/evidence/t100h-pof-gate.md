@@ -36,8 +36,8 @@ calls for is listed for the programme owner's approval, per test (decision 73).
 - **No fix was made.** None of the failures is a clear new-layout bug in code
   whose previous-layout answer is settled. So each resolution below is a
   proposal, and 5 of them need the owner's approval first.
-- **The approvals are pending.** The list is under
-  [Approvals needed](#approvals-needed).
+- **The owner approved every item on 2026-09-28.** The list and what was done are
+  under [Approvals needed](#approvals-needed).
 
 ## Conditions
 
@@ -393,7 +393,16 @@ why. #2418 and #2524 are both open issues.
 ## Approvals needed
 
 Decision 73 requires the owner's approval for each of these before it is made.
-**All are pending.**
+**All five were approved by the owner on 2026-09-28**, together with option B
+for `instant` (decision 81) and the new layout reading `StructureDefinition`.
+
+Approval 2 is implemented in a form that depends on the layout. The row expects
+the new layout's answer under `pof` and keeps its old expectation under
+`previous`, because the previous layout stays an opt-in run and still stores
+`instant` as a timestamp. Approvals 3 to 5 were checked in the runner on both
+layouts: under `pof`, `testTypes[27]` is excluded by #2524 and `[28]` and
+`testFhirR4[218]` pass unexcluded. Under `previous`, `[27]` and `[28]` are
+excluded by #2418 and `[218]` by the `contains` rule.
 
 | #   | Test or exclusion                                                                                                 | Kind        | The change                                                                                                                                                                                                |
 | --- | ----------------------------------------------------------------------------------------------------------------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -411,8 +420,14 @@ Two owner decisions are also needed, and they are not test changes:
   is not, approvals 3 and 4 are withdrawn, and the refusal moves to the source
   boundary.
 
-Main-code fixes of kind (a), proposed and not made, which change no test:
+The main-code fixes of kind (a):
 
-- `TraceExpression` and `TraceProjectionExpression` become nullable (cases 7–8).
-- The `instant` fix for cases 9–10: the traversal decode under option A, or the
-  `TIMESTAMP WITHOUT TIME ZONE` cast under option B.
+- **`TraceExpression` and `TraceProjectionExpression` become nullable** (cases
+  7–8). This fix does change existing tests, contrary to what this record first
+  said. `TraceExpressionTest.traceDataTypeAndNullableDelegateToChild` and
+  `traceProjectionDataTypeAndNullableDelegateToLeft`, in `encoders`, assert
+  `assertFalse(expr.nullable())` over a literal child. They predate the branch.
+  So this fix waits for a further approval, and is not committed.
+- **The `instant` fix for cases 9–10** is the `TIMESTAMP WITHOUT TIME ZONE` cast
+  under option B, scoped to `instant`. It is made, and changes no existing
+  test.
