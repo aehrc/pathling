@@ -18,12 +18,15 @@
 package au.csiro.pathling.fhirpath.column;
 
 import jakarta.annotation.Nonnull;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
 import org.apache.spark.sql.Column;
+import org.apache.spark.sql.types.DataType;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * The representation of stored elements that the engine decodes, element by element, into a
@@ -73,6 +76,42 @@ public class DecodedRepresentation extends DefaultRepresentation {
   @Nonnull
   public ColumnRepresentation traverseExtension() {
     return stored.traverseExtension();
+  }
+
+  /**
+   * Traverses to a field of the stored elements, which commutes with decoding them.
+   *
+   * <p>The decoded structure is not traversed. It has the same type as a previous-layout quantity,
+   * canonical form and value scale included, so the traversal expression, which chooses its
+   * normalisation from the type alone, would take it for stored data and normalise it again, at
+   * every step. Traversing the stored elements normalises them once, and decodes the field as any
+   * stored field of its type is decoded.
+   *
+   * @param fieldName the name of the field to traverse to
+   * @param fhirType the FHIR type of the field
+   * @param fallback the type of the null that stands for the field where it is absent
+   * @return the flattened result of the traversal
+   */
+  @Override
+  @Nonnull
+  public ColumnRepresentation traverse(
+      @Nonnull final String fieldName,
+      @Nonnull final Optional<FHIRDefinedType> fhirType,
+      @Nonnull final DataType fallback) {
+    return stored.traverse(fieldName, fhirType, fallback);
+  }
+
+  /**
+   * Gets a field of the stored elements, without flattening, for the reason {@link
+   * #traverse(String, Optional, DataType)} gives.
+   *
+   * @param fieldName the name of the field to get
+   * @return the field, unflattened
+   */
+  @Override
+  @Nonnull
+  public ColumnRepresentation getField(@Nonnull final String fieldName) {
+    return stored.getField(fieldName);
   }
 
   @Override
