@@ -2749,3 +2749,34 @@ switch:
 
 _Amends_ decision 78 by stating its scope.
 
+
+## 81. On the new layout, an `instant` is text at query time
+
+Owner decision (2026-09-28), prompted by T100h.
+
+The previous layout's encoder stores `instant` as a Spark timestamp, which keeps
+the point in time but not the offset. The new layout stores it as text, in its
+lexical form, like `dateTime`. No port step normalised one to the other, because
+decision 47's discriminators do not include the temporal types. The engine keeps
+the new layout's text rather than decoding it to a timestamp at traversal.
+
+FHIRPath comparison of an instant gives the same answers on both layouts. What
+leaves the engine differs:
+
+- **An untyped view column** is `TimestampType` on the previous layout and
+  `StringType` on the new one. `AnsiTypeHintingTest`'s instant row expects each
+  layout's answer (owner-approved).
+- **`issued.toString()` and a column declared `instant`** render the previous
+  layout's value in the session time zone without an offset,
+  `2023-01-01 02:00:00`. They render the new layout's value in its lexical form,
+  `2023-01-01T12:00:00+10:00`. This difference is accepted.
+- **An `ansi/type` of `TIMESTAMP WITHOUT TIME ZONE`** would drop the offset from
+  the text and keep the wall time. So an instant is cast to a timestamp first,
+  and that gives the point in time in the session time zone on both layouts.
+  Text of any other type keeps the direct cast and its wall time, which existing
+  tests pin.
+
+The previous layout's answers are unchanged, and stay so until T100e.
+
+_Amends_ nothing. It records the query-time type of a primitive that decision 70
+already stores as text.

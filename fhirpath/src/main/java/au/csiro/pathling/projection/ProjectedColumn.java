@@ -25,6 +25,7 @@ import jakarta.annotation.Nonnull;
 import java.util.Objects;
 import java.util.Optional;
 import org.apache.spark.sql.Column;
+import org.apache.spark.sql.types.ArrayType;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
@@ -94,10 +95,40 @@ public record ProjectedColumn(
     }
     return requestedColumn
         .sqlType()
-        .map(rawResult::try_cast)
+        .map(sqlType -> castToSqlType(rawResult, sqlType))
         .or(() -> declaredOutputType().map(rawResult::cast))
         .orElse(rawResult)
         .alias(requestedColumn.name());
+  }
+
+  /**
+   * Casts a column to the SQL type requested by its tag. An instant cast to a timestamp without a
+   * time zone is cast to a timestamp first. An instant is a point in time, and the new layout holds
+   * it as text carrying its offset, which a direct cast from text would discard, keeping the wall
+   * time instead. Through a timestamp, it gives the point in time in the session time zone, as the
+   * previous layout, which stores an instant as a timestamp, always has. Every other value keeps
+   * the direct cast, so text of any other type keeps its wall time.
+   *
+   * @param value the column to cast
+   * @param sqlType the requested SQL type
+   * @return the cast column
+   */
+  @Nonnull
+  private Column castToSqlType(@Nonnull final Column value, @Nonnull final DataType sqlType) {
+    final boolean instant =
+        collection.getFhirType().filter(FHIRDefinedType.INSTANT::equals).isPresent();
+    final boolean withoutTimeZone =
+        DataTypes.TimestampNTZType.equals(sqlType)
+            || sqlType instanceof final ArrayType arrayType
+                && DataTypes.TimestampNTZType.equals(arrayType.elementType());
+    if (instant && withoutTimeZone) {
+      final DataType withTimeZone =
+          sqlType instanceof ArrayType
+              ? DataTypes.createArrayType(DataTypes.TimestampType)
+              : DataTypes.TimestampType;
+      return value.try_cast(withTimeZone).try_cast(sqlType);
+    }
+    return value.try_cast(sqlType);
   }
 
   /**
