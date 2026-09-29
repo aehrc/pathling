@@ -42,13 +42,13 @@ def_pathling_context <- function(spark) {
 
 coding_row <- function(system, code) {
   coding <- list(
-    x0_id = NA,
-    x1_system = system,
-    x2_version = NA,
-    x3_code = code,
-    x4_display = NA,
-    x5_userSelected = NA,
-    x6__fid = NA
+    id = NA,
+    system = system,
+    version = NA,
+    code = code,
+    display = NA,
+    userSelected = NA,
+    `_fid` = NA
   )
   jsonlite::toJSON(
     as.list(coding),
