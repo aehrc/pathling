@@ -529,9 +529,10 @@ resolves no Spark Catalyst dependency, enforced by the build.
   type the definitions give that element, so that it can be written to Parquet
   and reported with its FHIR type on every surface that returns a column.
 - **FR-031**: Coding-valued columns MUST be decoded by field name, resolved once
-  per schema, with absent fields decoding as null and a structure carrying no
-  recognisable field rejected with an error naming the expected and actual
-  fields.
+  per schema, with absent fields decoding as null. A structure carrying no
+  recognisable field MUST be decoded by the released positional order, as the R
+  API's unnamed Coding structure is, and rejected with an error naming the
+  expected and actual fields only if it is too short to be read that way.
 - **FR-032**: Terminology operations MUST operate correctly on a Coding column
   narrower than the canonical layout.
 - **FR-033**: Reference resolution MUST NOT depend on a stored versioned-key

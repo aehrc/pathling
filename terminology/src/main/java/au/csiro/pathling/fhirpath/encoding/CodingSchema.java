@@ -109,12 +109,14 @@ public interface CodingSchema {
   /**
    * Decodes a Coding from a Row, reading its fields by name against the row's schema, so that a
    * structure narrower than {@link #DATA_TYPE}, or with its fields in another order, decodes with
-   * its absent fields null (FR-031). A row without a schema is read by the positions of {@link
-   * #DATA_TYPE}. See {@link CodingDecoder}.
+   * its absent fields null (FR-031). A row without a schema, or whose structure carries none of the
+   * Coding field names, is read by the positions of {@link #DATA_TYPE}, as the released versions
+   * read every Coding. See {@link CodingDecoder}.
    *
    * @param row the row to decode
    * @return the resulting Coding
-   * @throws IllegalArgumentException if the row's structure carries no field a Coding may have
+   * @throws IllegalArgumentException if the row's structure carries no field a Coding may have and
+   *     has fewer fields than the positional order
    */
   @Nullable
   static Coding decode(@Nullable final Row row) {

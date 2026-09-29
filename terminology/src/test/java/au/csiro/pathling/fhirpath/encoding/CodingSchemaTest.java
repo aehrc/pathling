@@ -157,6 +157,77 @@ class CodingSchemaTest {
         .forEach(name -> assertTrue(error.getMessage().contains(name), error.getMessage()));
   }
 
+  @Test
+  void unnamedStructureDecodesByTheReleasedPositions() {
+    // The R API builds a Coding as an unnamed structure, so Spark names its fields col1 to col6.
+    // Its id, display and userSelected are untyped nulls.
+    final StructType schema =
+        new StructType()
+            .add("col1", DataTypes.NullType)
+            .add("col2", DataTypes.StringType)
+            .add("col3", DataTypes.StringType)
+            .add("col4", DataTypes.StringType)
+            .add("col5", DataTypes.NullType)
+            .add("col6", DataTypes.NullType);
+    final Row row =
+        new GenericRowWithSchema(
+            new Object[] {null, SYSTEM, "v1", "404684003", null, null}, schema);
+
+    final Coding decoded = CodingSchema.decode(row);
+
+    assertNotNull(decoded);
+    assertEquals(SYSTEM, decoded.getSystem());
+    assertEquals("v1", decoded.getVersion());
+    assertEquals("404684003", decoded.getCode());
+    assertNull(decoded.getDisplay());
+    assertFalse(decoded.hasUserSelected());
+  }
+
+  @Test
+  void unnamedStructureWiderThanTheReleasedPositionsIgnoresTheRest() {
+    // The released positions read the first six fields and ignore any after them, as the previous
+    // layout's field identifier was ignored.
+    final StructType schema =
+        new StructType()
+            .add("a", DataTypes.StringType)
+            .add("b", DataTypes.StringType)
+            .add("c", DataTypes.StringType)
+            .add("d", DataTypes.StringType)
+            .add("e", DataTypes.StringType)
+            .add("f", DataTypes.BooleanType)
+            .add("g", DataTypes.IntegerType);
+    final Row row =
+        new GenericRowWithSchema(
+            new Object[] {"c1", SYSTEM, "v1", "404684003", "Clinical finding", true, 7}, schema);
+
+    final Coding decoded = CodingSchema.decode(row);
+
+    assertNotNull(decoded);
+    assertEquals(SYSTEM, decoded.getSystem());
+    assertEquals("v1", decoded.getVersion());
+    assertEquals("404684003", decoded.getCode());
+    assertEquals("Clinical finding", decoded.getDisplay());
+    assertTrue(decoded.getUserSelected());
+  }
+
+  @Test
+  void unnamedStructureNarrowerThanTheReleasedPositionsIsRejected() {
+    // The released positions need six fields, so a shorter unnamed structure cannot be a Coding.
+    final StructType schema =
+        new StructType()
+            .add("col1", DataTypes.NullType)
+            .add("col2", DataTypes.StringType)
+            .add("col3", DataTypes.StringType)
+            .add("col4", DataTypes.StringType);
+    final Row row =
+        new GenericRowWithSchema(new Object[] {null, SYSTEM, null, "404684003"}, schema);
+
+    final IllegalArgumentException error =
+        assertThrows(IllegalArgumentException.class, () -> CodingSchema.decode(row));
+    Stream.of("system", "code", "col1", "col4")
+        .forEach(name -> assertTrue(error.getMessage().contains(name), error.getMessage()));
+  }
+
   @Nonnull
   private static Object[] values(@Nonnull final Row row) {
     final Object[] values = new Object[row.length()];
