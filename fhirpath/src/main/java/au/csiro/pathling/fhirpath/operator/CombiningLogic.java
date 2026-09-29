@@ -47,16 +47,18 @@ import org.apache.spark.sql.functions;
  * The unification of operands that must share a type, and the array-level primitives used by the
  * FHIRPath combining operators.
  *
- * <p>{@link #unify(List)} is the one entry point through which every site that needs two or more
- * operands to share a type passes them (FR-056): equality, comparison, arithmetic, union, combine,
- * membership and choice traversal. It promotes the FHIR types of the operands and then unifies
- * their SQL shapes, in that order. The two steps answer different questions. Promotion is driven by
- * the definitions, and decides, for example, that an integer meets a decimal as a decimal. Shape
- * unification is structural: one FHIR type can be stored in a different shape at every path, and
- * the operands are projected by name into the merged shape of all of them.
+ * <p>Every site that needs two or more operands to share a type promotes their FHIR types and then
+ * unifies their SQL shapes, in that order (FR-056). Equality, comparison, arithmetic, membership
+ * and choice traversal do both through the entry point {@link #unify(List)}. Union and combine
+ * promote the types through {@link #promoteTypes(List)}, and unify the shapes in {@link
+ * #union(Collection, Collection)} and {@link #combine(Collection, Collection)} as they combine the
+ * operands. The two steps answer different questions. Promotion is driven by the definitions, and
+ * decides, for example, that an integer meets a decimal as a decimal. Shape unification is
+ * structural: one FHIR type can be stored in a different shape at every path, and the operands are
+ * projected by name into the merged shape of all of them.
  *
- * <p>A site that does not pass its operands through the entry point fails, where their shapes
- * differ, with a Spark analysis error that the engine cannot name.
+ * <p>A site that does not unify the shapes of its operands fails, where their shapes differ, with a
+ * Spark analysis error that the engine cannot name.
  *
  * <p>The combining helpers are used by {@link UnionOperator}, which deduplicates, and {@link
  * CombineOperator}, which concatenates without deduplication. They take operands whose types have

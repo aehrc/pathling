@@ -144,8 +144,9 @@ replaced by the projection of its own operand.
 Union and combine now promote the types of their operands only, and unify the
 shapes as they combine them. One `MergeCastAll` holds every operand once and
 yields a structure of the projections, which is bound once as the only element
-of an array that the combination transforms. The other unification sites, whose
-results are Boolean or primitive and so do not chain, keep `MergeCast`.
+of an array that the combination transforms. The other unification sites keep
+`MergeCast`, because their results are not stored structures, and so do not
+come back into another reconciliation.
 
 `(name | contact.name | name ...).family` on one Patient, through
 `FhirViewExecutor`, where `k` is the number of `|`. Analysis is the time to
@@ -162,6 +163,10 @@ build and analyse the query. `combine()` measures the same as `|`.
 
 The analysed plan now grows by 36 nodes per operand on both layouts. The
 optimised plan also stays linear, at 27 nodes per operand against 12 before,
-because the binding of the projections survives optimisation. The test
+because the binding of the projections survives optimisation. It survives where
+the shapes already agree too, where `MergeCast` was optimised away, and
+`ArrayTransform` has no generated code, so such a union is now evaluated
+through an interpreted higher-order function. Inlining the single-use binding
+at optimisation would remove both costs. The test
 `CombiningPlanSizeTest` requires the analysed plan of a chain of 8 to be at most
 three times that of a chain of 4, on both layouts and for both forms.

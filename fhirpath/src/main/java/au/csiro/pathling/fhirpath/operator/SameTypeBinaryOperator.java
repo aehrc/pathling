@@ -49,9 +49,9 @@ public abstract class SameTypeBinaryOperator implements FhirPathBinaryOperator {
     }
 
     // Unify the operands: promote both sides to a common FHIR type where one exists, e.g. an
-    // integer to a decimal, and then unify their SQL shapes, which differ where one FHIR type is
-    // stored in a different shape at each path (FR-056). Where there is no common type, the
-    // subclass decides what that means.
+    // integer to a decimal, and, unless the subclass unifies them as it combines them, unify their
+    // SQL shapes, which differ where one FHIR type is stored in a different shape at each path
+    // (FR-056). Where there is no common type, the subclass decides what that means.
     final List<Collection> unified = unify(List.of(left, right));
 
     final Collection reconciledLeft = unified.get(0);
