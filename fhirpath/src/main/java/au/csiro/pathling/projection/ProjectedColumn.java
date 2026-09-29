@@ -96,7 +96,7 @@ public record ProjectedColumn(
     return requestedColumn
         .sqlType()
         .map(sqlType -> castToSqlType(rawResult, sqlType))
-        .or(() -> declaredOutputType().map(rawResult::cast))
+        .or(() -> declaredOutputType().map(rawResult::try_cast))
         .orElse(rawResult)
         .alias(requestedColumn.name());
   }
