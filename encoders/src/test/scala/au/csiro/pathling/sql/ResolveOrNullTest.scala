@@ -1040,4 +1040,23 @@ class ResolveOrNullTest extends SparkSessionSupport with AdaptiveSparkPlanHelper
 
   private def causes(t: Throwable): Seq[Throwable] =
     Iterator.iterate(t)(_.getCause).takeWhile(_ != null).toSeq
+
+  /**
+   * A name that a projection beneath the operator gives to two columns is ambiguous too, and the
+   * reference fails with AMBIGUOUS_REFERENCE, as a plain reference does, whether it is selected or
+   * filtered on. A filter is the case that needs care: the analyzer can resolve its condition
+   * against the input of the projection, where the name is unique, so a reference that only
+   * deferred to a plain one would silently read the first of the two columns.
+   */
+  @Test
+  def nameDuplicatedByAProjectionFailsWithAmbiguousReference(): Unit = {
+    val duplicated = present.select(F.col("*"), F.lit(9).as("score"))
+    for (query <- Seq[() => Any](
+      () => duplicated.select(score).collect(),
+      () => duplicated.filter(score === 5).collect(),
+      () => duplicated.filter(F.col("score") === 5).collect())) {
+      val error = assertThrows(classOf[AnalysisException], () => query())
+      assertEquals("AMBIGUOUS_REFERENCE", error.getCondition)
+    }
+  }
 }

@@ -26,13 +26,13 @@ import org.apache.spark.SparkException
 import org.apache.spark.sql.AnalysisException
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.analysis.TypeCheckResult.{TypeCheckFailure, TypeCheckSuccess}
-import org.apache.spark.sql.catalyst.analysis.{GetViewColumnByNameAndOrdinal, TypeCheckResult, UnresolvedAttribute, UnresolvedException}
+import org.apache.spark.sql.catalyst.analysis.{GetViewColumnByNameAndOrdinal, TypeCheckResult, UnresolvedException}
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.{variant => variantExpr}
 import org.apache.spark.sql.catalyst.expressions.codegen.Block._
 import org.apache.spark.sql.catalyst.expressions.codegen.{CodeGenerator, CodegenContext, ExprCode, FalseLiteral}
 
-import org.apache.spark.sql.catalyst.util.{ArrayData, GenericArrayData}
+import org.apache.spark.sql.catalyst.util.{ArrayData, GenericArrayData, QuotingUtils}
 import org.apache.spark.sql.types._
 
 import scala.language.existentials
@@ -424,8 +424,10 @@ case class UnresolvedUnnest(value: Expression)
  * analyzer resolves against the operator's single child, and which throws
  * INCOMPATIBLE_VIEW_SCHEMA_CHANGE when the name does not match exactly one attribute. Where the
  * error reports that no attribute matched, it is caught and replaced with the fallback. Where more
- * than one matched, the name is ambiguous, and the reference is replaced with a plain one, which
- * fails with AMBIGUOUS_REFERENCE as any other reference to the column does.
+ * than one matched, the name is ambiguous, as after a self-join or beneath a projection that gives
+ * two columns the name, and the reference fails with AMBIGUOUS_REFERENCE, as a plain reference to
+ * the column does. The error names the columns without their qualifiers, which the error that
+ * signals the ambiguity does not report.
  *
  * The expression is built with no reference to any dataset, so that one column is valid over every
  * schema (decision 75). It depends on analyzer internals, and it has a known limit, which the tests
@@ -456,9 +458,17 @@ case class UnresolvedColumnOrNull(columnName: String, fallback: DataType, value:
         if (UnresolvedColumnOrNull.NO_MATCH == e.getMessageParameters.get("actualCols")) {
           Literal(null, fallback)
         } else {
-          // The name matches more than one attribute. A plain reference to it lets the analyzer
-          // report the ambiguity, as it does for any other reference to the column.
-          UnresolvedAttribute(Seq(columnName))
+          // The name matches more than one attribute. The ambiguity is reported here, where a
+          // plain reference to the column reports it. Deferring to a plain reference would let
+          // the analyzer resolve a filter's condition against the input of a projection beneath
+          // it, where the name may be unique, and so silently read one of the columns.
+          throw new AnalysisException(
+            errorClass = "AMBIGUOUS_REFERENCE",
+            messageParameters = Map(
+              "name" -> QuotingUtils.quoteIdentifier(columnName),
+              "referenceNames" -> e.getMessageParameters.get("actualCols")
+                .stripPrefix("[").stripSuffix("]").split(",").toSeq
+                .map(name => QuotingUtils.quoteIdentifier(name)).mkString("[", ", ", "]")))
         }
     }
   }

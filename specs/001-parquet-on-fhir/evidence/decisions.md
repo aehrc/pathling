@@ -2541,9 +2541,14 @@ layout's extension struct keeps `_fid`.
   it. Decision 73's list of visible changes records it.
 - **Ambiguous name.** Ambiguity raises the same error as absence, and the
   catch tells them apart by the attributes the error reports as matched, which
-  are none for an absent name. After a self-join the reference is replaced with
-  a plain one, which fails with `AMBIGUOUS_REFERENCE` as the base did
-  (`SelfJoinAmbiguityTest`, both layouts).
+  are none for an absent name. Where more than one matched, the catch raises
+  `AMBIGUOUS_REFERENCE` itself, as a plain reference does, after a self-join
+  (`SelfJoinAmbiguityTest`, both layouts) and beneath a projection that gives
+  two columns one name (`ResolveOrNullTest`). It does not defer to a plain
+  reference, because the analyzer resolves a filter's condition against the
+  input of the projection beneath it, where the name can be unique, and the
+  filter would then silently read one of the two columns. The error names the
+  columns without their qualifiers, which the caught error does not report.
 - **Fragility.** It depends on analyzer internals: that a node throws where it
   does, and that rules reach it through `mapChildren`. T038d and the
   plan-shape tests in T038a are what show a Spark upgrade has changed that.
