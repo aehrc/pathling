@@ -2364,9 +2364,10 @@ it. Beyond the two fixes, the owner approved each of these:
 - a FHIRPath or search column applied as a filter after a `select` that dropped
   the columns it reads finds no rows, where Spark used to add them back
   (decision 75's known limit);
-- a FHIRPath column used as a join condition still fails, but with
-  `INTERNAL_ERROR` where it used to report `AMBIGUOUS_REFERENCE` (decision 75's
-  join-condition limit).
+- a FHIRPath or search column used directly in a join condition now fails
+  with `INTERNAL_ERROR`, including where it used to work. Joining first and
+  then filtering still works, and view joins on keys are unaffected (decision
+  75's join-condition limit, `evidence/join-condition-limit.md`).
 
 ### What else it corrects
 
@@ -2515,12 +2516,28 @@ layout's extension struct keeps `_fid`.
 
 ### Known limits, accepted for now
 
-- **Join condition.** The spike's catch failed with `INTERNAL_ERROR`, an
-  `AssertionError`, in a join condition, even when the column exists. Its cause
-  was not investigated. It reaches the public API on the previous layout from
-  M2: a FHIRPath column used as a join condition, which failed with
-  `AMBIGUOUS_REFERENCE` before, now fails with `INTERNAL_ERROR`. Decision 73's
-  list of visible changes records it.
+- **Join condition.** The catch fails with `INTERNAL_ERROR` in a join
+  condition, even when the column exists. The cause is Spark's, verified on
+  4.0.2: a `Join` resolves its condition through
+  `ColumnResolutionHelper.resolveExpressionByPlanChildren`, which resolves the
+  `GetViewColumnByNameAndOrdinal` inside `UnresolvedColumnOrNull` through
+  `getAttrCandidates`, and that asserts the plan has one child. The
+  `AssertionError` escapes the `mapChildren` catch. The base's plain
+  `UnresolvedAttribute` resolves across both sides instead. So from M2, on both
+  layouts, a column from `fhirPathToColumn` or `searchToColumn` that reads a
+  column fails when used directly in a join condition. The base failed only
+  where both sides had the name, with `AMBIGUOUS_REFERENCE`, or neither did;
+  where one side had it, it worked. So this is a regression and not, as
+  recorded earlier, a change of error. Joining first and then filtering works. View joins on
+  `getResourceKey()` and `getReferenceKey()` are unaffected, because their
+  columns are compiled in each view's single-child projection and the join
+  compares plain output columns (`ReferenceKeyJoinTest`, both layouts). The
+  owner accepted it as a known issue on 2026-09-29, to be revisited, since the
+  usage is rare. The way forward is the "When to revisit" list below. Its first
+  item is option C in `evidence/join-condition-limit.md`, with B as its
+  variant; both were probed and work. That file records the reproduction, the
+  fallbacks if they prove unworkable, and the one option rejected. T100k tracks
+  it. Decision 73's list of visible changes records it.
 - **Ambiguous name.** After a self-join, the catch returns a null instead of
   `AMBIGUOUS_REFERENCE`, because ambiguity raises the same error as absence. No
   current test covers a self-join.
