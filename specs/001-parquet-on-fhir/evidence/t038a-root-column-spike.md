@@ -7,6 +7,11 @@ Filter, an aggregate _value_, and a generator in a select. Spark refuses it in a
 that works in a grouping key is not on T009a's terms: it catches an exception.
 It also gives a silent wrong answer when the name is ambiguous.
 
+> **Later change.** The catch that the engine adopted now falls back to a typed
+> null only when no column matches the name. An ambiguous name raises Spark's
+> `AMBIGUOUS_REFERENCE`, so the silent wrong answer described here no longer
+> occurs. The measurements below are kept as they were taken.
+
 ## Conditions
 
 - Spark 4.0.2 (Scala 2.13), in the `encoders` test JVM, `local[2]`, with ANSI on.
