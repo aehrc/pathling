@@ -78,8 +78,7 @@ public final class TerminologyUdfHelpers {
   }
 
   /**
-   * Decodes a single coding from a row, reading its fields by name against the row's schema, or by
-   * position if none of them is named as a Coding field (see {@link CodingDecoder}).
+   * Decodes a single coding from a row, reading its fields by name against the row's schema.
    *
    * @param codingRow the row containing the coding data
    * @return a stream containing the decoded coding, or null if input is null
@@ -91,8 +90,7 @@ public final class TerminologyUdfHelpers {
 
   /**
    * Decodes multiple codings from an iterable of rows, reading their fields by name against the
-   * schema of the rows, which is resolved once for all of them, or by position if none of them is
-   * named as a Coding field (see {@link CodingDecoder}).
+   * schema of the rows, which is resolved once for all of them.
    *
    * @param codingsRow the iterable containing the coding rows
    * @return a stream of decoded codings, or null if input is null

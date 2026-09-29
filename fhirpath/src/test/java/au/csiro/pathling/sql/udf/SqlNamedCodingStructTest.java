@@ -20,9 +20,7 @@ package au.csiro.pathling.sql.udf;
 import static au.csiro.pathling.sql.Terminology.display;
 import static au.csiro.pathling.sql.Terminology.member_of;
 import static au.csiro.pathling.test.helpers.TestHelpers.LOINC_URL;
-import static org.apache.spark.sql.functions.lit;
-import static org.apache.spark.sql.functions.struct;
-import static org.apache.spark.sql.functions.when;
+import static org.apache.spark.sql.functions.expr;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 
 import au.csiro.pathling.terminology.TerminologyService;
@@ -31,7 +29,6 @@ import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.assertions.DatasetAssert;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.helpers.TerminologyServiceHelpers;
-import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
@@ -44,18 +41,16 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 /**
- * Tests the terminology functions in Spark against a Coding built as an unnamed structure, as the R
- * API's {@code tx_to_coding} builds it.
+ * Tests the terminology functions in Spark against a Coding built with the SQL {@code named_struct}
+ * function, as the R API's {@code tx_to_coding} builds it.
  *
- * <p>That function builds a Coding as {@code struct(NULL, string(system), string(version),
- * string(code), NULL, NULL)}. Spark names the fields of such a structure {@code col1} to {@code
- * col6}, and gives the untyped nulls the null type. The released versions read a Coding by
- * position, so the functions must still accept this structure.
+ * <p>That function names the fields of the Coding, and leaves its id, display and userSelected as
+ * untyped nulls, as the Python API's {@code to_coding} does.
  *
  * @author Piotr Szul
  */
 @SpringBootUnitTest
-class PositionalCodingStructTest {
+class SqlNamedCodingStructTest {
 
   private static final String VALUE_SET_URL = "uuid:vs";
 
@@ -73,10 +68,10 @@ class PositionalCodingStructTest {
   }
 
   @Test
-  void memberOfAcceptsAnUnnamedCodingStructure() {
+  void memberOfAcceptsANamedStructCoding() {
     TerminologyServiceHelpers.setupValidate(terminologyService)
         .withValueSet(VALUE_SET_URL, CODING_1);
-    final Dataset<Row> codings = withUnnamedCoding();
+    final Dataset<Row> codings = withNamedStructCoding();
 
     final Dataset<Row> result = codings.select(member_of(codings.col("coding"), VALUE_SET_URL));
 
@@ -86,11 +81,11 @@ class PositionalCodingStructTest {
   }
 
   @Test
-  void displayAcceptsAnUnnamedCodingStructure() {
+  void displayAcceptsANamedStructCoding() {
     TerminologyServiceHelpers.setupLookup(terminologyService)
         .withDisplay(CODING_1, "Display 1")
         .withDisplay(CODING_2, "Display 2");
-    final Dataset<Row> codings = withUnnamedCoding();
+    final Dataset<Row> codings = withNamedStructCoding();
 
     final Dataset<Row> result = codings.select(display(codings.col("coding")));
 
@@ -102,10 +97,10 @@ class PositionalCodingStructTest {
   }
 
   /**
-   * Builds a Coding column from a code column the way {@code tx_to_coding} does, and checks that
-   * Spark names its fields positionally, so that the tests exercise the positional reading.
+   * Builds a Coding column from a code column with the SQL that {@code tx_to_coding} translates to,
+   * and checks that its fields carry the Coding field names.
    */
-  private Dataset<Row> withUnnamedCoding() {
+  private Dataset<Row> withNamedStructCoding() {
     final Dataset<Row> codes =
         DatasetBuilder.of(spark)
             .withIdColumn("id")
@@ -114,21 +109,18 @@ class PositionalCodingStructTest {
             .withRow("id-2", CODING_2.getCode())
             .withRow("id-3", null)
             .build();
-    // The casts mirror R's string() calls, which Spark does not name after their input.
-    final Column coding =
-        when(
-            codes.col("code").isNotNull(),
-            struct(
-                lit(null),
-                lit(LOINC_URL).cast(DataTypes.StringType),
-                lit(null).cast(DataTypes.StringType),
-                codes.col("code").cast(DataTypes.StringType),
-                lit(null),
-                lit(null)));
-    final Dataset<Row> result = codes.withColumn("coding", coding);
+    final Dataset<Row> result =
+        codes.withColumn(
+            "coding",
+            expr(
+                "CASE WHEN code IS NOT NULL THEN named_struct('id', NULL, 'system', string('"
+                    + LOINC_URL
+                    + "'), 'version', string(NULL), 'code', string(code), 'display', NULL,"
+                    + " 'userSelected', NULL) ELSE NULL END"));
     final StructType codingType = (StructType) result.schema().apply("coding").dataType();
     assertArrayEquals(
-        new String[] {"col1", "col2", "col3", "col4", "col5", "col6"}, codingType.fieldNames());
+        new String[] {"id", "system", "version", "code", "display", "userSelected"},
+        codingType.fieldNames());
     return result;
   }
 }

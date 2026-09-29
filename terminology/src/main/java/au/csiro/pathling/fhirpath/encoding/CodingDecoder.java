@@ -45,12 +45,6 @@ import org.hl7.fhir.r4.model.Coding;
  * <p>A row without a schema, as {@link org.apache.spark.sql.RowFactory} builds it, can only be read
  * by position, so it is read as the canonical structure.
  *
- * <p>A structure that carries none of the Coding field names, such as the unnamed {@code struct}
- * the R API builds, whose fields Spark names {@code col1} to {@code col6}, is read by position too,
- * as the released versions read every Coding: the system, version, code, display and userSelected
- * from the second to the sixth fields. Any fields after the sixth are ignored, and a structure with
- * fewer than six fields cannot be read this way, so it is rejected.
- *
  * @author Piotr Szul
  */
 public final class CodingDecoder {
@@ -70,20 +64,6 @@ public final class CodingDecoder {
           CodingSchema.USER_SELECTED_FIELD,
           "extension",
           CodingSchema.FID_FIELD);
-
-  /**
-   * The order in which the released versions read a Coding by position, whatever the names of the
-   * structure's fields.
-   */
-  @Nonnull
-  private static final List<String> POSITIONAL_FIELDS =
-      List.of(
-          CodingSchema.ID_FIELD,
-          CodingSchema.SYSTEM_FIELD,
-          CodingSchema.VERSION_FIELD,
-          CodingSchema.CODE_FIELD,
-          CodingSchema.DISPLAY_FIELD,
-          CodingSchema.USER_SELECTED_FIELD);
 
   /** The position that stands for a field the structure does not carry. */
   private static final int ABSENT = -1;
@@ -109,23 +89,13 @@ public final class CodingDecoder {
   private final int userSelectedIndex;
 
   private CodingDecoder(@Nonnull final StructType schema) {
-    final List<String> actualNames = Arrays.asList(schema.fieldNames());
-    final List<String> fieldNames;
-    if (actualNames.stream().anyMatch(CODING_FIELDS::contains)) {
-      fieldNames = actualNames;
-    } else if (actualNames.size() >= POSITIONAL_FIELDS.size()) {
-      // No field is named as a Coding field, so the structure is read by the released positions.
-      fieldNames = POSITIONAL_FIELDS;
-    } else {
+    final List<String> fieldNames = Arrays.asList(schema.fieldNames());
+    if (fieldNames.stream().noneMatch(CODING_FIELDS::contains)) {
       throw new IllegalArgumentException(
           "Expected a Coding structure with at least one of the fields "
               + CODING_FIELDS
-              + ", or an unnamed structure of at least "
-              + POSITIONAL_FIELDS.size()
-              + " fields read by position as "
-              + POSITIONAL_FIELDS
               + ", but the structure has the fields "
-              + actualNames);
+              + fieldNames);
     }
     this.schema = schema;
     this.systemIndex = fieldNames.indexOf(CodingSchema.SYSTEM_FIELD);
@@ -141,8 +111,7 @@ public final class CodingDecoder {
    *
    * @param schema the schema of the structure, or null for a row without a schema
    * @return the decoder for that schema
-   * @throws IllegalArgumentException if the structure carries no field a Coding may have and has
-   *     fewer fields than the positional order
+   * @throws IllegalArgumentException if the structure carries no field a Coding may have
    */
   @Nonnull
   public static CodingDecoder forSchema(@Nullable final StructType schema) {
@@ -161,13 +130,11 @@ public final class CodingDecoder {
   }
 
   /**
-   * Decodes a Coding from a row, by the names of the fields in the row's schema, or by position if
-   * none of them is the name of a Coding field.
+   * Decodes a Coding from a row, by the names of the fields in the row's schema.
    *
    * @param row the row to decode
    * @return the Coding, or null if the row is null
-   * @throws IllegalArgumentException if the row's structure carries no field a Coding may have and
-   *     has fewer fields than the positional order
+   * @throws IllegalArgumentException if the row's structure carries no field a Coding may have
    */
   @Nullable
   public static Coding decodeRow(@Nullable final Row row) {
