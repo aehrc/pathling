@@ -157,6 +157,28 @@ class CodingSchemaTest {
         .forEach(name -> assertTrue(error.getMessage().contains(name), error.getMessage()));
   }
 
+  @Test
+  void unnamedStructureIsRejected() {
+    // An unnamed struct, whose fields Spark names col1 to col6, is not read by position: a Coding
+    // must carry its field names.
+    final StructType schema =
+        new StructType()
+            .add("col1", DataTypes.NullType)
+            .add("col2", DataTypes.StringType)
+            .add("col3", DataTypes.StringType)
+            .add("col4", DataTypes.StringType)
+            .add("col5", DataTypes.NullType)
+            .add("col6", DataTypes.NullType);
+    final Row row =
+        new GenericRowWithSchema(
+            new Object[] {null, SYSTEM, "v1", "404684003", null, null}, schema);
+
+    final IllegalArgumentException error =
+        assertThrows(IllegalArgumentException.class, () -> CodingSchema.decode(row));
+    Stream.of("system", "code", "userSelected", "col1", "col6")
+        .forEach(name -> assertTrue(error.getMessage().contains(name), error.getMessage()));
+  }
+
   @Nonnull
   private static Object[] values(@Nonnull final Row row) {
     final Object[] values = new Object[row.length()];

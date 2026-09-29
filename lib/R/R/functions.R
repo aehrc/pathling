@@ -62,13 +62,13 @@ LOINC_URI <- "http://loinc.org"
 #' }
 tx_to_coding <- function(coding_column, system, version = NULL) {
   rlang::expr(if (!is.null({{ coding_column }})) {
-    struct(
-      NULL,
-      string({{ system }}),
-      string({{ version }}),
-      string({{ coding_column }}),
-      NULL,
-      NULL
+    named_struct(
+      "id", NULL,
+      "system", string({{ system }}),
+      "version", string({{ version }}),
+      "code", string({{ coding_column }}),
+      "display", NULL,
+      "userSelected", NULL
     )
   } else {
     NULL
