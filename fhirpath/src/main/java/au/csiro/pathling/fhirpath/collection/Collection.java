@@ -37,6 +37,7 @@ import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.comparison.ColumnEquality;
 import au.csiro.pathling.fhirpath.comparison.Equatable;
+import au.csiro.pathling.fhirpath.encoding.CodingSchema;
 import au.csiro.pathling.fhirpath.function.CollectionTransform;
 import au.csiro.pathling.fhirpath.function.ColumnTransform;
 import au.csiro.pathling.schema.PrimitiveTypes;
@@ -56,6 +57,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
+import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.instance.model.api.IBase;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
@@ -825,7 +827,11 @@ public class Collection implements Equatable {
         .map(
             t ->
                 TerminologyConcepts.union(
-                    getColumn().getField("coding"),
+                    // The codings are read as an array even where the schema lacks them, because
+                    // the concepts are told apart from sets of concepts by the depth of the array.
+                    getColumn()
+                        .getField(
+                            "coding", DataTypes.createArrayType(CodingSchema.codingStructType())),
                     (CodingCollection) traverse("coding").orElseThrow()));
   }
 

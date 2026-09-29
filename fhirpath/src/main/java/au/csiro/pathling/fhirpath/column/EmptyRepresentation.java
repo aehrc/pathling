@@ -106,8 +106,9 @@ public class EmptyRepresentation extends ColumnRepresentation {
 
   @Override
   @Nonnull
-  public ColumnRepresentation getField(@Nonnull final String fieldName) {
-    // Getting a field from an empty representation returns another empty representation
+  public ColumnRepresentation getField(
+      @Nonnull final String fieldName, @Nonnull final DataType fallback) {
+    // Getting a field from an empty representation returns another empty representation.
     return this;
   }
 

@@ -36,7 +36,6 @@ import lombok.ToString;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.DataType;
-import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
@@ -179,14 +178,16 @@ public class DefaultRepresentation extends ColumnRepresentation {
   /**
    * Gets a field of the structure, or of every structure in the array, that this representation
    * holds, without flattening. The field is referenced through the tolerant traversal expression,
-   * so the result is a null of the null type where the input schema does not carry the field.
+   * so the result is a null of the given type where the input schema does not carry the field.
    *
    * @param fieldName the name of the field to get
+   * @param fallback the type of the null that stands for the field where it is absent
    * @return the field, unflattened
    */
   @Override
   @Nonnull
-  public ColumnRepresentation getField(@Nonnull final String fieldName) {
-    return copyOf(ColumnFunctions.resolveOrNull(value, fieldName, DataTypes.NullType));
+  public ColumnRepresentation getField(
+      @Nonnull final String fieldName, @Nonnull final DataType fallback) {
+    return copyOf(ColumnFunctions.resolveOrNull(value, fieldName, fallback));
   }
 }

@@ -27,7 +27,6 @@ import lombok.Getter;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.DataType;
-import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
@@ -253,16 +252,12 @@ public final class ResourceRepresentation extends ColumnRepresentation {
    * preserving the nested structure of the field.
    *
    * @param fieldName the name of the field to get
+   * @param fallback the type of the null that stands for the field where it is absent
    * @return a {@link DefaultRepresentation} wrapping the field access
    */
   @Override
   @Nonnull
-  public ColumnRepresentation getField(@Nonnull final String fieldName) {
-    return getField(fieldName, DataTypes.NullType);
-  }
-
-  @Nonnull
-  private ColumnRepresentation getField(
+  public ColumnRepresentation getField(
       @Nonnull final String fieldName, @Nonnull final DataType fallback) {
     return existing(ColumnFunctions.columnOrNull(fieldName, fallback));
   }

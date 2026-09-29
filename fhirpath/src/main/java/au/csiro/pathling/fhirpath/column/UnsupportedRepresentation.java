@@ -75,7 +75,8 @@ public class UnsupportedRepresentation extends ColumnRepresentation {
   }
 
   @Override
-  public @Nonnull ColumnRepresentation getField(@Nonnull final String fieldName) {
+  public @Nonnull ColumnRepresentation getField(
+      @Nonnull final String fieldName, @Nonnull final DataType fallback) {
     throw new UnsupportedFhirPathFeatureError(
         "Field access is not supported for this path: " + description);
   }

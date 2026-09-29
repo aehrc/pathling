@@ -239,11 +239,33 @@ public abstract class ColumnRepresentation {
    * Returns a new {@link ColumnRepresentation} that represents the result of traversing to a nested
    * field within the current representation. The results can be nested.
    *
+   * <p>Where the input schema does not carry the field, the result is a null of the null type. A
+   * caller that relies on the type of the result, such as one that expects an array, uses {@link
+   * #getField(String, DataType)} instead.
+   *
    * @param fieldName The name of the field to traverse to
    * @return A new {@link ColumnRepresentation} representing the result of the traversal
    */
   @Nonnull
-  public abstract ColumnRepresentation getField(@Nonnull final String fieldName);
+  public ColumnRepresentation getField(@Nonnull final String fieldName) {
+    return getField(fieldName, DataTypes.NullType);
+  }
+
+  /**
+   * Returns a new {@link ColumnRepresentation} that represents the result of traversing to a nested
+   * field within the current representation, where the input schema may not carry the field. The
+   * results can be nested.
+   *
+   * <p>Where the field is absent, the result is a null of the given type, so that an expression
+   * built over the result resolves as it does over the present field (FR-025).
+   *
+   * @param fieldName The name of the field to traverse to
+   * @param fallback The type of the null that stands for the field where it is absent
+   * @return A new {@link ColumnRepresentation} representing the result of the traversal
+   */
+  @Nonnull
+  public abstract ColumnRepresentation getField(
+      @Nonnull final String fieldName, @Nonnull final DataType fallback);
 
   /**
    * Converts the current {@link ColumnRepresentation} to a string value.

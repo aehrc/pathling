@@ -106,12 +106,14 @@ public class DecodedRepresentation extends DefaultRepresentation {
    * #traverse(String, Optional, DataType)} gives.
    *
    * @param fieldName the name of the field to get
+   * @param fallback the type of the null that stands for the field where it is absent
    * @return the field, unflattened
    */
   @Override
   @Nonnull
-  public ColumnRepresentation getField(@Nonnull final String fieldName) {
-    return stored.getField(fieldName);
+  public ColumnRepresentation getField(
+      @Nonnull final String fieldName, @Nonnull final DataType fallback) {
+    return stored.getField(fieldName, fallback);
   }
 
   @Override
