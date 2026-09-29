@@ -19,6 +19,7 @@ package au.csiro.pathling.fhirpath.operator;
 
 import au.csiro.pathling.fhirpath.collection.Collection;
 import jakarta.annotation.Nonnull;
+import java.util.List;
 
 /**
  * Provides the functionality of the FHIRPath {@code combine(other)} function, which merges two
@@ -41,6 +42,17 @@ public class CombineOperator extends SameTypeBinaryOperator {
       @Nonnull final Collection nonEmpty, @Nonnull final BinaryOperatorInput input) {
     // Combine preserves duplicates, so no deduplication is required against an empty peer.
     return nonEmpty;
+  }
+
+  /**
+   * Promotes the types of the operands only. Their shapes are unified by {@link
+   * CombiningLogic#combine(Collection, Collection)}, as it combines them, so that each operand is
+   * held once in the combination.
+   */
+  @Nonnull
+  @Override
+  protected List<Collection> unify(@Nonnull final List<Collection> operands) {
+    return CombiningLogic.promoteTypes(operands);
   }
 
   @Nonnull

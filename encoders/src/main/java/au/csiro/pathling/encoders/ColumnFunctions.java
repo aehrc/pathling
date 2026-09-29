@@ -25,6 +25,7 @@ package au.csiro.pathling.encoders;
 import au.csiro.pathling.sql.DecimalNormalisation;
 import au.csiro.pathling.sql.InstantNormalisation;
 import au.csiro.pathling.sql.MergeCast;
+import au.csiro.pathling.sql.MergeCastAll;
 import au.csiro.pathling.sql.QuantityNormalisation;
 import au.csiro.pathling.sql.ResolveOrNull;
 import au.csiro.pathling.sql.UnresolvedTraverseExtension;
@@ -240,5 +241,40 @@ public class ColumnFunctions {
                 operands.stream().map(ExpressionUtils::expression).toList())
             .toSeq();
     return ExpressionUtils.column(new MergeCast(expressions, index, canonical));
+  }
+
+  /**
+   * Creates the reconciliation of several operands at once, which projects every one of several
+   * operands of the same FHIR type by name into the recursive field-wise merge of all of their
+   * types (FR-056), and holds the projections as the fields of one structure. Unlike {@link
+   * #mergeCast(List, int, CanonicalStructure)}, it holds each operand once, however many of the
+   * projections are read from it.
+   *
+   * @param operands the full, ordered list of operands being reconciled
+   * @param canonical the canonical structure of the operands' element type
+   * @return a Column holding a structure of the projected operands, read with {@link
+   *     #mergedOperand(Column, int)}
+   */
+  @Nonnull
+  public static Column mergeCastAll(
+      @Nonnull final List<Column> operands, @Nonnull final CanonicalStructure canonical) {
+    final Seq<Expression> expressions =
+        scala.jdk.javaapi.CollectionConverters.asScala(
+                operands.stream().map(ExpressionUtils::expression).toList())
+            .toSeq();
+    return ExpressionUtils.column(new MergeCastAll(expressions, canonical));
+  }
+
+  /**
+   * Reads the projection of one operand from the structure created by {@link #mergeCastAll(List,
+   * CanonicalStructure)}.
+   *
+   * @param merged the structure of the projected operands
+   * @param index the position in the list of the operand whose projection is wanted
+   * @return a Column holding the operand, projected into the merged type
+   */
+  @Nonnull
+  public static Column mergedOperand(@Nonnull final Column merged, final int index) {
+    return merged.getField(MergeCastAll.fieldName(index));
   }
 }

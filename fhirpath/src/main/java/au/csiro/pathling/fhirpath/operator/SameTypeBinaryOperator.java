@@ -52,13 +52,27 @@ public abstract class SameTypeBinaryOperator implements FhirPathBinaryOperator {
     // integer to a decimal, and then unify their SQL shapes, which differ where one FHIR type is
     // stored in a different shape at each path (FR-056). Where there is no common type, the
     // subclass decides what that means.
-    final List<Collection> unified = CombiningLogic.unify(List.of(left, right));
+    final List<Collection> unified = unify(List.of(left, right));
 
     final Collection reconciledLeft = unified.get(0);
     final Collection reconciledRight = unified.get(1);
     return reconciledLeft.typeEquivalentWith(reconciledRight)
         ? handleEquivalentTypes(reconciledLeft, reconciledRight, input)
         : handleNonEquivalentTypes(reconciledLeft, reconciledRight, input);
+  }
+
+  /**
+   * Unifies the operands before they are handed to {@link #handleEquivalentTypes} or {@link
+   * #handleNonEquivalentTypes}. By default, this promotes their types and unifies their shapes
+   * through {@link CombiningLogic#unify(List)}. A subclass that combines its operands into one
+   * collection may instead promote only their types, and unify their shapes as it combines them.
+   *
+   * @param operands the left and right operands, in that order
+   * @return the unified operands, in the same order
+   */
+  @Nonnull
+  protected List<Collection> unify(@Nonnull final List<Collection> operands) {
+    return CombiningLogic.unify(operands);
   }
 
   /**

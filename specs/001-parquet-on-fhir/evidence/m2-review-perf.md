@@ -129,3 +129,39 @@ scripts/m2-review/run.sh scripts/m2-review/PlanSize.java <third-party classpath 
 The third-party classpath is `mvn dependency:build-classpath` of `library-api`.
 The Parquet directory holds an `Observation` dataset, written either through
 `PathlingContext` or through `FhirJsonReader`.
+
+# M2 review: the plan of a chain of unions
+
+A union or combination of stored structures projects each operand by name into
+the merged structure of all of them (FR-056). Each operand's projection was a
+`MergeCast` that held every operand as a child, because the merged type depends
+on the resolved types of all of them (decision 75). The combination held both
+projections, and so both operands twice, and a chain of `n` combinations held
+the chain to its left `2^n` times. The analysed plan doubled with every operand,
+on both layouts. The optimised plan did not, because each `MergeCast` is
+replaced by the projection of its own operand.
+
+Union and combine now promote the types of their operands only, and unify the
+shapes as they combine them. One `MergeCastAll` holds every operand once and
+yields a structure of the projections, which is bound once as the only element
+of an array that the combination transforms. The other unification sites, whose
+results are Boolean or primitive and so do not chain, keep `MergeCast`.
+
+`(name | contact.name | name ...).family` on one Patient, through
+`FhirViewExecutor`, where `k` is the number of `|`. Analysis is the time to
+build and analyse the query. `combine()` measures the same as `|`.
+
+| Layout   | `k` | Base nodes | Before nodes | After nodes | Before analysis | After analysis |
+| -------- | --: | ---------: | -----------: | ----------: | --------------: | -------------: |
+| new      |   4 |        128 |          926 |         230 |          107 ms |         107 ms |
+| new      |   8 |        204 |       14,366 |         374 |        1,664 ms |         150 ms |
+| new      |  10 |        242 |       57,374 |         446 |        5,752 ms |         130 ms |
+| new      |  12 |        280 |      229,406 |         518 |       33,354 ms |         172 ms |
+| previous |   8 |        204 |       14,332 |         340 |        1,520 ms |         377 ms |
+| previous |  12 |        280 |      229,372 |         484 |       26,773 ms |         382 ms |
+
+The analysed plan now grows by 36 nodes per operand on both layouts. The
+optimised plan also stays linear, at 27 nodes per operand against 12 before,
+because the binding of the projections survives optimisation. The test
+`CombiningPlanSizeTest` requires the analysed plan of a chain of 8 to be at most
+three times that of a chain of 4, on both layouts and for both forms.

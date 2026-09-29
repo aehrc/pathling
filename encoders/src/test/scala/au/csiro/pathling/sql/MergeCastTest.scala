@@ -221,6 +221,34 @@ class MergeCastTest extends SparkSessionSupport {
     assertEquals(typeOf(result, "v"), typeOf(result, "f"))
   }
 
+  // -----------------------------------------------------------------------------------------------
+  // The reconciliation of every operand at once holds each operand once (finding 8).
+  // -----------------------------------------------------------------------------------------------
+
+  @Test
+  def reconcilingEveryOperandAtOnceMatchesEachProjection(): Unit = {
+    val operands = Seq(F.col("a"), F.col("b"), F.col("c"))
+    val merged = ColumnFunctions.mergeCastAll(operands.asJava, Name)
+    val projections = operands.indices.map(i => ColumnFunctions.mergedOperand(merged, i))
+    val result = data.select(F.concat(projections: _*).alias("m"),
+      F.concat(all(operands: _*): _*).alias("e"))
+    assertEquals(typeOf(result, "e"), typeOf(result, "m"))
+    val Seq(row) = result.collect().toSeq
+    assertEquals(row.get(1), row.get(0))
+  }
+
+  @Test
+  def reconcilingEveryOperandAtOnceHoldsEachOperandOnce(): Unit = {
+    val operands = Seq(F.col("a"), F.col("b"))
+    val analysed = data.select(ColumnFunctions.mergeCastAll(operands.asJava, Name).alias("m"))
+      .queryExecution.analyzed
+    val references = analysed.expressions.flatMap(_.collect {
+      case attribute: org.apache.spark.sql.catalyst.expressions.AttributeReference =>
+        attribute.name
+    })
+    assertEquals(Seq("a", "b"), references)
+  }
+
   private def elementOf(dataType: DataType): StructType = dataType match {
     case ArrayType(struct: StructType, _) => struct
     case struct: StructType => struct
