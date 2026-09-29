@@ -21,8 +21,6 @@ import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import jakarta.annotation.Nonnull;
-import java.util.List;
-import org.apache.commons.lang3.tuple.Pair;
 
 /**
  * Represents a binary operator in FHIRPath.
@@ -76,21 +74,5 @@ public interface FhirPathBinaryOperator {
   @Nonnull
   default String getOperatorName() {
     return this.getClass().getSimpleName();
-  }
-
-  /**
-   * Reconciles two collections to a common type, if possible.
-   *
-   * @param left The left collection
-   * @param right The right collection
-   * @return A pair of collections that can be reconciled to a common type
-   */
-  @Nonnull
-  static Pair<Collection, Collection> reconcileTypes(
-      @Nonnull final Collection left, @Nonnull final Collection right) {
-    // This is the promotion step of the unification entry point, which every operator reaches
-    // through CombiningLogic.unify rather than calling this directly.
-    final List<Collection> promoted = CombiningLogic.promoteTypes(List.of(left, right));
-    return Pair.of(promoted.get(0), promoted.get(1));
   }
 }

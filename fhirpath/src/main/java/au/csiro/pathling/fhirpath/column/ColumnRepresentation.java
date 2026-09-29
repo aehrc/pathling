@@ -163,26 +163,34 @@ public abstract class ColumnRepresentation {
 
   /**
    * Returns a new {@link ColumnRepresentation} that represents the result of traversing to a nested
-   * field within the current representation. The result is flattened.
+   * field within the current representation. The result is flattened. Where the input schema does
+   * not carry the field, the traversal yields a null of the null type.
    *
    * @param fieldName The name of the field to traverse to
    * @return A new {@link ColumnRepresentation} representing the result of the traversal
    */
   @Nonnull
-  public abstract ColumnRepresentation traverse(@Nonnull final String fieldName);
+  public ColumnRepresentation traverse(@Nonnull final String fieldName) {
+    return traverse(fieldName, Optional.empty(), DataTypes.NullType);
+  }
 
   /**
    * Returns a new {@link ColumnRepresentation} that represents the result of traversing to a nested
    * field within the current representation. This method also takes the FHIR type of the field into
    * account to return a more specific representation.
    *
+   * <p>The field is taken to be singular, so where the input schema does not carry it the result is
+   * a null of the storage type of a primitive, or of the null type otherwise.
+   *
    * @param fieldName The name of the field to traverse to
    * @param fhirType The FHIR type of the field
    * @return A new {@link ColumnRepresentation} representing the result of the traversal
    */
   @Nonnull
-  public abstract ColumnRepresentation traverse(
-      @Nonnull final String fieldName, @Nonnull final Optional<FHIRDefinedType> fhirType);
+  public ColumnRepresentation traverse(
+      @Nonnull final String fieldName, @Nonnull final Optional<FHIRDefinedType> fhirType) {
+    return traverse(fieldName, fhirType, AbsentElementTypes.singular(fhirType));
+  }
 
   /**
    * Returns a new {@link ColumnRepresentation} that represents the result of traversing to a nested

@@ -88,27 +88,12 @@ public class EmptyRepresentation extends ColumnRepresentation {
 
   @Override
   @Nonnull
-  public ColumnRepresentation traverse(@Nonnull final String fieldName) {
-    // Traversing an empty representation returns another empty representation
-    // This avoids the Spark error of trying to get a field from a null struct
-    return this;
-  }
-
-  @Override
-  @Nonnull
-  public ColumnRepresentation traverse(
-      @Nonnull final String fieldName, @Nonnull final Optional<FHIRDefinedType> fhirType) {
-    // Traversing an empty representation returns another empty representation
-    return this;
-  }
-
-  @Override
-  @Nonnull
   public ColumnRepresentation traverse(
       @Nonnull final String fieldName,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final DataType fallback) {
-    // Traversing an empty representation returns another empty representation.
+    // Traversing an empty representation returns another empty representation. This avoids the
+    // Spark error of trying to get a field from a null struct.
     return this;
   }
 

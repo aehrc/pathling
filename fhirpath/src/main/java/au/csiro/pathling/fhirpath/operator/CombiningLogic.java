@@ -34,12 +34,12 @@ import au.csiro.pathling.utilities.CanonicalStructure;
 import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.BiFunction;
 import java.util.function.BinaryOperator;
 import java.util.function.UnaryOperator;
 import java.util.stream.IntStream;
 import lombok.experimental.UtilityClass;
 import org.apache.spark.sql.Column;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * The unification of operands that must share a type, and the array-level primitives used by the
@@ -164,8 +164,7 @@ public class CombiningLogic {
       @Nonnull final ElementDefinition definition) {
     return definition
         .getFhirType()
-        .filter(fhirType -> fhirType != FHIRDefinedType.NULL)
-        .filter(fhirType -> !PrimitiveTypes.isPrimitive(fhirType))
+        .filter(PrimitiveTypes::isStructure)
         .map(unused -> DefinitionCanonicalStructure.of(definition, false));
   }
 
@@ -187,19 +186,12 @@ public class CombiningLogic {
   /** Projects every operand by name into the merged structure of all of them. */
   @Nonnull
   private static List<Collection> reconcileStructures(@Nonnull final List<Collection> operands) {
-    final Optional<CanonicalStructure> canonical = structureOfOperands(operands);
-    if (canonical.isEmpty()) {
-      return operands;
-    }
     // The operands are reconciled as arrays, because a singular structure and an array of them
     // have no merged type.
-    final List<Column> unified =
-        unifyColumns(
-            operands.stream().map(operand -> operand.getColumn().plural().getValue()).toList(),
-            canonical);
-    return IntStream.range(0, operands.size())
-        .mapToObj(index -> operands.get(index).copyWithColumn(unified.get(index)))
-        .toList();
+    return reconcile(
+        operands,
+        operands.stream().map(operand -> operand.getColumn().plural().getValue()).toList(),
+        (index, unified) -> operands.get(index).copyWithColumn(unified));
   }
 
   /**
@@ -210,23 +202,29 @@ public class CombiningLogic {
   private static List<Collection> reconcileStored(
       @Nonnull final List<Collection> operands,
       @Nonnull final List<DecodedRepresentation> decoded) {
+    return reconcile(
+        operands,
+        decoded.stream().map(CombiningLogic::storedArray).toList(),
+        (index, unified) -> rewrap(operands.get(index), unified, decoded.get(index).getDecoder()));
+  }
+
+  /**
+   * Unifies one array column per operand under the canonical structure of the operands' type, and
+   * rebuilds each operand from its unified column. Where the type has no structure, the operands
+   * are returned as they are.
+   */
+  @Nonnull
+  private static List<Collection> reconcile(
+      @Nonnull final List<Collection> operands,
+      @Nonnull final List<Column> columns,
+      @Nonnull final BiFunction<Integer, Column, Collection> rebuild) {
     final Optional<CanonicalStructure> canonical = structureOfOperands(operands);
     if (canonical.isEmpty()) {
       return operands;
     }
-    final List<Column> unified =
-        unifyColumns(
-            decoded.stream().map(column -> column.getStored().plural().getValue()).toList(),
-            canonical);
+    final List<Column> unified = unifyColumns(columns, canonical);
     return IntStream.range(0, operands.size())
-        .mapToObj(
-            index ->
-                operands
-                    .get(index)
-                    .copyWith(
-                        new DecodedRepresentation(
-                            new DefaultRepresentation(unified.get(index)),
-                            decoded.get(index).getDecoder())))
+        .mapToObj(index -> rebuild.apply(index, unified.get(index)))
         .toList();
   }
 
@@ -281,8 +279,7 @@ public class CombiningLogic {
               final DecodedRepresentation only = decoded.get(0);
               final Column result =
                   SqlFunctions.arrayDistinctWithEquality(
-                      only.getStored().plural().getValue(),
-                      decodedEquality(comparator, only.getDecoder()));
+                      storedArray(only), decodedEquality(comparator, only.getDecoder()));
               return rewrap(collection, result, only.getDecoder());
             })
         .orElseGet(
@@ -307,8 +304,8 @@ public class CombiningLogic {
               final UnaryOperator<Column> decoder = decoded.get(0).getDecoder();
               final Column result =
                   SqlFunctions.arrayUnionWithEquality(
-                      decoded.get(0).getStored().plural().getValue(),
-                      decoded.get(1).getStored().plural().getValue(),
+                      storedArray(decoded.get(0)),
+                      storedArray(decoded.get(1)),
                       decodedEquality(comparator, decoder));
               return rewrap(left, result, decoder);
             })
@@ -334,9 +331,7 @@ public class CombiningLogic {
             decoded ->
                 rewrap(
                     left,
-                    combineArrays(
-                        decoded.get(0).getStored().plural().getValue(),
-                        decoded.get(1).getStored().plural().getValue()),
+                    combineArrays(storedArray(decoded.get(0)), storedArray(decoded.get(1))),
                     decoded.get(0).getDecoder()))
         .orElseGet(
             () -> left.copyWithColumn(combineArrays(prepareArray(left), prepareArray(right))));
@@ -347,6 +342,12 @@ public class CombiningLogic {
   private static BinaryOperator<Column> decodedEquality(
       @Nonnull final ColumnEquality comparator, @Nonnull final UnaryOperator<Column> decoder) {
     return (left, right) -> comparator.equalsTo(decoder.apply(left), decoder.apply(right));
+  }
+
+  /** Returns the stored structures behind a decoded representation, as an array. */
+  @Nonnull
+  private static Column storedArray(@Nonnull final DecodedRepresentation decoded) {
+    return decoded.getStored().plural().getValue();
   }
 
   /** Builds a collection of the given stored structures, decoded as the template's were. */

@@ -22,6 +22,7 @@
  */
 package au.csiro.pathling.sql
 
+import au.csiro.pathling.encoders.ExtensionSupport.{EXTENSIONS_FIELD_NAME, EXTENSION_ELEMENT_NAME, FID_FIELD_NAME}
 import au.csiro.pathling.encoders.{UnevaluableCopy, UnresolvedColumnOrNull}
 import org.apache.spark.sql.catalyst.analysis.UnresolvedException
 import org.apache.spark.sql.catalyst.expressions.{ArrayTransform, Expression, GetArrayStructFields, GetMapValue, GetStructField, LambdaFunction, Literal, NamedLambdaVariable, NonSQLExpression, RuntimeReplaceable}
@@ -57,15 +58,6 @@ import org.apache.spark.sql.types.{ArrayType, DataType, NullType, StructType}
  */
 object ExtensionTraversal {
 
-  /** The name of the inline extension field in the new layout. */
-  val EXTENSION_FIELD = "extension"
-
-  /** The name of the field identifier in the previous layout. */
-  val FID_FIELD = "_fid"
-
-  /** The name of the table column holding the previous layout's extension map. */
-  val EXTENSION_MAP_COLUMN = "_extension"
-
   /** The type of the result where there are no extensions to find. */
   val ABSENT_TYPE: DataType = ArrayType(NullType)
 
@@ -76,16 +68,17 @@ object ExtensionTraversal {
    * @return the expression to replace the traversal with
    */
   def fromElement(parent: Expression): Expression = parent.dataType match {
-    case struct: StructType if has(struct, EXTENSION_FIELD) =>
-      GetStructField(parent, struct.fieldIndex(EXTENSION_FIELD), Some(EXTENSION_FIELD))
-    case ArrayType(struct: StructType, containsNull) if has(struct, EXTENSION_FIELD) =>
-      val ordinal = struct.fieldIndex(EXTENSION_FIELD)
+    case struct: StructType if has(struct, EXTENSION_ELEMENT_NAME) =>
+      GetStructField(
+        parent, struct.fieldIndex(EXTENSION_ELEMENT_NAME), Some(EXTENSION_ELEMENT_NAME))
+    case ArrayType(struct: StructType, containsNull) if has(struct, EXTENSION_ELEMENT_NAME) =>
+      val ordinal = struct.fieldIndex(EXTENSION_ELEMENT_NAME)
       val field = struct.fields(ordinal)
       GetArrayStructFields(parent, field, ordinal, struct.length, containsNull || field.nullable)
-    case struct: StructType if has(struct, FID_FIELD) =>
-      ExtensionLookup(parent, tolerantColumn(EXTENSION_MAP_COLUMN))
-    case ArrayType(struct: StructType, _) if has(struct, FID_FIELD) =>
-      ExtensionLookup(parent, tolerantColumn(EXTENSION_MAP_COLUMN))
+    case struct: StructType if has(struct, FID_FIELD_NAME) =>
+      ExtensionLookup(parent, tolerantColumn(EXTENSIONS_FIELD_NAME))
+    case ArrayType(struct: StructType, _) if has(struct, FID_FIELD_NAME) =>
+      ExtensionLookup(parent, tolerantColumn(EXTENSIONS_FIELD_NAME))
     case _ =>
       absent
   }
@@ -100,7 +93,7 @@ object ExtensionTraversal {
     if (isAbsent(fid)) {
       absent
     } else {
-      ExtensionLookup(fid, tolerantColumn(EXTENSION_MAP_COLUMN))
+      ExtensionLookup(fid, tolerantColumn(EXTENSIONS_FIELD_NAME))
     }
 
   /**
@@ -180,7 +173,7 @@ case class UnresolvedTraverseExtension(parent: Expression)
 case class UnresolvedTraverseRootExtension(extension: Expression)
   extends Expression with UnevaluableCopy with NonSQLExpression {
 
-  def this() = this(ExtensionTraversal.tolerantColumn(ExtensionTraversal.EXTENSION_FIELD))
+  def this() = this(ExtensionTraversal.tolerantColumn(EXTENSION_ELEMENT_NAME))
 
   override def mapChildren(f: Expression => Expression): Expression = {
     val newExtension = f(extension)
@@ -188,7 +181,7 @@ case class UnresolvedTraverseRootExtension(extension: Expression)
       copy(extension = newExtension)
     } else if (ExtensionTraversal.isAbsent(newExtension)) {
       UnresolvedTraverseRootExtensionByFid(
-        ExtensionTraversal.tolerantColumn(ExtensionTraversal.FID_FIELD))
+        ExtensionTraversal.tolerantColumn(FID_FIELD_NAME))
     } else {
       newExtension
     }
@@ -277,7 +270,7 @@ case class ExtensionLookup(left: Expression, right: Expression)
       newLeft: Expression, newRight: Expression): Expression = copy(left = newLeft, right = newRight)
 
   private def fidOf(element: Expression, struct: StructType): Expression = {
-    val ordinal = struct.fieldIndex(ExtensionTraversal.FID_FIELD)
-    GetStructField(element, ordinal, Some(ExtensionTraversal.FID_FIELD))
+    val ordinal = struct.fieldIndex(FID_FIELD_NAME)
+    GetStructField(element, ordinal, Some(FID_FIELD_NAME))
   }
 }

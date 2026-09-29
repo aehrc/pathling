@@ -38,6 +38,7 @@ import org.apache.spark.sql.Column;
 import org.apache.spark.sql.catalyst.expressions.Expression;
 import org.apache.spark.sql.classic.ExpressionUtils;
 import org.apache.spark.sql.types.DataType;
+import org.apache.spark.sql.types.DataTypes;
 import scala.collection.immutable.Seq;
 
 /**
@@ -114,6 +115,21 @@ public class ColumnFunctions {
       @Nonnull final DataType fallback) {
     return ExpressionUtils.column(
         new ResolveOrNull(ExpressionUtils.expression(child), fieldName, fallback));
+  }
+
+  /**
+   * Resolves a text field of a structure, or of every structure in an array, to a null string where
+   * the structure does not carry the field, rather than failing (FR-054). The field is read as the
+   * text it is stored as on either layout.
+   *
+   * @param child the structure, or array of structures
+   * @param fieldName the name of the field
+   * @return the field, or a null string where the structure does not carry it
+   */
+  @Nonnull
+  public static Column resolveStringOrNull(
+      @Nonnull final Column child, @Nonnull final String fieldName) {
+    return resolveOrNull(child, fieldName, DataTypes.StringType);
   }
 
   /**

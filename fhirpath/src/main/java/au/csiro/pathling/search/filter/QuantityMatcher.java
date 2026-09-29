@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.search.filter;
 
+import static au.csiro.pathling.encoders.ColumnFunctions.resolveStringOrNull;
 import static au.csiro.pathling.search.filter.FhirFieldNames.CODE;
 import static au.csiro.pathling.search.filter.FhirFieldNames.SYSTEM;
 import static au.csiro.pathling.search.filter.FhirFieldNames.UNIT;
@@ -26,7 +27,6 @@ import static org.apache.spark.sql.functions.coalesce;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.when;
 
-import au.csiro.pathling.encoders.ColumnFunctions;
 import au.csiro.pathling.encoders.terminology.ucum.Ucum;
 import au.csiro.pathling.encoders.terminology.ucum.Ucum.ValueWithUnit;
 import au.csiro.pathling.fhirpath.collection.DecimalCollection;
@@ -39,7 +39,6 @@ import jakarta.annotation.Nonnull;
 import java.math.BigDecimal;
 import java.util.Optional;
 import org.apache.spark.sql.Column;
-import org.apache.spark.sql.types.DataTypes;
 
 /**
  * Matches Quantity elements using FHIR quantity search semantics.
@@ -137,8 +136,8 @@ public class QuantityMatcher implements ElementMatcher {
       @Nonnull final QuantitySearchValue parsedValue,
       @Nonnull final Column valueMatch) {
     return valueMatch
-        .and(field(element, SYSTEM).equalTo(lit(system)))
-        .and(matchOptionalField(field(element, CODE), parsedValue.getCode()));
+        .and(resolveStringOrNull(element, SYSTEM).equalTo(lit(system)))
+        .and(matchOptionalField(resolveStringOrNull(element, CODE), parsedValue.getCode()));
   }
 
   /**
@@ -201,11 +200,11 @@ public class QuantityMatcher implements ElementMatcher {
       @Nonnull final QuantitySearchValue parsedValue) {
     // The canonical form of the element is computed from its stored text and code, and only where
     // the element is a UCUM quantity, because the search asks for a UCUM quantity.
-    final Column text = field(element, VALUE);
-    final Column elementCode = field(element, CODE);
+    final Column text = resolveStringOrNull(element, VALUE);
+    final Column elementCode = resolveStringOrNull(element, CODE);
     final Column canonicalMatch =
         when(
-            field(element, SYSTEM)
+            resolveStringOrNull(element, SYSTEM)
                 .equalTo(lit(UcumUnit.UCUM_SYSTEM_URI))
                 .and(
                     callUDF(CanonicalQuantityCode.FUNCTION_NAME, text, elementCode)
@@ -217,7 +216,7 @@ public class QuantityMatcher implements ElementMatcher {
 
     final Column standardMatch =
         matchValue(value(element), parsedValue.getNumericValue(), parsedValue.getPrefix())
-            .and(field(element, SYSTEM).equalTo(lit(system)))
+            .and(resolveStringOrNull(element, SYSTEM).equalTo(lit(system)))
             .and(elementCode.equalTo(lit(code)));
 
     return coalesce(canonicalMatch, standardMatch);
@@ -245,8 +244,8 @@ public class QuantityMatcher implements ElementMatcher {
    */
   @Nonnull
   private Column matchCodeOrUnit(@Nonnull final Column element, @Nonnull final String code) {
-    return matchFieldOrNull(field(element, CODE), code)
-        .or(matchFieldOrNull(field(element, UNIT), code));
+    return matchFieldOrNull(resolveStringOrNull(element, CODE), code)
+        .or(matchFieldOrNull(resolveStringOrNull(element, UNIT), code));
   }
 
   /**
@@ -260,19 +259,10 @@ public class QuantityMatcher implements ElementMatcher {
     return coalesce(field.equalTo(lit(value)), lit(false));
   }
 
-  /**
-   * Reads a text field of the element through the tolerant traversal, so that a field the schema
-   * does not carry is null. The value is read as the text it is stored as on either layout.
-   */
-  @Nonnull
-  private static Column field(@Nonnull final Column element, @Nonnull final String name) {
-    return ColumnFunctions.resolveOrNull(element, name, DataTypes.StringType);
-  }
-
   /** Reads the value of the element, decoded from its text for computation. */
   @Nonnull
   private static Column value(@Nonnull final Column element) {
-    return field(element, VALUE).try_cast(DecimalCollection.getDecimalType());
+    return resolveStringOrNull(element, VALUE).try_cast(DecimalCollection.getDecimalType());
   }
 
   /**

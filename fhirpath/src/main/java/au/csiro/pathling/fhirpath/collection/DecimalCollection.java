@@ -189,17 +189,6 @@ public class DecimalCollection extends Collection
   @Override
   @Nonnull
   public DecimalCollection withSharedSqlType() {
-    return normalizeDecimalType();
-  }
-
-  /**
-   * Normalizes this decimal collection to use the standard DECIMAL(32,6) type, keeping its
-   * cardinality.
-   *
-   * @return a new DecimalCollection with normalized decimal type
-   */
-  @Nonnull
-  public DecimalCollection normalizeDecimalType() {
     return copyWith(getColumn().elementTryCast(DECIMAL_TYPE));
   }
 

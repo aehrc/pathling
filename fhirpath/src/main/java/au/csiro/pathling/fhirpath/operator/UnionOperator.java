@@ -19,7 +19,6 @@ package au.csiro.pathling.fhirpath.operator;
 
 import au.csiro.pathling.fhirpath.collection.Collection;
 import jakarta.annotation.Nonnull;
-import java.util.List;
 
 /**
  * Provides the functionality of the union operator within FHIRPath, i.e. {@code |}.
@@ -44,8 +43,7 @@ public class UnionOperator extends SameTypeBinaryOperator {
   @Override
   protected Collection handleOneEmpty(
       @Nonnull final Collection nonEmpty, @Nonnull final BinaryOperatorInput input) {
-    // The one operand is unified on its own, which gives a primitive the shared SQL type.
-    return CombiningLogic.dedupe(CombiningLogic.unify(List.of(nonEmpty)).get(0));
+    return CombiningLogic.dedupe(nonEmpty);
   }
 
   @Nonnull

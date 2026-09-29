@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.fhirpath.encoding;
 
+import au.csiro.pathling.encoders.ExtensionSupport;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.Arrays;
@@ -62,7 +63,7 @@ public final class CodingDecoder {
           CodingSchema.CODE_FIELD,
           CodingSchema.DISPLAY_FIELD,
           CodingSchema.USER_SELECTED_FIELD,
-          "extension",
+          ExtensionSupport.EXTENSION_ELEMENT_NAME(),
           CodingSchema.FID_FIELD);
 
   /** The position that stands for a field the structure does not carry. */
