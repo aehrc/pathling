@@ -23,7 +23,6 @@
 package au.csiro.pathling.sql
 
 import au.csiro.pathling.sql.DecimalNormalisation.{fieldToText, holdsDecimals}
-import au.csiro.pathling.sql.QuantityNormalisation.normalise
 import org.apache.spark.sql.catalyst.expressions.{ArrayTransform, Expression, GetArrayStructFields, GetStructField, LambdaFunction, Literal, NamedLambdaVariable, RuntimeReplaceable}
 import org.apache.spark.sql.catalyst.trees.UnaryLike
 import org.apache.spark.sql.types.{ArrayType, DataType, StructType}
@@ -66,7 +65,9 @@ import org.apache.spark.sql.types.{ArrayType, DataType, StructType}
  *    value, yields a structure without them, whose value is its text, as
  *    [[QuantityNormalisation]] describes. The canonical form is not read. The quantity keeps its
  *    `_fid`, as the extension structure does, so this branch is the second exception to the rule:
- *    its leaves have the new layout's types, and the structure itself has one field more.
+ *    its leaves have the new layout's types, and the structure itself has one field more;
+ *  - an instant, which the previous layout stores as a timestamp, yields its text in UTC, as
+ *    [[InstantNormalisation]] describes (decision 81).
  *
  * @param child     the structure, or array of structures, to take the field from
  * @param fieldName the name of the field
@@ -91,6 +92,9 @@ case class ResolveOrNull(child: Expression, fieldName: String, fallback: DataTyp
     case _ =>
       Literal(null, fallback)
   }
+
+  private def normalise(field: Expression): Expression =
+    InstantNormalisation.normalise(QuantityNormalisation.normalise(field))
 
   private def isDecimal(struct: StructType): Boolean =
     struct.fieldNames.contains(fieldName) && holdsDecimals(struct(fieldName).dataType)

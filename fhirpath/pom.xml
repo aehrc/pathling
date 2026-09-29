@@ -35,8 +35,9 @@
   <description>A library that can translate FHIRPath expressions into Spark queries.</description>
 
   <properties>
-    <!-- The test layout dimension (T037a): previous, or pof for Parquet on FHIR. -->
-    <pathling.testLayout>previous</pathling.testLayout>
+    <!-- The test layout dimension (T037a): pof for Parquet on FHIR, the default since T100g, or
+      previous as an opt-in run. -->
+    <pathling.testLayout>pof</pathling.testLayout>
     <!-- The test schema mode dimension (T037): pruned is the only mode until M6. -->
     <pathling.testSchemaMode>pruned</pathling.testSchemaMode>
   </properties>

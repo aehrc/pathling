@@ -2312,9 +2312,9 @@ the build, so the number of failures left before the switch is always known.
   the public API writing the new layout, and stay in M4.
 - **Phase 10 moves from M2 to M4.** Divergent files read as one dataset and
   Delta widening on upsert are IO behaviour, not engine work, and they are the
-  only part of M2 a user could observe. M2 now joins the milestones that change
-  nothing a user can see, apart from the two fixes noted below. Phase 10 keeps
-  its number.
+  only part of M2 a user could observe. M2 was expected to join the milestones
+  that change nothing a user can see, apart from the two fixes noted below.
+  Phase 10 keeps its number.
 - **Variadic reconciliation stays in M2 until the measurement says otherwise.**
   It was proposed for M5. But the pruned schema gives one complex type different
   shapes at different paths as soon as the suites switch, so whatever the switch
@@ -2350,6 +2350,24 @@ change to one needs the programme owner's approval, per test. Three are known:
   listed for approval then.
 
 Whatever else T100h finds is listed the same way.
+
+That expectation did not hold. The previous layout reaches the engine through
+the new layout's branch from M2, and until M4 that is the layout
+`PathlingContext` writes, so the port changes what the public API returns on
+it. Beyond the two fixes, the owner approved each of these:
+
+- an `instant` is text rather than a timestamp, as a column type and as a value
+  (decision 81);
+- quantity comparison, and `eq` and `gt` search, differ for a value with more
+  than six fractional digits, and a quantity outside UCUM no longer matches a
+  UCUM search (decision 77);
+- a FHIRPath or search column applied as a filter after a `select` that dropped
+  the columns it reads finds no rows, where Spark used to add them back
+  (decision 75's known limit);
+- a FHIRPath or search column used directly in a join condition now fails
+  with `INTERNAL_ERROR`, including where it used to work. Joining first and
+  then filtering still works, and view joins on keys are unaffected (decision
+  75's join-condition limit, `evidence/join-condition-limit.md`).
 
 ### What else it corrects
 
@@ -2498,9 +2516,28 @@ layout's extension struct keeps `_fid`.
 
 ### Known limits, accepted for now
 
-- **Join condition.** The spike's catch failed with `INTERNAL_ERROR`, an
-  `AssertionError`, in a join condition, even when the column exists. Its cause
-  was not investigated.
+- **Join condition.** The catch fails with `INTERNAL_ERROR` in a join
+  condition, even when the column exists. The cause is Spark's, verified on
+  4.0.2: a `Join` resolves its condition through
+  `ColumnResolutionHelper.resolveExpressionByPlanChildren`, which resolves the
+  `GetViewColumnByNameAndOrdinal` inside `UnresolvedColumnOrNull` through
+  `getAttrCandidates`, and that asserts the plan has one child. The
+  `AssertionError` escapes the `mapChildren` catch. The base's plain
+  `UnresolvedAttribute` resolves across both sides instead. So from M2, on both
+  layouts, a column from `fhirPathToColumn` or `searchToColumn` that reads a
+  column fails when used directly in a join condition. The base failed only
+  where both sides had the name, with `AMBIGUOUS_REFERENCE`, or neither did;
+  where one side had it, it worked. So this is a regression and not, as
+  recorded earlier, a change of error. Joining first and then filtering works. View joins on
+  `getResourceKey()` and `getReferenceKey()` are unaffected, because their
+  columns are compiled in each view's single-child projection and the join
+  compares plain output columns (`ReferenceKeyJoinTest`, both layouts). The
+  owner accepted it as a known issue on 2026-09-29, to be revisited, since the
+  usage is rare. The way forward is the "When to revisit" list below. Its first
+  item is option C in `evidence/join-condition-limit.md`, with B as its
+  variant; both were probed and work. That file records the reproduction, the
+  fallbacks if they prove unworkable, and the one option rejected. T100k tracks
+  it. Decision 73's list of visible changes records it.
 - **Ambiguous name.** After a self-join, the catch returns a null instead of
   `AMBIGUOUS_REFERENCE`, because ambiguity raises the same error as absence. No
   current test covers a self-join.
@@ -2747,5 +2784,74 @@ switch:
   Nothing changes before the switch, unless an existing test depends on the
   previous schema through this API.
 
+**Every quantity type is decoded at traversal**, as Quantity is: Age, Count,
+Distance, Duration, SimpleQuantity and MoneyQuantity too. The previous layout
+stores each in the structure the engine computes with, so a whole value of any of
+them keeps the released version's rendering and schema before the switch. One
+difference from the released version remains, from decision 77: the scale and
+canonical form are computed from the value as the traversal yields it. So a whole
+quantity whose value has more than six fractional digits shows the stored
+`value_scale` of six rather than the source's, and a `_value_canonicalized`
+computed from the six digits kept, on the previous layout.
+
+**A field of a decoded quantity is read from the stored quantity.** The decoded
+structure has exactly the type of a stored previous-layout quantity, so the
+traversal expression, which decides from the type alone, took it for stored data
+and normalised it again at every step. Reading the field from the stored
+quantity normalises it once. Search is given the stored quantity for the same
+reason, so that it canonicalises the stored text (decision 77).
+`evidence/m2-review-perf.md` has the measurements.
+
 _Amends_ decision 78 by stating its scope.
 
+
+## 81. An `instant` is text at query time, on both layouts
+
+Owner decisions (2026-09-28), prompted by T100h. The first version of this
+decision left the previous layout's `instant` a timestamp. The owner revised it
+the same day, so that the engine sees one type.
+
+The previous layout's encoder stores `instant` as a Spark timestamp, which keeps
+the point in time but not the offset. The new layout stores it as text, in its
+lexical form, like `dateTime`. The engine keeps the new layout's text rather than
+decoding it to a timestamp.
+
+**The previous layout's instant is normalised to text at read time**, by a branch
+of the traversal expression chosen from the resolved schema, as decision 75 and
+the decimal branch do (`InstantNormalisation`). A timestamp-typed field is
+rendered as the point in time in UTC, in ISO 8601 form with a `Z` suffix. Its
+fractional seconds are included only where they are not zero, without trailing
+zeros:
+
+- `2023-01-01T02:00:00Z`;
+- `2023-01-01T02:00:00.123Z`.
+
+The rendering does not depend on the session time zone. The original offset
+cannot be recovered, so UTC is the only faithful form. The previous layout
+stores no other FHIR type as a timestamp.
+
+So the engine sees text instants on both layouts:
+
+- **An untyped view column** is `StringType` on both layouts. Its value is the
+  lexical form on the new layout and the UTC text on the previous one.
+  `AnsiTypeHintingTest`'s instant row expects `StringType`, with each layout's
+  value (owner-approved).
+- **`issued.toString()` and a column declared `instant`** give the same two
+  renderings. The difference between the layouts is accepted.
+- **FHIRPath comparison** gives the same answers on both layouts.
+- **An `ansi/type` of `TIMESTAMP WITHOUT TIME ZONE`** would drop the offset from
+  the text and keep the wall time. So an instant is cast to a timestamp first,
+  and that gives the point in time in the session time zone on both layouts.
+  Text of any other type keeps the direct cast and its wall time, which existing
+  tests pin.
+
+This changes what the previous layout returns, which until now was a timestamp.
+Until M4, the `library-api`, Python and R suites read the previous layout through
+the engine, so the change reaches them. Before it was made, the `library-api`
+suite was run and passed, and the Python and R tests were searched: none asserts
+an instant's type or value.
+
+_Amends_ decision 73's expectation that M2 changes nothing a user can see
+beyond two fixes, since the change reaches the public API on the previous layout.
+It records the query-time type of a primitive that decision 70 already stores as
+text.

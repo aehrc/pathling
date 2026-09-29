@@ -22,7 +22,6 @@ import au.csiro.pathling.fhirpath.collection.DecimalCollection;
 import au.csiro.pathling.fhirpath.collection.QuantityCollection;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
-import java.util.Set;
 import java.util.function.UnaryOperator;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -68,20 +67,6 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  */
 @EqualsAndHashCode(callSuper = false)
 public final class ResourceRepresentation extends ColumnRepresentation {
-
-  /**
-   * Quantity and the types profiled on it, which the previous layout stores with a canonical form
-   * that the traversal normalises away.
-   */
-  private static final Set<FHIRDefinedType> QUANTITY_TYPES =
-      Set.of(
-          FHIRDefinedType.QUANTITY,
-          FHIRDefinedType.AGE,
-          FHIRDefinedType.COUNT,
-          FHIRDefinedType.DISTANCE,
-          FHIRDefinedType.DURATION,
-          FHIRDefinedType.SIMPLEQUANTITY,
-          FHIRDefinedType.MONEYQUANTITY);
 
   /** Default name for the existence column (resource id). */
   public static final String DEFAULT_EXISTENCE_COLUMN = "id";
@@ -275,15 +260,21 @@ public final class ResourceRepresentation extends ColumnRepresentation {
           this,
           fieldName);
     }
-    if (fhirType.filter(QUANTITY_TYPES::contains).isPresent()) {
+    if (fhirType.filter(QuantityCollection.QUANTITY_TYPES::contains).isPresent()) {
       // A quantity is read in the new layout's shape on either layout, with the previous layout's
-      // canonical form and value scale normalised away. A Quantity is then decoded for computation,
-      // which computes its canonical form.
-      final ColumnRepresentation stored =
-          existing(ColumnFunctions.quantityColumnOrNull(fieldName, fallback)).removeNulls();
-      return fhirType.filter(FHIRDefinedType.QUANTITY::equals).isPresent()
-          ? QuantityCollection.decode(stored)
-          : stored;
+      // canonical form and value scale normalised away. It is then decoded for computation, which
+      // computes its canonical form, whichever of the quantity types it is (decision 80).
+      return QuantityCollection.decode(
+          existing(ColumnFunctions.quantityColumnOrNull(fieldName, fallback)).removeNulls());
+    }
+    if (fhirType.filter(FHIRDefinedType.INSTANT::equals).isPresent()) {
+      // An instant is read as text on either layout, with the previous layout's timestamp
+      // normalised to its text in UTC (decision 81).
+      return ElementRepresentation.ofPrimitive(
+          existing(ColumnFunctions.instantColumnOrNull(fieldName, fallback)).removeNulls(),
+          fhirType,
+          this,
+          fieldName);
     }
     final ColumnRepresentation result = getField(fieldName, fallback).removeNulls();
     if (fhirType.filter(FHIRDefinedType.BASE64BINARY::equals).isPresent()) {

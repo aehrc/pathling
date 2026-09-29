@@ -22,7 +22,6 @@ import static java.util.Objects.nonNull;
 import static java.util.stream.Collectors.toUnmodifiableMap;
 import static org.apache.spark.sql.functions.callUDF;
 import static org.apache.spark.sql.functions.coalesce;
-import static org.apache.spark.sql.functions.instr;
 import static org.apache.spark.sql.functions.length;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.regexp_extract;
@@ -218,17 +217,18 @@ public class QuantityEncoding {
   /**
    * Computes the scale of the text of a decimal, as {@link BigDecimal#scale()} gives it: the number
    * of digits after the decimal point, less the exponent where there is one.
+   *
+   * <p>The text is referenced twice, once for each part, because on the previous layout it is the
+   * rendering of the stored value, and every reference repeats that rendering in the plan. A null
+   * text gives a null scale, because the digits of a null are null.
    */
   @Nonnull
   private static Column scaleOf(@Nonnull final Column text) {
-    final Column mantissa = regexp_extract(text, "^[^eE]*", 0);
+    final Column fractionDigits = length(regexp_extract(text, "^[^.eE]*(?:\\.([0-9]*))?", 1));
     final Column exponent =
         coalesce(
             regexp_extract(text, "[eE]([-+]?[0-9]+)$", 1).try_cast(DataTypes.IntegerType), lit(0));
-    final Column point = instr(mantissa, ".");
-    final Column fractionDigits =
-        when(point.gt(0), length(mantissa).minus(point)).otherwise(lit(0));
-    return when(text.isNotNull(), fractionDigits.minus(exponent));
+    return fractionDigits.minus(exponent);
   }
 
   /**

@@ -24,6 +24,9 @@ import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluator;
 import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluatorBuilder;
 import au.csiro.pathling.fhirpath.parser.Parser;
+import au.csiro.pathling.search.SearchColumnBuilder;
+import au.csiro.pathling.sql.misc.CanonicalQuantityCode;
+import au.csiro.pathling.sql.misc.CanonicalQuantityValue;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.datasource.PrunedSchemaReader;
 import au.csiro.pathling.test.layout.LayoutDatasets;
@@ -210,6 +213,45 @@ class QuantityCollectionTest {
       @Nonnull final String expression, @Nonnull final List<String> expected) {
     assertThat(evaluate(datasets.get("pof"), expression))
         .containsExactlyInAnyOrderElementsOf(expected);
+  }
+
+  @Nonnull
+  Stream<Arguments> fieldPlanCases() {
+    // The previous layout's value is rendered to text once, by one CASE WHEN over its scale. The
+    // new layout's value is text already.
+    return Stream.of(
+        arguments("previous", "value.ofType(Quantity).value", 1),
+        arguments("pof", "value.ofType(Quantity).value", 0),
+        arguments("previous", "component.value.ofType(Quantity).value", 1),
+        arguments("pof", "component.value.ofType(Quantity).value", 0));
+  }
+
+  /**
+   * A field of a decoded quantity is read from the stored quantity, which is normalised once. The
+   * decoded structure has the type of a previous-layout quantity, so reading the field from it
+   * would normalise it a second time, and compute its canonical form for nothing.
+   */
+  @ParameterizedTest(name = "{1} over the {0} layout")
+  @MethodSource("fieldPlanCases")
+  void fieldOfADecodedQuantityIsNormalisedOnce(
+      @Nonnull final String layout,
+      @Nonnull final String expression,
+      final int expectedRenderings) {
+    final Dataset<Row> dataset = datasets.get(layout);
+    final String plan =
+        dataset
+            .select(
+                SearchColumnBuilder.withDefaultRegistry(fhirEncoders.getContext())
+                    .fromExpression(ResourceType.OBSERVATION, expression)
+                    .alias("x"))
+            .queryExecution()
+            .optimizedPlan()
+            .expressions()
+            .mkString(",");
+    assertThat(plan)
+        .doesNotContain(CanonicalQuantityValue.FUNCTION_NAME)
+        .doesNotContain(CanonicalQuantityCode.FUNCTION_NAME);
+    assertThat(plan.split("CASE WHEN", -1)).hasSize(expectedRenderings + 1);
   }
 
   /**

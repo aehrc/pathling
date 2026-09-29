@@ -23,6 +23,7 @@
 package au.csiro.pathling.encoders;
 
 import au.csiro.pathling.sql.DecimalNormalisation;
+import au.csiro.pathling.sql.InstantNormalisation;
 import au.csiro.pathling.sql.MergeCast;
 import au.csiro.pathling.sql.QuantityNormalisation;
 import au.csiro.pathling.sql.ResolveOrNull;
@@ -143,6 +144,22 @@ public class ColumnFunctions {
   public static Column decimalColumnOrNull(
       @Nonnull final String columnName, @Nonnull final DataType fallback) {
     return ExpressionUtils.column(DecimalNormalisation.tolerantColumn(columnName, fallback));
+  }
+
+  /**
+   * Creates a reference to a table-level instant column that resolves to its text on either layout,
+   * and to a null of the fallback type where the input does not have the column. The previous
+   * layout's timestamp is normalised to its text in UTC, which does not depend on the session time
+   * zone (decision 81).
+   *
+   * @param columnName the name of the table-level column
+   * @param fallback the type of the null returned when the column is absent
+   * @return a Column that yields the text of the instant column
+   */
+  @Nonnull
+  public static Column instantColumnOrNull(
+      @Nonnull final String columnName, @Nonnull final DataType fallback) {
+    return ExpressionUtils.column(InstantNormalisation.tolerantColumn(columnName, fallback));
   }
 
   /**

@@ -54,8 +54,8 @@ import org.springframework.beans.factory.annotation.Autowired;
  * the dimension governs, and the stored schema is checked for what distinguishes the layouts: a
  * decimal is a fixed-precision number on the previous layout and text on the new one (FR-002), and
  * an element the resource does not carry is present on the previous layout, whose schema is dense,
- * and absent from the new one, whose schema is pruned. Run with {@code -Dpathling.testLayout=pof}
- * and without it, the same test sees different stored data.
+ * and absent from the new one, whose schema is pruned. Run with {@code
+ * -Dpathling.testLayout=previous} and without it, the same test sees different stored data.
  *
  * @author Piotr Szul
  */
