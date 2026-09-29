@@ -157,15 +157,17 @@ class ResolveOrNullTest extends SparkSessionSupport with AdaptiveSparkPlanHelper
   }
 
   /**
-   * Known limit, recorded in `evidence/t038a-root-column-spike.md` and decision 75: an ambiguous
-   * name raises the same error as an absent one, so after a self-join the reference resolves to
-   * the fallback, silently, where a plain reference fails with AMBIGUOUS_REFERENCE. This test
-   * notices if that changes.
+   * An ambiguous name raises the same error as an absent one, and the two are told apart by the
+   * attributes the error reports as matched, of which an absent name has none. After a self-join
+   * the reference therefore fails with AMBIGUOUS_REFERENCE, as a plain reference does, rather than
+   * resolving silently to the fallback.
    */
   @Test
-  def knownLimitAmbiguousNameGivesSilentNull(): Unit = {
+  def ambiguousNameFailsWithAmbiguousReference(): Unit = {
     val selfJoin = present.as("l").join(present.as("r"), F.col("l.id") === F.col("r.id"))
-    assertEquals(Seq("[null]", "[null]"), rows(selfJoin.select(extensionMap)))
+    val error = assertThrows(classOf[AnalysisException],
+      () => selfJoin.select(extensionMap).collect())
+    assertEquals("AMBIGUOUS_REFERENCE", error.getCondition)
     val control = assertThrows(classOf[AnalysisException],
       () => selfJoin.select(F.col("_extension")).collect())
     assertEquals("AMBIGUOUS_REFERENCE", control.getCondition)

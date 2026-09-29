@@ -26,7 +26,7 @@ import org.apache.spark.SparkException
 import org.apache.spark.sql.AnalysisException
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.analysis.TypeCheckResult.{TypeCheckFailure, TypeCheckSuccess}
-import org.apache.spark.sql.catalyst.analysis.{GetViewColumnByNameAndOrdinal, TypeCheckResult, UnresolvedException}
+import org.apache.spark.sql.catalyst.analysis.{GetViewColumnByNameAndOrdinal, TypeCheckResult, UnresolvedAttribute, UnresolvedException}
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.{variant => variantExpr}
 import org.apache.spark.sql.catalyst.expressions.codegen.Block._
@@ -422,17 +422,16 @@ case class UnresolvedUnnest(value: Expression)
  * catch, because the analyzer leaves a missing name unresolved and reports it only in
  * `CheckAnalysis`. So the column is referenced through `GetViewColumnByNameAndOrdinal`, which the
  * analyzer resolves against the operator's single child, and which throws
- * INCOMPATIBLE_VIEW_SCHEMA_CHANGE when the name does not match exactly one attribute. That error is
- * caught and replaced with the fallback.
+ * INCOMPATIBLE_VIEW_SCHEMA_CHANGE when the name does not match exactly one attribute. Where the
+ * error reports that no attribute matched, it is caught and replaced with the fallback. Where more
+ * than one matched, the name is ambiguous, and the reference is replaced with a plain one, which
+ * fails with AMBIGUOUS_REFERENCE as any other reference to the column does.
  *
  * The expression is built with no reference to any dataset, so that one column is valid over every
- * schema (decision 75). It depends on analyzer internals, and it has known limits, which the tests
- * pin so that a change is noticed:
- *
- *  - In a join condition the analyzer asserts that the operator has a single child before it
- *    resolves the view column, so the query fails with INTERNAL_ERROR even when the column exists.
- *  - An ambiguous name raises the same error as an absent one, so after a self-join the reference
- *    resolves to the fallback rather than failing with AMBIGUOUS_REFERENCE.
+ * schema (decision 75). It depends on analyzer internals, and it has a known limit, which the tests
+ * pin so that a change is noticed: in a join condition the analyzer asserts that the operator has
+ * a single child before it resolves the view column, so the query fails with INTERNAL_ERROR even
+ * when the column exists.
  *
  * @param columnName the name of the table-level column
  * @param fallback   the type of the null returned when the column is absent
@@ -454,7 +453,13 @@ case class UnresolvedColumnOrNull(columnName: String, fallback: DataType, value:
       }
     } catch {
       case e: AnalysisException if e.getCondition == "INCOMPATIBLE_VIEW_SCHEMA_CHANGE" =>
-        Literal(null, fallback)
+        if (UnresolvedColumnOrNull.NO_MATCH == e.getMessageParameters.get("actualCols")) {
+          Literal(null, fallback)
+        } else {
+          // The name matches more than one attribute. A plain reference to it lets the analyzer
+          // report the ambiguity, as it does for any other reference to the column.
+          UnresolvedAttribute(Seq(columnName))
+        }
     }
   }
 
@@ -479,6 +484,12 @@ object UnresolvedColumnOrNull {
    * because the error is always caught.
    */
   val SOURCE_NAME = "pathling_tolerant_column"
+
+  /**
+   * The attributes that the error that signals absence reports as matched, where none did. An
+   * ambiguous name raises the same error, reporting the attributes it matched.
+   */
+  val NO_MATCH = "[]"
 
   /**
    * Creates a tolerant reference to a table-level column.
