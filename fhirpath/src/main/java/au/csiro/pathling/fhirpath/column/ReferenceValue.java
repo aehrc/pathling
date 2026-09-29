@@ -134,9 +134,10 @@ public class ReferenceValue {
    *   <li>Return null for individual references that cannot be resolved
    * </ol>
    *
-   * <p>Handles both singular and array columns. If the reference column is an array, the type
-   * column is an array of the same length, except where the input schema lacks the type, in which
-   * case it is a single null that stands for the type of every reference (FR-025).
+   * <p>Handles both singular and array columns. Of repeating references, the reference and the type
+   * columns are arrays of the same length, except where the input schema lacks one of them, in
+   * which case it is a single null that stands for that element of every reference (FR-025). The
+   * result is an array wherever either column is one.
    *
    * @return A column representation containing the extracted type string(s)
    */
@@ -152,7 +153,12 @@ public class ReferenceValue {
                     functions.transform(refArray, ref -> extractTypeFromColumns(ref, absentType)));
 
     final UnaryOperator<Column> singularLogic =
-        ref -> extractTypeFromColumns(ref, typeColumn.getValue());
+        ref ->
+            ValueFunctions.ifArray(
+                typeColumn.getValue(),
+                typeArray ->
+                    functions.transform(typeArray, type -> extractTypeFromColumns(ref, type)),
+                type -> extractTypeFromColumns(ref, type));
 
     return referenceColumn.vectorize(arrayLogic, singularLogic);
   }

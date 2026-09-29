@@ -130,9 +130,10 @@ public class ReferenceCollection extends Collection {
    */
   @Nonnull
   public Collection resolve() {
-    final ColumnRepresentation referenceColumn = getColumn().getField(FhirFieldNames.REFERENCE);
-    // The type is read as a string even where the schema lacks it, so that it combines with the
-    // reference it is paired with.
+    // The reference and the type are each read as a string even where the schema lacks them, so
+    // that each combines with the other.
+    final ColumnRepresentation referenceColumn =
+        getColumn().getField(FhirFieldNames.REFERENCE, DataTypes.StringType);
     final ColumnRepresentation typeColumn =
         getColumn().getField(TYPE_ELEMENT_NAME, DataTypes.StringType);
 

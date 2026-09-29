@@ -171,6 +171,102 @@ class AbsentReferenceTypeTest {
         .containsExactlyInAnyOrder(expected1, expected2);
   }
 
+  /** An observation whose references are logical: they have a type and no reference. */
+  private static final String LOGICAL =
+      "{\"resourceType\":\"Observation\",\"id\":\"o3\",\"status\":\"final\","
+          + "\"code\":{\"text\":\"x\"},"
+          + "\"subject\":{\"type\":\"Patient\",\"identifier\":{\"value\":\"1\"}},"
+          + "\"performer\":[{\"type\":\"Practitioner\",\"identifier\":{\"value\":\"a\"}},"
+          + "{\"type\":\"Organization\",\"identifier\":{\"value\":\"b\"}}]}";
+
+  /** An observation whose references have neither a type nor a reference. */
+  private static final String IDENTIFIED =
+      "{\"resourceType\":\"Observation\",\"id\":\"o4\",\"status\":\"final\","
+          + "\"code\":{\"text\":\"x\"},"
+          + "\"subject\":{\"identifier\":{\"value\":\"1\"}},"
+          + "\"performer\":[{\"identifier\":{\"value\":\"a\"}},"
+          + "{\"identifier\":{\"value\":\"b\"}}]}";
+
+  private Map<String, Dataset<Row>> logical;
+
+  private Map<String, Dataset<Row>> identified;
+
+  @BeforeAll
+  void setUpAbsentReferences() {
+    // No reference in these datasets has a reference, and the new layout omits it. The previous
+    // layout carries it, so it is removed from the schema there, as it is from a pruned table.
+    final PrunedSchemaReader previousLogical =
+        write(TestLayout.PREVIOUS, "previous-logical", LOGICAL);
+    logical =
+        Map.of(
+            "pof",
+            write(TestLayout.POF, "pof-logical", LOGICAL).read(),
+            "previous, full schema",
+            previousLogical.read(),
+            "previous, without performer.reference and subject.reference",
+            previousLogical.readWithout("performer.reference", "subject.reference"));
+    // No reference in these datasets has either a type or a reference.
+    final PrunedSchemaReader previousIdentified =
+        write(TestLayout.PREVIOUS, "previous-identified", IDENTIFIED);
+    identified =
+        Map.of(
+            "pof",
+            write(TestLayout.POF, "pof-identified", IDENTIFIED).read(),
+            "previous, full schema",
+            previousIdentified.read(),
+            "previous, without the type and reference of performer and subject",
+            previousIdentified.readWithout(
+                "performer.reference", "performer.type", "subject.reference", "subject.type"));
+  }
+
+  @Nonnull
+  Stream<Arguments> logicalCases() {
+    return Stream.of(
+            arguments("performer.resolve().count()", "o3=2"),
+            arguments("performer.resolve().ofType(Practitioner).count()", "o3=1"),
+            arguments("performer.resolve().ofType(Organization).count()", "o3=1"),
+            arguments("performer.where(resolve() is Organization).count()", "o3=1"),
+            arguments("performer.first().resolve().ofType(Practitioner).count()", "o3=1"),
+            arguments("subject.resolve().ofType(Patient).count()", "o3=1"))
+        .flatMap(
+            expression ->
+                logical.keySet().stream()
+                    .map(dataset -> arguments(dataset, expression.get()[0], expression.get()[1])));
+  }
+
+  @ParameterizedTest(name = "{1} over {0}")
+  @MethodSource("logicalCases")
+  void resolveTakesTypeWhereReferenceIsAbsent(
+      @Nonnull final String dataset,
+      @Nonnull final String expression,
+      @Nonnull final String expected) {
+    assertThat(evaluate(logical.get(dataset), expression))
+        .as("%s over %s", expression, dataset)
+        .containsExactly(expected);
+  }
+
+  @Nonnull
+  Stream<Arguments> identifiedCases() {
+    return Stream.of(
+            "performer.resolve().count()",
+            "performer.resolve().ofType(Practitioner).count()",
+            "performer.where(resolve() is Practitioner).count()",
+            "performer.first().resolve().count()",
+            "subject.resolve().count()")
+        .flatMap(
+            expression ->
+                identified.keySet().stream().map(dataset -> arguments(dataset, expression)));
+  }
+
+  @ParameterizedTest(name = "{1} over {0}")
+  @MethodSource("identifiedCases")
+  void resolveIsEmptyWhereTypeAndReferenceAreAbsent(
+      @Nonnull final String dataset, @Nonnull final String expression) {
+    assertThat(evaluate(identified.get(dataset), expression))
+        .as("%s over %s", expression, dataset)
+        .containsExactly("o4=0");
+  }
+
   @Nonnull
   private PrunedSchemaReader write(
       @Nonnull final TestLayout layout, @Nonnull final String name, @Nonnull final String... json) {
