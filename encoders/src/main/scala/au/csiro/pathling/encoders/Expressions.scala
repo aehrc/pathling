@@ -350,11 +350,12 @@ case class UnresolvedIfArray2(value: Expression, arrayExpressions: Expression =>
       newValue.dataType match {
         case ArrayType(ArrayType(_, _), _) => f(arrayExpressions(newValue))
         case ArrayType(_, _) => f(elseExpression(newValue))
-        case _ => throw new SparkException(
-          errorClass = "ARRAY_TYPE_EXPECTED",
-          messageParameters = Map(
-            "actualType" -> newValue.dataType.toString),
-          cause = null)
+        // Pathling registers no error classes of its own, so the failure is reported through
+        // Spark's internal error class, which carries a free-form message.
+        case _ => throw new AnalysisException(
+          errorClass = "INTERNAL_ERROR",
+          messageParameters = Map("message" ->
+            s"Expected an array or an array of arrays, but got ${newValue.dataType}."))
       }
     }
     else {
