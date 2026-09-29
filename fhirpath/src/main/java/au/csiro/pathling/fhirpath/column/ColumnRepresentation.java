@@ -525,6 +525,21 @@ public abstract class ColumnRepresentation {
   }
 
   /**
+   * Returns the value at an index of the current {@link ColumnRepresentation}. A singular value is
+   * returned as it is, whatever the index.
+   *
+   * @param index the zero-based index of the value, as an integer column
+   * @return A new {@link ColumnRepresentation} that is the value at the index, or null where there
+   *     is none
+   */
+  @Nonnull
+  public ColumnRepresentation elementAt(@Nonnull final Column index) {
+    // try_element_at is one-based, and returns null rather than failing for an index that is out
+    // of range.
+    return vectorize(c -> try_element_at(c, index.plus(1)), UnaryOperator.identity());
+  }
+
+  /**
    * Returns the last value from the current {@link ColumnRepresentation}.
    *
    * @return A new {@link ColumnRepresentation} that is the last value

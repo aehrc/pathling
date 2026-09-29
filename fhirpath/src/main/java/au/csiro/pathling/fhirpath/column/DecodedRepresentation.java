@@ -37,14 +37,14 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * combines with the structures the engine builds itself, while the stored element's extensions have
  * the type the data gives them. So extension traversal reads the stored elements (T097).
  *
- * <p>An operation that only selects among the elements, such as a filter or taking the first,
- * commutes with decoding. Those operations are applied to the stored elements and keep them. So do
- * the union and combination of two such representations, which merge the stored elements and decode
- * the result (T113b, decision 79). Every other operation, such as a union with a value the engine
- * built, acts on the decoded value and yields an ordinary representation, which reaches extensions
- * through the decoded structure's {@code _fid}. That finds them on the previous layout. On the new
- * layout the {@code _fid} is null and the table has no {@code _extension} column, so such a value
- * has no extensions there, as a System value should not.
+ * <p>An operation that only selects among the elements, such as a filter, taking the first or the
+ * last, or indexing, commutes with decoding. Those operations are applied to the stored elements
+ * and keep them. So do the union and combination of two such representations, which merge the
+ * stored elements and decode the result (T113b, decision 79). Every other operation, such as a
+ * union with a value the engine built, acts on the decoded value and yields an ordinary
+ * representation, which reaches extensions through the decoded structure's {@code _fid}. That finds
+ * them on the previous layout. On the new layout the {@code _fid} is null and the table has no
+ * {@code _extension} column, so such a value has no extensions there, as a System value should not.
  *
  * @author Piotr Szul
  */
@@ -136,5 +136,11 @@ public class DecodedRepresentation extends DefaultRepresentation {
   @Nonnull
   public ColumnRepresentation last() {
     return new DecodedRepresentation(stored.last(), decoder);
+  }
+
+  @Override
+  @Nonnull
+  public ColumnRepresentation elementAt(@Nonnull final Column index) {
+    return new DecodedRepresentation(stored.elementAt(index), decoder);
   }
 }
