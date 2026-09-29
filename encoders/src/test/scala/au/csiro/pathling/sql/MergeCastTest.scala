@@ -222,15 +222,17 @@ class MergeCastTest extends SparkSessionSupport {
   }
 
   // -----------------------------------------------------------------------------------------------
-  // The reconciliation of every operand at once holds each operand once (finding 8).
+  // The combination of projected operands holds each operand once (finding 8).
   // -----------------------------------------------------------------------------------------------
 
+  private def combination(operands: Column*): Column =
+    ColumnFunctions.mergeCombination(operands.asJava, Name,
+      (projected: java.util.List[Column]) => F.concat(projected.asScala.toSeq: _*))
+
   @Test
-  def reconcilingEveryOperandAtOnceMatchesEachProjection(): Unit = {
+  def combinationMatchesTheCombinationOfEachProjection(): Unit = {
     val operands = Seq(F.col("a"), F.col("b"), F.col("c"))
-    val merged = ColumnFunctions.mergeCastAll(operands.asJava, Name)
-    val projections = operands.indices.map(i => ColumnFunctions.mergedOperand(merged, i))
-    val result = data.select(F.concat(projections: _*).alias("m"),
+    val result = data.select(combination(operands: _*).alias("m"),
       F.concat(all(operands: _*): _*).alias("e"))
     assertEquals(typeOf(result, "e"), typeOf(result, "m"))
     val Seq(row) = result.collect().toSeq
@@ -238,15 +240,31 @@ class MergeCastTest extends SparkSessionSupport {
   }
 
   @Test
-  def reconcilingEveryOperandAtOnceHoldsEachOperandOnce(): Unit = {
-    val operands = Seq(F.col("a"), F.col("b"))
-    val analysed = data.select(ColumnFunctions.mergeCastAll(operands.asJava, Name).alias("m"))
+  def combinationHoldsEachOperandOnce(): Unit = {
+    val analysed = data.select(combination(F.col("a"), F.col("b")).alias("m"))
       .queryExecution.analyzed
     val references = analysed.expressions.flatMap(_.collect {
       case attribute: org.apache.spark.sql.catalyst.expressions.AttributeReference =>
         attribute.name
     })
     assertEquals(Seq("a", "b"), references)
+  }
+
+  @Test
+  def combinationOfOperandsThatAgreeAddsNothingToThePlan(): Unit = {
+    // Both are selected from one read of the data, so that their attributes are the same.
+    val source = data
+    val combined = source.select(combination(F.col("a"), F.col("a")).alias("m"))
+    val plain = source.select(F.concat(F.col("a"), F.col("a")).alias("m"))
+    assertTrue(plain.queryExecution.analyzed.sameResult(combined.queryExecution.analyzed),
+      combined.queryExecution.analyzed.toString)
+  }
+
+  @Test
+  def combinationOfOperandsThatCannotBeMergedFailsAnalysis(): Unit = {
+    val error = assertThrows(classOf[AnalysisException],
+      () => data.select(combination(F.col("sa"), F.col("a"))).collect())
+    assertTrue(error.getCondition.startsWith("DATATYPE_MISMATCH"), error.getCondition)
   }
 
   private def elementOf(dataType: DataType): StructType = dataType match {

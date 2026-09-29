@@ -25,18 +25,20 @@ package au.csiro.pathling.encoders;
 import au.csiro.pathling.sql.DecimalNormalisation;
 import au.csiro.pathling.sql.InstantNormalisation;
 import au.csiro.pathling.sql.MergeCast;
-import au.csiro.pathling.sql.MergeCastAll;
 import au.csiro.pathling.sql.QuantityNormalisation;
 import au.csiro.pathling.sql.ResolveOrNull;
+import au.csiro.pathling.sql.UnresolvedMergeCombination;
 import au.csiro.pathling.sql.UnresolvedTraverseExtension;
 import au.csiro.pathling.sql.UnresolvedTraverseRootExtension;
 import au.csiro.pathling.utilities.CanonicalStructure;
 import jakarta.annotation.Nonnull;
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.Function;
 import lombok.experimental.UtilityClass;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.catalyst.expressions.Expression;
+import org.apache.spark.sql.classic.ColumnConversions$;
 import org.apache.spark.sql.classic.ExpressionUtils;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
@@ -244,37 +246,34 @@ public class ColumnFunctions {
   }
 
   /**
-   * Creates the reconciliation of several operands at once, which projects every one of several
-   * operands of the same FHIR type by name into the recursive field-wise merge of all of their
-   * types (FR-056), and holds the projections as the fields of one structure. Unlike {@link
-   * #mergeCast(List, int, CanonicalStructure)}, it holds each operand once, however many of the
-   * projections are read from it.
+   * Combines several operands of the same FHIR type, each projected by name into the recursive
+   * field-wise merge of all of their types (FR-056). Unlike {@link #mergeCast(List, int,
+   * CanonicalStructure)}, each operand is held once in the combination, and an operand whose type
+   * is already the merged type is left as it is.
    *
-   * @param operands the full, ordered list of operands being reconciled
+   * @param operands the full, ordered list of operands being combined
    * @param canonical the canonical structure of the operands' element type
-   * @return a Column holding a structure of the projected operands, read with {@link
-   *     #mergedOperand(Column, int)}
+   * @param combination the combination of the projected operands, given in the same order
+   * @return a Column holding the combination of the projected operands
    */
   @Nonnull
-  public static Column mergeCastAll(
-      @Nonnull final List<Column> operands, @Nonnull final CanonicalStructure canonical) {
+  public static Column mergeCombination(
+      @Nonnull final List<Column> operands,
+      @Nonnull final CanonicalStructure canonical,
+      @Nonnull final Function<List<Column>, Column> combination) {
     final Seq<Expression> expressions =
         scala.jdk.javaapi.CollectionConverters.asScala(
                 operands.stream().map(ExpressionUtils::expression).toList())
             .toSeq();
-    return ExpressionUtils.column(new MergeCastAll(expressions, canonical));
-  }
-
-  /**
-   * Reads the projection of one operand from the structure created by {@link #mergeCastAll(List,
-   * CanonicalStructure)}.
-   *
-   * @param merged the structure of the projected operands
-   * @param index the position in the list of the operand whose projection is wanted
-   * @return a Column holding the operand, projected into the merged type
-   */
-  @Nonnull
-  public static Column mergedOperand(@Nonnull final Column merged, final int index) {
-    return merged.getField(MergeCastAll.fieldName(index));
+    final scala.Function1<Seq<Expression>, Expression> combine =
+        projected ->
+            ColumnConversions$.MODULE$
+                .toRichColumn(
+                    combination.apply(
+                        scala.jdk.javaapi.CollectionConverters.asJava(projected).stream()
+                            .map(ExpressionUtils::column)
+                            .toList()))
+                .expr();
+    return ExpressionUtils.column(new UnresolvedMergeCombination(expressions, canonical, combine));
   }
 }

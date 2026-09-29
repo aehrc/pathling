@@ -41,7 +41,6 @@ import java.util.function.UnaryOperator;
 import java.util.stream.IntStream;
 import lombok.experimental.UtilityClass;
 import org.apache.spark.sql.Column;
-import org.apache.spark.sql.functions;
 
 /**
  * The unification of operands that must share a type, and the array-level primitives used by the
@@ -344,8 +343,8 @@ public class CombiningLogic {
    * so a projection made on its own must hold every operand. A combination of such projections
    * holds every operand once for each of them, and in a chain of combinations the whole of the
    * chain to the left is held again at every level, which doubles the plan with every operand
-   * added. Here the operands are projected together, into one structure that holds each of them
-   * once, and the combination reads the projections from that structure through one binding of it.
+   * added. Here the combination is given the operands once, and applied to their projections once
+   * they are resolved, so that each projection holds only its own operand.
    *
    * @param operands the operands, whose types have been promoted, in order
    * @param combineStored the combination of the stored arrays of operands that all hold decoded
@@ -370,7 +369,7 @@ public class CombiningLogic {
           canonical
               .map(
                   structure ->
-                      combineMerged(
+                      ColumnFunctions.mergeCombination(
                           stored, structure, unified -> combineStored.apply(unified, decoder)))
               .orElseGet(() -> combineStored.apply(stored, decoder));
       return rewrap(template, result, decoder);
@@ -379,7 +378,7 @@ public class CombiningLogic {
       final List<Column> columns =
           operands.stream().map(operand -> operand.getColumn().plural().getValue()).toList();
       return template.copyWithColumn(
-          combineMerged(
+          ColumnFunctions.mergeCombination(
               columns,
               canonical.get(),
               unified ->
@@ -389,30 +388,6 @@ public class CombiningLogic {
                           .toList())));
     }
     return template.copyWithColumn(combinePlain.apply(operands));
-  }
-
-  /**
-   * Projects columns together into the merged structure of all of them, and combines the
-   * projections, so that each column is held once in the result.
-   *
-   * <p>The structure of the projections is bound once, as the only element of an array that is
-   * transformed by the combination, which reads each projection from a field of the bound value.
-   */
-  @Nonnull
-  private static Column combineMerged(
-      @Nonnull final List<Column> columns,
-      @Nonnull final CanonicalStructure canonical,
-      @Nonnull final Function<List<Column>, Column> combination) {
-    final Column merged = ColumnFunctions.mergeCastAll(columns, canonical);
-    return functions
-        .transform(
-            functions.array(merged),
-            bound ->
-                combination.apply(
-                    IntStream.range(0, columns.size())
-                        .mapToObj(index -> ColumnFunctions.mergedOperand(bound, index))
-                        .toList()))
-        .getItem(0);
   }
 
   /** The equality of two stored structures, which is the equality of their decoded values. */

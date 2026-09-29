@@ -142,31 +142,61 @@ on both layouts. The optimised plan did not, because each `MergeCast` is
 replaced by the projection of its own operand.
 
 Union and combine now promote the types of their operands only, and unify the
-shapes as they combine them. One `MergeCastAll` holds every operand once and
-yields a structure of the projections, which is bound once as the only element
-of an array that the combination transforms. The other unification sites keep
-`MergeCast`, because their results are not stored structures, and so do not
-come back into another reconciliation.
+shapes as they combine them. An `UnresolvedMergeCombination` holds each operand
+once, with the combination to apply. Once every operand is resolved, it
+replaces itself with the combination of the projections, each of which holds
+only its own operand. An operand whose type is already the merged type is its
+own projection, so where the shapes agree nothing is added to the plan. The
+other unification sites keep `MergeCast`, because their results are not stored
+structures, and so do not come back into another reconciliation.
+
+A first version of the fix, `MergeCastAll`, bound a structure of all the
+projections once, as the only element of an array that the combination
+transformed. Its analysed plan was linear too, but the binding stayed in the
+optimised plan even where the shapes agreed, and `ArrayTransform` has no
+generated code. On 200,000 Patients it made `name.combine(contact.name)` about
+2.6 times as slow on the new layout and twice as slow on the previous one,
+because `concat` lost code generation, and `name | name` about 25% slower. The
+design above replaced it.
 
 `(name | contact.name | name ...).family` on one Patient, through
 `FhirViewExecutor`, where `k` is the number of `|`. Analysis is the time to
-build and analyse the query. `combine()` measures the same as `|`.
+build and analyse the query. Base is issue/2367, before is 06f3cfbe6c, and
+after is the fix. `combine()` measures the same as `|`.
 
 | Layout   | `k` | Base nodes | Before nodes | After nodes | Before analysis | After analysis |
 | -------- | --: | ---------: | -----------: | ----------: | --------------: | -------------: |
-| new      |   4 |        128 |          926 |         230 |          107 ms |         107 ms |
-| new      |   8 |        204 |       14,366 |         374 |        1,664 ms |         150 ms |
-| new      |  10 |        242 |       57,374 |         446 |        5,752 ms |         130 ms |
-| new      |  12 |        280 |      229,406 |         518 |       33,354 ms |         172 ms |
-| previous |   8 |        204 |       14,332 |         340 |        1,520 ms |         377 ms |
-| previous |  12 |        280 |      229,372 |         484 |       26,773 ms |         382 ms |
+| new      |   4 |        128 |          926 |         186 |          222 ms |         125 ms |
+| new      |   8 |        204 |       14,366 |         286 |        1,398 ms |          99 ms |
+| new      |  12 |        280 |      229,406 |         386 |       27,243 ms |         119 ms |
+| previous |   4 |        128 |          892 |         152 |          357 ms |         434 ms |
+| previous |   8 |        204 |       14,332 |         252 |        1,524 ms |         377 ms |
+| previous |  12 |        280 |      229,372 |         352 |       25,582 ms |         377 ms |
 
-The analysed plan now grows by 36 nodes per operand on both layouts. The
-optimised plan also stays linear, at 27 nodes per operand against 12 before,
-because the binding of the projections survives optimisation. It survives where
-the shapes already agree too, where `MergeCast` was optimised away, and
-`ArrayTransform` has no generated code, so such a union is now evaluated
-through an interpreted higher-order function. Inlining the single-use binding
-at optimisation would remove both costs. The test
-`CombiningPlanSizeTest` requires the analysed plan of a chain of 8 to be at most
-three times that of a chain of 4, on both layouts and for both forms.
+The analysed plan now grows by 25 nodes per operand on both layouts, against
+19 on the base. The optimised plan is unchanged from 06f3cfbe6c, at 12 nodes
+per operand. The test `CombiningPlanSizeTest` requires the analysed plan of a
+chain of 8 to be at most three times that of a chain of 4, on both layouts and
+for both forms.
+
+The optimised plans of `name.combine(contact.name)`, `name | name`,
+`name | contact.name` and `telecom | contact.telecom` are identical to those
+of 06f3cfbe6c on both layouts, apart from expression identifiers, so the fix
+costs nothing at run time. Timed over 200,000 Patients, writing to the `noop`
+sink, as the median of five warm runs, the two agree within the drift of the
+machine, which moved the unaffected control `name.family` by up to 14% between
+runs. The two runs were made in opposite orders, before first in the first run
+and after first in the second.
+
+| Layout   | Expression                   | Before, run 1 | After, run 1 | Before, run 2 | After, run 2 |
+| -------- | ---------------------------- | ------------: | -----------: | ------------: | -----------: |
+| new      | `name.family` (control)      |        136 ms |       144 ms |        235 ms |       219 ms |
+| new      | `name.combine(contact.name)` |        273 ms |       292 ms |        423 ms |       430 ms |
+| new      | `name \| name`               |        216 ms |       225 ms |        396 ms |       426 ms |
+| new      | `name \| contact.name`       |        358 ms |       369 ms |        541 ms |       589 ms |
+| new      | `telecom \| contact.telecom` |        223 ms |       243 ms |        357 ms |       389 ms |
+| previous | `name.family` (control)      |        241 ms |       274 ms |        324 ms |       325 ms |
+| previous | `name.combine(contact.name)` |        470 ms |       616 ms |        697 ms |       714 ms |
+| previous | `name \| name`               |        330 ms |       360 ms |        501 ms |       531 ms |
+| previous | `name \| contact.name`       |        587 ms |       733 ms |        892 ms |       980 ms |
+| previous | `telecom \| contact.telecom` |        437 ms |       474 ms |        640 ms |       677 ms |
