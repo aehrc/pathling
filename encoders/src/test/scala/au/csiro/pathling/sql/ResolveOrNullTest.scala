@@ -174,6 +174,34 @@ class ResolveOrNullTest extends SparkSessionSupport with AdaptiveSparkPlanHelper
   }
 
   /**
+   * A name that matches the same attribute more than once is not ambiguous, and a plain reference
+   * resolves it, because the analyzer folds identical attributes together. So does the tolerant
+   * reference, whether the attribute is selected twice or grouped by twice.
+   */
+  @Test
+  def nameMatchingOneAttributeTwiceResolves(): Unit = {
+    val selectedTwice = present.select(F.col("*"), F.col("score"))
+    assertEquals(Seq("[5]", "[7]"), rows(selectedTwice.select(score)))
+    assertEquals(Seq("[1]"), rows(selectedTwice.filter(score === 5).select("id")))
+    val groupedTwice = present.groupBy(F.col("score"), F.col("score")).count()
+    assertEquals(Seq("[5]", "[7]"), rows(groupedTwice.select(score)))
+    assertEquals(Seq("[1]"), rows(groupedTwice.filter(score === 7).select("count")))
+  }
+
+  /**
+   * The error that reports an ambiguous name names each of the columns, even where the name
+   * contains a comma, which the error that signals the ambiguity uses to separate them.
+   */
+  @Test
+  def ambiguousNameContainingACommaIsReportedWhole(): Unit = {
+    val duplicated = present.select(F.col("*"), F.lit(1).as("a,b"), F.lit(2).as("a,b"))
+    val error = assertThrows(classOf[AnalysisException],
+      () => duplicated.select(columnOrNull("a,b", IntegerType)).collect())
+    assertEquals("AMBIGUOUS_REFERENCE", error.getCondition)
+    assertEquals("[`a,b`, `a,b`]", error.getMessageParameters.get("referenceNames"))
+  }
+
+  /**
    * A further limit, found while writing these tests and not recorded in the spike: a column that
    * the table has, but that a projection beneath the operator has dropped, is treated as absent.
    * A plain reference is resolved there by `ResolveMissingReferences`, which adds the column back
