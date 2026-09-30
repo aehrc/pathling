@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.search.filter;
 
+import static au.csiro.pathling.encoders.ColumnFunctions.resolveStringOrNull;
 import static au.csiro.pathling.search.filter.FhirFieldNames.CODE;
 import static au.csiro.pathling.search.filter.FhirFieldNames.CODING;
 import static au.csiro.pathling.search.filter.FhirFieldNames.SYSTEM;
@@ -101,7 +102,8 @@ public class TokenMatcher implements ElementMatcher {
    */
   @Nonnull
   private Column matchCoding(@Nonnull final Column element, @Nonnull final TokenSearchValue token) {
-    return matchSystemAndCode(field(element, SYSTEM), field(element, CODE), token);
+    return matchSystemAndCode(
+        resolveStringOrNull(element, SYSTEM), resolveStringOrNull(element, CODE), token);
   }
 
   /**
@@ -121,7 +123,9 @@ public class TokenMatcher implements ElementMatcher {
     // Match if ANY coding in the array matches
     return exists(
         codingArray,
-        coding -> matchSystemAndCode(field(coding, SYSTEM), field(coding, CODE), token));
+        coding ->
+            matchSystemAndCode(
+                resolveStringOrNull(coding, SYSTEM), resolveStringOrNull(coding, CODE), token));
   }
 
   /**
@@ -136,8 +140,8 @@ public class TokenMatcher implements ElementMatcher {
   private Column matchIdentifier(
       @Nonnull final Column element, @Nonnull final TokenSearchValue token) {
     return matchSystemAndCode(
-        field(element, SYSTEM),
-        field(element, VALUE), // Identifier uses 'value', not 'code'
+        resolveStringOrNull(element, SYSTEM),
+        resolveStringOrNull(element, VALUE), // Identifier uses 'value', not 'code'
         token);
   }
 
@@ -153,7 +157,7 @@ public class TokenMatcher implements ElementMatcher {
   private Column matchContactPoint(
       @Nonnull final Column element, @Nonnull final TokenSearchValue token) {
     // ContactPoint only matches on value - system|code syntax not applicable
-    return field(element, VALUE).equalTo(lit(token.requiresSimpleCode()));
+    return resolveStringOrNull(element, VALUE).equalTo(lit(token.requiresSimpleCode()));
   }
 
   /**
@@ -229,19 +233,5 @@ public class TokenMatcher implements ElementMatcher {
         .flatMap(Optional::stream)
         .reduce(Column::and)
         .orElse(lit(true));
-  }
-
-  /**
-   * Reads a string field of the element by name through the tolerant traversal, so that an element
-   * whose structure does not carry the field, such as one pruned to the fields its data populates,
-   * reads it as null (FR-054).
-   *
-   * @param element the element column
-   * @param name the name of the field
-   * @return the field, or a null string where the structure does not carry it
-   */
-  @Nonnull
-  private static Column field(@Nonnull final Column element, @Nonnull final String name) {
-    return ColumnFunctions.resolveOrNull(element, name, DataTypes.StringType);
   }
 }

@@ -26,6 +26,7 @@ import au.csiro.pathling.fhirpath.function.ColumnTransform;
 import au.csiro.pathling.search.filter.FhirFieldNames;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
+import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
@@ -129,8 +130,12 @@ public class ReferenceCollection extends Collection {
    */
   @Nonnull
   public Collection resolve() {
-    final ColumnRepresentation referenceColumn = getColumn().getField(FhirFieldNames.REFERENCE);
-    final ColumnRepresentation typeColumn = getColumn().getField(TYPE_ELEMENT_NAME);
+    // The reference and the type are each read as a string even where the schema lacks them, so
+    // that each combines with the other.
+    final ColumnRepresentation referenceColumn =
+        getColumn().getField(FhirFieldNames.REFERENCE, DataTypes.StringType);
+    final ColumnRepresentation typeColumn =
+        getColumn().getField(TYPE_ELEMENT_NAME, DataTypes.StringType);
 
     // Extract type information using ReferenceValue
     final ColumnRepresentation extractedType =

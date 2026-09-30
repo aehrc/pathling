@@ -22,7 +22,6 @@ import static org.apache.spark.sql.functions.lit;
 import au.csiro.pathling.encoders.ColumnFunctions;
 import jakarta.annotation.Nonnull;
 import org.apache.spark.sql.Column;
-import org.apache.spark.sql.types.DataTypes;
 
 /**
  * Matches the {@code reference} field of a FHIR Reference element against a search value.
@@ -49,8 +48,7 @@ public class ReferenceMatcher implements ElementMatcher {
     // Read through the tolerant traversal, so that a Reference whose structure does not carry the
     // reference string, such as one pruned to the fields its data populates, reads it as null and
     // matches nothing (FR-054).
-    final Column refCol =
-        ColumnFunctions.resolveOrNull(element, FhirFieldNames.REFERENCE, DataTypes.StringType);
+    final Column refCol = ColumnFunctions.resolveStringOrNull(element, FhirFieldNames.REFERENCE);
 
     // Absolute URI: exact string equality.
     if (isAbsoluteUri(searchValue)) {

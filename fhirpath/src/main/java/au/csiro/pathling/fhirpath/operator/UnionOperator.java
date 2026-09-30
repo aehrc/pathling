@@ -44,8 +44,18 @@ public class UnionOperator extends SameTypeBinaryOperator {
   @Override
   protected Collection handleOneEmpty(
       @Nonnull final Collection nonEmpty, @Nonnull final BinaryOperatorInput input) {
-    // The one operand is unified on its own, which gives a primitive the shared SQL type.
-    return CombiningLogic.dedupe(CombiningLogic.unify(List.of(nonEmpty)).get(0));
+    return CombiningLogic.dedupe(nonEmpty);
+  }
+
+  /**
+   * Promotes the types of the operands only. Their shapes are unified by {@link
+   * CombiningLogic#union(Collection, Collection)}, as it combines them, so that each operand is
+   * held once in the combination.
+   */
+  @Nonnull
+  @Override
+  protected List<Collection> unify(@Nonnull final List<Collection> operands) {
+    return CombiningLogic.promoteTypes(operands);
   }
 
   @Nonnull

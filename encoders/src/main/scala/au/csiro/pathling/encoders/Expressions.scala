@@ -32,7 +32,7 @@ import org.apache.spark.sql.catalyst.expressions.{variant => variantExpr}
 import org.apache.spark.sql.catalyst.expressions.codegen.Block._
 import org.apache.spark.sql.catalyst.expressions.codegen.{CodeGenerator, CodegenContext, ExprCode, FalseLiteral}
 
-import org.apache.spark.sql.catalyst.util.{ArrayData, GenericArrayData}
+import org.apache.spark.sql.catalyst.util.{ArrayData, GenericArrayData, QuotingUtils}
 import org.apache.spark.sql.types._
 
 import scala.language.existentials
@@ -350,11 +350,12 @@ case class UnresolvedIfArray2(value: Expression, arrayExpressions: Expression =>
       newValue.dataType match {
         case ArrayType(ArrayType(_, _), _) => f(arrayExpressions(newValue))
         case ArrayType(_, _) => f(elseExpression(newValue))
-        case _ => throw new SparkException(
-          errorClass = "ARRAY_TYPE_EXPECTED",
-          messageParameters = Map(
-            "actualType" -> newValue.dataType.toString),
-          cause = null)
+        // Pathling registers no error classes of its own, so the failure is reported through
+        // Spark's internal error class, which carries a free-form message.
+        case _ => throw new AnalysisException(
+          errorClass = "INTERNAL_ERROR",
+          messageParameters = Map("message" ->
+            s"Expected an array or an array of arrays, but got ${newValue.dataType}."))
       }
     }
     else {
@@ -421,17 +422,20 @@ case class UnresolvedUnnest(value: Expression)
  * catch, because the analyzer leaves a missing name unresolved and reports it only in
  * `CheckAnalysis`. So the column is referenced through `GetViewColumnByNameAndOrdinal`, which the
  * analyzer resolves against the operator's single child, and which throws
- * INCOMPATIBLE_VIEW_SCHEMA_CHANGE when the name does not match exactly one attribute. That error is
- * caught and replaced with the fallback.
+ * INCOMPATIBLE_VIEW_SCHEMA_CHANGE when the name does not match exactly one attribute. Where the
+ * error reports that no attribute matched, it is caught and replaced with the fallback. Where more
+ * than one matched, and the matches are one attribute, as where a column is selected twice, the
+ * reference resolves to it. Where they are different attributes, the name is ambiguous, as after a
+ * self-join or beneath a projection that gives two columns the name, and the reference fails with
+ * AMBIGUOUS_REFERENCE. In both cases it behaves as a plain reference to the column does. The error
+ * names the columns without their qualifiers, which the error that signals the ambiguity does not
+ * report.
  *
  * The expression is built with no reference to any dataset, so that one column is valid over every
- * schema (decision 75). It depends on analyzer internals, and it has known limits, which the tests
- * pin so that a change is noticed:
- *
- *  - In a join condition the analyzer asserts that the operator has a single child before it
- *    resolves the view column, so the query fails with INTERNAL_ERROR even when the column exists.
- *  - An ambiguous name raises the same error as an absent one, so after a self-join the reference
- *    resolves to the fallback rather than failing with AMBIGUOUS_REFERENCE.
+ * schema (decision 75). It depends on analyzer internals, and it has a known limit, which the tests
+ * pin so that a change is noticed: in a join condition the analyzer asserts that the operator has
+ * a single child before it resolves the view column, so the query fails with INTERNAL_ERROR even
+ * when the column exists.
  *
  * @param columnName the name of the table-level column
  * @param fallback   the type of the null returned when the column is absent
@@ -453,7 +457,38 @@ case class UnresolvedColumnOrNull(columnName: String, fallback: DataType, value:
       }
     } catch {
       case e: AnalysisException if e.getCondition == "INCOMPATIBLE_VIEW_SCHEMA_CHANGE" =>
-        Literal(null, fallback)
+        if (UnresolvedColumnOrNull.NO_MATCH == e.getMessageParameters.get("actualCols")) {
+          Literal(null, fallback)
+        } else {
+          resolveMatches(f, UnresolvedColumnOrNull.matchedNames(columnName,
+            e.getMessageParameters.get("actualCols")))
+        }
+    }
+  }
+
+  /**
+   * Resolves a name that matches more than one attribute. Where every match is the same attribute,
+   * as where a column is selected or grouped by twice, the name is not ambiguous, and it resolves to
+   * that attribute, as a plain reference does. Otherwise the ambiguity is reported here, where a
+   * plain reference to the column reports it. Deferring to a plain reference would let the analyzer
+   * resolve a filter's condition against the input of a projection beneath it, where the name may
+   * be unique, and so silently read one of the columns.
+   */
+  private def resolveMatches(f: Expression => Expression, names: Seq[String]): Expression = {
+    val matches = names.indices.map(ordinal => f(GetViewColumnByNameAndOrdinal(
+      UnresolvedColumnOrNull.SOURCE_NAME, columnName, ordinal, names.size, None)))
+    matches match {
+      case Seq(first: Attribute, rest@_*) if rest.forall {
+        case attribute: Attribute => attribute.exprId == first.exprId
+        case _ => false
+      } => first
+      case _ =>
+        throw new AnalysisException(
+          errorClass = "AMBIGUOUS_REFERENCE",
+          messageParameters = Map(
+            "name" -> QuotingUtils.quoteIdentifier(columnName),
+            "referenceNames" ->
+              names.map(name => QuotingUtils.quoteIdentifier(name)).mkString("[", ", ", "]")))
     }
   }
 
@@ -478,6 +513,29 @@ object UnresolvedColumnOrNull {
    * because the error is always caught.
    */
   val SOURCE_NAME = "pathling_tolerant_column"
+
+  /**
+   * The attributes that the error that signals absence reports as matched, where none did. An
+   * ambiguous name raises the same error, reporting the attributes it matched.
+   */
+  val NO_MATCH = "[]"
+
+  /**
+   * Returns the names of the attributes that the error signalling a name that matched more than
+   * once reports as matched. The error joins them with commas, which a name can contain, so they
+   * are split by length instead: every match has the name that was asked for, up to case.
+   *
+   * @param columnName the name that was asked for
+   * @param actualCols the matched names, as the error reports them
+   * @return the matched names
+   */
+  def matchedNames(columnName: String, actualCols: String): Seq[String] = {
+    val joined = actualCols.stripPrefix("[").stripSuffix("]")
+    val length = columnName.length
+    val count = (joined.length + 1) / (length + 1)
+    (0 until count).map(index => joined.substring(index * (length + 1),
+      index * (length + 1) + length))
+  }
 
   /**
    * Creates a tolerant reference to a table-level column.

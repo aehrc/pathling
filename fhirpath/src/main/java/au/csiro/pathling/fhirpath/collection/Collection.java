@@ -37,6 +37,7 @@ import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.comparison.ColumnEquality;
 import au.csiro.pathling.fhirpath.comparison.Equatable;
+import au.csiro.pathling.fhirpath.encoding.CodingSchema;
 import au.csiro.pathling.fhirpath.function.CollectionTransform;
 import au.csiro.pathling.fhirpath.function.ColumnTransform;
 import au.csiro.pathling.schema.PrimitiveTypes;
@@ -56,6 +57,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
+import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.instance.model.api.IBase;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
@@ -275,7 +277,7 @@ public class Collection implements Equatable {
             check(
                 maybeChildDef.get() instanceof ElementDefinition,
                 "Expected an ElementDefinition for an extension");
-            return traverseExtension((ElementDefinition) childDef);
+            return Optional.of(traverseExtension((ElementDefinition) childDef));
           }
           return Optional.of(traverseChild(childDef));
         });
@@ -333,15 +335,14 @@ public class Collection implements Equatable {
    * Traverses to an extension element within this collection.
    *
    * @param extensionDefinition the definition of the extension to traverse to
-   * @return an optional collection representing the extension
+   * @return a collection representing the extension
    */
   @Nonnull
-  protected Optional<Collection> traverseExtension(
-      @Nonnull final ElementDefinition extensionDefinition) {
+  protected Collection traverseExtension(@Nonnull final ElementDefinition extensionDefinition) {
     // Extension traversal reads the layout from the resolved parent: the inline extension field of
     // the new layout, or the entry for the parent's field identifier in the extension map column of
     // the previous one (decision 75). Above the traversal there is only the new layout's shape.
-    return Optional.of(Collection.build(getColumn().traverseExtension(), extensionDefinition));
+    return Collection.build(getColumn().traverseExtension(), extensionDefinition);
   }
 
   /**
@@ -826,7 +827,11 @@ public class Collection implements Equatable {
         .map(
             t ->
                 TerminologyConcepts.union(
-                    getColumn().getField("coding"),
+                    // The codings are read as an array even where the schema lacks them, because
+                    // the concepts are told apart from sets of concepts by the depth of the array.
+                    getColumn()
+                        .getField(
+                            "coding", DataTypes.createArrayType(CodingSchema.codingStructType())),
                     (CodingCollection) traverse("coding").orElseThrow()));
   }
 
@@ -888,11 +893,7 @@ public class Collection implements Equatable {
    * @return true where the values are stored FHIR structures
    */
   public boolean holdsStoredStructures() {
-    // The null type, which an empty literal has, is neither a primitive nor a structure.
-    return getFhirType()
-        .filter(fhirType -> fhirType != FHIRDefinedType.NULL)
-        .filter(fhirType -> !PrimitiveTypes.isPrimitive(fhirType))
-        .isPresent();
+    return getFhirType().filter(PrimitiveTypes::isStructure).isPresent();
   }
 
   /**

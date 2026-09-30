@@ -157,18 +157,48 @@ class ResolveOrNullTest extends SparkSessionSupport with AdaptiveSparkPlanHelper
   }
 
   /**
-   * Known limit, recorded in `evidence/t038a-root-column-spike.md` and decision 75: an ambiguous
-   * name raises the same error as an absent one, so after a self-join the reference resolves to
-   * the fallback, silently, where a plain reference fails with AMBIGUOUS_REFERENCE. This test
-   * notices if that changes.
+   * An ambiguous name raises the same error as an absent one, and the two are told apart by the
+   * attributes the error reports as matched, of which an absent name has none. After a self-join
+   * the reference therefore fails with AMBIGUOUS_REFERENCE, as a plain reference does, rather than
+   * resolving silently to the fallback.
    */
   @Test
-  def knownLimitAmbiguousNameGivesSilentNull(): Unit = {
+  def ambiguousNameFailsWithAmbiguousReference(): Unit = {
     val selfJoin = present.as("l").join(present.as("r"), F.col("l.id") === F.col("r.id"))
-    assertEquals(Seq("[null]", "[null]"), rows(selfJoin.select(extensionMap)))
+    val error = assertThrows(classOf[AnalysisException],
+      () => selfJoin.select(extensionMap).collect())
+    assertEquals("AMBIGUOUS_REFERENCE", error.getCondition)
     val control = assertThrows(classOf[AnalysisException],
       () => selfJoin.select(F.col("_extension")).collect())
     assertEquals("AMBIGUOUS_REFERENCE", control.getCondition)
+  }
+
+  /**
+   * A name that matches the same attribute more than once is not ambiguous, and a plain reference
+   * resolves it, because the analyzer folds identical attributes together. So does the tolerant
+   * reference, whether the attribute is selected twice or grouped by twice.
+   */
+  @Test
+  def nameMatchingOneAttributeTwiceResolves(): Unit = {
+    val selectedTwice = present.select(F.col("*"), F.col("score"))
+    assertEquals(Seq("[5]", "[7]"), rows(selectedTwice.select(score)))
+    assertEquals(Seq("[1]"), rows(selectedTwice.filter(score === 5).select("id")))
+    val groupedTwice = present.groupBy(F.col("score"), F.col("score")).count()
+    assertEquals(Seq("[5]", "[7]"), rows(groupedTwice.select(score)))
+    assertEquals(Seq("[1]"), rows(groupedTwice.filter(score === 7).select("count")))
+  }
+
+  /**
+   * The error that reports an ambiguous name names each of the columns, even where the name
+   * contains a comma, which the error that signals the ambiguity uses to separate them.
+   */
+  @Test
+  def ambiguousNameContainingACommaIsReportedWhole(): Unit = {
+    val duplicated = present.select(F.col("*"), F.lit(1).as("a,b"), F.lit(2).as("a,b"))
+    val error = assertThrows(classOf[AnalysisException],
+      () => duplicated.select(columnOrNull("a,b", IntegerType)).collect())
+    assertEquals("AMBIGUOUS_REFERENCE", error.getCondition)
+    assertEquals("[`a,b`, `a,b`]", error.getMessageParameters.get("referenceNames"))
   }
 
   /**
@@ -1038,4 +1068,23 @@ class ResolveOrNullTest extends SparkSessionSupport with AdaptiveSparkPlanHelper
 
   private def causes(t: Throwable): Seq[Throwable] =
     Iterator.iterate(t)(_.getCause).takeWhile(_ != null).toSeq
+
+  /**
+   * A name that a projection beneath the operator gives to two columns is ambiguous too, and the
+   * reference fails with AMBIGUOUS_REFERENCE, as a plain reference does, whether it is selected or
+   * filtered on. A filter is the case that needs care: the analyzer can resolve its condition
+   * against the input of the projection, where the name is unique, so a reference that only
+   * deferred to a plain one would silently read the first of the two columns.
+   */
+  @Test
+  def nameDuplicatedByAProjectionFailsWithAmbiguousReference(): Unit = {
+    val duplicated = present.select(F.col("*"), F.lit(9).as("score"))
+    for (query <- Seq[() => Any](
+      () => duplicated.select(score).collect(),
+      () => duplicated.filter(score === 5).collect(),
+      () => duplicated.filter(F.col("score") === 5).collect())) {
+      val error = assertThrows(classOf[AnalysisException], () => query())
+      assertEquals("AMBIGUOUS_REFERENCE", error.getCondition)
+    }
+  }
 }

@@ -23,9 +23,11 @@ import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.regexp_extract;
 import static org.apache.spark.sql.functions.when;
 
+import au.csiro.pathling.encoders.ValueFunctions;
 import jakarta.annotation.Nonnull;
 import java.util.function.UnaryOperator;
 import org.apache.spark.sql.Column;
+import org.apache.spark.sql.functions;
 
 /**
  * Utility class for working with Reference columns in SQL operations.
@@ -132,8 +134,10 @@ public class ReferenceValue {
    *   <li>Return null for individual references that cannot be resolved
    * </ol>
    *
-   * <p>Handles both singular and array columns - if reference column is an array, type column is
-   * also assumed to be an array.
+   * <p>Handles both singular and array columns. Of repeating references, the reference and the type
+   * columns are arrays of the same length, except where the input schema lacks one of them, in
+   * which case it is a single null that stands for that element of every reference (FR-025). The
+   * result is an array wherever either column is one.
    *
    * @return A column representation containing the extracted type string(s)
    */
@@ -141,11 +145,20 @@ public class ReferenceValue {
   public ColumnRepresentation extractType() {
     final UnaryOperator<Column> arrayLogic =
         refArray ->
-            org.apache.spark.sql.functions.zip_with(
-                refArray, typeColumn.getValue(), ReferenceValue::extractTypeFromColumns);
+            ValueFunctions.ifArray(
+                typeColumn.getValue(),
+                typeArray ->
+                    functions.zip_with(refArray, typeArray, ReferenceValue::extractTypeFromColumns),
+                absentType ->
+                    functions.transform(refArray, ref -> extractTypeFromColumns(ref, absentType)));
 
     final UnaryOperator<Column> singularLogic =
-        ref -> extractTypeFromColumns(ref, typeColumn.getValue());
+        ref ->
+            ValueFunctions.ifArray(
+                typeColumn.getValue(),
+                typeArray ->
+                    functions.transform(typeArray, type -> extractTypeFromColumns(ref, type)),
+                type -> extractTypeFromColumns(ref, type));
 
     return referenceColumn.vectorize(arrayLogic, singularLogic);
   }

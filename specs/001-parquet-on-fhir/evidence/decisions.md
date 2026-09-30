@@ -2441,8 +2441,9 @@ amendments.
   and `Aggregate`, where the two children may resolve at different times inside
   a lambda, are added to T038a.
 - **An unqualified name.** Where two resources share a plan, `_extension` could
-  be ambiguous. This is no worse than today, since the engine already uses the
-  same unqualified reference, and it is recorded rather than solved.
+  be ambiguous. The tolerant reference then fails with `AMBIGUOUS_REFERENCE`, as
+  the engine's plain unqualified reference does, rather than taking the
+  ambiguity for an absence (M2 review, finding 4).
 
 ### The option not taken
 
@@ -2538,9 +2539,19 @@ layout's extension struct keeps `_fid`.
   variant; both were probed and work. That file records the reproduction, the
   fallbacks if they prove unworkable, and the one option rejected. T100k tracks
   it. Decision 73's list of visible changes records it.
-- **Ambiguous name.** After a self-join, the catch returns a null instead of
-  `AMBIGUOUS_REFERENCE`, because ambiguity raises the same error as absence. No
-  current test covers a self-join.
+- **Ambiguous name.** Ambiguity raises the same error as absence, and the
+  catch tells them apart by the attributes the error reports as matched, which
+  are none for an absent name. Where more than one matched, the catch resolves
+  each match. Where they are one attribute, as where a column is selected or
+  grouped by twice, the reference resolves to it. Where they differ, the catch
+  raises `AMBIGUOUS_REFERENCE` itself. Either way it behaves as a plain
+  reference does, after a self-join (`SelfJoinAmbiguityTest`, both layouts) and
+  beneath a projection that repeats a name (`ResolveOrNullTest`). It does not
+  defer to a plain reference, because the analyzer resolves a filter's
+  condition against the input of the projection beneath it, where the name can
+  be unique, and the filter would then silently read one of the two columns.
+  The error names the columns without their qualifiers, which the caught error
+  does not report.
 - **Fragility.** It depends on analyzer internals: that a node throws where it
   does, and that rules reach it through `mapChildren`. T038d and the
   plan-shape tests in T038a are what show a Spark upgrade has changed that.

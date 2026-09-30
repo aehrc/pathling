@@ -29,6 +29,7 @@ import static org.apache.spark.sql.functions.struct;
 import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.encoders.ColumnFunctions;
+import au.csiro.pathling.encoders.ExtensionSupport;
 import au.csiro.pathling.encoders.QuantitySupport;
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
 import au.csiro.pathling.encoders.terminology.ucum.Ucum;
@@ -50,7 +51,6 @@ import lombok.Value;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
-import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.Metadata;
 import org.apache.spark.sql.types.MetadataBuilder;
@@ -125,7 +125,7 @@ public class QuantityEncoding {
         code.as(CODE_COLUMN),
         canonicalizedValue.as(CANONICALIZED_VALUE_COLUMN),
         canonicalizedCode.as(CANONICALIZED_CODE_COLUMN),
-        _fid.as("_fid"));
+        _fid.as(ExtensionSupport.FID_FIELD_NAME()));
   }
 
   /**
@@ -190,28 +190,23 @@ public class QuantityEncoding {
    */
   @Nonnull
   public static Column decodeStored(@Nonnull final Column stored) {
-    final Column text = storedField(stored, VALUE_COLUMN, DataTypes.StringType);
-    final Column code = storedField(stored, CODE_COLUMN, DataTypes.StringType);
+    final Column text = ColumnFunctions.resolveStringOrNull(stored, VALUE_COLUMN);
+    final Column code = ColumnFunctions.resolveStringOrNull(stored, CODE_COLUMN);
     return when(
             stored.isNotNull(),
             toStruct(
-                storedField(stored, "id", DataTypes.StringType),
+                ColumnFunctions.resolveStringOrNull(stored, "id"),
                 text,
                 scaleOf(text),
-                storedField(stored, "comparator", DataTypes.StringType),
-                storedField(stored, UNIT_COLUMN, DataTypes.StringType),
-                storedField(stored, SYSTEM_COLUMN, DataTypes.StringType),
+                ColumnFunctions.resolveStringOrNull(stored, "comparator"),
+                ColumnFunctions.resolveStringOrNull(stored, UNIT_COLUMN),
+                ColumnFunctions.resolveStringOrNull(stored, SYSTEM_COLUMN),
                 code,
                 callUDF(CanonicalQuantityValue.FUNCTION_NAME, text, code),
                 callUDF(CanonicalQuantityCode.FUNCTION_NAME, text, code),
-                storedField(stored, "_fid", DataTypes.IntegerType)))
+                ColumnFunctions.resolveOrNull(
+                    stored, ExtensionSupport.FID_FIELD_NAME(), DataTypes.IntegerType)))
         .cast(dataType());
-  }
-
-  @Nonnull
-  private static Column storedField(
-      @Nonnull final Column stored, @Nonnull final String name, @Nonnull final DataType type) {
-    return ColumnFunctions.resolveOrNull(stored, name, type);
   }
 
   /**
@@ -286,7 +281,8 @@ public class QuantityEncoding {
         new StructField(CANONICALIZED_VALUE_COLUMN, FlexiDecimal.DATA_TYPE, true, metadata);
     final StructField canonicalizedCode =
         new StructField(CANONICALIZED_CODE_COLUMN, DataTypes.StringType, true, metadata);
-    final StructField fid = new StructField("_fid", DataTypes.IntegerType, true, metadata);
+    final StructField fid =
+        new StructField(ExtensionSupport.FID_FIELD_NAME(), DataTypes.IntegerType, true, metadata);
     return new StructType(
         new StructField[] {
           id,

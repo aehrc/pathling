@@ -77,6 +77,10 @@ described under the options below.
   resolved parent, not the plan's children. Only the root reference fails.
 - **The `select("id")` row** is decision 75's separate dropped-column limit. It
   is shown because no variant changes it.
+- **The "Self-join, then filter" row has since changed.** The tolerant reference
+  now falls back to a typed null only when no column matches, so HEAD raises
+  `AMBIGUOUS_REFERENCE` there, as base does. The table records the measurement
+  as it was taken.
 
 The raw result files are not kept. `JoinProbe` prints one line per case, so a
 rerun reproduces them.

@@ -163,26 +163,34 @@ public abstract class ColumnRepresentation {
 
   /**
    * Returns a new {@link ColumnRepresentation} that represents the result of traversing to a nested
-   * field within the current representation. The result is flattened.
+   * field within the current representation. The result is flattened. Where the input schema does
+   * not carry the field, the traversal yields a null of the null type.
    *
    * @param fieldName The name of the field to traverse to
    * @return A new {@link ColumnRepresentation} representing the result of the traversal
    */
   @Nonnull
-  public abstract ColumnRepresentation traverse(@Nonnull final String fieldName);
+  public ColumnRepresentation traverse(@Nonnull final String fieldName) {
+    return traverse(fieldName, Optional.empty(), DataTypes.NullType);
+  }
 
   /**
    * Returns a new {@link ColumnRepresentation} that represents the result of traversing to a nested
    * field within the current representation. This method also takes the FHIR type of the field into
    * account to return a more specific representation.
    *
+   * <p>The field is taken to be singular, so where the input schema does not carry it the result is
+   * a null of the storage type of a primitive, or of the null type otherwise.
+   *
    * @param fieldName The name of the field to traverse to
    * @param fhirType The FHIR type of the field
    * @return A new {@link ColumnRepresentation} representing the result of the traversal
    */
   @Nonnull
-  public abstract ColumnRepresentation traverse(
-      @Nonnull final String fieldName, @Nonnull final Optional<FHIRDefinedType> fhirType);
+  public ColumnRepresentation traverse(
+      @Nonnull final String fieldName, @Nonnull final Optional<FHIRDefinedType> fhirType) {
+    return traverse(fieldName, fhirType, AbsentElementTypes.singular(fhirType));
+  }
 
   /**
    * Returns a new {@link ColumnRepresentation} that represents the result of traversing to a nested
@@ -231,11 +239,33 @@ public abstract class ColumnRepresentation {
    * Returns a new {@link ColumnRepresentation} that represents the result of traversing to a nested
    * field within the current representation. The results can be nested.
    *
+   * <p>Where the input schema does not carry the field, the result is a null of the null type. A
+   * caller that relies on the type of the result, such as one that expects an array, uses {@link
+   * #getField(String, DataType)} instead.
+   *
    * @param fieldName The name of the field to traverse to
    * @return A new {@link ColumnRepresentation} representing the result of the traversal
    */
   @Nonnull
-  public abstract ColumnRepresentation getField(@Nonnull final String fieldName);
+  public ColumnRepresentation getField(@Nonnull final String fieldName) {
+    return getField(fieldName, DataTypes.NullType);
+  }
+
+  /**
+   * Returns a new {@link ColumnRepresentation} that represents the result of traversing to a nested
+   * field within the current representation, where the input schema may not carry the field. The
+   * results can be nested.
+   *
+   * <p>Where the field is absent, the result is a null of the given type, so that an expression
+   * built over the result resolves as it does over the present field (FR-025).
+   *
+   * @param fieldName The name of the field to traverse to
+   * @param fallback The type of the null that stands for the field where it is absent
+   * @return A new {@link ColumnRepresentation} representing the result of the traversal
+   */
+  @Nonnull
+  public abstract ColumnRepresentation getField(
+      @Nonnull final String fieldName, @Nonnull final DataType fallback);
 
   /**
    * Converts the current {@link ColumnRepresentation} to a string value.
@@ -492,6 +522,21 @@ public abstract class ColumnRepresentation {
   public ColumnRepresentation first() {
 
     return vectorize(a -> getAt(a, 0), UnaryOperator.identity());
+  }
+
+  /**
+   * Returns the value at an index of the current {@link ColumnRepresentation}. A singular value is
+   * returned as it is, whatever the index.
+   *
+   * @param index the zero-based index of the value, as an integer column
+   * @return A new {@link ColumnRepresentation} that is the value at the index, or null where there
+   *     is none
+   */
+  @Nonnull
+  public ColumnRepresentation elementAt(@Nonnull final Column index) {
+    // try_element_at is one-based, and returns null rather than failing for an index that is out
+    // of range.
+    return vectorize(c -> try_element_at(c, index.plus(1)), UnaryOperator.identity());
   }
 
   /**

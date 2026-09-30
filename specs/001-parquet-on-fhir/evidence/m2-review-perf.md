@@ -129,3 +129,120 @@ scripts/m2-review/run.sh scripts/m2-review/PlanSize.java <third-party classpath 
 The third-party classpath is `mvn dependency:build-classpath` of `library-api`.
 The Parquet directory holds an `Observation` dataset, written either through
 `PathlingContext` or through `FhirJsonReader`.
+
+# M2 review: the plan of a chain of unions
+
+A union or combination of stored structures projects each operand by name into
+the merged structure of all of them (FR-056). Each operand's projection was a
+`MergeCast` that held every operand as a child, because the merged type depends
+on the resolved types of all of them (decision 75). The combination held both
+projections, and so both operands twice, and a chain of `n` combinations held
+the chain to its left `2^n` times. The analysed plan doubled with every operand,
+on both layouts. The optimised plan did not, because each `MergeCast` is
+replaced by the projection of its own operand.
+
+Union and combine now promote the types of their operands only, and unify the
+shapes as they combine them. An `UnresolvedMergeCombination` holds each operand
+once, with the combination to apply. Once every operand is resolved, it
+replaces itself with the combination of the projections, each of which holds
+only its own operand. An operand whose type is already the merged type is its
+own projection, so where the shapes agree nothing is added to the plan. The
+other unification sites keep `MergeCast`, because their results are not stored
+structures, and so do not come back into another reconciliation.
+
+A first version of the fix, `MergeCastAll`, bound a structure of all the
+projections once, as the only element of an array that the combination
+transformed. Its analysed plan was linear too, but the binding stayed in the
+optimised plan even where the shapes agreed, and `ArrayTransform` has no
+generated code. On 200,000 Patients it made `name.combine(contact.name)` about
+2.6 times as slow on the new layout and twice as slow on the previous one,
+because `concat` lost code generation, and `name | name` about 25% slower. The
+design above replaced it.
+
+`(name | contact.name | name ...).family` on one Patient, through
+`FhirViewExecutor`, where `k` is the number of `|`. Analysis is the time to
+build and analyse the query. Base is issue/2367, before is 06f3cfbe6c, and
+after is the fix. `combine()` measures the same as `|`.
+
+| Layout   | `k` | Base nodes | Before nodes | After nodes | Before analysis | After analysis |
+| -------- | --: | ---------: | -----------: | ----------: | --------------: | -------------: |
+| new      |   4 |        128 |          926 |         186 |          222 ms |         125 ms |
+| new      |   8 |        204 |       14,366 |         286 |        1,398 ms |          99 ms |
+| new      |  12 |        280 |      229,406 |         386 |       27,243 ms |         119 ms |
+| previous |   4 |        128 |          892 |         152 |          357 ms |         434 ms |
+| previous |   8 |        204 |       14,332 |         252 |        1,524 ms |         377 ms |
+| previous |  12 |        280 |      229,372 |         352 |       25,582 ms |         377 ms |
+
+The analysed plan now grows by 25 nodes per operand on both layouts, against
+19 on the base. The optimised plan is unchanged from 06f3cfbe6c, at 12 nodes
+per operand. The test `CombiningPlanSizeTest` requires the analysed plan of a
+chain of 8 to be at most three times that of a chain of 4, on both layouts and
+for both forms.
+
+## Unions of Codings and Quantities
+
+A union of a type with its own equality, such as Coding or Quantity,
+deduplicates the combination of its operands with an aggregation, which reads
+that combination twice: once for the type of its empty accumulator and once as
+its input. The combination was passed to both readings as it stood, because it
+is deterministic, so every union held its operands twice, and a chain doubled
+at every level in both the analysed and the optimised plan, whatever the
+shapes. This was independent of the reconciliation above, and the first
+version of the fix hid it only because its binding happened to hold the
+combination once. The combination is now bound once, as the only element of an
+array that the deduplication transforms. The aggregation and the filter have no
+generated code, so the binding costs none.
+
+Nodes of the analysed and optimised plans of the count of a chain of `n + 1`
+operands, on one Patient or Observation. The chains are
+`maritalStatus.coding | maritalStatus.coding | ...` and
+`value.ofType(Quantity) | value.ofType(Quantity) | ...`. The analysed plan of
+the previous layout also holds the encoding of the fixture, about 13,800 nodes.
+
+| Layout   | Chain    | `n` | Before, analysed | Before, optimised | After, analysed | After, optimised |
+| -------- | -------- | --: | ---------------: | ----------------: | --------------: | ---------------: |
+| new      | Coding   |   2 |              870 |               503 |             534 |              313 |
+| new      | Coding   |   8 |           60,342 |            37,295 |           1,650 |            1,057 |
+| new      | Quantity |   2 |            4,072 |               892 |           2,748 |              620 |
+| new      | Quantity |   8 |          322,600 |            62,380 |          10,152 |            2,000 |
+| previous | Coding   |   2 |           14,431 |               629 |          14,095 |              403 |
+| previous | Coding   |   8 |           73,903 |            46,493 |          15,211 |            1,363 |
+| previous | Quantity |   2 |           23,093 |             2,444 |          21,769 |            1,122 |
+| previous | Quantity |   8 |          341,621 |           177,332 |          29,173 |            3,402 |
+
+Every union type now grows its plans linearly. `CombiningPlanSizeTest` requires
+it of Coding and Quantity chains, of two shapes and of one, in both plans and
+on both layouts.
+
+A chain that also filters at every level,
+`(... | maritalStatus.coding).where($this = %resource.maritalStatus.coding.first())`,
+is linear too, at 5,407, 10,779 and 16,151 analysed nodes for `n` of 2, 4 and
+6 on the new layout, against 8,243, 41,075 and 172,403 before. From `n` of 7
+it still exceeds the analyzer's limit of 100 iterations of its resolution
+batch, on both layouts, because each level of nesting takes further iterations
+to resolve. That limit is not a matter of plan size, and is not addressed here.
+It is not a regression either: 06f3cfbe6c fails at the same depth, and runs out
+of memory at `n` of 8. With `spark.sql.analyzer.maxIterations` raised to 400,
+the chain analyses at `n` of 7, 8 and 10 in under 2 seconds.
+
+The optimised plans of `name.combine(contact.name)`, `name | name`,
+`name | contact.name` and `telecom | contact.telecom` are identical to those
+of 06f3cfbe6c on both layouts, apart from expression identifiers, so the fix
+costs nothing at run time. Timed over 200,000 Patients, writing to the `noop`
+sink, as the median of five warm runs, the two agree within the drift of the
+machine, which moved the unaffected control `name.family` by up to 14% between
+runs. The two runs were made in opposite orders, before first in the first run
+and after first in the second.
+
+| Layout   | Expression                   | Before, run 1 | After, run 1 | Before, run 2 | After, run 2 |
+| -------- | ---------------------------- | ------------: | -----------: | ------------: | -----------: |
+| new      | `name.family` (control)      |        136 ms |       144 ms |        235 ms |       219 ms |
+| new      | `name.combine(contact.name)` |        273 ms |       292 ms |        423 ms |       430 ms |
+| new      | `name \| name`               |        216 ms |       225 ms |        396 ms |       426 ms |
+| new      | `name \| contact.name`       |        358 ms |       369 ms |        541 ms |       589 ms |
+| new      | `telecom \| contact.telecom` |        223 ms |       243 ms |        357 ms |       389 ms |
+| previous | `name.family` (control)      |        241 ms |       274 ms |        324 ms |       325 ms |
+| previous | `name.combine(contact.name)` |        470 ms |       616 ms |        697 ms |       714 ms |
+| previous | `name \| name`               |        330 ms |       360 ms |        501 ms |       531 ms |
+| previous | `name \| contact.name`       |        587 ms |       733 ms |        892 ms |       980 ms |
+| previous | `telecom \| contact.telecom` |        437 ms |       474 ms |        640 ms |       677 ms |

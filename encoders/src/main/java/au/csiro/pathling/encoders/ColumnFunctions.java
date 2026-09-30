@@ -27,17 +27,21 @@ import au.csiro.pathling.sql.InstantNormalisation;
 import au.csiro.pathling.sql.MergeCast;
 import au.csiro.pathling.sql.QuantityNormalisation;
 import au.csiro.pathling.sql.ResolveOrNull;
+import au.csiro.pathling.sql.UnresolvedMergeCombination;
 import au.csiro.pathling.sql.UnresolvedTraverseExtension;
 import au.csiro.pathling.sql.UnresolvedTraverseRootExtension;
 import au.csiro.pathling.utilities.CanonicalStructure;
 import jakarta.annotation.Nonnull;
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.Function;
 import lombok.experimental.UtilityClass;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.catalyst.expressions.Expression;
+import org.apache.spark.sql.classic.ColumnConversions$;
 import org.apache.spark.sql.classic.ExpressionUtils;
 import org.apache.spark.sql.types.DataType;
+import org.apache.spark.sql.types.DataTypes;
 import scala.collection.immutable.Seq;
 
 /**
@@ -114,6 +118,21 @@ public class ColumnFunctions {
       @Nonnull final DataType fallback) {
     return ExpressionUtils.column(
         new ResolveOrNull(ExpressionUtils.expression(child), fieldName, fallback));
+  }
+
+  /**
+   * Resolves a text field of a structure, or of every structure in an array, to a null string where
+   * the structure does not carry the field, rather than failing (FR-054). The field is read as the
+   * text it is stored as on either layout.
+   *
+   * @param child the structure, or array of structures
+   * @param fieldName the name of the field
+   * @return the field, or a null string where the structure does not carry it
+   */
+  @Nonnull
+  public static Column resolveStringOrNull(
+      @Nonnull final Column child, @Nonnull final String fieldName) {
+    return resolveOrNull(child, fieldName, DataTypes.StringType);
   }
 
   /**
@@ -224,5 +243,37 @@ public class ColumnFunctions {
                 operands.stream().map(ExpressionUtils::expression).toList())
             .toSeq();
     return ExpressionUtils.column(new MergeCast(expressions, index, canonical));
+  }
+
+  /**
+   * Combines several operands of the same FHIR type, each projected by name into the recursive
+   * field-wise merge of all of their types (FR-056). Unlike {@link #mergeCast(List, int,
+   * CanonicalStructure)}, each operand is held once in the combination, and an operand whose type
+   * is already the merged type is left as it is.
+   *
+   * @param operands the full, ordered list of operands being combined
+   * @param canonical the canonical structure of the operands' element type
+   * @param combination the combination of the projected operands, given in the same order
+   * @return a Column holding the combination of the projected operands
+   */
+  @Nonnull
+  public static Column mergeCombination(
+      @Nonnull final List<Column> operands,
+      @Nonnull final CanonicalStructure canonical,
+      @Nonnull final Function<List<Column>, Column> combination) {
+    final Seq<Expression> expressions =
+        scala.jdk.javaapi.CollectionConverters.asScala(
+                operands.stream().map(ExpressionUtils::expression).toList())
+            .toSeq();
+    final scala.Function1<Seq<Expression>, Expression> combine =
+        projected ->
+            ColumnConversions$.MODULE$
+                .toRichColumn(
+                    combination.apply(
+                        scala.jdk.javaapi.CollectionConverters.asJava(projected).stream()
+                            .map(ExpressionUtils::column)
+                            .toList()))
+                .expr();
+    return ExpressionUtils.column(new UnresolvedMergeCombination(expressions, canonical, combine));
   }
 }
