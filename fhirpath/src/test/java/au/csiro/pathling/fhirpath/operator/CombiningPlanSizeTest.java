@@ -132,6 +132,104 @@ class CombiningPlanSizeTest {
         .containsExactly(expected);
   }
 
+  // The Coding of an Observation's code carries a display and that of a component's code does not,
+  // and the Observation's quantity carries a unit and the component's does not, so that each pair
+  // has two shapes on the new layout.
+  private static final List<String> OBSERVATIONS =
+      List.of(
+          "{\"resourceType\":\"Observation\",\"id\":\"o1\",\"status\":\"final\","
+              + "\"code\":{\"coding\":[{\"system\":\"urn:s\",\"code\":\"a\",\"display\":\"A\"}]},"
+              + "\"valueQuantity\":{\"value\":2,\"unit\":\"kg\","
+              + "\"system\":\"http://unitsofmeasure.org\",\"code\":\"kg\"},"
+              + "\"component\":[{\"code\":{\"coding\":[{\"system\":\"urn:s\",\"code\":\"b\"}]},"
+              + "\"valueQuantity\":{\"value\":3,\"system\":\"http://unitsofmeasure.org\","
+              + "\"code\":\"g\"}}]}");
+
+  private Map<String, Dataset<Row>> observations;
+
+  @BeforeAll
+  void setUpObservations() {
+    observations =
+        Map.of(
+            "previous",
+            storedObservations(TestLayout.PREVIOUS, "previous-observations"),
+            "pof",
+            storedObservations(TestLayout.POF, "pof-observations"));
+  }
+
+  @Nonnull
+  Stream<Arguments> customEqualityChains() {
+    return Stream.of("previous", "pof")
+        .flatMap(
+            layout ->
+                Stream.of(
+                    arguments(layout, "code.coding", "component.code.coding"),
+                    arguments(layout, "code.coding", "code.coding"),
+                    arguments(
+                        layout, "value.ofType(Quantity)", "component.value.ofType(Quantity)")));
+  }
+
+  /**
+   * A union of Codings or of Quantities deduplicates by the equality of the type rather than by SQL
+   * equality, and so reads the combination of its operands more than once. Were the combination
+   * held once for each reading, a chain would double at every level in both the analysed and the
+   * optimised plan.
+   */
+  @ParameterizedTest(name = "{1} | {2} over the {0} layout")
+  @MethodSource("customEqualityChains")
+  void chainedUnionWithCustomEqualityGrowsThePlanLinearly(
+      @Nonnull final String layout, @Nonnull final String even, @Nonnull final String odd) {
+    final Dataset<Row> dataset = observations.get(layout);
+    final Dataset<Row> shortChain = unionChain(dataset, even, odd, SHORT_CHAIN);
+    final Dataset<Row> longChain = unionChain(dataset, even, odd, LONG_CHAIN);
+
+    assertThat(size(longChain.queryExecution().analyzed()))
+        .as("analysed plan nodes for chains of %d and %d", SHORT_CHAIN, LONG_CHAIN)
+        .isLessThanOrEqualTo(3 * size(shortChain.queryExecution().analyzed()));
+    assertThat(size(longChain.queryExecution().optimizedPlan()))
+        .as("optimised plan nodes for chains of %d and %d", SHORT_CHAIN, LONG_CHAIN)
+        .isLessThanOrEqualTo(3 * size(shortChain.queryExecution().optimizedPlan()));
+    // The chain keeps its values: the distinct elements of the two operands.
+    assertThat(longChain.collectAsList().get(0).get(1)).isEqualTo(even.equals(odd) ? 1 : 2);
+  }
+
+  /** Returns the count of a chain of unions of two Observation paths, alternately. */
+  @Nonnull
+  private Dataset<Row> unionChain(
+      @Nonnull final Dataset<Row> dataset,
+      @Nonnull final String even,
+      @Nonnull final String odd,
+      final int length) {
+    final String chain =
+        IntStream.rangeClosed(0, length)
+            .mapToObj(index -> index % 2 == 0 ? even : odd)
+            .collect(Collectors.joining(" | "));
+    return DatasetEvaluatorBuilder.create(ResourceType.OBSERVATION, fhirEncoders.getContext())
+        .withDataset(dataset)
+        .build()
+        .evaluate(PARSER.parse("(" + chain + ").count()"))
+        .toCanonical()
+        .toIdValueDataset();
+  }
+
+  /** Returns the number of expression nodes in a plan. */
+  private static long size(@Nonnull final LogicalPlan plan) {
+    final scala.collection.Iterator<Expression> expressions = plan.expressions().iterator();
+    long size = 0;
+    while (expressions.hasNext()) {
+      size += size(expressions.next());
+    }
+    return size;
+  }
+
+  @Nonnull
+  private Dataset<Row> storedObservations(
+      @Nonnull final TestLayout layout, @Nonnull final String name) {
+    final Dataset<Row> dataset =
+        LayoutDatasets.fromJson(spark, fhirEncoders, layout, "Observation", OBSERVATIONS);
+    return PrunedSchemaReader.write(dataset, tempDir.resolve(name).toString()).read();
+  }
+
   /**
    * Returns a chain of the given number of combinations of the names of a Patient and those of its
    * contacts, alternately.

@@ -66,6 +66,12 @@ public class SqlFunctions {
    * Deduplicates an array using custom equality comparator. Implements manual deduplication with
    * aggregate() for types requiring custom equality semantics (Quantity, Coding, temporal types).
    *
+   * <p>The array is read twice, once for the type of the empty accumulator and once as the input of
+   * the aggregation, so it is bound once, even where it is deterministic. The array of a union is
+   * the combination of its operands, and in a chain of unions each operand is the array of another,
+   * so were each reading to hold its own copy, the plan would double with every union added. The
+   * binding costs no generated code, because the aggregation and the filter have none.
+   *
    * @param arrayColumn the array column to deduplicate
    * @param equalityComparator a function that compares two elements for equality
    * @return deduplicated array column
@@ -73,21 +79,24 @@ public class SqlFunctions {
   @Nonnull
   public static Column arrayDistinctWithEquality(
       @Nonnull final Column arrayColumn, @Nonnull final BinaryOperator<Column> equalityComparator) {
-    return let(
-        arrayColumn,
-        ac -> {
-          final Column emptyTypedArray = filter(ac, x -> lit(false));
-          return aggregate(
-              ac,
-              emptyTypedArray,
-              (acc, elem) ->
-                  when(
-                          not(
-                              exists(
-                                  acc, x -> ifnull(equalityComparator.apply(x, elem), lit(false)))),
-                          concat(acc, array(elem)))
-                      .otherwise(acc));
-        });
+    return element_at(
+        transform(
+            array(arrayColumn),
+            ac -> {
+              final Column emptyTypedArray = filter(ac, x -> lit(false));
+              return aggregate(
+                  ac,
+                  emptyTypedArray,
+                  (acc, elem) ->
+                      when(
+                              not(
+                                  exists(
+                                      acc,
+                                      x -> ifnull(equalityComparator.apply(x, elem), lit(false)))),
+                              concat(acc, array(elem)))
+                          .otherwise(acc));
+            }),
+        1);
   }
 
   /**

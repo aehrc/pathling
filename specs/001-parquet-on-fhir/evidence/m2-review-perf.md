@@ -179,6 +179,49 @@ per operand. The test `CombiningPlanSizeTest` requires the analysed plan of a
 chain of 8 to be at most three times that of a chain of 4, on both layouts and
 for both forms.
 
+## Unions of Codings and Quantities
+
+A union of a type with its own equality, such as Coding or Quantity,
+deduplicates the combination of its operands with an aggregation, which reads
+that combination twice: once for the type of its empty accumulator and once as
+its input. The combination was passed to both readings as it stood, because it
+is deterministic, so every union held its operands twice, and a chain doubled
+at every level in both the analysed and the optimised plan, whatever the
+shapes. This was independent of the reconciliation above, and the first
+version of the fix hid it only because its binding happened to hold the
+combination once. The combination is now bound once, as the only element of an
+array that the deduplication transforms. The aggregation and the filter have no
+generated code, so the binding costs none.
+
+Nodes of the analysed and optimised plans of the count of a chain of `n + 1`
+operands, on one Patient or Observation. The chains are
+`maritalStatus.coding | maritalStatus.coding | ...` and
+`value.ofType(Quantity) | value.ofType(Quantity) | ...`. The analysed plan of
+the previous layout also holds the encoding of the fixture, about 13,800 nodes.
+
+| Layout   | Chain    | `n` | Before, analysed | Before, optimised | After, analysed | After, optimised |
+| -------- | -------- | --: | ---------------: | ----------------: | --------------: | ---------------: |
+| new      | Coding   |   2 |              870 |               503 |             534 |              313 |
+| new      | Coding   |   8 |           60,342 |            37,295 |           1,650 |            1,057 |
+| new      | Quantity |   2 |            4,072 |               892 |           2,748 |              620 |
+| new      | Quantity |   8 |          322,600 |            62,380 |          10,152 |            2,000 |
+| previous | Coding   |   2 |           14,431 |               629 |          14,095 |              403 |
+| previous | Coding   |   8 |           73,903 |            46,493 |          15,211 |            1,363 |
+| previous | Quantity |   2 |           23,093 |             2,444 |          21,769 |            1,122 |
+| previous | Quantity |   8 |          341,621 |           177,332 |          29,173 |            3,402 |
+
+Every union type now grows its plans linearly. `CombiningPlanSizeTest` requires
+it of Coding and Quantity chains, of two shapes and of one, in both plans and
+on both layouts.
+
+A chain that also filters at every level,
+`(... | maritalStatus.coding).where($this = %resource.maritalStatus.coding.first())`,
+is linear too, at 5,407, 10,779 and 16,151 analysed nodes for `n` of 2, 4 and
+6 on the new layout, against 8,243, 41,075 and 172,403 before. At `n` of 8 it
+still exceeds the analyzer's limit of 100 iterations of its resolution batch,
+on both layouts, because each level of nesting takes further iterations to
+resolve. That limit is not a matter of plan size, and is not addressed here.
+
 The optimised plans of `name.combine(contact.name)`, `name | name`,
 `name | contact.name` and `telecom | contact.telecom` are identical to those
 of 06f3cfbe6c on both layouts, apart from expression identifiers, so the fix
