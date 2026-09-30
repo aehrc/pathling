@@ -217,10 +217,13 @@ on both layouts.
 A chain that also filters at every level,
 `(... | maritalStatus.coding).where($this = %resource.maritalStatus.coding.first())`,
 is linear too, at 5,407, 10,779 and 16,151 analysed nodes for `n` of 2, 4 and
-6 on the new layout, against 8,243, 41,075 and 172,403 before. At `n` of 8 it
-still exceeds the analyzer's limit of 100 iterations of its resolution batch,
-on both layouts, because each level of nesting takes further iterations to
-resolve. That limit is not a matter of plan size, and is not addressed here.
+6 on the new layout, against 8,243, 41,075 and 172,403 before. From `n` of 7
+it still exceeds the analyzer's limit of 100 iterations of its resolution
+batch, on both layouts, because each level of nesting takes further iterations
+to resolve. That limit is not a matter of plan size, and is not addressed here.
+It is not a regression either: 06f3cfbe6c fails at the same depth, and runs out
+of memory at `n` of 8. With `spark.sql.analyzer.maxIterations` raised to 400,
+the chain analyses at `n` of 7, 8 and 10 in under 2 seconds.
 
 The optimised plans of `name.combine(contact.name)`, `name | name`,
 `name | contact.name` and `telecom | contact.telecom` are identical to those
