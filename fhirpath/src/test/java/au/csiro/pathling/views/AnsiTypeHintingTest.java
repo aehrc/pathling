@@ -26,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.datasource.ObjectDataSource;
+import au.csiro.pathling.test.layout.TestLayout;
 import au.csiro.pathling.views.Column.ColumnBuilder;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -351,7 +352,12 @@ class AnsiTypeHintingTest {
             false,
             DataTypes.StringType,
             "24.4"),
-        Arguments.of("instant", "issued", false, DataTypes.TimestampType, "2023-01-01 02:00:00.0"),
+        Arguments.of(
+            "instant",
+            "issued",
+            false,
+            DataTypes.StringType,
+            TestLayout.active().isPof() ? "2023-01-01T12:00:00+10:00" : "2023-01-01T02:00:00Z"),
         // there is no way atm to get the original timezone so try UTC
         Arguments.of(
             "dateTime",

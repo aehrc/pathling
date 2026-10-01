@@ -28,6 +28,7 @@ import au.csiro.pathling.definition.defaults.DefaultPrimitiveDefinition;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.EmptyCollection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
+import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.Optional;
@@ -144,11 +145,17 @@ public class TypeInfo {
    * column. The mapper inspects which choice field is non-null for each row and returns the
    * corresponding TypeInfo. This enables per-row type resolution for polymorphic choice elements.
    *
+   * <p>Each choice field is reached through the tolerant traversal of the parent's representation,
+   * so a field that the input schema does not carry is taken to be unpopulated (FR-026), and a
+   * choice at the resource root is read from its table columns.
+   *
+   * @param parent the representation of the element that holds the choice
    * @param choiceTypes the list of possible child element definitions for the choice
    * @return a function that maps an element column to a TypeInfo struct column
    */
   @Nonnull
   public static UnaryOperator<Column> choiceTypeInfoMapper(
+      @Nonnull final ColumnRepresentation parent,
       @Nonnull final List<ElementDefinition> choiceTypes) {
     return elementCol -> {
       // Use a null struct matching the TypeInfo schema as the default fallback.
@@ -167,7 +174,7 @@ public class TypeInfo {
         final TypeInfo typeInfo = forFhirType(elemDef.getFhirType().orElseThrow(), false);
         result =
             when(
-                    elementCol.getField(elemDef.getElementName()).isNotNull(),
+                    parent.copyOf(elementCol).traverse(elemDef).getValue().isNotNull(),
                     typeInfo.toStructColumn())
                 .otherwise(result);
       }

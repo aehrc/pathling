@@ -512,8 +512,9 @@ resolves no Spark Catalyst dependency, enforced by the build.
 
 - **FR-024**: Traversal to an element the definitions describe but the schema
   does not carry MUST yield an empty collection.
-- **FR-025**: Traversal to an element the definitions do not describe MUST raise
-  an error.
+- **FR-025**: Traversal to an element the definitions do not describe MUST
+  yield an empty collection, as the engine has done since `551c2a3050`
+  (amended by decision 76).
 - **FR-026**: Selecting a choice variant absent from the schema MUST yield an
   empty collection.
 - **FR-027**: Combining an absent element with a populated one MUST succeed
@@ -574,7 +575,10 @@ after the schema-binding decision and belong to this section.
   positions relative to the element they accompany. Those fields have no
   definition element, so without a stated position two implementations could both
   claim to be canonical and still produce structs that compare positionally
-  wrong, which is the failure this requirement exists to prevent.
+  wrong, which is the failure this requirement exists to prevent. The
+  reconciliation projection applies it only where the operands' shapes differ:
+  operands that already share one type are left as they are (owner-confirmed,
+  decision 79).
 - **FR-058**: The merged type MUST be the recursive field-wise union of the
   inputs, and one implementation MUST serve both FR-056 and the merging of
   divergent file schemas in FR-041.
@@ -786,3 +790,22 @@ after the schema-binding decision and belong to this section.
   criterion is "lossless for the resources we test" rather than "lossless, or
   loud about what was lost", and that this reaches the M4 flag day. T134f and
   T134g carry the follow-ups.
+
+## Open questions
+
+- **OQ-1: Does a Coding result have a fixed type?** On the new layout a stored
+  Coding carries only the fields its data populates, and the engine returns a
+  Coding read from storage in that pruned structure, unless a union with a
+  wider Coding reconciles it. The struct type of a Coding result therefore
+  depends on the data, and so does the type of a SQL-on-FHIR view column that
+  projects a Coding without traversing into it: two tables holding the same
+  kind of resource can produce view columns of different types. Nothing here
+  violates a requirement as written. FR-031 and FR-032 require a narrower
+  Coding to be read and operated on correctly, and FR-028 to FR-030 fix the
+  type of a declared column and of an absent primitive, but none fixes the
+  type of a Coding result over populated data. The question is whether one
+  should: either a Coding result is widened to the canonical Coding structure
+  wherever it leaves the engine, or the data-dependent type is accepted and
+  documented. This is the engine's existing behaviour on the new layout, found
+  when the DSL tests first stored Codings pruned (T036a), where the test
+  harness now compares Coding results by field name.

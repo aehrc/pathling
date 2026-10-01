@@ -1,0 +1,33 @@
+diff --git a/encoders/src/main/scala/au/csiro/pathling/encoders/Expressions.scala b/encoders/src/main/scala/au/csiro/pathling/encoders/Expressions.scala
+index 0dc31618b4..4dbc57f06b 100644
+--- a/encoders/src/main/scala/au/csiro/pathling/encoders/Expressions.scala
++++ b/encoders/src/main/scala/au/csiro/pathling/encoders/Expressions.scala
+@@ -443,7 +443,14 @@ case class UnresolvedColumnOrNull(columnName: String, fallback: DataType, value:
+     this(columnName, fallback,
+       GetViewColumnByNameAndOrdinal(UnresolvedColumnOrNull.SOURCE_NAME, columnName, 0, 1, None))
+ 
++  // PROBE ONLY (join investigation). Variant chosen by -Dpathling.probe.variant=a|b|c.
+   override def mapChildren(f: Expression => Expression): Expression = {
++    val variant = System.getProperty("pathling.probe.variant", "a")
++    val attr = org.apache.spark.sql.catalyst.analysis.UnresolvedAttribute(Seq(columnName))
++    if (variant == "c") {
++      val byName = f(attr)
++      if (byName.resolved) return byName
++    }
+     try {
+       val newValue = f(value)
+       if (newValue.resolved) {
+@@ -454,6 +461,13 @@ case class UnresolvedColumnOrNull(columnName: String, fallback: DataType, value:
+     } catch {
+       case e: AnalysisException if e.getCondition == "INCOMPATIBLE_VIEW_SCHEMA_CHANGE" =>
+         Literal(null, fallback)
++      case _: AssertionError if variant == "c" =>
++        Literal(null, fallback)
++      case _: AssertionError =>
++        val retried = f(attr)
++        if (retried.resolved) retried
++        else if (variant == "b") Literal(null, fallback)
++        else retried
+     }
+   }
+ 

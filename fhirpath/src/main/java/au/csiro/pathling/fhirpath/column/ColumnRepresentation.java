@@ -31,11 +31,14 @@ import static org.apache.spark.sql.functions.try_element_at;
 import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.definition.ElementDefinition;
+import au.csiro.pathling.encoders.ColumnFunctions;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.util.List;
 import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.BinaryOperator;
+import java.util.function.Function;
 import java.util.function.UnaryOperator;
 import java.util.stream.Stream;
 import org.apache.spark.sql.Column;
@@ -160,36 +163,109 @@ public abstract class ColumnRepresentation {
 
   /**
    * Returns a new {@link ColumnRepresentation} that represents the result of traversing to a nested
-   * field within the current representation. The result is flattened.
+   * field within the current representation. The result is flattened. Where the input schema does
+   * not carry the field, the traversal yields a null of the null type.
    *
    * @param fieldName The name of the field to traverse to
    * @return A new {@link ColumnRepresentation} representing the result of the traversal
    */
   @Nonnull
-  public abstract ColumnRepresentation traverse(@Nonnull final String fieldName);
+  public ColumnRepresentation traverse(@Nonnull final String fieldName) {
+    return traverse(fieldName, Optional.empty(), DataTypes.NullType);
+  }
 
   /**
    * Returns a new {@link ColumnRepresentation} that represents the result of traversing to a nested
    * field within the current representation. This method also takes the FHIR type of the field into
    * account to return a more specific representation.
    *
+   * <p>The field is taken to be singular, so where the input schema does not carry it the result is
+   * a null of the storage type of a primitive, or of the null type otherwise.
+   *
    * @param fieldName The name of the field to traverse to
    * @param fhirType The FHIR type of the field
    * @return A new {@link ColumnRepresentation} representing the result of the traversal
    */
   @Nonnull
+  public ColumnRepresentation traverse(
+      @Nonnull final String fieldName, @Nonnull final Optional<FHIRDefinedType> fhirType) {
+    return traverse(fieldName, fhirType, AbsentElementTypes.singular(fhirType));
+  }
+
+  /**
+   * Returns a new {@link ColumnRepresentation} that represents the result of traversing to a nested
+   * field, which yields a null of the given type where the input schema does not carry the field
+   * (FR-054).
+   *
+   * @param fieldName The name of the field to traverse to
+   * @param fhirType The FHIR type of the field
+   * @param fallback The type of the null that stands for the field where it is absent, per FR-055
+   * @return A new {@link ColumnRepresentation} representing the result of the traversal
+   */
+  @Nonnull
   public abstract ColumnRepresentation traverse(
-      @Nonnull final String fieldName, @Nonnull final Optional<FHIRDefinedType> fhirType);
+      @Nonnull final String fieldName,
+      @Nonnull final Optional<FHIRDefinedType> fhirType,
+      @Nonnull final DataType fallback);
+
+  /**
+   * Returns a new {@link ColumnRepresentation} that represents the result of traversing to the
+   * element with the given definition. Where the input schema does not carry the element, the
+   * result is a null of the type the definition gives it (FR-055).
+   *
+   * @param definition The definition of the element to traverse to
+   * @return A new {@link ColumnRepresentation} representing the result of the traversal
+   */
+  @Nonnull
+  public ColumnRepresentation traverse(@Nonnull final ElementDefinition definition) {
+    return traverse(
+        definition.getElementName(), definition.getFhirType(), AbsentElementTypes.of(definition));
+  }
+
+  /**
+   * Returns a new {@link ColumnRepresentation} that represents the extensions of the elements in
+   * this representation, on either layout: the inline {@code extension} field of the new layout, or
+   * the entry for each element's {@code _fid} in the {@code _extension} column of the previous one
+   * (decision 75). The result is flattened.
+   *
+   * @return A new {@link ColumnRepresentation} representing the extensions
+   */
+  @Nonnull
+  public ColumnRepresentation traverseExtension() {
+    return copyOf(ColumnFunctions.traverseExtension(getValue())).removeNulls().flatten();
+  }
 
   /**
    * Returns a new {@link ColumnRepresentation} that represents the result of traversing to a nested
    * field within the current representation. The results can be nested.
    *
+   * <p>Where the input schema does not carry the field, the result is a null of the null type. A
+   * caller that relies on the type of the result, such as one that expects an array, uses {@link
+   * #getField(String, DataType)} instead.
+   *
    * @param fieldName The name of the field to traverse to
    * @return A new {@link ColumnRepresentation} representing the result of the traversal
    */
   @Nonnull
-  public abstract ColumnRepresentation getField(@Nonnull final String fieldName);
+  public ColumnRepresentation getField(@Nonnull final String fieldName) {
+    return getField(fieldName, DataTypes.NullType);
+  }
+
+  /**
+   * Returns a new {@link ColumnRepresentation} that represents the result of traversing to a nested
+   * field within the current representation, where the input schema may not carry the field. The
+   * results can be nested.
+   *
+   * <p>Where the field is absent, the result is a null of the given type, so that an expression
+   * built over the result resolves as it does over the present field (FR-025).
+   *
+   * @param fieldName The name of the field to traverse to
+   * @param fallback The type of the null that stands for the field where it is absent
+   * @return A new {@link ColumnRepresentation} representing the result of the traversal
+   */
+  @Nonnull
+  public abstract ColumnRepresentation getField(
+      @Nonnull final String fieldName, @Nonnull final DataType fallback);
 
   /**
    * Converts the current {@link ColumnRepresentation} to a string value.
@@ -315,6 +391,23 @@ public abstract class ColumnRepresentation {
   }
 
   /**
+   * Filters the elements of the current {@link ColumnRepresentation} using a predicate over the
+   * representation of each element.
+   *
+   * <p>The predicate receives each element as a copy of this representation, so a representation
+   * that carries more than its value can hand that on to the element. {@link DecodedRepresentation}
+   * does this, so that an element inside the predicate keeps what was stored for it.
+   *
+   * @param predicate the predicate, over the representation of an element
+   * @return A new {@link ColumnRepresentation} that is filtered
+   */
+  @Nonnull
+  public ColumnRepresentation filterElements(
+      @Nonnull final Function<ColumnRepresentation, Column> predicate) {
+    return filter(element -> predicate.apply(copyOf(element)));
+  }
+
+  /**
    * Inverts the current {@link ColumnRepresentation} (applies unary minus).
    *
    * @return A new {@link ColumnRepresentation} that is inverted
@@ -429,6 +522,21 @@ public abstract class ColumnRepresentation {
   public ColumnRepresentation first() {
 
     return vectorize(a -> getAt(a, 0), UnaryOperator.identity());
+  }
+
+  /**
+   * Returns the value at an index of the current {@link ColumnRepresentation}. A singular value is
+   * returned as it is, whatever the index.
+   *
+   * @param index the zero-based index of the value, as an integer column
+   * @return A new {@link ColumnRepresentation} that is the value at the index, or null where there
+   *     is none
+   */
+  @Nonnull
+  public ColumnRepresentation elementAt(@Nonnull final Column index) {
+    // try_element_at is one-based, and returns null rather than failing for an index that is out
+    // of range.
+    return vectorize(c -> try_element_at(c, index.plus(1)), UnaryOperator.identity());
   }
 
   /**
@@ -696,20 +804,25 @@ public abstract class ColumnRepresentation {
    * Traverses the current {@link ColumnRepresentation} to a selected elements in a choice and
    * returns a new {@link ColumnRepresentation} that is the result of the traversal.
    *
+   * <p>The variants are coalesced, so they must share a type. The whole ordered list of variants is
+   * passed to the unification, rather than folded a pair at a time.
+   *
+   * @param unify the unification of the variants' columns, which returns them in the same order
    * @param definitions The definitions to traverse to
    * @return A new {@link ColumnRepresentation} that is the result of the traversal
    */
   @Nonnull
-  public ColumnRepresentation traverseChoice(@Nonnull final ElementDefinition... definitions) {
+  public ColumnRepresentation traverseChoice(
+      @Nonnull final UnaryOperator<List<Column>> unify,
+      @Nonnull final ElementDefinition... definitions) {
     return transform(
         c ->
             coalesce(
-                Stream.of(definitions)
-                    .map(
-                        ed ->
-                            this.copyOf(c)
-                                .traverse(ed.getElementName(), ed.getFhirType())
-                                .getValue())
+                unify
+                    .apply(
+                        Stream.of(definitions)
+                            .map(ed -> this.copyOf(c).traverse(ed).getValue())
+                            .toList())
                     .toArray(Column[]::new)));
   }
 }

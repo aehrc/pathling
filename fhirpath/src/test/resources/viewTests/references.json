@@ -1,0 +1,517 @@
+{
+  "title": "references between resources",
+  "description": "Reference keys, resource keys and resolve() over resources that refer to one another: a reference that resolves, one whose target is absent, one to a resource type not present, a versioned reference, an absent reference, and a repeating reference element with several targets of different types.",
+  "resources": [
+    {
+      "resourceType": "Patient",
+      "id": "p1"
+    },
+    {
+      "resourceType": "Patient",
+      "id": "p2"
+    },
+    {
+      "resourceType": "Practitioner",
+      "id": "pr1"
+    },
+    {
+      "resourceType": "Observation",
+      "id": "o1",
+      "status": "final",
+      "code": {
+        "text": "resolvable"
+      },
+      "subject": {
+        "reference": "Patient/p1"
+      },
+      "performer": [
+        {
+          "reference": "Practitioner/pr1"
+        },
+        {
+          "reference": "Patient/p2"
+        },
+        {
+          "reference": "Practitioner/pr-missing"
+        },
+        {
+          "type": "Organization",
+          "display": "logical organisation",
+          "identifier": {
+            "value": "org-x"
+          }
+        }
+      ]
+    },
+    {
+      "resourceType": "Observation",
+      "id": "o2",
+      "status": "final",
+      "code": {
+        "text": "target absent"
+      },
+      "subject": {
+        "reference": "Patient/p-missing"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "o3",
+      "status": "final",
+      "code": {
+        "text": "type not present"
+      },
+      "subject": {
+        "reference": "Device/d1"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "o4",
+      "status": "final",
+      "code": {
+        "text": "versioned"
+      },
+      "subject": {
+        "reference": "Patient/p2/_history/3"
+      }
+    },
+    {
+      "resourceType": "Observation",
+      "id": "o5",
+      "status": "final",
+      "code": {
+        "text": "no subject"
+      }
+    }
+  ],
+  "tests": [
+    {
+      "title": "resource keys of the Patient targets",
+      "view": {
+        "resource": "Patient",
+        "select": [
+          {
+            "column": [
+              {
+                "name": "key",
+                "path": "getResourceKey()"
+              }
+            ]
+          }
+        ]
+      },
+      "expect": [
+        {
+          "key": "Patient/p1"
+        },
+        {
+          "key": "Patient/p2"
+        }
+      ]
+    },
+    {
+      "title": "resource keys of the Practitioner targets",
+      "view": {
+        "resource": "Practitioner",
+        "select": [
+          {
+            "column": [
+              {
+                "name": "key",
+                "path": "getResourceKey()"
+              }
+            ]
+          }
+        ]
+      },
+      "expect": [
+        {
+          "key": "Practitioner/pr1"
+        }
+      ]
+    },
+    {
+      "title": "reference key of a singular reference in each form",
+      "view": {
+        "resource": "Observation",
+        "select": [
+          {
+            "column": [
+              {
+                "name": "id",
+                "path": "id"
+              },
+              {
+                "name": "subject_key",
+                "path": "subject.getReferenceKey()"
+              }
+            ]
+          }
+        ]
+      },
+      "expect": [
+        {
+          "id": "o1",
+          "subject_key": "Patient/p1"
+        },
+        {
+          "id": "o2",
+          "subject_key": "Patient/p-missing"
+        },
+        {
+          "id": "o3",
+          "subject_key": "Device/d1"
+        },
+        {
+          "id": "o4",
+          "subject_key": "Patient/p2/_history/3"
+        },
+        {
+          "id": "o5",
+          "subject_key": null
+        }
+      ]
+    },
+    {
+      "title": "reference key of a singular reference with a type specifier",
+      "view": {
+        "resource": "Observation",
+        "select": [
+          {
+            "column": [
+              {
+                "name": "id",
+                "path": "id"
+              },
+              {
+                "name": "patient_key",
+                "path": "subject.getReferenceKey(Patient)"
+              },
+              {
+                "name": "device_key",
+                "path": "subject.getReferenceKey(Device)"
+              }
+            ]
+          }
+        ]
+      },
+      "expect": [
+        {
+          "id": "o1",
+          "patient_key": "Patient/p1",
+          "device_key": null
+        },
+        {
+          "id": "o2",
+          "patient_key": "Patient/p-missing",
+          "device_key": null
+        },
+        {
+          "id": "o3",
+          "patient_key": null,
+          "device_key": "Device/d1"
+        },
+        {
+          "id": "o4",
+          "patient_key": "Patient/p2/_history/3",
+          "device_key": null
+        },
+        {
+          "id": "o5",
+          "patient_key": null,
+          "device_key": null
+        }
+      ]
+    },
+    {
+      "title": "reference key of each target of a repeating reference",
+      "view": {
+        "resource": "Observation",
+        "select": [
+          {
+            "column": [
+              {
+                "name": "id",
+                "path": "id"
+              }
+            ]
+          },
+          {
+            "forEach": "performer",
+            "column": [
+              {
+                "name": "performer_key",
+                "path": "getReferenceKey()"
+              }
+            ]
+          }
+        ]
+      },
+      "expect": [
+        {
+          "id": "o1",
+          "performer_key": "Practitioner/pr1"
+        },
+        {
+          "id": "o1",
+          "performer_key": "Patient/p2"
+        },
+        {
+          "id": "o1",
+          "performer_key": "Practitioner/pr-missing"
+        },
+        {
+          "id": "o1",
+          "performer_key": null
+        }
+      ]
+    },
+    {
+      "title": "reference keys of a repeating reference as a collection",
+      "view": {
+        "resource": "Observation",
+        "select": [
+          {
+            "column": [
+              {
+                "name": "id",
+                "path": "id"
+              },
+              {
+                "name": "key_count",
+                "path": "performer.getReferenceKey().count()",
+                "type": "integer"
+              }
+            ]
+          }
+        ]
+      },
+      "expect": [
+        {
+          "id": "o1",
+          "key_count": 3
+        },
+        {
+          "id": "o2",
+          "key_count": 0
+        },
+        {
+          "id": "o3",
+          "key_count": 0
+        },
+        {
+          "id": "o4",
+          "key_count": 0
+        },
+        {
+          "id": "o5",
+          "key_count": 0
+        }
+      ]
+    },
+    {
+      "title": "resolve() with is over a singular reference",
+      "view": {
+        "resource": "Observation",
+        "select": [
+          {
+            "column": [
+              {
+                "name": "id",
+                "path": "id"
+              },
+              {
+                "name": "is_patient",
+                "path": "subject.resolve() is Patient"
+              },
+              {
+                "name": "is_device",
+                "path": "subject.resolve() is Device"
+              }
+            ]
+          }
+        ]
+      },
+      "expect": [
+        {
+          "id": "o1",
+          "is_patient": true,
+          "is_device": false
+        },
+        {
+          "id": "o2",
+          "is_patient": true,
+          "is_device": false
+        },
+        {
+          "id": "o3",
+          "is_patient": false,
+          "is_device": true
+        },
+        {
+          "id": "o4",
+          "is_patient": true,
+          "is_device": false
+        },
+        {
+          "id": "o5",
+          "is_patient": null,
+          "is_device": null
+        }
+      ]
+    },
+    {
+      "title": "resolve() with ofType() over a repeating reference of mixed target types",
+      "view": {
+        "resource": "Observation",
+        "where": [
+          {
+            "path": "performer.exists()"
+          }
+        ],
+        "select": [
+          {
+            "column": [
+              {
+                "name": "resolved_count",
+                "path": "performer.resolve().count()",
+                "type": "integer"
+              },
+              {
+                "name": "practitioner_count",
+                "path": "performer.resolve().ofType(Practitioner).count()",
+                "type": "integer"
+              },
+              {
+                "name": "patient_count",
+                "path": "performer.resolve().ofType(Patient).count()",
+                "type": "integer"
+              },
+              {
+                "name": "organization_count",
+                "path": "performer.resolve().ofType(Organization).count()",
+                "type": "integer"
+              },
+              {
+                "name": "device_count",
+                "path": "performer.resolve().ofType(Device).count()",
+                "type": "integer"
+              }
+            ]
+          }
+        ]
+      },
+      "expect": [
+        {
+          "resolved_count": 4,
+          "practitioner_count": 2,
+          "patient_count": 1,
+          "organization_count": 1,
+          "device_count": 0
+        }
+      ]
+    },
+    {
+      "title": "resolve() with is inside where() over a repeating reference",
+      "view": {
+        "resource": "Observation",
+        "select": [
+          {
+            "forEach": "performer.where(resolve() is Practitioner)",
+            "column": [
+              {
+                "name": "practitioner_key",
+                "path": "getReferenceKey()"
+              }
+            ]
+          }
+        ]
+      },
+      "expect": [
+        {
+          "practitioner_key": "Practitioner/pr1"
+        },
+        {
+          "practitioner_key": "Practitioner/pr-missing"
+        }
+      ]
+    },
+    {
+      "title": "getReferenceKey() with a type specifier inside where() over a repeating reference",
+      "view": {
+        "resource": "Observation",
+        "select": [
+          {
+            "forEach": "performer.where(getReferenceKey(Patient).exists())",
+            "column": [
+              {
+                "name": "patient_key",
+                "path": "getReferenceKey()"
+              }
+            ]
+          }
+        ]
+      },
+      "expect": [
+        {
+          "patient_key": "Patient/p2"
+        }
+      ]
+    },
+    {
+      "title": "getReferenceKey() compared inside where() over a repeating reference",
+      "view": {
+        "resource": "Observation",
+        "select": [
+          {
+            "forEach": "performer.where(getReferenceKey() = 'Practitioner/pr1')",
+            "column": [
+              {
+                "name": "matched_key",
+                "path": "getReferenceKey()"
+              }
+            ]
+          }
+        ]
+      },
+      "expect": [
+        {
+          "matched_key": "Practitioner/pr1"
+        }
+      ]
+    },
+    {
+      "title": "getReferenceKey() in a view-level where clause",
+      "view": {
+        "resource": "Observation",
+        "where": [
+          {
+            "path": "subject.getReferenceKey(Patient).exists()"
+          }
+        ],
+        "select": [
+          {
+            "column": [
+              {
+                "name": "id",
+                "path": "id"
+              }
+            ]
+          }
+        ]
+      },
+      "expect": [
+        {
+          "id": "o1"
+        },
+        {
+          "id": "o2"
+        },
+        {
+          "id": "o4"
+        }
+      ]
+    }
+  ]
+}

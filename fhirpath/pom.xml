@@ -34,6 +34,14 @@
   <name>Pathling FHIRPath Engine</name>
   <description>A library that can translate FHIRPath expressions into Spark queries.</description>
 
+  <properties>
+    <!-- The test layout dimension (T037a): pof for Parquet on FHIR, the default since T100g, or
+      previous as an opt-in run. -->
+    <pathling.testLayout>pof</pathling.testLayout>
+    <!-- The test schema mode dimension (T037): pruned is the only mode until M6. -->
+    <pathling.testSchemaMode>pruned</pathling.testSchemaMode>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>au.csiro.pathling</groupId>
@@ -42,6 +50,12 @@
     <dependency>
       <groupId>au.csiro.pathling</groupId>
       <artifactId>fhir-schema</artifactId>
+    </dependency>
+    <!-- The new-layout transform, which builds the new-layout arm of the test fixtures (T037a). -->
+    <dependency>
+      <groupId>au.csiro.pathling</groupId>
+      <artifactId>io</artifactId>
+      <scope>test</scope>
     </dependency>
 
     <!-- Apache Spark -->
@@ -211,6 +225,8 @@
               <systemPropertyVariables>
                 <spring.profiles.active>unit-test</spring.profiles.active>
                 <spark.logConf>true</spark.logConf>
+                <pathling.testLayout>${pathling.testLayout}</pathling.testLayout>
+                <pathling.testSchemaMode>${pathling.testSchemaMode}</pathling.testSchemaMode>
               </systemPropertyVariables>
             </configuration>
           </execution>
@@ -272,6 +288,8 @@
                   <systemPropertyVariables>
                     <spring.profiles.active>unit-test</spring.profiles.active>
                     <spark.logConf>true</spark.logConf>
+                    <pathling.testLayout>${pathling.testLayout}</pathling.testLayout>
+                    <pathling.testSchemaMode>${pathling.testSchemaMode}</pathling.testSchemaMode>
                     <au.csiro.pathling.views.test.disableExclusions>true</au.csiro.pathling.views.test.disableExclusions>
                   </systemPropertyVariables>
                 </configuration>

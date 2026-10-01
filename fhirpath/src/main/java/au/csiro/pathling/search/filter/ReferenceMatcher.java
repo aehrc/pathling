@@ -19,6 +19,7 @@ package au.csiro.pathling.search.filter;
 
 import static org.apache.spark.sql.functions.lit;
 
+import au.csiro.pathling.encoders.ColumnFunctions;
 import jakarta.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 
@@ -44,7 +45,10 @@ public class ReferenceMatcher implements ElementMatcher {
   @Override
   @Nonnull
   public Column match(@Nonnull final Column element, @Nonnull final String searchValue) {
-    final Column refCol = element.getField(FhirFieldNames.REFERENCE);
+    // Read through the tolerant traversal, so that a Reference whose structure does not carry the
+    // reference string, such as one pruned to the fields its data populates, reads it as null and
+    // matches nothing (FR-054).
+    final Column refCol = ColumnFunctions.resolveStringOrNull(element, FhirFieldNames.REFERENCE);
 
     // Absolute URI: exact string equality.
     if (isAbsoluteUri(searchValue)) {

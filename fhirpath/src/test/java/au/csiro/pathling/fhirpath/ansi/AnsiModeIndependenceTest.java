@@ -141,7 +141,7 @@ class AnsiModeIndependenceTest {
 
   @Test
   void decimalCombineNormalisationIsIdenticalUnderBothSettings() {
-    // combine() routes decimals through normalizeDecimalType (a DECIMAL(32,6) cast).
+    // combine() routes decimals through withSharedSqlType (a DECIMAL(32,6) cast).
     final List<IBaseResource> resources = List.of(observationWithQuantity(new BigDecimal("23.40")));
     assertParity(
         resources,

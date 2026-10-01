@@ -19,7 +19,7 @@ package au.csiro.pathling.fhirpath.operator;
 
 import au.csiro.pathling.fhirpath.collection.Collection;
 import jakarta.annotation.Nonnull;
-import org.apache.spark.sql.Column;
+import java.util.List;
 
 /**
  * Provides the functionality of the FHIRPath {@code combine(other)} function, which merges two
@@ -44,16 +44,24 @@ public class CombineOperator extends SameTypeBinaryOperator {
     return nonEmpty;
   }
 
+  /**
+   * Promotes the types of the operands only. Their shapes are unified by {@link
+   * CombiningLogic#combine(Collection, Collection)}, as it combines them, so that each operand is
+   * held once in the combination.
+   */
+  @Nonnull
+  @Override
+  protected List<Collection> unify(@Nonnull final List<Collection> operands) {
+    return CombiningLogic.promoteTypes(operands);
+  }
+
   @Nonnull
   @Override
   protected Collection handleEquivalentTypes(
       @Nonnull final Collection left,
       @Nonnull final Collection right,
       @Nonnull final BinaryOperatorInput input) {
-    final Column leftArray = CombiningLogic.prepareArray(left);
-    final Column rightArray = CombiningLogic.prepareArray(right);
-    final Column combined = CombiningLogic.combineArrays(leftArray, rightArray);
-    return left.copyWithColumn(combined);
+    return CombiningLogic.combine(left, right);
   }
 
   @Nonnull

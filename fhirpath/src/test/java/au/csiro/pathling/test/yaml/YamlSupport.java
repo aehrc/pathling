@@ -38,6 +38,7 @@ import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.encoding.CodingSchema;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import au.csiro.pathling.fhirpath.literal.CodingLiteral;
+import au.csiro.pathling.test.layout.TestLayout;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonSerializer;
@@ -49,11 +50,14 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.BiFunction;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.AllArgsConstructor;
@@ -131,8 +135,9 @@ public class YamlSupport {
         @Nonnull final CharSequence quantityLiteral, @Nonnull final JsonGenerator gen)
         throws IOException {
       final FhirPathQuantity quantity = FhirPathQuantity.parse(quantityLiteral.toString());
-      final Optional<FhirPathQuantity> canonical = quantity.asCanonical();
 
+      // No canonical form is written: the engine computes it from the value and code when it
+      // decodes a stored quantity, and does not read a stored one.
       gen.writeStartObject();
       // id field - always null for literals
       gen.writeNullField("id");
@@ -145,21 +150,6 @@ public class YamlSupport {
       gen.writeStringField("unit", quantity.getUnitName());
       gen.writeStringField("system", quantity.getSystem());
       gen.writeStringField("code", quantity.getCode());
-      // canonicalizedValue as array [value, scale] or null
-      if (canonical.isPresent()) {
-        gen.writeArrayFieldStart("canonicalizedValue");
-        gen.writeNumber(canonical.get().getValue());
-        gen.writeNumber(canonical.get().getValue().scale());
-        gen.writeEndArray();
-      } else {
-        gen.writeNullField("canonicalizedValue");
-      }
-      // canonicalizedCode
-      if (canonical.isPresent()) {
-        gen.writeStringField("canonicalizedCode", canonical.get().getCode());
-      } else {
-        gen.writeNullField("canonicalizedCode");
-      }
       // _fid field - always null for literals
       gen.writeNullField("_fid");
       gen.writeEndObject();
@@ -223,6 +213,14 @@ public class YamlSupport {
           Map.entry(FHIRDefinedType.DATETIME, DataTypes.StringType),
           Map.entry(FHIRDefinedType.DATE, DataTypes.StringType),
           Map.entry(FHIRDefinedType.NULL, DataTypes.NullType));
+
+  // The structure the new layout stores a quantity in, in the order of the FHIR definition.
+  private static final StructType STORED_QUANTITY =
+      new StructType()
+          .add(QuantityEncoding.VALUE_COLUMN, DataTypes.StringType)
+          .add(QuantityEncoding.UNIT_COLUMN, DataTypes.StringType)
+          .add(QuantityEncoding.SYSTEM_COLUMN, DataTypes.StringType)
+          .add(QuantityEncoding.CODE_COLUMN, DataTypes.StringType);
 
   public static final Yaml YAML = new Yaml(new FhirConstructor(), new FhirRepresenter());
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
@@ -491,21 +489,125 @@ public class YamlSupport {
     return childrenToStruct(resourceDefinition.getChildren());
   }
 
+  /**
+   * Returns the schema a subject is stored with in a layout. On the new layout a decimal is stored
+   * as text, which the engine decodes at traversal (FR-002), and a quantity as its FHIR structure,
+   * with the value as text and no canonical form, which the engine computes at traversal (FR-022).
+   * A Coding is stored with only the fields that the codings at its path populate, without the
+   * previous layout's field id, as the new layout prunes it (FR-025). On the previous layout the
+   * subject keeps the types the engine computes with, as it always has.
+   *
+   * @param resourceDefinition the definition of the subject
+   * @param subject the subject, which decides the fields of a pruned structure
+   * @param layout the layout to store the subject in
+   * @return the schema of the stored subject
+   */
+  @Nonnull
+  public static StructType definitionToStruct(
+      @Nonnull final DefaultResourceDefinition resourceDefinition,
+      @Nonnull final Map<Object, Object> subject,
+      @Nonnull final TestLayout layout) {
+    return childrenToStruct(
+        resourceDefinition.getChildren(),
+        (type, values) -> storedType(type, values, layout),
+        List.of(subject));
+  }
+
   @Nonnull
   public static StructType childrenToStruct(
       @Nonnull final Collection<ChildDefinition> childDefinitions) {
+    return childrenToStruct(childDefinitions, (type, values) -> FHIR_TO_SQL.get(type), List.of());
+  }
+
+  @Nullable
+  private static DataType storedType(
+      @Nonnull final FHIRDefinedType type,
+      @Nonnull final List<?> values,
+      @Nonnull final TestLayout layout) {
+    if (!layout.isPof()) {
+      return FHIR_TO_SQL.get(type);
+    }
+    return switch (type) {
+      case DECIMAL -> DataTypes.StringType;
+      case QUANTITY -> STORED_QUANTITY;
+      case CODING -> storedCodingType(values);
+      default -> FHIR_TO_SQL.get(type);
+    };
+  }
+
+  /**
+   * Returns the structure the new layout stores the codings at a path in: the fields of the FHIR
+   * definition, in its order, that any of them populates. Where none populates any field, every
+   * field is kept, because only the fields of a structure are pruned here, not the structure
+   * itself.
+   */
+  @Nonnull
+  private static StructType storedCodingType(@Nonnull final List<?> values) {
+    final List<Coding> codings =
+        values.stream()
+            .filter(FhirTypedLiteral.class::isInstance)
+            .map(FhirTypedLiteral.class::cast)
+            .filter(literal -> nonNull(literal.getLiteral()))
+            .map(literal -> CodingLiteral.fromString(requireNonNull(literal.getLiteral())))
+            .toList();
+    final Predicate<Predicate<Coding>> populated =
+        field -> codings.isEmpty() || codings.stream().anyMatch(field);
+    StructType stored = new StructType();
+    if (populated.test(coding -> nonNull(coding.getSystem()))) {
+      stored = stored.add(CodingSchema.SYSTEM_FIELD, DataTypes.StringType);
+    }
+    if (populated.test(coding -> nonNull(coding.getVersion()))) {
+      stored = stored.add(CodingSchema.VERSION_FIELD, DataTypes.StringType);
+    }
+    if (populated.test(coding -> nonNull(coding.getCode()))) {
+      stored = stored.add(CodingSchema.CODE_FIELD, DataTypes.StringType);
+    }
+    if (populated.test(coding -> nonNull(coding.getDisplay()))) {
+      stored = stored.add(CodingSchema.DISPLAY_FIELD, DataTypes.StringType);
+    }
+    if (populated.test(Coding::hasUserSelected)) {
+      stored = stored.add(CodingSchema.USER_SELECTED_FIELD, DataTypes.BooleanType);
+    }
+    return stored;
+  }
+
+  /**
+   * Returns the schema of a set of child elements. The values are the structures at the children's
+   * level of the subject, which the type of a pruned structure is derived from.
+   */
+  @Nonnull
+  private static StructType childrenToStruct(
+      @Nonnull final Collection<ChildDefinition> childDefinitions,
+      @Nonnull final BiFunction<FHIRDefinedType, List<?>, DataType> sqlType,
+      @Nonnull final List<?> parents) {
     return new StructType(
         childDefinitions.stream()
-            .flatMap(YamlSupport::elementToStructField)
+            .flatMap(child -> elementToStructField(child, sqlType, parents))
             .toArray(StructField[]::new));
   }
 
-  private static Stream<StructField> elementToStructField(final ChildDefinition childDefinition) {
+  /** Returns the non-null values of a child element across a set of structures. */
+  @Nonnull
+  private static List<?> valuesOf(@Nonnull final String name, @Nonnull final List<?> parents) {
+    return parents.stream()
+        .filter(Map.class::isInstance)
+        .map(parent -> ((Map<?, ?>) parent).get(name))
+        .flatMap(value -> value instanceof final List<?> list ? list.stream() : Stream.of(value))
+        .filter(Objects::nonNull)
+        .toList();
+  }
+
+  private static Stream<StructField> elementToStructField(
+      final ChildDefinition childDefinition,
+      @Nonnull final BiFunction<FHIRDefinedType, List<?>, DataType> sqlType,
+      @Nonnull final List<?> parents) {
     switch (childDefinition) {
       case final DefaultPrimitiveDefinition primitiveDefinition -> {
         final DataType elementType =
             requireNonNull(
-                FHIR_TO_SQL.get(primitiveDefinition.getType()),
+                sqlType.apply(
+                    primitiveDefinition.getType(),
+                    valuesOf(primitiveDefinition.getName(), parents)),
                 "No SQL type for " + primitiveDefinition.getFhirType());
         return Stream.of(
             new StructField(
@@ -517,12 +619,13 @@ public class YamlSupport {
                 Metadata.empty()));
       }
       case final DefaultCompositeDefinition compositeDefinition -> {
+        final List<?> values = valuesOf(compositeDefinition.getName(), parents);
         final StructType predefinedType =
-            (StructType) FHIR_TO_SQL.get(compositeDefinition.getType());
+            (StructType) sqlType.apply(compositeDefinition.getType(), values);
         final StructType elementType =
             predefinedType != null
                 ? predefinedType
-                : childrenToStruct(compositeDefinition.getChildren());
+                : childrenToStruct(compositeDefinition.getChildren(), sqlType, values);
         return Stream.of(
             new StructField(
                 compositeDefinition.getName(),
@@ -537,7 +640,9 @@ public class YamlSupport {
             childrenToStruct(
                 choiceDefinition.getChoices().stream()
                     .filter(c -> !c.getName().startsWith("_"))
-                    .toList());
+                    .toList(),
+                sqlType,
+                parents);
         return Stream.of(elementType.fields());
       }
       case null, default ->
@@ -552,5 +657,85 @@ public class YamlSupport {
     } catch (final JsonProcessingException e) {
       throw new RuntimeException(e);
     }
+  }
+
+  /**
+   * Returns a subject as the JSON it is stored from in a layout, to be read with the schema {@link
+   * #definitionToStruct(DefaultResourceDefinition, Map, TestLayout)} gives it.
+   *
+   * <p>On the new layout every decimal is written as a JSON string. Spark reads a string token into
+   * a text column verbatim, whereas it would re-serialise a number token, so a decimal given as a
+   * typed literal is stored with exactly the text of the literal. A decimal given as a number is
+   * stored as the text of the double. A quantity is written as its FHIR structure, with its value
+   * as text in the same way.
+   *
+   * @param objectModel the subject
+   * @param layout the layout to store the subject in
+   * @return the subject as JSON
+   */
+  @Nonnull
+  @SuppressWarnings("unchecked")
+  public static String subjectToJson(
+      @Nonnull final Map<Object, Object> objectModel, @Nonnull final TestLayout layout) {
+    return omToJson(
+        layout.isPof() ? (Map<Object, Object>) asStoredOnNewLayout(objectModel) : objectModel);
+  }
+
+  @Nullable
+  private static Object asStoredOnNewLayout(@Nullable final Object value) {
+    return switch (value) {
+      case final Double number -> Double.toString(number);
+      case final FhirTypedLiteral literal
+          when literal.getType() == FHIRDefinedType.DECIMAL && nonNull(literal.getLiteral()) ->
+          literal.getLiteral();
+      case final FhirTypedLiteral literal
+          when literal.getType() == FHIRDefinedType.QUANTITY && nonNull(literal.getLiteral()) ->
+          storedQuantity(FhirPathQuantity.parse(requireNonNull(literal.getLiteral())));
+      case final FhirTypedLiteral literal
+          when literal.getType() == FHIRDefinedType.CODING && nonNull(literal.getLiteral()) ->
+          storedCoding(CodingLiteral.fromString(requireNonNull(literal.getLiteral())));
+      case final Map<?, ?> map -> {
+        // A map is copied entry by entry, because a subject can carry null values, which the
+        // stream collectors reject.
+        final Map<Object, Object> copy = new LinkedHashMap<>();
+        map.forEach((key, entry) -> copy.put(key, asStoredOnNewLayout(entry)));
+        yield copy;
+      }
+      case final List<?> list -> list.stream().map(YamlSupport::asStoredOnNewLayout).toList();
+      case null, default -> value;
+    };
+  }
+
+  /**
+   * Returns a quantity in the structure the new layout stores it in, with the value as the plain
+   * text of the literal's value, so that a value with more fractional digits than the engine's
+   * decimal type holds is stored without loss.
+   */
+  @Nonnull
+  private static Map<Object, Object> storedQuantity(@Nonnull final FhirPathQuantity quantity) {
+    final Map<Object, Object> stored = new LinkedHashMap<>();
+    stored.put(QuantityEncoding.VALUE_COLUMN, quantity.getValue().toPlainString());
+    stored.put(QuantityEncoding.UNIT_COLUMN, quantity.getUnitName());
+    stored.put(QuantityEncoding.SYSTEM_COLUMN, quantity.getSystem());
+    stored.put(QuantityEncoding.CODE_COLUMN, quantity.getCode());
+    return stored;
+  }
+
+  /**
+   * Returns a Coding with every field the new layout can store for it, including whether it was
+   * selected by the user, which the previous layout's writer leaves out. A field the schema has
+   * pruned is ignored when the subject is read.
+   */
+  @Nonnull
+  private static Map<Object, Object> storedCoding(@Nonnull final Coding coding) {
+    final Map<Object, Object> stored = new LinkedHashMap<>();
+    stored.put(CodingSchema.SYSTEM_FIELD, coding.getSystem());
+    stored.put(CodingSchema.VERSION_FIELD, coding.getVersion());
+    stored.put(CodingSchema.CODE_FIELD, coding.getCode());
+    stored.put(CodingSchema.DISPLAY_FIELD, coding.getDisplay());
+    stored.put(
+        CodingSchema.USER_SELECTED_FIELD,
+        coding.hasUserSelected() ? coding.getUserSelected() : null);
+    return stored;
   }
 }

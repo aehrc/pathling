@@ -213,13 +213,13 @@ class TraceExpressionTest {
   }
 
   @Test
-  void traceDataTypeAndNullableDelegateToChild() {
+  void traceDataTypeDelegatesToChildAndIsAlwaysNullable() {
     final CapturingCollector collector = new CapturingCollector();
     final TraceExpression expr =
         new TraceExpression(stringLiteral("v"), "label", "string", collector);
 
     assertEquals(DataTypes.StringType, expr.dataType());
-    assertFalse(expr.nullable());
+    assertTrue(expr.nullable());
   }
 
   @Test
@@ -304,14 +304,14 @@ class TraceExpressionTest {
   }
 
   @Test
-  void traceProjectionDataTypeAndNullableDelegateToLeft() {
+  void traceProjectionDataTypeDelegatesToLeftAndIsAlwaysNullable() {
     final TraceProjectionExpression expr =
         new TraceProjectionExpression(
             stringLiteral("pass"), integerLiteral(1), "label", "integer", null);
 
     // The expression exposes the left (pass-through) schema, not the right.
     assertEquals(DataTypes.StringType, expr.dataType());
-    assertFalse(expr.nullable());
+    assertTrue(expr.nullable());
   }
 
   @Test

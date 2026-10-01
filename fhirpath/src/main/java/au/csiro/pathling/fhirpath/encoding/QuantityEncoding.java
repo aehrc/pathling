@@ -20,16 +20,24 @@ package au.csiro.pathling.fhirpath.encoding;
 import static au.csiro.pathling.sql.SqlFunctions.let;
 import static java.util.Objects.nonNull;
 import static java.util.stream.Collectors.toUnmodifiableMap;
+import static org.apache.spark.sql.functions.callUDF;
+import static org.apache.spark.sql.functions.coalesce;
+import static org.apache.spark.sql.functions.length;
 import static org.apache.spark.sql.functions.lit;
+import static org.apache.spark.sql.functions.regexp_extract;
 import static org.apache.spark.sql.functions.struct;
 import static org.apache.spark.sql.functions.when;
 
+import au.csiro.pathling.encoders.ColumnFunctions;
+import au.csiro.pathling.encoders.ExtensionSupport;
 import au.csiro.pathling.encoders.QuantitySupport;
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
 import au.csiro.pathling.encoders.terminology.ucum.Ucum;
 import au.csiro.pathling.fhirpath.FhirPathQuantity;
 import au.csiro.pathling.fhirpath.unit.CalendarDurationUnit;
 import au.csiro.pathling.fhirpath.unit.UcumUnit;
+import au.csiro.pathling.sql.misc.CanonicalQuantityCode;
+import au.csiro.pathling.sql.misc.CanonicalQuantityValue;
 import au.csiro.pathling.sql.types.FlexiDecimal;
 import au.csiro.pathling.sql.types.FlexiDecimalSupport;
 import jakarta.annotation.Nonnull;
@@ -117,7 +125,7 @@ public class QuantityEncoding {
         code.as(CODE_COLUMN),
         canonicalizedValue.as(CANONICALIZED_VALUE_COLUMN),
         canonicalizedCode.as(CANONICALIZED_CODE_COLUMN),
-        _fid.as("_fid"));
+        _fid.as(ExtensionSupport.FID_FIELD_NAME()));
   }
 
   /**
@@ -159,6 +167,63 @@ public class QuantityEncoding {
             canonicalizedCode,
             _fid)
         .toStruct();
+  }
+
+  /**
+   * Decodes a stored quantity into the structure the engine computes with, which is the structure
+   * of {@link #dataType()} (T096).
+   *
+   * <p>The stored quantity is the FHIR structure as the traversal expression yields it on either
+   * layout: its value is the text of a decimal, and it carries no canonical form, because the
+   * traversal expression normalises the previous layout's quantities to that shape too (T094b).
+   * Each field is read by name through the tolerant traversal, so a field the schema does not carry
+   * is null. The value is decoded to {@code DECIMAL(32,6)}, as {@link
+   * au.csiro.pathling.fhirpath.collection.DecimalCollection#decode} decodes any decimal, and its
+   * scale is taken from the text. The canonical form is computed from the stored text and code, as
+   * the previous layout's encoder computed it, so that no digit of the value is lost before
+   * canonicalisation. Taking the canonical form from an annotation is T096a.
+   *
+   * <p>A null quantity decodes to null.
+   *
+   * @param stored the stored quantity
+   * @return the quantity, in the structure the engine computes with
+   */
+  @Nonnull
+  public static Column decodeStored(@Nonnull final Column stored) {
+    final Column text = ColumnFunctions.resolveStringOrNull(stored, VALUE_COLUMN);
+    final Column code = ColumnFunctions.resolveStringOrNull(stored, CODE_COLUMN);
+    return when(
+            stored.isNotNull(),
+            toStruct(
+                ColumnFunctions.resolveStringOrNull(stored, "id"),
+                text,
+                scaleOf(text),
+                ColumnFunctions.resolveStringOrNull(stored, "comparator"),
+                ColumnFunctions.resolveStringOrNull(stored, UNIT_COLUMN),
+                ColumnFunctions.resolveStringOrNull(stored, SYSTEM_COLUMN),
+                code,
+                callUDF(CanonicalQuantityValue.FUNCTION_NAME, text, code),
+                callUDF(CanonicalQuantityCode.FUNCTION_NAME, text, code),
+                ColumnFunctions.resolveOrNull(
+                    stored, ExtensionSupport.FID_FIELD_NAME(), DataTypes.IntegerType)))
+        .cast(dataType());
+  }
+
+  /**
+   * Computes the scale of the text of a decimal, as {@link BigDecimal#scale()} gives it: the number
+   * of digits after the decimal point, less the exponent where there is one.
+   *
+   * <p>The text is referenced twice, once for each part, because on the previous layout it is the
+   * rendering of the stored value, and every reference repeats that rendering in the plan. A null
+   * text gives a null scale, because the digits of a null are null.
+   */
+  @Nonnull
+  private static Column scaleOf(@Nonnull final Column text) {
+    final Column fractionDigits = length(regexp_extract(text, "^[^.eE]*(?:\\.([0-9]*))?", 1));
+    final Column exponent =
+        coalesce(
+            regexp_extract(text, "[eE]([-+]?[0-9]+)$", 1).try_cast(DataTypes.IntegerType), lit(0));
+    return fractionDigits.minus(exponent);
   }
 
   /**
@@ -216,7 +281,8 @@ public class QuantityEncoding {
         new StructField(CANONICALIZED_VALUE_COLUMN, FlexiDecimal.DATA_TYPE, true, metadata);
     final StructField canonicalizedCode =
         new StructField(CANONICALIZED_CODE_COLUMN, DataTypes.StringType, true, metadata);
-    final StructField fid = new StructField("_fid", DataTypes.IntegerType, true, metadata);
+    final StructField fid =
+        new StructField(ExtensionSupport.FID_FIELD_NAME(), DataTypes.IntegerType, true, metadata);
     return new StructType(
         new StructField[] {
           id,

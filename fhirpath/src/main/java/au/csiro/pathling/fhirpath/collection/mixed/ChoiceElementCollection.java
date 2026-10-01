@@ -25,6 +25,8 @@ import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.EmptyCollection;
+import au.csiro.pathling.fhirpath.operator.CombiningLogic;
+import au.csiro.pathling.utilities.CanonicalStructure;
 import jakarta.annotation.Nonnull;
 import java.util.Arrays;
 import java.util.List;
@@ -99,8 +101,17 @@ public class ChoiceElementCollection extends MixedCollection implements Material
       // DecimalRepresentation)
       return resolveElement(Arrays.stream(selectedTypes).findFirst());
     } else {
+      // The variants are coalesced, so they are unified first, all of them at once (FR-056). A
+      // variant of a structure would be reconciled by name. The variants of one FHIRPath type are
+      // in practice all primitives, which already share their SQL type.
+      final Optional<CanonicalStructure> canonical =
+          CombiningLogic.canonicalStructureOf(selectedTypes[0]);
       return Collection.build(
-          parent.getColumn().traverseChoice(selectedTypes), fhirpathType.getDefaultFhirType());
+          parent
+              .getColumn()
+              .traverseChoice(
+                  columns -> CombiningLogic.unifyColumns(columns, canonical), selectedTypes),
+          fhirpathType.getDefaultFhirType());
     }
   }
 

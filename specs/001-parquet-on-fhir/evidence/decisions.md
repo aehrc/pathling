@@ -683,7 +683,7 @@ per-kind coverage afterwards.
 
 The dispatch arms decision 47 introduces are not a product feature by default.
 Their purpose is to keep the build green while the engine is rewritten, and to
-make the flip a writer flip rather than a migration. T100e removes them in M6.
+make the flip a writer flip rather than a migration. T100e removes them in M7.
 
 This is the cost that replaces the red window, and it is worth naming rather than
 discovering: some of the work in M2 exists to buy a green build and a safe flip,
@@ -701,6 +701,12 @@ rather than an ordinary task. **It has been moved to Phase 7**, at the head of
 M2: it sets the coverage standard for the arms, so settling it in Phase 13 would
 have decided in M4 how work written in M2 should have been tested. Its wiring
 stays in Phase 13.
+
+_Deferred (2026-09-26)._ The owner has moved T049a to the start of M7, to be
+settled with the other migration questions. Until then the arms are treated as
+transitional, which is the default above, and Phase 13 builds the check with a
+provisional default. The earlier text of this decision placed T100e in M6; it is
+in M7, since the dense schema became M6.
 
 ## 52. Three axes, not one, and the test framework carries two of them
 
@@ -829,6 +835,11 @@ rather than per subtree, since the extension type is self-recursive and its
 expansion infinite — sufficient because T110 reapplies the expression at every
 subsequent step, but worth proving rather than assuming. If either fails, the
 design reverts to decision 47 as originally written.
+
+_Amended by decision 74_: the premise that the map is a field on the resource
+struct is false, so the extension branch takes the map as a second child, named
+as the `_extension` column, and the extension struct keeps the previous layout's
+type.
 
 _The cost that stays._ A previous-layout decimal is normalised to its lexical
 form and then parsed back, where dispatch in the decimal collection could have
@@ -2256,6 +2267,8 @@ The order is fixed:
    inside a `transform` lambda and the self-recursive extension type. If it
    cannot, the fallback is dispatch in the collection classes (decision 47), and
    the rest of M2 is replanned against that before any feature is ported.
+   _Outcome, decision 74_: the gate failed on its first question, and the
+   binary form it also tested is taken instead of the fallback.
 2. **Coverage, then absent elements.** T020–T027 and T049a, then the
    absent-element block. Tolerance of an absent field comes first because every
    later step reaches the data through it.
@@ -2299,9 +2312,9 @@ the build, so the number of failures left before the switch is always known.
   the public API writing the new layout, and stay in M4.
 - **Phase 10 moves from M2 to M4.** Divergent files read as one dataset and
   Delta widening on upsert are IO behaviour, not engine work, and they are the
-  only part of M2 a user could observe. M2 now joins the milestones that change
-  nothing a user can see, apart from the two fixes noted below. Phase 10 keeps
-  its number.
+  only part of M2 a user could observe. M2 was expected to join the milestones
+  that change nothing a user can see, apart from the two fixes noted below.
+  Phase 10 keeps its number.
 - **Variadic reconciliation stays in M2 until the measurement says otherwise.**
   It was proposed for M5. But the pruned schema gives one complex type different
   shapes at different paths as soon as the suites switch, so whatever the switch
@@ -2338,6 +2351,24 @@ change to one needs the programme owner's approval, per test. Three are known:
 
 Whatever else T100h finds is listed the same way.
 
+That expectation did not hold. The previous layout reaches the engine through
+the new layout's branch from M2, and until M4 that is the layout
+`PathlingContext` writes, so the port changes what the public API returns on
+it. Beyond the two fixes, the owner approved each of these:
+
+- an `instant` is text rather than a timestamp, as a column type and as a value
+  (decision 81);
+- quantity comparison, and `eq` and `gt` search, differ for a value with more
+  than six fractional digits, and a quantity outside UCUM no longer matches a
+  UCUM search (decision 77);
+- a FHIRPath or search column applied as a filter after a `select` that dropped
+  the columns it reads finds no rows, where Spark used to add them back
+  (decision 75's known limit);
+- a FHIRPath or search column used directly in a join condition now fails
+  with `INTERNAL_ERROR`, including where it used to work. Joining first and
+  then filtering still works, and view joins on keys are unaffected (decision
+  75's join-condition limit, `evidence/join-condition-limit.md`).
+
 ### What else it corrects
 
 T020–T022, T088 and T098 assumed a `resolve()` that joins to the target
@@ -2352,3 +2383,486 @@ restated against the key functions.
 
 _Amends_ decisions 47, 51, 52 and 55 as to where the switch of the test estate
 happens, and supersedes the placement of Phase 10 in M2.
+
+## 74. The previous layout's extension map is a second child of the traversal expression, named as a column
+
+T038m failed on its first question (`evidence/t038m-normalisation-gate.md`).
+Decision 55 rested on the root extension map being a field on the resource
+struct, so that the expression could walk its own child down to the resource
+root and read the map beside it. The engine has no resource struct. Both
+resolvers build the resource as `ResourceRepresentation.alwaysPresent()`, whose
+value is `lit(true)`, and every resource field is a top-level column. The walk
+from `name.extension` ends at the `name` column, from inside a lambda at the
+lambda variable, and at the root at the literal. The expression cannot name
+`_extension` from inside its replacement either: `CheckAnalysis` rejects an
+unresolved reference there, and a resolved one needs an expression id the
+expression cannot see.
+
+The gate's second question passed, and it passed without the retained handle it
+was written around. The spike supplied the map as a **second child**, and the
+value it supplied was the engine's existing `extensionMapColumn`, which is no
+more than an unqualified reference to the top-level `_extension` column. As a
+child the reference is resolved by the analyzer like any other column,
+including inside a `transform` lambda, where it binds to the outer row. The
+binary form ran in all twelve engine-produced scenarios and gave the same rows
+as the unmodified engine, and the optimiser reduced it to
+`_extension#104[x._fid]`.
+
+So decision 47's fallback is not taken, and decision 55 stands with three
+amendments.
+
+- **The extension branch is binary at every site, not only inside lambdas.**
+  Its second child is `col("_extension")`, supplied by the engine at the
+  traversal site. The other branches stay unary. At the resource root the
+  branch also reads the resource's own `_fid`, which is a top-level column in
+  the same way.
+- **The map is named, not carried.** T094 no longer serves the extension map,
+  and T094a removes `extensionMapColumn` outright rather than deriving the map
+  from a handle. Decision 48's single expression survives; its derivation does
+  not.
+- **The strong same-`dataType` rule does not hold for the extension struct.**
+  Per-level normalisation is sufficient (question 3), but only because `_fid`
+  survives into each level's output, so that the next step can look up the
+  nested extensions. A normalised `extension` element therefore keeps the
+  previous layout's `Extension` type. The rule holds for every leaf reached by
+  further traversal, because each step normalises again. T108 and FR-054 are
+  unaffected: they compare new-layout datasets only.
+
+### What this rests on, and what is still unproven
+
+- **A missing column.** The new layout has no `_extension` column, and a plain
+  `col("_extension")` fails with `UNRESOLVED_COLUMN` before the expression is
+  consulted (the gate's new-layout control).
+  `UnresolvedFallbackIfMissingField` tolerates a missing struct field, not a
+  missing top-level column. The reference therefore needs a tolerant form that
+  resolves to a null map when the column is absent. It must be built on T009a's
+  terms, and it becomes the first item of T038a, before anything is built on it.
+- **Plan shapes.** The spike put the binary node only under `Project`. `Filter`
+  and `Aggregate`, where the two children may resolve at different times inside
+  a lambda, are added to T038a.
+- **An unqualified name.** Where two resources share a plan, `_extension` could
+  be ambiguous. The tolerant reference then fails with `AMBIGUOUS_REFERENCE`, as
+  the engine's plain unqualified reference does, rather than taking the
+  ambiguity for an absence (M2 review, finding 4).
+
+### The option not taken
+
+Making the resource root a struct would restore the unary form. It rests on one
+hand-built control, and it reverses the flat top-level-column design every
+resolver uses, so it is not pursued.
+
+_Amends_ decisions 48, 55 and 73 as to how the extension map reaches the
+traversal expression, and records the outcome of T038m.
+
+## 75. The compiled expression stays schema-agnostic, and a missing table column is tolerated by a catch
+
+Decision 74 has two parts. Its second part stood: a binary form survives the
+analyzer in every kind of plan. Its first part did not survive the T038a spike
+(`evidence/t038a-root-column-spike.md`). There is no construction on T009a's
+terms that tolerates a missing **table-level** column in every kind of plan.
+
+A struct field is different. `ResolveOrNull` can inspect the resolved parent's
+type and choose between the field and a null. At the resource root there is no
+parent to inspect: the resource is `lit(true)`, and every element is a table
+column. A plain `col("xxx")` gives nothing to catch when the column is missing.
+Neither `coalesce` nor a `RuntimeReplaceable` helps, because both need their
+child resolved before they act (checked on Spark 4.0.1: both report
+`UNRESOLVED_COLUMN`). The expansion of a star or a regex does tolerate absence,
+but Spark refuses it in a grouping key, a sort key and a join condition, even
+when the column exists.
+
+This is not specific to extensions. On a pruned new-layout table, any
+top-level element can be absent.
+
+### The principle
+
+**The compiled FHIRPath expression stays schema-agnostic.** Downstream code
+depends on it: `fhirPathToColumn`, `searchToColumn` and the evaluators all build
+columns with no dataset in hand. The engine does not consult a dataset's schema
+when compiling a column unless that proves necessary. So the option to choose
+from the schema at construction time is not taken.
+
+### The mechanism, for now
+
+A missing table column is tolerated by the `mapChildren` catch. This is the
+pattern `UnresolvedFallbackIfMissingField` already uses for struct fields. The
+column is referenced through a node that throws during resolution when the name
+is missing: in the spike, `GetViewColumnByNameAndOrdinal`, whose
+`INCOMPATIBLE_VIEW_SCHEMA_CHANGE` is caught and replaced with a typed null. The
+spike showed it works in a select, a filter, a grouping key, an aggregate value,
+a sort, and a generator. It is the most opaque of the options, which is what the
+schema-agnostic design needs.
+
+It applies at the resource root, to **every** top-level element, and it is
+emitted from `ResourceRepresentation` just as T110 emits `ResolveOrNull` from
+`DefaultRepresentation`.
+
+### Extensions, under this mechanism
+
+Extension traversal is one expression over the parent, with no second input
+and no flag for the legacy layout:
+
+- if the parent has an `extension` field, which is the new layout, it resolves
+  to that field;
+- otherwise it resolves to `_extension[parent._fid]`, where `_extension` is
+  always the table column.
+
+At the root, `extension` and `_fid` are table columns, reached through the
+catch. If legacy data lacks `_extension`, because it was encoded with
+extensions disabled, extension expressions fail as they do today. The precise
+construction is settled by T038a and T038e within these constraints.
+
+The strong same-`dataType` rule keeps decision 74's one exception. The previous
+layout's extension struct keeps `_fid`.
+
+### Known limits, accepted for now
+
+- **Join condition.** The catch fails with `INTERNAL_ERROR` in a join
+  condition, even when the column exists. The cause is Spark's, verified on
+  4.0.2: a `Join` resolves its condition through
+  `ColumnResolutionHelper.resolveExpressionByPlanChildren`, which resolves the
+  `GetViewColumnByNameAndOrdinal` inside `UnresolvedColumnOrNull` through
+  `getAttrCandidates`, and that asserts the plan has one child. The
+  `AssertionError` escapes the `mapChildren` catch. The base's plain
+  `UnresolvedAttribute` resolves across both sides instead. So from M2, on both
+  layouts, a column from `fhirPathToColumn` or `searchToColumn` that reads a
+  column fails when used directly in a join condition. The base failed only
+  where both sides had the name, with `AMBIGUOUS_REFERENCE`, or neither did;
+  where one side had it, it worked. So this is a regression and not, as
+  recorded earlier, a change of error. Joining first and then filtering works. View joins on
+  `getResourceKey()` and `getReferenceKey()` are unaffected, because their
+  columns are compiled in each view's single-child projection and the join
+  compares plain output columns (`ReferenceKeyJoinTest`, both layouts). The
+  owner accepted it as a known issue on 2026-09-29, to be revisited, since the
+  usage is rare. The way forward is the "When to revisit" list below. Its first
+  item is option C in `evidence/join-condition-limit.md`, with B as its
+  variant; both were probed and work. That file records the reproduction, the
+  fallbacks if they prove unworkable, and the one option rejected. T100k tracks
+  it. Decision 73's list of visible changes records it.
+- **Ambiguous name.** Ambiguity raises the same error as absence, and the
+  catch tells them apart by the attributes the error reports as matched, which
+  are none for an absent name. Where more than one matched, the catch resolves
+  each match. Where they are one attribute, as where a column is selected or
+  grouped by twice, the reference resolves to it. Where they differ, the catch
+  raises `AMBIGUOUS_REFERENCE` itself. Either way it behaves as a plain
+  reference does, after a self-join (`SelfJoinAmbiguityTest`, both layouts) and
+  beneath a projection that repeats a name (`ResolveOrNullTest`). It does not
+  defer to a plain reference, because the analyzer resolves a filter's
+  condition against the input of the projection beneath it, where the name can
+  be unique, and the filter would then silently read one of the two columns.
+  The error names the columns without their qualifiers, which the caught error
+  does not report.
+- **Fragility.** It depends on analyzer internals: that a node throws where it
+  does, and that rules reach it through `mapChildren`. T038d and the
+  plan-shape tests in T038a are what show a Spark upgrade has changed that.
+- **A column dropped by a projection beneath the operator.** Found by the
+  toolkit tests. A plain reference to such a column is repaired by
+  `ResolveMissingReferences`, which adds it back to the projection. The
+  tolerant reference is resolved first against the operator's child, where the
+  name is missing, so the catch returns the fallback before that rule runs. The
+  answer is silently wrong, not an error. It reaches root extension traversal
+  too, because that goes through the same reference. `ResolveOrNullTest` pins
+  it. The engine's present call sites apply columns to the table itself. T110
+  emits the reference at every root element, so it must check whether any
+  engine call site hits this case.
+- **The server's `_filter` search.** T110's check found one call site that
+  hits the dropped-column case. `applyFhirPathFilters` in
+  `server/.../search/SearchExecutor.java` selects `id` before it filters with
+  a FHIRPath column. Under the tolerant root reference, every element beneath
+  that selection is absent, so `_filter` would silently return no rows once
+  the server adopts this library. It is dealt with at M4, when the public API
+  is ported, by filtering before selecting. No engine site in `fhirpath` or
+  `library-api` hits the case.
+- **A column applied to a projected dataset.** `fhirPathToColumn` and
+  `searchToColumn`, and their Python and R equivalents, hand the column to the
+  caller. A caller who applies it to a dataset that has already dropped the
+  columns it reads now gets a null, where Spark used to add the column back.
+
+### The construction, as confirmed by the owner (2026-09-25)
+
+The toolkit that T038a–e and T038j–l built was confirmed as follows:
+
+- **The root has its own entry point.** `traverseRootExtension()` is separate
+  from `traverseExtension(parent)`. At the root there is no parent expression.
+  The root entry point reaches `extension`, `_fid` and `_extension` through the
+  tolerant table-column reference and decides from the resolved `_fid`.
+- **Three cases, not two.** A parent with an `extension` field resolves to that
+  field. A parent with `_fid` resolves to `_extension[_fid]`. A parent with
+  neither resolves to a null of FR-055's bottom type for a repeating complex
+  element, and it does not reach for `_extension`. FR-054 needs the third case,
+  because on a pruned new-layout table an element that carries no extensions
+  has neither field, and that table has no `_extension` column.
+- **The dropped-column limit** above is accepted, and T110 checks the engine's
+  call sites against it.
+- **`MergeCast` selects the operand it projects by position.** It takes the
+  full ordered operand list, the position of the operand to project, and the
+  canonical structure. It does not take the operand as a separate argument
+  beside the list, which is how T038l's text puts it. With a separate argument,
+  the projected operand would be a second copy of a list member, analysed on
+  its own. Selecting by position means the projected value is always the one
+  the target type was computed from. A caller unifying N operands emits one
+  node per position, each over the same list. T113a does that in
+  `CombiningLogic`.
+
+### When to revisit
+
+Revisit once there is more evidence on whether a schema-agnostic design can
+hold. The fallbacks, in order:
+
+1. understand and fix the join and ambiguity failures;
+2. a custom analyzer rule, which needs `SparkSessionExtensions`;
+3. building a struct from the root columns, so that the root becomes a parent
+   like any other.
+4. an explicit layout flag in the engine, considered for decision 79 and not
+   taken. It becomes worth it if layout-specific branches appear that cannot be
+   decided from the type, or once T045 detects the layout in M4.
+
+_Amends_ decision 74, withdrawing its tolerant reference and its second child.
+It records the principle that compiled expressions are schema-agnostic, and it
+extends tolerance of absence to the resource root.
+
+## 76. An undescribed element yields empty, and a declared decimal stays a string on output
+
+Both are owner decisions (2026-09-25), prompted by writing T101–T107 test-first.
+
+**FR-025 is amended to match the engine.** FR-025 required traversal to an
+element the definitions do not describe to raise an error. Since `551c2a3050`
+(June 2025), the engine deliberately returns an empty collection, and
+`SystemDslTest` asserts it ("traversal to undefined property returns {}"). The
+requirement now matches that behaviour. T102 tests it over a pruned schema, and
+no existing test changes.
+
+**T111 does not cast a declared `decimal`.** Decision 73 expected the T111 cast
+to change no output type on the previous layout, with `decimal` mapping to
+`DECIMAL(32,6)`. That was wrong. `DecimalCollection.toExternalValue` renders a
+decimal as its literal text, so a view column declared `"type": "decimal"` is
+output as a string today, while `getSqlType()` reports `DECIMAL(32,6)`. Casting
+it would change existing outputs, the SQL-on-FHIR fixtures `fn_boundary` and
+`fhirpath_numbers` among them. So `decimal` is exempt from the cast and stays a
+string. Every other declared type is cast. The disagreement between `getValue()`
+and `getSqlType()` stays for decimal.
+
+_Amends_ FR-025 and decision 73's expectation for T111.
+
+## 77. Quantity canonicalisation is computed from the stored value, and search follows the specification on UCUM
+
+Owner decisions (2026-09-27), prompted by port step 2 (T087, T096, T099).
+
+**Computed from the stored value, on both layouts.** No stored canonical form is
+read any more. On the previous layout the stored value keeps only six fractional
+digits, while the encoder computed its canonical form from the full source value.
+So a value with more digits can compare differently on previous-layout data:
+`0.0000002 kg = 0.2 'mg'` was true and is now false there, and true on the new
+layout. This is accepted as a known divergence until T100e. It keeps one code
+path and normalises the previous layout completely.
+
+**Search canonicalises only a UCUM quantity.** Quantity search compares
+canonical forms only where the stored quantity's system is UCUM, as the FHIR
+search specification says. Otherwise it matches exactly. The released encoder
+computed a canonical form whatever the system, so on data it wrote, `80 kg` with
+system `http://other.org` matched `gt70|http://unitsofmeasure.org|kg`. It no
+longer does. The `ElementMatcherTest` case that pins `false` for it is unchanged:
+its hand-built quantity has no canonical form, so it only ever tested exact
+matching.
+
+**FHIRPath comparison is fixed after the switch.** FHIRPath quantity comparison
+still canonicalises from the code whatever the system, so for a UCUM code under
+another system it disagrees with search. T096b, in M5, makes comparison follow
+the specification too.
+
+## 78. A previous-layout structure may keep `_fid`, and nothing else may differ
+
+Owner decision (2026-09-27), prompted by port step 2.
+
+The previous layout gives every complex element a `_fid`, which keys its
+extensions in the table-level `_extension` map. Extension traversal needs it on
+that layout (decision 75). Decision 74 made the extension structure an
+exception to the same-`dataType` rule, and step 2's normalised quantity needed
+the same exception. Coding, HumanName, Period and every other structure carry
+`_fid` too, so a named exception per type would recur at every port step.
+
+The rule is therefore stated generally:
+
+- a previous-layout structure may keep `_fid` in addition to the new layout's
+  fields;
+- every leaf reached through it has the new layout's type;
+- nothing else may differ.
+
+Code that treats a whole structure as a value, such as union across layouts,
+reconciles through `MergeCast`, as it must for pruned shapes anyway. T100e
+removes `_fid` with the previous layout.
+
+_Amends_ decisions 74 and 75, which named the extension structure as the one
+exception.
+
+## 79. On the new layout, extension traversal ignores `_fid` where there is no `_extension`
+
+Owner decision (2026-09-28), prompted by port step 4.
+
+The engine builds its System values, meaning literals and terminology results,
+in the FHIR-shaped structures the previous layout used, and these carry a
+`_fid` that is always null. So does the engine's quantity structure after a
+union rebuilds stored quantities into it. Extension traversal chooses its
+branch from the type, and it read a `_fid` field as the previous layout. So on
+a new-layout table it referenced the `_extension` column, which is not there,
+and the query failed.
+
+The engine's structures are not changed now. Changing them risks regressions
+where literals meet FHIR values, so it waits until after the switch (T124k).
+Instead, `_extension` is reached through the tolerant table-column reference,
+at every extension lookup. Where the column is absent, a lookup by `_fid` finds
+no extensions. On the previous layout nothing changes.
+
+Consequences:
+
+- `.extension` on a System value is empty on both layouts, as it should be,
+  because System types have no extensions. `WithoutExtensionsDefinition`, the
+  workaround step 4 added for `property()`, is removed.
+- **Known limit until T113b.** A union, `combine` or `iif` of two stored
+  quantities on the new layout returns no extensions, although the quantities
+  have them. The rebuild into the engine's structure has already dropped
+  `extension`. This was an error; it is now an empty answer. A test pins it as a
+  known limit, and T113b changes that test when combining keeps FHIR structures.
+- Previous-layout data encoded with extensions disabled has no `_extension`
+  column. `.extension` on it is now empty rather than an error. This relaxes
+  decision 75.
+- The known limits of the tolerant reference (a join condition, a self-join, a
+  column dropped by a projection beneath) now reach `_extension` too.
+
+The rule for the combining functions, which T113b implements, follows the FHIR
+binding. A combination of two FHIR operands keeps FHIR elements. Where a System
+value takes part, the FHIR operand is implicitly converted to the System type,
+which carries no `id` or `extension`. Terminology functions return System
+values.
+
+An explicit layout flag was considered and not taken: it reverses decision 75's
+schema-agnostic principle, needs plumbing to every place that compiles an
+expression, and gives the same answers as this tolerance for every present case.
+
+_Amends_ decision 75.
+
+### Addendum to 79 — a stored Coding combined with a System Coding keeps its extensions
+
+Owner-confirmed (2026-09-28), prompted by T113b. This is a known deviation from
+the rule above.
+
+A stored Coding combined with a Coding the engine built, such as a literal or a
+terminology result, is reconciled with it by name. It is not converted to the
+System type, so it keeps its `extension`. The engine has no marker that tells a
+stored Coding from one it built: both are plain structures of a Coding type.
+Quantities do have one, because a stored quantity is decoded at traversal and
+keeps the stored value beside the decoded one, so for quantities the rule holds.
+
+Both layouts agree today. The previous layout reaches the stored Coding's
+extensions through its `_fid`, and the new layout reads them inline.
+`ExtensionTraversalTest.storedCodingCombinedWithALiteralKeepsItsExtensions`
+pins the answer on both. Revisit it with T124k, when the engine's structures lose
+`_fid`, since the previous layout's answer rests on it.
+
+### Addendum to 79 — reconciliation applies canonical order only where shapes differ
+
+Owner-confirmed (2026-09-28), prompted by T113a. `MergeCast` leaves operands
+that already share one type as they are, rather than projecting them into a
+canonically ordered copy of that type. There is nothing to reconcile, and a
+structure the canonical order does not fully describe, such as one of the
+previous layout with its `_fid` and scale companions, would otherwise be
+reordered for no reason. FR-057 is amended to match. It was added as a
+precaution, not because a reorder was measured.
+
+## 80. The same-type rule covers what traversal reaches, and whole structures leave through the layout
+
+Owner decision (2026-09-28), prompted by port step 5.
+
+Previous-layout normalisation runs at the traversal step to a field. A structure
+returned whole is not normalised: on the previous layout `Location.position`
+keeps `DECIMAL(32,6)` values and their `*_scale` companions, and `Meta` keeps
+`versionId_versioned`. Decision 78's "nothing else may differ" therefore covers
+the fields a traversal reaches, not whole structures. Within one table there is
+one layout, so whole structures of both layouts never meet in a query while
+T049a is open.
+
+Two consumers see whole structures, and neither needs anything before the
+switch:
+
+- **`evaluateFhirPath`** renders a complex result as JSON. It must return valid
+  FHIR JSON, so from the switch it goes through the `io` module's layout-to-JSON
+  transform, which adapts the structure recursively (T100j). Before the switch
+  it reads the previous layout and renders as the released version does.
+- **`fhirPathToColumn`** returns the stored structure as a Spark column. Its
+  schema changes at the switch from the previous layout, a Pathling-specific
+  schema, to the new layout, which is a published specification. That change
+  is accepted as user-visible and is documented with the layout contract.
+  Nothing changes before the switch, unless an existing test depends on the
+  previous schema through this API.
+
+**Every quantity type is decoded at traversal**, as Quantity is: Age, Count,
+Distance, Duration, SimpleQuantity and MoneyQuantity too. The previous layout
+stores each in the structure the engine computes with, so a whole value of any of
+them keeps the released version's rendering and schema before the switch. One
+difference from the released version remains, from decision 77: the scale and
+canonical form are computed from the value as the traversal yields it. So a whole
+quantity whose value has more than six fractional digits shows the stored
+`value_scale` of six rather than the source's, and a `_value_canonicalized`
+computed from the six digits kept, on the previous layout.
+
+**A field of a decoded quantity is read from the stored quantity.** The decoded
+structure has exactly the type of a stored previous-layout quantity, so the
+traversal expression, which decides from the type alone, took it for stored data
+and normalised it again at every step. Reading the field from the stored
+quantity normalises it once. Search is given the stored quantity for the same
+reason, so that it canonicalises the stored text (decision 77).
+`evidence/m2-review-perf.md` has the measurements.
+
+_Amends_ decision 78 by stating its scope.
+
+
+## 81. An `instant` is text at query time, on both layouts
+
+Owner decisions (2026-09-28), prompted by T100h. The first version of this
+decision left the previous layout's `instant` a timestamp. The owner revised it
+the same day, so that the engine sees one type.
+
+The previous layout's encoder stores `instant` as a Spark timestamp, which keeps
+the point in time but not the offset. The new layout stores it as text, in its
+lexical form, like `dateTime`. The engine keeps the new layout's text rather than
+decoding it to a timestamp.
+
+**The previous layout's instant is normalised to text at read time**, by a branch
+of the traversal expression chosen from the resolved schema, as decision 75 and
+the decimal branch do (`InstantNormalisation`). A timestamp-typed field is
+rendered as the point in time in UTC, in ISO 8601 form with a `Z` suffix. Its
+fractional seconds are included only where they are not zero, without trailing
+zeros:
+
+- `2023-01-01T02:00:00Z`;
+- `2023-01-01T02:00:00.123Z`.
+
+The rendering does not depend on the session time zone. The original offset
+cannot be recovered, so UTC is the only faithful form. The previous layout
+stores no other FHIR type as a timestamp.
+
+So the engine sees text instants on both layouts:
+
+- **An untyped view column** is `StringType` on both layouts. Its value is the
+  lexical form on the new layout and the UTC text on the previous one.
+  `AnsiTypeHintingTest`'s instant row expects `StringType`, with each layout's
+  value (owner-approved).
+- **`issued.toString()` and a column declared `instant`** give the same two
+  renderings. The difference between the layouts is accepted.
+- **FHIRPath comparison** gives the same answers on both layouts.
+- **An `ansi/type` of `TIMESTAMP WITHOUT TIME ZONE`** would drop the offset from
+  the text and keep the wall time. So an instant is cast to a timestamp first,
+  and that gives the point in time in the session time zone on both layouts.
+  Text of any other type keeps the direct cast and its wall time, which existing
+  tests pin.
+
+This changes what the previous layout returns, which until now was a timestamp.
+Until M4, the `library-api`, Python and R suites read the previous layout through
+the engine, so the change reaches them. Before it was made, the `library-api`
+suite was run and passed, and the Python and R tests were searched: none asserts
+an instant's type or value.
+
+_Amends_ decision 73's expectation that M2 changes nothing a user can see
+beyond two fixes, since the change reaches the public API on the previous layout.
+It records the query-time type of a primitive that decision 70 already stores as
+text.
