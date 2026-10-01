@@ -74,7 +74,8 @@ public class ArbitraryObjectResolverFactory implements Function<RuntimeContext, 
     // Create definition from YAML
     final DefaultResourceDefinition subjectDefinition =
         (DefaultResourceDefinition) YamlSupport.yamlToDefinition(subjectResourceCode, subjectOM);
-    final StructType subjectSchema = YamlSupport.definitionToStruct(subjectDefinition, layout);
+    final StructType subjectSchema =
+        YamlSupport.definitionToStruct(subjectDefinition, subjectOM, layout);
 
     // Create flat Dataset with YAML schema
     final String subjectOMJson = YamlSupport.subjectToJson(subjectOM, layout);

@@ -19,6 +19,7 @@ package au.csiro.pathling.test.layout;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.fhirpath.encoding.CodingSchema;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluator;
 import au.csiro.pathling.test.SpringBootUnitTest;
@@ -165,6 +166,48 @@ class TestLayoutSwitchTest {
           .isEqualTo("0.0000001");
     } else {
       assertThat(schema.apply("single").dataType()).isEqualTo(QuantityEncoding.dataType());
+    }
+  }
+
+  @Test
+  void syntheticSubjectStoresCodingsInTheRequestedLayout() {
+    final Map<Object, Object> subject = new LinkedHashMap<>();
+    subject.put("single", FhirTypedLiteral.toCoding("http://a|x"));
+    subject.put(
+        "many",
+        List.of(
+            FhirTypedLiteral.toCoding("http://a|x|1"),
+            FhirTypedLiteral.toCoding("http://b|y||'Why'|true")));
+    final Dataset<Row> dataset =
+        ArbitraryObjectResolverFactory.of(subject)
+            .apply(RuntimeContext.of(spark, fhirEncoders))
+            .getDataset();
+    final StructType schema = dataset.schema();
+    final Row row = dataset.first();
+
+    if (TestLayout.active().isPof()) {
+      // The new layout stores a Coding with only the fields that the codings at its path
+      // populate, in the order of the FHIR definition, and without the previous layout's field id.
+      assertThat(schema.apply("single").dataType())
+          .isEqualTo(
+              new StructType()
+                  .add("system", DataTypes.StringType)
+                  .add("code", DataTypes.StringType));
+      assertThat(schema.apply("many").dataType())
+          .isEqualTo(
+              DataTypes.createArrayType(
+                  new StructType()
+                      .add("system", DataTypes.StringType)
+                      .add("version", DataTypes.StringType)
+                      .add("code", DataTypes.StringType)
+                      .add("display", DataTypes.StringType)
+                      .add("userSelected", DataTypes.BooleanType),
+                  true));
+      final Row second = row.<Row>getList(row.fieldIndex("many")).get(1);
+      assertThat(second.<String>getAs("display")).isEqualTo("Why");
+      assertThat(second.<Boolean>getAs("userSelected")).isTrue();
+    } else {
+      assertThat(schema.apply("single").dataType()).isEqualTo(CodingSchema.codingStructType());
     }
   }
 

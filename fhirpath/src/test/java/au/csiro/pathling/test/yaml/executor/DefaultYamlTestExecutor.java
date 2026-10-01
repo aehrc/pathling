@@ -35,6 +35,7 @@ import au.csiro.pathling.fhirpath.collection.QuantityCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
+import au.csiro.pathling.fhirpath.encoding.CodingSchema;
 import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluator;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.test.dsl.TypeInfoExpectation;
@@ -346,6 +347,11 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
         actual = actualRaw;
         expected = expectedRaw;
       }
+    } else if (evalResult instanceof CodingCollection) {
+      // A Coding read from the new layout has only the fields its data populates, so Codings are
+      // compared by the fields they hold rather than by position.
+      actual = normalizeCodings(actualRaw);
+      expected = normalizeCodings(expectedRaw);
     } else {
       actual = actualRaw;
       expected = expectedRaw;
@@ -388,6 +394,52 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
       return !seq.isEmpty() && seq.head() instanceof Row;
     }
     return false;
+  }
+
+  /**
+   * Normalizes a Coding result, or an array of them, for comparison by the fields each Coding
+   * holds. A result that is neither is returned unchanged.
+   *
+   * @param result the result, as read from the evaluated row
+   * @return the result, with each Coding as a map of its populated fields
+   */
+  @Nullable
+  private static Object normalizeCodings(@Nullable final Object result) {
+    if (result instanceof final Row row) {
+      return normalizeCodingRow(row);
+    }
+    if (isArrayOfRows(result)) {
+      final List<Map<String, Object>> normalized = new java.util.ArrayList<>();
+      final scala.collection.Iterator<?> it = ((scala.collection.Seq<?>) result).iterator();
+      while (it.hasNext()) {
+        normalized.add(normalizeCodingRow((Row) it.next()));
+      }
+      return normalized;
+    }
+    return result;
+  }
+
+  /**
+   * Normalizes a Coding Row to the fields it holds, by name. A field the Row's structure does not
+   * carry and a field holding null are both left out, so that a Coding narrowed to the fields its
+   * data populates equals the same Coding in the full structure. The element id and the previous
+   * layout's field id are left out too, as neither is part of the Coding's value.
+   *
+   * @param codingRow the Coding Row to normalize
+   * @return the populated fields of the Coding, by name
+   */
+  @Nonnull
+  private static Map<String, Object> normalizeCodingRow(@Nonnull final Row codingRow) {
+    final Map<String, Object> normalized = new HashMap<>();
+    for (final String field : codingRow.schema().fieldNames()) {
+      final int index = codingRow.fieldIndex(field);
+      if (!field.equals(CodingSchema.ID_FIELD)
+          && !field.equals(CodingSchema.FID_FIELD)
+          && !codingRow.isNullAt(index)) {
+        normalized.put(field, codingRow.get(index));
+      }
+    }
+    return normalized;
   }
 
   /**
