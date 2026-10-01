@@ -24,6 +24,8 @@ import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.datasource.DatasetDataSource;
 import au.csiro.pathling.test.datasource.PrunedSchemaReader;
+import au.csiro.pathling.test.layout.LayoutDatasets;
+import au.csiro.pathling.test.layout.TestLayout;
 import jakarta.annotation.Nonnull;
 import java.nio.file.Path;
 import java.util.List;
@@ -96,15 +98,18 @@ class PrunedTokenSearchTest {
     final PrunedSchemaReader patients =
         PrunedSchemaReader.write(
             encode("Patient", List.of(patient("1", "123", "555"), patient("2", "456", "777"))),
-            tempDir.resolve("patients").toString());
+            tempDir.resolve("patients").toString(),
+            encoders.of("Patient").schema());
     final PrunedSchemaReader observations =
         PrunedSchemaReader.write(
             encode("Observation", List.of(observation("1", "A"), observation("2", "B"))),
-            tempDir.resolve("observations").toString());
+            tempDir.resolve("observations").toString(),
+            encoders.of("Observation").schema());
     final PrunedSchemaReader encounters =
         PrunedSchemaReader.write(
             encode("Encounter", List.of(encounter("1", "AMB"), encounter("2", "IMP"))),
-            tempDir.resolve("encounters").toString());
+            tempDir.resolve("encounters").toString(),
+            encoders.of("Encounter").schema());
     datasets =
         Map.of(
             "identifierWithoutSystem", patients.readWithout("identifier.system"),
@@ -160,9 +165,8 @@ class PrunedTokenSearchTest {
   @Nonnull
   private Dataset<Row> encode(
       @Nonnull final String resourceType, @Nonnull final List<? extends IBaseResource> resources) {
-    return spark
-        .createDataset(List.<IBaseResource>copyOf(resources), encoders.of(resourceType))
-        .toDF();
+    return LayoutDatasets.fromResources(
+        spark, encoders, TestLayout.active(), resourceType, List.<IBaseResource>copyOf(resources));
   }
 
   /** A token search parameter on an element of a resource, named for the element. */

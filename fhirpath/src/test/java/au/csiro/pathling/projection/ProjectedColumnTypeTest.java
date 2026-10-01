@@ -27,6 +27,8 @@ import au.csiro.pathling.fhirpath.path.Paths.Traversal;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.datasource.DatasetDataSource;
 import au.csiro.pathling.test.datasource.PrunedSchemaReader;
+import au.csiro.pathling.test.layout.LayoutDatasets;
+import au.csiro.pathling.test.layout.TestLayout;
 import au.csiro.pathling.views.FhirView;
 import au.csiro.pathling.views.FhirViewExecutor;
 import com.google.gson.Gson;
@@ -69,6 +71,10 @@ import org.springframework.beans.factory.annotation.Autowired;
  * <p>Each view is run over the full schema, as the control that passed before T110, and over a
  * schema from which the named elements are removed, which passes since T110. The removed elements
  * are never populated in the source, so the pruned run must also return the control's rows.
+ *
+ * <p>The resources are built in the active test layout. The new layout's schema is already pruned
+ * to what the source populates, so there both runs read the elements as absent, and the control is
+ * a control only on the previous layout.
  *
  * @author Piotr Szul
  */
@@ -357,7 +363,9 @@ class ProjectedColumnTypeTest {
   private PrunedSchemaReader write(
       @Nonnull final String resourceType, @Nonnull final IBaseResource resource) {
     final Dataset<Row> encoded =
-        spark.createDataset(List.of(resource), fhirEncoders.of(resourceType)).toDF();
-    return PrunedSchemaReader.write(encoded, tempDir.resolve(resourceType).toString());
+        LayoutDatasets.fromResources(
+            spark, fhirEncoders, TestLayout.active(), resourceType, List.of(resource));
+    return PrunedSchemaReader.write(
+        encoded, tempDir.resolve(resourceType).toString(), fhirEncoders.of(resourceType).schema());
   }
 }

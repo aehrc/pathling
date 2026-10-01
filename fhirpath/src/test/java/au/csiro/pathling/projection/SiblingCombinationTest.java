@@ -24,12 +24,13 @@ import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.datasource.DatasetDataSource;
 import au.csiro.pathling.test.datasource.PrunedSchemaReader;
+import au.csiro.pathling.test.layout.LayoutDatasets;
+import au.csiro.pathling.test.layout.TestLayout;
 import au.csiro.pathling.views.FhirView;
 import au.csiro.pathling.views.FhirViewExecutor;
 import com.google.gson.Gson;
 import jakarta.annotation.Nonnull;
 import java.nio.file.Path;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -39,6 +40,7 @@ import java.util.stream.Stream;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations.PublicationStatus;
 import org.hl7.fhir.r4.model.Observation;
 import org.hl7.fhir.r4.model.Questionnaire;
@@ -60,10 +62,14 @@ import org.springframework.beans.factory.annotation.Autowired;
  *
  * <p>The views take the shape of the two {@code deep_nesting.json} cases excluded under #2625, but
  * over a schema from which the element is genuinely absent rather than past the encoder's nesting
- * bound. That bound already omits {@code item.item} from the full schema, so the nested cases use
- * {@code item.enableWhen}, which the full schema carries. The removed elements are never populated
- * in the source, so each view is run twice: over the full schema as the control, which passes
- * before T110, and over the pruned schema, which passes since T110 and T113.
+ * bound. On the previous layout that bound already omits {@code item.item} from the full schema, so
+ * the nested cases use {@code item.enableWhen}, which the full schema carries. The removed elements
+ * are never populated in the source, so each view is run twice: over the full schema as the
+ * control, which passes before T110, and over the pruned schema, which passes since T110 and T113.
+ *
+ * <p>The resources are built in the active test layout. The new layout's schema is already pruned
+ * to what the source populates, so there both runs read the elements as absent, and the control is
+ * a control only on the previous layout.
  *
  * @author Piotr Szul
  */
@@ -94,17 +100,27 @@ class SiblingCombinationTest {
     withItem.addItem().setLinkId("1").setText("One").setType(QuestionnaireItemType.GROUP);
     questionnaires =
         PrunedSchemaReader.write(
-            encode(withItem, questionnaire("q2")), tempDir.resolve("nested").toString());
+            encode(withItem, questionnaire("q2")),
+            tempDir.resolve("nested").toString(),
+            fhirEncoders.of("Questionnaire").schema());
     itemless =
         PrunedSchemaReader.write(
-            encode(questionnaire("q3"), questionnaire("q4")), tempDir.resolve("root").toString());
+            encode(questionnaire("q3"), questionnaire("q4")),
+            tempDir.resolve("root").toString(),
+            fhirEncoders.of("Questionnaire").schema());
     final Observation observation = new Observation();
     observation.setId("o1");
     observation.addReferenceRange().setText("r");
     observations =
         PrunedSchemaReader.write(
-            spark.createDataset(List.of(observation), fhirEncoders.of("Observation")).toDF(),
-            tempDir.resolve("Observation").toString());
+            LayoutDatasets.fromResources(
+                spark,
+                fhirEncoders,
+                TestLayout.active(),
+                "Observation",
+                List.<IBaseResource>of(observation)),
+            tempDir.resolve("Observation").toString(),
+            fhirEncoders.of("Observation").schema());
   }
 
   @Nonnull
@@ -363,7 +379,12 @@ class SiblingCombinationTest {
 
   @Nonnull
   private Dataset<Row> encode(@Nonnull final Questionnaire... resources) {
-    return spark.createDataset(Arrays.asList(resources), fhirEncoders.of("Questionnaire")).toDF();
+    return LayoutDatasets.fromResources(
+        spark,
+        fhirEncoders,
+        TestLayout.active(),
+        "Questionnaire",
+        List.<IBaseResource>of(resources));
   }
 
   @Nonnull

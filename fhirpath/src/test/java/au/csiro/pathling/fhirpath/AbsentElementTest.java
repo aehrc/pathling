@@ -26,6 +26,8 @@ import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluatorBuilder;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.datasource.PrunedSchemaReader;
+import au.csiro.pathling.test.layout.LayoutDatasets;
+import au.csiro.pathling.test.layout.TestLayout;
 import ca.uhn.fhir.parser.IParser;
 import jakarta.annotation.Nonnull;
 import java.nio.file.Path;
@@ -78,6 +80,11 @@ import org.springframework.beans.factory.annotation.Autowired;
  * <p>The cases cover a missing top-level column and a missing nested field, each at singular and
  * repeating cardinality, for primitive and complex elements.
  *
+ * <p>The input is built in the active test layout. The new layout's schema is already pruned to
+ * what the source populates, so there both runs read the elements as absent, and the control is a
+ * control only on the previous layout. The parity tests for decision 72 compare the new layout's
+ * shape with the released encoder explicitly, whatever the active layout.
+ *
  * @author Piotr Szul
  */
 @SpringBootUnitTest
@@ -112,19 +119,24 @@ class AbsentElementTest {
   void setUp() {
     patients =
         PrunedSchemaReader.write(
-            encode("Patient", patient1(), patient2()), tempDir.resolve("Patient").toString());
+            encodeInLayout("Patient", patient1(), patient2()),
+            tempDir.resolve("Patient").toString(),
+            fhirEncoders.of("Patient").schema());
     observations =
         PrunedSchemaReader.write(
-            encode("Observation", observation1(), observation2()),
-            tempDir.resolve("Observation").toString());
+            encodeInLayout("Observation", observation1(), observation2()),
+            tempDir.resolve("Observation").toString(),
+            fhirEncoders.of("Observation").schema());
     questionnaires =
         PrunedSchemaReader.write(
-            encode("Questionnaire", questionnaire1(), questionnaire2()),
-            tempDir.resolve("Questionnaire").toString());
+            encodeInLayout("Questionnaire", questionnaire1(), questionnaire2()),
+            tempDir.resolve("Questionnaire").toString(),
+            fhirEncoders.of("Questionnaire").schema());
     itemlessQuestionnaires =
         PrunedSchemaReader.write(
-            encode("Questionnaire", questionnaire2()),
-            tempDir.resolve("ItemlessQuestionnaire").toString());
+            encodeInLayout("Questionnaire", questionnaire2()),
+            tempDir.resolve("ItemlessQuestionnaire").toString(),
+            fhirEncoders.of("Questionnaire").schema());
   }
 
   // T101: traversal to an element the definitions describe but the schema lacks yields empty.
@@ -170,8 +182,12 @@ class AbsentElementTest {
   @MethodSource("absentPatientElements")
   void prunedSchemaLacksTheElement(
       @Nonnull final String prunedPath, @Nonnull final String expression) {
-    // A control on the setup: the element is carried by the full schema and not by the pruned one.
-    assertThat(hasElement(patients.read().schema(), prunedPath)).isTrue();
+    // A control on the setup: the element is one the definitions describe, and the pruned schema
+    // does not carry it. The previous layout's full schema carries it, while the new layout prunes
+    // it itself, because the source never populates it.
+    assertThat(hasElement(fhirEncoders.of("Patient").schema(), prunedPath)).isTrue();
+    assertThat(hasElement(patients.read().schema(), prunedPath))
+        .isEqualTo(!TestLayout.active().isPof());
     assertThat(hasElement(patients.readWithout(prunedPath).schema(), prunedPath)).isFalse();
   }
 
@@ -488,6 +504,14 @@ class AbsentElementTest {
         .toList();
   }
 
+  @Nonnull
+  private Dataset<Row> encodeInLayout(
+      @Nonnull final String resourceType, @Nonnull final IBaseResource... resources) {
+    return LayoutDatasets.fromResources(
+        spark, fhirEncoders, TestLayout.active(), resourceType, Arrays.asList(resources));
+  }
+
+  /** Encodes resources with the released encoder, whatever the active layout. */
   @Nonnull
   private Dataset<Row> encode(
       @Nonnull final String resourceType, @Nonnull final IBaseResource... resources) {

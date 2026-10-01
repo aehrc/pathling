@@ -24,6 +24,8 @@ import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.datasource.DatasetDataSource;
 import au.csiro.pathling.test.datasource.PrunedSchemaReader;
+import au.csiro.pathling.test.layout.LayoutDatasets;
+import au.csiro.pathling.test.layout.TestLayout;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.nio.file.Path;
@@ -54,6 +56,9 @@ import org.springframework.beans.factory.annotation.Autowired;
  * <p>A pruned schema carries only the elements the data populates, so a Period whose bounds are all
  * open at one end has no field for that bound. An absent bound is open, as a null one is.
  *
+ * <p>The resources are built in the active test layout. The new layout prunes the bound itself, and
+ * on the previous layout the bound is removed from the schema the files are read with.
+ *
  * @author Piotr Szul
  */
 @SpringBootUnitTest
@@ -80,11 +85,15 @@ class PrunedPeriodSearchTest {
         Map.of(
             "withoutEnd",
             PrunedSchemaReader.write(
-                    encode(List.of(openEnded, noPeriod)), tempDir.resolve("end").toString())
+                    encode(List.of(openEnded, noPeriod)),
+                    tempDir.resolve("end").toString(),
+                    encoders.of("Coverage").schema())
                 .readWithout("period.end"),
             "withoutStart",
             PrunedSchemaReader.write(
-                    encode(List.of(openStarted, noPeriod)), tempDir.resolve("start").toString())
+                    encode(List.of(openStarted, noPeriod)),
+                    tempDir.resolve("start").toString(),
+                    encoders.of("Coverage").schema())
                 .readWithout("period.start"));
   }
 
@@ -121,9 +130,8 @@ class PrunedPeriodSearchTest {
 
   @Nonnull
   private Dataset<Row> encode(@Nonnull final List<Coverage> resources) {
-    return spark
-        .createDataset(List.<IBaseResource>copyOf(resources), encoders.of("Coverage"))
-        .toDF();
+    return LayoutDatasets.fromResources(
+        spark, encoders, TestLayout.active(), "Coverage", List.<IBaseResource>copyOf(resources));
   }
 
   @Nonnull
