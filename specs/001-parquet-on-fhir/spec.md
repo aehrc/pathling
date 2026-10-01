@@ -790,3 +790,22 @@ after the schema-binding decision and belong to this section.
   criterion is "lossless for the resources we test" rather than "lossless, or
   loud about what was lost", and that this reaches the M4 flag day. T134f and
   T134g carry the follow-ups.
+
+## Open questions
+
+- **OQ-1: Does a Coding result have a fixed type?** On the new layout a stored
+  Coding carries only the fields its data populates, and the engine returns a
+  Coding read from storage in that pruned structure, unless a union with a
+  wider Coding reconciles it. The struct type of a Coding result therefore
+  depends on the data, and so does the type of a SQL-on-FHIR view column that
+  projects a Coding without traversing into it: two tables holding the same
+  kind of resource can produce view columns of different types. Nothing here
+  violates a requirement as written. FR-031 and FR-032 require a narrower
+  Coding to be read and operated on correctly, and FR-028 to FR-030 fix the
+  type of a declared column and of an absent primitive, but none fixes the
+  type of a Coding result over populated data. The question is whether one
+  should: either a Coding result is widened to the canonical Coding structure
+  wherever it leaves the engine, or the data-dependent type is accepted and
+  documented. This is the engine's existing behaviour on the new layout, found
+  when the DSL tests first stored Codings pruned (T036a), where the test
+  harness now compares Coding results by field name.
