@@ -38,6 +38,7 @@ import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.encoding.CodingSchema;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import au.csiro.pathling.fhirpath.literal.CodingLiteral;
+import au.csiro.pathling.test.layout.TestLayout;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonSerializer;
@@ -49,11 +50,13 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.AllArgsConstructor;
@@ -491,21 +494,54 @@ public class YamlSupport {
     return childrenToStruct(resourceDefinition.getChildren());
   }
 
+  /**
+   * Returns the schema a subject is stored with in a layout. On the new layout a decimal is stored
+   * as text, which the engine decodes at traversal (FR-002). On the previous layout the subject
+   * keeps the type the engine computes with, as it always has.
+   *
+   * @param resourceDefinition the definition of the subject
+   * @param layout the layout to store the subject in
+   * @return the schema of the stored subject
+   */
+  @Nonnull
+  public static StructType definitionToStruct(
+      @Nonnull final DefaultResourceDefinition resourceDefinition,
+      @Nonnull final TestLayout layout) {
+    return childrenToStruct(resourceDefinition.getChildren(), type -> storedType(type, layout));
+  }
+
   @Nonnull
   public static StructType childrenToStruct(
       @Nonnull final Collection<ChildDefinition> childDefinitions) {
+    return childrenToStruct(childDefinitions, FHIR_TO_SQL::get);
+  }
+
+  @Nullable
+  private static DataType storedType(
+      @Nonnull final FHIRDefinedType type, @Nonnull final TestLayout layout) {
+    return layout.isPof() && type == FHIRDefinedType.DECIMAL
+        ? DataTypes.StringType
+        : FHIR_TO_SQL.get(type);
+  }
+
+  @Nonnull
+  private static StructType childrenToStruct(
+      @Nonnull final Collection<ChildDefinition> childDefinitions,
+      @Nonnull final Function<FHIRDefinedType, DataType> sqlType) {
     return new StructType(
         childDefinitions.stream()
-            .flatMap(YamlSupport::elementToStructField)
+            .flatMap(child -> elementToStructField(child, sqlType))
             .toArray(StructField[]::new));
   }
 
-  private static Stream<StructField> elementToStructField(final ChildDefinition childDefinition) {
+  private static Stream<StructField> elementToStructField(
+      final ChildDefinition childDefinition,
+      @Nonnull final Function<FHIRDefinedType, DataType> sqlType) {
     switch (childDefinition) {
       case final DefaultPrimitiveDefinition primitiveDefinition -> {
         final DataType elementType =
             requireNonNull(
-                FHIR_TO_SQL.get(primitiveDefinition.getType()),
+                sqlType.apply(primitiveDefinition.getType()),
                 "No SQL type for " + primitiveDefinition.getFhirType());
         return Stream.of(
             new StructField(
@@ -517,12 +553,11 @@ public class YamlSupport {
                 Metadata.empty()));
       }
       case final DefaultCompositeDefinition compositeDefinition -> {
-        final StructType predefinedType =
-            (StructType) FHIR_TO_SQL.get(compositeDefinition.getType());
+        final StructType predefinedType = (StructType) sqlType.apply(compositeDefinition.getType());
         final StructType elementType =
             predefinedType != null
                 ? predefinedType
-                : childrenToStruct(compositeDefinition.getChildren());
+                : childrenToStruct(compositeDefinition.getChildren(), sqlType);
         return Stream.of(
             new StructField(
                 compositeDefinition.getName(),
@@ -537,7 +572,8 @@ public class YamlSupport {
             childrenToStruct(
                 choiceDefinition.getChoices().stream()
                     .filter(c -> !c.getName().startsWith("_"))
-                    .toList());
+                    .toList(),
+                sqlType);
         return Stream.of(elementType.fields());
       }
       case null, default ->
@@ -552,5 +588,45 @@ public class YamlSupport {
     } catch (final JsonProcessingException e) {
       throw new RuntimeException(e);
     }
+  }
+
+  /**
+   * Returns a subject as the JSON it is stored from in a layout, to be read with the schema {@link
+   * #definitionToStruct(DefaultResourceDefinition, TestLayout)} gives it.
+   *
+   * <p>On the new layout every decimal is written as a JSON string. Spark reads a string token into
+   * a text column verbatim, whereas it would re-serialise a number token, so a decimal given as a
+   * typed literal is stored with exactly the text of the literal. A decimal given as a number is
+   * stored as the text of the double.
+   *
+   * @param objectModel the subject
+   * @param layout the layout to store the subject in
+   * @return the subject as JSON
+   */
+  @Nonnull
+  @SuppressWarnings("unchecked")
+  public static String subjectToJson(
+      @Nonnull final Map<Object, Object> objectModel, @Nonnull final TestLayout layout) {
+    return omToJson(
+        layout.isPof() ? (Map<Object, Object>) decimalsAsText(objectModel) : objectModel);
+  }
+
+  @Nullable
+  private static Object decimalsAsText(@Nullable final Object value) {
+    return switch (value) {
+      case final Double number -> Double.toString(number);
+      case final FhirTypedLiteral literal
+          when literal.getType() == FHIRDefinedType.DECIMAL && nonNull(literal.getLiteral()) ->
+          literal.getLiteral();
+      case final Map<?, ?> map -> {
+        // A map is copied entry by entry, because a subject can carry null values, which the
+        // stream collectors reject.
+        final Map<Object, Object> copy = new LinkedHashMap<>();
+        map.forEach((key, entry) -> copy.put(key, decimalsAsText(entry)));
+        yield copy;
+      }
+      case final List<?> list -> list.stream().map(YamlSupport::decimalsAsText).toList();
+      case null, default -> value;
+    };
   }
 }

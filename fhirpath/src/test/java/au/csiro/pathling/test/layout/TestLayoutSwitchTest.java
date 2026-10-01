@@ -22,16 +22,21 @@ import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluator;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.datasource.ObjectDataSource;
+import au.csiro.pathling.test.yaml.FhirTypedLiteral;
+import au.csiro.pathling.test.yaml.resolver.ArbitraryObjectResolverFactory;
 import au.csiro.pathling.test.yaml.resolver.FhirResolverFactory;
 import au.csiro.pathling.test.yaml.resolver.HapiResolverFactory;
 import au.csiro.pathling.test.yaml.resolver.RuntimeContext;
 import jakarta.annotation.Nonnull;
 import java.math.BigDecimal;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
@@ -54,8 +59,10 @@ import org.springframework.beans.factory.annotation.Autowired;
  * the dimension governs, and the stored schema is checked for what distinguishes the layouts: a
  * decimal is a fixed-precision number on the previous layout and text on the new one (FR-002), and
  * an element the resource does not carry is present on the previous layout, whose schema is dense,
- * and absent from the new one, whose schema is pruned. Run with {@code
- * -Dpathling.testLayout=previous} and without it, the same test sees different stored data.
+ * and absent from the new one, whose schema is pruned. The synthetic subject the DSL's {@code
+ * withSubject} and the YAML suites evaluate against is not a resource, so it is checked separately,
+ * for its decimals only. Run with {@code -Dpathling.testLayout=previous} and without it, the same
+ * test sees different stored data.
  *
  * @author Piotr Szul
  */
@@ -95,6 +102,34 @@ class TestLayoutSwitchTest {
     assertThat(previous).isNotEqualTo(pof);
     assertInLayout("previous", previous, TestLayout.PREVIOUS);
     assertInLayout("pof", pof, TestLayout.POF);
+  }
+
+  @Test
+  void syntheticSubjectStoresDecimalsInTheRequestedLayout() {
+    final Map<Object, Object> subject = new LinkedHashMap<>();
+    subject.put("plain", 1.5);
+    subject.put("typed", FhirTypedLiteral.toDecimal("1.0E-7"));
+    subject.put("many", List.of(9.5, 10.0));
+    final Dataset<Row> dataset =
+        ArbitraryObjectResolverFactory.of(subject)
+            .apply(RuntimeContext.of(spark, fhirEncoders))
+            .getDataset();
+    final StructType schema = dataset.schema();
+    final Row row = dataset.first();
+
+    if (TestLayout.active().isPof()) {
+      // The new layout stores a decimal as text, so a typed literal keeps its text exactly and a
+      // plain number is stored as the text of the double.
+      assertThat(schema.apply("plain").dataType()).isEqualTo(DataTypes.StringType);
+      assertThat(schema.apply("many").dataType())
+          .isEqualTo(DataTypes.createArrayType(DataTypes.StringType, true));
+      assertThat(row.<String>getAs("plain")).isEqualTo("1.5");
+      assertThat(row.<String>getAs("typed")).isEqualTo("1.0E-7");
+      assertThat(row.<String>getList(row.fieldIndex("many"))).containsExactly("9.5", "10.0");
+    } else {
+      assertThat(schema.apply("plain").dataType()).isInstanceOf(DecimalType.class);
+      assertThat(schema.apply("typed").dataType()).isInstanceOf(DecimalType.class);
+    }
   }
 
   @Nonnull
