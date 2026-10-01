@@ -227,6 +227,14 @@ public class YamlSupport {
           Map.entry(FHIRDefinedType.DATE, DataTypes.StringType),
           Map.entry(FHIRDefinedType.NULL, DataTypes.NullType));
 
+  // The structure the new layout stores a quantity in, in the order of the FHIR definition.
+  private static final StructType STORED_QUANTITY =
+      new StructType()
+          .add(QuantityEncoding.VALUE_COLUMN, DataTypes.StringType)
+          .add(QuantityEncoding.UNIT_COLUMN, DataTypes.StringType)
+          .add(QuantityEncoding.SYSTEM_COLUMN, DataTypes.StringType)
+          .add(QuantityEncoding.CODE_COLUMN, DataTypes.StringType);
+
   public static final Yaml YAML = new Yaml(new FhirConstructor(), new FhirRepresenter());
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
@@ -496,8 +504,9 @@ public class YamlSupport {
 
   /**
    * Returns the schema a subject is stored with in a layout. On the new layout a decimal is stored
-   * as text, which the engine decodes at traversal (FR-002). On the previous layout the subject
-   * keeps the type the engine computes with, as it always has.
+   * as text, which the engine decodes at traversal (FR-002), and a quantity as its FHIR structure,
+   * with the value as text and no canonical form, which the engine computes at traversal (FR-022).
+   * On the previous layout the subject keeps the types the engine computes with, as it always has.
    *
    * @param resourceDefinition the definition of the subject
    * @param layout the layout to store the subject in
@@ -519,9 +528,14 @@ public class YamlSupport {
   @Nullable
   private static DataType storedType(
       @Nonnull final FHIRDefinedType type, @Nonnull final TestLayout layout) {
-    return layout.isPof() && type == FHIRDefinedType.DECIMAL
-        ? DataTypes.StringType
-        : FHIR_TO_SQL.get(type);
+    if (!layout.isPof()) {
+      return FHIR_TO_SQL.get(type);
+    }
+    return switch (type) {
+      case DECIMAL -> DataTypes.StringType;
+      case QUANTITY -> STORED_QUANTITY;
+      default -> FHIR_TO_SQL.get(type);
+    };
   }
 
   @Nonnull
@@ -597,7 +611,8 @@ public class YamlSupport {
    * <p>On the new layout every decimal is written as a JSON string. Spark reads a string token into
    * a text column verbatim, whereas it would re-serialise a number token, so a decimal given as a
    * typed literal is stored with exactly the text of the literal. A decimal given as a number is
-   * stored as the text of the double.
+   * stored as the text of the double. A quantity is written as its FHIR structure, with its value
+   * as text in the same way.
    *
    * @param objectModel the subject
    * @param layout the layout to store the subject in
@@ -608,25 +623,43 @@ public class YamlSupport {
   public static String subjectToJson(
       @Nonnull final Map<Object, Object> objectModel, @Nonnull final TestLayout layout) {
     return omToJson(
-        layout.isPof() ? (Map<Object, Object>) decimalsAsText(objectModel) : objectModel);
+        layout.isPof() ? (Map<Object, Object>) asStoredOnNewLayout(objectModel) : objectModel);
   }
 
   @Nullable
-  private static Object decimalsAsText(@Nullable final Object value) {
+  private static Object asStoredOnNewLayout(@Nullable final Object value) {
     return switch (value) {
       case final Double number -> Double.toString(number);
       case final FhirTypedLiteral literal
           when literal.getType() == FHIRDefinedType.DECIMAL && nonNull(literal.getLiteral()) ->
           literal.getLiteral();
+      case final FhirTypedLiteral literal
+          when literal.getType() == FHIRDefinedType.QUANTITY && nonNull(literal.getLiteral()) ->
+          storedQuantity(FhirPathQuantity.parse(requireNonNull(literal.getLiteral())));
       case final Map<?, ?> map -> {
         // A map is copied entry by entry, because a subject can carry null values, which the
         // stream collectors reject.
         final Map<Object, Object> copy = new LinkedHashMap<>();
-        map.forEach((key, entry) -> copy.put(key, decimalsAsText(entry)));
+        map.forEach((key, entry) -> copy.put(key, asStoredOnNewLayout(entry)));
         yield copy;
       }
-      case final List<?> list -> list.stream().map(YamlSupport::decimalsAsText).toList();
+      case final List<?> list -> list.stream().map(YamlSupport::asStoredOnNewLayout).toList();
       case null, default -> value;
     };
+  }
+
+  /**
+   * Returns a quantity in the structure the new layout stores it in, with the value as the plain
+   * text of the literal's value, so that a value with more fractional digits than the engine's
+   * decimal type holds is stored without loss.
+   */
+  @Nonnull
+  private static Map<Object, Object> storedQuantity(@Nonnull final FhirPathQuantity quantity) {
+    final Map<Object, Object> stored = new LinkedHashMap<>();
+    stored.put(QuantityEncoding.VALUE_COLUMN, quantity.getValue().toPlainString());
+    stored.put(QuantityEncoding.UNIT_COLUMN, quantity.getUnitName());
+    stored.put(QuantityEncoding.SYSTEM_COLUMN, quantity.getSystem());
+    stored.put(QuantityEncoding.CODE_COLUMN, quantity.getCode());
+    return stored;
   }
 }

@@ -19,6 +19,7 @@ package au.csiro.pathling.test.layout;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluator;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.datasource.ObjectDataSource;
@@ -129,6 +130,41 @@ class TestLayoutSwitchTest {
     } else {
       assertThat(schema.apply("plain").dataType()).isInstanceOf(DecimalType.class);
       assertThat(schema.apply("typed").dataType()).isInstanceOf(DecimalType.class);
+    }
+  }
+
+  @Test
+  void syntheticSubjectStoresQuantitiesInTheRequestedLayout() {
+    final Map<Object, Object> subject = new LinkedHashMap<>();
+    subject.put("single", FhirTypedLiteral.toQuantity("1.50 'mg'"));
+    subject.put("many", List.of(FhirTypedLiteral.toQuantity("0.0000001 'kg'")));
+    final Dataset<Row> dataset =
+        ArbitraryObjectResolverFactory.of(subject)
+            .apply(RuntimeContext.of(spark, fhirEncoders))
+            .getDataset();
+    final StructType schema = dataset.schema();
+    final Row row = dataset.first();
+
+    if (TestLayout.active().isPof()) {
+      // The new layout stores a quantity as its FHIR structure, with the value as text and no
+      // canonical form, and the text of the literal's value is kept exactly.
+      final StructType stored =
+          new StructType()
+              .add("value", DataTypes.StringType)
+              .add("unit", DataTypes.StringType)
+              .add("system", DataTypes.StringType)
+              .add("code", DataTypes.StringType);
+      assertThat(schema.apply("single").dataType()).isEqualTo(stored);
+      assertThat(schema.apply("many").dataType())
+          .isEqualTo(DataTypes.createArrayType(stored, true));
+      final Row single = row.getStruct(row.fieldIndex("single"));
+      assertThat(single.<String>getAs("value")).isEqualTo("1.50");
+      assertThat(single.<String>getAs("code")).isEqualTo("mg");
+      assertThat(single.<String>getAs("system")).isEqualTo("http://unitsofmeasure.org");
+      assertThat(row.<Row>getList(row.fieldIndex("many")).getFirst().<String>getAs("value"))
+          .isEqualTo("0.0000001");
+    } else {
+      assertThat(schema.apply("single").dataType()).isEqualTo(QuantityEncoding.dataType());
     }
   }
 
