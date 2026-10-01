@@ -135,8 +135,9 @@ public class YamlSupport {
         @Nonnull final CharSequence quantityLiteral, @Nonnull final JsonGenerator gen)
         throws IOException {
       final FhirPathQuantity quantity = FhirPathQuantity.parse(quantityLiteral.toString());
-      final Optional<FhirPathQuantity> canonical = quantity.asCanonical();
 
+      // No canonical form is written: the engine computes it from the value and code when it
+      // decodes a stored quantity, and does not read a stored one.
       gen.writeStartObject();
       // id field - always null for literals
       gen.writeNullField("id");
@@ -149,21 +150,6 @@ public class YamlSupport {
       gen.writeStringField("unit", quantity.getUnitName());
       gen.writeStringField("system", quantity.getSystem());
       gen.writeStringField("code", quantity.getCode());
-      // canonicalizedValue as array [value, scale] or null
-      if (canonical.isPresent()) {
-        gen.writeArrayFieldStart("canonicalizedValue");
-        gen.writeNumber(canonical.get().getValue());
-        gen.writeNumber(canonical.get().getValue().scale());
-        gen.writeEndArray();
-      } else {
-        gen.writeNullField("canonicalizedValue");
-      }
-      // canonicalizedCode
-      if (canonical.isPresent()) {
-        gen.writeStringField("canonicalizedCode", canonical.get().getCode());
-      } else {
-        gen.writeNullField("canonicalizedCode");
-      }
       // _fid field - always null for literals
       gen.writeNullField("_fid");
       gen.writeEndObject();
