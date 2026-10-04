@@ -370,15 +370,6 @@ class SqlExportSupportTest {
   }
 
   @Test
-  void clientTrackingIdIsLengthPrefixedInTheKey() {
-    // The tracking id is a client-controlled free-text section: it is length-prefixed so that
-    // whatever delimiters it contains, it cannot be mistaken for the neighbouring sections.
-    final String key = support.computeCacheKeyComponent(requestWithTrackingId("abc|format=csv"));
-
-    assertThat(key).contains("|clientTrackingId=14:abc|format=csv");
-  }
-
-  @Test
   void mapIterationOrderDoesNotChangeKey() {
     // Bindings and label maps render sorted, so identical kick-offs deduplicate regardless of the
     // map implementation's iteration order.
@@ -400,19 +391,6 @@ class SqlExportSupportTest {
         "http://localhost/fhir",
         List.of(subjects),
         null,
-        SqlExportFormat.NDJSON,
-        false,
-        Set.of(),
-        null);
-  }
-
-  @Nonnull
-  private static SqlExportRequest requestWithTrackingId(@Nonnull final String trackingId) {
-    return new SqlExportRequest(
-        "http://localhost/fhir/$sql-export",
-        "http://localhost/fhir",
-        List.of(sqlSubject("s1", "SELECT 1 AS n")),
-        trackingId,
         SqlExportFormat.NDJSON,
         false,
         Set.of(),
