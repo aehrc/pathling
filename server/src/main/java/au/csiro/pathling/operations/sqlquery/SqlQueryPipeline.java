@@ -142,7 +142,6 @@ public class SqlQueryPipeline {
       @Nonnull final PreparedSqlQuery prepared,
       @Nonnull final DataSource dataSource,
       @Nonnull final Consumer<Dataset<Row>> consumer) {
-    executor.execute(
-        prepared.getRequest(), prepared.getDependencyGraph(), dataSource, consumer);
+    executor.execute(prepared.getRequest(), prepared.getDependencyGraph(), dataSource, consumer);
   }
 }

@@ -300,11 +300,11 @@ class SqlRunProviderTest {
     final Dataset<Row> result = mock();
     doAnswer(
             invocation -> {
-              invocation.<Consumer<Dataset<Row>>>getArgument(3).accept(result);
+              invocation.<Consumer<Dataset<Row>>>getArgument(2).accept(result);
               return null;
             })
         .when(pipeline)
-        .execute(any(), any(), any(), any());
+        .execute(any(), any(), any());
 
     run(builder().format("csv").header(false));
 
@@ -598,7 +598,7 @@ class SqlRunProviderTest {
               throw failure;
             })
         .when(pipeline)
-        .execute(any(), any(), any(), any());
+        .execute(any(), any(), any());
   }
 
   /** Extracts the diagnostics of the exception's first outcome issue. */

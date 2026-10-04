@@ -49,10 +49,9 @@ import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
 
 /**
- * Tests for {@link ViewRegistrationService}, with particular attention to the random
- * namespacing that prevents concurrent {@code $sql-run} requests from clobbering one another's
- * temporary views in Spark's session-global catalog, and to the reading of configured external
- * tables.
+ * Tests for {@link ViewRegistrationService}, with particular attention to the random namespacing
+ * that prevents concurrent {@code $sql-run} requests from clobbering one another's temporary views
+ * in Spark's session-global catalog, and to the reading of configured external tables.
  *
  * @author John Grimes
  */
@@ -128,8 +127,7 @@ class ViewRegistrationServiceTest {
     // Two nodes that happen to share a label but resolve to different resources are keyed by their
     // distinct canonical keys, so their temp views never collide.
     final String left = ViewRegistrationService.resolveTempViewName("v9f3a1c", "ViewDefinition/a");
-    final String right =
-        ViewRegistrationService.resolveTempViewName("v9f3a1c", "ViewDefinition/b");
+    final String right = ViewRegistrationService.resolveTempViewName("v9f3a1c", "ViewDefinition/b");
     assertThat(left).isNotEqualTo(right);
   }
 

@@ -201,8 +201,7 @@ public class SqlRunProvider {
       runViewDefinition(
           subject, supplied, inlineResources, filters, outputFormat, header, limit, response);
     } else {
-      runSqlLibrary(
-          subject, supplied, parameters, filters, outputFormat, header, limit, response);
+      runSqlLibrary(subject, supplied, parameters, filters, outputFormat, header, limit, response);
     }
   }
 

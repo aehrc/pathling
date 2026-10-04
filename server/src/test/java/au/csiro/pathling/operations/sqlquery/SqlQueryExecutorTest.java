@@ -257,8 +257,7 @@ class SqlQueryExecutorTest {
     assertThatThrownBy(
             () ->
                 newExecutor()
-                    .execute(
-                        byPath, graphOf(table), mock(DataSource.class), dataset -> {}))
+                    .execute(byPath, graphOf(table), mock(DataSource.class), dataset -> {}))
         .isInstanceOf(InvalidRequestException.class)
         .hasMessageContaining("SQL references an undeclared table");
   }

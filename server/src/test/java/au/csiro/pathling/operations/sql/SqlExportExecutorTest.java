@@ -140,8 +140,8 @@ class SqlExportExecutorTest {
 
     executor.execute(request(first, second), JOB_ID);
 
-    verify(pipeline).execute(eq(first.preparedQuery()), any(), any(), any());
-    verify(pipeline).execute(eq(second.preparedQuery()), any(), any(), any());
+    verify(pipeline).execute(eq(first.preparedQuery()), any(), any());
+    verify(pipeline).execute(eq(second.preparedQuery()), any(), any());
   }
 
   // The whole job reads through one snapshot, captured once at execution start, so a write that
@@ -183,15 +183,6 @@ class SqlExportExecutorTest {
     assertThat(base.getValue()).isSameAs(plainSource);
   }
 
-  // Each subject gets its own random temp-view namespace, so two subjects of one job cannot
-  // collide on a view name.
-  @Test
-  void namespacesEachSubjectsTempViewsRandomly() {
-    executor.execute(request(sqlSubject("first"), sqlSubject("second")), JOB_ID);
-
-    verify(pipeline, times(2)).execute(any(), any(), any());
-  }
-
   // The job's format decides how the result is written, and the header flag reaches the CSV writer.
   @Test
   void writesCsvWithTheRequestedHeaderSetting() {
@@ -220,7 +211,7 @@ class SqlExportExecutorTest {
               throw new IllegalStateException("Spark said no");
             })
         .when(pipeline)
-        .execute(any(), any(), any(), any());
+        .execute(any(), any(), any());
 
     // It also propagates untranslated: only an analysis failure is a fault in the subject, so an
     // infrastructure fault must not be relabelled as one.
@@ -307,7 +298,7 @@ class SqlExportExecutorTest {
               throw failure;
             })
         .when(pipeline)
-        .execute(any(), any(), any(), any());
+        .execute(any(), any(), any());
   }
 
   // ---- helpers ----
