@@ -85,7 +85,9 @@
     <pathling.antlrVersion>4.13.1</pathling.antlrVersion>
     <pathling.lombokVersion>1.18.38</pathling.lombokVersion>
     <pathling.infinispanVersion>15.0.3.Final</pathling.infinispanVersion>
-    <pathling.jacksonVersion>2.22.1</pathling.jacksonVersion>
+    <!-- Pinned at or above 2.22.3, which fixes CVE-2026-89407, CVE-2026-89425, CVE-2026-68497,
+         CVE-2026-91776, CVE-2026-91777, CVE-2026-19032 and CVE-2026-83557. -->
+    <pathling.jacksonVersion>2.22.3</pathling.jacksonVersion>
     <pathling.jerseyVersion>3.1.11</pathling.jerseyVersion>
     <pathling.surefireVersion>3.2.5</pathling.surefireVersion>
     <!-- Pinned at or above 1.5.34, which fixes CVE-2026-9828 and CVE-2026-10532. -->
