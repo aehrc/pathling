@@ -45,12 +45,16 @@ pc = PathlingContext.create(
 )
 ```
 
-:::warning
-Most Spark settings, including `spark.driver.memory`, only take effect when the
-driver JVM launches. In local mode the driver JVM is already running by the time
-`PathlingContext.create` applies the configuration, so `spark.driver.memory`
-set here has no effect unless the Python process itself is launched with the
-`SPARK_DRIVER_MEMORY` environment variable (or via `spark-submit`).
+:::note
+Settings such as `spark.driver.memory` and `spark.jars.packages` are fixed when
+the driver JVM launches. `spark_conf` takes effect because
+`PathlingContext.create` launches that JVM when it builds the session. If a JVM
+is already running in the process - because a session was created earlier (even
+one that has since been stopped), or because the code runs in a notebook, the
+`pyspark` shell or under `spark-submit` - `create` raises an error rather than
+silently ignoring the configuration. In those environments, set driver memory at
+launch instead, for example with the `SPARK_DRIVER_MEMORY` environment variable
+or `spark-submit --driver-memory`.
 :::
 
 If you need full control over how the session is set up, you can still build

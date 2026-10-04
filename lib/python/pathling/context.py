@@ -22,10 +22,12 @@ Author: John Grimes.
 
 # noinspection PyPackageRequirements
 
+import os
 import warnings
 from typing import TYPE_CHECKING, Dict, Optional, Sequence
 
 from py4j.java_gateway import JavaObject
+from pyspark import SparkContext
 from pyspark.sql import Column, DataFrame, SparkSession
 
 from pathling._spark_defaults import (
@@ -204,8 +206,11 @@ class PathlingContext:
                ``spark.`` and values must be strings. The entries are merged with Pathling's
                managed defaults with the same protection as the CLI's ``--spark-conf`` flag,
                so a managed key such as ``spark.jars.packages`` cannot be silently clobbered.
-               Cannot be combined with ``spark``: most Spark settings only take effect when
-               the JVM launches, so they cannot be applied to a session that already exists.
+               Cannot be combined with ``spark``, and raises :class:`ValueError` if a Spark
+               driver JVM is already running in the process (for example after an earlier
+               session, even a stopped one, or under ``spark-submit``): the driver heap and
+               classpath are fixed when the JVM launches, so settings such as
+               ``spark.driver.memory`` could no longer take effect.
         :param max_nesting_level: controls the maximum depth of nested element data that is encoded
                upon import. This affects certain elements within FHIR resources that contain
                recursive references, e.g. `QuestionnaireResponse.item
@@ -293,9 +298,9 @@ class PathlingContext:
             raise ValueError(
                 "terminology_storage_path is required when terminology_mode is 'local'"
             )
-        # spark_conf only takes effect when Pathling builds a new SparkSession:
-        # most Spark settings (e.g. driver memory) are JVM-launch-time only and
-        # cannot be applied to a session that already exists.
+        # spark_conf only takes effect when Pathling builds a new SparkSession
+        # and that build launches the driver JVM: launch-time settings (e.g.
+        # driver memory, packages) are fixed once the JVM is running.
         if spark_conf is not None:
             if spark is not None:
                 raise ValueError(
@@ -304,11 +309,21 @@ class PathlingContext:
                     "take effect. Omit 'spark' to let Pathling build the session, "
                     "or apply the configuration to your session yourself."
                 )
-            if SparkSession.getActiveSession() is not None:
+            # The gateway outlives SparkSession.stop(), and spark-submit starts
+            # the JVM before Python runs, advertising it via PYSPARK_GATEWAY_PORT.
+            if (
+                SparkContext._gateway is not None
+                or "PYSPARK_GATEWAY_PORT" in os.environ
+            ):
                 raise ValueError(
-                    "spark_conf has no effect when an already-active SparkSession "
-                    "would be reused: stop the active session first, or apply the "
-                    "configuration to it yourself."
+                    "spark_conf cannot take effect because a Spark driver JVM is "
+                    "already running in this process (started by an earlier "
+                    "SparkSession, a notebook or shell, or spark-submit), so "
+                    "launch-time settings such as spark.driver.memory would be "
+                    "ignored. Call create() with spark_conf before any Spark "
+                    "session is created in a fresh process, or configure Spark "
+                    "at launch (e.g. SPARK_DRIVER_MEMORY or spark-submit "
+                    "--driver-memory)."
                 )
 
         def _new_spark_session():
