@@ -41,13 +41,18 @@ public class ResolvedExternalTable implements ResolvedDependency {
 
   /**
    * An external table's rows come from the location it is pointed at, read as the configured
-   * format, both of which the operator can change while the canonical URL stays as it was.
+   * format, both of which the operator can change while the canonical URL stays as it was. Each
+   * component is length-prefixed (see {@link ResolvedDependency#encode(String)}) so that a path
+   * containing ':' cannot shift the boundary between the format and the location.
    *
    * @return the content description
    */
   @Override
   @Nonnull
   public String describeContent() {
-    return "external-table:" + format + ':' + path;
+    return "external-table:"
+        + ResolvedDependency.encode(format)
+        + ':'
+        + ResolvedDependency.encode(path);
   }
 }
