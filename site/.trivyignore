@@ -78,3 +78,8 @@ CVE-2026-14257
 # sees a request-supplied buffer, and it is not deployed with the static site.
 CVE-2025-71329
 CVE-2025-71330
+
+# braces stack-overflow DoS, no fixed release available (3.0.3 is the latest published version).
+# braces is a build-time transitive of micromatch, used by Docusaurus to glob trusted source
+# files. It is not deployed with the static site.
+CVE-2026-93687
