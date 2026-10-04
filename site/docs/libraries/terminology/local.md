@@ -577,7 +577,7 @@ The `accept_language` context parameter, and the parameter of the same name on
 
 ```python
 pc = PathlingContext.create(
-    spark,
+    spark_conf={"spark.driver.memory": "8g"},
     terminology_mode="local",
     terminology_storage_path="/data/tx-store",
 )
@@ -666,7 +666,7 @@ can be corrected.
 
 ```python
 pc = PathlingContext.create(
-    spark,
+    spark_conf={"spark.driver.memory": "8g"},
     terminology_mode="local",
     terminology_storage_path="/data/tx-store",
     dialect_aliases={"en-NZ": "271000210107"},
