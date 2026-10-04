@@ -33,7 +33,6 @@ import au.csiro.pathling.operations.sqlquery.ResolvedExternalTable;
 import au.csiro.pathling.operations.sqlquery.ResolvedSqlView;
 import au.csiro.pathling.operations.sqlquery.ResolvedViewDefinition;
 import au.csiro.pathling.operations.sqlquery.SqlLibraryParser;
-import au.csiro.pathling.operations.sqlquery.SqlQueryOutputFormat;
 import au.csiro.pathling.operations.sqlquery.SqlQueryRequest;
 import au.csiro.pathling.views.FhirView;
 import jakarta.annotation.Nonnull;
@@ -282,8 +281,7 @@ class SqlExportSupportTest {
     final ParsedSqlQuery parsed =
         new ParsedSqlQuery(SUBJECT_SQL, List.of(), List.of(), SqlLibraryParser.SQL_QUERY_TYPE_CODE);
     final PreparedSqlQuery prepared =
-        new PreparedSqlQuery(
-            new SqlQueryRequest(parsed, SqlQueryOutputFormat.NDJSON, false, null, Map.of()), graph);
+        new PreparedSqlQuery(new SqlQueryRequest(parsed, null, Map.of()), graph);
     return new SqlExportRequest(
         "http://localhost/fhir/$sql-export",
         "http://localhost/fhir",
@@ -409,8 +407,7 @@ class SqlExportSupportTest {
       @Nonnull final Map<String, Object> bindings) {
     final ParsedSqlQuery parsed =
         new ParsedSqlQuery(sql, List.of(), List.of(), SqlLibraryParser.SQL_QUERY_TYPE_CODE);
-    final SqlQueryRequest request =
-        new SqlQueryRequest(parsed, SqlQueryOutputFormat.NDJSON, false, null, bindings);
+    final SqlQueryRequest request = new SqlQueryRequest(parsed, null, bindings);
     final ResolvedDependencyGraph graph =
         new ResolvedDependencyGraph(List.of(), Map.of(), Map.of());
     return SubjectInput.ofSql(SubjectKind.SQL_QUERY, name, new PreparedSqlQuery(request, graph));
@@ -423,8 +420,7 @@ class SqlExportSupportTest {
       @Nonnull final Map<String, String> topLevelKeysByLabel) {
     final ParsedSqlQuery parsed =
         new ParsedSqlQuery(sql, List.of(), List.of(), SqlLibraryParser.SQL_QUERY_TYPE_CODE);
-    final SqlQueryRequest request =
-        new SqlQueryRequest(parsed, SqlQueryOutputFormat.NDJSON, false, null, Map.of());
+    final SqlQueryRequest request = new SqlQueryRequest(parsed, null, Map.of());
     final ResolvedDependencyGraph graph =
         new ResolvedDependencyGraph(List.of(), topLevelKeysByLabel, Map.of());
     return SubjectInput.ofSql(SubjectKind.SQL_QUERY, name, new PreparedSqlQuery(request, graph));

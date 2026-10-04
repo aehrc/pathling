@@ -29,6 +29,7 @@ import static org.mockito.Mockito.when;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.operations.export.ExportDataSourceBuilder;
 import au.csiro.pathling.operations.sqlquery.SqlLibraryFixtures;
+import au.csiro.pathling.operations.sqlquery.SqlQueryOutputFormat;
 import au.csiro.pathling.operations.sqlquery.SqlQueryPipeline;
 import au.csiro.pathling.operations.sqlquery.SqlQueryResultStreamer;
 import au.csiro.pathling.operations.view.ViewExecutionHelper;
@@ -46,10 +47,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Consumer;
 import org.apache.spark.SparkException;
 import org.apache.spark.sql.AnalysisException;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 import org.apache.spark.sql.delta.DeltaAnalysisException;
 import org.hl7.fhir.instance.model.api.IBaseResource;
+import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.InstantType;
 import org.hl7.fhir.r4.model.Library;
@@ -142,7 +147,7 @@ class SqlRunProviderTest {
   @Test
   void reportsAnUndeclaredBindingAgainstTheParametersPart() {
     stubSubject(SubjectKind.SQL_QUERY);
-    when(pipeline.prepare(any(), any(), any(), any(), any(), any(), any()))
+    when(pipeline.prepare(any(), any(), any(), any()))
         .thenThrow(
             new InvalidRequestException(
                 "Parameter 'nosuch' is not declared in the SQLQuery Library's parameter list"));
@@ -158,7 +163,7 @@ class SqlRunProviderTest {
   @Test
   void reportsAMistypedBindingAgainstTheParametersPart() {
     stubSubject(SubjectKind.SQL_QUERY);
-    when(pipeline.prepare(any(), any(), any(), any(), any(), any(), any()))
+    when(pipeline.prepare(any(), any(), any(), any()))
         .thenThrow(new InvalidRequestException("Parameter 'count' expects an integer"));
 
     final BaseServerResponseException exception =
@@ -172,7 +177,7 @@ class SqlRunProviderTest {
   @Test
   void leavesAFailureUnlabelledWhenNoBindingsWereSupplied() {
     stubSubject(SubjectKind.SQL_QUERY);
-    when(pipeline.prepare(any(), any(), any(), any(), any(), any(), any()))
+    when(pipeline.prepare(any(), any(), any(), any()))
         .thenThrow(new InvalidRequestException("Cycle detected in the dependency graph"));
 
     final BaseServerResponseException exception = catchServerException(() -> run(builder()));
@@ -186,7 +191,7 @@ class SqlRunProviderTest {
   @Test
   void preservesAnOutcomeAFailureAlreadyCarries() {
     stubSubject(SubjectKind.SQL_QUERY);
-    when(pipeline.prepare(any(), any(), any(), any(), any(), any(), any()))
+    when(pipeline.prepare(any(), any(), any(), any()))
         .thenThrow(
             SqlOperationError.badRequest(
                 IssueType.NOTSUPPORTED, "subject", "The SQL uses an unsupported construct."));
@@ -216,7 +221,7 @@ class SqlRunProviderTest {
   void acceptsParametersForASqlSubjectAndResourcesForAView() {
     stubSubject(SubjectKind.SQL_QUERY);
     run(builder().parameters(new Parameters()));
-    verify(pipeline).prepare(any(), any(), any(), any(), any(), any(), any());
+    verify(pipeline).prepare(any(), any(), any(), any());
 
     stubSubject(SubjectKind.VIEW_DEFINITION);
     run(builder().inlineResources(List.of("{\"resourceType\":\"Patient\"}")));
@@ -246,7 +251,7 @@ class SqlRunProviderTest {
 
     run(builder().source("  "));
 
-    verify(pipeline).prepare(any(), any(), any(), any(), any(), any(), any());
+    verify(pipeline).prepare(any(), any(), any(), any());
   }
 
   // A resource-carrying parameter cannot be expressed in a query string, so a GET naming one is
@@ -288,16 +293,22 @@ class SqlRunProviderTest {
     assertIssue(exception, IssueType.NOTSUPPORTED, "_format");
   }
 
-  // The chosen format is handed to the SQL engine, so the prepared query and the streamed output
-  // agree on it.
+  // The chosen format and header choice reach the streamer that writes the SQL engine's result.
   @Test
-  void passesTheSelectedFormatToTheSqlEngine() {
+  void streamsTheSqlResultInTheSelectedFormat() {
     stubSubject(SubjectKind.SQL_QUERY);
+    final Dataset<Row> result = mock();
+    doAnswer(
+            invocation -> {
+              invocation.<Consumer<Dataset<Row>>>getArgument(3).accept(result);
+              return null;
+            })
+        .when(pipeline)
+        .execute(any(), any(), any(), any());
 
-    run(builder().format("csv"));
+    run(builder().format("csv").header(false));
 
-    verify(pipeline)
-        .prepare(any(), org.mockito.ArgumentMatchers.eq("csv"), any(), any(), any(), any(), any());
+    verify(streamer).stream(result, SqlQueryOutputFormat.CSV, false, response);
   }
 
   // ---------------------------------------------------------------------------
@@ -406,7 +417,7 @@ class SqlRunProviderTest {
     run(builder().context(List.of(new Library())));
 
     final org.mockito.InOrder inOrder = org.mockito.Mockito.inOrder(pipeline, artefacts);
-    inOrder.verify(pipeline).prepare(any(), any(), any(), any(), any(), any(), any());
+    inOrder.verify(pipeline).prepare(any(), any(), any(), any());
     inOrder.verify(artefacts).checkAllMatched();
   }
 
@@ -422,7 +433,7 @@ class SqlRunProviderTest {
     run(builder());
 
     verify(viewExecutionHelper).streamView(any(), any(), any(), anyBooleanValue(), any(), any());
-    verify(pipeline, never()).prepare(any(), any(), any(), any(), any(), any(), any());
+    verify(pipeline, never()).prepare(any(), any(), any(), any());
   }
 
   // A SQL subject goes to the SQL pipeline and never to the FhirView engine.
@@ -433,7 +444,7 @@ class SqlRunProviderTest {
 
     run(builder());
 
-    verify(pipeline).prepare(any(), any(), any(), any(), any(), any(), any());
+    verify(pipeline).prepare(any(), any(), any(), any());
     verify(viewExecutionHelper, never())
         .streamView(any(), any(), any(), anyBooleanValue(), any(), any());
   }
@@ -637,7 +648,7 @@ class SqlRunProviderTest {
         request.subjectReference,
         request.inlineResources,
         request.format,
-        null,
+        request.header,
         request.patients,
         null,
         null,
@@ -657,6 +668,7 @@ class SqlRunProviderTest {
     @Nullable private List<IBaseResource> context;
     @Nullable private List<String> inlineResources;
     @Nullable private String format;
+    @Nullable private BooleanType header;
     @Nullable private List<Reference> patients;
     @Nullable private String source;
     private RequestTypeEnum method = RequestTypeEnum.POST;
@@ -683,6 +695,12 @@ class SqlRunProviderTest {
     @Nonnull
     Request format(@Nonnull final String value) {
       this.format = value;
+      return this;
+    }
+
+    @Nonnull
+    Request header(final boolean value) {
+      this.header = new BooleanType(value);
       return this;
     }
 

@@ -122,8 +122,9 @@ public final class SqlOperationError {
    *
    * <p>Any other failure returns null and must be rethrown as it is, so that the unwrapping and
    * per-type conversions of {@code ErrorHandlingInterceptor} still see it. A runtime error raised
-   * by the terminal consumer arrives that way, and stays a {@code 500}: it fires once the response
-   * may already be committed, where the status can no longer be rewritten.
+   * while the terminal consumer evaluates the result arrives that way, and is converted like any
+   * other failure provided no rows have been written yet; once they have, the status is committed
+   * and can no longer be rewritten.
    *
    * @param subjectName the name of the subject at fault, or null where the request admits only one
    *     subject and there is nothing to disambiguate

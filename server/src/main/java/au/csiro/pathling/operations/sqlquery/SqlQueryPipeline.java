@@ -27,7 +27,6 @@ import java.util.function.Consumer;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.instance.model.api.IBaseResource;
-import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.IntegerType;
 import org.hl7.fhir.r4.model.Parameters;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -80,33 +79,18 @@ public class SqlQueryPipeline {
    * request-supplied views, falling back to server storage), but does not touch Spark.
    *
    * @param library the SQLQuery Library resource (inline or already resolved from a reference)
-   * @param format the explicit {@code _format} parameter, if any
-   * @param acceptHeader the HTTP {@code Accept} header value, used as a fallback for {@code format}
-   * @param includeHeader whether to include a CSV header row; {@code null} defaults to {@code true}
    * @param limit optional row cap
    * @param parameters runtime parameter bindings as a {@code Parameters} resource
    * @param supplied request-supplied artefacts matched by the canonical URL they satisfy
    * @return the prepared query
    */
   @Nonnull
-  @SuppressWarnings("java:S107")
   public PreparedSqlQuery prepare(
       @Nonnull final IBaseResource library,
-      @Nullable final String format,
-      @Nullable final String acceptHeader,
-      @Nullable final BooleanType includeHeader,
       @Nullable final IntegerType limit,
       @Nullable final Parameters parameters,
       @Nonnull final SuppliedArtefacts supplied) {
-    return prepare(
-        library,
-        format,
-        acceptHeader,
-        includeHeader,
-        limit,
-        parameters,
-        supplied,
-        new LinkedHashMap<>());
+    return prepare(library, limit, parameters, supplied, new LinkedHashMap<>());
   }
 
   /**
@@ -114,9 +98,6 @@ public class SqlQueryPipeline {
    * dependency shared by several queries in one job is resolved once and shared.
    *
    * @param library the SQLQuery or SQLView Library resource
-   * @param format the explicit {@code _format} parameter, if any
-   * @param acceptHeader the HTTP {@code Accept} header value, used as a fallback for {@code format}
-   * @param includeHeader whether to include a CSV header row; {@code null} defaults to {@code true}
    * @param limit optional row cap
    * @param parameters runtime parameter bindings as a {@code Parameters} resource
    * @param supplied request-supplied artefacts matched by the canonical URL they satisfy
@@ -124,18 +105,13 @@ public class SqlQueryPipeline {
    * @return the prepared query
    */
   @Nonnull
-  @SuppressWarnings("java:S107")
   public PreparedSqlQuery prepare(
       @Nonnull final IBaseResource library,
-      @Nullable final String format,
-      @Nullable final String acceptHeader,
-      @Nullable final BooleanType includeHeader,
       @Nullable final IntegerType limit,
       @Nullable final Parameters parameters,
       @Nonnull final SuppliedArtefacts supplied,
       @Nonnull final Map<String, ResolvedDependency> nodesByKey) {
-    final SqlQueryRequest request =
-        requestParser.parse(library, format, acceptHeader, includeHeader, limit, parameters);
+    final SqlQueryRequest request = requestParser.parse(library, limit, parameters);
     final ResolvedDependencyGraph dependencyGraph =
         dependencyResolver.resolve(request.getParsedQuery(), supplied, nodesByKey);
     return new PreparedSqlQuery(request, dependencyGraph);

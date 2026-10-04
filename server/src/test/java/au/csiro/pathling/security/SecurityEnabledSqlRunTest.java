@@ -26,8 +26,6 @@ import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.errors.AccessDeniedError;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
-import au.csiro.pathling.operations.compartment.GroupMemberService;
-import au.csiro.pathling.operations.compartment.PatientCompartmentService;
 import au.csiro.pathling.operations.export.ExportDataSourceBuilder;
 import au.csiro.pathling.operations.sql.ContextArtefactParser;
 import au.csiro.pathling.operations.sql.ResolvedFilters;
@@ -40,7 +38,6 @@ import au.csiro.pathling.operations.sql.SuppliedArtefacts;
 import au.csiro.pathling.operations.sqlquery.SqlQueryPipeline;
 import au.csiro.pathling.operations.sqlquery.SqlQueryResultStreamer;
 import au.csiro.pathling.operations.view.ViewExecutionHelper;
-import au.csiro.pathling.read.ReadExecutor;
 import au.csiro.pathling.util.FhirServerTestConfiguration;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.api.RequestTypeEnum;
@@ -83,13 +80,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 @MockitoBean(types = OidcConfiguration.class)
 @MockitoBean(types = JwtDecoder.class)
 @MockitoBean(types = JwtAuthenticationConverter.class)
-@Import({
-  FhirServerTestConfiguration.class,
-  PatientCompartmentService.class,
-  GroupMemberService.class,
-  ViewExecutionHelper.class,
-  ReadExecutor.class
-})
+@Import({FhirServerTestConfiguration.class, ViewExecutionHelper.class})
 class SecurityEnabledSqlRunTest extends SecurityTest {
 
   private static final String ERROR_MSG_TEMPLATE = "Missing authority: 'pathling:%s'";

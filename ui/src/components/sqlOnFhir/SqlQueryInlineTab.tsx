@@ -47,43 +47,44 @@ const PARAMETER_TYPES: SqlQueryParameterType[] = [
   "dateTime",
 ];
 
+/** A table source that carries a canonical URL, and so can be referenced. */
+type ReferenceableSource = SourceOption & { url: string };
+
 /**
- * Renders a grouped list of selectable table sources for the source picker.
- * A source is bound by its canonical URL; one without a URL is rendered
- * disabled with an inline explanation, since it cannot satisfy a canonical
- * dependency reference.
+ * Reports whether a source carries a canonical URL. A source without one can
+ * never satisfy a canonical dependency reference, so it is not offered.
+ *
+ * @param source - The source to test.
+ * @returns True when the source has a non-empty URL.
+ */
+function isReferenceable(source: SourceOption): source is ReferenceableSource {
+  return Boolean(source.url);
+}
+
+/**
+ * Renders a grouped list of selectable table sources for the source picker,
+ * each bound by its canonical URL.
  *
  * @param props - The component props.
  * @param props.label - The group heading (e.g. "View definitions").
- * @param props.sources - The sources to list in this group.
+ * @param props.sources - The referenceable sources to list in this group.
  * @returns The select group, or null when there are no sources.
  */
 function SourceSelectGroup({
   label,
   sources,
-}: Readonly<{ label: string; sources: SourceOption[] }>) {
+}: Readonly<{ label: string; sources: ReferenceableSource[] }>) {
   if (sources.length === 0) {
     return null;
   }
   return (
     <Select.Group>
       <Select.Label>{label}</Select.Label>
-      {sources.map((source) =>
-        source.url ? (
-          <Select.Item key={source.id} value={source.url}>
-            {source.name}
-          </Select.Item>
-        ) : (
-          <Select.Item key={source.id} value={`no-url:${source.id}`} disabled>
-            <Flex direction="column">
-              <Text>{source.name}</Text>
-              <Text size="1" color="gray">
-                No canonical URL - add a url to reference this view
-              </Text>
-            </Flex>
-          </Select.Item>
-        ),
-      )}
+      {sources.map((source) => (
+        <Select.Item key={source.id} value={source.url}>
+          {source.name}
+        </Select.Item>
+      ))}
     </Select.Group>
   );
 }
@@ -147,7 +148,10 @@ export function SqlQueryInlineTab({
   sqlViews,
   disabled = false,
 }: Readonly<SqlQueryInlineTabProps>) {
-  const hasSources = viewDefinitions.length > 0 || sqlViews.length > 0;
+  const viewDefinitionSources = viewDefinitions.filter(isReferenceable);
+  const sqlViewSources = sqlViews.filter(isReferenceable);
+  const allSources = [...viewDefinitionSources, ...sqlViewSources];
+  const hasSources = allSources.length > 0;
 
   const handleAddTable = () => {
     onTablesChange([
@@ -219,10 +223,6 @@ export function SqlQueryInlineTab({
           style={{ fontFamily: "monospace" }}
           aria-label="SQL"
         />
-        <FieldGuidance>
-          The SQL is encoded as Base64 in `Library.content[0].data`. The plain text is also kept in
-          the `sql-text` extension.
-        </FieldGuidance>
       </Box>
 
       <Box>
@@ -257,9 +257,7 @@ export function SqlQueryInlineTab({
                 )}
                 <Select.Root
                   value={
-                    findSourceByUrl([...viewDefinitions, ...sqlViews], table.referenceUrl)
-                      ? table.referenceUrl
-                      : undefined
+                    findSourceByUrl(allSources, table.referenceUrl) ? table.referenceUrl : undefined
                   }
                   onValueChange={(value) => handleUpdateTable(table.rowId, { referenceUrl: value })}
                   disabled={disabled || !hasSources}
@@ -270,17 +268,16 @@ export function SqlQueryInlineTab({
                     aria-label={`Source for view ${index + 1}`}
                   />
                   <Select.Content>
-                    <SourceSelectGroup label="View definitions" sources={viewDefinitions} />
-                    <SourceSelectGroup label="SQL views" sources={sqlViews} />
+                    <SourceSelectGroup label="View definitions" sources={viewDefinitionSources} />
+                    <SourceSelectGroup label="SQL views" sources={sqlViewSources} />
                   </Select.Content>
                 </Select.Root>
-                {table.referenceUrl &&
-                  !findSourceByUrl([...viewDefinitions, ...sqlViews], table.referenceUrl) && (
-                    <Text size="1" color="amber" as="div" mt="1">
-                      Source not found:{" "}
-                      <code style={{ wordBreak: "break-all" }}>{table.referenceUrl}</code>
-                    </Text>
-                  )}
+                {table.referenceUrl && !findSourceByUrl(allSources, table.referenceUrl) && (
+                  <Text size="1" color="amber" as="div" mt="1">
+                    Source not found:{" "}
+                    <code style={{ wordBreak: "break-all" }}>{table.referenceUrl}</code>
+                  </Text>
+                )}
               </Box>
               <IconButton
                 size="2"
@@ -309,8 +306,7 @@ export function SqlQueryInlineTab({
         </FieldLabel>
         {parameters.length === 0 && (
           <FieldGuidance>
-            Declare the parameters the SQL binds, and the value to bind on this run. Each becomes a
-            `Library.parameter` entry with `use=in`; values are never saved.
+            Declare the parameters the SQL binds, and the value to bind on this run.
           </FieldGuidance>
         )}
         <Flex direction="column" gap="2" mt="1">

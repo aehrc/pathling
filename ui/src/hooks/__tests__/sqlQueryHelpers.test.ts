@@ -21,7 +21,6 @@ import {
   findSourceByUrl,
   libraryToSummary,
   mapLibraryBundle,
-  parseTabularBody,
   readSqlQueryResponse,
   storedReferencesToViewRows,
 } from "../sqlQueryHelpers";
@@ -137,89 +136,32 @@ describe("mapLibraryBundle", () => {
   });
 });
 
-describe("parseTabularBody", () => {
-  // CSV bodies are parsed using the dedicated CSV utility.
-  it("parses a CSV body", () => {
-    const body = "id,name\n1,Alice\n2,Bob";
-    const { columns, rows } = parseTabularBody(body, "csv");
-    expect(columns).toEqual(["id", "name"]);
-    expect(rows).toEqual([
-      { id: "1", name: "Alice" },
-      { id: "2", name: "Bob" },
-    ]);
-  });
-
-  // NDJSON bodies are parsed line by line.
-  it("parses an NDJSON body", () => {
-    const body = '{"id":1,"name":"Alice"}\n{"id":2,"name":"Bob"}';
-    const { columns, rows } = parseTabularBody(body, "ndjson");
-    expect(columns).toEqual(["id", "name"]);
-    expect(rows).toEqual([
+describe("readSqlQueryResponse", () => {
+  // The preview is always requested as NDJSON, which is parsed line by line.
+  it("parses an NDJSON body into columns and rows", async () => {
+    const response = new Response(
+      '{"id":1,"name":"Alice"}\n{"id":2,"name":"Bob"}\n',
+    );
+    const result = await readSqlQueryResponse(response);
+    expect(result.columns).toEqual(["id", "name"]);
+    expect(result.rows).toEqual([
       { id: 1, name: "Alice" },
       { id: 2, name: "Bob" },
     ]);
   });
 
-  // JSON bodies parse into a single array.
-  it("parses a JSON body", () => {
-    const body = '[{"id":1},{"id":2}]';
-    const { columns, rows } = parseTabularBody(body, "json");
-    expect(columns).toEqual(["id"]);
-    expect(rows).toEqual([{ id: 1 }, { id: 2 }]);
-  });
-
-  // FHIR-format bodies are flattened from a Parameters resource.
-  it("flattens a FHIR-format body", () => {
-    const body = JSON.stringify({
-      resourceType: "Parameters",
-      parameter: [
-        {
-          name: "row",
-          part: [{ name: "id", valueInteger: 1 }],
-        },
-      ],
-    });
-    const { columns, rows } = parseTabularBody(body, "fhir");
-    expect(columns).toEqual(["id"]);
-    expect(rows).toEqual([{ id: "1" }]);
-  });
-
-  // An empty body yields zero rows for any tabular format.
-  it("returns no rows for an empty JSON body", () => {
-    expect(parseTabularBody("", "json")).toEqual({
-      columns: [],
-      rows: [],
-    });
-  });
-});
-
-describe("readSqlQueryResponse", () => {
-  // CSV branch uses the response text and returns a tabular result with
-  // a Blob for verbatim download.
-  it("returns a tabular result for csv", async () => {
-    const response = new Response("id,name\n1,Alice", {
-      status: 200,
-      headers: { "Content-Type": "text/csv" },
-    });
-    const result = await readSqlQueryResponse(response, "csv");
-    expect(result.kind).toBe("tabular");
-    if (result.kind !== "tabular") return;
+  // NDJSON omits null-valued keys, so a column seen only on a later row must
+  // still appear, after the columns seen before it.
+  it("collects columns across rows in first-seen order", async () => {
+    const response = new Response('{"id":1}\n{"id":2,"name":"Bob"}');
+    const result = await readSqlQueryResponse(response);
     expect(result.columns).toEqual(["id", "name"]);
-    expect(result.rows).toEqual([{ id: "1", name: "Alice" }]);
-    expect(result.rawBody).toBeInstanceOf(Blob);
   });
 
-  // Parquet branch returns a binary blob and does not attempt to parse.
-  it("returns a binary result for parquet", async () => {
-    const data = new Uint8Array([1, 2, 3]);
-    const response = new Response(data, {
-      status: 200,
-      headers: { "Content-Type": "application/vnd.apache.parquet" },
-    });
-    const result = await readSqlQueryResponse(response, "parquet");
-    expect(result.kind).toBe("binary");
-    if (result.kind !== "binary") return;
-    expect(result.blob.size).toBe(3);
+  // An empty body yields zero rows.
+  it("returns no rows for an empty body", async () => {
+    const result = await readSqlQueryResponse(new Response(""));
+    expect(result).toEqual({ columns: [], rows: [] });
   });
 });
 

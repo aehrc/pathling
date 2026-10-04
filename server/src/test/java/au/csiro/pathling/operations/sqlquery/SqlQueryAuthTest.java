@@ -33,20 +33,18 @@ import au.csiro.pathling.encoders.ViewDefinitionResource.ColumnComponent;
 import au.csiro.pathling.encoders.ViewDefinitionResource.SelectComponent;
 import au.csiro.pathling.errors.AccessDeniedError;
 import au.csiro.pathling.io.source.DataSource;
+import au.csiro.pathling.operations.sql.SuppliedArtefact;
 import au.csiro.pathling.operations.sql.SuppliedArtefacts;
-import au.csiro.pathling.read.ReadExecutor;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.views.FhirView;
 import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
 import java.util.List;
-import java.util.Map;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Library;
-import org.hl7.fhir.r4.model.Reference;
 import org.hl7.fhir.r4.model.StringType;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -58,7 +56,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 
 /**
- * Security tests for the {@code $sqlquery-*} resolution path, wiring the real {@link ViewResolver},
+ * Security tests for the SQL dependency resolution path, wiring the real {@link ViewResolver},
  * {@link LibraryReferenceResolver}, and {@link SqlDependencyResolver} with authorisation enabled.
  * Verifies the metadata-resource authorisation matrix: a stored ViewDefinition dependency (resolved
  * by canonical URL) requires {@code ViewDefinition} READ, a stored SQLView dependency requires
@@ -79,14 +77,11 @@ class SqlQueryAuthTest {
   @Autowired private FhirEncoders fhirEncoders;
   @Autowired private FhirContext fhirContext;
 
-  private ReadExecutor readExecutor;
   private DataSource dataSource;
-  private LibraryReferenceResolver libraryReferenceResolver;
   private SqlDependencyResolver resolver;
 
   @BeforeEach
   void setUp() {
-    readExecutor = mock(ReadExecutor.class);
     dataSource = mock(DataSource.class);
     // Default to no matches; individual tests stub the datasets they need.
     when(dataSource.read("ViewDefinition")).thenReturn(viewDefinitionDataset());
@@ -106,8 +101,8 @@ class SqlQueryAuthTest {
 
     final ViewResolver viewResolver =
         new ViewResolver(dataSource, fhirEncoders, serverConfiguration, fhirContext);
-    libraryReferenceResolver =
-        new LibraryReferenceResolver(readExecutor, dataSource, fhirEncoders, serverConfiguration);
+    final LibraryReferenceResolver libraryReferenceResolver =
+        new LibraryReferenceResolver(dataSource, fhirEncoders, serverConfiguration);
     resolver =
         new SqlDependencyResolver(
             viewResolver, libraryReferenceResolver, new SqlLibraryParser(), serverConfiguration);
@@ -181,24 +176,9 @@ class SqlQueryAuthTest {
         .isThrownBy(
             () ->
                 resolver.resolve(
-                    sqlQuery(PV_URL), SuppliedArtefacts.ofViews(Map.of(PV_URL, supplied))));
-  }
-
-  @Test
-  void topLevelQueryReferenceRequiresLibraryRead() {
-    final Library base = SqlLibraryFixtures.sqlView("SELECT 1");
-    base.setId("base");
-    when(readExecutor.read("Library", "base")).thenReturn(base);
-
-    // The top-level by-reference resolution goes through LibraryReferenceResolver, which enforces
-    // the Library metadata READ.
-    setSecurityContext("pathling:sql-run");
-    assertThatThrownBy(() -> libraryReferenceResolver.resolve(new Reference("Library/base")))
-        .isInstanceOf(AccessDeniedError.class)
-        .hasMessageContaining("Library");
-
-    setSecurityContext("pathling:read:Library");
-    assertThat(libraryReferenceResolver.resolve(new Reference("Library/base"))).isNotNull();
+                    sqlQuery(PV_URL),
+                    SuppliedArtefacts.of(
+                        List.of(SuppliedArtefact.ofView(PV_URL, null, supplied)))));
   }
 
   @Test

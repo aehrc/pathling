@@ -484,10 +484,10 @@ export const mockEmptySqlViewLibraryBundle: Bundle = {
 };
 
 /**
- * Mock CSV body for `$sql-run` results.
+ * Mock NDJSON body for `$sql-run` results.
  */
-export const mockSqlQueryRunCsv =
-  "patient_id,given_name\npat-1,Alice\npat-2,Bob";
+export const mockSqlQueryRunNdjson =
+  '{"patient_id":"pat-1","given_name":"Alice"}\n{"patient_id":"pat-2","given_name":"Bob"}\n';
 
 /**
  * Mock OperationOutcome body for `$sql-run` validation failures.
