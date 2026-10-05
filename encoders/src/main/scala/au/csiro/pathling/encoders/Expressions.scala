@@ -33,6 +33,7 @@ import org.apache.spark.sql.catalyst.expressions.codegen.Block._
 import org.apache.spark.sql.catalyst.expressions.codegen.{CodeGenerator, CodegenContext, ExprCode, FalseLiteral}
 
 import org.apache.spark.sql.catalyst.util.{ArrayData, GenericArrayData}
+import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.types._
 
 import scala.language.existentials
@@ -350,6 +351,8 @@ case class UnresolvedIfArray2(value: Expression, arrayExpressions: Expression =>
       newValue.dataType match {
         case ArrayType(ArrayType(_, _), _) => f(arrayExpressions(newValue))
         case ArrayType(_, _) => f(elseExpression(newValue))
+        // A null-typed value is a collection that is known to be empty.
+        case NullType => f(elseExpression(newValue))
         case _ => throw new SparkException(
           errorClass = "ARRAY_TYPE_EXPECTED",
           messageParameters = Map(
@@ -497,6 +500,120 @@ case class UnresolvedEmptyArrayIfMissingField(value: Expression)
 }
 
 /**
+ * Helpers for recognising values whose type is null, which is how an expression that is known to
+ * be empty, such as navigation to a field that is not in the schema, is represented.
+ */
+object NullTypes {
+
+  /**
+   * Determines whether a type is the null type, or an array of the null type.
+   *
+   * @param dataType the type to check
+   * @return true if the type carries no information beyond being empty
+   */
+  def isNullTyped(dataType: DataType): Boolean = dataType match {
+    case NullType => true
+    case ArrayType(NullType, _) => true
+    case _ => false
+  }
+}
+
+/**
+ * Extracts a field from a struct, or from each struct in an array of structs, treating a value
+ * that has no such field as empty.
+ *
+ * A null-typed value always yields null, because it represents a value that is known to be empty,
+ * and extracting a field from it would otherwise fail. When `allowMissingField` is true, a field
+ * that is absent from the struct schema also yields null, instead of failing with FIELD_NOT_FOUND.
+ * In all other cases the field is extracted as it would be by `Column.getField`.
+ *
+ * @param value             the struct, or array of structs, to extract the field from
+ * @param fieldName         the name of the field to extract
+ * @param allowMissingField whether a field that is absent from the schema yields null
+ */
+case class UnresolvedFieldOrNull(value: Expression, fieldName: String,
+                                 allowMissingField: Boolean)
+  extends Expression with UnevaluableCopy with NonSQLExpression {
+
+  override def mapChildren(f: Expression => Expression): Expression = {
+    val newValue = f(value)
+    if (!newValue.resolved) {
+      copy(value = newValue)
+    } else if (NullTypes.isNullTyped(newValue.dataType)) {
+      Literal(null)
+    } else if (allowMissingField && isMissingField(newValue.dataType)) {
+      Literal(null)
+    } else {
+      ExtractValue(newValue, Literal(fieldName), SQLConf.get.resolver)
+    }
+  }
+
+  private def isMissingField(dataType: DataType): Boolean = dataType match {
+    case struct: StructType => !hasField(struct)
+    case ArrayType(struct: StructType, _) => !hasField(struct)
+    case _ => false
+  }
+
+  private def hasField(struct: StructType): Boolean = {
+    val resolver = SQLConf.get.resolver
+    struct.fieldNames.exists(resolver(_, fieldName))
+  }
+
+  override def dataType: DataType = throw new UnresolvedException("dataType")
+
+  override def nullable: Boolean = throw new UnresolvedException("nullable")
+
+  override lazy val resolved = false
+
+  override def toString: String = s"$value.$fieldName"
+
+  override def children: Seq[Expression] = value :: Nil
+
+  override def withNewChildrenInternal(newChildren: IndexedSeq[Expression]): Expression =
+    copy(value = newChildren.head)
+}
+
+/**
+ * Casts a null-typed value to a target type, leaving values that already have a type unchanged.
+ *
+ * This gives a value that is known to be empty the type that it would have had if it were
+ * present. A null-typed array is only cast to an array type, so that an empty collection is never
+ * converted into a string representation of itself.
+ *
+ * @param value      the value to type
+ * @param targetType the type to cast a null-typed value to
+ */
+case class UnresolvedCastIfNullType(value: Expression, targetType: DataType)
+  extends Expression with UnevaluableCopy with NonSQLExpression {
+
+  override def mapChildren(f: Expression => Expression): Expression = {
+    val newValue = f(value)
+    if (!newValue.resolved) {
+      copy(value = newValue)
+    } else {
+      (newValue.dataType, targetType) match {
+        case (NullType, _) => Cast(newValue, targetType)
+        case (ArrayType(NullType, _), _: ArrayType) => Cast(newValue, targetType)
+        case _ => newValue
+      }
+    }
+  }
+
+  override def dataType: DataType = throw new UnresolvedException("dataType")
+
+  override def nullable: Boolean = throw new UnresolvedException("nullable")
+
+  override lazy val resolved = false
+
+  override def toString: String = s"$value"
+
+  override def children: Seq[Expression] = value :: Nil
+
+  override def withNewChildrenInternal(newChildren: IndexedSeq[Expression]): Expression =
+    copy(value = newChildren.head)
+}
+
+/**
  * A custom Spark expression for recursive tree traversal with extraction at each level.
  *
  * This expression implements a depth-first traversal of nested structures by recursively
@@ -506,7 +623,8 @@ case class UnresolvedEmptyArrayIfMissingField(value: Expression)
  * 2. The results of recursively traversing child nodes
  *
  * The expression handles field resolution gracefully - if a field is not found during
- * traversal (FIELD_NOT_FOUND error), it returns an empty array rather than failing.
+ * traversal (FIELD_NOT_FOUND error), or a traversal yields a null-typed value because it
+ * navigated to a field that is not in the schema, it returns an empty array rather than failing.
  *
  * '''Depth Limiting:''' The `level` parameter (maxDepth) controls recursion depth to prevent
  * infinite loops in self-referential structures. The depth counter only decrements when
@@ -552,6 +670,17 @@ case class UnresolvedTransformTree(node: Expression,
     val safeExtractor: Expression => Expression = e => Coalesce(
       Seq(extractor(e), CreateArray(Seq.empty)))
 
+    // At the root of a typed repeat traversal, an empty result is a typed empty array so that
+    // sibling column combination through StructProduct sees a consistent element type. Inner
+    // traversal nodes (parentType.nonEmpty) use an untyped empty array, which the surrounding
+    // Concat upcasts against typed sibling arrays.
+    def emptyResult: Expression = (parentType, expectedElementType) match {
+      case (None, Some(elementType)) =>
+        Cast(CreateArray(Seq.empty), ArrayType(elementType))
+      case _ =>
+        CreateArray(Seq.empty)
+    }
+
     // Only the Catalyst resolution call f(node) is expected to throw FIELD_NOT_FOUND when the
     // field doesn't exist at this schema level. Other operations (extractor, traversal
     // construction) should propagate errors normally.
@@ -559,19 +688,14 @@ case class UnresolvedTransformTree(node: Expression,
       f(node)
     } catch {
       case e: AnalysisException if e.errorClass.contains("FIELD_NOT_FOUND") =>
-        // At the root of a typed repeat traversal, fall back to a typed empty array so that
-        // sibling column combination through StructProduct sees a consistent element type.
-        // Inner traversal nodes (parentType.nonEmpty) keep the untyped empty array — the
-        // surrounding Concat upcasts them against typed sibling arrays.
-        return (parentType, expectedElementType) match {
-          case (None, Some(elementType)) =>
-            Cast(CreateArray(Seq.empty), ArrayType(elementType))
-          case _ =>
-            CreateArray(Seq.empty)
-        }
+        return emptyResult
     }
 
-    if (newValue.resolved) {
+    if (newValue.resolved && NullTypes.isNullTyped(newValue.dataType)) {
+      // A null-typed node is the result of navigating to a field that is not in the schema, so
+      // there is nothing to extract and no further nodes to visit.
+      emptyResult
+    } else if (newValue.resolved) {
       // If node is resolved we concatenate the value extracted from the node with next level
       // traversal.
       if (level > 0 || !parentType.contains(newValue.dataType))
@@ -636,9 +760,12 @@ case class StructProduct(children: Seq[Expression], outer: Boolean = false)
   }
 
   @transient override lazy val dataType: DataType = {
+    // Every field is nullable, because an outer product, or a null element in an input array,
+    // yields elements whose fields from that input are null.
     val fields = {
       children
         .flatMap(_.dataType.asInstanceOf[ArrayType].elementType.asInstanceOf[StructType].fields)
+        .map(_.copy(nullable = true))
     }
     ArrayType(StructType(fields), containsNull = true)
   }
@@ -931,7 +1058,11 @@ case class UnresolvedVariantUnwrap(inner: Expression, schemaRef: Expression,
   override def mapChildren(f: Expression => Expression): Expression = {
     val newInner = f(inner)
     val newSchemaRef = f(schemaRef)
-    if (newInner.resolved && newSchemaRef.resolved) {
+    if (newSchemaRef.resolved && NullTypes.isNullTyped(newSchemaRef.dataType)) {
+      // A null-typed level-0 result means the input is known to be empty, so there is no
+      // schema to unwrap to and nothing to unwrap.
+      CreateArray(Seq.empty)
+    } else if (newInner.resolved && newSchemaRef.resolved) {
       // Determine the target element type from the schema reference expression.
       val targetElementType = newSchemaRef.dataType match {
         case ArrayType(elementType, _) => elementType

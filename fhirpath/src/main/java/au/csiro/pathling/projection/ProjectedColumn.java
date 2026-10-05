@@ -17,20 +17,24 @@
 
 package au.csiro.pathling.projection;
 
+import au.csiro.pathling.encoders.ValueFunctions;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import jakarta.annotation.Nonnull;
 import java.util.Objects;
+import java.util.Optional;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * The result of evaluating a {@link RequestedColumn} as part of a {@link ProjectionClause}.
  *
  * @param collection The result of evaluating the column.
  * @param requestedColumn The column that was requested to be included in the projection.
+ * @author John Grimes
  */
 public record ProjectedColumn(
     @Nonnull Collection collection, @Nonnull RequestedColumn requestedColumn) {
@@ -80,11 +84,18 @@ public record ProjectedColumn(
               + originalMessage.substring(1);
       throw new UnsupportedOperationException(contextualMessage, e);
     }
-    return requestedColumn
-        .sqlType()
-        .map(rawResult::try_cast)
-        .orElse(rawResult)
-        .alias(requestedColumn.name());
+    // A path that navigates beyond the encoded schema has a null-typed value. Without a SQL type
+    // annotation to cast to, it is given the type that the column has when the data is present.
+    final Column typedResult =
+        requestedColumn
+            .sqlType()
+            .map(rawResult::try_cast)
+            .orElseGet(
+                () ->
+                    findSqlType()
+                        .map(type -> ValueFunctions.castIfNullType(rawResult, type))
+                        .orElse(rawResult));
+    return typedResult.alias(requestedColumn.name());
   }
 
   /**
@@ -100,7 +111,10 @@ public record ProjectedColumn(
    *   <li>The resolved {@link FhirPathType} on the collection (requires {@link Materializable}).
    * </ol>
    *
-   * <p>When {@code collection()} is {@code true}, the element type is wrapped in {@link
+   * <p>A FHIR type is mapped to the type of the value that {@link #getValue()} produces for it,
+   * which differs from the internal FHIRPath representation for decimals (rendered as strings to
+   * preserve their precision) and base64Binary values (decoded to binary). When {@code
+   * collection()} is {@code true}, the element type is wrapped in {@link
    * DataTypes#createArrayType}.
    *
    * @return The Spark {@link DataType} for this column.
@@ -109,31 +123,62 @@ public record ProjectedColumn(
    */
   @Nonnull
   public DataType getSqlType() {
-    final DataType elementType =
-        requestedColumn
-            .sqlType()
-            .or(
-                () ->
-                    requestedColumn
-                        .type()
-                        .flatMap(FhirPathType::forFhirType)
-                        .map(FhirPathType::getSqlDataType))
-            .or(
-                () -> {
-                  if (!(collection instanceof Materializable)) {
-                    throw new UnsupportedOperationException(
-                        "Cannot obtain value for non-primitive collection of FHIR type: "
-                            + collection.getFhirType().map(Objects::toString).orElse("unknown"));
-                  }
-                  return collection.getType().map(FhirPathType::getSqlDataType);
-                })
-            .orElseThrow(
-                () ->
-                    new UnsupportedOperationException(
+    return findSqlType()
+        .orElseThrow(
+            () ->
+                collection instanceof Materializable
+                    ? new UnsupportedOperationException(
                         "Cannot derive SQL type for column '"
                             + requestedColumn.name()
                             + "': no sqlType annotation, FHIR type annotation, or resolved"
-                            + " FhirPathType"));
-    return requestedColumn.collection() ? DataTypes.createArrayType(elementType) : elementType;
+                            + " FhirPathType")
+                    : new UnsupportedOperationException(
+                        "Cannot obtain value for non-primitive collection of FHIR type: "
+                            + collection.getFhirType().map(Objects::toString).orElse("unknown")));
+  }
+
+  /**
+   * Derives the Spark SQL type for this column as described in {@link #getSqlType()}, if there is
+   * enough type information to do so.
+   *
+   * @return The Spark {@link DataType} for this column, or empty if it cannot be derived
+   */
+  @Nonnull
+  private Optional<DataType> findSqlType() {
+    return requestedColumn
+        .sqlType()
+        .or(
+            () ->
+                requestedColumn
+                    .type()
+                    .flatMap(
+                        fhirType ->
+                            FhirPathType.forFhirType(fhirType)
+                                .map(type -> valueType(type, Optional.of(fhirType)))))
+        .or(
+            () ->
+                collection instanceof Materializable
+                    ? collection.getType().map(type -> valueType(type, collection.getFhirType()))
+                    : Optional.empty())
+        .map(type -> requestedColumn.collection() ? DataTypes.createArrayType(type) : type);
+  }
+
+  /**
+   * Maps a FHIRPath type to the Spark SQL type of the column values that it produces.
+   *
+   * @param type The FHIRPath type
+   * @param fhirType The FHIR type, which distinguishes base64Binary from other string types
+   * @return The Spark SQL type of the column values
+   */
+  @Nonnull
+  private static DataType valueType(
+      @Nonnull final FhirPathType type, @Nonnull final Optional<FHIRDefinedType> fhirType) {
+    if (FhirPathType.DECIMAL.equals(type)) {
+      return DataTypes.StringType;
+    } else if (fhirType.filter(FHIRDefinedType.BASE64BINARY::equals).isPresent()) {
+      return DataTypes.BinaryType;
+    } else {
+      return type.getSqlDataType();
+    }
   }
 }

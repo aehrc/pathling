@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.fhirpath;
 
+import static au.csiro.pathling.encoders.ValueFunctions.nullSafeField;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.struct;
 import static org.apache.spark.sql.functions.when;
@@ -167,7 +168,7 @@ public class TypeInfo {
         final TypeInfo typeInfo = forFhirType(elemDef.getFhirType().orElseThrow(), false);
         result =
             when(
-                    elementCol.getField(elemDef.getElementName()).isNotNull(),
+                    nullSafeField(elementCol, elemDef.getElementName()).isNotNull(),
                     typeInfo.toStructColumn())
                 .otherwise(result);
       }

@@ -231,6 +231,554 @@
       "expect": []
     },
     {
+      "title": "forEachOrNull on a recursive path that exits the schema",
+      "description": "forEachOrNull traversal that walks the recursive item element one step past the encoder's nesting limit. The path is treated as an empty collection, so each resource produces a single row with null values for the forEachOrNull columns.",
+      "view": {
+        "resource": "Questionnaire",
+        "status": "active",
+        "select": [
+          {
+            "column": [
+              {
+                "name": "id",
+                "path": "id",
+                "type": "id"
+              }
+            ]
+          },
+          {
+            "forEachOrNull": "item.item.item.item.item",
+            "column": [
+              {
+                "name": "linkId",
+                "path": "linkId",
+                "type": "string"
+              }
+            ]
+          }
+        ]
+      },
+      "expectColumns": ["id", "linkId"],
+      "expect": [
+        {
+          "id": "q1",
+          "linkId": null
+        },
+        {
+          "id": "q-wide",
+          "linkId": null
+        }
+      ]
+    },
+    {
+      "title": "forEachOrNull that exits the schema with a collection column",
+      "description": "Same as the previous test but the forEachOrNull has a collection column alongside the sibling id column. The null row produced for the empty collection must not violate the nullability of the collection column.",
+      "view": {
+        "resource": "Questionnaire",
+        "status": "active",
+        "select": [
+          {
+            "column": [
+              {
+                "name": "id",
+                "path": "id",
+                "type": "id"
+              }
+            ]
+          },
+          {
+            "forEachOrNull": "item.item.item.item.item",
+            "column": [
+              {
+                "name": "linkIds",
+                "path": "linkId",
+                "type": "string",
+                "collection": true
+              }
+            ]
+          }
+        ]
+      },
+      "expectColumns": ["id", "linkIds"],
+      "expect": [
+        {
+          "id": "q1",
+          "linkIds": null
+        },
+        {
+          "id": "q-wide",
+          "linkIds": null
+        }
+      ]
+    },
+    {
+      "title": "nested forEachOrNull that exits the schema",
+      "description": "An outer forEach at the deepest encoded level contains a forEachOrNull whose path exits the schema. The inner path is resolved inside the outer forEach's lambda. The outer rows are retained, with null values for the inner columns.",
+      "view": {
+        "resource": "Questionnaire",
+        "status": "active",
+        "select": [
+          {
+            "column": [
+              {
+                "name": "id",
+                "path": "id",
+                "type": "id"
+              }
+            ]
+          },
+          {
+            "forEach": "item.item.item.item",
+            "select": [
+              {
+                "column": [
+                  {
+                    "name": "parentLinkId",
+                    "path": "linkId",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "forEachOrNull": "item",
+                "column": [
+                  {
+                    "name": "childLinkId",
+                    "path": "linkId",
+                    "type": "string"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "expectColumns": ["id", "parentLinkId", "childLinkId"],
+      "expect": [
+        {
+          "id": "q1",
+          "parentLinkId": "g1.1.1.1",
+          "childLinkId": null
+        },
+        {
+          "id": "q-wide",
+          "parentLinkId": "g1.1.1.1",
+          "childLinkId": null
+        }
+      ]
+    },
+    {
+      "title": "unionAll of forEach branches inside and outside the schema",
+      "description": "One unionAll branch iterates the deepest encoded items and the other exits the schema. The empty branch must have the same element type as the populated branch, including for a column without a type annotation, so that the branches can be concatenated.",
+      "view": {
+        "resource": "Questionnaire",
+        "status": "active",
+        "select": [
+          {
+            "column": [
+              {
+                "name": "id",
+                "path": "id",
+                "type": "id"
+              }
+            ]
+          },
+          {
+            "unionAll": [
+              {
+                "forEach": "item.item.item.item",
+                "column": [
+                  {
+                    "name": "linkId",
+                    "path": "linkId",
+                    "type": "string"
+                  },
+                  {
+                    "name": "itemType",
+                    "path": "type"
+                  }
+                ]
+              },
+              {
+                "forEach": "item.item.item.item.item",
+                "column": [
+                  {
+                    "name": "linkId",
+                    "path": "linkId",
+                    "type": "string"
+                  },
+                  {
+                    "name": "itemType",
+                    "path": "type"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "expectColumns": ["id", "linkId", "itemType"],
+      "expect": [
+        {
+          "id": "q1",
+          "linkId": "g1.1.1.1",
+          "itemType": "string"
+        },
+        {
+          "id": "q-wide",
+          "linkId": "g1.1.1.1",
+          "itemType": "string"
+        }
+      ]
+    },
+    {
+      "title": "column on a recursive path that exits the schema",
+      "description": "Columns whose paths walk the recursive item element one step past the encoder's nesting limit. The path is treated as an empty collection: the singular column is null, the collection column is empty, and every resource still produces a row. The collection column has no type annotation, so its type is inferred from the path.",
+      "view": {
+        "resource": "Questionnaire",
+        "status": "active",
+        "select": [
+          {
+            "column": [
+              {
+                "name": "id",
+                "path": "id",
+                "type": "id"
+              },
+              {
+                "name": "deepLinkId",
+                "path": "item.item.item.item.item.linkId.first()",
+                "type": "string"
+              },
+              {
+                "name": "deepLinkIds",
+                "path": "item.item.item.item.item.linkId",
+                "collection": true
+              }
+            ]
+          }
+        ]
+      },
+      "expectColumns": ["id", "deepLinkId", "deepLinkIds"],
+      "expect": [
+        {
+          "id": "q1",
+          "deepLinkId": null,
+          "deepLinkIds": []
+        },
+        {
+          "id": "q-wide",
+          "deepLinkId": null,
+          "deepLinkIds": []
+        }
+      ]
+    },
+    {
+      "title": "column that exits the schema inside a forEach",
+      "description": "A forEach iterates the deepest encoded items, and one of its columns walks one step further. The column is null, and the forEach rows are retained rather than discarded.",
+      "view": {
+        "resource": "Questionnaire",
+        "status": "active",
+        "select": [
+          {
+            "column": [
+              {
+                "name": "id",
+                "path": "id",
+                "type": "id"
+              }
+            ]
+          },
+          {
+            "forEach": "item.item.item.item",
+            "column": [
+              {
+                "name": "linkId",
+                "path": "linkId",
+                "type": "string"
+              },
+              {
+                "name": "childLinkId",
+                "path": "item.linkId.first()",
+                "type": "string"
+              }
+            ]
+          }
+        ]
+      },
+      "expectColumns": ["id", "linkId", "childLinkId"],
+      "expect": [
+        {
+          "id": "q1",
+          "linkId": "g1.1.1.1",
+          "childLinkId": null
+        },
+        {
+          "id": "q-wide",
+          "linkId": "g1.1.1.1",
+          "childLinkId": null
+        }
+      ]
+    },
+    {
+      "title": "functions on a path that exits the schema",
+      "description": "Inside a forEach over the deepest encoded items, functions applied to the next level of item see an empty collection, exactly as they would if the data were absent.",
+      "view": {
+        "resource": "Questionnaire",
+        "status": "active",
+        "select": [
+          {
+            "column": [
+              {
+                "name": "id",
+                "path": "id",
+                "type": "id"
+              }
+            ]
+          },
+          {
+            "forEach": "item.item.item.item",
+            "column": [
+              {
+                "name": "childExists",
+                "path": "item.exists()",
+                "type": "boolean"
+              },
+              {
+                "name": "childEmpty",
+                "path": "item.empty()",
+                "type": "boolean"
+              },
+              {
+                "name": "childCount",
+                "path": "item.count()",
+                "type": "integer"
+              },
+              {
+                "name": "linkIds",
+                "path": "linkId | item.linkId",
+                "type": "string",
+                "collection": true
+              }
+            ]
+          }
+        ]
+      },
+      "expectColumns": [
+        "id",
+        "childExists",
+        "childEmpty",
+        "childCount",
+        "linkIds"
+      ],
+      "expect": [
+        {
+          "id": "q1",
+          "childExists": false,
+          "childEmpty": true,
+          "childCount": 0,
+          "linkIds": ["g1.1.1.1"]
+        },
+        {
+          "id": "q-wide",
+          "childExists": false,
+          "childEmpty": true,
+          "childCount": 0,
+          "linkIds": ["g1.1.1.1"]
+        }
+      ]
+    },
+    {
+      "title": "forEach filtered on a level that exits the schema",
+      "description": "A forEach over the deepest encoded items, filtered on the absence of a further level of item, matches every deepest encoded item.",
+      "view": {
+        "resource": "Questionnaire",
+        "status": "active",
+        "select": [
+          {
+            "column": [
+              {
+                "name": "id",
+                "path": "id",
+                "type": "id"
+              }
+            ]
+          },
+          {
+            "forEach": "item.item.item.item.where(item.empty())",
+            "column": [
+              {
+                "name": "linkId",
+                "path": "linkId",
+                "type": "string"
+              }
+            ]
+          }
+        ]
+      },
+      "expectColumns": ["id", "linkId"],
+      "expect": [
+        {
+          "id": "q1",
+          "linkId": "g1.1.1.1"
+        },
+        {
+          "id": "q-wide",
+          "linkId": "g1.1.1.1"
+        }
+      ]
+    },
+    {
+      "title": "forEach over a union of levels inside and outside the schema",
+      "description": "A forEach over the union of the deepest encoded items and the level beyond them iterates the deepest encoded items.",
+      "view": {
+        "resource": "Questionnaire",
+        "status": "active",
+        "select": [
+          {
+            "column": [
+              {
+                "name": "id",
+                "path": "id",
+                "type": "id"
+              }
+            ]
+          },
+          {
+            "forEach": "item.item.item.item | item.item.item.item.item",
+            "column": [
+              {
+                "name": "linkId",
+                "path": "linkId",
+                "type": "string"
+              }
+            ]
+          }
+        ]
+      },
+      "expectColumns": ["id", "linkId"],
+      "expect": [
+        {
+          "id": "q1",
+          "linkId": "g1.1.1.1"
+        },
+        {
+          "id": "q-wide",
+          "linkId": "g1.1.1.1"
+        }
+      ]
+    },
+    {
+      "title": "column that exits the schema inside a repeat",
+      "description": "A repeat visits every encoded item. A column that navigates to the next level of item is null at the deepest encoded item, and that item's row is retained.",
+      "view": {
+        "resource": "Questionnaire",
+        "status": "active",
+        "select": [
+          {
+            "column": [
+              {
+                "name": "id",
+                "path": "id",
+                "type": "id"
+              }
+            ]
+          },
+          {
+            "repeat": ["item"],
+            "column": [
+              {
+                "name": "linkId",
+                "path": "linkId",
+                "type": "string"
+              },
+              {
+                "name": "childLinkId",
+                "path": "item.linkId.first()",
+                "type": "string"
+              }
+            ]
+          }
+        ]
+      },
+      "expectColumns": ["id", "linkId", "childLinkId"],
+      "expect": [
+        {
+          "id": "q1",
+          "linkId": "g1",
+          "childLinkId": "g1.1"
+        },
+        {
+          "id": "q1",
+          "linkId": "g1.1",
+          "childLinkId": "g1.1.1"
+        },
+        {
+          "id": "q1",
+          "linkId": "g1.1.1",
+          "childLinkId": "g1.1.1.1"
+        },
+        {
+          "id": "q1",
+          "linkId": "g1.1.1.1",
+          "childLinkId": null
+        },
+        {
+          "id": "q-wide",
+          "linkId": "g1",
+          "childLinkId": "g1.1"
+        },
+        {
+          "id": "q-wide",
+          "linkId": "g1.1",
+          "childLinkId": "g1.1.1"
+        },
+        {
+          "id": "q-wide",
+          "linkId": "g1.1.1",
+          "childLinkId": "g1.1.1.1"
+        },
+        {
+          "id": "q-wide",
+          "linkId": "g1.1.1.1",
+          "childLinkId": null
+        }
+      ]
+    },
+    {
+      "title": "where clause on a path that exits the schema",
+      "description": "A view-level where clause that navigates beyond the encoded depth sees an empty collection.",
+      "view": {
+        "resource": "Questionnaire",
+        "status": "active",
+        "select": [
+          {
+            "column": [
+              {
+                "name": "id",
+                "path": "id",
+                "type": "id"
+              }
+            ]
+          }
+        ],
+        "where": [
+          {
+            "path": "item.item.item.item.item.exists().not()"
+          }
+        ]
+      },
+      "expectColumns": ["id"],
+      "expect": [
+        {
+          "id": "q1"
+        },
+        {
+          "id": "q-wide"
+        }
+      ]
+    },
+    {
       "title": "nested repeat at schema boundary with wide type coverage",
       "description": "Outer repeat traverses all ancestor items; inner repeat at each ancestor traverses its descendants using a wide column selection (string, boolean, integer scalars plus boolean[] and uri[] collection columns). When the outer repeat reaches g1.1.1.1 (deepest encoded item), the inner repeat exits the encoded schema. The typed empty fallback produced at that point must have field types that are compatible with the non-empty rows from shallower ancestors so that Spark can concat them. If getSqlType() returns wrong types (e.g. NullType instead of BooleanType for a boolean[] column), the concat fails.",
       "view": {
