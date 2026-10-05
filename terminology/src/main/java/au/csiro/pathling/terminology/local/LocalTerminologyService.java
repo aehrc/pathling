@@ -21,7 +21,13 @@ import au.csiro.pathling.config.LocalTerminologyConfiguration;
 import au.csiro.pathling.config.TerminologyConfiguration;
 import au.csiro.pathling.ecl.EclParseException;
 import au.csiro.pathling.ecl.UnsupportedEclConstructError;
+import au.csiro.pathling.terminology.ImplicitTerminologyUrls;
 import au.csiro.pathling.terminology.TerminologyService;
+import au.csiro.pathling.terminology.conceptmap.ConceptMapContent;
+import au.csiro.pathling.terminology.conceptmap.ConceptMapContentException;
+import au.csiro.pathling.terminology.conceptmap.ConceptMapRelationship;
+import au.csiro.pathling.terminology.conceptmap.ConceptMapVersionException;
+import au.csiro.pathling.terminology.conceptmap.ConceptMapping;
 import au.csiro.pathling.terminology.expand.ExpansionLimitExceededException;
 import au.csiro.pathling.terminology.expand.ValueSetExpansion;
 import au.csiro.pathling.terminology.expand.ValueSetExpansionException;
@@ -170,6 +176,7 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
 
   private volatile boolean initialised;
   private TerminologyStoreReader reader;
+  private VersionResolver versionResolver;
   private ValueSetResolver valueSetResolver;
   private ExpansionCache expansionCache;
   private ConceptMapIndex conceptMapIndex;
@@ -313,11 +320,7 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
     if (!reverse && !SNOMED_URI.equals(coding.getSystem())) {
       return Collections.emptyList();
     }
-    final int base = conceptMapUrl.indexOf('?');
-    final String baseUri = base < 0 ? conceptMapUrl : conceptMapUrl.substring(0, base);
-    final String requestedVersion = SNOMED_URI.equals(baseUri) ? null : baseUri;
-    final Optional<String> systemVersionId =
-        valueSetResolver.resolveCodeSystemVersion(SNOMED_URI, requestedVersion);
+    final Optional<String> systemVersionId = snomedVersionOf(conceptMapUrl);
     if (systemVersionId.isEmpty()) {
       return Collections.emptyList();
     }
@@ -446,9 +449,10 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
   @Override
   public Optional<ValueSetExpansion> expand(
       @Nonnull final String url, @Nullable final String version, final int maxMembers) {
-    if (version != null && url.indexOf('?') >= 0) {
+    if (version != null && ImplicitTerminologyUrls.isImplicitValueSet(url)) {
       // An implicit value set URL carries its version in its base, so a pinned version cannot be
-      // applied to it and is not silently ignored.
+      // applied to it and is not silently ignored. Any other URL, whether or not it carries a
+      // query, is resolved with its pin as an explicit value set.
       throw new ValueSetExpansionException(
           "cannot determine which version to use: '"
               + url
@@ -532,6 +536,112 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
         indexes,
         members,
         maxMembers);
+  }
+
+  @Nonnull
+  @Override
+  public Optional<ConceptMapContent> readConceptMap(
+      @Nonnull final String url, @Nullable final String version, final int maxMappings) {
+    // One grammar both classifies the URL and yields its reference set, so that every base it
+    // accepts, including an experimental (xsct) edition/version URI, is read here.
+    final String implicitRefset = ImplicitTerminologyUrls.implicitConceptMapRefset(url);
+    if (implicitRefset != null) {
+      return readSnomedImplicitConceptMap(url, implicitRefset, version, maxMappings);
+    }
+    ensureInitialised();
+    return ConceptMapStore.resolve(reader, url, version, versionResolver)
+        .map(conceptMap -> ConceptMapContent.fromResource(conceptMap, maxMappings));
+  }
+
+  /**
+   * Reads a SNOMED CT implicit concept map: one row per association row of the reference set in the
+   * SNOMED CT version the URL's base selects, ordered by source code and then target code, with
+   * both versions the resolved version URI and the store's displays.
+   *
+   * <p>Only the four association reference sets for which HL7 Terminology defines an implicit
+   * concept map are recognised. The rows are ordered by code rather than emitted in the index's
+   * iteration order, for the reason given at {@link #byConceptCode}.
+   *
+   * @param url the implicit concept map URL
+   * @param refsetId the reference set named by the URL's {@code fhir_cm} parameter
+   * @param version the pinned version, which an implicit concept map URL cannot carry
+   * @param maxMappings the largest number of rows the caller will accept
+   * @return the content, or empty if the reference set is not one of the four or the store holds no
+   *     SNOMED CT version that the base selects
+   * @throws ConceptMapContentException if a version is pinned
+   * @throws ConceptMapVersionException if a bare base cannot select a single default edition
+   */
+  @Nonnull
+  private Optional<ConceptMapContent> readSnomedImplicitConceptMap(
+      @Nonnull final String url,
+      @Nonnull final String refsetId,
+      @Nullable final String version,
+      final int maxMappings) {
+    final ConceptMapEquivalence equivalence = IMPLICIT_CONCEPT_MAP_RELATIONSHIPS.get(refsetId);
+    if (equivalence == null) {
+      return Optional.empty();
+    }
+    final String relationship =
+        ConceptMapRelationship.of(
+            org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence.fromCode(
+                equivalence.toCode()));
+    if (version != null) {
+      throw new ConceptMapContentException(
+          "cannot determine which version to use: an implicit concept map URL carries its version"
+              + " in its base");
+    }
+    ensureInitialised();
+    final Optional<String> systemVersionId;
+    try {
+      systemVersionId = snomedVersionOf(url);
+    } catch (final AmbiguousVersionException e) {
+      throw new ConceptMapVersionException(e.getMessage(), e);
+    }
+    if (systemVersionId.isEmpty()) {
+      return Optional.empty();
+    }
+    final String versionUri = valueSetResolver.versionOf(systemVersionId.get()).orElse(null);
+    final CodeSystemIndexes indexes = indexesFor(systemVersionId.get());
+    final Map<Integer, List<String>> associations = indexes.refsets().targets(refsetId);
+    final ConceptDictionary dictionary = indexes.dictionary();
+    final List<Integer> sources = new ArrayList<>(associations.keySet());
+    sources.sort(Comparator.comparing(dictionary::code));
+    final List<ConceptMapping> rows = new ArrayList<>();
+    for (final int source : sources) {
+      final String sourceCode = dictionary.code(source);
+      final String sourceDisplay = dictionary.display(source);
+      // The index does not order a concept's targets, so they are put in code order here.
+      for (final String target : associations.get(source).stream().sorted().toList()) {
+        final Integer targetDense = dictionary.denseId(target);
+        rows.add(
+            new ConceptMapping(
+                SNOMED_URI,
+                versionUri,
+                sourceCode,
+                sourceDisplay,
+                SNOMED_URI,
+                versionUri,
+                target,
+                targetDense == null ? null : dictionary.display(targetDense),
+                relationship));
+      }
+    }
+    return Optional.of(ConceptMapContent.fromMappings(url, versionUri, rows, maxMappings));
+  }
+
+  /**
+   * Resolves the SNOMED CT version that the base of an implicit concept map URL selects: the store
+   * default for a bare {@code http://snomed.info/sct} base, or exactly the edition/version URI.
+   *
+   * @param conceptMapUrl the implicit concept map URL
+   * @return the stable system version identifier, or empty if the store holds no such version
+   */
+  @Nonnull
+  private Optional<String> snomedVersionOf(@Nonnull final String conceptMapUrl) {
+    final int base = conceptMapUrl.indexOf('?');
+    final String baseUri = base < 0 ? conceptMapUrl : conceptMapUrl.substring(0, base);
+    final String requestedVersion = SNOMED_URI.equals(baseUri) ? null : baseUri;
+    return valueSetResolver.resolveCodeSystemVersion(SNOMED_URI, requestedVersion);
   }
 
   /**
@@ -1075,6 +1185,7 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
   public synchronized void close() {
     indexesCache.clear();
     reader = null;
+    versionResolver = null;
     valueSetResolver = null;
     expansionCache = null;
     conceptMapIndex = null;
@@ -1103,7 +1214,7 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
           Objects.requireNonNull(local.getStoragePath(), "A terminology storage path is required");
       log.debug("Opening local terminology store: {}", storagePath);
       reader = TerminologyStoreReader.open(storagePath, hadoopConfiguration);
-      final VersionResolver versionResolver = new VersionResolver(local.getDefaultSnomedEdition());
+      versionResolver = new VersionResolver(local.getDefaultSnomedEdition());
       valueSetResolver =
           new ValueSetResolver(
               CodeSystemEntry.loadCatalogue(reader),
