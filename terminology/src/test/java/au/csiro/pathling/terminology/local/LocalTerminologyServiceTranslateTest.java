@@ -19,6 +19,7 @@ package au.csiro.pathling.terminology.local;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 import au.csiro.pathling.config.LocalTerminologyConfiguration;
 import au.csiro.pathling.config.TerminologyConfiguration;
@@ -34,16 +35,20 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 /**
  * Tests local {@code translate}: explicit imported ConceptMaps (forward, reverse, target-scoped,
  * with equivalences preserved), the unknown-content fallback, and SNOMED implicit concept maps
- * derived from association reference sets.
+ * derived from the association reference sets THO defines as such, each with its own relationship.
  *
  * <p>The ordering assertions here pin the contract, but they do not by themselves prove the service
  * imposes it, because this store's reference set rows already happen to be laid out in code order.
@@ -99,6 +104,15 @@ class LocalTerminologyServiceTranslateTest {
 
   private static String eclValueSet(final String ecl) {
     return Rf2Mini.SNOMED_URI + "?fhir_vs=ecl/" + URLEncoder.encode(ecl, StandardCharsets.UTF_8);
+  }
+
+  private static String implicitConceptMap(final String refsetId) {
+    return Rf2Mini.SNOMED_URI + "?fhir_cm=" + refsetId;
+  }
+
+  /** The distinct equivalences of a set of translations. */
+  private static Set<ConceptMapEquivalence> equivalences(final List<Translation> translations) {
+    return translations.stream().map(Translation::getEquivalence).collect(Collectors.toSet());
   }
 
   @Test
@@ -164,14 +178,93 @@ class LocalTerminologyServiceTranslateTest {
             .isEmpty());
   }
 
-  @Test
-  void translatesSnomedAssociationRefsetForward() {
-    // The inactive concept has a SAME AS association to its active replacement.
-    final String conceptMap = Rf2Mini.SNOMED_URI + "?fhir_cm=" + Rf2Mini.SAME_AS_REFSET;
+  /**
+   * Each association reference set that can be used as an implicit concept map, with a source
+   * concept of the fixture, its target, and the relationship THO assigns to the reference set.
+   */
+  static Stream<Arguments> implicitConceptMaps() {
+    return Stream.of(
+        arguments(
+            Rf2Mini.SAME_AS_REFSET,
+            Rf2Mini.DIABETES_INACTIVE,
+            Rf2Mini.TYPE2_DIABETES,
+            ConceptMapEquivalence.EQUAL),
+        arguments(
+            Rf2Mini.REPLACED_BY_REFSET,
+            Rf2Mini.REPLACED_BY_SOURCE,
+            Rf2Mini.TYPE1_DIABETES,
+            ConceptMapEquivalence.EQUIVALENT),
+        arguments(
+            Rf2Mini.POSSIBLY_EQUIVALENT_TO_REFSET,
+            Rf2Mini.POSSIBLY_EQUIVALENT_TO_SOURCE,
+            Rf2Mini.TYPE1_DIABETES,
+            ConceptMapEquivalence.INEXACT),
+        arguments(
+            Rf2Mini.ALTERNATIVE_REFSET,
+            Rf2Mini.ALTERNATIVE_SOURCE,
+            Rf2Mini.GESTATIONAL_DIABETES,
+            ConceptMapEquivalence.INEXACT));
+  }
+
+  @ParameterizedTest
+  @MethodSource("implicitConceptMaps")
+  void forwardTranslationCarriesTheRelationshipOfTheReferenceSet(
+      final String refsetId,
+      final String source,
+      final String target,
+      final ConceptMapEquivalence relationship) {
+    // The relationship comes from the reference set, not from a fixed default.
     final List<Translation> result =
-        snomedService.translate(snomed(Rf2Mini.DIABETES_INACTIVE), conceptMap, false, null);
-    assertEquals(Set.of(Rf2Mini.TYPE2_DIABETES), targetCodes(result));
-    assertEquals(Rf2Mini.SNOMED_URI, result.get(0).getConcept().getSystem());
+        snomedService.translate(snomed(source), implicitConceptMap(refsetId), false, null);
+    final Translation translation =
+        result.stream()
+            .filter(t -> target.equals(t.getConcept().getCode()))
+            .findFirst()
+            .orElseThrow();
+    assertEquals(Rf2Mini.SNOMED_URI, translation.getConcept().getSystem());
+    assertEquals(Set.of(relationship), equivalences(result));
+  }
+
+  @ParameterizedTest
+  @MethodSource("implicitConceptMaps")
+  void reverseTranslationCarriesTheSameRelationship(
+      final String refsetId,
+      final String source,
+      final String target,
+      final ConceptMapEquivalence relationship) {
+    // Each of these relationships is symmetric, so reversing the map does not change it.
+    final List<Translation> result =
+        snomedService.translate(snomed(target), implicitConceptMap(refsetId), true, null);
+    assertTrue(targetCodes(result).contains(source));
+    assertEquals(Set.of(relationship), equivalences(result));
+  }
+
+  @Test
+  void forwardTranslationReturnsEveryTargetOfAConceptInCodeOrder() {
+    // An ambiguous concept is possibly equivalent to more than one concept, and every one of them
+    // is a translation. The fixture writes the higher code first.
+    final List<Translation> result =
+        snomedService.translate(
+            snomed(Rf2Mini.POSSIBLY_EQUIVALENT_TO_SOURCE),
+            implicitConceptMap(Rf2Mini.POSSIBLY_EQUIVALENT_TO_REFSET),
+            false,
+            null);
+    assertEquals(
+        List.of(Rf2Mini.TYPE1_DIABETES, Rf2Mini.TYPE2_DIABETES), orderedTargetCodes(result));
+  }
+
+  @Test
+  void associationReferenceSetOutsideTheImplicitConceptMapsTranslatesToNothing() {
+    // WAS A is loaded with its association targets, as its membership shows, but it is not one of
+    // the reference sets that THO defines as an implicit concept map, so it is unknown content in
+    // both directions.
+    final String wasAValueSet = Rf2Mini.SNOMED_URI + "?fhir_vs=refset/" + Rf2Mini.WAS_A_REFSET;
+    assertTrue(snomedService.validateCode(wasAValueSet, snomed(Rf2Mini.WAS_A_SOURCE)));
+
+    final String conceptMap = implicitConceptMap(Rf2Mini.WAS_A_REFSET);
+    assertTrue(
+        snomedService.translate(snomed(Rf2Mini.WAS_A_SOURCE), conceptMap, false, null).isEmpty());
+    assertTrue(snomedService.translate(snomed(Rf2Mini.DIABETES), conceptMap, true, null).isEmpty());
   }
 
   @Test

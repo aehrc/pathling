@@ -199,7 +199,10 @@ public final class TerminologyStoreSchema {
   /** The dense identifier of a reference set member's referenced concept. */
   public static final String COLUMN_REFERENCED_DENSE_ID = "referenced_dense_id";
 
-  /** The association target code of a reference set member (drives {@code ?fhir_cm}). */
+  /**
+   * The target of a reference set member: the target concept of an association, or the map target
+   * of a simple map (drives {@code ?fhir_cm}).
+   */
   public static final String COLUMN_TARGET_CODE = "target_code";
 
   /** The full R4 resource JSON of an imported ValueSet or ConceptMap. */

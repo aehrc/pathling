@@ -456,12 +456,12 @@ Peak memory does not grow with the number of concepts, but the largest
 vocabularies still need more driver heap than the 1 GB default to hold the
 working set of the Spark joins that build the store. The OMOP vocabulary (around
 6.6 million concepts), for example, imports comfortably with a 4 GB heap. Set
-the heap with the `SPARK_DRIVER_MEMORY` environment variable; in local mode the
-driver JVM starts before `--spark-conf` can size its heap, so that flag has no
-effect on driver memory.
+the heap with `--spark-conf spark.driver.memory=4g`, or with the same key in the
+[`[spark]` table](#spark-configuration) or the `SPARK_DRIVER_MEMORY` environment
+variable.
 
 ```bash
-SPARK_DRIVER_MEMORY=4g pathling import-fhir-terminology \
+pathling --spark-conf spark.driver.memory=4g import-fhir-terminology \
   /data/ohdsi.fhir.omop-0.1.0.tgz /data/tx-store
 ```
 

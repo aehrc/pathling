@@ -98,6 +98,7 @@ import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.function.FilterFunction;
 import org.apache.spark.api.java.function.MapFunction;
 import org.apache.spark.broadcast.Broadcast;
+import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Observation;
@@ -137,6 +138,8 @@ public class SnomedRf2Importer {
   private static final String PREFERRED = "900000000000548007";
   private static final String DEFINED_STATUS = "900000000000073002";
   private static final String TARGET_COMPONENT_ID = "targetComponentId";
+  private static final String MAP_TARGET = "mapTarget";
+  private static final String MAP_GROUP = "mapGroup";
   private static final String ACCEPTABILITY_ID = "acceptabilityId";
   private static final String DESCRIPTION_ID = "descriptionId";
 
@@ -1157,11 +1160,7 @@ public class SnomedRf2Importer {
               readRf2(path, "refsetId", "referencedComponentId")
                   .filter(col(COLUMN_ACTIVE).equalTo("1")),
               resolution.input);
-      final boolean hasTarget = raw.schema().getFieldIndex(TARGET_COMPONENT_ID).isDefined();
-      final Dataset<Row> targetColumn =
-          hasTarget
-              ? raw.withColumn(COLUMN_TARGET_CODE, col(TARGET_COMPONENT_ID))
-              : raw.withColumn(COLUMN_TARGET_CODE, lit(null).cast(DataTypes.StringType));
+      final Dataset<Row> targetColumn = raw.withColumn(COLUMN_TARGET_CODE, targetOf(raw));
       final Dataset<Row> mapped =
           observeRowCount(
               targetColumn
@@ -1179,6 +1178,26 @@ public class SnomedRf2Importer {
       members = members == null ? mapped : members.unionByName(mapped);
     }
     return new Refsets(members == null ? emptyRefsetTable(systemVersionId) : members, resolutions);
+  }
+
+  /**
+   * Returns the column holding the target of each row of a reference set file, which drives the
+   * SNOMED CT implicit concept maps: the {@code targetComponentId} of an association reference set,
+   * or the {@code mapTarget} of a simple map reference set. A complex or extended map also carries
+   * a {@code mapTarget}, but it is identified by its {@code mapGroup} column and yields no target,
+   * because which of its targets applies depends on map rules that an implicit concept map does not
+   * evaluate. Any other file yields no target.
+   */
+  @Nonnull
+  private static Column targetOf(@Nonnull final Dataset<Row> raw) {
+    final StructType schema = raw.schema();
+    if (schema.getFieldIndex(TARGET_COMPONENT_ID).isDefined()) {
+      return col(TARGET_COMPONENT_ID);
+    }
+    if (schema.getFieldIndex(MAP_TARGET).isDefined() && schema.getFieldIndex(MAP_GROUP).isEmpty()) {
+      return col(MAP_TARGET);
+    }
+    return lit(null).cast(DataTypes.StringType);
   }
 
   // --- Metadata rows. ---

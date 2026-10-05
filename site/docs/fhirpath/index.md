@@ -274,6 +274,9 @@ specification:
 - [FHIR-specific functions](fhir-functions.md) - Functions defined in the FHIR
   specification for use with FHIR data, including `extension`, `resolve`,
   `memberOf`, `subsumes`, and `subsumedBy`.
+- [SQL on FHIR functions](sql-on-fhir-functions.md) - Functions defined in the
+  SQL on FHIR specification for joining views: `getResourceKey` and
+  `getReferenceKey`.
 - [Extension functions](extension-functions.md) - Functions unique to Pathling,
   including terminology functions like `designation`, `display`, `property`, and
   `translate`, plus the Coding literal data type.

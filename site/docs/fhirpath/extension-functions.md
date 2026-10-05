@@ -1,5 +1,5 @@
 ---
-sidebar_position: 3
+sidebar_position: 4
 description: Extension functions and data types implemented in Pathling in addition to the standard FHIRPath and FHIR specifications.
 ---
 
