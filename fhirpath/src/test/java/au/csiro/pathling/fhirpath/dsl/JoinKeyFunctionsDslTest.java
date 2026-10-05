@@ -63,6 +63,11 @@ public class JoinKeyFunctionsDslTest extends FhirPathDslTestBase {
                     .element(
                         "observationReference",
                         ref -> ref.fhirType(REFERENCE).string("reference", "Observation/obs-456"))
+                    // RelatedPerson is a type whose name ends with the name of another type
+                    // (Person), which the type parameter must not confuse with it.
+                    .element(
+                        "relatedPersonReference",
+                        ref -> ref.fhirType(REFERENCE).string("reference", "RelatedPerson/r1"))
                     .element(
                         "emptyReference", ref -> ref.fhirType(REFERENCE).stringEmpty("reference"))
                     // Define a collection of references
@@ -120,6 +125,14 @@ public class JoinKeyFunctionsDslTest extends FhirPathDslTestBase {
         .testEmpty(
             "observationReference.getReferenceKey(Patient)",
             "getReferenceKey() with non-matching type returns empty for Observation")
+        .group("getReferenceKey() type parameter matches the whole type name")
+        .testEmpty(
+            "relatedPersonReference.getReferenceKey(Person)",
+            "getReferenceKey(Person) returns empty for a RelatedPerson reference")
+        .testEquals(
+            "RelatedPerson/r1",
+            "relatedPersonReference.getReferenceKey(RelatedPerson)",
+            "getReferenceKey(RelatedPerson) returns the key for a RelatedPerson reference")
         .group("getReferenceKey() function error cases")
         .testError(
             "nonReference.getReferenceKey()",
