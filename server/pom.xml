@@ -48,7 +48,9 @@
     <pathling.httpCore5Version>5.4.3</pathling.httpCore5Version>
     <pathling.testSetup.skip>false</pathling.testSetup.skip>
     <pathling.ui.skip>false</pathling.ui.skip>
-    <pathling.jacksonVersion>2.22.1</pathling.jacksonVersion>
+    <!-- Pinned at or above 2.22.3, which fixes CVE-2026-89407, CVE-2026-89425, CVE-2026-68497,
+         CVE-2026-91776, CVE-2026-91777, CVE-2026-19032 and CVE-2026-83557. -->
+    <pathling.jacksonVersion>2.22.3</pathling.jacksonVersion>
     <pathling.testDataVersion>1.0.0</pathling.testDataVersion>
     <pathling.slf4jVersion>2.0.17</pathling.slf4jVersion>
     <pathling.jibVersion>3.4.6</pathling.jibVersion>
