@@ -26,7 +26,8 @@
  * inline query switches to the stored tab with the saved query selected and
  * the values typed inline carried across by name. Execute and Add to export
  * set are gated on every declared parameter carrying a valid value, while Save
- * is gated only on duplicate names, since values are never persisted.
+ * is gated only on duplicate names, since values are never persisted. An inline
+ * query may depend on a value set or concept map alone.
  *
  * @author John Grimes
  */
@@ -395,6 +396,38 @@ describe("SqlQueryForm inline execution", () => {
         parameterTypes: { period_end: "date" },
       }),
     );
+  });
+
+  // A query may depend on terminology alone. Execute stays disabled until the
+  // terminology row names both a label and a canonical URL, and the request's
+  // Library then carries the row as a dependency, with no view required.
+  it("executes a query whose only dependency is a value set", async () => {
+    const onExecute = vi.fn();
+    const { user } = renderForm({ onExecute });
+    const executeButton = screen.getByRole("button", { name: /execute/i });
+
+    await user.click(screen.getByRole("tab", { name: /provide sql/i }));
+    await user.type(screen.getByRole("textbox", { name: /^sql$/i }), "SELECT * FROM cvd_codes");
+    await user.click(screen.getByRole("button", { name: /add value set or concept map/i }));
+    await user.type(screen.getByRole("textbox", { name: "Label for terminology 1" }), "cvd_codes");
+    expect(executeButton).toBeDisabled();
+
+    await user.type(
+      screen.getByRole("textbox", { name: "Canonical URL for terminology 1" }),
+      "http://example.org/ValueSet/cvd|2026",
+    );
+    expect(executeButton).toBeEnabled();
+    await user.click(executeButton);
+
+    const request = onExecute.mock.calls[0][0] as SqlQueryRequest;
+    expect(request.mode).toBe("inline");
+    expect(request.mode === "inline" && request.library.relatedArtifact).toEqual([
+      {
+        type: "depends-on",
+        label: "cvd_codes",
+        resource: "http://example.org/ValueSet/cvd|2026",
+      },
+    ]);
   });
 });
 

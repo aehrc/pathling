@@ -20,6 +20,10 @@ package au.csiro.pathling.operations.sqlquery;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -33,13 +37,26 @@ import au.csiro.pathling.encoders.ViewDefinitionResource.ColumnComponent;
 import au.csiro.pathling.encoders.ViewDefinitionResource.SelectComponent;
 import au.csiro.pathling.errors.AccessDeniedError;
 import au.csiro.pathling.io.source.DataSource;
+import au.csiro.pathling.library.PathlingContext;
+import au.csiro.pathling.operations.sql.SqlRunProvider;
 import au.csiro.pathling.operations.sql.SuppliedArtefact;
 import au.csiro.pathling.operations.sql.SuppliedArtefacts;
+import au.csiro.pathling.security.OperationAccess;
+import au.csiro.pathling.security.SecurityAspect;
+import au.csiro.pathling.terminology.TerminologyService;
+import au.csiro.pathling.terminology.TerminologyServiceFactory;
+import au.csiro.pathling.terminology.conceptmap.ConceptMapContent;
+import au.csiro.pathling.terminology.conceptmap.ConceptMapRelationship;
+import au.csiro.pathling.terminology.conceptmap.ConceptMapping;
+import au.csiro.pathling.terminology.expand.ValueSetExpansion;
+import au.csiro.pathling.terminology.expand.ValueSetMember;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.views.FhirView;
 import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -61,8 +78,10 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
  * Verifies the metadata-resource authorisation matrix: a stored ViewDefinition dependency (resolved
  * by canonical URL) requires {@code ViewDefinition} READ, a stored SQLView dependency requires
  * {@code Library} READ, the per-projected-resource READ still applies at each leaf, a
- * request-supplied (inline) view requires no metadata READ, and a configured external table
- * requires no READ authority at all while waiving none for the FHIR dependencies alongside it.
+ * request-supplied (inline) view requires no metadata READ, and a configured external table, a
+ * value set or a concept map requires no READ authority at all while waiving none for the FHIR
+ * dependencies alongside it. A concept map is resolved by the real {@link ConceptMapResolver} over
+ * a mocked terminology service, so that an authority check added on that path would be caught.
  *
  * @author John Grimes
  */
@@ -72,6 +91,8 @@ class SqlQueryAuthTest {
   private static final String PV_URL = "https://example.org/ViewDefinition/pv";
   private static final String BASE_URL = "https://example.org/Library/base";
   private static final String TABLE_URL = "https://example.org/data/refsets";
+  private static final String VALUE_SET_URL = "https://example.org/ValueSet/cvd";
+  private static final String CONCEPT_MAP_URL = "https://example.org/ConceptMap/sct-to-icd10";
 
   @Autowired private SparkSession spark;
   @Autowired private FhirEncoders fhirEncoders;
@@ -79,6 +100,8 @@ class SqlQueryAuthTest {
 
   private DataSource dataSource;
   private SqlDependencyResolver resolver;
+  private ValueSetMembershipResolver valueSetMembershipResolver;
+  private TerminologyService terminologyService;
 
   @BeforeEach
   void setUp() {
@@ -103,9 +126,23 @@ class SqlQueryAuthTest {
         new ViewResolver(dataSource, fhirEncoders, serverConfiguration, fhirContext);
     final LibraryReferenceResolver libraryReferenceResolver =
         new LibraryReferenceResolver(dataSource, fhirEncoders, serverConfiguration);
+    valueSetMembershipResolver = mock(ValueSetMembershipResolver.class);
+    terminologyService = mock(TerminologyService.class);
+    final TerminologyServiceFactory terminologyServiceFactory =
+        mock(TerminologyServiceFactory.class);
+    when(terminologyServiceFactory.build()).thenReturn(terminologyService);
+    final PathlingContext pathlingContext = mock(PathlingContext.class);
+    when(pathlingContext.getTerminologyServiceFactory()).thenReturn(terminologyServiceFactory);
+    final ConceptMapResolver conceptMapResolver =
+        new ConceptMapResolver(pathlingContext, serverConfiguration);
     resolver =
         new SqlDependencyResolver(
-            viewResolver, libraryReferenceResolver, new SqlLibraryParser(), serverConfiguration);
+            viewResolver,
+            libraryReferenceResolver,
+            valueSetMembershipResolver,
+            conceptMapResolver,
+            new SqlLibraryParser(),
+            serverConfiguration);
   }
 
   @AfterEach
@@ -212,6 +249,106 @@ class SqlQueryAuthTest {
     assertThatNoException().isThrownBy(() -> resolver.resolve(join, SuppliedArtefacts.empty()));
   }
 
+  @Test
+  void valueSetDependencyRequiresNoReadAuthority() {
+    // A value set is resolved through the terminology layer, never read from storage as a FHIR
+    // resource, so the operation authority alone is enough: no pathling:read:* authority is held.
+    stubValueSet();
+    setSecurityContext("pathling:sql-run");
+    final ResolvedDependencyGraph graph =
+        resolver.resolve(sqlQuery(VALUE_SET_URL), SuppliedArtefacts.empty());
+
+    assertThat(graph.getOrderedNodes()).singleElement().isInstanceOf(ResolvedValueSet.class);
+  }
+
+  @Test
+  void valueSetWaivesNoAuthorityForFhirDependenciesAlongsideIt() {
+    stubValueSet();
+    when(dataSource.read("ViewDefinition"))
+        .thenReturn(viewDefinitionDataset(simpleViewDefinition("pv", PV_URL, "Patient")));
+    final ParsedSqlQuery join =
+        sqlQuery(
+            "SELECT * FROM pv WHERE pv.id IN (SELECT code FROM vs)",
+            new ViewArtifactReference("pv", PV_URL),
+            new ViewArtifactReference("vs", VALUE_SET_URL));
+
+    // The stored ViewDefinition keeps its metadata and projected-resource READ requirements when
+    // joined to a value set; the value set adds none and removes none.
+    setSecurityContext("pathling:sql-run", "pathling:read:Patient");
+    assertThatThrownBy(() -> resolver.resolve(join, SuppliedArtefacts.empty()))
+        .isInstanceOf(AccessDeniedError.class)
+        .hasMessageContaining("ViewDefinition");
+
+    setSecurityContext("pathling:sql-run", "pathling:read:ViewDefinition");
+    assertThatThrownBy(() -> resolver.resolve(join, SuppliedArtefacts.empty()))
+        .isInstanceOf(AccessDeniedError.class)
+        .hasMessageContaining("Patient");
+
+    setSecurityContext("pathling:sql-run", "pathling:read:ViewDefinition", "pathling:read:Patient");
+    final ResolvedDependencyGraph graph = resolver.resolve(join, SuppliedArtefacts.empty());
+    assertThat(graph.getOrderedNodes())
+        .hasSize(2)
+        .anySatisfy(node -> assertThat(node).isInstanceOf(ResolvedViewDefinition.class))
+        .anySatisfy(node -> assertThat(node).isInstanceOf(ResolvedValueSet.class));
+  }
+
+  @Test
+  void conceptMapDependencyRequiresOnlyTheOperationAuthority() {
+    // A concept map is resolved through the terminology layer, never read from storage as a FHIR
+    // resource, so the operation authority alone is enough: no pathling:read:* authority is held.
+    stubConceptMap();
+    setSecurityContext("pathling:sql-run");
+    assertThatNoException()
+        .isThrownBy(() -> new SecurityAspect().checkRequiredAuthority(sqlRunAccess()));
+    final ResolvedDependencyGraph graph =
+        resolver.resolve(sqlQuery(CONCEPT_MAP_URL), SuppliedArtefacts.empty());
+
+    assertThat(graph.getOrderedNodes()).singleElement().isInstanceOf(ResolvedConceptMap.class);
+  }
+
+  @Test
+  void conceptMapDependencyWithoutTheOperationAuthorityIsRefused() {
+    // Holding every read authority does not stand in for the operation authority, which the
+    // operation checks before any dependency is resolved.
+    stubConceptMap();
+    setSecurityContext("pathling:read");
+    assertThatThrownBy(() -> new SecurityAspect().checkRequiredAuthority(sqlRunAccess()))
+        .isInstanceOf(AccessDeniedError.class)
+        .hasMessageContaining("pathling:sql-run");
+  }
+
+  @Test
+  void conceptMapWaivesNoAuthorityForFhirDependenciesAlongsideIt() {
+    stubConceptMap();
+    when(dataSource.read("ViewDefinition"))
+        .thenReturn(viewDefinitionDataset(simpleViewDefinition("pv", PV_URL, "Patient")));
+    final ParsedSqlQuery join =
+        sqlQuery(
+            "SELECT * FROM pv LEFT JOIN cm ON pv.id = cm.source_code",
+            new ViewArtifactReference("pv", PV_URL),
+            new ViewArtifactReference("cm", CONCEPT_MAP_URL));
+
+    // The stored ViewDefinition keeps its metadata and projected-resource READ requirements when
+    // joined to a concept map; the concept map adds none and removes none.
+    setSecurityContext("pathling:sql-run", "pathling:read:Patient");
+    assertThatThrownBy(() -> resolver.resolve(join, SuppliedArtefacts.empty()))
+        .isInstanceOf(AccessDeniedError.class)
+        .hasMessageContaining("ViewDefinition");
+
+    setSecurityContext("pathling:sql-run", "pathling:read:ViewDefinition");
+    assertThatThrownBy(() -> resolver.resolve(join, SuppliedArtefacts.empty()))
+        .isInstanceOf(AccessDeniedError.class)
+        .hasMessageContaining("Patient");
+
+    // Exactly the view's authorities suffice: none is needed for ConceptMap.
+    setSecurityContext("pathling:sql-run", "pathling:read:ViewDefinition", "pathling:read:Patient");
+    final ResolvedDependencyGraph graph = resolver.resolve(join, SuppliedArtefacts.empty());
+    assertThat(graph.getOrderedNodes())
+        .hasSize(2)
+        .anySatisfy(node -> assertThat(node).isInstanceOf(ResolvedViewDefinition.class))
+        .anySatisfy(node -> assertThat(node).isInstanceOf(ResolvedConceptMap.class));
+  }
+
   // ---------------------------------------------------------------------------
   // Helpers.
   // ---------------------------------------------------------------------------
@@ -226,6 +363,61 @@ class SqlQueryAuthTest {
   @Nonnull
   private Dataset<Row> libraryDataset(@Nonnull final Library... libraries) {
     return spark.createDataset(List.of(libraries), fhirEncoders.of("Library")).toDF();
+  }
+
+  /**
+   * Makes the membership resolver answer the value set canonical with a one-member expansion, as
+   * the terminology layer would; the resolver itself performs no authority check.
+   */
+  private void stubValueSet() {
+    when(valueSetMembershipResolver.resolveCanonical(any(), any()))
+        .thenReturn(
+            Optional.of(
+                new ResolvedValueSet(
+                    VALUE_SET_URL,
+                    new ValueSetExpansion(
+                        VALUE_SET_URL,
+                        null,
+                        null,
+                        null,
+                        List.of(),
+                        List.of(
+                            new ValueSetMember(
+                                "http://snomed.info/sct", null, "22298006", null, null))))));
+  }
+
+  /**
+   * Makes the terminology service answer the concept map canonical with one mapping, so that the
+   * real concept map resolver builds its node from it.
+   */
+  private void stubConceptMap() {
+    when(terminologyService.readConceptMap(eq(CONCEPT_MAP_URL), isNull(), anyInt()))
+        .thenReturn(
+            Optional.of(
+                new ConceptMapContent(
+                    CONCEPT_MAP_URL,
+                    null,
+                    List.of(
+                        new ConceptMapping(
+                            "http://snomed.info/sct",
+                            null,
+                            "22298006",
+                            null,
+                            "http://hl7.org/fhir/sid/icd-10",
+                            null,
+                            "I21",
+                            null,
+                            ConceptMapRelationship.EQUIVALENT)))));
+  }
+
+  /** The operation authority declared by the {@code $sql-run} operation method. */
+  @Nonnull
+  private static OperationAccess sqlRunAccess() {
+    return Arrays.stream(SqlRunProvider.class.getMethods())
+        .filter(method -> method.isAnnotationPresent(OperationAccess.class))
+        .findFirst()
+        .orElseThrow()
+        .getAnnotation(OperationAccess.class);
   }
 
   @Nonnull

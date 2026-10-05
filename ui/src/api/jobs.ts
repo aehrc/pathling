@@ -138,7 +138,8 @@ export function parseJobsResponse(parameters: Parameters): JobSummary[] {
  * @param options - Optional authentication options.
  * @returns The caller's jobs, newest first as ordered by the server.
  * @throws {UnauthorizedError} When the request receives a 401 response.
- * @throws {NotFoundError} When the request receives a 404 response.
+ * @throws {OperationOutcomeError} When the response carries an OperationOutcome.
+ * @throws {NotFoundError} When the request receives a 404 response without an OperationOutcome.
  * @throws {Error} For other non-successful responses.
  *
  * @example
