@@ -125,8 +125,9 @@ class LocalTerminologyServiceSimpleMapTest {
     final String store = work.resolve("store").toString();
     final String release = writeRelease(work.resolve("release")).toString();
     new SnomedRf2Importer(spark, store).importFrom(release, null);
-    // The same release again as an experimental version, which the default version ranks below
-    // every production version, so that experimental concept map URLs have content to resolve.
+    // The same release again as an experimental version, which default version selection ranks
+    // below every production version, so that experimental concept map URLs have content to
+    // resolve.
     new SnomedRf2Importer(spark, store)
         .importFrom(release, "http://snomed.info/xsct/" + MODULE + "/version/" + EFFECTIVE_TIME);
     service =
@@ -224,7 +225,9 @@ class LocalTerminologyServiceSimpleMapTest {
   }
 
   @Test
-  void forwardTranslationThroughAnExperimentalEditionUrlWithoutVersionUsesItsLatestVersion() {
+  void forwardTranslationThroughAnExperimentalEditionUrlWithoutVersionResolves() {
+    // This proves that experimental concept map URLs reach the SNOMED CT path. Which namespace
+    // answers is covered by ValueSetResolverTest, since both copies here hold the same content.
     final String url = "http://snomed.info/xsct/" + MODULE + "?fhir_cm=" + CTV3_MAP;
     assertEquals(
         List.of("equivalent " + CTV3_SYSTEM + "|X40J4"),

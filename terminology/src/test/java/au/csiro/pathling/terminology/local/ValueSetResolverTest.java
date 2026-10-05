@@ -30,6 +30,7 @@ import au.csiro.pathling.vcl.VclParseException;
 import au.csiro.pathling.vcl.VclRefsetMembership;
 import au.csiro.pathling.vcl.VclSystemScoped;
 import au.csiro.pathling.vcl.VclWildcard;
+import jakarta.annotation.Nullable;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -63,9 +64,9 @@ class ValueSetResolverTest {
 
   /**
    * A store holding two International versions, one Australian version and an experimental
-   * International version that is later than either production one.
+   * International version.
    */
-  private static ValueSetResolver multiEdition(final String defaultEdition) {
+  private static ValueSetResolver multiEdition(@Nullable final String defaultEdition) {
     final List<CodeSystemEntry> catalogue =
         List.of(
             new CodeSystemEntry(Rf2Mini.SNOMED_URI, Rf2Mini.VERSION_20230601, V1),
@@ -195,12 +196,18 @@ class ValueSetResolverTest {
   }
 
   @Test
-  void codingVersionNamingOnlyAProductionEditionIgnoresExperimentalVersions() {
-    // This is the Coding.version path. The experimental version is later than any production
-    // version, but an sct edition URI names published content only.
-    assertEquals(
-        Optional.of(V2),
-        multiEdition(null).resolveCodeSystemVersion(Rf2Mini.SNOMED_URI, INTERNATIONAL));
+  void productionEditionUrlIsNotAnsweredByExperimentalVersions() {
+    // The store holds the named edition only as unpublished content, which an sct edition URI does
+    // not name, whether it arrives in a value set URL or in Coding.version.
+    final List<CodeSystemEntry> catalogue =
+        List.of(
+            new CodeSystemEntry(
+                Rf2Mini.SNOMED_URI,
+                "http://snomed.info/xsct/900000000000207008/version/20250101",
+                V_EXPERIMENTAL));
+    final ValueSetResolver resolver = new ValueSetResolver(catalogue, new VersionResolver(null));
+    assertTrue(resolver.resolve(INTERNATIONAL + "?fhir_vs").isEmpty());
+    assertTrue(resolver.resolveCodeSystemVersion(Rf2Mini.SNOMED_URI, INTERNATIONAL).isEmpty());
   }
 
   @Test
