@@ -43,19 +43,26 @@ import org.hl7.fhir.r4.model.ValueSet;
 /**
  * Resolves a value set URL to the code system version it evaluates over and the {@link
  * VclExpression} that defines its members. It handles the SNOMED CT implicit value set forms
- * (all-concepts, reference set, is-a, and ECL) on both unversioned and edition/version-qualified
- * SNOMED URIs, and VCL implicit value set URLs. Content that is absent from the store resolves to
- * {@link Optional#empty()}, so the caller applies the unknown-content fallback.
+ * (all-concepts, reference set, is-a, and ECL) on unversioned, edition-qualified and
+ * version-qualified SNOMED URIs, and VCL implicit value set URLs. Content that is absent from the
+ * store resolves to {@link Optional#empty()}, so the caller applies the unknown-content fallback.
  *
  * @author John Grimes
  */
 public class ValueSetResolver {
 
   private static final String SNOMED_URI = "http://snomed.info/sct";
+  private static final String SNOMED_EXPERIMENTAL_URI = "http://snomed.info/xsct";
   private static final String VCL_URI_PREFIX = "http://fhir.org/VCL";
   private static final String CONCEPT = "concept";
-  private static final Pattern SNOMED_VERSIONED =
-      Pattern.compile("^http://snomed\\.info/x?sct/\\d+/version/\\d+$");
+
+  /** A SNOMED CT edition URI, optionally qualified by a version. */
+  private static final Pattern SNOMED_EDITION_OR_VERSION =
+      Pattern.compile("^http://snomed\\.info/x?sct/\\d+(/version/\\d+)?$");
+
+  /** A SNOMED CT edition URI that names no version. */
+  private static final Pattern SNOMED_EDITION =
+      Pattern.compile("^http://snomed\\.info/x?sct/\\d+$");
 
   /** The maximum number of memoised URL resolutions retained. */
   private static final int RESOLUTION_CACHE_SIZE = 1000;
@@ -141,7 +148,7 @@ public class ValueSetResolver {
     if (valueSetUrl.startsWith(VCL_URI_PREFIX)) {
       return resolveVcl(valueSetUrl);
     }
-    if (valueSetUrl.startsWith(SNOMED_URI)) {
+    if (valueSetUrl.startsWith(SNOMED_URI) || valueSetUrl.startsWith(SNOMED_EXPERIMENTAL_URI)) {
       return resolveSnomed(valueSetUrl);
     }
     return resolveExplicit(valueSetUrl);
@@ -206,7 +213,7 @@ public class ValueSetResolver {
     final String requestedVersion;
     if (SNOMED_URI.equals(base)) {
       requestedVersion = null;
-    } else if (SNOMED_VERSIONED.matcher(base).matches()) {
+    } else if (SNOMED_EDITION_OR_VERSION.matcher(base).matches()) {
       requestedVersion = base;
     } else {
       return Optional.empty();
@@ -269,8 +276,10 @@ public class ValueSetResolver {
   /**
    * Resolves a code system URL and optional version to the stable identifier of a stored code
    * system version. An explicit version selects exactly that version; an absent version selects the
-   * default per the version-ordering rules. This backs both value set resolution and the per-coding
-   * operations (lookup, subsumes, translate).
+   * default per the version-ordering rules. A SNOMED CT edition URI that names no version, such as
+   * {@code http://snomed.info/sct/32506021000036107}, selects the latest stored version of that
+   * edition, as THO permits. This backs both value set resolution and the per-coding operations
+   * (lookup, subsumes, translate).
    *
    * @param url the code system canonical URL
    * @param requestedVersion the requested version, or null for the default
@@ -284,18 +293,33 @@ public class ValueSetResolver {
       @Nonnull final String url, @jakarta.annotation.Nullable final String requestedVersion) {
     final List<CodeSystemEntry> candidates =
         catalogue.stream().filter(entry -> url.equals(entry.getUrl())).toList();
-    if (candidates.isEmpty()) {
-      return Optional.empty();
+    if (requestedVersion == null) {
+      return latestOf(candidates, url);
     }
-    if (requestedVersion != null) {
-      return candidates.stream()
-          .filter(entry -> requestedVersion.equals(entry.getVersion()))
-          .findFirst()
-          .map(CodeSystemEntry::getSystemVersionId);
+    if (SNOMED_URI.equals(url) && SNOMED_EDITION.matcher(requestedVersion).matches()) {
+      // Matching on the version prefix keeps the sct and xsct namespaces apart, and stops an
+      // edition from matching another edition whose identifier merely starts with the same digits.
+      final String versionPrefix = requestedVersion + "/version/";
+      return latestOf(
+          candidates.stream()
+              .filter(
+                  entry ->
+                      entry.getVersion() != null && entry.getVersion().startsWith(versionPrefix))
+              .toList(),
+          url);
     }
-    final CodeSystemEntry latest =
-        versionResolver.getLatestOfVersions(candidates, CodeSystemEntry::getVersion, url);
-    return Optional.ofNullable(latest).map(CodeSystemEntry::getSystemVersionId);
+    return candidates.stream()
+        .filter(entry -> requestedVersion.equals(entry.getVersion()))
+        .findFirst()
+        .map(CodeSystemEntry::getSystemVersionId);
+  }
+
+  @Nonnull
+  private Optional<String> latestOf(
+      @Nonnull final List<CodeSystemEntry> candidates, @Nonnull final String url) {
+    return Optional.ofNullable(
+            versionResolver.getLatestOfVersions(candidates, CodeSystemEntry::getVersion, url))
+        .map(CodeSystemEntry::getSystemVersionId);
   }
 
   /** Finds the first system scope in an expression, which determines the code system it targets. */

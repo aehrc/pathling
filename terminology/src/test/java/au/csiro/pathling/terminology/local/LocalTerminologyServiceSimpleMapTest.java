@@ -123,8 +123,12 @@ class LocalTerminologyServiceSimpleMapTest {
             .config("spark.ui.enabled", "false")
             .getOrCreate();
     final String store = work.resolve("store").toString();
+    final String release = writeRelease(work.resolve("release")).toString();
+    new SnomedRf2Importer(spark, store).importFrom(release, null);
+    // The same release again as an experimental version, which the default version ranks below
+    // every production version, so that experimental concept map URLs have content to resolve.
     new SnomedRf2Importer(spark, store)
-        .importFrom(writeRelease(work.resolve("release")).toString(), null);
+        .importFrom(release, "http://snomed.info/xsct/" + MODULE + "/version/" + EFFECTIVE_TIME);
     service =
         new LocalTerminologyService(
             TerminologyConfiguration.builder()
@@ -201,6 +205,30 @@ class LocalTerminologyServiceSimpleMapTest {
     assertEquals(
         List.of("inexact " + ICD_O_SYSTEM + "|C18.9"),
         describe(service.translate(snomed(SOURCE_B), url, false, null)));
+  }
+
+  @Test
+  void forwardTranslationThroughAnEditionUrlWithoutVersionUsesTheLatestVersion() {
+    // The documented translate example names the edition but not the version, which THO allows a
+    // server to resolve to the most recent version of that edition.
+    final String url = SNOMED + "/" + MODULE + "?fhir_cm=" + CTV3_MAP;
+    assertEquals(
+        List.of("equivalent " + CTV3_SYSTEM + "|X40J4"),
+        describe(service.translate(snomed(SOURCE_D), url, false, null)));
+  }
+
+  @Test
+  void forwardTranslationThroughAnAbsentEditionFindsNothing() {
+    final String url = SNOMED + "/32506021000036107?fhir_cm=" + CTV3_MAP;
+    assertEquals(List.of(), describe(service.translate(snomed(SOURCE_D), url, false, null)));
+  }
+
+  @Test
+  void forwardTranslationThroughAnExperimentalEditionUrlWithoutVersionUsesItsLatestVersion() {
+    final String url = "http://snomed.info/xsct/" + MODULE + "?fhir_cm=" + CTV3_MAP;
+    assertEquals(
+        List.of("equivalent " + CTV3_SYSTEM + "|X40J4"),
+        describe(service.translate(snomed(SOURCE_D), url, false, null)));
   }
 
   @Test
