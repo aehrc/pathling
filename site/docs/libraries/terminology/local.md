@@ -737,11 +737,24 @@ remote mode rather than an error.
 | A SNOMED CT implicit concept map | `http://snomed.info/sct?fhir_cm=[refsetId]`        |
 
 The `isa/` form is the subtype hierarchy including the named concept itself, so
-it is equivalent to `ecl/<<[conceptId]`. Every SNOMED form is also accepted on an
-edition and version qualified URI, for example
-`http://snomed.info/sct/32506021000036107/version/20250630?fhir_vs=ecl/...`,
-which evaluates against that version rather than the store default. Any other
-`fhir_vs` value is treated as unknown content.
+it is equivalent to `ecl/<<[conceptId]`. Any other `fhir_vs` value is treated as
+unknown content.
+
+Every SNOMED form, including `fhir_cm`, is also accepted on an edition URI, with
+or without a version, and evaluates against that edition rather than the store
+default:
+
+| Base URI                                                    | Evaluates against                         |
+| ----------------------------------------------------------- | ----------------------------------------- |
+| `http://snomed.info/sct/32506021000036107/version/20250630` | that version                              |
+| `http://snomed.info/sct/32506021000036107`                  | the latest stored version of that edition |
+
+The same applies to a SNOMED CT version given in `Coding.version` or in a VCL
+system, such as `(http://snomed.info/sct|http://snomed.info/sct/32506021000036107)`.
+An edition URI in the `http://snomed.info/xsct` namespace, which the
+[SNOMED CT URI Standard](https://docs.snomed.org/snomed-ct-specifications/snomed-ct-uri-standard/2-snomed-ct-uri-space#uris-for-unpublished-content)
+reserves for unpublished content, selects only from versions imported under that
+namespace, and an `http://snomed.info/sct` edition URI only from the others.
 
 A SNOMED CT implicit concept map is either one of the four association
 reference sets or a simple map reference set, which are the two kinds
