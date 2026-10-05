@@ -40,6 +40,12 @@ public class ReferenceCollection extends Collection {
   private static final String TYPE_ELEMENT_NAME = "type";
 
   /**
+   * Matches the trailing {@code [id]} segment of a reference, with an optional {@code
+   * /_history/[version]} suffix.
+   */
+  private static final String REFERENCE_ID_SUFFIX_PATTERN = "/[^/]+(/_history/[^/]+)?$";
+
+  /**
    * Creates a new ReferenceCollection.
    *
    * @param column the column representation
@@ -60,6 +66,9 @@ public class ReferenceCollection extends Collection {
   /**
    * Gets a collection containing the keys of the references.
    *
+   * <p>If a type is specified, only references whose type segment names exactly that type are kept,
+   * so {@code getReferenceKey(Person)} does not match a {@code RelatedPerson/r1} reference.
+   *
    * @param typeSpecifier The type specifier to filter by
    * @return a {@link Collection} containing the keys of the references in this collection, suitable
    *     for joining with resource keys
@@ -67,9 +76,10 @@ public class ReferenceCollection extends Collection {
   @Nonnull
   public Collection getKeyCollection(@Nonnull final Optional<TypeSpecifier> typeSpecifier) {
     return typeSpecifier
-        // If a type was specified, create a regular expression that matches references of this
-        // type.
-        .map(ts -> ts.toFhirType().toCode() + "/.+")
+        // If a type was specified, create a regular expression that matches references whose
+        // type segment is exactly this type. The match is anchored so that types whose names
+        // end with the specified type (e.g. RelatedPerson for Person) are not matched.
+        .map(ts -> "^" + ts.toFhirType().toCode() + REFERENCE_ID_SUFFIX_PATTERN)
         // Get a ColumnTransform that filters the reference column based on the regular expression.
         .map(this::keyFilter)
         // Apply the filter to the reference column.
