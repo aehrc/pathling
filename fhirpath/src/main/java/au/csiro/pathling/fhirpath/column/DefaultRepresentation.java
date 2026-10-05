@@ -21,7 +21,6 @@ import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.encoders.ValueFunctions;
 import jakarta.annotation.Nonnull;
-import jakarta.annotation.Nullable;
 import java.util.Optional;
 import java.util.function.UnaryOperator;
 import lombok.AccessLevel;
@@ -116,26 +115,58 @@ public class DefaultRepresentation extends ColumnRepresentation {
   @Nonnull
   @Override
   public ColumnRepresentation traverse(@Nonnull final String fieldName) {
-    return copyOf(value.getField(fieldName)).removeNulls().flatten();
+    return fromField(ValueFunctions.nullSafeField(value, fieldName));
   }
 
   @Override
   @Nonnull
   public ColumnRepresentation traverse(
       @Nonnull final String fieldName, @Nonnull final Optional<FHIRDefinedType> fhirType) {
-    @Nullable final FHIRDefinedType resolvedFhirType = fhirType.orElse(null);
-    if (FHIRDefinedType.BASE64BINARY.equals(resolvedFhirType)) {
-      // If the field is a base64Binary, represent it using a BinaryRepresentation.
-      return DefaultRepresentation.fromBinaryColumn(traverse(fieldName).getValue());
-    } else {
-      // Otherwise, use the default representation.
-      return traverse(fieldName);
-    }
+    return withFhirType(traverse(fieldName), fhirType);
+  }
+
+  @Override
+  @Nonnull
+  public ColumnRepresentation traverseOrEmpty(
+      @Nonnull final String fieldName, @Nonnull final Optional<FHIRDefinedType> fhirType) {
+    return withFhirType(fromField(ValueFunctions.fieldOrNull(value, fieldName)), fhirType);
   }
 
   @Override
   @Nonnull
   public ColumnRepresentation getField(@Nonnull final String fieldName) {
-    return copyOf(value.getField(fieldName));
+    return copyOf(ValueFunctions.nullSafeField(value, fieldName));
+  }
+
+  /**
+   * Builds the representation of a traversed field, which is flattened and has null elements
+   * removed.
+   *
+   * @param field The extracted field
+   * @return The representation of the field
+   */
+  @Nonnull
+  private ColumnRepresentation fromField(@Nonnull final Column field) {
+    return copyOf(field).removeNulls().flatten();
+  }
+
+  /**
+   * Adapts the representation of a traversed field to its FHIR type.
+   *
+   * @param field The representation of the traversed field
+   * @param fhirType The FHIR type of the field
+   * @return The representation of the field, adapted to its type
+   */
+  @Nonnull
+  private static ColumnRepresentation withFhirType(
+      @Nonnull final ColumnRepresentation field,
+      @Nonnull final Optional<FHIRDefinedType> fhirType) {
+    if (fhirType.filter(FHIRDefinedType.BASE64BINARY::equals).isPresent()) {
+      // If the field is a base64Binary, represent it using a BinaryRepresentation.
+      return DefaultRepresentation.fromBinaryColumn(field.getValue());
+    } else {
+      // Otherwise, use the default representation.
+      return field;
+    }
   }
 }

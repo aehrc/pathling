@@ -28,6 +28,8 @@ import static org.apache.spark.sql.functions.inline;
 import static org.apache.spark.sql.functions.struct;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Arrays;
 import java.util.List;
@@ -143,6 +145,35 @@ public abstract class ExpressionsBothModesTest {
 
     assertEquals(aSize * bSize * cSize, ((Seq<?>) spRow.getAs("sp_three")).size());
     assertEquals(aSize * bSize * cSize, ((Seq<?>) spoRow.getAs("spo_three")).size());
+  }
+
+  @Test
+  void structProductOutputFieldsAreNullable() {
+    // An outer product yields a null element for an empty operand, so every output field can be
+    // null, even if the field of the operand is declared as non-nullable. A literal null operand
+    // lets the whole generator be code-generated, which relies on the declared nullability.
+    final StructType elementType =
+        DataTypes.createStructType(
+            List.of(
+                DataTypes.createStructField(
+                    "values", DataTypes.createArrayType(DataTypes.StringType), false)));
+
+    final Dataset<Row> result =
+        spark
+            .range(1)
+            .toDF()
+            .select(
+                inline(
+                    ColumnFunctions.structProduct(
+                        array(struct(functions.lit(1).alias("id"))),
+                        ColumnFunctions.structProductOuter(
+                            functions.lit(null).cast(DataTypes.createArrayType(elementType))))));
+
+    assertTrue(result.schema().apply("values").nullable());
+    final List<Row> rows = result.collectAsList();
+    assertEquals(1, rows.size());
+    assertEquals(1, (Integer) rows.getFirst().getAs("id"));
+    assertNull(rows.getFirst().getAs("values"));
   }
 
   @Test
