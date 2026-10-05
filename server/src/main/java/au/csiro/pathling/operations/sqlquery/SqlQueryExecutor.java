@@ -37,10 +37,11 @@ import org.springframework.stereotype.Component;
  * lifecycle. The only piece of the pipeline that touches Spark.
  *
  * <p>Each node of the graph is materialised in topological order: a {@code ViewDefinition} leaf is
- * executed as a view, and a {@code SQLView} node's SQL is rewritten against the temp views of its
- * already-materialised children, validated, and run. The top-level SQL is then rewritten against
- * its own direct dependencies' temp views and run. Every node's SQL is validated statically before
- * execution and against its analysed plan during execution.
+ * executed as a view, an external table leaf is read from its configured path, and a {@code
+ * SQLView} node's SQL is rewritten against the temp views of its already-materialised children,
+ * validated, and run. The top-level SQL is then rewritten against its own direct dependencies' temp
+ * views and run. Every node's SQL is validated statically before execution and against its analysed
+ * plan during execution.
  *
  * @author John Grimes
  */
@@ -103,14 +104,12 @@ public class SqlQueryExecutor {
    * @param request the parsed and validated request
    * @param graph the resolved dependency graph the SQL references
    * @param dataSource the data source backing FhirView execution
-   * @param requestId the HAPI per-request id used to namespace temp view names
    * @param consumer terminal consumer of the result dataset
    */
   public void execute(
       @Nonnull final SqlQueryRequest request,
       @Nonnull final ResolvedDependencyGraph graph,
       @Nonnull final DataSource dataSource,
-      @Nonnull final String requestId,
       @Nonnull final Consumer<Dataset<Row>> consumer) {
 
     validateStatically(request, graph);
@@ -118,7 +117,7 @@ public class SqlQueryExecutor {
     final Map<String, String> registeredByKey = new LinkedHashMap<>();
     try {
       for (final ResolvedDependency node : graph.getOrderedNodes()) {
-        materialiseNode(node, dataSource, requestId, registeredByKey);
+        materialiseNode(node, dataSource, registeredByKey);
       }
 
       final Map<String, String> topLevelViews =
@@ -144,17 +143,21 @@ public class SqlQueryExecutor {
 
   /**
    * Materialises a single graph node as a request-scoped temp view, recording its name by canonical
-   * key. A {@code SQLView} node's analysed plan is validated against its own children's temp views
-   * before registration, so it cannot reach an unauthorised data source.
+   * key. A {@code ViewDefinition} leaf is executed against the data source, an external table leaf
+   * is read from its configured path, and a {@code SQLView} node's analysed plan is validated
+   * against its own children's temp views before registration, so it cannot reach an unauthorised
+   * data source. Neither leaf kind needs that check: a leaf's relation is exposed only through the
+   * trusted alias registered here, which is what the parent's own analysed-plan check accepts.
    */
   private void materialiseNode(
       @Nonnull final ResolvedDependency node,
       @Nonnull final DataSource dataSource,
-      @Nonnull final String requestId,
       @Nonnull final Map<String, String> registeredByKey) {
     final Dataset<Row> dataset;
     if (node instanceof final ResolvedViewDefinition viewDefinition) {
       dataset = viewRegistrationService.buildViewDefinition(viewDefinition.getView(), dataSource);
+    } else if (node instanceof final ResolvedExternalTable externalTable) {
+      dataset = viewRegistrationService.buildExternalTable(externalTable);
     } else if (node instanceof final ResolvedSqlView sqlView) {
       dataset = viewRegistrationService.buildSqlView(sqlView, registeredByKey);
       final Set<String> childViewNames =
@@ -166,7 +169,7 @@ public class SqlQueryExecutor {
           "Unsupported dependency node type: " + node.getClass().getSimpleName());
     }
     final String tempViewName =
-        viewRegistrationService.registerDataset(node.getCanonicalKey(), dataset, requestId);
+        viewRegistrationService.registerDataset(node.getCanonicalKey(), dataset);
     registeredByKey.put(node.getCanonicalKey(), tempViewName);
     log.debug(
         "Materialised temp view '{}' for dependency '{}'", tempViewName, node.getCanonicalKey());

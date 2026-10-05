@@ -38,4 +38,15 @@ public class ResolvedViewDefinition implements ResolvedDependency {
    * The parsed view, ready for execution. Its resource drives the projected-resource READ check.
    */
   @Nonnull FhirView view;
+
+  /**
+   * A ViewDefinition's rows are entirely decided by its parsed projection.
+   *
+   * @return the content description
+   */
+  @Override
+  @Nonnull
+  public String describeContent() {
+    return "view-definition:" + view;
+  }
 }

@@ -20,14 +20,17 @@ package au.csiro.pathling.operations.sqlquery;
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.io.source.DataSource;
+import au.csiro.pathling.operations.sql.SqlOperationError;
 import au.csiro.pathling.views.FhirView;
 import au.csiro.pathling.views.FhirViewExecutor;
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import jakarta.annotation.Nonnull;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.UUID;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Dataset;
@@ -38,10 +41,10 @@ import org.springframework.stereotype.Component;
 
 /**
  * Manages the lifecycle of Spark temporary views for SQL query execution. Each execution scopes its
- * views to the HAPI per-request id and keys them by the resolved dependency's canonical identity,
- * so concurrent {@code $sql-run} requests cannot clobber one another in Spark's session-global
- * temporary view catalog, a shared node materialises once, and the same table label used in
- * different nodes cannot collide.
+ * views to a server-generated random namespace and keys them by the resolved dependency's canonical
+ * identity, so concurrent {@code $sql-run} requests cannot clobber one another in Spark's
+ * session-global temporary view catalog, a shared node materialises once, and the same table label
+ * used in different nodes cannot collide.
  *
  * @author John Grimes
  */
@@ -51,7 +54,7 @@ public class ViewRegistrationService {
 
   private static final String VIEW_NAME_PREFIX = "sqlquery_";
 
-  private static final Pattern UNSAFE_REQUEST_ID_CHARS = Pattern.compile("\\W");
+  private static final Pattern UNSAFE_IDENTIFIER_CHARS = Pattern.compile("\\W");
 
   @Nonnull private final SparkSession sparkSession;
 
@@ -81,19 +84,32 @@ public class ViewRegistrationService {
    * identifier (a dependency's canonical key, or a bare label in the single-level tests) and
    * returns that name.
    *
+   * <p>The view name is namespaced with a server-generated random id, never the caller-supplied
+   * request id: HAPI takes the request id verbatim from the caller's {@code X-Request-ID} header,
+   * so namespacing views with it would let a caller predict temp view names and forge a {@code
+   * SubqueryAlias} that the analysed-plan trust gate would accept (issue 2770).
+   *
    * @param identifier the canonical key (or label) the temp view materialises
    * @param dataset the dataset to register
-   * @param requestId the per-request id used to namespace the registered view name
    * @return the registered temp view name
    */
   @Nonnull
-  String registerDataset(
-      @Nonnull final String identifier,
-      @Nonnull final Dataset<Row> dataset,
-      @Nonnull final String requestId) {
-    final String tempViewName = resolveTempViewName(requestId, identifier);
+  String registerDataset(@Nonnull final String identifier, @Nonnull final Dataset<Row> dataset) {
+    final String tempViewName = resolveTempViewName(newViewNamespace(), identifier);
     dataset.createOrReplaceTempView(tempViewName);
     return tempViewName;
+  }
+
+  /**
+   * Generates a fresh, unguessable namespace for temp view names. A new namespace is minted for
+   * every registered view, so concurrent requests can never clobber one another's views and a
+   * caller can never predict the name their request's views will be registered under (issue 2770).
+   *
+   * @return a Spark-safe random namespace
+   */
+  @Nonnull
+  static String newViewNamespace() {
+    return "v" + UUID.randomUUID().toString().replace("-", "");
   }
 
   /**
@@ -158,6 +174,37 @@ public class ViewRegistrationService {
   }
 
   /**
+   * Builds the dataset for a resolved external table leaf by reading its configured path in its
+   * configured format. The result is not registered; the caller registers it. The read resolves the
+   * relation and schema eagerly, so a missing or unreadable path fails here rather than at collect
+   * time.
+   *
+   * <p>Any failure of the read is an operator-side fault, not a defect in the caller's SQL, so it
+   * is translated into a 500 that names the table's URL only; the path and the Spark cause are
+   * logged but not returned. The cause is deliberately not attached to the thrown exception because
+   * the error interceptor unwraps an internal error to its cause, which would discard this message.
+   *
+   * @param node the resolved external table
+   * @return the table's dataset
+   * @throws BaseServerResponseException with status 500 if the table cannot be read
+   */
+  @Nonnull
+  public Dataset<Row> buildExternalTable(@Nonnull final ResolvedExternalTable node) {
+    try {
+      return sparkSession.read().format(node.getFormat()).load(node.getPath());
+    } catch (final Exception e) {
+      log.error(
+          "Failed to read external table {} ({} at {})",
+          node.getCanonicalKey(),
+          node.getFormat(),
+          node.getPath(),
+          e);
+      throw SqlOperationError.internalError(
+          "Failed to read external table '" + node.getCanonicalKey() + "'");
+    }
+  }
+
+  /**
    * Drops the specified temporary views from the Spark session.
    *
    * @param tempViewNames the names of the temporary views to drop
@@ -196,33 +243,19 @@ public class ViewRegistrationService {
    * dependency's canonical key (the production case, so a shared node materialises once and labels
    * cannot collide across nodes) or, for the existing single-level tests, a bare table label.
    *
-   * <p>Both the request id and the identifier are sanitised so that the resulting Spark temp view
-   * name is a legal identifier (HAPI request ids are alphanumeric, but {@code X-Request-ID} and
-   * canonical keys such as {@code ViewDefinition/patient-view} can carry slashes and dashes).
+   * <p>The namespace is always a server-generated random id ({@code v} followed by hex digits), so
+   * it needs no sanitising. The identifier is sanitised so that the resulting Spark temp view name
+   * is a legal identifier (canonical keys such as {@code ViewDefinition/patient-view} can carry
+   * slashes and dashes).
    *
-   * @param requestId the per-request id used to namespace registered view names
+   * @param namespace the server-generated random namespace for this view
    * @param identifier the canonical key (or label) the temp view materialises
    * @return the temp view name
    */
   @Nonnull
   static String resolveTempViewName(
-      @Nonnull final String requestId, @Nonnull final String identifier) {
-    return VIEW_NAME_PREFIX + sanitiseRequestId(requestId) + "_" + sanitiseIdentifier(identifier);
-  }
-
-  /**
-   * Strips characters that aren't valid in a Spark identifier. Falls back to a hash of the original
-   * input when the result would otherwise be empty (e.g. a request id consisting only of dashes,
-   * which would collide with another all-special-chars id and reintroduce the temp-view clobbering
-   * this namespacing exists to prevent).
-   */
-  @Nonnull
-  private static String sanitiseRequestId(@Nonnull final String requestId) {
-    final String sanitised = UNSAFE_REQUEST_ID_CHARS.matcher(requestId).replaceAll("");
-    if (!sanitised.isEmpty()) {
-      return sanitised;
-    }
-    return "r" + Integer.toUnsignedString(requestId.hashCode(), 16);
+      @Nonnull final String namespace, @Nonnull final String identifier) {
+    return VIEW_NAME_PREFIX + namespace + "_" + sanitiseIdentifier(identifier);
   }
 
   /**
@@ -234,10 +267,10 @@ public class ViewRegistrationService {
    */
   @Nonnull
   private static String sanitiseIdentifier(@Nonnull final String identifier) {
-    if (!UNSAFE_REQUEST_ID_CHARS.matcher(identifier).find()) {
+    if (!UNSAFE_IDENTIFIER_CHARS.matcher(identifier).find()) {
       return identifier;
     }
-    final String cleaned = UNSAFE_REQUEST_ID_CHARS.matcher(identifier).replaceAll("_");
+    final String cleaned = UNSAFE_IDENTIFIER_CHARS.matcher(identifier).replaceAll("_");
     return cleaned + "_" + Integer.toUnsignedString(identifier.hashCode(), 16);
   }
 }

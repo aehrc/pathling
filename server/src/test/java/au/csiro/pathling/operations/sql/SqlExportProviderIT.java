@@ -22,6 +22,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import jakarta.annotation.Nonnull;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
@@ -122,6 +123,41 @@ class SqlExportProviderIT extends AbstractAsyncExportIT {
     assertThat(outputs).hasSize(1);
     final String content = downloadAll(outputNamed(outputs, "ad_hoc"));
     assertThat(content).contains("Smith").contains("Johnson").contains("Williams");
+  }
+
+  // A kick-off is executed against the definitions it submitted, not against an earlier
+  // kick-off's. Both requests here carry the same subject name and the same inline subject SQL,
+  // and both inline a body at the same context url; only that body differs. Matching on the
+  // subject alone handed the second request the first one's job and the first one's rows
+  // (aehrc/pathling#2757).
+  @Test
+  void aDifferentInlineContextBodyIsExecutedAsItsOwnJob() throws InterruptedException {
+    final Map<String, Object> unfiltered =
+        parameters(
+            subject(nameOf("ad_hoc"), resourcePart("subjectResource", inlineQueryOverAdHocView())),
+            resourcePart("context", adHocView()));
+    final Map<String, Object> filtered =
+        parameters(
+            subject(nameOf("ad_hoc"), resourcePart("subjectResource", inlineQueryOverAdHocView())),
+            resourcePart("context", adHocViewLimitedToJohnson()));
+
+    final String firstStatusUrl = contentLocationOf(systemLevelUri(), unfiltered);
+    final String secondStatusUrl = contentLocationOf(systemLevelUri(), filtered);
+    assertThat(secondStatusUrl)
+        .as("A kick-off inlining a different context body must get its own job")
+        .isNotEqualTo(firstStatusUrl);
+
+    // The rows are the filtered view's, so the second job ran the body the second request
+    // submitted.
+    final Map<String, Object> manifest = exportToCompletion(systemLevelUri(), filtered);
+    final String content = downloadAll(outputNamed(paramsByName(manifest, "output"), "ad_hoc"));
+    assertThat(content).contains("Johnson").doesNotContain("Smith").doesNotContain("Williams");
+
+    // The first job is untouched by the second, and still holds the unfiltered rows.
+    final Map<String, Object> firstManifest = exportToCompletion(systemLevelUri(), unfiltered);
+    final String firstContent =
+        downloadAll(outputNamed(paramsByName(firstManifest, "output"), "ad_hoc"));
+    assertThat(firstContent).contains("Smith").contains("Johnson").contains("Williams");
   }
 
   // An analysis failure cannot be caught at kick-off, since analysing the SQL needs the dependency
@@ -476,6 +512,17 @@ class SqlExportProviderIT extends AbstractAsyncExportIT {
                 List.of(
                     Map.of("name", "id", "path", "id"),
                     Map.of("name", "family_name", "path", "name.first().family")))));
+  }
+
+  /**
+   * The same ad-hoc ViewDefinition, under the same canonical url, narrowed to a single patient.
+   * Used to show that the body inlined at a url decides what a kick-off exports.
+   */
+  @Nonnull
+  private Map<String, Object> adHocViewLimitedToJohnson() {
+    final Map<String, Object> view = new LinkedHashMap<>(adHocView());
+    view.put("where", List.of(Map.of("path", "name.first().family = 'Johnson'")));
+    return view;
   }
 
   /** An inline SQLQuery whose only table source is the ad-hoc view above. */

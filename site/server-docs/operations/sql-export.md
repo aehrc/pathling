@@ -56,7 +56,10 @@ meaningless for a bulk file set, and is refused as `invalid`.
 ## Job guarantees
 
 - **One snapshot.** Every subject reads the Delta table versions pinned when
-  the job began, so concurrent writes are invisible to it.
+  the job began, so concurrent writes are invisible to it. The snapshot covers
+  the warehouse only: a configured
+  [external table](../configuration#sql-query) is outside it and is read at its
+  current state when the subject that references it is materialised.
 - **One resolution per canonical URL.** Dependency resolution is memoised
   across the job, so an artefact several subjects share is resolved once.
 - **One output per subject.** The manifest carries exactly one `output` per

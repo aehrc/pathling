@@ -35,6 +35,7 @@ import org.springframework.validation.annotation.Validated;
  * Configuration properties for the Pathling server.
  *
  * @author Felix Naumann
+ * @author John Grimes
  */
 @ConfigurationProperties(prefix = "pathling")
 @Validated
@@ -117,9 +118,20 @@ public class ServerConfiguration {
   /** Configuration for the admin UI. */
   @Valid @NotNull private AdminUiConfiguration adminUi = new AdminUiConfiguration();
 
-  /** Logs the server configuration on startup. */
+  /**
+   * Logs the server configuration on startup. Each configured external table is recorded at {@code
+   * INFO} so that operators can see which tables are reachable from SQL on FHIR queries; no table
+   * path is probed here.
+   */
   @PostConstruct
   public void logConfiguration() {
     log.debug("Server configuration: {}", this);
+    for (final ExternalTableConfiguration table : sqlQuery.getExternalTables()) {
+      log.info(
+          "External table: url={}, path={}, format={}",
+          table.getUrl(),
+          table.getPath(),
+          table.getFormat());
+    }
   }
 }

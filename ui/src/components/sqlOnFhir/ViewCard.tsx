@@ -118,9 +118,6 @@ export function ViewCard({ job, onClose }: Readonly<ViewCardProps>) {
   // Track multiple exports within this card.
   const [exports, setExports] = useState<ViewExportInstance[]>([]);
 
-  // A view is always run in a tabular format, so a binary result cannot arise.
-  const tabular = result?.kind === "tabular" ? result : undefined;
-
   // Derive states.
   const isRunning = status === "pending";
   const isComplete = status === "success";
@@ -187,23 +184,23 @@ export function ViewCard({ job, onClose }: Readonly<ViewCardProps>) {
 
         {error && <ErrorCallout issues={toDisplayIssues(error)} size="1" />}
 
-        {isComplete && tabular && tabular.rows.length === 0 && (
+        {isComplete && result && result.rows.length === 0 && (
           <Text size="2" color="gray">
             No rows returned.
           </Text>
         )}
 
-        {isComplete && tabular && tabular.rows.length > 0 && (
+        {isComplete && result && result.rows.length > 0 && (
           <>
             <Flex align="center" justify="between">
-              <Badge color="gray">{tabular.rows.length} rows (first 10)</Badge>
+              <Badge color="gray">{result.rows.length} rows (first 10)</Badge>
               <ExportControls onExport={handleExport} disabled={false} />
             </Flex>
             <Box style={{ width: "100%", overflowX: "auto" }}>
               <Table.Root size="1">
                 <Table.Header>
                   <Table.Row>
-                    {tabular.columns.map((column) => (
+                    {result.columns.map((column) => (
                       <Table.ColumnHeaderCell key={column} style={{ whiteSpace: "nowrap" }}>
                         <Text weight="medium" size="1">
                           {column}
@@ -213,10 +210,10 @@ export function ViewCard({ job, onClose }: Readonly<ViewCardProps>) {
                   </Table.Row>
                 </Table.Header>
                 <Table.Body>
-                  {tabular.rows.map((row, rowIndex) => (
+                  {result.rows.map((row, rowIndex) => (
                     // eslint-disable-next-line @eslint-react/no-array-index-key -- Query result rows have no stable identifier.
                     <Table.Row key={rowIndex}>
-                      {tabular.columns.map((column) => (
+                      {result.columns.map((column) => (
                         <Table.Cell key={column} style={{ whiteSpace: "nowrap" }}>
                           <Code size="1" title={formatCellValue(row[column])}>
                             {formatCellValue(row[column])}

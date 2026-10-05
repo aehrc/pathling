@@ -100,7 +100,10 @@ cache key from the following components:
    `Accept-Encoding`)
 3. **Database state** - A hash of the current database state
 4. **Operation-specific parameters** - For operations that support POST with a
-   request body, parameters from the body are included
+   request body, parameters from the body are included. For `$sql-export` this
+   covers the resolved content of every dependency the job's subjects reach -
+   ViewDefinitions, SQLViews and external tables alike - so two kick-offs that
+   inline different definitions at the same canonical URL are not equivalent.
 
 If two requests produce the same cache key, they are considered equivalent and
 will share the same async job. This allows multiple clients making identical

@@ -27,7 +27,6 @@ import jakarta.annotation.Nonnull;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.hadoop.fs.Path;
 import org.apache.spark.sql.AnalysisException;
@@ -101,25 +100,6 @@ public class ExportFileWriter {
     } catch (final IOException e) {
       log.warn("Failed to delete partial output directory for job {}", jobId, e);
     }
-  }
-
-  /**
-   * Returns a name unique among the already-used names, appending a numeric suffix on collision.
-   *
-   * @param baseName the desired base name
-   * @param usedNames the names already used in this export (not modified)
-   * @return a unique name
-   */
-  @Nonnull
-  public String uniqueName(@Nonnull final String baseName, @Nonnull final Set<String> usedNames) {
-    if (!usedNames.contains(baseName)) {
-      return baseName;
-    }
-    int suffix = 1;
-    while (usedNames.contains(baseName + "_" + suffix)) {
-      suffix++;
-    }
-    return baseName + "_" + suffix;
   }
 
   /**

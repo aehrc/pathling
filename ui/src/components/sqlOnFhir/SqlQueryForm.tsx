@@ -47,7 +47,6 @@ import {
   rowsToBindings,
 } from "./sqlQueryFormHelpers";
 import { SqlQueryInlineTab } from "./SqlQueryInlineTab";
-import { SqlQueryOutputControls } from "./SqlQueryOutputControls";
 import { SqlQueryStoredTab } from "./SqlQueryStoredTab";
 import { useSqlQueryLibraries, useSqlViews, useViewDefinitions } from "../../hooks";
 import { ErrorCallout } from "../error/ErrorCallout";
@@ -55,7 +54,6 @@ import { ErrorCallout } from "../error/ErrorCallout";
 import type {
   SaveSqlQueryLibraryResult,
   SqlQueryLibrary,
-  SqlQueryOutputFormat,
   SqlQueryParameterDeclaration,
   SqlQueryParameterType,
   SqlQueryRelatedArtifact,
@@ -109,11 +107,8 @@ export function SqlQueryForm({
   const [tables, setTables] = useState<SqlQueryRelatedArtifact[]>([]);
   const [parameters, setParameters] = useState<SqlQueryParameterDeclaration[]>([]);
 
-  // Runtime bindings, output format and execution options.
+  // Runtime bindings.
   const [bindings, setBindings] = useState<SqlQueryRuntimeBindingsState>({});
-  const [format, setFormat] = useState<SqlQueryOutputFormat>("ndjson");
-  const [limit, setLimit] = useState<string>("");
-  const [csvHeader, setCsvHeader] = useState<boolean>(true);
 
   // Save error to surface inline (Execute errors are surfaced in the result card).
   const [saveError, setSaveError] = useState<Error | null>(null);
@@ -145,19 +140,11 @@ export function SqlQueryForm({
   const inlineInput = { title, sql, tables, parameters };
 
   const baseRequestOptions = () => {
-    // The result card shows at most 10 rows as a preview, so cap the request
-    // accordingly. Full-result downloads will be handled by a future SQL
-    // query export operation.
-    const parsedLimit = limit.trim() === "" ? undefined : Number.parseInt(limit, 10);
-    const requestLimit = parsedLimit === undefined ? 10 : Math.min(parsedLimit, 10);
     // The inline tab's rows carry their own values, so they are the source of
     // the inline request's bindings; the stored tab uses the name-keyed map.
     // A stored boolean with no entry is defaulted to false so the assembled
     // request never sends an unbound parameter.
     return {
-      format,
-      limit: requestLimit,
-      header: format === "csv" ? csvHeader : undefined,
       bindings:
         source === "stored"
           ? bindUntouchedBooleans(declaredParameters, bindings)
@@ -226,9 +213,6 @@ export function SqlQueryForm({
     }
   };
 
-  const limitInvalid =
-    limit.trim() !== "" && (!/^[0-9]+$/.test(limit.trim()) || Number.parseInt(limit, 10) <= 0);
-
   const duplicateParameterNames = findDuplicateParameterNames(parameters);
 
   // Every declared parameter must carry a valid value before the query can be
@@ -243,7 +227,6 @@ export function SqlQueryForm({
   const canExecute =
     !disabled &&
     !isExecuting &&
-    !limitInvalid &&
     parametersBound &&
     (source === "stored" ? selectedLibraryId !== "" : canExecuteInlineForm(inlineInput));
 
@@ -308,16 +291,6 @@ export function SqlQueryForm({
             </Tabs.Content>
           </Box>
         </Tabs.Root>
-
-        <SqlQueryOutputControls
-          format={format}
-          onFormatChange={setFormat}
-          limit={limit}
-          onLimitChange={setLimit}
-          header={csvHeader}
-          onHeaderChange={setCsvHeader}
-          disabled={disabled || isExecuting}
-        />
 
         <Flex gap="3">
           <Button

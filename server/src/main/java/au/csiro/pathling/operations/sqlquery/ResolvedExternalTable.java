@@ -18,37 +18,36 @@
 package au.csiro.pathling.operations.sqlquery;
 
 import jakarta.annotation.Nonnull;
-import java.util.Map;
 import lombok.Value;
 
 /**
- * A resolved {@code SQLView} node. Carries the view's SQL and the mapping from each table label the
- * SQL uses to the canonical key of the child node that label resolves to, so the SQL can be
- * rewritten against the children's request-scoped temp views at materialisation time.
+ * A resolved leaf node for an operator-configured external table. The table is read directly from
+ * its storage path by Spark rather than projected from FHIR resources, declares no further
+ * dependencies and carries no version, so it is always a leaf of the dependency graph.
  *
  * @author John Grimes
  */
 @Value
-public class ResolvedSqlView implements ResolvedDependency {
+public class ResolvedExternalTable implements ResolvedDependency {
 
-  /** The stable canonical identity of the SQLView Library. */
+  /** The configured canonical URL, verbatim. External tables have no version. */
   @Nonnull String canonicalKey;
 
-  /** The view's SQL text. */
-  @Nonnull String sql;
+  /** The storage location of the table, used only by the Spark read. */
+  @Nonnull String path;
 
-  /** This view's local table label to the canonical key of the resolved child it references. */
-  @Nonnull Map<String, String> childKeysByLabel;
+  /** The Spark data source name ({@code delta} or {@code parquet}), used only by the Spark read. */
+  @Nonnull String format;
 
   /**
-   * A SQLView produces rows by running its SQL over its children, so both the SQL and the children
-   * it is wired to are part of its content.
+   * An external table's rows come from the location it is pointed at, read as the configured
+   * format, both of which the operator can change while the canonical URL stays as it was.
    *
    * @return the content description
    */
   @Override
   @Nonnull
   public String describeContent() {
-    return "sql-view:" + sql + ':' + childKeysByLabel;
+    return "external-table:" + format + ':' + path;
   }
 }

@@ -18,8 +18,8 @@
 /**
  * Hook for the synchronous `$sql-run` operation. One hook serves every kind of
  * subject, because the operation itself is subject-polymorphic: a
- * ViewDefinition, a SQLQuery and a SQLView all go to the same endpoint and
- * come back in the same set of formats.
+ * ViewDefinition, a SQLQuery and a SQLView all go to the same endpoint. The
+ * result is always requested as NDJSON and parsed for preview.
  *
  * @author John Grimes
  */
@@ -32,7 +32,7 @@ import { config } from "../config";
 import { buildBindingsResource, readSqlQueryResponse } from "./sqlQueryHelpers";
 import { useAuth } from "../contexts/AuthContext";
 
-import type { SqlRunFormat, SubjectSource } from "../api";
+import type { SubjectSource } from "../api";
 import type {
   SqlQueryParameterType,
   SqlQueryResult,
@@ -45,12 +45,8 @@ import type {
 export interface SqlRunRequest {
   /** How the subject is named. */
   subject: SubjectSource;
-  /** Output format; the server defaults to ndjson when omitted. */
-  format?: SqlRunFormat;
   /** Maximum rows to return. */
   limit?: number;
-  /** Whether CSV output carries a header row. */
-  header?: boolean;
   /** Values bound to the declared parameters, for a SQL subject only. */
   bindings?: SqlQueryRuntimeBindings;
   /** Declared parameter types, keyed by name. */
@@ -90,7 +86,7 @@ export interface UseSqlRunResult {
 }
 
 /**
- * Runs a subject via `$sql-run` and returns a parsed, format-aware result.
+ * Runs a subject via `$sql-run` and returns the parsed NDJSON result.
  *
  * A stored subject with no runtime bindings is sent as a GET, which is the
  * form the specification prefers and the one a user can paste into a browser;
@@ -122,9 +118,7 @@ export function useSqlRun(options?: UseSqlRunOptions): UseSqlRunResult {
         request.subject.kind === "reference" && !parameters
           ? await sqlRunStored(fhirBaseUrl, {
               reference: request.subject.reference,
-              format: request.format,
               limit: request.limit,
-              header: request.header,
               patientIds: request.patientIds,
               groupIds: request.groupIds,
               since: request.since,
@@ -132,9 +126,7 @@ export function useSqlRun(options?: UseSqlRunOptions): UseSqlRunResult {
             })
           : await sqlRun(fhirBaseUrl, {
               subject: request.subject,
-              format: request.format,
               limit: request.limit,
-              header: request.header,
               parameters,
               patientIds: request.patientIds,
               groupIds: request.groupIds,
@@ -142,7 +134,7 @@ export function useSqlRun(options?: UseSqlRunOptions): UseSqlRunResult {
               accessToken,
             });
 
-      return readSqlQueryResponse(response, request.format ?? "ndjson");
+      return readSqlQueryResponse(response);
     },
     onSuccess: options?.onSuccess,
     onError: options?.onError,
