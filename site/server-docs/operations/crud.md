@@ -39,6 +39,7 @@ Content-Type: application/fhir+json
 ```
 
 The response will include:
+
 - HTTP status `201 Created`
 - A `Location` header with the URL of the newly created resource
 - The created resource with the server-generated ID
@@ -67,6 +68,7 @@ GET /fhir/Patient/example-patient-1
 ```
 
 The response will be:
+
 - HTTP status `200 OK` with the resource
 - HTTP status `404 Not Found` if the resource does not exist
 
@@ -118,11 +120,42 @@ DELETE /fhir/Patient/example-patient-1
 ```
 
 The response will be:
+
 - HTTP status `204 No Content` if the resource was successfully deleted
 - HTTP status `404 Not Found` if the resource does not exist
 
 Note that delete operations are not idempotent in Pathling - attempting to
 delete a resource that has already been deleted will return a `404` error.
+
+## ViewDefinition resources
+
+The server stores ViewDefinition resources as defined by
+[SQL on FHIR ViewDefinition 3.0.0-ballot](https://build.fhir.org/ig/HL7/sql-on-fhir/en/StructureDefinition-ViewDefinition.html).
+Every root element of the resource is retained, so a ViewDefinition reads back
+as it was written.
+
+Complex elements are stored using the FHIR R4 datatypes. Sub-elements that are
+defined only in later releases of FHIR are therefore not retained:
+
+- `useContext.valueCanonical`
+- `relatedArtifact.classifier`
+- `relatedArtifact.resourceReference`
+- `relatedArtifact.publicationStatus`
+- `relatedArtifact.publicationDate`
+- `relatedArtifact.document.height`
+- `relatedArtifact.document.width`
+- `relatedArtifact.document.frames`
+- `relatedArtifact.document.duration`
+- `relatedArtifact.document.pages`
+- `constant.valueInteger64`
+
+Codes that exist only in later releases, such as a `relatedArtifact.type` of
+`part-of`, are rejected with a `400` error rather than dropped.
+
+A warehouse that holds a ViewDefinition table written by an earlier version of
+Pathling needs
+[`pathling.storage.schemaAutoMerge`](../configuration#storage) enabled when
+upgrading, so that the table gains the columns for the additional elements.
 
 ## Batch operations
 

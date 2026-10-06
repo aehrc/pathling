@@ -22,12 +22,19 @@ Author: John Grimes.
 
 # noinspection PyPackageRequirements
 
+import os
+import warnings
 from typing import TYPE_CHECKING, Dict, Optional, Sequence
 
 from py4j.java_gateway import JavaObject
+from pyspark import SparkContext
 from pyspark.sql import Column, DataFrame, SparkSession
 
-from pathling._spark_defaults import managed_spark_defaults
+from pathling._spark_defaults import (
+    managed_spark_defaults,
+    merge_spark_conf,
+    validate_spark_conf,
+)
 from pathling.fhir import MimeType
 
 if TYPE_CHECKING:
@@ -126,6 +133,7 @@ class PathlingContext:
     def create(
         cls,
         spark: Optional[SparkSession] = None,
+        spark_conf: Optional[Dict[str, str]] = None,
         max_nesting_level: Optional[int] = 3,
         enable_extensions: Optional[bool] = False,
         enabled_open_types: Optional[Sequence[str]] = (
@@ -187,12 +195,22 @@ class PathlingContext:
         it will be reused - and it is assumed that the Pathling library API JAR is already on the
         classpath. If you are running your own cluster, make sure it is on the list of packages.
 
-        If a SparkSession is provided, it needs to include the Pathling library API JAR on its
-        classpath. You can get the path for the JAR (which is bundled with the Python package)
-        using the `pathling.etc.find_jar` method.
+        If a SparkSession is provided, it must already have the Pathling library runtime and
+        Delta Lake packages on its classpath, for example via the ``spark.jars.packages``
+        coordinates from :func:`pathling._spark_defaults.managed_spark_defaults`.
 
         :param spark: a pre-configured :class:`SparkSession` instance, use this if you need to
                control the way that the session is set up
+        :param spark_conf: extra Spark configuration entries to apply when Pathling builds a
+               new SparkSession, e.g. ``{"spark.driver.memory": "8g"}``. Keys must begin with
+               ``spark.`` and values must be strings. The entries are merged with Pathling's
+               managed defaults with the same protection as the CLI's ``--spark-conf`` flag,
+               so a managed key such as ``spark.jars.packages`` cannot be silently clobbered.
+               Cannot be combined with ``spark``, and raises :class:`ValueError` if a Spark
+               driver JVM is already running in the process (for example after an earlier
+               session, even a stopped one, or under ``spark-submit``): the driver heap and
+               classpath are fixed when the JVM launches, so settings such as
+               ``spark.driver.memory`` could no longer take effect.
         :param max_nesting_level: controls the maximum depth of nested element data that is encoded
                upon import. This affects certain elements within FHIR resources that contain
                recursive references, e.g. `QuestionnaireResponse.item
@@ -280,6 +298,33 @@ class PathlingContext:
             raise ValueError(
                 "terminology_storage_path is required when terminology_mode is 'local'"
             )
+        # spark_conf only takes effect when Pathling builds a new SparkSession
+        # and that build launches the driver JVM: launch-time settings (e.g.
+        # driver memory, packages) are fixed once the JVM is running.
+        if spark_conf is not None:
+            if spark is not None:
+                raise ValueError(
+                    "spark_conf cannot be used together with 'spark': the supplied "
+                    "SparkSession already exists, so the configuration could not "
+                    "take effect. Omit 'spark' to let Pathling build the session, "
+                    "or apply the configuration to your session yourself."
+                )
+            # The gateway outlives SparkSession.stop(), and spark-submit starts
+            # the JVM before Python runs, advertising it via PYSPARK_GATEWAY_PORT.
+            if (
+                SparkContext._gateway is not None
+                or "PYSPARK_GATEWAY_PORT" in os.environ
+            ):
+                raise ValueError(
+                    "spark_conf cannot take effect because a Spark driver JVM is "
+                    "already running in this process (started by an earlier "
+                    "SparkSession, a notebook or shell, or spark-submit), so "
+                    "launch-time settings such as spark.driver.memory would be "
+                    "ignored. Call create() with spark_conf before any Spark "
+                    "session is created in a fresh process, or configure Spark "
+                    "at launch (e.g. SPARK_DRIVER_MEMORY or spark-submit "
+                    "--driver-memory)."
+                )
 
         def _new_spark_session():
             extra_configs = {}
@@ -289,6 +334,18 @@ class PathlingContext:
                 extra_configs["spark.driver.extraJavaOptions"] = (
                     f"-agentlib:jdwp=transport=dt_socket,server=y,"
                     f"suspend={suspend_option},address={debug_port}"
+                )
+            if spark_conf is not None:
+                # Validate the user map and merge it with the managed defaults
+                # using the same protection as the CLI's --spark-conf flag, so
+                # a managed key (e.g. spark.jars.packages) cannot be clobbered.
+                # Applied last so an explicit spark_conf entry wins for the same
+                # key, mirroring the CLI's user-overlay-last convention.
+                extra_configs.update(
+                    merge_spark_conf(
+                        validate_spark_conf(spark_conf),
+                        on_warning=warnings.warn,
+                    )
                 )
             return _build_spark_session(extra_configs)
 
@@ -473,18 +530,46 @@ class PathlingContext:
             options = builder.build()
         self._jpc.importSnomed(source, storage_path, options)
 
-    def import_fhir_terminology(self, source: str, storage_path: str) -> None:
+    def import_fhir_terminology(
+        self,
+        source: str,
+        storage_path: str,
+        verify_package: bool = True,
+        package_registry: Optional[str] = None,
+    ) -> None:
         """
         Imports FHIR R4 CodeSystem, ValueSet, and ConceptMap resources into a local terminology
         store.
 
+        A FHIR NPM package (``.tgz``) is checked against the checksum its registry publishes before
+        anything is written: a package that does not match fails the import and leaves the store
+        untouched. A package the registry does not describe, or a registry that cannot be reached,
+        is imported and recorded as unverified. For an offline import, or a package that was never
+        published to a registry, pass ``verify_package=False``; the import is then recorded as
+        having skipped verification.
+
         :param source: the path to a JSON file, a directory of JSON files, or a FHIR NPM package
                (``.tgz``), on any filesystem accessible through the Hadoop FileSystem API
         :param storage_path: the terminology store location, created if absent
+        :param verify_package: whether a package source is checked against its registry's published
+               checksum; ``True`` by default
+        :param package_registry: the FHIR package registry to check a package against; when omitted
+               the library default (``https://packages.fhir.org``) is used
         :raises: the mapped JVM ``TerminologyImportException`` if the source contains no importable
-                 resources or an invalid resource; the store is left unmodified
+                 resources or an invalid resource, or the package does not match the registry
+                 checksum; the store is left unmodified
         """
-        self._jpc.importFhirTerminology(source, storage_path)
+        options = None
+        if not verify_package or package_registry is not None:
+            jvm = self._spark._jvm
+            builder = (
+                jvm.au.csiro.pathling.library.terminology.FhirImportOptions.builder()
+            )
+            builder = builder.verifyPackage(verify_package)
+            if package_registry is not None:
+                builder = builder.packageRegistry(package_registry)
+            options = builder.build()
+        self._jpc.importFhirTerminology(source, storage_path, options)
 
     def encode(
         self,

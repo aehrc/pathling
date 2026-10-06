@@ -17,6 +17,8 @@
 
 package au.csiro.pathling.fhirpath.collection;
 
+import static org.apache.spark.sql.functions.regexp_replace;
+
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
@@ -39,6 +41,9 @@ public class ReferenceCollection extends Collection {
 
   private static final String TYPE_ELEMENT_NAME = "type";
 
+  /** Matches the version segment at the end of a version-specific reference. */
+  private static final String VERSION_SUFFIX_PATTERN = "/_history/[^/]+$";
+
   /**
    * Creates a new ReferenceCollection.
    *
@@ -60,6 +65,14 @@ public class ReferenceCollection extends Collection {
   /**
    * Gets a collection containing the keys of the references.
    *
+   * <p>A trailing {@code /_history/[version]} segment is removed from each key, because {@link
+   * ResourceCollection#getKeyCollection()} builds resource keys from the resource type and id
+   * alone. A version-specific reference therefore joins to whichever version of its target is
+   * present, e.g. {@code Patient/p2/_history/3} gives the key {@code Patient/p2}.
+   *
+   * <p>If a type is specified, only references whose final {@code [type]/[id]} segments name that
+   * exact type are kept, so {@code Person} does not match {@code RelatedPerson/r1}.
+   *
    * @param typeSpecifier The type specifier to filter by
    * @return a {@link Collection} containing the keys of the references in this collection, suitable
    *     for joining with resource keys
@@ -67,19 +80,35 @@ public class ReferenceCollection extends Collection {
   @Nonnull
   public Collection getKeyCollection(@Nonnull final Optional<TypeSpecifier> typeSpecifier) {
     return typeSpecifier
-        // If a type was specified, create a regular expression that matches references of this
-        // type.
-        .map(ts -> ts.toFhirType().toCode() + "/.+")
+        // If a type was specified, create a regular expression that matches references whose final
+        // [type]/[id] segments, ignoring any version, name exactly that type.
+        .map(ts -> "(^|/)" + ts.toFhirType().toCode() + "/[^/]+(/_history/[^/]+)?$")
         // Get a ColumnTransform that filters the reference column based on the regular expression.
         .map(this::keyFilter)
         // Apply the filter to the reference column.
         .map(this::filter)
-        // Return a StringCollection of the reference elements.s
+        // Return a StringCollection of the reference elements.
         .flatMap(c -> c.traverse(FhirFieldNames.REFERENCE))
         // If no type was specified, return the reference column as is.
         .or(() -> this.traverse(FhirFieldNames.REFERENCE))
+        // Strip the version from versioned references so they join to resource keys.
+        .map(this::stripVersionFromKey)
         // If the reference column is not present, return an empty collection.
         .orElse(EmptyCollection.getInstance());
+  }
+
+  /**
+   * Strips a trailing {@code /_history/<version>} segment from the reference strings in this
+   * collection, so that a versioned reference joins to its target's resource key.
+   *
+   * @param referenceKeys the collection of reference keys
+   * @return the collection with versioned references normalised
+   */
+  @Nonnull
+  private Collection stripVersionFromKey(@Nonnull final Collection referenceKeys) {
+    final ColumnRepresentation normalisedKeys =
+        referenceKeys.getColumn().transform(col -> regexp_replace(col, VERSION_SUFFIX_PATTERN, ""));
+    return referenceKeys.copyWith(normalisedKeys);
   }
 
   @Nonnull

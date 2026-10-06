@@ -164,9 +164,12 @@ current `name` element, matching `name.select(use | given)`.
 
 #### String functions
 
-| Function           | Description                          |
-| ------------------ | ------------------------------------ |
-| `join(separator?)` | Join strings with optional separator |
+| Function              | Description                                          |
+| --------------------- | ---------------------------------------------------- |
+| `join(separator?)`    | Join strings with optional separator                 |
+| `startsWith(prefix)`  | Test whether the string starts with the given prefix |
+| `endsWith(suffix)`    | Test whether the string ends with the given suffix   |
+| `contains(substring)` | Test whether the string contains the given substring |
 
 #### Type functions
 
@@ -271,6 +274,9 @@ specification:
 - [FHIR-specific functions](fhir-functions.md) - Functions defined in the FHIR
   specification for use with FHIR data, including `extension`, `resolve`,
   `memberOf`, `subsumes`, and `subsumedBy`.
+- [SQL on FHIR functions](sql-on-fhir-functions.md) - Functions defined in the
+  SQL on FHIR specification for joining views: `getResourceKey` and
+  `getReferenceKey`.
 - [Extension functions](extension-functions.md) - Functions unique to Pathling,
   including terminology functions like `designation`, `display`, `property`, and
   `translate`, plus the Coding literal data type.

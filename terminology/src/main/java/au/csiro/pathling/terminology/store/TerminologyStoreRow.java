@@ -45,6 +45,16 @@ public class TerminologyStoreRow {
   }
 
   /**
+   * Returns whether the named column is present in this row.
+   *
+   * @param column the column name
+   * @return true if the column is present
+   */
+  public boolean hasColumn(@Nonnull final String column) {
+    return row.getSchema().indexOf(column) >= 0;
+  }
+
+  /**
    * Returns whether the named column is null in this row.
    *
    * @param column the column name

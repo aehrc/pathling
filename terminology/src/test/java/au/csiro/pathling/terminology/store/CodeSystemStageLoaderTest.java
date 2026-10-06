@@ -208,6 +208,7 @@ class CodeSystemStageLoaderTest {
 
   private void load(final CodeSystemStaging staging, final String store) {
     final TerminologyStoreWriter writer = new TerminologyStoreWriter(spark, store);
-    new CodeSystemStageLoader(spark, writer).load(staging, URL, VERSION, "is-a", store);
+    new CodeSystemStageLoader(spark, writer)
+        .load(staging, URL, VERSION, "is-a", ImportProvenance.of(store, null));
   }
 }

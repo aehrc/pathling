@@ -31,6 +31,7 @@ import au.csiro.pathling.encoders.ResourceTypes;
 import au.csiro.pathling.fhirpath.evaluation.SingleInstanceEvaluationResult;
 import au.csiro.pathling.fhirpath.evaluation.SingleInstanceEvaluator;
 import au.csiro.pathling.library.io.source.DataSourceBuilder;
+import au.csiro.pathling.library.terminology.FhirImportOptions;
 import au.csiro.pathling.library.terminology.TerminologyImportOptions;
 import au.csiro.pathling.search.SearchColumnBuilder;
 import au.csiro.pathling.sql.PathlingUdfConfigurer;
@@ -56,7 +57,6 @@ import jakarta.annotation.Nullable;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -679,7 +679,37 @@ public class PathlingContext {
   @Nonnull
   public PathlingContext importFhirTerminology(
       @Nonnull final String source, @Nonnull final String storagePath) {
-    new FhirTerminologyImporter(spark, storagePath).importFrom(source);
+    return importFhirTerminology(source, storagePath, null);
+  }
+
+  /**
+   * Imports FHIR R4 CodeSystem, ValueSet, and ConceptMap resources into a local terminology store,
+   * with control over the package checksum check. The source may be a single JSON file, a directory
+   * of JSON files, or a FHIR NPM package ({@code .tgz}), on any filesystem accessible through the
+   * Hadoop FileSystem API. Bundles are unwrapped.
+   *
+   * <p>When the source is a package, its checksum is compared with the one its registry publishes
+   * before anything is written, and the import fails if the two differ. Turn {@code verifyPackage}
+   * off to import without consulting a registry, which is also how an import runs offline; the
+   * store then records the verification as skipped.
+   *
+   * @param source the path to a JSON file, a directory of JSON files, or a FHIR NPM package
+   * @param storagePath the terminology store location, created if absent
+   * @param options the verification overrides, or null for the defaults
+   * @return this context, for chaining
+   * @throws au.csiro.pathling.terminology.store.TerminologyImportException if the source contains
+   *     no importable resources or an invalid resource, or if a package does not match the checksum
+   *     its registry publishes; the store is left unmodified
+   */
+  @Nonnull
+  public PathlingContext importFhirTerminology(
+      @Nonnull final String source,
+      @Nonnull final String storagePath,
+      @Nullable final FhirImportOptions options) {
+    final boolean verifyPackage = options == null || options.isVerifyPackage();
+    final String packageRegistry = options == null ? null : options.getPackageRegistry();
+    new FhirTerminologyImporter(spark, storagePath)
+        .importFrom(source, verifyPackage, packageRegistry);
     return this;
   }
 
@@ -914,8 +944,7 @@ public class PathlingContext {
     warnAboutIgnoredServerSettings(configuration);
 
     // The local block and storage path are guaranteed present by configuration validation.
-    final String storagePath =
-        Objects.requireNonNull(Objects.requireNonNull(configuration.getLocal()).getStoragePath());
+    final String storagePath = configuration.getLocal().getStoragePath();
     final Map<String, String> hadoopConfiguration =
         snapshotHadoopConfiguration(spark.sessionState().newHadoopConf());
 

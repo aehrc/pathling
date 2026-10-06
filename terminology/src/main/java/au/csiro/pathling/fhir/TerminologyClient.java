@@ -37,6 +37,7 @@ import org.apache.http.client.HttpClient;
 import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.CodeSystem;
 import org.hl7.fhir.r4.model.CodeType;
+import org.hl7.fhir.r4.model.IntegerType;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.UriType;
@@ -213,6 +214,48 @@ public interface TerminologyClient extends Closeable {
       @Nonnull CodeType code,
       @Nullable CodeType property,
       @Nullable StringType acceptLanguage);
+
+  /**
+   * Expands a value set identified by canonical URL, returning one page of the expansion.
+   *
+   * @param url the canonical URL of the value set
+   * @param valueSetVersion the version of the value set to expand, or null for the server's default
+   * @param count the number of entries requested in the page
+   * @param offset the index of the first entry requested
+   * @return the {@link ValueSet} carrying the page of the expansion
+   * @see <a href="https://www.hl7.org/fhir/R4/valueset-operation-expand.html">ValueSet/$expand</a>
+   */
+  @Operation(name = "$expand", type = ValueSet.class, idempotent = true)
+  @Nonnull
+  ValueSet expand(
+      @Nonnull @OperationParam(name = "url") UriType url,
+      @Nullable @OperationParam(name = "valueSetVersion") StringType valueSetVersion,
+      @Nonnull @OperationParam(name = "count") IntegerType count,
+      @Nonnull @OperationParam(name = "offset") IntegerType offset);
+
+  /**
+   * Expands a value set supplied as a resource, returning one page of the expansion.
+   *
+   * @param valueSet the value set resource to expand
+   * @param count the number of entries requested in the page
+   * @param offset the index of the first entry requested
+   * @return the {@link ValueSet} carrying the page of the expansion
+   * @see <a href="https://www.hl7.org/fhir/R4/valueset-operation-expand.html">ValueSet/$expand</a>
+   */
+  @Operation(name = "$expand", type = ValueSet.class)
+  @Nonnull
+  ValueSet expand(
+      @Nonnull @OperationParam(name = "valueSet") ValueSet valueSet,
+      @Nonnull @OperationParam(name = "count") IntegerType count,
+      @Nonnull @OperationParam(name = "offset") IntegerType offset);
+
+  /**
+   * Returns the base URL of the terminology server this client communicates with.
+   *
+   * @return the server base URL
+   */
+  @Nonnull
+  String getServerUrl();
 
   /**
    * Builds a new terminology client.
