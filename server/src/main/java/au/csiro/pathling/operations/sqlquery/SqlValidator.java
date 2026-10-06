@@ -403,7 +403,8 @@ public class SqlValidator {
    *     dataset.queryExecution().analyzed()}
    * @param registeredViewNames the names of the request-scoped temporary views that were registered
    *     for this query - any leaf physical relation must be reachable only as a descendant of a
-   *     {@link SubqueryAlias} whose name appears in this set
+   *     {@link SubqueryAlias} whose name appears in this set, reached either through plan children
+   *     or through the plan of a subquery hanging off a descendant of that alias
    * @throws InvalidRequestException if the plan contains rejected operations or references a
    *     relation that is not one of the registered temp views
    */
@@ -543,7 +544,11 @@ public class SqlValidator {
     return false;
   }
 
-  /** Recursively validates an analyzed plan, tracking whether we are inside a trusted alias. */
+  /**
+   * Recursively validates an analyzed plan, tracking whether we are inside a trusted alias. The
+   * flag is carried into the node's own expressions as well as its children, so that a subquery
+   * hanging off a node that is already inside a trusted alias inherits that trust.
+   */
   private void walkPlanAnalyzed(
       @Nonnull final LogicalPlan plan,
       @Nonnull final Set<String> registeredViewNames,
@@ -551,7 +556,7 @@ public class SqlValidator {
     validatePlanNodeAnalyzed(plan, registeredViewNames, inTrustedAlias);
     final List<Expression> expressions = CollectionConverters.asJava(plan.expressions());
     for (final Expression expr : expressions) {
-      walkExpressionAnalyzed(expr, registeredViewNames);
+      walkExpressionAnalyzed(expr, registeredViewNames, inTrustedAlias);
     }
     // Defence in depth: mirror the strict-walk carve-out for any WithWindowDefinition that
     // survives analysis (for example a pipe-SQL WINDOW clause), whose windowDefinitions map
@@ -560,7 +565,7 @@ public class SqlValidator {
     if (plan instanceof final WithWindowDefinition withWindow) {
       for (final WindowSpecDefinition spec :
           CollectionConverters.asJava(withWindow.windowDefinitions()).values()) {
-        walkExpressionAnalyzed(spec, registeredViewNames);
+        walkExpressionAnalyzed(spec, registeredViewNames, inTrustedAlias);
       }
     }
     final boolean childTrust = inTrustedAlias || isTrustedAlias(plan, registeredViewNames);
@@ -608,16 +613,30 @@ public class SqlValidator {
     }
   }
 
-  /** Recursively validates an expression tree (analyzed mode). */
+  /**
+   * Recursively validates an expression tree (analyzed mode), carrying the enclosing plan node's
+   * trust into any subquery plan it encounters.
+   *
+   * <p>A subquery's plan is part of the plan it hangs off, so it inherits that node's trust exactly
+   * as the node's plan children do. Without this, a {@code SQLView} whose SQL uses a subquery over
+   * one of its own declared dependencies is rejected once an enclosing query reaches it: the
+   * enclosing check is given only its own dependencies' temp view names, so the nested view's child
+   * relation is not recognised, even though that relation was already vetted against the nested
+   * view's own dependencies when the node was materialised (issue 2759). A subquery written in the
+   * user's own top-level SQL still starts untrusted, because the node carrying it sits above every
+   * trusted alias in the plan.
+   */
   private void walkExpressionAnalyzed(
-      @Nonnull final Expression expr, @Nonnull final Set<String> registeredViewNames) {
+      @Nonnull final Expression expr,
+      @Nonnull final Set<String> registeredViewNames,
+      final boolean inTrustedAlias) {
     validateExpression(expr, /* strict= */ false);
     if (expr instanceof final SubqueryExpression subquery) {
-      walkPlanAnalyzed(subquery.plan(), registeredViewNames, /* inTrustedAlias= */ false);
+      walkPlanAnalyzed(subquery.plan(), registeredViewNames, inTrustedAlias);
     }
     final List<Expression> children = CollectionConverters.asJava(expr.children());
     for (final Expression child : children) {
-      walkExpressionAnalyzed(child, registeredViewNames);
+      walkExpressionAnalyzed(child, registeredViewNames, inTrustedAlias);
     }
   }
 
