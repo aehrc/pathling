@@ -84,11 +84,16 @@ public final class RoundTripHarness {
   /** The element FR-006 says is never represented. */
   @Nonnull private static final String CONTAINED = "contained";
 
+  /** Where a resource carries its narrative, as a JSON pointer. */
+  @Nonnull private static final String NARRATIVE = "/text/div";
+
   private final boolean excludePrimitiveMetadata;
 
   private final boolean excludeContainedResources;
 
   private final boolean excludeIgnoredContent;
+
+  private final boolean collapseNarrativeWhitespace;
 
   /** Where the stored dataset is written as Parquet and read back from, if anywhere. */
   @Nullable private final Path persistence;
@@ -97,10 +102,12 @@ public final class RoundTripHarness {
       final boolean excludePrimitiveMetadata,
       final boolean excludeContainedResources,
       final boolean excludeIgnoredContent,
+      final boolean collapseNarrativeWhitespace,
       @Nullable final Path persistence) {
     this.excludePrimitiveMetadata = excludePrimitiveMetadata;
     this.excludeContainedResources = excludeContainedResources;
     this.excludeIgnoredContent = excludeIgnoredContent;
+    this.collapseNarrativeWhitespace = collapseNarrativeWhitespace;
     this.persistence = persistence;
   }
 
@@ -112,7 +119,7 @@ public final class RoundTripHarness {
    */
   @Nonnull
   public static RoundTripHarness unconditional() {
-    return new RoundTripHarness(false, false, false, null);
+    return new RoundTripHarness(false, false, false, false, null);
   }
 
   /**
@@ -123,7 +130,7 @@ public final class RoundTripHarness {
    */
   @Nonnull
   public static RoundTripHarness excludingPrimitiveMetadata() {
-    return new RoundTripHarness(true, false, false, null);
+    return new RoundTripHarness(true, false, false, false, null);
   }
 
   /**
@@ -141,7 +148,12 @@ public final class RoundTripHarness {
    */
   @Nonnull
   public RoundTripHarness excludingContainedResources() {
-    return new RoundTripHarness(excludePrimitiveMetadata, true, excludeIgnoredContent, persistence);
+    return new RoundTripHarness(
+        excludePrimitiveMetadata,
+        true,
+        excludeIgnoredContent,
+        collapseNarrativeWhitespace,
+        persistence);
   }
 
   /**
@@ -162,7 +174,34 @@ public final class RoundTripHarness {
   @Nonnull
   public RoundTripHarness excludingIgnoredContent() {
     return new RoundTripHarness(
-        excludePrimitiveMetadata, excludeContainedResources, true, persistence);
+        excludePrimitiveMetadata,
+        excludeContainedResources,
+        true,
+        collapseNarrativeWhitespace,
+        persistence);
+  }
+
+  /**
+   * Returns a harness that compares a resource's narrative with the runs of whitespace in it
+   * collapsed, which is the one change HAPI makes to a narrative it parses from XML or writes as
+   * XML (decision 83).
+   *
+   * <p>A narrative is XHTML, and XML ingest reaches the layout through HAPI's XML parser. HAPI
+   * collapses each run of whitespace within it to a single space, so the narrative that comes back
+   * is the narrative that went in as rendered, but not as written. The exception applies only where
+   * the two narratives differ and are equal once collapsed, and each such narrative is counted, so
+   * a narrative that differs in any other way still fails the round trip.
+   *
+   * @return the harness
+   */
+  @Nonnull
+  public RoundTripHarness collapsingNarrativeWhitespace() {
+    return new RoundTripHarness(
+        excludePrimitiveMetadata,
+        excludeContainedResources,
+        excludeIgnoredContent,
+        true,
+        persistence);
   }
 
   /**
@@ -180,7 +219,11 @@ public final class RoundTripHarness {
   @Nonnull
   public RoundTripHarness persistingTo(@Nonnull final Path directory) {
     return new RoundTripHarness(
-        excludePrimitiveMetadata, excludeContainedResources, excludeIgnoredContent, directory);
+        excludePrimitiveMetadata,
+        excludeContainedResources,
+        excludeIgnoredContent,
+        collapseNarrativeWhitespace,
+        directory);
   }
 
   /**
@@ -198,8 +241,39 @@ public final class RoundTripHarness {
   @Nonnull
   public RoundTripOutcome assertRoundTrip(
       @Nonnull final String resourceType, @Nonnull final Path corpus) {
+    return assertRoundTrip(
+        resourceType, corpus, TransformFixtures.reader().read(resourceType, corpus.toString()));
+  }
+
+  /**
+   * Round-trips resources that reached the layout by a route other than a file of newline-delimited
+   * JSON, such as a bundle or XML, asserting that each comes back semantically equal to the JSON it
+   * is expected to be.
+   *
+   * <p>The route is the caller's: it hands over what it stored, and a file holding the JSON each of
+   * those resources should come back as. Everything else is as {@link #assertRoundTrip(String,
+   * Path)} does it, including the exceptions and their counts, which are taken from that file.
+   *
+   * @param resourceType the type of the resources
+   * @param expected a file of newline-delimited JSON holding the resources as they should come back
+   * @param transformed the resources as the route stored them
+   * @return how often each exception applied
+   */
+  @Nonnull
+  public RoundTripOutcome assertRoundTrip(
+      @Nonnull final String resourceType,
+      @Nonnull final Path expected,
+      @Nonnull final Dataset<Row> transformed) {
+    return compare(resourceType, expected, roundTrip(resourceType, transformed));
+  }
+
+  @Nonnull
+  private RoundTripOutcome compare(
+      @Nonnull final String resourceType,
+      @Nonnull final Path corpus,
+      @Nonnull final List<String> documents) {
     final Map<String, JsonNode> expected = byIdentifier(read(corpus), "source");
-    final Map<String, JsonNode> actual = byIdentifier(roundTrip(resourceType, corpus), "output");
+    final Map<String, JsonNode> actual = byIdentifier(documents, "output");
     assertEquals(expected.keySet(), actual.keySet(), "the round trip returned different resources");
 
     if (excludeContainedResources) {
@@ -223,6 +297,13 @@ public final class RoundTripHarness {
             .mapToInt(resource -> removeBase64Whitespace(canonical, resource))
             .sum();
 
+    final int narrative =
+        collapseNarrativeWhitespace
+            ? expected.entrySet().stream()
+                .mapToInt(entry -> collapseNarrative(entry.getValue(), actual.get(entry.getKey())))
+                .sum()
+            : 0;
+
     int numericOnly = 0;
     for (final Map.Entry<String, JsonNode> entry : expected.entrySet()) {
       final JsonNode output = actual.get(entry.getKey());
@@ -230,7 +311,7 @@ public final class RoundTripHarness {
           .ifPresent(difference -> fail("The round trip was not lossless at " + difference));
       numericOnly += SemanticJson.numericOnlyMatches(entry.getValue(), output);
     }
-    return new RoundTripOutcome(excluded, ignored, whitespace, numericOnly);
+    return new RoundTripOutcome(excluded, ignored, whitespace, numericOnly, narrative);
   }
 
   /**
@@ -248,11 +329,10 @@ public final class RoundTripHarness {
         resourceType, TransformFixtures.inferred(corpus.toString()).schema());
   }
 
-  /** Runs the corpus through the layout and back, returning the documents that came out. */
+  /** Runs stored resources out of the layout, returning the documents that came out. */
   @Nonnull
-  private List<String> roundTrip(@Nonnull final String resourceType, @Nonnull final Path corpus) {
-    final Dataset<Row> transformed =
-        TransformFixtures.reader().read(resourceType, corpus.toString());
+  private List<String> roundTrip(
+      @Nonnull final String resourceType, @Nonnull final Dataset<Row> transformed) {
     final Dataset<Row> stored =
         persistence == null ? transformed : persisted(resourceType, transformed, persistence);
     return TransformFixtures.writer().write(resourceType, stored).collectAsList();
@@ -476,6 +556,30 @@ public final class RoundTripHarness {
     } else if (node.isArray()) {
       node.forEach(RoundTripHarness::removeContainedResources);
     }
+  }
+
+  /**
+   * Takes the output's narrative as the expected one where the two differ only in their runs of
+   * whitespace, returning 1 where it did and 0 otherwise. A narrative that differs in any other way
+   * is left for the comparison to report.
+   */
+  private static int collapseNarrative(
+      @Nonnull final JsonNode expected, @Nullable final JsonNode output) {
+    final JsonNode expectedDiv = expected.at(NARRATIVE);
+    final JsonNode outputDiv = output == null ? expectedDiv : output.at(NARRATIVE);
+    if (!expectedDiv.isTextual()
+        || !outputDiv.isTextual()
+        || expectedDiv.asText().equals(outputDiv.asText())
+        || !collapsed(expectedDiv.asText()).equals(collapsed(outputDiv.asText()))) {
+      return 0;
+    }
+    ((ObjectNode) expected.get("text")).set("div", outputDiv);
+    return 1;
+  }
+
+  @Nonnull
+  private static String collapsed(@Nonnull final String text) {
+    return text.replaceAll("\\s+", " ");
   }
 
   /** Whether a node is a structure or an array that now holds nothing. */

@@ -34,15 +34,29 @@ public final class RoundTripOutcome {
 
   private final int numericOnly;
 
+  private final int narrativeWhitespace;
+
   RoundTripOutcome(
       final int primitiveMetadata,
       final int ignoredContent,
       final int base64Whitespace,
-      final int numericOnly) {
+      final int numericOnly,
+      final int narrativeWhitespace) {
     this.primitiveMetadata = primitiveMetadata;
     this.ignoredContent = ignoredContent;
     this.base64Whitespace = base64Whitespace;
     this.numericOnly = numericOnly;
+    this.narrativeWhitespace = narrativeWhitespace;
+  }
+
+  /**
+   * Returns the number of narratives that came back equal to the source only once their runs of
+   * whitespace were collapsed, which XML ingest does to a narrative (decision 83).
+   *
+   * @return the count
+   */
+  public int getNarrativeWhitespace() {
+    return narrativeWhitespace;
   }
 
   /**
