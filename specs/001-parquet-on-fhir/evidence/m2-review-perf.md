@@ -36,8 +36,9 @@ canonicalisation.
 > and is decoded where it is computed with (`Collection.toEngineForm()`), and the
 > search matcher still reads the stored elements. The measurements below are of
 > the earlier design. Decoding once per operation, rather than once at traversal,
-> has not been measured. Decimals are not affected: they are decoded once at
-> traversal, because the decode is one safe cast and loses no extension.
+> has not been measured; T100o, in M4, measures it. Decimals are not affected:
+> they are decoded once at traversal, because the decode is one safe cast and
+> loses no extension.
 
 The branch applies only to stored data because the engine no longer hands its
 decoded structures to the traversal expression:

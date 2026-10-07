@@ -137,6 +137,10 @@ class StoredQuantityTest {
         arguments(value + " = " + value, "q1=true", "q2=true"),
         arguments(components + "[0] > " + components + "[1]", "q1=true", "q2=null"),
         arguments(value + " < 1 'kg'", "q1=true", "q2=true"),
+        // A System quantity on the left decodes the stored quantity on the right just the same.
+        arguments("1500 'mg' = " + value, "q1=true", "q2=false"),
+        arguments("2 'g' < " + value, "q1=false", "q2=true"),
+        arguments("1 'kg' > " + value, "q1=true", "q2=true"),
         // A stored quantity is deduplicated by its canonical value.
         arguments("(" + components + " | " + components + ").count()", "q1=2", "q2=1"),
         // Operations that compute with the quantity decode it.

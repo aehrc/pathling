@@ -2886,3 +2886,54 @@ passed, and the Python and R tests were searched: none uses an instant constant.
 The coercion to a string in flat projections no longer formats an instant as a
 timestamp, since the value is already text. No view sets that constraint today,
 so it changes nothing a user can see.
+
+## 82. A stored quantity is decoded where it is computed with, and a decimal at traversal
+
+Owner decisions (2026-10-07), prompted by the review of #2800.
+
+M2 first decoded a stored quantity at traversal, and kept its extensions with a
+`DecodedRepresentation` subtype of the column representation. Any operation that
+rebuilds the representation as a `DefaultRepresentation` loses such a subtype,
+and with it the extensions. So no representation subtype is used for this, and
+`DecodedRepresentation` and `ElementRepresentation` are removed.
+
+**A stored quantity stays in the stored shape** after traversal, with its `id`,
+`extension` and `_fid`, and is decoded to the engine's structure only where it
+is computed with, by `Collection.toEngineForm()`. A quantity is stored when its
+definition is present and is not `QuantityCollection.LITERAL_DEFINITION`. A
+literal, or the result of a conversion or a numeric promotion, is a System
+quantity, which never has extensions. So:
+
+- Comparison and equality of stored quantities decode both operands through
+  `StoredQuantityComparator`.
+- Where a stored quantity meets a System quantity, on either side, the stored
+  one is decoded first, and the result is a System quantity without extensions.
+  This applies to unions too: `(value | 7 'g')` has no extensions.
+- A union or `combine` of stored quantities reconciles them by name and keeps
+  their extensions.
+
+The cost is that a stored quantity is decoded once per operation that computes
+with it, rather than once at traversal. It has not been measured; the
+measurements in `m2-review-perf.md` are of the earlier design. T100o, in M4,
+measures it beside T136 and reports it to the owner before anything changes.
+
+**A decimal is decoded at traversal**, to `DECIMAL(32,6)`, on both layouts. The
+decode is one safe cast, and a decimal's extensions live beside it in `_value`,
+so nothing is lost by decoding it early. Keeping the lexical form of a decimal,
+and of a quantity's value, is left to the custom JSON serde (T134h), which could
+use the same test for a stored value. Query-time decimal precision is unchanged
+(FR-035).
+
+`StoredQuantityTest` pins this on both layouts, including a System quantity on
+the left of a comparison.
+
+**The YAML test harness compares a result in the engine's form**
+(owner-approved). `DefaultYamlTestExecutor` passes the evaluated result through
+`toEngineForm()` before comparing it with the expected value, which the harness
+builds in the engine's structure. That is what it compared while a quantity was
+decoded at traversal, and it leaves every result other than a stored quantity
+unchanged. So the YAML suite checks a stored quantity's decoded value, not what
+the stored shape keeps, such as its extensions; `StoredQuantityTest` covers that.
+
+_Amends_ T096's decoding of a quantity at traversal, and supersedes the
+`DecodedRepresentation` that T097 first recorded.
