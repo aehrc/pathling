@@ -2937,3 +2937,104 @@ the stored shape keeps, such as its extensions; `StoredQuantityTest` covers that
 
 _Amends_ T096's decoding of a quantity at traversal, and supersedes the
 `DecodedRepresentation` that T097 first recorded.
+
+## 83. Bundles and XML reach the layout as JSON text, through HAPI, with the previous encoder's reference resolution
+
+Made while implementing M3 (T058, T058a, T068, T069, T069a).
+
+**Both formats are text in and JSON text out.** `BundleTransformer.resources(type,
+bundles)` returns the resources of one type that a dataset of bundles carries, as
+FHIR JSON, one per row. `XmlIngest.toJson` converts XML documents, as a dataset or
+as a column, to FHIR JSON. Either output is then read by `FhirJsonReader.read(type,
+documents)` like any other JSON, so both meet the same `toLayout` without touching
+it, as decision 70 foresaw. Neither class calls the reader itself: they sit in
+`io.transform` as the tasks name, and the reader in `io.json` already depends on
+that package, so the hand-off is the caller's — the tests now, `PathlingContext` in
+M4. `BundleTransformer.xml()` explodes a bundle written as XML, which the previous
+encoder accepted (`DataSourceBuilder.bundles` with `application/fhir+xml`).
+
+**HAPI parses both, inside the function Spark runs.** plan.md's complexity table
+already records this as the one exception to FR-050's "no FHIR object in a per-row
+plan". It covers exactly `BundleTransformer`, `XmlIngest` and the package-private
+`FhirParsers` they share, so T127's inspection still holds for the rest of `io`. Only
+public Spark API is used (`Dataset.flatMap`, `functions.udf`), so the Catalyst import
+ban is unaffected. HAPI reaches `io` through `fhir-schema` already; `io/pom.xml` now
+declares `hapi-fhir-base` and `hapi-fhir-structures-r4` because it uses them
+directly. No artifact is added. The parsing is R4, as the previous encoder's was.
+
+A Jackson-only bundle explosion was considered and not taken. It would have kept
+the bundle's content away from HAPI, but resolving references by the JSON key
+`reference` is wrong: R4 has `uri` elements of that name (`DetectedIssue.reference`,
+`Expression.reference`, `Immunization.education.reference`), and resolving them by
+type means walking the definitions per row.
+
+**Parser settings.** A resource keeps its own `id` rather than taking its entry's
+`fullUrl` (`setOverrideResourceIdWithBundleEntryFullUrl(false)`, as `ResourceParser`
+does). HAPI drops the version from every reference it writes by default, which
+would change a versioned reference the source carries, so that is switched off
+(`setStripVersionsFromReferences(false)`).
+
+**Reference resolution is the previous encoder's**, ported from `ResourceParser` and
+`R4FhirConversionSupport.resolveReferences`, whose test cases `BundleTransformTest`
+repeats over the same bundle:
+
+- Only a `Reference` is resolved, wherever it occurs, including within an extension
+  and within the extension of a primitive. An element of another type named
+  `reference` keeps its value even where it names an entry.
+- A reference that is a URN naming another entry's `fullUrl` becomes that entry's
+  identifier as HAPI reports it: `Type/id`, **and `Type/id/_history/v` when the
+  entry's `meta.versionId` is set**. This is what the previous encoder stored; the
+  version follows from preserving it, and is the point the owner may want to
+  revisit before M4 if the engine's reference matching expects `Type/id`.
+- Any other reference is kept as written: a URN naming no entry, a URN naming an
+  entry without an identifier, and every reference that is not a URN.
+- HAPI's link from a reference to its target is cleared once read, because HAPI
+  writes a linked target that has no identifier into the referring resource as a
+  contained resource, adding content the source did not carry. A link to a
+  contained resource is kept.
+
+**Explosion.** `Bundle` is refused as a type (FR-007), as is a name that is not a
+resource type. An entry without a resource contributes nothing. A bundle carried
+as an entry's resource is neither returned nor exploded in turn, as before.
+Filtering to the requested type happens before the reader infers a schema
+(decision 70's one-type-per-input contract).
+
+**What HAPI changes, measured.** These are the differences between the HAPI routes
+and newline-delimited JSON, and each is either asserted or recorded here:
+
+- _Narrative._ JSON parsed and written by HAPI keeps `text.div` exactly. XML does
+  not: HAPI collapses every run of whitespace in the XHTML to one space. The round
+  trip harness gains a counted exception for it, `collapsingNarrativeWhitespace()`,
+  which applies only where the two narratives are equal once collapsed, and
+  `IngestFormatRoundTripTest` asserts its count equals the number of source
+  narratives collapsing changes. Collapsing is not harmless inside `<pre>`; no
+  example in the corpora has one. The previous encoder, which also parsed XML with
+  HAPI, did the same.
+- _Undescribed content._ HAPI's lenient parser drops content the definitions do not
+  describe, with a log line, before the transform sees it. So the HAPI routes report
+  fewer findings than JSON ingest does: such content is lost silently rather than
+  reported. The previous encoder had the same gap.
+- _A repeating primitive carried only as metadata._ HAPI's JSON parser drops a
+  `_name` array that has no `name` array beside it — the specification's own
+  `ActivityDefinition.timingTiming._event` in `referralPrimaryCareMentalHealth`. JSON
+  ingest keeps the structure (decision 72). A bundle written as JSON loses it, and
+  so did the test's generation of XML from that example, which is why
+  `IngestFormatRoundTripTest` removes it from the expected side and asserts the
+  removal applied once. This matters to M5, which stores primitive metadata.
+- _Decimals._ HAPI keeps a decimal's text, so nothing is lost beyond what the reader
+  already loses through a double (decision 68).
+
+The second and third are open for the owner: M3 changes nothing observable, and
+they become observable only when M4 routes `encodeBundle` and XML `encode` here.
+
+**The harness.** `RoundTripHarness.assertRoundTrip(type, expected, transformed)`
+takes what a route stored and a file of the JSON it should come back as, so a route
+other than newline-delimited JSON can be round-tripped. The expected side of a
+bundle is derived from the bundle's text independently of the code under test. XML
+input is written from the JSON by HAPI rather than vendored, because a pretty-printed
+XML twin carries whitespace inside the XHTML that its JSON does not, and so is not
+the same content.
+
+_Corpora_: `io/src/test/resources/data/bundles/synthea.json` is the Synthea bundle
+`encoders` already tests with, and `references.json` is `library-api`'s reference
+resolution bundle.
