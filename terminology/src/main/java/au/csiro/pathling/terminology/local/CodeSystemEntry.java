@@ -48,7 +48,8 @@ public class CodeSystemEntry {
   @Nonnull String systemVersionId;
 
   /**
-   * Loads the catalogue of code system versions from the store.
+   * Loads the catalogue of code system versions from the store, which is empty for a store that
+   * holds no code system (for example, one holding only ConceptMaps).
    *
    * @param reader the store reader
    * @return the code system entries
@@ -56,7 +57,7 @@ public class CodeSystemEntry {
   @Nonnull
   public static List<CodeSystemEntry> loadCatalogue(@Nonnull final TerminologyStoreReader reader) {
     final List<CodeSystemEntry> entries = new ArrayList<>();
-    reader.readTable(
+    reader.readTableIfPresent(
         CODE_SYSTEM,
         row ->
             entries.add(
