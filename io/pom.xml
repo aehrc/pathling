@@ -42,6 +42,20 @@
       <artifactId>fhir-schema</artifactId>
     </dependency>
 
+    <!--
+         HAPI FHIR parses XML and bundles for the two ingest formats that have no Spark-native path
+         that preserves FHIR semantics (plan.md, complexity tracking). Both already reach this module
+         through fhir-schema; they are declared because this module now uses them directly.
+     -->
+    <dependency>
+      <groupId>ca.uhn.hapi.fhir</groupId>
+      <artifactId>hapi-fhir-base</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>ca.uhn.hapi.fhir</groupId>
+      <artifactId>hapi-fhir-structures-r4</artifactId>
+    </dependency>
+
     <!-- Apache Spark -->
     <dependency>
       <groupId>org.apache.spark</groupId>
