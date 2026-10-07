@@ -23,7 +23,6 @@ import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_SOURCE_SYSTEM;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_TARGET_CODE;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_TARGET_SYSTEM;
-import static org.apache.spark.sql.functions.broadcast;
 import static org.apache.spark.sql.functions.col;
 
 import com.fasterxml.jackson.core.JsonEncoding;
@@ -36,22 +35,19 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructType;
 
 /**
  * The transient staging of one ConceptMap streamed to disk: an NDJSON file with one line per
- * mapping, written by the flattener and read back through Spark so the driver never holds the
- * mappings of a map in memory. Each line refers to its group by index, and the systems of each
- * group, of which a map has few, are held here until the file is read back. The file lives in a
- * driver-local temporary directory that is deleted when the staging is closed.
+ * mapping and another with one line per group, written by the flattener and read back through
+ * Spark, so the driver never holds the mappings or the groups of a map in memory. Each mapping
+ * refers to its group by index, because a group's systems may follow its elements in the source.
+ * The files live in a driver-local temporary directory that is deleted when the staging is closed.
  *
  * @author John Grimes
  */
@@ -61,29 +57,35 @@ public class ConceptMapStaging implements AutoCloseable {
   private static final JsonFactory FACTORY = new JsonFactory();
 
   private static final String FILE_MAPPING = "mapping.ndjson";
+  private static final String FILE_GROUP = "group.ndjson";
 
   /** The staging column holding the index of the group a mapping belongs to. */
   private static final String COLUMN_GROUP = "group";
 
-  /** The column naming the index of a group in the staged group systems. */
+  /** The staging column holding the index of a group in the group file. */
   private static final String COLUMN_GROUP_INDEX = "group_index";
 
   @Nonnull private final Path directory;
-  @Nonnull private final JsonGenerator generator;
-  @Nonnull private final List<Row> groups = new ArrayList<>();
+  @Nonnull private final JsonGenerator mappingGenerator;
+  @Nonnull private final JsonGenerator groupGenerator;
+  private int groupCount;
   private int mappingCount;
   private boolean sealed;
 
-  private ConceptMapStaging(@Nonnull final Path directory, @Nonnull final JsonGenerator generator) {
+  private ConceptMapStaging(
+      @Nonnull final Path directory,
+      @Nonnull final JsonGenerator mappingGenerator,
+      @Nonnull final JsonGenerator groupGenerator) {
     this.directory = directory;
-    this.generator = generator;
+    this.mappingGenerator = mappingGenerator;
+    this.groupGenerator = groupGenerator;
   }
 
   /**
-   * Creates a fresh staging directory holding an empty mapping file ready to append to.
+   * Creates a fresh staging directory holding empty mapping and group files ready to append to.
    *
    * @return a new staging instance
-   * @throws TerminologyImportException if the temporary directory cannot be created
+   * @throws TerminologyImportException if the temporary directory or files cannot be created
    */
   @Nonnull
   public static ConceptMapStaging create() {
@@ -93,17 +95,25 @@ public class ConceptMapStaging implements AutoCloseable {
     } catch (final IOException e) {
       throw new TerminologyImportException("Unable to create a temporary staging directory", e);
     }
+    JsonGenerator mappingGenerator = null;
     try {
-      final JsonGenerator generator =
-          FACTORY.createGenerator(
-              Files.newOutputStream(directory.resolve(FILE_MAPPING)), JsonEncoding.UTF8);
-      // Emit one JSON object per line so Spark reads the file as newline-delimited JSON.
-      generator.setRootValueSeparator(new SerializedString("\n"));
-      return new ConceptMapStaging(directory, generator);
+      mappingGenerator = openGenerator(directory.resolve(FILE_MAPPING));
+      return new ConceptMapStaging(
+          directory, mappingGenerator, openGenerator(directory.resolve(FILE_GROUP)));
     } catch (final IOException e) {
+      closeQuietly(mappingGenerator);
       deleteDirectory(directory);
       throw new TerminologyImportException("Unable to create a temporary staging file", e);
     }
+  }
+
+  @Nonnull
+  private static JsonGenerator openGenerator(@Nonnull final Path file) throws IOException {
+    final JsonGenerator generator =
+        FACTORY.createGenerator(Files.newOutputStream(file), JsonEncoding.UTF8);
+    // Emit one JSON object per line so Spark reads the file as newline-delimited JSON.
+    generator.setRootValueSeparator(new SerializedString("\n"));
+    return generator;
   }
 
   /**
@@ -112,7 +122,7 @@ public class ConceptMapStaging implements AutoCloseable {
    * @return the number of registered groups
    */
   public int groupCount() {
-    return groups.size();
+    return groupCount;
   }
 
   /**
@@ -123,7 +133,17 @@ public class ConceptMapStaging implements AutoCloseable {
    */
   public void appendGroup(
       @Nullable final String sourceSystem, @Nullable final String targetSystem) {
-    groups.add(RowFactory.create(groups.size(), sourceSystem, targetSystem));
+    requireUnsealed();
+    try {
+      groupGenerator.writeStartObject();
+      groupGenerator.writeNumberField(COLUMN_GROUP_INDEX, groupCount);
+      groupGenerator.writeStringField(COLUMN_SOURCE_SYSTEM, sourceSystem);
+      groupGenerator.writeStringField(COLUMN_TARGET_SYSTEM, targetSystem);
+      groupGenerator.writeEndObject();
+    } catch (final IOException e) {
+      throw new UncheckedIOException(e);
+    }
+    groupCount++;
   }
 
   /**
@@ -140,21 +160,19 @@ public class ConceptMapStaging implements AutoCloseable {
       @Nonnull final String sourceCode,
       @Nullable final String targetCode,
       @Nonnull final String equivalence) {
-    if (sealed) {
-      throw new IllegalStateException("Staging has been sealed for reading and cannot be appended");
-    }
+    requireUnsealed();
     if (mappingCount == Integer.MAX_VALUE) {
       throw new TerminologyImportException(
           "A ConceptMap may hold at most " + Integer.MAX_VALUE + " mappings");
     }
     try {
-      generator.writeStartObject();
-      generator.writeNumberField(COLUMN_ORDINAL, mappingCount);
-      generator.writeNumberField(COLUMN_GROUP, group);
-      generator.writeStringField(COLUMN_SOURCE_CODE, sourceCode);
-      generator.writeStringField(COLUMN_TARGET_CODE, targetCode);
-      generator.writeStringField(COLUMN_EQUIVALENCE, equivalence);
-      generator.writeEndObject();
+      mappingGenerator.writeStartObject();
+      mappingGenerator.writeNumberField(COLUMN_ORDINAL, mappingCount);
+      mappingGenerator.writeNumberField(COLUMN_GROUP, group);
+      mappingGenerator.writeStringField(COLUMN_SOURCE_CODE, sourceCode);
+      mappingGenerator.writeStringField(COLUMN_TARGET_CODE, targetCode);
+      mappingGenerator.writeStringField(COLUMN_EQUIVALENCE, equivalence);
+      mappingGenerator.writeEndObject();
     } catch (final IOException e) {
       throw new UncheckedIOException(e);
     }
@@ -170,8 +188,14 @@ public class ConceptMapStaging implements AutoCloseable {
     return mappingCount;
   }
 
+  private void requireUnsealed() {
+    if (sealed) {
+      throw new IllegalStateException("Staging has been sealed for reading and cannot be appended");
+    }
+  }
+
   /**
-   * Flushes and closes the appender so the staging can be read back. No further rows may be
+   * Flushes and closes the appenders so the staging can be read back. No further rows may be
    * appended after sealing.
    */
   public void sealForReading() {
@@ -180,7 +204,8 @@ public class ConceptMapStaging implements AutoCloseable {
     }
     sealed = true;
     try {
-      generator.close();
+      mappingGenerator.close();
+      groupGenerator.close();
     } catch (final IOException e) {
       throw new UncheckedIOException(e);
     }
@@ -192,7 +217,7 @@ public class ConceptMapStaging implements AutoCloseable {
    * target_code} and {@code equivalence}.
    *
    * @param spark the Spark session to read with
-   * @return the mappings, lazily read from the staging file
+   * @return the mappings, lazily read from the staging files
    */
   @Nonnull
   public Dataset<Row> read(@Nonnull final SparkSession spark) {
@@ -210,9 +235,12 @@ public class ConceptMapStaging implements AutoCloseable {
             .add(COLUMN_TARGET_SYSTEM, DataTypes.StringType, true);
     final Dataset<Row> mappings =
         spark.read().schema(mappingSchema).json(directory.resolve(FILE_MAPPING).toUri().toString());
-    final Dataset<Row> groupSystems = spark.createDataFrame(groups, groupSchema);
+    // A map usually has a handful of groups, which Spark broadcasts, but it may have one per
+    // element, so the choice of join is left to Spark rather than forced.
+    final Dataset<Row> groups =
+        spark.read().schema(groupSchema).json(directory.resolve(FILE_GROUP).toUri().toString());
     return mappings
-        .join(broadcast(groupSystems), col(COLUMN_GROUP).equalTo(col(COLUMN_GROUP_INDEX)))
+        .join(groups, col(COLUMN_GROUP).equalTo(col(COLUMN_GROUP_INDEX)))
         .select(
             col(COLUMN_ORDINAL),
             col(COLUMN_SOURCE_SYSTEM),
@@ -226,18 +254,27 @@ public class ConceptMapStaging implements AutoCloseable {
   public void close() {
     if (!sealed) {
       sealed = true;
-      try {
-        generator.close();
-      } catch (final IOException e) {
-        log.debug("Failed to close the staging appender during cleanup", e);
-      }
+      closeQuietly(mappingGenerator);
+      closeQuietly(groupGenerator);
     }
     deleteDirectory(directory);
+  }
+
+  private static void closeQuietly(@Nullable final JsonGenerator generator) {
+    if (generator == null) {
+      return;
+    }
+    try {
+      generator.close();
+    } catch (final IOException e) {
+      log.debug("Failed to close a staging appender during cleanup", e);
+    }
   }
 
   private static void deleteDirectory(@Nonnull final Path directory) {
     try {
       Files.deleteIfExists(directory.resolve(FILE_MAPPING));
+      Files.deleteIfExists(directory.resolve(FILE_GROUP));
       Files.deleteIfExists(directory);
     } catch (final IOException e) {
       log.warn("Failed to clean up temporary staging directory {}", directory, e);

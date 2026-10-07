@@ -292,13 +292,14 @@ equivalence of each of its targets. A target without an equivalence is treated
 as `relatedto`, and an element without a code is skipped. An unrecognised
 equivalence fails the import, naming the map, before any of the map is written.
 
-### Bundles and ValueSets
+### Bundles and non-CodeSystem resources
 
 A Bundle is streamed entry by entry, so CodeSystems and ConceptMaps inside a
-Bundle are imported with the same bounded memory as standalone ones, and a
-Bundle may be of any size. The entries are validated before anything is
-written: each CodeSystem, ValueSet or ConceptMap must carry a canonical URL, and
-an entry holding any other kind of resource is skipped.
+Bundle are imported with the same bounded memory as standalone ones. Of each
+entry, only its type, canonical URL and version are held in memory, never its
+content. The entries are validated before anything is written: each
+CodeSystem, ValueSet or ConceptMap must carry a canonical URL, and an entry
+holding any other kind of resource is skipped.
 
 ValueSets are stored whole, so a single ValueSet must fit in memory; one larger
 than 1 GB, standalone or in a Bundle, fails with an actionable error naming the

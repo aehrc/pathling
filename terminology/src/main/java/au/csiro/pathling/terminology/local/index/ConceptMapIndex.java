@@ -126,12 +126,18 @@ public final class ConceptMapIndex {
     if (versions == null) {
       return List.of();
     }
-    final String version =
-        versionResolver.getLatestOfVersions(versions, Function.identity(), conceptMapUrl);
+    // The versions in the store are fixed for the life of the index, so the version that answers
+    // is resolved once, when the map is first loaded.
     final Mappings mappings =
         loaded.computeIfAbsent(
-            TerminologyStoreSchema.conceptMapId(conceptMapUrl, version),
-            id -> Mappings.load(reader, id, conceptMapUrl));
+            conceptMapUrl,
+            url ->
+                Mappings.load(
+                    reader,
+                    TerminologyStoreSchema.conceptMapId(
+                        url,
+                        versionResolver.getLatestOfVersions(versions, Function.identity(), url)),
+                    url));
     return mappings.translate(system, code, reverse);
   }
 
