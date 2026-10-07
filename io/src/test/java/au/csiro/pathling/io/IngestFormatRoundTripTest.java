@@ -19,8 +19,10 @@ package au.csiro.pathling.io;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.io.transform.BundleTransformer;
+import au.csiro.pathling.io.transform.NonConformantContent;
 import au.csiro.pathling.io.transform.TransformFixtures;
 import au.csiro.pathling.io.transform.XmlIngest;
 import ca.uhn.fhir.context.FhirContext;
@@ -39,11 +41,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -68,9 +73,11 @@ import org.junit.jupiter.params.provider.MethodSource;
  * is content and pretty-printing the XML adds it, so it could not be compared with the JSON at all.
  *
  * <p>Every route admits the exclusions the JSON route does: primitive metadata until M5 and {@code
- * contained} resources permanently, since the Synthea bundle's claims carry them. The XML routes
- * also admit the one change HAPI makes to a narrative, the collapsing of its whitespace, and count
- * it (decision 83).
+ * contained} resources permanently, since the Synthea bundle's claims carry them. What makes the
+ * second honest is that the finding FR-006 requires is asserted to survive the route. The XML
+ * routes also admit, and count, the whitespace HAPI's XML writer collapses in a narrative while the
+ * test writes its XML input; HAPI's XML parser, which is what XML ingest uses, keeps it (decision
+ * 83).
  */
 class IngestFormatRoundTripTest {
 
@@ -119,6 +126,29 @@ class IngestFormatRoundTripTest {
             directory);
 
     assertEquals(0, outcome.getPrimitiveMetadata(), "the corpus carries no primitive metadata");
+  }
+
+  /**
+   * Asserts that a contained resource carried by an exploded resource still reaches the transform,
+   * so that its presence is reported as FR-006 requires rather than lost to the parser. This is
+   * what the round trips' exclusion of contained resources rests on.
+   */
+  @Test
+  void detectsTheContainedResourcesABundleCarries() {
+    final String type = "ExplanationOfBenefit";
+    for (final Dataset<String> resources :
+        List.of(
+            BundleTransformer.json().resources(type, dataset(List.of(text(SYNTHEA_JSON)))),
+            BundleTransformer.xml().resources(type, dataset(List.of(xml(text(SYNTHEA_JSON))))))) {
+      final List<NonConformantContent> findings =
+          TransformFixtures.transformer()
+              .findings(type, TransformFixtures.spark().read().json(resources).schema());
+
+      assertEquals(
+          Set.of(type + ".contained"),
+          findings.stream().map(NonConformantContent::getPath).collect(Collectors.toSet()));
+      assertTrue(findings.stream().allMatch(NonConformantContent::isContainedResource));
+    }
   }
 
   /**

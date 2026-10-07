@@ -2983,9 +2983,11 @@ repeats over the same bundle:
   `reference` keeps its value even where it names an entry.
 - A reference that is a URN naming another entry's `fullUrl` becomes that entry's
   identifier as HAPI reports it: `Type/id`, **and `Type/id/_history/v` when the
-  entry's `meta.versionId` is set**. This is what the previous encoder stored; the
-  version follows from preserving it, and is the point the owner may want to
-  revisit before M4 if the engine's reference matching expects `Type/id`.
+  entry's `meta.versionId` is set**. That is what the previous encoder's
+  `resolveUrnReference` sets, read from its code and confirmed by a probe of HAPI's
+  parser rather than by running `encodeBundle` end to end. The version follows from
+  preserving that behaviour, and is the point the owner may want to revisit before
+  M4 if the engine's reference matching expects `Type/id`.
 - Any other reference is kept as written: a URN naming no entry, a URN naming an
   entry without an identifier, and every reference that is not a URN.
 - HAPI's link from a reference to its target is cleared once read, because HAPI
@@ -3002,14 +3004,17 @@ Filtering to the requested type happens before the reader infers a schema
 **What HAPI changes, measured.** These are the differences between the HAPI routes
 and newline-delimited JSON, and each is either asserted or recorded here:
 
-- _Narrative._ JSON parsed and written by HAPI keeps `text.div` exactly. XML does
-  not: HAPI collapses every run of whitespace in the XHTML to one space. The round
-  trip harness gains a counted exception for it, `collapsingNarrativeWhitespace()`,
-  which applies only where the two narratives are equal once collapsed, and
+- _Narrative._ HAPI's JSON parser and writer keep `text.div` exactly, and so does
+  its XML parser, which is what XML ingest uses: a narrative is stored as the XML
+  wrote it. HAPI's XML **writer** does not keep it — it replaces the whitespace
+  between a narrative's elements with one space. That writer is used only by the
+  tests, to produce XML input from the JSON corpora, so the change belongs to the
+  fixtures and not to ingest. The round trip harness gains a counted exception for
+  it, `collapsingNarrativeWhitespace()`, which applies only where the two
+  narratives are equal once their whitespace is collapsed, and
   `IngestFormatRoundTripTest` asserts its count equals the number of source
-  narratives collapsing changes. Collapsing is not harmless inside `<pre>`; no
-  example in the corpora has one. The previous encoder, which also parsed XML with
-  HAPI, did the same.
+  narratives collapsing changes. No example in the corpora carries `<pre>`, where
+  the difference would matter to rendering.
 - _Undescribed content._ HAPI's lenient parser drops content the definitions do not
   describe, with a log line, before the transform sees it. So the HAPI routes report
   fewer findings than JSON ingest does: such content is lost silently rather than
@@ -3023,6 +3028,10 @@ and newline-delimited JSON, and each is either asserted or recorded here:
   removal applied once. This matters to M5, which stores primitive metadata.
 - _Decimals._ HAPI keeps a decimal's text, so nothing is lost beyond what the reader
   already loses through a double (decision 68).
+
+A contained resource does survive both routes, so FR-006's finding is still made;
+`IngestFormatRoundTripTest` asserts it, because the round trips' exclusion of
+contained resources rests on it.
 
 The second and third are open for the owner: M3 changes nothing observable, and
 they become observable only when M4 routes `encodeBundle` and XML `encode` here.

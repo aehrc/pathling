@@ -51,7 +51,8 @@ public final class RoundTripOutcome {
 
   /**
    * Returns the number of narratives that came back equal to the source only once their runs of
-   * whitespace were collapsed, which XML ingest does to a narrative (decision 83).
+   * whitespace were collapsed, which HAPI's XML writer does to a narrative when a test writes its
+   * XML input (decision 83).
    *
    * @return the count
    */
