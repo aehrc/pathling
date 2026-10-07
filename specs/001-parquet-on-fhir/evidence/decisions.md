@@ -3006,8 +3006,9 @@ and newline-delimited JSON, and each is either asserted or recorded here:
 
 - _Narrative._ HAPI's JSON parser and writer keep `text.div` exactly, and so does
   its XML parser, which is what XML ingest uses: a narrative is stored as the XML
-  wrote it. HAPI's XML **writer** does not keep it — it replaces the whitespace
-  between a narrative's elements with one space. That writer is used only by the
+  wrote it. HAPI's XML **writer** does not keep it — it replaces a run of
+  whitespace beside a tag, at the start or end of a text node, with one space,
+  while keeping a run within the text. That writer is used only by the
   tests, to produce XML input from the JSON corpora, so the change belongs to the
   fixtures and not to ingest. The round trip harness gains a counted exception for
   it, `collapsingNarrativeWhitespace()`, which applies only where the two
@@ -3018,7 +3019,15 @@ and newline-delimited JSON, and each is either asserted or recorded here:
 - _Undescribed content._ HAPI's lenient parser drops content the definitions do not
   describe, with a log line, before the transform sees it. So the HAPI routes report
   fewer findings than JSON ingest does: such content is lost silently rather than
-  reported. The previous encoder had the same gap.
+  reported. The previous encoder had the same gap. HAPI also coerces content it
+  can read but that is not conformant, again without a finding: a `birthDate`
+  written as the number `1980` is stored as the text `"1980"`, an `active` written
+  as the text `"true"` is stored as `true`, and of two values for one choice element
+  only the first is kept. JSON ingest reports each of these (FR-016 item 5).
+- _Content HAPI cannot read._ An invalid primitive in XML, such as
+  `<birthDate value="not-a-date"/>`, or an entry whose resource type is unknown,
+  throws inside the function Spark runs and fails the whole job, where JSON ingest
+  reports the content and continues. The previous encoder failed the same way.
 - _A repeating primitive carried only as metadata._ HAPI's JSON parser drops a
   `_name` array that has no `name` array beside it — the specification's own
   `ActivityDefinition.timingTiming._event` in `referralPrimaryCareMentalHealth`. JSON
@@ -3033,8 +3042,11 @@ A contained resource does survive both routes, so FR-006's finding is still made
 `IngestFormatRoundTripTest` asserts it, because the round trips' exclusion of
 contained resources rests on it.
 
-The second and third are open for the owner: M3 changes nothing observable, and
-they become observable only when M4 routes `encodeBundle` and XML `encode` here.
+The second, third and fourth are open for the owner: M3 changes nothing
+observable, and they become observable only when M4 routes `encodeBundle` and XML
+`encode` here. So is FR-007's guarantee at that switch: `Bundle` is refused only by
+`BundleTransformer`, not by `FhirJsonReader` or the transform, so M4's public entry
+points must keep it.
 
 **The harness.** `RoundTripHarness.assertRoundTrip(type, expected, transformed)`
 takes what a route stored and a file of the JSON it should come back as, so a route

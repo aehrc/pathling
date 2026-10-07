@@ -42,6 +42,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -96,6 +97,9 @@ class IngestFormatRoundTripTest {
   /** The prefix of a reference that names another entry of the same bundle. */
   @Nonnull private static final String URN = "urn:";
 
+  /** A run of whitespace beside a tag of a narrative, at the start or the end of a text node. */
+  @Nonnull private static final Pattern BESIDE_A_TAG = Pattern.compile(">\\s+|\\s+<");
+
   @ParameterizedTest
   @MethodSource("syntheaTypes")
   void roundTripsTheResourcesAJsonBundleIsExplodedInto(
@@ -126,6 +130,12 @@ class IngestFormatRoundTripTest {
             directory);
 
     assertEquals(0, outcome.getPrimitiveMetadata(), "the corpus carries no primitive metadata");
+    assertEquals(
+        expectedResources(text(SYNTHEA_JSON), resourceType).stream()
+            .filter(IngestFormatRoundTripTest::hasCollapsibleNarrative)
+            .count(),
+        outcome.getNarrativeWhitespace(),
+        "the narratives collapsed are not those whose whitespace collapsing changes");
   }
 
   /**
@@ -209,10 +219,18 @@ class IngestFormatRoundTripTest {
         "the narratives collapsed are not those whose whitespace collapsing changes");
   }
 
-  /** Whether a resource's narrative carries a run of whitespace that collapsing would change. */
+  /**
+   * Whether a resource's narrative carries whitespace beside a tag that HAPI's XML writer would
+   * collapse to one space. The writer keeps a run of whitespace within a text node, so that does
+   * not count.
+   */
   private static boolean hasCollapsibleNarrative(@Nonnull final String resource) {
     final JsonNode div = SemanticJson.parse(resource).at("/text/div");
-    return div.isTextual() && !div.asText().equals(div.asText().replaceAll("\\s+", " "));
+    return div.isTextual()
+        && BESIDE_A_TAG
+            .matcher(div.asText())
+            .results()
+            .anyMatch(match -> !match.group().matches(">? <?"));
   }
 
   /**
