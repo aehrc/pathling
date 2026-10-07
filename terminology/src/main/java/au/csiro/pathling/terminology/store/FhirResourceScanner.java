@@ -38,10 +38,11 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 
 /**
- * Streams each FHIR resource in a source just far enough to read its leading metadata ({@code
- * resourceType}, {@code url}, {@code version}) and byte size, stopping before any large content
- * array. This lets the importer validate cheap structural facts and route resources by type and
- * size before writing anything, with peak memory independent of the source size.
+ * Streams each FHIR resource in a source just far enough to read its metadata ({@code
+ * resourceType}, {@code url}, {@code version}) and byte size, stopping before a CodeSystem's large
+ * concept array. A Bundle is read through, scanning the resource of each of its entries as a member
+ * of the Bundle. This lets the importer validate cheap structural facts and route resources by type
+ * and size before writing anything, with peak memory independent of the source size.
  *
  * <p>The scan handles the same three source shapes as the importer: a bare JSON file, a directory
  * of JSON files, and a FHIR NPM package ({@code .tgz}). A package's {@code package.json} is read
@@ -63,10 +64,14 @@ public class FhirResourceScanner {
   private static final String FIELD_URL = "url";
   private static final String FIELD_VERSION = "version";
 
-  /** The large array fields that mark the end of the metadata the pre-scan needs to read. */
+  /** The large array field that marks the end of the metadata of a CodeSystem. */
   private static final String FIELD_CONCEPT = "concept";
 
+  /** The entry array of a Bundle, whose resources are scanned as members of the Bundle. */
   private static final String FIELD_ENTRY = "entry";
+
+  /** The field of a Bundle entry that holds its resource. */
+  private static final String FIELD_RESOURCE = "resource";
 
   /** The package manifest field naming the package, alongside the shared {@code version} field. */
   private static final String FIELD_NAME = "name";
@@ -222,46 +227,130 @@ public class FhirResourceScanner {
   }
 
   /**
-   * Scans a single resource stream, reading only its leading metadata. The stream is not closed.
+   * Scans a single resource stream, reading only its metadata. A Bundle's entries are scanned in
+   * turn, each resource just as a standalone one is, so that the Bundle is returned with a member
+   * per entry. The stream is not closed.
    *
    * @param in the resource JSON stream
    * @param entryName the file path or archive entry name, for routing and error messages
    * @param byteSize the byte size of the entry
    * @return the scanned resource; its {@code resourceType}, {@code url}, or {@code version} are
-   *     null when absent from the leading metadata
+   *     null when absent from the metadata read
    * @throws IOException if the stream cannot be read
    */
   @Nonnull
   public static ScannedResource scanStream(
       @Nonnull final InputStream in, @Nonnull final String entryName, final long byteSize)
       throws IOException {
-    String resourceType = null;
-    String url = null;
-    String version = null;
     try (JsonParser parser = FACTORY.createParser(in)) {
       if (parser.nextToken() != JsonToken.START_OBJECT) {
         return new ScannedResource(null, null, null, entryName, byteSize);
       }
+      final ResourceMetadata metadata = new ResourceMetadata();
+      final List<ScannedResource> members = new ArrayList<>();
       while (parser.nextToken() == JsonToken.FIELD_NAME) {
         final String field = parser.currentName();
         parser.nextToken();
-        switch (field) {
-          case FIELD_RESOURCE_TYPE -> resourceType = parser.getValueAsString();
-          case FIELD_URL -> url = parser.getValueAsString();
-          case FIELD_VERSION -> version = parser.getValueAsString();
-          case FIELD_CONCEPT, FIELD_ENTRY -> {
-            // The concept (CodeSystem) and entry (Bundle) arrays are the large content arrays; stop
-            // before reading them so the scan cost stays a few kilobytes.
-            return new ScannedResource(resourceType, url, version, entryName, byteSize);
-          }
-          default -> parser.skipChildren();
+        if (FIELD_ENTRY.equals(field)) {
+          // Only a Bundle has an entry array, though its resourceType may not have been read yet.
+          scanEntries(parser, entryName, members);
+        } else if (FIELD_CONCEPT.equals(field)) {
+          // The concept array of a CodeSystem is its large content array; stop before reading it
+          // so the scan cost stays a few kilobytes.
+          break;
+        } else {
+          metadata.read(field, parser);
         }
-        if (resourceType != null && url != null && version != null) {
-          return new ScannedResource(resourceType, url, version, entryName, byteSize);
+        if (metadata.isComplete() && !metadata.isBundle()) {
+          break;
         }
       }
+      return metadata.toScannedResource(
+          entryName, byteSize, metadata.isBundle() ? members : List.of());
     }
-    return new ScannedResource(resourceType, url, version, entryName, byteSize);
+  }
+
+  /** Scans the entries of a Bundle, adding a member for each, in order. */
+  private static void scanEntries(
+      @Nonnull final JsonParser parser,
+      @Nonnull final String entryName,
+      @Nonnull final List<ScannedResource> members)
+      throws IOException {
+    if (parser.currentToken() != JsonToken.START_ARRAY) {
+      parser.skipChildren();
+      return;
+    }
+    while (parser.nextToken() != JsonToken.END_ARRAY) {
+      final String memberName = entryName + "#entry[" + members.size() + "]";
+      ScannedResource member = new ScannedResource(null, null, null, memberName, 0);
+      if (parser.currentToken() == JsonToken.START_OBJECT) {
+        while (parser.nextToken() == JsonToken.FIELD_NAME) {
+          final String field = parser.currentName();
+          parser.nextToken();
+          if (FIELD_RESOURCE.equals(field) && parser.currentToken() == JsonToken.START_OBJECT) {
+            member = scanMember(parser, memberName);
+          } else {
+            parser.skipChildren();
+          }
+        }
+      } else {
+        parser.skipChildren();
+      }
+      members.add(member);
+    }
+  }
+
+  /**
+   * Scans the resource of a Bundle entry, from its opening brace to its closing one, measuring its
+   * byte size from the parser's offsets. Unlike a standalone resource, the whole object is
+   * consumed, since the scan continues with the next entry.
+   */
+  @Nonnull
+  private static ScannedResource scanMember(
+      @Nonnull final JsonParser parser, @Nonnull final String memberName) throws IOException {
+    final long start = parser.currentTokenLocation().getByteOffset();
+    final ResourceMetadata metadata = new ResourceMetadata();
+    while (parser.nextToken() == JsonToken.FIELD_NAME) {
+      final String field = parser.currentName();
+      parser.nextToken();
+      metadata.read(field, parser);
+    }
+    final long end = parser.currentLocation().getByteOffset();
+    return metadata.toScannedResource(memberName, end - start, List.of());
+  }
+
+  /** The metadata fields of a resource, collected as the scan meets them. */
+  private static final class ResourceMetadata {
+
+    private String resourceType;
+    private String url;
+    private String version;
+
+    /** Records a metadata field, or skips the value of any other field. */
+    void read(@Nonnull final String field, @Nonnull final JsonParser parser) throws IOException {
+      switch (field) {
+        case FIELD_RESOURCE_TYPE -> resourceType = parser.getValueAsString();
+        case FIELD_URL -> url = parser.getValueAsString();
+        case FIELD_VERSION -> version = parser.getValueAsString();
+        default -> parser.skipChildren();
+      }
+    }
+
+    boolean isComplete() {
+      return resourceType != null && url != null && version != null;
+    }
+
+    boolean isBundle() {
+      return "Bundle".equals(resourceType);
+    }
+
+    @Nonnull
+    ScannedResource toScannedResource(
+        @Nonnull final String entryName,
+        final long byteSize,
+        @Nonnull final List<ScannedResource> members) {
+      return new ScannedResource(resourceType, url, version, entryName, byteSize, members);
+    }
   }
 
   /** Reports whether a source points at a FHIR NPM package by its file extension. */

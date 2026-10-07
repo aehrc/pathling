@@ -18,23 +18,38 @@
 package au.csiro.pathling.terminology.store;
 
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_CANONICAL_URL;
-import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.CONCEPT_MAP;
+import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_CONCEPT_MAP_ID;
+import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_EQUIVALENCE;
+import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_ORDINAL;
+import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_SOURCE_CODE;
+import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_SOURCE_SYSTEM;
+import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_TARGET_CODE;
+import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_TARGET_SYSTEM;
+import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_VERSION;
+import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.CONCEPT_MAPPING;
+import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.ENTRY_TYPE_CONCEPT_MAP;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.VALUE_SET;
+import static org.apache.spark.sql.functions.col;
+import static org.apache.spark.sql.functions.lit;
 
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.DataFormatException;
 import ca.uhn.fhir.parser.IParser;
 import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonToken;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
@@ -50,11 +65,8 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SaveMode;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.instance.model.api.IBaseResource;
-import org.hl7.fhir.r4.model.Bundle;
-import org.hl7.fhir.r4.model.CodeSystem;
-import org.hl7.fhir.r4.model.ConceptMap;
-import org.hl7.fhir.r4.model.Resource;
 import org.hl7.fhir.r4.model.ValueSet;
 
 /**
@@ -62,13 +74,14 @@ import org.hl7.fhir.r4.model.ValueSet;
  * source is read through the Hadoop FileSystem API and may be a single JSON file, a directory of
  * JSON files, or a FHIR NPM package ({@code .tgz}); Bundles are unwrapped.
  *
- * <p>Every source is first pre-scanned to validate cheap structural facts (each importable resource
- * is a FHIR object carrying a canonical URL) before anything is written, so an invalid source
- * leaves the store untouched. CodeSystems of any size are then streamed through a bounded-memory
- * pipeline (token-stream flatten to temporary NDJSON staging, then a Spark load), so peak driver
- * memory does not grow with the number of concepts. ValueSets and ConceptMaps keep the
- * whole-resource HAPI path, guarded by a size limit so an oversized one fails with an actionable
- * error rather than a memory error.
+ * <p>Every source, including the entries of each Bundle, is first pre-scanned to validate cheap
+ * structural facts (each importable resource is a FHIR object carrying a canonical URL) before
+ * anything is written, so an invalid source leaves the store untouched. CodeSystems and ConceptMaps
+ * of any size, standalone or in a Bundle, are then streamed through a bounded-memory pipeline
+ * (token-stream flatten to temporary NDJSON staging, then a Spark load), so peak driver memory does
+ * not grow with the number of concepts or mappings. ValueSets keep the whole-resource HAPI path,
+ * guarded by a size limit so an oversized one fails with an actionable error rather than a memory
+ * error.
  *
  * @author John Grimes
  */
@@ -76,10 +89,18 @@ import org.hl7.fhir.r4.model.ValueSet;
 public class FhirTerminologyImporter {
 
   /**
-   * The maximum byte size of a resource handled through the whole-resource HAPI path. Comfortably
-   * below the JVM array limit and far above any legitimate ValueSet or ConceptMap.
+   * The maximum byte size of a ValueSet, which is handled through the whole-resource HAPI path.
+   * Comfortably below the JVM array limit and far above any legitimate ValueSet.
    */
   static final long DEFAULT_WHOLE_RESOURCE_LIMIT_BYTES = 1L << 30;
+
+  private static final String VALUE_SET_TYPE = "ValueSet";
+
+  /** The entry array of a Bundle. */
+  private static final String FIELD_ENTRY = "entry";
+
+  /** The field of a Bundle entry that holds its resource. */
+  private static final String FIELD_RESOURCE = "resource";
 
   /**
    * The Parquet row-group size applied while writing store tables during import. A small, fixed
@@ -119,8 +140,8 @@ public class FhirTerminologyImporter {
    *
    * @param spark the Spark session used to write
    * @param storagePath the root path of the terminology store, created if absent
-   * @param wholeResourceLimitBytes the maximum byte size for a whole-resource (non-CodeSystem)
-   *     import
+   * @param wholeResourceLimitBytes the maximum byte size of a ValueSet, the one resource imported
+   *     whole
    */
   FhirTerminologyImporter(
       @Nonnull final SparkSession spark,
@@ -281,24 +302,32 @@ public class FhirTerminologyImporter {
     }
   }
 
+  /**
+   * Validates every terminology resource of a source, including the members of each Bundle, before
+   * anything is written: each must carry a canonical URL, and a ValueSet, the one resource still
+   * read whole, must fit within the whole-resource limit.
+   */
   private void validate(
       @Nonnull final List<ScannedResource> scanned, @Nonnull final String source) {
-    boolean anyImportable = false;
-    for (final ScannedResource resource : scanned) {
-      if (!resource.isImportable()) {
-        continue;
-      }
-      anyImportable = true;
-      // A Bundle's canonical URL and its contents are validated when it is parsed on the import
-      // pass, since the pre-scan does not descend into its entries.
-      if (!"Bundle".equals(resource.getResourceType())) {
-        requireUrl(resource.getUrl(), resource.getResourceType(), resource.getEntryName());
-      }
-      if (!resource.isCodeSystem() && resource.getByteSize() > wholeResourceLimitBytes) {
+    final List<ScannedResource> resources =
+        scanned.stream()
+            .flatMap(
+                resource ->
+                    resource.isBundle() ? resource.getMembers().stream() : Stream.of(resource))
+            .filter(ScannedResource::isTerminologyResource)
+            .toList();
+    if (resources.isEmpty()) {
+      throw new TerminologyImportException(
+          "No importable FHIR CodeSystem, ValueSet, or ConceptMap resources were found in "
+              + source
+              + ".");
+    }
+    for (final ScannedResource resource : resources) {
+      requireUrl(resource.getUrl(), resource.getResourceType(), resource.getEntryName());
+      if (VALUE_SET_TYPE.equals(resource.getResourceType())
+          && resource.getByteSize() > wholeResourceLimitBytes) {
         throw new TerminologyImportException(
-            "The "
-                + resource.getResourceType()
-                + " "
+            "The ValueSet "
                 + resource.getUrl()
                 + " in "
                 + resource.getEntryName()
@@ -306,15 +335,9 @@ public class FhirTerminologyImporter {
                 + resource.getByteSize()
                 + " bytes, exceeding the "
                 + wholeResourceLimitBytes
-                + "-byte whole-resource import limit; only CodeSystems are imported with bounded"
-                + " memory.");
+                + "-byte limit on a ValueSet, which is imported whole; only CodeSystems and"
+                + " ConceptMaps are imported with bounded memory.");
       }
-    }
-    if (!anyImportable) {
-      throw new TerminologyImportException(
-          "No importable FHIR CodeSystem, ValueSet, or ConceptMap resources were found in "
-              + source
-              + ".");
     }
   }
 
@@ -344,6 +367,7 @@ public class FhirTerminologyImporter {
     final String source = provenance.getSource();
     final Path root = new Path(source);
     final FileSystem fs = root.getFileSystem(hadoopConf);
+    final ImportContext context = new ImportContext(provenance, writer, loader, counts);
     if (fs.getFileStatus(root).isDirectory()) {
       final RemoteIterator<LocatedFileStatus> iterator = fs.listFiles(root, true);
       while (iterator.hasNext()) {
@@ -351,8 +375,7 @@ public class FhirTerminologyImporter {
         final String name = status.getPath().getName();
         if (name.endsWith(".json") && !FhirResourceScanner.isPackageMetadata(name)) {
           try (InputStream in = fs.open(status.getPath())) {
-            importEntry(
-                in, status.getPath().toString(), provenance, byEntry, writer, loader, counts);
+            importEntry(in, byEntry.get(status.getPath().toString()), context);
           }
         }
       }
@@ -365,90 +388,245 @@ public class FhirTerminologyImporter {
           if (!entry.isDirectory()
               && name.endsWith(".json")
               && !FhirResourceScanner.isPackageMetadata(name)) {
-            importEntry(tar, entry.getName(), provenance, byEntry, writer, loader, counts);
+            importEntry(tar, byEntry.get(entry.getName()), context);
           }
         }
       }
     } else {
       try (InputStream in = fs.open(root)) {
-        importEntry(in, source, provenance, byEntry, writer, loader, counts);
+        importEntry(in, byEntry.get(source), context);
       }
     }
   }
 
   /**
-   * Imports one JSON entry, routing by the pre-scan result: a CodeSystem is streamed straight from
-   * the entry stream into staging with no whole-entry buffering, while a bounded whole resource is
-   * read into memory for the HAPI path. The stream is positioned at the start of the entry; for an
-   * archive it reports end-of-entry so the streaming parser never reads past the entry, and it is
-   * not closed here.
+   * Imports one JSON entry, routing by the pre-scan result. A CodeSystem, a ConceptMap, and a
+   * Bundle are streamed straight from the entry stream with no whole-entry buffering, while a
+   * ValueSet, bounded by the pre-scan, is read into memory for the HAPI path. The stream is
+   * positioned at the start of the entry; for an archive it reports end-of-entry so the streaming
+   * parser never reads past the entry, and it is not closed here.
    */
   private void importEntry(
       @Nonnull final InputStream in,
-      @Nonnull final String entryName,
-      @Nonnull final ImportProvenance provenance,
-      @Nonnull final Map<String, ScannedResource> byEntry,
-      @Nonnull final TerminologyStoreWriter writer,
-      @Nonnull final CodeSystemStageLoader loader,
-      @Nonnull final ImportCounts counts)
+      @Nullable final ScannedResource scanned,
+      @Nonnull final ImportContext context)
       throws IOException {
-    final ScannedResource scanned = byEntry.get(entryName);
     if (scanned == null || !scanned.isImportable()) {
       return;
     }
-    if (scanned.isCodeSystem()) {
-      requireUrl(scanned.getUrl(), "CodeSystem", entryName);
-      flattenAndLoad(in, scanned.getUrl(), scanned.getVersion(), provenance, loader, counts);
-    } else {
-      importWholeResource(IOUtils.toByteArray(in), entryName, provenance, writer, loader, counts);
+    if (VALUE_SET_TYPE.equals(scanned.getResourceType())) {
+      importValueSet(new String(IOUtils.toByteArray(in), StandardCharsets.UTF_8), scanned, context);
+      return;
+    }
+    try (JsonParser parser = JSON_FACTORY.createParser(in)) {
+      if (scanned.isBundle()) {
+        importBundle(parser, scanned, context);
+      } else {
+        importStreamed(parser, scanned, context);
+      }
     }
   }
 
   /**
-   * Flattens a CodeSystem straight from its entry stream through the streaming path and loads it,
-   * translating failures into the partial-version contract once a write has begun. The stream is
-   * consumed but not closed.
+   * Walks a Bundle's entries in the order the pre-scan recorded them, importing the resource of
+   * each entry whose member is terminology content through the same path as a standalone resource.
+   */
+  private void importBundle(
+      @Nonnull final JsonParser parser,
+      @Nonnull final ScannedResource bundle,
+      @Nonnull final ImportContext context)
+      throws IOException {
+    if (parser.nextToken() != JsonToken.START_OBJECT) {
+      throw new TerminologyImportException(
+          "Expected a Bundle JSON object in " + bundle.getEntryName());
+    }
+    final List<ScannedResource> members = bundle.getMembers();
+    while (parser.nextToken() == JsonToken.FIELD_NAME) {
+      final String field = parser.currentName();
+      parser.nextToken();
+      if (!FIELD_ENTRY.equals(field) || parser.currentToken() != JsonToken.START_ARRAY) {
+        parser.skipChildren();
+        continue;
+      }
+      int index = 0;
+      while (parser.nextToken() != JsonToken.END_ARRAY) {
+        if (index >= members.size()) {
+          throw new TerminologyImportException(
+              "The Bundle in " + bundle.getEntryName() + " changed while it was being imported.");
+        }
+        importBundleEntry(parser, members.get(index++), context);
+      }
+    }
+  }
+
+  /** Imports the resource of one Bundle entry, skipping everything else in the entry. */
+  private void importBundleEntry(
+      @Nonnull final JsonParser parser,
+      @Nonnull final ScannedResource member,
+      @Nonnull final ImportContext context)
+      throws IOException {
+    if (parser.currentToken() != JsonToken.START_OBJECT) {
+      parser.skipChildren();
+      return;
+    }
+    while (parser.nextToken() == JsonToken.FIELD_NAME) {
+      if (!FIELD_RESOURCE.equals(parser.currentName()) || !member.isTerminologyResource()) {
+        parser.nextToken();
+        parser.skipChildren();
+      } else if (VALUE_SET_TYPE.equals(member.getResourceType())) {
+        parser.nextToken();
+        importValueSet(copyObject(parser), member, context);
+      } else {
+        // The streaming paths start by reading the resource's opening brace.
+        importStreamed(parser, member, context);
+      }
+    }
+  }
+
+  /** Copies the JSON object at the parser's position into a string, consuming it. */
+  @Nonnull
+  private static String copyObject(@Nonnull final JsonParser parser) throws IOException {
+    final StringWriter json = new StringWriter();
+    try (JsonGenerator generator = JSON_FACTORY.createGenerator(json)) {
+      generator.copyCurrentStructure(parser);
+    }
+    return json.toString();
+  }
+
+  /**
+   * Imports a CodeSystem or a ConceptMap from a parser positioned before its opening brace,
+   * consuming the resource.
+   */
+  private void importStreamed(
+      @Nonnull final JsonParser parser,
+      @Nonnull final ScannedResource scanned,
+      @Nonnull final ImportContext context) {
+    if (scanned.isCodeSystem()) {
+      flattenAndLoad(parser, scanned.getUrl(), scanned.getVersion(), context);
+    } else {
+      flattenAndWriteConceptMap(parser, scanned.getUrl(), scanned.getVersion(), context);
+    }
+  }
+
+  /**
+   * Flattens a CodeSystem through the streaming path and loads it, translating failures into the
+   * partial-version contract once a write has begun.
    */
   private void flattenAndLoad(
-      @Nonnull final InputStream in,
+      @Nonnull final JsonParser parser,
       @Nonnull final String url,
       @Nullable final String version,
-      @Nonnull final ImportProvenance provenance,
-      @Nonnull final CodeSystemStageLoader loader,
-      @Nonnull final ImportCounts counts) {
+      @Nonnull final ImportContext context) {
     log.info("Streaming CodeSystem {}", url);
+    final ImportCounts counts = context.counts();
     try (CodeSystemStaging staging = CodeSystemStaging.create()) {
       final CodeSystemStreamFlattener flattener = new CodeSystemStreamFlattener(staging);
-      try (JsonParser parser = JSON_FACTORY.createParser(in)) {
+      try {
         flattener.flatten(parser);
       } catch (final IOException | RuntimeException e) {
         if (counts.writeBegun) {
-          throw partialFailure(url, version, e);
+          throw partialFailure("CodeSystem", url, version, e);
         }
         throw new TerminologyImportException(
             "Unable to parse CodeSystem "
                 + url
                 + " from "
-                + provenance.getSource()
+                + context.provenance().getSource()
                 + "; the source may be corrupt.",
             e);
       }
       staging.sealForReading();
       counts.writeBegun = true;
       try {
-        loader.load(staging, url, version, flattener.getHierarchyMeaning(), provenance);
+        context
+            .loader()
+            .load(staging, url, version, flattener.getHierarchyMeaning(), context.provenance());
       } catch (final RuntimeException e) {
-        throw partialFailure(url, version, e);
+        throw partialFailure("CodeSystem", url, version, e);
       }
     }
     counts.codeSystems++;
   }
 
+  /**
+   * Flattens a ConceptMap through the streaming path into staging, then replaces the stored
+   * mappings of its version with the staged ones. A map that cannot be read is rejected before any
+   * of it is written.
+   */
+  private void flattenAndWriteConceptMap(
+      @Nonnull final JsonParser parser,
+      @Nonnull final String url,
+      @Nullable final String version,
+      @Nonnull final ImportContext context) {
+    log.info("Streaming ConceptMap {}", url);
+    final ImportCounts counts = context.counts();
+    try (ConceptMapStaging staging = ConceptMapStaging.create()) {
+      final int mappings;
+      try {
+        mappings = new ConceptMapStreamFlattener(staging).flatten(parser);
+      } catch (final IOException | RuntimeException e) {
+        throw new TerminologyImportException(
+            "Unable to read ConceptMap "
+                + url
+                + " from "
+                + context.provenance().getSource()
+                + ": "
+                + e.getMessage(),
+            e);
+      }
+      staging.sealForReading();
+      counts.writeBegun = true;
+      log.info("Loading ConceptMap {} ({} mappings) into the store", url, mappings);
+      try {
+        writeConceptMapping(staging, url, version, context);
+      } catch (final RuntimeException e) {
+        throw partialFailure("ConceptMap", url, version, e);
+      }
+    }
+    counts.conceptMaps++;
+  }
+
+  private void writeConceptMapping(
+      @Nonnull final ConceptMapStaging staging,
+      @Nonnull final String url,
+      @Nullable final String version,
+      @Nonnull final ImportContext context) {
+    final String conceptMapId = TerminologyStoreSchema.conceptMapId(url, version);
+    final Dataset<Row> data =
+        staging
+            .read(spark)
+            .select(
+                lit(url).alias(COLUMN_CANONICAL_URL),
+                lit(version).cast(DataTypes.StringType).alias(COLUMN_VERSION),
+                col(COLUMN_ORDINAL),
+                col(COLUMN_SOURCE_SYSTEM),
+                col(COLUMN_SOURCE_CODE),
+                col(COLUMN_TARGET_SYSTEM),
+                col(COLUMN_TARGET_CODE),
+                col(COLUMN_EQUIVALENCE),
+                lit(conceptMapId).alias(COLUMN_CONCEPT_MAP_ID));
+    final TerminologyStoreWriter writer = context.writer();
+    if (writer.tableExists(CONCEPT_MAPPING)) {
+      writer.replaceWhere(
+          data, CONCEPT_MAPPING, COLUMN_CONCEPT_MAP_ID + " = '" + conceptMapId + "'");
+    } else {
+      writer.writeTable(data, CONCEPT_MAPPING, SaveMode.Overwrite, List.of(COLUMN_CONCEPT_MAP_ID));
+    }
+    writer.upsertManifestEntry(
+        ManifestEntry.forImport(
+            ENTRY_TYPE_CONCEPT_MAP, url, version, context.provenance(), Instant.now()));
+  }
+
   @Nonnull
   private static TerminologyImportException partialFailure(
-      @Nonnull final String url, @Nullable final String version, @Nonnull final Throwable cause) {
+      @Nonnull final String resourceType,
+      @Nonnull final String url,
+      @Nullable final String version,
+      @Nonnull final Throwable cause) {
     return new TerminologyImportException(
-        "The import of CodeSystem "
+        "The import of "
+            + resourceType
+            + " "
             + url
             + (version != null ? " version " + version : "")
             + " failed after writing had begun. The store may hold a partial version of it;"
@@ -456,109 +634,62 @@ public class FhirTerminologyImporter {
         cause);
   }
 
-  /** Imports a ValueSet, ConceptMap, or Bundle through the whole-resource HAPI path. */
-  private void importWholeResource(
-      @Nonnull final byte[] bytes,
-      @Nonnull final String entryName,
-      @Nonnull final ImportProvenance provenance,
-      @Nonnull final TerminologyStoreWriter writer,
-      @Nonnull final CodeSystemStageLoader loader,
-      @Nonnull final ImportCounts counts) {
+  /** Imports a ValueSet, already bounded by the pre-scan, through the whole-resource HAPI path. */
+  private void importValueSet(
+      @Nonnull final String json,
+      @Nonnull final ScannedResource scanned,
+      @Nonnull final ImportContext context) {
     final IBaseResource parsed;
     try {
-      parsed = parser().parseResource(new String(bytes, StandardCharsets.UTF_8));
+      parsed = parser().parseResource(json);
     } catch (final DataFormatException e) {
       throw new TerminologyImportException(
-          "Unable to parse FHIR resource from " + entryName + ": " + e.getMessage(), e);
+          "Unable to parse FHIR resource from " + scanned.getEntryName() + ": " + e.getMessage(),
+          e);
     }
-    if (parsed instanceof final Bundle bundle) {
-      for (final Bundle.BundleEntryComponent bundleEntry : bundle.getEntry()) {
-        final Resource resource = bundleEntry.getResource();
-        if (resource != null) {
-          importBundleResource(resource, entryName, provenance, writer, loader, counts);
-        }
-      }
-    } else if (parsed instanceof final Resource resource) {
-      importBundleResource(resource, entryName, provenance, writer, loader, counts);
+    if (!(parsed instanceof final ValueSet valueSet)) {
+      throw new TerminologyImportException(
+          "Expected a ValueSet in " + scanned.getEntryName() + " but found " + parsed.fhirType());
     }
-  }
-
-  private void importBundleResource(
-      @Nonnull final Resource resource,
-      @Nonnull final String entryName,
-      @Nonnull final ImportProvenance provenance,
-      @Nonnull final TerminologyStoreWriter writer,
-      @Nonnull final CodeSystemStageLoader loader,
-      @Nonnull final ImportCounts counts) {
-    if (resource instanceof final CodeSystem codeSystem) {
-      requireUrl(codeSystem.getUrl(), "CodeSystem", entryName);
-      // Re-encode the Bundle-extracted CodeSystem so it flows through the same streaming flattener.
-      final byte[] json =
-          parser().encodeResourceToString(codeSystem).getBytes(StandardCharsets.UTF_8);
-      flattenAndLoad(
-          new java.io.ByteArrayInputStream(json),
-          codeSystem.getUrl(),
-          codeSystem.getVersion(),
-          provenance,
-          loader,
-          counts);
-    } else if (resource instanceof final ValueSet valueSet) {
-      requireUrl(valueSet.getUrl(), "ValueSet", entryName);
-      counts.writeBegun = true;
-      importResource(
-          writer,
-          VALUE_SET,
-          "value_set",
-          valueSet.getUrl(),
-          valueSet.getVersion(),
-          valueSet,
-          provenance);
-      counts.valueSets++;
-    } else if (resource instanceof final ConceptMap conceptMap) {
-      requireUrl(conceptMap.getUrl(), "ConceptMap", entryName);
-      counts.writeBegun = true;
-      importResource(
-          writer,
-          CONCEPT_MAP,
-          "concept_map",
-          conceptMap.getUrl(),
-          conceptMap.getVersion(),
-          conceptMap,
-          provenance);
-      counts.conceptMaps++;
-    }
-  }
-
-  // --- Whole-resource storage (unchanged from the pre-streaming importer). ---
-
-  private void importResource(
-      @Nonnull final TerminologyStoreWriter writer,
-      @Nonnull final String tableName,
-      @Nonnull final String entryType,
-      @Nonnull final String url,
-      @Nullable final String version,
-      @Nonnull final Resource resource,
-      @Nonnull final ImportProvenance provenance) {
-    final String json = parser().encodeResourceToString(resource);
+    requireUrl(valueSet.getUrl(), VALUE_SET_TYPE, scanned.getEntryName());
+    context.counts().writeBegun = true;
     final Dataset<Row> data =
         spark.createDataFrame(
-            List.of(RowFactory.create(url, version, json)),
+            List.of(
+                RowFactory.create(
+                    valueSet.getUrl(),
+                    valueSet.getVersion(),
+                    parser().encodeResourceToString(valueSet))),
             TerminologyStoreSchema.resourceTableSchema());
-    if (writer.tableExists(tableName)) {
+    final TerminologyStoreWriter writer = context.writer();
+    if (writer.tableExists(VALUE_SET)) {
       writer.replaceWhere(
           data,
-          tableName,
+          VALUE_SET,
           COLUMN_CANONICAL_URL
               + " = '"
-              + url
+              + valueSet.getUrl()
               + "' AND "
-              + TerminologyStoreWriter.versionPredicate(version));
+              + TerminologyStoreWriter.versionPredicate(valueSet.getVersion()));
     } else {
-      writer.writeTable(data, tableName, SaveMode.Overwrite, List.of());
+      writer.writeTable(data, VALUE_SET, SaveMode.Overwrite, List.of());
     }
     writer.upsertManifestEntry(
-        ManifestEntry.forImport(entryType, url, version, provenance, Instant.now()));
+        ManifestEntry.forImport(
+            "value_set",
+            valueSet.getUrl(),
+            valueSet.getVersion(),
+            context.provenance(),
+            Instant.now()));
+    context.counts().valueSets++;
   }
+
+  /** What every resource of one import pass is written with and counted against. */
+  private record ImportContext(
+      @Nonnull ImportProvenance provenance,
+      @Nonnull TerminologyStoreWriter writer,
+      @Nonnull CodeSystemStageLoader loader,
+      @Nonnull ImportCounts counts) {}
 
   /** Mutable running counts and the write-begun flag across an import. */
   private static final class ImportCounts {

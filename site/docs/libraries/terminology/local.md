@@ -256,21 +256,75 @@ hierarchies just as they do over nested ones. A `parent` or `child` reference to
 a code absent from the CodeSystem is skipped with a warning, and duplicate
 concept codes resolve to their first occurrence with a warning.
 
-### Bundles and non-CodeSystem resources
+### Large ConceptMaps
 
-ValueSets and ConceptMaps are stored whole, so a single resource must fit in
-memory; one larger than 1 GB fails with an actionable error naming the resource
-rather than an opaque memory error. Bundle-wrapped sources are also parsed in
-memory, so a Bundle is subject to the same in-memory limit; supply large
-CodeSystems as standalone resources to benefit from the streaming path.
+ConceptMaps are imported with bounded memory regardless of their size, in the
+same way as CodeSystems: each is streamed from the source to temporary files on
+the driver and loaded with Spark, so the driver never holds a map's mappings in
+memory. Each target of each source element is stored as a row of the store's
+`concept_mapping` table, and a running count of parsed mappings is logged
+during a long import.
+
+Peak import memory depends on how many cores write in parallel rather than on
+the size of the map. On a 14-core machine, a ConceptMap of 5 million mappings
+(a 373 MB JSON file) imported in 8 seconds within a 1 GB driver heap, and one
+of 20 million mappings (1.5 GB) imported in 18 seconds within 1.5 GB; the
+latter also imported within 1 GB when Spark was limited to 8 cores. See
+[driver memory for large imports](../cli#terminology-import-commands) for how to
+raise the heap.
+
+At query time a map's mappings are read the first time `translate` uses it,
+and only those of the version that answers, so maps that are never used cost
+nothing. The mappings are then held in memory on each executor for the life of
+the session, in a compact form that stores each distinct code once as UTF-8
+bytes and each mapping as a few integers. In the measurements above, where
+nearly every code was distinct, this came to about 50 bytes per mapping: 254 MB
+for the 5 million mapping map and 1 GB for the 20 million mapping one. Executor
+memory must accommodate the maps a query uses.
+
+Where the store holds several versions of a ConceptMap, `translate` uses the
+latest, chosen by the same version ordering as for ValueSets. The versions are
+never combined.
+
+Only the parts of a ConceptMap that `translate` uses are stored: the source and
+target systems of each group, the code of each element, and the code and
+equivalence of each of its targets. A target without an equivalence is treated
+as `relatedto`, and an element without a code is skipped. An unrecognised
+equivalence fails the import, naming the map, before any of the map is written.
+
+### Bundles and ValueSets
+
+A Bundle is streamed entry by entry, so CodeSystems and ConceptMaps inside a
+Bundle are imported with the same bounded memory as standalone ones, and a
+Bundle may be of any size. The entries are validated before anything is
+written: each CodeSystem, ValueSet or ConceptMap must carry a canonical URL, and
+an entry holding any other kind of resource is skipped.
+
+ValueSets are stored whole, so a single ValueSet must fit in memory; one larger
+than 1 GB, standalone or in a Bundle, fails with an actionable error naming the
+resource rather than an opaque memory error.
+
+### Stores written by earlier versions
+
+Format version 2 changed how ConceptMaps are stored, from one JSON document per
+map to one row per mapping, which is what makes large maps possible. A store
+written by Pathling 9.9.0 or earlier that holds any ConceptMap fails to open,
+naming the maps, rather than translating as though they were absent. Re-import
+the FHIR terminology content into a new store to upgrade it; the SNOMED CT
+content of such a store needs no change, but importing it again into the new
+store is the simplest way to carry it over. A store written by Pathling 9.9.0
+that holds no ConceptMaps opens unchanged. A store written by this version of
+Pathling does not open with Pathling 9.9.0, which reports the format version as
+too new.
 
 ### Recovering from a failed import
 
-If an import fails partway through writing a CodeSystem (for example, because the
-source is truncated or corrupt), it reports that the store may hold a partial
-version of that CodeSystem and advises re-running the import. Because content is
-keyed by system version, re-running with a corrected source fully replaces the
-partial version and repairs the store.
+If an import fails after it has begun writing (for example, because a
+CodeSystem later in the source is truncated or corrupt), it reports that the
+store may hold a partial version of the CodeSystem or ConceptMap concerned and
+advises re-running the import. Because content is keyed by resource version,
+re-running with a corrected source fully replaces the partial version and
+repairs the store.
 
 ### Provenance and verification
 
@@ -283,7 +337,7 @@ same provenance values.
 
 | Column                 | Type      | Null | Meaning                                                                                                                                                                                             |
 | ---------------------- | --------- | ---- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `store_format_version` | int       | no   | The store layout version, always `1`.                                                                                                                                                               |
+| `store_format_version` | int       | no   | The store layout version the row was written under: `2`, or `1` for rows written by Pathling 9.9.0 and earlier.                                                                                     |
 | `entry_type`           | string    | no   | `code_system`, `value_set` or `concept_map`.                                                                                                                                                        |
 | `canonical_url`        | string    | no   | The canonical URL of the imported resource.                                                                                                                                                         |
 | `version`              | string    | yes  | Its version, where the resource declares one.                                                                                                                                                       |
@@ -297,8 +351,7 @@ same provenance values.
 
 The store format version is unchanged by the last five columns, so a store
 built before they were recorded opens, answers queries and accepts new imports
-without migration, its existing rows reading back as null; and a store carrying
-them opens with the preceding version of Pathling, which ignores them.
+without migration, its existing rows reading back as null.
 
 The SHA-256 is taken from the bytes the import already reads, so it adds no
 further pass over an archive, and it covers the whole file: it agrees with

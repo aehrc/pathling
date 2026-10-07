@@ -187,6 +187,49 @@ class TerminologyStoreTest {
   }
 
   @Test
+  void rejectsAStoreHoldingConceptMapsInTheFormerLayout(@TempDir final Path storeDir) {
+    // Format version 1 stored each ConceptMap as a single JSON document, which this version of
+    // Pathling no longer reads, so the store must be re-imported rather than silently losing maps.
+    final String store = storeDir.resolve("store").toString();
+    new TerminologyStoreWriter(spark, store)
+        .writeManifest(
+            List.of(formatOneEntry("code_system"), formatOneEntry("concept_map")), SaveMode.Append);
+
+    final TerminologyStoreException e =
+        assertThrows(
+            TerminologyStoreException.class, () -> TerminologyStoreReader.open(store, Map.of()));
+    assertTrue(e.getMessage().contains("http://example.org/v1"), e.getMessage());
+    assertTrue(e.getMessage().contains("re-import"), e.getMessage());
+  }
+
+  @Test
+  void opensAFormatOneStoreWithoutConceptMaps(@TempDir final Path storeDir) {
+    // Nothing else changed layout between format versions 1 and 2.
+    final String store = storeDir.resolve("store").toString();
+    new TerminologyStoreWriter(spark, store)
+        .writeManifest(
+            List.of(formatOneEntry("code_system"), formatOneEntry("value_set")), SaveMode.Append);
+
+    assertEquals(2, TerminologyStoreReader.open(store, Map.of()).readManifest().size());
+  }
+
+  @Nonnull
+  private static ManifestEntry formatOneEntry(@Nonnull final String entryType) {
+    return new ManifestEntry(
+        1,
+        entryType,
+        "http://example.org/v1",
+        entryType,
+        "v1.json",
+        Instant.now(),
+        null,
+        null,
+        null,
+        null,
+        null);
+  }
+
+  @Test
   void rejectsMissingStore(@TempDir final Path storeDir) {
     final String missing = storeDir.resolve("does-not-exist").toString();
     assertThrows(

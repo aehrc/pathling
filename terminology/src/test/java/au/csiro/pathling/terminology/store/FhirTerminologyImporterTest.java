@@ -20,15 +20,21 @@ package au.csiro.pathling.terminology.store;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.CLOSURE;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_ACTIVE;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_ANCESTOR_DENSE_ID;
+import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_CANONICAL_URL;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_CODE;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_CONCEPT_DENSE_ID;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_DENSE_ID;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_DESCENDANT_DENSE_ID;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_DISPLAY;
+import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_EQUIVALENCE;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_PROPERTY_CODE;
+import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_SOURCE_CODE;
+import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_TARGET_CODE;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_TERM;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_VALUE;
+import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_VERSION;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.CONCEPT;
+import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.CONCEPT_MAPPING;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.DESCRIPTION;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.PROPERTY;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -432,6 +438,227 @@ class FhirTerminologyImporterTest {
     // B is-a A comes from both nesting and a parent property, and C is-a A from a property; the
     // overlapping B is-a A edge is not double-counted.
     assertEquals(Set.of("A->B", "A->C"), mixed);
+  }
+
+  // --- Streaming ConceptMaps. ---
+
+  @Test
+  void importsAConceptMapAsOneRowPerMapping(@TempDir final Path dir) {
+    final String store = dir.resolve("store").toString();
+    new FhirTerminologyImporter(spark, store)
+        .importFrom(conceptMapFixture().toString(), false, null);
+
+    final ManifestEntry entry = manifest(store).get(0);
+    assertEquals("concept_map", entry.getEntryType());
+    assertEquals(FhirFixtures.CONCEPT_MAP, entry.getCanonicalUrl());
+    assertEquals(FhirFixtures.VERSION, entry.getVersion());
+    // Each mapping is a row of its own, keyed by the map's URL and version.
+    assertEquals(
+        Set.of(
+            mapping(FhirFixtures.CONCEPT_MAP, FhirFixtures.VERSION, "dog", "pet", "equivalent"),
+            mapping(FhirFixtures.CONCEPT_MAP, FhirFixtures.VERSION, "cat", "pet", "equivalent"),
+            mapping(
+                FhirFixtures.CONCEPT_MAP, FhirFixtures.VERSION, "whale", "aquatic", "relatedto"),
+            mapping(FhirFixtures.CONCEPT_MAP, FhirFixtures.VERSION, "sparrow", "pet", "wider")),
+        mappings(store));
+  }
+
+  @Test
+  void importsAConceptMapLargerThanTheWholeResourceLimit(@TempDir final Path dir) {
+    final String store = dir.resolve("store").toString();
+    // The fixture is far larger than this limit, which would reject it if it were read whole.
+    new FhirTerminologyImporter(spark, store, 100L)
+        .importFrom(conceptMapFixture().toString(), false, null);
+
+    assertEquals(4, mappings(store).size());
+  }
+
+  @Test
+  void reimportingAConceptMapReplacesOnlyThatVersionsMappings(@TempDir final Path dir)
+      throws Exception {
+    final String store = dir.resolve("store").toString();
+    final Path first = dir.resolve("first.json");
+    Files.writeString(first, conceptMapJson("1", "a", "b"));
+    final Path other = dir.resolve("other.json");
+    Files.writeString(other, conceptMapJson("2", "c", "d"));
+    final Path revised = dir.resolve("revised.json");
+    Files.writeString(revised, conceptMapJson("1", "a", "z"));
+
+    new FhirTerminologyImporter(spark, store).importFrom(first.toString(), false, null);
+    new FhirTerminologyImporter(spark, store).importFrom(other.toString(), false, null);
+    new FhirTerminologyImporter(spark, store).importFrom(revised.toString(), false, null);
+
+    // The revised version 1 replaced its predecessor outright, and version 2 was left alone.
+    assertEquals(
+        Set.of(
+            mapping("http://example.org/cm", "1", "a", "z", "equivalent"),
+            mapping("http://example.org/cm", "2", "c", "d", "equivalent")),
+        mappings(store));
+  }
+
+  @Test
+  void rejectsAConceptMapWithAnUnrecognisedEquivalenceBeforeWritingIt(@TempDir final Path dir)
+      throws Exception {
+    final Path source = dir.resolve("bad.json");
+    Files.writeString(source, conceptMapJson("1", "a", "b").replace("equivalent", "sort-of"));
+    final String store = dir.resolve("store").toString();
+
+    final TerminologyImportException e =
+        assertThrows(
+            TerminologyImportException.class,
+            () ->
+                new FhirTerminologyImporter(spark, store)
+                    .importFrom(source.toString(), false, null));
+
+    assertTrue(e.getMessage().contains("http://example.org/cm"), e.getMessage());
+    assertTrue(e.getMessage().contains("sort-of"), e.getMessage());
+    // The map was rejected while it was being read, before anything was written.
+    assertThrows(
+        TerminologyStoreException.class, () -> TerminologyStoreReader.open(store, Map.of()));
+  }
+
+  // --- Streaming Bundles. ---
+
+  @Test
+  void importsEveryImportableMemberOfABundleLargerThanTheWholeResourceLimit(
+      @TempDir final Path dir) {
+    final String store = dir.resolve("store").toString();
+    // The limit admits the bundled ValueSet but not the Bundle as a whole, nor its ConceptMap.
+    new FhirTerminologyImporter(spark, store, 400L)
+        .importFrom(FhirPackageFixtures.resource("bundle-mixed.json").toString(), false, null);
+
+    assertBundleMixedImported(store);
+  }
+
+  @Test
+  void importsABundleFromAPackage(@TempDir final Path dir) throws Exception {
+    final Path archive =
+        FhirPackageFixtures.buildPackage(
+            dir, "bundle.tgz", "bundle-mixed.json", "nested-hierarchy.json");
+    final String store = dir.resolve("store").toString();
+
+    new FhirTerminologyImporter(spark, store).importFrom(archive.toString(), false, null);
+
+    assertBundleMixedImported(store);
+    // The entry after the Bundle is read from the right place in the archive stream.
+    assertTrue(
+        manifestByType(store)
+            .get("code_system")
+            .contains("http://example.org/fhir/CodeSystem/nested"));
+  }
+
+  @Test
+  void rejectsAnOversizedValueSetInABundleBeforeAnyWrite(@TempDir final Path dir) {
+    final String store = dir.resolve("store").toString();
+    final FhirTerminologyImporter importer = new FhirTerminologyImporter(spark, store, 100L);
+
+    final TerminologyImportException e =
+        assertThrows(
+            TerminologyImportException.class,
+            () ->
+                importer.importFrom(
+                    FhirPackageFixtures.resource("bundle-mixed.json").toString(), false, null));
+
+    assertTrue(e.getMessage().contains("http://example.org/fhir/ValueSet/bundled"), e.getMessage());
+    assertTrue(e.getMessage().toLowerCase().contains("limit"), e.getMessage());
+    // The CodeSystem that precedes the ValueSet in the Bundle was not written either.
+    assertThrows(
+        TerminologyStoreException.class, () -> TerminologyStoreReader.open(store, Map.of()));
+  }
+
+  @Test
+  void rejectsABundleMemberWithoutACanonicalUrlBeforeAnyWrite(@TempDir final Path dir)
+      throws Exception {
+    final Path source = dir.resolve("bundle.json");
+    Files.writeString(
+        source,
+        "{\"resourceType\":\"Bundle\",\"entry\":[{\"resource\":"
+            + FhirPackageFixtures.read("simple-valid.json")
+            + "},{\"resource\":{\"resourceType\":\"ConceptMap\",\"status\":\"active\"}}]}");
+    final String store = dir.resolve("store").toString();
+
+    final TerminologyImportException e =
+        assertThrows(
+            TerminologyImportException.class,
+            () ->
+                new FhirTerminologyImporter(spark, store)
+                    .importFrom(source.toString(), false, null));
+
+    assertTrue(e.getMessage().toLowerCase().contains("canonical url"), e.getMessage());
+    assertTrue(e.getMessage().contains("bundle.json#entry[1]"), e.getMessage());
+    assertThrows(
+        TerminologyStoreException.class, () -> TerminologyStoreReader.open(store, Map.of()));
+  }
+
+  @Test
+  void rejectsABundleWithNoImportableMembers(@TempDir final Path dir) throws Exception {
+    final Path source = dir.resolve("bundle.json");
+    Files.writeString(
+        source,
+        "{\"resourceType\":\"Bundle\",\"entry\":[{\"resource\":{\"resourceType\":\"Patient\"}}]}");
+    final String store = dir.resolve("store").toString();
+
+    final TerminologyImportException e =
+        assertThrows(
+            TerminologyImportException.class,
+            () ->
+                new FhirTerminologyImporter(spark, store)
+                    .importFrom(source.toString(), false, null));
+    assertTrue(e.getMessage().contains("No importable"), e.getMessage());
+  }
+
+  private void assertBundleMixedImported(final String store) {
+    final Map<String, Set<String>> byType = manifestByType(store);
+    assertTrue(byType.get("code_system").contains("http://example.org/fhir/CodeSystem/bundled"));
+    assertEquals(Set.of("http://example.org/fhir/ValueSet/bundled"), byType.get("value_set"));
+    assertEquals(Set.of("http://example.org/fhir/ConceptMap/bundled"), byType.get("concept_map"));
+    assertTrue(closurePairs(store).contains("A->B"));
+    assertEquals(
+        Set.of(
+            mapping("http://example.org/fhir/ConceptMap/bundled", "1.0.0", "A", "X", "equivalent"),
+            mapping("http://example.org/fhir/ConceptMap/bundled", "1.0.0", "B", "Y", "wider")),
+        mappings(store));
+  }
+
+  private static Path conceptMapFixture() {
+    return FhirFixtures.jsonDirectory().resolve("conceptmap-species-to-category.json");
+  }
+
+  /** A one-mapping ConceptMap with the given version, source code and target code. */
+  private static String conceptMapJson(
+      final String version, final String sourceCode, final String targetCode) {
+    return "{\"resourceType\":\"ConceptMap\",\"url\":\"http://example.org/cm\",\"version\":\""
+        + version
+        + "\",\"group\":[{\"source\":\"http://s\",\"target\":\"http://t\",\"element\":[{\"code\":\""
+        + sourceCode
+        + "\",\"target\":[{\"code\":\""
+        + targetCode
+        + "\",\"equivalence\":\"equivalent\"}]}]}]}";
+  }
+
+  private static String mapping(
+      final String url,
+      final String version,
+      final String sourceCode,
+      final String targetCode,
+      final String equivalence) {
+    return url + "|" + version + ": " + sourceCode + " -> " + targetCode + " (" + equivalence + ")";
+  }
+
+  private Set<String> mappings(final String store) {
+    final Set<String> rows = new HashSet<>();
+    TerminologyStoreReader.open(store, Map.of())
+        .readTable(
+            CONCEPT_MAPPING,
+            row ->
+                rows.add(
+                    mapping(
+                        row.getString(COLUMN_CANONICAL_URL),
+                        row.getString(COLUMN_VERSION),
+                        row.getString(COLUMN_SOURCE_CODE),
+                        row.getString(COLUMN_TARGET_CODE),
+                        row.getString(COLUMN_EQUIVALENCE))));
+    return rows;
   }
 
   // --- Provenance and registry verification (feature 059). ---
