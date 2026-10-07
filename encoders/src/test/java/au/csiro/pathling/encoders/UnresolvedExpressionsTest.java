@@ -65,17 +65,6 @@ class UnresolvedExpressionsTest {
   }
 
   @Test
-  void testUnresolvedNullIfMissingField() {
-    final UnresolvedNullIfMissingField unresolvedNullIfMissingField =
-        new UnresolvedNullIfMissingField(stringLiteral("data1"));
-    assertUnresolvedExpression(unresolvedNullIfMissingField);
-    assertEquals("data1", unresolvedNullIfMissingField.toString());
-    assertEquals(
-        new UnresolvedNullIfMissingField(stringLiteral("data2")),
-        unresolvedNullIfMissingField.withNewChildrenInternal(toIndexedSeq(stringLiteral("data2"))));
-  }
-
-  @Test
   void testUnresolvedTransformTree() {
 
     final Function1<Expression, Expression> extractor = x -> x;

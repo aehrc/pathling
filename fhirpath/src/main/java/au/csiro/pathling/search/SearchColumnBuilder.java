@@ -216,8 +216,10 @@ public class SearchColumnBuilder {
     final SingleResourceEvaluator evaluator = createEvaluator(resourceType);
     final Collection result = evaluator.evaluate(fhirPath);
 
-    // Get the Column value - for boolean expressions this should be a scalar boolean
-    return result.getColumn().getValue();
+    // Get the Column value - for boolean expressions this should be a scalar boolean. A value is
+    // returned in the form the engine computes with, so that a quantity has the same structure
+    // whatever the layout.
+    return result.toEngineForm().getColumn().getValue();
   }
 
   /**

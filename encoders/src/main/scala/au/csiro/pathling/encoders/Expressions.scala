@@ -26,13 +26,13 @@ import org.apache.spark.SparkException
 import org.apache.spark.sql.AnalysisException
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.analysis.TypeCheckResult.{TypeCheckFailure, TypeCheckSuccess}
-import org.apache.spark.sql.catalyst.analysis.{TypeCheckResult, UnresolvedException}
+import org.apache.spark.sql.catalyst.analysis.{GetViewColumnByNameAndOrdinal, TypeCheckResult, UnresolvedException}
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.{variant => variantExpr}
 import org.apache.spark.sql.catalyst.expressions.codegen.Block._
 import org.apache.spark.sql.catalyst.expressions.codegen.{CodeGenerator, CodegenContext, ExprCode, FalseLiteral}
 
-import org.apache.spark.sql.catalyst.util.{ArrayData, GenericArrayData}
+import org.apache.spark.sql.catalyst.util.{ArrayData, GenericArrayData, QuotingUtils}
 import org.apache.spark.sql.types._
 
 import scala.language.existentials
@@ -350,11 +350,12 @@ case class UnresolvedIfArray2(value: Expression, arrayExpressions: Expression =>
       newValue.dataType match {
         case ArrayType(ArrayType(_, _), _) => f(arrayExpressions(newValue))
         case ArrayType(_, _) => f(elseExpression(newValue))
-        case _ => throw new SparkException(
-          errorClass = "ARRAY_TYPE_EXPECTED",
-          messageParameters = Map(
-            "actualType" -> newValue.dataType.toString),
-          cause = null)
+        // Pathling registers no error classes of its own, so the failure is reported through
+        // Spark's internal error class, which carries a free-form message.
+        case _ => throw new AnalysisException(
+          errorClass = "INTERNAL_ERROR",
+          messageParameters = Map("message" ->
+            s"Expected an array or an array of arrays, but got ${newValue.dataType}."))
       }
     }
     else {
@@ -412,28 +413,39 @@ case class UnresolvedUnnest(value: Expression)
 }
 
 /**
- * Trait for expressions that return a fallback value when a struct field doesn't exist in the
- * schema, instead of throwing an error.
+ * A reference to a table-level column that resolves to a null of the given type when the column is
+ * absent from the input, instead of failing with UNRESOLVED_COLUMN.
  *
- * This is essential for handling optional fields in nested structures where a field may not be
- * present in all instances of a struct type. When the specified field is missing from the struct
- * schema, implementations return their specific fallback value rather than causing a
- * FIELD_NOT_FOUND analysis error.
+ * A missing struct field is tolerated by `au.csiro.pathling.sql.ResolveOrNull`, which inspects the
+ * resolved parent's type. A table-level column has no parent to inspect, so it is tolerated by a
+ * catch inside `mapChildren` instead (decision 75). A plain unresolved attribute gives nothing to
+ * catch, because the analyzer leaves a missing name unresolved and reports it only in
+ * `CheckAnalysis`. So the column is referenced through `GetViewColumnByNameAndOrdinal`, which the
+ * analyzer resolves against the operator's single child, and which throws
+ * INCOMPATIBLE_VIEW_SCHEMA_CHANGE when the name does not match exactly one attribute. Where the
+ * error reports that no attribute matched, it is caught and replaced with the fallback. Where more
+ * than one matched, and the matches are one attribute, as where a column is selected twice, the
+ * reference resolves to it. Where they are different attributes, the name is ambiguous, as after a
+ * self-join or beneath a projection that gives two columns the name, and the reference fails with
+ * AMBIGUOUS_REFERENCE. In both cases it behaves as a plain reference to the column does. The error
+ * names the columns without their qualifiers, which the error that signals the ambiguity does not
+ * report.
  *
- * '''Important:''' This only handles fields that don't exist in the schema. If a field exists
- * but has a null value, that null value is returned normally.
+ * The expression is built with no reference to any dataset, so that one column is valid over every
+ * schema (decision 75). It depends on analyzer internals, and it has a known limit, which the tests
+ * pin so that a change is noticed: in a join condition the analyzer asserts that the operator has
+ * a single child before it resolves the view column, so the query fails with INTERNAL_ERROR even
+ * when the column exists.
+ *
+ * @param columnName the name of the table-level column
+ * @param fallback   the type of the null returned when the column is absent
  */
-trait UnresolvedFallbackIfMissingField
+case class UnresolvedColumnOrNull(columnName: String, fallback: DataType, value: Expression)
   extends Expression with UnevaluableCopy with NonSQLExpression {
 
-  /** The expression that may reference a non-existent field. */
-  def value: Expression
-
-  /** The expression to return when the field is not found in the schema. */
-  protected def fallbackExpression: Expression
-
-  /** Creates a copy of this expression with a new value. */
-  protected def copyWithValue(newValue: Expression): UnresolvedFallbackIfMissingField
+  def this(columnName: String, fallback: DataType) =
+    this(columnName, fallback,
+      GetViewColumnByNameAndOrdinal(UnresolvedColumnOrNull.SOURCE_NAME, columnName, 0, 1, None))
 
   override def mapChildren(f: Expression => Expression): Expression = {
     try {
@@ -441,11 +453,42 @@ trait UnresolvedFallbackIfMissingField
       if (newValue.resolved) {
         newValue
       } else {
-        copyWithValue(newValue)
+        copy(value = newValue)
       }
     } catch {
-      case e: AnalysisException if e.errorClass.contains("FIELD_NOT_FOUND") =>
-        fallbackExpression
+      case e: AnalysisException if e.getCondition == "INCOMPATIBLE_VIEW_SCHEMA_CHANGE" =>
+        if (UnresolvedColumnOrNull.NO_MATCH == e.getMessageParameters.get("actualCols")) {
+          Literal(null, fallback)
+        } else {
+          resolveMatches(f, UnresolvedColumnOrNull.matchedNames(columnName,
+            e.getMessageParameters.get("actualCols")))
+        }
+    }
+  }
+
+  /**
+   * Resolves a name that matches more than one attribute. Where every match is the same attribute,
+   * as where a column is selected or grouped by twice, the name is not ambiguous, and it resolves to
+   * that attribute, as a plain reference does. Otherwise the ambiguity is reported here, where a
+   * plain reference to the column reports it. Deferring to a plain reference would let the analyzer
+   * resolve a filter's condition against the input of a projection beneath it, where the name may
+   * be unique, and so silently read one of the columns.
+   */
+  private def resolveMatches(f: Expression => Expression, names: Seq[String]): Expression = {
+    val matches = names.indices.map(ordinal => f(GetViewColumnByNameAndOrdinal(
+      UnresolvedColumnOrNull.SOURCE_NAME, columnName, ordinal, names.size, None)))
+    matches match {
+      case Seq(first: Attribute, rest@_*) if rest.forall {
+        case attribute: Attribute => attribute.exprId == first.exprId
+        case _ => false
+      } => first
+      case _ =>
+        throw new AnalysisException(
+          errorClass = "AMBIGUOUS_REFERENCE",
+          messageParameters = Map(
+            "name" -> QuotingUtils.quoteIdentifier(columnName),
+            "referenceNames" ->
+              names.map(name => QuotingUtils.quoteIdentifier(name)).mkString("[", ", ", "]")))
     }
   }
 
@@ -455,45 +498,54 @@ trait UnresolvedFallbackIfMissingField
 
   override lazy val resolved = false
 
-  override def toString: String = s"$value"
+  override def toString: String = s"columnOrNull($columnName)"
 
   override def children: Seq[Expression] = value :: Nil
-}
-
-/**
- * Returns null when a struct field doesn't exist in the schema, instead of throwing an error.
- *
- * @param value the expression that may reference a non-existent field
- */
-case class UnresolvedNullIfMissingField(value: Expression)
-  extends UnresolvedFallbackIfMissingField {
-
-  override protected def fallbackExpression: Expression = Literal(null)
-
-  override protected def copyWithValue(newValue: Expression): UnresolvedFallbackIfMissingField =
-    copy(value = newValue)
 
   override def withNewChildrenInternal(newChildren: IndexedSeq[Expression]): Expression =
-    UnresolvedNullIfMissingField(newChildren.head)
+    copy(value = newChildren.head)
 }
 
-/**
- * Returns an empty array when a struct field doesn't exist in the schema, instead of throwing
- * an error. This is suitable for use in array concatenation contexts where type compatibility
- * is required.
- *
- * @param value the expression that may reference a non-existent field
- */
-case class UnresolvedEmptyArrayIfMissingField(value: Expression)
-  extends UnresolvedFallbackIfMissingField {
+object UnresolvedColumnOrNull {
 
-  override protected def fallbackExpression: Expression = CreateArray(Seq.empty)
+  /**
+   * The name reported as the view in the error that signals absence. It is never shown to a user,
+   * because the error is always caught.
+   */
+  val SOURCE_NAME = "pathling_tolerant_column"
 
-  override protected def copyWithValue(newValue: Expression): UnresolvedFallbackIfMissingField =
-    copy(value = newValue)
+  /**
+   * The attributes that the error that signals absence reports as matched, where none did. An
+   * ambiguous name raises the same error, reporting the attributes it matched.
+   */
+  val NO_MATCH = "[]"
 
-  override def withNewChildrenInternal(newChildren: IndexedSeq[Expression]): Expression =
-    UnresolvedEmptyArrayIfMissingField(newChildren.head)
+  /**
+   * Returns the names of the attributes that the error signalling a name that matched more than
+   * once reports as matched. The error joins them with commas, which a name can contain, so they
+   * are split by length instead: every match has the name that was asked for, up to case.
+   *
+   * @param columnName the name that was asked for
+   * @param actualCols the matched names, as the error reports them
+   * @return the matched names
+   */
+  def matchedNames(columnName: String, actualCols: String): Seq[String] = {
+    val joined = actualCols.stripPrefix("[").stripSuffix("]")
+    val length = columnName.length
+    val count = (joined.length + 1) / (length + 1)
+    (0 until count).map(index => joined.substring(index * (length + 1),
+      index * (length + 1) + length))
+  }
+
+  /**
+   * Creates a tolerant reference to a table-level column.
+   *
+   * @param columnName the name of the table-level column
+   * @param fallback   the type of the null returned when the column is absent
+   * @return the tolerant reference
+   */
+  def apply(columnName: String, fallback: DataType): UnresolvedColumnOrNull =
+    new UnresolvedColumnOrNull(columnName, fallback)
 }
 
 /**
@@ -505,8 +557,14 @@ case class UnresolvedEmptyArrayIfMissingField(value: Expression)
  * 1. The extracted value from the current node
  * 2. The results of recursively traversing child nodes
  *
- * The expression handles field resolution gracefully - if a field is not found during
- * traversal (FIELD_NOT_FOUND error), it returns an empty array rather than failing.
+ * The recursion stops where a traversal step resolves to the bottom type: the null type, or an
+ * array of it. That is the fallback the tolerant traversal expression
+ * (`au.csiro.pathling.sql.ResolveOrNull`) gives an absent complex element (FR-055), and the one the
+ * tolerant table-column reference gives an absent element at the resource root, so a step that
+ * walks off the input schema has nothing left to descend into. The check is made on the resolved
+ * step, so it depends on no exception being thrown during analysis (T110a). Traversals must
+ * therefore be built from the tolerant expression: a direct field reference that walks off the
+ * schema fails with FIELD_NOT_FOUND.
  *
  * '''Depth Limiting:''' The `level` parameter (maxDepth) controls recursion depth to prevent
  * infinite loops in self-referential structures. The depth counter only decrements when
@@ -552,23 +610,25 @@ case class UnresolvedTransformTree(node: Expression,
     val safeExtractor: Expression => Expression = e => Coalesce(
       Seq(extractor(e), CreateArray(Seq.empty)))
 
-    // Only the Catalyst resolution call f(node) is expected to throw FIELD_NOT_FOUND when the
-    // field doesn't exist at this schema level. Other operations (extractor, traversal
-    // construction) should propagate errors normally.
-    val newValue = try {
-      f(node)
-    } catch {
-      case e: AnalysisException if e.errorClass.contains("FIELD_NOT_FOUND") =>
-        // At the root of a typed repeat traversal, fall back to a typed empty array so that
-        // sibling column combination through StructProduct sees a consistent element type.
-        // Inner traversal nodes (parentType.nonEmpty) keep the untyped empty array — the
-        // surrounding Concat upcasts them against typed sibling arrays.
-        return (parentType, expectedElementType) match {
-          case (None, Some(elementType)) =>
-            Cast(CreateArray(Seq.empty), ArrayType(elementType))
-          case _ =>
-            CreateArray(Seq.empty)
-        }
+    // At the root of a typed repeat traversal, the empty result is typed so that sibling column
+    // combination through StructProduct sees a consistent element type. Inner traversal nodes
+    // (parentType.nonEmpty) keep the untyped empty array — the surrounding Concat upcasts them
+    // against typed sibling arrays.
+    lazy val emptyResult = (parentType, expectedElementType) match {
+      case (None, Some(elementType)) =>
+        Cast(CreateArray(Seq.empty), ArrayType(elementType))
+      case _ =>
+        CreateArray(Seq.empty)
+    }
+
+    // The traversals are tolerant, so a step that walks off the input schema resolves to the bottom
+    // type rather than failing, and the check below stops it.
+    val newValue = f(node)
+
+    if (newValue.resolved && UnresolvedTransformTree.isBottom(newValue.dataType)) {
+      // The step resolved to the fallback of an absent element, so there is nothing to descend
+      // into.
+      return emptyResult
     }
 
     if (newValue.resolved) {
@@ -609,6 +669,22 @@ case class UnresolvedTransformTree(node: Expression,
   override def withNewChildrenInternal(newChildren: IndexedSeq[Expression]): Expression = {
     UnresolvedTransformTree(newChildren.head, extractor, traversals, parentType, level,
       errorOnDepthExhaustion, expectedElementType)
+  }
+}
+
+object UnresolvedTransformTree {
+
+  /**
+   * Returns true where a resolved traversal step has the bottom type, which is what the tolerant
+   * traversal gives an element absent from the input schema.
+   *
+   * @param dataType the resolved type of the step
+   * @return true if the type is the null type, or an array of it at any depth
+   */
+  def isBottom(dataType: DataType): Boolean = dataType match {
+    case NullType => true
+    case ArrayType(elementType, _) => isBottom(elementType)
+    case _ => false
   }
 }
 
@@ -911,6 +987,9 @@ case class StructProduct(children: Seq[Expression], outer: Boolean = false)
  * expression are resolved, this expression expands into a `transform(inner, v -> variant_get(v,
  * '$', targetSchema))` call that converts each Variant element back to the target struct type.
  *
+ * Where the level-0 result has the bottom type, because the element it reaches is absent from the
+ * input schema, no variant can be decoded to it and every element is a null of that type.
+ *
  * @param inner     the Array[Variant] expression produced by UnresolvedTransformTree
  * @param schemaRef an expression whose resolved element type determines the target schema
  */
@@ -943,11 +1022,15 @@ case class UnresolvedVariantUnwrap(inner: Expression, schemaRef: Expression,
         exprId = NamedExpression.newExprId,
         value = new java.util.concurrent.atomic.AtomicReference[Any]()
       )
-      val variantGetExpr = new variantExpr.VariantGet(
-        lambdaVar, Literal.create("$", StringType),
-        targetElementType, failOnError = failOnError, timeZoneId = None
-      )
-      val lambdaFunc = LambdaFunction(variantGetExpr, Seq(lambdaVar))
+      val elementExpr = if (UnresolvedTransformTree.isBottom(targetElementType)) {
+        Literal(null, targetElementType)
+      } else {
+        new variantExpr.VariantGet(
+          lambdaVar, Literal.create("$", StringType),
+          targetElementType, failOnError = failOnError, timeZoneId = None
+        )
+      }
+      val lambdaFunc = LambdaFunction(elementExpr, Seq(lambdaVar))
       ArrayTransform(newInner, lambdaFunc)
     } else {
       copy(inner = newInner, schemaRef = newSchemaRef)

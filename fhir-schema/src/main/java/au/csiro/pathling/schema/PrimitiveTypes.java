@@ -87,4 +87,15 @@ public final class PrimitiveTypes {
   public static boolean isPrimitive(@Nonnull final FHIRDefinedType type) {
     return TYPES.containsKey(type.toCode());
   }
+
+  /**
+   * Returns whether a FHIR type is a structure, which is every type other than a primitive and the
+   * null type that an empty literal has.
+   *
+   * @param type the FHIR type
+   * @return true where the type is a structure
+   */
+  public static boolean isStructure(@Nonnull final FHIRDefinedType type) {
+    return type != FHIRDefinedType.NULL && !isPrimitive(type);
+  }
 }

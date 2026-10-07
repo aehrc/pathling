@@ -36,12 +36,14 @@ import au.csiro.pathling.fhirpath.column.QuantityValue;
 import au.csiro.pathling.fhirpath.comparison.ColumnComparator;
 import au.csiro.pathling.fhirpath.comparison.Comparable;
 import au.csiro.pathling.fhirpath.comparison.QuantityComparator;
+import au.csiro.pathling.fhirpath.comparison.StoredQuantityComparator;
 import au.csiro.pathling.fhirpath.encoding.CodingSchema;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import au.csiro.pathling.sql.misc.QuantityToLiteral;
 import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.types.DataTypes;
@@ -53,6 +55,22 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * @author John Grimes
  */
 public class QuantityCollection extends Collection implements Comparable, StringCoercible, Numeric {
+
+  /**
+   * Quantity and the types profiled on it. A stored element of any of them is normalised at
+   * traversal to the new layout's shape (T094b, decision 80), because the previous layout stores
+   * each of them with its canonical form and the scale of its value. It is decoded into the
+   * structure the engine computes with only where it is computed with.
+   */
+  public static final Set<FHIRDefinedType> QUANTITY_TYPES =
+      Set.of(
+          FHIRDefinedType.QUANTITY,
+          FHIRDefinedType.AGE,
+          FHIRDefinedType.COUNT,
+          FHIRDefinedType.DISTANCE,
+          FHIRDefinedType.DURATION,
+          FHIRDefinedType.SIMPLEQUANTITY,
+          FHIRDefinedType.MONEYQUANTITY);
 
   /**
    * Creates a definition for a Coding element with the specified name and cardinality.
@@ -83,15 +101,13 @@ public class QuantityCollection extends Collection implements Comparable, String
    * @param type The FHIRPath type
    * @param fhirType The FHIR type
    * @param definition The FHIR definition
-   * @param extensionMapColumn The extension map column
    */
   public QuantityCollection(
       @Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
-      @Nonnull final Optional<? extends NodeDefinition> definition,
-      @Nonnull final Optional<Column> extensionMapColumn) {
-    super(columnRepresentation, type, fhirType, definition, extensionMapColumn);
+      @Nonnull final Optional<? extends NodeDefinition> definition) {
+    super(columnRepresentation, type, fhirType, definition);
   }
 
   /**
@@ -109,8 +125,7 @@ public class QuantityCollection extends Collection implements Comparable, String
         columnRepresentation,
         Optional.of(FhirPathType.QUANTITY),
         Optional.of(FHIRDefinedType.QUANTITY),
-        definition,
-        Optional.empty());
+        definition);
   }
 
   /**
@@ -156,6 +171,36 @@ public class QuantityCollection extends Collection implements Comparable, String
   }
 
   /**
+   * Returns whether the values of a collection are quantities in the stored shape, as traversal
+   * reached them from the data. A collection the engine builds, such as a literal or the result of
+   * a conversion, has no definition or only the synthetic one, and holds quantities in the
+   * structure the engine computes with. Those are System quantities, which never carry extensions.
+   *
+   * <p>The definition is not required to be a FHIR definition, because the data of a resource
+   * described by a definition of another origin is stored just the same.
+   *
+   * @param collection the collection
+   * @return true where the values are stored quantities, of any of the quantity types
+   */
+  public static boolean holdsStoredQuantities(@Nonnull final Collection collection) {
+    return collection.getFhirType().filter(QUANTITY_TYPES::contains).isPresent()
+        && collection
+            .getDefinition()
+            .filter(definition -> definition != LITERAL_DEFINITION)
+            .isPresent();
+  }
+
+  /**
+   * Returns whether the values of this collection are quantities in the stored shape.
+   *
+   * @return true where the values are stored quantities
+   * @see #holdsStoredQuantities(Collection)
+   */
+  public boolean isStored() {
+    return holdsStoredQuantities(this);
+  }
+
+  /**
    * Projects a Coding structure from the coded unit of a single quantity value.
    *
    * <p>The unit name is carried across as the display, as it is the human-readable rendering of the
@@ -196,7 +241,8 @@ public class QuantityCollection extends Collection implements Comparable, String
   @Nonnull
   @Override
   public Optional<TerminologyConcepts> toConcepts() {
-    final ColumnRepresentation codings = getColumn().transform(QuantityCollection::toCoding);
+    final ColumnRepresentation codings =
+        toEngineForm().getColumn().transform(QuantityCollection::toCoding);
     return Optional.of(TerminologyConcepts.set(codings, CodingCollection.build(codings)));
   }
 
@@ -207,13 +253,15 @@ public class QuantityCollection extends Collection implements Comparable, String
    */
   @Nonnull
   public StringCollection asStringCollection() {
-    return map(r -> r.transformWithUdf(QuantityToLiteral.FUNCTION_NAME), StringCollection::build);
+    return toEngineForm()
+        .map(r -> r.transformWithUdf(QuantityToLiteral.FUNCTION_NAME), StringCollection::build);
   }
 
   @Nonnull
   @Override
   public StringCollection asStringPath() {
-    return asSingular()
+    return toEngineForm()
+        .asSingular()
         .map(r -> r.callUdf(QuantityToLiteral.FUNCTION_NAME), StringCollection::build);
   }
 
@@ -228,10 +276,21 @@ public class QuantityCollection extends Collection implements Comparable, String
     throw new UnsupportedFhirPathFeatureError("Quantity math operations are not supported yet");
   }
 
+  /**
+   * The values of a quantity collection are stored FHIR structures where it has a FHIR definition,
+   * and the structure the engine builds otherwise.
+   *
+   * @return true where the values are stored quantities
+   */
+  @Override
+  public boolean holdsStoredStructures() {
+    return isStored();
+  }
+
   @Override
   @Nonnull
   public ColumnComparator getComparator() {
-    return QuantityComparator.getInstance();
+    return isStored() ? StoredQuantityComparator.getInstance() : QuantityComparator.getInstance();
   }
 
   /**
@@ -244,7 +303,8 @@ public class QuantityCollection extends Collection implements Comparable, String
   @Nonnull
   public Collection toUnit(@Nonnull final Collection targetUnit) {
     final Column unitColumn = targetUnit.getColumn().singular().getValue();
-    return map(q -> new DefaultRepresentation(QuantityValue.of(q).toUnit(unitColumn)));
+    return toEngineForm()
+        .map(q -> new DefaultRepresentation(QuantityValue.of(q).toUnit(unitColumn)));
   }
 
   /**
@@ -258,7 +318,8 @@ public class QuantityCollection extends Collection implements Comparable, String
   @Nonnull
   public Collection convertibleToUnit(@Nonnull final Collection targetUnit) {
     final Column unitColumn = targetUnit.getColumn().singular().getValue();
-    final Column result = QuantityValue.of(getColumn()).convertibleToUnit(unitColumn);
+    final Column result =
+        QuantityValue.of(toEngineForm().getColumn()).convertibleToUnit(unitColumn);
     return BooleanCollection.build(new DefaultRepresentation(result));
   }
 }

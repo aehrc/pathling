@@ -1,0 +1,14 @@
+{
+  "resource": "Patient",
+  "select": [
+    {
+      "forEach": "name",
+      "column": [
+        {
+          "name": "family",
+          "path": "family"
+        }
+      ]
+    }
+  ]
+}

@@ -17,6 +17,8 @@
 
 package au.csiro.pathling.fhirpath.column;
 
+import au.csiro.pathling.encoders.ColumnFunctions;
+import au.csiro.pathling.fhirpath.collection.QuantityCollection;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import java.util.function.UnaryOperator;
@@ -24,6 +26,7 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
+import org.apache.spark.sql.types.DataType;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
@@ -43,8 +46,8 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  *   <li>{@link #vectorize(UnaryOperator, UnaryOperator)} applies the singular expression and
  *       returns a new ResourceRepresentation (resources are always singular)
  *   <li>{@link #flatten()} returns {@code this} unchanged since resources are already flat
- *   <li>{@link #traverse(String)} returns a {@link DefaultRepresentation} with {@code
- *       col(fieldName)} - subsequent traversals use {@code getField()}
+ *   <li>{@link #traverse(String)} returns a {@link DefaultRepresentation} with a tolerant reference
+ *       to the table column - subsequent traversals use the tolerant traversal expression
  * </ul>
  *
  * <p>Example column generation differences:
@@ -189,50 +192,57 @@ public final class ResourceRepresentation extends ColumnRepresentation {
   }
 
   /**
-   * Traverses from the root to a top-level field in the flat schema.
+   * Traverses from the root to a top-level field in the flat schema, yielding a null of the given
+   * type where the input does not have the column.
    *
    * <p>Unlike nested schema traversal where we use {@code col("ResourceType").getField(fieldName)},
-   * this method creates a direct column reference using {@code col(fieldName)}.
+   * this method creates a direct reference to the table column. The reference is tolerant (decision
+   * 75). When the existence column has been modified (e.g., via filtering with {@code where()}),
+   * the field access is conditional on the existence column being non-null.
    *
-   * <p>When the existence column has been modified (e.g., via filtering with {@code where()}), the
-   * field access is conditional on the existence column being non-null. For the default case
-   * (existence column is {@code col("id")}), the field is accessed directly without additional null
-   * checks.
-   *
-   * <p>The returned representation is a {@link DefaultRepresentation}, so subsequent traversals
-   * will use the standard {@code getField()} method for nested access.
-   *
-   * @param fieldName the name of the field to traverse to
-   * @return a {@link DefaultRepresentation} wrapping the field access
-   */
-  @Override
-  @Nonnull
-  public ColumnRepresentation traverse(@Nonnull final String fieldName) {
-    // at the root level, access the field directly via col(fieldName)
-    // removeNulls() filters out NULL values from arrays to match the behavior of
-    // DefaultRepresentation.traverse() - but we don't flatten here
-    return getField(fieldName).removeNulls();
-  }
-
-  /**
-   * Traverses from the root to a top-level field in the flat schema, with FHIR type awareness.
-   *
-   * <p>This method delegates to {@link #traverse(String)} for the actual traversal, then applies
-   * type-specific handling for special FHIR types like base64Binary.
+   * <p>removeNulls() filters out NULL values from arrays to match the behavior of {@link
+   * DefaultRepresentation#traverse(String)}, but the result is not flattened.
    *
    * @param fieldName the name of the field to traverse to
    * @param fhirType the FHIR type of the field
+   * @param fallback the type of the null that stands for the column where it is absent
    * @return a {@link ColumnRepresentation} for the field, with appropriate type handling
    */
   @Override
   @Nonnull
   public ColumnRepresentation traverse(
-      @Nonnull final String fieldName, @Nonnull final Optional<FHIRDefinedType> fhirType) {
-    if (fhirType.filter(FHIRDefinedType.BASE64BINARY::equals).isPresent()) {
-      // If the field is a base64Binary, represent it using binary column handling
-      return DefaultRepresentation.fromBinaryColumn(traverse(fieldName).getValue());
+      @Nonnull final String fieldName,
+      @Nonnull final Optional<FHIRDefinedType> fhirType,
+      @Nonnull final DataType fallback) {
+    return DefaultRepresentation.decodeField(
+        readField(fieldName, fhirType, fallback).removeNulls(), fhirType);
+  }
+
+  /**
+   * Reads a top-level field in the shape the new layout gives it, on either layout, normalising the
+   * previous layout's shape where the field's type is stored differently there.
+   */
+  @Nonnull
+  private ColumnRepresentation readField(
+      @Nonnull final String fieldName,
+      @Nonnull final Optional<FHIRDefinedType> fhirType,
+      @Nonnull final DataType fallback) {
+    if (fhirType.filter(FHIRDefinedType.DECIMAL::equals).isPresent()) {
+      // A decimal is read as text, with the previous layout's value and scale columns normalised
+      // to it.
+      return existing(ColumnFunctions.decimalColumnOrNull(fieldName, fallback));
     }
-    return traverse(fieldName);
+    if (fhirType.filter(QuantityCollection.QUANTITY_TYPES::contains).isPresent()) {
+      // A quantity, of any of the quantity types, is read with the previous layout's canonical
+      // form and value scale normalised away.
+      return existing(ColumnFunctions.quantityColumnOrNull(fieldName, fallback));
+    }
+    if (fhirType.filter(FHIRDefinedType.INSTANT::equals).isPresent()) {
+      // An instant is read as text, with the previous layout's timestamp normalised to its text in
+      // UTC (decision 81).
+      return existing(ColumnFunctions.instantColumnOrNull(fieldName, fallback));
+    }
+    return getField(fieldName, fallback);
   }
 
   /**
@@ -242,12 +252,34 @@ public final class ResourceRepresentation extends ColumnRepresentation {
    * preserving the nested structure of the field.
    *
    * @param fieldName the name of the field to get
+   * @param fallback the type of the null that stands for the field where it is absent
    * @return a {@link DefaultRepresentation} wrapping the field access
    */
   @Override
   @Nonnull
-  public ColumnRepresentation getField(@Nonnull final String fieldName) {
+  public ColumnRepresentation getField(
+      @Nonnull final String fieldName, @Nonnull final DataType fallback) {
+    return existing(ColumnFunctions.columnOrNull(fieldName, fallback));
+  }
+
+  /** Makes a reference to a table column conditional on the resource existing. */
+  @Nonnull
+  private ColumnRepresentation existing(@Nonnull final Column column) {
+    return new DefaultRepresentation(functions.when(existenceColumn.isNotNull(), column));
+  }
+
+  /**
+   * Traverses to the extensions of the resource itself, on either layout (decision 75). The
+   * resource's {@code extension}, {@code _fid} and {@code _extension} columns are all reached
+   * through the tolerant table-column reference.
+   *
+   * @return a {@link DefaultRepresentation} holding the extensions of the resource
+   */
+  @Override
+  @Nonnull
+  public ColumnRepresentation traverseExtension() {
     return new DefaultRepresentation(
-        functions.when(existenceColumn.isNotNull(), functions.col(fieldName)));
+            functions.when(existenceColumn.isNotNull(), ColumnFunctions.traverseRootExtension()))
+        .removeNulls();
   }
 }

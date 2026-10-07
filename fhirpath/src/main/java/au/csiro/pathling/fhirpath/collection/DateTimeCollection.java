@@ -17,8 +17,6 @@
 
 package au.csiro.pathling.fhirpath.collection;
 
-import static org.apache.spark.sql.functions.date_format;
-
 import au.csiro.pathling.annotations.UsedByReflection;
 import au.csiro.pathling.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.FhirPathDateTime;
@@ -28,11 +26,8 @@ import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import jakarta.annotation.Nonnull;
-import java.sql.Timestamp;
 import java.text.ParseException;
 import java.util.Optional;
-import org.apache.spark.sql.Column;
-import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.DateTimeType;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.InstantType;
@@ -45,8 +40,6 @@ import org.hl7.fhir.r4.model.InstantType;
 public class DateTimeCollection extends Collection
     implements StringCoercible, Materializable, DateTimeComparable {
 
-  private static final String SPARK_FHIRPATH_DATETIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSSXXX";
-
   /**
    * Creates a new DateTimeCollection.
    *
@@ -54,15 +47,13 @@ public class DateTimeCollection extends Collection
    * @param type the FhirPath type
    * @param fhirType the FHIR type
    * @param definition the node definition
-   * @param extensionMapColumn the extension map column
    */
   protected DateTimeCollection(
       @Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
-      @Nonnull final Optional<? extends NodeDefinition> definition,
-      @Nonnull final Optional<Column> extensionMapColumn) {
-    super(columnRepresentation, type, fhirType, definition, extensionMapColumn);
+      @Nonnull final Optional<? extends NodeDefinition> definition) {
+    super(columnRepresentation, type, fhirType, definition);
   }
 
   /**
@@ -80,8 +71,7 @@ public class DateTimeCollection extends Collection
         columnRepresentation,
         Optional.of(FhirPathType.DATETIME),
         Optional.of(FHIRDefinedType.DATETIME),
-        definition,
-        Optional.empty());
+        definition);
   }
 
   /**
@@ -108,7 +98,8 @@ public class DateTimeCollection extends Collection
   }
 
   /**
-   * Returns a new instance based upon a {@link InstantType}.
+   * Returns a new instance based upon a {@link InstantType}. The instant is held as its text, as a
+   * traversed instant is on both layouts (decision 81).
    *
    * @param value The value to use
    * @return A new instance of {@link DateTimeCollection}
@@ -116,13 +107,11 @@ public class DateTimeCollection extends Collection
   @UsedByReflection
   @Nonnull
   public static DateTimeCollection fromValue(@Nonnull final InstantType value) {
-    final Timestamp timestamp = new Timestamp(value.getValue().toInstant().toEpochMilli());
-    final ColumnRepresentation column = new DefaultRepresentation(functions.lit(timestamp));
+    final ColumnRepresentation column = DefaultRepresentation.literal(value.getValueAsString());
     return new DateTimeCollection(
         column,
         Optional.of(FhirPathType.DATETIME),
         Optional.of(FHIRDefinedType.INSTANT),
-        Optional.empty(),
         Optional.empty());
   }
 
@@ -143,16 +132,15 @@ public class DateTimeCollection extends Collection
     return DateTimeCollection.build(DefaultRepresentation.literal(dateTimeString));
   }
 
+  /**
+   * Returns the value as a string. An instant needs no formatting, because it is held as its text
+   * on both layouts (decision 81), like every other date and time.
+   *
+   * @return the value as a string
+   */
   @Nonnull
   @Override
   public StringCollection asStringPath() {
-    final ColumnRepresentation valueColumn;
-    final Optional<FHIRDefinedType> fhirType = getFhirType();
-    if (fhirType.isPresent() && fhirType.get() == FHIRDefinedType.INSTANT) {
-      valueColumn = getColumn().call(c -> date_format(c, SPARK_FHIRPATH_DATETIME_FORMAT));
-    } else {
-      valueColumn = getColumn();
-    }
-    return StringCollection.build(valueColumn);
+    return StringCollection.build(getColumn());
   }
 }

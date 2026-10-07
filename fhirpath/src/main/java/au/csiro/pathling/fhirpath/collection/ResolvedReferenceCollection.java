@@ -25,7 +25,6 @@ import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
-import org.apache.spark.sql.Column;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
@@ -52,15 +51,13 @@ public class ResolvedReferenceCollection extends Collection {
    * @param type the FhirPath type
    * @param fhirType the FHIR type
    * @param definition the node definition
-   * @param extensionMapColumn the extension map column
    */
   protected ResolvedReferenceCollection(
       @Nonnull final ColumnRepresentation column,
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
-      @Nonnull final Optional<? extends NodeDefinition> definition,
-      @Nonnull final Optional<Column> extensionMapColumn) {
-    super(column, type, fhirType, definition, extensionMapColumn);
+      @Nonnull final Optional<? extends NodeDefinition> definition) {
+    super(column, type, fhirType, definition);
   }
 
   /**
@@ -79,7 +76,7 @@ public class ResolvedReferenceCollection extends Collection {
       @Nonnull final ColumnRepresentation column, @Nonnull final FHIRDefinedType fhirType) {
     final Optional<FhirPathType> fhirPathType = FhirPathType.forFhirType(fhirType);
     return new ResolvedReferenceCollection(
-        column, fhirPathType, Optional.of(fhirType), Optional.empty(), Optional.empty());
+        column, fhirPathType, Optional.of(fhirType), Optional.empty());
   }
 
   /**
@@ -97,14 +94,13 @@ public class ResolvedReferenceCollection extends Collection {
     // For dynamic typing, we don't know the type statically, so we leave it empty.
     // The actual type checking will be done at runtime using the column values.
     return new ResolvedReferenceCollection(
-        column, Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
+        column, Optional.empty(), Optional.empty(), Optional.empty());
   }
 
   @Nonnull
   @Override
   public Collection copyWith(@Nonnull final ColumnRepresentation newValue) {
-    return new ResolvedReferenceCollection(
-        newValue, getType(), getFhirType(), getDefinition(), getExtensionMapColumn());
+    return new ResolvedReferenceCollection(newValue, getType(), getFhirType(), getDefinition());
   }
 
   /**

@@ -181,16 +181,19 @@ class ConversionLogic {
    * <p>The conversion function and collection builder are automatically determined from the target
    * type using internal registries.
    *
-   * @param input The input collection to convert
+   * @param source The input collection to convert
    * @param targetType The target FHIRPath type
    * @return The converted collection or EmptyCollection if conversion fails
    */
   Collection performConversion(
-      @Nonnull final Collection input, @Nonnull final FhirPathType targetType) {
+      @Nonnull final Collection source, @Nonnull final FhirPathType targetType) {
 
-    if (input instanceof EmptyCollection) {
+    if (source instanceof EmptyCollection) {
       return EmptyCollection.getInstance();
     }
+    // A conversion computes with the values, so a stored quantity is taken as the System quantity
+    // it converts to.
+    final Collection input = source.toEngineForm();
 
     // Look up conversion function and builder from registries
     final BiFunction<FhirPathType, Column, Column> conversionLogic =

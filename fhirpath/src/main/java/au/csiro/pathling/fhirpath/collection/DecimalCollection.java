@@ -60,15 +60,13 @@ public class DecimalCollection extends Collection
    * @param fhirPathType the FhirPath type
    * @param fhirType the FHIR type
    * @param definition the node definition
-   * @param extensionMapColumn the extension map column
    */
   protected DecimalCollection(
       @Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> fhirPathType,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
-      @Nonnull final Optional<NodeDefinition> definition,
-      @Nonnull final Optional<Column> extensionMapColumn) {
-    super(columnRepresentation, fhirPathType, fhirType, definition, extensionMapColumn);
+      @Nonnull final Optional<NodeDefinition> definition) {
+    super(columnRepresentation, fhirPathType, fhirType, definition);
   }
 
   /**
@@ -86,8 +84,7 @@ public class DecimalCollection extends Collection
         columnRepresentation,
         Optional.of(FhirPathType.DECIMAL),
         Optional.of(FHIRDefinedType.DECIMAL),
-        definition,
-        Optional.empty());
+        definition);
   }
 
   /**
@@ -154,6 +151,23 @@ public class DecimalCollection extends Collection
   }
 
   /**
+   * Decodes a stored decimal to the type the engine computes with, {@code DECIMAL(32,6)} (FR-035).
+   *
+   * <p>A decimal is stored as text, in the lexical form of a FHIR decimal, and the traversal
+   * expression normalises the previous layout's decimals to the same text, so this is the one
+   * decoding path for both layouts. A value with more fractional digits than the type holds is
+   * rounded, and one beyond its range is null, as the previous layout's encoder made it. The cast
+   * is a safe one, so the result does not depend on the session's ANSI setting.
+   *
+   * @param stored the stored decimal, or array of decimals, as text
+   * @return the decimal, or array of decimals, as {@code DECIMAL(32,6)}
+   */
+  @Nonnull
+  public static ColumnRepresentation decode(@Nonnull final ColumnRepresentation stored) {
+    return stored.elementTryCast(DECIMAL_TYPE);
+  }
+
+  /**
    * Gets the decimal data type used for representing decimal values in Spark.
    *
    * @return the {@link org.apache.spark.sql.types.DataType} used for representing decimal values in
@@ -164,17 +178,18 @@ public class DecimalCollection extends Collection
   }
 
   /**
-   * Normalizes this decimal collection to use the standard DECIMAL(32,6) type. This ensures type
-   * compatibility when combining decimal values with different precisions.
+   * Returns this collection with its values as {@code DECIMAL(32,6)}, so that decimals of different
+   * precisions share one SQL type and can be held in one array.
    *
-   * @return a new DecimalCollection with normalized decimal type
+   * <p>The cast is a safe one, so an out-of-range value yields null rather than raising under ANSI
+   * mode, independent of the session-wide setting. It keeps the cardinality of the collection.
+   *
+   * @return this collection, with its values as {@code DECIMAL(32,6)}
    */
+  @Override
   @Nonnull
-  public DecimalCollection normalizeDecimalType() {
-    // Route through the safe-cast helper so an out-of-range value yields NULL rather than raising
-    // under ANSI mode, independent of the session-wide setting.
-    final Column normalizedArray = getColumn().plural().elementTryCast(DECIMAL_TYPE).getValue();
-    return (DecimalCollection) copyWithColumn(normalizedArray);
+  public DecimalCollection withSharedSqlType() {
+    return copyWith(getColumn().elementTryCast(DECIMAL_TYPE));
   }
 
   @Override

@@ -61,15 +61,13 @@ public class IntegerCollection extends Collection
    * @param type the FhirPath type
    * @param fhirType the FHIR type
    * @param definition the node definition
-   * @param extensionMapColumn the extension map column
    */
   protected IntegerCollection(
       @Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
-      @Nonnull final Optional<? extends NodeDefinition> definition,
-      @Nonnull final Optional<Column> extensionMapColumn) {
-    super(columnRepresentation, type, fhirType, definition, extensionMapColumn);
+      @Nonnull final Optional<? extends NodeDefinition> definition) {
+    super(columnRepresentation, type, fhirType, definition);
     fhirType.ifPresent(
         t -> {
           if (!INTEGER_TYPES.contains(t)) {
@@ -93,8 +91,7 @@ public class IntegerCollection extends Collection
         columnRepresentation,
         Optional.of(FhirPathType.INTEGER),
         Optional.of(FHIRDefinedType.INTEGER),
-        definition,
-        Optional.empty());
+        definition);
   }
 
   /**

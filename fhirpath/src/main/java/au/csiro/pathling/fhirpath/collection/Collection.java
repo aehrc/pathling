@@ -37,8 +37,11 @@ import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.comparison.ColumnEquality;
 import au.csiro.pathling.fhirpath.comparison.Equatable;
+import au.csiro.pathling.fhirpath.encoding.CodingSchema;
+import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import au.csiro.pathling.fhirpath.function.CollectionTransform;
 import au.csiro.pathling.fhirpath.function.ColumnTransform;
+import au.csiro.pathling.schema.PrimitiveTypes;
 import au.csiro.pathling.sql.SqlFunctions;
 import com.google.common.collect.ImmutableMap;
 import jakarta.annotation.Nonnull;
@@ -55,6 +58,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
+import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.instance.model.api.IBase;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
@@ -94,8 +98,6 @@ public class Collection implements Equatable {
   /** The FHIR definition that describes this path, if there is one. */
   @Nonnull private final Optional<? extends NodeDefinition> definition;
 
-  @Nonnull private final Optional<Column> extensionMapColumn;
-
   /**
    * Builds the appropriate subtype of {@link Collection} based upon the supplied {@link
    * ElementDefinition}.
@@ -113,7 +115,7 @@ public class Collection implements Equatable {
       @Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final FHIRDefinedType fhirType,
       @Nonnull final Optional<ElementDefinition> definition) {
-    return getInstance(columnRepresentation, Optional.of(fhirType), definition, Optional.empty());
+    return getInstance(columnRepresentation, Optional.of(fhirType), definition);
   }
 
   /**
@@ -124,7 +126,6 @@ public class Collection implements Equatable {
    * traversable.
    *
    * @param columnRepresentation a {@link Column} containing the result of the expression
-   * @param extensionMapColumn an optional extension map column
    * @param definition the {@link ElementDefinition} that this path should be based upon
    * @return a new {@link Collection}
    * @throws CollectionConstructionError if there is a problem constructing the collection
@@ -132,12 +133,10 @@ public class Collection implements Equatable {
   @Nonnull
   public static Collection build(
       @Nonnull final ColumnRepresentation columnRepresentation,
-      @Nonnull final Optional<Column> extensionMapColumn,
       @Nonnull final ElementDefinition definition) {
     final Optional<FHIRDefinedType> optionalFhirType = definition.getFhirType();
     if (optionalFhirType.isPresent()) {
-      return getInstance(
-          columnRepresentation, optionalFhirType, Optional.of(definition), extensionMapColumn);
+      return getInstance(columnRepresentation, optionalFhirType, Optional.of(definition));
     } else {
       throw new IllegalArgumentException(
           "Attempted to build a Collection with an ElementDefinition with no fhirType");
@@ -160,8 +159,7 @@ public class Collection implements Equatable {
   public static Collection build(
       @Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final FHIRDefinedType fhirType) {
-    return getInstance(
-        columnRepresentation, Optional.of(fhirType), Optional.empty(), Optional.empty());
+    return getInstance(columnRepresentation, Optional.of(fhirType), Optional.empty());
   }
 
   /**
@@ -179,11 +177,7 @@ public class Collection implements Equatable {
       @Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final NodeDefinition definition) {
     return new Collection(
-        columnRepresentation,
-        Optional.empty(),
-        Optional.empty(),
-        Optional.of(definition),
-        Optional.empty());
+        columnRepresentation, Optional.empty(), Optional.empty(), Optional.of(definition));
   }
 
   /**
@@ -194,8 +188,6 @@ public class Collection implements Equatable {
    *     expression
    * @param fhirType the {@link FHIRDefinedType} that this path should be based upon
    * @param definition the {@link ElementDefinition} that this path should be based upon
-   * @param extensionMapColumn an optional {@link Column} representing the extension map, if this
-   *     path is an extension
    * @return a new {@link Collection} representing the specified path
    * @throws CollectionConstructionError if there is a problem constructing the collection
    */
@@ -203,8 +195,7 @@ public class Collection implements Equatable {
   private static Collection getInstance(
       @Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
-      @Nonnull final Optional<ElementDefinition> definition,
-      @Nonnull final Optional<Column> extensionMapColumn) {
+      @Nonnull final Optional<ElementDefinition> definition) {
     // Look up the class that represents an element with the specified FHIR type.
     final FHIRDefinedType resolvedType =
         fhirType
@@ -227,13 +218,8 @@ public class Collection implements Equatable {
       // Call its constructor and return.
       final Constructor<? extends Collection> constructor =
           elementPathClass.getDeclaredConstructor(
-              ColumnRepresentation.class,
-              Optional.class,
-              Optional.class,
-              Optional.class,
-              Optional.class);
-      return constructor.newInstance(
-          columnRepresentation, fhirPathType, fhirType, definition, extensionMapColumn);
+              ColumnRepresentation.class, Optional.class, Optional.class, Optional.class);
+      return constructor.newInstance(columnRepresentation, fhirPathType, fhirType, definition);
     } catch (final NoSuchMethodException
         | InstantiationException
         | IllegalAccessException
@@ -292,7 +278,7 @@ public class Collection implements Equatable {
             check(
                 maybeChildDef.get() instanceof ElementDefinition,
                 "Expected an ElementDefinition for an extension");
-            return traverseExtension((ElementDefinition) childDef);
+            return Optional.of(traverseExtension((ElementDefinition) childDef));
           }
           return Optional.of(traverseChild(childDef));
         });
@@ -339,42 +325,25 @@ public class Collection implements Equatable {
    */
   @Nonnull
   public Collection traverseElement(@Nonnull final ElementDefinition childDef) {
-    // Invoke the traversal method on the column context to get the new column.
-    final ColumnRepresentation columnRepresentation =
-        getColumn().traverse(childDef.getElementName(), childDef.getFhirType());
+    // Invoke the traversal method on the column context to get the new column. Where the input
+    // schema does not carry the element, the column is a null of the type the definition gives it.
+    final ColumnRepresentation columnRepresentation = getColumn().traverse(childDef);
     // Return a new Collection with the new column and the child definition.
-    return Collection.build(columnRepresentation, extensionMapColumn, childDef);
+    return Collection.build(columnRepresentation, childDef);
   }
 
   /**
    * Traverses to an extension element within this collection.
    *
    * @param extensionDefinition the definition of the extension to traverse to
-   * @return an optional collection representing the extension
+   * @return a collection representing the extension
    */
   @Nonnull
-  protected Optional<Collection> traverseExtension(
-      @Nonnull final ElementDefinition extensionDefinition) {
-    return getExtensionMapColumn()
-        .map(
-            em ->
-                Collection.build(
-                    new DefaultRepresentation(em)
-                        .transform(c -> getFid().applyTo(c).removeNulls().getValue())
-                        .removeNulls()
-                        .flatten(),
-                    extensionMapColumn,
-                    extensionDefinition));
-  }
-
-  /**
-   * Gets the field ID column for this collection.
-   *
-   * @return the column representation containing the field ID
-   */
-  @Nonnull
-  protected ColumnRepresentation getFid() {
-    return column.traverse(ExtensionSupport.FID_FIELD_NAME());
+  protected Collection traverseExtension(@Nonnull final ElementDefinition extensionDefinition) {
+    // Extension traversal reads the layout from the resolved parent: the inline extension field of
+    // the new layout, or the entry for the parent's field identifier in the extension map column of
+    // the previous one (decision 75). Above the traversal there is only the new layout's shape.
+    return Collection.build(getColumn().traverseExtension(), extensionDefinition);
   }
 
   /**
@@ -392,24 +361,23 @@ public class Collection implements Equatable {
           definitionValue instanceof ElementDefinition,
           "Cannot copy a Collection with a non-ElementDefinition definition");
       final ElementDefinition elementDefinition = (ElementDefinition) definitionValue;
-      return getInstance(
-          newValue, getFhirType(), Optional.of(elementDefinition), extensionMapColumn);
+      return getInstance(newValue, getFhirType(), Optional.of(elementDefinition));
     }
-    return getInstance(newValue, getFhirType(), Optional.empty(), extensionMapColumn);
+    return getInstance(newValue, getFhirType(), Optional.empty());
   }
 
   /**
-   * Returns a new {@link Collection} with the specified {@link Column}, preserving type and
-   * extension information.
+   * Returns a new {@link Collection} with the specified {@link Column}, preserving its type and
+   * definition.
    *
    * <p>This is a convenience method that wraps the provided column in a {@link
    * DefaultRepresentation} and creates a new collection while maintaining the FHIR type and
-   * extension mapping from the original collection. This is particularly useful when transforming
-   * column data while preserving the collection's semantic context.
+   * definition from the original collection. This is particularly useful when transforming column
+   * data while preserving the collection's semantic context.
    *
    * @param newColumn The new {@link Column} to use as the collection's data
    * @return A new {@link Collection} with the specified {@link Column} but preserving FHIR type,
-   *     extension information, and column representation type
+   *     definition, and column representation type
    * @throws CollectionConstructionError if there was a problem constructing the collection
    */
   @Nonnull
@@ -860,7 +828,11 @@ public class Collection implements Equatable {
         .map(
             t ->
                 TerminologyConcepts.union(
-                    getColumn().getField("coding"),
+                    // The codings are read as an array even where the schema lacks them, because
+                    // the concepts are told apart from sets of concepts by the depth of the array.
+                    getColumn()
+                        .getField(
+                            "coding", DataTypes.createArrayType(CodingSchema.codingStructType())),
                     (CodingCollection) traverse("coding").orElseThrow()));
   }
 
@@ -894,6 +866,53 @@ public class Collection implements Equatable {
       // this most likely is an empty collection or mixed collection
       return this == other;
     }
+  }
+
+  /**
+   * Returns this collection with its values in the SQL type that every collection of its FHIRPath
+   * type shares. This is applied where unified operands are combined into one array ({@link
+   * au.csiro.pathling.fhirpath.operator.CombiningLogic#prepareArray}), and not where they are only
+   * compared or computed with.
+   *
+   * <p>By default the values already have that type.
+   *
+   * @return this collection, with its values in the shared SQL type
+   */
+  @Nonnull
+  public Collection withSharedSqlType() {
+    return this;
+  }
+
+  /**
+   * Returns whether the values of this collection are FHIR structures in the shape the stored data
+   * gives them. The unification entry point reconciles such structures by name, because one FHIR
+   * type can be stored in a different shape at every path (FR-056).
+   *
+   * <p>By default that is every collection of a complex FHIR type. A collection whose values are a
+   * structure the engine builds, rather than the stored one, says otherwise.
+   *
+   * @return true where the values are stored FHIR structures
+   */
+  public boolean holdsStoredStructures() {
+    return getFhirType().filter(PrimitiveTypes::isStructure).isPresent();
+  }
+
+  /**
+   * Gets this collection in the form the engine computes with.
+   *
+   * <p>A quantity reached by traversal, of any of the quantity types, is held in the stored shape,
+   * so as to keep the extensions that the structure the engine computes with cannot carry. Here it
+   * is decoded into that structure, computing the canonical form of each quantity from the quantity
+   * itself (T096, FR-022). The result is a collection of System quantities, which have no
+   * extensions (T097). Every other collection is returned as it is.
+   *
+   * @return the collection, in the form the engine computes with
+   */
+  @Nonnull
+  public Collection toEngineForm() {
+    return QuantityCollection.holdsStoredQuantities(this)
+        ? QuantityCollection.build(getColumn().transform(QuantityEncoding::decodeStored))
+        : this;
   }
 
   /**

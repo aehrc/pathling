@@ -57,7 +57,8 @@ public class RepeatFunctionDslTest extends FhirPathDslTestBase {
 
   /**
    * Provides a FhirEncoders bean with maxNestingLevel=3 to support deeply nested items in test
-   * Questionnaire resources.
+   * Questionnaire resources. The setting binds only the previous layout; the new layout's pruned
+   * schema takes its depth from the data (FR-044).
    */
   @TestConfiguration
   static class Config {
