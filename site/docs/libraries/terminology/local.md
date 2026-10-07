@@ -265,26 +265,14 @@ memory. Each target of each source element is stored as a row of the store's
 `concept_mapping` table, and a running count of parsed mappings is logged
 during a long import.
 
-Peak import memory depends on how many cores write in parallel rather than on
-the size of the map. Measured as the smallest driver heap with which the import
-succeeds, with Spark limited to 4 cores, maps of 1 million to 20 million
-mappings (73 MB to 1.5 GB of JSON) all imported within 512 MB, close to the
-minimum Spark will start with. With Spark using all 14 cores of the same
-machine, the requirement rose with the size of the source, because Spark writes
-one 128 MB part of the staged mappings per core at once: 512 MB for 2 million
-mappings, 1 GB for 10 million and 1.5 GB for 20 million. Limiting the cores
-Spark uses is therefore the most direct way to reduce import memory. See
-[driver memory for large imports](../cli#terminology-import-commands) for how to
-raise the heap.
-
 At query time a map's mappings are read the first time `translate` uses it,
 and only those of the version that answers, so maps that are never used cost
 nothing. The mappings are then held in memory on each executor for the life of
 the session, in a compact form that stores each distinct code once as UTF-8
-bytes and each mapping as a few integers. In the measurements above, where
-nearly every code was distinct, this came to about 53 bytes per mapping: 267 MB
-for 5 million mappings and 1 GB for 20 million. Executor memory must
-accommodate the maps a query uses.
+bytes and each mapping as a few integers. In measurements of maps of up to 20
+million mappings, where nearly every code was distinct, this came to about 53
+bytes per mapping: 267 MB for 5 million mappings and 1 GB for 20 million.
+Executor memory must accommodate the maps a query uses.
 
 Where the store holds several versions of a ConceptMap, `translate` uses the
 latest, chosen by the same version ordering as for ValueSets. The versions are
