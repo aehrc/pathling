@@ -65,6 +65,25 @@ public class JoinKeyFunctionsDslTest extends FhirPathDslTestBase {
                         ref -> ref.fhirType(REFERENCE).string("reference", "Observation/obs-456"))
                     .element(
                         "emptyReference", ref -> ref.fhirType(REFERENCE).stringEmpty("reference"))
+                    // Non-relative references can never equal a [type]/[id] resource key, so
+                    // they must produce no key.
+                    .element(
+                        "absoluteReference",
+                        ref ->
+                            ref.fhirType(REFERENCE)
+                                .string(
+                                    "reference",
+                                    "https://example.org/fhir/Patient/patient-123"))
+                    .element(
+                        "containedReference",
+                        ref -> ref.fhirType(REFERENCE).string("reference", "#p1"))
+                    .element(
+                        "urnReference",
+                        ref ->
+                            ref.fhirType(REFERENCE)
+                                .string(
+                                    "reference",
+                                    "urn:uuid:550e8400-e29b-41d4-a716-446655440000"))
                     // Define a collection of references
                     .elementArray(
                         "multipleReferences",
@@ -85,6 +104,16 @@ public class JoinKeyFunctionsDslTest extends FhirPathDslTestBase {
         .testEmpty(
             "emptyReference.getReferenceKey()",
             "getReferenceKey() returns empty for an empty reference")
+        .group("getReferenceKey() excludes non-relative references")
+        .testEmpty(
+            "absoluteReference.getReferenceKey()",
+            "getReferenceKey() returns empty for an absolute URL reference")
+        .testEmpty(
+            "containedReference.getReferenceKey()",
+            "getReferenceKey() returns empty for a contained reference")
+        .testEmpty(
+            "urnReference.getReferenceKey()",
+            "getReferenceKey() returns empty for a URN reference")
         .testEquals(
             List.of("Patient/patient-123", "Practitioner/pract-456"),
             "multipleReferences.getReferenceKey()",
