@@ -81,7 +81,9 @@ public class JoinKeyFunctionsDslTest extends FhirPathDslTestBase {
                         "urnReference",
                         ref ->
                             ref.fhirType(REFERENCE)
-                                .string("reference", "urn:uuid:550e8400-e29b-41d4-a716-446655440000"))
+                                .string(
+                                    "reference",
+                                    "urn:uuid:550e8400-e29b-41d4-a716-446655440000"))
                     // Define a collection of references
                     .elementArray(
                         "multipleReferences",
