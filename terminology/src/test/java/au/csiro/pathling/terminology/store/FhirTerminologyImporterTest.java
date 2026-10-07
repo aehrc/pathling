@@ -502,13 +502,12 @@ class FhirTerminologyImporterTest {
     final Path source = dir.resolve("bad.json");
     Files.writeString(source, conceptMapJson("1", "a", "b").replace("equivalent", "sort-of"));
     final String store = dir.resolve("store").toString();
+    final FhirTerminologyImporter importer = new FhirTerminologyImporter(spark, store);
+    final String path = source.toString();
 
     final TerminologyImportException e =
         assertThrows(
-            TerminologyImportException.class,
-            () ->
-                new FhirTerminologyImporter(spark, store)
-                    .importFrom(source.toString(), false, null));
+            TerminologyImportException.class, () -> importer.importFrom(path, false, null));
 
     assertTrue(e.getMessage().contains("http://example.org/cm"), e.getMessage());
     assertTrue(e.getMessage().contains("sort-of"), e.getMessage());
@@ -551,13 +550,11 @@ class FhirTerminologyImporterTest {
   void rejectsAnOversizedValueSetInABundleBeforeAnyWrite(@TempDir final Path dir) {
     final String store = dir.resolve("store").toString();
     final FhirTerminologyImporter importer = new FhirTerminologyImporter(spark, store, 100L);
+    final String path = FhirPackageFixtures.resource("bundle-mixed.json").toString();
 
     final TerminologyImportException e =
         assertThrows(
-            TerminologyImportException.class,
-            () ->
-                importer.importFrom(
-                    FhirPackageFixtures.resource("bundle-mixed.json").toString(), false, null));
+            TerminologyImportException.class, () -> importer.importFrom(path, false, null));
 
     assertTrue(e.getMessage().contains("http://example.org/fhir/ValueSet/bundled"), e.getMessage());
     assertTrue(e.getMessage().toLowerCase().contains("limit"), e.getMessage());
@@ -576,13 +573,12 @@ class FhirTerminologyImporterTest {
             + FhirPackageFixtures.read("simple-valid.json")
             + "},{\"resource\":{\"resourceType\":\"ConceptMap\",\"status\":\"active\"}}]}");
     final String store = dir.resolve("store").toString();
+    final FhirTerminologyImporter importer = new FhirTerminologyImporter(spark, store);
+    final String path = source.toString();
 
     final TerminologyImportException e =
         assertThrows(
-            TerminologyImportException.class,
-            () ->
-                new FhirTerminologyImporter(spark, store)
-                    .importFrom(source.toString(), false, null));
+            TerminologyImportException.class, () -> importer.importFrom(path, false, null));
 
     assertTrue(e.getMessage().toLowerCase().contains("canonical url"), e.getMessage());
     assertTrue(e.getMessage().contains("bundle.json#entry[1]"), e.getMessage());
@@ -597,13 +593,12 @@ class FhirTerminologyImporterTest {
         source,
         "{\"resourceType\":\"Bundle\",\"entry\":[{\"resource\":{\"resourceType\":\"Patient\"}}]}");
     final String store = dir.resolve("store").toString();
+    final FhirTerminologyImporter importer = new FhirTerminologyImporter(spark, store);
+    final String path = source.toString();
 
     final TerminologyImportException e =
         assertThrows(
-            TerminologyImportException.class,
-            () ->
-                new FhirTerminologyImporter(spark, store)
-                    .importFrom(source.toString(), false, null));
+            TerminologyImportException.class, () -> importer.importFrom(path, false, null));
     assertTrue(e.getMessage().contains("No importable"), e.getMessage());
   }
 

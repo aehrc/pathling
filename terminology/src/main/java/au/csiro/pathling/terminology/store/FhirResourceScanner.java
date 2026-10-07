@@ -248,22 +248,19 @@ public class FhirResourceScanner {
       }
       final ResourceMetadata metadata = new ResourceMetadata();
       final List<ScannedResource> members = new ArrayList<>();
-      while (parser.nextToken() == JsonToken.FIELD_NAME) {
+      boolean scanning = true;
+      while (scanning && parser.nextToken() == JsonToken.FIELD_NAME) {
         final String field = parser.currentName();
         parser.nextToken();
         if (FIELD_ENTRY.equals(field)) {
           // Only a Bundle has an entry array, though its resourceType may not have been read yet.
           scanEntries(parser, entryName, members);
-        } else if (FIELD_CONCEPT.equals(field)) {
-          // The concept array of a CodeSystem is its large content array; stop before reading it
-          // so the scan cost stays a few kilobytes.
-          break;
-        } else {
+        } else if (!FIELD_CONCEPT.equals(field)) {
           metadata.read(field, parser);
         }
-        if (metadata.isComplete() && !metadata.isBundle()) {
-          break;
-        }
+        // The concept array of a CodeSystem is its large content array; stop before reading it so
+        // the scan cost stays a few kilobytes. A complete non-Bundle needs nothing more.
+        scanning = !FIELD_CONCEPT.equals(field) && !(metadata.isComplete() && !metadata.isBundle());
       }
       return metadata.toScannedResource(
           entryName, byteSize, metadata.isBundle() ? members : List.of());
