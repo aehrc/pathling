@@ -80,6 +80,9 @@ public class QuantityEncoding {
   /** The name of the column containing the human-readable unit string. */
   public static final String UNIT_COLUMN = "unit";
 
+  /** The name of the column containing the comparator of the quantity. */
+  private static final String COMPARATOR_COLUMN = "comparator";
+
   /** The name of the column containing the canonicalised value of the quantity. */
   public static final String CANONICALIZED_VALUE_COLUMN =
       QuantitySupport.VALUE_CANONICALIZED_FIELD_NAME();
@@ -119,7 +122,7 @@ public class QuantityEncoding {
         // mode, independent of the session-wide setting.
         value.try_cast(DecimalCustomCoder.decimalType()).as(VALUE_COLUMN),
         value_scale.as("value_scale"),
-        comparator.as("comparator"),
+        comparator.as(COMPARATOR_COLUMN),
         unit.as(UNIT_COLUMN),
         system.as(SYSTEM_COLUMN),
         code.as(CODE_COLUMN),
@@ -198,7 +201,7 @@ public class QuantityEncoding {
                 ColumnFunctions.resolveStringOrNull(stored, "id"),
                 text,
                 scaleOf(text),
-                ColumnFunctions.resolveStringOrNull(stored, "comparator"),
+                ColumnFunctions.resolveStringOrNull(stored, COMPARATOR_COLUMN),
                 ColumnFunctions.resolveStringOrNull(stored, UNIT_COLUMN),
                 ColumnFunctions.resolveStringOrNull(stored, SYSTEM_COLUMN),
                 code,
@@ -273,7 +276,7 @@ public class QuantityEncoding {
     final StructField valueScale =
         new StructField("value_scale", DataTypes.IntegerType, true, metadata);
     final StructField comparator =
-        new StructField("comparator", DataTypes.StringType, true, metadata);
+        new StructField(COMPARATOR_COLUMN, DataTypes.StringType, true, metadata);
     final StructField unit = new StructField(UNIT_COLUMN, DataTypes.StringType, true, metadata);
     final StructField system = new StructField(SYSTEM_COLUMN, DataTypes.StringType, true, metadata);
     final StructField code = new StructField(CODE_COLUMN, DataTypes.StringType, true, metadata);

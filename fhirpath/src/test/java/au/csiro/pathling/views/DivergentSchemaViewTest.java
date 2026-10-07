@@ -23,7 +23,8 @@ import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.datasource.DatasetDataSource;
 import au.csiro.pathling.test.datasource.PrunedSchemaReader;
-import ca.uhn.fhir.parser.IParser;
+import au.csiro.pathling.test.layout.LayoutDatasets;
+import au.csiro.pathling.test.layout.TestLayout;
 import com.google.gson.Gson;
 import jakarta.annotation.Nonnull;
 import java.io.IOException;
@@ -40,7 +41,6 @@ import org.apache.spark.sql.SaveMode;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.ArrayType;
 import org.apache.spark.sql.types.StructType;
-import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -56,6 +56,10 @@ import org.springframework.beans.factory.annotation.Autowired;
  * row per element, whether or not the leaf is populated. T027a extends the fixture so that the leaf
  * is absent from one file's schema rather than merely null, which exercises tolerant traversal over
  * divergent files and not only the unnesting shape.
+ *
+ * <p>The first case is pinned to the previous layout, because it needs the leaf carried as a null,
+ * which only the previous layout's dense schema does. The second follows the active test layout,
+ * and on the new layout the leaf is absent from the second file because that file populates none.
  *
  * @author Piotr Szul
  */
@@ -77,8 +81,20 @@ class DivergentSchemaViewTest {
     // Write each batch to its own Parquet file in one directory, and read the directory back as a
     // single dataset, so that the engine reads real files rather than an in-memory union.
     final String patientDir = tempDir.resolve("Patient").toString();
-    encode("batch-1.ndjson").coalesce(1).write().mode(SaveMode.Overwrite).parquet(patientDir);
-    encode("batch-2.ndjson").coalesce(1).write().mode(SaveMode.Append).parquet(patientDir);
+    // The files are always in the previous layout, whose dense schema carries the leaf as a null
+    // in the second file, so that both files share a schema. On the new layout the second file
+    // would not carry the leaf, and a read without merging would take its schema from whichever
+    // file it read first; the next test covers that case.
+    encode("batch-1.ndjson", TestLayout.PREVIOUS)
+        .coalesce(1)
+        .write()
+        .mode(SaveMode.Overwrite)
+        .parquet(patientDir);
+    encode("batch-2.ndjson", TestLayout.PREVIOUS)
+        .coalesce(1)
+        .write()
+        .mode(SaveMode.Append)
+        .parquet(patientDir);
     final Dataset<Row> patients = spark.read().parquet(patientDir);
     assertThat(patients.inputFiles()).hasSize(2);
 
@@ -102,9 +118,17 @@ class DivergentSchemaViewTest {
     // The second file is written with the projected leaf removed from its schema entirely, rather
     // than carried as a null, as a pruned table would store it (T027a).
     final String patientDir = tempDir.resolve("Patient").toString();
-    encode("batch-1.ndjson").coalesce(1).write().mode(SaveMode.Overwrite).parquet(patientDir);
+    // On the new layout the second file lacks the leaf already, because it populates none.
+    encode("batch-1.ndjson", TestLayout.active())
+        .coalesce(1)
+        .write()
+        .mode(SaveMode.Overwrite)
+        .parquet(patientDir);
     final Dataset<Row> withoutLeaf =
-        PrunedSchemaReader.write(encode("batch-2.ndjson"), tempDir.resolve("staging").toString())
+        PrunedSchemaReader.write(
+                encode("batch-2.ndjson", TestLayout.active()),
+                tempDir.resolve("staging").toString(),
+                fhirEncoders.of("Patient").schema())
             .readWithout("name.family");
     withoutLeaf.coalesce(1).write().mode(SaveMode.Append).parquet(patientDir);
 
@@ -151,15 +175,11 @@ class DivergentSchemaViewTest {
   }
 
   @Nonnull
-  private Dataset<Row> encode(@Nonnull final String fileName) throws IOException {
-    final IParser parser = fhirEncoders.getContext().newJsonParser();
-    final List<IBaseResource> resources =
-        readFixture(fileName)
-            .lines()
-            .filter(line -> !line.isBlank())
-            .map(line -> (IBaseResource) parser.parseResource(line))
-            .toList();
-    return spark.createDataset(resources, fhirEncoders.of("Patient")).toDF();
+  private Dataset<Row> encode(@Nonnull final String fileName, @Nonnull final TestLayout layout)
+      throws IOException {
+    final List<String> json =
+        readFixture(fileName).lines().filter(line -> !line.isBlank()).toList();
+    return LayoutDatasets.fromJson(spark, fhirEncoders, layout, "Patient", json);
   }
 
   @Nonnull

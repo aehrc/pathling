@@ -111,6 +111,7 @@ class AbsentReferenceTypeTest {
             write(TestLayout.POF, "pof-mixed", UNTYPED, TYPED).read(),
             "previous, full schema",
             previousMixed.read());
+    setUpAbsentReferences();
   }
 
   @Nonnull
@@ -191,8 +192,7 @@ class AbsentReferenceTypeTest {
 
   private Map<String, Dataset<Row>> identified;
 
-  @BeforeAll
-  void setUpAbsentReferences() {
+  private void setUpAbsentReferences() {
     // No reference in these datasets has a reference, and the new layout omits it. The previous
     // layout carries it, so it is removed from the schema there, as it is from a pruned table.
     final PrunedSchemaReader previousLogical =

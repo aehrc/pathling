@@ -45,18 +45,18 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 
 /**
- * Tests the indexer over quantities, which are held in the stored shape for their extensions and
- * decoded only where they are computed with (T097, decision 80).
+ * Tests that a quantity reached by traversal is held in the stored shape, and is decoded only where
+ * it is computed with.
  *
- * <p>Indexing only selects among the elements, so it keeps the stored element. An extension of the
- * indexed quantity is therefore found on either layout, and it is the extension of the element at
- * that index. Every case runs on both layouts in the same run.
+ * <p>A stored quantity keeps its extensions through the operations that only select or combine
+ * stored quantities. Where it meets a System quantity, such as a literal, it is taken as the System
+ * quantity it decodes to, which has no extensions. Every case runs on both layouts in the same run.
  *
  * @author Piotr Szul
  */
 @SpringBootUnitTest
 @TestInstance(Lifecycle.PER_CLASS)
-class IndexedQuantityExtensionTest {
+class StoredQuantityTest {
 
   private static final Parser PARSER = new Parser();
 
@@ -77,8 +77,10 @@ class IndexedQuantityExtensionTest {
   /** An observation whose quantities carry no extension. */
   private static final String BARE =
       "{\"resourceType\":\"Observation\",\"id\":\"q2\",\"status\":\"final\","
-          + "\"code\":{\"text\":\"x\"},\"valueQuantity\":{\"value\":4,\"unit\":\"g\"},"
-          + "\"component\":[{\"code\":{\"text\":\"a\"},\"valueQuantity\":{\"value\":5}}]}";
+          + "\"code\":{\"text\":\"x\"},\"valueQuantity\":{\"value\":4,\"unit\":\"g\","
+          + "\"system\":\"http://unitsofmeasure.org\",\"code\":\"g\"},"
+          + "\"component\":[{\"code\":{\"text\":\"a\"},\"valueQuantity\":{\"value\":5,"
+          + "\"system\":\"http://unitsofmeasure.org\",\"code\":\"g\"}}]}";
 
   @Autowired SparkSession spark;
 
@@ -104,35 +106,49 @@ class IndexedQuantityExtensionTest {
   }
 
   @Nonnull
-  static Stream<Arguments> indexings() {
+  static Stream<Arguments> expressions() {
+    final String value = "value.ofType(Quantity)";
     final String components = "component.value.ofType(Quantity)";
     return Stream.of(
-        // The extension of the element at the index, and not of any other element.
+        // A union of stored quantities keeps the extensions of each of them.
         arguments(
-            components + "[0].extension.where(url = 'urn:first').exists()", "q1=true", "q2=false"),
-        arguments(
-            components + "[0].extension.where(url = 'urn:second').exists()",
-            "q1=false",
-            "q2=false"),
-        arguments(
-            components + "[1].extension.where(url = 'urn:second').exists()", "q1=true", "q2=false"),
-        arguments(
-            components + "[1].extension.where(url = 'urn:first').exists()", "q1=false", "q2=false"),
-        arguments(components + "[2].extension.exists()", "q1=false", "q2=false"),
-        // A singular quantity is its own first element.
-        arguments(
-            "value.ofType(Quantity)[0].extension.where(url = 'urn:quantity').exists()",
+            "(" + value + " | " + components + ").extension.where(url = 'urn:quantity').exists()",
             "q1=true",
             "q2=false"),
-        // The decoded element stays aligned with the stored one.
-        arguments(components + "[1].code", "q1=mg", "q2=null"),
-        arguments(components + "[0].code", "q1=kg", "q2=null"),
-        arguments("(" + components + "[1] = 3 'mg')", "q1=true", "q2=null"));
+        arguments(
+            "(" + value + " | " + components + ").extension.where(url = 'urn:second').exists()",
+            "q1=true",
+            "q2=false"),
+        arguments("(" + value + " | " + components + ").count()", "q1=3", "q2=2"),
+        // Combining keeps the extensions too, and does not deduplicate.
+        arguments(
+            value + ".combine(" + value + ").extension.where(url = 'urn:quantity').count()",
+            "q1=2",
+            "q2=0"),
+        // A union with a System quantity takes the stored quantity as a System quantity, which has
+        // no extensions, and keeps its value.
+        arguments("(" + value + " | 7 'g').extension.exists()", "q1=false", "q2=false"),
+        arguments("(" + value + " | 7 'g').count()", "q1=2", "q2=2"),
+        arguments("(7 'g' | " + value + ").count()", "q1=2", "q2=2"),
+        // A union deduplicates by the canonical value, whichever the form of the operands.
+        arguments("(" + value + " | 1500 'mg').count()", "q1=1", "q2=2"),
+        // Equality and comparison decode the stored quantity.
+        arguments(value + " = 1500 'mg'", "q1=true", "q2=false"),
+        arguments(value + " = " + value, "q1=true", "q2=true"),
+        arguments(components + "[0] > " + components + "[1]", "q1=true", "q2=null"),
+        arguments(value + " < 1 'kg'", "q1=true", "q2=true"),
+        // A stored quantity is deduplicated by its canonical value.
+        arguments("(" + components + " | " + components + ").count()", "q1=2", "q2=1"),
+        // Operations that compute with the quantity decode it.
+        arguments(value + ".toString()", "q1=1.5 'g'", "q2=4 'g'"),
+        arguments(value + ".toQuantity('mg').value", "q1=1500.000000", "q2=4000.000000"),
+        arguments(value + ".toQuantity().extension.exists()", "q1=false", "q2=false"),
+        arguments(value + ".extension.exists()", "q1=true", "q2=false"));
   }
 
   @Nonnull
   Stream<Arguments> cases() {
-    return indexings()
+    return expressions()
         .flatMap(
             expression ->
                 datasets.keySet().stream()
@@ -147,7 +163,7 @@ class IndexedQuantityExtensionTest {
 
   @ParameterizedTest(name = "{1} over {0}")
   @MethodSource("cases")
-  void indexedQuantityKeepsItsExtensions(
+  void storedQuantityIsDecodedOnlyWhereItIsComputedWith(
       @Nonnull final String dataset,
       @Nonnull final String expression,
       @Nonnull final String expected1,

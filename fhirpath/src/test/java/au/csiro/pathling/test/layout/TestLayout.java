@@ -81,8 +81,8 @@ public final class TestLayout {
   }
 
   /**
-   * Returns the layout a property value names. An unset property selects the previous layout; any
-   * value other than the two known names is refused, including one that differs only in case.
+   * Returns the layout a property value names. An unset property selects the new layout; any value
+   * other than the two known names is refused, including one that differs only in case.
    *
    * @param value the value of the property, or null where it is not set
    * @return the layout

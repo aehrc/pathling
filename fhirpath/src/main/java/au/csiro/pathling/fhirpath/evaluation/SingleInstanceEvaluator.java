@@ -156,7 +156,9 @@ public class SingleInstanceEvaluator {
       }
 
       // Apply the result Column to the dataset and collect the results.
-      final Column resultColumn = resultCollection.getColumn().getValue();
+      // The values are rendered in the form the engine computes with, which a stored quantity is
+      // decoded to.
+      final Column resultColumn = resultCollection.toEngineForm().getColumn().getValue();
       final List<TypedValue> results = collectResults(resourceDf, resultColumn, expectedReturnType);
       final List<TraceResult> traces = buildTraceResults(traceCollector);
       return new SingleInstanceEvaluationResult(results, expectedReturnType, traces);
@@ -250,7 +252,8 @@ public class SingleInstanceEvaluator {
     // the main expression, so we compose the expressions.
     final FhirPath composedPath = contextPath.andThen(mainPath);
     final Collection composedResult = evaluator.evaluate(composedPath);
-    final Column composedColumn = composedResult.getColumn().getValue();
+    // The values are rendered in the form the engine computes with, as they are without a context.
+    final Column composedColumn = composedResult.toEngineForm().getColumn().getValue();
 
     final List<TypedValue> results = collectResults(resourceDf, composedColumn, expectedReturnType);
     final List<TraceResult> traces = buildTraceResults(traceCollector);

@@ -38,7 +38,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.BinaryOperator;
-import java.util.function.Function;
 import java.util.function.UnaryOperator;
 import java.util.stream.Stream;
 import org.apache.spark.sql.Column;
@@ -391,23 +390,6 @@ public abstract class ColumnRepresentation {
   }
 
   /**
-   * Filters the elements of the current {@link ColumnRepresentation} using a predicate over the
-   * representation of each element.
-   *
-   * <p>The predicate receives each element as a copy of this representation, so a representation
-   * that carries more than its value can hand that on to the element. {@link DecodedRepresentation}
-   * does this, so that an element inside the predicate keeps what was stored for it.
-   *
-   * @param predicate the predicate, over the representation of an element
-   * @return A new {@link ColumnRepresentation} that is filtered
-   */
-  @Nonnull
-  public ColumnRepresentation filterElements(
-      @Nonnull final Function<ColumnRepresentation, Column> predicate) {
-    return filter(element -> predicate.apply(copyOf(element)));
-  }
-
-  /**
    * Inverts the current {@link ColumnRepresentation} (applies unary minus).
    *
    * @return A new {@link ColumnRepresentation} that is inverted
@@ -534,8 +516,9 @@ public abstract class ColumnRepresentation {
    */
   @Nonnull
   public ColumnRepresentation elementAt(@Nonnull final Column index) {
-    // try_element_at is one-based, and returns null rather than failing for an index that is out
-    // of range.
+    // try_element_at is one-based, and returns null rather than failing for an index past the end.
+    // A negative index is not handled: Spark counts it from the end, or fails on position zero
+    // (#2805).
     return vectorize(c -> try_element_at(c, index.plus(1)), UnaryOperator.identity());
   }
 

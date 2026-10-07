@@ -18,6 +18,7 @@
 package au.csiro.pathling.test.datasource;
 
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.util.Arrays;
 import java.util.List;
 import org.apache.spark.sql.Dataset;
@@ -38,6 +39,12 @@ import org.apache.spark.sql.types.StructType;
  * <p>An element is named by its dotted path from the resource root, such as {@code active} or
  * {@code name.family}. Each step below the root descends through a struct or an array of structs.
  *
+ * <p>A reader may be given the schema the definitions describe for the resource, such as the
+ * previous layout's dense schema. An element that schema describes may then be named for removal
+ * even where the written schema does not carry it, because the new layout has already pruned it,
+ * and it is left as it is. An element that neither schema carries is still refused, so that a
+ * misspelt path fails rather than leaving the data unchanged.
+ *
  * @author Piotr Szul
  */
 public final class PrunedSchemaReader {
@@ -48,13 +55,17 @@ public final class PrunedSchemaReader {
 
   @Nonnull private final StructType schema;
 
+  @Nullable private final StructType describedSchema;
+
   private PrunedSchemaReader(
       @Nonnull final SparkSession spark,
       @Nonnull final String path,
-      @Nonnull final StructType schema) {
+      @Nonnull final StructType schema,
+      @Nullable final StructType describedSchema) {
     this.spark = spark;
     this.path = path;
     this.schema = schema;
+    this.describedSchema = describedSchema;
   }
 
   /**
@@ -68,7 +79,26 @@ public final class PrunedSchemaReader {
   public static PrunedSchemaReader write(
       @Nonnull final Dataset<Row> dataset, @Nonnull final String path) {
     dataset.coalesce(1).write().mode(SaveMode.Overwrite).parquet(path);
-    return new PrunedSchemaReader(dataset.sparkSession(), path, dataset.schema());
+    return new PrunedSchemaReader(dataset.sparkSession(), path, dataset.schema(), null);
+  }
+
+  /**
+   * Writes a dataset to Parquet at the given location, and returns a reader over the written files
+   * that accepts the removal of an element the written schema has already pruned.
+   *
+   * @param dataset the dataset to write, in either layout
+   * @param path the directory to write to
+   * @param describedSchema a schema carrying every element the definitions describe for the
+   *     resource, against which a path absent from the written schema is checked
+   * @return a reader over the written files
+   */
+  @Nonnull
+  public static PrunedSchemaReader write(
+      @Nonnull final Dataset<Row> dataset,
+      @Nonnull final String path,
+      @Nonnull final StructType describedSchema) {
+    dataset.coalesce(1).write().mode(SaveMode.Overwrite).parquet(path);
+    return new PrunedSchemaReader(dataset.sparkSession(), path, dataset.schema(), describedSchema);
   }
 
   /**
@@ -82,18 +112,39 @@ public final class PrunedSchemaReader {
   }
 
   /**
-   * Reads the written files back with the named elements removed from the schema.
+   * Reads the written files back with the named elements removed from the schema. An element the
+   * written schema does not carry is left as it is where the described schema carries it.
    *
    * @param elementPaths the dotted paths of the elements to remove
    * @return the dataset, without the named elements
+   * @throws IllegalArgumentException where an element is carried by neither schema
    */
   @Nonnull
   public Dataset<Row> readWithout(@Nonnull final String... elementPaths) {
     StructType pruned = schema;
     for (final String elementPath : elementPaths) {
-      pruned = without(pruned, Arrays.asList(elementPath.split("\\.")));
+      final List<String> steps = Arrays.asList(elementPath.split("\\."));
+      if (carries(pruned, steps) || describedSchema == null || !carries(describedSchema, steps)) {
+        pruned = without(pruned, steps);
+      }
     }
     return spark.read().schema(pruned).parquet(path);
+  }
+
+  /** Returns whether a schema carries the element at a path. */
+  private static boolean carries(@Nonnull final DataType type, @Nonnull final List<String> steps) {
+    DataType current = type;
+    for (final String step : steps) {
+      while (current instanceof final ArrayType array) {
+        current = array.elementType();
+      }
+      if (!(current instanceof final StructType struct)
+          || Arrays.stream(struct.fieldNames()).noneMatch(step::equals)) {
+        return false;
+      }
+      current = struct.apply(step).dataType();
+    }
+    return true;
   }
 
   @Nonnull

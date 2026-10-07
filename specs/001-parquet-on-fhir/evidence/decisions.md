@@ -2866,3 +2866,23 @@ _Amends_ decision 73's expectation that M2 changes nothing a user can see
 beyond two fixes, since the change reaches the public API on the previous layout.
 It records the query-time type of a primitive that decision 70 already stores as
 text.
+
+### Addendum to 81 — an instant constant is text too
+
+Owner-approved (2026-10-07), prompted by the review of #2800. A view constant
+declared `valueInstant` was still built as a timestamp literal, so the engine saw
+two types for one FHIR type: text where an instant was traversed, and a timestamp
+where it was a constant. A constant is now its lexical form, as given, with its
+offset kept, which is how the new layout stores a traversed instant.
+
+So an untyped view column over an instant constant is `StringType`, and its value
+is the constant's text, such as `2023-01-01T12:00:00Z`. Until now it was
+`TimestampType`, with the point in time rendered in the session time zone.
+`AnsiTypeHintingTest`'s instant row in `fhirDefaultMappings` expects
+`StringType`, with the lexical text (owner-approved). The change reaches the
+public API on both layouts. The `fhirpath` and `library-api` suites were run and
+passed, and the Python and R tests were searched: none uses an instant constant.
+
+The coercion to a string in flat projections no longer formats an instant as a
+timestamp, since the value is already text. No view sets that constraint today,
+so it changes nothing a user can see.

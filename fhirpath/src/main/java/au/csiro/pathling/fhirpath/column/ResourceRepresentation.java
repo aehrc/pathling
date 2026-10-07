@@ -215,7 +215,7 @@ public final class ResourceRepresentation extends ColumnRepresentation {
       @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final DataType fallback) {
     return DefaultRepresentation.decodeField(
-        readField(fieldName, fhirType, fallback).removeNulls(), fhirType, this, fieldName);
+        readField(fieldName, fhirType, fallback).removeNulls(), fhirType);
   }
 
   /**

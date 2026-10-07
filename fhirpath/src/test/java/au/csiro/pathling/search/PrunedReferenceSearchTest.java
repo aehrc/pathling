@@ -24,6 +24,8 @@ import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.datasource.DatasetDataSource;
 import au.csiro.pathling.test.datasource.PrunedSchemaReader;
+import au.csiro.pathling.test.layout.LayoutDatasets;
+import au.csiro.pathling.test.layout.TestLayout;
 import jakarta.annotation.Nonnull;
 import java.nio.file.Path;
 import java.util.List;
@@ -32,7 +34,6 @@ import java.util.stream.Stream;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
-import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.Enumerations.SearchParamType;
@@ -82,14 +83,16 @@ class PrunedReferenceSearchTest {
   void setUp() {
     final PrunedSchemaReader observations =
         PrunedSchemaReader.write(
-            spark
-                .createDataset(
-                    List.<IBaseResource>of(
-                        observation("1", "Patient/p1", "Practitioner/pr1"),
-                        observation("2", "Patient/p2", "Practitioner/pr2")),
-                    encoders.of("Observation"))
-                .toDF(),
-            tempDir.resolve("observations").toString());
+            LayoutDatasets.fromResources(
+                spark,
+                encoders,
+                TestLayout.active(),
+                "Observation",
+                List.of(
+                    observation("1", "Patient/p1", "Practitioner/pr1"),
+                    observation("2", "Patient/p2", "Practitioner/pr2"))),
+            tempDir.resolve("observations").toString(),
+            encoders.of("Observation").schema());
     datasets =
         Map.of(
             "full", observations.read(),

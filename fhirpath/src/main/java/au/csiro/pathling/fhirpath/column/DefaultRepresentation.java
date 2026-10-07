@@ -22,7 +22,6 @@ import static org.apache.spark.sql.functions.lit;
 import au.csiro.pathling.encoders.ColumnFunctions;
 import au.csiro.pathling.encoders.ValueFunctions;
 import au.csiro.pathling.fhirpath.collection.DecimalCollection;
-import au.csiro.pathling.fhirpath.collection.QuantityCollection;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.Optional;
@@ -135,43 +134,34 @@ public class DefaultRepresentation extends ColumnRepresentation {
       @Nonnull final DataType fallback) {
     return decodeField(
         copyOf(ColumnFunctions.resolveOrNull(value, fieldName, fallback)).removeNulls().flatten(),
-        fhirType,
-        this,
-        fieldName);
+        fhirType);
   }
 
   /**
    * Decodes a traversed field for computation, by its FHIR type. The field has been read in the
    * shape the new layout gives it, on either layout.
    *
+   * <p>A quantity is not decoded here. It stays in the stored shape, so that it keeps its
+   * extensions, and the quantity collection decodes it where it is computed with.
+   *
    * @param field the traversed field
    * @param fhirType the FHIR type of the field
-   * @param parent the representation the field was traversed from
-   * @param fieldName the name of the field
    * @return the decoded field
    */
   @Nonnull
   static ColumnRepresentation decodeField(
       @Nonnull final ColumnRepresentation field,
-      @Nonnull final Optional<FHIRDefinedType> fhirType,
-      @Nonnull final ColumnRepresentation parent,
-      @Nonnull final String fieldName) {
+      @Nonnull final Optional<FHIRDefinedType> fhirType) {
     @Nullable final FHIRDefinedType resolvedFhirType = fhirType.orElse(null);
     if (FHIRDefinedType.BASE64BINARY.equals(resolvedFhirType)) {
       // If the field is a base64Binary, represent it using a BinaryRepresentation.
       return DefaultRepresentation.fromBinaryColumn(field.getValue());
     } else if (FHIRDefinedType.DECIMAL.equals(resolvedFhirType)) {
       // A decimal is read as text on either layout, and decoded for computation.
-      return ElementRepresentation.ofPrimitive(
-          DecimalCollection.decode(field), fhirType, parent, fieldName);
-    } else if (resolvedFhirType != null
-        && QuantityCollection.QUANTITY_TYPES.contains(resolvedFhirType)) {
-      // A quantity, of any of the quantity types, is decoded for computation, which computes its
-      // canonical form (decision 80).
-      return QuantityCollection.decode(field);
+      return DecimalCollection.decode(field);
     } else {
-      // Otherwise, use the default representation, retaining the parent of a primitive.
-      return ElementRepresentation.ofPrimitive(field, fhirType, parent, fieldName);
+      // Otherwise, use the field as it was traversed.
+      return field;
     }
   }
 

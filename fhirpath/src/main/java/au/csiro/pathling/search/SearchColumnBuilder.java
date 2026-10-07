@@ -21,8 +21,6 @@ import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
-import au.csiro.pathling.fhirpath.column.DecodedRepresentation;
 import au.csiro.pathling.fhirpath.evaluation.CrossResourceStrategy;
 import au.csiro.pathling.fhirpath.evaluation.SingleResourceEvaluator;
 import au.csiro.pathling.fhirpath.evaluation.SingleResourceEvaluatorBuilder;
@@ -218,8 +216,10 @@ public class SearchColumnBuilder {
     final SingleResourceEvaluator evaluator = createEvaluator(resourceType);
     final Collection result = evaluator.evaluate(fhirPath);
 
-    // Get the Column value - for boolean expressions this should be a scalar boolean
-    return result.getColumn().getValue();
+    // Get the Column value - for boolean expressions this should be a scalar boolean. A value is
+    // returned in the form the engine computes with, so that a quantity has the same structure
+    // whatever the layout.
+    return result.toEngineForm().getColumn().getValue();
   }
 
   /**
@@ -336,21 +336,7 @@ public class SearchColumnBuilder {
 
     // Standard path: build filter directly from the evaluated column.
     final SearchFilter filter = getFilterForType(paramType, criterion.getModifier(), fhirType);
-    return filter.buildFilter(storedElements(result.getColumn()), criterion.getValues());
-  }
-
-  /**
-   * Returns the elements a search matches, as they were stored. Where the engine has decoded them
-   * for computation, as it decodes a quantity, the matcher is given the stored elements instead:
-   * the decoded value is a {@code DECIMAL(32,6)}, so matching it would lose every digit after the
-   * sixth that the new layout's text keeps, before canonicalisation (decision 77).
-   *
-   * @param column the evaluated elements
-   * @return the elements as they were stored
-   */
-  @Nonnull
-  private static ColumnRepresentation storedElements(@Nonnull final ColumnRepresentation column) {
-    return column instanceof final DecodedRepresentation decoded ? decoded.getStored() : column;
+    return filter.buildFilter(result.getColumn(), criterion.getValues());
   }
 
   /**

@@ -133,7 +133,8 @@ public record ProjectedColumn(
 
   /**
    * Gets the SQL type that the declared FHIR type of the column gives its output, if a FHIR type is
-   * declared and is one that is cast on output.
+   * declared and is one that is cast on output. A base64Binary value is output as the bytes it
+   * encodes, so it is cast to binary rather than to the string type of its FHIRPath type.
    *
    * @return the SQL type of the declared FHIR type, as an array for a collection column
    */
@@ -142,8 +143,11 @@ public record ProjectedColumn(
     return requestedColumn
         .type()
         .filter(type -> !UNCAST_DECLARED_TYPE.equals(type))
-        .flatMap(FhirPathType::forFhirType)
-        .map(FhirPathType::getSqlDataType)
+        .flatMap(
+            type ->
+                FHIRDefinedType.BASE64BINARY.equals(type)
+                    ? Optional.of(DataTypes.BinaryType)
+                    : FhirPathType.forFhirType(type).map(FhirPathType::getSqlDataType))
         .map(type -> requestedColumn.collection() ? DataTypes.createArrayType(type) : type);
   }
 

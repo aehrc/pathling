@@ -38,6 +38,7 @@ import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.comparison.ColumnEquality;
 import au.csiro.pathling.fhirpath.comparison.Equatable;
 import au.csiro.pathling.fhirpath.encoding.CodingSchema;
+import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import au.csiro.pathling.fhirpath.function.CollectionTransform;
 import au.csiro.pathling.fhirpath.function.ColumnTransform;
 import au.csiro.pathling.schema.PrimitiveTypes;
@@ -397,7 +398,7 @@ public class Collection implements Equatable {
    */
   @Nonnull
   public Collection filter(@Nonnull final ColumnTransform lambda) {
-    return map(ctx -> ctx.filterElements(element -> lambda.apply(element).getValue()));
+    return map(ctx -> ctx.filter(col -> lambda.apply(ctx.copyOf(col)).getValue()));
   }
 
   /**
@@ -894,6 +895,24 @@ public class Collection implements Equatable {
    */
   public boolean holdsStoredStructures() {
     return getFhirType().filter(PrimitiveTypes::isStructure).isPresent();
+  }
+
+  /**
+   * Gets this collection in the form the engine computes with.
+   *
+   * <p>A quantity reached by traversal, of any of the quantity types, is held in the stored shape,
+   * so as to keep the extensions that the structure the engine computes with cannot carry. Here it
+   * is decoded into that structure, computing the canonical form of each quantity from the quantity
+   * itself (T096, FR-022). The result is a collection of System quantities, which have no
+   * extensions (T097). Every other collection is returned as it is.
+   *
+   * @return the collection, in the form the engine computes with
+   */
+  @Nonnull
+  public Collection toEngineForm() {
+    return QuantityCollection.holdsStoredQuantities(this)
+        ? QuantityCollection.build(getColumn().transform(QuantityEncoding::decodeStored))
+        : this;
   }
 
   /**

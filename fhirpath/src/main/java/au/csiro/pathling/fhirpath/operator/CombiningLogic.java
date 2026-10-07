@@ -24,8 +24,6 @@ import static org.apache.spark.sql.functions.concat;
 import au.csiro.pathling.definition.ElementDefinition;
 import au.csiro.pathling.encoders.ColumnFunctions;
 import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.column.DecodedRepresentation;
-import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.comparison.ColumnEquality;
 import au.csiro.pathling.schema.DefinitionCanonicalStructure;
 import au.csiro.pathling.schema.PrimitiveTypes;
@@ -35,9 +33,7 @@ import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.BiFunction;
-import java.util.function.BinaryOperator;
 import java.util.function.Function;
-import java.util.function.UnaryOperator;
 import java.util.stream.IntStream;
 import lombok.experimental.UtilityClass;
 import org.apache.spark.sql.Column;
@@ -78,13 +74,12 @@ public class CombiningLogic {
    * <ul>
    *   <li>Where every operand holds stored FHIR structures, each operand is projected by name into
    *       the merged structure of all of them, under the canonical order of the definitions
-   *       (FR-057).
-   *   <li>Where every operand holds structures the engine decoded from stored ones, the stored
-   *       structures are reconciled, and decoded again. A combination of two FHIR operands
-   *       therefore keeps the stored FHIR structures, and their extensions (decision 79). Where
-   *       only some operands were decoded, a System value takes part, such as a literal. The FHIR
-   *       operands are then taken as the System values they were decoded to, which already share
-   *       the engine's structure.
+   *       (FR-057). A combination of two FHIR operands therefore keeps their extensions (decision
+   *       79).
+   *   <li>Where only some operands hold stored FHIR structures, a System value takes part, such as
+   *       a literal. The stored operands are then taken in the form the engine computes with (see
+   *       {@link Collection#toEngineForm()}), which they share with the System value. Those
+   *       operands have no extensions, as a System value has none.
    * </ul>
    *
    * <p>A primitive needs no shape unification here. Two decimals of different precision are given
@@ -177,14 +172,21 @@ public class CombiningLogic {
     if (operands.size() < 2 || !typeEquivalent(operands)) {
       return operands;
     }
-    final Optional<List<DecodedRepresentation>> decoded = decoded(operands);
-    if (decoded.isPresent()) {
-      return reconcileStored(operands, decoded.get());
-    }
-    if (operands.stream().allMatch(Collection::holdsStoredStructures)) {
-      return reconcileStructures(operands);
-    }
-    return operands;
+    final List<Collection> aligned = alignForm(operands);
+    return aligned.stream().allMatch(Collection::holdsStoredStructures)
+        ? reconcileStructures(aligned)
+        : aligned;
+  }
+
+  /**
+   * Takes the operands in the form the engine computes with, unless every one of them holds stored
+   * structures, which are reconciled by name and keep what they stored.
+   */
+  @Nonnull
+  private static List<Collection> alignForm(@Nonnull final List<Collection> operands) {
+    return operands.stream().allMatch(Collection::holdsStoredStructures)
+        ? operands
+        : operands.stream().map(Collection::toEngineForm).toList();
   }
 
   /** Projects every operand by name into the merged structure of all of them. */
@@ -196,20 +198,6 @@ public class CombiningLogic {
         operands,
         operands.stream().map(operand -> operand.getColumn().plural().getValue()).toList(),
         (index, unified) -> operands.get(index).copyWithColumn(unified));
-  }
-
-  /**
-   * Reconciles the stored structures behind decoded operands, and decodes the reconciled structures
-   * again, so that every operand keeps its stored structure.
-   */
-  @Nonnull
-  private static List<Collection> reconcileStored(
-      @Nonnull final List<Collection> operands,
-      @Nonnull final List<DecodedRepresentation> decoded) {
-    return reconcile(
-        operands,
-        decoded.stream().map(CombiningLogic::storedArray).toList(),
-        (index, unified) -> rewrap(operands.get(index), unified, decoded.get(index).getDecoder()));
   }
 
   /**
@@ -254,20 +242,6 @@ public class CombiningLogic {
   }
 
   /**
-   * Returns the decoded representations of the operands, where every operand holds values the
-   * engine decoded from stored structures.
-   */
-  @Nonnull
-  private static Optional<List<DecodedRepresentation>> decoded(
-      @Nonnull final List<Collection> operands) {
-    return operands.stream()
-            .allMatch(operand -> operand.getColumn() instanceof DecodedRepresentation)
-        ? Optional.of(
-            operands.stream().map(operand -> (DecodedRepresentation) operand.getColumn()).toList())
-        : Optional.empty();
-  }
-
-  /**
    * Deduplicates the values of a unified collection, as the union of a collection with an empty
    * one.
    *
@@ -276,23 +250,13 @@ public class CombiningLogic {
    */
   @Nonnull
   public static Collection dedupe(@Nonnull final Collection collection) {
-    final ColumnEquality comparator = collection.getComparator();
-    return decoded(List.of(collection))
-        .map(
-            decoded -> {
-              final DecodedRepresentation only = decoded.get(0);
-              final Column result =
-                  SqlFunctions.arrayDistinctWithEquality(
-                      storedArray(only), decodedEquality(comparator, only.getDecoder()));
-              return rewrap(collection, result, only.getDecoder());
-            })
-        .orElseGet(
-            () -> collection.copyWithColumn(dedupeArray(prepareArray(collection), comparator)));
+    return collection.copyWithColumn(
+        dedupeArray(prepareArray(collection), collection.getComparator()));
   }
 
   /**
    * Merges two collections and deduplicates the result, as the FHIRPath union operator does. Where
-   * both hold decoded values, the stored structures are merged, and compared by their decoded
+   * both hold stored structures, the stored structures are merged, and compared by their decoded
    * values.
    *
    * <p>The operands are to have had their types promoted, and are unified in shape here, as they
@@ -304,19 +268,18 @@ public class CombiningLogic {
    */
   @Nonnull
   public static Collection union(@Nonnull final Collection left, @Nonnull final Collection right) {
-    final ColumnEquality comparator = left.getComparator();
     return combineUnified(
         List.of(left, right),
-        (stored, decoder) ->
-            SqlFunctions.arrayUnionWithEquality(
-                stored.get(0), stored.get(1), decodedEquality(comparator, decoder)),
         unified ->
-            unionArrays(prepareArray(unified.get(0)), prepareArray(unified.get(1)), comparator));
+            unionArrays(
+                prepareArray(unified.get(0)),
+                prepareArray(unified.get(1)),
+                unified.get(0).getComparator()));
   }
 
   /**
    * Concatenates two collections without deduplication, as the FHIRPath {@code combine} function
-   * does. Where both hold decoded values, the stored structures are concatenated.
+   * does. Where both hold stored structures, the stored structures are concatenated.
    *
    * <p>The operands are to have had their types promoted, and are unified in shape here, as they
    * are combined (see {@link #combineUnified}).
@@ -330,7 +293,6 @@ public class CombiningLogic {
       @Nonnull final Collection left, @Nonnull final Collection right) {
     return combineUnified(
         List.of(left, right),
-        (stored, decoder) -> combineArrays(stored.get(0), stored.get(1)),
         unified -> combineArrays(prepareArray(unified.get(0)), prepareArray(unified.get(1))));
   }
 
@@ -347,69 +309,32 @@ public class CombiningLogic {
    * they are resolved, so that each projection holds only its own operand.
    *
    * @param operands the operands, whose types have been promoted, in order
-   * @param combineStored the combination of the stored arrays of operands that all hold decoded
-   *     values, given the decoding of one stored element
-   * @param combinePlain the combination of any other operands
+   * @param combine the combination of the unified operands
    * @return the combined collection, built on the first operand
    */
   @Nonnull
   private static Collection combineUnified(
       @Nonnull final List<Collection> operands,
-      @Nonnull final BiFunction<List<Column>, UnaryOperator<Column>, Column> combineStored,
-      @Nonnull final Function<List<Collection>, Column> combinePlain) {
-    final Collection template = operands.get(0);
-    final boolean reconcilable = operands.size() >= 2 && typeEquivalent(operands);
+      @Nonnull final Function<List<Collection>, Column> combine) {
+    final List<Collection> aligned = alignForm(operands);
+    final Collection template = aligned.get(0);
+    final boolean reconcilable = aligned.size() >= 2 && typeEquivalent(aligned);
     final Optional<CanonicalStructure> canonical =
-        reconcilable ? structureOfOperands(operands) : Optional.empty();
-    final Optional<List<DecodedRepresentation>> decoded = decoded(operands);
-    if (decoded.isPresent()) {
-      final UnaryOperator<Column> decoder = decoded.get().get(0).getDecoder();
-      final List<Column> stored = decoded.get().stream().map(CombiningLogic::storedArray).toList();
-      final Column result =
-          canonical
-              .map(
-                  structure ->
-                      ColumnFunctions.mergeCombination(
-                          stored, structure, unified -> combineStored.apply(unified, decoder)))
-              .orElseGet(() -> combineStored.apply(stored, decoder));
-      return rewrap(template, result, decoder);
-    }
-    if (canonical.isPresent() && operands.stream().allMatch(Collection::holdsStoredStructures)) {
+        reconcilable ? structureOfOperands(aligned) : Optional.empty();
+    if (canonical.isPresent() && aligned.stream().allMatch(Collection::holdsStoredStructures)) {
       final List<Column> columns =
-          operands.stream().map(operand -> operand.getColumn().plural().getValue()).toList();
+          aligned.stream().map(operand -> operand.getColumn().plural().getValue()).toList();
       return template.copyWithColumn(
           ColumnFunctions.mergeCombination(
               columns,
               canonical.get(),
               unified ->
-                  combinePlain.apply(
-                      IntStream.range(0, operands.size())
-                          .mapToObj(index -> operands.get(index).copyWithColumn(unified.get(index)))
+                  combine.apply(
+                      IntStream.range(0, aligned.size())
+                          .mapToObj(index -> aligned.get(index).copyWithColumn(unified.get(index)))
                           .toList())));
     }
-    return template.copyWithColumn(combinePlain.apply(operands));
-  }
-
-  /** The equality of two stored structures, which is the equality of their decoded values. */
-  @Nonnull
-  private static BinaryOperator<Column> decodedEquality(
-      @Nonnull final ColumnEquality comparator, @Nonnull final UnaryOperator<Column> decoder) {
-    return (left, right) -> comparator.equalsTo(decoder.apply(left), decoder.apply(right));
-  }
-
-  /** Returns the stored structures behind a decoded representation, as an array. */
-  @Nonnull
-  private static Column storedArray(@Nonnull final DecodedRepresentation decoded) {
-    return decoded.getStored().plural().getValue();
-  }
-
-  /** Builds a collection of the given stored structures, decoded as the template's were. */
-  @Nonnull
-  private static Collection rewrap(
-      @Nonnull final Collection template,
-      @Nonnull final Column stored,
-      @Nonnull final UnaryOperator<Column> decoder) {
-    return template.copyWith(new DecodedRepresentation(new DefaultRepresentation(stored), decoder));
+    return template.copyWithColumn(combine.apply(aligned));
   }
 
   /**

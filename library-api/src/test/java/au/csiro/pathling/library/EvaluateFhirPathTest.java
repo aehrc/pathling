@@ -335,6 +335,21 @@ public class EvaluateFhirPathTest {
   }
 
   @Test
+  void quantityResultIsTheSameWithAContextExpression() {
+    // A context expression must not change how a result is rendered, so a Quantity reached through
+    // a context is rendered as it is without one.
+    final SingleInstanceEvaluationResult withoutContext =
+        pathling.evaluateFhirPath("Observation", OBSERVATION_JSON, "value.ofType(Quantity)");
+    final SingleInstanceEvaluationResult withContext =
+        pathling.evaluateFhirPath(
+            "Observation", OBSERVATION_JSON, "$this", "value.ofType(Quantity)", null);
+
+    assertEquals(
+        withoutContext.getResults().stream().map(TypedValue::getValue).toList(),
+        withContext.getResults().stream().map(TypedValue::getValue).toList());
+  }
+
+  @Test
   void complexTypeResultExcludesFidField() {
     // Any complex type result should not contain the _fid field.
     final SingleInstanceEvaluationResult result =

@@ -31,12 +31,12 @@ import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.TerminologyConcepts;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
-import au.csiro.pathling.fhirpath.column.DecodedRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.column.QuantityValue;
 import au.csiro.pathling.fhirpath.comparison.ColumnComparator;
 import au.csiro.pathling.fhirpath.comparison.Comparable;
 import au.csiro.pathling.fhirpath.comparison.QuantityComparator;
+import au.csiro.pathling.fhirpath.comparison.StoredQuantityComparator;
 import au.csiro.pathling.fhirpath.encoding.CodingSchema;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import au.csiro.pathling.sql.misc.QuantityToLiteral;
@@ -57,9 +57,10 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 public class QuantityCollection extends Collection implements Comparable, StringCoercible, Numeric {
 
   /**
-   * Quantity and the types profiled on it. A stored element of any of them is decoded at traversal
-   * into the structure the engine computes with (T096, decision 80), because the previous layout
-   * stores each of them in that structure, with its canonical form and the scale of its value.
+   * Quantity and the types profiled on it. A stored element of any of them is normalised at
+   * traversal to the new layout's shape (T094b, decision 80), because the previous layout stores
+   * each of them with its canonical form and the scale of its value. It is decoded into the
+   * structure the engine computes with only where it is computed with.
    */
   public static final Set<FHIRDefinedType> QUANTITY_TYPES =
       Set.of(
@@ -170,24 +171,33 @@ public class QuantityCollection extends Collection implements Comparable, String
   }
 
   /**
-   * Decodes stored quantities into the structure the engine computes with, computing the canonical
-   * form of each from the quantity itself (T096, FR-022).
+   * Returns whether the values of a collection are quantities in the stored shape, as traversal
+   * reached them from the data. A collection the engine builds, such as a literal or the result of
+   * a conversion, has no definition or only the synthetic one, and holds quantities in the
+   * structure the engine computes with. Those are System quantities, which never carry extensions.
    *
-   * <p>This is applied at element traversal only, to the quantity as the traversal expression
-   * yields it, which is the new layout's shape on either layout (T094b). Quantities the engine
-   * builds itself, such as literals and the results of conversion, are already in the structure it
-   * computes with.
+   * <p>The definition is not required to be a FHIR definition, because the data of a resource
+   * described by a definition of another origin is stored just the same.
    *
-   * <p>The stored quantities are retained beside the decoded ones, because the decoded structure
-   * has a fixed type and cannot carry the new layout's inline extensions (T097).
-   *
-   * @param stored the stored quantity, or array of quantities
-   * @return the quantity, or array of quantities, in the structure of {@link
-   *     QuantityEncoding#dataType()}
+   * @param collection the collection
+   * @return true where the values are stored quantities, of any of the quantity types
    */
-  @Nonnull
-  public static ColumnRepresentation decode(@Nonnull final ColumnRepresentation stored) {
-    return new DecodedRepresentation(stored, QuantityEncoding::decodeStored);
+  public static boolean holdsStoredQuantities(@Nonnull final Collection collection) {
+    return collection.getFhirType().filter(QUANTITY_TYPES::contains).isPresent()
+        && collection
+            .getDefinition()
+            .filter(definition -> definition != LITERAL_DEFINITION)
+            .isPresent();
+  }
+
+  /**
+   * Returns whether the values of this collection are quantities in the stored shape.
+   *
+   * @return true where the values are stored quantities
+   * @see #holdsStoredQuantities(Collection)
+   */
+  public boolean isStored() {
+    return holdsStoredQuantities(this);
   }
 
   /**
@@ -231,7 +241,8 @@ public class QuantityCollection extends Collection implements Comparable, String
   @Nonnull
   @Override
   public Optional<TerminologyConcepts> toConcepts() {
-    final ColumnRepresentation codings = getColumn().transform(QuantityCollection::toCoding);
+    final ColumnRepresentation codings =
+        toEngineForm().getColumn().transform(QuantityCollection::toCoding);
     return Optional.of(TerminologyConcepts.set(codings, CodingCollection.build(codings)));
   }
 
@@ -242,13 +253,15 @@ public class QuantityCollection extends Collection implements Comparable, String
    */
   @Nonnull
   public StringCollection asStringCollection() {
-    return map(r -> r.transformWithUdf(QuantityToLiteral.FUNCTION_NAME), StringCollection::build);
+    return toEngineForm()
+        .map(r -> r.transformWithUdf(QuantityToLiteral.FUNCTION_NAME), StringCollection::build);
   }
 
   @Nonnull
   @Override
   public StringCollection asStringPath() {
-    return asSingular()
+    return toEngineForm()
+        .asSingular()
         .map(r -> r.callUdf(QuantityToLiteral.FUNCTION_NAME), StringCollection::build);
   }
 
@@ -264,22 +277,20 @@ public class QuantityCollection extends Collection implements Comparable, String
   }
 
   /**
-   * The values of a quantity collection are always the structure the engine computes with, whether
-   * decoded from stored quantities or built by the engine. Where they were decoded, the stored
-   * quantities are held by the {@link DecodedRepresentation}, and the unification entry point
-   * reconciles those instead.
+   * The values of a quantity collection are stored FHIR structures where it has a FHIR definition,
+   * and the structure the engine builds otherwise.
    *
-   * @return false
+   * @return true where the values are stored quantities
    */
   @Override
   public boolean holdsStoredStructures() {
-    return false;
+    return isStored();
   }
 
   @Override
   @Nonnull
   public ColumnComparator getComparator() {
-    return QuantityComparator.getInstance();
+    return isStored() ? StoredQuantityComparator.getInstance() : QuantityComparator.getInstance();
   }
 
   /**
@@ -292,7 +303,8 @@ public class QuantityCollection extends Collection implements Comparable, String
   @Nonnull
   public Collection toUnit(@Nonnull final Collection targetUnit) {
     final Column unitColumn = targetUnit.getColumn().singular().getValue();
-    return map(q -> new DefaultRepresentation(QuantityValue.of(q).toUnit(unitColumn)));
+    return toEngineForm()
+        .map(q -> new DefaultRepresentation(QuantityValue.of(q).toUnit(unitColumn)));
   }
 
   /**
@@ -306,7 +318,8 @@ public class QuantityCollection extends Collection implements Comparable, String
   @Nonnull
   public Collection convertibleToUnit(@Nonnull final Collection targetUnit) {
     final Column unitColumn = targetUnit.getColumn().singular().getValue();
-    final Column result = QuantityValue.of(getColumn()).convertibleToUnit(unitColumn);
+    final Column result =
+        QuantityValue.of(toEngineForm().getColumn()).convertibleToUnit(unitColumn);
     return BooleanCollection.build(new DefaultRepresentation(result));
   }
 }

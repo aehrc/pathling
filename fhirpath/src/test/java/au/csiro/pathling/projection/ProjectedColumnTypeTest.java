@@ -27,10 +27,13 @@ import au.csiro.pathling.fhirpath.path.Paths.Traversal;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.datasource.DatasetDataSource;
 import au.csiro.pathling.test.datasource.PrunedSchemaReader;
+import au.csiro.pathling.test.layout.LayoutDatasets;
+import au.csiro.pathling.test.layout.TestLayout;
 import au.csiro.pathling.views.FhirView;
 import au.csiro.pathling.views.FhirViewExecutor;
 import com.google.gson.Gson;
 import jakarta.annotation.Nonnull;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
@@ -70,6 +73,10 @@ import org.springframework.beans.factory.annotation.Autowired;
  * schema from which the named elements are removed, which passes since T110. The removed elements
  * are never populated in the source, so the pruned run must also return the control's rows.
  *
+ * <p>The resources are built in the active test layout. The new layout's schema is already pruned
+ * to what the source populates, so there both runs read the elements as absent, and the control is
+ * a control only on the previous layout.
+ *
  * @author Piotr Szul
  */
 @SpringBootUnitTest
@@ -98,6 +105,7 @@ class ProjectedColumnTypeTest {
     patient.setId("p1");
     patient.setGender(AdministrativeGender.FEMALE);
     patient.addName().addGiven("Ann");
+    patient.addPhoto().setData("Hello".getBytes(StandardCharsets.UTF_8));
 
     final Observation observation = new Observation();
     observation.setId("o1");
@@ -198,6 +206,24 @@ class ProjectedColumnTypeTest {
     assertColumnTypes(
         run("Observation", reader.readWithout("valueQuantity"), selection),
         Map.of("amount", STRING));
+  }
+
+  @Test
+  void declaredBase64BinaryTypeIsOutputAsBytes() {
+    // A base64Binary value is output as the bytes it encodes, so its declared type casts it to
+    // binary rather than to the string type of its FHIRPath type.
+    final String selection =
+        """
+        {
+          "column": [
+            { "name": "data", "path": "photo.data.first()", "type": "base64Binary" }
+          ]
+        }
+        """;
+    final Dataset<Row> result = run("Patient", readers.get("Patient").read(), selection);
+    assertColumnTypes(result, Map.of("data", DataTypes.BinaryType));
+    assertThat((byte[]) result.first().getAs("data"))
+        .isEqualTo("Hello".getBytes(StandardCharsets.UTF_8));
   }
 
   // T107: a column declaring no type over an absent primitive carries the definitions' type
@@ -357,7 +383,9 @@ class ProjectedColumnTypeTest {
   private PrunedSchemaReader write(
       @Nonnull final String resourceType, @Nonnull final IBaseResource resource) {
     final Dataset<Row> encoded =
-        spark.createDataset(List.of(resource), fhirEncoders.of(resourceType)).toDF();
-    return PrunedSchemaReader.write(encoded, tempDir.resolve(resourceType).toString());
+        LayoutDatasets.fromResources(
+            spark, fhirEncoders, TestLayout.active(), resourceType, List.of(resource));
+    return PrunedSchemaReader.write(
+        encoded, tempDir.resolve(resourceType).toString(), fhirEncoders.of(resourceType).schema());
   }
 }

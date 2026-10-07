@@ -255,8 +255,8 @@ class AnsiTypeHintingTest {
         Arguments.of(
             "instant",
             new InstantType("2023-01-01T12:00:00Z"),
-            DataTypes.TimestampType,
-            "2023-01-01 12:00:00.0"),
+            DataTypes.StringType,
+            "2023-01-01T12:00:00Z"),
         Arguments.of("integer", new IntegerType(42), DataTypes.IntegerType, "42"),
         Arguments.of(
             "markdown", new MarkdownType("**bold text**"), DataTypes.StringType, "**bold text**"),

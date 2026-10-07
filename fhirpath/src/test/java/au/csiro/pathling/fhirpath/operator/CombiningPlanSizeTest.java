@@ -99,6 +99,7 @@ class CombiningPlanSizeTest {
             stored(TestLayout.PREVIOUS, "previous"),
             "pof",
             stored(TestLayout.POF, "pof"));
+    setUpObservations();
   }
 
   @Nonnull
@@ -147,8 +148,7 @@ class CombiningPlanSizeTest {
 
   private Map<String, Dataset<Row>> observations;
 
-  @BeforeAll
-  void setUpObservations() {
+  private void setUpObservations() {
     observations =
         Map.of(
             "previous",
