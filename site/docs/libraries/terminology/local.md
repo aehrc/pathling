@@ -270,9 +270,10 @@ the size of the map. Measured as the smallest driver heap with which the import
 succeeds, with Spark limited to 4 cores, maps of 1 million to 20 million
 mappings (73 MB to 1.5 GB of JSON) all imported within 512 MB, close to the
 minimum Spark will start with. With Spark using all 14 cores of the same
-machine, the requirement rose with the size of the source until every core had
-a part of it to write: 512 MB for 2 million mappings, 1 GB for 10 million and
-1.5 GB for 20 million. See
+machine, the requirement rose with the size of the source, because Spark writes
+one 128 MB part of the staged mappings per core at once: 512 MB for 2 million
+mappings, 1 GB for 10 million and 1.5 GB for 20 million. Limiting the cores
+Spark uses is therefore the most direct way to reduce import memory. See
 [driver memory for large imports](../cli#terminology-import-commands) for how to
 raise the heap.
 
