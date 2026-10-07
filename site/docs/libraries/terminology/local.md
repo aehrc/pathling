@@ -327,6 +327,11 @@ advises re-running the import. Because content is keyed by resource version,
 re-running with a corrected source fully replaces the partial version and
 repairs the store.
 
+A ConceptMap that cannot be read, for example because it is truncated or
+carries an unrecognised equivalence, is rejected before any of it is written,
+with an error naming it. Resources earlier in the same source have already been
+imported by then; re-running the import with a corrected source completes it.
+
 ### Provenance and verification
 
 Every import records the provenance of what it loaded in the store's
