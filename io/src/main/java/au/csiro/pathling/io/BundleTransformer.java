@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.io.transform;
+package au.csiro.pathling.io;
 
 import ca.uhn.fhir.parser.IParser;
 import jakarta.annotation.Nonnull;
@@ -36,14 +36,16 @@ import org.hl7.fhir.r4.model.Resource;
  * Explodes FHIR bundles into the resources they carry, one resource type at a time, resolving the
  * references between their entries (FR-007, FR-045).
  *
- * <p>A bundle is a transport carrier and never a resource type: asking for {@code Bundle} is
- * refused, and a bundle carried as the resource of an entry is neither returned nor exploded in
- * turn, as the previous encoder did not explode it. An entry that carries no resource, such as a
- * request to delete one, contributes nothing.
+ * <p>A bundle is a transport carrier and never a resource type. The readers refuse to be asked for
+ * {@code Bundle} before they get here (FR-007), and a bundle carried as the resource of an entry is
+ * neither returned nor exploded in turn, as the previous encoder did not explode it. An entry that
+ * carries no resource, such as a request to delete one, contributes nothing.
  *
- * <p>The output is FHIR JSON, one resource per row, all of the type asked for, which is the input
- * {@code FhirJsonReader} takes. Filtering to the one type happens here, before the reader infers a
- * schema, because the reader's input carries resources of one type (decision 70).
+ * <p>The output is FHIR JSON, one resource per row, all of the type asked for, which {@link
+ * FhirJsonReader} then reads, whichever format the bundles were written in. Filtering to the one
+ * type happens here, before the reader infers a schema, because the reader's input carries
+ * resources of one type (decision 70). This is how the bundle routes of both readers work today,
+ * and none of it is public (decision 84).
  *
  * <p>References are resolved as the previous encoder resolved them (decision 83). A reference that
  * is a URN naming the full URL of another entry is rewritten to that entry's identifier, which HAPI
@@ -58,10 +60,7 @@ import org.hl7.fhir.r4.model.Resource;
  * this format. HAPI's parser ignores content the definitions do not describe, so such content in a
  * bundle is not reported as a finding the way it is for newline-delimited JSON (decision 83).
  */
-public final class BundleTransformer {
-
-  /** The resource type a bundle is, and which is never stored (FR-007). */
-  @Nonnull private static final String BUNDLE = "Bundle";
+final class BundleTransformer {
 
   /** The prefix of a reference that may name another entry of the same bundle. */
   @Nonnull private static final String URN = "urn:";
@@ -81,7 +80,7 @@ public final class BundleTransformer {
    * @return the transformer
    */
   @Nonnull
-  public static BundleTransformer json() {
+  static BundleTransformer json() {
     return new BundleTransformer(false);
   }
 
@@ -92,7 +91,7 @@ public final class BundleTransformer {
    * @return the transformer
    */
   @Nonnull
-  public static BundleTransformer xml() {
+  static BundleTransformer xml() {
     return new BundleTransformer(true);
   }
 
@@ -100,20 +99,14 @@ public final class BundleTransformer {
    * Returns the resources of one type carried by bundles, as FHIR JSON with the references between
    * entries resolved. A document that is not a bundle fails the job that evaluates the result.
    *
-   * @param resourceType the type of the resources to return, which may not be {@code Bundle}
+   * @param resourceType the type of the resources to return, which the caller has already checked
+   *     may be stored
    * @param bundles the bundles, one per row
    * @return the resources, one per row
-   * @throws IllegalArgumentException if the type is {@code Bundle} or is not a resource type
    */
   @Nonnull
-  public Dataset<String> resources(
+  Dataset<String> resources(
       @Nonnull final String resourceType, @Nonnull final Dataset<String> bundles) {
-    if (BUNDLE.equals(resourceType)) {
-      throw new IllegalArgumentException("A bundle is never stored as a resource type");
-    }
-    if (!FhirParsers.context().getResourceTypes().contains(resourceType)) {
-      throw new IllegalArgumentException("Not a resource type: " + resourceType);
-    }
     // The function captures only these two values, so it serialises without the transformer.
     final boolean fromXml = xml;
     return bundles.flatMap(

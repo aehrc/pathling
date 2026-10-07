@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.io.transform;
+package au.csiro.pathling.io;
 
 import jakarta.annotation.Nonnull;
 import java.util.Map;
@@ -35,7 +35,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * them, and a table with a default branch has to be restructured before that can land (decision
  * 68).
  */
-public final class PrimitiveConverters {
+final class PrimitiveConverters {
 
   /**
    * The integral types a JSON integer may arrive as. Inference gives a long, and the narrower types

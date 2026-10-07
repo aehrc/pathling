@@ -20,7 +20,6 @@ package au.csiro.pathling.io;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import au.csiro.pathling.io.transform.NonConformantContent;
 import jakarta.annotation.Nonnull;
 import java.net.URISyntaxException;
 import java.nio.file.Path;

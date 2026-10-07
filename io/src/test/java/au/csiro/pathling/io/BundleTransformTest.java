@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.io.transform;
+package au.csiro.pathling.io;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -50,7 +50,8 @@ import org.junit.jupiter.api.Test;
  *
  * <p>The reference cases are those of the previous encoder's {@code ResourceParserTest}, over the
  * same bundle, so that what this layout stores for a reference is what was stored before. Decision
- * 83 records the semantics.
+ * 83 records the semantics. They assert the JSON each bundle is exploded into, which is internal to
+ * the bundle routes; what is stored is asserted through the public readers (decision 84).
  */
 class BundleTransformTest {
 
@@ -84,7 +85,7 @@ class BundleTransformTest {
 
     assertThrows(
         IllegalArgumentException.class,
-        () -> BundleTransformer.json().resources("Bundle", bundles));
+        () -> TransformFixtures.reader().readBundles("Bundle", bundles));
   }
 
   @Test
@@ -93,7 +94,7 @@ class BundleTransformTest {
 
     assertThrows(
         IllegalArgumentException.class,
-        () -> BundleTransformer.json().resources("NotAResource", bundles));
+        () -> TransformFixtures.reader().readBundles("NotAResource", bundles));
   }
 
   @Test
@@ -105,10 +106,7 @@ class BundleTransformTest {
             .collect(
                 Collectors.toMap(
                     Function.identity(),
-                    type ->
-                        ids(
-                            TransformFixtures.reader()
-                                .read(type, BundleTransformer.json().resources(type, bundles)))));
+                    type -> ids(TransformFixtures.reader().readBundles(type, bundles))));
 
     assertEquals(
         Map.of(
@@ -137,12 +135,7 @@ class BundleTransformTest {
             + "{\"resourceType\":\"Patient\",\"id\":\"second\"}}]}";
 
     final List<String> ids =
-        ids(
-            TransformFixtures.reader()
-                .read(
-                    "Patient",
-                    BundleTransformer.json()
-                        .resources("Patient", documents(references(), second))));
+        ids(TransformFixtures.reader().readBundles("Patient", documents(references(), second)));
 
     assertEquals(List.of(PATIENT_ID, "second"), ids);
   }
@@ -156,11 +149,7 @@ class BundleTransformTest {
             + "\"request\":{\"method\":\"PUT\",\"url\":\"Patient/kept\"}}]}";
 
     assertEquals(
-        List.of("kept"),
-        ids(
-            TransformFixtures.reader()
-                .read(
-                    "Patient", BundleTransformer.json().resources("Patient", documents(bundle)))));
+        List.of("kept"), ids(TransformFixtures.reader().readBundles("Patient", documents(bundle))));
   }
 
   /**
@@ -189,7 +178,7 @@ class BundleTransformTest {
 
     assertThrows(
         Exception.class,
-        () -> BundleTransformer.json().resources("Patient", documents).collectAsList());
+        () -> TransformFixtures.reader().readBundles("Patient", documents).collectAsList());
   }
 
   @Test
@@ -321,10 +310,7 @@ class BundleTransformTest {
   @Test
   void storesTheResolvedReference() {
     final Dataset<Row> conditions =
-        TransformFixtures.reader()
-            .read(
-                "Condition",
-                BundleTransformer.json().resources("Condition", documents(references())));
+        TransformFixtures.reader().readBundles("Condition", documents(references()));
 
     final Map<String, String> subjects =
         conditions.collectAsList().stream()

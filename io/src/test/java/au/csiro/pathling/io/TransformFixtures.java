@@ -15,12 +15,10 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.io.transform;
+package au.csiro.pathling.io;
 
 import au.csiro.pathling.definition.DefinitionContext;
 import au.csiro.pathling.definition.fhir.FhirDefinitionContext;
-import au.csiro.pathling.io.json.FhirJsonReader;
-import au.csiro.pathling.io.json.FhirJsonWriter;
 import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -35,11 +33,9 @@ import org.apache.spark.sql.SparkSession;
 
 /**
  * Fixtures shared by the transform tests: the R4 definitions, a Spark session, the transformer,
- * reader and writer over them, and the writing of a corpus of FHIR JSON documents to a directory.
- *
- * <p>It is public because the round trip harness in the parent package drives the same transform.
+ * readers and writers over them, and the writing of a corpus of FHIR JSON documents to a directory.
  */
-public final class TransformFixtures {
+final class TransformFixtures {
 
   /** The FHIR R4 definitions, built once because the HAPI context is expensive to create. */
   @Nonnull
@@ -76,16 +72,28 @@ public final class TransformFixtures {
     return ResourceTransformer.of(DEFINITIONS);
   }
 
-  /** Returns a reader over the R4 definitions and the shared session. */
+  /** Returns the reader of every format, over the R4 definitions and the shared session. */
   @Nonnull
-  public static FhirJsonReader reader() {
-    return FhirJsonReader.of(spark(), transformer());
+  public static FhirReader fhirReader() {
+    return FhirReader.of(spark(), DEFINITIONS);
   }
 
-  /** Returns a writer over the R4 definitions. */
+  /** Returns the writer of every format, over the R4 definitions. */
+  @Nonnull
+  public static FhirWriter fhirWriter() {
+    return FhirWriter.of(DEFINITIONS);
+  }
+
+  /** Returns the reader of FHIR JSON, over the R4 definitions and the shared session. */
+  @Nonnull
+  public static FhirJsonReader reader() {
+    return fhirReader().json();
+  }
+
+  /** Returns the writer of FHIR JSON, over the R4 definitions. */
   @Nonnull
   public static FhirJsonWriter writer() {
-    return FhirJsonWriter.of(transformer());
+    return fhirWriter().json();
   }
 
   /**

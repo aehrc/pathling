@@ -15,15 +15,16 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.io.transform;
+package au.csiro.pathling.io;
 
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import jakarta.annotation.Nonnull;
 
 /**
- * The FHIR parsers the two ingest formats without a Spark-native path use, configured so that what
- * they parse and then write as JSON keeps what the source said (decision 83).
+ * The FHIR parsers that the routes without a Spark-native path use, which are bundles and XML in
+ * either direction, configured so that what they parse and then write keeps what the source said
+ * (decisions 83 and 84).
  *
  * <p>A parser is made where it is used, inside the function Spark runs, because neither a parser
  * nor the FHIR context behind it can be serialised. The context is HAPI's cached one, so it is
@@ -34,7 +35,8 @@ final class FhirParsers {
   private FhirParsers() {}
 
   /**
-   * Returns a parser of FHIR JSON, which is also the parser every resource is written out with.
+   * Returns a parser of FHIR JSON, which is also the parser a resource parsed from a bundle or from
+   * XML is written out with.
    *
    * @return the parser
    */
@@ -44,7 +46,7 @@ final class FhirParsers {
   }
 
   /**
-   * Returns a parser of FHIR XML.
+   * Returns a parser of FHIR XML, which is also the parser a resource is written out as XML with.
    *
    * @return the parser
    */
@@ -53,13 +55,8 @@ final class FhirParsers {
     return configured(context().newXmlParser());
   }
 
-  /**
-   * Returns the FHIR context, which also says which resource types exist.
-   *
-   * @return the context
-   */
   @Nonnull
-  static FhirContext context() {
+  private static FhirContext context() {
     return FhirContext.forR4Cached();
   }
 

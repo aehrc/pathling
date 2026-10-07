@@ -23,11 +23,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import au.csiro.pathling.definition.ElementDefinition;
-import au.csiro.pathling.io.json.FhirJsonReader;
-import au.csiro.pathling.io.json.FhirJsonWriter;
-import au.csiro.pathling.io.transform.NonConformantContent;
-import au.csiro.pathling.io.transform.ResourceTransformer;
-import au.csiro.pathling.io.transform.TransformFixtures;
 import au.csiro.pathling.schema.DefinitionCanonicalStructure;
 import au.csiro.pathling.schema.LayoutEntry;
 import au.csiro.pathling.schema.LayoutFields;

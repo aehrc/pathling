@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.io.transform;
+package au.csiro.pathling.io;
 
 import jakarta.annotation.Nonnull;
 
@@ -30,7 +30,7 @@ import jakarta.annotation.Nonnull;
  * <p>The kind is carried as a string with a predicate for each value, rather than as an
  * enumeration, matching the way the layout entries distinguish their own kinds.
  */
-public final class NonConformantContent {
+final class NonConformantContent {
 
   private static final String CONTAINED_RESOURCE = "containedResource";
   private static final String UNDESCRIBED_CONTENT = "undescribedContent";

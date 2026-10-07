@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.io.transform;
+package au.csiro.pathling.io;
 
 import au.csiro.pathling.definition.DefinitionContext;
 import au.csiro.pathling.schema.DefinitionCanonicalStructure;
@@ -44,11 +44,11 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * layout back into a dataset that serialises as FHIR JSON (R-008, decision 70).
  *
  * <p>Both directions are structured in and structured out: no text is read or written here, which
- * is what {@link au.csiro.pathling.io.json.FhirJsonReader} and {@link
- * au.csiro.pathling.io.json.FhirJsonWriter} add. Types, cardinality, conventions and field order
- * all come from the definitions, and the schema of the input decides nothing but which elements the
- * data populates (FR-008, FR-012). The schema is fitted to the data because presence can only be
- * known after seeing it.
+ * is what {@link FhirJsonReader} and {@link FhirJsonWriter} add. This class is not public, because
+ * its input is the intermediate a JSON read infers, which a later reader may not produce (decision
+ * 84). Types, cardinality, conventions and field order all come from the definitions, and the
+ * schema of the input decides nothing but which elements the data populates (FR-008, FR-012). The
+ * schema is fitted to the data because presence can only be known after seeing it.
  *
  * <p>The input to {@link #toLayout} is in the JSON data model: every element under its FHIR JSON
  * name, a structure as a structure, a repeating element as an array, and each primitive in the type
@@ -76,7 +76,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * per-row plan and no expression tree is authored by hand (FR-050, FR-051).
  */
 @Slf4j
-public final class ResourceTransformer {
+final class ResourceTransformer {
 
   @Nonnull private final DefinitionContext definitions;
 
@@ -108,10 +108,12 @@ public final class ResourceTransformer {
    * @param resourceType the type of the resources the source carries
    * @param source the resources, in the JSON data model
    * @return the resources, in this layout
+   * @throws IllegalArgumentException if the type is {@code Bundle} or is not a resource type
    */
   @Nonnull
   public Dataset<Row> toLayout(
       @Nonnull final String resourceType, @Nonnull final Dataset<Row> source) {
+    requireStorable(resourceType);
     final StructType observed = source.schema();
     final DefinitionCanonicalStructure canonical =
         DefinitionCanonicalStructure.forResource(definitions, resourceType);
@@ -122,6 +124,17 @@ public final class ResourceTransformer {
             .flatMap(Optional::stream)
             .toArray(Column[]::new);
     return source.select(columns);
+  }
+
+  /**
+   * Refuses a resource type that may not be stored, which every read asks before it infers a schema
+   * and {@link #toLayout} asks again (FR-007).
+   *
+   * @param resourceType the resource type to check
+   * @throws IllegalArgumentException if the type is {@code Bundle} or is not a resource type
+   */
+  void requireStorable(@Nonnull final String resourceType) {
+    StorableResourceType.require(definitions, resourceType);
   }
 
   /**

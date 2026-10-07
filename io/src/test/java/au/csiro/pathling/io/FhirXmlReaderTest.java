@@ -15,13 +15,12 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.io.transform;
+package au.csiro.pathling.io;
 
-import static org.apache.spark.sql.functions.col;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -38,7 +37,8 @@ import org.apache.spark.sql.types.StructType;
 import org.junit.jupiter.api.Test;
 
 /**
- * Tests that XML ingest reaches the same stored result as the equivalent JSON (T058a, T069).
+ * Tests that XML ingest reaches the same stored result as the equivalent JSON (T058a, T069),
+ * through the public XML reader (decision 84).
  *
  * <p>Two cases are where XML and JSON differ in form, so they are where a conversion would go
  * wrong. A primitive's extension is a child element in XML and an underscore-prefixed sibling in
@@ -47,7 +47,7 @@ import org.junit.jupiter.api.Test;
  * it as a shape mismatch rather than as an array of one. Cardinality has to come from the FHIR
  * parser and the definitions, never from the text.
  */
-class XmlIngestTest {
+class FhirXmlReaderTest {
 
   @Nonnull private static final ObjectMapper MAPPER = new ObjectMapper();
 
@@ -102,8 +102,8 @@ class XmlIngestTest {
 
   @Test
   void convertsToTheEquivalentJson() {
-    assertEquals(parse(PATIENT_JSON), parse(converted(PATIENT_XML)));
-    assertEquals(parse(OBSERVATION_JSON), parse(converted(OBSERVATION_XML)));
+    assertEquals(parse(PATIENT_JSON), parse(converted("Patient", PATIENT_XML)));
+    assertEquals(parse(OBSERVATION_JSON), parse(converted("Observation", OBSERVATION_XML)));
   }
 
   @Test
@@ -119,7 +119,7 @@ class XmlIngestTest {
   @Test
   void storesARepeatingElementOccurringOnceAsAnArray() {
     final Dataset<Row> stored =
-        TransformFixtures.reader().read("Patient", XmlIngest.of().toJson(documents(PATIENT_XML)));
+        TransformFixtures.fhirReader().xml().read("Patient", documents(PATIENT_XML));
 
     final StructType schema = stored.schema();
     final ArrayType names = assertInstanceOf(ArrayType.class, schema.apply("name").dataType());
@@ -134,33 +134,43 @@ class XmlIngestTest {
         List.of("Jane"), storedNames.get(0).getList(storedNames.get(0).fieldIndex("given")));
   }
 
+  /**
+   * The type of an XML document is known only once it is parsed, so the reader selects the
+   * documents of the type asked for, as the previous encoder did, and stores only those.
+   */
   @Test
-  void convertsAColumn() {
-    final Dataset<Row> converted =
-        documents(PATIENT_XML).toDF("xml").select(XmlIngest.of().toJson(col("xml")).alias("json"));
+  void storesOnlyTheDocumentsOfTheTypeAskedFor() {
+    final Dataset<Row> stored =
+        TransformFixtures.fhirReader()
+            .xml()
+            .read("Patient", documents(OBSERVATION_XML, PATIENT_XML, OBSERVATION_XML));
 
-    assertEquals(parse(PATIENT_JSON), parse(converted.collectAsList().get(0).getString(0)));
+    assertEquals(
+        sorted(TransformFixtures.fhirReader().xml().read("Patient", documents(PATIENT_XML))),
+        sorted(stored));
   }
 
   @Test
-  void convertsANullDocumentToNull() {
+  void convertsNothingForANullDocument() {
     final Dataset<String> documents =
         TransformFixtures.spark().createDataset(Arrays.asList((String) null), Encoders.STRING());
 
-    assertNull(XmlIngest.of().toJson(documents).collectAsList().get(0));
+    assertTrue(XmlConversion.toJson("Patient", documents).collectAsList().isEmpty());
   }
 
   @Test
   void failsOnADocumentThatIsNotXml() {
     final Dataset<String> documents = documents("{\"resourceType\":\"Patient\"}");
 
-    assertThrows(Exception.class, () -> XmlIngest.of().toJson(documents).collectAsList());
+    assertThrows(
+        Exception.class,
+        () -> TransformFixtures.fhirReader().xml().read("Patient", documents).collectAsList());
   }
 
   private static void assertSameStoredResult(
       @Nonnull final String resourceType, @Nonnull final String xml, @Nonnull final String json) {
     final Dataset<Row> fromXml =
-        TransformFixtures.reader().read(resourceType, XmlIngest.of().toJson(documents(xml)));
+        TransformFixtures.fhirReader().xml().read(resourceType, documents(xml));
     final Dataset<Row> fromJson = TransformFixtures.reader().read(resourceType, documents(json));
 
     assertEquals(fromJson.schema(), fromXml.schema(), "the stored schemas differ");
@@ -168,8 +178,8 @@ class XmlIngestTest {
   }
 
   @Nonnull
-  private static String converted(@Nonnull final String xml) {
-    return XmlIngest.of().toJson(documents(xml)).collectAsList().get(0);
+  private static String converted(@Nonnull final String resourceType, @Nonnull final String xml) {
+    return XmlConversion.toJson(resourceType, documents(xml)).collectAsList().get(0);
   }
 
   @Nonnull

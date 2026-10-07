@@ -21,10 +21,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import au.csiro.pathling.io.transform.BundleTransformer;
-import au.csiro.pathling.io.transform.NonConformantContent;
-import au.csiro.pathling.io.transform.TransformFixtures;
-import au.csiro.pathling.io.transform.XmlIngest;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -109,7 +105,7 @@ class IngestFormatRoundTripTest {
             resourceType,
             text(SYNTHEA_JSON),
             text(SYNTHEA_JSON),
-            BundleTransformer.json(),
+            TransformFixtures.fhirReader().json(),
             harness(directory),
             directory);
 
@@ -125,7 +121,7 @@ class IngestFormatRoundTripTest {
             resourceType,
             xml(text(SYNTHEA_JSON)),
             text(SYNTHEA_JSON),
-            BundleTransformer.xml(),
+            TransformFixtures.fhirReader().xml(),
             harness(directory).collapsingNarrativeWhitespace(),
             directory);
 
@@ -174,7 +170,7 @@ class IngestFormatRoundTripTest {
             resourceType,
             text(REFERENCES_JSON),
             text(REFERENCES_JSON),
-            BundleTransformer.json(),
+            TransformFixtures.fhirReader().json(),
             harness(directory),
             directory);
 
@@ -206,7 +202,7 @@ class IngestFormatRoundTripTest {
     write(expected, withoutUnwritable(resourceType, source));
 
     final Dataset<Row> transformed =
-        TransformFixtures.reader().read(resourceType, XmlIngest.of().toJson(dataset(documents)));
+        TransformFixtures.fhirReader().xml().read(resourceType, dataset(documents));
 
     final RoundTripOutcome outcome =
         harness(directory)
@@ -258,7 +254,7 @@ class IngestFormatRoundTripTest {
       @Nonnull final String resourceType,
       @Nonnull final String bundle,
       @Nonnull final String expectedFrom,
-      @Nonnull final BundleTransformer transformer,
+      @Nonnull final FhirFormatReader reader,
       @Nonnull final RoundTripHarness harness,
       @Nonnull final Path directory) {
     final Path expected = directory.resolve("expected.ndjson");
@@ -266,9 +262,7 @@ class IngestFormatRoundTripTest {
     assertFalse(resources.isEmpty(), "the corpus carries no " + resourceType);
     write(expected, resources);
 
-    final Dataset<Row> transformed =
-        TransformFixtures.reader()
-            .read(resourceType, transformer.resources(resourceType, dataset(List.of(bundle))));
+    final Dataset<Row> transformed = reader.readBundles(resourceType, dataset(List.of(bundle)));
 
     return harness.assertRoundTrip(resourceType, expected, transformed);
   }

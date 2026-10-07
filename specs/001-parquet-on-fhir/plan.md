@@ -87,7 +87,7 @@ repository `CLAUDE.md` chain (`CONTRIBUTING.md`, `server/CONTRIBUTING.md`,
 | The new encoding duplicates schema derivation that `SchemaConverter` performs today | `SchemaConverter` reaches Catalyst through the `CustomCoder` schema hook, and the existing encoders must not be modified | Reusing it in place would either require modifying `encoders` (excluded by decision) or carrying its Catalyst dependency into the new module (excluded by FR-048) |
 | Two layouts exist in the build for the duration | The old encoders are retained for migration tooling | Retiring them now would leave no path for users to migrate data at rest |
 | The query engine reads both layouts from M2 until T100e removes the previous reader in M6 | It is what lets the engine be rewritten behind a green build and makes the switch a writer flip rather than a migration; it also keeps the switch reversible until M6 | Converting the engine by replacement was the previous plan and produced a span with no green build at all (decision 40, reversed). The cost is recorded as decision 51 and retired by a named task rather than left open |
-| FHIR objects still appear inside a UDF for XML and Bundle ingest | Neither has a Spark-native path that preserves FHIR semantics | A second parser for each would split the codebase permanently; UDFs are public, stable Spark API, so the constraint is met |
+| FHIR objects still appear inside a UDF for XML and Bundle ingest, and for XML output | Neither has a Spark-native path that preserves FHIR semantics; XML output keeps what `decode` offers (decision 84) | A second parser for each would split the codebase permanently; UDFs are public, stable Spark API, so the constraint is met |
 
 ## Project Structure
 
@@ -131,11 +131,15 @@ fhir-schema/                        # NEW. spark-sql-api only; no Catalyst.
                                       # share.
 
 io/                                 # NEW. The new encoding.
-  src/main/java/au/csiro/pathling/io/transform/    # JSON-shaped <-> PoF
-                                      # datasets, both directions.
-  src/main/java/au/csiro/pathling/io/json/         # JSON text in files or
-                                      # a Dataset<String> (decision 70).
-  src/main/java/au/csiro/pathling/io/annotation/   # Annotation processors.
+  src/main/java/au/csiro/pathling/io/              # One package. Public:
+                                      # FhirReader and FhirWriter, with a
+                                      # reader and writer per format, JSON
+                                      # and XML (decision 84). Everything
+                                      # behind them, the transform included,
+                                      # is package-private.
+  src/main/java/au/csiro/pathling/io/annotation/   # Annotation processors,
+                                      # unless they need the transform's
+                                      # internals (decision 84).
 
 encoders/                           # Implementation unchanged; retained for
   src/main/scala/au/csiro/pathling/sql/   # migration tooling. Gains two
