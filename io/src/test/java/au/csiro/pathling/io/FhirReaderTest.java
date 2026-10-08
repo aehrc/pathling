@@ -91,7 +91,7 @@ class FhirReaderTest {
     return routes.stream()
         .flatMap(
             route ->
-                Stream.of("Bundle", "NotAResource")
+                Stream.of("Bundle", "bundle", "BUNDLE", "patient", "NotAResource")
                     .map(type -> Arguments.of(route.get()[0], type, route.get()[1])));
   }
 
