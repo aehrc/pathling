@@ -1,0 +1,1089 @@
+Spark 4.0.2, catalog hive
+Delta jar delta-spark_2.13-4.0.0.jar
+spark.sql.sources.default = parquet
+spark.sql.storeAssignmentPolicy = ANSI
+spark.sql.ansi.enabled = true
+[parquet] 1-narrow-top mergeSchema=false
+  append: FAIL org.apache.spark.sql.AnalysisException [_LEGACY_ERROR_TEMP_1161]: The column number of the existing table spark_catalog.default.t1 (struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>) doesn't match the data schema (struct<id:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>).
+  provider: parquet
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[parquet] 1-narrow-top mergeSchema=true
+  append: FAIL org.apache.spark.sql.AnalysisException [_LEGACY_ERROR_TEMP_1161]: The column number of the existing table spark_catalog.default.t2 (struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>) doesn't match the data schema (struct<id:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>).
+  provider: parquet
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[parquet] 2s-narrow-struct mergeSchema=false
+  append: FAIL org.apache.spark.sql.AnalysisException [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA]: [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for the table `spark_catalog`.`default`.`t3`: Cannot find data for the output column `meta`.`source`. SQLSTATE: KD000
+  provider: parquet
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[parquet] 2s-narrow-struct mergeSchema=true
+  append: FAIL org.apache.spark.sql.AnalysisException [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA]: [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for the table `spark_catalog`.`default`.`t4`: Cannot find data for the output column `meta`.`source`. SQLSTATE: KD000
+  provider: parquet
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[parquet] 2a-narrow-array mergeSchema=false
+  append: FAIL org.apache.spark.sql.AnalysisException [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA]: [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for the table `spark_catalog`.`default`.`t5`: Cannot find data for the output column `name`.`element`.`text`. SQLSTATE: KD000
+  provider: parquet
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[parquet] 2a-narrow-array mergeSchema=true
+  append: FAIL org.apache.spark.sql.AnalysisException [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA]: [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for the table `spark_catalog`.`default`.`t6`: Cannot find data for the output column `name`.`element`.`text`. SQLSTATE: KD000
+  provider: parquet
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[parquet] 3-wide-top mergeSchema=false
+  append: FAIL org.apache.spark.sql.AnalysisException [_LEGACY_ERROR_TEMP_1161]: The column number of the existing table spark_catalog.default.t7 (struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>) doesn't match the data schema (struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>,birthDate:string>).
+  provider: parquet
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[parquet] 3-wide-top mergeSchema=true
+  append: FAIL org.apache.spark.sql.AnalysisException [_LEGACY_ERROR_TEMP_1161]: The column number of the existing table spark_catalog.default.t8 (struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>) doesn't match the data schema (struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>,birthDate:string>).
+  provider: parquet
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[parquet] 4s-wide-struct mergeSchema=false
+  append: FAIL org.apache.spark.sql.AnalysisException [INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS]: [INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS] Cannot write incompatible data for the table `spark_catalog`.`default`.`t9`: Cannot write extra fields `lastUpdated` to the struct `meta`. SQLSTATE: KD000
+  provider: parquet
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[parquet] 4s-wide-struct mergeSchema=true
+  append: FAIL org.apache.spark.sql.AnalysisException [INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS]: [INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS] Cannot write incompatible data for the table `spark_catalog`.`default`.`t10`: Cannot write extra fields `lastUpdated` to the struct `meta`. SQLSTATE: KD000
+  provider: parquet
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[parquet] 4a-wide-array mergeSchema=false
+  append: FAIL org.apache.spark.sql.AnalysisException [INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS]: [INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS] Cannot write incompatible data for the table `spark_catalog`.`default`.`t11`: Cannot write extra fields `use` to the struct `name`.`element`. SQLSTATE: KD000
+  provider: parquet
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[parquet] 4a-wide-array mergeSchema=true
+  append: FAIL org.apache.spark.sql.AnalysisException [INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS]: [INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS] Cannot write incompatible data for the table `spark_catalog`.`default`.`t12`: Cannot write extra fields `use` to the struct `name`.`element`. SQLSTATE: KD000
+  provider: parquet
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[parquet] Mt-mixed-top mergeSchema=false
+  append: FAIL org.apache.spark.sql.AnalysisException [_LEGACY_ERROR_TEMP_1162]: Cannot resolve 'gender' given input columns: [id, meta, name, birthDate].
+  provider: parquet
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[parquet] Mt-mixed-top mergeSchema=true
+  append: FAIL org.apache.spark.sql.AnalysisException [_LEGACY_ERROR_TEMP_1162]: Cannot resolve 'gender' given input columns: [id, meta, name, birthDate].
+  provider: parquet
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[parquet] Ms-mixed-struct mergeSchema=false
+  append: FAIL org.apache.spark.sql.AnalysisException [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA]: [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for the table `spark_catalog`.`default`.`t15`: Cannot find data for the output column `meta`.`source`. SQLSTATE: KD000
+  provider: parquet
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[parquet] Ms-mixed-struct mergeSchema=true
+  append: FAIL org.apache.spark.sql.AnalysisException [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA]: [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for the table `spark_catalog`.`default`.`t16`: Cannot find data for the output column `meta`.`source`. SQLSTATE: KD000
+  provider: parquet
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[parquet] Ma-mixed-array mergeSchema=false
+  append: FAIL org.apache.spark.sql.AnalysisException [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA]: [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for the table `spark_catalog`.`default`.`t17`: Cannot find data for the output column `name`.`element`.`text`. SQLSTATE: KD000
+  provider: parquet
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[parquet] Ma-mixed-array mergeSchema=true
+  append: FAIL org.apache.spark.sql.AnalysisException [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA]: [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for the table `spark_catalog`.`default`.`t18`: Cannot find data for the output column `name`.`element`.`text`. SQLSTATE: KD000
+  provider: parquet
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[parquet] 8s-reorder-struct mergeSchema=false
+  append: OK
+  provider: parquet
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","gender":"female","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2","text":"T2"}]}
+[parquet] 8s-reorder-struct mergeSchema=true
+  append: OK
+  provider: parquet
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","gender":"female","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2","text":"T2"}]}
+[parquet] 8a-reorder-array mergeSchema=false
+  append: OK
+  provider: parquet
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","gender":"female","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2","text":"T2"}]}
+[parquet] 8a-reorder-array mergeSchema=true
+  append: OK
+  provider: parquet
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","gender":"female","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2","text":"T2"}]}
+[parquet] 8t-reorder-top mergeSchema=false
+  append: OK
+  provider: parquet
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","gender":"female","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2","text":"T2"}]}
+[parquet] 8t-reorder-top mergeSchema=true
+  append: OK
+  provider: parquet
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","gender":"female","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2","text":"T2"}]}
+[delta] 1-narrow-top mergeSchema=false
+  append: OK
+  provider: delta
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2","text":"T2"}]}
+[delta] 1-narrow-top mergeSchema=true
+  append: OK
+  provider: delta
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2","text":"T2"}]}
+[delta] 2s-narrow-struct mergeSchema=false
+  append: OK
+  provider: delta
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","gender":"female","meta":{"versionId":"2"},"name":[{"family":"F2","text":"T2"}]}
+[delta] 2s-narrow-struct mergeSchema=true
+  append: OK
+  provider: delta
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","gender":"female","meta":{"versionId":"2"},"name":[{"family":"F2","text":"T2"}]}
+[delta] 2a-narrow-array mergeSchema=false
+  append: OK
+  provider: delta
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","gender":"female","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2"}]}
+[delta] 2a-narrow-array mergeSchema=true
+  append: OK
+  provider: delta
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","gender":"female","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2"}]}
+[delta] 3-wide-top mergeSchema=false
+  append: FAIL org.apache.spark.sql.delta.DeltaAnalysisException [_LEGACY_ERROR_TEMP_DELTA_0007]: [_LEGACY_ERROR_TEMP_DELTA_0007] A schema mismatch detected when writing to the Delta table (Table ID: <uuid>). To enable schema migration using DataFrameWriter or DataStreamWriter, please set: '.option("mergeSchema", "true")'. For other operations, set the session configuration spark.databricks.delta.schema.autoMerge.enabled to "true". See the documentation specific to the operation for details. Table schema: root -- id: string (nullable = true) -- gender: string (nullable = true) -- meta: struct (nullable = true) |-- versionId: string (nullable = true) |-- source...
+  provider: delta
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[delta] 3-wide-top mergeSchema=true
+  append: OK
+  provider: delta
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>,birthDate:string>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","gender":"female","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2","text":"T2"}],"birthDate":"2000-01-01"}
+[delta] 4s-wide-struct mergeSchema=false
+  append: FAIL org.apache.spark.sql.delta.DeltaAnalysisException [_LEGACY_ERROR_TEMP_DELTA_0007]: [_LEGACY_ERROR_TEMP_DELTA_0007] A schema mismatch detected when writing to the Delta table (Table ID: <uuid>). To enable schema migration using DataFrameWriter or DataStreamWriter, please set: '.option("mergeSchema", "true")'. For other operations, set the session configuration spark.databricks.delta.schema.autoMerge.enabled to "true". See the documentation specific to the operation for details. Table schema: root -- id: string (nullable = true) -- gender: string (nullable = true) -- meta: struct (nullable = true) |-- versionId: string (nullable = true) |-- source...
+  provider: delta
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[delta] 4s-wide-struct mergeSchema=true
+  append: OK
+  provider: delta
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string,lastUpdated:string>,name:array<struct<family:string,text:string>>>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","gender":"female","meta":{"versionId":"2","source":"s2","lastUpdated":"2024"},"name":[{"family":"F2","text":"T2"}]}
+[delta] 4a-wide-array mergeSchema=false
+  append: FAIL org.apache.spark.sql.delta.DeltaAnalysisException [_LEGACY_ERROR_TEMP_DELTA_0007]: [_LEGACY_ERROR_TEMP_DELTA_0007] A schema mismatch detected when writing to the Delta table (Table ID: <uuid>). To enable schema migration using DataFrameWriter or DataStreamWriter, please set: '.option("mergeSchema", "true")'. For other operations, set the session configuration spark.databricks.delta.schema.autoMerge.enabled to "true". See the documentation specific to the operation for details. Table schema: root -- id: string (nullable = true) -- gender: string (nullable = true) -- meta: struct (nullable = true) |-- versionId: string (nullable = true) |-- source...
+  provider: delta
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[delta] 4a-wide-array mergeSchema=true
+  append: OK
+  provider: delta
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string,use:string>>>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","gender":"female","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2","text":"T2","use":"official"}]}
+[delta] Mt-mixed-top mergeSchema=false
+  append: FAIL org.apache.spark.sql.delta.DeltaAnalysisException [_LEGACY_ERROR_TEMP_DELTA_0007]: [_LEGACY_ERROR_TEMP_DELTA_0007] A schema mismatch detected when writing to the Delta table (Table ID: <uuid>). To enable schema migration using DataFrameWriter or DataStreamWriter, please set: '.option("mergeSchema", "true")'. For other operations, set the session configuration spark.databricks.delta.schema.autoMerge.enabled to "true". See the documentation specific to the operation for details. Table schema: root -- id: string (nullable = true) -- gender: string (nullable = true) -- meta: struct (nullable = true) |-- versionId: string (nullable = true) |-- source...
+  provider: delta
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[delta] Mt-mixed-top mergeSchema=true
+  append: OK
+  provider: delta
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>,birthDate:string>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2","text":"T2"}],"birthDate":"2000-01-01"}
+[delta] Ms-mixed-struct mergeSchema=false
+  append: FAIL org.apache.spark.sql.delta.DeltaAnalysisException [_LEGACY_ERROR_TEMP_DELTA_0007]: [_LEGACY_ERROR_TEMP_DELTA_0007] A schema mismatch detected when writing to the Delta table (Table ID: <uuid>). To enable schema migration using DataFrameWriter or DataStreamWriter, please set: '.option("mergeSchema", "true")'. For other operations, set the session configuration spark.databricks.delta.schema.autoMerge.enabled to "true". See the documentation specific to the operation for details. Table schema: root -- id: string (nullable = true) -- gender: string (nullable = true) -- meta: struct (nullable = true) |-- versionId: string (nullable = true) |-- source...
+  provider: delta
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[delta] Ms-mixed-struct mergeSchema=true
+  append: OK
+  provider: delta
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string,lastUpdated:string>,name:array<struct<family:string,text:string>>>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","gender":"female","meta":{"versionId":"2","lastUpdated":"2024"},"name":[{"family":"F2","text":"T2"}]}
+[delta] Ma-mixed-array mergeSchema=false
+  append: FAIL org.apache.spark.sql.delta.DeltaAnalysisException [_LEGACY_ERROR_TEMP_DELTA_0007]: [_LEGACY_ERROR_TEMP_DELTA_0007] A schema mismatch detected when writing to the Delta table (Table ID: <uuid>). To enable schema migration using DataFrameWriter or DataStreamWriter, please set: '.option("mergeSchema", "true")'. For other operations, set the session configuration spark.databricks.delta.schema.autoMerge.enabled to "true". See the documentation specific to the operation for details. Table schema: root -- id: string (nullable = true) -- gender: string (nullable = true) -- meta: struct (nullable = true) |-- versionId: string (nullable = true) |-- source...
+  provider: delta
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[delta] Ma-mixed-array mergeSchema=true
+  append: OK
+  provider: delta
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string,use:string>>>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","gender":"female","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2","use":"official"}]}
+[delta] 8s-reorder-struct mergeSchema=false
+  append: OK
+  provider: delta
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","gender":"female","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2","text":"T2"}]}
+[delta] 8s-reorder-struct mergeSchema=true
+  append: OK
+  provider: delta
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","gender":"female","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2","text":"T2"}]}
+[delta] 8a-reorder-array mergeSchema=false
+  append: OK
+  provider: delta
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","gender":"female","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2","text":"T2"}]}
+[delta] 8a-reorder-array mergeSchema=true
+  append: OK
+  provider: delta
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","gender":"female","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2","text":"T2"}]}
+[delta] 8t-reorder-top mergeSchema=false
+  append: OK
+  provider: delta
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","gender":"female","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2","text":"T2"}]}
+[delta] 8t-reorder-top mergeSchema=true
+  append: OK
+  provider: delta
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","gender":"female","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2","text":"T2"}]}
+[default] 1-narrow-top mergeSchema=false
+  append: FAIL org.apache.spark.sql.AnalysisException [_LEGACY_ERROR_TEMP_1161]: The column number of the existing table spark_catalog.default.t49 (struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>) doesn't match the data schema (struct<id:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>).
+  provider: parquet
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[default] 1-narrow-top mergeSchema=true
+  append: FAIL org.apache.spark.sql.AnalysisException [_LEGACY_ERROR_TEMP_1161]: The column number of the existing table spark_catalog.default.t50 (struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>) doesn't match the data schema (struct<id:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>).
+  provider: parquet
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[default] 2s-narrow-struct mergeSchema=false
+  append: FAIL org.apache.spark.sql.AnalysisException [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA]: [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for the table `spark_catalog`.`default`.`t51`: Cannot find data for the output column `meta`.`source`. SQLSTATE: KD000
+  provider: parquet
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[default] 2s-narrow-struct mergeSchema=true
+  append: FAIL org.apache.spark.sql.AnalysisException [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA]: [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for the table `spark_catalog`.`default`.`t52`: Cannot find data for the output column `meta`.`source`. SQLSTATE: KD000
+  provider: parquet
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[default] 2a-narrow-array mergeSchema=false
+  append: FAIL org.apache.spark.sql.AnalysisException [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA]: [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for the table `spark_catalog`.`default`.`t53`: Cannot find data for the output column `name`.`element`.`text`. SQLSTATE: KD000
+  provider: parquet
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[default] 2a-narrow-array mergeSchema=true
+  append: FAIL org.apache.spark.sql.AnalysisException [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA]: [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for the table `spark_catalog`.`default`.`t54`: Cannot find data for the output column `name`.`element`.`text`. SQLSTATE: KD000
+  provider: parquet
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[default] 3-wide-top mergeSchema=false
+  append: FAIL org.apache.spark.sql.AnalysisException [_LEGACY_ERROR_TEMP_1161]: The column number of the existing table spark_catalog.default.t55 (struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>) doesn't match the data schema (struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>,birthDate:string>).
+  provider: parquet
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[default] 3-wide-top mergeSchema=true
+  append: FAIL org.apache.spark.sql.AnalysisException [_LEGACY_ERROR_TEMP_1161]: The column number of the existing table spark_catalog.default.t56 (struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>) doesn't match the data schema (struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>,birthDate:string>).
+  provider: parquet
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[default] 4s-wide-struct mergeSchema=false
+  append: FAIL org.apache.spark.sql.AnalysisException [INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS]: [INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS] Cannot write incompatible data for the table `spark_catalog`.`default`.`t57`: Cannot write extra fields `lastUpdated` to the struct `meta`. SQLSTATE: KD000
+  provider: parquet
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[default] 4s-wide-struct mergeSchema=true
+  append: FAIL org.apache.spark.sql.AnalysisException [INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS]: [INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS] Cannot write incompatible data for the table `spark_catalog`.`default`.`t58`: Cannot write extra fields `lastUpdated` to the struct `meta`. SQLSTATE: KD000
+  provider: parquet
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[default] 4a-wide-array mergeSchema=false
+  append: FAIL org.apache.spark.sql.AnalysisException [INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS]: [INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS] Cannot write incompatible data for the table `spark_catalog`.`default`.`t59`: Cannot write extra fields `use` to the struct `name`.`element`. SQLSTATE: KD000
+  provider: parquet
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[default] 4a-wide-array mergeSchema=true
+  append: FAIL org.apache.spark.sql.AnalysisException [INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS]: [INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS] Cannot write incompatible data for the table `spark_catalog`.`default`.`t60`: Cannot write extra fields `use` to the struct `name`.`element`. SQLSTATE: KD000
+  provider: parquet
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[default] Mt-mixed-top mergeSchema=false
+  append: FAIL org.apache.spark.sql.AnalysisException [_LEGACY_ERROR_TEMP_1162]: Cannot resolve 'gender' given input columns: [id, meta, name, birthDate].
+  provider: parquet
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[default] Mt-mixed-top mergeSchema=true
+  append: FAIL org.apache.spark.sql.AnalysisException [_LEGACY_ERROR_TEMP_1162]: Cannot resolve 'gender' given input columns: [id, meta, name, birthDate].
+  provider: parquet
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[default] Ms-mixed-struct mergeSchema=false
+  append: FAIL org.apache.spark.sql.AnalysisException [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA]: [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for the table `spark_catalog`.`default`.`t63`: Cannot find data for the output column `meta`.`source`. SQLSTATE: KD000
+  provider: parquet
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[default] Ms-mixed-struct mergeSchema=true
+  append: FAIL org.apache.spark.sql.AnalysisException [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA]: [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for the table `spark_catalog`.`default`.`t64`: Cannot find data for the output column `meta`.`source`. SQLSTATE: KD000
+  provider: parquet
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[default] Ma-mixed-array mergeSchema=false
+  append: FAIL org.apache.spark.sql.AnalysisException [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA]: [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for the table `spark_catalog`.`default`.`t65`: Cannot find data for the output column `name`.`element`.`text`. SQLSTATE: KD000
+  provider: parquet
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[default] Ma-mixed-array mergeSchema=true
+  append: FAIL org.apache.spark.sql.AnalysisException [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA]: [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for the table `spark_catalog`.`default`.`t66`: Cannot find data for the output column `name`.`element`.`text`. SQLSTATE: KD000
+  provider: parquet
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[default] 8s-reorder-struct mergeSchema=false
+  append: OK
+  provider: parquet
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","gender":"female","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2","text":"T2"}]}
+[default] 8s-reorder-struct mergeSchema=true
+  append: OK
+  provider: parquet
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","gender":"female","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2","text":"T2"}]}
+[default] 8a-reorder-array mergeSchema=false
+  append: OK
+  provider: parquet
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","gender":"female","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2","text":"T2"}]}
+[default] 8a-reorder-array mergeSchema=true
+  append: OK
+  provider: parquet
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","gender":"female","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2","text":"T2"}]}
+[default] 8t-reorder-top mergeSchema=false
+  append: OK
+  provider: parquet
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","gender":"female","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2","text":"T2"}]}
+[default] 8t-reorder-top mergeSchema=true
+  append: OK
+  provider: parquet
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","gender":"female","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2","text":"T2"}]}
+[delta-path] 1-narrow-top mergeSchema=false
+  append: OK
+  provider: delta(path)
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2","text":"T2"}]}
+[delta-path] 1-narrow-top mergeSchema=true
+  append: OK
+  provider: delta(path)
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2","text":"T2"}]}
+[delta-path] 2s-narrow-struct mergeSchema=false
+  append: OK
+  provider: delta(path)
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","gender":"female","meta":{"versionId":"2"},"name":[{"family":"F2","text":"T2"}]}
+[delta-path] 2s-narrow-struct mergeSchema=true
+  append: OK
+  provider: delta(path)
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","gender":"female","meta":{"versionId":"2"},"name":[{"family":"F2","text":"T2"}]}
+[delta-path] 2a-narrow-array mergeSchema=false
+  append: OK
+  provider: delta(path)
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","gender":"female","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2"}]}
+[delta-path] 2a-narrow-array mergeSchema=true
+  append: OK
+  provider: delta(path)
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","gender":"female","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2"}]}
+[delta-path] 3-wide-top mergeSchema=false
+  append: FAIL org.apache.spark.sql.delta.DeltaAnalysisException [_LEGACY_ERROR_TEMP_DELTA_0007]: [_LEGACY_ERROR_TEMP_DELTA_0007] A schema mismatch detected when writing to the Delta table (Table ID: <uuid>). To enable schema migration using DataFrameWriter or DataStreamWriter, please set: '.option("mergeSchema", "true")'. For other operations, set the session configuration spark.databricks.delta.schema.autoMerge.enabled to "true". See the documentation specific to the operation for details. Table schema: root -- id: string (nullable = true) -- gender: string (nullable = true) -- meta: struct (nullable = true) |-- versionId: string (nullable = true) |-- source...
+  provider: delta(path)
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[delta-path] 3-wide-top mergeSchema=true
+  append: OK
+  provider: delta(path)
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>,birthDate:string>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","gender":"female","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2","text":"T2"}],"birthDate":"2000-01-01"}
+[delta-path] 4s-wide-struct mergeSchema=false
+  append: FAIL org.apache.spark.sql.delta.DeltaAnalysisException [_LEGACY_ERROR_TEMP_DELTA_0007]: [_LEGACY_ERROR_TEMP_DELTA_0007] A schema mismatch detected when writing to the Delta table (Table ID: <uuid>). To enable schema migration using DataFrameWriter or DataStreamWriter, please set: '.option("mergeSchema", "true")'. For other operations, set the session configuration spark.databricks.delta.schema.autoMerge.enabled to "true". See the documentation specific to the operation for details. Table schema: root -- id: string (nullable = true) -- gender: string (nullable = true) -- meta: struct (nullable = true) |-- versionId: string (nullable = true) |-- source...
+  provider: delta(path)
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[delta-path] 4s-wide-struct mergeSchema=true
+  append: OK
+  provider: delta(path)
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string,lastUpdated:string>,name:array<struct<family:string,text:string>>>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","gender":"female","meta":{"versionId":"2","source":"s2","lastUpdated":"2024"},"name":[{"family":"F2","text":"T2"}]}
+[delta-path] 4a-wide-array mergeSchema=false
+  append: FAIL org.apache.spark.sql.delta.DeltaAnalysisException [_LEGACY_ERROR_TEMP_DELTA_0007]: [_LEGACY_ERROR_TEMP_DELTA_0007] A schema mismatch detected when writing to the Delta table (Table ID: <uuid>). To enable schema migration using DataFrameWriter or DataStreamWriter, please set: '.option("mergeSchema", "true")'. For other operations, set the session configuration spark.databricks.delta.schema.autoMerge.enabled to "true". See the documentation specific to the operation for details. Table schema: root -- id: string (nullable = true) -- gender: string (nullable = true) -- meta: struct (nullable = true) |-- versionId: string (nullable = true) |-- source...
+  provider: delta(path)
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[delta-path] 4a-wide-array mergeSchema=true
+  append: OK
+  provider: delta(path)
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string,use:string>>>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","gender":"female","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2","text":"T2","use":"official"}]}
+[delta-path] Mt-mixed-top mergeSchema=false
+  append: FAIL org.apache.spark.sql.delta.DeltaAnalysisException [_LEGACY_ERROR_TEMP_DELTA_0007]: [_LEGACY_ERROR_TEMP_DELTA_0007] A schema mismatch detected when writing to the Delta table (Table ID: <uuid>). To enable schema migration using DataFrameWriter or DataStreamWriter, please set: '.option("mergeSchema", "true")'. For other operations, set the session configuration spark.databricks.delta.schema.autoMerge.enabled to "true". See the documentation specific to the operation for details. Table schema: root -- id: string (nullable = true) -- gender: string (nullable = true) -- meta: struct (nullable = true) |-- versionId: string (nullable = true) |-- source...
+  provider: delta(path)
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[delta-path] Mt-mixed-top mergeSchema=true
+  append: OK
+  provider: delta(path)
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>,birthDate:string>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2","text":"T2"}],"birthDate":"2000-01-01"}
+[delta-path] Ms-mixed-struct mergeSchema=false
+  append: FAIL org.apache.spark.sql.delta.DeltaAnalysisException [_LEGACY_ERROR_TEMP_DELTA_0007]: [_LEGACY_ERROR_TEMP_DELTA_0007] A schema mismatch detected when writing to the Delta table (Table ID: <uuid>). To enable schema migration using DataFrameWriter or DataStreamWriter, please set: '.option("mergeSchema", "true")'. For other operations, set the session configuration spark.databricks.delta.schema.autoMerge.enabled to "true". See the documentation specific to the operation for details. Table schema: root -- id: string (nullable = true) -- gender: string (nullable = true) -- meta: struct (nullable = true) |-- versionId: string (nullable = true) |-- source...
+  provider: delta(path)
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[delta-path] Ms-mixed-struct mergeSchema=true
+  append: OK
+  provider: delta(path)
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string,lastUpdated:string>,name:array<struct<family:string,text:string>>>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","gender":"female","meta":{"versionId":"2","lastUpdated":"2024"},"name":[{"family":"F2","text":"T2"}]}
+[delta-path] Ma-mixed-array mergeSchema=false
+  append: FAIL org.apache.spark.sql.delta.DeltaAnalysisException [_LEGACY_ERROR_TEMP_DELTA_0007]: [_LEGACY_ERROR_TEMP_DELTA_0007] A schema mismatch detected when writing to the Delta table (Table ID: <uuid>). To enable schema migration using DataFrameWriter or DataStreamWriter, please set: '.option("mergeSchema", "true")'. For other operations, set the session configuration spark.databricks.delta.schema.autoMerge.enabled to "true". See the documentation specific to the operation for details. Table schema: root -- id: string (nullable = true) -- gender: string (nullable = true) -- meta: struct (nullable = true) |-- versionId: string (nullable = true) |-- source...
+  provider: delta(path)
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[delta-path] Ma-mixed-array mergeSchema=true
+  append: OK
+  provider: delta(path)
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string,use:string>>>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","gender":"female","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2","use":"official"}]}
+[delta-path] 8s-reorder-struct mergeSchema=false
+  append: OK
+  provider: delta(path)
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","gender":"female","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2","text":"T2"}]}
+[delta-path] 8s-reorder-struct mergeSchema=true
+  append: OK
+  provider: delta(path)
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","gender":"female","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2","text":"T2"}]}
+[delta-path] 8a-reorder-array mergeSchema=false
+  append: OK
+  provider: delta(path)
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","gender":"female","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2","text":"T2"}]}
+[delta-path] 8a-reorder-array mergeSchema=true
+  append: OK
+  provider: delta(path)
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","gender":"female","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2","text":"T2"}]}
+[delta-path] 8t-reorder-top mergeSchema=false
+  append: OK
+  provider: delta(path)
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","gender":"female","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2","text":"T2"}]}
+[delta-path] 8t-reorder-top mergeSchema=true
+  append: OK
+  provider: delta(path)
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","gender":"female","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2","text":"T2"}]}
+[case 6a] external Parquet table, declared schema, OPTIONS (mergeSchema 'true')
+  write base files: OK
+  create table: OK
+  SHOW CREATE TABLE: CREATE TABLE spark_catalog.default.e6a ( id STRING, gender STRING, meta STRUCT<versionId: STRING, source: STRING>, name ARRAY<STRUCT<family: STRING, text: STRING>>) USING parquet OPTIONS ( 'mergeSchema' = 'true') LOCATION '<scratch>/run-N/ext-a' 
+  -- before:
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+  append wide files directly: OK
+  append narrow files directly: OK
+  REFRESH TABLE: OK
+  -- after REFRESH TABLE:
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (3):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"n","meta":{"versionId":"3"},"name":[{"family":"F3"}]}
+    {"id":"w","gender":"female","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2","text":"T2"}]}
+  spark.catalog.refreshTable: OK
+  -- after spark.catalog.refreshTable:
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (3):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"n","meta":{"versionId":"3"},"name":[{"family":"F3"}]}
+    {"id":"w","gender":"female","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2","text":"T2"}]}
+  spark.catalog.recoverPartitions: FAIL org.apache.spark.sql.AnalysisException [NOT_A_PARTITIONED_TABLE]: [NOT_A_PARTITIONED_TABLE] Operation ALTER TABLE RECOVER PARTITIONS is not allowed for `spark_catalog`.`default`.`e6a` because it is not a partitioned table. SQLSTATE: 42809
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (3):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"n","meta":{"versionId":"3"},"name":[{"family":"F3"}]}
+    {"id":"w","gender":"female","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2","text":"T2"}]}
+  -- reference: spark.read.option(mergeSchema,true).parquet(location):
+  schema: struct<id:string,meta:struct<versionId:string,source:string,lastUpdated:string>,name:array<struct<family:string,text:string,use:string>>,gender:string,birthDate:string>
+  rows (3):
+    {"id":"a","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}],"gender":"male"}
+    {"id":"n","meta":{"versionId":"3"},"name":[{"family":"F3"}]}
+    {"id":"w","meta":{"versionId":"2","source":"s2","lastUpdated":"2024"},"name":[{"family":"F2","text":"T2","use":"official"}],"gender":"female","birthDate":"2000-01-01"}
+[case 6b] external Parquet table, inferred schema, OPTIONS (mergeSchema 'true')
+  write base files: OK
+  create table: OK
+  SHOW CREATE TABLE: CREATE TABLE spark_catalog.default.e6b ( id STRING, gender STRING, meta STRUCT<versionId: STRING, source: STRING>, name ARRAY<STRUCT<family: STRING, text: STRING>>) USING parquet OPTIONS ( 'mergeSchema' = 'true') LOCATION '<scratch>/run-N/ext-b' 
+  -- before:
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+  append wide files directly: OK
+  append narrow files directly: OK
+  REFRESH TABLE: OK
+  -- after REFRESH TABLE:
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (3):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"n","meta":{"versionId":"3"},"name":[{"family":"F3"}]}
+    {"id":"w","gender":"female","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2","text":"T2"}]}
+  spark.catalog.refreshTable: OK
+  -- after spark.catalog.refreshTable:
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (3):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"n","meta":{"versionId":"3"},"name":[{"family":"F3"}]}
+    {"id":"w","gender":"female","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2","text":"T2"}]}
+  spark.catalog.recoverPartitions: FAIL org.apache.spark.sql.AnalysisException [NOT_A_PARTITIONED_TABLE]: [NOT_A_PARTITIONED_TABLE] Operation ALTER TABLE RECOVER PARTITIONS is not allowed for `spark_catalog`.`default`.`e6b` because it is not a partitioned table. SQLSTATE: 42809
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (3):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"n","meta":{"versionId":"3"},"name":[{"family":"F3"}]}
+    {"id":"w","gender":"female","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2","text":"T2"}]}
+  -- reference: spark.read.option(mergeSchema,true).parquet(location):
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string,lastUpdated:string>,name:array<struct<family:string,text:string,use:string>>,birthDate:string>
+  rows (3):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"n","meta":{"versionId":"3"},"name":[{"family":"F3"}]}
+    {"id":"w","gender":"female","meta":{"versionId":"2","source":"s2","lastUpdated":"2024"},"name":[{"family":"F2","text":"T2","use":"official"}],"birthDate":"2000-01-01"}
+  -- drop and re-create the external table over the same location
+  drop table: OK
+  re-create table: OK
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string,lastUpdated:string>,name:array<struct<family:string,text:string,use:string>>,birthDate:string>
+  rows (3):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"n","meta":{"versionId":"3"},"name":[{"family":"F3"}]}
+    {"id":"w","gender":"female","meta":{"versionId":"2","source":"s2","lastUpdated":"2024"},"name":[{"family":"F2","text":"T2","use":"official"}],"birthDate":"2000-01-01"}
+  -- control: re-create without the mergeSchema option (session default)
+  spark.sql.parquet.mergeSchema = false
+  drop table: OK
+  re-create table: OK
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string,lastUpdated:string>,name:array<struct<family:string,text:string,use:string>>,birthDate:string>
+  rows (3):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"n","meta":{"versionId":"3"},"name":[{"family":"F3"}]}
+    {"id":"w","gender":"female","meta":{"versionId":"2","source":"s2","lastUpdated":"2024"},"name":[{"family":"F2","text":"T2","use":"official"}],"birthDate":"2000-01-01"}
+  -- control: re-create without the option, spark.sql.parquet.mergeSchema=true on the session
+  drop table: OK
+  re-create table: OK
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string,lastUpdated:string>,name:array<struct<family:string,text:string,use:string>>,birthDate:string>
+  rows (3):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"n","meta":{"versionId":"3"},"name":[{"family":"F3"}]}
+    {"id":"w","gender":"female","meta":{"versionId":"2","source":"s2","lastUpdated":"2024"},"name":[{"family":"F2","text":"T2","use":"official"}],"birthDate":"2000-01-01"}
+[case 6c] external Parquet table via saveAsTable(path, mergeSchema option)
+  saveAsTable: OK
+  SHOW CREATE TABLE: CREATE TABLE spark_catalog.default.e6c ( id STRING, gender STRING, meta STRUCT<versionId: STRING, source: STRING>, name ARRAY<STRUCT<family: STRING, text: STRING>>) USING parquet OPTIONS ( 'mergeSchema' = 'true') LOCATION '<scratch>/run-N/ext-c' 
+  -- before:
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+  append wide files directly: OK
+  append narrow files directly: OK
+  REFRESH TABLE: OK
+  -- after REFRESH TABLE:
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (3):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"n","meta":{"versionId":"3"},"name":[{"family":"F3"}]}
+    {"id":"w","gender":"female","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2","text":"T2"}]}
+  spark.catalog.refreshTable: OK
+  -- after spark.catalog.refreshTable:
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (3):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"n","meta":{"versionId":"3"},"name":[{"family":"F3"}]}
+    {"id":"w","gender":"female","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2","text":"T2"}]}
+  spark.catalog.recoverPartitions: FAIL org.apache.spark.sql.AnalysisException [NOT_A_PARTITIONED_TABLE]: [NOT_A_PARTITIONED_TABLE] Operation ALTER TABLE RECOVER PARTITIONS is not allowed for `spark_catalog`.`default`.`e6c` because it is not a partitioned table. SQLSTATE: 42809
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (3):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"n","meta":{"versionId":"3"},"name":[{"family":"F3"}]}
+    {"id":"w","gender":"female","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2","text":"T2"}]}
+  -- reference: spark.read.option(mergeSchema,true).parquet(location):
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string,lastUpdated:string>,name:array<struct<family:string,text:string,use:string>>,birthDate:string>
+  rows (3):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"n","meta":{"versionId":"3"},"name":[{"family":"F3"}]}
+    {"id":"w","gender":"female","meta":{"versionId":"2","source":"s2","lastUpdated":"2024"},"name":[{"family":"F2","text":"T2","use":"official"}],"birthDate":"2000-01-01"}
+[case 6d] managed Parquet table via saveAsTable(mergeSchema option)
+  saveAsTable: OK
+  location: <scratch>/run-N/warehouse/m6d
+  SHOW CREATE TABLE: CREATE TABLE spark_catalog.default.m6d ( id STRING, gender STRING, meta STRUCT<versionId: STRING, source: STRING>, name ARRAY<STRUCT<family: STRING, text: STRING>>) USING parquet OPTIONS ( 'mergeSchema' = 'true') 
+  -- before:
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+  append wide files directly: OK
+  append narrow files directly: OK
+  REFRESH TABLE: OK
+  -- after REFRESH TABLE:
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (3):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"n","meta":{"versionId":"3"},"name":[{"family":"F3"}]}
+    {"id":"w","gender":"female","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2","text":"T2"}]}
+  spark.catalog.refreshTable: OK
+  -- after spark.catalog.refreshTable:
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (3):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"n","meta":{"versionId":"3"},"name":[{"family":"F3"}]}
+    {"id":"w","gender":"female","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2","text":"T2"}]}
+  spark.catalog.recoverPartitions: FAIL org.apache.spark.sql.AnalysisException [NOT_A_PARTITIONED_TABLE]: [NOT_A_PARTITIONED_TABLE] Operation ALTER TABLE RECOVER PARTITIONS is not allowed for `spark_catalog`.`default`.`m6d` because it is not a partitioned table. SQLSTATE: 42809
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (3):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"n","meta":{"versionId":"3"},"name":[{"family":"F3"}]}
+    {"id":"w","gender":"female","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2","text":"T2"}]}
+  -- reference: spark.read.option(mergeSchema,true).parquet(location):
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string,lastUpdated:string>,name:array<struct<family:string,text:string,use:string>>,birthDate:string>
+  rows (3):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"n","meta":{"versionId":"3"},"name":[{"family":"F3"}]}
+    {"id":"w","gender":"female","meta":{"versionId":"2","source":"s2","lastUpdated":"2024"},"name":[{"family":"F2","text":"T2","use":"official"}],"birthDate":"2000-01-01"}
+[case 7 parquet] ALTER TABLE ... ADD COLUMNS (birthDate STRING)
+  alter: OK
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>,birthDate:string>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+  append 3-wide-top via saveAsTable: OK
+  append wide-all via saveAsTable: FAIL org.apache.spark.sql.AnalysisException [INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS]: [INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS] Cannot write incompatible data for the table `spark_catalog`.`default`.`a97`: Cannot write extra fields `lastUpdated` to the struct `meta`. SQLSTATE: KD000
+  append narrow-all via saveAsTable: FAIL org.apache.spark.sql.AnalysisException [_LEGACY_ERROR_TEMP_1161]: The column number of the existing table spark_catalog.default.a97 (struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>,birthDate:string>) doesn't match the data schema (struct<id:string,meta:struct<versionId:string>,name:array<struct<family:string>>>).
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>,birthDate:string>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","gender":"female","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2","text":"T2"}],"birthDate":"2000-01-01"}
+[case 7 parquet] ALTER TABLE ... ADD COLUMNS (meta.lastUpdated STRING)
+  alter: FAIL org.apache.spark.sql.AnalysisException [UNSUPPORTED_FEATURE.TABLE_OPERATION]: [UNSUPPORTED_FEATURE.TABLE_OPERATION] The feature is not supported: Table `spark_catalog`.`default`.`a98` does not support ADD COLUMN with qualified column. Please check the current catalog and namespace to make sure the qualified table name is expected, and also check the catalog implementation which is configured by "spark.sql.catalog". SQLSTATE: 0A000
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[case 7 parquet] ALTER TABLE ... ADD COLUMNS (name.element.use STRING)
+  alter: FAIL org.apache.spark.sql.AnalysisException [UNSUPPORTED_FEATURE.TABLE_OPERATION]: [UNSUPPORTED_FEATURE.TABLE_OPERATION] The feature is not supported: Table `spark_catalog`.`default`.`a99` does not support ADD COLUMN with qualified column. Please check the current catalog and namespace to make sure the qualified table name is expected, and also check the catalog implementation which is configured by "spark.sql.catalog". SQLSTATE: 0A000
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[case 7 parquet] ALTER TABLE ... REPLACE COLUMNS (id STRING, gender STRING, meta STRUCT<versionId:STRING,source:STRING,lastUpdated:STRING>, name ARRAY<STRUCT<family:STRING,text:STRING,use:STRING>>, birthDate STRING)
+  alter: FAIL org.apache.spark.sql.AnalysisException [UNSUPPORTED_FEATURE.TABLE_OPERATION]: [UNSUPPORTED_FEATURE.TABLE_OPERATION] The feature is not supported: Table `spark_catalog`.`default`.`a100` does not support REPLACE COLUMNS. Please check the current catalog and namespace to make sure the qualified table name is expected, and also check the catalog implementation which is configured by "spark.sql.catalog". SQLSTATE: 0A000
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[case 7 parquet] ALTER TABLE ... ALTER COLUMN meta TYPE STRUCT<versionId:STRING,source:STRING,lastUpdated:STRING>
+  alter: FAIL org.apache.spark.sql.AnalysisException [NOT_SUPPORTED_CHANGE_COLUMN]: [NOT_SUPPORTED_CHANGE_COLUMN] ALTER TABLE ALTER/CHANGE COLUMN is not supported for changing `spark_catalog`.`default`.`a101`'s column `meta` with type "STRUCT<versionId: STRING, source: STRING>" to `meta` with type "STRUCT<versionId: STRING, source: STRING, lastUpdated: STRING>". SQLSTATE: 0A000; line 1 pos 0
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[case 7 parquet] ALTER TABLE ... CHANGE COLUMN meta meta STRUCT<versionId:STRING,source:STRING,lastUpdated:STRING>
+  alter: FAIL org.apache.spark.sql.AnalysisException [NOT_SUPPORTED_CHANGE_COLUMN]: [NOT_SUPPORTED_CHANGE_COLUMN] ALTER TABLE ALTER/CHANGE COLUMN is not supported for changing `spark_catalog`.`default`.`a102`'s column `meta` with type "STRUCT<versionId: STRING, source: STRING>" to `meta` with type "STRUCT<versionId: STRING, source: STRING, lastUpdated: STRING>". SQLSTATE: 0A000; line 1 pos 0
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[case 7 delta] ALTER TABLE ... ADD COLUMNS (birthDate STRING)
+  alter: OK
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>,birthDate:string>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+  append 3-wide-top via saveAsTable: OK
+  append wide-all via saveAsTable: FAIL org.apache.spark.sql.delta.DeltaAnalysisException [_LEGACY_ERROR_TEMP_DELTA_0007]: [_LEGACY_ERROR_TEMP_DELTA_0007] A schema mismatch detected when writing to the Delta table (Table ID: <uuid>). To enable schema migration using DataFrameWriter or DataStreamWriter, please set: '.option("mergeSchema", "true")'. For other operations, set the session configuration spark.databricks.delta.schema.autoMerge.enabled to "true". See the documentation specific to the operation for details. Table schema: root -- id: string (nullable = true) -- gender: string (nullable = true) -- meta: struct (nullable = true) |-- versionId: string (nullable = true) |-- source...
+  append narrow-all via saveAsTable: OK
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>,birthDate:string>
+  rows (3):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","gender":"female","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2","text":"T2"}],"birthDate":"2000-01-01"}
+    {"id":"n","meta":{"versionId":"3"},"name":[{"family":"F3"}]}
+[case 7 delta] ALTER TABLE ... ADD COLUMNS (meta.lastUpdated STRING)
+  alter: OK
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string,lastUpdated:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+  append 3-wide-top via saveAsTable: FAIL org.apache.spark.sql.delta.DeltaAnalysisException [_LEGACY_ERROR_TEMP_DELTA_0007]: [_LEGACY_ERROR_TEMP_DELTA_0007] A schema mismatch detected when writing to the Delta table (Table ID: <uuid>). To enable schema migration using DataFrameWriter or DataStreamWriter, please set: '.option("mergeSchema", "true")'. For other operations, set the session configuration spark.databricks.delta.schema.autoMerge.enabled to "true". See the documentation specific to the operation for details. Table schema: root -- id: string (nullable = true) -- gender: string (nullable = true) -- meta: struct (nullable = true) |-- versionId: string (nullable = true) |-- source...
+  append wide-all via saveAsTable: FAIL org.apache.spark.sql.delta.DeltaAnalysisException [_LEGACY_ERROR_TEMP_DELTA_0007]: [_LEGACY_ERROR_TEMP_DELTA_0007] A schema mismatch detected when writing to the Delta table (Table ID: <uuid>). To enable schema migration using DataFrameWriter or DataStreamWriter, please set: '.option("mergeSchema", "true")'. For other operations, set the session configuration spark.databricks.delta.schema.autoMerge.enabled to "true". See the documentation specific to the operation for details. Table schema: root -- id: string (nullable = true) -- gender: string (nullable = true) -- meta: struct (nullable = true) |-- versionId: string (nullable = true) |-- source...
+  append narrow-all via saveAsTable: OK
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string,lastUpdated:string>,name:array<struct<family:string,text:string>>>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"n","meta":{"versionId":"3"},"name":[{"family":"F3"}]}
+[case 7 delta] ALTER TABLE ... ADD COLUMNS (name.element.use STRING)
+  alter: OK
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string,use:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+  append 3-wide-top via saveAsTable: FAIL org.apache.spark.sql.delta.DeltaAnalysisException [_LEGACY_ERROR_TEMP_DELTA_0007]: [_LEGACY_ERROR_TEMP_DELTA_0007] A schema mismatch detected when writing to the Delta table (Table ID: <uuid>). To enable schema migration using DataFrameWriter or DataStreamWriter, please set: '.option("mergeSchema", "true")'. For other operations, set the session configuration spark.databricks.delta.schema.autoMerge.enabled to "true". See the documentation specific to the operation for details. Table schema: root -- id: string (nullable = true) -- gender: string (nullable = true) -- meta: struct (nullable = true) |-- versionId: string (nullable = true) |-- source...
+  append wide-all via saveAsTable: FAIL org.apache.spark.sql.delta.DeltaAnalysisException [_LEGACY_ERROR_TEMP_DELTA_0007]: [_LEGACY_ERROR_TEMP_DELTA_0007] A schema mismatch detected when writing to the Delta table (Table ID: <uuid>). To enable schema migration using DataFrameWriter or DataStreamWriter, please set: '.option("mergeSchema", "true")'. For other operations, set the session configuration spark.databricks.delta.schema.autoMerge.enabled to "true". See the documentation specific to the operation for details. Table schema: root -- id: string (nullable = true) -- gender: string (nullable = true) -- meta: struct (nullable = true) |-- versionId: string (nullable = true) |-- source...
+  append narrow-all via saveAsTable: OK
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string,use:string>>>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"n","meta":{"versionId":"3"},"name":[{"family":"F3"}]}
+[case 7 delta] ALTER TABLE ... REPLACE COLUMNS (id STRING, gender STRING, meta STRUCT<versionId:STRING,source:STRING,lastUpdated:STRING>, name ARRAY<STRUCT<family:STRING,text:STRING,use:STRING>>, birthDate STRING)
+  alter: OK
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string,lastUpdated:string>,name:array<struct<family:string,text:string,use:string>>,birthDate:string>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+  append 3-wide-top via saveAsTable: OK
+  append wide-all via saveAsTable: OK
+  append narrow-all via saveAsTable: OK
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string,lastUpdated:string>,name:array<struct<family:string,text:string,use:string>>,birthDate:string>
+  rows (4):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","gender":"female","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2","text":"T2"}],"birthDate":"2000-01-01"}
+    {"id":"n","meta":{"versionId":"3"},"name":[{"family":"F3"}]}
+    {"id":"w","gender":"female","meta":{"versionId":"2","source":"s2","lastUpdated":"2024"},"name":[{"family":"F2","text":"T2","use":"official"}],"birthDate":"2000-01-01"}
+[case 7 delta] ALTER TABLE ... ALTER COLUMN meta TYPE STRUCT<versionId:STRING,source:STRING,lastUpdated:STRING>
+  alter: FAIL org.apache.spark.sql.catalyst.ExtendedAnalysisException [CANNOT_UPDATE_FIELD.STRUCT_TYPE]: [CANNOT_UPDATE_FIELD.STRUCT_TYPE] Cannot update `spark_catalog`.`default`.`a107` field `meta` type: Update a struct by updating its fields. SQLSTATE: 0A000; line 1 pos 0; AlterColumns [altercolumnspec(resolvedfieldname(StructField(meta,StructType(StructField(versionId,StringType,true),StructField(source,StringType,true)),true)), Some(StructType(StructField(versionId,StringType,true),StructField(source,StringType,true),StructField(lastUpdated,StringType,true))), None, None, None, None)] +- ResolvedTable org.apache.spark.sql.delta.catalog.DeltaCatalog@<hash>, default.a107, DeltaTableV2(org.apa...
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[case 7 delta] ALTER TABLE ... CHANGE COLUMN meta meta STRUCT<versionId:STRING,source:STRING,lastUpdated:STRING>
+  alter: FAIL org.apache.spark.sql.catalyst.ExtendedAnalysisException [CANNOT_UPDATE_FIELD.STRUCT_TYPE]: [CANNOT_UPDATE_FIELD.STRUCT_TYPE] Cannot update `spark_catalog`.`default`.`a108` field `meta` type: Update a struct by updating its fields. SQLSTATE: 0A000; line 1 pos 0; AlterColumns [altercolumnspec(resolvedfieldname(StructField(meta,StructType(StructField(versionId,StringType,true),StructField(source,StringType,true)),true)), Some(StructType(StructField(versionId,StringType,true),StructField(source,StringType,true),StructField(lastUpdated,StringType,true))), None, None, None, None)] +- ResolvedTable org.apache.spark.sql.delta.catalog.DeltaCatalog@<hash>, default.a108, DeltaTableV2(org.apa...
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[case 10 parquet] 1-narrow-top via INSERT INTO t BY NAME
+  append: OK
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2","text":"T2"}]}
+[case 10 parquet] 1-narrow-top via writeTo(t).append()
+  append: FAIL java.lang.RuntimeException: org.apache.spark.sql.AnalysisException: Cannot write into v1 table: `spark_catalog`.`default`.`r110`.
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[case 10 parquet] 1-narrow-top via conform: table.limit(0).unionByName(batch, true), then saveAsTable append
+  append: OK
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2","text":"T2"}]}
+[case 10 parquet] 2s-narrow-struct via INSERT INTO t BY NAME
+  append: FAIL java.lang.RuntimeException: org.apache.spark.sql.AnalysisException: [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for the table `spark_catalog`.`default`.`r112`: Cannot find data for the output column `meta`.`source`. SQLSTATE: KD000
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[case 10 parquet] 2s-narrow-struct via writeTo(t).append()
+  append: FAIL java.lang.RuntimeException: org.apache.spark.sql.AnalysisException: Cannot write into v1 table: `spark_catalog`.`default`.`r113`.
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[case 10 parquet] 2s-narrow-struct via conform: table.limit(0).unionByName(batch, true), then saveAsTable append
+  append: OK
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","gender":"female","meta":{"versionId":"2"},"name":[{"family":"F2","text":"T2"}]}
+[case 10 parquet] 2a-narrow-array via INSERT INTO t BY NAME
+  append: FAIL java.lang.RuntimeException: org.apache.spark.sql.AnalysisException: [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for the table `spark_catalog`.`default`.`r115`: Cannot find data for the output column `name`.`element`.`text`. SQLSTATE: KD000
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[case 10 parquet] 2a-narrow-array via writeTo(t).append()
+  append: FAIL java.lang.RuntimeException: org.apache.spark.sql.AnalysisException: Cannot write into v1 table: `spark_catalog`.`default`.`r116`.
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[case 10 parquet] 2a-narrow-array via conform: table.limit(0).unionByName(batch, true), then saveAsTable append
+  append: OK
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","gender":"female","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2"}]}
+[case 10 parquet] 3-wide-top via writeTo(t).append()
+  append: FAIL java.lang.RuntimeException: org.apache.spark.sql.AnalysisException: Cannot write into v1 table: `spark_catalog`.`default`.`r118`.
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[case 10 parquet] 3-wide-top via writeTo(t).option(mergeSchema,true).append()
+  append: FAIL java.lang.RuntimeException: org.apache.spark.sql.AnalysisException: Cannot write into v1 table: `spark_catalog`.`default`.`r119`.
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[case 10 parquet] 3-wide-top via INSERT INTO t BY NAME
+  append: FAIL java.lang.RuntimeException: org.apache.spark.sql.AnalysisException: [INSERT_COLUMN_ARITY_MISMATCH.TOO_MANY_DATA_COLUMNS] Cannot write to `spark_catalog`.`default`.`r120`, the reason is too many data columns: Table columns: `id`, `gender`, `meta`, `name`. Data columns: `id`, `gender`, `meta`, `name`, `birthDate`. SQLSTATE: 21S01
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[case 10 parquet] 4s-wide-struct via writeTo(t).append()
+  append: FAIL java.lang.RuntimeException: org.apache.spark.sql.AnalysisException: Cannot write into v1 table: `spark_catalog`.`default`.`r121`.
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[case 10 parquet] 4s-wide-struct via writeTo(t).option(mergeSchema,true).append()
+  append: FAIL java.lang.RuntimeException: org.apache.spark.sql.AnalysisException: Cannot write into v1 table: `spark_catalog`.`default`.`r122`.
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[case 10 parquet] 4s-wide-struct via INSERT INTO t BY NAME
+  append: FAIL java.lang.RuntimeException: org.apache.spark.sql.AnalysisException: [INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS] Cannot write incompatible data for the table `spark_catalog`.`default`.`r123`: Cannot write extra fields `lastUpdated` to the struct `meta`. SQLSTATE: KD000
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[case 10 parquet] 4a-wide-array via writeTo(t).append()
+  append: FAIL java.lang.RuntimeException: org.apache.spark.sql.AnalysisException: Cannot write into v1 table: `spark_catalog`.`default`.`r124`.
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[case 10 parquet] 4a-wide-array via writeTo(t).option(mergeSchema,true).append()
+  append: FAIL java.lang.RuntimeException: org.apache.spark.sql.AnalysisException: Cannot write into v1 table: `spark_catalog`.`default`.`r125`.
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[case 10 parquet] 4a-wide-array via INSERT INTO t BY NAME
+  append: FAIL java.lang.RuntimeException: org.apache.spark.sql.AnalysisException: [INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS] Cannot write incompatible data for the table `spark_catalog`.`default`.`r126`: Cannot write extra fields `use` to the struct `name`.`element`. SQLSTATE: KD000
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[case 10 delta] 1-narrow-top via INSERT INTO t BY NAME
+  append: OK
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2","text":"T2"}]}
+[case 10 delta] 1-narrow-top via writeTo(t).append()
+  append: OK
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2","text":"T2"}]}
+[case 10 delta] 1-narrow-top via conform: table.limit(0).unionByName(batch, true), then saveAsTable append
+  append: OK
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2","text":"T2"}]}
+[case 10 delta] 2s-narrow-struct via INSERT INTO t BY NAME
+  append: FAIL java.lang.RuntimeException: org.apache.spark.sql.delta.DeltaAnalysisException: [DELTA_INSERT_COLUMN_ARITY_MISMATCH] Cannot write to 'spark_catalog.default.r130', not enough nested fields in batch.meta; target table has 2 column(s) but the inserted data has 1 column(s)
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[case 10 delta] 2s-narrow-struct via writeTo(t).append()
+  append: OK
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","gender":"female","meta":{"versionId":"2"},"name":[{"family":"F2","text":"T2"}]}
+[case 10 delta] 2s-narrow-struct via conform: table.limit(0).unionByName(batch, true), then saveAsTable append
+  append: OK
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","gender":"female","meta":{"versionId":"2"},"name":[{"family":"F2","text":"T2"}]}
+[case 10 delta] 2a-narrow-array via INSERT INTO t BY NAME
+  append: FAIL java.lang.RuntimeException: org.apache.spark.sql.AnalysisException: [DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION] Cannot resolve "name" due to data type mismatch: cannot cast "ARRAY<STRUCT<family: STRING NOT NULL>>" to "ARRAY<STRUCT<family: STRING, text: STRING>>". SQLSTATE: 42K09; line 1 pos 0; 'AppendData RelationV2[id#81196, gender#81197, meta#81198, name#81199] spark_catalog.default.r133 spark_catalog.default.r133, true +- 'Project [id#81192 AS id#81200, gender#81193 AS gender#81201, named_struct(versionId, cast(meta#81194.versionId as string), source, cast(meta#81194.source as string)) AS meta#81204, cast(name#81195 a...
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[case 10 delta] 2a-narrow-array via writeTo(t).append()
+  append: OK
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","gender":"female","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2"}]}
+[case 10 delta] 2a-narrow-array via conform: table.limit(0).unionByName(batch, true), then saveAsTable append
+  append: OK
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","gender":"female","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2"}]}
+[case 10 delta] 3-wide-top via writeTo(t).append()
+  append: FAIL java.lang.RuntimeException: org.apache.spark.sql.delta.DeltaAnalysisException: [_LEGACY_ERROR_TEMP_DELTA_0007] A schema mismatch detected when writing to the Delta table (Table ID: <uuid>). To enable schema migration using DataFrameWriter or DataStreamWriter, please set: '.option("mergeSchema", "true")'. For other operations, set the session configuration spark.databricks.delta.schema.autoMerge.enabled to "true". See the documentation specific to the operation for details. Table schema: root -- id: string (nullable = true) -- gender: string (nullable = true) -- meta: struct (nullable = true)...
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[case 10 delta] 3-wide-top via writeTo(t).option(mergeSchema,true).append()
+  append: OK
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>,birthDate:string>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","gender":"female","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2","text":"T2"}],"birthDate":"2000-01-01"}
+[case 10 delta] 3-wide-top via INSERT INTO t BY NAME
+  append: FAIL java.lang.RuntimeException: org.apache.spark.sql.delta.DeltaAnalysisException: [_LEGACY_ERROR_TEMP_DELTA_0007] A schema mismatch detected when writing to the Delta table (Table ID: <uuid>). To enable schema migration using DataFrameWriter or DataStreamWriter, please set: '.option("mergeSchema", "true")'. For other operations, set the session configuration spark.databricks.delta.schema.autoMerge.enabled to "true". See the documentation specific to the operation for details. Table schema: root -- id: string (nullable = true) -- gender: string (nullable = true) -- meta: struct (nullable = true)...
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[case 10 delta] 4s-wide-struct via writeTo(t).append()
+  append: FAIL java.lang.RuntimeException: org.apache.spark.sql.delta.DeltaAnalysisException: [_LEGACY_ERROR_TEMP_DELTA_0007] A schema mismatch detected when writing to the Delta table (Table ID: <uuid>). To enable schema migration using DataFrameWriter or DataStreamWriter, please set: '.option("mergeSchema", "true")'. For other operations, set the session configuration spark.databricks.delta.schema.autoMerge.enabled to "true". See the documentation specific to the operation for details. Table schema: root -- id: string (nullable = true) -- gender: string (nullable = true) -- meta: struct (nullable = true)...
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[case 10 delta] 4s-wide-struct via writeTo(t).option(mergeSchema,true).append()
+  append: OK
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string,lastUpdated:string>,name:array<struct<family:string,text:string>>>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","gender":"female","meta":{"versionId":"2","source":"s2","lastUpdated":"2024"},"name":[{"family":"F2","text":"T2"}]}
+[case 10 delta] 4s-wide-struct via INSERT INTO t BY NAME
+  append: FAIL java.lang.RuntimeException: org.apache.spark.sql.delta.DeltaAnalysisException: [_LEGACY_ERROR_TEMP_DELTA_0007] A schema mismatch detected when writing to the Delta table (Table ID: <uuid>). To enable schema migration using DataFrameWriter or DataStreamWriter, please set: '.option("mergeSchema", "true")'. For other operations, set the session configuration spark.databricks.delta.schema.autoMerge.enabled to "true". See the documentation specific to the operation for details. Table schema: root -- id: string (nullable = true) -- gender: string (nullable = true) -- meta: struct (nullable = true)...
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[case 10 delta] 4a-wide-array via writeTo(t).append()
+  append: FAIL java.lang.RuntimeException: org.apache.spark.sql.delta.DeltaAnalysisException: [_LEGACY_ERROR_TEMP_DELTA_0007] A schema mismatch detected when writing to the Delta table (Table ID: <uuid>). To enable schema migration using DataFrameWriter or DataStreamWriter, please set: '.option("mergeSchema", "true")'. For other operations, set the session configuration spark.databricks.delta.schema.autoMerge.enabled to "true". See the documentation specific to the operation for details. Table schema: root -- id: string (nullable = true) -- gender: string (nullable = true) -- meta: struct (nullable = true)...
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+[case 10 delta] 4a-wide-array via writeTo(t).option(mergeSchema,true).append()
+  append: OK
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string,use:string>>>
+  rows (2):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
+    {"id":"b","gender":"female","meta":{"versionId":"2","source":"s2"},"name":[{"family":"F2","text":"T2","use":"official"}]}
+[case 10 delta] 4a-wide-array via INSERT INTO t BY NAME
+  append: FAIL java.lang.RuntimeException: org.apache.spark.sql.delta.DeltaAnalysisException: [_LEGACY_ERROR_TEMP_DELTA_0007] A schema mismatch detected when writing to the Delta table (Table ID: <uuid>). To enable schema migration using DataFrameWriter or DataStreamWriter, please set: '.option("mergeSchema", "true")'. For other operations, set the session configuration spark.databricks.delta.schema.autoMerge.enabled to "true". See the documentation specific to the operation for details. Table schema: root -- id: string (nullable = true) -- gender: string (nullable = true) -- meta: struct (nullable = true)...
+  schema: struct<id:string,gender:string,meta:struct<versionId:string,source:string>,name:array<struct<family:string,text:string>>>
+  rows (1):
+    {"id":"a","gender":"male","meta":{"versionId":"1","source":"s1"},"name":[{"family":"F1","text":"T1"}]}
