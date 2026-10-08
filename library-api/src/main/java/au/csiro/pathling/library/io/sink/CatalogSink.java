@@ -124,7 +124,7 @@ class CatalogSink implements DataSink {
           if (deltaTableExists(tableName)) {
             // If the table already exists, merge the data in.
             final DeltaTable table = DeltaTable.forName(tableName);
-            merge(table, dataset);
+            merge(context, resourceType, table, dataset);
           } else {
             // If the table does not exist, create it.
             writeDataset(dataset, tableName, SaveMode.ERROR_IF_EXISTS);

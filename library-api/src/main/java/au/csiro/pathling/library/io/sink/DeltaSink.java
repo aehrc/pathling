@@ -24,9 +24,13 @@ import static org.apache.spark.sql.functions.transform;
 import static org.apache.spark.sql.functions.transform_values;
 import static org.apache.spark.sql.functions.when;
 
+import au.csiro.pathling.definition.fhir.FhirDefinitionContext;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.SaveMode;
+import au.csiro.pathling.schema.DefinitionCanonicalStructure;
+import au.csiro.pathling.utilities.StructureMerge;
+import io.delta.tables.DeltaMergeBuilder;
 import io.delta.tables.DeltaTable;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -117,7 +121,7 @@ final class DeltaSink implements DataSink {
           if (deltaTableExists(tablePath)) {
             // If the table already exists, merge the data in.
             final DeltaTable table = DeltaTable.forPath(context.getSpark(), tablePath);
-            merge(table, dataset);
+            merge(context, resourceType, table, dataset);
           } else {
             // If the table does not exist, create it. If an error occurs here, there must be a
             // pre-existing file at the path that is not a Delta table.
@@ -161,41 +165,60 @@ final class DeltaSink implements DataSink {
   }
 
   /**
-   * Merges the given dataset into the specified Delta table.
+   * Merges the given dataset into the specified Delta table, matching resources on their id.
    *
-   * <p>Where the table carries fields the dataset does not, the merge is permitted to leave those
-   * fields null on the rows it writes, rather than failing. This is the state a warehouse is in
-   * when it was written with more open types configured than the encoder now writing to it, which
-   * is otherwise unwritable even though the data is perfectly readable.
+   * <p>A matched resource is replaced in full, so an element its earlier version carried and the
+   * dataset does not is left null rather than kept. Where the table carries fields the dataset does
+   * not, the dataset is presented under the table's schema with those fields null.
    *
+   * <p>Where the dataset carries fields the table does not, the table is widened to admit them, as
+   * an append widens it (decision 41). Under a schema fitted to the data, a batch carrying elements
+   * the table has not seen before is the steady state rather than an error, so refusing to widen
+   * here would fire on ordinary use, and append and upsert would answer the same question two ways.
+   *
+   * @param context the Pathling context, whose FHIR definitions order the union of the two schemas
+   * @param resourceType the type of the resources being merged
    * @param table the Delta table to merge into
    * @param dataset the dataset containing updates to be merged
    */
-  static void merge(@Nonnull final DeltaTable table, @Nonnull final Dataset<Row> dataset) {
+  static void merge(
+      @Nonnull final PathlingContext context,
+      @Nonnull final String resourceType,
+      @Nonnull final DeltaTable table,
+      @Nonnull final Dataset<Row> dataset) {
     final StructType targetSchema = table.toDF().schema();
+    final Set<String> targetPaths = fieldPaths(targetSchema);
+    final Set<String> sourcePaths = fieldPaths(dataset.schema());
+    final boolean widening = !targetPaths.containsAll(sourcePaths);
 
-    // Where the target carries fields the dataset does not, and the dataset carries none the target
-    // does not, present the dataset under the target's own schema with those fields null. The merge
-    // itself is then an ordinary aligned one, so a row it matches is replaced in full rather than
-    // keeping the values the target happened to hold for the fields the source cannot express.
+    // The dataset is presented under a schema carrying every field of the table, with the fields
+    // it lacks null, so that the merge itself is an ordinary aligned one and a row it matches is
+    // replaced in full rather than keeping the values the table held for the fields the dataset
+    // cannot express. Delta's own schema evolution alone would leave those values in place.
     //
-    // Delta's own schema evolution was not used for this. It is the mechanism that makes the write
-    // possible at all, but it couples two behaviours behind one flag - null-filling on insert, and
-    // evolving the target to admit fields only the source carries - and it leaves a matched row's
-    // other columns untouched rather than replacing the row.
-    //
-    // Where the two schemas differ in both directions at once, the dataset is passed through
-    // unchanged and the merge fails as it otherwise would: widening the target is the caller's
-    // decision, not this method's.
-    final Dataset<Row> updates =
-        isPurelyNarrowing(targetSchema, dataset.schema())
-            ? conformToTarget(dataset, targetSchema)
-            : dataset;
+    // Where the dataset also carries fields the table lacks, that schema is the union of the two,
+    // and the merge is permitted to evolve the table to it. The union is produced by the shared
+    // structure merge, as every merged schema Pathling produces is (FR-057, FR-058). The merge
+    // matches fields by name, so the order Delta stores an evolved table in is its own.
+    final Dataset<Row> updates;
+    if (widening) {
+      final StructType union =
+          StructureMerge.merge(
+              targetSchema,
+              dataset.schema(),
+              DefinitionCanonicalStructure.forResource(
+                  FhirDefinitionContext.of(context.getFhirContext()), resourceType));
+      updates = conformToTarget(dataset, union);
+    } else if (!sourcePaths.containsAll(targetPaths)) {
+      updates = conformToTarget(dataset, targetSchema);
+    } else {
+      updates = dataset;
+    }
 
     // Perform a merge operation where we match on the 'id' column.
-    table
-        .as("original")
-        .merge(updates.as("updates"), "original.id = updates.id")
+    final DeltaMergeBuilder builder =
+        table.as("original").merge(updates.as("updates"), "original.id = updates.id");
+    (widening ? builder.withSchemaEvolution() : builder)
         .whenMatched()
         .updateAll()
         .whenNotMatched()
@@ -294,22 +317,6 @@ final class DeltaSink implements DataSink {
         .filter(field -> field.name().equals(name))
         .findFirst()
         .orElse(null);
-  }
-
-  /**
-   * Determines whether the source schema is a strict subset of the target schema, at every level of
-   * nesting.
-   *
-   * @param target the schema of the table being merged into
-   * @param source the schema of the dataset being merged
-   * @return true if the target carries fields the source does not, and the source carries none the
-   *     target does not
-   */
-  private static boolean isPurelyNarrowing(
-      @Nonnull final StructType target, @Nonnull final StructType source) {
-    final Set<String> targetPaths = fieldPaths(target);
-    final Set<String> sourcePaths = fieldPaths(source);
-    return targetPaths.containsAll(sourcePaths) && !sourcePaths.containsAll(targetPaths);
   }
 
   /**

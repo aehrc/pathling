@@ -63,6 +63,10 @@
       <artifactId>utilities</artifactId>
     </dependency>
     <dependency>
+      <groupId>au.csiro.pathling</groupId>
+      <artifactId>fhir-schema</artifactId>
+    </dependency>
+    <dependency>
       <groupId>au.csiro.fhir</groupId>
       <artifactId>bulk-export</artifactId>
     </dependency>

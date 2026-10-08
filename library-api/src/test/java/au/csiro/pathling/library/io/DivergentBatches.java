@@ -70,6 +70,22 @@ public final class DivergentBatches {
            "name":[{"given":["Epsilon","Zeta"]},{"given":["Eta"]}]}\
           """);
 
+  /**
+   * An update to a resource of the first batch, together with a resource neither batch carries, in
+   * the second batch's shape. Merged over the first batch, it replaces {@code p1} with a resource
+   * that has no gender and no family.
+   */
+  private static final List<String> SECOND_UPDATING_FIRST =
+      List.of(
+          """
+          {"resourceType":"Patient","id":"p1","birthDate":"1970-03-03",
+           "name":[{"given":["Updated"]}]}\
+          """,
+          """
+          {"resourceType":"Patient","id":"p3","birthDate":"1990-01-01",
+           "name":[{"given":["Delta"]}]}\
+          """);
+
   private DivergentBatches() {}
 
   /**
@@ -92,6 +108,17 @@ public final class DivergentBatches {
   @Nonnull
   public static Dataset<Row> second(@Nonnull final PathlingContext context) {
     return toLayout(context, SECOND);
+  }
+
+  /**
+   * Returns a batch in the second batch's shape that updates {@code p1} and adds {@code p3}.
+   *
+   * @param context the Pathling context
+   * @return the updating batch
+   */
+  @Nonnull
+  public static Dataset<Row> secondUpdatingFirst(@Nonnull final PathlingContext context) {
+    return toLayout(context, SECOND_UPDATING_FIRST);
   }
 
   /**
