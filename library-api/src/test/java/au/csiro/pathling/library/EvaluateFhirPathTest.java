@@ -25,8 +25,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.fhirpath.evaluation.SingleInstanceEvaluationResult;
 import au.csiro.pathling.fhirpath.evaluation.SingleInstanceEvaluationResult.TypedValue;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Stream;
 import org.apache.spark.sql.SparkSession;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -312,9 +318,11 @@ public class EvaluateFhirPathTest {
       """;
 
   @Test
-  void quantityResultExcludesSyntheticFields() {
-    // Evaluating a Quantity expression should return JSON without synthetic fields
-    // like value_scale, _value_canonicalized, or _code_canonicalized.
+  void quantityResultCarriesOnlyTheElementsOfAQuantity() {
+    // Evaluating a Quantity expression should return JSON holding the elements of the Quantity the
+    // resource carries, and nothing the storage layout adds: neither the previous layout's
+    // companions (value_scale, _value_canonicalized, _code_canonicalized, _fid) nor the Parquet on
+    // FHIR layout's metadata groups and annotations, all of which begin with an underscore.
     final SingleInstanceEvaluationResult result =
         pathling.evaluateFhirPath("Observation", OBSERVATION_JSON, "value.ofType(Quantity)");
 
@@ -326,12 +334,10 @@ public class EvaluateFhirPathTest {
 
     final String json = (String) first.getValue();
     assertNotNull(json);
-    assertFalse(json.contains("value_scale"), "JSON should not contain value_scale");
-    assertFalse(
-        json.contains("_value_canonicalized"), "JSON should not contain _value_canonicalized");
-    assertFalse(
-        json.contains("_code_canonicalized"), "JSON should not contain _code_canonicalized");
-    assertFalse(json.contains("_fid"), "JSON should not contain _fid");
+    final JsonObject quantity = JsonParser.parseString(json).getAsJsonObject();
+    assertEquals(Set.of("value", "unit", "system", "code"), quantity.keySet());
+    assertEquals("mmHg", quantity.get("unit").getAsString());
+    assertEquals("mm[Hg]", quantity.get("code").getAsString());
   }
 
   @Test
@@ -350,8 +356,10 @@ public class EvaluateFhirPathTest {
   }
 
   @Test
-  void complexTypeResultExcludesFidField() {
-    // Any complex type result should not contain the _fid field.
+  void complexTypeResultExcludesStorageFields() {
+    // Any complex type result should hold only the elements of its type, with nothing the storage
+    // layout adds, such as the previous layout's _fid or the Parquet on FHIR layout's metadata
+    // groups and annotations, all of which begin with an underscore.
     final SingleInstanceEvaluationResult result =
         pathling.evaluateFhirPath("Patient", PATIENT_JSON, "name");
 
@@ -362,6 +370,27 @@ public class EvaluateFhirPathTest {
       final String json = (String) tv.getValue();
       assertNotNull(json);
       assertFalse(json.contains("_fid"), "JSON should not contain _fid");
+      assertTrue(
+          fieldNames(JsonParser.parseString(json)).stream().noneMatch(name -> name.startsWith("_")),
+          "JSON should not contain a storage field: " + json);
+    }
+  }
+
+  /** Collects the names of every field of a JSON value, at any depth. */
+  @Nonnull
+  private static List<String> fieldNames(@Nonnull final JsonElement element) {
+    if (element.isJsonObject()) {
+      return element.getAsJsonObject().entrySet().stream()
+          .flatMap(
+              entry ->
+                  Stream.concat(Stream.of(entry.getKey()), fieldNames(entry.getValue()).stream()))
+          .toList();
+    } else if (element.isJsonArray()) {
+      return element.getAsJsonArray().asList().stream()
+          .flatMap(item -> fieldNames(item).stream())
+          .toList();
+    } else {
+      return List.of();
     }
   }
 

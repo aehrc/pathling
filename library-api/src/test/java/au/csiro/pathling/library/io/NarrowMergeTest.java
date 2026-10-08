@@ -17,64 +17,76 @@
 
 package au.csiro.pathling.library.io;
 
-import static org.apache.spark.sql.functions.lit;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.TestHelpers;
+import ca.uhn.fhir.parser.IParser;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.commons.io.FileUtils;
-import org.apache.spark.sql.AnalysisException;
 import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.types.ArrayType;
 import org.apache.spark.sql.types.StructType;
+import org.hl7.fhir.r4.model.DateTimeType;
+import org.hl7.fhir.r4.model.DateType;
 import org.hl7.fhir.r4.model.Enumerations.AdministrativeGender;
 import org.hl7.fhir.r4.model.Extension;
 import org.hl7.fhir.r4.model.Patient;
+import org.hl7.fhir.r4.model.Period;
 import org.hl7.fhir.r4.model.StringType;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 /**
- * Tests that merging into a Delta table through the library API tolerates a source narrower than
- * the target, leaving the target's additional columns null on the written rows, while continuing to
- * reject a source that would widen the target.
+ * Tests that merging into a Delta table through the library API accepts a source whose schema
+ * differs from the target's in either direction. A source narrower than the target leaves the
+ * target's additional columns null on the written rows; a source wider than the target widens it,
+ * as an append does (decision 41, T117a).
  *
- * <p>Both directions matter. The tolerance is what makes a warehouse written by one encoder
- * configuration writable by a narrower one; refusing to widen is what keeps the tolerance from
- * quietly turning into schema evolution the caller did not ask for.
+ * <p>Under a schema fitted to the data, two batches of the same resource type differ whenever their
+ * resources populate different elements, so both directions are ordinary use. The resources are
+ * encoded through {@link PathlingContext#encode}, so the divergence comes from the data rather than
+ * from encoder configuration. {@code DeltaSchemaMergingTest} covers a source differing in both
+ * directions at the top level and inside a repeating element; this class covers each direction on
+ * its own, and the choice value of an extension, which is where a narrower encoder configuration
+ * used to differ.
  *
  * @author John Grimes
  */
 class NarrowMergeTest {
 
   private static final String STRING_EXTENSION_URL = "http://example.org/string-extension";
+  private static final String PERIOD_EXTENSION_URL = "http://example.org/period-extension";
   private static final String TABLE_FILE_NAME = "Patient.parquet";
 
   private static SparkSession spark;
   private static Path temporaryDirectory;
-  private static PathlingContext wideContext;
-  private static PathlingContext narrowContext;
+  private static PathlingContext context;
+  private static IParser parser;
 
   /** Set up Spark and a temporary warehouse. */
   @BeforeAll
   static void setUp() throws IOException {
     temporaryDirectory = Files.createTempDirectory("pathling-narrow-merge-test-");
     spark = TestHelpers.sparkBuilder().getOrCreate();
-    wideContext = ExtensionContexts.wide(spark);
-    narrowContext = ExtensionContexts.narrow(spark);
+    context = PathlingContext.create(spark);
+    parser = context.getFhirContext().newJsonParser();
   }
 
   /** Tear down Spark and remove the temporary warehouse. */
@@ -87,26 +99,22 @@ class NarrowMergeTest {
   /**
    * Merging a source that lacks a column the target carries succeeds, leaves that column null on
    * the written rows, and replaces the row whose id already existed (US3.1, US3.2, SC-007).
-   *
-   * <p>Before the fix this failed with {@code DELTA_UPDATE_SCHEMA_MISMATCH_EXPRESSION}.
    */
   @Test
   void narrowerSourceMergesAndLeavesTheMissingColumnNull() {
     // Arrange: a target holding two patients, both with a gender.
     final String warehouse = warehouse("narrower-source");
-    write(
-        wideContext, ExtensionContexts.encodeWide(spark, targetPatients()), warehouse, "overwrite");
+    write(encode(targetPatients()), warehouse, "overwrite");
 
     // Arrange: a source that updates one of them and adds a third, carrying no gender column at
     // all.
-    final Dataset<Row> narrowerSource =
-        ExtensionContexts.encodeWide(spark, sourcePatients()).drop("gender");
+    final Dataset<Row> narrowerSource = encode(sourcePatients()).drop("gender");
 
     // Act.
-    write(wideContext, narrowerSource, warehouse, "merge");
+    write(narrowerSource, warehouse, "merge");
 
     // Assert: the untouched row keeps its gender, and the two written rows have none.
-    final Map<String, String> genders = gendersById(warehouse);
+    final Map<String, String> genders = valuesById(warehouse, "gender");
     assertEquals(3, genders.size());
     assertEquals(AdministrativeGender.MALE.toCode(), genders.get("target-only"));
     assertNull(genders.get("in-both"));
@@ -115,165 +123,136 @@ class NarrowMergeTest {
     // Assert: the matched row was replaced, not merged field by field.
     assertEquals(
         "the updated value",
-        extensionValueOf(warehouse, "in-both"),
+        stringExtensionValueOf(warehouse, "in-both"),
         "the row matching an existing id should have been replaced");
   }
 
-  /**
-   * The target keeps its own schema after a narrower source is merged into it, so a reader
-   * configured with the original open types still reads the columns written before (US3.3).
-   */
+  /** The target keeps its own schema after a narrower source is merged into it (US3.3). */
   @Test
   void mergeLeavesTheTargetSchemaUnchanged() {
     // Arrange.
     final String warehouse = warehouse("schema-unchanged");
-    write(
-        wideContext, ExtensionContexts.encodeWide(spark, targetPatients()), warehouse, "overwrite");
+    write(encode(targetPatients()), warehouse, "overwrite");
     final StructType before = storedSchema(warehouse);
 
     // Act.
-    write(
-        wideContext,
-        ExtensionContexts.encodeWide(spark, sourcePatients()).drop("gender"),
-        warehouse,
-        "merge");
+    write(encode(sourcePatients()).drop("gender"), warehouse, "merge");
 
     // Assert: the schema is exactly what it was, so the merge widened nothing and dropped nothing.
     assertEquals(before, storedSchema(warehouse));
   }
 
   /**
-   * A narrowly-encoded source merges into a table written with more open types configured, and the
-   * rows written before it remain readable by the encoder that wrote them (US3.1, SC-007).
+   * A source whose extensions carry fewer choice values than the target's merges into it, and the
+   * rows written before it keep their values (US3.1, SC-007).
    *
    * <p>This is the state the reporter of #2697 described, at the level of nested struct fields
-   * rather than whole columns: the target's extension struct carries {@code valuePeriod} and {@code
-   * valueQuantity}, and the source's does not.
+   * rather than whole columns: the target's extension struct carries {@code valuePeriod}, and the
+   * source's does not.
    */
   @Test
-  void narrowlyEncodedSourceMergesIntoAWiderTable() {
-    // Arrange: a target written with Period and Quantity configured.
-    final String warehouse = warehouse("narrow-encoder");
-    write(
-        wideContext, ExtensionContexts.encodeWide(spark, targetPatients()), warehouse, "overwrite");
+  void narrowerExtensionSourceMergesIntoAWiderTable() {
+    // Arrange: a target whose extensions carry a period as well as a string.
+    final String warehouse = warehouse("narrower-extension");
+    write(encode(withPeriodExtensions(targetPatients())), warehouse, "overwrite");
     final StructType before = storedSchema(warehouse);
 
-    // Act: merge a source encoded without them, through the narrow context.
-    write(
-        narrowContext, ExtensionContexts.encodeNarrow(spark, sourcePatients()), warehouse, "merge");
+    // Act: merge a source whose extensions carry only a string.
+    write(encode(sourcePatients()), warehouse, "merge");
 
     // Assert: the table kept its wider schema.
     assertEquals(before, storedSchema(warehouse));
 
-    // Assert: the row written by the wide encoder and never touched still decodes to its original
-    // extension value, read back with the wide encoder through the library API.
+    // Assert: the row written before the merge and never touched still carries its values.
     assertEquals(
         "the original value",
-        extensionValueOf(warehouse, "target-only"),
+        stringExtensionValueOf(warehouse, "target-only"),
         "a row written before the merge should still carry its value");
+    assertEquals("2020-01-01", periodExtensionStartOf(warehouse, "target-only"));
     // Assert: and the newly written rows are there.
-    assertEquals(3, gendersById(warehouse).size());
+    assertEquals(3, valuesById(warehouse, "gender").size());
   }
 
   /**
-   * A source whose nested structs carry fields the target's do not still fails, so the change adds
-   * tolerance rather than schema evolution (US3.4, FR-012).
+   * A source whose extensions carry a choice value the target's do not widens the target inside the
+   * extension structure, rather than being refused as it was under the previous layout (decision
+   * 41, T117a).
    *
-   * <p>This is the inverse of {@link #narrowlyEncodedSourceMergesIntoAWiderTable}: a widely-encoded
-   * source merged into a narrowly-encoded target.
+   * <p>This is the inverse of {@link #narrowerExtensionSourceMergesIntoAWiderTable}.
    */
   @Test
-  void wideningSourceStillFails() {
-    // Arrange: a target written with the narrow encoder.
-    final String warehouse = warehouse("widening-source");
-    write(
-        narrowContext,
-        ExtensionContexts.encodeNarrow(spark, targetPatients()),
-        warehouse,
-        "overwrite");
-    final StructType before = storedSchema(warehouse);
+  void widerExtensionSourceWidensTheTarget() {
+    // Arrange: a target whose extensions carry only a string.
+    final String warehouse = warehouse("wider-extension");
+    write(encode(targetPatients()), warehouse, "overwrite");
+    assertFalse(extensionFields(storedSchema(warehouse)).contains("valuePeriod"));
 
-    // Act and assert: merging a widely-encoded source is refused, for the same reason it is today.
-    final AnalysisException failure =
-        assertThrows(
-            AnalysisException.class,
-            () ->
-                write(
-                    wideContext,
-                    ExtensionContexts.encodeWide(spark, sourcePatients()),
-                    warehouse,
-                    "merge"));
-    assertTrue(
-        failure.getMessage().contains("DELTA_UPDATE_SCHEMA_MISMATCH_EXPRESSION"),
-        "expected the merge to fail on the struct mismatch, but got: " + failure.getMessage());
+    // Act: merge a source whose extensions carry a period as well.
+    write(encode(withPeriodExtensions(sourcePatients())), warehouse, "merge");
 
-    // Assert: the target was left alone, and in particular was not widened.
-    assertEquals(2, gendersById(warehouse).size());
-    assertEquals(before, storedSchema(warehouse));
+    // Assert: the target's extension structure gained the period.
+    assertTrue(extensionFields(storedSchema(warehouse)).contains("valuePeriod"));
+
+    // Assert: the written rows carry it, the matched row having been replaced, and the untouched
+    // row has none.
+    assertEquals(3, valuesById(warehouse, "gender").size());
+    assertEquals("2020-01-01", periodExtensionStartOf(warehouse, "in-both"));
+    assertEquals("2020-01-01", periodExtensionStartOf(warehouse, "source-only"));
+    assertNull(periodExtensionStartOf(warehouse, "target-only"));
+    assertEquals("the updated value", stringExtensionValueOf(warehouse, "in-both"));
+    assertEquals("the original value", stringExtensionValueOf(warehouse, "target-only"));
   }
 
   /**
-   * A source carrying a top-level column the target lacks merges as it does today, ignoring that
-   * column, and does not widen the target (US3.4, FR-012).
-   *
-   * <p>This shape of widening difference does not fail today, unlike the nested one: {@code
-   * updateAll} and {@code insertAll} address the target's columns, so a column only the source
-   * carries is simply not written. What matters for FR-012 is that enabling the tolerance for a
-   * narrower source has not turned this into schema evolution.
+   * A source carrying a top-level element the target lacks widens the target with that column,
+   * leaving it null on the rows the source did not write (decision 41, T117a).
    */
   @Test
-  void wideningSourceDoesNotWidenTheTarget() {
+  void widerTopLevelSourceWidensTheTarget() {
     // Arrange.
-    final String warehouse = warehouse("widening-column");
-    write(
-        wideContext, ExtensionContexts.encodeWide(spark, targetPatients()), warehouse, "overwrite");
-    final StructType before = storedSchema(warehouse);
-    final Dataset<Row> widerSource =
-        ExtensionContexts.encodeWide(spark, sourcePatients()).withColumn("unexpected", lit(1));
+    final String warehouse = warehouse("wider-column");
+    write(encode(targetPatients()), warehouse, "overwrite");
+    assertFalse(List.of(storedSchema(warehouse).fieldNames()).contains("birthDate"));
 
     // Act.
-    write(wideContext, widerSource, warehouse, "merge");
+    write(encode(withBirthDates(sourcePatients())), warehouse, "merge");
 
-    // Assert: the rows were written, and the target's schema is untouched.
-    assertEquals(3, gendersById(warehouse).size());
-    assertEquals(before, storedSchema(warehouse));
-    assertTrue(
-        !List.of(storedSchema(warehouse).fieldNames()).contains("unexpected"),
-        "the target should not have been widened by the source");
+    // Assert: the target gained the column, and holds the source's values in it.
+    assertTrue(List.of(storedSchema(warehouse).fieldNames()).contains("birthDate"));
+    final Map<String, String> birthDates = valuesById(warehouse, "birthDate");
+    assertEquals(3, birthDates.size());
+    assertEquals("1990-01-01", birthDates.get("in-both"));
+    assertEquals("1990-01-01", birthDates.get("source-only"));
+    assertNull(birthDates.get("target-only"));
   }
 
   /**
-   * A source that differs from the target in both directions at once still fails, because admitting
-   * it would widen the target (US3.5, FR-012).
+   * A source that differs from the target in both directions at once merges, widening the target
+   * with what it carries and leaving null what it lacks on the rows it wrote (decision 41, T117a).
    */
   @Test
-  void sourceDifferingInBothDirectionsStillFails() {
+  void sourceDifferingInBothDirectionsWidensTheTarget() {
     // Arrange: a source that both lacks a column the target has and carries one it does not.
     final String warehouse = warehouse("both-directions");
-    write(
-        wideContext, ExtensionContexts.encodeWide(spark, targetPatients()), warehouse, "overwrite");
-    final Dataset<Row> mixedSource =
-        ExtensionContexts.encodeWide(spark, sourcePatients())
-            .drop("gender")
-            .withColumn("unexpected", lit(1));
+    write(encode(targetPatients()), warehouse, "overwrite");
+    final Dataset<Row> mixedSource = encode(withBirthDates(sourcePatients())).drop("gender");
 
-    // Act and assert: refused, for the same reason it is today - the column the source lacks cannot
-    // be resolved in the update clause.
-    final AnalysisException failure =
-        assertThrows(
-            AnalysisException.class, () -> write(wideContext, mixedSource, warehouse, "merge"));
-    assertTrue(
-        failure.getMessage().contains("DELTA_MERGE_UNRESOLVED_EXPRESSION"),
-        "expected the merge to fail on the unresolved column, but got: " + failure.getMessage());
+    // Act.
+    write(mixedSource, warehouse, "merge");
 
-    // Assert: the target was left alone, and in particular was not widened.
-    assertEquals(2, gendersById(warehouse).size());
-    assertTrue(
-        List.of(storedSchema(warehouse).fieldNames()).contains("gender"),
-        "the target should still carry its own columns");
-    assertTrue(
-        !List.of(storedSchema(warehouse).fieldNames()).contains("unexpected"),
-        "the target should not have been widened by the source");
+    // Assert: the target keeps its own columns and gains the source's.
+    final List<String> fields = List.of(storedSchema(warehouse).fieldNames());
+    assertTrue(fields.contains("gender"), "the target should still carry its own columns");
+    assertTrue(fields.contains("birthDate"), "the target should have been widened by the source");
+
+    // Assert: the matched row was replaced in full, and the untouched row kept its values.
+    final Map<String, String> genders = valuesById(warehouse, "gender");
+    assertEquals(3, genders.size());
+    assertEquals(AdministrativeGender.MALE.toCode(), genders.get("target-only"));
+    assertNull(genders.get("in-both"));
+    final Map<String, String> birthDates = valuesById(warehouse, "birthDate");
+    assertEquals("1990-01-01", birthDates.get("in-both"));
+    assertNull(birthDates.get("target-only"));
   }
 
   /** A merge whose source and target schemas are aligned behaves as it does today (US3.7). */
@@ -281,20 +260,13 @@ class NarrowMergeTest {
   void alignedMergeIsUnaffected() {
     // Arrange.
     final String warehouse = warehouse("aligned");
-    write(
-        wideContext, ExtensionContexts.encodeWide(spark, targetPatients()), warehouse, "overwrite");
+    write(encode(targetPatients()), warehouse, "overwrite");
 
     // Act.
-    assertDoesNotThrow(
-        () ->
-            write(
-                wideContext,
-                ExtensionContexts.encodeWide(spark, sourcePatients()),
-                warehouse,
-                "merge"));
+    assertDoesNotThrow(() -> write(encode(sourcePatients()), warehouse, "merge"));
 
     // Assert: three rows, with the source's own genders intact rather than null-filled.
-    final Map<String, String> genders = gendersById(warehouse);
+    final Map<String, String> genders = valuesById(warehouse, "gender");
     assertEquals(3, genders.size());
     assertEquals(AdministrativeGender.MALE.toCode(), genders.get("target-only"));
     assertEquals(AdministrativeGender.FEMALE.toCode(), genders.get("in-both"));
@@ -331,13 +303,38 @@ class NarrowMergeTest {
     return patient;
   }
 
+  /** Adds an extension holding a period to each patient. */
+  @Nonnull
+  private static List<Patient> withPeriodExtensions(@Nonnull final List<Patient> patients) {
+    patients.forEach(
+        patient ->
+            patient.addExtension(
+                new Extension(
+                    PERIOD_EXTENSION_URL,
+                    new Period().setStartElement(new DateTimeType("2020-01-01")))));
+    return patients;
+  }
+
+  /** Gives each patient a birth date. */
+  @Nonnull
+  private static List<Patient> withBirthDates(@Nonnull final List<Patient> patients) {
+    patients.forEach(patient -> patient.setBirthDateElement(new DateType("1990-01-01")));
+    return patients;
+  }
+
+  /** Encodes the patients through the library API. */
+  @Nonnull
+  private static Dataset<Row> encode(@Nonnull final List<Patient> patients) {
+    final List<String> json = patients.stream().map(parser::encodeResourceToString).toList();
+    return context.encode(spark.createDataset(json, Encoders.STRING()).toDF(), "Patient");
+  }
+
   @Nonnull
   private static String warehouse(@Nonnull final String name) {
     return temporaryDirectory.resolve(name).toString();
   }
 
   private static void write(
-      @Nonnull final PathlingContext context,
       @Nonnull final Dataset<Row> dataset,
       @Nonnull final String warehouse,
       @Nonnull final String saveMode) {
@@ -360,27 +357,61 @@ class NarrowMergeTest {
     return spark.read().format("delta").load(Path.of(warehouse, TABLE_FILE_NAME).toString());
   }
 
-  /** Returns the gender code held against each stored id, which is null where none was written. */
+  /** Returns the field names of the struct inside the {@code extension} array of a schema. */
   @Nonnull
-  private static Map<String, String> gendersById(@Nonnull final String warehouse) {
-    final Map<String, String> genders = new HashMap<>();
+  private static List<String> extensionFields(@Nonnull final StructType schema) {
+    final StructType extension =
+        (StructType) ((ArrayType) schema.apply("extension").dataType()).elementType();
+    return Arrays.asList(extension.fieldNames());
+  }
+
+  /** Returns the value of one column held against each stored id, which is null where none was. */
+  @Nonnull
+  private static Map<String, String> valuesById(
+      @Nonnull final String warehouse, @Nonnull final String column) {
+    final Map<String, String> values = new HashMap<>();
     storedTable(warehouse)
-        .select("id", "gender")
+        .selectExpr("id", "CAST(" + column + " AS STRING)")
         .collectAsList()
-        .forEach(row -> genders.put(row.getString(0), row.getString(1)));
-    return genders;
+        .forEach(row -> values.put(row.getString(0), row.getString(1)));
+    return values;
+  }
+
+  /** Returns the string extension value of the stored resource with the given id. */
+  @Nullable
+  private static String stringExtensionValueOf(
+      @Nonnull final String warehouse, @Nonnull final String id) {
+    return extensionValue(warehouse, id, STRING_EXTENSION_URL, "valueString");
+  }
+
+  /** Returns the start of the period extension of the stored resource with the given id. */
+  @Nullable
+  private static String periodExtensionStartOf(
+      @Nonnull final String warehouse, @Nonnull final String id) {
+    return extensionValue(warehouse, id, PERIOD_EXTENSION_URL, "valuePeriod.start");
   }
 
   /**
-   * Returns the string extension value of the stored resource with the given id, decoded through
-   * the library API with the wide encoder.
+   * Returns a value of the extension with the given URL on the resource with the given id, read
+   * back through the library API.
    */
-  @Nonnull
-  private static String extensionValueOf(
-      @Nonnull final String warehouse, @Nonnull final String id) {
-    final Dataset<Row> row =
-        wideContext.read().delta(warehouse).read("Patient").filter("id = '" + id + "'");
-    final Patient decoded = ExtensionContexts.decodeOne(wideContext, row);
-    return ((StringType) decoded.getExtensionByUrl(STRING_EXTENSION_URL).getValue()).getValue();
+  @Nullable
+  private static String extensionValue(
+      @Nonnull final String warehouse,
+      @Nonnull final String id,
+      @Nonnull final String url,
+      @Nonnull final String field) {
+    final List<String> values =
+        context
+            .read()
+            .delta(warehouse)
+            .read("Patient")
+            .filter("id = '" + id + "'")
+            .selectExpr("explode(extension) AS e")
+            .filter("e.url = '" + url + "'")
+            .selectExpr("CAST(e." + field + " AS STRING)")
+            .as(Encoders.STRING())
+            .collectAsList();
+    return values.isEmpty() ? null : values.getFirst();
   }
 }

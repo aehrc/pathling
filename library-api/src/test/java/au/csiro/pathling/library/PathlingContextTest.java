@@ -50,7 +50,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -68,7 +67,6 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import scala.collection.mutable.ArraySeq;
 
 @Slf4j
 public class PathlingContextTest {
@@ -132,6 +130,15 @@ public class PathlingContextTest {
     assertAllRelativeReferences(df.select("id_versioned").as(Encoders.STRING()).collectAsList());
   }
 
+  /**
+   * Asserts the identifiers of resources stored in the Parquet on FHIR layout, which carries the
+   * logical id alone, without the versioned companion of the previous layout.
+   */
+  public void assertValidNewLayoutIdColumns(@Nonnull final Dataset<Row> df) {
+    assertAllGUIDs(df.select("id").as(Encoders.STRING()).collectAsList());
+    assertFieldNotPresent("id_versioned", df.schema());
+  }
+
   public <T> void assertValidRelativeRefColumns(
       @Nonnull final Dataset<T> df, final Column... refColumns) {
     Stream.of(refColumns)
@@ -164,12 +171,12 @@ public class PathlingContextTest {
         pathling.encodeBundle(bundlesDF.toDF(), "Patient", PathlingContext.FHIR_JSON);
     assertEquals(5, patientsDataframe.count());
 
-    assertValidIdColumns(patientsDataframe);
+    assertValidNewLayoutIdColumns(patientsDataframe);
 
     // Test omission of MIME type.
     final Dataset<Row> patientsDataframe2 = pathling.encodeBundle(bundlesDF.toDF(), "Patient");
     assertEquals(5, patientsDataframe2.count());
-    assertValidIdColumns(patientsDataframe2);
+    assertValidNewLayoutIdColumns(patientsDataframe2);
 
     final Dataset<Condition> conditionsDataframe =
         pathling.encodeBundle(bundlesDF, Condition.class, PathlingContext.FHIR_JSON);
@@ -205,7 +212,7 @@ public class PathlingContextTest {
     final Dataset<Row> patientsDataframe =
         pathling.encode(jsonResources.toDF(), "Patient", PathlingContext.FHIR_JSON);
     assertEquals(9, patientsDataframe.count());
-    assertValidIdColumns(patientsDataframe);
+    assertValidNewLayoutIdColumns(patientsDataframe);
 
     final Dataset<Condition> conditionsDataframe =
         pathling.encode(jsonResources, Condition.class, PathlingContext.FHIR_JSON);
@@ -216,14 +223,23 @@ public class PathlingContextTest {
     assertValidRelativeRefColumns(conditionsDataframe, col("encounter"));
   }
 
+  /**
+   * The nesting, extension and open-type options bound the schema of the dense mode only, which
+   * does not exist yet, so they bound nothing in the fitted schema that encoding stores: depth
+   * comes from the data, extensions appear because they are present, and open types resolve as
+   * observed (contracts/library-api.md, decision 69). The options are still accepted and reported
+   * back.
+   */
   @Test
   void testEncoderOptions() {
     final Dataset<Row> jsonResourcesDF = spark.read().text(TEST_DATA_URL + "/resources/R4/json");
 
-    // Test the defaults
-    final Row defaultRow =
-        PathlingContext.create(spark).encode(jsonResourcesDF, "Questionnaire").head();
-    assertFieldPresent("_extension", defaultRow.schema());
+    // Test the defaults: the nested items the data carries are present, and there is no extension
+    // map.
+    final Dataset<Row> defaultQuestionnaires =
+        PathlingContext.create(spark).encode(jsonResourcesDF, "Questionnaire");
+    final Row defaultRow = defaultQuestionnaires.head();
+    assertFieldNotPresent("_extension", defaultRow.schema());
     final Row defaultItem = (Row) defaultRow.getList(defaultRow.fieldIndex("item")).getFirst();
     assertFieldPresent("item", defaultItem.schema());
 
@@ -233,15 +249,18 @@ public class PathlingContextTest {
         EncodingConfiguration.builder().enableExtensions(false).maxNestingLevel(1).build();
     final PathlingContext context1 = PathlingContext.createForEncoding(spark, encodingConfig1);
 
-    final Row rowWithNesting = context1.encode(jsonResourcesDF, "Questionnaire").head();
-    assertFieldNotPresent("_extension", rowWithNesting.schema());
-    // Test item nesting
+    final Dataset<Row> questionnairesWithNesting =
+        context1.encode(jsonResourcesDF, "Questionnaire");
+    // The options bound nothing: the schema is the one the defaults give.
+    assertEquals(defaultQuestionnaires.schema(), questionnairesWithNesting.schema());
+    final Row rowWithNesting = questionnairesWithNesting.head();
+    // Test item nesting: the third level of items the data carries is kept.
     final Row itemWithNesting =
         (Row) rowWithNesting.getList(rowWithNesting.fieldIndex("item")).getFirst();
     assertFieldPresent("item", itemWithNesting.schema());
     final Row nestedItem =
         (Row) itemWithNesting.getList(itemWithNesting.fieldIndex("item")).getFirst();
-    assertFieldNotPresent("item", nestedItem.schema());
+    assertFieldPresent("item", nestedItem.schema());
 
     // Verify encoding configuration can be retrieved
     final EncodingConfiguration retrievedConfig1 = context1.getEncodingConfiguration();
@@ -256,17 +275,20 @@ public class PathlingContextTest {
             .openTypes(Set.of("boolean", "string", "Address"))
             .build();
     final PathlingContext context2 = PathlingContext.createForEncoding(spark, encodingConfig2);
-    final Row rowWithExtensions = context2.encode(jsonResourcesDF, "Patient").head();
-    assertFieldPresent("_extension", rowWithExtensions.schema());
+    final Dataset<Row> patientsWithExtensions = context2.encode(jsonResourcesDF, "Patient");
+    assertEquals(
+        PathlingContext.create(spark).encode(jsonResourcesDF, "Patient").schema(),
+        patientsWithExtensions.schema());
+    final Row rowWithExtensions = patientsWithExtensions.head();
+    assertFieldNotPresent("_extension", rowWithExtensions.schema());
 
-    final Map<Integer, ArraySeq<Row>> extensions =
-        rowWithExtensions.getJavaMap(rowWithExtensions.fieldIndex("_extension"));
-
-    // get the first extension of some extension set
-    final Row extension = (Row) extensions.values().toArray(ArraySeq[]::new)[0].apply(0);
+    // The extensions are stored inline, with every value type the data carries, whether or not it
+    // is among the open types.
+    final Row extension =
+        (Row) rowWithExtensions.getList(rowWithExtensions.fieldIndex("extension")).getFirst();
     assertFieldPresent("valueString", extension.schema());
     assertFieldPresent("valueAddress", extension.schema());
-    assertFieldPresent("valueBoolean", extension.schema());
+    assertFieldPresent("valueDecimal", extension.schema());
     assertFieldNotPresent("valueInteger", extension.schema());
 
     // Verify encoding configuration can be retrieved
