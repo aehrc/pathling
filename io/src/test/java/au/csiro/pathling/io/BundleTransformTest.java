@@ -84,18 +84,18 @@ class BundleTransformTest {
   void refusesToReturnBundlesAsAResourceType() {
     final Dataset<String> bundles = documents(references());
 
-    assertThrows(
-        IllegalArgumentException.class,
-        () -> TransformFixtures.reader().readBundles("Bundle", bundles));
+    final FhirJsonReader reader = TransformFixtures.reader();
+
+    assertThrows(IllegalArgumentException.class, () -> reader.readBundles("Bundle", bundles));
   }
 
   @Test
   void refusesATypeTheDefinitionsDoNotDescribe() {
     final Dataset<String> bundles = documents(references());
 
-    assertThrows(
-        IllegalArgumentException.class,
-        () -> TransformFixtures.reader().readBundles("NotAResource", bundles));
+    final FhirJsonReader reader = TransformFixtures.reader();
+
+    assertThrows(IllegalArgumentException.class, () -> reader.readBundles("NotAResource", bundles));
   }
 
   @Test

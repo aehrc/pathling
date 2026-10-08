@@ -577,7 +577,7 @@ public final class RoundTripHarness {
   private static String collapsed(@Nonnull final String text) {
     // Only whitespace beside a tag is collapsed, so that a narrative that lost whitespace within
     // its text is still reported.
-    return text.replaceAll(">\\s+", "> ").replaceAll("\\s+<", " <");
+    return text.replaceAll(">\\s++", "> ").replaceAll("\\s++<", " <");
   }
 
   /** Whether a node is a structure or an array that now holds nothing. */

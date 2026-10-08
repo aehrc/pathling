@@ -25,7 +25,8 @@ import ca.uhn.fhir.context.RuntimeResourceDefinition;
 import ca.uhn.fhir.parser.IParser;
 import jakarta.annotation.Nonnull;
 import java.io.Serializable;
-import java.lang.reflect.Method;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -104,8 +105,8 @@ final class FhirParsers implements Serializable {
    * included.
    *
    * <p>HAPI has no public way to list them: {@code getResourceTypes} omits the types registered
-   * with {@code registerCustomType}. The package-private method that lists them is called by
-   * reflection until the layout no longer depends on HAPI for definitions, and {@code
+   * with {@code registerCustomType}. The package-private method that lists them is called through a
+   * method handle until the layout no longer depends on HAPI for definitions, and {@code
    * CustomResourceTypeTest} fails if a HAPI upgrade removes it.
    */
   @Nonnull
@@ -113,10 +114,14 @@ final class FhirParsers implements Serializable {
   private static Collection<RuntimeResourceDefinition> registeredDefinitions(
       @Nonnull final FhirContext context) {
     try {
-      final Method method = FhirContext.class.getDeclaredMethod("getAllResourceDefinitions");
-      method.setAccessible(true);
-      return (Collection<RuntimeResourceDefinition>) method.invoke(context);
-    } catch (final ReflectiveOperationException e) {
+      return (Collection<RuntimeResourceDefinition>)
+          MethodHandles.privateLookupIn(FhirContext.class, MethodHandles.lookup())
+              .findVirtual(
+                  FhirContext.class,
+                  "getAllResourceDefinitions",
+                  MethodType.methodType(Collection.class))
+              .invoke(context);
+    } catch (final Throwable e) {
       throw new IllegalStateException(
           "Cannot list the resource types registered with the FHIR context", e);
     }
