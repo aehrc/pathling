@@ -65,8 +65,26 @@ final class XmlConversion {
   @Nonnull
   static Dataset<String> toJson(
       @Nonnull final String resourceType, @Nonnull final Dataset<String> documents) {
+    return toJson(resourceType, documents, FhirParsers.standard());
+  }
+
+  /**
+   * Converts FHIR XML documents to FHIR JSON as {@link #toJson(String, Dataset)} does, reading the
+   * resource types the parsers read.
+   *
+   * @param resourceType the type of the resources to keep
+   * @param documents the XML documents, one per row
+   * @param parsers the parsers to convert the documents with
+   * @return the JSON documents of that type, in the same order
+   */
+  @Nonnull
+  static Dataset<String> toJson(
+      @Nonnull final String resourceType,
+      @Nonnull final Dataset<String> documents,
+      @Nonnull final FhirParsers parsers) {
     return documents.flatMap(
-        (FlatMapFunction<String, String>) document -> convertToJson(document, resourceType),
+        (FlatMapFunction<String, String>)
+            document -> convertToJson(document, resourceType, parsers),
         Encoders.STRING());
   }
 
@@ -74,27 +92,30 @@ final class XmlConversion {
    * Converts FHIR JSON documents to FHIR XML, one document per row.
    *
    * @param documents the JSON documents
+   * @param parsers the parsers to convert the documents with
    * @return the XML documents, in the same order
    */
   @Nonnull
-  static Dataset<String> toXml(@Nonnull final Dataset<String> documents) {
+  static Dataset<String> toXml(
+      @Nonnull final Dataset<String> documents, @Nonnull final FhirParsers parsers) {
     return documents.map(
         (MapFunction<String, String>)
             document ->
-                FhirParsers.xml()
-                    .encodeResourceToString(FhirParsers.json().parseResource(document)),
+                parsers.xml().encodeResourceToString(parsers.json().parseResource(document)),
         Encoders.STRING());
   }
 
   @Nonnull
   private static Iterator<String> convertToJson(
-      @Nullable final String document, @Nonnull final String resourceType) {
+      @Nullable final String document,
+      @Nonnull final String resourceType,
+      @Nonnull final FhirParsers parsers) {
     if (document == null) {
       return Collections.emptyIterator();
     }
-    final IBaseResource resource = FhirParsers.xml().parseResource(document);
+    final IBaseResource resource = parsers.xml().parseResource(document);
     return resourceType.equals(resource.fhirType())
-        ? List.of(FhirParsers.json().encodeResourceToString(resource)).iterator()
+        ? List.of(parsers.json().encodeResourceToString(resource)).iterator()
         : Collections.emptyIterator();
   }
 }

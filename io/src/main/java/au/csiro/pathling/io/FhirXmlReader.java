@@ -39,8 +39,11 @@ public final class FhirXmlReader implements FhirFormatReader {
 
   @Nonnull private final FhirJsonReader json;
 
-  FhirXmlReader(@Nonnull final FhirJsonReader json) {
+  @Nonnull private final FhirParsers parsers;
+
+  FhirXmlReader(@Nonnull final FhirJsonReader json, @Nonnull final FhirParsers parsers) {
     this.json = json;
+    this.parsers = parsers;
   }
 
   /**
@@ -54,13 +57,13 @@ public final class FhirXmlReader implements FhirFormatReader {
   @Nonnull
   public Dataset<Row> read(
       @Nonnull final String resourceType, @Nonnull final Dataset<String> documents) {
-    return json.read(resourceType, XmlConversion.toJson(resourceType, documents));
+    return json.read(resourceType, XmlConversion.toJson(resourceType, documents, parsers));
   }
 
   @Override
   @Nonnull
   public Dataset<Row> readBundles(
       @Nonnull final String resourceType, @Nonnull final Dataset<String> bundles) {
-    return json.read(resourceType, BundleTransformer.xml().resources(resourceType, bundles));
+    return json.read(resourceType, BundleTransformer.xml(parsers).resources(resourceType, bundles));
   }
 }

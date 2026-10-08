@@ -31,6 +31,7 @@ import jakarta.annotation.Nonnull;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -280,6 +281,43 @@ class BundleTransformTest {
 
     assertEquals("urn:uuid:anonymous", observation.at("/subject/reference").asText());
     assertFalse(observation.has("contained"));
+  }
+
+  /**
+   * A reference to an entry whose identifier carries only an extension has no value to be resolved
+   * to, so it is kept rather than cleared.
+   */
+  @Test
+  void keepsAReferenceToAnEntryWhoseIdentifierCarriesOnlyAnExtension() {
+    final String bundle =
+        "{\"resourceType\":\"Bundle\",\"type\":\"transaction\",\"entry\":["
+            + "{\"fullUrl\":\"urn:uuid:anonymous\",\"resource\":{\"resourceType\":\"Patient\","
+            + "\"_id\":{\"extension\":[{\"url\":\"http://example.com/id\","
+            + "\"valueString\":\"x\"}]},\"active\":true}},"
+            + "{\"fullUrl\":\"urn:uuid:o\",\"resource\":{\"resourceType\":\"Observation\","
+            + "\"id\":\"o1\",\"status\":\"final\",\"code\":{\"text\":\"x\"},"
+            + "\"subject\":{\"reference\":\"urn:uuid:anonymous\"}}}]}";
+
+    final JsonNode observation =
+        parse(
+            BundleTransformer.json()
+                .resources("Observation", documents(bundle))
+                .collectAsList()
+                .get(0));
+
+    assertEquals("urn:uuid:anonymous", observation.at("/subject/reference").asText());
+  }
+
+  /** A null row is left out, as a null XML document is, rather than failing the whole job. */
+  @Test
+  void skipsANullBundle() {
+    final String bundle =
+        "{\"resourceType\":\"Bundle\",\"type\":\"collection\",\"entry\":[{\"resource\":"
+            + "{\"resourceType\":\"Patient\",\"id\":\"kept\"}}]}";
+    final Dataset<String> bundles =
+        TransformFixtures.spark().createDataset(Arrays.asList(null, bundle), Encoders.STRING());
+
+    assertEquals(List.of("kept"), ids(TransformFixtures.reader().readBundles("Patient", bundles)));
   }
 
   /**

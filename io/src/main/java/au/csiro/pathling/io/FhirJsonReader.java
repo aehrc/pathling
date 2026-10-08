@@ -65,10 +65,15 @@ public final class FhirJsonReader implements FhirFormatReader {
 
   @Nonnull private final ResourceTransformer transformer;
 
+  @Nonnull private final FhirParsers parsers;
+
   FhirJsonReader(
-      @Nonnull final SparkSession spark, @Nonnull final ResourceTransformer transformer) {
+      @Nonnull final SparkSession spark,
+      @Nonnull final ResourceTransformer transformer,
+      @Nonnull final FhirParsers parsers) {
     this.spark = spark;
     this.transformer = transformer;
+    this.parsers = parsers;
   }
 
   /**
@@ -102,7 +107,7 @@ public final class FhirJsonReader implements FhirFormatReader {
   @Nonnull
   public Dataset<Row> readBundles(
       @Nonnull final String resourceType, @Nonnull final Dataset<String> bundles) {
-    return read(resourceType, BundleTransformer.json().resources(resourceType, bundles));
+    return read(resourceType, BundleTransformer.json(parsers).resources(resourceType, bundles));
   }
 
   @Nonnull

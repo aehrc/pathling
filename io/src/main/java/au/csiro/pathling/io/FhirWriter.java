@@ -40,9 +40,9 @@ public final class FhirWriter {
 
   @Nonnull private final FhirXmlWriter xml;
 
-  private FhirWriter(@Nonnull final FhirJsonWriter json) {
+  private FhirWriter(@Nonnull final FhirJsonWriter json, @Nonnull final FhirParsers parsers) {
     this.json = json;
-    this.xml = new FhirXmlWriter(json);
+    this.xml = new FhirXmlWriter(json, parsers);
   }
 
   /**
@@ -53,7 +53,8 @@ public final class FhirWriter {
    */
   @Nonnull
   public static FhirWriter of(@Nonnull final DefinitionContext definitions) {
-    return new FhirWriter(new FhirJsonWriter(ResourceTransformer.of(definitions)));
+    return new FhirWriter(
+        new FhirJsonWriter(ResourceTransformer.of(definitions)), FhirParsers.of(definitions));
   }
 
   /**

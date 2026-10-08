@@ -19,6 +19,8 @@ package au.csiro.pathling.io;
 
 import ca.uhn.fhir.parser.IParser;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
@@ -70,8 +72,11 @@ final class BundleTransformer {
 
   private final boolean xml;
 
-  private BundleTransformer(final boolean xml) {
+  @Nonnull private final FhirParsers parsers;
+
+  private BundleTransformer(final boolean xml, @Nonnull final FhirParsers parsers) {
     this.xml = xml;
+    this.parsers = parsers;
   }
 
   /**
@@ -81,7 +86,19 @@ final class BundleTransformer {
    */
   @Nonnull
   static BundleTransformer json() {
-    return new BundleTransformer(false);
+    return json(FhirParsers.standard());
+  }
+
+  /**
+   * Returns a transformer of bundles written as FHIR JSON, which reads the resource types the
+   * parsers read.
+   *
+   * @param parsers the parsers to read the bundles with
+   * @return the transformer
+   */
+  @Nonnull
+  static BundleTransformer json(@Nonnull final FhirParsers parsers) {
+    return new BundleTransformer(false, parsers);
   }
 
   /**
@@ -92,7 +109,19 @@ final class BundleTransformer {
    */
   @Nonnull
   static BundleTransformer xml() {
-    return new BundleTransformer(true);
+    return xml(FhirParsers.standard());
+  }
+
+  /**
+   * Returns a transformer of bundles written as FHIR XML, which reads the resource types the
+   * parsers read.
+   *
+   * @param parsers the parsers to read the bundles with
+   * @return the transformer
+   */
+  @Nonnull
+  static BundleTransformer xml(@Nonnull final FhirParsers parsers) {
+    return new BundleTransformer(true, parsers);
   }
 
   /**
@@ -101,29 +130,36 @@ final class BundleTransformer {
    *
    * @param resourceType the type of the resources to return, which the caller has already checked
    *     may be stored
-   * @param bundles the bundles, one per row
+   * @param bundles the bundles, one per row, where a null row is left out
    * @return the resources, one per row
    */
   @Nonnull
   Dataset<String> resources(
       @Nonnull final String resourceType, @Nonnull final Dataset<String> bundles) {
-    // The function captures only these two values, so it serialises without the transformer.
+    // The function captures only these values, so it serialises without the transformer.
     final boolean fromXml = xml;
+    final FhirParsers fhirParsers = parsers;
     return bundles.flatMap(
-        (FlatMapFunction<String, String>) bundle -> explode(bundle, resourceType, fromXml),
+        (FlatMapFunction<String, String>)
+            bundle -> explode(bundle, resourceType, fromXml, fhirParsers),
         Encoders.STRING());
   }
 
   @Nonnull
   private static Iterator<String> explode(
-      @Nonnull final String text, @Nonnull final String resourceType, final boolean fromXml) {
-    final IBaseResource parsed =
-        (fromXml ? FhirParsers.xml() : FhirParsers.json()).parseResource(text);
+      @Nullable final String text,
+      @Nonnull final String resourceType,
+      final boolean fromXml,
+      @Nonnull final FhirParsers parsers) {
+    if (text == null) {
+      return Collections.emptyIterator();
+    }
+    final IBaseResource parsed = (fromXml ? parsers.xml() : parsers.json()).parseResource(text);
     if (!(parsed instanceof final Bundle bundle)) {
       throw new IllegalArgumentException(
           "Expected a bundle and found a resource of type " + parsed.fhirType());
     }
-    final IParser json = FhirParsers.json();
+    final IParser json = parsers.json();
     final List<Resource> resources =
         bundle.getEntry().stream()
             .map(BundleEntryComponent::getResource)
@@ -161,7 +197,7 @@ final class BundleTransformer {
     if (value != null && value.startsWith(CONTAINED)) {
       return;
     }
-    if (value != null && value.startsWith(URN) && target.hasIdElement()) {
+    if (value != null && value.startsWith(URN) && target.getIdElement().hasValue()) {
       reference.setReference(target.getIdElement().getValue());
     }
     reference.setResource(null);

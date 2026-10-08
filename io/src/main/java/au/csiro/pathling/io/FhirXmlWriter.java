@@ -36,14 +36,17 @@ public final class FhirXmlWriter implements FhirFormatWriter {
 
   @Nonnull private final FhirJsonWriter json;
 
-  FhirXmlWriter(@Nonnull final FhirJsonWriter json) {
+  @Nonnull private final FhirParsers parsers;
+
+  FhirXmlWriter(@Nonnull final FhirJsonWriter json, @Nonnull final FhirParsers parsers) {
     this.json = json;
+    this.parsers = parsers;
   }
 
   @Override
   @Nonnull
   public Dataset<String> write(
       @Nonnull final String resourceType, @Nonnull final Dataset<Row> stored) {
-    return XmlConversion.toXml(json.write(resourceType, stored));
+    return XmlConversion.toXml(json.write(resourceType, stored), parsers);
   }
 }
