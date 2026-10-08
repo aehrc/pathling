@@ -18,6 +18,7 @@
 package au.csiro.pathling.io;
 
 import au.csiro.pathling.definition.DefinitionContext;
+import ca.uhn.fhir.parser.DataFormatException;
 import jakarta.annotation.Nonnull;
 
 /**
@@ -51,9 +52,10 @@ final class StorableResourceType {
     }
     try {
       definitions.findResourceDefinition(resourceType);
-    } catch (final RuntimeException e) {
-      // The definitions report an unknown name in their own way, which for HAPI's is not an
-      // IllegalArgumentException, so every route reports it the same way here.
+    } catch (final IllegalArgumentException | DataFormatException e) {
+      // The definitions report an unknown name in their own way: the default ones with an
+      // IllegalArgumentException and HAPI's with a DataFormatException. Only those two mean the
+      // name is unknown, so any other failure of the lookup is not reported as one.
       throw new IllegalArgumentException("Not a resource type: " + resourceType, e);
     }
   }
