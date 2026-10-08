@@ -184,6 +184,12 @@
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
+    <!-- Reads the engine's YAML conformance cases, which the expression-to-column tests run. -->
+    <dependency>
+      <groupId>com.fasterxml.jackson.dataformat</groupId>
+      <artifactId>jackson-dataformat-yaml</artifactId>
+      <scope>test</scope>
+    </dependency>
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-engine</artifactId>
