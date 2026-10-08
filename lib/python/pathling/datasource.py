@@ -22,6 +22,7 @@ from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Sequence
 from py4j.java_collections import SetConverter
 from py4j.java_gateway import JavaObject
 from pyspark.sql import DataFrame
+from pyspark.sql.types import StructType
 
 from pathling import PathlingContext
 from pathling.core import SparkConversionsMixin, StringToStringSetMapper
@@ -191,14 +192,34 @@ class DataSources(SparkConversionsMixin):
             jbuilder.dataset(resource_code, resource_data._jdf)
         return self._wrap_ds(jbuilder)
 
-    def parquet(self, path: str) -> DataSource:
+    def parquet(
+        self, path: str, schemas: Optional[Dict[str, StructType]] = None
+    ) -> DataSource:
         """
         Creates a data source from a directory containing Parquet tables. Each table must be named
         according to the name of the resource type that it stores.
 
+        The files of a resource type may carry differing schemas, and are read as one dataset whose
+        schema is the union of theirs. Merging the schemas reads the footer of every file, so the
+        cost of it can be avoided by supplying the schema to read a resource type with. A supplied
+        schema is used as given, so it must cover the union of the type's files: columns it omits
+        are not read. The workable pattern is to merge once and persist the result, or to take the
+        writer's schema, and supply that.
+
         :param path: The URI of the directory containing the Parquet tables.
+        :param schemas: An optional dictionary of the schema to read each resource type with, keyed
+               by resource type code. Resource types it does not name are merged as usual.
         :return: A DataSource object that can be used to run queries against the data.
         """
+        if schemas:
+            jvm = self.spark._jvm
+            jschemas = jvm.java.util.HashMap()
+            for resource_type, schema in schemas.items():
+                jschemas.put(
+                    resource_type,
+                    jvm.org.apache.spark.sql.types.DataType.fromJson(schema.json()),
+                )
+            return self._wrap_ds(self._jdataSources.parquetWithSchemas(path, jschemas))
         return self._wrap_ds(self._jdataSources.parquet(path))
 
     def delta(self, path: str) -> DataSource:

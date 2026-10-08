@@ -151,6 +151,12 @@ final class DeltaSink implements DataSink {
       writer.option("overwriteSchema", "true");
     }
 
+    // A schema fitted to the data means a batch carrying elements the table has not seen before is
+    // the steady state, so an append widens the table to admit them rather than failing (FR-042).
+    if (saveMode == SaveMode.APPEND) {
+      writer.option("mergeSchema", "true");
+    }
+
     writer.save(tablePath);
   }
 

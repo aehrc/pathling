@@ -22,6 +22,7 @@ import static java.util.Objects.requireNonNull;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.PersistenceError;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
@@ -29,6 +30,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -76,6 +78,13 @@ public abstract class FileSource extends DatasetSource {
    * and would otherwise be valid. The predicate receives the resource type code as a string.
    */
   @Nonnull protected final Predicate<String> additionalResourceTypeFilter;
+
+  /**
+   * The files of each resource type this source serves, after filtering. A type's dataset is not
+   * built from them until the type is first read, because building it resolves its schema, which
+   * may mean reading the footer of every one of its files (T118b).
+   */
+  @Nonnull private final Map<String, Collection<String>> files;
 
   /**
    * Path-based constructor that scans a directory to discover FHIR data files.
@@ -159,7 +168,10 @@ public abstract class FileSource extends DatasetSource {
     this.reader = reader;
     this.transformer = transformer;
     this.additionalResourceTypeFilter = additionalResourceTypeFilter;
-    this.resourceMap = buildResourceMap(files);
+    this.files = selectFiles(files);
+    // Datasets are resolved on first read, possibly from more than one thread.
+    this.resourceMap = new ConcurrentHashMap<>();
+    log.debug("Source has {} resource types: {}", this.files.size(), this.files.keySet());
   }
 
   @Nonnull
@@ -232,35 +244,89 @@ public abstract class FileSource extends DatasetSource {
   }
 
   /**
-   * Creates a map of {@link ResourceType} to {@link Dataset} from the given map of resource types
-   * to files.
+   * Selects the files this source serves: those with the expected extension, belonging to a
+   * resource type that is supported and not excluded. Nothing here reads a file, so the selection
+   * is cheap enough to make eagerly, and it is what answers {@link #getResourceTypes()}.
    *
    * @param files a map of resource types to file paths
-   * @return a map of {@link ResourceType} to {@link Dataset}
+   * @return the selected files of each resource type that has any
    */
   @Nonnull
-  private Map<String, Dataset<Row>> buildResourceMap(
+  private Map<String, Collection<String>> selectFiles(
       final @Nonnull Map<String, Collection<String>> files) {
-    final Map<String, Dataset<Row>> result =
-        files.entrySet().stream()
-            // Filter out any paths that do not have the expected extension.
-            .map(entry -> Map.entry(entry.getKey(), checkExtension(entry.getValue())))
-            // Filter out resource types with no files after extension filtering.
-            .filter(entry -> !entry.getValue().isEmpty())
-            // Filter out any resource codes that are not supported.
-            .filter(entry -> context.isResourceTypeSupported(entry.getKey()))
-            // Filter out any resource that should be explicitly ignored.
-            .filter(entry -> additionalResourceTypeFilter.test(entry.getKey()))
-            .collect(
-                Collectors.toMap(
-                    Map.Entry::getKey,
-                    entry -> {
-                      final String[] paths = entry.getValue().toArray(new String[0]);
-                      final Dataset<Row> sourceStrings = reader.load(paths);
-                      return transformer.apply(sourceStrings, entry.getKey());
-                    }));
-    log.debug("Final resource map has {} resource types: {}", result.size(), result.keySet());
-    return result;
+    return files.entrySet().stream()
+        // Filter out any paths that do not have the expected extension.
+        .map(entry -> Map.entry(entry.getKey(), checkExtension(entry.getValue())))
+        // Filter out resource types with no files after extension filtering.
+        .filter(entry -> !entry.getValue().isEmpty())
+        // Filter out any resource codes that are not supported.
+        .filter(entry -> context.isResourceTypeSupported(entry.getKey()))
+        // Filter out any resource that should be explicitly ignored.
+        .filter(entry -> additionalResourceTypeFilter.test(entry.getKey()))
+        .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
+  }
+
+  /**
+   * Returns the reader to load the files of a resource type with. Subclasses override this to read
+   * a type differently from the others, for example with a schema supplied for it.
+   *
+   * @param resourceType the resource type being loaded
+   * @return the reader for that type
+   */
+  @Nonnull
+  protected DataFrameReader readerFor(@Nonnull final String resourceType) {
+    return reader;
+  }
+
+  /**
+   * Builds the dataset of a resource type from its files.
+   *
+   * @param resourceType the resource type
+   * @return the dataset
+   */
+  @Nonnull
+  private Dataset<Row> load(@Nonnull final String resourceType) {
+    log.debug("Resolving resource type: {}", resourceType);
+    final String[] paths = files.get(resourceType).toArray(new String[0]);
+    return transformer.apply(readerFor(resourceType).load(paths), resourceType);
+  }
+
+  @Nonnull
+  @Override
+  public Dataset<Row> read(@Nullable final String resourceCode) {
+    // The concurrent map admits no null key, so a null code is answered here as the superclass
+    // answers any type it does not hold.
+    if (resourceCode == null) {
+      throw new IllegalArgumentException("No data found for resource type: null");
+    }
+    if (!resourceMap.containsKey(resourceCode) && files.containsKey(resourceCode)) {
+      return resourceMap.computeIfAbsent(resourceCode, this::load);
+    }
+    return super.read(resourceCode);
+  }
+
+  @Override
+  public @Nonnull Set<String> getResourceTypes() {
+    final Set<String> resourceTypes = new HashSet<>(files.keySet());
+    resourceTypes.addAll(resourceMap.keySet());
+    return Collections.unmodifiableSet(resourceTypes);
+  }
+
+  @Nonnull
+  @Override
+  public QueryableDataSource map(
+      @Nonnull final BiFunction<String, Dataset<Row>, Dataset<Row>> operator) {
+    // The operator applies to every type, so every type has to be resolved first.
+    files.keySet().forEach(this::read);
+    return super.map(operator);
+  }
+
+  @Override
+  public @Nonnull QueryableDataSource filterByResourceType(
+      @Nonnull final Predicate<String> resourceTypePredicate) {
+    // Only the types that are kept are resolved.
+    files.keySet().stream().filter(resourceTypePredicate).forEach(this::read);
+    return super.filterByResourceType(resourceTypePredicate);
   }
 
   /**

@@ -161,8 +161,18 @@ pathling_read_datasets <- function(pc, resources) {
 #' \code{pathling_read_parquet()} creates a data source from a directory containing Parquet tables.
 #' Each table must be named according to the name of the resource type that it stores.
 #'
+#' The files of a resource type may carry differing schemas, and are read as one dataset whose
+#' schema is the union of theirs. Merging the schemas reads the footer of every file, so the cost of
+#' it can be avoided by supplying the schema to read a resource type with. A supplied schema is used
+#' as given, so it must cover the union of the type's files: columns it omits are not read. The
+#' workable pattern is to merge once and persist the result, or to take the writer's schema, and
+#' supply that.
+#'
 #' @param pc The PathlingContext object.
 #' @param path The URI of the directory containing the Parquet tables.
+#' @param schemas An optional named list of the schema to read each resource type with, keyed by
+#'   resource type code. Each schema is either a Spark schema in its JSON representation, or a Java
+#'   \code{StructType} object. Resource types the list does not name are merged as usual.
 #' @return A DataSource object that can be used to run queries against the data.
 #'
 #' @seealso \href{https://pathling.csiro.au/docs/libraries/io#parquet}{Pathling documentation - Reading Parquet}
@@ -177,8 +187,30 @@ pathling_read_datasets <- function(pc, resources) {
 #'   ds_read("Patient") %>%
 #'   sparklyr::sdf_nrow()
 #' }
-pathling_read_parquet <- function(pc, path) {
-  pc %>% invoke_datasource("parquet", as.character(path))
+pathling_read_parquet <- function(pc, path, schemas = NULL) {
+  if (is.null(schemas) || length(schemas) == 0) {
+    return(pc %>% invoke_datasource("parquet", as.character(path)))
+  }
+  sc <- sparklyr::spark_connection(pc)
+  pc %>% invoke_datasource(
+    "parquetWithSchemas", as.character(path), to_java_schema_map(sc, schemas)
+  )
+}
+
+#' @importFrom sparklyr j_invoke
+#' @importFrom sparklyr j_invoke_new
+#' @importFrom sparklyr invoke_static
+to_java_schema_map <- function(sc, schemas) {
+  stopifnot(!is.null(names(schemas)), all(names(schemas) != ""))
+  map <- j_invoke_new(sc, "java.util.HashMap")
+  for (resource_type in names(schemas)) {
+    schema <- schemas[[resource_type]]
+    if (is.character(schema)) {
+      schema <- invoke_static(sc, "org.apache.spark.sql.types.DataType", "fromJson", schema)
+    }
+    j_invoke(map, "put", resource_type, schema)
+  }
+  map
 }
 
 #' Create a data source from Delta tables

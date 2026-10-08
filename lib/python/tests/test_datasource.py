@@ -188,6 +188,42 @@ def test_datasource_parquet(parquet_test_data_dir, temp_parquet_dir, pathling_ct
     ]
 
 
+def write_divergent_parquet(spark, warehouse: str) -> str:
+    """
+    Writes two batches of Patient rows whose schemas diverge in both directions into one Parquet
+    directory, as two appends of one file each, and returns the directory's path.
+    """
+    table = os.path.join(warehouse, "Patient.parquet")
+    spark.createDataFrame([Row(id="p1", gender="male")]).coalesce(1).write.mode(
+        "overwrite"
+    ).parquet(table)
+    spark.createDataFrame([Row(id="p2", birthDate="1990-01-01")]).coalesce(
+        1
+    ).write.mode("append").parquet(table)
+    return table
+
+
+def test_datasource_parquet_merges_divergent_files(func_temp_dir, pathling_ctx):
+    write_divergent_parquet(pathling_ctx.spark, func_temp_dir)
+
+    patients = pathling_ctx.read.parquet(func_temp_dir).read("Patient")
+
+    assert {"id", "gender", "birthDate"} <= set(patients.columns)
+    assert patients.count() == 2
+
+
+def test_datasource_parquet_with_supplied_schemas(func_temp_dir, pathling_ctx):
+    table = write_divergent_parquet(pathling_ctx.spark, func_temp_dir)
+    union = pathling_ctx.spark.read.option("mergeSchema", "true").parquet(table).schema
+
+    patients = pathling_ctx.read.parquet(
+        func_temp_dir, schemas={"Patient": union}
+    ).read("Patient")
+
+    assert patients.schema == union
+    assert patients.count() == 2
+
+
 def test_datasource_delta(delta_test_data_dir, temp_delta_dir, pathling_ctx):
     pathling_ctx.read.delta(delta_test_data_dir).write.delta(temp_delta_dir)
     data_source = pathling_ctx.read.delta(temp_delta_dir)

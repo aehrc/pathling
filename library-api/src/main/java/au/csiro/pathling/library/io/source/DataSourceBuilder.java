@@ -23,8 +23,10 @@ import au.csiro.fhir.export.BulkExportClient;
 import au.csiro.pathling.library.PathlingContext;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
+import org.apache.spark.sql.types.StructType;
 
 /**
  * A factory for creating various different data sources capable of preparing FHIR data for query.
@@ -161,6 +163,26 @@ public record DataSourceBuilder(@Nonnull PathlingContext context) {
       @Nullable final String path, @Nullable final Function<String, Set<String>> fileNameMapper) {
     return new ParquetSource(
         context, checkArgumentNotNull(path), checkArgumentNotNull(fileNameMapper));
+  }
+
+  /**
+   * Creates a new data source from a directory containing Parquet-encoded FHIR resource data, with
+   * filenames representing the resource type the file/directory contains, reading each resource
+   * type named in the given map with the schema it supplies.
+   *
+   * <p>By default the schemas of a resource type's files are merged into their union, which reads
+   * the footer of every file. A supplied schema is used as given instead, so it must cover the
+   * union of the type's files: columns it omits are not read. Resource types the map does not name
+   * are merged as usual.
+   *
+   * @param path the URI of the directory containing the Parquet files/directories
+   * @param schemas the schema to read each resource type with, keyed by resource type code
+   * @return the new data source
+   */
+  @Nonnull
+  public QueryableDataSource parquetWithSchemas(
+      @Nullable final String path, @Nullable final Map<String, StructType> schemas) {
+    return new ParquetSource(context, checkArgumentNotNull(path), checkArgumentNotNull(schemas));
   }
 
   /**

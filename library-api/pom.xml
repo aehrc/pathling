@@ -175,6 +175,12 @@
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
+    <!-- The new layout's write path, used by tests until the public API switches to it. -->
+    <dependency>
+      <groupId>au.csiro.pathling</groupId>
+      <artifactId>io</artifactId>
+      <scope>test</scope>
+    </dependency>
 
     <dependency>
       <groupId>org.junit.jupiter</groupId>

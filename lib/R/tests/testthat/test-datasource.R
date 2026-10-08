@@ -130,6 +130,53 @@ test_that("datasource parquet", {
   expect_equal(collect(result), tibble::tibble(count = 71))
 })
 
+write_divergent_parquet <- function(spark, warehouse) {
+  table <- file.path(warehouse, "Patient.parquet")
+  first <- sparklyr::copy_to(spark, data.frame(id = "p1", gender = "male"), "first_batch", overwrite = TRUE)
+  second <- sparklyr::copy_to(spark, data.frame(id = "p2", birthDate = "1990-01-01"), "second_batch", overwrite = TRUE)
+  sparklyr::spark_write_parquet(sparklyr::sdf_coalesce(first, 1), table, mode = "overwrite")
+  sparklyr::spark_write_parquet(sparklyr::sdf_coalesce(second, 1), table, mode = "append")
+  table
+}
+
+test_that("datasource parquet merges divergent files", {
+  spark <- def_spark()
+  pc <- def_pathling_context(spark)
+  warehouse <- file.path(tempdir(), "parquet-divergent")
+  write_divergent_parquet(spark, warehouse)
+
+  patients <- pc %>%
+    pathling_read_parquet(warehouse) %>%
+    ds_read("Patient")
+
+  expect_true(all(c("id", "gender", "birthDate") %in% colnames(patients)))
+  expect_equal(sparklyr::sdf_nrow(patients), 2)
+})
+
+test_that("datasource parquet with supplied schemas", {
+  spark <- def_spark()
+  pc <- def_pathling_context(spark)
+  warehouse <- file.path(tempdir(), "parquet-supplied")
+  table <- write_divergent_parquet(spark, warehouse)
+  union <- spark %>%
+    sparklyr::spark_session() %>%
+    sparklyr::invoke("read") %>%
+    sparklyr::invoke("format", "parquet") %>%
+    sparklyr::invoke("option", "mergeSchema", "true") %>%
+    sparklyr::invoke("load", table) %>%
+    sparklyr::invoke("schema")
+
+  patients <- pc %>%
+    pathling_read_parquet(warehouse, schemas = list(Patient = union %>% sparklyr::invoke("json"))) %>%
+    ds_read("Patient")
+
+  expect_equal(
+    patients %>% sparklyr::spark_dataframe() %>% sparklyr::invoke("schema") %>% sparklyr::invoke("json"),
+    union %>% sparklyr::invoke("json")
+  )
+  expect_equal(sparklyr::sdf_nrow(patients), 2)
+})
+
 test_that("datasource delta", {
   spark <- def_spark()
   pc <- def_pathling_context(spark)
