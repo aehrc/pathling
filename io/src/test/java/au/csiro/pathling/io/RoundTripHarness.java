@@ -577,7 +577,24 @@ public final class RoundTripHarness {
   private static String collapsed(@Nonnull final String text) {
     // Only whitespace beside a tag is collapsed, so that a narrative that lost whitespace within
     // its text is still reported.
-    return text.replaceAll(">\\s++", "> ").replaceAll("\\s++<", " <");
+    final StringBuilder collapsed = new StringBuilder(text.length());
+    int start = 0;
+    while (start < text.length()) {
+      if (!Character.isWhitespace(text.charAt(start))) {
+        collapsed.append(text.charAt(start++));
+        continue;
+      }
+      int end = start;
+      while (end < text.length() && Character.isWhitespace(text.charAt(end))) {
+        end++;
+      }
+      final boolean besideTag =
+          (start > 0 && text.charAt(start - 1) == '>')
+              || (end < text.length() && text.charAt(end) == '<');
+      collapsed.append(besideTag ? " " : text.substring(start, end));
+      start = end;
+    }
+    return collapsed.toString();
   }
 
   /** Whether a node is a structure or an array that now holds nothing. */
