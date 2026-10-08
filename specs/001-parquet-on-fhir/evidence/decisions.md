@@ -3170,6 +3170,10 @@ produced, the conversion fails on none of it and changes this:
 without a finding, coerce readable non-conformant content, and fail the job on content
 HAPI cannot read, where JSON reports and continues. The owner chose to document this
 rather than unify it now: `FhirFormatReader.readBundles` and `FhirXmlReader` say so.
+Whether to unify it, or to raise it as an issue that outlives this specification, is
+decided in M5 under T078e, beside the `_x` loss T061 and T078c must settle and the
+positional null XML egress drops. Where M5's annotation processors live, now that the
+transform is package-private, is decided under T063.
 Whether a URN naming a versioned entry resolves to `Type/id/_history/v` stays open for
 M4.
 
