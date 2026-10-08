@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.io.transform;
+package au.csiro.pathling.io;
 
 import jakarta.annotation.Nonnull;
 import java.util.Set;
@@ -34,7 +34,7 @@ import org.apache.spark.sql.types.DataType;
  * value by value, which would turn {@code 1.5} into {@code 1} and {@code "yes"} into {@code true}
  * (decision 68).
  */
-public final class PrimitiveConverter {
+final class PrimitiveConverter {
 
   @Nonnull private final Predicate<DataType> accepted;
 

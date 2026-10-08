@@ -21,8 +21,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import au.csiro.pathling.io.transform.NonConformantContent;
-import au.csiro.pathling.io.transform.TransformFixtures;
 import jakarta.annotation.Nonnull;
 import java.io.IOException;
 import java.nio.file.Files;

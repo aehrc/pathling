@@ -15,12 +15,11 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.io.json;
+package au.csiro.pathling.io;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import au.csiro.pathling.io.transform.TransformFixtures;
 import jakarta.annotation.Nonnull;
 import java.nio.file.Path;
 import java.util.Comparator;

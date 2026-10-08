@@ -21,7 +21,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import au.csiro.pathling.io.transform.NonConformantContent;
 import jakarta.annotation.Nonnull;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -254,9 +253,11 @@ class SpecExampleRoundTripTest {
    * <p>The corpus is kept whole on disk and the subset chosen here, so restoring full coverage is a
    * matter of returning {@link #roundTrippableTypes()} instead. Each step takes the type covering
    * the most corners not yet covered, breaking ties by name, so the selection is deterministic.
+   *
+   * <p>{@code IngestFormatRoundTripTest} runs the same selection through XML.
    */
   @Nonnull
-  private static Stream<String> selection() {
+  static Stream<String> selection() {
     final Map<String, Set<String>> corners = corners();
     final List<String> candidates = roundTrippableTypes().toList();
     final Set<String> uncovered =
@@ -337,7 +338,7 @@ class SpecExampleRoundTripTest {
   }
 
   @Nonnull
-  private static Path corpus(@Nonnull final String resourceType) {
+  static Path corpus(@Nonnull final String resourceType) {
     return directory().resolve(resourceType + ".ndjson");
   }
 

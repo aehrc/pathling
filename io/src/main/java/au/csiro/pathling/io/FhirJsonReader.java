@@ -15,9 +15,8 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.io.json;
+package au.csiro.pathling.io;
 
-import au.csiro.pathling.io.transform.ResourceTransformer;
 import jakarta.annotation.Nonnull;
 import org.apache.spark.sql.DataFrameReader;
 import org.apache.spark.sql.Dataset;
@@ -25,16 +24,19 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 
 /**
- * Reads FHIR JSON text into this layout, from files of newline-delimited JSON or from a dataset of
- * documents (decision 70).
+ * Reads FHIR JSON into this layout, from files of newline-delimited JSON, from a dataset of
+ * documents, or from a dataset of bundles (decisions 70 and 84). It is obtained from {@link
+ * FhirReader#json()}.
  *
- * <p>The text is read with an inferred schema and handed to {@link ResourceTransformer#toLayout},
- * which imposes the definitions on it. Nothing here knows FHIR beyond the resource type it is told.
+ * <p>Types, cardinality and field order come from the definitions, and what the text carries
+ * decides only which elements are present (FR-008, FR-012). Text that is not JSON at all fails the
+ * read.
  *
- * <p>Every document read in one call is a resource of that one type. This is not checked: a
- * document of another type is stored as though it were of the named type, and the fields the named
- * type lacks are reported as content this layout does not store. A caller holding documents of
- * several types selects those of one type first.
+ * <p>Every resource read in one call is of that one type. This is not checked: a document of
+ * another type is stored as though it were of the named type, and the fields the named type lacks
+ * are reported as content this layout does not store. A caller holding documents of several types
+ * selects those of one type first. Bundles are the exception, because the resources of the type
+ * asked for are selected from them before anything is inferred.
  *
  * <p>Nothing read here is pruned (decision 71). A structure whose only content was a primitive's id
  * and extensions is conformant and kept on purpose until M5: the primitive is stored as a null of
@@ -47,7 +49,7 @@ import org.apache.spark.sql.SparkSession;
  * until M5 they are written without the metadata they align with. Each loss is reported. Detecting
  * what is emptied is deferred to the JSON serde that the lexical form of a decimal also waits on.
  */
-public final class FhirJsonReader {
+public final class FhirJsonReader implements FhirFormatReader {
 
   /** The reader option that decides what happens to a document that is not valid JSON. */
   @Nonnull private static final String READ_MODE = "mode";
@@ -63,23 +65,15 @@ public final class FhirJsonReader {
 
   @Nonnull private final ResourceTransformer transformer;
 
-  private FhirJsonReader(
-      @Nonnull final SparkSession spark, @Nonnull final ResourceTransformer transformer) {
+  @Nonnull private final FhirParsers parsers;
+
+  FhirJsonReader(
+      @Nonnull final SparkSession spark,
+      @Nonnull final ResourceTransformer transformer,
+      @Nonnull final FhirParsers parsers) {
     this.spark = spark;
     this.transformer = transformer;
-  }
-
-  /**
-   * Returns a reader that transforms what it reads with a transformer.
-   *
-   * @param spark the Spark session to read files with
-   * @param transformer the transformer to apply
-   * @return the reader
-   */
-  @Nonnull
-  public static FhirJsonReader of(
-      @Nonnull final SparkSession spark, @Nonnull final ResourceTransformer transformer) {
-    return new FhirJsonReader(spark, transformer);
+    this.parsers = parsers;
   }
 
   /**
@@ -88,23 +82,32 @@ public final class FhirJsonReader {
    * @param resourceType the type of every resource the files carry
    * @param path the path to read from, which may name a file or a directory
    * @return the resources, in this layout
+   * @throws IllegalArgumentException if the type is {@code Bundle} or is not a resource type
    */
   @Nonnull
   public Dataset<Row> read(@Nonnull final String resourceType, @Nonnull final String path) {
+    transformer.requireStorable(resourceType);
     return transformer.toLayout(resourceType, json(spark).json(path));
   }
 
   /**
-   * Reads a dataset of FHIR JSON documents, one per row, into this layout.
+   * {@inheritDoc}
    *
-   * @param resourceType the type of every resource the documents carry
-   * @param documents the documents
-   * @return the resources, in this layout
+   * <p>Every document is a resource of the type asked for, as for files.
    */
+  @Override
   @Nonnull
   public Dataset<Row> read(
       @Nonnull final String resourceType, @Nonnull final Dataset<String> documents) {
+    transformer.requireStorable(resourceType);
     return transformer.toLayout(resourceType, json(documents.sparkSession()).json(documents));
+  }
+
+  @Override
+  @Nonnull
+  public Dataset<Row> readBundles(
+      @Nonnull final String resourceType, @Nonnull final Dataset<String> bundles) {
+    return read(resourceType, BundleTransformer.json(parsers).resources(resourceType, bundles));
   }
 
   @Nonnull

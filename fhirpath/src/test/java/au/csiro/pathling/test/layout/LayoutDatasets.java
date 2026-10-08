@@ -21,8 +21,7 @@ import static au.csiro.pathling.UnitTestDependencies.jsonParser;
 
 import au.csiro.pathling.definition.fhir.FhirDefinitionContext;
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.io.json.FhirJsonReader;
-import au.csiro.pathling.io.transform.ResourceTransformer;
+import au.csiro.pathling.io.FhirReader;
 import ca.uhn.fhir.parser.IParser;
 import jakarta.annotation.Nonnull;
 import java.util.List;
@@ -121,9 +120,8 @@ public final class LayoutDatasets {
       @Nonnull final FhirEncoders encoders,
       @Nonnull final String resourceType,
       @Nonnull final List<String> json) {
-    final FhirJsonReader reader =
-        FhirJsonReader.of(
-            spark, ResourceTransformer.of(FhirDefinitionContext.of(encoders.getContext())));
-    return reader.read(resourceType, spark.createDataset(json, Encoders.STRING()));
+    return FhirReader.of(spark, FhirDefinitionContext.of(encoders.getContext()))
+        .json()
+        .read(resourceType, spark.createDataset(json, Encoders.STRING()));
   }
 }

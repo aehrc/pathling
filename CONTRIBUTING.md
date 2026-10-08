@@ -16,10 +16,10 @@ main `pom.xml` in the root of the repository:
   SQL API, not internal Catalyst API.
 - `encoders` - Encoders for transforming [FHIR](https://hl7.org/fhir/) data into
   Spark Datasets.
-- `io` - Reading and writing FHIR JSON in the
+- `io` - Reading and writing FHIR JSON and XML, as resources or bundles, in the
   [Parquet on FHIR](specs/001-parquet-on-fhir/spec.md) storage layout, as
-  dataset transformations. Like `fhir-schema`, it may not use internal Catalyst
-  API.
+  dataset transformations. `FhirReader` and `FhirWriter` are its public
+  surface. Like `fhir-schema`, it may not use internal Catalyst API.
 - `terminology` - Terminology operations from Spark, either through
   a [FHIR terminology server](https://hl7.org/fhir/terminology-service.html)
   or a locally imported terminology store.

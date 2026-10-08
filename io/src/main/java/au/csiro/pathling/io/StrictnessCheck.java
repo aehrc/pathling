@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.io.transform;
+package au.csiro.pathling.io;
 
 import au.csiro.pathling.schema.DefinitionCanonicalStructure;
 import au.csiro.pathling.schema.LayoutEntry;
@@ -43,7 +43,7 @@ import org.apache.spark.sql.types.StructType;
  * <p>Nothing here decides what happens to a finding. The content is ignored whatever its kind, and
  * the findings are what the warning naming it is made from (decision 68).
  */
-public final class StrictnessCheck {
+final class StrictnessCheck {
 
   @Nonnull private final DefinitionCanonicalStructure canonical;
 

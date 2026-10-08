@@ -55,8 +55,12 @@ public class FhirDefinitionContext implements DefinitionContext {
     final FhirResourceTag resourceTag = FhirResourceTag.of(resourceCode);
     final RuntimeResourceDefinition hapiDefinition =
         fhirContext.getResourceDefinition(resourceCode);
-    return new FhirResourceDefinition(
-        resourceCode, resourceTag.getResourceType(), requireNonNull(hapiDefinition));
+    // HAPI matches a name without regard to case, but a resource type is its canonical name only,
+    // as the other definition contexts treat it, so a name that differs from it is not found.
+    if (!resourceCode.equals(requireNonNull(hapiDefinition).getName())) {
+      throw new IllegalArgumentException("Resource type not found: " + resourceCode);
+    }
+    return new FhirResourceDefinition(resourceCode, resourceTag.getResourceType(), hapiDefinition);
   }
 
   /**

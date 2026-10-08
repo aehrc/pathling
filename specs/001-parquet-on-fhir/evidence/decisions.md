@@ -2937,3 +2937,248 @@ the stored shape keeps, such as its extensions; `StoredQuantityTest` covers that
 
 _Amends_ T096's decoding of a quantity at traversal, and supersedes the
 `DecodedRepresentation` that T097 first recorded.
+
+## 83. Bundles and XML reach the layout as JSON text, through HAPI, with the previous encoder's reference resolution
+
+Made while implementing M3 (T058, T058a, T068, T069, T069a).
+
+**Both formats are text in and JSON text out.** `BundleTransformer.resources(type,
+bundles)` returns the resources of one type that a dataset of bundles carries, as
+FHIR JSON, one per row. `XmlIngest.toJson` converts XML documents, as a dataset or
+as a column, to FHIR JSON. Either output is then read by `FhirJsonReader.read(type,
+documents)` like any other JSON, so both meet the same `toLayout` without touching
+it, as decision 70 foresaw. Neither class calls the reader itself: they sit in
+`io.transform` as the tasks name, and the reader in `io.json` already depends on
+that package, so the hand-off is the caller's — the tests now, `PathlingContext` in
+M4. `BundleTransformer.xml()` explodes a bundle written as XML, which the previous
+encoder accepted (`DataSourceBuilder.bundles` with `application/fhir+xml`).
+
+**HAPI parses both, inside the function Spark runs.** plan.md's complexity table
+already records this as the one exception to FR-050's "no FHIR object in a per-row
+plan". It covers exactly `BundleTransformer`, `XmlIngest` and the package-private
+`FhirParsers` they share, so T127's inspection still holds for the rest of `io`. Only
+public Spark API is used (`Dataset.flatMap`, `functions.udf`), so the Catalyst import
+ban is unaffected. HAPI reaches `io` through `fhir-schema` already; `io/pom.xml` now
+declares `hapi-fhir-base` and `hapi-fhir-structures-r4` because it uses them
+directly. No artifact is added. The parsing is R4, as the previous encoder's was.
+
+A Jackson-only bundle explosion was considered and not taken. It would have kept
+the bundle's content away from HAPI, but resolving references by the JSON key
+`reference` is wrong: R4 has `uri` elements of that name (`DetectedIssue.reference`,
+`Expression.reference`, `Immunization.education.reference`), and resolving them by
+type means walking the definitions per row.
+
+**Parser settings.** A resource keeps its own `id` rather than taking its entry's
+`fullUrl` (`setOverrideResourceIdWithBundleEntryFullUrl(false)`, as `ResourceParser`
+does). HAPI drops the version from every reference it writes by default, which
+would change a versioned reference the source carries, so that is switched off
+(`setStripVersionsFromReferences(false)`).
+
+**Reference resolution is the previous encoder's**, ported from `ResourceParser` and
+`R4FhirConversionSupport.resolveReferences`, whose test cases `BundleTransformTest`
+repeats over the same bundle:
+
+- Only a `Reference` is resolved, wherever it occurs, including within an extension
+  and within the extension of a primitive. An element of another type named
+  `reference` keeps its value even where it names an entry.
+- A reference that is a URN naming another entry's `fullUrl` becomes that entry's
+  identifier as HAPI reports it: `Type/id`, **and `Type/id/_history/v` when the
+  entry's `meta.versionId` is set**. That is what the previous encoder's
+  `resolveUrnReference` sets, read from its code and confirmed by a probe of HAPI's
+  parser rather than by running `encodeBundle` end to end. The version follows from
+  preserving that behaviour, and is the point the owner may want to revisit before
+  M4 if the engine's reference matching expects `Type/id`.
+- Any other reference is kept as written: a URN naming no entry, a URN naming an
+  entry without an identifier, and every reference that is not a URN.
+- HAPI's link from a reference to its target is cleared once read, because HAPI
+  writes a linked target that has no identifier into the referring resource as a
+  contained resource, adding content the source did not carry. A link to a
+  contained resource is kept.
+
+**Explosion.** `Bundle` is refused as a type (FR-007), as is a name that is not a
+resource type. An entry without a resource contributes nothing. A bundle carried
+as an entry's resource is neither returned nor exploded in turn, as before.
+Filtering to the requested type happens before the reader infers a schema
+(decision 70's one-type-per-input contract).
+
+**What HAPI changes, measured.** These are the differences between the HAPI routes
+and newline-delimited JSON, and each is either asserted or recorded here:
+
+- _Narrative._ HAPI's JSON parser and writer keep `text.div` exactly, and so does
+  its XML parser, which is what XML ingest uses: a narrative is stored as the XML
+  wrote it. HAPI's XML **writer** does not keep it — it replaces a run of
+  whitespace beside a tag, at the start or end of a text node, with one space,
+  while keeping a run within the text. That writer is used only by the
+  tests, to produce XML input from the JSON corpora, so the change belongs to the
+  fixtures and not to ingest. The round trip harness gains a counted exception for
+  it, `collapsingNarrativeWhitespace()`, which applies only where the two
+  narratives are equal once their whitespace is collapsed, and
+  `IngestFormatRoundTripTest` asserts its count equals the number of source
+  narratives collapsing changes. No example in the corpora carries `<pre>`, where
+  the difference would matter to rendering.
+- _Undescribed content._ HAPI's lenient parser drops content the definitions do not
+  describe, with a log line, before the transform sees it. So the HAPI routes report
+  fewer findings than JSON ingest does: such content is lost silently rather than
+  reported. The previous encoder had the same gap. HAPI also coerces content it
+  can read but that is not conformant, again without a finding: a `birthDate`
+  written as the number `1980` is stored as the text `"1980"`, an `active` written
+  as the text `"true"` is stored as `true`, and of two values for one choice element
+  only the first is kept. JSON ingest reports each of these (FR-016 item 5).
+- _Content HAPI cannot read._ An invalid primitive in XML, such as
+  `<birthDate value="not-a-date"/>`, or an entry whose resource type is unknown,
+  throws inside the function Spark runs and fails the whole job, where JSON ingest
+  reports the content and continues. The previous encoder failed the same way.
+- _A repeating primitive carried only as metadata._ HAPI's JSON parser drops a
+  `_name` array that has no `name` array beside it — the specification's own
+  `ActivityDefinition.timingTiming._event` in `referralPrimaryCareMentalHealth`. JSON
+  ingest keeps the structure (decision 72). A bundle written as JSON loses it, and
+  so did the test's generation of XML from that example, which is why
+  `IngestFormatRoundTripTest` removes it from the expected side and asserts the
+  removal applied once. This matters to M5, which stores primitive metadata.
+- _Decimals._ HAPI keeps a decimal's text, so nothing is lost beyond what the reader
+  already loses through a double (decision 68).
+
+A contained resource does survive both routes, so FR-006's finding is still made;
+`IngestFormatRoundTripTest` asserts it, because the round trips' exclusion of
+contained resources rests on it.
+
+The second, third and fourth are open for the owner: M3 changes nothing
+observable, and they become observable only when M4 routes `encodeBundle` and XML
+`encode` here. So is FR-007's guarantee at that switch: `Bundle` is refused only by
+`BundleTransformer`, not by `FhirJsonReader` or the transform, so M4's public entry
+points must keep it.
+
+**The harness.** `RoundTripHarness.assertRoundTrip(type, expected, transformed)`
+takes what a route stored and a file of the JSON it should come back as, so a route
+other than newline-delimited JSON can be round-tripped. The expected side of a
+bundle is derived from the bundle's text independently of the code under test. XML
+input is written from the JSON by HAPI rather than vendored, because a pretty-printed
+XML twin carries whitespace inside the XHTML that its JSON does not, and so is not
+the same content.
+
+_Corpora_: `io/src/test/resources/data/bundles/synthea.json` is the Synthea bundle
+`encoders` already tests with, and `references.json` is `library-api`'s reference
+resolution bundle.
+
+_Addendum (decision 84)_: the classes named here are no longer public. `BundleTransformer`
+and `FhirParsers` are package-private in `au.csiro.pathling.io`, `XmlIngest` is the
+package-private `XmlConversion`, and the hand-off this decision left to the caller is
+made by `FhirReader`'s format readers. The refusal of `Bundle` moved from
+`BundleTransformer` to every read and to `toLayout`.
+
+## 84. `io` has one public surface for reading and writing, by format, and the mechanism behind it is hidden
+
+Made after the review of M3 (PR #2817), with the owner, before M4 calls any of it.
+
+Decisions 70 and 83 left `io`'s public surface describing its mechanism. A caller built
+a `ResourceTransformer`, whose input is what Spark's JSON reader infers, and composed it
+by hand with `BundleTransformer` or `XmlIngest`, whose names and `json()`/`xml()` split
+say that HAPI parses those formats and returns JSON text. Both are implementation
+choices that are expected to change: XML could be read by a definitions-driven native
+reader, and the JSON serde that decisions 70, 71 and 82 defer to could parse text
+straight into the layout, leaving no JSON-shaped intermediate and no `toLayout` step.
+Anything public in `io` is something M4 and every later release must keep, and `io` has
+not yet been released, so the surface is settled now.
+
+**The surface.** Two entry points are built from the definitions, which are the only
+configuration a caller supplies:
+
+```java
+FhirReader reader = FhirReader.of(spark, definitions);
+reader.json().read(type, path);              // newline-delimited JSON files
+reader.json().read(type, documents);         // Dataset<String>
+reader.json().readBundles(type, bundles);
+reader.xml().read(type, documents);
+reader.xml().readBundles(type, bundles);
+reader.format(mediaType).read(type, documents);
+
+FhirWriter writer = FhirWriter.of(definitions);
+writer.json().write(type, stored);           // Dataset<String>
+writer.json().write(type, stored, path, mode);
+writer.xml().write(type, stored);
+writer.format(mediaType).write(type, stored);
+```
+
+`json()` and `xml()` return `FhirJsonReader` and `FhirXmlReader` (and the two writers),
+which implement the sealed interfaces `FhirFormatReader` and `FhirFormatWriter`. A
+method that only one format supports exists only on that format's type, so reading XML
+from a path does not compile. `format` takes `application/fhir+json` or
+`application/fhir+xml` and refuses anything else, so that M4 passes the media type its
+own entry points already take: `encode` is `reader.format(mime).read`, `encodeBundle`
+is `reader.format(mime).readBundles`, and `decode` is `writer.format(mime).write`. The
+interfaces are sealed so that a method can be added to them later without breaking an
+implementation outside `io`.
+
+The shapes considered were methods named per format and container on two classes
+(`readXmlBundles`), a media-type parameter, an enum parameter, a Spark-style builder
+with string options, and this one. It was chosen because it is checked at compile time,
+grows by format rather than by combination of format, container and input, and gives
+each format a place for options of its own (M5's annotation toggles, a leniency
+setting) without touching the others. Its cost is the number of public types.
+
+**What is hidden.** `ResourceTransformer`, `NonConformantContent`, `StrictnessCheck`,
+`PrimitiveConverter`, `PrimitiveConverters`, `BundleTransformer`, `FhirParsers` and
+`XmlConversion` (formerly `XmlIngest`) are package-private. Since package-private
+reaches only one package, `io.json` and `io.transform` are folded into
+`au.csiro.pathling.io`, which no other module uses. The paths that completed tasks name
+predate this, as do the evidence scripts that import the old packages; neither is
+rewritten. If M5's annotation processors need the transform's internals they join this
+package rather than `io.annotation`.
+
+Hiding the transformer withdraws decision 70's structured input: a table of FHIR JSON
+already held as structures can no longer be stored without a round trip through text.
+Nothing in M4 needs it, so it is not offered; if it returns, it returns as a named
+method on the JSON reader that commits to the JSON data model as an input format, not
+as the engine every route runs through. `findings` is not public either. `encode` does
+not report today, so M4 does not need it, and its contract across formats is not
+settled: the HAPI routes cannot report what HAPI drops before the transform sees it.
+
+**FR-007 in one place.** `StorableResourceType` refuses `Bundle` and a name the
+definitions do not describe as a resource. Every read asks it before Spark runs a job
+to infer a schema, and `toLayout` asks it again, so the guarantee holds whatever
+route reaches the layout. The XML and bundle routes are lazy until the JSON read, so
+the JSON read's check comes first on those too. The type check now takes the resource
+types from the definitions rather than from HAPI's context.
+
+**XML selects its own type.** `FhirXmlReader.read` keeps only the documents whose
+resource is of the type asked for, and leaves out a null document. Decision 70 puts
+that selection in `PathlingContext.encode` for JSON, where the type can be read with
+Spark functions; an XML document's type is known only once it is parsed, so M4 could
+not select it without parsing XML itself. The previous encoder discarded documents of
+other types in the same way.
+
+**XML output.** `PathlingContext.decode(..., FHIR_XML)` writes XML through HAPI today,
+so FR-043 needs XML egress in M4 and T081's amendment by decision 70 named only JSON.
+`FhirXmlWriter` writes each resource as JSON with the JSON writer and converts it with
+HAPI inside the function Spark runs, which plan.md's FR-050 exception now covers in
+both directions. Measured on what the JSON writer emits that the previous encoder never
+produced, the conversion fails on none of it and changes this:
+
+- An element that is an empty structure (`"name":[{}]`, `"maritalStatus":{}`) is left
+  out, where the JSON writer writes an empty object (decisions 71 and 72).
+- The null that keeps a repeating primitive's position is left out: `[null,"B"]` is
+  written as one `<given value="B"/>`. `FhirXmlWriterTest` asserts it.
+- A decimal is written from the double the JSON writer emits (decision 68): `1.0E-5`
+  becomes `0.000010` and `123456789.0` stays `123456789.0`, so trailing zeros the
+  source did not carry can appear. The decimal serde that decision 68 defers fixes
+  both formats.
+- A narrative's whitespace beside a tag is collapsed to one space, the HAPI XML
+  writer behaviour decision 83 measured. The previous `decode` wrote XML with the same
+  writer.
+
+**What stays as decision 83 left it.** The HAPI routes still drop undescribed content
+without a finding, coerce readable non-conformant content, and fail the job on content
+HAPI cannot read, where JSON reports and continues. The owner chose to document this
+rather than unify it now: `FhirFormatReader.readBundles` and `FhirXmlReader` say so.
+Whether to unify it, or to raise it as an issue that outlives this specification, is
+decided in M5 under T078e, beside the `_x` loss T061 and T078c must settle and the
+positional null XML egress drops. Where M5's annotation processors live, now that the
+transform is package-private, is decided under T063.
+Whether a URN naming a versioned entry resolves to `Type/id/_history/v` stays open for
+M4.
+
+_Consequence for the specification_: T068 and T069 carry a note that this decision
+replaced their public classes, and T070, T081 and T082 are reworded to call the
+facade. plan.md's module layout shows the one package and its FR-050 row covers XML
+output. The open tasks that name files in `io/json` or `io/transform` name them in
+`io`.

@@ -15,9 +15,8 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.io.json;
+package au.csiro.pathling.io;
 
-import au.csiro.pathling.io.transform.ResourceTransformer;
 import jakarta.annotation.Nonnull;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -30,18 +29,16 @@ import org.apache.spark.sql.functions;
 
 /**
  * Writes resources stored in this layout as FHIR JSON text, to a dataset of documents or to files
- * of newline-delimited JSON (decision 70).
+ * of newline-delimited JSON (decisions 70 and 84). It is obtained from {@link FhirWriter#json()}.
  *
- * <p>The layout is first turned into the JSON data model by {@link
- * ResourceTransformer#toJsonShape}, and the JSON writer serialises that. The one thing decided here
- * is that a field which is null is left out rather than written as null, which is what FR-019 now
- * asks for. The rest of FR-019 is deferred (decision 71): a structure whose every field is null is
+ * <p>A field which is null is left out rather than written as null, which is what FR-019 now asks
+ * for. The rest of FR-019 is deferred (decision 71): a structure whose every field is null is
  * written as an empty object and an array holding nulls as it stands, neither of which is
  * conformant FHIR. For conformant input that happens only where a primitive's id and extensions
  * were not stored, and is kept on purpose until M5 (decision 71's addendum); the layout is assumed
  * to carry neither for any other reason.
  */
-public final class FhirJsonWriter {
+public final class FhirJsonWriter implements FhirFormatWriter {
 
   /** Asks the JSON writer to leave out a field that is null. */
   @Nonnull
@@ -51,28 +48,11 @@ public final class FhirJsonWriter {
 
   @Nonnull private final ResourceTransformer transformer;
 
-  private FhirJsonWriter(@Nonnull final ResourceTransformer transformer) {
+  FhirJsonWriter(@Nonnull final ResourceTransformer transformer) {
     this.transformer = transformer;
   }
 
-  /**
-   * Returns a writer that transforms what it writes with a transformer.
-   *
-   * @param transformer the transformer to apply
-   * @return the writer
-   */
-  @Nonnull
-  public static FhirJsonWriter of(@Nonnull final ResourceTransformer transformer) {
-    return new FhirJsonWriter(transformer);
-  }
-
-  /**
-   * Returns one FHIR JSON document per stored resource.
-   *
-   * @param resourceType the type of the resources the dataset carries
-   * @param stored the resources, in this layout
-   * @return the documents
-   */
+  @Override
   @Nonnull
   public Dataset<String> write(
       @Nonnull final String resourceType, @Nonnull final Dataset<Row> stored) {

@@ -289,6 +289,11 @@ class AnnotationFreeSuiteTest {
         continue;
       }
       final String resourceType = resourceTypeNode.asText();
+      if ("Bundle".equals(resourceType)) {
+        // A bundle is never stored (FR-007), so the suites' cases over one are excluded and never
+        // reach this layout.
+        continue;
+      }
       final List<String> fileSlots = new ArrayList<>();
       final List<String> fileAnnotations = new ArrayList<>();
       scan(
