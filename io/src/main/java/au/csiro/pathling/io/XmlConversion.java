@@ -17,13 +17,11 @@
 
 package au.csiro.pathling.io;
 
+import ca.uhn.fhir.parser.IParser;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-import org.apache.spark.api.java.function.FlatMapFunction;
-import org.apache.spark.api.java.function.MapFunction;
+import java.util.stream.Stream;
+import org.apache.spark.api.java.function.MapPartitionsFunction;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
 import org.hl7.fhir.instance.model.api.IBaseResource;
@@ -82,9 +80,16 @@ final class XmlConversion {
       @Nonnull final String resourceType,
       @Nonnull final Dataset<String> documents,
       @Nonnull final FhirParsers parsers) {
-    return documents.flatMap(
-        (FlatMapFunction<String, String>)
-            document -> convertToJson(document, resourceType, parsers),
+    // The parsers are made once for each partition rather than once for each document.
+    return documents.mapPartitions(
+        (MapPartitionsFunction<String, String>)
+            rows -> {
+              final IParser reader = parsers.xml();
+              final IParser writer = parsers.json();
+              return Partitions.stream(rows)
+                  .flatMap(document -> convertToJson(document, resourceType, reader, writer))
+                  .iterator();
+            },
         Encoders.STRING());
   }
 
@@ -98,24 +103,31 @@ final class XmlConversion {
   @Nonnull
   static Dataset<String> toXml(
       @Nonnull final Dataset<String> documents, @Nonnull final FhirParsers parsers) {
-    return documents.map(
-        (MapFunction<String, String>)
-            document ->
-                parsers.xml().encodeResourceToString(parsers.json().parseResource(document)),
+    // The parsers are made once for each partition rather than once for each document.
+    return documents.mapPartitions(
+        (MapPartitionsFunction<String, String>)
+            rows -> {
+              final IParser reader = parsers.json();
+              final IParser writer = parsers.xml();
+              return Partitions.stream(rows)
+                  .map(document -> writer.encodeResourceToString(reader.parseResource(document)))
+                  .iterator();
+            },
         Encoders.STRING());
   }
 
   @Nonnull
-  private static Iterator<String> convertToJson(
+  private static Stream<String> convertToJson(
       @Nullable final String document,
       @Nonnull final String resourceType,
-      @Nonnull final FhirParsers parsers) {
+      @Nonnull final IParser reader,
+      @Nonnull final IParser writer) {
     if (document == null) {
-      return Collections.emptyIterator();
+      return Stream.empty();
     }
-    final IBaseResource resource = parsers.xml().parseResource(document);
+    final IBaseResource resource = reader.parseResource(document);
     return resourceType.equals(resource.fhirType())
-        ? List.of(parsers.json().encodeResourceToString(resource)).iterator()
-        : Collections.emptyIterator();
+        ? Stream.of(writer.encodeResourceToString(resource))
+        : Stream.empty();
   }
 }

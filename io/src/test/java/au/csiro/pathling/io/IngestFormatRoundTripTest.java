@@ -304,9 +304,13 @@ class IngestFormatRoundTripTest {
           && entry.get("fullUrl").asText().startsWith(URN)
           && resource != null
           && resource.has("id")) {
+        final String version = resource.at("/meta/versionId").asText();
         targets.put(
             entry.get("fullUrl").asText(),
-            resource.get("resourceType").asText() + "/" + resource.get("id").asText());
+            resource.get("resourceType").asText()
+                + "/"
+                + resource.get("id").asText()
+                + (version.isEmpty() ? "" : "/_history/" + version));
       }
     }
     final List<String> expected = new ArrayList<>();
@@ -328,16 +332,21 @@ class IngestFormatRoundTripTest {
   }
 
   /**
-   * Rewrites every {@code reference} naming another entry. Neither corpus carries an element of
-   * another type under that name, which is the only case where matching by name would differ from
-   * matching by type; {@code BundleTransformTest} covers that case.
+   * Rewrites every {@code Reference} naming another entry, with the version of the entry where it
+   * has one, as production does. A Reference is recognised as an object that carries a {@code
+   * reference} and is not a resource, which leaves alone a URI element named {@code reference} on a
+   * resource, such as {@code DetectedIssue.reference}. That is as far as the oracle can go without
+   * the definitions, and {@code BundleTransformTest} pins the behaviour itself.
    */
   private static void rewriteReferences(
       @Nonnull final JsonNode node, @Nonnull final Map<String, String> targets) {
     if (node.isObject()) {
       final ObjectNode object = (ObjectNode) node;
       final JsonNode reference = object.get("reference");
-      if (reference != null && reference.isTextual() && targets.containsKey(reference.asText())) {
+      if (!object.has("resourceType")
+          && reference != null
+          && reference.isTextual()
+          && targets.containsKey(reference.asText())) {
         object.set("reference", TextNode.valueOf(targets.get(reference.asText())));
       }
       object.elements().forEachRemaining(child -> rewriteReferences(child, targets));

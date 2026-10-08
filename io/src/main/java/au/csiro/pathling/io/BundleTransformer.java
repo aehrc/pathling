@@ -20,11 +20,10 @@ package au.csiro.pathling.io;
 import ca.uhn.fhir.parser.IParser;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
-import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
-import org.apache.spark.api.java.function.FlatMapFunction;
+import java.util.stream.Stream;
+import org.apache.spark.api.java.function.MapPartitionsFunction;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
 import org.hl7.fhir.instance.model.api.IBaseResource;
@@ -139,27 +138,33 @@ final class BundleTransformer {
     // The function captures only these values, so it serialises without the transformer.
     final boolean fromXml = xml;
     final FhirParsers fhirParsers = parsers;
-    return bundles.flatMap(
-        (FlatMapFunction<String, String>)
-            bundle -> explode(bundle, resourceType, fromXml, fhirParsers),
+    // The parsers are made once for each partition rather than once for each bundle.
+    return bundles.mapPartitions(
+        (MapPartitionsFunction<String, String>)
+            rows -> {
+              final IParser reader = fromXml ? fhirParsers.xml() : fhirParsers.json();
+              final IParser writer = fhirParsers.json();
+              return Partitions.stream(rows)
+                  .flatMap(row -> explode(row, resourceType, reader, writer))
+                  .iterator();
+            },
         Encoders.STRING());
   }
 
   @Nonnull
-  private static Iterator<String> explode(
+  private static Stream<String> explode(
       @Nullable final String text,
       @Nonnull final String resourceType,
-      final boolean fromXml,
-      @Nonnull final FhirParsers parsers) {
+      @Nonnull final IParser reader,
+      @Nonnull final IParser writer) {
     if (text == null) {
-      return Collections.emptyIterator();
+      return Stream.empty();
     }
-    final IBaseResource parsed = (fromXml ? parsers.xml() : parsers.json()).parseResource(text);
+    final IBaseResource parsed = reader.parseResource(text);
     if (!(parsed instanceof final Bundle bundle)) {
       throw new IllegalArgumentException(
           "Expected a bundle and found a resource of type " + parsed.fhirType());
     }
-    final IParser json = parsers.json();
     final List<Resource> resources =
         bundle.getEntry().stream()
             .map(BundleEntryComponent::getResource)
@@ -167,7 +172,7 @@ final class BundleTransformer {
             .filter(resource -> resourceType.equals(resource.fhirType()))
             .toList();
     resources.forEach(BundleTransformer::resolveReferences);
-    return resources.stream().map(json::encodeResourceToString).iterator();
+    return resources.stream().map(writer::encodeResourceToString);
   }
 
   /**

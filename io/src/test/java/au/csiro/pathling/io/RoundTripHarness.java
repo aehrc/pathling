@@ -555,9 +555,9 @@ public final class RoundTripHarness {
   }
 
   /**
-   * Takes the output's narrative as the expected one where the two differ only in their runs of
-   * whitespace, returning 1 where it did and 0 otherwise. A narrative that differs in any other way
-   * is left for the comparison to report.
+   * Takes the output's narrative as the expected one where the two differ only in the runs of
+   * whitespace beside a tag, returning 1 where it did and 0 otherwise. A narrative that differs in
+   * any other way is left for the comparison to report.
    */
   private static int collapseNarrative(
       @Nonnull final JsonNode expected, @Nullable final JsonNode output) {
@@ -575,7 +575,9 @@ public final class RoundTripHarness {
 
   @Nonnull
   private static String collapsed(@Nonnull final String text) {
-    return text.replaceAll("\\s+", " ");
+    // Only whitespace beside a tag is collapsed, so that a narrative that lost whitespace within
+    // its text is still reported.
+    return text.replaceAll(">\\s+", "> ").replaceAll("\\s+<", " <");
   }
 
   /** Whether a node is a structure or an array that now holds nothing. */
