@@ -3254,5 +3254,5 @@ in any way is refused before anything is written, with a message naming the tabl
 difference and the remedy — write to Delta, or write to a path and read it with the
 merging Parquet source. This is a regression for incremental loads into Parquet catalog
 tables, which worked only because the dense schema gave every batch the same columns.
-Padding narrower batches and widening Parquet catalog tables are left to a follow-up
-issue rather than built in M4. FR-042 carries this exception.
+Padding narrower batches and widening Parquet catalog tables are left to issue #2819
+rather than built in M4. FR-042 carries this exception.
