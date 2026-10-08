@@ -106,7 +106,8 @@ class CatalogSink implements DataSink {
       fileInfos.add(new FileInformation(resourceType, tableName));
 
       switch (saveMode) {
-        case ERROR_IF_EXISTS, APPEND, IGNORE -> writeDataset(dataset, tableName, saveMode);
+        case ERROR_IF_EXISTS, IGNORE -> writeDataset(dataset, tableName, saveMode);
+        case APPEND -> append(dataset, tableName);
         case OVERWRITE -> {
           if (format.isPresent() && "delta".equals(format.get())) {
             // This is to work around a bug relating to Delta tables not being able to be
@@ -136,11 +137,63 @@ class CatalogSink implements DataSink {
     return new WriteDetails(fileInfos);
   }
 
+  /**
+   * Appends to a table, widening it where it is a Delta table and refusing a batch whose schema
+   * differs from it where it is not (decision 86, FR-042).
+   *
+   * <p>A Delta table is widened to admit fields only the batch carries, as every other write into
+   * an existing Delta table is. A table in another format cannot be: Spark refuses a differing
+   * append at every level, narrower included, and there is no public route to add a nested field to
+   * its stored schema. Such an append is refused here instead, before anything is written, with a
+   * message naming the difference and the remedy. Field order is not a difference, because an
+   * append places fields by name.
+   *
+   * @param dataset the batch to append
+   * @param tableName the name of the table to append to
+   * @throws IllegalArgumentException if the table exists, is not a Delta table, and its schema
+   *     differs from the batch's
+   */
+  private void append(@Nonnull final Dataset<Row> dataset, @Nonnull final String tableName) {
+    if (context.getSpark().catalog().tableExists(tableName)) {
+      if (deltaTableExists(tableName)) {
+        writeDataset(dataset, tableName, SaveMode.APPEND, true);
+        return;
+      }
+      final List<String> differences =
+          SchemaDifferences.between(context.getSpark().table(tableName).schema(), dataset.schema());
+      if (!differences.isEmpty()) {
+        throw new IllegalArgumentException(
+            "Cannot append to table "
+                + tableName
+                + ", which is not a Delta table, because the schema of the data differs from the"
+                + " table's: "
+                + String.join("; ", differences)
+                + ". Only a Delta table can be widened to admit the data. Write to a Delta table"
+                + " instead, or write to a path and read it with the Parquet source, which"
+                + " merges the schemas of its files.");
+      }
+    }
+    writeDataset(dataset, tableName, SaveMode.APPEND);
+  }
+
   private void writeDataset(
       @Nonnull final Dataset<Row> dataset,
       @Nonnull final String tableName,
       @Nonnull final SaveMode saveMode) {
+    writeDataset(dataset, tableName, saveMode, false);
+  }
+
+  private void writeDataset(
+      @Nonnull final Dataset<Row> dataset,
+      @Nonnull final String tableName,
+      @Nonnull final SaveMode saveMode,
+      final boolean mergeSchema) {
     final DataFrameWriter<Row> writer = dataset.write();
+
+    // Widen an existing Delta table to admit the fields only the data carries.
+    if (mergeSchema) {
+      writer.option("mergeSchema", "true");
+    }
 
     // Apply save mode if it has a Spark equivalent.
     saveMode.getSparkSaveMode().ifPresent(writer::mode);

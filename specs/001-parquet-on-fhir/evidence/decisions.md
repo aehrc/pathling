@@ -3182,3 +3182,77 @@ replaced their public classes, and T070, T081 and T082 are reworded to call the
 facade. plan.md's module layout shows the one package and its FR-050 row covers XML
 output. The open tasks that name files in `io/json` or `io/transform` name them in
 `io`.
+
+## 85. Canonical order binds the struct types Pathling builds, not the schemas it reads
+
+Owner decision (2026-10-08), prompted by T118a in M4.
+
+Spark's `mergeSchema` appends a field first seen in a later file at the end of its
+struct, and Delta's schema evolution does the same to a widened table. A merged
+read schema is therefore not in definition order. FR-057 named "the merge of
+divergent file schemas" among the places canonical order holds, while T118a reached
+only merged schemas Pathling produces itself.
+
+A struct whose fields are in a non-canonical order is one more divergent shape, no
+different from the divergent sparse shapes a pruned schema already yields: both are
+reconciled in the same situations and in the same way, by FR-056's projection by
+name into the merged type. Canonical input is therefore not needed for correctness,
+on two conditions:
+
+- the reconciliation's shape comparison is sensitive to field order, so that two
+  structures carrying the same fields in different orders are projected rather than
+  left as they are; and
+- the merge takes its order from the definitions rather than from its operands, as
+  research.md R-011 already requires, so the merged type is canonical whatever order
+  the operands arrive in.
+
+Canonical input would not remove the positional hazard for a caller's own Spark SQL
+either, because two pruned shapes of one type with the same arity and different
+fields compare just as wrongly. Two further facts weigh against canonicalising what
+is read. Delta is the default format, and a Delta read takes its schema from the
+table's log, so canonicalising it would mean reordering nested columns on every
+widening or projecting on every read. And most operations are expected to be
+performed on system types rather than on FHIR structures, while the complex system
+types such as `Quantity` can be fully normalised in future.
+
+_Consequence for the specification_: FR-057 binds the struct types Pathling
+produces — schema derivation, the merge of two element types, the merge Pathling
+performs when it widens a target, and the reconciliation projection — and exempts
+schemas obtained from storage: Spark's merged read schema, an evolved Delta table's
+schema and a schema the caller supplies. T118a stands as worded. A test in Phase 10
+puts two `HumanName` structures carrying the same fields in different orders
+through FHIRPath equality, `union` and `combine` and asserts correct results.
+
+## 86. Every write into an existing table widens it where the format can, and a Parquet catalog table refuses a differing batch
+
+Owner decision (2026-10-08), prompted by Phase 10's review in M4 and measured in
+`catalog-append-schema.md`.
+
+The save modes decide what happens to the rows already in a table; they say nothing
+about its schema. Widening is a separate rule that applies whenever a mode writes into
+an existing table, which `APPEND` and `MERGE` do. FR-042 is read that way: whenever a
+batch is written into an existing table, the table is widened to hold it, whatever the
+sink and whatever the mode. After Phase 10 the path-based Delta sink did so for both
+modes and the catalog sink for `MERGE` only, so the same batch was accepted or refused
+depending on the route — the inconsistency decision 41 exists to prevent.
+
+Measured on Spark 4.0.2 and Delta 4.0.0, in both the in-memory and the Hive catalog:
+
+- A Delta catalog append with `mergeSchema=true` widens at the top level, inside a
+  struct and inside an array of structs, including a batch that both adds and lacks
+  fields. A narrower batch appends with or without the option.
+- A Parquet catalog append fails whenever the batch's schema differs from the stored
+  one in any direction, narrower included. A narrower batch can be padded to the stored
+  schema by the writer, and a new top-level column added with `ALTER TABLE ADD COLUMNS`,
+  but there is no public route to add a nested field to a Parquet catalog table's
+  stored schema, and the stored schema is never re-inferred from the files on refresh.
+
+_Consequence for the specification_: the catalog sink sets `mergeSchema=true` on an
+`APPEND` into a Delta table, so every Delta write widens. An `APPEND` into an existing
+Parquet (or other non-Delta) catalog table whose batch schema differs from the table's
+in any way is refused before anything is written, with a message naming the table, the
+difference and the remedy — write to Delta, or write to a path and read it with the
+merging Parquet source. This is a regression for incremental loads into Parquet catalog
+tables, which worked only because the dense schema gave every batch the same columns.
+Padding narrower batches and widening Parquet catalog tables are left to a follow-up
+issue rather than built in M4. FR-042 carries this exception.

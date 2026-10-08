@@ -164,7 +164,9 @@ pathling_read_datasets <- function(pc, resources) {
 #' The files of a resource type may carry differing schemas, and are read as one dataset whose
 #' schema is the union of theirs. Merging the schemas reads the footer of every file, so the cost of
 #' it can be avoided by supplying the schema to read a resource type with. A supplied schema is used
-#' as given, so it must cover the union of the type's files: columns it omits are not read. The
+#' as given, so it must cover the union of the type's files: columns it omits are not read, and it
+#' can lose whole rows, not just columns. A view unnesting a repeating element returns none of a
+#' file's rows for that element when the schema omits every field the file carries inside it. The
 #' workable pattern is to merge once and persist the result, or to take the writer's schema, and
 #' supply that.
 #'
@@ -172,7 +174,8 @@ pathling_read_datasets <- function(pc, resources) {
 #' @param path The URI of the directory containing the Parquet tables.
 #' @param schemas An optional named list of the schema to read each resource type with, keyed by
 #'   resource type code. Each schema is either a Spark schema in its JSON representation, or a Java
-#'   \code{StructType} object. Resource types the list does not name are merged as usual.
+#'   \code{StructType} object. At most ten schemas can be supplied. Resource types the list does
+#'   not name are merged as usual.
 #' @return A DataSource object that can be used to run queries against the data.
 #'
 #' @seealso \href{https://pathling.csiro.au/docs/libraries/io#parquet}{Pathling documentation - Reading Parquet}
@@ -197,20 +200,44 @@ pathling_read_parquet <- function(pc, path, schemas = NULL) {
   )
 }
 
-#' @importFrom sparklyr j_invoke
-#' @importFrom sparklyr j_invoke_new
-#' @importFrom sparklyr invoke_static
+#' Build a Java map of resource types to schemas
+#'
+#' Converts a named list of schemas into a \code{java.util.Map} from resource type codes to
+#' \code{StructType} objects. Each schema is either a Spark schema in its JSON representation, or a
+#' Java \code{StructType} object. As \code{java_map_of} records, the map is built by a single call
+#' to \code{Map.of}, because sparklyr can neither pass an R map to a Java method nor build a Java
+#' map up entry by entry, so it can carry at most ten entries.
+#'
+#' @param sc The Spark connection.
+#' @param schemas A named list of schemas.
+#'
+#' @return A jobj referring to a \code{java.util.Map}.
+#'
+#' @importFrom sparklyr j_invoke_static
+#' @noRd
 to_java_schema_map <- function(sc, schemas) {
   stopifnot(!is.null(names(schemas)), all(names(schemas) != ""))
-  map <- j_invoke_new(sc, "java.util.HashMap")
-  for (resource_type in names(schemas)) {
+  if (length(schemas) > 10) {
+    stop(
+      "At most 10 schemas can be supplied from R. Supply the remainder through the Java or ",
+      "Python API, or leave them to be merged."
+    )
+  }
+  resource_types <- names(schemas)
+  java_schemas <- lapply(resource_types, function(resource_type) {
     schema <- schemas[[resource_type]]
     if (is.character(schema)) {
-      schema <- invoke_static(sc, "org.apache.spark.sql.types.DataType", "fromJson", schema)
+      j_invoke_static(sc, "org.apache.spark.sql.types.DataType", "fromJson", schema)
+    } else {
+      schema
     }
-    j_invoke(map, "put", resource_type, schema)
-  }
-  map
+  })
+  # Interleave the resource types and schemas into the key, value, key, value order Map.of takes.
+  interleaved <- unlist(
+    lapply(seq_along(resource_types), function(i) list(resource_types[[i]], java_schemas[[i]])),
+    recursive = FALSE
+  )
+  do.call(j_invoke_static, c(list(sc, "java.util.Map", "of"), interleaved))
 }
 
 #' Create a data source from Delta tables

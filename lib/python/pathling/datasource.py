@@ -203,8 +203,10 @@ class DataSources(SparkConversionsMixin):
         schema is the union of theirs. Merging the schemas reads the footer of every file, so the
         cost of it can be avoided by supplying the schema to read a resource type with. A supplied
         schema is used as given, so it must cover the union of the type's files: columns it omits
-        are not read. The workable pattern is to merge once and persist the result, or to take the
-        writer's schema, and supply that.
+        are not read, and it can lose whole rows, not just columns. A view unnesting a repeating
+        element returns none of a file's rows for that element when the schema omits every field the
+        file carries inside it. The workable pattern is to merge once and persist the result, or to
+        take the writer's schema, and supply that.
 
         :param path: The URI of the directory containing the Parquet tables.
         :param schemas: An optional dictionary of the schema to read each resource type with, keyed

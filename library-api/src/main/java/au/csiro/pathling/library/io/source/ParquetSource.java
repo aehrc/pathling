@@ -38,7 +38,9 @@ import org.apache.spark.sql.types.StructType;
  * the columns only the others carry are silently dropped. Merging reads the footer of every file of
  * the type, so the cost of it can be avoided per resource type by supplying the schema to read
  * with. A supplied schema is used as given, so it must cover the union of the type's files, or the
- * columns it omits are dropped just as silently; the workable pattern is to merge once and persist
+ * columns it omits are dropped just as silently. It can lose whole rows, not just columns: a view
+ * unnesting a repeating element returns none of a file's rows for that element when the schema
+ * omits every field the file carries inside it. The workable pattern is to merge once and persist
  * the result, or to take the writer's schema, and supply that. There is deliberately no switch that
  * turns merging off without supplying a schema (T119).
  *

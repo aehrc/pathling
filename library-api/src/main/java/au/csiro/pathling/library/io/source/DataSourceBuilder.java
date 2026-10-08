@@ -172,8 +172,10 @@ public record DataSourceBuilder(@Nonnull PathlingContext context) {
    *
    * <p>By default the schemas of a resource type's files are merged into their union, which reads
    * the footer of every file. A supplied schema is used as given instead, so it must cover the
-   * union of the type's files: columns it omits are not read. Resource types the map does not name
-   * are merged as usual.
+   * union of the type's files: columns it omits are not read, and it can lose whole rows, not just
+   * columns. A view unnesting a repeating element returns none of a file's rows for that element
+   * when the schema omits every field the file carries inside it. Resource types the map does not
+   * name are merged as usual.
    *
    * @param path the URI of the directory containing the Parquet files/directories
    * @param schemas the schema to read each resource type with, keyed by resource type code

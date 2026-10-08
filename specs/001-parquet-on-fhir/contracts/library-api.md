@@ -133,8 +133,12 @@ There is deliberately no boolean for it. Switching merging off was measured
 returning as few as 6 of 24 leaf columns on a divergent corpus, silently, so it
 is a trap rather than a choice. A supplied schema is safe only while it covers
 the union of every file's columns; supply one narrower and columns are dropped
-just as silently, merely deterministically. The workable pattern is to merge
-once and persist the result, or to take the writer's schema, and supply that.
+just as silently, merely deterministically. Whole rows can go with them: a view
+that unnests a repeating element returns none of a file's rows for that element
+when the supplied schema omits every field the file carries inside it, because
+the reader then has nothing from which to reconstruct the array. The workable
+pattern is to merge once and persist the result, or to take the writer's
+schema, and supply that.
 
 Appending to a transactional table merges the schema, so a batch carrying new
 elements widens the table rather than failing.
