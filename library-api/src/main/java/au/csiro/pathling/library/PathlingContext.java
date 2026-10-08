@@ -25,11 +25,14 @@ import au.csiro.pathling.config.FhirpathConfiguration;
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.config.TerminologyConfiguration;
 import au.csiro.pathling.config.TerminologyMode;
+import au.csiro.pathling.definition.fhir.FhirDefinitionContext;
 import au.csiro.pathling.encoders.FhirEncoderBuilder;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.ResourceTypes;
 import au.csiro.pathling.fhirpath.evaluation.SingleInstanceEvaluationResult;
 import au.csiro.pathling.fhirpath.evaluation.SingleInstanceEvaluator;
+import au.csiro.pathling.io.FhirReader;
+import au.csiro.pathling.io.FhirWriter;
 import au.csiro.pathling.library.io.source.DataSourceBuilder;
 import au.csiro.pathling.library.terminology.TerminologyImportOptions;
 import au.csiro.pathling.search.SearchColumnBuilder;
@@ -61,13 +64,13 @@ import java.util.Optional;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.spark.api.java.function.MapPartitionsFunction;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
+import org.apache.spark.sql.functions;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
@@ -107,6 +110,12 @@ public class PathlingContext {
 
   @Nonnull @Getter private final Gson gson;
 
+  /** Reads resources given as text into the Parquet on FHIR layout. */
+  @Nonnull private final FhirReader fhirReader;
+
+  /** Writes resources stored in the Parquet on FHIR layout as text. */
+  @Nonnull private final FhirWriter fhirWriter;
+
   /**
    * Creates a new PathlingContext with the specified configuration.
    *
@@ -129,6 +138,9 @@ public class PathlingContext {
     TerminologyUdfRegistrar.registerUdfs(spark, terminologyServiceFactory);
     PathlingUdfConfigurer.registerUdfs(spark);
     gson = buildGson();
+    final FhirDefinitionContext definitions = FhirDefinitionContext.of(fhirEncoders.getContext());
+    fhirReader = FhirReader.of(spark, definitions);
+    fhirWriter = FhirWriter.of(definitions);
   }
 
   /**
@@ -419,6 +431,10 @@ public class PathlingContext {
    * Takes a dataset with string representations of FHIR resources and encodes the resources of the
    * given type as a Spark dataset.
    *
+   * <p>A dataset typed by the resource's class can only be produced by the FHIR encoders, so the
+   * resources are stored in the layout of earlier releases rather than in the Parquet on FHIR
+   * layout that {@link #encode(Dataset, String, String, String)} stores.
+   *
    * @param stringResources the dataset with the string representation of the resources.
    * @param resourceClass the class of the resources to encode.
    * @param inputMimeType the mime type of the encoding for the input strings.
@@ -437,7 +453,10 @@ public class PathlingContext {
 
   /**
    * Takes a dataframe with string representations of FHIR resources and encodes the resources of
-   * the given type as a Spark dataframe.
+   * the given type as a Spark dataframe, in the Parquet on FHIR layout.
+   *
+   * <p>Documents of other resource types are left out. A streaming dataframe is encoded in the
+   * layout of earlier releases, because the Parquet on FHIR layout fits its schema to the data.
    *
    * @param stringResourcesDf the dataframe with the string representation of the resources.
    * @param resourceName the name of the resources to encode.
@@ -453,13 +472,14 @@ public class PathlingContext {
       @Nonnull final String inputMimeType,
       @Nullable final String maybeColumnName) {
 
-    final Dataset<String> stringResources =
-        (nonNull(maybeColumnName) ? stringResourcesDf.select(maybeColumnName) : stringResourcesDf)
-            .as(Encoders.STRING());
-
-    final RuntimeResourceDefinition definition =
-        FhirEncoders.contextFor(fhirVersion).getResourceDefinition(resourceName);
-    return encode(stringResources, definition.getImplementingClass(), inputMimeType).toDF();
+    final Dataset<String> stringResources = documents(stringResourcesDf, maybeColumnName);
+    if (stringResources.isStreaming()) {
+      // The Parquet on FHIR layout fits its schema to the data, which a stream cannot provide.
+      return encode(stringResources, implementingClass(resourceName), inputMimeType).toDF();
+    }
+    return fhirReader
+        .format(inputMimeType)
+        .read(resourceName, selectForJson(stringResources, resourceName, inputMimeType));
   }
 
   /**
@@ -500,10 +520,13 @@ public class PathlingContext {
    * Takes a dataframe of encoded resources of the specified type and decodes them into a dataset of
    * string representations, based on the requested output MIME type.
    *
+   * <p>The resources are expected in the Parquet on FHIR layout, which {@link #encode(Dataset,
+   * String, String, String)} stores.
+   *
    * @param resources the dataframe of encoded resources
    * @param resourceName the name of the resources to decode
    * @param outputMimeType the MIME type of the output strings
-   * @param <T> the type of the resource
+   * @param <T> the type of the resource, which is not used and is kept for compatibility
    * @return a dataset of string representations of the resources
    */
   @Nonnull
@@ -511,24 +534,16 @@ public class PathlingContext {
       @Nonnull final Dataset<Row> resources,
       @Nonnull final String resourceName,
       @Nonnull final String outputMimeType) {
-    final RuntimeResourceDefinition definition =
-        FhirEncoders.contextFor(fhirVersion).getResourceDefinition(resourceName);
-
-    @SuppressWarnings("unchecked")
-    final Class<T> resourceClass = (Class<T>) definition.getImplementingClass();
-
-    final ExpressionEncoder<T> encoder = fhirEncoders.of(resourceClass);
-    final Dataset<T> typedResources = resources.as(encoder);
-
-    final MapPartitionsFunction<T, String> mapper =
-        new DecodeResourceMapPartitions<>(fhirVersion, outputMimeType);
-
-    return typedResources.mapPartitions(mapper, Encoders.STRING());
+    return fhirWriter.format(outputMimeType).write(resourceName, resources);
   }
 
   /**
    * Takes a dataset with string representations of FHIR bundles and encodes the resources of the
    * given type as a Spark dataset.
+   *
+   * <p>A dataset typed by the resource's class can only be produced by the FHIR encoders, so the
+   * resources are stored in the layout of earlier releases rather than in the Parquet on FHIR
+   * layout that {@link #encodeBundle(Dataset, String, String, String)} stores.
    *
    * @param stringBundles the dataset with the string representation of the resources.
    * @param resourceClass the class of the resources to encode.
@@ -548,7 +563,10 @@ public class PathlingContext {
 
   /**
    * Takes a dataframe with string representations of FHIR bundles and encodes the resources of the
-   * given type as a Spark dataframe.
+   * given type as a Spark dataframe, in the Parquet on FHIR layout.
+   *
+   * <p>A streaming dataframe is encoded in the layout of earlier releases, because the Parquet on
+   * FHIR layout fits its schema to the data.
    *
    * @param stringBundlesDf the dataframe with the string representation of the resources
    * @param resourceName the name of the resources to encode
@@ -564,13 +582,12 @@ public class PathlingContext {
       @Nonnull final String inputMimeType,
       @Nullable final String maybeColumnName) {
 
-    final Dataset<String> stringResources =
-        (nonNull(maybeColumnName) ? stringBundlesDf.select(maybeColumnName) : stringBundlesDf)
-            .as(Encoders.STRING());
-
-    final RuntimeResourceDefinition definition =
-        FhirEncoders.contextFor(fhirVersion).getResourceDefinition(resourceName);
-    return encodeBundle(stringResources, definition.getImplementingClass(), inputMimeType).toDF();
+    final Dataset<String> stringBundles = documents(stringBundlesDf, maybeColumnName);
+    if (stringBundles.isStreaming()) {
+      // The Parquet on FHIR layout fits its schema to the data, which a stream cannot provide.
+      return encodeBundle(stringBundles, implementingClass(resourceName), inputMimeType).toDF();
+    }
+    return fhirReader.format(inputMimeType).readBundles(resourceName, stringBundles);
   }
 
   /**
@@ -604,6 +621,41 @@ public class PathlingContext {
   public Dataset<Row> encodeBundle(
       @Nonnull final Dataset<Row> stringBundlesDf, @Nonnull final String resourceName) {
     return encodeBundle(stringBundlesDf, resourceName, FHIR_JSON);
+  }
+
+  /**
+   * Takes the column of documents from a dataframe, which is its only column unless one is named.
+   */
+  @Nonnull
+  private static Dataset<String> documents(
+      @Nonnull final Dataset<Row> dataframe, @Nullable final String maybeColumnName) {
+    return (nonNull(maybeColumnName) ? dataframe.select(maybeColumnName) : dataframe)
+        .as(Encoders.STRING());
+  }
+
+  /**
+   * Selects the JSON documents of one resource type, as encoding has always done (decision 70). A
+   * document whose type cannot be read is kept, so that text which is not JSON still fails the read
+   * rather than being left out. XML documents are selected by the XML reader itself (decision 84).
+   */
+  @Nonnull
+  private static Dataset<String> selectForJson(
+      @Nonnull final Dataset<String> documents,
+      @Nonnull final String resourceType,
+      @Nonnull final String mimeType) {
+    if (!FHIR_JSON.equals(mimeType)) {
+      return documents;
+    }
+    final Column type =
+        functions.get_json_object(documents.col(documents.columns()[0]), "$.resourceType");
+    return documents.filter(type.isNull().or(type.equalTo(resourceType)));
+  }
+
+  @Nonnull
+  private Class<? extends IBaseResource> implementingClass(@Nonnull final String resourceName) {
+    final RuntimeResourceDefinition definition =
+        FhirEncoders.contextFor(fhirVersion).getResourceDefinition(resourceName);
+    return definition.getImplementingClass();
   }
 
   /**

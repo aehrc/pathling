@@ -66,6 +66,11 @@
       <groupId>au.csiro.pathling</groupId>
       <artifactId>fhir-schema</artifactId>
     </dependency>
+    <!-- Reads and writes resources as text in the Parquet on FHIR layout. -->
+    <dependency>
+      <groupId>au.csiro.pathling</groupId>
+      <artifactId>io</artifactId>
+    </dependency>
     <dependency>
       <groupId>au.csiro.fhir</groupId>
       <artifactId>bulk-export</artifactId>
@@ -179,13 +184,6 @@
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
-    <!-- The new layout's write path, used by tests until the public API switches to it. -->
-    <dependency>
-      <groupId>au.csiro.pathling</groupId>
-      <artifactId>io</artifactId>
-      <scope>test</scope>
-    </dependency>
-
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-engine</artifactId>

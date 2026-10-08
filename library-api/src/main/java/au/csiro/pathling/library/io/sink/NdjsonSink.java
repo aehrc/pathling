@@ -19,6 +19,8 @@ package au.csiro.pathling.library.io.sink;
 
 import static au.csiro.pathling.library.io.FileSystemPersistence.safelyJoinPaths;
 
+import au.csiro.pathling.definition.fhir.FhirDefinitionContext;
+import au.csiro.pathling.io.FhirWriter;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.FileSystemPersistence;
@@ -28,7 +30,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.function.UnaryOperator;
-import org.apache.spark.sql.Dataset;
 
 /**
  * A data sink that writes data to NDJSON files on a filesystem.
@@ -36,6 +37,9 @@ import org.apache.spark.sql.Dataset;
  * @author John Grimes
  */
 final class NdjsonSink implements DataSink {
+
+  /** The extension the JSON writer gives the files of each partition. */
+  @Nonnull private static final String JSON_EXTENSION = "json";
 
   /** The Pathling context to use. */
   @Nonnull private final PathlingContext context;
@@ -51,6 +55,9 @@ final class NdjsonSink implements DataSink {
 
   /** A function that maps resource type to file name. */
   @Nonnull private final UnaryOperator<String> fileNameMapper;
+
+  /** Writes the stored resources as FHIR JSON. */
+  @Nonnull private final FhirWriter writer;
 
   /**
    * Constructs an NdjsonSink with a custom file name mapper.
@@ -69,6 +76,7 @@ final class NdjsonSink implements DataSink {
     this.path = path;
     this.saveMode = saveMode;
     this.fileNameMapper = fileNameMapper;
+    this.writer = FhirWriter.of(FhirDefinitionContext.of(context.getFhirContext()));
   }
 
   /**
@@ -91,18 +99,20 @@ final class NdjsonSink implements DataSink {
   public WriteDetails write(@Nonnull final DataSource source) {
     final List<FileInformation> fileInfos = new ArrayList<>();
     for (final String resourceType : source.getResourceTypes()) {
-      // Convert the dataset of structured FHIR data to a dataset of JSON strings.
-      final Dataset<String> jsonStrings =
-          context.decode(source.read(resourceType), resourceType, PathlingContext.FHIR_JSON);
-
-      // Write the JSON strings to the file system. Each partition will have their id added to the
-      // name later
+      // Write the resources to the file system as FHIR JSON. Each partition will have its id added
+      // to the name later.
       final String fileName = String.join(".", fileNameMapper.apply(resourceType), "ndjson");
       final String resultUrl = safelyJoinPaths(path, fileName);
 
       switch (saveMode) {
         case ERROR_IF_EXISTS, OVERWRITE, APPEND, IGNORE ->
-            writeJsonStrings(jsonStrings, resultUrl, saveMode);
+            writer
+                .json()
+                .write(
+                    resourceType,
+                    source.read(resourceType),
+                    resultUrl,
+                    saveMode.getSparkSaveMode().orElseThrow());
         case MERGE ->
             throw new UnsupportedOperationException("Merge operation is not supported for NDJSON");
         default -> throw new IllegalStateException("Unexpected save mode: " + saveMode);
@@ -111,22 +121,10 @@ final class NdjsonSink implements DataSink {
       // <resource_type>.<partId>.ndjson, i.e. Patient.00000.ndjson
       final Collection<String> renamed =
           FileSystemPersistence.renamePartitionedFiles(
-              context.getSpark(), resultUrl, resultUrl, "txt");
+              context.getSpark(), resultUrl, resultUrl, JSON_EXTENSION);
       renamed.forEach(
           renamedFilename -> fileInfos.add(new FileInformation(resourceType, renamedFilename)));
     }
     return new WriteDetails(fileInfos);
-  }
-
-  void writeJsonStrings(
-      @Nonnull final Dataset<String> jsonStrings,
-      @Nonnull final String resultUrlPartitioned,
-      @Nonnull final SaveMode saveMode) {
-    // final var writer = jsonStrings.coalesce(1).write()
-    final var writer = jsonStrings.write();
-    // Apply save mode if it has a Spark equivalent
-    saveMode.getSparkSaveMode().ifPresent(writer::mode);
-
-    writer.text(resultUrlPartitioned);
   }
 }
