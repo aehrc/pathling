@@ -73,6 +73,16 @@ Each cell is characters / `CASE WHEN` / decodes / best time.
   `m2-review-perf.md`, apart from `referenceRange.low.value` on the new layout,
   which is 194 characters here and 15 there; it decodes nothing in either.
 
+## Suites
+
+The full builds at the same commit show none of the code-generation fallbacks
+the M2 review counted, on either layout.
+
+| Run                                                                      | `grows beyond 64 KB` | `MethodTooLarge` |
+| ------------------------------------------------------------------------ | -------------------: | ---------------: |
+| `install -pl library-runtime -am`, fhirpath on the new layout, JaCoCo on |                    0 |                0 |
+| `verify -pl fhirpath -Dpathling.testLayout=previous -Djacoco.skip=true`  |                    0 |                0 |
+
 ## For the owner
 
 Whether this matters is the owner's decision. The cost is in the size of the
