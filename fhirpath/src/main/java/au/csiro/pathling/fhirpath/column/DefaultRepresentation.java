@@ -35,6 +35,7 @@ import lombok.ToString;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.DataType;
+import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
@@ -121,6 +122,11 @@ public class DefaultRepresentation extends ColumnRepresentation {
    * representation holds. The field is referenced through the tolerant traversal expression, so the
    * traversal yields a null of the given type where the input schema does not carry the field.
    *
+   * <p>Where this representation holds an array, a present field is read from every element, which
+   * yields an array of the field's type, so the null that stands for an absent field is given that
+   * array shape too. Whether the field is present or absent, and whether a repeating parent is
+   * present or absent, the traversal then yields one type (decision 88).
+   *
    * @param fieldName the name of the field to traverse to
    * @param fhirType the FHIR type of the field
    * @param fallback the type of the null that stands for the field where it is absent
@@ -132,9 +138,14 @@ public class DefaultRepresentation extends ColumnRepresentation {
       @Nonnull final String fieldName,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final DataType fallback) {
-    return decodeField(
-        copyOf(ColumnFunctions.resolveOrNull(value, fieldName, fallback)).removeNulls().flatten(),
-        fhirType);
+    final Column field =
+        ValueFunctions.ifArray(
+            value,
+            array ->
+                ColumnFunctions.resolveOrNull(
+                    array, fieldName, DataTypes.createArrayType(fallback)),
+            singular -> ColumnFunctions.resolveOrNull(singular, fieldName, fallback));
+    return decodeField(copyOf(field).removeNulls().flatten(), fhirType);
   }
 
   /**

@@ -49,7 +49,6 @@ import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.functions;
-import org.apache.spark.sql.types.ArrayType;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
 import org.junit.jupiter.api.AfterAll;
@@ -227,6 +226,15 @@ class FhirPathToColumnTest {
             """);
     final Dataset<Row> absent =
         encode("Patient", "{\"resourceType\":\"Patient\",\"id\":\"p2\",\"gender\":\"male\"}");
+    // The parents are present, and the elements beneath them absent.
+    final Dataset<Row> partial =
+        encode(
+            "Patient",
+            """
+            {"resourceType":"Patient","id":"p3","name":[{"given":["Ann"]}],
+             "maritalStatus":{"coding":[{"system":"http://example.org"}]},
+             "contact":[{"name":{"given":["Bob"]}}]}\
+            """);
 
     final List<String> failures = new ArrayList<>();
     for (final String expression :
@@ -246,10 +254,20 @@ class FhirPathToColumnTest {
       final DataType absentType = overAbsent.schema().apply(RESULT).dataType();
       final DataType presentType =
           present.select(column.alias(RESULT)).schema().apply(RESULT).dataType();
-      // The element's type is compared without the arrays its parents' cardinality adds, which
-      // FR-030 does not govern.
-      if (DataTypes.NullType.equals(absentType)
-          || !leafType(presentType).equals(leafType(absentType))) {
+      final DataType partialType =
+          partial.select(column.alias(RESULT)).schema().apply(RESULT).dataType();
+      if (!presentType.equals(partialType)) {
+        failures.add(
+            expression
+                + ": "
+                + partialType
+                + " where only the parent is present, "
+                + presentType
+                + " where the element is");
+      }
+      // The column has the type it has where the element is present, including the arrays a
+      // repeating parent adds, whether or not the parent itself is present (decision 88).
+      if (DataTypes.NullType.equals(absentType) || !presentType.equals(absentType)) {
         failures.add(
             expression + ": " + absentType + " where absent, " + presentType + " where present");
         continue;
@@ -262,11 +280,6 @@ class FhirPathToColumnTest {
       }
     }
     assertTrue(failures.isEmpty(), String.join("\n", failures));
-  }
-
-  @Nonnull
-  private static DataType leafType(@Nonnull final DataType type) {
-    return type instanceof final ArrayType array ? leafType(array.elementType()) : type;
   }
 
   // The test set.
