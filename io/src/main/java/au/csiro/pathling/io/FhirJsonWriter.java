@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.io;
 
+import au.csiro.pathling.definition.NodeDefinition;
 import jakarta.annotation.Nonnull;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -26,6 +27,8 @@ import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SaveMode;
 import org.apache.spark.sql.functions;
+import org.apache.spark.sql.types.ArrayType;
+import org.apache.spark.sql.types.DataType;
 
 /**
  * Writes resources stored in this layout as FHIR JSON text, to a dataset of documents or to files
@@ -84,5 +87,39 @@ public final class FhirJsonWriter implements FhirFormatWriter {
         .options(WRITE_OPTIONS)
         .mode(mode)
         .json(path);
+  }
+
+  /**
+   * Returns the FHIR JSON of the values of one element stored in this layout, such as an element
+   * that a query returns whole (T100j, decision 80).
+   *
+   * <p>The values are a structure, or an array of them, of the type the definition describes, and
+   * each is written as one JSON object, as a resource's elements are by {@link #write(String,
+   * Dataset)}, with a null field left out. A decimal is written as a bare number with the text it
+   * is stored as, rather than through a double as a resource's is. A field the definition does not
+   * describe is left out too, rather than refused, because a value a query computes can carry
+   * fields of its own beside the elements of its type.
+   *
+   * @param element the definition of the element
+   * @param stored the values
+   * @param type the type of the values, a structure or an array of them
+   * @return the JSON text of each value, as a string, or as an array of strings where the values
+   *     are an array; null where a value is null
+   * @throws IllegalArgumentException if the type is neither a structure nor an array of them
+   */
+  @Nonnull
+  public Column writeElement(
+      @Nonnull final NodeDefinition element,
+      @Nonnull final Column stored,
+      @Nonnull final DataType type) {
+    final Column shaped = ResourceTransformer.elementToJsonShape(element, stored, type);
+    return type instanceof ArrayType
+        ? functions.transform(shaped, FhirJsonWriter::elementJson)
+        : elementJson(shaped);
+  }
+
+  @Nonnull
+  private static Column elementJson(@Nonnull final Column shaped) {
+    return ResourceTransformer.unmarkDecimals(functions.to_json(shaped, WRITE_OPTIONS));
   }
 }

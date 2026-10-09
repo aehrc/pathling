@@ -77,6 +77,7 @@ graph TD
     terminology --> encoders
     fhirpath --> terminology
     fhirpath --> fhir-schema
+    fhirpath --> io
     library-api --> utilities
     library-api --> encoders
     library-api --> terminology

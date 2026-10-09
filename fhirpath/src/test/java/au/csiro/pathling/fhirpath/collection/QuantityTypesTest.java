@@ -59,7 +59,8 @@ import org.springframework.beans.factory.annotation.Autowired;
  * evaluation rendered their value as a number, and a projected column had that structure. Both must
  * hold on the previous layout after the port, where the traversal expression normalises the stored
  * element to text, and they hold on the new layout too, because the element is decoded there in the
- * same way.
+ * same way. A whole value is rendered as FHIR JSON from the stored element, so its value is a
+ * number with the text of the source, on both layouts (T100j).
  *
  * <p>The fixtures cover a Duration at the resource root, an Age that is a choice at the root, a
  * Duration nested in a singular parent, and a Duration nested in a repeating one.
@@ -121,35 +122,29 @@ class QuantityTypesTest {
                 "Encounter",
                 "length",
                 "Duration",
-                "{\"value\":90.000000,\"unit\":\"min\",\"system\":\""
-                    + UCUM
-                    + "\",\"code\":\"min\"}"),
+                "{\"value\":90,\"unit\":\"min\",\"system\":\"" + UCUM + "\",\"code\":\"min\"}"),
             arguments(
                 "Condition",
                 "onset.ofType(Age)",
                 "Age",
-                "{\"value\":12.000000,\"unit\":\"a\",\"system\":\"" + UCUM + "\",\"code\":\"a\"}"),
+                "{\"value\":12,\"unit\":\"a\",\"system\":\"" + UCUM + "\",\"code\":\"a\"}"),
             arguments(
                 "MedicationRequest",
                 "dispenseRequest.expectedSupplyDuration",
                 "Duration",
-                "{\"value\":30.000000,\"unit\":\"days\",\"system\":\""
-                    + UCUM
-                    + "\",\"code\":\"d\"}"),
+                "{\"value\":30,\"unit\":\"days\",\"system\":\"" + UCUM + "\",\"code\":\"d\"}"),
             arguments(
                 "MedicationRequest",
                 "dosageInstruction.timing.repeat.bounds.ofType(Duration)",
                 "Duration",
-                "{\"value\":7.000000,\"unit\":\"days\",\"system\":\""
-                    + UCUM
-                    + "\",\"code\":\"d\"}"),
+                "{\"value\":7,\"unit\":\"days\",\"system\":\"" + UCUM + "\",\"code\":\"d\"}"),
             arguments("Encounter", "length.value", "decimal", "90.000000"))
         .flatMap(c -> bothLayouts(c.get()));
   }
 
   @ParameterizedTest(name = "{2} over the {0} layout")
   @MethodSource("wholeValues")
-  void singleInstanceEvaluationRendersTheDecodedValue(
+  void singleInstanceEvaluationRendersTheStoredValue(
       @Nonnull final TestLayout layout,
       @Nonnull final String resourceType,
       @Nonnull final String expression,

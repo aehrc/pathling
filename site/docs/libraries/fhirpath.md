@@ -439,6 +439,8 @@ FHIRPath expressions can also be evaluated against a single FHIR resource provid
 
 The method returns a list of typed results along with the inferred return type of the expression.
 
+A value of a complex type, such as a `HumanName`, a `Quantity` or an `Extension`, is returned as a string of FHIR JSON. It holds the elements of the value as they are stored, so a quantity keeps its extensions, and each decimal is a JSON number with the text it is stored with.
+
 <!--suppress CheckEmptyScriptTag -->
 <Tabs>
 <TabItem value="python" label="Python">

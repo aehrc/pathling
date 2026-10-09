@@ -51,11 +51,11 @@
       <groupId>au.csiro.pathling</groupId>
       <artifactId>fhir-schema</artifactId>
     </dependency>
-    <!-- The new-layout transform, which builds the new-layout arm of the test fixtures (T037a). -->
+    <!-- The layout-to-JSON transform, which renders a complex result of single-resource evaluation
+         as FHIR JSON (T100j), and builds the new-layout arm of the test fixtures (T037a). -->
     <dependency>
       <groupId>au.csiro.pathling</groupId>
       <artifactId>io</artifactId>
-      <scope>test</scope>
     </dependency>
 
     <!-- Apache Spark -->
