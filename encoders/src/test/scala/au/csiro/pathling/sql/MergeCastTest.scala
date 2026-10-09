@@ -145,6 +145,34 @@ class MergeCastTest extends SparkSessionSupport {
   }
 
   @Test
+  def absentRepeatingOperandCombinesWithSingularStructures(): Unit = {
+    // Whether the operands repeat is decided by the present operands alone (T100m). An absent
+    // repeating operand takes part in no merge, and projects to a null of the singular merged type.
+    val absent = F.lit(null).cast(ArrayType(NullType))
+    val Seq(n, sa, sb) = all(absent, F.col("sa"), F.col("sb"))
+    val result = data.select(n.alias("n"), sa.alias("sa"), sb.alias("sb"))
+    assertEquals(typeOf(result, "sa"), typeOf(result, "n"))
+    assertEquals(typeOf(result, "sb"), typeOf(result, "n"))
+    assertEquals(Seq("id", "family", "given"), elementOf(typeOf(result, "n")).fieldNames.toSeq)
+    assertEquals(Seq("[null,[a1,Smith,null],[b1,null,ArraySeq(John)]]"), rows(result))
+  }
+
+  @Test
+  def absentOperandsOfBothCardinalitiesAgreeOnOneBottomType(): Unit = {
+    // With no operand present, a singular and a repeating absent operand agree on an array of the
+    // bottom type, into which the singular null projects without loss (T100m, FR-055).
+    val singular = F.lit(null).cast(NullType)
+    val repeating = F.lit(null).cast(ArrayType(NullType))
+    for (operands <- Seq(Seq(singular, repeating), Seq(repeating, singular))) {
+      val Seq(x, y) = all(operands: _*)
+      val result = data.select(x.alias("x"), y.alias("y"))
+      assertEquals(ArrayType(NullType), typeOf(result, "x"))
+      assertEquals(ArrayType(NullType), typeOf(result, "y"))
+      assertEquals(Seq("[null,null]"), rows(result))
+    }
+  }
+
+  @Test
   def projectionIsByNameAndNotACast(): Unit = {
     // Two structures with the same field types in a different order. A cast between them
     // reorders positionally, with no error, and swaps the values.

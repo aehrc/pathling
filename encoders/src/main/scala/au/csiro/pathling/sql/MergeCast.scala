@@ -49,7 +49,9 @@ import scala.util.{Failure, Success, Try}
  * reorders their fields positionally and silently. A field an operand lacks becomes a null, and a
  * null structure stays null rather than becoming a structure of nulls. An operand of the bottom
  * type, or an array of it, is how an absent element is typed (FR-055): it takes part in no merge
- * and projects to a null of the merged type.
+ * and projects to a null of the merged type, whatever its cardinality. Whether the merged type
+ * repeats is decided by the present operands, and where none is present, absent operands of both
+ * cardinalities agree on an array of the bottom type.
  *
  * The operands must be all structures or all arrays of structures, apart from those of the bottom
  * type, which combine with either. Operands of any other type must already agree, and are left as
@@ -89,6 +91,9 @@ case class MergeCast(operands: Seq[Expression], index: Int, canonical: Canonical
 
 object MergeCast {
 
+  /** The type absent operands of both cardinalities agree on: an array of the bottom type. */
+  private val AbsentRepeating: DataType = ArrayType(NullType, containsNull = true)
+
   /**
    * Computes the type that operands of the given types are projected into.
    *
@@ -99,13 +104,19 @@ object MergeCast {
    */
   def mergedType(types: Seq[DataType], canonical: CanonicalStructure): DataType = {
     val present = types.filterNot(isAbsent)
-    if (present.isEmpty || types.forall(_ == types.head)) {
+    if (types.forall(_ == types.head)) {
       // Operands that already share one type have nothing to reconcile, and are left as they are
       // rather than reordered. A structure the canonical structure does not fully describe, such
       // as one of the previous layout, is therefore only changed where it meets another shape.
       types.head
+    } else if (present.isEmpty) {
+      // Absent operands of both cardinalities agree on an array of the bottom type, into which a
+      // singular null projects without loss, where an array could not become a singular null.
+      AbsentRepeating
     } else {
-      val repeating = types.exists(_.isInstanceOf[ArrayType])
+      // Whether the operands repeat is decided by the present ones alone, because an absent
+      // operand takes part in no merge, whichever its cardinality.
+      val repeating = present.exists(_.isInstanceOf[ArrayType])
       if (repeating && !present.forall(_.isInstanceOf[ArrayType])) {
         throw new IllegalArgumentException(
           "Cannot reconcile singular and repeating operands: " + types.map(_.simpleString)
@@ -151,6 +162,7 @@ object MergeCast {
       val element = NamedLambdaVariable("element", NullType, nullable = true)
       ArrayTransform(value,
         LambdaFunction(withNullability(Literal(null, t), containsNull), Seq(element)))
+    case (ArrayType(NullType, _), t) => Literal(null, t)
     case (fs: StructType, ts: StructType) =>
       val struct = CreateNamedStruct(ts.fields.toSeq.flatMap { field =>
         val projected = fs.fieldNames.indexOf(field.name) match {
