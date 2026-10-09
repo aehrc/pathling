@@ -269,4 +269,3 @@ The decision table above changes in two rows: "Join condition,
 `not(text.exists())`, `text` on neither side" now gives the C column's 3697
 where the base gave `UNRESOLVED_COLUMN`, and the self-join rows give
 `AMBIGUOUS_REFERENCE`, as the base did.
-
