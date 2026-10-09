@@ -93,6 +93,62 @@ test_that("encode_xml_bundles", {
   )
 })
 
+# Documents of several types, each one per line, as encode reads them. The Bundle is another type
+# and is left out, as the Observation is, when Patients are requested.
+mixed_json <- c(
+  '{"resourceType":"Patient","id":"p1","gender":"male"}',
+  '{"resourceType":"Observation","id":"o1","status":"final","code":{"text":"x"}}',
+  '{"resourceType":"Patient","id":"p2","gender":"female"}',
+  paste0(
+    '{"resourceType":"Bundle","id":"b1","type":"collection","entry":[{"resource":',
+    '{"resourceType":"Patient","id":"p3"}}]}'
+  )
+)
+
+mixed_xml <- c(
+  '<Patient xmlns="http://hl7.org/fhir"><id value="p1"/><gender value="male"/></Patient>',
+  paste0(
+    '<Observation xmlns="http://hl7.org/fhir"><id value="o1"/><status value="final"/>',
+    '<code><text value="x"/></code></Observation>'
+  ),
+  '<Patient xmlns="http://hl7.org/fhir"><id value="p2"/><gender value="female"/></Patient>',
+  paste0(
+    '<Bundle xmlns="http://hl7.org/fhir"><id value="b1"/><type value="collection"/>',
+    '<entry><resource><Patient><id value="p3"/></Patient></resource></entry></Bundle>'
+  )
+)
+
+encoded_ids <- function(pc, documents, resource_type, input_type) {
+  pathling_encode(pc, documents, resource_type, input_type = input_type) %>%
+    select(id) %>%
+    collect() %>%
+    pull(id) %>%
+    sort()
+}
+
+test_that("encode keeps only the requested type", {
+  # Only the documents of the requested type are stored, as before the switch (T070, SC-008).
+  spark <- spark_session()
+  pc <- pathling_connect(spark)
+  for (format in list(list(mixed_json, MimeType$FHIR_JSON), list(mixed_xml, MimeType$FHIR_XML))) {
+    documents <- sparklyr::copy_to(
+      spark, data.frame(value = format[[1]]),
+      name = paste0("mixed_", sample.int(1e6, 1)), overwrite = TRUE
+    )
+    expect_equal(encoded_ids(pc, documents, "Patient", format[[2]]), c("p1", "p2"))
+    expect_equal(encoded_ids(pc, documents, "Observation", format[[2]]), "o1")
+    # A type that is absent from the input gives an empty result, not a failure.
+    expect_equal(
+      pathling_encode(pc, documents, "Condition", input_type = format[[2]]) %>% sdf_nrow(), 0
+    )
+  }
+})
+
+# The nesting and extension options bound the schema of the dense mode only, which does not exist
+# yet, so they bound nothing in the fitted schema that encoding stores: depth comes from the data,
+# and extensions are stored inline because they are present (contracts/library-api.md, decision
+# 69). The options are still accepted.
+
 test_that("element_nesting", {
   spark_session <- spark_session()
   json_resources_df <- json_resources_df(spark_session, json_resources_dir())
@@ -101,30 +157,22 @@ test_that("element_nesting", {
   pathling_0 <- pathling_connect(spark_session, max_nesting_level = 0)
   pathling_1 <- pathling_connect(spark_session, max_nesting_level = 1)
 
-  # default nesting level is 3
-  quest_def <- pathling_encode(pathling_def, json_resources_df, "Questionnaire") %>%
+  # The levels of items the data carries are kept, whatever the nesting level.
+  quest_def_df <- pathling_encode(pathling_def, json_resources_df, "Questionnaire")
+  quest_def <- quest_def_df %>%
     head(1) %>%
     sdf_collect()
   expect_true("item" %in% names(quest_def))
   expect_true("item" %in% names(quest_def$item[[1]][[1]]))
   expect_true("item" %in% names(quest_def$item[[1]][[1]]$item[[1]]))
   expect_true("item" %in% names(quest_def$item[[1]][[1]]$item[[1]]$item[[1]]))
-  expect_false("item" %in% names(quest_def$item[[1]][[1]]$item[[1]]$item[[1]]$item[[1]]))
 
-  # max nesting level set to 0
-  quest_0 <- pathling_encode(pathling_0, json_resources_df, "Questionnaire") %>%
-    head(1) %>%
-    sdf_collect()
-  expect_true("item" %in% names(quest_0))
-  expect_false("item" %in% names(quest_0$item[[1]][[1]]))
-
-  # max nesting level set to 1
-  quest_1 <- pathling_encode(pathling_1, json_resources_df, "Questionnaire") %>%
-    head(1) %>%
-    sdf_collect()
-  expect_true("item" %in% names(quest_1))
-  expect_true("item" %in% names(quest_1$item[[1]][[1]]))
-  expect_false("item" %in% names(quest_1$item[[1]][[1]]$item[[1]]))
+  # The options bound nothing: the schema is the one the defaults give.
+  for (pathling in list(pathling_0, pathling_1)) {
+    quest <- pathling_encode(pathling, json_resources_df, "Questionnaire")
+    expect_equal(sdf_schema(quest), sdf_schema(quest_def_df))
+    expect_equal(quest %>% head(1) %>% sdf_collect(), quest_def)
+  }
 })
 
 test_that("extension_support", {
@@ -135,16 +183,14 @@ test_that("extension_support", {
   pathling_ext_off <- pathling_connect(spark_session, enable_extensions = FALSE)
   pathling_ext_on <- pathling_connect(spark_session, enable_extensions = TRUE)
 
-  patient_def <- pathling_encode(pathling_def, json_resources_df, "Patient") %>%
-    head(1) %>%
-    sdf_collect()
+  # The extensions are stored inline, and there is no extension map.
+  patient_def <- pathling_encode(pathling_def, json_resources_df, "Patient")
   expect_false("_extension" %in% colnames(patient_def))
+  expect_true("extension" %in% colnames(patient_def))
 
-  # extensions disabled
-  patient_off <- pathling_encode(pathling_ext_off, json_resources_df, "Patient") %>% head(1)
-  expect_false("_extension" %in% colnames(patient_off))
-
-  # extensions enabled
-  patient_on <- pathling_encode(pathling_ext_on, json_resources_df, "Patient") %>% head(1)
-  expect_true("_extension" %in% colnames(patient_on))
+  for (pathling in list(pathling_ext_off, pathling_ext_on)) {
+    patient <- pathling_encode(pathling, json_resources_df, "Patient")
+    expect_equal(sdf_schema(patient), sdf_schema(patient_def))
+    expect_false("_extension" %in% colnames(patient))
+  }
 })
