@@ -226,8 +226,9 @@ jobs:
     environment: maven-central
     runs-on: ubuntu-latest
     # The artefacts are only published once every suite has passed, which is the same guarantee the
-    # single job gave when it ran the tests itself.
-    needs: [detect-changes, test-core, test-python, test-r]
+    # single job gave when it ran the tests itself. That includes the fhirpath suites over the
+    # previous layout.
+    needs: [detect-changes, test-core, test-fhirpath-previous-layout, test-python, test-r]
     permissions:
       id-token: write
       contents: read

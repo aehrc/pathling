@@ -308,10 +308,14 @@ jobs:
   sonar:
     name: SonarCloud analysis
     runs-on: ubuntu-latest
-    needs: [detect-changes, test-core]
+    needs: [detect-changes, test-core, test-fhirpath-previous-layout]
     # Analysis is only meaningful once every module has reported its coverage; a partial set would
-    # be published as a drop in coverage.
-    if: needs.detect-changes.outputs.core == 'true' && needs.test-core.result == 'success'
+    # be published as a drop in coverage. The fhirpath suites over the previous layout report no
+    # coverage, but are a test job like the others, so the analysis waits on them too.
+    if: |
+      needs.detect-changes.outputs.core == 'true' &&
+      needs.test-core.result == 'success' &&
+      needs.test-fhirpath-previous-layout.result == 'success'
     permissions:
       contents: read
     steps:
