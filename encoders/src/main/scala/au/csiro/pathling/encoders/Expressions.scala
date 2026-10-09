@@ -26,7 +26,7 @@ import org.apache.spark.SparkException
 import org.apache.spark.sql.AnalysisException
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.analysis.TypeCheckResult.{TypeCheckFailure, TypeCheckSuccess}
-import org.apache.spark.sql.catalyst.analysis.{GetViewColumnByNameAndOrdinal, TypeCheckResult, UnresolvedException}
+import org.apache.spark.sql.catalyst.analysis.{GetViewColumnByNameAndOrdinal, TypeCheckResult, UnresolvedAttribute, UnresolvedException}
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.{variant => variantExpr}
 import org.apache.spark.sql.catalyst.expressions.codegen.Block._
@@ -431,11 +431,22 @@ case class UnresolvedUnnest(value: Expression)
  * names the columns without their qualifiers, which the error that signals the ambiguity does not
  * report.
  *
+ * Before the view column, the name is resolved as a plain unresolved attribute, and where that
+ * yields an attribute of the input, the reference is that attribute (T100k, option C in
+ * `evidence/join-condition-limit.md`). This is what makes the reference work in a join condition,
+ * where the analyzer resolves a plain attribute across both sides, but asserts that the operator
+ * has a single child before it resolves a view column. So where the plain attribute stays
+ * unresolved, the name matches no column of either side, and the assertion the view column then
+ * raises is taken for absence. Only an attribute is accepted from the plain resolution: a name can
+ * also resolve to a lambda variable, an outer reference or a function such as `current_date`, none
+ * of which is the table column the reference stands for, and each falls through to the view
+ * column. A plain attribute that matches more than one column fails with AMBIGUOUS_REFERENCE, as
+ * the view column does.
+ *
  * The expression is built with no reference to any dataset, so that one column is valid over every
- * schema (decision 75). It depends on analyzer internals, and it has a known limit, which the tests
- * pin so that a change is noticed: in a join condition the analyzer asserts that the operator has
- * a single child before it resolves the view column, so the query fails with INTERNAL_ERROR even
- * when the column exists.
+ * schema (decision 75). It depends on analyzer internals, which the tests pin so that a change is
+ * noticed: that the view column throws where it does, and that it fails the single-child assertion
+ * in an operator with two children.
  *
  * @param columnName the name of the table-level column
  * @param fallback   the type of the null returned when the column is absent
@@ -447,7 +458,17 @@ case class UnresolvedColumnOrNull(columnName: String, fallback: DataType, value:
     this(columnName, fallback,
       GetViewColumnByNameAndOrdinal(UnresolvedColumnOrNull.SOURCE_NAME, columnName, 0, 1, None))
 
-  override def mapChildren(f: Expression => Expression): Expression = {
+  override def mapChildren(f: Expression => Expression): Expression =
+    f(UnresolvedAttribute(Seq(columnName))) match {
+      case attribute: Attribute if attribute.resolved => attribute
+      case _ => resolveViewColumn(f)
+    }
+
+  /**
+   * Resolves the name through the view column, which signals absence and ambiguity by throwing.
+   * It is reached only where the plain attribute did not resolve to an attribute of the input.
+   */
+  private def resolveViewColumn(f: Expression => Expression): Expression =
     try {
       val newValue = f(value)
       if (newValue.resolved) {
@@ -463,8 +484,13 @@ case class UnresolvedColumnOrNull(columnName: String, fallback: DataType, value:
           resolveMatches(f, UnresolvedColumnOrNull.matchedNames(columnName,
             e.getMessageParameters.get("actualCols")))
         }
+      // The analyzer resolves the view column only against an operator with a single child, and
+      // asserts that it has one. An operator with more, such as a join, resolves a plain attribute
+      // across all of its children, so the plain attribute not resolving means that no child has
+      // the column.
+      case _: AssertionError =>
+        Literal(null, fallback)
     }
-  }
 
   /**
    * Resolves a name that matches more than one attribute. Where every match is the same attribute,

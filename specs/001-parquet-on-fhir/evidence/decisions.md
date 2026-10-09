@@ -2367,7 +2367,11 @@ it. Beyond the two fixes, the owner approved each of these:
 - a FHIRPath or search column used directly in a join condition now fails
   with `INTERNAL_ERROR`, including where it used to work. Joining first and
   then filtering still works, and view joins on keys are unaffected (decision
-  75's join-condition limit, `evidence/join-condition-limit.md`).
+  75's join-condition limit, `evidence/join-condition-limit.md`). _Resolved in
+  M4 by T100k_: such a column works in a join condition again, reading the
+  column from whichever side has it, failing with `AMBIGUOUS_REFERENCE` where
+  both do, and answering the fallback where neither does, where the base
+  failed with `UNRESOLVED_COLUMN`.
 
 ### What else it corrects
 
@@ -2517,7 +2521,17 @@ layout's extension struct keeps `_fid`.
 
 ### Known limits, accepted for now
 
-- **Join condition.** The catch fails with `INTERNAL_ERROR` in a join
+- **Join condition. Resolved in M4 by T100k, with option C**: the reference
+  first resolves its name as a plain attribute, and accepts the result only
+  where it is an attribute of the input; otherwise it goes on to the view
+  column, and takes the single-child assertion the view column then raises in a
+  join for absence, since the plain attribute would have resolved across both
+  sides had either had the column. `ResolveOrNullTest` pins the assertion
+  (`viewColumnInJoinConditionFailsTheSingleChildAssertion`), the join cases, a
+  name that is also a literal function (`current_date`) and a lambda variable
+  of the column's name; `JoinConditionTest` in `fhirpath` covers FHIRPath and
+  search columns in a join condition on both layouts. The text below is the
+  limit as it stood. The catch fails with `INTERNAL_ERROR` in a join
   condition, even when the column exists. The cause is Spark's, verified on
   4.0.2: a `Join` resolves its condition through
   `ColumnResolutionHelper.resolveExpressionByPlanChildren`, which resolves the
@@ -2727,7 +2741,9 @@ Consequences:
   column. `.extension` on it is now empty rather than an error. This relaxes
   decision 75.
 - The known limits of the tolerant reference (a join condition, a self-join, a
-  column dropped by a projection beneath) now reach `_extension` too.
+  column dropped by a projection beneath) now reach `_extension` too. The first
+  two have since been resolved, the self-join by the M2 review fix and the join
+  condition by T100k.
 
 The rule for the combining functions, which T113b implements, follows the FHIR
 binding. A combination of two FHIR operands keeps FHIR elements. Where a System
