@@ -617,6 +617,10 @@ after the schema-binding decision and belong to this section.
 
 - **FR-043**: `encode`, `encodeBundle` and `decode` MUST be preserved in Java,
   Python and R.
+  *(Read by decision 87 as preserving the forms taking a resource name, which
+  Python and R expose. The Java overloads returning a dataset typed by a HAPI
+  class are removed, and encoding a streaming dataset fails until the dense
+  schema restores it in M6.)*
 - **FR-044**: The nesting, extension and open-type options MUST keep their
   current meaning for the dense schema and MUST NOT apply to the pruned one.
   *(Staged by decision 69. The options remain in the public API throughout, and

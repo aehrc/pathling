@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.library.io;
 
+import static org.apache.spark.sql.functions.lit;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -253,6 +254,32 @@ class NarrowMergeTest {
     final Map<String, String> birthDates = valuesById(warehouse, "birthDate");
     assertEquals("1990-01-01", birthDates.get("in-both"));
     assertNull(birthDates.get("target-only"));
+  }
+
+  /**
+   * A source carrying a column the definitions do not describe widens the target with it, as an
+   * append does, rather than ignoring it as the merge did before it widened (decision 41, T117a).
+   */
+  @Test
+  void sourceWithAnUndescribedColumnWidensTheTarget() {
+    // Arrange.
+    final String warehouse = warehouse("undescribed-column");
+    write(encode(targetPatients()), warehouse, "overwrite");
+    final Dataset<Row> widerSource = encode(sourcePatients()).withColumn("unexpected", lit(1));
+
+    // Act.
+    write(widerSource, warehouse, "merge");
+
+    // Assert: the target gained the column, which holds the source's value on the rows it wrote
+    // and is null on the row it did not.
+    assertTrue(List.of(storedSchema(warehouse).fieldNames()).contains("unexpected"));
+    final Map<String, String> unexpected = valuesById(warehouse, "unexpected");
+    assertEquals(3, unexpected.size());
+    assertEquals("1", unexpected.get("in-both"));
+    assertEquals("1", unexpected.get("source-only"));
+    assertNull(unexpected.get("target-only"));
+    assertEquals(
+        AdministrativeGender.MALE.toCode(), valuesById(warehouse, "gender").get("target-only"));
   }
 
   /** A merge whose source and target schemas are aligned behaves as it does today (US3.7). */

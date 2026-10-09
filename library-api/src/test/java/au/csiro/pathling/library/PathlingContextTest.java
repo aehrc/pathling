@@ -60,9 +60,6 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
-import org.apache.spark.sql.streaming.OutputMode;
-import org.apache.spark.sql.streaming.StreamingQuery;
-import org.hl7.fhir.r4.model.Condition;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -125,11 +122,6 @@ public class PathlingContextTest {
         "All values should be relative references, but some are not: " + invalidValues);
   }
 
-  public <T> void assertValidIdColumns(@Nonnull final Dataset<T> df) {
-    assertAllGUIDs(df.select("id").as(Encoders.STRING()).collectAsList());
-    assertAllRelativeReferences(df.select("id_versioned").as(Encoders.STRING()).collectAsList());
-  }
-
   /**
    * Asserts the identifiers of resources stored in the Parquet on FHIR layout, which carries the
    * logical id alone, without the versioned companion of the previous layout.
@@ -178,11 +170,11 @@ public class PathlingContextTest {
     assertEquals(5, patientsDataframe2.count());
     assertValidNewLayoutIdColumns(patientsDataframe2);
 
-    final Dataset<Condition> conditionsDataframe =
-        pathling.encodeBundle(bundlesDF, Condition.class, PathlingContext.FHIR_JSON);
+    final Dataset<Row> conditionsDataframe =
+        pathling.encodeBundle(bundlesDF.toDF(), "Condition", PathlingContext.FHIR_JSON);
     assertEquals(107, conditionsDataframe.count());
 
-    assertValidIdColumns(conditionsDataframe);
+    assertValidNewLayoutIdColumns(conditionsDataframe);
     assertValidRelativeRefColumns(conditionsDataframe, col("subject"));
     assertValidRelativeRefColumns(conditionsDataframe, col("encounter"));
   }
@@ -193,11 +185,11 @@ public class PathlingContextTest {
         spark.read().option("wholetext", true).textFile(TEST_DATA_URL + "/bundles/R4/xml");
 
     final PathlingContext pathling = PathlingContext.create(spark);
-    final Dataset<Condition> conditionsDataframe =
-        pathling.encodeBundle(bundlesDF, Condition.class, PathlingContext.FHIR_XML);
+    final Dataset<Row> conditionsDataframe =
+        pathling.encodeBundle(bundlesDF.toDF(), "Condition", PathlingContext.FHIR_XML);
     assertEquals(107, conditionsDataframe.count());
 
-    assertValidIdColumns(conditionsDataframe);
+    assertValidNewLayoutIdColumns(conditionsDataframe);
     assertValidRelativeRefColumns(conditionsDataframe, col("subject"));
     assertValidRelativeRefColumns(conditionsDataframe, col("encounter"));
   }
@@ -214,11 +206,11 @@ public class PathlingContextTest {
     assertEquals(9, patientsDataframe.count());
     assertValidNewLayoutIdColumns(patientsDataframe);
 
-    final Dataset<Condition> conditionsDataframe =
-        pathling.encode(jsonResources, Condition.class, PathlingContext.FHIR_JSON);
+    final Dataset<Row> conditionsDataframe =
+        pathling.encode(jsonResources.toDF(), "Condition", PathlingContext.FHIR_JSON);
     assertEquals(71, conditionsDataframe.count());
 
-    assertValidIdColumns(conditionsDataframe);
+    assertValidNewLayoutIdColumns(conditionsDataframe);
     assertValidRelativeRefColumns(conditionsDataframe, col("subject"));
     assertValidRelativeRefColumns(conditionsDataframe, col("encounter"));
   }
@@ -297,43 +289,34 @@ public class PathlingContextTest {
     assertEquals(Set.of("boolean", "string", "Address"), retrievedConfig2.getOpenTypes());
   }
 
+  /**
+   * A streaming dataset cannot be scanned to fit a schema, so encoding one fails with a message
+   * saying so until the dense schema arrives (decision 87), rather than storing the previous
+   * layout.
+   */
   @Test
-  void testEncodeResourceStream() throws Exception {
-    final EncodingConfiguration encodingConfig =
-        EncodingConfiguration.builder().enableExtensions(true).build();
-    final PathlingContext pathling = PathlingContext.createForEncoding(spark, encodingConfig);
+  void testEncodeResourceStream() {
+    final PathlingContext pathling = PathlingContext.create(spark);
 
     final Dataset<Row> jsonResources =
         spark.readStream().text(TEST_DATA_URL + "/resources/R4/json");
-
     assertTrue(jsonResources.isStreaming());
 
-    final Dataset<Row> patientsStream =
-        pathling.encode(jsonResources, "Patient", PathlingContext.FHIR_JSON);
+    final UnsupportedOperationException encodeFailure =
+        assertThrows(
+            UnsupportedOperationException.class,
+            () -> pathling.encode(jsonResources, "Patient", PathlingContext.FHIR_JSON));
+    assertTrue(
+        encodeFailure.getMessage().contains("streaming"),
+        "unexpected message: " + encodeFailure.getMessage());
 
-    assertTrue(patientsStream.isStreaming());
-
-    final StreamingQuery patientsQuery =
-        patientsStream.writeStream().queryName("patients").format("memory").start();
-
-    patientsQuery.processAllAvailable();
-    final long patientsCount = spark.sql("select count(*) from patients").head().getLong(0);
-    assertEquals(9, patientsCount);
-
-    final StreamingQuery conditionQuery =
-        pathling
-            .encode(jsonResources, "Condition", PathlingContext.FHIR_JSON)
-            .groupBy()
-            .count()
-            .writeStream()
-            .outputMode(OutputMode.Complete())
-            .queryName("countCondition")
-            .format("memory")
-            .start();
-
-    conditionQuery.processAllAvailable();
-    final long conditionsCount = spark.sql("select * from countCondition").head().getLong(0);
-    assertEquals(71, conditionsCount);
+    final UnsupportedOperationException bundleFailure =
+        assertThrows(
+            UnsupportedOperationException.class,
+            () -> pathling.encodeBundle(jsonResources, "Patient", PathlingContext.FHIR_JSON));
+    assertTrue(
+        bundleFailure.getMessage().contains("streaming"),
+        "unexpected message: " + bundleFailure.getMessage());
   }
 
   @Test

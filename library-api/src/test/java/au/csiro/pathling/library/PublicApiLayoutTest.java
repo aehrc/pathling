@@ -23,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.definition.fhir.FhirDefinitionContext;
+import au.csiro.pathling.encoders.UnsupportedResourceError;
 import au.csiro.pathling.io.FhirReader;
 import au.csiro.pathling.library.io.source.LayoutDetector;
 import au.csiro.pathling.library.io.source.StorageLayout;
@@ -165,7 +166,12 @@ class PublicApiLayoutTest {
   void encodeRefusesBundleAsAType() {
     final Dataset<Row> documents = documents(json(), emptyBundle());
 
-    assertThrows(IllegalArgumentException.class, () -> pathling.encode(documents, "Bundle"));
+    // The error is the one the previous encoder raised, so that callers see no change (FR-007).
+    assertThrows(UnsupportedResourceError.class, () -> pathling.encode(documents, "Bundle"));
+    assertThrows(
+        UnsupportedResourceError.class,
+        () -> pathling.encode(documents, "Bundle", PathlingContext.FHIR_XML));
+    assertThrows(UnsupportedResourceError.class, () -> pathling.encodeBundle(documents, "Bundle"));
   }
 
   // Encoding bundles.

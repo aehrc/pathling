@@ -16,7 +16,10 @@ Python and R.
 | Evaluating FHIRPath to a column, and against a single resource | Signatures preserved. |
 | Running ViewDefinitions | Preserved. |
 
-No public signature is removed or narrowed.
+No public signature is removed or narrowed, with one exception (decision 87): the
+Java `encode` and `encodeBundle` overloads that return a dataset typed by a HAPI
+class are removed, since only the previous encoder can produce one. Encoding a
+streaming dataset fails until the dense schema arrives in M6.
 
 ## Options added
 

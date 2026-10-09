@@ -3256,3 +3256,59 @@ merging Parquet source. This is a regression for incremental loads into Parquet 
 tables, which worked only because the dense schema gave every batch the same columns.
 Padding narrower batches and widening Parquet catalog tables are left to issue #2819
 rather than built in M4. FR-042 carries this exception.
+
+## 87. The typed `encode` overloads are removed, and streaming `encode` fails until the dense schema
+
+Owner decision (2026-10-09), prompted by Phase 12's switch in M4.
+
+`encode(Dataset<String>, Class<T>, String)` and `encodeBundle(Dataset<String>, Class<T>,
+String)` return a dataset typed by a HAPI class, which only the FHIR encoders can produce, so
+after the switch they were the one public path still storing the previous layout, and their
+output was refused by `decode`, the sinks and, from Phase 13, the sources. Nothing in the
+repository calls them outside their own tests: Python, R, the server, the benchmark and the
+documentation all use the overloads taking a resource name. They are removed. This is in
+keeping with the aim of removing HAPI from the public interface, and anyone needing typed HAPI
+datasets can use the encoders directly, as the server does through `getFhirEncoders()`.
+FR-043 is read as preserving the name-based forms, which Python and R expose.
+
+A streaming dataset cannot be scanned to fit a schema, so the pruned layout cannot be produced
+from one. The dense schema, derived from the definitions, is the solution, and it arrives in M6.
+Until then `encode` and `encodeBundle` over a streaming dataset fail with a message saying so,
+rather than falling back to the previous encoder: every public path writes only the new layout.
+This is a regression of a documented feature from M4 until M6. The streaming example in the
+documentation is rewritten to say so, and `testEncodeResourceStream` asserts the message.
+
+_Consequence for the specification_: T100c removes the previous encoder's map-partition encode
+paths, the parser behind them and their tests, as nothing public reaches them. A task in Phase
+17 (M6) restores streaming `encode` over the dense schema.
+
+## 88. An absent element's fallback carries the cardinality of the path that reaches it
+
+Owner decision (2026-10-09), prompted by T108a.
+
+The fallback FR-055 supplies for an absent element was taken from the element's own
+definition, ignoring repeating ancestors on the path. `name.family` was therefore
+`ArrayType(StringType)` over a dataset carrying `name` and `StringType` over one without it,
+and likewise `name.period.start`, `maritalStatus.coding.code` and `contact.name.family`. The
+values agree, but one expression yielded two column types, which FR-030 and SC-010 forbid and
+which breaks appending or unioning results computed over batches of differing width. The
+fallback is wrapped to the array shape a present path would produce, at the engine site that
+supplies it.
+
+## 89. `maxUnboundTraversalDepth` guards same-type recursion, which the new layout's nesting cannot produce
+
+Owner decision (2026-10-09), prompted by `EvaluateRepeatAllTest.extensionsLimitedByDepth`.
+
+The bound was introduced against infinite recursion through extensions, which in the previous
+layout had one SQL type at every nesting level, and through exotic expressions such as
+`repeatAll(first())`. In the new layout a nested structure contains its child's type, so no
+level can share an ancestor's SQL type, and the tolerant traversal stops at the first level
+whose field is absent (T110a, `TransformTreeTerminationTest`). Nested extensions are bounded by
+the data and no longer consume the budget, which still applies to a projection returning the
+same struct at every level.
+
+_Consequence for the specification_: `extensionsLimitedByDepth` expects every level present in
+the data on the new layout; a test asserts that same-type recursion such as `repeatAll(first())`
+is still bounded; the FHIRPath documentation describes the bound as guarding same-type
+recursion. Whether such exotic recursion should fail on exhaustion rather than stop is issue
+#2820.
