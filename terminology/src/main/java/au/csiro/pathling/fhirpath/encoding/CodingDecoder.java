@@ -20,11 +20,12 @@ package au.csiro.pathling.fhirpath.encoding;
 import au.csiro.pathling.encoders.ExtensionSupport;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicReference;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.r4.model.Coding;
@@ -39,9 +40,12 @@ import org.hl7.fhir.r4.model.Coding;
  * {@code _fid}. So the position of each Coding field is resolved from the structure's field names,
  * and an absent field decodes as null.
  *
- * <p>The positions are resolved once per schema, not per row. Every row that Spark hands a function
- * from one column shares one schema instance, so the decoder last used is kept and reused while the
- * schema is the same instance; any other schema is looked up by equality.
+ * <p>The positions are resolved once per schema, not per row. They depend on the names of the
+ * structure's fields alone, so decoders are cached by the list of those names, which bounds the
+ * cache by the ways a Coding's fields can be named and ordered rather than by every type beneath
+ * them. Every row that Spark hands a function from one column shares one schema instance, so each
+ * thread keeps the schema and decoder it last used, and reuses the decoder while the schema is the
+ * same instance; any other schema is looked up by its field names.
  *
  * <p>A row without a schema, as {@link org.apache.spark.sql.RowFactory} builds it, can only be read
  * by position, so it is read as the canonical structure.
@@ -69,15 +73,20 @@ public final class CodingDecoder {
   /** The position that stands for a field the structure does not carry. */
   private static final int ABSENT = -1;
 
-  @Nonnull private static final CodingDecoder CANONICAL = new CodingDecoder(CodingSchema.DATA_TYPE);
+  @Nonnull
+  private static final CodingDecoder CANONICAL =
+      new CodingDecoder(Arrays.asList(CodingSchema.DATA_TYPE.fieldNames()));
 
   @Nonnull
-  private static final Map<StructType, CodingDecoder> BY_SCHEMA = new ConcurrentHashMap<>();
+  private static final Map<List<String>, CodingDecoder> BY_FIELD_NAMES = new ConcurrentHashMap<>();
 
+  /**
+   * The schema each thread last decoded and its decoder. A thread runs one task at a time, so the
+   * slot is not contended, and tasks reading different columns on other threads do not evict it.
+   */
   @Nonnull
-  private static final AtomicReference<CodingDecoder> LAST_USED = new AtomicReference<>(CANONICAL);
-
-  @Nonnull private final StructType schema;
+  private static final ThreadLocal<Entry<StructType, CodingDecoder>> LAST_USED =
+      ThreadLocal.withInitial(() -> new SimpleImmutableEntry<>(CodingSchema.DATA_TYPE, CANONICAL));
 
   private final int systemIndex;
 
@@ -89,8 +98,7 @@ public final class CodingDecoder {
 
   private final int userSelectedIndex;
 
-  private CodingDecoder(@Nonnull final StructType schema) {
-    final List<String> fieldNames = Arrays.asList(schema.fieldNames());
+  private CodingDecoder(@Nonnull final List<String> fieldNames) {
     if (fieldNames.stream().noneMatch(CODING_FIELDS::contains)) {
       throw new IllegalArgumentException(
           "Expected a Coding structure with at least one of the fields "
@@ -98,7 +106,6 @@ public final class CodingDecoder {
               + ", but the structure has the fields "
               + fieldNames);
     }
-    this.schema = schema;
     this.systemIndex = fieldNames.indexOf(CodingSchema.SYSTEM_FIELD);
     this.versionIndex = fieldNames.indexOf(CodingSchema.VERSION_FIELD);
     this.codeIndex = fieldNames.indexOf(CodingSchema.CODE_FIELD);
@@ -119,14 +126,15 @@ public final class CodingDecoder {
     if (schema == null) {
       return CANONICAL;
     }
-    final CodingDecoder last = LAST_USED.get();
+    final Entry<StructType, CodingDecoder> last = LAST_USED.get();
     // Rows from one column share one schema instance, so an identity check suffices here, and it
     // avoids hashing the schema for every row.
-    if (last.schema == schema) {
-      return last;
+    if (last.getKey() == schema) {
+      return last.getValue();
     }
-    final CodingDecoder decoder = BY_SCHEMA.computeIfAbsent(schema, CodingDecoder::new);
-    LAST_USED.set(decoder);
+    final CodingDecoder decoder =
+        BY_FIELD_NAMES.computeIfAbsent(List.of(schema.fieldNames()), CodingDecoder::new);
+    LAST_USED.set(new SimpleImmutableEntry<>(schema, decoder));
     return decoder;
   }
 
