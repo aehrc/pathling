@@ -3641,3 +3641,106 @@ without a warning. The script reaches the short name without editing the log: it
 type once through the Parquet sink, places the file under the short name, and creates each
 Delta table around it with Delta's own conversion, which writes a log and checksum that
 describe the file as it is named.
+
+## 116. An open choice takes the specification's order of open types
+
+Found in M4, regenerating the R package's example data (decision 115); fixed in M4.
+
+Two runs of `lib/R/data-raw/example_data.R`, from the same build and the same NDJSON, wrote
+Patient files with equal rows and different schemas: the fields of an extension's value
+struct (`valueDecimal`, `valueString`, `valueCode`, `valueAddress`) changed order between
+runs. Encoding through `FhirReader` is schema derivation, so this broke FR-057.
+
+_Cause_: `FhirChoiceDefinition.getAllChildTypes()` took a choice's order from the definition
+library's `RuntimeChildChoiceDefinition.getChoices()`, on the assumption that it is the type
+list of the child annotation. For a declared choice it is. An open choice (`RuntimeChildAny`)
+declares no types (`@Child(type = {})`), and HAPI 8.10.0's `RuntimeChildAny.sealAndInitialize`
+fills it by iterating the key set of a `HashMap` keyed by type class, so in identity-hash
+order. It then sorts with `ResourceTypeNameComparator`, which compares only classes
+implementing the DSTU2 `IResource` and returns 0 for every R4 datatype, so the stable sort
+keeps the hash order (`javap` of both classes, `hapi-runtimechildany-javap.txt` under
+`.local/work/issue/2764/`). Identity hashes repeat between runs of a single-threaded program
+whose startup is identical, which is why a standalone probe printed one order three times; they
+differ under a different hashing mode (`-XX:hashCode=0` and `=1` each gave another order,
+`hash-order-variation.txt`), under Surefire (a third order) and under Spark's multi-threaded
+startup, as the two R runs showed. The order reached every struct type built from the canonical
+structure: the transform's schema, `StructureMerge`, the reconciliation projection (`MergeCast`)
+and the Delta sink's widening.
+
+_Fix_: for an open choice, `getAllChildTypes()` orders the variants by the specification. The
+order is the type list of `Extension.value[x]` in the R4 definition (`StructureDefinition-
+Extension.json` in `hl7.fhir.r4.core` 4.0.1), which is the same list in the same order for every
+open choice in R4: `Extension.value[x]`, `ElementDefinition.defaultValue[x]`, `fixed[x]`,
+`pattern[x]` and `example.value[x]`, `Parameters.parameter.value[x]`,
+`StructureMap.group.rule.source.defaultValue[x]`, and `Task.input.value[x]` and
+`output.value[x]`. These nine are also exactly the choices the definition library builds as
+`RuntimeChildAny`. The list is pinned in `OpenTypeOrder`, because the definition library carries
+no structure definitions to read it from. A declared choice keeps its annotation order, unchanged.
+
+_Owner decision needed_: the definition library accepts nine types in an open choice beyond the
+specification's 50 (`ElementDefinition`, `Extension`, `MarketingStatus`, `Narrative`,
+`Population`, `ProdCharacteristic`, `ProductShelfLife`, `SubstanceAmount`, `Xhtml`). Decision 45
+keeps them, so they need a position, and the specification gives none. They are placed after the
+50, ordered by variant name. No conformant instance can populate them, so the choice affects only
+non-conformant input; FR-057 does not say where fields without a definition position go, beyond
+the layout's own fields.
+
+_Audit_ of every place a struct type Pathling produces takes its order:
+
+- `FhirChoiceDefinition.getAllChildTypes()`: **the defect**, fixed. The declared-choice branch
+  is now checked against the child annotation's type list for every choice in R4.
+- `BaseFhirNodeDefinition.getChildren()`: HAPI's composite child list, which `ModelScanner`
+  builds in `@Child(order)` order. Correct. `nestedChildElementsByName`, built from the hash-ordered
+  `getValidChildNames()`, is used only for lookup by name.
+- `DefinitionCanonicalStructure.buildEntries()`: iterates the definitions; its `HashMap` memo and
+  `toUnmodifiableMap` index are lookup only. Correct, given the fix.
+- `LayoutFields.annotationNames` (fixed `List.of` per type; its `Set.of` constants are membership
+  tests only), `MetadataGroupStructure.fieldOrder()` (`List.of(id, extension)`) and
+  `PrimitiveTypes` (lookup only): correct.
+- `DefaultChoiceDefinition` and `DefaultDefinitionContext`: list order as given; the map is
+  lookup only. Correct.
+- `ResourceTransformer` (`toLayout`, `structure`, `absentStructure`, egress): every struct is
+  built by iterating the canonical entries; egress follows the stored schema by design. Correct.
+- `StructureMerge`: order from `fieldOrder()`, with names the canonical structure does not know
+  appended sorted by name. Deterministic; canonical given the fix.
+- `MergeCast`, `UnresolvedMergeCombination`, `ColumnFunctions` (encoders),
+  `CombiningLogic` and `ChoiceElementCollection` (fhirpath): take their order from
+  `StructureMerge` under a `DefinitionCanonicalStructure`. Correct, given the fix.
+- `DeltaSink` widening: `StructureMerge` under the resource's canonical structure; its `HashSet`
+  of field paths is a containment test only. Correct, given the fix.
+- `TypeFunctions.type()` on a choice iterates `getAllChildTypes()` to build a per-row `when`
+  chain, not a struct type; at most one variant is non-null, so its order does not affect the
+  result.
+- `contained` is not represented (`DefinitionCanonicalStructure.addElement`), so it builds no
+  struct type.
+- The previous layout's encoder (`SchemaTraversal.getOrderedListOfChoiceChildNames`) sorts
+  variants by type name; it is deterministic and out of FR-057's scope.
+
+_Tests_: `ChoiceExpansionSweepTest` now asserts the order of every choice in R4 as well as its
+variants, against the annotation for a declared choice and against its own copy of the
+specification's list for an open one, so a change of the definition library's open types fails
+it. `ResourceTransformerTest.ordersTheVariantsOfAnOpenChoiceAsTheSpecificationListsThem` encodes
+extensions whose variants arrive out of order across rows, nested and on a complex element, and
+asserts every struct field by field. `DefinitionCanonicalStructureTest.mergesTheVariantsOfAnOpenChoiceInTheOrderTheSpecificationListsThem`
+covers the merge. All three failed before the fix (`open-order-before-*.log`).
+
+_R example data_: regenerated after the fix by two runs of `example_data.R`, each with an
+empty Ivy home of its own (`oo-gen-1`, `oo-gen-2`) and the `library-runtime` jar of the
+fixed build (SHA-1 `84a9b8bc`, that of `library-runtime/target` and `~/.m2`). The Parquet
+files of the two runs have equal schemas, equal rows and equal footer key-value metadata,
+and the extension value structs are in canonical order (`url`, `valueCode`, `valueDecimal`,
+`valueString`, `valueAddress`, and nested `url`, `valueString`, `valueCoding`). They are not
+byte-identical: parquet-mr records each column chunk's encodings in a hash-ordered set, so
+the footer lists them in a different order from run to run (for example `RLE,
+PLAIN_DICTIONARY, BIT_PACKED` against `BIT_PACKED, PLAIN_DICTIONARY, RLE`), and the Delta
+logs carry a timestamp and a transaction id. Neither is a schema, and neither is
+Pathling's to fix.
+
+_Verification_: `mvn clean install -pl library-runtime -am`, all green: utilities 35,
+fhir-schema 39, encoders 621, io 480 (1 skipped), terminology 538, fhirpath 7,574 (922
+skipped), library-api 305 (`open-order-full-build.log`). `fhirpath` on the previous layout,
+7,574 (924 skipped), green (`open-order-fhirpath-previous.log`). Python, 566 passed, with an
+empty Ivy home of its own (`ivy-oo-pytest-1`, `4 artifacts copied, 0 already retrieved`); R,
+200 expectations, 0 failed (`ivy-oo-r-1`, created empty and filled by the run). In both, the
+retrieved `library-runtime` jar's SHA-1 is `84a9b8bc`, that of `library-runtime/target`, and
+it carries `OpenTypeOrder`.
