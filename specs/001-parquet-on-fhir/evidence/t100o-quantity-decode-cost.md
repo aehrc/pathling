@@ -11,6 +11,13 @@ once, on both layouts, which is consistent with Spark evaluating a repeated
 deterministic expression of one projection or filter once. Nothing has been changed: the task
 asks for the result to go to the owner first.
 
+**The generated code, examined afterwards, does not bear out that inference**
+(see [The generated code](#the-generated-code)): Spark's common-subexpression
+elimination shares the `canonical_quantity_code` call between comparisons but
+not `canonical_quantity_value`, which stays once per use inside the branch that
+runs only where the units are comparable, and an inequality takes the projection
+out of whole-stage code generation altogether.
+
 ## Conditions
 
 - Measured at `2afe74dea6` on `issue/2764`, Spark 4.0.2, `local[4]`, Java 21, on
@@ -95,6 +102,120 @@ reading the canonical form from the quantity annotation once M5 emits it, which
 removes the UDF calls from each decode, and decoding at traversal those
 quantities whose extensions cannot be reached, which reopens decision 82. None is
 implemented.
+
+## The generated code
+
+Decision 92 closes T100o if the generated code shows Spark deduplicating the
+decode. It does not, so T100o stays open.
+
+### Method
+
+`scripts/m2-review/Codegen.java` selects four expressions over the same
+Observations, with `spark.sql.subexpressionElimination.enabled` on (the
+default) and then off, and examines the code that evaluates the projection:
+the whole-stage code from `queryExecution().debug().codegenToSeq()` where the
+projection is part of a stage, and otherwise the `UnsafeProjection` code that
+`ProjectExec` generates, produced the same way with
+`GenerateUnsafeProjection.createCode`. It counts the call sites of the two UDFs
+of a decode by the name each site carries for its error message, the
+regular-expression matches of the parse, and the subexpression functions Spark
+generated, and reports why a projection left whole-stage code generation. Where
+it did, the decodes beneath an expression that cannot generate code
+(`CodegenFallback`) are interpreted, and are counted from the plan.
+
+Measured at `3f38b1090e` (the `fhirpath` code of `4f9e5aa8a6`), and, for the
+comparison with eager decoding, at `633894edfc`, the commit before decision 82's
+redesign (`1fee8c4046^`), where a stored quantity was decoded at traversal by
+`QuantityCollection`'s `DecodedRepresentation`. That commit was built with
+`mvn package` in a scratch worktree, and its new-layout data was written by its
+own `io` reader with `scripts/m2-review/WriteNewLayoutM2.java` (12 columns, as
+at `HEAD`). Spark 4.0.2, Java 21.
+
+### Results
+
+Each cell is `canonical_quantity_value` sites / `canonical_quantity_code` sites
+in the generated code, then the decodes in the physical plan, then the code's
+characters and its largest method's bytecode. `q` is `value.ofType(Quantity)`.
+
+| Expression, new layout                      | Elimination on                    | Elimination off                   |
+| ------------------------------------------- | --------------------------------- | --------------------------------- |
+| `q`                                         | 1 / 1, plan 1; 27,562 ch, 1,570 B | 1 / 1, plan 1; 27,562 ch, 1,570 B |
+| `q > 1 'mg/dL'`                             | 1 / 1, plan 1; 20,643 ch, 1,360 B | 1 / 1, plan 1; 21,290 ch, 1,466 B |
+| `q > 1 'mg/dL' and q < 1000 'mg/dL'`        | 2 / 1, plan 2; 34,495 ch, 2,167 B | 2 / 2, plan 2; 38,446 ch, 2,931 B |
+| `... and q != 50 'mg/dL'` (not whole-stage) | 3 / 1 + 2 interpreted, plan 5     | 3 / 3 + 2 interpreted, plan 5     |
+
+| Expression, previous layout                 | Elimination on                     | Elimination off                     |
+| ------------------------------------------- | ---------------------------------- | ----------------------------------- |
+| `q`                                         | 1 / 1, plan 1; 121,594 ch, 8,259 B | 1 / 1, plan 1; 121,594 ch, 8,259 B  |
+| `q > 1 'mg/dL'`                             | 1 / 1, plan 1; 74,773 ch, 5,248 B  | 1 / 1, plan 1; 75,468 ch, 5,354 B   |
+| `q > 1 'mg/dL' and q < 1000 'mg/dL'`        | 2 / 1, plan 2; 127,070 ch, 7,369 B | 2 / 2, plan 2; 149,661 ch, 10,707 B |
+| `... and q != 50 'mg/dL'` (not whole-stage) | 3 / 1 + 2 interpreted, plan 5      | 3 / 3 + 2 interpreted, plan 5       |
+
+The projection code of the three-comparison case is 31,379 characters with
+elimination on and 40,938 off on the new layout (122,633 and 157,723 on the
+previous), which is not comparable with the whole-stage figures above it.
+
+- **The decode is not deduplicated.** With two comparisons the plan holds two
+  decodes, and the generated code calls `canonical_quantity_value` twice whether
+  elimination is on or off. Only `canonical_quantity_code` is shared: with
+  elimination on it moves into a subexpression function evaluated once per row,
+  because the test of whether the units are comparable, which reads it, is
+  evaluated unconditionally. The value is computed inside the branch that runs
+  only where the units are comparable, and Spark does not eliminate an
+  expression that is not evaluated on every path. That branch is also why the
+  run time barely moves: the repeated value UDF runs only for rows whose units
+  are comparable with the literal's, and once per comparison for those.
+- **The parse is pruned, not shared.** A comparison reads only the canonical
+  value and code of the decoded structure, so the optimiser drops the scale and
+  its two regular-expression matches; only `q` itself, which returns the whole
+  structure, keeps them.
+- **The code grows with each use.** On the new layout the second comparison
+  takes the code from 20,643 to 34,495 characters and the largest method from
+  1,360 to 2,167 bytes of bytecode (38,446 and 2,931 without elimination); on the
+  previous layout from 74,773 to 127,070 characters and 5,248 to 7,369 bytes.
+- **An inequality leaves whole-stage code generation.** `q != 50 'mg/dL'`
+  compiles into `exists` and `filter` over arrays, which cannot generate code
+  (`ArrayExists`, `ArrayFilter`), so the whole projection is evaluated by a
+  separately generated projection, with those functions and the two decodes
+  beneath them interpreted. The nested width of the types involved (11 fields)
+  is far from the limit of 100, so this is the cause. The inequality also
+  decodes the quantity three times, which with the two of the other comparisons
+  makes the five decodes of the earlier table.
+- **Eager and lazy decoding generate the same code.** At `633894edfc` every
+  count and size above is identical, on both layouts, and on the new layout the
+  generated code of each case differs from `HEAD`'s only in the addresses of the
+  UDF lambdas in its error messages, as decision 92 states: each design hands
+  Spark the same tree.
+
+### Reproduction of the generated-code check
+
+```bash
+mvn package -pl library-api -am -DskipTests -Djacoco.skip=true
+mvn dependency:build-classpath -pl library-api -Dmdep.outputFile=/tmp/cp-raw.txt
+# Keep the Pathling jars out of the third-party classpath, so that ~/.m2 cannot shadow them.
+tr ':' '\n' < /tmp/cp-raw.txt | grep -v /au/csiro/pathling/ | paste -sd: - > /tmp/cp.txt
+J=$(for m in utilities fhir-schema encoders io terminology fhirpath library-api; do \
+  ls $m/target/$m-*.jar | grep -v -E 'sources|javadoc|tests'; done | paste -sd: -)
+S=specs/001-parquet-on-fhir/evidence/scripts/m2-review
+$S/run.sh $S/Codegen.java /tmp/cp.txt "$J" /tmp/t100o/pof /tmp/t100o-code/pof
+$S/run.sh $S/Codegen.java /tmp/cp.txt "$J" /tmp/t100o/previous /tmp/t100o-code/previous
+
+# Eager decoding, before decision 82's redesign, in a scratch worktree.
+git worktree add --detach /tmp/wt-m2 1fee8c4046^
+mvn -f /tmp/wt-m2/pom.xml package -pl library-api -am -DskipTests -Djacoco.skip=true
+mvn -f /tmp/wt-m2/pom.xml dependency:build-classpath -pl library-api \
+  -Dmdep.outputFile=/tmp/cp-m2-raw.txt
+tr ':' '\n' < /tmp/cp-m2-raw.txt | grep -v /au/csiro/pathling/ | paste -sd: - > /tmp/cp-m2.txt
+JM=$(for m in utilities fhir-schema encoders io terminology fhirpath library-api; do \
+  ls /tmp/wt-m2/$m/target/$m-*.jar | grep -v -E 'sources|javadoc|tests'; done | paste -sd: -)
+$S/run.sh $S/WriteNewLayoutM2.java /tmp/cp-m2.txt "$JM" \
+  server/src/test/resources/import-data/ndjson/Observation.ndjson /tmp/t100o-m2
+$S/run.sh $S/Codegen.java /tmp/cp-m2.txt "$JM" /tmp/t100o-m2/pof /tmp/t100o-code/m2-pof
+git worktree remove --force /tmp/wt-m2
+```
+
+The data under `/tmp/t100o` is written by `WriteLayouts.java` as in the
+reproduction below. `Codegen.java` compiles against both commits.
 
 ## Reproduction
 
