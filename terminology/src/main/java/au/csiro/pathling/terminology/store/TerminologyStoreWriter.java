@@ -213,7 +213,8 @@ public class TerminologyStoreWriter {
         entry.getPackageName(),
         entry.getPackageVersion(),
         verification == null ? null : verification.getCode(),
-        entry.getPackageRegistry());
+        entry.getPackageRegistry(),
+        entry.getFault());
   }
 
   /** Builds a SQL predicate matching a nullable version. */

@@ -549,8 +549,7 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
       return readSnomedImplicitConceptMap(url, implicitRefset, version, maxMappings);
     }
     ensureInitialised();
-    return ConceptMapStore.resolve(reader, url, version, versionResolver)
-        .map(conceptMap -> ConceptMapContent.fromResource(conceptMap, maxMappings));
+    return ConceptMapStore.read(reader, url, version, versionResolver, maxMappings);
   }
 
   /**
@@ -1221,7 +1220,7 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
               versionResolver,
               ValueSetStore.load(reader, versionResolver));
       expansionCache = new ExpansionCache(local.getExpansionCacheSize());
-      conceptMapIndex = ConceptMapIndex.load(reader);
+      conceptMapIndex = ConceptMapIndex.load(reader, versionResolver);
       dialectResolver = new DialectResolver(local.getDialectAliases());
       initialised = true;
     }

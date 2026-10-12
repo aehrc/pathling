@@ -82,6 +82,7 @@ class PathlingContextLocalModeTest {
                     null,
                     null,
                     null,
+                    null,
                     null)),
             SaveMode.Append);
     return store;

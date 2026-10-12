@@ -177,6 +177,7 @@ class TerminologyStoreTest {
             null,
             null,
             null,
+            null,
             null);
     new TerminologyStoreWriter(spark, store).writeManifest(List.of(future), SaveMode.Append);
 
@@ -184,6 +185,50 @@ class TerminologyStoreTest {
         assertThrows(
             TerminologyStoreException.class, () -> TerminologyStoreReader.open(store, Map.of()));
     assertTrue(e.getMessage().contains("format version"), "message should mention format version");
+  }
+
+  @Test
+  void rejectsAStoreHoldingConceptMapsInTheFormerLayout(@TempDir final Path storeDir) {
+    // Format version 1 stored each ConceptMap as a single JSON document, which this version of
+    // Pathling no longer reads, so the store must be re-imported rather than silently losing maps.
+    final String store = storeDir.resolve("store").toString();
+    new TerminologyStoreWriter(spark, store)
+        .writeManifest(
+            List.of(formatOneEntry("code_system"), formatOneEntry("concept_map")), SaveMode.Append);
+
+    final TerminologyStoreException e =
+        assertThrows(
+            TerminologyStoreException.class, () -> TerminologyStoreReader.open(store, Map.of()));
+    assertTrue(e.getMessage().contains("http://example.org/v1"), e.getMessage());
+    assertTrue(e.getMessage().contains("re-import"), e.getMessage());
+  }
+
+  @Test
+  void opensAFormatOneStoreWithoutConceptMaps(@TempDir final Path storeDir) {
+    // Nothing else changed layout between format versions 1 and 2.
+    final String store = storeDir.resolve("store").toString();
+    new TerminologyStoreWriter(spark, store)
+        .writeManifest(
+            List.of(formatOneEntry("code_system"), formatOneEntry("value_set")), SaveMode.Append);
+
+    assertEquals(2, TerminologyStoreReader.open(store, Map.of()).readManifest().size());
+  }
+
+  @Nonnull
+  private static ManifestEntry formatOneEntry(@Nonnull final String entryType) {
+    return new ManifestEntry(
+        1,
+        entryType,
+        "http://example.org/v1",
+        entryType,
+        "v1.json",
+        Instant.now(),
+        null,
+        null,
+        null,
+        null,
+        null,
+        null);
   }
 
   @Test
@@ -245,12 +290,36 @@ class TerminologyStoreTest {
     assertEquals(PackageVerification.VERIFIED, read.getPackageVerification());
     assertEquals("https://packages.fhir.org", read.getPackageRegistry());
     assertEquals(importedAt, read.getImportedAt());
+    assertNull(read.getFault());
 
     final StructType schema = TerminologyStoreSchema.manifestSchema();
-    assertEquals(11, schema.fields().length, "manifest should have eleven columns");
+    assertEquals(12, schema.fields().length, "manifest should have twelve columns");
     for (final String column : NEW_COLUMNS) {
       assertTrue(schema.apply(column).nullable(), column + " should be nullable");
     }
+    assertTrue(schema.apply(TerminologyStoreSchema.COLUMN_FAULT).nullable());
+  }
+
+  @Test
+  void manifestRoundTripsAConceptMapFault(@TempDir final Path storeDir) {
+    // A ConceptMap whose content cannot be read as a concept map relation records why.
+    final String store = storeDir.resolve("store").toString();
+    final String fault = "the mapping for source code 'a' has products";
+    new TerminologyStoreWriter(spark, store)
+        .upsertManifestEntry(
+            ManifestEntry.forImport(
+                "concept_map",
+                "http://example.org/cm",
+                "1",
+                fullProvenance(),
+                Instant.now().truncatedTo(ChronoUnit.MICROS),
+                fault));
+
+    final List<ManifestEntry> manifest =
+        TerminologyStoreReader.open(store, Map.of()).readManifest();
+
+    assertEquals(1, manifest.size());
+    assertEquals(fault, manifest.get(0).getFault());
   }
 
   @Test
@@ -273,6 +342,7 @@ class TerminologyStoreTest {
     assertNull(read.getPackageVersion());
     assertNull(read.getPackageVerification());
     assertNull(read.getPackageRegistry());
+    assertNull(read.getFault());
   }
 
   @Test
@@ -299,6 +369,7 @@ class TerminologyStoreTest {
     assertNull(legacy.getPackageVersion());
     assertNull(legacy.getPackageVerification());
     assertNull(legacy.getPackageRegistry());
+    assertNull(legacy.getFault());
 
     final ManifestEntry imported = entryFor(manifest, "http://example.org/cs");
     assertEquals(SHA_256, imported.getSourceSha256());
@@ -313,7 +384,7 @@ class TerminologyStoreTest {
             .format("delta")
             .load(TerminologyStoreSchema.tablePath(store, TerminologyStoreSchema.MANIFEST))
             .schema();
-    assertEquals(11, schema.fields().length, "manifest should have gained the five columns");
+    assertEquals(12, schema.fields().length, "manifest should have gained the six columns");
   }
 
   @Test
