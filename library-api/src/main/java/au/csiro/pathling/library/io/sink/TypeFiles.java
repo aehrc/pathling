@@ -21,9 +21,13 @@ import au.csiro.pathling.library.io.PersistenceError;
 import au.csiro.pathling.library.io.source.FileSource;
 import jakarta.annotation.Nonnull;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -33,11 +37,22 @@ import org.apache.spark.sql.SparkSession;
 /**
  * The files a sink writing a directory of files finds for a resource type in that directory: the
  * files the matching file source reads as the type. They are what a save mode is applied to, since
- * the directory a write is made into is renamed away once it is written.
+ * the directory a write is made into is renamed away once it is written. That renaming is here too,
+ * since the names it gives the files are what keep one write's files from replacing another's.
  *
  * @author Piotr Szul
  */
+@Slf4j
 final class TypeFiles {
+
+  /**
+   * The name Spark gives a file it writes: the partition id and the id of the write, then an
+   * optional file counter and the extensions.
+   */
+  @Nonnull
+  private static final Pattern SPARK_PART_FILE =
+      Pattern.compile(
+          "^part-(\\d+)-([0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12})(?:[-.].*)?$");
 
   private TypeFiles() {}
 
@@ -131,5 +146,108 @@ final class TypeFiles {
         throw new PersistenceError("Problem deleting the replaced file " + file, e);
       }
     }
+  }
+
+  /**
+   * Replaces the directory a write was made into with its files, renamed to follow the naming
+   * convention in {@link FileSource#resourceNameWithQualifierMapper(String)} and keeping the id
+   * Spark gave the write.
+   *
+   * <p>Each file is named {@code <name>.<partId>-<writeId>.<extension>}, for example {@code
+   * Patient.00000-7a60a041-0e7d-4e24-b23d-82405a665677.parquet}, where the table is {@code
+   * <name>.<extension>}. Spark gives every write an id of its own, so the files of a write never
+   * take the names of an earlier write's files in the same directory, and a write can be added
+   * beside them.
+   *
+   * @param spark the Spark session
+   * @param table the directory the write was made into, {@code <name>.<extension>}
+   * @param partExtension the extension of the files Spark wrote in the table
+   * @return the paths of the renamed files
+   * @throws PersistenceError if a file is not named as Spark names them, or there is a problem
+   *     renaming one, in which case the table is left in place
+   */
+  @Nonnull
+  static List<String> renameKeepingWriteId(
+      @Nonnull final SparkSession spark,
+      @Nonnull final String table,
+      @Nonnull final String partExtension) {
+    return renameKeepingWriteId(
+        FileSystemPersistence.getFileSystem(spark, table), table, partExtension);
+  }
+
+  /**
+   * Replaces the directory a write was made into with its files, renamed as {@link
+   * #renameKeepingWriteId(SparkSession, String, String)} describes.
+   *
+   * @param fileSystem the file system holding the table
+   * @param table the directory the write was made into, {@code <name>.<extension>}
+   * @param partExtension the extension of the files Spark wrote in the table
+   * @return the paths of the renamed files
+   * @throws PersistenceError if the table has no files with the extension, is not named {@code
+   *     <name>.<extension>}, or holds a file not named as Spark names them, or there is a problem
+   *     renaming one, in which case the table is left in place
+   */
+  @Nonnull
+  static List<String> renameKeepingWriteId(
+      @Nonnull final FileSystem fileSystem,
+      @Nonnull final String table,
+      @Nonnull final String partExtension) {
+    final Path tablePath = new Path(table);
+    final String[] nameAndExtension = tablePath.getName().split("\\.");
+    if (nameAndExtension.length != 2) {
+      throw new PersistenceError(
+          "Expected the table %s to be named <name>.<extension>".formatted(table), null);
+    }
+    try {
+      final List<Path> parts =
+          Arrays.stream(fileSystem.listStatus(tablePath))
+              .map(FileStatus::getPath)
+              .filter(file -> FilenameUtils.isExtension(file.getName(), partExtension))
+              .toList();
+      if (parts.isEmpty()) {
+        throw new PersistenceError("No partition files were found in " + table, null);
+      }
+      final List<String> renamed = new ArrayList<>();
+      for (final Path part : parts) {
+        final Path target =
+            new Path(
+                tablePath.getParent(),
+                "%s.%s.%s"
+                    .formatted(
+                        nameAndExtension[0], partitionAndWriteId(part), nameAndExtension[1]));
+        log.info("Renaming result to: {}", target);
+        // A rename that fails must not be followed by the removal of the table, which still holds
+        // the file.
+        if (!fileSystem.rename(part, target)) {
+          throw new PersistenceError(
+              "Could not rename the partition file %s to %s; the table %s has been left in place"
+                  .formatted(part, target, table),
+              null);
+        }
+        renamed.add(target.toString());
+      }
+      log.info("Cleaning up: {}", table);
+      fileSystem.delete(tablePath, true);
+      return renamed;
+    } catch (final IOException e) {
+      throw new PersistenceError("Problem renaming the partition files of " + table, e);
+    }
+  }
+
+  /**
+   * Returns the partition id and the write id of a file Spark wrote, for example {@code
+   * 00000-<writeId>} from {@code part-00000-<writeId>-c000.snappy.parquet}.
+   */
+  @Nonnull
+  private static String partitionAndWriteId(@Nonnull final Path part) {
+    final Matcher matcher = SPARK_PART_FILE.matcher(part.getName());
+    if (!matcher.matches()) {
+      throw new PersistenceError(
+          ("Unexpected spark partitioning structure. Expected %s to be named "
+                  + "part-<partitionId>-<writeId>")
+              .formatted(part),
+          null);
+    }
+    return matcher.group(1) + "-" + matcher.group(2);
   }
 }

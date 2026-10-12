@@ -21,13 +21,11 @@ import static au.csiro.pathling.library.io.FileSystemPersistence.safelyJoinPaths
 
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.PathlingContext;
-import au.csiro.pathling.library.io.FileSystemPersistence;
 import au.csiro.pathling.library.io.PersistenceError;
 import au.csiro.pathling.library.io.SaveMode;
 import au.csiro.pathling.library.io.source.LayoutDetector;
 import jakarta.annotation.Nonnull;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -153,9 +151,8 @@ final class ParquetSink implements DataSink {
       // follow the pattern {resourceType}.{partId}-{writeId}.parquet, e.g.
       // Patient.00000-7a60a041-0e7d-4e24-b23d-82405a665677.parquet, so that a write never takes
       // the names of an earlier write's files.
-      final Collection<String> renamed =
-          FileSystemPersistence.renamePartitionedFilesKeepingWriteId(
-              context.getSpark(), tablePath, tablePath, PARQUET_EXTENSION);
+      final List<String> renamed =
+          TypeFiles.renameKeepingWriteId(context.getSpark(), tablePath, PARQUET_EXTENSION);
       if (saveMode == SaveMode.OVERWRITE) {
         TypeFiles.deleteReplaced(context.getSpark(), path, replaced, tablePath);
       }

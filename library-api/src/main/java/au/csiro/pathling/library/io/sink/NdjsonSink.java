@@ -23,12 +23,10 @@ import au.csiro.pathling.definition.fhir.FhirDefinitionContext;
 import au.csiro.pathling.io.FhirWriter;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.PathlingContext;
-import au.csiro.pathling.library.io.FileSystemPersistence;
 import au.csiro.pathling.library.io.PersistenceError;
 import au.csiro.pathling.library.io.SaveMode;
 import jakarta.annotation.Nonnull;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -167,9 +165,8 @@ final class NdjsonSink implements DataSink {
       // <resource_type>.<partId>-<writeId>.ndjson, e.g.
       // Patient.00000-7a60a041-0e7d-4e24-b23d-82405a665677.ndjson, so that a write never takes the
       // names of an earlier write's files.
-      final Collection<String> renamed =
-          FileSystemPersistence.renamePartitionedFilesKeepingWriteId(
-              context.getSpark(), resultUrl, resultUrl, JSON_EXTENSION);
+      final List<String> renamed =
+          TypeFiles.renameKeepingWriteId(context.getSpark(), resultUrl, JSON_EXTENSION);
       if (saveMode == SaveMode.OVERWRITE) {
         TypeFiles.deleteReplaced(context.getSpark(), path, replaced, resultUrl);
       }
