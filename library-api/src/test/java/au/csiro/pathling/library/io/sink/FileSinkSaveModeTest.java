@@ -86,7 +86,7 @@ class FileSinkSaveModeTest {
   @ParameterizedTest
   @ValueSource(strings = {"parquet", "ndjson"})
   void appendKeepsTheRowsOfAnEarlierWrite(@Nonnull final String format) {
-    write(format, "error", patients("a1", "a2"));
+    write(format, "append", patients("a1", "a2"));
     write(format, "append", patients("b1", "b2"));
 
     assertEquals(List.of("a1", "a2", "b1", "b2"), readIds(format));
