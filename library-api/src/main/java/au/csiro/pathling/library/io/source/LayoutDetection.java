@@ -35,7 +35,10 @@ public class LayoutDetection {
   /** The layout the schema is classified as. */
   @Nonnull StorageLayout layout;
 
-  /** The fields found that only the previous layout carries, in schema order. */
+  /**
+   * The fields found that only the previous layout carries, in schema order. They are cited as
+   * evidence whatever the classification, and only the root versioned id among them decides it.
+   */
   @Nonnull List<String> previousLayoutMarkers;
 
   /** The fields found that only the Parquet on FHIR layout carries, in schema order. */
@@ -51,12 +54,14 @@ public class LayoutDetection {
   }
 
   /**
-   * Returns whether the schema carries markers of both layouts, as an append of new-layout data
-   * into a previous-layout table produces.
+   * Returns whether the schema was classified as the previous layout and also carries markers of
+   * the Parquet on FHIR layout, as an append of new-layout data into a previous-layout table
+   * produces. A Parquet on FHIR schema carrying a previous-layout marker that does not classify it,
+   * such as the {@code _fid} of a coding a terminology function returned, is not mixed.
    *
-   * @return true if markers of both layouts were found
+   * @return true if the schema is the previous layout and carries markers of both layouts
    */
   public boolean isMixed() {
-    return !previousLayoutMarkers.isEmpty() && !newLayoutMarkers.isEmpty();
+    return layout == StorageLayout.PREVIOUS && !newLayoutMarkers.isEmpty();
   }
 }

@@ -57,11 +57,18 @@ import org.apache.spark.sql.types.StructType;
  * <p>A leading underscore is not a marker on its own, since the metadata groups and annotations of
  * the new layout begin with one too.
  *
- * <p>A single previous-layout marker is decisive, whatever else the schema carries: a table holding
- * both layouts, as an append of new data into an earlier table produces, is the case the engine
- * assumes never arises (decision 47), so it is refused rather than read. A schema carrying no
- * marker of either layout is unclassifiable and accepted, because marker absence is not evidence of
- * an unsupported layout.
+ * <p>The decisive marker of the previous layout is the {@code id_versioned} beside a string {@code
+ * id} at the root, which the previous encoder writes for every resource, with extensions enabled or
+ * not (decision 100). Where it is present the table is the previous layout, whatever else it
+ * carries: a table holding both layouts, as an append of new data into an earlier table produces,
+ * keeps it, and is the case the engine assumes never arises (decision 47), so it is refused rather
+ * than read. The other previous-layout markers are evidence, cited in a refusal, but do not
+ * classify a table by themselves, because this release still writes one of them: the codings the
+ * terminology functions return carry a {@code _fid}, and data holding them must read back.
+ *
+ * <p>Without the root versioned id, a schema is the Parquet on FHIR layout where it carries a
+ * marker of that layout, and is otherwise unclassifiable and accepted, because marker absence is
+ * not evidence of an unsupported layout.
  *
  * <p>Detection reads nothing but the schema it is given, so it needs no file access beyond the
  * schema the read already obtains (FR-038).
@@ -98,7 +105,7 @@ public final class LayoutDetector {
     final List<String> previous = markers(schema, "", LayoutDetector::isPreviousLayoutMarker);
     final List<String> current = markers(schema, "", LayoutDetector::isNewLayoutMarker);
     final StorageLayout layout;
-    if (!previous.isEmpty()) {
+    if (hasRootVersionedId(schema)) {
       layout = StorageLayout.PREVIOUS;
     } else if (!current.isEmpty()) {
       layout = StorageLayout.PARQUET_ON_FHIR;
@@ -243,6 +250,11 @@ public final class LayoutDetector {
         || QUANTITY_CANONICAL_FIELDS.contains(name)
         || isVersionedId(field, parent)
         || isScaleCompanion(field, parent);
+  }
+
+  /** Whether the root of a schema carries the versioned id, the decisive previous-layout marker. */
+  private static boolean hasRootVersionedId(@Nonnull final StructType schema) {
+    return Arrays.stream(schema.fields()).anyMatch(field -> isVersionedId(field, schema));
   }
 
   /** The versioned id is a string beside a string id. */

@@ -111,18 +111,40 @@ class LayoutDetectorTest {
     assertEquals(List.of("id_versioned"), detection.getPreviousLayoutMarkers());
   }
 
-  /** A sparse previous-layout schema is still the previous layout, on any one of its markers. */
+  /** A sparse previous-layout schema is still the previous layout, on its root versioned id. */
   @Test
-  void sparsePreviousLayoutSchemasAreThePreviousLayout() {
+  void sparsePreviousLayoutSchemaIsThePreviousLayout() {
     final StructType versionedId = struct(string("id"), string("id_versioned"), string("gender"));
+
+    final LayoutDetection detection = LayoutDetector.detect(versionedId);
+
+    assertEquals(StorageLayout.PREVIOUS, detection.getLayout());
+    assertEquals(List.of("id_versioned"), detection.getPreviousLayoutMarkers());
+  }
+
+  /**
+   * Previous-layout evidence without the root versioned id does not classify a schema (decision
+   * 100): it is cited, but the schema is unclassifiable, as it would be without the evidence, and
+   * is accepted.
+   */
+  @Test
+  void previousLayoutEvidenceWithoutTheVersionedIdIsNotDecisive() {
     final StructType nestedFid =
         struct(string("id"), field("name", array(struct(string("family"), integer("_fid")))));
     final StructType scale =
         struct(string("id"), field("value", new DecimalType(32, 6)), integer("value_scale"));
+    final StructType nestedVersionedId =
+        struct(
+            string("id"), field("contained", array(struct(string("id"), string("id_versioned")))));
 
-    assertEquals(List.of("id_versioned"), previousMarkers(versionedId));
+    for (final StructType schema : List.of(nestedFid, scale, nestedVersionedId)) {
+      final LayoutDetection detection = LayoutDetector.detect(schema);
+      assertEquals(StorageLayout.UNCLASSIFIABLE, detection.getLayout(), schema::treeString);
+      assertDoesNotThrow(() -> LayoutDetector.check("Patient", schema));
+    }
     assertEquals(List.of("name._fid"), previousMarkers(nestedFid));
     assertEquals(List.of("value_scale"), previousMarkers(scale));
+    assertEquals(List.of("contained.id_versioned"), previousMarkers(nestedVersionedId));
   }
 
   /**
@@ -244,8 +266,8 @@ class LayoutDetectorTest {
   /**
    * A table carrying markers of both layouts, as an append of new-layout data into a
    * previous-layout table produces, is rejected as the previous layout, with the evidence of both
-   * layouts kept. Decision 47 assumes the two layouts never meet inside one query, so the presence
-   * of a single previous-layout marker is decisive.
+   * layouts kept. Decision 47 assumes the two layouts never meet inside one query, so the root
+   * versioned id the earlier table keeps is decisive whatever else the table carries.
    */
   @Test
   void mixedSchemaIsRejectedWithTheEvidenceOfBothLayouts() {
@@ -258,15 +280,17 @@ class LayoutDetectorTest {
 
     assertEquals(StorageLayout.PREVIOUS, detection.getLayout());
     assertFalse(detection.isSupported());
+    assertTrue(detection.isMixed());
     assertTrue(detection.getPreviousLayoutMarkers().contains("_fid"));
     assertEquals(List.of("resourceType"), detection.getNewLayoutMarkers());
   }
 
   /**
-   * A new-layout table into which a single previous-layout structure has been merged is rejected.
+   * A new-layout table carrying a nested {@code _fid}, as a coding a terminology function returned
+   * does, is the new layout and accepted, with the field still cited as evidence (decision 100).
    */
   @Test
-  void newLayoutSchemaWithOneNestedPreviousLayoutFieldIsRejected() {
+  void newLayoutSchemaWithOneNestedPreviousLayoutFieldIsAccepted() {
     final StructType schema =
         struct(
             string("resourceType"),
@@ -275,9 +299,11 @@ class LayoutDetectorTest {
 
     final LayoutDetection detection = LayoutDetector.detect(schema);
 
-    assertEquals(StorageLayout.PREVIOUS, detection.getLayout());
+    assertEquals(StorageLayout.PARQUET_ON_FHIR, detection.getLayout());
+    assertFalse(detection.isMixed());
     assertEquals(List.of("name._fid"), detection.getPreviousLayoutMarkers());
     assertEquals(List.of("resourceType"), detection.getNewLayoutMarkers());
+    assertDoesNotThrow(() -> LayoutDetector.check("Patient", schema));
   }
 
   // T040: the nested walk.
