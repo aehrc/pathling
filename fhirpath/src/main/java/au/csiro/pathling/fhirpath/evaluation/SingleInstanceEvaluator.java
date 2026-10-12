@@ -22,7 +22,6 @@ import static org.apache.spark.sql.classic.ExpressionUtils.expression;
 
 import au.csiro.pathling.config.FhirpathConfiguration;
 import au.csiro.pathling.definition.ElementDefinition;
-import au.csiro.pathling.definition.fhir.FhirDefinitionContext;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.ListTraceCollector;
@@ -37,7 +36,6 @@ import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.evaluation.SingleInstanceEvaluationResult.TraceResult;
 import au.csiro.pathling.fhirpath.evaluation.SingleInstanceEvaluationResult.TypedValue;
 import au.csiro.pathling.fhirpath.parser.Parser;
-import au.csiro.pathling.io.FhirWriter;
 import au.csiro.pathling.sql.NormaliseQuantity;
 import au.csiro.pathling.sql.SqlFunctions;
 import au.csiro.pathling.sql.SyntheticFieldUtils;
@@ -88,6 +86,7 @@ public class SingleInstanceEvaluator {
    * @param contextExpression an optional context expression; if non-null, the main expression is
    *     composed with the context
    * @param variables optional named variables available via %variable syntax, or null
+   * @param renderer renders a result whose values are structures as FHIR JSON
    * @return a {@link SingleInstanceEvaluationResult} containing typed result values and type
    *     metadata
    */
@@ -98,7 +97,8 @@ public class SingleInstanceEvaluator {
       @Nonnull final FhirContext fhirContext,
       @Nonnull final String fhirPathExpression,
       @Nullable final String contextExpression,
-      @Nullable final Map<String, Object> variables) {
+      @Nullable final Map<String, Object> variables,
+      @Nonnull final ElementRenderer renderer) {
     return evaluate(
         resourceDf,
         resourceType,
@@ -106,7 +106,8 @@ public class SingleInstanceEvaluator {
         fhirPathExpression,
         contextExpression,
         variables,
-        FhirpathConfiguration.DEFAULT);
+        FhirpathConfiguration.DEFAULT,
+        renderer);
   }
 
   /**
@@ -121,6 +122,7 @@ public class SingleInstanceEvaluator {
    *     composed with the context
    * @param variables optional named variables available via %variable syntax, or null
    * @param configuration the FHIRPath evaluation configuration
+   * @param renderer renders a result whose values are structures as FHIR JSON
    * @return a {@link SingleInstanceEvaluationResult} containing typed result values and type
    *     metadata
    */
@@ -132,7 +134,8 @@ public class SingleInstanceEvaluator {
       @Nonnull final String fhirPathExpression,
       @Nullable final String contextExpression,
       @Nullable final Map<String, Object> variables,
-      @Nonnull final FhirpathConfiguration configuration) {
+      @Nonnull final FhirpathConfiguration configuration,
+      @Nonnull final ElementRenderer renderer) {
 
     // Convert incoming variables to Collection objects for the evaluator.
     final Map<String, Collection> variableCollections = convertVariables(variables);
@@ -167,12 +170,12 @@ public class SingleInstanceEvaluator {
             evaluator,
             expectedReturnType,
             traceCollector,
-            fhirContext);
+            renderer);
       }
 
       // Apply the result Column to the dataset and collect the results.
       final List<TypedValue> results =
-          collectResults(resourceDf, resultCollection, expectedReturnType, fhirContext);
+          collectResults(resourceDf, resultCollection, expectedReturnType, renderer);
       final List<TraceResult> traces = buildTraceResults(traceCollector);
       return new SingleInstanceEvaluationResult(results, expectedReturnType, traces);
     }
@@ -235,7 +238,7 @@ public class SingleInstanceEvaluator {
    * @param evaluator the single resource evaluator
    * @param expectedReturnType the inferred return type of the main expression
    * @param traceCollector the trace collector for capturing trace() output
-   * @param fhirContext the FHIR context
+   * @param renderer renders a result whose values are structures as FHIR JSON
    * @return a SingleInstanceEvaluationResult with results for each context item
    */
   @Nonnull
@@ -247,7 +250,7 @@ public class SingleInstanceEvaluator {
       @Nonnull final SingleResourceEvaluator evaluator,
       @Nonnull final String expectedReturnType,
       @Nonnull final ListTraceCollector traceCollector,
-      @Nonnull final FhirContext fhirContext) {
+      @Nonnull final ElementRenderer renderer) {
 
     // Parse and evaluate the context expression.
     final FhirPath contextPath = parser.parse(contextExpression);
@@ -269,7 +272,7 @@ public class SingleInstanceEvaluator {
     final Collection composedResult = evaluator.evaluate(composedPath);
 
     final List<TypedValue> results =
-        collectResults(resourceDf, composedResult, expectedReturnType, fhirContext);
+        collectResults(resourceDf, composedResult, expectedReturnType, renderer);
     final List<TraceResult> traces = buildTraceResults(traceCollector);
     return new SingleInstanceEvaluationResult(results, expectedReturnType, traces);
   }
@@ -294,17 +297,17 @@ public class SingleInstanceEvaluator {
    * Collects materialised results from a Dataset by applying the column of a result collection.
    *
    * <p>A result whose values are structures, and whose collection carries the definition of their
-   * type, is rendered as FHIR JSON by the layout-to-JSON transform of the {@code io} module, which
-   * adapts the structure recursively by the definition (T100j, decision 80). A structure that was
-   * read from the data is rendered as it is stored, so a quantity keeps its extensions and a
-   * decimal its text, as a number. A structure the engine builds, such as a System quantity, is
-   * rendered by the definition it carries, and the fields it has beside the elements of its type
-   * are left out. Every other value is collected as it is.
+   * type, is rendered as FHIR JSON by the supplied renderer, which is the layout-to-JSON transform
+   * of the {@code io} module, adapting the structure recursively by the definition (T100j,
+   * decisions 80 and 91). A structure that was read from the data is rendered as it is stored, so a
+   * quantity keeps its extensions and a decimal its text, as a number. A structure the engine
+   * builds, such as a System quantity, is rendered by the definition it carries, and the fields it
+   * has beside the elements of its type are left out. Every other value is collected as it is.
    *
    * @param resourceDf the single-row encoded resource Dataset
    * @param result the result collection
    * @param typeName the FHIR type name for the result values
-   * @param fhirContext the FHIR context
+   * @param renderer renders values that are structures as FHIR JSON
    * @return a list of typed values
    */
   @Nonnull
@@ -312,7 +315,7 @@ public class SingleInstanceEvaluator {
       @Nonnull final Dataset<Row> resourceDf,
       @Nonnull final Collection result,
       @Nonnull final String typeName,
-      @Nonnull final FhirContext fhirContext) {
+      @Nonnull final ElementRenderer renderer) {
 
     final Dataset<Row> valueDf = resourceDf.select(renderedValue(result).alias(RESULT_COLUMN));
     final DataType valueType = valueDf.schema().fields()[0].dataType();
@@ -322,9 +325,8 @@ public class SingleInstanceEvaluator {
             .map(
                 definition ->
                     valueDf.select(
-                        FhirWriter.of(FhirDefinitionContext.of(fhirContext))
-                            .json()
-                            .writeElement(definition, valueDf.col(RESULT_COLUMN), valueType)
+                        renderer
+                            .render(definition, valueDf.col(RESULT_COLUMN), valueType)
                             .alias(RESULT_COLUMN)))
             .orElse(valueDf);
     final List<Row> rows = resultDf.collectAsList();

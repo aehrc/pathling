@@ -27,6 +27,7 @@ import au.csiro.pathling.fhirpath.evaluation.SingleInstanceEvaluator;
 import au.csiro.pathling.search.SearchColumnBuilder;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.datasource.PrunedSchemaReader;
+import au.csiro.pathling.test.helpers.JsonElementRenderer;
 import au.csiro.pathling.test.layout.LayoutDatasets;
 import au.csiro.pathling.test.layout.TestLayout;
 import jakarta.annotation.Nonnull;
@@ -157,7 +158,8 @@ class QuantityTypesTest {
             fhirEncoders.getContext(),
             expression,
             null,
-            null);
+            null,
+            JsonElementRenderer.of(fhirEncoders.getContext()));
     assertThat(result.getResults())
         .singleElement()
         .satisfies(

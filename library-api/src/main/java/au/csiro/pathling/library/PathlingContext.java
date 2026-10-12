@@ -867,7 +867,9 @@ public class PathlingContext {
         fhirPathExpression,
         contextExpression,
         variables,
-        fhirpathConfig);
+        fhirpathConfig,
+        // A complex result is rendered as FHIR JSON by the layout-to-JSON transform of io.
+        fhirWriter.json()::writeElement);
   }
 
   /**
