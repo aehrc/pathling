@@ -404,7 +404,8 @@ class LayoutDetectorTest {
         "The Patient data is stored in the layout written by earlier releases of Pathling, "
             + "not the Parquet on FHIR layout this release expects. "
             + "Fields identifying the earlier layout: id_versioned, name._fid. "
-            + "Re-import the data from its source with this release; "
+            + "Re-import the data from its source with this release, into a new location or "
+            + "by overwriting this one; "
             + "data in the earlier layout cannot be converted in place.",
         error.getMessage());
     assertEquals("Patient", error.getResourceType());
@@ -426,8 +427,9 @@ class LayoutDetectorTest {
             + "Fields identifying the earlier layout: id_versioned. "
             + "It also carries fields of the Parquet on FHIR layout (resourceType), "
             + "so it mixes the two layouts, as appending new data to earlier data does. "
-            + "Re-import the data from its source into a new location with this release, "
-            + "because appending to or merging into this data is refused, and data in the "
+            + "Re-import the data from its source with this release, into a new location or "
+            + "by overwriting this one, because appending to or merging into this data is "
+            + "refused, and data in the "
             + "earlier layout cannot be converted in place. Where the data is a directory of "
             + "files, the directory holds files of the earlier layout: remove them, or "
             + "re-import their data from its source.",

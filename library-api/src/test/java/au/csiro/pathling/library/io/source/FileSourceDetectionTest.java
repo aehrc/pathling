@@ -67,14 +67,16 @@ class FileSourceDetectionTest {
 
   /** The remedy the message closes with, for data in the previous layout alone. */
   private static final String REMEDY =
-      ". Re-import the data from its source with this release; "
+      ". Re-import the data from its source with this release, into a new location or "
+          + "by overwriting this one; "
           + "data in the earlier layout cannot be converted in place.";
 
   /** The remedy for data mixing the two layouts. */
   private static final String MIXED_REMEDY =
       "so it mixes the two layouts, as appending new data to earlier data does. "
-          + "Re-import the data from its source into a new location with this release, "
-          + "because appending to or merging into this data is refused, and data in the "
+          + "Re-import the data from its source with this release, into a new location or "
+          + "by overwriting this one, because appending to or merging into this data is "
+          + "refused, and data in the "
           + "earlier layout cannot be converted in place. Where the data is a directory of "
           + "files, the directory holds files of the earlier layout: remove them, or "
           + "re-import their data from its source.";

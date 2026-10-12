@@ -136,14 +136,15 @@ public final class LayoutDetector {
 
   /**
    * Builds the message refusing a table, naming the resource type, the detected layout, the
-   * expected layout, the evidence and the remedy. The remedy is a re-import from source, because no
-   * in-place conversion exists and any rewrite of the previous layout's fixed-precision decimals
-   * would be lossy where a re-import is not.
+   * expected layout, the evidence and the remedy. The remedy is a re-import from source, into a new
+   * location or by overwriting the existing one, because no in-place conversion exists and any
+   * rewrite of the previous layout's fixed-precision decimals would be lossy where a re-import is
+   * not. An overwrite is not refused, since it leaves one layout behind (decision 105).
    *
-   * <p>Where the data mixes the two layouts, the remedy is a re-import into a new location, because
-   * a write appending to or merging into the data is refused too (decision 99). The message also
-   * covers a directory of files, whose files of the earlier layout can be removed instead, so that
-   * it serves every source and sink without being told where the data lives.
+   * <p>Where the data mixes the two layouts, a re-import cannot append to or merge into the data,
+   * which is refused too (decision 99), so it goes to a new location or overwrites. The message
+   * also covers a directory of files, whose files of the earlier layout can be removed instead, so
+   * that it serves every source and sink without being told where the data lives.
    *
    * @param resourceType the resource type the table holds
    * @param detection the classification of its schema
@@ -169,15 +170,17 @@ public final class LayoutDetector {
           .append("It also carries fields of the Parquet on FHIR layout (")
           .append(cite(detection.getNewLayoutMarkers()))
           .append("), so it mixes the two layouts, as appending new data to earlier data does. ")
-          .append("Re-import the data from its source into a new location with this release, ")
-          .append("because appending to or merging into this data is refused, and data in the ")
+          .append("Re-import the data from its source with this release, into a new location or ")
+          .append("by overwriting this one, because appending to or merging into this data is ")
+          .append("refused, and data in the ")
           .append("earlier layout cannot be converted in place. Where the data is a directory of ")
           .append("files, the directory holds files of the earlier layout: remove them, or ")
           .append("re-import their data from its source.")
           .toString();
     }
     return message
-        .append("Re-import the data from its source with this release; ")
+        .append("Re-import the data from its source with this release, into a new location or ")
+        .append("by overwriting this one; ")
         .append("data in the earlier layout cannot be converted in place.")
         .toString();
   }
