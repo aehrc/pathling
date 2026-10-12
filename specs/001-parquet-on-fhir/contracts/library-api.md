@@ -27,7 +27,7 @@ streaming dataset fails until the dense schema arrives in M6.
 | --- | --- | --- |
 | Schema mode | Whether the stored schema is fitted to the data or comprises every defined element. Dense arrives in M6; until then fitted is the only value and the option is not offered. | Fitted |
 | Annotation toggles | Enable or disable each annotation individually. | All enabled |
-| Layout detection opt-out | Per source, for conforming data the detector cannot classify. | Detection enabled |
+| Layout detection opt-out | Per source, for conforming data the detector misclassifies; the data is then read as it is. | Detection enabled |
 | Read schema supply | Per source. Supplies the schema a read uses instead of merging every file's. | Unset, so schemas are merged |
 
 All are surfaced in Java, Python and R.
@@ -60,7 +60,7 @@ layout, the expected layout and the remedy.
 
 This is the intended improvement, but it is a behaviour change and belongs in
 the release notes. The per-source opt-out exists for conforming data the
-detector cannot classify.
+detector misclassifies; the data is then read as it is.
 
 ### Writing into a dataset written by an earlier release now fails
 

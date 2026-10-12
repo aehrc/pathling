@@ -3516,3 +3516,81 @@ of whole-stage code generation, leave the decodes beneath them interpreted, and 
 operand three times. T096c, beside T096a in Phase 15, measures the cost of that fallback with
 the T100o scripts, checks whether `=` does the same, and rewrites the operator without the
 array functions if the cost matters.
+
+## 104. The detector's changed expectations under decision 100 are approved
+
+Owner decision (2026-10-12), on Phase 13b. No code.
+
+The `LayoutDetectorTest` expectations that decision 100 changed stand: a sparse schema whose
+only previous-layout evidence is a nested `_fid` or a `value_scale` companion is now
+unclassifiable rather than refused, `newLayoutSchemaWithOneNestedPreviousLayoutFieldIsAccepted`
+pins that a new-layout schema with one nested previous-layout field is accepted, and the
+mixed-layout message carries the text decision 99 gave it.
+
+## 105. A sink does not refuse a write that replaces or skips a previous-layout target
+
+Owner decision (2026-10-12), on Phase 13b. This confirms T042a and T046a as built.
+
+FR-037a covers the writes that would merge new-layout data into an earlier-layout target:
+append and merge. An overwrite replaces the target and its schema, leaving one layout, and is
+how a re-import reuses a location, so it is not refused; nor are `ERROR_IF_EXISTS` and
+`IGNORE`, which fail or do nothing where the target exists.
+`SinkDetectionTest.deltaOverwriteReplacesAPreviousLayoutTable` is approved. The refusal
+message's remedy names overwriting the existing location beside re-importing into a new one.
+
+## 106. The Parquet sink's append data loss is fixed in M4
+
+Owner decision (2026-10-12), on Phase 13b's finding in T046a.
+
+A second append through the Parquet sink renamed its partition files onto the names the first
+write had used, ignored the failed rename and deleted the partition directory, so the appended
+rows were lost while the write reported success. It is fixed in M4 rather than deferred: the
+renamed files keep the identity of the write that produced them, and a failed rename is an
+error that leaves the partition directory in place.
+
+## 107. The R package's example data moves to the new layout
+
+Owner decision (2026-10-12), on Phase 13b.
+
+The `parquet` and `delta` example data in `lib/R/inst/extdata`, written by the previous
+encoder, would be refused by the detector this release wires in. It is regenerated in the
+Parquet on FHIR layout from the package's own NDJSON example data, through `PathlingContext`
+and the Parquet and Delta sinks, as T100d regenerated the `library-api` fixtures.
+
+## 108. The detection opt-out is for data the detector misclassifies
+
+Owner decision (2026-10-12), on Phase 13b. This amends `contracts/library-api.md`.
+
+Unclassifiable data is already accepted (decision 100), so the opt-out is not for data the
+detector "cannot classify". It is for conforming data the detector misclassifies, which is
+then read as it is. Both places in the contract say so. The opt-out also lets earlier-layout
+data reach the engine, which reads both layouts until T100e; whether that is a supported
+route is T049a's question, and T049a carries the note.
+
+## 109. The sinks have no detection opt-out
+
+Owner decision (2026-10-12), on Phase 13b.
+
+A sink classifies its target only to refuse a merging write into the previous layout, and
+that classification needs a root `id_versioned`, which the new layout never writes, so a
+conforming target cannot be misclassified as the previous layout. Overwrite is the way out
+for a target that is. A write-side switch would mainly serve to create mixed tables.
+
+## 110. `DatasetSource` stays unchecked
+
+Owner decision (2026-10-12), on Phase 13b.
+
+FR-037 scopes detection to file-based sources, so `DatasetSource`, which wraps datasets the
+caller already holds, is not checked. It and `PathlingContext.getFhirEncoders()`, which still
+produces the previous layout, are routes by which previous-layout data reaches the engine.
+They are settled with the gate in M7, and T049a carries the note.
+
+## 111. `LayoutDetection.isMixed()` keeps its meaning
+
+Owner decision (2026-10-12), on Phase 13b.
+
+`isMixed()` is true for a schema classified as the previous layout that also carries markers
+of the new layout. Under decision 100 that is narrower than "carries markers of both", since
+evidence of the previous layout without a root `id_versioned` no longer classifies. The
+meaning is accepted as it stands: the type was created in this milestone and has never been
+released.
