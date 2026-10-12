@@ -40,6 +40,27 @@ public class DeltaSource extends FileSource {
    * @param path the path to the Delta table directory
    */
   public DeltaSource(@Nonnull final PathlingContext context, @Nonnull final String path) {
+    this(context, path, true);
+  }
+
+  /**
+   * Constructs a DeltaSource with the specified PathlingContext and path, saying whether the layout
+   * of the stored data is classified as it is read.
+   *
+   * <p>Layout detection is enabled by the other constructors. It classifies each table from the
+   * schema the read already resolves, and refuses a table in a layout this release does not read,
+   * such as the layout written by earlier releases, with an {@link UnsupportedLayoutException}.
+   * Disabling it is an opt-out for conforming data the detector misclassifies, and applies to this
+   * source alone (FR-040).
+   *
+   * @param context the PathlingContext to use
+   * @param path the path to the Delta table directory
+   * @param layoutDetection whether the layout of each table is classified as it is read
+   */
+  public DeltaSource(
+      @Nonnull final PathlingContext context,
+      @Nonnull final String path,
+      final boolean layoutDetection) {
     super(
         context,
         path,
@@ -52,7 +73,8 @@ public class DeltaSource extends FileSource {
         // Apply no transformations on the data - we assume it has already been processed using the
         // Pathling FHIR encoders.
         (sourceData, resourceType) -> sourceData,
-        resourceType -> true);
+        resourceType -> true,
+        layoutDetection);
   }
 
   /**
@@ -66,6 +88,23 @@ public class DeltaSource extends FileSource {
   public DeltaSource(
       @Nonnull final PathlingContext context,
       @Nonnull final Map<String, Collection<String>> files) {
+    this(context, files, true);
+  }
+
+  /**
+   * Constructs a DeltaSource with the specified PathlingContext and map of resource types to Delta
+   * table paths, saying whether the layout of each table is classified as it is read. See {@link
+   * #DeltaSource(PathlingContext, String, boolean)} for what layout detection does.
+   *
+   * @param context the PathlingContext to use
+   * @param files a map where keys are resource type names and values are collections of Delta table
+   *     paths
+   * @param layoutDetection whether the layout of each table is classified as it is read
+   */
+  public DeltaSource(
+      @Nonnull final PathlingContext context,
+      @Nonnull final Map<String, Collection<String>> files,
+      final boolean layoutDetection) {
     super(
         context,
         files,
@@ -75,6 +114,7 @@ public class DeltaSource extends FileSource {
         // Apply no transformations on the data - we assume it has already been processed using the
         // Pathling FHIR encoders.
         (sourceData, resourceType) -> sourceData,
-        resourceType -> true);
+        resourceType -> true,
+        layoutDetection);
   }
 }

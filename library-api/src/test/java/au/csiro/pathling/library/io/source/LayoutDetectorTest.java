@@ -399,9 +399,12 @@ class LayoutDetectorTest {
             + "not the Parquet on FHIR layout this release expects. "
             + "Fields identifying the earlier layout: id_versioned. "
             + "It also carries fields of the Parquet on FHIR layout (resourceType), "
-            + "so it mixes the two layouts, as appending new data to an earlier table does. "
-            + "Re-import the data from its source with this release; "
-            + "data in the earlier layout cannot be converted in place.",
+            + "so it mixes the two layouts, as appending new data to earlier data does. "
+            + "Re-import the data from its source into a new location with this release, "
+            + "because appending to or merging into this data is refused, and data in the "
+            + "earlier layout cannot be converted in place. Where the data is a directory of "
+            + "files, the directory holds files of the earlier layout: remove them, or "
+            + "re-import their data from its source.",
         error.getMessage());
   }
 

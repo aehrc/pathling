@@ -87,6 +87,13 @@ public abstract class FileSource extends DatasetSource {
   @Nonnull private final Map<String, Collection<String>> files;
 
   /**
+   * Whether the layout of each resource type's stored data is classified as it is loaded, and an
+   * earlier layout refused (FR-037). Only a source reading a stored layout enables it: a source
+   * encoding FHIR JSON produces the Parquet on FHIR layout itself, so there is nothing to classify.
+   */
+  private final boolean layoutDetection;
+
+  /**
    * Path-based constructor that scans a directory to discover FHIR data files.
    *
    * <p>Use this constructor when you have a directory containing FHIR files and want Pathling to
@@ -120,11 +127,50 @@ public abstract class FileSource extends DatasetSource {
       @Nonnull final Predicate<String> additionalResourceTypeFilter) {
     this(
         context,
+        path,
+        fileNameMapper,
+        extension,
+        reader,
+        transformer,
+        additionalResourceTypeFilter,
+        false);
+  }
+
+  /**
+   * Path-based constructor that scans a directory to discover FHIR data files, as {@link
+   * #FileSource(PathlingContext, String, Function, String, DataFrameReader, BiFunction, Predicate)}
+   * does, and says whether the layout of the stored data is classified as it is read.
+   *
+   * @param context the Pathling context
+   * @param path the path to the source files, which may be a directory or a glob pattern
+   * @param fileNameMapper a function that maps a file name to a set of resource types
+   * @param extension the file extension that this source expects for its source files
+   * @param reader a {@link DataFrameReader} that can be used to read the source files
+   * @param transformer a function that transforms a Dataset containing raw source data of a
+   *     specified resource type into a Dataset containing the imported data
+   * @param additionalResourceTypeFilter filter to filter out specific resource types if desired,
+   *     receives the resource type code as a string
+   * @param layoutDetection whether the layout of each resource type's stored data is classified as
+   *     it is read, refusing a layout this release does not read with an {@link
+   *     UnsupportedLayoutException}
+   */
+  protected FileSource(
+      @Nonnull final PathlingContext context,
+      @Nonnull final String path,
+      @Nonnull final Function<String, Set<String>> fileNameMapper,
+      @Nonnull final String extension,
+      @Nonnull final DataFrameReader reader,
+      @Nonnull final BiFunction<Dataset<Row>, String, Dataset<Row>> transformer,
+      @Nonnull final Predicate<String> additionalResourceTypeFilter,
+      final boolean layoutDetection) {
+    this(
+        context,
         retrieveFilesFromPath(path, context, fileNameMapper),
         extension,
         reader,
         transformer,
-        additionalResourceTypeFilter);
+        additionalResourceTypeFilter,
+        layoutDetection);
   }
 
   /**
@@ -163,7 +209,37 @@ public abstract class FileSource extends DatasetSource {
       @Nonnull final DataFrameReader reader,
       @Nonnull final BiFunction<Dataset<Row>, String, Dataset<Row>> transformer,
       @Nonnull final Predicate<String> additionalResourceTypeFilter) {
+    this(context, files, extension, reader, transformer, additionalResourceTypeFilter, false);
+  }
+
+  /**
+   * Map-based constructor for programmatically specifying which files contain which resource types,
+   * as {@link #FileSource(PathlingContext, Map, String, DataFrameReader, BiFunction, Predicate)}
+   * does, and saying whether the layout of the stored data is classified as it is read.
+   *
+   * @param context the Pathling context
+   * @param files a map where keys are resource type codes (e.g., "Patient", "Observation") and
+   *     values are collections of file paths containing data for that resource type
+   * @param extension the file extension that this source expects for its source files
+   * @param reader a {@link DataFrameReader} that can be used to read the source files
+   * @param transformer a function that transforms a Dataset containing raw source data of a
+   *     specified resource type into a Dataset containing the imported data
+   * @param additionalResourceTypeFilter filter to filter out specific resource types if desired,
+   *     receives the resource type code as a string
+   * @param layoutDetection whether the layout of each resource type's stored data is classified as
+   *     it is read, refusing a layout this release does not read with an {@link
+   *     UnsupportedLayoutException}
+   */
+  protected FileSource(
+      @Nonnull final PathlingContext context,
+      @Nonnull final Map<String, Collection<String>> files,
+      @Nonnull final String extension,
+      @Nonnull final DataFrameReader reader,
+      @Nonnull final BiFunction<Dataset<Row>, String, Dataset<Row>> transformer,
+      @Nonnull final Predicate<String> additionalResourceTypeFilter,
+      final boolean layoutDetection) {
     super(context);
+    this.layoutDetection = layoutDetection;
     this.extension = extension;
     this.reader = reader;
     this.transformer = transformer;
@@ -279,16 +355,25 @@ public abstract class FileSource extends DatasetSource {
   }
 
   /**
-   * Builds the dataset of a resource type from its files.
+   * Builds the dataset of a resource type from its files, refusing it first if layout detection is
+   * enabled and the stored data is in a layout this release does not read.
+   *
+   * <p>The classification reads only the schema the load has already resolved, so it adds no file
+   * access to the read (FR-038). A refused type is not cached, so every read of it is refused.
    *
    * @param resourceType the resource type
    * @return the dataset
+   * @throws UnsupportedLayoutException if the stored data is in a layout this release does not read
    */
   @Nonnull
   private Dataset<Row> load(@Nonnull final String resourceType) {
     log.debug("Resolving resource type: {}", resourceType);
     final String[] paths = files.get(resourceType).toArray(new String[0]);
-    return transformer.apply(readerFor(resourceType).load(paths), resourceType);
+    final Dataset<Row> stored = readerFor(resourceType).load(paths);
+    if (layoutDetection) {
+      LayoutDetector.check(resourceType, stored.schema());
+    }
+    return transformer.apply(stored, resourceType);
   }
 
   @Nonnull

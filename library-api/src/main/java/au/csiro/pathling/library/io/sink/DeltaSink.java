@@ -28,6 +28,7 @@ import au.csiro.pathling.definition.fhir.FhirDefinitionContext;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.SaveMode;
+import au.csiro.pathling.library.io.source.LayoutDetector;
 import au.csiro.pathling.schema.DefinitionCanonicalStructure;
 import au.csiro.pathling.utilities.StructureMerge;
 import io.delta.tables.DeltaMergeBuilder;
@@ -37,7 +38,9 @@ import jakarta.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
@@ -103,14 +106,33 @@ final class DeltaSink implements DataSink {
     this(context, path, saveMode, UnaryOperator.identity());
   }
 
+  /**
+   * Writes every resource type of the source to its table.
+   *
+   * <p>Every resource type is read, and every table an append or a merge would write into is
+   * classified, before anything is written, so that a refusal of either kind leaves every table as
+   * it was rather than some written and some not (FR-037a).
+   *
+   * @param source the data to write
+   * @return the tables written
+   * @throws au.csiro.pathling.library.io.source.UnsupportedLayoutException if a table the write
+   *     would append to or merge into is in a layout this release does not read, or the source
+   *     refuses its own data
+   */
   @Override
   @Nonnull
   public WriteDetails write(@Nonnull final DataSource source) {
+    final Map<String, Dataset<Row>> datasets = new LinkedHashMap<>();
+    source.getResourceTypes().forEach(type -> datasets.put(type, source.read(type)));
+    if (saveMode == SaveMode.APPEND || saveMode == SaveMode.MERGE) {
+      datasets.keySet().forEach(this::checkTargetLayout);
+    }
+
     final List<FileInformation> fileInfos = new ArrayList<>();
-    for (final String resourceType : source.getResourceTypes()) {
-      final Dataset<Row> dataset = source.read(resourceType);
-      final String fileName = String.join(".", fileNameMapper.apply(resourceType), "parquet");
-      final String tablePath = safelyJoinPaths(path, fileName);
+    for (final Map.Entry<String, Dataset<Row>> entry : datasets.entrySet()) {
+      final String resourceType = entry.getKey();
+      final Dataset<Row> dataset = entry.getValue();
+      final String tablePath = tablePath(resourceType);
 
       fileInfos.add(new FileInformation(resourceType, tablePath));
 
@@ -132,6 +154,31 @@ final class DeltaSink implements DataSink {
       }
     }
     return new WriteDetails(fileInfos);
+  }
+
+  /**
+   * Returns the path of the table a resource type is written to.
+   *
+   * @param resourceType the resource type
+   * @return the path of its table
+   */
+  @Nonnull
+  private String tablePath(@Nonnull final String resourceType) {
+    return safelyJoinPaths(path, String.join(".", fileNameMapper.apply(resourceType), "parquet"));
+  }
+
+  /**
+   * Refuses a write into an existing table in a layout this release does not read, before the write
+   * could widen the table to carry both layouts. The table's schema is read from its log.
+   *
+   * @param resourceType the resource type whose table is checked
+   */
+  private void checkTargetLayout(@Nonnull final String resourceType) {
+    final String tablePath = tablePath(resourceType);
+    if (deltaTableExists(tablePath)) {
+      LayoutDetector.check(
+          resourceType, DeltaTable.forPath(context.getSpark(), tablePath).toDF().schema());
+    }
   }
 
   /**

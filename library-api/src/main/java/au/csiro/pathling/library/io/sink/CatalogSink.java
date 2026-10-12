@@ -22,10 +22,13 @@ import static au.csiro.pathling.library.io.sink.DeltaSink.merge;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.SaveMode;
+import au.csiro.pathling.library.io.source.LayoutDetector;
 import io.delta.tables.DeltaTable;
 import jakarta.annotation.Nonnull;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.apache.spark.sql.DataFrameWriter;
 import org.apache.spark.sql.Dataset;
@@ -95,12 +98,32 @@ class CatalogSink implements DataSink {
     this.format = Optional.of(format);
   }
 
+  /**
+   * Writes every resource type of the source to its table.
+   *
+   * <p>Every resource type is read, and every table an append or a merge would write into is
+   * classified, before anything is written, so that a refusal of either kind leaves every table as
+   * it was rather than some written and some not (FR-037a).
+   *
+   * @param source the data to write
+   * @return the tables written
+   * @throws au.csiro.pathling.library.io.source.UnsupportedLayoutException if a table the write
+   *     would append to or merge into is in a layout this release does not read, or the source
+   *     refuses its own data
+   */
   @Override
   @Nonnull
   public WriteDetails write(@Nonnull final DataSource source) {
+    final Map<String, Dataset<Row>> datasets = new LinkedHashMap<>();
+    source.getResourceTypes().forEach(type -> datasets.put(type, source.read(type)));
+    if (saveMode == SaveMode.APPEND || saveMode == SaveMode.MERGE) {
+      datasets.keySet().forEach(this::checkTargetLayout);
+    }
+
     final List<FileInformation> fileInfos = new ArrayList<>();
-    for (final String resourceType : source.getResourceTypes()) {
-      final Dataset<Row> dataset = source.read(resourceType);
+    for (final Map.Entry<String, Dataset<Row>> entry : datasets.entrySet()) {
+      final String resourceType = entry.getKey();
+      final Dataset<Row> dataset = entry.getValue();
       final String tableName = getTableName(resourceType);
 
       fileInfos.add(new FileInformation(resourceType, tableName));
@@ -202,6 +225,24 @@ class CatalogSink implements DataSink {
     format.ifPresent(writer::format);
 
     writer.saveAsTable(tableName);
+  }
+
+  /**
+   * Refuses a write into an existing table in a layout this release does not read, before the write
+   * could widen the table to carry both layouts, or fail on the difference between them. The
+   * table's schema is read from the catalog.
+   *
+   * <p>An append writes into any existing table and a merge into an existing Delta table. A merge
+   * into an existing table of another format fails regardless, so checking every existing table
+   * refuses nothing that would otherwise have been written.
+   *
+   * @param resourceType the resource type whose table is checked
+   */
+  private void checkTargetLayout(@Nonnull final String resourceType) {
+    final String tableName = getTableName(resourceType);
+    if (context.getSpark().catalog().tableExists(tableName)) {
+      LayoutDetector.check(resourceType, context.getSpark().table(tableName).schema());
+    }
   }
 
   /**

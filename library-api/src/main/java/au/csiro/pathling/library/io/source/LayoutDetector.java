@@ -133,6 +133,11 @@ public final class LayoutDetector {
    * in-place conversion exists and any rewrite of the previous layout's fixed-precision decimals
    * would be lossy where a re-import is not.
    *
+   * <p>Where the data mixes the two layouts, the remedy is a re-import into a new location, because
+   * a write appending to or merging into the data is refused too (decision 99). The message also
+   * covers a directory of files, whose files of the earlier layout can be removed instead, so that
+   * it serves every source and sink without being told where the data lives.
+   *
    * @param resourceType the resource type the table holds
    * @param detection the classification of its schema
    * @return the message
@@ -153,11 +158,16 @@ public final class LayoutDetector {
             .append(cite(detection.getPreviousLayoutMarkers()))
             .append(". ");
     if (detection.isMixed()) {
-      message
+      return message
           .append("It also carries fields of the Parquet on FHIR layout (")
           .append(cite(detection.getNewLayoutMarkers()))
-          .append(
-              "), so it mixes the two layouts, as appending new data to an earlier table does. ");
+          .append("), so it mixes the two layouts, as appending new data to earlier data does. ")
+          .append("Re-import the data from its source into a new location with this release, ")
+          .append("because appending to or merging into this data is refused, and data in the ")
+          .append("earlier layout cannot be converted in place. Where the data is a directory of ")
+          .append("files, the directory holds files of the earlier layout: remove them, or ")
+          .append("re-import their data from its source.")
+          .toString();
     }
     return message
         .append("Re-import the data from its source with this release; ")

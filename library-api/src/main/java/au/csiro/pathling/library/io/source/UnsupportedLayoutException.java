@@ -16,7 +16,6 @@
  */
 package au.csiro.pathling.library.io.source;
 
-import au.csiro.pathling.errors.InvalidUserInputError;
 import jakarta.annotation.Nonnull;
 import java.io.Serial;
 import lombok.Getter;
@@ -26,10 +25,14 @@ import lombok.Getter;
  * written by earlier releases. The message names the resource type, the detected layout, the
  * expected layout, the evidence and the remedy.
  *
+ * <p>It is not an {@code InvalidUserInputError}, because the library does not claim whose fault
+ * stored data is: a table in an earlier layout may belong to an operator, a deployment or a client.
+ * A caller that knows decides how to report it (decision 98).
+ *
  * @author Piotr Szul
  */
 @Getter
-public class UnsupportedLayoutException extends InvalidUserInputError {
+public class UnsupportedLayoutException extends RuntimeException {
 
   @Serial private static final long serialVersionUID = 2794580374046273817L;
 
