@@ -391,13 +391,15 @@ DatasetSource data = pc.read().datasets()
 
 ### Parquet
 
-You can load data from a directory
-containing [Parquet](https://parquet.apache.org/) files. The Parquet files must
-have been saved using the schema used by the Pathling encoders (
-see [Writing FHIR data](#parquet-1)).
+You can load data from a directory containing
+[Parquet](https://parquet.apache.org/) files written by Pathling (see
+[Writing FHIR data](#parquet-1) and [Storage layout](./schema.md)).
 
-The files are assumed to be named according to their resource
-type (`[resource type].parquet`), e.g. `Patient.parquet`, `Condition.parquet`.
+The files are recognised as holding a resource type by their names, which start
+with the resource type: `[resource type].parquet` or
+`[resource type].[qualifier].parquet`, e.g. `Patient.parquet` or
+`Patient.00000-7a60a041-0e7d-4e24-b23d-82405a665677.parquet`. All the files of a
+resource type are read together as one dataset.
 
 <!--suppress CheckEmptyScriptTag -->
 <Tabs>
@@ -425,7 +427,90 @@ val data = pc.read().parquet("/usr/share/staging/parquet")
 <TabItem value="java" label="Java">
 
 ```java
-ParquetSource data = pc.read().parquet("/usr/share/staging/parquet");
+QueryableDataSource data = pc.read().parquet("/usr/share/staging/parquet");
+```
+
+</TabItem>
+</Tabs>
+
+#### Schema merging
+
+Pathling stores each resource type with a schema that is
+[fitted to the data](./schema.md#the-schema-is-fitted-to-the-data), so files
+written at different times can carry different columns. The Parquet source
+therefore merges the schemas of a resource type's files, and reads them as one
+dataset whose schema is the union of theirs. Without merging, the schema of
+whichever file happened to be read first would win, and the columns that only
+other files carry would be silently lost.
+
+Merging reads the footer of every file, which takes time on a large dataset. The
+way to avoid that cost is to supply the schema to read a resource type with,
+rather than to switch merging off, and there is deliberately no option to switch
+it off. A supplied schema is used as given, so it must cover the columns of
+every file of that type. Columns it leaves out are not read, and whole rows can
+be lost as well as columns: a view that unnests a repeating element returns none
+of a file's rows for that element if the schema leaves out every field the file
+carries within it. The workable pattern is to merge once and keep the resulting
+schema, or to take the schema of the data that was written, and supply that.
+Resource types for which no schema is supplied are merged as usual.
+
+<!--suppress CheckEmptyScriptTag -->
+<Tabs>
+<TabItem value="python" label="Python">
+
+```python
+# Merge once, and keep the resulting schema.
+patient_schema = pc.read.parquet("/usr/share/staging/parquet").read("Patient").schema
+
+# Later reads use the schema rather than merging the schemas of the files.
+data = pc.read.parquet(
+    "/usr/share/staging/parquet", schemas={"Patient": patient_schema}
+)
+```
+
+</TabItem>
+<TabItem value="r" label="R">
+
+```r
+# Merge once, and keep the resulting schema as JSON.
+patient_schema <- pc %>%
+        pathling_read_parquet("/usr/share/staging/parquet") %>%
+        ds_read("Patient") %>%
+        sparklyr::spark_dataframe() %>%
+        sparklyr::invoke("schema") %>%
+        sparklyr::invoke("json")
+
+# Later reads use the schema rather than merging the schemas of the files.
+data <- pc %>% pathling_read_parquet("/usr/share/staging/parquet",
+                                     schemas = list(Patient = patient_schema))
+```
+
+At most ten schemas can be supplied from R.
+
+</TabItem>
+<TabItem value="scala" label="Scala">
+
+```scala
+// Merge once, and keep the resulting schema.
+val patientSchema = pc.read().parquet("/usr/share/staging/parquet")
+        .read("Patient").schema
+
+// Later reads use the schema rather than merging the schemas of the files.
+val data = pc.read().parquetWithSchemas("/usr/share/staging/parquet",
+    Map("Patient" -> patientSchema).asJava)
+```
+
+</TabItem>
+<TabItem value="java" label="Java">
+
+```java
+// Merge once, and keep the resulting schema.
+StructType patientSchema = pc.read().parquet("/usr/share/staging/parquet")
+        .read("Patient").schema();
+
+// Later reads use the schema rather than merging the schemas of the files.
+QueryableDataSource data = pc.read().parquetWithSchemas(
+        "/usr/share/staging/parquet", Map.of("Patient", patientSchema));
 ```
 
 </TabItem>
@@ -436,14 +521,15 @@ ParquetSource data = pc.read().parquet("/usr/share/staging/parquet");
 You can load data from a directory containing [Delta Lake](https://delta.io/)
 tables. Delta tables are a specialisation of Parquet that enable additional
 functionality, such as incremental update and history. The Delta tables must
-have been saved using the schema used by the Pathling encoders
-(see [Writing FHIR data](#delta-lake-1)).
+have been written by Pathling (see [Writing FHIR data](#delta-lake-1)). A Delta
+table records its schema in its transaction log, so its schema is not merged
+from its files.
 
 Note that you will need to use
 the [enable_delta](https://pathling.csiro.au/docs/python/pathling.html#pathling.context.PathlingContext)
 parameter when initialising the Pathling context.
 
-The files are assumed to be named according to their resource
+The tables are assumed to be named according to their resource
 type (`[resource type].parquet`), e.g. `Patient.parquet`, `Condition.parquet`.
 
 <!--suppress CheckEmptyScriptTag -->
@@ -472,7 +558,7 @@ val data = pc.read().delta("/usr/share/staging/delta")
 <TabItem value="java" label="Java">
 
 ```java
-DeltaSource data = pc.read().delta("/usr/share/staging/delta");
+QueryableDataSource data = pc.read().delta("/usr/share/staging/delta");
 ```
 
 </TabItem>
@@ -518,7 +604,66 @@ val data = pc.read().tables("mimic-iv")
 <TabItem value="java" label="Java">
 
 ```java
-CatalogSource data = pc.read().tables("mimic-iv");
+QueryableDataSource data = pc.read().tables("mimic-iv");
+```
+
+</TabItem>
+</Tabs>
+
+### Layout detection
+
+Earlier releases of Pathling stored resources in a
+[different layout](./schema.md#data-written-by-earlier-releases), which this
+release does not read. The Parquet, Delta and managed table sources check the
+layout of each resource type as it is read, and refuse data in the earlier
+layout with an error naming the resource type, the layout detected and the
+remedy. Previously, such data was read and then failed later in a confusing way,
+or gave wrong answers where the columns happened to line up.
+
+Data in the earlier layout cannot be converted in place. Re-import it from its
+source with this release, either into a new location or by overwriting the
+existing one.
+
+If data that was written by this release is misclassified by the check, the
+check can be disabled for a single data source. Every other data source,
+including others created from the same context, keeps checking. The option is
+intended only for conforming data that is misclassified.
+
+<!--suppress CheckEmptyScriptTag -->
+<Tabs>
+<TabItem value="python" label="Python">
+
+```python
+data = pc.read.parquet("/usr/share/staging/parquet", layout_detection=False)
+```
+
+The `delta` and `tables` methods take the same `layout_detection` argument.
+
+</TabItem>
+<TabItem value="r" label="R">
+
+```r
+data <- pc %>% pathling_read_parquet("/usr/share/staging/parquet",
+                                     layout_detection = FALSE)
+```
+
+The `pathling_read_delta` and `pathling_read_tables` functions take the same
+`layout_detection` argument.
+
+</TabItem>
+<TabItem value="scala" label="Scala">
+
+```scala
+val data = pc.read().withLayoutDetection(false)
+        .parquet("/usr/share/staging/parquet")
+```
+
+</TabItem>
+<TabItem value="java" label="Java">
+
+```java
+QueryableDataSource data = pc.read().withLayoutDetection(false)
+        .parquet("/usr/share/staging/parquet");
 ```
 
 </TabItem>
@@ -531,6 +676,67 @@ back out to a variety of targets. This is useful for persisting source data in a
 more efficient form for query (e.g. Parquet or Delta), or for exporting data to
 NDJSON for use in other systems.
 
+Data is written in the Parquet on FHIR layout described in
+[Storage layout](./schema.md). Writing into Parquet files, a Delta table or a
+managed table that holds data written by an earlier release of Pathling is
+refused when the write would add to that data (an append or a merge), with the
+same message that [reading it](#layout-detection) gives. The check is made for
+every resource type before anything is written, so a refused write leaves the
+target as it was. A write that replaces the data, with the `overwrite` save
+mode, is not refused, and is one way to re-import data into the same location.
+
+### Save modes
+
+Each write takes a save mode, which decides what happens to data that a
+resource type already has at the target:
+
+| Save mode   | Effect                                                                                                                    |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `error`     | The write fails if a resource type already has data at the target. For NDJSON and Parquet, nothing is written.            |
+| `overwrite` | The data of each resource type written replaces the data that type already has.                                           |
+| `append`    | The data is added beside the data each resource type already has.                                                         |
+| `ignore`    | A resource type that already has data is skipped, and its data is left as it is. Other resource types are written.        |
+| `merge`     | Resources are matched on their ID: a matched resource is replaced, and a new one is added. Delta and managed tables only. |
+
+In Python and R, the save mode is passed as the `save_mode` argument, and
+defaults to `error` for NDJSON and Parquet and to `overwrite` for Delta and
+managed tables. In Java and Scala, it is set with the `saveMode` method of the
+writer, and defaults to `error` for every target.
+
+<!--suppress CheckEmptyScriptTag -->
+<Tabs>
+<TabItem value="python" label="Python">
+
+```python
+from pathling.datasink import SaveMode
+
+data.write.parquet("/usr/share/warehouse/parquet", save_mode=SaveMode.APPEND)
+```
+
+</TabItem>
+<TabItem value="r" label="R">
+
+```r
+data %>% ds_write_parquet("/usr/share/warehouse/parquet", save_mode = SaveMode$APPEND)
+```
+
+</TabItem>
+<TabItem value="scala" label="Scala">
+
+```scala
+data.write().saveMode("append").parquet("/usr/share/warehouse/parquet")
+```
+
+</TabItem>
+<TabItem value="java" label="Java">
+
+```java
+data.write().saveMode("append").parquet("/usr/share/warehouse/parquet");
+```
+
+</TabItem>
+</Tabs>
+
 ### NDJSON
 
 You can write data to a directory containing NDJSON files. Each resource type
@@ -541,6 +747,11 @@ number and an identifier of the write
 has its own identifier, an append adds files beside those of earlier writes
 rather than replacing them. The NDJSON source reads all of a type's files as
 that type.
+
+The save mode applies to the files a resource type already has in the
+directory. With the default save mode, writing a resource type that already has
+files fails with an error before any resource type is written. The `merge` save
+mode is not supported for NDJSON.
 
 <!--suppress CheckEmptyScriptTag -->
 <Tabs>
@@ -568,9 +779,7 @@ data.write().ndjson("/tmp/ndjson")
 <TabItem value="java" label="Java">
 
 ```java
-data.write().
-
-ndjson("/tmp/ndjson");
+data.write().ndjson("/tmp/ndjson");
 ```
 
 </TabItem>
@@ -587,6 +796,15 @@ write has its own identifier, an append adds files beside those of earlier
 writes rather than replacing them. The Parquet source reads all of a type's
 files as that type, including files named `[resource type].parquet` or
 `[resource type].[partition].parquet`.
+
+The save mode applies to the files a resource type already has in the
+directory. With the default save mode, writing a resource type that already has
+files fails with an error before any resource type is written. The `merge` save
+mode is not supported for Parquet; use Delta if you need to merge.
+
+Files appended to a resource type can carry columns that its earlier files do
+not, because each write's schema is [fitted to its data](./schema.md). The
+Parquet source [merges their schemas](#schema-merging) when it reads them.
 
 <!--suppress CheckEmptyScriptTag -->
 <Tabs>
@@ -614,9 +832,7 @@ data.write().parquet("/usr/share/warehouse/parquet")
 <TabItem value="java" label="Java">
 
 ```java
-data.write().
-
-parquet("/usr/share/warehouse/parquet");
+data.write().parquet("/usr/share/warehouse/parquet");
 ```
 
 </TabItem>
@@ -632,17 +848,16 @@ Note that you will need to use
 the [enable_delta](https://pathling.csiro.au/docs/python/pathling.html#pathling.context.PathlingContext)
 parameter when initialising the Pathling context.
 
-The files are named according to their resource
+The tables are named according to their resource
 type (`[resource type].parquet`), e.g. `Patient.parquet`, `Condition.parquet`.
 
-Writing in merge mode into a table that carries columns your current encoder
-configuration does not produce - for example a table written with more open types
-enabled for extension values than you have configured now - succeeds. Those
-columns are left null on the rows that are written, and the table keeps its wider
-schema, so a reader configured with the original open types can still read the
-rows written before. A source that carries columns the table does not is a
-different matter: that would mean widening the table, which is not done for you,
-so such a write still fails.
+Because each write's schema is [fitted to its data](./schema.md), a batch can
+carry elements that the table has not seen before. Appending or merging such a
+batch widens the table to hold the new columns, rather than failing. A batch
+that lacks columns the table carries can also be appended or merged: those
+columns are left null on the rows that are written. In merge mode, a matched
+resource is replaced in full, so an element that its earlier version carried and
+the new version does not is left null rather than kept.
 
 <!--suppress CheckEmptyScriptTag -->
 <Tabs>
@@ -670,9 +885,7 @@ data.write().delta("/usr/share/warehouse/delta")
 <TabItem value="java" label="Java">
 
 ```java
-data.write().
-
-delta("/usr/share/warehouse/delta");
+data.write().delta("/usr/share/warehouse/delta");
 ```
 
 </TabItem>
@@ -691,6 +904,16 @@ e.g. `Patient`, `Condition`.
 This also works with
 the [Unity Catalog](https://docs.databricks.com/data-governance/unity-catalog/index.html)
 feature of Databricks.
+
+Appending to or merging into an existing Delta table widens it to hold columns
+that only the new batch carries, as for [Delta Lake](#delta-lake-1). A table in
+another format, such as Parquet, cannot be widened. Appending to such a table is
+refused, before anything is written, if the schema of the batch differs from the
+table's in any way, including a batch that lacks some of the table's columns.
+Because each batch's schema is fitted to its data, this makes incremental loads
+into a non-Delta managed table fail whenever the data changes shape. Write to a
+Delta table instead, or write Parquet files to a path and read them with the
+[Parquet source](#parquet), which merges the schemas of its files.
 
 <!--suppress CheckEmptyScriptTag -->
 <Tabs>
@@ -718,9 +941,7 @@ data.write().tables("test")
 <TabItem value="java" label="Java">
 
 ```java
-data.write().
-
-tables("test");
+data.write().tables("test");
 ```
 
 </TabItem>
