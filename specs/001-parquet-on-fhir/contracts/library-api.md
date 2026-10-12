@@ -69,6 +69,29 @@ into such a table either failed with a storage-layer schema error or, where no
 column types conflicted, succeeded and left one table carrying two layouts. It
 is now rejected with the same message a read gives.
 
+### Writing Parquet or NDJSON where a type already has files honours the save mode
+
+Writing Parquet or NDJSON to a directory in which a resource type already has
+files now applies the save mode to those files (decision 112). Previously each
+write's files were renamed out of the directory Spark wrote them to, so a later
+write found that directory empty: it ignored the save mode, and its files took
+the names of the earlier write's and were lost while the write reported
+success. This loss is in every release since 9.3.0 and is tracked for the 9.x
+line as [#2823](https://github.com/aehrc/pathling/issues/2823).
+
+- With the default save mode (`error` in Python and R, `ERROR_IF_EXISTS` in
+  Java), such a write now raises a `PersistenceError` before writing any type,
+  where it used to discard the write silently.
+- `overwrite` replaces the type's earlier files.
+- `append` keeps the earlier files and adds the new ones beside them.
+- `ignore` skips the type and leaves its files as they are.
+
+Output file names now carry the id of the write that produced them,
+`<Type>.<partId>-<writeId>.<ext>` (for example
+`Patient.00000-7a60a041-0e7d-4e24-b23d-82405a665677.parquet`), where they were
+`<Type>.<partId>.<ext>`. Files named by earlier releases are still read as the
+type.
+
 ### A column expression stays valid over any conformant schema
 
 The expression-to-column API keeps its current contract: an expression becomes a
