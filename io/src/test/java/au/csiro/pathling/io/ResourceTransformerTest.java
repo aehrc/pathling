@@ -230,6 +230,64 @@ class ResourceTransformerTest {
         List.of("url", "valueString"), List.of(structAt(schema, "extension").fieldNames()));
   }
 
+  /**
+   * The variants of an open choice are ordered as the specification lists the open types, at every
+   * level an extension reaches, whichever variants each row carries and in whatever order.
+   *
+   * <p>The definition library declares no order for an open choice, and the order it reports
+   * follows the identity hashes of the type classes, which differ between runs of one build. The
+   * expected orders are written out here from the list in the R4 definition of {@code
+   * Extension.value[x]}, restricted to the variants the documents carry.
+   */
+  @Test
+  void ordersTheVariantsOfAnOpenChoiceAsTheSpecificationListsThem(
+      @TempDir @Nonnull final Path directory) {
+    final StructType schema =
+        TransformFixtures.reader()
+            .read(
+                "Patient",
+                TransformFixtures.corpus(
+                    directory,
+                    "{\"resourceType\":\"Patient\",\"id\":\"1\",\"extension\":["
+                        + "{\"url\":\"a\",\"valueReference\":{\"reference\":\"Patient/2\"}},"
+                        + "{\"url\":\"b\",\"valueCoding\":{\"code\":\"c\"}},"
+                        + "{\"url\":\"c\",\"valueAddress\":{\"city\":\"Adelaide\"}}],"
+                        + "\"address\":[{\"city\":\"Perth\",\"extension\":["
+                        + "{\"url\":\"d\",\"valueDateTime\":\"2020-01-01\"},"
+                        + "{\"url\":\"e\",\"valueBoolean\":true}]}]}",
+                    "{\"resourceType\":\"Patient\",\"id\":\"2\",\"extension\":["
+                        + "{\"url\":\"f\",\"valueString\":\"s\"},"
+                        + "{\"url\":\"g\",\"valueInteger\":1},"
+                        + "{\"url\":\"h\",\"valueDecimal\":1.5},"
+                        + "{\"url\":\"i\",\"valueCode\":\"x\"},"
+                        + "{\"url\":\"j\",\"valueBoolean\":false},"
+                        + "{\"url\":\"k\",\"extension\":["
+                        + "{\"url\":\"l\",\"valueQuantity\":{\"value\":1}},"
+                        + "{\"url\":\"m\",\"valueCoding\":{\"code\":\"n\"}},"
+                        + "{\"url\":\"o\",\"valueString\":\"p\"}]}]}"))
+            .schema();
+
+    assertEquals(
+        List.of(
+            "extension",
+            "url",
+            "valueBoolean",
+            "valueCode",
+            "valueDecimal",
+            "valueInteger",
+            "valueString",
+            "valueAddress",
+            "valueCoding",
+            "valueReference"),
+        List.of(structAt(schema, "extension").fieldNames()));
+    assertEquals(
+        List.of("url", "valueString", "valueCoding", "valueQuantity"),
+        List.of(structAt(schema, "extension", "extension").fieldNames()));
+    assertEquals(
+        List.of("url", "valueBoolean", "valueDateTime"),
+        List.of(structAt(schema, "address", "extension").fieldNames()));
+  }
+
   @Nonnull
   private static Dataset<Row> transform(
       @Nonnull final Path directory,

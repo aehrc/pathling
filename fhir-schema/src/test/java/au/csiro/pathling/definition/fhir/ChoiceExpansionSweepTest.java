@@ -25,15 +25,19 @@ import ca.uhn.fhir.context.BaseRuntimeChildDefinition;
 import ca.uhn.fhir.context.BaseRuntimeElementCompositeDefinition;
 import ca.uhn.fhir.context.BaseRuntimeElementDefinition;
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.context.RuntimeChildAny;
 import ca.uhn.fhir.context.RuntimeChildChoiceDefinition;
 import ca.uhn.fhir.context.RuntimeChildExtension;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
+import ca.uhn.fhir.model.api.annotation.Child;
 import jakarta.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Stream;
+import org.apache.commons.lang3.StringUtils;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.Extension;
 import org.junit.jupiter.api.Test;
@@ -52,10 +56,92 @@ import org.junit.jupiter.api.Test;
  * reference, so the oracle subtracts those aliases from the valid names. It is computed from the
  * definition library alone, never from the expansion under test, so it bites in both directions: an
  * over-eager collapse makes the expansion too small, and an under-eager one too large.
+ *
+ * <p>The order is pinned too, because it is part of the type of every structure that carries the
+ * choice (FR-057). For a declared choice the oracle is the type list of the child annotation. An
+ * open choice declares no types, and the definition library fills it from a hash map keyed by type
+ * class, so its order is that of identity hashes; the oracle is then the specification's own list,
+ * {@link #R4_OPEN_TYPES}, followed by the types the library accepts beyond it, ordered by name.
  */
 class ChoiceExpansionSweepTest {
 
   @Nonnull private static final FhirContext CONTEXT = FhirContext.forR4();
+
+  /**
+   * The types of {@code Extension.value[x]} in the order its R4 definition lists them, copied from
+   * {@code StructureDefinition-Extension.json} in the {@code hl7.fhir.r4.core} 4.0.1 package. Every
+   * open choice in R4 lists the same types in the same order.
+   */
+  @Nonnull
+  private static final List<String> R4_OPEN_TYPES =
+      List.of(
+          "base64Binary",
+          "boolean",
+          "canonical",
+          "code",
+          "date",
+          "dateTime",
+          "decimal",
+          "id",
+          "instant",
+          "integer",
+          "markdown",
+          "oid",
+          "positiveInt",
+          "string",
+          "time",
+          "unsignedInt",
+          "uri",
+          "url",
+          "uuid",
+          "Address",
+          "Age",
+          "Annotation",
+          "Attachment",
+          "CodeableConcept",
+          "Coding",
+          "ContactPoint",
+          "Count",
+          "Distance",
+          "Duration",
+          "HumanName",
+          "Identifier",
+          "Money",
+          "Period",
+          "Quantity",
+          "Range",
+          "Ratio",
+          "Reference",
+          "SampledData",
+          "Signature",
+          "Timing",
+          "ContactDetail",
+          "Contributor",
+          "DataRequirement",
+          "Expression",
+          "ParameterDefinition",
+          "RelatedArtifact",
+          "TriggerDefinition",
+          "UsageContext",
+          "Dosage",
+          "Meta");
+
+  /**
+   * The types the definition library accepts in an open choice beyond the specification's list. No
+   * conformant instance can carry them, but they are kept (decision 45), after the listed types.
+   */
+  @Nonnull
+  private static final Set<String> R4_OPEN_TYPE_EXTRAS =
+      Set.of(
+          "ElementDefinition",
+          "Extension",
+          "MarketingStatus",
+          "Narrative",
+          "Population",
+          "ProdCharacteristic",
+          "ProductShelfLife",
+          "SubstanceAmount",
+          "Xhtml");
 
   @Test
   void expandsEveryChoiceToExactlyTheVariantsTheDefinitionsValidate() {
@@ -129,7 +215,34 @@ class ChoiceExpansionSweepTest {
         expectedVariants(choice),
         Set.copyOf(expanded),
         "The expansion of " + path + " does not describe the variants the definitions validate");
+    assertEquals(expectedOrder(choice), expanded, "The expansion of " + path + " is out of order");
     checked.add(path);
+  }
+
+  /**
+   * Returns the order the variants of a choice are expected in: the declared type list for a
+   * declared choice, and the specification's list of open types for an open one, with each
+   * reference target collapsed into the one reference variant at the position of the first.
+   */
+  @Nonnull
+  private static List<String> expectedOrder(@Nonnull final RuntimeChildChoiceDefinition choice) {
+    final String elementName = choice.getElementName();
+    if (choice instanceof RuntimeChildAny) {
+      final List<String> listed =
+          R4_OPEN_TYPES.stream().map(type -> elementName + StringUtils.capitalize(type)).toList();
+      final List<String> extras =
+          R4_OPEN_TYPE_EXTRAS.stream().map(type -> elementName + type).sorted().toList();
+      return Stream.concat(listed.stream(), extras.stream()).toList();
+    }
+    final Child annotation = choice.getField().getAnnotation(Child.class);
+    return Stream.of(annotation.type())
+        .map(
+            type ->
+                choice.getResourceTypes().contains(type)
+                    ? elementName + "Reference"
+                    : choice.getChildNameByDatatype(type))
+        .distinct()
+        .toList();
   }
 
   /**
