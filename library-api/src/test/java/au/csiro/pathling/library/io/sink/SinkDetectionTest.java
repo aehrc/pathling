@@ -276,13 +276,21 @@ class SinkDetectionTest {
 
   /**
    * Previous-layout data is refused where it is read, so a write from a source holding it to any
-   * sink, NDJSON included, is refused before anything is written.
+   * sink, NDJSON included, is refused before anything is written, whichever of the source's types
+   * holds it and so whatever order the types are written in.
    */
-  @Test
-  void previousLayoutSourceIsRefusedBeforeAnySinkWrites() {
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void previousLayoutSourceIsRefusedBeforeAnySinkWrites(final boolean previousPatients) {
     final Path source = directory.resolve("source");
-    writeParquet(newPatients(context, "n1"), source, PATIENT_TABLE);
-    writeParquet(previousConditions(spark, "c1"), source, CONDITION_TABLE);
+    writeParquet(
+        previousPatients ? previousPatients(spark, "p1") : newPatients(context, "n1"),
+        source,
+        PATIENT_TABLE);
+    writeParquet(
+        previousPatients ? newConditions(context, "c1") : previousConditions(spark, "c1"),
+        source,
+        CONDITION_TABLE);
     final Path target = directory.resolve("target");
 
     assertThrows(

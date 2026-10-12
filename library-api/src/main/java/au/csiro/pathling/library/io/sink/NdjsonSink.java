@@ -28,8 +28,12 @@ import au.csiro.pathling.library.io.SaveMode;
 import jakarta.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.UnaryOperator;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 
 /**
  * A data sink that writes data to NDJSON files on a filesystem.
@@ -94,11 +98,27 @@ final class NdjsonSink implements DataSink {
     this(context, path, saveMode, UnaryOperator.identity());
   }
 
+  /**
+   * Writes every resource type of the source to NDJSON files.
+   *
+   * <p>Every resource type is read before anything is written, so that a source refusing one of its
+   * types, as one holding data in the layout written by earlier releases does, leaves nothing
+   * written rather than some types and not others.
+   *
+   * @param source the data to write
+   * @return the files written
+   * @throws au.csiro.pathling.library.io.source.UnsupportedLayoutException if the source refuses
+   *     its own data
+   */
   @Override
   @Nonnull
   public WriteDetails write(@Nonnull final DataSource source) {
+    final Map<String, Dataset<Row>> datasets = new LinkedHashMap<>();
+    source.getResourceTypes().forEach(type -> datasets.put(type, source.read(type)));
+
     final List<FileInformation> fileInfos = new ArrayList<>();
-    for (final String resourceType : source.getResourceTypes()) {
+    for (final Map.Entry<String, Dataset<Row>> entry : datasets.entrySet()) {
+      final String resourceType = entry.getKey();
       // Write the resources to the file system as FHIR JSON. Each partition will have its id added
       // to the name later.
       final String fileName = String.join(".", fileNameMapper.apply(resourceType), "ndjson");
@@ -110,7 +130,7 @@ final class NdjsonSink implements DataSink {
                 .json()
                 .write(
                     resourceType,
-                    source.read(resourceType),
+                    entry.getValue(),
                     resultUrl,
                     saveMode.getSparkSaveMode().orElseThrow());
         case MERGE ->
