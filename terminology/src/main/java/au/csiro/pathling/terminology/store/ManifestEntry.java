@@ -69,6 +69,12 @@ public class ManifestEntry implements Serializable {
   @Nullable String packageRegistry;
 
   /**
+   * Why a ConceptMap cannot be read as the rows of a concept map relation, or null where it can or
+   * the entry is not a ConceptMap.
+   */
+  @Nullable String fault;
+
+  /**
    * Creates an entry describing a resource written by an import, taking the provenance values from
    * the import that wrote it.
    *
@@ -87,6 +93,30 @@ public class ManifestEntry implements Serializable {
       @Nullable final String version,
       @Nonnull final ImportProvenance provenance,
       @Nonnull final Instant importedAt) {
+    return forImport(entryType, canonicalUrl, version, provenance, importedAt, null);
+  }
+
+  /**
+   * Creates an entry describing a resource written by an import, taking the provenance values from
+   * the import that wrote it and recording why its content cannot be read in full.
+   *
+   * @param entryType the kind of entry: {@code code_system}, {@code value_set} or {@code
+   *     concept_map}
+   * @param canonicalUrl the canonical URL of the entry
+   * @param version the version of the entry, or null if unversioned
+   * @param provenance the provenance of the import that wrote the entry
+   * @param importedAt when the entry was imported
+   * @param fault why a ConceptMap cannot be read as a concept map relation, or null
+   * @return the manifest entry
+   */
+  @Nonnull
+  public static ManifestEntry forImport(
+      @Nonnull final String entryType,
+      @Nonnull final String canonicalUrl,
+      @Nullable final String version,
+      @Nonnull final ImportProvenance provenance,
+      @Nonnull final Instant importedAt,
+      @Nullable final String fault) {
     return new ManifestEntry(
         TerminologyStoreSchema.STORE_FORMAT_VERSION,
         entryType,
@@ -98,6 +128,7 @@ public class ManifestEntry implements Serializable {
         provenance.getPackageName(),
         provenance.getPackageVersion(),
         provenance.getPackageVerification(),
-        provenance.getPackageRegistry());
+        provenance.getPackageRegistry(),
+        fault);
   }
 }

@@ -54,6 +54,7 @@ class ConceptMapIndexTest {
   private static final String UNICODE = "http://example.org/cm/unicode";
   private static final List<String> UNICODE_CODES = List.of("a", "é", "\uFFFD", "😀", "z");
   private static final String LARGE = "http://example.org/cm/large";
+  private static final String UNREPRESENTABLE = "http://example.org/cm/unrepresentable";
   private static final int LARGE_SIZE = 5000;
 
   private static SparkSession spark;
@@ -122,6 +123,18 @@ class ConceptMapIndexTest {
                     IntStream.range(0, LARGE_SIZE)
                         .mapToObj(i -> element("s" + i, "t" + i))
                         .toList()))));
+    // A map that a concept map relation cannot carry, because a target depends on other elements
+    // and another has no equivalence, is still translated through.
+    Files.writeString(
+        source.resolve("unrepresentable.json"),
+        conceptMap(
+            UNREPRESENTABLE,
+            "1",
+            group(
+                "http://s",
+                "http://t",
+                "{\"code\":\"x\",\"target\":[{\"code\":\"y\",\"equivalence\":\"equal\","
+                    + "\"dependsOn\":[{\"property\":\"p\",\"value\":\"v\"}]},{\"code\":\"z\"}]}")));
     store = dir.resolve("store").toString();
     new FhirTerminologyImporter(spark, store).importFrom(source.toString(), false, null);
 
@@ -232,6 +245,15 @@ class ConceptMapIndexTest {
     assertEquals(
         List.of("http://s|s" + (LARGE_SIZE - 1) + " (equivalent)"),
         describe(index.translate(LARGE, "http://t", "t" + (LARGE_SIZE - 1), true)));
+  }
+
+  @Test
+  void translatesThroughAMapThatARelationCannotCarry() {
+    // The fault recorded in the manifest does not stop translation, and the target without an
+    // equivalence is related to its source.
+    assertEquals(
+        List.of("http://t|y (equal)", "http://t|z (relatedto)"),
+        describe(index.translate(UNREPRESENTABLE, "http://s", "x", false)));
   }
 
   private static List<String> describe(final List<Translation> translations) {

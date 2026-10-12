@@ -452,6 +452,8 @@ class FhirTerminologyImporterTest {
     assertEquals("concept_map", entry.getEntryType());
     assertEquals(FhirFixtures.CONCEPT_MAP, entry.getCanonicalUrl());
     assertEquals(FhirFixtures.VERSION, entry.getVersion());
+    // The fixture can be read in full as a concept map relation.
+    assertNull(entry.getFault());
     // Each mapping is a row of its own, keyed by the map's URL and version.
     assertEquals(
         Set.of(
@@ -471,6 +473,44 @@ class FhirTerminologyImporterTest {
         .importFrom(conceptMapFixture().toString(), false, null);
 
     assertEquals(4, mappings(store).size());
+  }
+
+  @Test
+  void recordsInTheManifestWhyAConceptMapCannotBeReadAsARelation(@TempDir final Path dir)
+      throws Exception {
+    final Path source = dir.resolve("products.json");
+    Files.writeString(
+        source,
+        "{\"resourceType\":\"ConceptMap\",\"url\":\"http://example.org/cm\",\"version\":\"1\","
+            + "\"group\":[{\"source\":\"http://s\",\"target\":\"http://t\",\"element\":"
+            + "[{\"code\":\"a\",\"target\":[{\"code\":\"b\",\"equivalence\":\"equivalent\","
+            + "\"product\":[{\"property\":\"p\",\"value\":\"v\"}]}]}]}]}");
+    final String store = dir.resolve("store").toString();
+
+    new FhirTerminologyImporter(spark, store).importFrom(source.toString(), false, null);
+
+    assertEquals("the mapping for source code 'a' has products", manifest(store).get(0).getFault());
+    // The fault does not stop the mapping from being stored for translate.
+    assertEquals(
+        Set.of(mapping("http://example.org/cm", "1", "a", "b", "equivalent")), mappings(store));
+  }
+
+  @Test
+  void reimportingAConceptMapReplacesItsFault(@TempDir final Path dir) throws Exception {
+    final Path faulty = dir.resolve("faulty.json");
+    Files.writeString(
+        faulty, conceptMapJson("1", "a", "b").replace(",\"equivalence\":\"equivalent\"", ""));
+    final Path corrected = dir.resolve("corrected.json");
+    Files.writeString(corrected, conceptMapJson("1", "a", "b"));
+    final String store = dir.resolve("store").toString();
+
+    new FhirTerminologyImporter(spark, store).importFrom(faulty.toString(), false, null);
+    assertEquals(
+        "the mapping for source code 'a' has no equivalence", manifest(store).get(0).getFault());
+    new FhirTerminologyImporter(spark, store).importFrom(corrected.toString(), false, null);
+
+    assertEquals(1, manifest(store).size());
+    assertNull(manifest(store).get(0).getFault());
   }
 
   @Test

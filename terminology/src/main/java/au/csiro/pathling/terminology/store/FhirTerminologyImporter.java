@@ -22,9 +22,13 @@ import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_EQUIVALENCE;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_ORDINAL;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_SOURCE_CODE;
+import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_SOURCE_DISPLAY;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_SOURCE_SYSTEM;
+import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_SOURCE_VERSION;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_TARGET_CODE;
+import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_TARGET_DISPLAY;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_TARGET_SYSTEM;
+import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_TARGET_VERSION;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_VERSION;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.CONCEPT_MAPPING;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.ENTRY_TYPE_CONCEPT_MAP;
@@ -600,9 +604,13 @@ public class FhirTerminologyImporter {
                 lit(version).cast(DataTypes.StringType).alias(COLUMN_VERSION),
                 col(COLUMN_ORDINAL),
                 col(COLUMN_SOURCE_SYSTEM),
+                col(COLUMN_SOURCE_VERSION),
                 col(COLUMN_SOURCE_CODE),
+                col(COLUMN_SOURCE_DISPLAY),
                 col(COLUMN_TARGET_SYSTEM),
+                col(COLUMN_TARGET_VERSION),
                 col(COLUMN_TARGET_CODE),
+                col(COLUMN_TARGET_DISPLAY),
                 col(COLUMN_EQUIVALENCE),
                 lit(conceptMapId).alias(COLUMN_CONCEPT_MAP_ID));
     final TerminologyStoreWriter writer = context.writer();
@@ -612,9 +620,16 @@ public class FhirTerminologyImporter {
     } else {
       writer.writeTable(data, CONCEPT_MAPPING, SaveMode.Overwrite, List.of(COLUMN_CONCEPT_MAP_ID));
     }
+    // The reason the map cannot be read as a concept map relation, if any, describes the version as
+    // a whole, so it is recorded with the version rather than among its mappings.
     writer.upsertManifestEntry(
         ManifestEntry.forImport(
-            ENTRY_TYPE_CONCEPT_MAP, url, version, context.provenance(), Instant.now()));
+            ENTRY_TYPE_CONCEPT_MAP,
+            url,
+            version,
+            context.provenance(),
+            Instant.now(),
+            staging.fault()));
   }
 
   @Nonnull

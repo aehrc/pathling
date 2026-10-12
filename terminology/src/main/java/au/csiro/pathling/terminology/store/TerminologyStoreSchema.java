@@ -121,6 +121,14 @@ public final class TerminologyStoreSchema {
   public static final String COLUMN_PACKAGE_REGISTRY = "package_registry";
 
   /**
+   * The manifest column recording why a ConceptMap cannot be read as the rows of a concept map
+   * relation: the first content in the map that the rows cannot carry, in the order {@code
+   * ConceptMapContent.fromResource} checks a resource. Null where the map can be read in full, and
+   * for every entry that is not a ConceptMap. {@code translate} does not consult it.
+   */
+  public static final String COLUMN_FAULT = "fault";
+
+  /**
    * The stable identifier of a code system version, a hash of its URL and version. This is the
    * partition column of every content table so that versions coexist and replace atomically.
    */
@@ -223,14 +231,32 @@ public final class TerminologyStoreSchema {
   /** The full R4 resource JSON of an imported ValueSet. */
   public static final String COLUMN_RESOURCE_JSON = "resource_json";
 
-  /** The system of the source concept of a ConceptMap mapping, null where its group names none. */
+  /**
+   * The system of the source concept of a ConceptMap mapping, as its group's {@code source} gives
+   * it, null where the group names none.
+   */
   public static final String COLUMN_SOURCE_SYSTEM = "source_system";
+
+  /** The {@code sourceVersion} of the group of a ConceptMap mapping, null where it gives none. */
+  public static final String COLUMN_SOURCE_VERSION = "source_version";
 
   /** The code of the source concept of a ConceptMap mapping. */
   public static final String COLUMN_SOURCE_CODE = "source_code";
 
-  /** The system of the target concept of a ConceptMap mapping, null where its group names none. */
+  /** The display of the source element of a ConceptMap mapping, null where it gives none. */
+  public static final String COLUMN_SOURCE_DISPLAY = "source_display";
+
+  /**
+   * The system of the target concept of a ConceptMap mapping, as its group's {@code target} gives
+   * it, null where the group names none.
+   */
   public static final String COLUMN_TARGET_SYSTEM = "target_system";
+
+  /** The {@code targetVersion} of the group of a ConceptMap mapping, null where it gives none. */
+  public static final String COLUMN_TARGET_VERSION = "target_version";
+
+  /** The display of the target of a ConceptMap mapping, null where it gives none. */
+  public static final String COLUMN_TARGET_DISPLAY = "target_display";
 
   /** The equivalence code of a ConceptMap mapping (for example {@code equivalent}). */
   public static final String COLUMN_EQUIVALENCE = "equivalence";
@@ -331,6 +357,7 @@ public final class TerminologyStoreSchema {
         .add(COLUMN_PACKAGE_NAME, DataTypes.StringType, true)
         .add(COLUMN_PACKAGE_VERSION, DataTypes.StringType, true)
         .add(COLUMN_PACKAGE_VERIFICATION, DataTypes.StringType, true)
-        .add(COLUMN_PACKAGE_REGISTRY, DataTypes.StringType, true);
+        .add(COLUMN_PACKAGE_REGISTRY, DataTypes.StringType, true)
+        .add(COLUMN_FAULT, DataTypes.StringType, true);
   }
 }

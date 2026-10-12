@@ -20,10 +20,15 @@ package au.csiro.pathling.terminology.store;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_EQUIVALENCE;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_ORDINAL;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_SOURCE_CODE;
+import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_SOURCE_DISPLAY;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_SOURCE_SYSTEM;
+import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_SOURCE_VERSION;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_TARGET_CODE;
+import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_TARGET_DISPLAY;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_TARGET_SYSTEM;
+import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_TARGET_VERSION;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -34,7 +39,9 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.List;
+import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.junit.jupiter.api.AfterAll;
@@ -44,8 +51,10 @@ import org.junit.jupiter.api.io.TempDir;
 
 /**
  * Verifies the streaming ConceptMap flattener: every target of every element becomes one staging
- * row carrying its group's systems, the fields of a ConceptMap may appear in any order, a missing
- * equivalence defaults to {@code relatedto}, and an unrecognised equivalence fails the import.
+ * row carrying its group's systems and versions and its displays, the fields of a ConceptMap may
+ * appear in any order, a missing equivalence defaults to {@code relatedto}, an unrecognised
+ * equivalence fails the import, and the first content that a concept map relation cannot carry is
+ * recorded with the staging.
  *
  * @author John Grimes
  */
@@ -202,16 +211,84 @@ class ConceptMapStreamFlattenerTest {
     }
   }
 
-  /** Flattens a ConceptMap and reads its staging rows back in document order. */
+  @Test
+  void carriesDisplaysAndTheGroupsOwnVersions() throws Exception {
+    // Versions are carried as written; reading a canonical's version out of its system is left to
+    // the reader, as is treating a blank value as absent.
+    final String json =
+        "{\"resourceType\":\"ConceptMap\",\"group\":[{\"source\":\"http://s|1\","
+            + "\"sourceVersion\":\"9\",\"target\":\"http://t\",\"targetVersion\":\"2\","
+            + "\"element\":[{\"code\":\"a\",\"display\":\"A\",\"target\":[{\"code\":\"b\","
+            + "\"display\":\"B\",\"equivalence\":\"equal\"}]},{\"code\":\"c\",\"target\":"
+            + "[{\"code\":\"d\",\"equivalence\":\"equal\"}]}]}]}";
+
+    final List<List<String>> rows =
+        staged(json).orderBy(COLUMN_ORDINAL).collectAsList().stream()
+            .map(
+                row ->
+                    Arrays.asList(
+                        row.<String>getAs(COLUMN_SOURCE_VERSION),
+                        row.<String>getAs(COLUMN_SOURCE_DISPLAY),
+                        row.<String>getAs(COLUMN_TARGET_VERSION),
+                        row.<String>getAs(COLUMN_TARGET_DISPLAY)))
+            .toList();
+
+    assertEquals(
+        List.of(Arrays.asList("9", "A", "2", "B"), Arrays.asList("9", null, "2", null)), rows);
+  }
+
+  @Test
+  void recordsNoFaultForContentARelationCanCarry() throws Exception {
+    final String json =
+        Files.readString(
+            FhirFixtures.jsonDirectory().resolve("conceptmap-species-to-category.json"));
+
+    assertNull(fault(json));
+  }
+
+  @Test
+  void recordsOnlyTheFirstFault() throws Exception {
+    // The first element's target carries dependsOn; the second has no equivalence.
+    final String json =
+        "{\"resourceType\":\"ConceptMap\",\"group\":[{\"source\":\"http://s\",\"element\":["
+            + "{\"code\":\"a\",\"target\":[{\"code\":\"b\",\"equivalence\":\"equal\","
+            + "\"dependsOn\":[{\"property\":\"p\",\"value\":\"v\"}]}]},"
+            + "{\"code\":\"c\",\"target\":[{\"code\":\"d\"}]}]}]}";
+
+    assertEquals(
+        "the mapping for source code 'a' depends on other elements (dependsOn)", fault(json));
+    // The fault does not stop either mapping from being staged for translate.
+    assertEquals(
+        List.of(
+            row("http://s", "a", null, "b", "equal"), row("http://s", "c", null, "d", "relatedto")),
+        flatten(json));
+  }
+
+  /** Flattens a ConceptMap and reads its mapping rows back in document order. */
   private static List<String> flatten(final String json) throws IOException {
+    return staged(json).orderBy(COLUMN_ORDINAL).collectAsList().stream()
+        .map(ConceptMapStreamFlattenerTest::row)
+        .toList();
+  }
+
+  /** Flattens a ConceptMap and returns the fault recorded with the staging, or null. */
+  private static String fault(final String json) throws IOException {
+    try (ConceptMapStaging staging = ConceptMapStaging.create();
+        JsonParser parser = FACTORY.createParser(json.getBytes(StandardCharsets.UTF_8))) {
+      new ConceptMapStreamFlattener(staging).flatten(parser);
+      return staging.fault();
+    }
+  }
+
+  /** Flattens a ConceptMap and reads every staging row back, collected before cleanup. */
+  private static Dataset<Row> staged(final String json) throws IOException {
     try (ConceptMapStaging staging = ConceptMapStaging.create()) {
       try (JsonParser parser = FACTORY.createParser(json.getBytes(StandardCharsets.UTF_8))) {
         new ConceptMapStreamFlattener(staging).flatten(parser);
       }
       staging.sealForReading();
-      return staging.read(spark).orderBy(COLUMN_ORDINAL).collectAsList().stream()
-          .map(ConceptMapStreamFlattenerTest::row)
-          .toList();
+      final Dataset<Row> rows = staging.read(spark);
+      return spark.createDataFrame(rows.collectAsList(), rows.schema());
     }
   }
 

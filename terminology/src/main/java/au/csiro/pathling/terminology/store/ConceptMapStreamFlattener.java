@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.terminology.store;
 
+import au.csiro.pathling.terminology.conceptmap.ConceptMapFault;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import jakarta.annotation.Nonnull;
@@ -34,10 +35,18 @@ import org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence;
  * systems, which may follow the elements in the source, so the flattener never holds more than one
  * element at a time and accepts the fields of the map in any order.
  *
- * <p>Only the parts of a ConceptMap that local {@code translate} uses are kept: the group source
- * and target systems, the element code, and each target's code and equivalence. A target without an
- * equivalence is {@code relatedto}, and an element without a code is skipped, since it cannot be
- * looked up.
+ * <p>The parts of a ConceptMap kept are those that local {@code translate} uses, the group source
+ * and target systems, the element code, and each target's code and equivalence, together with those
+ * that reading the map as a concept map relation adds: the group source and target versions and the
+ * element and target displays. For {@code translate}, a target without an equivalence is {@code
+ * relatedto}, and an element without a code is skipped, since it cannot be looked up.
+ *
+ * <p>A concept map relation cannot carry all of that content, so the first fault in the map is
+ * recorded with the staging, in the order {@link
+ * au.csiro.pathling.terminology.conceptmap.ConceptMapContent#fromResource} checks a resource: each
+ * group in turn, its {@code source} before its elements, each element's code before its targets,
+ * and each target's {@code dependsOn}, {@code product}, equivalence and code in that order. A value
+ * that is absent, blank, or carried only by an extension is treated as missing.
  *
  * @author John Grimes
  */
@@ -49,10 +58,15 @@ public class ConceptMapStreamFlattener {
 
   private static final String FIELD_GROUP = "group";
   private static final String FIELD_SOURCE = "source";
+  private static final String FIELD_SOURCE_VERSION = "sourceVersion";
   private static final String FIELD_TARGET = "target";
+  private static final String FIELD_TARGET_VERSION = "targetVersion";
   private static final String FIELD_ELEMENT = "element";
   private static final String FIELD_CODE = "code";
+  private static final String FIELD_DISPLAY = "display";
   private static final String FIELD_EQUIVALENCE = "equivalence";
+  private static final String FIELD_DEPENDS_ON = "dependsOn";
+  private static final String FIELD_PRODUCT = "product";
 
   @Nonnull private final ConceptMapStaging staging;
 
@@ -66,8 +80,9 @@ public class ConceptMapStreamFlattener {
   }
 
   /**
-   * Flattens a ConceptMap from the current parser position, appending a staging row per mapping and
-   * registering the systems of each group with the staging.
+   * Flattens a ConceptMap from the current parser position, appending a staging row per mapping,
+   * registering the systems and versions of each group with the staging, and recording the first
+   * fault in the map, if any.
    *
    * @param parser a parser positioned before the ConceptMap object
    * @return the number of mappings flattened
@@ -100,66 +115,114 @@ public class ConceptMapStreamFlattener {
     }
     final int group = staging.groupCount();
     String sourceSystem = null;
+    String sourceVersion = null;
     String targetSystem = null;
+    String targetVersion = null;
+    String elementFault = null;
     while (parser.nextToken() == JsonToken.FIELD_NAME) {
       final String field = parser.currentName();
       parser.nextToken();
       switch (field) {
-        case FIELD_SOURCE -> sourceSystem = parser.getValueAsString();
-        case FIELD_TARGET -> targetSystem = parser.getValueAsString();
-        case FIELD_ELEMENT -> flattenElements(parser, group);
+        case FIELD_SOURCE -> sourceSystem = text(parser);
+        case FIELD_SOURCE_VERSION -> sourceVersion = text(parser);
+        case FIELD_TARGET -> targetSystem = text(parser);
+        case FIELD_TARGET_VERSION -> targetVersion = text(parser);
+        case FIELD_ELEMENT -> {
+          final String fault = flattenElements(parser, group);
+          elementFault = elementFault == null ? fault : elementFault;
+        }
         default -> parser.skipChildren();
       }
     }
-    staging.appendGroup(sourceSystem, targetSystem);
+    staging.appendGroup(sourceSystem, sourceVersion, targetSystem, targetVersion);
+    // The source of a group is checked before any of its elements, wherever it appears.
+    if (!present(sourceSystem)) {
+      staging.recordFault(ConceptMapFault.groupWithoutSource());
+    } else if (elementFault != null) {
+      staging.recordFault(elementFault);
+    }
   }
 
-  private void flattenElements(@Nonnull final JsonParser parser, final int group)
+  /** Flattens the elements of a group, returning the first fault among them, or null. */
+  @Nullable
+  private String flattenElements(@Nonnull final JsonParser parser, final int group)
       throws IOException {
     if (parser.currentToken() != JsonToken.START_ARRAY) {
       parser.skipChildren();
-      return;
+      return null;
     }
+    String fault = null;
     while (parser.nextToken() != JsonToken.END_ARRAY) {
-      flattenElement(parser, group);
+      final String elementFault = flattenElement(parser, group);
+      fault = fault == null ? elementFault : fault;
     }
+    return fault;
   }
 
   /**
-   * Flattens one element. Its targets may precede its code, so they are held until the element
-   * ends, which bounds the memory by the size of the element rather than of the map.
+   * Flattens one element, returning its fault, or null. Its targets may precede its code, so they
+   * are held until the element ends, which bounds the memory by the size of the element rather than
+   * of the map.
    */
-  private void flattenElement(@Nonnull final JsonParser parser, final int group)
+  @Nullable
+  private String flattenElement(@Nonnull final JsonParser parser, final int group)
       throws IOException {
     if (parser.currentToken() != JsonToken.START_OBJECT) {
       parser.skipChildren();
-      return;
+      return null;
     }
     String code = null;
-    final List<String[]> targets = new ArrayList<>();
+    String display = null;
+    final List<Target> targets = new ArrayList<>();
     while (parser.nextToken() == JsonToken.FIELD_NAME) {
       final String field = parser.currentName();
       parser.nextToken();
       switch (field) {
-        case FIELD_CODE -> code = parser.getValueAsString();
+        case FIELD_CODE -> code = text(parser);
+        case FIELD_DISPLAY -> display = text(parser);
         case FIELD_TARGET -> readTargets(parser, targets);
         default -> parser.skipChildren();
       }
     }
-    if (code == null) {
-      return;
-    }
-    for (final String[] target : targets) {
-      staging.appendMapping(group, code, target[0], target[1]);
-      if (staging.mappingCount() % PROGRESS_INTERVAL == 0) {
-        log.info("Parsed {} mappings", staging.mappingCount());
+    if (code != null) {
+      for (final Target target : targets) {
+        staging.appendMapping(
+            group, code, display, target.code(), target.display(), target.equivalence());
+        if (staging.mappingCount() % PROGRESS_INTERVAL == 0) {
+          log.info("Parsed {} mappings", staging.mappingCount());
+        }
       }
     }
+    return fault(code, targets);
   }
 
-  /** Reads an element's targets as {@code [code, equivalence]} pairs. */
+  /** Returns the first fault of an element, checking its code and then each target in turn. */
+  @Nullable
+  private static String fault(@Nullable final String code, @Nonnull final List<Target> targets) {
+    if (!present(code)) {
+      return ConceptMapFault.elementWithoutCode();
+    }
+    for (final Target target : targets) {
+      if (target.dependsOn()) {
+        return ConceptMapFault.dependsOn(code);
+      }
+      if (target.product()) {
+        return ConceptMapFault.product(code);
+      }
+      if (!target.equivalenceGiven()) {
+        return ConceptMapFault.noEquivalence(code);
+      }
+      if (!ConceptMapEquivalence.UNMATCHED.toCode().equals(target.equivalence())
+          && !present(target.code())) {
+        return ConceptMapFault.noTargetCode(code);
+      }
+    }
+    return null;
+  }
+
+  /** Reads an element's targets. */
   private static void readTargets(
-      @Nonnull final JsonParser parser, @Nonnull final List<String[]> targets) throws IOException {
+      @Nonnull final JsonParser parser, @Nonnull final List<Target> targets) throws IOException {
     if (parser.currentToken() != JsonToken.START_ARRAY) {
       parser.skipChildren();
       return;
@@ -170,18 +233,70 @@ public class ConceptMapStreamFlattener {
         continue;
       }
       String code = null;
+      String display = null;
       String equivalence = null;
+      boolean dependsOn = false;
+      boolean product = false;
       while (parser.nextToken() == JsonToken.FIELD_NAME) {
         final String field = parser.currentName();
         parser.nextToken();
         switch (field) {
-          case FIELD_CODE -> code = parser.getValueAsString();
-          case FIELD_EQUIVALENCE -> equivalence = parser.getValueAsString();
+          case FIELD_CODE -> code = text(parser);
+          case FIELD_DISPLAY -> display = text(parser);
+          case FIELD_EQUIVALENCE -> equivalence = text(parser);
+          case FIELD_DEPENDS_ON -> dependsOn = hasContent(parser);
+          case FIELD_PRODUCT -> product = hasContent(parser);
           default -> parser.skipChildren();
         }
       }
-      targets.add(new String[] {code, validEquivalence(equivalence)});
+      targets.add(
+          new Target(
+              code,
+              display,
+              validEquivalence(equivalence),
+              equivalence != null && !equivalence.isEmpty(),
+              dependsOn,
+              product));
     }
+  }
+
+  /** Returns the value of a primitive, or null where it is not one, consuming it either way. */
+  @Nullable
+  private static String text(@Nonnull final JsonParser parser) throws IOException {
+    if (parser.currentToken().isScalarValue()) {
+      return parser.getValueAsString();
+    }
+    parser.skipChildren();
+    return null;
+  }
+
+  /**
+   * Reports whether a repeating element has an entry with content, as HAPI's {@code has} methods do
+   * for {@code dependsOn} and {@code product}, consuming it.
+   */
+  private static boolean hasContent(@Nonnull final JsonParser parser) throws IOException {
+    if (parser.currentToken() != JsonToken.START_ARRAY) {
+      parser.skipChildren();
+      return false;
+    }
+    boolean content = false;
+    while (parser.nextToken() != JsonToken.END_ARRAY) {
+      if (parser.currentToken() != JsonToken.START_OBJECT) {
+        parser.skipChildren();
+        continue;
+      }
+      while (parser.nextToken() == JsonToken.FIELD_NAME) {
+        content = true;
+        parser.nextToken();
+        parser.skipChildren();
+      }
+    }
+    return content;
+  }
+
+  /** Reports whether a value is present, as HAPI reports a primitive with a value. */
+  private static boolean present(@Nullable final String value) {
+    return value != null && !value.isBlank();
   }
 
   /** Returns the equivalence code, defaulting to {@code relatedto} and rejecting unknown codes. */
@@ -196,4 +311,22 @@ public class ConceptMapStreamFlattener {
       throw new TerminologyImportException("Unrecognised ConceptMap equivalence '" + code + "'", e);
     }
   }
+
+  /**
+   * One target of an element, as the map gives it.
+   *
+   * @param code the target code, or null
+   * @param display the target display, or null
+   * @param equivalence the equivalence staged for {@code translate}
+   * @param equivalenceGiven whether the map gives the equivalence rather than it being defaulted
+   * @param dependsOn whether the target depends on other elements
+   * @param product whether the target carries products
+   */
+  private record Target(
+      @Nullable String code,
+      @Nullable String display,
+      @Nonnull String equivalence,
+      boolean equivalenceGiven,
+      boolean dependsOn,
+      boolean product) {}
 }

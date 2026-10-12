@@ -177,6 +177,7 @@ class TerminologyStoreTest {
             null,
             null,
             null,
+            null,
             null);
     new TerminologyStoreWriter(spark, store).writeManifest(List.of(future), SaveMode.Append);
 
@@ -222,6 +223,7 @@ class TerminologyStoreTest {
         entryType,
         "v1.json",
         Instant.now(),
+        null,
         null,
         null,
         null,
@@ -288,12 +290,36 @@ class TerminologyStoreTest {
     assertEquals(PackageVerification.VERIFIED, read.getPackageVerification());
     assertEquals("https://packages.fhir.org", read.getPackageRegistry());
     assertEquals(importedAt, read.getImportedAt());
+    assertNull(read.getFault());
 
     final StructType schema = TerminologyStoreSchema.manifestSchema();
-    assertEquals(11, schema.fields().length, "manifest should have eleven columns");
+    assertEquals(12, schema.fields().length, "manifest should have twelve columns");
     for (final String column : NEW_COLUMNS) {
       assertTrue(schema.apply(column).nullable(), column + " should be nullable");
     }
+    assertTrue(schema.apply(TerminologyStoreSchema.COLUMN_FAULT).nullable());
+  }
+
+  @Test
+  void manifestRoundTripsAConceptMapFault(@TempDir final Path storeDir) {
+    // A ConceptMap whose content cannot be read as a concept map relation records why.
+    final String store = storeDir.resolve("store").toString();
+    final String fault = "the mapping for source code 'a' has products";
+    new TerminologyStoreWriter(spark, store)
+        .upsertManifestEntry(
+            ManifestEntry.forImport(
+                "concept_map",
+                "http://example.org/cm",
+                "1",
+                fullProvenance(),
+                Instant.now().truncatedTo(ChronoUnit.MICROS),
+                fault));
+
+    final List<ManifestEntry> manifest =
+        TerminologyStoreReader.open(store, Map.of()).readManifest();
+
+    assertEquals(1, manifest.size());
+    assertEquals(fault, manifest.get(0).getFault());
   }
 
   @Test
@@ -316,6 +342,7 @@ class TerminologyStoreTest {
     assertNull(read.getPackageVersion());
     assertNull(read.getPackageVerification());
     assertNull(read.getPackageRegistry());
+    assertNull(read.getFault());
   }
 
   @Test
@@ -342,6 +369,7 @@ class TerminologyStoreTest {
     assertNull(legacy.getPackageVersion());
     assertNull(legacy.getPackageVerification());
     assertNull(legacy.getPackageRegistry());
+    assertNull(legacy.getFault());
 
     final ManifestEntry imported = entryFor(manifest, "http://example.org/cs");
     assertEquals(SHA_256, imported.getSourceSha256());
@@ -356,7 +384,7 @@ class TerminologyStoreTest {
             .format("delta")
             .load(TerminologyStoreSchema.tablePath(store, TerminologyStoreSchema.MANIFEST))
             .schema();
-    assertEquals(11, schema.fields().length, "manifest should have gained the five columns");
+    assertEquals(12, schema.fields().length, "manifest should have gained the six columns");
   }
 
   @Test

@@ -19,6 +19,7 @@ package au.csiro.pathling.terminology.store;
 
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_CANONICAL_URL;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_ENTRY_TYPE;
+import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_FAULT;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_IMPORTED_AT;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_PACKAGE_NAME;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_PACKAGE_REGISTRY;
@@ -169,7 +170,7 @@ public class TerminologyStoreReader {
 
   /**
    * Builds a manifest entry from a manifest row, tolerating a manifest written before the
-   * provenance columns existed by reading them only where they are present.
+   * provenance and fault columns existed by reading them only where they are present.
    */
   @Nonnull
   private static ManifestEntry manifestEntry(@Nonnull final TerminologyStoreRow row) {
@@ -185,7 +186,8 @@ public class TerminologyStoreReader {
         stringIfPresent(row, COLUMN_PACKAGE_NAME),
         stringIfPresent(row, COLUMN_PACKAGE_VERSION),
         verification == null ? null : PackageVerification.fromCode(verification),
-        stringIfPresent(row, COLUMN_PACKAGE_REGISTRY));
+        stringIfPresent(row, COLUMN_PACKAGE_REGISTRY),
+        stringIfPresent(row, COLUMN_FAULT));
   }
 
   @Nullable

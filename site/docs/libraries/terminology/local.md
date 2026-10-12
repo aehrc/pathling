@@ -278,11 +278,18 @@ Where the store holds several versions of a ConceptMap, `translate` uses the
 latest, chosen by the same version ordering as for ValueSets. The versions are
 never combined.
 
-Only the parts of a ConceptMap that `translate` uses are stored: the source and
-target systems of each group, the code of each element, and the code and
-equivalence of each of its targets. A target without an equivalence is treated
-as `relatedto`, and an element without a code is skipped. An unrecognised
-equivalence fails the import, naming the map, before any of the map is written.
+Only the parts of a ConceptMap that Pathling reads are stored: the source and
+target systems and versions of each group, the code and display of each
+element, and the code, display and equivalence of each of its targets. For
+`translate`, a target without an equivalence is treated as `relatedto`, and an
+element without a code is skipped. A map is also read in full, as rows of
+source and target codes; content those rows cannot carry (a group without a
+source, an element without a code, or a target with `dependsOn` or `product`,
+without an equivalence, or without a code when it is not `unmatched`) does not
+stop the import or `translate`, but reading the map in full fails, naming the
+first such fault in the map, which the import records in the `fault` column of
+the manifest. An unrecognised equivalence fails the import, naming the map,
+before any of the map is written.
 
 ### Bundles and non-CodeSystem resources
 
@@ -346,10 +353,11 @@ same provenance values.
 | `package_version`      | string    | yes  | The `version` from the package's `package.json`, with the same nullability as `package_name`.                                                                                                       |
 | `package_verification` | string    | yes  | `verified`, `unverified` or `skipped`. Null when the source was not a package.                                                                                                                      |
 | `package_registry`     | string    | yes  | The registry that vouched for the bytes, with any trailing slash removed. Set only when `package_verification` is `verified`.                                                                       |
+| `fault`                | string    | yes  | Why a ConceptMap cannot be read in full as rows of source and target codes, naming the first such fault in the map. Null where it can, and for code systems and value sets.                         |
 
-The store format version is unchanged by the last five columns, so a store
-built before they were recorded opens, answers queries and accepts new imports
-without migration, its existing rows reading back as null.
+The store format version is unchanged by the last six columns, so a store built
+before they were recorded opens, answers queries and accepts new imports without
+migration, its existing rows reading back as null.
 
 The SHA-256 is taken from the bytes the import already reads, so it adds no
 further pass over an archive, and it covers the whole file: it agrees with

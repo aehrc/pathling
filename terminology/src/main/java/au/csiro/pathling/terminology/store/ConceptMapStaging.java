@@ -20,9 +20,13 @@ package au.csiro.pathling.terminology.store;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_EQUIVALENCE;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_ORDINAL;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_SOURCE_CODE;
+import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_SOURCE_DISPLAY;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_SOURCE_SYSTEM;
+import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_SOURCE_VERSION;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_TARGET_CODE;
+import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_TARGET_DISPLAY;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_TARGET_SYSTEM;
+import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_TARGET_VERSION;
 import static org.apache.spark.sql.functions.col;
 
 import com.fasterxml.jackson.core.JsonEncoding;
@@ -48,6 +52,8 @@ import org.apache.spark.sql.types.StructType;
  * Spark, so the driver never holds the mappings or the groups of a map in memory. Each mapping
  * refers to its group by index, because a group's systems may follow its elements in the source.
  * The files live in a driver-local temporary directory that is deleted when the staging is closed.
+ * The one thing held in memory is the first fault recorded, the reason the map cannot be read as a
+ * concept map relation, which the importer records in the manifest.
  *
  * @author John Grimes
  */
@@ -71,6 +77,7 @@ public class ConceptMapStaging implements AutoCloseable {
   private int groupCount;
   private int mappingCount;
   private boolean sealed;
+  @Nullable private String fault;
 
   private ConceptMapStaging(
       @Nonnull final Path directory,
@@ -126,19 +133,26 @@ public class ConceptMapStaging implements AutoCloseable {
   }
 
   /**
-   * Registers the systems of the next group, in document order.
+   * Registers the systems and versions of the next group, in document order, as the map gives them.
    *
-   * @param sourceSystem the group's source system, or null where it names none
-   * @param targetSystem the group's target system, or null where it names none
+   * @param sourceSystem the group's {@code source}, or null where it names none
+   * @param sourceVersion the group's {@code sourceVersion}, or null where it gives none
+   * @param targetSystem the group's {@code target}, or null where it names none
+   * @param targetVersion the group's {@code targetVersion}, or null where it gives none
    */
   public void appendGroup(
-      @Nullable final String sourceSystem, @Nullable final String targetSystem) {
+      @Nullable final String sourceSystem,
+      @Nullable final String sourceVersion,
+      @Nullable final String targetSystem,
+      @Nullable final String targetVersion) {
     requireUnsealed();
     try {
       groupGenerator.writeStartObject();
       groupGenerator.writeNumberField(COLUMN_GROUP_INDEX, groupCount);
       groupGenerator.writeStringField(COLUMN_SOURCE_SYSTEM, sourceSystem);
+      groupGenerator.writeStringField(COLUMN_SOURCE_VERSION, sourceVersion);
       groupGenerator.writeStringField(COLUMN_TARGET_SYSTEM, targetSystem);
+      groupGenerator.writeStringField(COLUMN_TARGET_VERSION, targetVersion);
       groupGenerator.writeEndObject();
     } catch (final IOException e) {
       throw new UncheckedIOException(e);
@@ -151,14 +165,18 @@ public class ConceptMapStaging implements AutoCloseable {
    *
    * @param group the index of the group the mapping belongs to
    * @param sourceCode the code of the source concept
+   * @param sourceDisplay the display of the source element, or null where it gives none
    * @param targetCode the code of the target concept, or null where the target carries none
+   * @param targetDisplay the display of the target, or null where it gives none
    * @param equivalence the equivalence code of the mapping
    * @throws TerminologyImportException if the map holds more mappings than can be numbered
    */
   public void appendMapping(
       final int group,
       @Nonnull final String sourceCode,
+      @Nullable final String sourceDisplay,
       @Nullable final String targetCode,
+      @Nullable final String targetDisplay,
       @Nonnull final String equivalence) {
     requireUnsealed();
     if (mappingCount == Integer.MAX_VALUE) {
@@ -170,13 +188,38 @@ public class ConceptMapStaging implements AutoCloseable {
       mappingGenerator.writeNumberField(COLUMN_ORDINAL, mappingCount);
       mappingGenerator.writeNumberField(COLUMN_GROUP, group);
       mappingGenerator.writeStringField(COLUMN_SOURCE_CODE, sourceCode);
+      mappingGenerator.writeStringField(COLUMN_SOURCE_DISPLAY, sourceDisplay);
       mappingGenerator.writeStringField(COLUMN_TARGET_CODE, targetCode);
+      mappingGenerator.writeStringField(COLUMN_TARGET_DISPLAY, targetDisplay);
       mappingGenerator.writeStringField(COLUMN_EQUIVALENCE, equivalence);
       mappingGenerator.writeEndObject();
     } catch (final IOException e) {
       throw new UncheckedIOException(e);
     }
     mappingCount++;
+  }
+
+  /**
+   * Records a reason that the map cannot be read as a concept map relation. Only the first reason
+   * recorded is kept, so the caller records them in the order the map is to be checked.
+   *
+   * @param reason the reason
+   */
+  public void recordFault(@Nonnull final String reason) {
+    requireUnsealed();
+    if (fault == null) {
+      fault = reason;
+    }
+  }
+
+  /**
+   * Returns the first reason recorded that the map cannot be read as a concept map relation.
+   *
+   * @return the reason, or null where none was recorded
+   */
+  @Nullable
+  public String fault() {
+    return fault;
   }
 
   /**
@@ -212,9 +255,10 @@ public class ConceptMapStaging implements AutoCloseable {
   }
 
   /**
-   * Reads the sealed staging back as mappings that carry their group's systems, in the columns
-   * {@code ordinal}, {@code source_system}, {@code source_code}, {@code target_system}, {@code
-   * target_code} and {@code equivalence}.
+   * Reads the sealed staging back as mappings that carry their group's systems and versions, in the
+   * columns {@code ordinal}, {@code source_system}, {@code source_version}, {@code source_code},
+   * {@code source_display}, {@code target_system}, {@code target_version}, {@code target_code},
+   * {@code target_display} and {@code equivalence}.
    *
    * @param spark the Spark session to read with
    * @return the mappings, lazily read from the staging files
@@ -226,13 +270,17 @@ public class ConceptMapStaging implements AutoCloseable {
             .add(COLUMN_ORDINAL, DataTypes.IntegerType, false)
             .add(COLUMN_GROUP, DataTypes.IntegerType, false)
             .add(COLUMN_SOURCE_CODE, DataTypes.StringType, false)
+            .add(COLUMN_SOURCE_DISPLAY, DataTypes.StringType, true)
             .add(COLUMN_TARGET_CODE, DataTypes.StringType, true)
+            .add(COLUMN_TARGET_DISPLAY, DataTypes.StringType, true)
             .add(COLUMN_EQUIVALENCE, DataTypes.StringType, false);
     final StructType groupSchema =
         new StructType()
             .add(COLUMN_GROUP_INDEX, DataTypes.IntegerType, false)
             .add(COLUMN_SOURCE_SYSTEM, DataTypes.StringType, true)
-            .add(COLUMN_TARGET_SYSTEM, DataTypes.StringType, true);
+            .add(COLUMN_SOURCE_VERSION, DataTypes.StringType, true)
+            .add(COLUMN_TARGET_SYSTEM, DataTypes.StringType, true)
+            .add(COLUMN_TARGET_VERSION, DataTypes.StringType, true);
     final Dataset<Row> mappings =
         spark.read().schema(mappingSchema).json(directory.resolve(FILE_MAPPING).toUri().toString());
     // A map usually has a handful of groups, which Spark broadcasts, but it may have one per
@@ -244,9 +292,13 @@ public class ConceptMapStaging implements AutoCloseable {
         .select(
             col(COLUMN_ORDINAL),
             col(COLUMN_SOURCE_SYSTEM),
+            col(COLUMN_SOURCE_VERSION),
             col(COLUMN_SOURCE_CODE),
+            col(COLUMN_SOURCE_DISPLAY),
             col(COLUMN_TARGET_SYSTEM),
+            col(COLUMN_TARGET_VERSION),
             col(COLUMN_TARGET_CODE),
+            col(COLUMN_TARGET_DISPLAY),
             col(COLUMN_EQUIVALENCE));
   }
 
