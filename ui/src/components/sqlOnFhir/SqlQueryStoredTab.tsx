@@ -18,8 +18,9 @@
 /**
  * "Select query" tab body for the SQL query form: a grouped picker offering
  * stored SQLQueries and SQLViews, a decoded SQL preview, a read-only summary
- * of referenced views, and the parameters section pairing each declared
- * parameter with the value to bind on this run.
+ * of its dependencies (views, value sets and concept maps alike), and the
+ * parameters section pairing each declared parameter with the value to bind
+ * on this run.
  *
  * @author John Grimes
  */
@@ -155,7 +156,7 @@ export function SqlQueryStoredTab({
           </Box>
 
           <Box>
-            <FieldLabel mb="1">Views</FieldLabel>
+            <FieldLabel mb="1">Dependencies</FieldLabel>
             {selectedLibrary.relatedArtifacts.length > 0 ? (
               <Flex direction="column" gap="1">
                 {selectedLibrary.relatedArtifacts.map((ra) => (

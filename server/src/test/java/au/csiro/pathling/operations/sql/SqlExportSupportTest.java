@@ -27,15 +27,22 @@ import au.csiro.pathling.operations.bulkexport.ExportResultRegistry;
 import au.csiro.pathling.operations.export.ExportFileWriter;
 import au.csiro.pathling.operations.sqlquery.ParsedSqlQuery;
 import au.csiro.pathling.operations.sqlquery.PreparedSqlQuery;
+import au.csiro.pathling.operations.sqlquery.ResolvedConceptMap;
 import au.csiro.pathling.operations.sqlquery.ResolvedDependency;
 import au.csiro.pathling.operations.sqlquery.ResolvedDependencyGraph;
 import au.csiro.pathling.operations.sqlquery.ResolvedExternalTable;
 import au.csiro.pathling.operations.sqlquery.ResolvedSqlView;
+import au.csiro.pathling.operations.sqlquery.ResolvedValueSet;
 import au.csiro.pathling.operations.sqlquery.ResolvedViewDefinition;
 import au.csiro.pathling.operations.sqlquery.SqlLibraryParser;
 import au.csiro.pathling.operations.sqlquery.SqlQueryRequest;
+import au.csiro.pathling.terminology.conceptmap.ConceptMapContent;
+import au.csiro.pathling.terminology.conceptmap.ConceptMapping;
+import au.csiro.pathling.terminology.expand.ValueSetExpansion;
+import au.csiro.pathling.terminology.expand.ValueSetMember;
 import au.csiro.pathling.views.FhirView;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -145,6 +152,40 @@ class SqlExportSupportTest {
     assertThat(second).isNotEqualTo(first);
   }
 
+  // A value set leaf's rows are its members, so two kick-offs that inline different memberships at
+  // the one canonical URL would export different rows and must not share a job (spec 061, US3
+  // scenario 5).
+  @Test
+  void aDifferentValueSetMembershipAtTheSameUrlProducesADifferentKey() {
+    final String first =
+        support.computeCacheKeyComponent(
+            requestOver(valueSetGraph(member("22298006"), member("I21"))));
+    final String second =
+        support.computeCacheKeyComponent(
+            requestOver(valueSetGraph(member("22298006"), member("73211009"))));
+
+    assertThat(second).isNotEqualTo(first);
+  }
+
+  // A concept map leaf's rows are its mappings, so two kick-offs that inline different maps at the
+  // one canonical URL would export different translations and must not share a job (spec 062, US3
+  // scenario 5).
+  @Test
+  void aDifferentConceptMapAtTheSameUrlProducesADifferentKey() {
+    final String first =
+        support.computeCacheKeyComponent(
+            requestOver(conceptMapGraph(mapping("22298006", "I21", "equivalent"))));
+    final String second =
+        support.computeCacheKeyComponent(
+            requestOver(conceptMapGraph(mapping("22298006", "I22", "equivalent"))));
+    final String relabelled =
+        support.computeCacheKeyComponent(
+            requestOver(conceptMapGraph(mapping("22298006", "I21", "related-to"))));
+
+    assertThat(second).isNotEqualTo(first);
+    assertThat(relabelled).isNotEqualTo(first);
+  }
+
   // -------------------------------------------------------------------------
   // Kick-offs that really are the same.
   // -------------------------------------------------------------------------
@@ -185,6 +226,38 @@ class SqlExportSupportTest {
     final String descending = support.computeCacheKeyComponent(requestOver(twoLabelGraph(true)));
 
     assertThat(descending).isEqualTo(ascending);
+  }
+
+  // Two separately resolved copies of one membership describe themselves identically, so a
+  // repeated kick-off still deduplicates onto the job that is already running.
+  @Test
+  void anIdenticalValueSetMembershipProducesTheSameKey() {
+    final String first =
+        support.computeCacheKeyComponent(
+            requestOver(valueSetGraph(member("22298006"), member("I21"))));
+    final String second =
+        support.computeCacheKeyComponent(
+            requestOver(valueSetGraph(member("22298006"), member("I21"))));
+
+    assertThat(second).isEqualTo(first);
+  }
+
+  // Two separately resolved copies of one concept map describe themselves identically, so a
+  // repeated kick-off still deduplicates onto the job that is already running.
+  @Test
+  void anIdenticalConceptMapProducesTheSameKey() {
+    final String first =
+        support.computeCacheKeyComponent(
+            requestOver(
+                conceptMapGraph(
+                    mapping("22298006", "I21", "equivalent"), mapping("73211009", "E14", null))));
+    final String second =
+        support.computeCacheKeyComponent(
+            requestOver(
+                conceptMapGraph(
+                    mapping("22298006", "I21", "equivalent"), mapping("73211009", "E14", null))));
+
+    assertThat(second).isEqualTo(first);
   }
 
   // A dependency swapped for a different resource is a different request even when both bodies
@@ -229,6 +302,47 @@ class SqlExportSupportTest {
   private static ResolvedDependencyGraph externalTableGraph(
       @Nonnull final String path, @Nonnull final String format) {
     return graph(Map.of("crit_a", VIEW_URL), new ResolvedExternalTable(VIEW_URL, path, format));
+  }
+
+  /** A graph whose single dependency is a value set holding the given members. */
+  @Nonnull
+  private static ResolvedDependencyGraph valueSetGraph(@Nonnull final ValueSetMember... members) {
+    final ValueSetExpansion expansion =
+        new ValueSetExpansion(VIEW_URL, null, null, null, List.of(), List.of(members));
+    return graph(Map.of("crit_a", VIEW_URL), new ResolvedValueSet(VIEW_URL, expansion));
+  }
+
+  /** A SNOMED CT member with the given code and no display or inactive flag. */
+  @Nonnull
+  private static ValueSetMember member(@Nonnull final String code) {
+    return new ValueSetMember("http://snomed.info/sct", null, code, null, null);
+  }
+
+  /** A graph whose single dependency is a concept map holding the given mappings. */
+  @Nonnull
+  private static ResolvedDependencyGraph conceptMapGraph(
+      @Nonnull final ConceptMapping... mappings) {
+    final ConceptMapContent content =
+        ConceptMapContent.fromMappings(VIEW_URL, "2026", List.of(mappings), Integer.MAX_VALUE);
+    return graph(Map.of("crit_a", VIEW_URL), new ResolvedConceptMap(VIEW_URL, content));
+  }
+
+  /** A SNOMED CT to ICD-10 mapping with the given codes and relationship, and no displays. */
+  @Nonnull
+  private static ConceptMapping mapping(
+      @Nonnull final String sourceCode,
+      @Nonnull final String targetCode,
+      @Nullable final String relationship) {
+    return new ConceptMapping(
+        "http://snomed.info/sct",
+        null,
+        sourceCode,
+        null,
+        "http://hl7.org/fhir/sid/icd-10",
+        "2019",
+        targetCode,
+        null,
+        relationship);
   }
 
   /**
