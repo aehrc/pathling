@@ -236,6 +236,94 @@ test_that("datasource tables with schema", {
   expect_equal(collect(result), tibble::tibble(count = 71))
 })
 
+# Tests for layout detection and its opt-out.
+
+previous_layout_refusal <- paste0(
+  "The Patient data is stored in the layout written by earlier releases of Pathling"
+)
+
+# Writes Patients carrying the root versioned id that the layout of earlier releases stores beside
+# every resource id, through the given kind of storage, and returns a function that opens a data
+# source over them, taking the layout detection setting.
+write_previous_layout <- function(spark, pc, kind) {
+  warehouse <- file.path(tempdir(), paste0("previous-", kind, "-", as.integer(runif(1, 0, 1e9))))
+  patients <- sparklyr::copy_to(
+    spark,
+    data.frame(id = "p1", id_versioned = "Patient/p1/_history/1", gender = "female"),
+    "previous_patients",
+    overwrite = TRUE
+  )
+  writer <- patients %>%
+    sparklyr::spark_dataframe() %>%
+    sparklyr::invoke("write")
+  table <- file.path(warehouse, "Patient.parquet")
+  if (kind == "parquet") {
+    writer %>% sparklyr::invoke("parquet", table)
+    return(function(detection) pathling_read_parquet(pc, warehouse, layout_detection = detection))
+  }
+  if (kind == "delta") {
+    writer %>%
+      sparklyr::invoke("format", "delta") %>%
+      sparklyr::invoke("save", table)
+    return(function(detection) pathling_read_delta(pc, warehouse, layout_detection = detection))
+  }
+  database <- paste0("previous_", as.integer(runif(1, 0, 1e9)))
+  spark %>%
+    sparklyr::spark_session() %>%
+    sparklyr::invoke("sql", paste("CREATE DATABASE", database))
+  writer %>%
+    sparklyr::invoke("format", "delta") %>%
+    sparklyr::invoke("saveAsTable", paste0(database, ".Patient"))
+  function(detection) pathling_read_tables(pc, schema = database, layout_detection = detection)
+}
+
+for (kind in c("parquet", "delta", "tables")) {
+  test_that(paste("previous layout is refused from", kind), {
+    spark <- def_spark()
+    pc <- def_pathling_context(spark)
+    open_source <- write_previous_layout(spark, pc, kind)
+
+    expect_error(open_source(TRUE) %>% ds_read("Patient"), previous_layout_refusal)
+  })
+
+  test_that(paste("layout detection opt-out permits the read from", kind), {
+    spark <- def_spark()
+    pc <- def_pathling_context(spark)
+    open_source <- write_previous_layout(spark, pc, kind)
+
+    patients <- open_source(FALSE) %>% ds_read("Patient")
+
+    expect_true("id_versioned" %in% colnames(patients))
+    expect_equal(sparklyr::sdf_nrow(patients), 1)
+  })
+}
+
+test_that("layout detection opt-out is scoped to one source", {
+  spark <- def_spark()
+  pc <- def_pathling_context(spark)
+  open_source <- write_previous_layout(spark, pc, "parquet")
+  opted_out <- open_source(FALSE)
+  detecting <- open_source(TRUE)
+
+  expect_equal(sparklyr::sdf_nrow(opted_out %>% ds_read("Patient")), 1)
+  expect_error(detecting %>% ds_read("Patient"), previous_layout_refusal)
+})
+
+for (layout_detection in c(TRUE, FALSE)) {
+  test_that(paste("conforming data reads alike with layout detection", layout_detection), {
+    spark <- def_spark()
+    pc <- def_pathling_context(spark)
+
+    parquet <- pc %>%
+      pathling_read_parquet(parquet_test_data_dir(), layout_detection = layout_detection)
+    delta <- pc %>%
+      pathling_read_delta(delta_test_data_dir(), layout_detection = layout_detection)
+
+    expect_equal(collect(parquet_query(parquet)), tibble::tibble(count = 71))
+    expect_equal(collect(delta_query(delta)), tibble::tibble(count = 71))
+  })
+}
+
 # Tests for write_details return value from write operations.
 
 test_that("ndjson write returns details", {

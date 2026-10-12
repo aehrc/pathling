@@ -17,10 +17,12 @@
 
 import os
 from tempfile import TemporaryDirectory
+from uuid import uuid4
 
 from flask import Response
+from py4j.protocol import Py4JJavaError
 from pyspark.sql import DataFrame, Row
-from pytest import fixture
+from pytest import fixture, mark, raises
 
 from pathling.datasource import DataSource
 
@@ -246,6 +248,86 @@ def test_datasource_delta_merge(delta_test_data_dir, temp_delta_dir, pathling_ct
     assert result.collect() == [
         ResultRow(71),
     ]
+
+
+PREVIOUS_LAYOUT_REFUSAL = (
+    "The Patient data is stored in the layout written by earlier releases of Pathling"
+)
+
+
+def write_previous_layout(pathling_ctx, kind: str, warehouse: str):
+    """
+    Writes Patients carrying the root versioned id that the layout of earlier releases stores
+    beside every resource id, through the given kind of storage, and returns a function that
+    opens a data source over them, taking the layout detection setting.
+    """
+    spark = pathling_ctx.spark
+    patients = spark.createDataFrame(
+        [Row(id="p1", id_versioned="Patient/p1/_history/1", gender="female")]
+    )
+    table = os.path.join(warehouse, "Patient.parquet")
+    if kind == "parquet":
+        patients.write.parquet(table)
+        return lambda detection: pathling_ctx.read.parquet(
+            warehouse, layout_detection=detection
+        )
+    if kind == "delta":
+        patients.write.format("delta").save(table)
+        return lambda detection: pathling_ctx.read.delta(
+            warehouse, layout_detection=detection
+        )
+    database = "previous_" + uuid4().hex
+    spark.sql(f"CREATE DATABASE {database}")
+    patients.write.format("delta").saveAsTable(f"{database}.Patient")
+    return lambda detection: pathling_ctx.read.tables(
+        schema=database, layout_detection=detection
+    )
+
+
+@mark.parametrize("kind", ["parquet", "delta", "tables"])
+def test_previous_layout_is_refused(kind, func_temp_dir, pathling_ctx):
+    open_source = write_previous_layout(pathling_ctx, kind, func_temp_dir)
+
+    with raises(Py4JJavaError) as error:
+        open_source(True).read("Patient")
+
+    assert "UnsupportedLayoutException" in str(error.value)
+    assert PREVIOUS_LAYOUT_REFUSAL in str(error.value)
+    assert "Re-import the data from its source" in str(error.value)
+
+
+@mark.parametrize("kind", ["parquet", "delta", "tables"])
+def test_layout_detection_opt_out_permits_the_read(kind, func_temp_dir, pathling_ctx):
+    open_source = write_previous_layout(pathling_ctx, kind, func_temp_dir)
+
+    patients = open_source(False).read("Patient")
+
+    assert "id_versioned" in patients.columns
+    assert patients.count() == 1
+
+
+def test_layout_detection_opt_out_is_scoped_to_one_source(func_temp_dir, pathling_ctx):
+    open_source = write_previous_layout(pathling_ctx, "parquet", func_temp_dir)
+    opted_out = open_source(False)
+
+    assert opted_out.read("Patient").count() == 1
+    with raises(Py4JJavaError):
+        pathling_ctx.read.parquet(func_temp_dir).read("Patient")
+
+
+@mark.parametrize("layout_detection", [True, False])
+def test_conforming_data_reads_alike_with_and_without_layout_detection(
+    layout_detection, parquet_test_data_dir, delta_test_data_dir, pathling_ctx
+):
+    parquet = pathling_ctx.read.parquet(
+        parquet_test_data_dir, layout_detection=layout_detection
+    )
+    delta = pathling_ctx.read.delta(
+        delta_test_data_dir, layout_detection=layout_detection
+    )
+
+    assert parquet_query(parquet).collect() == [ResultRow(71)]
+    assert delta_query(delta).collect() == [ResultRow(71)]
 
 
 def test_datasource_tables(ndjson_test_data_dir, pathling_ctx):

@@ -29,6 +29,26 @@ invoke_datasource <- function(pc, name, ...) {
     j_invoke(name, ...)
 }
 
+#' Invoke a data source that reads stored data
+#'
+#' Invokes a method of the Java data source builder after setting whether the sources it creates
+#' classify the layout of the data they read.
+#'
+#' @param pc The PathlingContext object.
+#' @param layout_detection Whether the source classifies the layout of the data it reads.
+#' @param name The name of the builder method.
+#' @param ... The arguments of the builder method.
+#' @return A jobj referring to the data source.
+#'
+#' @importFrom sparklyr j_invoke
+#' @noRd
+invoke_stored_datasource <- function(pc, layout_detection, name, ...) {
+  pc %>%
+    data_sources() %>%
+    j_invoke("withLayoutDetection", as.logical(layout_detection)) %>%
+    j_invoke(name, ...)
+}
+
 to_java_list <- function(sc, elements) {
   list <- j_invoke_new(sc, "java.util.ArrayList")
   for (e in elements) {
@@ -170,12 +190,20 @@ pathling_read_datasets <- function(pc, resources) {
 #' workable pattern is to merge once and persist the result, or to take the writer's schema, and
 #' supply that.
 #'
+#' The layout of each resource type's data is classified as it is read, and data in the layout
+#' written by earlier releases of Pathling is refused with a message naming the remedy, which is to
+#' re-import it from its source.
+#'
 #' @param pc The PathlingContext object.
 #' @param path The URI of the directory containing the Parquet tables.
 #' @param schemas An optional named list of the schema to read each resource type with, keyed by
 #'   resource type code. Each schema is either a Spark schema in its JSON representation, or a Java
 #'   \code{StructType} object. At most ten schemas can be supplied. Resource types the list does
 #'   not name are merged as usual.
+#' @param layout_detection Whether to classify the layout of each resource type's data as it is
+#'   read, refusing data in the layout written by earlier releases of Pathling. Defaults to
+#'   \code{TRUE}. Set it to \code{FALSE} only for conforming data that the detector misclassifies;
+#'   it applies to this data source alone.
 #' @return A DataSource object that can be used to run queries against the data.
 #'
 #' @seealso \href{https://pathling.csiro.au/docs/libraries/io#parquet}{Pathling documentation - Reading Parquet}
@@ -190,13 +218,13 @@ pathling_read_datasets <- function(pc, resources) {
 #'   ds_read("Patient") %>%
 #'   sparklyr::sdf_nrow()
 #' }
-pathling_read_parquet <- function(pc, path, schemas = NULL) {
+pathling_read_parquet <- function(pc, path, schemas = NULL, layout_detection = TRUE) {
   if (is.null(schemas) || length(schemas) == 0) {
-    return(pc %>% invoke_datasource("parquet", as.character(path)))
+    return(pc %>% invoke_stored_datasource(layout_detection, "parquet", as.character(path)))
   }
   sc <- sparklyr::spark_connection(pc)
-  pc %>% invoke_datasource(
-    "parquetWithSchemas", as.character(path), to_java_schema_map(sc, schemas)
+  pc %>% invoke_stored_datasource(
+    layout_detection, "parquetWithSchemas", as.character(path), to_java_schema_map(sc, schemas)
   )
 }
 
@@ -246,8 +274,16 @@ to_java_schema_map <- function(sc, schemas) {
 #' \code{pathling_read_delta()} creates a data source from a directory containing Delta tables.
 #' Each table must be named according to the name of the resource type that it stores.
 #'
+#' The layout of each resource type's data is classified as it is read, and data in the layout
+#' written by earlier releases of Pathling is refused with a message naming the remedy, which is to
+#' re-import it from its source.
+#'
 #' @param pc The PathlingContext object.
 #' @param path The URI of the directory containing the Delta tables.
+#' @param layout_detection Whether to classify the layout of each resource type's data as it is
+#'   read, refusing data in the layout written by earlier releases of Pathling. Defaults to
+#'   \code{TRUE}. Set it to \code{FALSE} only for conforming data that the detector misclassifies;
+#'   it applies to this data source alone.
 #' @return A DataSource object that can be used to run queries against the data.
 #'
 #' @seealso \href{https://pathling.csiro.au/docs/libraries/io#delta-lake}{Pathling documentation - Reading Delta}
@@ -262,8 +298,8 @@ to_java_schema_map <- function(sc, schemas) {
 #'   ds_read("Patient") %>%
 #'   sparklyr::sdf_nrow()
 #' }
-pathling_read_delta <- function(pc, path) {
-  pc %>% invoke_datasource("delta", as.character(path))
+pathling_read_delta <- function(pc, path, layout_detection = TRUE) {
+  pc %>% invoke_stored_datasource(layout_detection, "delta", as.character(path))
 }
 
 #' Create a data source from managed tables
@@ -271,8 +307,16 @@ pathling_read_delta <- function(pc, path) {
 #' \code{pathling_read_tables()} creates a data source from a set of Spark tables,
 #' where the table names are the resource type codes.
 #'
+#' The layout of each resource type's data is classified as it is read, and data in the layout
+#' written by earlier releases of Pathling is refused with a message naming the remedy, which is to
+#' re-import it from its source.
+#'
 #' @param pc The PathlingContext object.
 #' @param schema An optional schema name that should be used to qualify the table names.
+#' @param layout_detection Whether to classify the layout of each resource type's data as it is
+#'   read, refusing data in the layout written by earlier releases of Pathling. Defaults to
+#'   \code{TRUE}. Set it to \code{FALSE} only for conforming data that the detector misclassifies;
+#'   it applies to this data source alone.
 #' @return A DataSource object that can be used to run queries against the data.
 #'
 #' @seealso \href{https://pathling.csiro.au/docs/libraries/io#managed-tables}{Pathling documentation - Reading managed tables}
@@ -287,11 +331,11 @@ pathling_read_delta <- function(pc, path) {
 #'   ds_read("Patient") %>%
 #'   sparklyr::sdf_nrow()
 #' }
-pathling_read_tables <- function(pc, schema = NULL) {
+pathling_read_tables <- function(pc, schema = NULL, layout_detection = TRUE) {
   if (!is.null(schema)) {
-    pc %>% invoke_datasource("tables", as.character(schema))
+    pc %>% invoke_stored_datasource(layout_detection, "tables", as.character(schema))
   } else {
-    pc %>% invoke_datasource("tables")
+    pc %>% invoke_stored_datasource(layout_detection, "tables")
   }
 }
 
