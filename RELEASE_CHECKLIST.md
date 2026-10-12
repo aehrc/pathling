@@ -30,6 +30,8 @@ The version number needs to be changed in the following places:
 - `terminology/pom.xml`
 - `library-api/pom.xml`
 - `utilities/pom.xml`
+- `fhir-schema/pom.xml`
+- `io/pom.xml`
 - `encoders/pom.xml`
 - `fhirpath/pom.xml`
 - `lib/python/pom.xml`
