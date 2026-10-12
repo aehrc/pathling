@@ -1756,6 +1756,9 @@ This is documented rather than warned about. A warning would fire on every conte
 carrying a non-default value, for a window that ends when the mode lands, and the
 contract is where a user finds out what an option does.
 
+_Amended by decision 94_: the documentation of the three options is left describing the
+previous encoder's bounds until M6, where T033 rewrites it.
+
 That window is the cost of this placement and it is not small. M5 is twenty-one
 tasks across two phases, landing as a series of independent increments. FR-009 and
 FR-044 are unmet for its duration, and SC-002's curated dense subset with them.
@@ -3328,3 +3331,87 @@ the data on the new layout; a test asserts that same-type recursion such as `rep
 is still bounded; the FHIRPath documentation describes the bound as guarding same-type
 recursion. Whether such exotic recursion should fail on exhaustion rather than stop is issue
 #2820.
+
+## 90. An element absent from both sides of a join answers empty in the join condition
+
+Owner decision (2026-10-12), on T100k.
+
+`ResolveOrNullTest.knownLimitJoinConditionFailsWithInternalError` is replaced by the join
+tests T100k added and by the plan-shape pin `viewColumnInJoinConditionFailsTheSingleChildAssertion`.
+An element that neither side of a join carries now answers the typed null of FR-055 in a
+join condition, as it does in a filter applied after the join, where it failed with
+`UNRESOLVED_COLUMN` before option C. This is not a loss of error reporting: FHIRPath paths
+are validated against the definitions before any column is built, so a misspelled element
+still fails, at compilation, on every layout.
+
+## 91. `fhirpath` renders complex results through a renderer that `library-api` injects
+
+Owner decision (2026-10-12), on T100j.
+
+The owner accepts the stored-text values `QuantityTypesTest` now expects for a whole quantity
+(`90` rather than `90.000000`), and the public `FhirWriter...json().writeElement` in `io`.
+
+The owner rejects the compile-scope dependency of `fhirpath` on `io` that T100j introduced.
+`fhirpath` depends on `io` at test scope only, as plan.md's Structure Decision states. The
+evaluator behind `evaluateFhirPath` takes the rendering of a complex value as a small
+functional interface defined in `fhirpath`, and `PathlingContext` in `library-api`, which
+depends on both modules, passes `io`'s `writeElement`. `fhirpath`'s own tests pass the real
+renderer from `io` at test scope. No public signature of `PathlingContext` or of
+`SingleInstanceEvaluationResult` changes.
+
+## 92. Repeated decode of a stored quantity is a plan-level question, and is revisited with the annotation
+
+Owner decision (2026-10-12), on T100o.
+
+Plan growth from decoding a stored quantity once per use is the same whether the decode is
+eager (at traversal), lazy (where computed with, decision 82) or cached in Java on the
+`Collection`, because each hands Spark the same expression tree for each use. Only binding
+the decoded value at plan level, or Spark's common-subexpression elimination at code
+generation, removes the duplication. T100o is closed if the generated code shows that Spark
+deduplicates the decode; binding is not implemented in M4 either way.
+
+_Consequence for the specification_: T096a, which takes the canonical form from the quantity
+annotation in M5, reads it from the annotation once it exists rather than computing it in the
+decode, and the T100o measurement is repeated then.
+
+## 93. The detection opt-out is checked from the bindings by T049
+
+Owner decision (2026-10-12), on T100b.
+
+T100b's check of the detection opt-out from Python and R moves to T049, which exposes the
+opt-out in the bindings. T049 runs the Python and R suites with the opt-out on and with it
+off, and Phase 13b ends with a full, clean Python and R run.
+
+## 94. The three bounds options are documented again when they bound something again
+
+Owner decision (2026-10-12), raised by T100b. This amends decision 69's "documented rather
+than warned about".
+
+The documentation of `max_nesting_level`, `enable_extensions` and `enabled_open_types` (the
+Python docstrings, the R roxygen and the `EncodingConfiguration` Javadoc) still describes the
+previous encoder's bounds, which the fitted schema does not apply. It is left unchanged until
+M6, where T033 gives the options meaning again for the dense schema (FR-044), and is rewritten
+there. Between the switch and M6 the options stay accepted and inert, as decision 69 says, but
+their documentation does not yet say so.
+
+## 95. `library-runtime` always builds its jar afresh
+
+Owner decision (2026-10-12), raised by T100b.
+
+Without `clean`, the jar plugin left the previous build's shaded jar in place, the shade
+plugin layered the freshly built modules over it, and the stale classes won, so a build
+without `clean` could install a runtime that did not hold the current code (T100b's first
+Python run). The jar plugin's default execution in `library-runtime/pom.xml` sets
+`forceCreation`, so the unshaded jar is rebuilt on every build and the shade plugin starts
+from it. Moving the version to a SNAPSHOT and clearing the stale artifacts from `~/.m2` are
+handled by the owner outside M4.
+
+## 96. Each Python test run starts with an empty Hive metastore
+
+Owner decision (2026-10-12), raised by T100b.
+
+The Python tests' Spark session kept its Derby metastore in `lib/python/metastore_db`, in the
+working directory, so a run inherited the databases and warehouse locations of the one before
+it, and `test_datasource_tables` failed with `LOCATION_ALREADY_EXISTS`. The test session puts
+Derby's home under the session's temporary directory, so every run starts with an empty
+metastore and leaves nothing in the checkout.
