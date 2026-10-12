@@ -3728,8 +3728,10 @@ _R example data_: regenerated after the fix by two runs of `example_data.R`, eac
 empty Ivy home of its own (`oo-gen-1`, `oo-gen-2`) and the `library-runtime` jar of the
 fixed build (SHA-1 `84a9b8bc`, that of `library-runtime/target` and `~/.m2`). The Parquet
 files of the two runs have equal schemas, equal rows and equal footer key-value metadata,
-and the extension value structs are in canonical order (`url`, `valueCode`, `valueDecimal`,
-`valueString`, `valueAddress`, and nested `url`, `valueString`, `valueCoding`). They are not
+and every struct in them is in canonical order: each file's schema is unchanged by
+`StructureMerge` under the resource's canonical structure (`oo-canonical-check.log`). The
+extension value structs, for example, are `url`, `valueCode`, `valueDecimal`, `valueString`,
+`valueAddress`, and nested `url`, `valueString`, `valueCoding`. They are not
 byte-identical: parquet-mr records each column chunk's encodings in a hash-ordered set, so
 the footer lists them in a different order from run to run (for example `RLE,
 PLAIN_DICTIONARY, BIT_PACKED` against `BIT_PACKED, PLAIN_DICTIONARY, RLE`), and the Delta
