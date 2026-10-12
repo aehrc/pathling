@@ -1110,7 +1110,7 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
               versionResolver,
               ValueSetStore.load(reader, versionResolver));
       expansionCache = new ExpansionCache(local.getExpansionCacheSize());
-      conceptMapIndex = ConceptMapIndex.load(reader);
+      conceptMapIndex = ConceptMapIndex.load(reader, versionResolver);
       dialectResolver = new DialectResolver(local.getDialectAliases());
       initialised = true;
     }
