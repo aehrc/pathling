@@ -24,20 +24,14 @@ import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.FileSystemPersistence;
 import au.csiro.pathling.library.io.PersistenceError;
 import au.csiro.pathling.library.io.SaveMode;
-import au.csiro.pathling.library.io.source.FileSource;
 import au.csiro.pathling.library.io.source.LayoutDetector;
 import jakarta.annotation.Nonnull;
-import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.UnaryOperator;
-import org.apache.commons.io.FilenameUtils;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -101,28 +95,47 @@ final class ParquetSink implements DataSink {
   /**
    * Writes every resource type of the source to its files.
    *
-   * <p>Every resource type is read, and, for an append, the files each type already has in the
-   * directory are classified, before anything is written, so that a refusal of either kind leaves
-   * the directory as it was rather than some types written and some not (FR-037a).
+   * <p>Every resource type is read, and the files each type already has in the directory are found,
+   * before anything is written, so that a refusal of any kind leaves the directory as it was rather
+   * than some types written and some not (FR-037a). The save mode applies to those files: an append
+   * adds beside them, after classifying them; an overwrite replaces them; an error-if-exists write
+   * is refused where there are any; and an ignored write skips the type where there are any.
    *
    * @param source the data to write
    * @return the files written
    * @throws au.csiro.pathling.library.io.source.UnsupportedLayoutException if the files an append
    *     would add to are in a layout this release does not read, or the source refuses its own data
+   * @throws PersistenceError if the save mode is error-if-exists and a type already has files
    */
   @Override
   @Nonnull
   public WriteDetails write(@Nonnull final DataSource source) {
     final Map<String, Dataset<Row>> datasets = new LinkedHashMap<>();
     source.getResourceTypes().forEach(type -> datasets.put(type, source.read(type)));
+    final Map<String, List<Path>> existing = new LinkedHashMap<>();
+    datasets
+        .keySet()
+        .forEach(
+            type ->
+                existing.put(
+                    type,
+                    TypeFiles.list(
+                        context.getSpark(), path, fileNameMapper.apply(type), PARQUET_EXTENSION)));
+    if (saveMode == SaveMode.ERROR_IF_EXISTS) {
+      existing.forEach((type, files) -> TypeFiles.refuseIfAny(type, files, path));
+    }
     if (saveMode == SaveMode.APPEND) {
-      datasets.keySet().forEach(this::checkTargetLayout);
+      existing.forEach(this::checkTargetLayout);
     }
 
     final List<FileInformation> fileInfos = new ArrayList<>();
     for (final Map.Entry<String, Dataset<Row>> entry : datasets.entrySet()) {
       final String resourceType = entry.getKey();
       final Dataset<Row> dataset = entry.getValue();
+      final List<Path> replaced = existing.get(resourceType);
+      if (saveMode == SaveMode.IGNORE && !replaced.isEmpty()) {
+        continue;
+      }
       final String fileName =
           String.join(".", fileNameMapper.apply(resourceType), PARQUET_EXTENSION);
       final String tablePath = safelyJoinPaths(path, fileName);
@@ -136,11 +149,16 @@ final class ParquetSink implements DataSink {
         default -> throw new IllegalStateException("Unexpected save mode: " + saveMode);
       }
 
-      // Remove the partitioned directory and replace it with the renamed partitioned files.
-      // Files follow the pattern {resourceType}.{partId}.parquet, e.g. Patient.00000.parquet.
+      // Remove the partitioned directory and replace it with the renamed partitioned files. Files
+      // follow the pattern {resourceType}.{partId}-{writeId}.parquet, e.g.
+      // Patient.00000-7a60a041-0e7d-4e24-b23d-82405a665677.parquet, so that a write never takes
+      // the names of an earlier write's files.
       final Collection<String> renamed =
-          FileSystemPersistence.renamePartitionedFiles(
+          FileSystemPersistence.renamePartitionedFilesKeepingWriteId(
               context.getSpark(), tablePath, tablePath, PARQUET_EXTENSION);
+      if (saveMode == SaveMode.OVERWRITE) {
+        TypeFiles.deleteReplaced(context.getSpark(), path, replaced, tablePath);
+      }
       renamed.forEach(
           renamedFilename -> fileInfos.add(new FileInformation(resourceType, renamedFilename)));
     }
@@ -154,34 +172,19 @@ final class ParquetSink implements DataSink {
    * schemas are merged to classify them, as the source merges them to read them.
    *
    * @param resourceType the resource type whose existing files are checked
+   * @param existing the files the type already has
    */
-  private void checkTargetLayout(@Nonnull final String resourceType) {
-    final String fileName = fileNameMapper.apply(resourceType);
-    final Path directory = new Path(path);
-    final FileSystem fileSystem = FileSystemPersistence.getFileSystem(context.getSpark(), path);
-    final String[] existing;
-    try {
-      if (!fileSystem.exists(directory)) {
-        return;
-      }
-      existing =
-          Arrays.stream(fileSystem.listStatus(directory))
-              .map(FileStatus::getPath)
-              .filter(file -> FilenameUtils.isExtension(file.getName(), PARQUET_EXTENSION))
-              .filter(
-                  file ->
-                      FileSource.resourceNameWithQualifierMapper(
-                              FilenameUtils.getBaseName(file.getName()))
-                          .contains(fileName))
-              .map(Path::toString)
-              .toArray(String[]::new);
-    } catch (final IOException e) {
-      throw new PersistenceError("Problem listing the files of " + resourceType + " in " + path, e);
-    }
-    if (existing.length > 0) {
+  private void checkTargetLayout(
+      @Nonnull final String resourceType, @Nonnull final List<Path> existing) {
+    if (!existing.isEmpty()) {
       LayoutDetector.check(
           resourceType,
-          context.getSpark().read().option("mergeSchema", "true").parquet(existing).schema());
+          context
+              .getSpark()
+              .read()
+              .option("mergeSchema", "true")
+              .parquet(existing.stream().map(Path::toString).toArray(String[]::new))
+              .schema());
     }
   }
 

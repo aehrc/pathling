@@ -29,6 +29,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.function.UnaryOperator;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.hadoop.fs.FileStatus;
@@ -43,6 +46,15 @@ import org.apache.spark.sql.SparkSession;
  */
 @Slf4j
 public class FileSystemPersistence {
+
+  /**
+   * The name Spark gives a file it writes: the partition id and the id of the write, then an
+   * optional file counter and the extensions.
+   */
+  @Nonnull
+  private static final Pattern SPARK_PART_FILE =
+      Pattern.compile(
+          "^part-(\\d+)-([0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12})(?:[-.].*)?$");
 
   private FileSystemPersistence() {}
 
@@ -96,11 +108,17 @@ public class FileSystemPersistence {
    * Rename the partitioned file to follow the naming convention in {@link
    * FileSource#resourceNameWithQualifierMapper(String)}.
    *
+   * <p>Each file is named for its partition alone, {@code <name>.<partId>.<extension>}, so a second
+   * write to the same location produces the same names. Where a write may be added to an earlier
+   * one, use {@link #renamePartitionedFilesKeepingWriteId(SparkSession, String, String, String)}.
+   *
    * @param spark the Spark session
    * @param partitionedLocation the location URL containing the partitioned file
    * @param departitionedLocation the desired URL of the resulting file
    * @param extension the file extension used within the partitioned directory
    * @return the locations of the resulting (renamed) file
+   * @throws PersistenceError if there is a problem renaming a partition file, in which case the
+   *     partitioned directory is left in place
    */
   @Nonnull
   public static Collection<String> renamePartitionedFiles(
@@ -119,13 +137,16 @@ public class FileSystemPersistence {
    * Rename the partitioned file to follow the pathling naming convention in {@link
    * au.csiro.pathling.library.io.source.FileSource#resourceNameWithQualifierMapper(String)}.
    *
+   * <p>Each file is named for its partition alone, {@code <name>.<partId>.<extension>}.
+   *
    * @param partitionedLocation a Hadoop {@link FileSystem} representing the location that both the
    *     partitioned and departitioned files are located in
    * @param partitionedUrl the URL of the partitioned file
    * @param departitionedUrl the desired URL of the resulting file
    * @param extension the file extension used within the partitioned directory
    * @return the locations of the resulting (renamed) file
-   * @throws PersistenceError if there is a problem copying the partition file
+   * @throws PersistenceError if there is a problem renaming a partition file, in which case the
+   *     partitioned directory is left in place
    */
   @Nonnull
   public static Collection<String> renamePartitionedFiles(
@@ -133,6 +154,79 @@ public class FileSystemPersistence {
       @Nonnull final String partitionedUrl,
       @Nonnull final String departitionedUrl,
       @Nonnull final String extension) {
+    return departition(
+        partitionedLocation,
+        partitionedUrl,
+        departitionedUrl,
+        extension,
+        FileSystemPersistence::partitionId);
+  }
+
+  /**
+   * Rename the partitioned file to follow the naming convention in {@link
+   * FileSource#resourceNameWithQualifierMapper(String)}, keeping the id Spark gave the write.
+   *
+   * <p>Each file is named {@code <name>.<partId>-<writeId>.<extension>}, for example {@code
+   * Patient.00000-7a60a041-0e7d-4e24-b23d-82405a665677.parquet}. Spark gives every write an id of
+   * its own, so the files of a write never take the names of an earlier write's files in the same
+   * location, and a write can be added beside them.
+   *
+   * @param spark the Spark session
+   * @param partitionedLocation the location URL containing the partitioned file
+   * @param departitionedLocation the desired URL of the resulting file
+   * @param extension the file extension used within the partitioned directory
+   * @return the locations of the resulting (renamed) files
+   * @throws PersistenceError if a partition file is not named as Spark names them, or there is a
+   *     problem renaming one, in which case the partitioned directory is left in place
+   */
+  @Nonnull
+  public static Collection<String> renamePartitionedFilesKeepingWriteId(
+      @Nonnull final SparkSession spark,
+      @Nonnull final String partitionedLocation,
+      @Nonnull final String departitionedLocation,
+      @Nonnull final String extension) {
+    return renamePartitionedFilesKeepingWriteId(
+        getFileSystem(spark, partitionedLocation),
+        partitionedLocation,
+        departitionedLocation,
+        extension);
+  }
+
+  /**
+   * Rename the partitioned file to follow the naming convention in {@link
+   * FileSource#resourceNameWithQualifierMapper(String)}, keeping the id Spark gave the write, as
+   * {@link #renamePartitionedFilesKeepingWriteId(SparkSession, String, String, String)} describes.
+   *
+   * @param partitionedLocation a Hadoop {@link FileSystem} representing the location that both the
+   *     partitioned and departitioned files are located in
+   * @param partitionedUrl the URL of the partitioned file
+   * @param departitionedUrl the desired URL of the resulting file
+   * @param extension the file extension used within the partitioned directory
+   * @return the locations of the resulting (renamed) files
+   * @throws PersistenceError if a partition file is not named as Spark names them, or there is a
+   *     problem renaming one, in which case the partitioned directory is left in place
+   */
+  @Nonnull
+  public static Collection<String> renamePartitionedFilesKeepingWriteId(
+      @Nonnull final FileSystem partitionedLocation,
+      @Nonnull final String partitionedUrl,
+      @Nonnull final String departitionedUrl,
+      @Nonnull final String extension) {
+    return departition(
+        partitionedLocation,
+        partitionedUrl,
+        departitionedUrl,
+        extension,
+        FileSystemPersistence::partitionAndWriteId);
+  }
+
+  @Nonnull
+  private static Collection<String> departition(
+      @Nonnull final FileSystem partitionedLocation,
+      @Nonnull final String partitionedUrl,
+      @Nonnull final String departitionedUrl,
+      @Nonnull final String extension,
+      @Nonnull final UnaryOperator<String> partitionQualifier) {
     try {
       final Path partitionedPath = new Path(partitionedUrl);
       final FileStatus[] partitionFiles = partitionedLocation.listStatus(partitionedPath);
@@ -157,24 +251,23 @@ public class FileSystemPersistence {
 
       final List<String> renamedFiles = new ArrayList<>();
       for (final String fileName : targetFiles) {
-        final Path filenamePath = new Path(fileName);
-
-        final String[] partIdSplit =
-            FilenameUtils.removeExtension(filenamePath.getName()).split("-");
-        if (partIdSplit.length < 2) {
-          throw new PersistenceError(
-              ("Unexpected spark partitioning structure. Expected %s to have the partitioned id "
-                      + "after the first '-'")
-                  .formatted(fileName),
-              null);
-        }
         final String renamedFilename =
             "%s.%s.%s"
                 .formatted(
-                    departitionFilenameAndExt[0], partIdSplit[1], departitionFilenameAndExt[1]);
+                    departitionFilenameAndExt[0],
+                    partitionQualifier.apply(fileName),
+                    departitionFilenameAndExt[1]);
         final Path renamedPath = new Path(new Path(departitionedUrl).getParent(), renamedFilename);
         log.info("Renaming result to: {}", renamedPath);
-        partitionedLocation.rename(new Path(fileName), renamedPath);
+        // A rename that fails, as one onto an existing file may, must not be followed by the
+        // removal of the partitioned directory, which still holds the file.
+        if (!partitionedLocation.rename(new Path(fileName), renamedPath)) {
+          throw new PersistenceError(
+              ("Could not rename the partition file %s to %s; the partitioned directory %s has "
+                      + "been left in place")
+                  .formatted(fileName, renamedPath, partitionedUrl),
+              null);
+        }
         renamedFiles.add(renamedPath.toString());
       }
       log.info("Cleaning up: {}", partitionedUrl);
@@ -183,5 +276,40 @@ public class FileSystemPersistence {
     } catch (final IOException e) {
       throw new PersistenceError("Problem copying partition file", e);
     }
+  }
+
+  /**
+   * Returns the partition id of a file Spark wrote, the text after the first '-' in its name, for
+   * example {@code 00000} from {@code part-00000-<writeId>-c000.txt}.
+   */
+  @Nonnull
+  private static String partitionId(@Nonnull final String fileName) {
+    final String[] partIdSplit =
+        FilenameUtils.removeExtension(new Path(fileName).getName()).split("-");
+    if (partIdSplit.length < 2) {
+      throw new PersistenceError(
+          ("Unexpected spark partitioning structure. Expected %s to have the partitioned id "
+                  + "after the first '-'")
+              .formatted(fileName),
+          null);
+    }
+    return partIdSplit[1];
+  }
+
+  /**
+   * Returns the partition id and the write id of a file Spark wrote, for example {@code
+   * 00000-<writeId>} from {@code part-00000-<writeId>-c000.snappy.parquet}.
+   */
+  @Nonnull
+  private static String partitionAndWriteId(@Nonnull final String fileName) {
+    final Matcher matcher = SPARK_PART_FILE.matcher(new Path(fileName).getName());
+    if (!matcher.matches()) {
+      throw new PersistenceError(
+          ("Unexpected spark partitioning structure. Expected %s to be named "
+                  + "part-<partitionId>-<writeId>")
+              .formatted(fileName),
+          null);
+    }
+    return matcher.group(1) + "-" + matcher.group(2);
   }
 }

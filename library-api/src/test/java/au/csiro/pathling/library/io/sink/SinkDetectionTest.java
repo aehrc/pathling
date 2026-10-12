@@ -253,7 +253,11 @@ class SinkDetectionTest {
     final List<Path> filesBefore = files(directory);
     assertTrue(
         filesBefore.stream()
-            .anyMatch(file -> file.getFileName().toString().matches("Patient\\.\\d+\\.parquet")),
+            .anyMatch(
+                file ->
+                    file.getFileName()
+                        .toString()
+                        .matches("Patient\\.\\d+-[0-9a-f-]{36}\\.parquet")),
         filesBefore::toString);
 
     assertThrows(
@@ -263,13 +267,53 @@ class SinkDetectionTest {
     assertEquals(filesBefore, files(directory));
   }
 
-  /** An append beside new-layout Parquet files is not refused. */
+  /**
+   * An append beside a partition file named as earlier releases named them, {@code
+   * Patient.00000.parquet}, is refused too.
+   */
+  @Test
+  void parquetAppendBesidePreviousLayoutFilesNamedByEarlierReleasesIsRefused() throws IOException {
+    placeAsEarlierReleaseFile(previousPatients(spark, "p1"), "Patient.00000.parquet");
+    final List<Path> filesBefore = files(directory);
+
+    assertThrows(
+        UnsupportedLayoutException.class,
+        () -> newPatientSource("n1").write().saveMode("append").parquet(directory.toString()));
+
+    assertEquals(filesBefore, files(directory));
+  }
+
+  /**
+   * An overwrite replaces previous-layout Parquet files, whether named by this release or an
+   * earlier one, so the directory then reads as the new layout alone.
+   */
+  @Test
+  void parquetOverwriteReplacesPreviousLayoutFiles() throws IOException {
+    context
+        .read()
+        .datasets()
+        .dataset("Patient", previousPatients(spark, "p1"))
+        .write()
+        .parquet(directory.toString());
+    placeAsEarlierReleaseFile(previousPatients(spark, "p0"), "Patient.00000.parquet");
+
+    newPatientSource("n1", "n2").write().saveMode("overwrite").parquet(directory.toString());
+
+    final Dataset<Row> patients = context.read().parquet(directory.toString()).read("Patient");
+    assertEquals(List.of("n1", "n2"), ids(patients));
+    assertFalse(List.of(patients.schema().fieldNames()).contains("id_versioned"));
+  }
+
+  /** An append beside new-layout Parquet files is not refused, and keeps the rows of both. */
   @Test
   void parquetAppendBesideNewLayoutSucceeds() {
     newPatientSource("n1").write().parquet(directory.toString());
 
     assertDoesNotThrow(
         () -> newPatientSource("n2").write().saveMode("append").parquet(directory.toString()));
+
+    assertEquals(
+        List.of("n1", "n2"), ids(context.read().parquet(directory.toString()).read("Patient")));
   }
 
   // The source boundary.
@@ -327,6 +371,24 @@ class SinkDetectionTest {
                 "The Patient data is stored in the layout written by earlier releases of Pathling"),
         error.getMessage());
     assertTrue(((String) before.get(1)).contains("id_versioned"));
+  }
+
+  /**
+   * Writes a dataset as a single Parquet file in the directory, under a name an earlier release
+   * would have given one of its partition files.
+   */
+  private void placeAsEarlierReleaseFile(
+      @Nonnull final Dataset<Row> dataset, @Nonnull final String fileName) throws IOException {
+    final Path written = Files.createTempDirectory(directory.getParent(), "written");
+    dataset.coalesce(1).write().mode("overwrite").parquet(written.toString());
+    try (final Stream<Path> parts = Files.list(written)) {
+      Files.move(
+          parts
+              .filter(file -> file.getFileName().toString().endsWith(".parquet"))
+              .findFirst()
+              .orElseThrow(),
+          directory.resolve(fileName));
+    }
   }
 
   @Nonnull

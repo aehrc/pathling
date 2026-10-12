@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.library.io;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -25,9 +26,12 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Collection;
+import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FilterFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -71,6 +75,64 @@ class FileSystemPersistenceTest {
 
     // assert that the partitioned files have been deleted
     assertFalse(fs.exists(new Path(hadoopPath, "Patient.ndjson")));
+  }
+
+  @Test
+  void test_files_keep_the_write_id_when_asked() throws IOException {
+    final Path partitionPath = new Path(hadoopPath, "Patient.ndjson");
+
+    final Collection<String> renamed =
+        FileSystemPersistence.renamePartitionedFilesKeepingWriteId(
+            fs, partitionPath.toString(), partitionPath.toString(), "txt");
+
+    final String writeId = "7a60a041-0e7d-4e24-b23d-82405a665677";
+    assertEquals(4, renamed.size());
+    for (final String part : List.of("00000", "00001", "00002", "00003")) {
+      assertTrue(fs.exists(new Path(hadoopPath, "Patient." + part + "-" + writeId + ".ndjson")));
+    }
+    assertFalse(fs.exists(partitionPath));
+  }
+
+  @Test
+  void test_keeping_the_write_id_refuses_a_file_not_named_by_spark() throws IOException {
+    final Path testDir = new Path(hadoopPath, "NotSpark.ndjson");
+    fs.mkdirs(testDir);
+    fs.create(new Path(testDir, "part-00000-hash.txt")).close();
+    final String testDirString = testDir.toString();
+
+    final PersistenceError exception =
+        assertThrows(
+            PersistenceError.class,
+            () ->
+                FileSystemPersistence.renamePartitionedFilesKeepingWriteId(
+                    fs, testDirString, testDirString, "txt"));
+
+    assertTrue(exception.getMessage().contains("part-<partitionId>-<writeId>"));
+    assertTrue(fs.exists(testDir));
+  }
+
+  @Test
+  void test_a_failed_rename_is_an_error_and_keeps_the_partitioned_directory() throws IOException {
+    final Path partitionPath = new Path(hadoopPath, "Patient.ndjson");
+    final FileSystem refusingRenames =
+        new FilterFileSystem(fs) {
+          @Override
+          public boolean rename(final Path src, final Path dst) {
+            return false;
+          }
+        };
+    final String partitionUrl = partitionPath.toString();
+
+    final PersistenceError exception =
+        assertThrows(
+            PersistenceError.class,
+            () ->
+                FileSystemPersistence.renamePartitionedFiles(
+                    refusingRenames, partitionUrl, partitionUrl, "txt"));
+
+    assertTrue(exception.getMessage().contains("Could not rename the partition file"));
+    assertTrue(fs.exists(partitionPath));
+    assertEquals(4, fs.listStatus(partitionPath, p -> p.getName().endsWith(".txt")).length);
   }
 
   @Test
