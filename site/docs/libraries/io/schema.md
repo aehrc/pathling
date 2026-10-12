@@ -290,8 +290,9 @@ In this release:
   into a Delta table or a managed table. The check is made for every resource
   type before anything is written, so a refused write leaves the target as it
   was, and never leaves a table holding both layouts.
-  Writes that replace or skip the existing data (the `overwrite`, `error` and
-  `ignore` save modes) are not refused.
+  A write that replaces the existing data (the `overwrite` save mode) or skips
+  it (the `ignore` save mode) is not refused. With the `error` save mode, the
+  write fails anyway, because the target already holds data.
 
 The remedy is to re-import the data from its source with this release, either
 into a new location or by overwriting the existing one. Where the data is a

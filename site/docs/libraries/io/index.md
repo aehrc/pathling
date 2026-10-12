@@ -690,13 +690,13 @@ mode, is not refused, and is one way to re-import data into the same location.
 Each write takes a save mode, which decides what happens to data that a
 resource type already has at the target:
 
-| Save mode   | Effect                                                                                                                    |
-| ----------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `error`     | The write fails if a resource type already has data at the target. For NDJSON and Parquet, nothing is written.            |
-| `overwrite` | The data of each resource type written replaces the data that type already has.                                           |
-| `append`    | The data is added beside the data each resource type already has.                                                         |
-| `ignore`    | A resource type that already has data is skipped, and its data is left as it is. Other resource types are written.        |
-| `merge`     | Resources are matched on their ID: a matched resource is replaced, and a new one is added. Delta and managed tables only. |
+| Save mode   | Effect                                                                                                                            |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `error`     | The write fails if a resource type already has data at the target. For NDJSON and Parquet, nothing is written.                    |
+| `overwrite` | The data of each resource type written replaces the data that type already has.                                                   |
+| `append`    | The data is added beside the data each resource type already has.                                                                 |
+| `ignore`    | A resource type that already has data is skipped, and its data is left as it is. Other resource types are written.                |
+| `merge`     | Resources are matched on their ID: a matched resource is replaced, and a new one is added. Delta tables only, by path or managed. |
 
 In Python and R, the save mode is passed as the `save_mode` argument, and
 defaults to `error` for NDJSON and Parquet and to `overwrite` for Delta and
@@ -908,8 +908,10 @@ feature of Databricks.
 Appending to or merging into an existing Delta table widens it to hold columns
 that only the new batch carries, as for [Delta Lake](#delta-lake-1). A table in
 another format, such as Parquet, cannot be widened. Appending to such a table is
-refused, before anything is written, if the schema of the batch differs from the
-table's in any way, including a batch that lacks some of the table's columns.
+refused if the schema of the batch differs from the table's in any way,
+including a batch that lacks some of the table's columns. Nothing is written to
+the refused table, but tables of resource types written earlier in the same
+write keep the data written to them.
 Because each batch's schema is fitted to its data, this makes incremental loads
 into a non-Delta managed table fail whenever the data changes shape. Write to a
 Delta table instead, or write Parquet files to a path and read them with the
