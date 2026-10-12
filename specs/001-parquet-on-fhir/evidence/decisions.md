@@ -3415,3 +3415,104 @@ working directory, so a run inherited the databases and warehouse locations of t
 it, and `test_datasource_tables` failed with `LOCATION_ALREADY_EXISTS`. The test session puts
 Derby's home under the session's temporary directory, so every run starts with an empty
 metastore and leaves nothing in the checkout.
+
+## 97. The detector and its outcome stay public
+
+Owner decision (2026-10-12), for Phase 13b.
+
+`LayoutDetector`, `LayoutDetection`, `StorageLayout` and `UnsupportedLayoutException` all
+stay public in `au.csiro.pathling.library.io.source`. The sinks, in another package, call the
+detector, and a caller handling a refusal needs the exception and the classification it
+carries.
+
+## 98. A refused layout is a `RuntimeException`, not a user-input error
+
+Owner decision (2026-10-12), for Phase 13b. This amends T045 as built.
+
+`UnsupportedLayoutException` extends `RuntimeException` directly rather than
+`InvalidUserInputError`. The library does not claim whose fault stored data is: a warehouse
+in an earlier layout may be the operator's, a deployment's or a client's. The server, when it
+moves to this line, maps the exception itself: to a 500 carrying the message for a read of
+its own warehouse, and to a 400 for `$import` of a client-supplied file. That mapping is part
+of the server's follow-up (T134b).
+
+## 99. A mixed table is still refused, and its message names a remedy that works
+
+Owner decision (2026-10-12), for Phase 13b. This confirms decision 47 and amends T042's
+message.
+
+A schema carrying evidence of both layouts is still classified as the previous layout and
+refused. Its remedy is sharpened, because re-importing into the same table is no longer
+possible once T046a refuses an append or a merge into it: the message tells the user to
+re-import from source into a new location, and, where the data is a directory of files,
+that the directory holds files of the earlier layout, which can be removed or re-imported.
+The message covers both cases in one text, so the detector takes no description of where
+the data lives and gains no public parameter.
+
+## 100. The root `id_versioned` alone classifies a table as the previous layout
+
+Owner decision (2026-10-12), for Phase 13b. This amends T045's "a single previous-layout
+marker is decisive".
+
+The terminology functions build codings through `CodingSchema`, which still carries a
+`_fid` field. A resource dataset holding a `translate` result, written through any sink and
+read back, therefore carried a nested `_fid` and was refused as the previous layout: Pathling
+rejected its own output. The decisive marker becomes the root `id_versioned` beside a string
+`id`, which every previous-layout resource table carries, with extensions enabled or not,
+because the previous encoder writes the versioned id for every resource. The other markers
+(`_fid`, `_extension`, a `_scale` companion, the quantity's canonicalised fields, and an
+`id_versioned` below the root) remain evidence cited in a refusal, but do not by themselves
+classify a table.
+
+A schema with previous-layout evidence but no root `id_versioned` is not refused. It is
+classified as the Parquet on FHIR layout where it carries a marker of that layout, and as
+unclassifiable otherwise, exactly as it would be without the evidence.
+
+_Precondition, checked before the rule changed._ Every previous-layout fixture in the
+repository has a root `id_versioned`: the `parquet`, `parquet-custom` and `delta` fixtures of
+`library-api` as they were before T100d converted them (read from `6a9d10fabb^`), and the
+`parquet` and `delta` example data in `lib/R/inst/extdata`, which is still the previous
+layout. No other Parquet or Delta fixture is tracked; the other previous-layout data in the
+test estate is produced at test time by the previous encoder, whose `IdCustomCoder` writes
+`id_versioned` beside every resource id.
+
+_Consequence for the specification_: removing `_fid` from `CodingSchema` is not done in M4.
+It is recorded on T100e (M7), where the previous layout's reader goes.
+
+## 101. The server's move needs a warehouse migration story, decided at M7
+
+Owner decision (2026-10-12), for Phase 13b. No code.
+
+A server often holds a warehouse with no source to re-import from, and converting it in
+place is lossy, because the previous layout stored decimals at a fixed scale. The realistic
+choices are routing earlier-layout data through the engine's previous-layout reader for a
+while, which constrains what T100e may delete; a documented, lossy converter that decodes to
+FHIR JSON and encodes through `FhirReader`; and re-import where the source still exists.
+They are decided at M7, with T049a, against the server's needs. The server's mapping of
+`UnsupportedLayoutException` (decision 98) belongs to the same move. T134b and T049a carry
+the note.
+
+## 102. T100o closes without a code change
+
+Owner decision (2026-10-12), on T100o. This settles what decision 92 left open.
+
+The generated-code check (`evidence/t100o-quantity-decode-cost.md`, "The generated code")
+showed that Spark shares the `canonical_quantity_code` call between comparisons but computes
+`canonical_quantity_value` once per use, inside the branch that runs only where the units are
+comparable. The owner accepts that cost until T096a (M5) reads the canonical form from the
+annotation, for three reasons: it is small (59 to 70 ms for three comparisons over 10,000
+rows on the new layout); the generated code stays far below the 64 KB method limit (its
+largest method is 2,167 bytes on the new layout); and the code is identical before and after
+decision 82. Binding the decoded value in the engine (Catalyst's `With`) is rejected for now.
+T096a keeps decision 92's amendment to repeat the measurement.
+
+## 103. The quantity inequality's fallback from code generation is measured in M5
+
+Owner decision (2026-10-12), raised by T100o. Adds T096c.
+
+The same check found that the quantity `!=` compiles to higher-order array functions
+(`ArrayExists`, `ArrayFilter`), which cannot generate code. They take the whole projection out
+of whole-stage code generation, leave the decodes beneath them interpreted, and decode the
+operand three times. T096c, beside T096a in Phase 15, measures the cost of that fallback with
+the T100o scripts, checks whether `=` does the same, and rewrites the operator without the
+array functions if the cost matters.
