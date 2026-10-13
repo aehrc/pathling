@@ -127,10 +127,11 @@ class ElementJsonTest {
   void valuesThatAreNotStructuresAreRefused() {
     final FhirJsonWriter writer = TransformFixtures.writer();
     final Column values = functions.lit("x");
+    final NodeDefinition position = element("Location", "position");
 
     assertThrows(
         IllegalArgumentException.class,
-        () -> writer.writeElement(element("Location", "position"), values, DataTypes.StringType));
+        () -> writer.writeElement(position, values, DataTypes.StringType));
   }
 
   @Nonnull

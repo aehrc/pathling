@@ -127,50 +127,12 @@ public abstract class FileSource extends DatasetSource {
       @Nonnull final Predicate<String> additionalResourceTypeFilter) {
     this(
         context,
-        path,
-        fileNameMapper,
-        extension,
-        reader,
-        transformer,
-        additionalResourceTypeFilter,
-        false);
-  }
-
-  /**
-   * Path-based constructor that scans a directory to discover FHIR data files, as {@link
-   * #FileSource(PathlingContext, String, Function, String, DataFrameReader, BiFunction, Predicate)}
-   * does, and says whether the layout of the stored data is classified as it is read.
-   *
-   * @param context the Pathling context
-   * @param path the path to the source files, which may be a directory or a glob pattern
-   * @param fileNameMapper a function that maps a file name to a set of resource types
-   * @param extension the file extension that this source expects for its source files
-   * @param reader a {@link DataFrameReader} that can be used to read the source files
-   * @param transformer a function that transforms a Dataset containing raw source data of a
-   *     specified resource type into a Dataset containing the imported data
-   * @param additionalResourceTypeFilter filter to filter out specific resource types if desired,
-   *     receives the resource type code as a string
-   * @param layoutDetection whether the layout of each resource type's stored data is classified as
-   *     it is read, refusing a layout this release does not read with an {@link
-   *     UnsupportedLayoutException}
-   */
-  protected FileSource(
-      @Nonnull final PathlingContext context,
-      @Nonnull final String path,
-      @Nonnull final Function<String, Set<String>> fileNameMapper,
-      @Nonnull final String extension,
-      @Nonnull final DataFrameReader reader,
-      @Nonnull final BiFunction<Dataset<Row>, String, Dataset<Row>> transformer,
-      @Nonnull final Predicate<String> additionalResourceTypeFilter,
-      final boolean layoutDetection) {
-    this(
-        context,
         retrieveFilesFromPath(path, context, fileNameMapper),
         extension,
         reader,
         transformer,
         additionalResourceTypeFilter,
-        layoutDetection);
+        false);
   }
 
   /**
@@ -250,8 +212,19 @@ public abstract class FileSource extends DatasetSource {
     log.debug("Source has {} resource types: {}", this.files.size(), this.files.keySet());
   }
 
+  /**
+   * Scans a path for FHIR data files and groups them by the resource types their names map to, as
+   * the path-based constructor does. A subclass that also says whether the layout is classified
+   * passes the result to the map-based constructor.
+   *
+   * @param path the path to the source files, which may be a directory or a glob pattern
+   * @param context the Pathling context
+   * @param fileNameMapper a function that maps a file name to a set of resource types
+   * @return the files found for each resource type
+   * @throws PersistenceError if the path cannot be read
+   */
   @Nonnull
-  private static Map<String, Collection<String>> retrieveFilesFromPath(
+  protected static Map<String, Collection<String>> retrieveFilesFromPath(
       @Nonnull final String path,
       @Nonnull final PathlingContext context,
       @Nonnull final Function<String, Set<String>> fileNameMapper) {

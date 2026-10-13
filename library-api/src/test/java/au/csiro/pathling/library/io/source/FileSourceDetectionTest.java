@@ -206,8 +206,9 @@ class FileSourceDetectionTest {
   @ParameterizedTest
   @EnumSource(Kind.class)
   void operationsOverEveryTypeAreRefused(@Nonnull final Kind kind) {
-    assertThrows(
-        UnsupportedLayoutException.class, () -> source(kind, true, true).cache().read("Patient"));
+    final QueryableDataSource source = source(kind, true, true);
+
+    assertThrows(UnsupportedLayoutException.class, () -> readThroughCache(source));
   }
 
   /**
@@ -321,6 +322,15 @@ class FileSourceDetectionTest {
       case DELTA -> builder.delta((previous ? previousDelta : newDelta).toString());
       case CATALOG -> builder.tables(previous ? previousDatabase : newDatabase);
     };
+  }
+
+  /**
+   * Caches a source and reads the patients from it. A file source resolves every type as it is
+   * cached, and a catalog source as the type is read, so either call may be refused.
+   */
+  @Nonnull
+  private static Dataset<Row> readThroughCache(@Nonnull final QueryableDataSource source) {
+    return source.cache().read("Patient");
   }
 
   /** Writes the data where a detecting source of the given kind reads it, and reads it back. */

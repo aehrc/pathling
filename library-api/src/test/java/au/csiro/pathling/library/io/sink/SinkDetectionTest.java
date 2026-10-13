@@ -104,8 +104,9 @@ class SinkDetectionTest {
     final List<Object> before = deltaState(directory.resolve(PATIENT_TABLE));
 
     final DataSinkBuilder sink = newPatientSource("n1").write().saveMode(mode);
+    final String location = directory.toString();
     final UnsupportedLayoutException error =
-        assertThrows(UnsupportedLayoutException.class, () -> sink.delta(directory.toString()));
+        assertThrows(UnsupportedLayoutException.class, () -> sink.delta(location));
 
     assertRefusalOfPreviousPatients(error, before);
     assertEquals(before, deltaState(directory.resolve(PATIENT_TABLE)));
@@ -153,7 +154,8 @@ class SinkDetectionTest {
             .dataset("Condition", newConditions(context, "c2"));
 
     final DataSinkBuilder sink = source.write().saveMode("append");
-    assertThrows(UnsupportedLayoutException.class, () -> sink.delta(directory.toString()));
+    final String location = directory.toString();
+    assertThrows(UnsupportedLayoutException.class, () -> sink.delta(location));
 
     assertEquals(patientsBefore, deltaState(directory.resolve(PATIENT_TABLE)));
     assertEquals(conditionsBefore, deltaState(directory.resolve(CONDITION_TABLE)));
@@ -226,8 +228,9 @@ class SinkDetectionTest {
     final List<Path> filesBefore = files(directory);
 
     final DataSinkBuilder sink = newPatientSource("n1").write().saveMode("append");
+    final String location = directory.toString();
     final UnsupportedLayoutException error =
-        assertThrows(UnsupportedLayoutException.class, () -> sink.parquet(directory.toString()));
+        assertThrows(UnsupportedLayoutException.class, () -> sink.parquet(location));
 
     assertEquals("Patient", error.getResourceType());
     assertEquals(filesBefore, files(directory));
@@ -256,7 +259,8 @@ class SinkDetectionTest {
         filesBefore::toString);
 
     final DataSinkBuilder sink = newPatientSource("n1").write().saveMode("append");
-    assertThrows(UnsupportedLayoutException.class, () -> sink.parquet(directory.toString()));
+    final String location = directory.toString();
+    assertThrows(UnsupportedLayoutException.class, () -> sink.parquet(location));
 
     assertEquals(filesBefore, files(directory));
   }
@@ -271,7 +275,8 @@ class SinkDetectionTest {
     final List<Path> filesBefore = files(directory);
 
     final DataSinkBuilder sink = newPatientSource("n1").write().saveMode("append");
-    assertThrows(UnsupportedLayoutException.class, () -> sink.parquet(directory.toString()));
+    final String location = directory.toString();
+    assertThrows(UnsupportedLayoutException.class, () -> sink.parquet(location));
 
     assertEquals(filesBefore, files(directory));
   }
@@ -331,7 +336,8 @@ class SinkDetectionTest {
     final Path target = directory.resolve("target");
 
     final DataSinkBuilder sink = context.read().parquet(source.toString()).write();
-    assertThrows(UnsupportedLayoutException.class, () -> sink.ndjson(target.toString()));
+    final String location = target.toString();
+    assertThrows(UnsupportedLayoutException.class, () -> sink.ndjson(location));
 
     assertFalse(Files.exists(target));
   }

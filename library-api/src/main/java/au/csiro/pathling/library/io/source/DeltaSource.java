@@ -63,10 +63,9 @@ public class DeltaSource extends FileSource {
       final boolean layoutDetection) {
     super(
         context,
-        path,
         // Use the "resource name with qualifier" mapper by default, which takes the resource name
         // from the file name and is tolerant of an optional qualifier string.
-        FileSource::resourceNameWithQualifierMapper,
+        retrieveFilesFromPath(path, context, FileSource::resourceNameWithQualifierMapper),
         // Delta tables store data in parquet format internally, so we use the parquet extension.
         "parquet",
         context.getSpark().read().format("delta"),

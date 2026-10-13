@@ -85,10 +85,9 @@ public class ParquetSource extends FileSource {
       @Nonnull final Predicate<String> additionalResourceTypeFilter) {
     super(
         context,
-        path,
         // Use the "resource name with qualifier" mapper by default, which takes the resource name
         // from the file name and is tolerant of an optional qualifier string.
-        FileSource::resourceNameWithQualifierMapper,
+        retrieveFilesFromPath(path, context, FileSource::resourceNameWithQualifierMapper),
         // Assume the "parquet" file extension.
         PARQUET_FILE_EXTENSION,
         mergingReader(context),
@@ -114,8 +113,7 @@ public class ParquetSource extends FileSource {
       @Nonnull final Function<String, Set<String>> fileNameMapper) {
     super(
         context,
-        path,
-        fileNameMapper,
+        retrieveFilesFromPath(path, context, fileNameMapper),
         PARQUET_FILE_EXTENSION,
         mergingReader(context),
         // Apply no transformations on the data - we assume it has already been processed using the
@@ -193,8 +191,7 @@ public class ParquetSource extends FileSource {
       @Nonnull final Map<String, StructType> schemas) {
     super(
         context,
-        path,
-        FileSource::resourceNameWithQualifierMapper,
+        retrieveFilesFromPath(path, context, FileSource::resourceNameWithQualifierMapper),
         PARQUET_FILE_EXTENSION,
         mergingReader(context),
         // Apply no transformations on the data - we assume it has already been processed using the
@@ -232,8 +229,7 @@ public class ParquetSource extends FileSource {
       final boolean layoutDetection) {
     super(
         context,
-        path,
-        fileNameMapper,
+        retrieveFilesFromPath(path, context, fileNameMapper),
         PARQUET_FILE_EXTENSION,
         mergingReader(context),
         // Apply no transformations on the data - we assume it has already been processed using the
