@@ -3962,3 +3962,22 @@ failing before the fix with the `PersistenceError`, passing after.
 Not fixed: two files of one partition that differ only in the file counter (`-c000`, `-c001`), which
 `spark.sql.files.maxRecordsPerFile` produces, are given the same name, and the second rename fails
 after the rows are written. It is recorded here for the owning task to schedule.
+
+## 130. The save modes find a type's files under a file name that is not only letters
+
+Raised by the automated review of the M4 pull request; owner decision (2026-10-13).
+
+`TypeFiles.list` found a type's existing files through the pattern the file source reads with,
+which admits only letters. Under a `fileNameMapper` giving, for example, `Patient_v2`, it found
+none, so an overwrite left the earlier files beside the new ones, an error-if-exists write was not
+refused and an ignored write was not skipped. On `main` a repeated write took the earlier files'
+names; the write ids M4 gives each write made the files accumulate instead.
+
+_Decision_: fixed in M4. The sink matches the file name it was given as it is: a base name that is
+the file name, alone or followed by a period and a qualifier holding none. For a name of letters
+alone this is the set the reader's pattern gives. The fix makes the save modes correct; it does not
+make such files readable, since the file source still reads only names of letters. Tests:
+`FileSinkSaveModeTest.overwriteUnderANameNotOnlyLettersReplacesTheEarlierFiles`,
+`errorIfExistsUnderANameNotOnlyLettersIsRefused` and
+`ignoreUnderANameNotOnlyLettersLeavesTheEarlierFiles`, each for Parquet and NDJSON, failing before
+the fix, passing after.

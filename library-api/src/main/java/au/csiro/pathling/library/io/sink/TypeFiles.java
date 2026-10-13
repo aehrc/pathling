@@ -59,9 +59,14 @@ final class TypeFiles {
   private TypeFiles() {}
 
   /**
-   * Lists the files in a directory that the file source reads as the type: those with the extension
-   * whose base name, less any qualifier such as a partition id, is the type's file name. The table
-   * a write is made into, {@code <fileName>.<extension>}, is among them where it exists.
+   * Lists the files in a directory that the sink gives the type: those with the extension whose
+   * base name is the type's file name, alone or followed by a period and a qualifier without one,
+   * such as a partition id. The table a write is made into, {@code <fileName>.<extension>}, is
+   * among them where it exists.
+   *
+   * <p>The file name is matched as it is, not by the pattern the file source reads a type's files
+   * with, which admits only letters. A file name the sink is given that is not only letters is
+   * therefore not read as the type, but the save modes still find the files written under it.
    *
    * @param spark the Spark session
    * @param directory the directory the sink writes
@@ -85,16 +90,29 @@ final class TypeFiles {
       return Arrays.stream(fileSystem.listStatus(directoryPath))
           .map(FileStatus::getPath)
           .filter(file -> FilenameUtils.isExtension(file.getName(), extension))
-          .filter(
-              file ->
-                  FileSource.resourceNameWithQualifierMapper(
-                          FilenameUtils.getBaseName(file.getName()))
-                      .contains(fileName))
+          .filter(file -> isNamedFor(FilenameUtils.getBaseName(file.getName()), fileName))
           .toList();
     } catch (final IOException e) {
       throw new PersistenceError(
           "Problem listing the files of " + fileName + " in " + directory, e);
     }
+  }
+
+  /**
+   * Returns whether a base name is a file name, alone or followed by a period and a qualifier that
+   * holds no period.
+   */
+  private static boolean isNamedFor(
+      @Nonnull final String baseName, @Nonnull final String fileName) {
+    if (baseName.equals(fileName)) {
+      return true;
+    }
+    final String prefix = fileName + ".";
+    if (!baseName.startsWith(prefix)) {
+      return false;
+    }
+    final String qualifier = baseName.substring(prefix.length());
+    return !qualifier.isEmpty() && qualifier.indexOf('.') < 0;
   }
 
   /**

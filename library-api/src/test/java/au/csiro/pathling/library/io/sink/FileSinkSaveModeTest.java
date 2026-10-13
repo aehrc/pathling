@@ -64,6 +64,9 @@ class FileSinkSaveModeTest {
       Pattern.compile(
           "^Patient\\.(\\d{5})-([0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12})\\.(\\w+)$");
 
+  /** A file name for the type that is not only letters, which the file source does not read. */
+  private static final String MAPPED_NAME = "Patient_v2";
+
   @TempDir Path directory;
 
   private static SparkSession spark;
@@ -220,6 +223,50 @@ class FileSinkSaveModeTest {
     assertTrue(Files.exists(directory.resolve("Patient.parquet/part-00000.snappy.parquet")));
   }
 
+  /**
+   * An overwrite under a file name that is not only letters replaces the files of an earlier write
+   * under that name. Such files are not read by the file source, so the files are compared.
+   */
+  @ParameterizedTest
+  @ValueSource(strings = {"parquet", "ndjson"})
+  void overwriteUnderANameNotOnlyLettersReplacesTheEarlierFiles(@Nonnull final String format)
+      throws IOException {
+    writeMapped(format, "error", patients("a1", "a2"));
+    final List<String> before = fileNames(directory);
+    writeMapped(format, "overwrite", patients("b1"));
+
+    final List<String> after = fileNames(directory);
+    assertFalse(after.isEmpty());
+    assertTrue(
+        after.stream().allMatch(name -> name.startsWith(MAPPED_NAME + ".")), after::toString);
+    assertTrue(before.stream().noneMatch(after::contains), after::toString);
+  }
+
+  /** An error-if-exists write under a file name that is not only letters sees the earlier files. */
+  @ParameterizedTest
+  @ValueSource(strings = {"parquet", "ndjson"})
+  void errorIfExistsUnderANameNotOnlyLettersIsRefused(@Nonnull final String format)
+      throws IOException {
+    writeMapped(format, "error", patients("a1"));
+    final List<String> before = fileNames(directory);
+    final DatasetSource second = patients("b1");
+
+    assertThrows(PersistenceError.class, () -> writeMapped(format, "error", second));
+    assertEquals(before, fileNames(directory));
+  }
+
+  /** An ignored write under a file name that is not only letters leaves the earlier files. */
+  @ParameterizedTest
+  @ValueSource(strings = {"parquet", "ndjson"})
+  void ignoreUnderANameNotOnlyLettersLeavesTheEarlierFiles(@Nonnull final String format)
+      throws IOException {
+    writeMapped(format, "error", patients("a1"));
+    final List<String> before = fileNames(directory);
+    writeMapped(format, "ignore", patients("b1"));
+
+    assertEquals(before, fileNames(directory));
+  }
+
   @Nonnull
   private static DatasetSource patients(@Nonnull final String... ids) {
     return context.read().datasets().dataset("Patient", newPatients(context, ids));
@@ -232,6 +279,15 @@ class FileSinkSaveModeTest {
     return "parquet".equals(format)
         ? builder.parquet(directory.toString())
         : builder.ndjson(directory.toString());
+  }
+
+  @Nonnull
+  private WriteDetails writeMapped(
+      @Nonnull final String format, @Nonnull final String mode, @Nonnull final DataSource source) {
+    final DataSinkBuilder builder = new DataSinkBuilder(context, source).saveMode(mode);
+    return "parquet".equals(format)
+        ? builder.parquet(directory.toString(), type -> MAPPED_NAME)
+        : builder.ndjson(directory.toString(), type -> MAPPED_NAME);
   }
 
   @Nonnull
