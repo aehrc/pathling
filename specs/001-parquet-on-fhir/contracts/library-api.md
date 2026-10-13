@@ -144,8 +144,9 @@ there is no per-path caveat.
 fail. It is ignored, and a warning names what was dropped; the strictness
 option is withdrawn (decision 68). The same applies to `contained` resources, to
 an element whose JSON encoding type contradicts the definitions, and — because
-inference types a column from every value in a file — to every value of such an
-element in that file, not only the offending one. Malformed JSON still fails
+inference types a column from every value read together — to every value of such
+an element in the same read, across all of its files, not only the offending
+one. Malformed JSON still fails
 the read.
 
 ### Schema merging on by default

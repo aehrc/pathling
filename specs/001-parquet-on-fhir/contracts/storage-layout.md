@@ -104,7 +104,7 @@ It holds on a fitted schema subject to the exceptions below, and on a dense
 schema additionally within the configured nesting, extension and open-type
 settings.
 
-Not covered. The first two are reported; the rest are not: `contained`
+Not covered. The first three are reported; the rest are not: `contained`
 resources; content the definition set does not describe or contradicts;
 primitive element ids and extensions, until M5; decimal lexical form — trailing zeros,
 exponent notation as written, and precision beyond a double; `base64Binary`

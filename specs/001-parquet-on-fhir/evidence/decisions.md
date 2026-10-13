@@ -3774,3 +3774,38 @@ both the page and the contract section.
 _Rejected_: removing the section until M7, which leaves the integration branch with a
 behaviour change it does not describe and the section to be written from scratch; and a "may
 change" notice on the page, which no reader would see before the question is settled.
+
+## 118. The server docs' link to the storage layout page is settled with the server's move
+
+Raised by the Phase 14 documentation work (T129).
+
+The server docs present `/docs/libraries/io/schema` as the server's Parquet format
+(`site/server-docs/operations/import.md` and `export.md`, the same two pages in the 2.0.1
+snapshot under `site/server_versioned_docs/`, and the Javadoc of `ImportFormat` and
+`ExportOutputFormat`). That page now describes the new layout; the server is pinned to library
+9.9.0 and writes the previous one, and library docs are not versioned.
+
+_Decision_: deferred to T134b, with a note there. Nothing is wrong until the library docs
+deploy after M7 (decision 117), and the fix depends on T134b's outcome: if the server has moved
+to the new layout by the release the links are right as they stand; otherwise the previous
+layout's description, taken from the page on `main`, goes into the server docs and the links
+point at it.
+
+_Rejected_: copying the previous page into the server docs now, which puts server changes in a
+core milestone and is wasted if the server moves first; and leaving it unowned.
+
+## 119. Two contract statements are corrected to match the code
+
+Raised by the Phase 14 documentation work (T129).
+
+`contracts/storage-layout.md` listed primitive element ids and extensions among the round-trip
+exclusions that are not reported. `StrictnessCheck` reports them as primitive metadata, by the
+decision that makes the report and the structure kept share one predicate
+(`isConformingMetadataGroup`), so they are now among the reported three.
+`contracts/library-api.md` said a contradicting type nulls every value of the element "in that
+file". Inference runs over everything one read encodes together, so the reach is the whole read,
+across files; the release-notes text now says so.
+
+_Rejected_: changing the code to fit the contract, which would hide data loss until M5 and, for
+inference, give the files of one merged read different column types.
+
