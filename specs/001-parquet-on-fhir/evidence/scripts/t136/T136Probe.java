@@ -18,8 +18,9 @@ import org.apache.spark.sql.types.StructType;
  * T136 probe: the facts used to attribute the benchmark movements, gathered on the benchmark's own
  * data and views. For each resource type it prints the leaf-field count of the schema the public
  * encode now writes and of the previous layout's encoder schema. For each view it prints the size
- * of the optimised plan, the number of canonical-quantity UDF calls in it, and whether the
- * executed plan is wholly code-generated.
+ * of the optimised plan, the number of canonical-quantity UDF calls, CASE WHEN, decimal casts and
+ * lambda functions in it, and the executed plan, whose operators inside whole-stage code generation
+ * carry a "*(n)" prefix.
  *
  * <p>Run with the shaded benchmark jar as the classpath: {@code java -cp
  * benchmark/target/benchmark-9.9.0.jar T136Probe.java}.
@@ -70,15 +71,16 @@ public class T136Probe {
       final String executed = result.queryExecution().executedPlan().toString();
       System.out.printf(
           "PLAN %s optimised chars: %d; canonical_quantity_value: %d; "
-              + "canonical_quantity_code: %d; CASE WHEN: %d; decimal casts: %d; "
-              + "executed plan has WholeStageCodegen: %b%n",
+              + "canonical_quantity_code: %d; CASE WHEN: %d; decimal casts: %d; lambdas: %d%n",
           view.getKey(),
           optimised.length(),
           count(optimised, "canonical_quantity_value"),
           count(optimised, "canonical_quantity_code"),
           count(optimised, "CASE WHEN"),
           count(optimised, "as decimal("),
-          executed.contains("WholeStageCodegen") || executed.contains("*("));
+          count(optimised, "lambdafunction("));
+      System.out.println("EXECUTED " + view.getKey());
+      System.out.println(executed);
       if (args.length > 0 && args[0].equals(view.getKey())) {
         System.out.println(optimised);
       }

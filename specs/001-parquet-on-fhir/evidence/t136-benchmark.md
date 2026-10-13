@@ -160,12 +160,24 @@ code = ...)` filter lambdas. The four `decimal` casts are the lexical decoding
 of `value`. The baseline's plan was not captured, so how the plan grew cannot be
 shown without building `4bfadac552`, and this records no cause. The whole plan
 is in `.local/work/issue/2764/t136-usbp-plan.txt`.
-`QuestionnaireResponseFlat` planning improved by a similar amount, and its plan
-holds 18 decimal casts and 26 `CASE WHEN`. So lexical decimal decoding does not
-in itself make planning worse here.
+As an observation only: `QuestionnaireResponseFlat`'s plan holds more decimal
+casts (18) than `UsCoreBloodPressures`'s, and its planning improved by a similar
+amount.
 
-**Every view's executed plan is code-generated.** None holds the
-`CodegenFallback` that T096c is about, since no view uses the quantity `!=`.
+**Every view's `Generate` runs outside whole-stage code generation, and so does
+`UsCoreBloodPressures`'s `Filter`.** In the executed plans, the scan and the
+final `Project` carry a `*(n)` prefix, which marks operators inside whole-stage
+code generation. The `Generate` that unnests each view's rows never carries one,
+in any of the seven views. In `UsCoreBloodPressures`, the `Filter` that holds the
+`code.coding.exists(...)` condition does not either. Its optimised plan holds 336
+lambda functions (`filter` over `code.coding` and `component`), and
+`QuestionnaireResponseFlat`'s holds 75. These are the higher-order array functions
+that T100o found to be `CodegenFallback`. So the fallback that T096c describes for
+the quantity `!=` is reached here by Coding filtering, which involves no quantity.
+The baseline's plans were not captured. So whether these operators were already
+outside code generation at `4bfadac552` is not known, and nothing here attributes
+a timing to it. No view calls a canonical-quantity UDF, because none uses the
+quantity `!=`.
 
 **The planning floor is unchanged.** The three `Patient` views, `ConditionFlat` and
 `EncounterFlat` plan in 52 to 65 ms, against 50 to 64 ms in the baseline. The
