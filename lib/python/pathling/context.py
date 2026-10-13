@@ -571,6 +571,104 @@ class PathlingContext:
             options = builder.build()
         self._jpc.importFhirTerminology(source, storage_path, options)
 
+    def value_set(self, canonical: str, max_members: Optional[int] = None) -> DataFrame:
+        """
+        Resolves a value set to its membership and returns it as a relation that Spark SQL can
+        join to, as described in the SQL on FHIR `Terminology in SQL
+        <https://build.fhir.org/ig/HL7/sql-on-fhir/en/terminology-in-sql.html>`_ page.
+
+        The relation has one row per member and the columns ``system``, ``version``, ``code``,
+        ``display`` and ``inactive``; ``system`` and ``code`` are never null. The membership is
+        obtained from the configured terminology layer when this method is called, so every use of
+        the relation sees the same membership.
+
+        Example::
+
+            pc.value_set(
+                "http://example.org/ValueSet/cardiovascular-disease|2026"
+            ).createOrReplaceTempView("cvd_codes")
+
+        :param canonical: the canonical URL of the value set, optionally with a ``|version``
+               suffix
+        :param max_members: the largest membership accepted; 100,000 when omitted
+        :return: a :class:`DataFrame` containing the value set relation
+        :raises: the mapped JVM ``TerminologyRelationException`` if the value set cannot be
+                 resolved, or its membership cannot be determined or exceeds the cap
+        """
+        if max_members is None:
+            return self._wrap_df(self._jpc.valueSet(canonical))
+        return self._wrap_df(self._jpc.valueSet(canonical, max_members))
+
+    def value_set_from_json(
+        self, json: str, max_members: Optional[int] = None
+    ) -> DataFrame:
+        """
+        Returns the membership of a ValueSet supplied as FHIR JSON as a relation with the columns
+        of :meth:`value_set`.
+
+        Where the resource carries an ``expansion``, that expansion is the membership and the
+        terminology layer is not consulted; an incomplete expansion is rejected. Where it carries
+        only a ``compose``, the configured terminology layer expands it.
+
+        :param json: the ValueSet resource as FHIR JSON
+        :param max_members: the largest membership accepted; 100,000 when omitted
+        :return: a :class:`DataFrame` containing the value set relation
+        :raises: the mapped JVM ``TerminologyRelationException`` if the JSON is not a ValueSet, or
+                 its membership cannot be determined or exceeds the cap
+        """
+        if max_members is None:
+            return self._wrap_df(self._jpc.valueSetFromJson(json))
+        return self._wrap_df(self._jpc.valueSetFromJson(json, max_members))
+
+    def concept_map(
+        self, canonical: str, max_mappings: Optional[int] = None
+    ) -> DataFrame:
+        """
+        Resolves a concept map to its mappings and returns them as a relation that Spark SQL can
+        join to, as described in the SQL on FHIR `Terminology in SQL
+        <https://build.fhir.org/ig/HL7/sql-on-fhir/en/terminology-in-sql.html>`_ page.
+
+        The relation has one row per mapping, plus one row with a null ``target_code`` for each
+        source code the map states has no mapping, and the columns ``source_system``,
+        ``source_version``, ``source_code``, ``source_display``, ``target_system``,
+        ``target_version``, ``target_code``, ``target_display`` and ``relationship``;
+        ``source_system`` and ``source_code`` are never null. ``relationship`` is an R5
+        ConceptMapRelationship code, converted from the R4 equivalence.
+
+        Example::
+
+            pc.concept_map(
+                "http://example.org/ConceptMap/sct-to-icd10|2026"
+            ).createOrReplaceTempView("sct_to_icd10")
+
+        :param canonical: the canonical URL of the concept map, optionally with a ``|version``
+               suffix
+        :param max_mappings: the largest number of mappings accepted; 100,000 when omitted
+        :return: a :class:`DataFrame` containing the concept map relation
+        :raises: the mapped JVM ``TerminologyRelationException`` if the concept map cannot be
+                 resolved, carries content the relation cannot represent, or exceeds the cap
+        """
+        if max_mappings is None:
+            return self._wrap_df(self._jpc.conceptMap(canonical))
+        return self._wrap_df(self._jpc.conceptMap(canonical, max_mappings))
+
+    def concept_map_from_json(
+        self, json: str, max_mappings: Optional[int] = None
+    ) -> DataFrame:
+        """
+        Returns the mappings of a ConceptMap supplied as FHIR JSON as a relation with the columns
+        of :meth:`concept_map`, without consulting the terminology layer.
+
+        :param json: the ConceptMap resource as FHIR JSON
+        :param max_mappings: the largest number of mappings accepted; 100,000 when omitted
+        :return: a :class:`DataFrame` containing the concept map relation
+        :raises: the mapped JVM ``TerminologyRelationException`` if the JSON is not a ConceptMap,
+                 carries content the relation cannot represent, or exceeds the cap
+        """
+        if max_mappings is None:
+            return self._wrap_df(self._jpc.conceptMapFromJson(json))
+        return self._wrap_df(self._jpc.conceptMapFromJson(json, max_mappings))
+
     def encode(
         self,
         df: DataFrame,
