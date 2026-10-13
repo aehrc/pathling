@@ -3677,7 +3677,7 @@ open choice in R4: `Extension.value[x]`, `ElementDefinition.defaultValue[x]`, `f
 `RuntimeChildAny`. The list is pinned in `OpenTypeOrder`, because the definition library carries
 no structure definitions to read it from. A declared choice keeps its annotation order, unchanged.
 
-_Owner decision needed_: the definition library accepts nine types in an open choice beyond the
+_Owner decision (2026-10-13), accepted as placed_: the definition library accepts nine types in an open choice beyond the
 specification's 50 (`ElementDefinition`, `Extension`, `MarketingStatus`, `Narrative`,
 `Population`, `ProdCharacteristic`, `ProductShelfLife`, `SubstanceAmount`, `Xhtml`). Decision 45
 keeps them, so they need a position, and the specification gives none. They are placed after the
@@ -3746,3 +3746,31 @@ empty Ivy home of its own (`ivy-oo-pytest-1`, `4 artifacts copied, 0 already ret
 200 expectations, 0 failed (`ivy-oo-r-1`, created empty and filled by the run). In both, the
 retrieved `library-runtime` jar's SHA-1 is `84a9b8bc`, that of `library-runtime/target`, and
 it carries `OpenTypeOrder`.
+
+_Owner rulings (2026-10-13), with the above_: test fixtures written before the fix keep the
+order they were written in. They are read by name (FR-056), and rewriting them would churn
+binary files for no change of behaviour. The styler finding in the R package's example data
+script is left out of M4.
+
+## 117. The storage layout page describes the refusal M4 implements
+
+Raised by the Phase 14 documentation work (T129).
+
+`contracts/storage-layout.md` held its section on data written by earlier releases back from
+publication until T049a, deferred to M7, is answered, because routing would make its opening
+sentence false. T129 nonetheless rewrote `site/docs/libraries/io/schema.md` with that section,
+scoped to the refusal M4 implements and presenting the opt-out only for misclassified
+conforming data (decision 108).
+
+_Decision_: keep the section. No milestone is released on its own: milestone pull requests
+target the integration branch `issue/2367`, and the site is deployed only from `main`, after
+M7. The page therefore cannot reach a reader before T049a is settled, which is what the hold
+protected against. Keeping it records the behaviour the code has now and has it reviewed now;
+if T049a chooses routing, the cost is one revision before the release. The contract's hold
+note is reworded to that effect, its opt-out sentence is aligned with decision 108
+("misclassifies", not "cannot be classified"), and T049a carries a note to confirm or revise
+both the page and the contract section.
+
+_Rejected_: removing the section until M7, which leaves the integration branch with a
+behaviour change it does not describe and the section to be written from scratch; and a "may
+change" notice on the page, which no reader would see before the question is settled.
