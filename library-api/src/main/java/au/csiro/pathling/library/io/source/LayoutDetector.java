@@ -223,15 +223,12 @@ public final class LayoutDetector {
       @Nonnull final DataType type,
       @Nonnull final String prefix,
       @Nonnull final BiPredicate<StructField, StructType> isMarker) {
-    if (type instanceof final StructType struct) {
-      return markers(struct, prefix, isMarker);
-    } else if (type instanceof final ArrayType array) {
-      return nested(array.elementType(), prefix, isMarker);
-    } else if (type instanceof final MapType map) {
-      return nested(map.valueType(), prefix, isMarker);
-    } else {
-      return List.of();
-    }
+    return switch (type) {
+      case final StructType struct -> markers(struct, prefix, isMarker);
+      case final ArrayType array -> nested(array.elementType(), prefix, isMarker);
+      case final MapType map -> nested(map.valueType(), prefix, isMarker);
+      default -> List.of();
+    };
   }
 
   /** The markers that are only markers at the root of a table. */
@@ -317,14 +314,12 @@ public final class LayoutDetector {
 
   @Nonnull
   private static Optional<StructType> groupStruct(@Nonnull final DataType type) {
-    if (type instanceof final StructType struct) {
-      return Optional.of(struct);
-    } else if (type instanceof final ArrayType array
-        && array.elementType() instanceof final StructType struct) {
-      return Optional.of(struct);
-    } else {
-      return Optional.empty();
-    }
+    return switch (type) {
+      case final StructType struct -> Optional.of(struct);
+      case final ArrayType array when array.elementType() instanceof final StructType struct ->
+          Optional.of(struct);
+      default -> Optional.empty();
+    };
   }
 
   @Nonnull

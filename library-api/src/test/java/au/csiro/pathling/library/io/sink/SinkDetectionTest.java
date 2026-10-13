@@ -103,10 +103,9 @@ class SinkDetectionTest {
     writeDelta(previousPatients(spark, "p1"), directory, PATIENT_TABLE);
     final List<Object> before = deltaState(directory.resolve(PATIENT_TABLE));
 
+    final DataSinkBuilder sink = newPatientSource("n1").write().saveMode(mode);
     final UnsupportedLayoutException error =
-        assertThrows(
-            UnsupportedLayoutException.class,
-            () -> newPatientSource("n1").write().saveMode(mode).delta(directory.toString()));
+        assertThrows(UnsupportedLayoutException.class, () -> sink.delta(directory.toString()));
 
     assertRefusalOfPreviousPatients(error, before);
     assertEquals(before, deltaState(directory.resolve(PATIENT_TABLE)));
@@ -153,9 +152,8 @@ class SinkDetectionTest {
             .dataset("Patient", newPatients(context, "n2"))
             .dataset("Condition", newConditions(context, "c2"));
 
-    assertThrows(
-        UnsupportedLayoutException.class,
-        () -> source.write().saveMode("append").delta(directory.toString()));
+    final DataSinkBuilder sink = source.write().saveMode("append");
+    assertThrows(UnsupportedLayoutException.class, () -> sink.delta(directory.toString()));
 
     assertEquals(patientsBefore, deltaState(directory.resolve(PATIENT_TABLE)));
     assertEquals(conditionsBefore, deltaState(directory.resolve(CONDITION_TABLE)));
@@ -176,10 +174,9 @@ class SinkDetectionTest {
     final List<String> idsBefore = ids(spark.table(database + ".Patient"));
     final long versionsBefore = "delta".equals(format) ? catalogVersions(database) : 0;
 
+    final DataSinkBuilder sink = newPatientSource("n1").write().saveMode("append");
     final UnsupportedLayoutException error =
-        assertThrows(
-            UnsupportedLayoutException.class,
-            () -> newPatientSource("n1").write().saveMode("append").tables(database, format));
+        assertThrows(UnsupportedLayoutException.class, () -> sink.tables(database, format));
 
     assertEquals("Patient", error.getResourceType());
     assertEquals(idsBefore, ids(spark.table(database + ".Patient")));
@@ -199,9 +196,8 @@ class SinkDetectionTest {
     previousPatients(spark, "p1").write().format("delta").saveAsTable(database + ".Patient");
     final long versionsBefore = catalogVersions(database);
 
-    assertThrows(
-        UnsupportedLayoutException.class,
-        () -> newPatientSource("n1").write().saveMode("merge").tables(database, "delta"));
+    final DataSinkBuilder sink = newPatientSource("n1").write().saveMode("merge");
+    assertThrows(UnsupportedLayoutException.class, () -> sink.tables(database, "delta"));
 
     assertEquals(versionsBefore, catalogVersions(database));
     assertEquals(List.of("p1"), ids(spark.table(database + ".Patient")));
@@ -229,10 +225,9 @@ class SinkDetectionTest {
     writeParquet(previousPatients(spark, "p1"), directory, PATIENT_TABLE);
     final List<Path> filesBefore = files(directory);
 
+    final DataSinkBuilder sink = newPatientSource("n1").write().saveMode("append");
     final UnsupportedLayoutException error =
-        assertThrows(
-            UnsupportedLayoutException.class,
-            () -> newPatientSource("n1").write().saveMode("append").parquet(directory.toString()));
+        assertThrows(UnsupportedLayoutException.class, () -> sink.parquet(directory.toString()));
 
     assertEquals("Patient", error.getResourceType());
     assertEquals(filesBefore, files(directory));
@@ -260,9 +255,8 @@ class SinkDetectionTest {
                         .matches("Patient\\.\\d+-[0-9a-f-]{36}\\.parquet")),
         filesBefore::toString);
 
-    assertThrows(
-        UnsupportedLayoutException.class,
-        () -> newPatientSource("n1").write().saveMode("append").parquet(directory.toString()));
+    final DataSinkBuilder sink = newPatientSource("n1").write().saveMode("append");
+    assertThrows(UnsupportedLayoutException.class, () -> sink.parquet(directory.toString()));
 
     assertEquals(filesBefore, files(directory));
   }
@@ -276,9 +270,8 @@ class SinkDetectionTest {
     placeAsEarlierReleaseFile(previousPatients(spark, "p1"), "Patient.00000.parquet");
     final List<Path> filesBefore = files(directory);
 
-    assertThrows(
-        UnsupportedLayoutException.class,
-        () -> newPatientSource("n1").write().saveMode("append").parquet(directory.toString()));
+    final DataSinkBuilder sink = newPatientSource("n1").write().saveMode("append");
+    assertThrows(UnsupportedLayoutException.class, () -> sink.parquet(directory.toString()));
 
     assertEquals(filesBefore, files(directory));
   }
@@ -337,9 +330,8 @@ class SinkDetectionTest {
         CONDITION_TABLE);
     final Path target = directory.resolve("target");
 
-    assertThrows(
-        UnsupportedLayoutException.class,
-        () -> context.read().parquet(source.toString()).write().ndjson(target.toString()));
+    final DataSinkBuilder sink = context.read().parquet(source.toString()).write();
+    assertThrows(UnsupportedLayoutException.class, () -> sink.ndjson(target.toString()));
 
     assertFalse(Files.exists(target));
   }

@@ -80,7 +80,8 @@ public class DatasetSource extends AbstractSource {
   @Nonnull
   @Override
   public Dataset<Row> read(@Nullable final String resourceCode) {
-    return Optional.ofNullable(resourceMap.get(resourceCode))
+    return Optional.ofNullable(resourceCode)
+        .map(resourceMap::get)
         .orElseThrow(
             () -> new IllegalArgumentException("No data found for resource type: " + resourceCode));
   }

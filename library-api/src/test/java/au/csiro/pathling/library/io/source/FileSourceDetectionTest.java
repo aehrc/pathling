@@ -23,6 +23,7 @@ import static au.csiro.pathling.library.io.LayoutFixtures.writeDelta;
 import static au.csiro.pathling.library.io.LayoutFixtures.writeParquet;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -219,10 +220,10 @@ class FileSourceDetectionTest {
     writeParquet(previousPatients(spark, "p1"), mixed, PATIENT_TABLE);
     writeParquet(newPatients(context, "n1"), mixed, PATIENT_TABLE);
 
+    final QueryableDataSource source = context.read().parquet(mixed.toString());
+
     final UnsupportedLayoutException error =
-        assertThrows(
-            UnsupportedLayoutException.class,
-            () -> context.read().parquet(mixed.toString()).read("Patient"));
+        assertThrows(UnsupportedLayoutException.class, () -> source.read("Patient"));
 
     assertTrue(error.getDetection().isMixed());
     assertTrue(error.getMessage().endsWith(MIXED_REMEDY), error.getMessage());
@@ -275,7 +276,7 @@ class FileSourceDetectionTest {
     final DataSourceBuilder builder = context.read();
 
     assertTrue(builder.layoutDetection());
-    assertTrue(builder.withLayoutDetection(false) != builder);
+    assertNotSame(builder, builder.withLayoutDetection(false));
     assertTrue(builder.layoutDetection());
   }
 

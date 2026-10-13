@@ -379,12 +379,11 @@ public abstract class FileSource extends DatasetSource {
   @Nonnull
   @Override
   public Dataset<Row> read(@Nullable final String resourceCode) {
-    // The concurrent map admits no null key, so a null code is answered here as the superclass
-    // answers any type it does not hold.
-    if (resourceCode == null) {
-      throw new IllegalArgumentException("No data found for resource type: null");
-    }
-    if (!resourceMap.containsKey(resourceCode) && files.containsKey(resourceCode)) {
+    // The concurrent map admits no null key, so a null code is left to the superclass, which
+    // answers it as any type it does not hold.
+    if (resourceCode != null
+        && !resourceMap.containsKey(resourceCode)
+        && files.containsKey(resourceCode)) {
       return resourceMap.computeIfAbsent(resourceCode, this::load);
     }
     return super.read(resourceCode);
