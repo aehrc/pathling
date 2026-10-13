@@ -47,12 +47,14 @@ final class TypeFiles {
 
   /**
    * The name Spark gives a file it writes: the partition id and the id of the write, then an
-   * optional file counter and the extensions.
+   * optional file counter and the extensions. Databricks puts a transaction id, {@code
+   * tid-<number>}, between the partition id and the id of the write.
    */
   @Nonnull
   private static final Pattern SPARK_PART_FILE =
       Pattern.compile(
-          "^part-(\\d+)-([0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12})(?:[-.].*)?$");
+          "^part-(\\d+)-(?:tid--?\\d+-)?([0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12})"
+              + "(?:[-.].*)?$");
 
   private TypeFiles() {}
 

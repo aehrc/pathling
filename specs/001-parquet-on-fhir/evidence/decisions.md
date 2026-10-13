@@ -3941,3 +3941,24 @@ identity fast path. Concurrent tasks decoding Coding columns of different schema
 other's entry and fall back to the existing lookup by field names. Rejected: suppressing the rule
 in the code, for which the repository has no precedent, or in SonarCloud's interface.
 
+
+## 129. A file Databricks names is renamed as one Spark names
+
+Raised by the automated review of the M4 pull request; owner decision (2026-10-13).
+
+`TypeFiles.renameKeepingWriteId` recognised only `part-<partitionId>-<writeId>…`. Databricks'
+commit protocol names its files `part-<partitionId>-tid-<transactionId>-<writeId>-…`, so a write on
+Databricks completed and then failed with "No partition files were found", inviting a retry that
+would duplicate the rows, as decision 127 describes. On `main` any file with the extension was
+renamed, taking whatever followed the first `-` as its id.
+
+_Decision_: fixed in M4. The pattern admits an optional `tid-<number>-` before the write id, and the
+renamed file keeps the partition and write ids, as for a file Spark names. Accepting any name, with
+a generated id where none is found, was rejected: it cannot tell a write from the hand-assembled
+table that decision 127 leaves in place. The Databricks name is taken from its documented form and
+has not been checked against a cluster. Test: `TypeFilesTest.filesNamedByDatabricksKeepTheWriteId`,
+failing before the fix with the `PersistenceError`, passing after.
+
+Not fixed: two files of one partition that differ only in the file counter (`-c000`, `-c001`), which
+`spark.sql.files.maxRecordsPerFile` produces, are given the same name, and the second rename fails
+after the rows are written. It is recorded here for the owning task to schedule.

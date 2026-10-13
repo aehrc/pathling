@@ -73,6 +73,28 @@ class TypeFilesTest {
     assertFalse(fs.exists(table));
   }
 
+  /**
+   * Databricks names the files its commit protocol writes with a transaction id between the
+   * partition id and the id of the write, and a task attempt and counter after it.
+   */
+  @Test
+  void filesNamedByDatabricksKeepTheWriteId() throws IOException {
+    final Path table = new Path(directory, "Condition.ndjson");
+    fs.mkdirs(table);
+    fs.create(new Path(table, "part-00000-tid-5046671251912249212-" + WRITE_ID + "-5-1-c000.txt"))
+        .close();
+    fs.create(new Path(table, "part-00001-tid-5046671251912249212-" + WRITE_ID + "-6-1-c000.txt"))
+        .close();
+
+    final List<String> renamed = TypeFiles.renameKeepingWriteId(fs, table.toString(), "txt");
+
+    assertEquals(2, renamed.size());
+    for (final String part : List.of("00000", "00001")) {
+      assertTrue(fs.exists(new Path(directory, "Condition." + part + "-" + WRITE_ID + ".ndjson")));
+    }
+    assertFalse(fs.exists(table));
+  }
+
   @Test
   void aFileNotNamedBySparkIsRefused() throws IOException {
     final Path table = new Path(directory, "NotSpark.ndjson");
