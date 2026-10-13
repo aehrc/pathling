@@ -606,7 +606,7 @@ class PathlingContext:
         Returns the membership of a ValueSet supplied as FHIR R4 JSON as a relation with the
         columns of :meth:`value_set`.
 
-        The resource must carry a ``url``, and elements that R4 does not define are rejected.
+        The resource must carry a ``url``, and content that is not valid FHIR R4 is rejected.
         Where the resource carries an ``expansion``, that expansion is the membership and the
         terminology layer is not consulted; an incomplete expansion is rejected. Where it carries
         only a ``compose``, the configured terminology layer expands it.
@@ -660,8 +660,8 @@ class PathlingContext:
         Returns the mappings of a ConceptMap supplied as FHIR R4 JSON as a relation with the
         columns of :meth:`concept_map`, without consulting the terminology layer.
 
-        The resource must carry a ``url``, and elements that R4 does not define, such as the R5
-        ``noMap`` and ``relationship``, are rejected.
+        The resource must carry a ``url``, and content that is not valid FHIR R4, such as the R5
+        ``noMap`` and ``relationship`` elements, is rejected.
 
         :param json: the ConceptMap resource as FHIR R4 JSON
         :param max_mappings: the largest number of mappings accepted; 100,000 when omitted

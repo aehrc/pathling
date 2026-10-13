@@ -284,7 +284,7 @@ as FHIR R4 JSON instead:
 | `value_set_from_json`   | `pathling_value_set_from_json`   | `valueSetFromJson`   |
 | `concept_map_from_json` | `pathling_concept_map_from_json` | `conceptMapFromJson` |
 
-The resource must carry a `url`. Elements that R4 does not define are rejected
+The resource must carry a `url`. Content that is not valid FHIR R4 is rejected
 rather than ignored, so an R5 ConceptMap, such as the worked example of the
 specification with its `relationship` and `noMap` elements, must be expressed
 with the R4 `equivalence` (`unmatched` in place of `noMap`) before it is

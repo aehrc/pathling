@@ -764,8 +764,8 @@ public class PathlingContext {
 
   /**
    * Returns the membership of a ValueSet supplied as FHIR R4 JSON as a relation with the columns of
-   * {@link #valueSet(String)}. The resource must carry a {@code url}, and elements that R4 does not
-   * define are rejected. Where the resource carries an {@code expansion}, that expansion is the
+   * {@link #valueSet(String)}. The resource must carry a {@code url}, and content that is not valid
+   * FHIR R4 is rejected. Where the resource carries an {@code expansion}, that expansion is the
    * membership and the terminology layer is not consulted; an incomplete expansion is rejected.
    * Where it carries only a {@code compose}, the configured terminology layer expands it. At most
    * {@value TerminologyRelations#DEFAULT_MAX_MEMBERS} members are accepted.
@@ -848,8 +848,8 @@ public class PathlingContext {
   /**
    * Returns the mappings of a ConceptMap supplied as FHIR R4 JSON as a relation with the columns of
    * {@link #conceptMap(String)}, without consulting the terminology layer. The resource must carry
-   * a {@code url}, and elements that R4 does not define, such as the R5 {@code noMap} and {@code
-   * relationship}, are rejected. At most {@value TerminologyRelations#DEFAULT_MAX_MAPPINGS}
+   * a {@code url}, and content that is not valid FHIR R4, such as the R5 {@code noMap} and {@code
+   * relationship} elements, is rejected. At most {@value TerminologyRelations#DEFAULT_MAX_MAPPINGS}
    * mappings are accepted.
    *
    * @param json the ConceptMap resource as FHIR R4 JSON

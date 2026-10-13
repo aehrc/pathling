@@ -51,8 +51,8 @@ pathling_value_set <- function(pc, canonical, max_members = NULL) {
 #' Get a supplied value set as a relation
 #'
 #' Returns the membership of a ValueSet supplied as FHIR R4 JSON as a relation with the columns of
-#' \code{\link{pathling_value_set}}. The resource must carry a \code{url}, and elements that R4 does
-#' not define are rejected. Where the resource carries an \code{expansion}, that expansion is the
+#' \code{\link{pathling_value_set}}. The resource must carry a \code{url}, and content that is not
+#' valid FHIR R4 is rejected. Where the resource carries an \code{expansion}, that expansion is the
 #' membership and the terminology layer is not consulted; an incomplete expansion is rejected.
 #' Where it carries only a \code{compose}, the configured terminology layer expands it.
 #'
@@ -118,8 +118,8 @@ pathling_concept_map <- function(pc, canonical, max_mappings = NULL) {
 #'
 #' Returns the mappings of a ConceptMap supplied as FHIR R4 JSON as a relation with the columns of
 #' \code{\link{pathling_concept_map}}, without consulting the terminology layer. The resource must
-#' carry a \code{url}, and elements that R4 does not define, such as the R5 \code{noMap} and
-#' \code{relationship}, are rejected.
+#' carry a \code{url}, and content that is not valid FHIR R4, such as the R5 \code{noMap} and
+#' \code{relationship} elements, is rejected.
 #'
 #' @param pc The PathlingContext object.
 #' @param json The ConceptMap resource as FHIR R4 JSON.
