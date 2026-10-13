@@ -159,12 +159,15 @@ final class TypeFiles {
    * take the names of an earlier write's files in the same directory, and a write can be added
    * beside them.
    *
+   * <p>A file in the table that Spark did not name, which a table assembled by hand can hold, is
+   * left there, and so is the table: it is still read as the type, so the rows it holds are kept.
+   *
    * @param spark the Spark session
    * @param table the directory the write was made into, {@code <name>.<extension>}
    * @param partExtension the extension of the files Spark wrote in the table
    * @return the paths of the renamed files
-   * @throws PersistenceError if a file is not named as Spark names them, or there is a problem
-   *     renaming one, in which case the table is left in place
+   * @throws PersistenceError if the table holds no file named as Spark names them, or there is a
+   *     problem renaming one, in which case the table is left in place
    */
   @Nonnull
   static List<String> renameKeepingWriteId(
@@ -183,9 +186,9 @@ final class TypeFiles {
    * @param table the directory the write was made into, {@code <name>.<extension>}
    * @param partExtension the extension of the files Spark wrote in the table
    * @return the paths of the renamed files
-   * @throws PersistenceError if the table has no files with the extension, is not named {@code
-   *     <name>.<extension>}, or holds a file not named as Spark names them, or there is a problem
-   *     renaming one, in which case the table is left in place
+   * @throws PersistenceError if the table is not named {@code <name>.<extension>} or holds no file
+   *     with the extension named as Spark names them, or there is a problem renaming one, in which
+   *     case the table is left in place
    */
   @Nonnull
   static List<String> renameKeepingWriteId(
@@ -199,13 +202,18 @@ final class TypeFiles {
           "Expected the table %s to be named <name>.<extension>".formatted(table), null);
     }
     try {
-      final List<Path> parts =
+      final List<Path> files =
           Arrays.stream(fileSystem.listStatus(tablePath))
               .map(FileStatus::getPath)
               .filter(file -> FilenameUtils.isExtension(file.getName(), partExtension))
               .toList();
+      final List<Path> parts =
+          files.stream().filter(file -> SPARK_PART_FILE.matcher(file.getName()).matches()).toList();
       if (parts.isEmpty()) {
-        throw new PersistenceError("No partition files were found in " + table, null);
+        throw new PersistenceError(
+            "No partition files were found in %s; expected files named part-<partitionId>-<writeId>"
+                .formatted(table),
+            null);
       }
       final List<String> renamed = new ArrayList<>();
       for (final Path part : parts) {
@@ -226,8 +234,12 @@ final class TypeFiles {
         }
         renamed.add(target.toString());
       }
-      log.info("Cleaning up: {}", table);
-      fileSystem.delete(tablePath, true);
+      if (parts.size() == files.size()) {
+        log.info("Cleaning up: {}", table);
+        fileSystem.delete(tablePath, true);
+      } else {
+        log.warn("Leaving {} in place, as it holds files that Spark did not name", table);
+      }
       return renamed;
     } catch (final IOException e) {
       throw new PersistenceError("Problem renaming the partition files of " + table, e);
@@ -242,11 +254,7 @@ final class TypeFiles {
   private static String partitionAndWriteId(@Nonnull final Path part) {
     final Matcher matcher = SPARK_PART_FILE.matcher(part.getName());
     if (!matcher.matches()) {
-      throw new PersistenceError(
-          ("Unexpected spark partitioning structure. Expected %s to be named "
-                  + "part-<partitionId>-<writeId>")
-              .formatted(part),
-          null);
+      throw new IllegalArgumentException("Not a file Spark named: " + part);
     }
     return matcher.group(1) + "-" + matcher.group(2);
   }

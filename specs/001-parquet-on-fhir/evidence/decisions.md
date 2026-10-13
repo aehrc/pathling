@@ -3909,3 +3909,21 @@ _Decision_: a note on T096c to measure the `!=` cost against plans that already 
 scale where per-row cost shows. No issue is raised for the engine-wide question unless that
 measurement shows the fallback matters.
 
+## 127. A file Spark did not name is left in the table rather than failing the write
+
+Raised by the first adversarial review of M4; owner decision (2026-10-13).
+
+An append into a directory whose `<Type>.<ext>` table was assembled by hand, holding a part file
+Spark did not name (the shape of the R package's `inst/extdata/parquet/Patient.parquet`), renamed
+the new write's files out of the table and then threw `PersistenceError` on the foreign name. The
+rows were all written and readable, but the caller was told the write failed, and a retry would
+duplicate them. On `main` the rename collision was ignored silently (#2823), so the false error
+was M4's.
+
+_Decision_: fixed in M4. `TypeFiles.renameKeepingWriteId` renames only the files Spark named and
+leaves any other file in the table, keeping the table, which the source still reads as the type;
+it still refuses a table holding no file Spark named. Tests:
+`TypeFilesTest.aFileNotNamedBySparkBesideTheWriteIsLeftInTheTable` and
+`FileSinkSaveModeTest.appendBesideAHandAssembledTableKeepsEveryRow`, both failing before the fix
+with the `PersistenceError` (`r1fix-red.log`), passing after (`r1fix-green.log`).
+

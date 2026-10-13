@@ -89,6 +89,21 @@ class TypeFilesTest {
   }
 
   @Test
+  void aFileNotNamedBySparkBesideTheWriteIsLeftInTheTable() throws IOException {
+    final Path table = new Path(directory, "Patient.ndjson");
+    final Path foreign = new Path(table, "part-00000.txt");
+    fs.create(foreign).close();
+
+    final List<String> renamed = TypeFiles.renameKeepingWriteId(fs, table.toString(), "txt");
+
+    assertEquals(4, renamed.size());
+    for (final String part : List.of("00000", "00001", "00002", "00003")) {
+      assertTrue(fs.exists(new Path(directory, "Patient." + part + "-" + WRITE_ID + ".ndjson")));
+    }
+    assertTrue(fs.exists(foreign));
+  }
+
+  @Test
   void aFailedRenameIsAnErrorAndKeepsTheTable() throws IOException {
     final Path table = new Path(directory, "Patient.ndjson");
     final FileSystem refusingRenames =

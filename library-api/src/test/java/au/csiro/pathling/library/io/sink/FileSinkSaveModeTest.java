@@ -202,6 +202,24 @@ class FileSinkSaveModeTest {
     assertEquals(List.of("b1", "o1"), readIds("ndjson"));
   }
 
+  /**
+   * An append into a directory whose table was assembled by hand, holding a file Spark did not
+   * name, succeeds and keeps every row: the file is left in the table, which is still read as the
+   * type.
+   */
+  @Test
+  void appendBesideAHandAssembledTableKeepsEveryRow() throws IOException {
+    newPatients(context, "h1").coalesce(1).write().parquet(directory.resolve("h").toString());
+    Files.createDirectories(directory.resolve("Patient.parquet"));
+    moveOnlyPartFile(
+        directory.resolve("h"), directory.resolve("Patient.parquet/part-00000.snappy.parquet"));
+
+    write("parquet", "append", patients("b1"));
+
+    assertEquals(List.of("b1", "h1"), readIds("parquet"));
+    assertTrue(Files.exists(directory.resolve("Patient.parquet/part-00000.snappy.parquet")));
+  }
+
   @Nonnull
   private static DatasetSource patients(@Nonnull final String... ids) {
     return context.read().datasets().dataset("Patient", newPatients(context, ids));
