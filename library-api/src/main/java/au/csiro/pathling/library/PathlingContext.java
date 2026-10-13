@@ -763,13 +763,14 @@ public class PathlingContext {
   }
 
   /**
-   * Returns the membership of a ValueSet supplied as FHIR JSON as a relation with the columns of
-   * {@link #valueSet(String)}. Where the resource carries an {@code expansion}, that expansion is
-   * the membership and the terminology layer is not consulted; an incomplete expansion is rejected.
+   * Returns the membership of a ValueSet supplied as FHIR R4 JSON as a relation with the columns of
+   * {@link #valueSet(String)}. The resource must carry a {@code url}, and elements that R4 does not
+   * define are rejected. Where the resource carries an {@code expansion}, that expansion is the
+   * membership and the terminology layer is not consulted; an incomplete expansion is rejected.
    * Where it carries only a {@code compose}, the configured terminology layer expands it. At most
    * {@value TerminologyRelations#DEFAULT_MAX_MEMBERS} members are accepted.
    *
-   * @param json the ValueSet resource as FHIR JSON
+   * @param json the ValueSet resource as FHIR R4 JSON
    * @return the value set relation
    * @throws TerminologyRelationException if the JSON is not a ValueSet, or its membership cannot be
    *     determined or exceeds the cap
@@ -780,10 +781,10 @@ public class PathlingContext {
   }
 
   /**
-   * Returns the membership of a ValueSet supplied as FHIR JSON as a relation, accepting at most the
-   * given number of members. See {@link #valueSetFromJson(String)}.
+   * Returns the membership of a ValueSet supplied as FHIR R4 JSON as a relation, accepting at most
+   * the given number of members. See {@link #valueSetFromJson(String)}.
    *
-   * @param json the ValueSet resource as FHIR JSON
+   * @param json the ValueSet resource as FHIR R4 JSON
    * @param maxMembers the largest membership accepted, which must be positive
    * @return the value set relation
    * @throws IllegalArgumentException if the cap is not positive
@@ -845,11 +846,13 @@ public class PathlingContext {
   }
 
   /**
-   * Returns the mappings of a ConceptMap supplied as FHIR JSON as a relation with the columns of
-   * {@link #conceptMap(String)}, without consulting the terminology layer. At most {@value
-   * TerminologyRelations#DEFAULT_MAX_MAPPINGS} mappings are accepted.
+   * Returns the mappings of a ConceptMap supplied as FHIR R4 JSON as a relation with the columns of
+   * {@link #conceptMap(String)}, without consulting the terminology layer. The resource must carry
+   * a {@code url}, and elements that R4 does not define, such as the R5 {@code noMap} and {@code
+   * relationship}, are rejected. At most {@value TerminologyRelations#DEFAULT_MAX_MAPPINGS}
+   * mappings are accepted.
    *
-   * @param json the ConceptMap resource as FHIR JSON
+   * @param json the ConceptMap resource as FHIR R4 JSON
    * @return the concept map relation
    * @throws TerminologyRelationException if the JSON is not a ConceptMap, carries content the
    *     relation cannot represent, or exceeds the cap
@@ -860,10 +863,10 @@ public class PathlingContext {
   }
 
   /**
-   * Returns the mappings of a ConceptMap supplied as FHIR JSON as a relation, accepting at most the
-   * given number of mappings. See {@link #conceptMapFromJson(String)}.
+   * Returns the mappings of a ConceptMap supplied as FHIR R4 JSON as a relation, accepting at most
+   * the given number of mappings. See {@link #conceptMapFromJson(String)}.
    *
-   * @param json the ConceptMap resource as FHIR JSON
+   * @param json the ConceptMap resource as FHIR R4 JSON
    * @param maxMappings the largest number of mappings accepted, which must be positive
    * @return the concept map relation
    * @throws IllegalArgumentException if the cap is not positive

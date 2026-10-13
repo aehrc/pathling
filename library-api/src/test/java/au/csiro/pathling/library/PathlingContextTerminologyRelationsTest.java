@@ -507,6 +507,23 @@ class PathlingContextTerminologyRelationsTest {
         () -> pathling.conceptMapFromJson("{\"resourceType\": \"ConceptMap\"}"));
   }
 
+  @Test
+  void suppliedR5ConceptMapIsRejectedRatherThanReadAsEmpty() {
+    // An R5 map whose elements carry only noMap has no R4 targets; read leniently it would be a map
+    // with no mappings, so elements unknown to R4 must fail the parse instead.
+    final String json =
+        """
+        {"resourceType": "ConceptMap", "url": "http://example.org/ConceptMap/r5",
+         "group": [{"source": "http://snomed.info/sct", "target": "http://hl7.org/fhir/sid/icd-10",
+           "element": [{"code": "102499006", "noMap": true}]}]}
+        """;
+
+    final TerminologyRelationException error =
+        assertThrows(TerminologyRelationException.class, () -> pathling.conceptMapFromJson(json));
+
+    assertTrue(error.getMessage().contains("noMap"));
+  }
+
   // ---------------------------------------------------------------------------------------------
   // The relations in Spark SQL, using the worked examples of the specification.
   // ---------------------------------------------------------------------------------------------

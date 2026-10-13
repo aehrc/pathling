@@ -50,13 +50,14 @@ pathling_value_set <- function(pc, canonical, max_members = NULL) {
 
 #' Get a supplied value set as a relation
 #'
-#' Returns the membership of a ValueSet supplied as FHIR JSON as a relation with the columns of
-#' \code{\link{pathling_value_set}}. Where the resource carries an \code{expansion}, that expansion
-#' is the membership and the terminology layer is not consulted; an incomplete expansion is
-#' rejected. Where it carries only a \code{compose}, the configured terminology layer expands it.
+#' Returns the membership of a ValueSet supplied as FHIR R4 JSON as a relation with the columns of
+#' \code{\link{pathling_value_set}}. The resource must carry a \code{url}, and elements that R4 does
+#' not define are rejected. Where the resource carries an \code{expansion}, that expansion is the
+#' membership and the terminology layer is not consulted; an incomplete expansion is rejected.
+#' Where it carries only a \code{compose}, the configured terminology layer expands it.
 #'
 #' @param pc The PathlingContext object.
-#' @param json The ValueSet resource as FHIR JSON.
+#' @param json The ValueSet resource as FHIR R4 JSON.
 #' @param max_members The largest membership accepted. When NULL, 100,000 members are accepted.
 #'   Defaults to NULL.
 #'
@@ -115,11 +116,13 @@ pathling_concept_map <- function(pc, canonical, max_mappings = NULL) {
 
 #' Get a supplied concept map as a relation
 #'
-#' Returns the mappings of a ConceptMap supplied as FHIR JSON as a relation with the columns of
-#' \code{\link{pathling_concept_map}}, without consulting the terminology layer.
+#' Returns the mappings of a ConceptMap supplied as FHIR R4 JSON as a relation with the columns of
+#' \code{\link{pathling_concept_map}}, without consulting the terminology layer. The resource must
+#' carry a \code{url}, and elements that R4 does not define, such as the R5 \code{noMap} and
+#' \code{relationship}, are rejected.
 #'
 #' @param pc The PathlingContext object.
-#' @param json The ConceptMap resource as FHIR JSON.
+#' @param json The ConceptMap resource as FHIR R4 JSON.
 #' @param max_mappings The largest number of mappings accepted. When NULL, 100,000 mappings are
 #'   accepted. Defaults to NULL.
 #'

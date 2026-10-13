@@ -603,14 +603,15 @@ class PathlingContext:
         self, json: str, max_members: Optional[int] = None
     ) -> DataFrame:
         """
-        Returns the membership of a ValueSet supplied as FHIR JSON as a relation with the columns
-        of :meth:`value_set`.
+        Returns the membership of a ValueSet supplied as FHIR R4 JSON as a relation with the
+        columns of :meth:`value_set`.
 
+        The resource must carry a ``url``, and elements that R4 does not define are rejected.
         Where the resource carries an ``expansion``, that expansion is the membership and the
         terminology layer is not consulted; an incomplete expansion is rejected. Where it carries
         only a ``compose``, the configured terminology layer expands it.
 
-        :param json: the ValueSet resource as FHIR JSON
+        :param json: the ValueSet resource as FHIR R4 JSON
         :param max_members: the largest membership accepted; 100,000 when omitted
         :return: a :class:`DataFrame` containing the value set relation
         :raises: the mapped JVM ``TerminologyRelationException`` if the JSON is not a ValueSet, or
@@ -656,10 +657,13 @@ class PathlingContext:
         self, json: str, max_mappings: Optional[int] = None
     ) -> DataFrame:
         """
-        Returns the mappings of a ConceptMap supplied as FHIR JSON as a relation with the columns
-        of :meth:`concept_map`, without consulting the terminology layer.
+        Returns the mappings of a ConceptMap supplied as FHIR R4 JSON as a relation with the
+        columns of :meth:`concept_map`, without consulting the terminology layer.
 
-        :param json: the ConceptMap resource as FHIR JSON
+        The resource must carry a ``url``, and elements that R4 does not define, such as the R5
+        ``noMap`` and ``relationship``, are rejected.
+
+        :param json: the ConceptMap resource as FHIR R4 JSON
         :param max_mappings: the largest number of mappings accepted; 100,000 when omitted
         :return: a :class:`DataFrame` containing the concept map relation
         :raises: the mapped JVM ``TerminologyRelationException`` if the JSON is not a ConceptMap,

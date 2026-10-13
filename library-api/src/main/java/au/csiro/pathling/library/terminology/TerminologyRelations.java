@@ -32,6 +32,7 @@ import au.csiro.pathling.terminology.expand.ValueSetExpansionException;
 import au.csiro.pathling.terminology.expand.ValueSetMember;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.DataFormatException;
+import ca.uhn.fhir.parser.StrictErrorHandler;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.List;
@@ -162,11 +163,12 @@ public class TerminologyRelations {
   }
 
   /**
-   * Returns the membership of a ValueSet supplied as FHIR JSON as a relation under {@link
+   * Returns the membership of a ValueSet supplied as FHIR R4 JSON as a relation under {@link
    * #VALUE_SET_SCHEMA}. A resource carrying an {@code expansion} supplies the membership as-is; one
-   * carrying only a {@code compose} is expanded by the terminology service.
+   * carrying only a {@code compose} is expanded by the terminology service. The resource must carry
+   * a {@code url}.
    *
-   * @param json the ValueSet resource as FHIR JSON
+   * @param json the ValueSet resource as FHIR R4 JSON
    * @param maxMembers the largest membership accepted
    * @return the value set relation
    * @throws IllegalArgumentException if the cap is not positive
@@ -227,10 +229,10 @@ public class TerminologyRelations {
   }
 
   /**
-   * Returns the mappings of a ConceptMap supplied as FHIR JSON as a relation under {@link
+   * Returns the mappings of a ConceptMap supplied as FHIR R4 JSON as a relation under {@link
    * #CONCEPT_MAP_SCHEMA}, without consulting the terminology service.
    *
-   * @param json the ConceptMap resource as FHIR JSON
+   * @param json the ConceptMap resource as FHIR R4 JSON
    * @param maxMappings the largest number of mappings accepted
    * @return the concept map relation
    * @throws IllegalArgumentException if the cap is not positive
@@ -285,11 +287,19 @@ public class TerminologyRelations {
     return new TerminologyRelationException(kind + " '" + canonical + "' could not be resolved");
   }
 
+  /**
+   * Parses a supplied resource as FHIR R4 JSON, rejecting elements that R4 does not define. A
+   * lenient parse would drop them silently, so that an R5 ConceptMap whose elements carry only
+   * {@code noMap} would read as a map with no mappings.
+   */
   @Nonnull
   private <T extends IBaseResource> T parse(
       @Nonnull final String json, @Nonnull final Class<T> type, @Nonnull final String kind) {
     try {
-      return fhirContext.newJsonParser().parseResource(type, json);
+      return fhirContext
+          .newJsonParser()
+          .setParserErrorHandler(new StrictErrorHandler())
+          .parseResource(type, json);
     } catch (final DataFormatException e) {
       throw new TerminologyRelationException(
           kind + " could not be parsed as a FHIR " + type.getSimpleName() + ": " + e.getMessage(),

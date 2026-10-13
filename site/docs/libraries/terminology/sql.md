@@ -277,12 +277,18 @@ pc.getSpark().sql("""
 ## Supplying a resource
 
 A ValueSet or ConceptMap that the terminology layer does not hold can be passed
-as FHIR JSON instead:
+as FHIR R4 JSON instead:
 
 | Python                  | R                                | Java and Scala       |
 | ----------------------- | -------------------------------- | -------------------- |
 | `value_set_from_json`   | `pathling_value_set_from_json`   | `valueSetFromJson`   |
 | `concept_map_from_json` | `pathling_concept_map_from_json` | `conceptMapFromJson` |
+
+The resource must carry a `url`. Elements that R4 does not define are rejected
+rather than ignored, so an R5 ConceptMap, such as the worked example of the
+specification with its `relationship` and `noMap` elements, must be expressed
+with the R4 `equivalence` (`unmatched` in place of `noMap`) before it is
+supplied.
 
 Where a supplied ValueSet carries an `expansion`, that expansion is the
 membership and the terminology layer is not consulted. An incomplete expansion,
