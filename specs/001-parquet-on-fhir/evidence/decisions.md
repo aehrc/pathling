@@ -3854,3 +3854,16 @@ returns `QueryableDataSource`. They predate this programme and are equally broke
 
 _Decision_: not fixed in M4; raised as #2825.
 
+## 123. A format given without a schema writes to the current database
+
+Raised by T117c; owner decision (2026-10-13).
+
+Java's `DataSinkBuilder.tables(schema, format)` requires a schema, and a `tables(format)`
+overload would clash with `tables(schema)`. When Python `tables()` or R `ds_write_tables()` is
+given a format and no schema, it passes `spark.catalog.currentDatabase()`, which is where an
+unqualified table name would land, so the tables go where a call without a format would put them.
+
+_Rejected_: a differently named Java builder method taking a format alone, which adds public API
+for a result the caller can already get; and requiring a schema with a format, which is clumsy
+in the common single-database case.
+
