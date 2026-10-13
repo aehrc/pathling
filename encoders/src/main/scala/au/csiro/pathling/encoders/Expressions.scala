@@ -487,8 +487,8 @@ case class UnresolvedColumnOrNull(columnName: String, fallback: DataType, value:
       // The analyzer resolves the view column only against an operator with a single child, and
       // asserts that it has one. An operator with more, such as a join, resolves a plain attribute
       // across all of its children, so the plain attribute not resolving means that no child has
-      // the column.
-      case _: AssertionError =>
+      // the column. Any other assertion is a failure, and is not taken for absence.
+      case e: AssertionError if UnresolvedColumnOrNull.isSingleChildAssertion(e) =>
         Literal(null, fallback)
     }
 
@@ -545,6 +545,26 @@ object UnresolvedColumnOrNull {
    * ambiguous name raises the same error, reporting the attributes it matched.
    */
   val NO_MATCH = "[]"
+
+  /**
+   * The class of the analyzer's column resolution, whose resolution of a view column asserts that
+   * the operator has a single child.
+   */
+  private val COLUMN_RESOLUTION = "org.apache.spark.sql.catalyst.analysis.ColumnResolutionHelper"
+
+  /**
+   * Returns whether an assertion is the one the analyzer raises when it resolves a view column in
+   * an operator with more than one child. It is recognised by being raised from the analyzer's
+   * column resolution, since the assertion carries no message of its own to tell it apart.
+   *
+   * @param error the assertion
+   * @return whether it is the single-child assertion
+   */
+  def isSingleChildAssertion(error: AssertionError): Boolean =
+    error.getStackTrace.iterator
+      .dropWhile(_.getClassName.startsWith("scala."))
+      .nextOption()
+      .exists(_.getClassName.startsWith(COLUMN_RESOLUTION))
 
   /**
    * Returns the names of the attributes that the error signalling a name that matched more than

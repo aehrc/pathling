@@ -3981,3 +3981,19 @@ make such files readable, since the file source still reads only names of letter
 `errorIfExistsUnderANameNotOnlyLettersIsRefused` and
 `ignoreUnderANameNotOnlyLettersLeavesTheEarlierFiles`, each for Parquet and NDJSON, failing before
 the fix, passing after.
+
+## 131. Only the analyzer's single-child assertion is taken for an absent column
+
+Raised by the automated review of the M4 pull request; owner decision (2026-10-13).
+
+`UnresolvedColumnOrNull` took any `AssertionError` raised while resolving its view column for the
+column's absence from a join, and returned a null. An assertion with another cause, a failure in
+resolution, was turned into nulls without a trace.
+
+_Decision_: fixed in M4. The assertion is taken for absence only where it is raised from the
+analyzer's column resolution (`ColumnResolutionHelper`), which is where Spark 4.0 asserts that the
+operator has one child; any other is rethrown. The assertion carries no message, so it is told
+apart by where it is raised. `ResolveOrNullTest.viewColumnInJoinConditionFailsTheSingleChildAssertion`
+now also pins that it is recognised, so an upgrade of Spark that moves it fails that test. Test:
+`ResolveOrNullTest.otherAssertionInResolutionIsNotTakenForAbsence`, failing before the fix, passing
+after; `JoinConditionTest` passes unchanged.

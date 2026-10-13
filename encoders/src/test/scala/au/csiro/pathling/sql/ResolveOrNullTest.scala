@@ -242,6 +242,27 @@ class ResolveOrNullTest extends SparkSessionSupport with AdaptiveSparkPlanHelper
       assertEquals("INTERNAL_ERROR", error.getCondition)
       assertTrue(causes(error).exists(_.isInstanceOf[AssertionError]), error.toString)
     }
+    // The assertion is raised by the analyzer's column resolution, which is what the reference
+    // takes for absence.
+    val error = assertThrows(classOf[SparkException],
+      () => present.join(other, column(GetViewColumnByNameAndOrdinal(
+        UnresolvedColumnOrNull.SOURCE_NAME, "score", 0, 1, None)) >= other("k")).collect())
+    val assertion = causes(error).collectFirst { case a: AssertionError => a }.get
+    assertTrue(UnresolvedColumnOrNull.isSingleChildAssertion(assertion), assertion.toString)
+  }
+
+  /**
+   * An assertion raised anywhere other than the analyzer's single-child check is not taken for
+   * absence, so a failure in resolving the reference is not turned into a null.
+   */
+  @Test
+  def otherAssertionInResolutionIsNotTakenForAbsence(): Unit = {
+    val reference = new UnresolvedColumnOrNull("score", IntegerType)
+    val error = assertThrows(classOf[AssertionError], () => reference.mapChildren {
+      case _: GetViewColumnByNameAndOrdinal => throw new AssertionError("assertion failed")
+      case other => other
+    })
+    assertEquals("assertion failed", error.getMessage)
   }
 
   /**
