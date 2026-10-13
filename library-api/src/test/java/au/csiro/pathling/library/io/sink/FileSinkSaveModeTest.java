@@ -242,6 +242,25 @@ class FileSinkSaveModeTest {
     assertTrue(before.stream().noneMatch(after::contains), after::toString);
   }
 
+  /**
+   * An append under a file name that is not only letters checks the layout of the earlier files,
+   * which it now finds, and adds its files beside them.
+   */
+  @ParameterizedTest
+  @ValueSource(strings = {"parquet", "ndjson"})
+  void appendUnderANameNotOnlyLettersKeepsTheEarlierFiles(@Nonnull final String format)
+      throws IOException {
+    writeMapped(format, "error", patients("a1"));
+    final List<String> before = fileNames(directory);
+    writeMapped(format, "append", patients("b1"));
+
+    final List<String> after = fileNames(directory);
+    assertTrue(after.containsAll(before), after::toString);
+    assertTrue(after.size() > before.size(), after::toString);
+    assertTrue(
+        after.stream().allMatch(name -> name.startsWith(MAPPED_NAME + ".")), after::toString);
+  }
+
   /** An error-if-exists write under a file name that is not only letters sees the earlier files. */
   @ParameterizedTest
   @ValueSource(strings = {"parquet", "ndjson"})

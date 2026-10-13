@@ -3961,7 +3961,9 @@ failing before the fix with the `PersistenceError`, passing after.
 
 Not fixed: two files of one partition that differ only in the file counter (`-c000`, `-c001`), which
 `spark.sql.files.maxRecordsPerFile` produces, are given the same name, and the second rename fails
-after the rows are written. It is recorded here for the owning task to schedule.
+after the rows are written; on the local file system the rename is refused and the table kept, as
+a probe confirmed. On `main` the counter was dropped too, and the collision ignored. It is
+scheduled on T046a, with a check of the Databricks name on a cluster at release.
 
 ## 130. The save modes find a type's files under a file name that is not only letters
 
@@ -3976,11 +3978,12 @@ names; the write ids M4 gives each write made the files accumulate instead.
 _Decision_: fixed in M4. The sink matches the file name it was given as it is: a base name that is
 the file name, alone or followed by a period and a qualifier holding none. For a name of letters
 alone this is the set the reader's pattern gives. The fix makes the save modes correct; it does not
-make such files readable, since the file source still reads only names of letters. Tests:
+make such files readable, since the file source still reads only names of letters. An append under
+such a name now finds the earlier files, so the Parquet sink's layout check applies to them. Tests:
 `FileSinkSaveModeTest.overwriteUnderANameNotOnlyLettersReplacesTheEarlierFiles`,
 `errorIfExistsUnderANameNotOnlyLettersIsRefused` and
 `ignoreUnderANameNotOnlyLettersLeavesTheEarlierFiles`, each for Parquet and NDJSON, failing before
-the fix, passing after.
+the fix, passing after; `appendUnderANameNotOnlyLettersKeepsTheEarlierFiles` covers the append.
 
 ## 131. Only the analyzer's single-child assertion is taken for an absent column
 
