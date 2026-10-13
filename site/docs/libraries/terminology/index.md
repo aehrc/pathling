@@ -13,6 +13,9 @@ By default the functions are evaluated by a remote FHIR terminology server. See
 including caching and authentication. The same functions can also be evaluated
 against a [local terminology store](./local.md) with no network dependency.
 
+A value set or concept map can also be returned as a table and joined to in
+Spark SQL; see [terminology in SQL](./sql.md).
+
 import Tabs from "@theme/Tabs";
 import TabItem from "@theme/TabItem";
 
