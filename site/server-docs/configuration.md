@@ -229,15 +229,15 @@ references it.
 
 A value set dependency takes its membership from the terminology layer
 configured under [terminology service](#terminology-service), according to
-`pathling.terminology.mode`. In `SERVER` mode (the default) the value set is
+`pathling.terminology.mode`. In `server` mode (the default) the value set is
 expanded through `ValueSet/$expand` on `pathling.terminology.serverUrl`, paged
 in requests of 10,000 entries until the expansion is complete, and the request
 carries only the canonical URL, the pinned version where the reference has one,
 and the paging controls. The client and authentication settings below apply to
 those requests as to any other, but expansions are not held in the terminology
 result cache, since each is resolved once per request or job in any case. In
-`LOCAL` mode membership is computed by the local terminology store at
-`pathling.terminology.local.storagePath`. With
+`local` mode membership is computed by the
+[local terminology store](#local-terminology-store). With
 `pathling.terminology.enabled` set to `false`, a value set dependency that is
 not supplied inline as a `context` ValueSet with an `expansion` is a `404`,
 since the canonical cannot be resolved, and a `context` ValueSet carrying only a
@@ -516,10 +516,16 @@ spark:
 
 - `pathling.terminology.enabled` - (default: `true`) Enables use of terminology
   functions within queries.
+- `pathling.terminology.mode` - (default: `server`) Selects where terminology
+  functions are evaluated. `server` sends requests to the FHIR terminology
+  service at `pathling.terminology.serverUrl`. `local` evaluates them against a
+  local terminology store, configured as described in
+  [local terminology store](#local-terminology-store).
 - `pathling.terminology.serverUrl` - (default:
   `https://tx.ontoserver.csiro.au/fhir`) The endpoint of the
   [FHIR terminology service](https://hl7.org/fhir/R4/terminology-service.html)
-  (R4) that the server can use to resolve terminology queries.
+  (R4) that the server can use to resolve terminology queries. Only used in
+  `server` mode.
 - `pathling.terminology.verboseLogging` - (default: `false`) Setting this option
   to `true` will enable additional logging of the details of requests between
   the server and the terminology service.
@@ -533,6 +539,70 @@ spark:
   The server can use the header to return the result in the preferred language
   if it is able. The actual behaviour may depend on the server implementation
   and the code systems used.
+
+#### Local terminology store
+
+In `local` mode the FHIRPath terminology functions (`memberOf`, `translate`,
+`subsumes`, `subsumedBy`, `display`, `property` and `designation`), and the
+value set dependencies of SQL queries (see [SQL query](#sql-query)), are
+evaluated against a store of SNOMED CT and FHIR terminology content, with no
+requests to a terminology server.
+
+The server reads the store but does not create it. Build it beforehand with the
+`import-snomed` and `import-fhir-terminology` commands of the
+[Pathling CLI](/docs/libraries/cli#terminology-import-commands), or the
+equivalent functions of the Python or R libraries, as described in
+[local terminology mode](/docs/libraries/terminology/local).
+
+- `pathling.terminology.local.storagePath` - The location of the store, as a
+  path or URL accessible through the Hadoop FileSystem API (e.g.
+  `file:///usr/share/terminology`, `s3a://my-bucket/terminology`). Required in
+  `local` mode.
+- `pathling.terminology.local.defaultSnomedEdition` - The module identifier of
+  the SNOMED CT edition to use for an unversioned SNOMED CT reference when the
+  store holds more than one edition (e.g. `32506021000036107` for the
+  Australian edition). If it is not set, such a reference is an error.
+- `pathling.terminology.local.expansionCacheSize` - (default: `100`) The
+  maximum number of value set expansions held in memory by each Spark executor.
+- `pathling.terminology.local.dialectAliases` - A map of additional language
+  tags to the identifiers of the SNOMED CT language reference sets that serve
+  them, used when a display is requested in a particular language (e.g.
+  `en-NZ` to `271000210107`). Each entry is a separate variable named after the
+  tag, e.g. `pathling.terminology.local.dialectAliases.en-NZ=271000210107`. See
+  [registering additional dialects](/docs/libraries/terminology/local#registering-additional-dialects).
+
+This is a minimal configuration using environment variables:
+
+```bash
+PATHLING_TERMINOLOGY_MODE=local
+PATHLING_TERMINOLOGY_LOCAL_STORAGEPATH=file:///usr/share/terminology
+```
+
+The same configuration in the `pathling.config` map of the
+[Helm chart](./deployment/kubernetes), with a dialect alias:
+
+```yaml
+pathling:
+    config:
+        pathling.terminology.mode: local
+        pathling.terminology.local.storagePath: s3a://my-bucket/terminology
+        pathling.terminology.local.dialectAliases.en-NZ: "271000210107"
+```
+
+The store is opened when the server starts, so a missing `storagePath`, or a
+store that cannot be read, stops the server from starting. In a Spark cluster
+the executors also open the store, so the path must be reachable from every
+executor - for example an object store bucket, or a volume mounted into the
+executor pods (see [Kubernetes](./deployment/kubernetes)). The executors use
+the Hadoop configuration of the server, so object store credentials set through
+`spark.hadoop.*` configuration apply to both.
+
+The `serverUrl`, `client`, `cache` and `authentication` settings have no effect
+in `local` mode, and the server logs a warning at startup for each one that has
+been changed from its default. `acceptLanguage` and `verboseLogging` also apply
+only to requests to a terminology server; in `local` mode, request a display in
+a particular language through the language argument of `display` or
+`property`.
 
 #### Client
 
