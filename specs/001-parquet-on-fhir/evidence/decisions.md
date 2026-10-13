@@ -3867,3 +3867,31 @@ _Rejected_: a differently named Java builder method taking a format alone, which
 for a result the caller can already get; and requiring a schema with a format, which is clumsy
 in the common single-database case.
 
+## 124. The planning regression of one view is investigated in M7
+
+Raised by T136; owner decision (2026-10-13).
+
+At the flip, planning `UsCoreBloodPressures` takes 158–163 ms against the T003 baseline's
+143.6 ms (1.10–1.14), just above the two runs' 14% drift between sessions, while every other
+view's planning is flat or better. The cause is not established, and the baseline's plan was
+never captured.
+
+_Decision_: investigate in M7 (new task T136a), against plans captured from the baseline commit
+and the head. Meanwhile every re-run of T136 saves each view's optimised plan beside its
+timings, so the comparison has a recent plan to start from.
+
+## 125. The reference key stays computed; joins are measured in M7
+
+Raised by T136; owner decision (2026-10-13).
+
+FR-033 makes a precomputed reference key an annotation to be added if T136 showed joins need it.
+T136 cannot show that: none of the seven views joins or calls `resolve()`, and the resource and
+reference keys are only projected, compiling to `concat(...)` and `CASE WHEN RLIKE(...)`.
+
+_Decision_: the computed key is the default, and M5 builds no precomputed key. T136b, in M7,
+adds join and `resolve()` views to the benchmark, measures them on the computed key, and raises a
+follow-up issue for a key annotation only if the numbers call for one.
+
+_Rejected_: extending the benchmark in M5 before the annotation work, or in M4, which nothing in
+either milestone depends on.
+
