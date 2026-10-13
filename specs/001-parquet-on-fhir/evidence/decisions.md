@@ -3809,3 +3809,38 @@ across files; the release-notes text now says so.
 _Rejected_: changing the code to fit the contract, which would hide data loss until M5 and, for
 inference, give the files of one merged read different column types.
 
+## 120. The Python and R catalog sinks take a table format
+
+Raised by the Phase 14 documentation work (T129); owner decision (2026-10-13).
+
+Java's `DataSinkBuilder.tables(schema, format)` takes a table format; Python `tables()` and R
+`ds_write_tables()` do not, so a table they create takes `spark.sql.sources.default`, which is
+Parquet outside platforms that default to Delta. T117b (decision 86) refuses an append into a
+non-Delta catalog table whose schema differs from the batch, and fitted schemas make that the
+common case, so a second append from either binding on default settings is refused with a
+remedy, Delta, that the binding offers no direct way to take. A second `merge` into a table the
+first created in the default format fails too, which predates M4.
+
+_Decision_: add a `format` parameter to both, in M4 (T117c), defaulting to Spark's setting as
+Java does, so existing calls create what they created before. The docs recommend Delta for
+tables that will be appended to or merged into.
+
+_Rejected_: documenting `spark.sql.sources.default=delta` alone, which changes every table the
+session creates; and deferring, which leaves the refusal M4 introduces without the route its
+own message names, with no milestone owning the bindings' half.
+
+## 121. The schema mode and annotation toggles are documented by the milestones that offer them
+
+Raised by the Phase 14 documentation work (T129); owner decision (2026-10-13).
+
+`contracts/library-api.md` lists a schema mode and per-annotation toggles. Neither can be set in
+M4: the schema mode arrives with the dense schema in M6 (T033), and annotations in M5 (T063). The
+site therefore leaves both out, and says that this release writes no annotations and only the
+fitted schema.
+
+_Decision_: nothing in M4. T063 and T033 each carry a note to document their option and to
+revise the storage layout page's statement that the option's absence makes true.
+
+_Rejected_: documenting them now as forthcoming, which no reader sees before the release
+(decision 117) and which would be rewritten anyway.
+
