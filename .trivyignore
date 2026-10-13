@@ -55,10 +55,11 @@ CVE-2025-66566
 # vulnerable path requires the caller to supply a null array or an out-of-range offset or length,
 # which only Spark's own internal compression code does.
 CVE-2026-59949
-# Native library temp-file race and LZ4FrameInputStream / LZ4BlockInputStream /
-# LZ4DecompressorWithLength allocation DoS. No fixed version exists for the org.lz4:lz4-java
-# coordinate that Spark 4.0.2 pins; fixes are only in the at.yawk.lz4 fork (>= 1.11.4).
-# Pathling code never calls the lz4 API.
+# Native library temp-file race, LZ4FrameInputStream / LZ4BlockInputStream /
+# LZ4DecompressorWithLength allocation DoS, and LZ4BlockInputStream stack exhaustion on empty
+# blocks. No fixed version exists for the org.lz4:lz4-java coordinate that Spark 4.0.2 pins; fixes
+# are only in the at.yawk.lz4 fork (>= 1.11.4). Pathling code never calls the lz4 API.
+CVE-2026-106449
 CVE-2026-106450
 CVE-2026-106451
 CVE-2026-106452
