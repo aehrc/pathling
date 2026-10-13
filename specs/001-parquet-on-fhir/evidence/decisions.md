@@ -3895,3 +3895,17 @@ follow-up issue for a key annotation only if the numbers call for one.
 _Rejected_: extending the benchmark in M5 before the annotation work, or in M4, which nothing in
 either milestone depends on.
 
+## 126. The code-generation fallback is measured before it is treated as a problem
+
+Raised by T136; owner decision (2026-10-13).
+
+T136 found every view's `Generate`, and `UsCoreBloodPressures`'s Coding `Filter` with its 336
+higher-order `filter` lambdas, outside whole-stage code generation, so the fallback T096c
+describes for the quantity `!=` is not specific to it. No timing has been attributed to the
+fallback: T100o's only measurement of it, adding `q != 50 'mg/dL'`, moved a small dataset's best
+time from 64 to 70 ms, and both affected views execute faster than the baseline.
+
+_Decision_: a note on T096c to measure the `!=` cost against plans that already fall back, at a
+scale where per-row cost shows. No issue is raised for the engine-wide question unless that
+measurement shows the fallback matters.
+
