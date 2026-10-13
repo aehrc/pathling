@@ -914,8 +914,9 @@ the refused table, but tables of resource types written earlier in the same
 write keep the data written to them.
 Because each batch's schema is fitted to its data, this makes incremental loads
 into a non-Delta managed table fail whenever the data changes shape. Write to a
-Delta table instead, or write Parquet files to a path and read them with the
-[Parquet source](#parquet), which merges the schemas of its files.
+Delta table instead, by choosing its [format](#table-format), or write Parquet
+files to a path and read them with the [Parquet source](#parquet), which merges
+the schemas of its files.
 
 <!--suppress CheckEmptyScriptTag -->
 <Tabs>
@@ -944,6 +945,54 @@ data.write().tables("test")
 
 ```java
 data.write().tables("test");
+```
+
+</TabItem>
+</Tabs>
+
+#### Table format
+
+New tables are created in the format that the `spark.sql.sources.default`
+setting of the Spark session names, which is Parquet unless your platform
+configures otherwise. You can choose the format of the tables instead, for
+example `delta` or `parquet`. The format is applied when a write creates a
+table.
+
+We recommend Delta for tables that will be appended to or merged into. Only a
+Delta table can be widened to admit a batch with a different schema, and the
+`merge` save mode works only with Delta tables, so a second merge into a table
+that the first merge created in Parquet fails.
+
+In Python and R, if you choose a format without specifying a schema, the tables
+are written to the current schema of the Spark session.
+
+<!--suppress CheckEmptyScriptTag -->
+<Tabs>
+<TabItem value="python" label="Python">
+
+```python
+data.write.tables("test", save_mode="merge", format="delta")
+```
+
+</TabItem>
+<TabItem value="r" label="R">
+
+```r
+data %>% ds_write_tables("test", save_mode = SaveMode$MERGE, format = "delta")
+```
+
+</TabItem>
+<TabItem value="scala" label="Scala">
+
+```scala
+data.write().saveMode("merge").tables("test", "delta")
+```
+
+</TabItem>
+<TabItem value="java" label="Java">
+
+```java
+data.write().saveMode("merge").tables("test", "delta");
 ```
 
 </TabItem>

@@ -238,6 +238,122 @@ test_that("datasource tables with schema", {
 
 # Tests for layout detection and its opt-out.
 
+# Writes the given Patient resources, as JSON strings, to an NDJSON file in a new directory, and
+# returns the directory's path.
+write_patients <- function(name, patients) {
+  directory <- file.path(tempdir(), paste0(name, "-", as.integer(runif(1, 0, 1e9))))
+  dir.create(directory)
+  writeLines(patients, file.path(directory, "Patient.ndjson"))
+  directory
+}
+
+# Creates a database of its own for one test, and returns its name.
+new_database <- function(spark) {
+  database <- paste0("tables_", as.integer(runif(1, 0, 1e9)))
+  spark %>%
+    sparklyr::spark_session() %>%
+    sparklyr::invoke("sql", paste("CREATE DATABASE", database))
+  database
+}
+
+# Returns the format the catalog records for a table, such as "delta" or "parquet".
+table_provider <- function(spark, table) {
+  description <- spark %>%
+    sdf_sql(paste("DESCRIBE TABLE EXTENDED", table)) %>%
+    collect()
+  tolower(description$data_type[description$col_name == "Provider"])
+}
+
+test_that("datasource tables in delta format take a wider append", {
+  spark <- def_spark()
+  pc <- def_pathling_context(spark)
+  database <- new_database(spark)
+  table <- paste0(database, ".Patient")
+  narrow <- write_patients("narrow", '{"resourceType":"Patient","id":"p1","gender":"male"}')
+  wide <- write_patients(
+    "wide",
+    '{"resourceType":"Patient","id":"p2","gender":"female","birthDate":"1990-01-01"}'
+  )
+
+  pc %>%
+    pathling_read_ndjson(narrow) %>%
+    ds_write_tables(schema = database, format = "delta")
+  # The first batch's fitted schema lacks the element the second carries.
+  expect_false("birthDate" %in% colnames(sdf_sql(spark, paste("SELECT * FROM", table))))
+  pc %>%
+    pathling_read_ndjson(wide) %>%
+    ds_write_tables(schema = database, save_mode = SaveMode$APPEND, format = "delta")
+
+  patients <- sdf_sql(spark, paste("SELECT * FROM", table))
+  expect_equal(table_provider(spark, table), "delta")
+  expect_true("birthDate" %in% colnames(patients))
+  expect_equal(sort(collect(patients)$id), c("p1", "p2"))
+})
+
+test_that("datasource tables in delta format take a second merge", {
+  spark <- def_spark()
+  pc <- def_pathling_context(spark)
+  database <- new_database(spark)
+  table <- paste0(database, ".Patient")
+  first <- write_patients("first", '{"resourceType":"Patient","id":"p1","gender":"male"}')
+  second <- write_patients("second", c(
+    '{"resourceType":"Patient","id":"p1","gender":"female"}',
+    '{"resourceType":"Patient","id":"p2","gender":"other","birthDate":"1990-01-01"}'
+  ))
+
+  pc %>%
+    pathling_read_ndjson(first) %>%
+    ds_write_tables(schema = database, save_mode = SaveMode$MERGE, format = "delta")
+  pc %>%
+    pathling_read_ndjson(second) %>%
+    ds_write_tables(schema = database, save_mode = SaveMode$MERGE, format = "delta")
+
+  patients <- sdf_sql(spark, paste("SELECT * FROM", table)) %>%
+    select(id, gender) %>%
+    arrange(id) %>%
+    collect()
+  expect_equal(table_provider(spark, table), "delta")
+  expect_equal(patients, tibble::tibble(id = c("p1", "p2"), gender = c("female", "other")))
+})
+
+test_that("datasource tables take a format without a schema", {
+  spark <- def_spark()
+  pc <- def_pathling_context(spark)
+  database <- new_database(spark)
+  patients <- write_patients("patients", '{"resourceType":"Patient","id":"p1","gender":"male"}')
+  catalog <- spark %>%
+    sparklyr::spark_session() %>%
+    sparklyr::invoke("catalog")
+  previous <- catalog %>% sparklyr::invoke("currentDatabase")
+  catalog %>% sparklyr::invoke("setCurrentDatabase", database)
+  on.exit(catalog %>% sparklyr::invoke("setCurrentDatabase", previous), add = TRUE)
+
+  pc %>%
+    pathling_read_ndjson(patients) %>%
+    ds_write_tables(format = "delta")
+
+  expect_equal(table_provider(spark, paste0(database, ".Patient")), "delta")
+})
+
+test_that("datasource tables take the default format when none is given", {
+  spark <- def_spark()
+  pc <- def_pathling_context(spark)
+  database <- new_database(spark)
+  table <- paste0(database, ".Patient")
+  patients <- write_patients("patients", '{"resourceType":"Patient","id":"p1","gender":"male"}')
+
+  pc %>%
+    pathling_read_ndjson(patients) %>%
+    ds_write_tables(schema = database)
+
+  default_format <- spark %>%
+    sparklyr::spark_session() %>%
+    sparklyr::invoke("conf") %>%
+    sparklyr::invoke("get", "spark.sql.sources.default")
+  expect_equal(table_provider(spark, table), tolower(default_format))
+  expect_equal(sparklyr::sdf_nrow(sdf_sql(spark, paste("SELECT * FROM", table))), 1)
+})
+
 previous_layout_refusal <- paste0(
   "The Patient data is stored in the layout written by earlier releases of Pathling"
 )

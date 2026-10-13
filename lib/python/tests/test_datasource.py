@@ -15,6 +15,7 @@
 # limitations under the License.
 #
 
+import json
 import os
 from tempfile import TemporaryDirectory
 from uuid import uuid4
@@ -350,6 +351,116 @@ def test_datasource_tables_schema(ndjson_test_data_dir, pathling_ctx):
     assert result.collect() == [
         ResultRow(71),
     ]
+
+
+def write_patients(directory: str, patients: list) -> str:
+    """
+    Writes the given Patient resources to an NDJSON file in a new directory, and returns the
+    directory's path.
+    """
+    os.makedirs(directory)
+    with open(os.path.join(directory, "Patient.ndjson"), "w") as file:
+        file.writelines(
+            json.dumps({"resourceType": "Patient", **patient}) + "\n"
+            for patient in patients
+        )
+    return directory
+
+
+def new_database(spark) -> str:
+    """Creates a database of its own for one test, and returns its name."""
+    database = "tables_" + uuid4().hex
+    spark.sql(f"CREATE DATABASE {database}")
+    return database
+
+
+def table_provider(spark, table: str) -> str:
+    """Returns the format the catalog records for a table, such as "delta" or "parquet"."""
+    rows = spark.sql(f"DESCRIBE TABLE EXTENDED {table}").collect()
+    return next(row.data_type for row in rows if row.col_name == "Provider").lower()
+
+
+def test_datasource_tables_delta_format_takes_wider_append(func_temp_dir, pathling_ctx):
+    spark = pathling_ctx.spark
+    database = new_database(spark)
+    narrow = write_patients(
+        os.path.join(func_temp_dir, "narrow"), [{"id": "p1", "gender": "male"}]
+    )
+    wide = write_patients(
+        os.path.join(func_temp_dir, "wide"),
+        [{"id": "p2", "gender": "female", "birthDate": "1990-01-01"}],
+    )
+
+    pathling_ctx.read.ndjson(narrow).write.tables(schema=database, format="delta")
+    # The first batch's fitted schema lacks the element the second carries.
+    assert "birthDate" not in spark.table(f"{database}.Patient").columns
+    pathling_ctx.read.ndjson(wide).write.tables(
+        schema=database, save_mode="append", format="delta"
+    )
+
+    patients = spark.table(f"{database}.Patient")
+    assert table_provider(spark, f"{database}.Patient") == "delta"
+    assert "birthDate" in patients.columns
+    assert sorted(row.id for row in patients.collect()) == ["p1", "p2"]
+
+
+def test_datasource_tables_delta_format_takes_second_merge(func_temp_dir, pathling_ctx):
+    spark = pathling_ctx.spark
+    database = new_database(spark)
+    first = write_patients(
+        os.path.join(func_temp_dir, "first"), [{"id": "p1", "gender": "male"}]
+    )
+    second = write_patients(
+        os.path.join(func_temp_dir, "second"),
+        [
+            {"id": "p1", "gender": "female"},
+            {"id": "p2", "gender": "other", "birthDate": "1990-01-01"},
+        ],
+    )
+
+    pathling_ctx.read.ndjson(first).write.tables(
+        schema=database, save_mode="merge", format="delta"
+    )
+    pathling_ctx.read.ndjson(second).write.tables(
+        schema=database, save_mode="merge", format="delta"
+    )
+
+    patients = spark.table(f"{database}.Patient")
+    assert table_provider(spark, f"{database}.Patient") == "delta"
+    assert sorted((row.id, row.gender) for row in patients.collect()) == [
+        ("p1", "female"),
+        ("p2", "other"),
+    ]
+
+
+def test_datasource_tables_format_without_schema(func_temp_dir, pathling_ctx):
+    spark = pathling_ctx.spark
+    database = new_database(spark)
+    patients = write_patients(
+        os.path.join(func_temp_dir, "patients"), [{"id": "p1", "gender": "male"}]
+    )
+    previous = spark.catalog.currentDatabase()
+    spark.catalog.setCurrentDatabase(database)
+    try:
+        pathling_ctx.read.ndjson(patients).write.tables(format="delta")
+    finally:
+        spark.catalog.setCurrentDatabase(previous)
+
+    assert table_provider(spark, f"{database}.Patient") == "delta"
+
+
+def test_datasource_tables_default_format(func_temp_dir, pathling_ctx):
+    spark = pathling_ctx.spark
+    database = new_database(spark)
+    patients = write_patients(
+        os.path.join(func_temp_dir, "patients"), [{"id": "p1", "gender": "male"}]
+    )
+
+    pathling_ctx.read.ndjson(patients).write.tables(schema=database)
+
+    default_format = spark.conf.get("spark.sql.sources.default").lower()
+    assert table_provider(spark, f"{database}.Patient") == default_format
+    assert spark.table(f"{database}.Patient").count() == 1
 
 
 def test_datasource_bulk_with_temp_dir(pathling_ctx, bulk_server):

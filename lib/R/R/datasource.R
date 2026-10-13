@@ -501,9 +501,14 @@ ds_write_delta <- function(ds, path, save_mode = SaveMode$OVERWRITE) {
 #' Writes the data from a data source to a set of tables in the Spark catalog.
 #'
 #' @param ds The DataSource object.
-#' @param schema The name of the schema to write the tables to.
+#' @param schema The name of the schema to write the tables to. If omitted, the current database
+#'      of the Spark session is used.
 #' @param save_mode The save mode to use when writing the data - "overwrite" will overwrite any
 #'      existing data, "merge" will merge the new data with the existing data based on resource ID.
+#' @param format The table format to create tables in, such as "delta" or "parquet". If omitted,
+#'      Spark's default (the \code{spark.sql.sources.default} setting) is used. Use "delta" for
+#'      tables that will later be appended to or merged into: only a Delta table can be widened to
+#'      admit data whose schema differs from its own, and only a Delta table can be merged into.
 #'
 #' @return A list with element \code{file_infos}, containing a list of files created.
 #'   Each file has \code{fhir_resource_type} and \code{absolute_url}.
@@ -527,8 +532,9 @@ ds_write_delta <- function(ds, path, save_mode = SaveMode$OVERWRITE) {
 #' pc <- pathling_connect(sc)
 #' data_source <- pc %>% pathling_read_ndjson(pathling_examples("ndjson"))
 #'
-#' # Write the data to a set of Spark tables in the 'default' database.
-#' data_source %>% ds_write_tables("default", save_mode = SaveMode$MERGE)
+#' # Write the data to a set of Delta tables in the 'default' database, which later writes can
+#' # merge into.
+#' data_source %>% ds_write_tables("default", save_mode = SaveMode$MERGE, format = "delta")
 #'
 #' pathling_disconnect(pc)
 #' unlink(temp_dir_path, recursive = TRUE)
@@ -536,8 +542,18 @@ ds_write_delta <- function(ds, path, save_mode = SaveMode$OVERWRITE) {
 #' @family data sink functions
 #'
 #' @export
-ds_write_tables <- function(ds, schema = NULL, save_mode = SaveMode$OVERWRITE) {
-  if (!is.null(schema)) {
+ds_write_tables <- function(ds, schema = NULL, save_mode = SaveMode$OVERWRITE, format = NULL) {
+  if (!is.null(format)) {
+    # The Java method that takes a format also requires a schema, so the current database stands
+    # in for an omitted one, which is where the tables would go anyway.
+    if (is.null(schema)) {
+      schema <- sparklyr::spark_connection(ds) %>%
+        sparklyr::spark_session() %>%
+        invoke("catalog") %>%
+        invoke("currentDatabase")
+    }
+    invoke_datasink(ds, "tables", save_mode, schema, format)
+  } else if (!is.null(schema)) {
     invoke_datasink(ds, "tables", save_mode, schema)
   } else {
     invoke_datasink(ds, "tables", save_mode)
