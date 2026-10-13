@@ -3844,3 +3844,13 @@ revise the storage layout page's statement that the option's absence makes true.
 _Rejected_: documenting them now as forthcoming, which no reader sees before the release
 (decision 117) and which would be rewritten anyway.
 
+## 122. Java examples that do not compile are left to their own issue
+
+Raised by the Phase 14 documentation work (T129); owner decision (2026-10-13).
+
+Java and Kotlin snippets in `io/index.md`, `running-queries.md` and `cloud-storage.md` assign
+`pc.read().ndjson(…)` and `.bundles(…)` to `NdjsonSource` and `BundlesSource`, where the builder
+returns `QueryableDataSource`. They predate this programme and are equally broken on `main`.
+
+_Decision_: not fixed in M4; raised as #2825.
+
