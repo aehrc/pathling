@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.r4.model.Coding;
@@ -81,12 +82,13 @@ public final class CodingDecoder {
   private static final Map<List<String>, CodingDecoder> BY_FIELD_NAMES = new ConcurrentHashMap<>();
 
   /**
-   * The schema each thread last decoded and its decoder. A thread runs one task at a time, so the
-   * slot is not contended, and tasks reading different columns on other threads do not evict it.
+   * The schema last decoded and its decoder, shared by every thread. Rows from one column arrive in
+   * runs, so this usually answers without a lookup; tasks decoding columns of other schemas at the
+   * same time replace it, which costs them a lookup by field names and nothing else.
    */
   @Nonnull
-  private static final ThreadLocal<Entry<StructType, CodingDecoder>> LAST_USED =
-      ThreadLocal.withInitial(() -> new SimpleImmutableEntry<>(CodingSchema.DATA_TYPE, CANONICAL));
+  private static final AtomicReference<Entry<StructType, CodingDecoder>> LAST_USED =
+      new AtomicReference<>(new SimpleImmutableEntry<>(CodingSchema.DATA_TYPE, CANONICAL));
 
   private final int systemIndex;
 

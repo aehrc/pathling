@@ -3927,3 +3927,17 @@ it still refuses a table holding no file Spark named. Tests:
 `FileSinkSaveModeTest.appendBesideAHandAssembledTableKeepsEveryRow`, both failing before the fix
 with the `PersistenceError` (`r1fix-red.log`), passing after (`r1fix-green.log`).
 
+## 128. The Coding decoder's last-used cache is shared rather than per thread
+
+Raised by SonarCloud on the M4 pull request (rule S5164, a static `ThreadLocal` never removed),
+which failed the quality gate's reliability rating; owner decision (2026-10-13).
+
+`CodingDecoder` kept the decoder each thread last used in a static `ThreadLocal`, so rows from
+one column skip hashing their schema. The cached values are small and immutable and there is no
+point at which to remove them, but the rule fails the gate.
+
+_Decision_: one last-used entry shared by every thread, in an `AtomicReference`, keeping the
+identity fast path. Concurrent tasks decoding Coding columns of different schemas replace each
+other's entry and fall back to the existing lookup by field names. Rejected: suppressing the rule
+in the code, for which the repository has no precedent, or in SonarCloud's interface.
+
