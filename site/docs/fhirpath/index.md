@@ -113,27 +113,27 @@ for detailed semantics.
 
 #### Existence functions
 
-| Function            | Description                                                                                              |
-| ------------------- | -------------------------------------------------------------------------------------------------------- |
-| `exists(criteria?)` | Returns `true` if the collection has any elements, optionally filtered by criteria                       |
-| `empty()`           | Returns `true` if the collection is empty                                                                |
-| `count()`           | Returns the integer count of items in the collection (0 if empty)                                        |
-| `all(criteria)`     | Returns `true` if criteria evaluates to `true` for every element (`true` for an empty collection)        |
-| `allTrue()`         | Returns `true` if all Boolean items are `true` (`true` for an empty collection)                          |
-| `anyTrue()`         | Returns `true` if any Boolean item is `true` (`false` for an empty collection)                           |
-| `allFalse()`        | Returns `true` if all Boolean items are `false` (`true` for an empty collection)                         |
-| `anyFalse()`        | Returns `true` if any Boolean item is `false` (`false` for an empty collection)                          |
-| `isDistinct()`      | Returns `true` if all items in the collection are distinct, using FHIRPath equality (`=`)                |
+| Function            | Description                                                                                       |
+| ------------------- | ------------------------------------------------------------------------------------------------- |
+| `exists(criteria?)` | Returns `true` if the collection has any elements, optionally filtered by criteria                |
+| `empty()`           | Returns `true` if the collection is empty                                                         |
+| `count()`           | Returns the integer count of items in the collection (0 if empty)                                 |
+| `all(criteria)`     | Returns `true` if criteria evaluates to `true` for every element (`true` for an empty collection) |
+| `allTrue()`         | Returns `true` if all Boolean items are `true` (`true` for an empty collection)                   |
+| `anyTrue()`         | Returns `true` if any Boolean item is `true` (`false` for an empty collection)                    |
+| `allFalse()`        | Returns `true` if all Boolean items are `false` (`true` for an empty collection)                  |
+| `anyFalse()`        | Returns `true` if any Boolean item is `false` (`false` for an empty collection)                   |
+| `isDistinct()`      | Returns `true` if all items in the collection are distinct, using FHIRPath equality (`=`)         |
 
 #### Filtering and projection functions
 
-| Function                | Description                                                       |
-| ----------------------- | ----------------------------------------------------------------- |
-| `where(criteria)`       | Filter collection by criteria expression                          |
-| `select(projection)`    | Evaluate projection for each element, flattening results          |
-| `ofType(type)`          | Filter collection by type                                         |
-| `repeat(projection)`    | Recursively evaluate projection, deduplicating results            |
-| `repeatAll(projection)` | Recursively evaluate projection without deduplication (see below) |
+| Function                | Description                                                                                  |
+| ----------------------- | -------------------------------------------------------------------------------------------- |
+| `where(criteria)`       | Filter collection by criteria expression                                                     |
+| `select(projection)`    | Evaluate projection for each element, flattening results                                     |
+| `ofType(type)`          | Filter collection by type                                                                    |
+| `repeat(projection)`    | Recursively evaluate projection, deduplicating results                                       |
+| `repeatAll(projection)` | Recursively evaluate projection without deduplication (see below)                            |
 | `distinct()`            | Returns only the unique items, using FHIRPath equality (`=`); element order is not preserved |
 
 #### Subsetting functions
@@ -214,14 +214,20 @@ The following FHIRPath features are **not currently supported**:
 
 #### Recursive traversal depth
 
-Both `repeat` and `repeatAll` use static type analysis to determine how to
-handle the recursion. When the projection expression produces the same FHIR
-type at each level (e.g. navigating `item` within a Questionnaire), the
-traversal is bounded by a configurable maximum depth. The default maximum depth
-is 10.
+Both `repeat` and `repeatAll` stop when a level of the traversal produces no
+new items. The maximum depth guards against recursion that would never end on
+its own: a projection that yields a value of the same SQL type as the level it
+was applied to, such as `name.repeatAll(first())`. Each such same-type level
+counts towards a configurable maximum depth, which defaults to 10. When the
+maximum is reached, `repeatAll` and `repeat` raise an error, except when
+traversing extensions, where they stop and return the results collected up to
+that point.
 
-For Extension traversal, depth exhaustion silently stops and returns results
-collected up to that point. For other types, depth exhaustion raises an error.
+Nested structures in the data, such as the `item` elements of a Questionnaire
+or extensions nested within extensions, are stored with a different type at
+each level, because each level contains the type of the level beneath it. Their
+traversal therefore does not count towards the maximum depth, and stops where
+the data does: every level the data carries is returned.
 
 The maximum depth can be configured:
 

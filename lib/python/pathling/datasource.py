@@ -22,6 +22,7 @@ from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Sequence
 from py4j.java_collections import SetConverter
 from py4j.java_gateway import JavaObject
 from pyspark.sql import DataFrame
+from pyspark.sql.types import StructType
 
 from pathling import PathlingContext
 from pathling.core import SparkConversionsMixin, StringToStringSetMapper
@@ -124,6 +125,16 @@ class DataSources(SparkConversionsMixin):
     def _wrap_ds(self, jds: JavaObject) -> DataSource:
         return DataSource(jds, self._pc)
 
+    def _stored_sources(self, layout_detection: bool) -> JavaObject:
+        """
+        Returns the Java builder for a source reading stored data, with layout detection enabled
+        or disabled for the sources it creates.
+
+        :param layout_detection: Whether the sources classify the layout of the data they read.
+        :return: The Java data source builder.
+        """
+        return self._jdataSources.withLayoutDetection(layout_detection)
+
     def ndjson(
         self,
         path,
@@ -191,42 +202,97 @@ class DataSources(SparkConversionsMixin):
             jbuilder.dataset(resource_code, resource_data._jdf)
         return self._wrap_ds(jbuilder)
 
-    def parquet(self, path: str) -> DataSource:
+    def parquet(
+        self,
+        path: str,
+        schemas: Optional[Dict[str, StructType]] = None,
+        layout_detection: bool = True,
+    ) -> DataSource:
         """
         Creates a data source from a directory containing Parquet tables. Each table must be named
         according to the name of the resource type that it stores.
 
+        The files of a resource type may carry differing schemas, and are read as one dataset whose
+        schema is the union of theirs. Merging the schemas reads the footer of every file, so the
+        cost of it can be avoided by supplying the schema to read a resource type with. A supplied
+        schema is used as given, so it must cover the union of the type's files: columns it omits
+        are not read, and it can lose whole rows, not just columns. A view unnesting a repeating
+        element returns none of a file's rows for that element when the schema omits every field the
+        file carries inside it. The workable pattern is to merge once and persist the result, or to
+        take the writer's schema, and supply that.
+
+        The layout of each resource type's data is classified as it is read, and data in the layout
+        written by earlier releases of Pathling is refused with a message naming the remedy, which
+        is to re-import it from its source.
+
         :param path: The URI of the directory containing the Parquet tables.
+        :param schemas: An optional dictionary of the schema to read each resource type with, keyed
+               by resource type code. Resource types it does not name are merged as usual.
+        :param layout_detection: Whether to classify the layout of each resource type's data as
+               it is read, refusing data in the layout written by earlier releases of Pathling.
+               Defaults to True. Set it to False only for conforming data that the detector
+               misclassifies; it applies to this data source alone.
         :return: A DataSource object that can be used to run queries against the data.
         """
-        return self._wrap_ds(self._jdataSources.parquet(path))
+        if schemas:
+            jvm = self.spark._jvm
+            jschemas = jvm.java.util.HashMap()
+            for resource_type, schema in schemas.items():
+                jschemas.put(
+                    resource_type,
+                    jvm.org.apache.spark.sql.types.DataType.fromJson(schema.json()),
+                )
+            return self._wrap_ds(
+                self._stored_sources(layout_detection).parquetWithSchemas(
+                    path, jschemas
+                )
+            )
+        return self._wrap_ds(self._stored_sources(layout_detection).parquet(path))
 
-    def delta(self, path: str) -> DataSource:
+    def delta(self, path: str, layout_detection: bool = True) -> DataSource:
         """
         Creates a data source from a directory containing Delta tables, as used by Pathling Server
         for persistence. Each table must be named according to the name of the resource type that
         it stores.
 
+        The layout of each table is classified as it is read, and a table in the layout written by
+        earlier releases of Pathling is refused with a message naming the remedy, which is to
+        re-import it from its source.
+
         :param path: The URI of the directory containing the Delta tables.
+        :param layout_detection: Whether to classify the layout of each resource type's data as
+               it is read, refusing data in the layout written by earlier releases of Pathling.
+               Defaults to True. Set it to False only for conforming data that the detector
+               misclassifies; it applies to this data source alone.
         :return: A DataSource object that can be used to run queries against the data.
         """
-        return self._wrap_ds(self._jdataSources.delta(path))
+        return self._wrap_ds(self._stored_sources(layout_detection).delta(path))
 
     def tables(
         self,
         schema: Optional[str] = None,
+        layout_detection: bool = True,
     ) -> DataSource:
         """
         Creates a data source from a set of Spark tables, where the table names are the resource
         type codes.
 
+        The layout of each table is classified as it is read, and a table in the layout written by
+        earlier releases of Pathling is refused with a message naming the remedy, which is to
+        re-import it from its source.
+
         :param schema: An optional schema name that should be used to qualify the table names.
+        :param layout_detection: Whether to classify the layout of each resource type's data as
+               it is read, refusing data in the layout written by earlier releases of Pathling.
+               Defaults to True. Set it to False only for conforming data that the detector
+               misclassifies; it applies to this data source alone.
         :return: A DataSource object that can be used to run queries against the data.
         """
+        sources = self._stored_sources(layout_detection)
         if schema:
-            return self._wrap_ds(self._jdataSources.tables(schema))
+            return self._wrap_ds(sources.tables(schema))
         else:
-            return self._wrap_ds(self._jdataSources.tables())
+            return self._wrap_ds(sources.tables())
 
     def bulk(
         self,

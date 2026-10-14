@@ -568,8 +568,12 @@ after the schema-binding decision and belong to this section.
   merged type. It MUST NOT reconcile by casting, because a struct cast of equal
   arity reorders fields positionally and silently compares the wrong fields.
 - **FR-057**: Struct field order MUST be canonical wherever a struct type is
-  produced: schema derivation, the merge of two element types, the merge of
-  divergent file schemas, and the reconciliation projection. Canonical order is
+  produced by Pathling: schema derivation, the merge of two element types, the
+  merge Pathling performs when it widens a target, and the reconciliation
+  projection. A schema obtained from storage — Spark's merged read schema, an
+  evolved Delta table's schema, or a schema the caller supplies — may carry its
+  fields in any order: a non-canonical order is one more divergent shape, and
+  FR-056 reconciles it by name like any other (decision 85). Canonical order is
   definition order, restricted to the fields present, with the layout's own
   fields — the annotations, and the metadata group beside a primitive — at fixed
   positions relative to the element they accompany. Those fields have no
@@ -603,12 +607,20 @@ after the schema-binding decision and belong to this section.
 - **FR-041**: Reading a dataset whose files carry differing schemas MUST return
   the union of their elements, with no resource lost and cardinality preserved.
 - **FR-042**: Appending a batch whose schema differs from the table's MUST
-  succeed and widen the table schema.
+  succeed and widen the table schema, through every sink and every save mode
+  that writes into an existing table. A non-Delta catalog table, whose stored
+  schema cannot be widened at a nested level, MUST instead refuse a batch whose
+  schema differs from the table's in any way, before anything is written, with
+  a message naming the remedy (decision 86).
 
 ### Compatibility
 
 - **FR-043**: `encode`, `encodeBundle` and `decode` MUST be preserved in Java,
   Python and R.
+  *(Read by decision 87 as preserving the forms taking a resource name, which
+  Python and R expose. The Java overloads returning a dataset typed by a HAPI
+  class are removed, and encoding a streaming dataset fails until the dense
+  schema restores it in M6.)*
 - **FR-044**: The nesting, extension and open-type options MUST keep their
   current meaning for the dense schema and MUST NOT apply to the pruned one.
   *(Staged by decision 69. The options remain in the public API throughout, and

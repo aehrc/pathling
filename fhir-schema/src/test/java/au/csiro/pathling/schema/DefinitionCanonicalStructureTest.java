@@ -293,4 +293,42 @@ class DefinitionCanonicalStructureTest {
     // The merge is commutative, so the other order gives the same result.
     assertEquals(merged, StructureMerge.merge(right, left, patient()));
   }
+
+  @Test
+  void mergesTheVariantsOfAnOpenChoiceInTheOrderTheSpecificationListsThem() {
+    // An open choice declares no order of its own, and the order the definition library reports
+    // for it differs between runs, so the merge must take it from the specification's list of
+    // open types: string before Address before Coding, at the top level and within a nested
+    // extension alike.
+    final StructType left =
+        struct(
+            field(
+                "extension",
+                array(
+                    struct(
+                        field("valueCoding", struct(field("code", DataTypes.StringType))),
+                        field(
+                            "extension",
+                            array(
+                                struct(
+                                    field(
+                                        "valueCoding", struct(field("code", DataTypes.StringType))),
+                                    field("valueString", DataTypes.StringType))))))));
+    final StructType right =
+        struct(
+            field(
+                "extension",
+                array(
+                    struct(
+                        field("valueAddress", struct(field("city", DataTypes.StringType))),
+                        field("valueString", DataTypes.StringType)))));
+
+    final StructType merged = StructureMerge.merge(left, right, patient());
+    assertEquals(
+        List.of("extension", "valueString", "valueAddress", "valueCoding"),
+        names(structAt(merged, "extension")));
+    assertEquals(
+        List.of("valueString", "valueCoding"), names(structAt(merged, "extension", "extension")));
+    assertEquals(merged, StructureMerge.merge(right, left, patient()));
+  }
 }

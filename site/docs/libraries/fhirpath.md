@@ -433,11 +433,21 @@ Results in:
 | 8ee183e2-b3c0-4151-be94-b945d6aa8c6d | male   | 1967       |
 | 93ee0b14-4f22-4c1a-93e2-b4e5c0d7f0d6 | male   | 1995       |
 
+## Absent elements
+
+A column created from a FHIRPath expression does not depend on any particular dataset. It can be applied to any dataset of the resource type, whatever columns its [schema](./io/schema.md#the-schema-is-fitted-to-the-data) carries, and one column applied to two datasets that hold the same resources under schemas of different widths gives the same results, with the same type.
+
+Where an element that an expression refers to is absent from the schema of a dataset, it evaluates as empty. If the element is primitive, the column has the type that the FHIR definitions give the element, so `birthDate` gives a string column and `name.given` an array of strings, whether or not the data carries them. Such a column can be written to Parquet, and combined with the same column computed over other datasets.
+
+If the result of an expression is a complex element, such as `maritalStatus` or `name`, and the dataset does not carry it, the column has Spark's null type (`void`), or an array of that type for a repeating element. A column of this type cannot be written to Parquet or ORC, and is left out, rather than written as null, when written as JSON. To write such a result, select the primitive elements you need, such as `maritalStatus.coding.code`. The columns of a SQL on FHIR view are always primitive, so views are not affected.
+
 ## Single resource evaluation
 
 FHIRPath expressions can also be evaluated against a single FHIR resource provided as a JSON string, without requiring the resource to be part of a DataFrame. This is useful for ad-hoc evaluation, testing expressions, or working with individual resources.
 
 The method returns a list of typed results along with the inferred return type of the expression.
+
+A value of a complex type, such as a `HumanName`, a `Quantity` or an `Extension`, is returned as a string of FHIR JSON. It holds the elements of the value as they are stored, so a quantity keeps its extensions, and each decimal is a JSON number with the text it is stored with.
 
 <!--suppress CheckEmptyScriptTag -->
 <Tabs>

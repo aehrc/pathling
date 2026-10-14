@@ -29,6 +29,26 @@ invoke_datasource <- function(pc, name, ...) {
     j_invoke(name, ...)
 }
 
+#' Invoke a data source that reads stored data
+#'
+#' Invokes a method of the Java data source builder after setting whether the sources it creates
+#' classify the layout of the data they read.
+#'
+#' @param pc The PathlingContext object.
+#' @param layout_detection Whether the source classifies the layout of the data it reads.
+#' @param name The name of the builder method.
+#' @param ... The arguments of the builder method.
+#' @return A jobj referring to the data source.
+#'
+#' @importFrom sparklyr j_invoke
+#' @noRd
+invoke_stored_datasource <- function(pc, layout_detection, name, ...) {
+  pc %>%
+    data_sources() %>%
+    j_invoke("withLayoutDetection", as.logical(layout_detection)) %>%
+    j_invoke(name, ...)
+}
+
 to_java_list <- function(sc, elements) {
   list <- j_invoke_new(sc, "java.util.ArrayList")
   for (e in elements) {
@@ -161,8 +181,29 @@ pathling_read_datasets <- function(pc, resources) {
 #' \code{pathling_read_parquet()} creates a data source from a directory containing Parquet tables.
 #' Each table must be named according to the name of the resource type that it stores.
 #'
+#' The files of a resource type may carry differing schemas, and are read as one dataset whose
+#' schema is the union of theirs. Merging the schemas reads the footer of every file, so the cost of
+#' it can be avoided by supplying the schema to read a resource type with. A supplied schema is used
+#' as given, so it must cover the union of the type's files: columns it omits are not read, and it
+#' can lose whole rows, not just columns. A view unnesting a repeating element returns none of a
+#' file's rows for that element when the schema omits every field the file carries inside it. The
+#' workable pattern is to merge once and persist the result, or to take the writer's schema, and
+#' supply that.
+#'
+#' The layout of each resource type's data is classified as it is read, and data in the layout
+#' written by earlier releases of Pathling is refused with a message naming the remedy, which is to
+#' re-import it from its source.
+#'
 #' @param pc The PathlingContext object.
 #' @param path The URI of the directory containing the Parquet tables.
+#' @param schemas An optional named list of the schema to read each resource type with, keyed by
+#'   resource type code. Each schema is either a Spark schema in its JSON representation, or a Java
+#'   \code{StructType} object. At most ten schemas can be supplied. Resource types the list does
+#'   not name are merged as usual.
+#' @param layout_detection Whether to classify the layout of each resource type's data as it is
+#'   read, refusing data in the layout written by earlier releases of Pathling. Defaults to
+#'   \code{TRUE}. Set it to \code{FALSE} only for conforming data that the detector misclassifies;
+#'   it applies to this data source alone.
 #' @return A DataSource object that can be used to run queries against the data.
 #'
 #' @seealso \href{https://pathling.csiro.au/docs/libraries/io#parquet}{Pathling documentation - Reading Parquet}
@@ -177,8 +218,54 @@ pathling_read_datasets <- function(pc, resources) {
 #'   ds_read("Patient") %>%
 #'   sparklyr::sdf_nrow()
 #' }
-pathling_read_parquet <- function(pc, path) {
-  pc %>% invoke_datasource("parquet", as.character(path))
+pathling_read_parquet <- function(pc, path, schemas = NULL, layout_detection = TRUE) {
+  if (is.null(schemas) || length(schemas) == 0) {
+    return(pc %>% invoke_stored_datasource(layout_detection, "parquet", as.character(path)))
+  }
+  sc <- sparklyr::spark_connection(pc)
+  pc %>% invoke_stored_datasource(
+    layout_detection, "parquetWithSchemas", as.character(path), to_java_schema_map(sc, schemas)
+  )
+}
+
+#' Build a Java map of resource types to schemas
+#'
+#' Converts a named list of schemas into a \code{java.util.Map} from resource type codes to
+#' \code{StructType} objects. Each schema is either a Spark schema in its JSON representation, or a
+#' Java \code{StructType} object. As \code{java_map_of} records, the map is built by a single call
+#' to \code{Map.of}, because sparklyr can neither pass an R map to a Java method nor build a Java
+#' map up entry by entry, so it can carry at most ten entries.
+#'
+#' @param sc The Spark connection.
+#' @param schemas A named list of schemas.
+#'
+#' @return A jobj referring to a \code{java.util.Map}.
+#'
+#' @importFrom sparklyr j_invoke_static
+#' @noRd
+to_java_schema_map <- function(sc, schemas) {
+  stopifnot(!is.null(names(schemas)), all(names(schemas) != ""))
+  if (length(schemas) > 10) {
+    stop(
+      "At most 10 schemas can be supplied from R. Supply the remainder through the Java or ",
+      "Python API, or leave them to be merged."
+    )
+  }
+  resource_types <- names(schemas)
+  java_schemas <- lapply(resource_types, function(resource_type) {
+    schema <- schemas[[resource_type]]
+    if (is.character(schema)) {
+      j_invoke_static(sc, "org.apache.spark.sql.types.DataType", "fromJson", schema)
+    } else {
+      schema
+    }
+  })
+  # Interleave the resource types and schemas into the key, value, key, value order Map.of takes.
+  interleaved <- unlist(
+    lapply(seq_along(resource_types), function(i) list(resource_types[[i]], java_schemas[[i]])),
+    recursive = FALSE
+  )
+  do.call(j_invoke_static, c(list(sc, "java.util.Map", "of"), interleaved))
 }
 
 #' Create a data source from Delta tables
@@ -187,8 +274,16 @@ pathling_read_parquet <- function(pc, path) {
 #' \code{pathling_read_delta()} creates a data source from a directory containing Delta tables.
 #' Each table must be named according to the name of the resource type that it stores.
 #'
+#' The layout of each resource type's data is classified as it is read, and data in the layout
+#' written by earlier releases of Pathling is refused with a message naming the remedy, which is to
+#' re-import it from its source.
+#'
 #' @param pc The PathlingContext object.
 #' @param path The URI of the directory containing the Delta tables.
+#' @param layout_detection Whether to classify the layout of each resource type's data as it is
+#'   read, refusing data in the layout written by earlier releases of Pathling. Defaults to
+#'   \code{TRUE}. Set it to \code{FALSE} only for conforming data that the detector misclassifies;
+#'   it applies to this data source alone.
 #' @return A DataSource object that can be used to run queries against the data.
 #'
 #' @seealso \href{https://pathling.csiro.au/docs/libraries/io#delta-lake}{Pathling documentation - Reading Delta}
@@ -203,8 +298,8 @@ pathling_read_parquet <- function(pc, path) {
 #'   ds_read("Patient") %>%
 #'   sparklyr::sdf_nrow()
 #' }
-pathling_read_delta <- function(pc, path) {
-  pc %>% invoke_datasource("delta", as.character(path))
+pathling_read_delta <- function(pc, path, layout_detection = TRUE) {
+  pc %>% invoke_stored_datasource(layout_detection, "delta", as.character(path))
 }
 
 #' Create a data source from managed tables
@@ -212,8 +307,16 @@ pathling_read_delta <- function(pc, path) {
 #' \code{pathling_read_tables()} creates a data source from a set of Spark tables,
 #' where the table names are the resource type codes.
 #'
+#' The layout of each resource type's data is classified as it is read, and data in the layout
+#' written by earlier releases of Pathling is refused with a message naming the remedy, which is to
+#' re-import it from its source.
+#'
 #' @param pc The PathlingContext object.
 #' @param schema An optional schema name that should be used to qualify the table names.
+#' @param layout_detection Whether to classify the layout of each resource type's data as it is
+#'   read, refusing data in the layout written by earlier releases of Pathling. Defaults to
+#'   \code{TRUE}. Set it to \code{FALSE} only for conforming data that the detector misclassifies;
+#'   it applies to this data source alone.
 #' @return A DataSource object that can be used to run queries against the data.
 #'
 #' @seealso \href{https://pathling.csiro.au/docs/libraries/io#managed-tables}{Pathling documentation - Reading managed tables}
@@ -228,11 +331,11 @@ pathling_read_delta <- function(pc, path) {
 #'   ds_read("Patient") %>%
 #'   sparklyr::sdf_nrow()
 #' }
-pathling_read_tables <- function(pc, schema = NULL) {
+pathling_read_tables <- function(pc, schema = NULL, layout_detection = TRUE) {
   if (!is.null(schema)) {
-    pc %>% invoke_datasource("tables", as.character(schema))
+    pc %>% invoke_stored_datasource(layout_detection, "tables", as.character(schema))
   } else {
-    pc %>% invoke_datasource("tables")
+    pc %>% invoke_stored_datasource(layout_detection, "tables")
   }
 }
 
@@ -299,8 +402,9 @@ invoke_datasink <- function(ds, name, save_mode = NULL, ...) {
 
 #' Write FHIR data to NDJSON files
 #'
-#' Writes the data from a data source to a directory of NDJSON files. The files will be named using
-#' the resource type and the ".ndjson" extension.
+#' Writes the data from a data source to a directory of NDJSON files. Each resource type is written
+#' to one or more files named with the resource type, a partition number and an identifier of the
+#' write, for example "Patient.00000-<write id>.ndjson".
 #'
 #' @param ds The DataSource object.
 #' @param path The URI of the directory to write the files to.
@@ -331,7 +435,9 @@ ds_write_ndjson <- function(ds, path, save_mode = SaveMode$ERROR, file_name_mapp
 
 #' Write FHIR data to Parquet files
 #'
-#' Writes the data from a data source to a directory of Parquet files.
+#' Writes the data from a data source to a directory of Parquet files. Each resource type is written
+#' to one or more files named with the resource type, a partition number and an identifier of the
+#' write, for example "Patient.00000-<write id>.parquet".
 #'
 #' @param ds The DataSource object.
 #' @param path The URI of the directory to write the files to.
@@ -395,9 +501,14 @@ ds_write_delta <- function(ds, path, save_mode = SaveMode$OVERWRITE) {
 #' Writes the data from a data source to a set of tables in the Spark catalog.
 #'
 #' @param ds The DataSource object.
-#' @param schema The name of the schema to write the tables to.
+#' @param schema The name of the schema to write the tables to. If omitted, the current database
+#'      of the Spark session is used.
 #' @param save_mode The save mode to use when writing the data - "overwrite" will overwrite any
 #'      existing data, "merge" will merge the new data with the existing data based on resource ID.
+#' @param format The table format to create tables in, such as "delta" or "parquet". If omitted,
+#'      Spark's default (the \code{spark.sql.sources.default} setting) is used. Use "delta" for
+#'      tables that will later be appended to or merged into: only a Delta table can be widened to
+#'      admit data whose schema differs from its own, and only a Delta table can be merged into.
 #'
 #' @return A list with element \code{file_infos}, containing a list of files created.
 #'   Each file has \code{fhir_resource_type} and \code{absolute_url}.
@@ -421,8 +532,9 @@ ds_write_delta <- function(ds, path, save_mode = SaveMode$OVERWRITE) {
 #' pc <- pathling_connect(sc)
 #' data_source <- pc %>% pathling_read_ndjson(pathling_examples("ndjson"))
 #'
-#' # Write the data to a set of Spark tables in the 'default' database.
-#' data_source %>% ds_write_tables("default", save_mode = SaveMode$MERGE)
+#' # Write the data to a set of Delta tables in the 'default' database, which later writes can
+#' # merge into.
+#' data_source %>% ds_write_tables("default", save_mode = SaveMode$MERGE, format = "delta")
 #'
 #' pathling_disconnect(pc)
 #' unlink(temp_dir_path, recursive = TRUE)
@@ -430,8 +542,18 @@ ds_write_delta <- function(ds, path, save_mode = SaveMode$OVERWRITE) {
 #' @family data sink functions
 #'
 #' @export
-ds_write_tables <- function(ds, schema = NULL, save_mode = SaveMode$OVERWRITE) {
-  if (!is.null(schema)) {
+ds_write_tables <- function(ds, schema = NULL, save_mode = SaveMode$OVERWRITE, format = NULL) {
+  if (!is.null(format)) {
+    # The Java method that takes a format also requires a schema, so the current database stands
+    # in for an omitted one, which is where the tables would go anyway.
+    if (is.null(schema)) {
+      schema <- sparklyr::spark_connection(ds) %>%
+        sparklyr::spark_session() %>%
+        invoke("catalog") %>%
+        invoke("currentDatabase")
+    }
+    invoke_datasink(ds, "tables", save_mode, schema, format)
+  } else if (!is.null(schema)) {
     invoke_datasink(ds, "tables", save_mode, schema)
   } else {
     invoke_datasink(ds, "tables", save_mode)

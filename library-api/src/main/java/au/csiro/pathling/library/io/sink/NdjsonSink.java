@@ -19,16 +19,21 @@ package au.csiro.pathling.library.io.sink;
 
 import static au.csiro.pathling.library.io.FileSystemPersistence.safelyJoinPaths;
 
+import au.csiro.pathling.definition.fhir.FhirDefinitionContext;
+import au.csiro.pathling.io.FhirWriter;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.PathlingContext;
-import au.csiro.pathling.library.io.FileSystemPersistence;
+import au.csiro.pathling.library.io.PersistenceError;
 import au.csiro.pathling.library.io.SaveMode;
 import jakarta.annotation.Nonnull;
 import java.util.ArrayList;
-import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.UnaryOperator;
+import org.apache.hadoop.fs.Path;
 import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 
 /**
  * A data sink that writes data to NDJSON files on a filesystem.
@@ -36,6 +41,12 @@ import org.apache.spark.sql.Dataset;
  * @author John Grimes
  */
 final class NdjsonSink implements DataSink {
+
+  /** The extension the JSON writer gives the files of each partition. */
+  @Nonnull private static final String JSON_EXTENSION = "json";
+
+  /** The extension of the files this sink writes. */
+  @Nonnull private static final String NDJSON_EXTENSION = "ndjson";
 
   /** The Pathling context to use. */
   @Nonnull private final PathlingContext context;
@@ -51,6 +62,9 @@ final class NdjsonSink implements DataSink {
 
   /** A function that maps resource type to file name. */
   @Nonnull private final UnaryOperator<String> fileNameMapper;
+
+  /** Writes the stored resources as FHIR JSON. */
+  @Nonnull private final FhirWriter writer;
 
   /**
    * Constructs an NdjsonSink with a custom file name mapper.
@@ -69,6 +83,7 @@ final class NdjsonSink implements DataSink {
     this.path = path;
     this.saveMode = saveMode;
     this.fileNameMapper = fileNameMapper;
+    this.writer = FhirWriter.of(FhirDefinitionContext.of(context.getFhirContext()));
   }
 
   /**
@@ -86,47 +101,78 @@ final class NdjsonSink implements DataSink {
     this(context, path, saveMode, UnaryOperator.identity());
   }
 
+  /**
+   * Writes every resource type of the source to NDJSON files.
+   *
+   * <p>Every resource type is read, and the files each type already has in the directory are found,
+   * before anything is written, so that a source refusing one of its types, as one holding data in
+   * the layout written by earlier releases does, or a type refused by the save mode, leaves nothing
+   * written rather than some types and not others. The save mode applies to those files: an append
+   * adds beside them; an overwrite replaces them; an error-if-exists write is refused where there
+   * are any; and an ignored write skips the type where there are any.
+   *
+   * @param source the data to write
+   * @return the files written
+   * @throws au.csiro.pathling.library.io.source.UnsupportedLayoutException if the source refuses
+   *     its own data
+   * @throws PersistenceError if the save mode is error-if-exists and a type already has files
+   */
   @Override
   @Nonnull
   public WriteDetails write(@Nonnull final DataSource source) {
-    final List<FileInformation> fileInfos = new ArrayList<>();
-    for (final String resourceType : source.getResourceTypes()) {
-      // Convert the dataset of structured FHIR data to a dataset of JSON strings.
-      final Dataset<String> jsonStrings =
-          context.decode(source.read(resourceType), resourceType, PathlingContext.FHIR_JSON);
+    final Map<String, Dataset<Row>> datasets = new LinkedHashMap<>();
+    source.getResourceTypes().forEach(type -> datasets.put(type, source.read(type)));
+    final Map<String, List<Path>> existing = new LinkedHashMap<>();
+    datasets
+        .keySet()
+        .forEach(
+            type ->
+                existing.put(
+                    type,
+                    TypeFiles.list(
+                        context.getSpark(), path, fileNameMapper.apply(type), NDJSON_EXTENSION)));
+    if (saveMode == SaveMode.ERROR_IF_EXISTS) {
+      existing.forEach((type, files) -> TypeFiles.refuseIfAny(type, files, path));
+    }
 
-      // Write the JSON strings to the file system. Each partition will have their id added to the
-      // name later
-      final String fileName = String.join(".", fileNameMapper.apply(resourceType), "ndjson");
+    final List<FileInformation> fileInfos = new ArrayList<>();
+    for (final Map.Entry<String, Dataset<Row>> entry : datasets.entrySet()) {
+      final String resourceType = entry.getKey();
+      final List<Path> replaced = existing.get(resourceType);
+      if (saveMode == SaveMode.IGNORE && !replaced.isEmpty()) {
+        continue;
+      }
+      // Write the resources to the file system as FHIR JSON. Each partition will have its id added
+      // to the name later.
+      final String fileName =
+          String.join(".", fileNameMapper.apply(resourceType), NDJSON_EXTENSION);
       final String resultUrl = safelyJoinPaths(path, fileName);
 
       switch (saveMode) {
         case ERROR_IF_EXISTS, OVERWRITE, APPEND, IGNORE ->
-            writeJsonStrings(jsonStrings, resultUrl, saveMode);
+            writer
+                .json()
+                .write(
+                    resourceType,
+                    entry.getValue(),
+                    resultUrl,
+                    saveMode.getSparkSaveMode().orElseThrow());
         case MERGE ->
             throw new UnsupportedOperationException("Merge operation is not supported for NDJSON");
         default -> throw new IllegalStateException("Unexpected save mode: " + saveMode);
       }
       // Remove the partitioned directory and replace it with the renamed partitioned files
-      // <resource_type>.<partId>.ndjson, i.e. Patient.00000.ndjson
-      final Collection<String> renamed =
-          FileSystemPersistence.renamePartitionedFiles(
-              context.getSpark(), resultUrl, resultUrl, "txt");
+      // <resource_type>.<partId>-<writeId>.ndjson, e.g.
+      // Patient.00000-7a60a041-0e7d-4e24-b23d-82405a665677.ndjson, so that a write never takes the
+      // names of an earlier write's files.
+      final List<String> renamed =
+          TypeFiles.renameKeepingWriteId(context.getSpark(), resultUrl, JSON_EXTENSION);
+      if (saveMode == SaveMode.OVERWRITE) {
+        TypeFiles.deleteReplaced(context.getSpark(), path, replaced, resultUrl);
+      }
       renamed.forEach(
           renamedFilename -> fileInfos.add(new FileInformation(resourceType, renamedFilename)));
     }
     return new WriteDetails(fileInfos);
-  }
-
-  void writeJsonStrings(
-      @Nonnull final Dataset<String> jsonStrings,
-      @Nonnull final String resultUrlPartitioned,
-      @Nonnull final SaveMode saveMode) {
-    // final var writer = jsonStrings.coalesce(1).write()
-    final var writer = jsonStrings.write();
-    // Apply save mode if it has a Spark equivalent
-    saveMode.getSparkSaveMode().ifPresent(writer::mode);
-
-    writer.text(resultUrlPartitioned);
   }
 }

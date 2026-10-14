@@ -1756,6 +1756,9 @@ This is documented rather than warned about. A warning would fire on every conte
 carrying a non-default value, for a window that ends when the mode lands, and the
 contract is where a user finds out what an option does.
 
+_Amended by decision 94_: the documentation of the three options is left describing the
+previous encoder's bounds until M6, where T033 rewrites it.
+
 That window is the cost of this placement and it is not small. M5 is twenty-one
 tasks across two phases, landing as a series of independent increments. FR-009 and
 FR-044 are unmet for its duration, and SC-002's curated dense subset with them.
@@ -2367,7 +2370,11 @@ it. Beyond the two fixes, the owner approved each of these:
 - a FHIRPath or search column used directly in a join condition now fails
   with `INTERNAL_ERROR`, including where it used to work. Joining first and
   then filtering still works, and view joins on keys are unaffected (decision
-  75's join-condition limit, `evidence/join-condition-limit.md`).
+  75's join-condition limit, `evidence/join-condition-limit.md`). _Resolved in
+  M4 by T100k_: such a column works in a join condition again, reading the
+  column from whichever side has it, failing with `AMBIGUOUS_REFERENCE` where
+  both do, and answering the fallback where neither does, where the base
+  failed with `UNRESOLVED_COLUMN`.
 
 ### What else it corrects
 
@@ -2517,7 +2524,17 @@ layout's extension struct keeps `_fid`.
 
 ### Known limits, accepted for now
 
-- **Join condition.** The catch fails with `INTERNAL_ERROR` in a join
+- **Join condition. Resolved in M4 by T100k, with option C**: the reference
+  first resolves its name as a plain attribute, and accepts the result only
+  where it is an attribute of the input; otherwise it goes on to the view
+  column, and takes the single-child assertion the view column then raises in a
+  join for absence, since the plain attribute would have resolved across both
+  sides had either had the column. `ResolveOrNullTest` pins the assertion
+  (`viewColumnInJoinConditionFailsTheSingleChildAssertion`), the join cases, a
+  name that is also a literal function (`current_date`) and a lambda variable
+  of the column's name; `JoinConditionTest` in `fhirpath` covers FHIRPath and
+  search columns in a join condition on both layouts. The text below is the
+  limit as it stood. The catch fails with `INTERNAL_ERROR` in a join
   condition, even when the column exists. The cause is Spark's, verified on
   4.0.2: a `Join` resolves its condition through
   `ColumnResolutionHelper.resolveExpressionByPlanChildren`, which resolves the
@@ -2727,7 +2744,9 @@ Consequences:
   column. `.extension` on it is now empty rather than an error. This relaxes
   decision 75.
 - The known limits of the tolerant reference (a join condition, a self-join, a
-  column dropped by a projection beneath) now reach `_extension` too.
+  column dropped by a projection beneath) now reach `_extension` too. The first
+  two have since been resolved, the self-join by the M2 review fix and the join
+  condition by T100k.
 
 The rule for the combining functions, which T113b implements, follows the FHIR
 binding. A combination of two FHIR operands keeps FHIR elements. Where a System
@@ -3182,3 +3201,802 @@ replaced their public classes, and T070, T081 and T082 are reworded to call the
 facade. plan.md's module layout shows the one package and its FR-050 row covers XML
 output. The open tasks that name files in `io/json` or `io/transform` name them in
 `io`.
+
+## 85. Canonical order binds the struct types Pathling builds, not the schemas it reads
+
+Owner decision (2026-10-08), prompted by T118a in M4.
+
+Spark's `mergeSchema` appends a field first seen in a later file at the end of its
+struct, and Delta's schema evolution does the same to a widened table. A merged
+read schema is therefore not in definition order. FR-057 named "the merge of
+divergent file schemas" among the places canonical order holds, while T118a reached
+only merged schemas Pathling produces itself.
+
+A struct whose fields are in a non-canonical order is one more divergent shape, no
+different from the divergent sparse shapes a pruned schema already yields: both are
+reconciled in the same situations and in the same way, by FR-056's projection by
+name into the merged type. Canonical input is therefore not needed for correctness,
+on two conditions:
+
+- the reconciliation's shape comparison is sensitive to field order, so that two
+  structures carrying the same fields in different orders are projected rather than
+  left as they are; and
+- the merge takes its order from the definitions rather than from its operands, as
+  research.md R-011 already requires, so the merged type is canonical whatever order
+  the operands arrive in.
+
+Canonical input would not remove the positional hazard for a caller's own Spark SQL
+either, because two pruned shapes of one type with the same arity and different
+fields compare just as wrongly. Two further facts weigh against canonicalising what
+is read. Delta is the default format, and a Delta read takes its schema from the
+table's log, so canonicalising it would mean reordering nested columns on every
+widening or projecting on every read. And most operations are expected to be
+performed on system types rather than on FHIR structures, while the complex system
+types such as `Quantity` can be fully normalised in future.
+
+_Consequence for the specification_: FR-057 binds the struct types Pathling
+produces — schema derivation, the merge of two element types, the merge Pathling
+performs when it widens a target, and the reconciliation projection — and exempts
+schemas obtained from storage: Spark's merged read schema, an evolved Delta table's
+schema and a schema the caller supplies. T118a stands as worded. A test in Phase 10
+puts two `HumanName` structures carrying the same fields in different orders
+through FHIRPath equality, `union` and `combine` and asserts correct results.
+
+## 86. Every write into an existing table widens it where the format can, and a Parquet catalog table refuses a differing batch
+
+Owner decision (2026-10-08), prompted by Phase 10's review in M4 and measured in
+`catalog-append-schema.md`.
+
+The save modes decide what happens to the rows already in a table; they say nothing
+about its schema. Widening is a separate rule that applies whenever a mode writes into
+an existing table, which `APPEND` and `MERGE` do. FR-042 is read that way: whenever a
+batch is written into an existing table, the table is widened to hold it, whatever the
+sink and whatever the mode. After Phase 10 the path-based Delta sink did so for both
+modes and the catalog sink for `MERGE` only, so the same batch was accepted or refused
+depending on the route — the inconsistency decision 41 exists to prevent.
+
+Measured on Spark 4.0.2 and Delta 4.0.0, in both the in-memory and the Hive catalog:
+
+- A Delta catalog append with `mergeSchema=true` widens at the top level, inside a
+  struct and inside an array of structs, including a batch that both adds and lacks
+  fields. A narrower batch appends with or without the option.
+- A Parquet catalog append fails whenever the batch's schema differs from the stored
+  one in any direction, narrower included. A narrower batch can be padded to the stored
+  schema by the writer, and a new top-level column added with `ALTER TABLE ADD COLUMNS`,
+  but there is no public route to add a nested field to a Parquet catalog table's
+  stored schema, and the stored schema is never re-inferred from the files on refresh.
+
+_Consequence for the specification_: the catalog sink sets `mergeSchema=true` on an
+`APPEND` into a Delta table, so every Delta write widens. An `APPEND` into an existing
+Parquet (or other non-Delta) catalog table whose batch schema differs from the table's
+in any way is refused before anything is written, with a message naming the table, the
+difference and the remedy — write to Delta, or write to a path and read it with the
+merging Parquet source. This is a regression for incremental loads into Parquet catalog
+tables, which worked only because the dense schema gave every batch the same columns.
+Padding narrower batches and widening Parquet catalog tables are left to issue #2819
+rather than built in M4. FR-042 carries this exception.
+
+## 87. The typed `encode` overloads are removed, and streaming `encode` fails until the dense schema
+
+Owner decision (2026-10-09), prompted by Phase 12's switch in M4.
+
+`encode(Dataset<String>, Class<T>, String)` and `encodeBundle(Dataset<String>, Class<T>,
+String)` return a dataset typed by a HAPI class, which only the FHIR encoders can produce, so
+after the switch they were the one public path still storing the previous layout, and their
+output was refused by `decode`, the sinks and, from Phase 13, the sources. Nothing in the
+repository calls them outside their own tests: Python, R, the server, the benchmark and the
+documentation all use the overloads taking a resource name. They are removed. This is in
+keeping with the aim of removing HAPI from the public interface, and anyone needing typed HAPI
+datasets can use the encoders directly, as the server does through `getFhirEncoders()`.
+FR-043 is read as preserving the name-based forms, which Python and R expose.
+
+A streaming dataset cannot be scanned to fit a schema, so the pruned layout cannot be produced
+from one. The dense schema, derived from the definitions, is the solution, and it arrives in M6.
+Until then `encode` and `encodeBundle` over a streaming dataset fail with a message saying so,
+rather than falling back to the previous encoder: every public path writes only the new layout.
+This is a regression of a documented feature from M4 until M6. The streaming example in the
+documentation is rewritten to say so, and `testEncodeResourceStream` asserts the message.
+
+_Consequence for the specification_: T100c removes the previous encoder's map-partition encode
+paths, the parser behind them and their tests, as nothing public reaches them. A task in Phase
+17 (M6) restores streaming `encode` over the dense schema.
+
+## 88. An absent element's fallback carries the cardinality of the path that reaches it
+
+Owner decision (2026-10-09), prompted by T108a.
+
+The fallback FR-055 supplies for an absent element was taken from the element's own
+definition, ignoring repeating ancestors on the path. `name.family` was therefore
+`ArrayType(StringType)` over a dataset carrying `name` and `StringType` over one without it,
+and likewise `name.period.start`, `maritalStatus.coding.code` and `contact.name.family`. The
+values agree, but one expression yielded two column types, which FR-030 and SC-010 forbid and
+which breaks appending or unioning results computed over batches of differing width. The
+fallback is wrapped to the array shape a present path would produce, at the engine site that
+supplies it.
+
+## 89. `maxUnboundTraversalDepth` guards same-type recursion, which the new layout's nesting cannot produce
+
+Owner decision (2026-10-09), prompted by `EvaluateRepeatAllTest.extensionsLimitedByDepth`.
+
+The bound was introduced against infinite recursion through extensions, which in the previous
+layout had one SQL type at every nesting level, and through exotic expressions such as
+`repeatAll(first())`. In the new layout a nested structure contains its child's type, so no
+level can share an ancestor's SQL type, and the tolerant traversal stops at the first level
+whose field is absent (T110a, `TransformTreeTerminationTest`). Nested extensions are bounded by
+the data and no longer consume the budget, which still applies to a projection returning the
+same struct at every level.
+
+_Consequence for the specification_: `extensionsLimitedByDepth` expects every level present in
+the data on the new layout; a test asserts that same-type recursion such as `repeatAll(first())`
+is still bounded; the FHIRPath documentation describes the bound as guarding same-type
+recursion. Whether such exotic recursion should fail on exhaustion rather than stop is issue
+#2820.
+
+## 90. An element absent from both sides of a join answers empty in the join condition
+
+Owner decision (2026-10-12), on T100k.
+
+`ResolveOrNullTest.knownLimitJoinConditionFailsWithInternalError` is replaced by the join
+tests T100k added and by the plan-shape pin `viewColumnInJoinConditionFailsTheSingleChildAssertion`.
+An element that neither side of a join carries now answers the typed null of FR-055 in a
+join condition, as it does in a filter applied after the join, where it failed with
+`UNRESOLVED_COLUMN` before option C. This is not a loss of error reporting: FHIRPath paths
+are validated against the definitions before any column is built, so a misspelled element
+still fails, at compilation, on every layout.
+
+## 91. `fhirpath` renders complex results through a renderer that `library-api` injects
+
+Owner decision (2026-10-12), on T100j.
+
+The owner accepts the stored-text values `QuantityTypesTest` now expects for a whole quantity
+(`90` rather than `90.000000`), and the public `FhirWriter...json().writeElement` in `io`.
+
+The owner rejects the compile-scope dependency of `fhirpath` on `io` that T100j introduced.
+`fhirpath` depends on `io` at test scope only, as plan.md's Structure Decision states. The
+evaluator behind `evaluateFhirPath` takes the rendering of a complex value as a small
+functional interface defined in `fhirpath`, and `PathlingContext` in `library-api`, which
+depends on both modules, passes `io`'s `writeElement`. `fhirpath`'s own tests pass the real
+renderer from `io` at test scope. No public signature of `PathlingContext` or of
+`SingleInstanceEvaluationResult` changes.
+
+## 92. Repeated decode of a stored quantity is a plan-level question, and is revisited with the annotation
+
+Owner decision (2026-10-12), on T100o.
+
+Plan growth from decoding a stored quantity once per use is the same whether the decode is
+eager (at traversal), lazy (where computed with, decision 82) or cached in Java on the
+`Collection`, because each hands Spark the same expression tree for each use. Only binding
+the decoded value at plan level, or Spark's common-subexpression elimination at code
+generation, removes the duplication. T100o is closed if the generated code shows that Spark
+deduplicates the decode; binding is not implemented in M4 either way.
+
+_Consequence for the specification_: T096a, which takes the canonical form from the quantity
+annotation in M5, reads it from the annotation once it exists rather than computing it in the
+decode, and the T100o measurement is repeated then.
+
+## 93. The detection opt-out is checked from the bindings by T049
+
+Owner decision (2026-10-12), on T100b.
+
+T100b's check of the detection opt-out from Python and R moves to T049, which exposes the
+opt-out in the bindings. T049 runs the Python and R suites with the opt-out on and with it
+off, and Phase 13b ends with a full, clean Python and R run.
+
+## 94. The three bounds options are documented again when they bound something again
+
+Owner decision (2026-10-12), raised by T100b. This amends decision 69's "documented rather
+than warned about".
+
+The documentation of `max_nesting_level`, `enable_extensions` and `enabled_open_types` (the
+Python docstrings, the R roxygen and the `EncodingConfiguration` Javadoc) still describes the
+previous encoder's bounds, which the fitted schema does not apply. It is left unchanged until
+M6, where T033 gives the options meaning again for the dense schema (FR-044), and is rewritten
+there. Between the switch and M6 the options stay accepted and inert, as decision 69 says, but
+their documentation does not yet say so.
+
+## 95. `library-runtime` always builds its jar afresh
+
+Owner decision (2026-10-12), raised by T100b.
+
+Without `clean`, the jar plugin left the previous build's shaded jar in place, the shade
+plugin layered the freshly built modules over it, and the stale classes won, so a build
+without `clean` could install a runtime that did not hold the current code (T100b's first
+Python run). The jar plugin's default execution in `library-runtime/pom.xml` sets
+`forceCreation`, so the unshaded jar is rebuilt on every build and the shade plugin starts
+from it. Moving the version to a SNAPSHOT and clearing the stale artifacts from `~/.m2` are
+handled by the owner outside M4.
+
+## 96. Each Python test run starts with an empty Hive metastore
+
+Owner decision (2026-10-12), raised by T100b.
+
+The Python tests' Spark session kept its Derby metastore in `lib/python/metastore_db`, in the
+working directory, so a run inherited the databases and warehouse locations of the one before
+it, and `test_datasource_tables` failed with `LOCATION_ALREADY_EXISTS`. The test session puts
+Derby's home under the session's temporary directory, so every run starts with an empty
+metastore and leaves nothing in the checkout.
+
+## 97. The detector and its outcome stay public
+
+Owner decision (2026-10-12), for Phase 13b.
+
+`LayoutDetector`, `LayoutDetection`, `StorageLayout` and `UnsupportedLayoutException` all
+stay public in `au.csiro.pathling.library.io.source`. The sinks, in another package, call the
+detector, and a caller handling a refusal needs the exception and the classification it
+carries.
+
+## 98. A refused layout is a `RuntimeException`, not a user-input error
+
+Owner decision (2026-10-12), for Phase 13b. This amends T045 as built.
+
+`UnsupportedLayoutException` extends `RuntimeException` directly rather than
+`InvalidUserInputError`. The library does not claim whose fault stored data is: a warehouse
+in an earlier layout may be the operator's, a deployment's or a client's. The server, when it
+moves to this line, maps the exception itself: to a 500 carrying the message for a read of
+its own warehouse, and to a 400 for `$import` of a client-supplied file. That mapping is part
+of the server's follow-up (T134b).
+
+## 99. A mixed table is still refused, and its message names a remedy that works
+
+Owner decision (2026-10-12), for Phase 13b. This confirms decision 47 and amends T042's
+message.
+
+A schema carrying evidence of both layouts is still classified as the previous layout and
+refused. Its remedy is sharpened, because re-importing into the same table is no longer
+possible once T046a refuses an append or a merge into it: the message tells the user to
+re-import from source into a new location, and, where the data is a directory of files,
+that the directory holds files of the earlier layout, which can be removed or re-imported.
+The message covers both cases in one text, so the detector takes no description of where
+the data lives and gains no public parameter.
+
+## 100. The root `id_versioned` alone classifies a table as the previous layout
+
+Owner decision (2026-10-12), for Phase 13b. This amends T045's "a single previous-layout
+marker is decisive".
+
+The terminology functions build codings through `CodingSchema`, which still carries a
+`_fid` field. A resource dataset holding a `translate` result, written through any sink and
+read back, therefore carried a nested `_fid` and was refused as the previous layout: Pathling
+rejected its own output. The decisive marker becomes the root `id_versioned` beside a string
+`id`, which every previous-layout resource table carries, with extensions enabled or not,
+because the previous encoder writes the versioned id for every resource. The other markers
+(`_fid`, `_extension`, a `_scale` companion, the quantity's canonicalised fields, and an
+`id_versioned` below the root) remain evidence cited in a refusal, but do not by themselves
+classify a table.
+
+A schema with previous-layout evidence but no root `id_versioned` is not refused. It is
+classified as the Parquet on FHIR layout where it carries a marker of that layout, and as
+unclassifiable otherwise, exactly as it would be without the evidence.
+
+_Precondition, checked before the rule changed._ Every previous-layout fixture in the
+repository has a root `id_versioned`: the `parquet`, `parquet-custom` and `delta` fixtures of
+`library-api` as they were before T100d converted them (read from `6a9d10fabb^`), and the
+`parquet` and `delta` example data in `lib/R/inst/extdata`, which is still the previous
+layout. No other Parquet or Delta fixture is tracked; the other previous-layout data in the
+test estate is produced at test time by the previous encoder, whose `IdCustomCoder` writes
+`id_versioned` beside every resource id.
+
+_Consequence for the specification_: removing `_fid` from `CodingSchema` is not done in M4.
+It is recorded on T100e (M7), where the previous layout's reader goes.
+
+## 101. The server's move needs a warehouse migration story, decided at M7
+
+Owner decision (2026-10-12), for Phase 13b. No code.
+
+A server often holds a warehouse with no source to re-import from, and converting it in
+place is lossy, because the previous layout stored decimals at a fixed scale. The realistic
+choices are routing earlier-layout data through the engine's previous-layout reader for a
+while, which constrains what T100e may delete; a documented, lossy converter that decodes to
+FHIR JSON and encodes through `FhirReader`; and re-import where the source still exists.
+They are decided at M7, with T049a, against the server's needs. The server's mapping of
+`UnsupportedLayoutException` (decision 98) belongs to the same move. T134b and T049a carry
+the note.
+
+## 102. T100o closes without a code change
+
+Owner decision (2026-10-12), on T100o. This settles what decision 92 left open.
+
+The generated-code check (`evidence/t100o-quantity-decode-cost.md`, "The generated code")
+showed that Spark shares the `canonical_quantity_code` call between comparisons but computes
+`canonical_quantity_value` once per use, inside the branch that runs only where the units are
+comparable. The owner accepts that cost until T096a (M5) reads the canonical form from the
+annotation, for three reasons: it is small (59 to 70 ms for three comparisons over 10,000
+rows on the new layout); the generated code stays far below the 64 KB method limit (its
+largest method is 2,167 bytes on the new layout); and the code is identical before and after
+decision 82. Binding the decoded value in the engine (Catalyst's `With`) is rejected for now.
+T096a keeps decision 92's amendment to repeat the measurement.
+
+## 103. The quantity inequality's fallback from code generation is measured in M5
+
+Owner decision (2026-10-12), raised by T100o. Adds T096c.
+
+The same check found that the quantity `!=` compiles to higher-order array functions
+(`ArrayExists`, `ArrayFilter`), which cannot generate code. They take the whole projection out
+of whole-stage code generation, leave the decodes beneath them interpreted, and decode the
+operand three times. T096c, beside T096a in Phase 15, measures the cost of that fallback with
+the T100o scripts, checks whether `=` does the same, and rewrites the operator without the
+array functions if the cost matters.
+
+## 104. The detector's changed expectations under decision 100 are approved
+
+Owner decision (2026-10-12), on Phase 13b. No code.
+
+The `LayoutDetectorTest` expectations that decision 100 changed stand: a sparse schema whose
+only previous-layout evidence is a nested `_fid` or a `value_scale` companion is now
+unclassifiable rather than refused, `newLayoutSchemaWithOneNestedPreviousLayoutFieldIsAccepted`
+pins that a new-layout schema with one nested previous-layout field is accepted, and the
+mixed-layout message carries the text decision 99 gave it.
+
+## 105. A sink does not refuse a write that replaces or skips a previous-layout target
+
+Owner decision (2026-10-12), on Phase 13b. This confirms T042a and T046a as built.
+
+FR-037a covers the writes that would merge new-layout data into an earlier-layout target:
+append and merge. An overwrite replaces the target and its schema, leaving one layout, and is
+how a re-import reuses a location, so it is not refused; nor are `ERROR_IF_EXISTS` and
+`IGNORE`, which fail or do nothing where the target exists.
+`SinkDetectionTest.deltaOverwriteReplacesAPreviousLayoutTable` is approved. The refusal
+message's remedy names overwriting the existing location beside re-importing into a new one.
+
+## 106. The Parquet sink's append data loss is fixed in M4
+
+Owner decision (2026-10-12), on Phase 13b's finding in T046a.
+
+A second append through the Parquet sink renamed its partition files onto the names the first
+write had used, ignored the failed rename and deleted the partition directory, so the appended
+rows were lost while the write reported success. It is fixed in M4 rather than deferred: the
+renamed files keep the identity of the write that produced them, and a failed rename is an
+error that leaves the partition directory in place.
+
+## 107. The R package's example data moves to the new layout
+
+Owner decision (2026-10-12), on Phase 13b.
+
+The `parquet` and `delta` example data in `lib/R/inst/extdata`, written by the previous
+encoder, would be refused by the detector this release wires in. It is regenerated in the
+Parquet on FHIR layout from the package's own NDJSON example data, through `PathlingContext`
+and the Parquet and Delta sinks, as T100d regenerated the `library-api` fixtures.
+
+## 108. The detection opt-out is for data the detector misclassifies
+
+Owner decision (2026-10-12), on Phase 13b. This amends `contracts/library-api.md`.
+
+Unclassifiable data is already accepted (decision 100), so the opt-out is not for data the
+detector "cannot classify". It is for conforming data the detector misclassifies, which is
+then read as it is. Both places in the contract say so. The opt-out also lets earlier-layout
+data reach the engine, which reads both layouts until T100e; whether that is a supported
+route is T049a's question, and T049a carries the note.
+
+## 109. The sinks have no detection opt-out
+
+Owner decision (2026-10-12), on Phase 13b.
+
+A sink classifies its target only to refuse a merging write into the previous layout, and
+that classification needs a root `id_versioned`, which the new layout never writes, so a
+conforming target cannot be misclassified as the previous layout. Overwrite is the way out
+for a target that is. A write-side switch would mainly serve to create mixed tables.
+
+## 110. `DatasetSource` stays unchecked
+
+Owner decision (2026-10-12), on Phase 13b.
+
+FR-037 scopes detection to file-based sources, so `DatasetSource`, which wraps datasets the
+caller already holds, is not checked. It and `PathlingContext.getFhirEncoders()`, which still
+produces the previous layout, are routes by which previous-layout data reaches the engine.
+They are settled with the gate in M7, and T049a carries the note.
+
+## 111. `LayoutDetection.isMixed()` keeps its meaning
+
+Owner decision (2026-10-12), on Phase 13b.
+
+`isMixed()` is true for a schema classified as the previous layout that also carries markers
+of the new layout. Under decision 100 that is narrower than "carries markers of both", since
+evidence of the previous layout without a root `id_versioned` no longer classifies. The
+meaning is accepted as it stands: the type was created in this milestone and has never been
+released.
+
+## 112. The save-mode fix for the Parquet and NDJSON sinks is accepted as built
+
+Owner decision (2026-10-12), on the follow-ups to decisions 104 to 111. This confirms decision
+106 as extended in T046a and amends `contracts/library-api.md`.
+
+The fix is accepted as implemented in `def86f1744`, for Parquet and NDJSON alike: the renamed
+files keep the id Spark gave the write, every rename's result is checked, and each save mode is
+applied by the sink to the files the type already has. The data loss it fixes is not new. It is
+on `main` in every release since 9.3.0, and is tracked for the 9.x line as
+[#2823](https://github.com/aehrc/pathling/issues/2823). The contract's behaviour changes gain a
+release-notes entry: such a write now honours the save mode, so the default raises a
+`PersistenceError` before writing any type where it used to discard the write silently, and
+output file names carry the write id, `<Type>.<partId>-<writeId>.<ext>`.
+
+## 113. The write-id renaming is not public API
+
+Owner decision (2026-10-12), on the follow-ups to decisions 104 to 111.
+
+The two public `FileSystemPersistence.renamePartitionedFilesKeepingWriteId` overloads added by
+`def86f1744` are withdrawn from the public API. The renaming moves to the package-private
+`TypeFiles` in `io.sink`, beside the only sinks that use it, and its tests move with it.
+`FileSystemPersistence.renamePartitionedFiles`, which the server's `ExportFileWriter` calls,
+keeps its signature and its naming, and gains only the check of each rename's result.
+
+## 114. The test expectations changed by the save-mode fix are approved
+
+Owner decision (2026-10-12), on the follow-ups to decisions 104 to 111. No code.
+
+The changed expectations stand: the file-name pattern, now carrying the write id, in
+`DataSourcesTest.parquetWriteCreatesIndividualFiles` and
+`SinkDetectionTest.parquetAppendBesideRenamedPreviousLayoutFilesIsRefused`; the stronger
+assertion in `SinkDetectionTest.parquetAppendBesideNewLayoutSucceeds`, which checks the rows of
+both writes; and the overwrite remedy in the exact refusal messages asserted by
+`LayoutDetectorTest` and `FileSourceDetectionTest`.
+
+## 115. The R package's example data is produced by a committed script
+
+Owner decision (2026-10-12), on the follow-ups to decisions 104 to 111. This amends decision 107.
+
+The `parquet` and `delta` example data in `lib/R/inst/extdata` is regenerated by a committed,
+reproducible script rather than by hand. The hand-made data renamed the Delta part file and
+patched its log entry to keep the package's paths under the 100 bytes R CMD build accepts
+without a warning. The script reaches the short name without editing the log: it writes each
+type once through the Parquet sink, places the file under the short name, and creates each
+Delta table around it with Delta's own conversion, which writes a log and checksum that
+describe the file as it is named.
+
+## 116. An open choice takes the specification's order of open types
+
+Found in M4, regenerating the R package's example data (decision 115); fixed in M4.
+
+Two runs of `lib/R/data-raw/example_data.R`, from the same build and the same NDJSON, wrote
+Patient files with equal rows and different schemas: the fields of an extension's value
+struct (`valueDecimal`, `valueString`, `valueCode`, `valueAddress`) changed order between
+runs. Encoding through `FhirReader` is schema derivation, so this broke FR-057.
+
+_Cause_: `FhirChoiceDefinition.getAllChildTypes()` took a choice's order from the definition
+library's `RuntimeChildChoiceDefinition.getChoices()`, on the assumption that it is the type
+list of the child annotation. For a declared choice it is. An open choice (`RuntimeChildAny`)
+declares no types (`@Child(type = {})`), and HAPI 8.10.0's `RuntimeChildAny.sealAndInitialize`
+fills it by iterating the key set of a `HashMap` keyed by type class, so in identity-hash
+order. It then sorts with `ResourceTypeNameComparator`, which compares only classes
+implementing the DSTU2 `IResource` and returns 0 for every R4 datatype, so the stable sort
+keeps the hash order (`javap` of both classes, `hapi-runtimechildany-javap.txt` under
+`.local/work/issue/2764/`). Identity hashes repeat between runs of a single-threaded program
+whose startup is identical, which is why a standalone probe printed one order three times; they
+differ under a different hashing mode (`-XX:hashCode=0` and `=1` each gave another order,
+`hash-order-variation.txt`), under Surefire (a third order) and under Spark's multi-threaded
+startup, as the two R runs showed. The order reached every struct type built from the canonical
+structure: the transform's schema, `StructureMerge`, the reconciliation projection (`MergeCast`)
+and the Delta sink's widening.
+
+_Fix_: for an open choice, `getAllChildTypes()` orders the variants by the specification. The
+order is the type list of `Extension.value[x]` in the R4 definition (`StructureDefinition-
+Extension.json` in `hl7.fhir.r4.core` 4.0.1), which is the same list in the same order for every
+open choice in R4: `Extension.value[x]`, `ElementDefinition.defaultValue[x]`, `fixed[x]`,
+`pattern[x]` and `example.value[x]`, `Parameters.parameter.value[x]`,
+`StructureMap.group.rule.source.defaultValue[x]`, and `Task.input.value[x]` and
+`output.value[x]`. These nine are also exactly the choices the definition library builds as
+`RuntimeChildAny`. The list is pinned in `OpenTypeOrder`, because the definition library carries
+no structure definitions to read it from. A declared choice keeps its annotation order, unchanged.
+
+_Owner decision (2026-10-13), accepted as placed_: the definition library accepts nine types in an open choice beyond the
+specification's 50 (`ElementDefinition`, `Extension`, `MarketingStatus`, `Narrative`,
+`Population`, `ProdCharacteristic`, `ProductShelfLife`, `SubstanceAmount`, `Xhtml`). Decision 45
+keeps them, so they need a position, and the specification gives none. They are placed after the
+50, ordered by variant name. No conformant instance can populate them, so the choice affects only
+non-conformant input; FR-057 does not say where fields without a definition position go, beyond
+the layout's own fields.
+
+_Audit_ of every place a struct type Pathling produces takes its order:
+
+- `FhirChoiceDefinition.getAllChildTypes()`: **the defect**, fixed. The declared-choice branch
+  is now checked against the child annotation's type list for every choice in R4.
+- `BaseFhirNodeDefinition.getChildren()`: HAPI's composite child list, which `ModelScanner`
+  builds in `@Child(order)` order. Correct. `nestedChildElementsByName`, built from the hash-ordered
+  `getValidChildNames()`, is used only for lookup by name.
+- `DefinitionCanonicalStructure.buildEntries()`: iterates the definitions; its `HashMap` memo and
+  `toUnmodifiableMap` index are lookup only. Correct, given the fix.
+- `LayoutFields.annotationNames` (fixed `List.of` per type; its `Set.of` constants are membership
+  tests only), `MetadataGroupStructure.fieldOrder()` (`List.of(id, extension)`) and
+  `PrimitiveTypes` (lookup only): correct.
+- `DefaultChoiceDefinition` and `DefaultDefinitionContext`: list order as given; the map is
+  lookup only. Correct.
+- `ResourceTransformer` (`toLayout`, `structure`, `absentStructure`, egress): every struct is
+  built by iterating the canonical entries; egress follows the stored schema by design. Correct.
+- `StructureMerge`: order from `fieldOrder()`, with names the canonical structure does not know
+  appended sorted by name. Deterministic; canonical given the fix.
+- `MergeCast`, `UnresolvedMergeCombination`, `ColumnFunctions` (encoders),
+  `CombiningLogic` and `ChoiceElementCollection` (fhirpath): take their order from
+  `StructureMerge` under a `DefinitionCanonicalStructure`. Correct, given the fix.
+- `DeltaSink` widening: `StructureMerge` under the resource's canonical structure; its `HashSet`
+  of field paths is a containment test only. Correct, given the fix.
+- `TypeFunctions.type()` on a choice iterates `getAllChildTypes()` to build a per-row `when`
+  chain, not a struct type; at most one variant is non-null, so its order does not affect the
+  result.
+- `contained` is not represented (`DefinitionCanonicalStructure.addElement`), so it builds no
+  struct type.
+- The previous layout's encoder (`SchemaTraversal.getOrderedListOfChoiceChildNames`) sorts
+  variants by type name; it is deterministic and out of FR-057's scope.
+
+_Tests_: `ChoiceExpansionSweepTest` now asserts the order of every choice in R4 as well as its
+variants, against the annotation for a declared choice and against its own copy of the
+specification's list for an open one, so a change of the definition library's open types fails
+it. `ResourceTransformerTest.ordersTheVariantsOfAnOpenChoiceAsTheSpecificationListsThem` encodes
+extensions whose variants arrive out of order across rows, nested and on a complex element, and
+asserts every struct field by field. `DefinitionCanonicalStructureTest.mergesTheVariantsOfAnOpenChoiceInTheOrderTheSpecificationListsThem`
+covers the merge. All three failed before the fix (`open-order-before-*.log`).
+
+_R example data_: regenerated after the fix by two runs of `example_data.R`, each with an
+empty Ivy home of its own (`oo-gen-1`, `oo-gen-2`) and the `library-runtime` jar of the
+fixed build (SHA-1 `84a9b8bc`, that of `library-runtime/target` and `~/.m2`). The Parquet
+files of the two runs have equal schemas, equal rows and equal footer key-value metadata,
+and every struct in them is in canonical order: each file's schema is unchanged by
+`StructureMerge` under the resource's canonical structure (`oo-canonical-check.log`). The
+extension value structs, for example, are `url`, `valueCode`, `valueDecimal`, `valueString`,
+`valueAddress`, and nested `url`, `valueString`, `valueCoding`. They are not
+byte-identical: parquet-mr records each column chunk's encodings in a hash-ordered set, so
+the footer lists them in a different order from run to run (for example `RLE,
+PLAIN_DICTIONARY, BIT_PACKED` against `BIT_PACKED, PLAIN_DICTIONARY, RLE`), and the Delta
+logs carry a timestamp and a transaction id. Neither is a schema, and neither is
+Pathling's to fix.
+
+_Verification_: `mvn clean install -pl library-runtime -am`, all green: utilities 35,
+fhir-schema 39, encoders 621, io 480 (1 skipped), terminology 538, fhirpath 7,574 (922
+skipped), library-api 305 (`open-order-full-build.log`). `fhirpath` on the previous layout,
+7,574 (924 skipped), green (`open-order-fhirpath-previous.log`). Python, 566 passed, with an
+empty Ivy home of its own (`ivy-oo-pytest-1`, `4 artifacts copied, 0 already retrieved`); R,
+200 expectations, 0 failed (`ivy-oo-r-1`, created empty and filled by the run). In both, the
+retrieved `library-runtime` jar's SHA-1 is `84a9b8bc`, that of `library-runtime/target`, and
+it carries `OpenTypeOrder`.
+
+_Owner rulings (2026-10-13), with the above_: test fixtures written before the fix keep the
+order they were written in. They are read by name (FR-056), and rewriting them would churn
+binary files for no change of behaviour. The styler finding in the R package's example data
+script is left out of M4.
+
+## 117. The storage layout page describes the refusal M4 implements
+
+Raised by the Phase 14 documentation work (T129).
+
+`contracts/storage-layout.md` held its section on data written by earlier releases back from
+publication until T049a, deferred to M7, is answered, because routing would make its opening
+sentence false. T129 nonetheless rewrote `site/docs/libraries/io/schema.md` with that section,
+scoped to the refusal M4 implements and presenting the opt-out only for misclassified
+conforming data (decision 108).
+
+_Decision_: keep the section. No milestone is released on its own: milestone pull requests
+target the integration branch `issue/2367`, and the site is deployed only from `main`, after
+M7. The page therefore cannot reach a reader before T049a is settled, which is what the hold
+protected against. Keeping it records the behaviour the code has now and has it reviewed now;
+if T049a chooses routing, the cost is one revision before the release. The contract's hold
+note is reworded to that effect, its opt-out sentence is aligned with decision 108
+("misclassifies", not "cannot be classified"), and T049a carries a note to confirm or revise
+both the page and the contract section.
+
+_Rejected_: removing the section until M7, which leaves the integration branch with a
+behaviour change it does not describe and the section to be written from scratch; and a "may
+change" notice on the page, which no reader would see before the question is settled.
+
+## 118. The server docs' link to the storage layout page is settled with the server's move
+
+Raised by the Phase 14 documentation work (T129).
+
+The server docs present `/docs/libraries/io/schema` as the server's Parquet format
+(`site/server-docs/operations/import.md` and `export.md`, the same two pages in the 2.0.1
+snapshot under `site/server_versioned_docs/`, and the Javadoc of `ImportFormat` and
+`ExportOutputFormat`). That page now describes the new layout; the server is pinned to library
+9.9.0 and writes the previous one, and library docs are not versioned.
+
+_Decision_: deferred to T134b, with a note there. Nothing is wrong until the library docs
+deploy after M7 (decision 117), and the fix depends on T134b's outcome: if the server has moved
+to the new layout by the release the links are right as they stand; otherwise the previous
+layout's description, taken from the page on `main`, goes into the server docs and the links
+point at it.
+
+_Rejected_: copying the previous page into the server docs now, which puts server changes in a
+core milestone and is wasted if the server moves first; and leaving it unowned.
+
+## 119. Two contract statements are corrected to match the code
+
+Raised by the Phase 14 documentation work (T129).
+
+`contracts/storage-layout.md` listed primitive element ids and extensions among the round-trip
+exclusions that are not reported. `StrictnessCheck` reports them as primitive metadata, by the
+decision that makes the report and the structure kept share one predicate
+(`isConformingMetadataGroup`), so they are now among the reported three.
+`contracts/library-api.md` said a contradicting type nulls every value of the element "in that
+file". Inference runs over everything one read encodes together, so the reach is the whole read,
+across files; the release-notes text now says so.
+
+_Rejected_: changing the code to fit the contract, which would hide data loss until M5 and, for
+inference, give the files of one merged read different column types.
+
+## 120. The Python and R catalog sinks take a table format
+
+Raised by the Phase 14 documentation work (T129); owner decision (2026-10-13).
+
+Java's `DataSinkBuilder.tables(schema, format)` takes a table format; Python `tables()` and R
+`ds_write_tables()` do not, so a table they create takes `spark.sql.sources.default`, which is
+Parquet outside platforms that default to Delta. T117b (decision 86) refuses an append into a
+non-Delta catalog table whose schema differs from the batch, and fitted schemas make that the
+common case, so a second append from either binding on default settings is refused with a
+remedy, Delta, that the binding offers no direct way to take. A second `merge` into a table the
+first created in the default format fails too, which predates M4.
+
+_Decision_: add a `format` parameter to both, in M4 (T117c), defaulting to Spark's setting as
+Java does, so existing calls create what they created before. The docs recommend Delta for
+tables that will be appended to or merged into.
+
+_Rejected_: documenting `spark.sql.sources.default=delta` alone, which changes every table the
+session creates; and deferring, which leaves the refusal M4 introduces without the route its
+own message names, with no milestone owning the bindings' half.
+
+## 121. The schema mode and annotation toggles are documented by the milestones that offer them
+
+Raised by the Phase 14 documentation work (T129); owner decision (2026-10-13).
+
+`contracts/library-api.md` lists a schema mode and per-annotation toggles. Neither can be set in
+M4: the schema mode arrives with the dense schema in M6 (T033), and annotations in M5 (T063). The
+site therefore leaves both out, and says that this release writes no annotations and only the
+fitted schema.
+
+_Decision_: nothing in M4. T063 and T033 each carry a note to document their option and to
+revise the storage layout page's statement that the option's absence makes true.
+
+_Rejected_: documenting them now as forthcoming, which no reader sees before the release
+(decision 117) and which would be rewritten anyway.
+
+## 122. Java examples that do not compile are left to their own issue
+
+Raised by the Phase 14 documentation work (T129); owner decision (2026-10-13).
+
+Java and Kotlin snippets in `io/index.md`, `running-queries.md` and `cloud-storage.md` assign
+`pc.read().ndjson(…)` and `.bundles(…)` to `NdjsonSource` and `BundlesSource`, where the builder
+returns `QueryableDataSource`. They predate this programme and are equally broken on `main`.
+
+_Decision_: not fixed in M4; raised as #2825.
+
+## 123. A format given without a schema writes to the current database
+
+Raised by T117c; owner decision (2026-10-13).
+
+Java's `DataSinkBuilder.tables(schema, format)` requires a schema, and a `tables(format)`
+overload would clash with `tables(schema)`. When Python `tables()` or R `ds_write_tables()` is
+given a format and no schema, it passes `spark.catalog.currentDatabase()`, which is where an
+unqualified table name would land, so the tables go where a call without a format would put them.
+
+_Rejected_: a differently named Java builder method taking a format alone, which adds public API
+for a result the caller can already get; and requiring a schema with a format, which is clumsy
+in the common single-database case.
+
+## 124. The planning regression of one view is investigated in M7
+
+Raised by T136; owner decision (2026-10-13).
+
+At the flip, planning `UsCoreBloodPressures` takes 158–163 ms against the T003 baseline's
+143.6 ms (1.10–1.14), just above the two runs' 14% drift between sessions, while every other
+view's planning is flat or better. The cause is not established, and the baseline's plan was
+never captured.
+
+_Decision_: investigate in M7 (new task T136a), against plans captured from the baseline commit
+and the head. Meanwhile every re-run of T136 saves each view's optimised plan beside its
+timings, so the comparison has a recent plan to start from.
+
+## 125. The reference key stays computed; joins are measured in M7
+
+Raised by T136; owner decision (2026-10-13).
+
+FR-033 makes a precomputed reference key an annotation to be added if T136 showed joins need it.
+T136 cannot show that: none of the seven views joins or calls `resolve()`, and the resource and
+reference keys are only projected, compiling to `concat(...)` and `CASE WHEN RLIKE(...)`.
+
+_Decision_: the computed key is the default, and M5 builds no precomputed key. T136b, in M7,
+adds join and `resolve()` views to the benchmark, measures them on the computed key, and raises a
+follow-up issue for a key annotation only if the numbers call for one.
+
+_Rejected_: extending the benchmark in M5 before the annotation work, or in M4, which nothing in
+either milestone depends on.
+
+## 126. The code-generation fallback is measured before it is treated as a problem
+
+Raised by T136; owner decision (2026-10-13).
+
+T136 found every view's `Generate`, and `UsCoreBloodPressures`'s Coding `Filter` with its 336
+higher-order `filter` lambdas, outside whole-stage code generation, so the fallback T096c
+describes for the quantity `!=` is not specific to it. No timing has been attributed to the
+fallback: T100o's only measurement of it, adding `q != 50 'mg/dL'`, moved a small dataset's best
+time from 64 to 70 ms, and both affected views execute faster than the baseline.
+
+_Decision_: a note on T096c to measure the `!=` cost against plans that already fall back, at a
+scale where per-row cost shows. No issue is raised for the engine-wide question unless that
+measurement shows the fallback matters.
+
+## 127. A file Spark did not name is left in the table rather than failing the write
+
+Raised by the first adversarial review of M4; owner decision (2026-10-13).
+
+An append into a directory whose `<Type>.<ext>` table was assembled by hand, holding a part file
+Spark did not name (the shape of the R package's `inst/extdata/parquet/Patient.parquet`), renamed
+the new write's files out of the table and then threw `PersistenceError` on the foreign name. The
+rows were all written and readable, but the caller was told the write failed, and a retry would
+duplicate them. On `main` the rename collision was ignored silently (#2823), so the false error
+was M4's.
+
+_Decision_: fixed in M4. `TypeFiles.renameKeepingWriteId` renames only the files Spark named and
+leaves any other file in the table, keeping the table, which the source still reads as the type;
+it still refuses a table holding no file Spark named. Tests:
+`TypeFilesTest.aFileNotNamedBySparkBesideTheWriteIsLeftInTheTable` and
+`FileSinkSaveModeTest.appendBesideAHandAssembledTableKeepsEveryRow`, both failing before the fix
+with the `PersistenceError` (`r1fix-red.log`), passing after (`r1fix-green.log`).
+
+## 128. The Coding decoder's last-used cache is shared rather than per thread
+
+Raised by SonarCloud on the M4 pull request (rule S5164, a static `ThreadLocal` never removed),
+which failed the quality gate's reliability rating; owner decision (2026-10-13).
+
+`CodingDecoder` kept the decoder each thread last used in a static `ThreadLocal`, so rows from
+one column skip hashing their schema. The cached values are small and immutable and there is no
+point at which to remove them, but the rule fails the gate.
+
+_Decision_: one last-used entry shared by every thread, in an `AtomicReference`, keeping the
+identity fast path. Concurrent tasks decoding Coding columns of different schemas replace each
+other's entry and fall back to the existing lookup by field names. Rejected: suppressing the rule
+in the code, for which the repository has no precedent, or in SonarCloud's interface.
+
+
+## 129. A file Databricks names is renamed as one Spark names
+
+Raised by the automated review of the M4 pull request; owner decision (2026-10-13).
+
+`TypeFiles.renameKeepingWriteId` recognised only `part-<partitionId>-<writeId>…`. Databricks'
+commit protocol names its files `part-<partitionId>-tid-<transactionId>-<writeId>-…`, so a write on
+Databricks completed and then failed with "No partition files were found", inviting a retry that
+would duplicate the rows, as decision 127 describes. On `main` any file with the extension was
+renamed, taking whatever followed the first `-` as its id.
+
+_Decision_: fixed in M4. The pattern admits an optional `tid-<number>-` before the write id, and the
+renamed file keeps the partition and write ids, as for a file Spark names. Accepting any name, with
+a generated id where none is found, was rejected: it cannot tell a write from the hand-assembled
+table that decision 127 leaves in place. The Databricks name is taken from its documented form and
+has not been checked against a cluster. Test: `TypeFilesTest.filesNamedByDatabricksKeepTheWriteId`,
+failing before the fix with the `PersistenceError`, passing after.
+
+Not fixed: two files of one partition that differ only in the file counter (`-c000`, `-c001`), which
+`spark.sql.files.maxRecordsPerFile` produces, are given the same name, and the second rename fails
+after the rows are written; on the local file system the rename is refused and the table kept, as
+a probe confirmed. On `main` the counter was dropped too, and the collision ignored. It is
+scheduled on T046a, with a check of the Databricks name on a cluster at release.
+
+## 130. The save modes find a type's files under a file name that is not only letters
+
+Raised by the automated review of the M4 pull request; owner decision (2026-10-13).
+
+`TypeFiles.list` found a type's existing files through the pattern the file source reads with,
+which admits only letters. Under a `fileNameMapper` giving, for example, `Patient_v2`, it found
+none, so an overwrite left the earlier files beside the new ones, an error-if-exists write was not
+refused and an ignored write was not skipped. On `main` a repeated write took the earlier files'
+names; the write ids M4 gives each write made the files accumulate instead.
+
+_Decision_: fixed in M4. The sink matches the file name it was given as it is: a base name that is
+the file name, alone or followed by a period and a qualifier holding none. For a name of letters
+alone this is the set the reader's pattern gives. The fix makes the save modes correct; it does not
+make such files readable, since the file source still reads only names of letters. An append under
+such a name now finds the earlier files, so the Parquet sink's layout check applies to them. Tests:
+`FileSinkSaveModeTest.overwriteUnderANameNotOnlyLettersReplacesTheEarlierFiles`,
+`errorIfExistsUnderANameNotOnlyLettersIsRefused` and
+`ignoreUnderANameNotOnlyLettersLeavesTheEarlierFiles`, each for Parquet and NDJSON, failing before
+the fix, passing after; `appendUnderANameNotOnlyLettersKeepsTheEarlierFiles` covers the append.
+
+## 131. Only the analyzer's single-child assertion is taken for an absent column
+
+Raised by the automated review of the M4 pull request; owner decision (2026-10-13).
+
+`UnresolvedColumnOrNull` took any `AssertionError` raised while resolving its view column for the
+column's absence from a join, and returned a null. An assertion with another cause, a failure in
+resolution, was turned into nulls without a trace.
+
+_Decision_: fixed in M4. The assertion is taken for absence only where it is raised from the
+analyzer's column resolution (`ColumnResolutionHelper`), which is where Spark 4.0 asserts that the
+operator has one child; any other is rethrown. The assertion carries no message, so it is told
+apart by where it is raised. `ResolveOrNullTest.viewColumnInJoinConditionFailsTheSingleChildAssertion`
+now also pins that it is recognised, so an upgrade of Spark that moves it fails that test. Test:
+`ResolveOrNullTest.otherAssertionInResolutionIsNotTakenForAbsence`, failing before the fix, passing
+after; `JoinConditionTest` passes unchanged.

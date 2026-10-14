@@ -23,17 +23,51 @@ import au.csiro.fhir.export.BulkExportClient;
 import au.csiro.pathling.library.PathlingContext;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
+import org.apache.spark.sql.types.StructType;
 
 /**
  * A factory for creating various different data sources capable of preparing FHIR data for query.
  *
+ * <p>The sources that read stored data (Parquet, Delta and catalog tables) classify the layout of
+ * each resource type's data as it is read, and refuse data in a layout this release does not read,
+ * such as the layout written by earlier releases, with an {@link UnsupportedLayoutException}
+ * (FR-037). {@link #withLayoutDetection(boolean)} disables this for the sources a builder creates,
+ * as an opt-out for conforming data the detector misclassifies (FR-040).
+ *
  * @param context the {@link PathlingContext} to use for creating the data sources
+ * @param layoutDetection whether the Parquet, Delta and catalog sources this builder creates
+ *     classify the layout of the data they read
  * @author Piotr Szul
  * @author John Grimes
  */
-public record DataSourceBuilder(@Nonnull PathlingContext context) {
+public record DataSourceBuilder(@Nonnull PathlingContext context, boolean layoutDetection) {
+
+  /**
+   * Creates a builder whose sources classify the layout of the data they read.
+   *
+   * @param context the {@link PathlingContext} to use for creating the data sources
+   */
+  public DataSourceBuilder(@Nonnull final PathlingContext context) {
+    this(context, true);
+  }
+
+  /**
+   * Returns a builder whose Parquet, Delta and catalog sources classify the layout of the data they
+   * read, or do not. Each source keeps the setting it was created with, so disabling detection for
+   * one source leaves every other source, including those created from this builder, unaffected.
+   *
+   * @param layoutDetection false to skip layout detection in the sources the returned builder
+   *     creates
+   * @return a builder with the given setting
+   */
+  @Nonnull
+  public DataSourceBuilder withLayoutDetection(final boolean layoutDetection) {
+    return new DataSourceBuilder(context, layoutDetection);
+  }
 
   /**
    * Creates a new data source from a directory containing NDJSON encoded FHIR resource data, with
@@ -145,7 +179,12 @@ public record DataSourceBuilder(@Nonnull PathlingContext context) {
    */
   @Nonnull
   public QueryableDataSource parquet(@Nullable final String path) {
-    return new ParquetSource(context, checkArgumentNotNull(path));
+    return new ParquetSource(
+        context,
+        checkArgumentNotNull(path),
+        FileSource::resourceNameWithQualifierMapper,
+        Map.of(),
+        layoutDetection);
   }
 
   /**
@@ -160,7 +199,38 @@ public record DataSourceBuilder(@Nonnull PathlingContext context) {
   public QueryableDataSource parquet(
       @Nullable final String path, @Nullable final Function<String, Set<String>> fileNameMapper) {
     return new ParquetSource(
-        context, checkArgumentNotNull(path), checkArgumentNotNull(fileNameMapper));
+        context,
+        checkArgumentNotNull(path),
+        checkArgumentNotNull(fileNameMapper),
+        Map.of(),
+        layoutDetection);
+  }
+
+  /**
+   * Creates a new data source from a directory containing Parquet-encoded FHIR resource data, with
+   * filenames representing the resource type the file/directory contains, reading each resource
+   * type named in the given map with the schema it supplies.
+   *
+   * <p>By default the schemas of a resource type's files are merged into their union, which reads
+   * the footer of every file. A supplied schema is used as given instead, so it must cover the
+   * union of the type's files: columns it omits are not read, and it can lose whole rows, not just
+   * columns. A view unnesting a repeating element returns none of a file's rows for that element
+   * when the schema omits every field the file carries inside it. Resource types the map does not
+   * name are merged as usual.
+   *
+   * @param path the URI of the directory containing the Parquet files/directories
+   * @param schemas the schema to read each resource type with, keyed by resource type code
+   * @return the new data source
+   */
+  @Nonnull
+  public QueryableDataSource parquetWithSchemas(
+      @Nullable final String path, @Nullable final Map<String, StructType> schemas) {
+    return new ParquetSource(
+        context,
+        checkArgumentNotNull(path),
+        FileSource::resourceNameWithQualifierMapper,
+        checkArgumentNotNull(schemas),
+        layoutDetection);
   }
 
   /**
@@ -171,7 +241,7 @@ public record DataSourceBuilder(@Nonnull PathlingContext context) {
    */
   @Nonnull
   public QueryableDataSource delta(@Nullable final String path) {
-    return new DeltaSource(context, checkArgumentNotNull(path));
+    return new DeltaSource(context, checkArgumentNotNull(path), layoutDetection);
   }
 
   /**
@@ -182,7 +252,13 @@ public record DataSourceBuilder(@Nonnull PathlingContext context) {
    */
   @Nonnull
   public QueryableDataSource tables() {
-    return new CatalogSource(context);
+    return new CatalogSource(
+        context,
+        Optional.empty(),
+        Optional.empty(),
+        Optional.empty(),
+        Optional.empty(),
+        layoutDetection);
   }
 
   /**
@@ -195,7 +271,13 @@ public record DataSourceBuilder(@Nonnull PathlingContext context) {
    */
   @Nonnull
   public QueryableDataSource tables(@Nullable final String schema) {
-    return new CatalogSource(context, checkArgumentNotNull(schema));
+    return new CatalogSource(
+        context,
+        Optional.of(checkArgumentNotNull(schema)),
+        Optional.empty(),
+        Optional.empty(),
+        Optional.empty(),
+        layoutDetection);
   }
 
   /**

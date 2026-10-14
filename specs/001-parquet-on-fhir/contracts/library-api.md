@@ -16,7 +16,10 @@ Python and R.
 | Evaluating FHIRPath to a column, and against a single resource | Signatures preserved. |
 | Running ViewDefinitions | Preserved. |
 
-No public signature is removed or narrowed.
+No public signature is removed or narrowed, with one exception (decision 87): the
+Java `encode` and `encodeBundle` overloads that return a dataset typed by a HAPI
+class are removed, since only the previous encoder can produce one. Encoding a
+streaming dataset fails until the dense schema arrives in M6.
 
 ## Options added
 
@@ -24,7 +27,7 @@ No public signature is removed or narrowed.
 | --- | --- | --- |
 | Schema mode | Whether the stored schema is fitted to the data or comprises every defined element. Dense arrives in M6; until then fitted is the only value and the option is not offered. | Fitted |
 | Annotation toggles | Enable or disable each annotation individually. | All enabled |
-| Layout detection opt-out | Per source, for conforming data the detector cannot classify. | Detection enabled |
+| Layout detection opt-out | Per source, for conforming data the detector misclassifies; the data is then read as it is. | Detection enabled |
 | Read schema supply | Per source. Supplies the schema a read uses instead of merging every file's. | Unset, so schemas are merged |
 
 All are surfaced in Java, Python and R.
@@ -57,7 +60,7 @@ layout, the expected layout and the remedy.
 
 This is the intended improvement, but it is a behaviour change and belongs in
 the release notes. The per-source opt-out exists for conforming data the
-detector cannot classify.
+detector misclassifies; the data is then read as it is.
 
 ### Writing into a dataset written by an earlier release now fails
 
@@ -65,6 +68,29 @@ Sinks classify the target's layout before merging into it. Previously an append
 into such a table either failed with a storage-layer schema error or, where no
 column types conflicted, succeeded and left one table carrying two layouts. It
 is now rejected with the same message a read gives.
+
+### Writing Parquet or NDJSON where a type already has files honours the save mode
+
+Writing Parquet or NDJSON to a directory in which a resource type already has
+files now applies the save mode to those files (decision 112). Previously each
+write's files were renamed out of the directory Spark wrote them to, so a later
+write found that directory empty: it ignored the save mode, and its files took
+the names of the earlier write's and were lost while the write reported
+success. This loss is in every release since 9.3.0 and is tracked for the 9.x
+line as [#2823](https://github.com/aehrc/pathling/issues/2823).
+
+- With the default save mode (`error` in Python and R, `ERROR_IF_EXISTS` in
+  Java), such a write now raises a `PersistenceError` before writing any type,
+  where it used to discard the write silently.
+- `overwrite` replaces the type's earlier files.
+- `append` keeps the earlier files and adds the new ones beside them.
+- `ignore` skips the type and leaves its files as they are.
+
+Output file names now carry the id of the write that produced them,
+`<Type>.<partId>-<writeId>.<ext>` (for example
+`Patient.00000-7a60a041-0e7d-4e24-b23d-82405a665677.parquet`), where they were
+`<Type>.<partId>.<ext>`. Files named by earlier releases are still read as the
+type.
 
 ### A column expression stays valid over any conformant schema
 
@@ -118,8 +144,9 @@ there is no per-path caveat.
 fail. It is ignored, and a warning names what was dropped; the strictness
 option is withdrawn (decision 68). The same applies to `contained` resources, to
 an element whose JSON encoding type contradicts the definitions, and — because
-inference types a column from every value in a file — to every value of such an
-element in that file, not only the offending one. Malformed JSON still fails
+inference types a column from every value read together — to every value of such
+an element in the same read, across all of its files, not only the offending
+one. Malformed JSON still fails
 the read.
 
 ### Schema merging on by default
@@ -133,8 +160,12 @@ There is deliberately no boolean for it. Switching merging off was measured
 returning as few as 6 of 24 leaf columns on a divergent corpus, silently, so it
 is a trap rather than a choice. A supplied schema is safe only while it covers
 the union of every file's columns; supply one narrower and columns are dropped
-just as silently, merely deterministically. The workable pattern is to merge
-once and persist the result, or to take the writer's schema, and supply that.
+just as silently, merely deterministically. Whole rows can go with them: a view
+that unnests a repeating element returns none of a file's rows for that element
+when the supplied schema omits every field the file carries inside it, because
+the reader then has nothing from which to reconstruct the array. The workable
+pattern is to merge once and persist the result, or to take the writer's
+schema, and supply that.
 
 Appending to a transactional table merges the schema, so a batch carrying new
 elements widens the table rather than failing.

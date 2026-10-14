@@ -113,6 +113,11 @@ public class FilteringAndProjectionFunctions {
    * <p>This is the standard FHIRPath {@code repeat()} function. Unlike {@code repeatAll()}, it
    * performs equality-based deduplication of results.
    *
+   * <p>The maximum same-type recursion depth, {@code maxUnboundTraversalDepth} in the FHIRPath
+   * configuration, bounds only levels whose result has the same SQL type as the level it was
+   * evaluated on. Nested structures in the data have a different SQL type at each level, so their
+   * traversal stops where the data does.
+   *
    * <p>If the input collection is empty, the result is empty.
    *
    * @param input The input collection
@@ -143,10 +148,13 @@ public class FilteringAndProjectionFunctions {
    *
    * <p>If the input collection is empty, the result is empty.
    *
-   * <p>For Extension traversal, same-type depth exhaustion silently stops and returns results
-   * collected up to that point. For all other same-type traversals, depth exhaustion raises an
-   * error indicating infinite recursive traversal. The depth limit is controlled by {@code
-   * maxUnboundTraversalDepth} in the FHIRPath configuration.
+   * <p>The depth limit, {@code maxUnboundTraversalDepth} in the FHIRPath configuration, guards
+   * same-type recursion: a level whose result has the same SQL type as the level it was evaluated
+   * on, as {@code repeatAll(first())} produces, which would otherwise never end. Nested structures
+   * in the data have a different SQL type at each level, so their traversal does not consume the
+   * limit and stops where the data does. For Extension traversal, same-type depth exhaustion
+   * silently stops and returns results collected up to that point. For all other same-type
+   * traversals, depth exhaustion raises an error indicating infinite recursive traversal.
    *
    * @param input The input collection
    * @param expression The projection expression to apply recursively

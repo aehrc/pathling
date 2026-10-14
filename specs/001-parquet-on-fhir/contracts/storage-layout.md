@@ -104,7 +104,7 @@ It holds on a fitted schema subject to the exceptions below, and on a dense
 schema additionally within the configured nesting, extension and open-type
 settings.
 
-Not covered. The first two are reported; the rest are not: `contained`
+Not covered. The first three are reported; the rest are not: `contained`
 resources; content the definition set does not describe or contradicts;
 primitive element ids and extensions, until M5; decimal lexical form — trailing zeros,
 exponent notation as written, and precision beyond a double; `base64Binary`
@@ -144,15 +144,16 @@ the resource type, the detected layout and the remedy. Its sinks do the same for
 the target they write into, before any schema merge is attempted, so a write
 into a dataset written by an earlier release cannot quietly leave one table
 carrying both layouts. The check can be disabled per source for the case where
-conforming data cannot be classified.
+the detector misclassifies conforming data; the data is then read as it is.
 
 **Provisional, pending T049a.** The query engine itself retains a reader for the
 previous layout from M2 until it is removed in M7, which is what lets the engine
 be converted behind a green build. Whether the *source boundary* keeps refusing
 earlier-layout data, refuses by default but routes under the existing opt-out, or
-routes outright is not yet settled. Only the first is described above; the other
-two would make this section's opening sentence false, so it is not to be
-published until T049a is answered.
+routes outright is not yet settled. Only the first is described above, and it is
+what M4 implements. The site's storage layout page describes that refusal; no
+milestone is released before M7, so T049a must confirm or revise both this
+section and the page before the release (decision 117).
 
 Migration of data at rest is separate work: a version gate by default, and an
 opt-in rewrite tool built from the retained previous implementation. A migrated

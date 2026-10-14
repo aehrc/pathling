@@ -47,6 +47,18 @@ def temp_dir():
     temp_dir.cleanup()
 
 
+@fixture(scope="session")
+def derby_home():
+    """
+    A directory for the Derby database behind the Hive metastore, which lives
+    for the whole test session, so that every run starts with an empty
+    metastore and leaves nothing in the working directory.
+    """
+    derby_home = TemporaryDirectory(prefix="derby")
+    yield derby_home.name
+    derby_home.cleanup()
+
+
 @fixture(scope="module", autouse=True)
 def temp_warehouse_dir(temp_dir):
     temp_warehouse_dir = TemporaryDirectory(dir=temp_dir, prefix="warehouse")
@@ -56,7 +68,7 @@ def temp_warehouse_dir(temp_dir):
 
 # noinspection PyProtectedMember
 @fixture(scope="module")
-def pathling_ctx(request, temp_warehouse_dir):
+def pathling_ctx(request, temp_warehouse_dir, derby_home):
     """
     Fixture for creating a Spark Session available for all tests in this
     testing session.
@@ -82,8 +94,16 @@ def pathling_ctx(request, temp_warehouse_dir):
         )
         .config("spark.sql.catalogImplementation", "hive")
         .config("spark.sql.warehouse.dir", temp_warehouse_dir)
+        # Derby otherwise keeps the metastore in the working directory, where
+        # a run inherits the databases and warehouse locations of the last.
+        .config("spark.driver.extraJavaOptions", f"-Dderby.system.home={derby_home}")
         .getOrCreate()
     )
+    # The option above takes effect only where this session launches the JVM,
+    # and another test module may have launched it first. Derby reads the
+    # property when it boots, on the first use of the metastore, which only
+    # this session makes, so setting it here covers that case too.
+    spark._jvm.java.lang.System.setProperty("derby.system.home", derby_home)
     # noinspection SqlNoDataSourceInspection
     spark.sql("CREATE DATABASE IF NOT EXISTS test")
 

@@ -23,9 +23,10 @@
 package au.csiro.pathling.sql
 
 import au.csiro.pathling.encoders.ColumnFunctions.{columnOrNull, decimalColumnOrNull, quantityColumnOrNull, resolveOrNull, traverseExtension, traverseRootExtension}
+import au.csiro.pathling.encoders.UnresolvedColumnOrNull
 import org.apache.spark.SparkException
-import org.apache.spark.sql.catalyst.analysis.UnresolvedAttribute
-import org.apache.spark.sql.catalyst.expressions.{AttributeReference, Expression, GetArrayStructFields, GetStructField, Literal}
+import org.apache.spark.sql.catalyst.analysis.{GetViewColumnByNameAndOrdinal, UnresolvedAttribute}
+import org.apache.spark.sql.catalyst.expressions.{ArrayTransform, AttributeReference, Expression, GetArrayStructFields, GetStructField, LambdaFunction, Literal, UnresolvedNamedLambdaVariable}
 import org.apache.spark.sql.execution.FileSourceScanExec
 import org.apache.spark.sql.execution.adaptive.AdaptiveSparkPlanHelper
 import org.apache.spark.sql.types._
@@ -140,20 +141,128 @@ class ResolveOrNullTest extends SparkSessionSupport with AdaptiveSparkPlanHelper
   }
 
   /**
-   * Known limit, recorded in `evidence/t038a-root-column-spike.md` and decision 75: the reference
-   * fails in a join condition, even where the column exists. The analyzer resolves the view column
-   * only against an operator with a single child, and asserts that it has one
-   * (`ColumnResolutionHelper.resolveExpressionByPlanChildren`), so a join fails with an
-   * `AssertionError` that the catch does not see. This test notices if that changes.
+   * The reference in a join condition (T100k). A join resolves its condition across both of its
+   * children, so the reference resolves to the column of whichever side has it, and to the
+   * fallback where neither does. Each side is read once and bound, so that the condition refers to
+   * the attributes of the plan being joined.
    */
   @Test
-  def knownLimitJoinConditionFailsWithInternalError(): Unit = {
+  def tableColumnInJoinCondition(): Unit = {
+    val (withScore, withoutScore, keys) = (present, absent, other)
+    // A column of one side.
+    assertEquals(Seq("[1,0]", "[2,0]"),
+      rows(withScore.join(keys, score >= keys("k")).select(F.col("id"), keys("k"))))
+    // The same, in a semi join, whose condition also reads both sides.
+    assertEquals(Seq("[1]", "[2]"),
+      rows(withScore.join(keys, score >= keys("k"), "left_semi").select("id")))
+    // A column of neither side is the fallback, so the condition is null for every pair.
+    assertEquals(Seq(), rows(withoutScore.join(keys, score >= keys("k")).select("id")))
+    assertEquals(Seq("[1]", "[2]"),
+      rows(withoutScore.join(keys, score.isNull && keys("k") === 0).select("id")))
+    assertEquals(IntegerType,
+      withoutScore.join(keys, F.lit(true)).select(score.alias("s")).schema("s").dataType)
+  }
+
+  /** Joining first and then filtering, the control for the condition above, gives the same rows. */
+  @Test
+  def tableColumnInFilterAfterJoin(): Unit = {
+    val (withScore, withoutScore, keys) = (present, absent, other)
+    assertEquals(Seq("[1,0]", "[2,0]"),
+      rows(withScore.join(keys).filter(score >= keys("k")).select(F.col("id"), keys("k"))))
+    assertEquals(Seq(), rows(withoutScore.join(keys).filter(score >= keys("k")).select("id")))
+  }
+
+  /** A name that both sides of a join have is ambiguous in the condition, as a plain one is. */
+  @Test
+  def nameOnBothSidesOfAJoinFailsWithAmbiguousReference(): Unit = {
+    val (left, right) = (present, other.select(F.lit(9).as("score")))
+    val error = assertThrows(classOf[AnalysisException],
+      () => left.join(right, score > 0).collect())
+    assertEquals("AMBIGUOUS_REFERENCE", error.getCondition)
+    val control = assertThrows(classOf[AnalysisException],
+      () => left.join(right, F.col("score") > 0).collect())
+    assertEquals("AMBIGUOUS_REFERENCE", control.getCondition)
+  }
+
+  /**
+   * The reference takes from the plain resolution of its name only an attribute of the input. A
+   * name that is also a function the analyzer resolves without parentheses is that function where
+   * no column has the name, and the reference is the fallback there instead.
+   */
+  @Test
+  def nameOfALiteralFunctionIsTheColumnOrTheFallback(): Unit = {
+    val withColumn = parquet("currentDate", "select 1 as id, 'x' as current_date")
+    val withoutColumn = parquet("noCurrentDate", "select 1 as id")
+    val reference = columnOrNull("current_date", StringType)
+    assertEquals(Seq("[x]"), rows(withColumn.select(reference)))
+    assertEquals(Seq("[null]"), rows(withoutColumn.select(reference)))
+    // The control: a plain reference to the name is the function where no column has it.
+    assertEquals(DateType, withoutColumn.select(F.col("current_date").as("d")).schema("d").dataType)
+    // The same, in a join condition.
+    val keys = other
+    assertEquals(Seq("[1]"), rows(withColumn.join(keys, reference === "x").select("id")))
+    assertEquals(Seq(), rows(withoutColumn.join(keys, reference.isNotNull).select("id")))
+  }
+
+  /**
+   * Inside a lambda whose variable has the column's name, the reference is the table column, and
+   * the fallback where the table has no such column, never the variable.
+   */
+  @Test
+  def referenceInsideALambdaIsNotTheLambdaVariable(): Unit = {
+    val variable = UnresolvedNamedLambdaVariable(Seq("score"))
+    def overArr(body: Expression): Column =
+      column(ArrayTransform(expression(F.col("arr")), LambdaFunction(body, Seq(variable))))
+    assertEquals(Seq("[1,ArraySeq(5, 5)]", "[2,ArraySeq(7)]"),
+      rows(present.select(F.col("id"), overArr(expression(score)))))
+    assertEquals(Seq("[1,ArraySeq(null, null)]", "[2,ArraySeq(null)]"),
+      rows(absent.select(F.col("id"), overArr(expression(score)))))
+    // The control: the variable is bound under that name, and a reference to it as a variable is
+    // the element. The parser makes every name in a lambda's body such a reference, so the
+    // reference's plain attribute is never bound to a variable.
+    assertEquals(Seq("[1,ArraySeq(a, b)]", "[2,ArraySeq(c)]"),
+      rows(present.select(F.col("id"),
+        overArr(UnresolvedNamedLambdaVariable(Seq("score", "v"))))))
+  }
+
+  /**
+   * The analyzer internal the join case rests on: a view column in the condition of an operator
+   * with two children fails the assertion that the operator has one, with INTERNAL_ERROR, whether
+   * or not the column exists. If an upgrade of Spark changes this, the reference's handling of
+   * absence in a join needs to be revisited.
+   */
+  @Test
+  def viewColumnInJoinConditionFailsTheSingleChildAssertion(): Unit = {
+    val keys = other
     for (data <- Seq(present, absent)) {
+      val viewColumn = column(GetViewColumnByNameAndOrdinal(
+        UnresolvedColumnOrNull.SOURCE_NAME, "score", 0, 1, None))
       val error = assertThrows(classOf[SparkException],
-        () => data.join(other, score >= other("k")).collect())
+        () => data.join(keys, viewColumn >= keys("k")).collect())
       assertEquals("INTERNAL_ERROR", error.getCondition)
       assertTrue(causes(error).exists(_.isInstanceOf[AssertionError]), error.toString)
     }
+    // The assertion is raised by the analyzer's column resolution, which is what the reference
+    // takes for absence.
+    val error = assertThrows(classOf[SparkException],
+      () => present.join(other, column(GetViewColumnByNameAndOrdinal(
+        UnresolvedColumnOrNull.SOURCE_NAME, "score", 0, 1, None)) >= other("k")).collect())
+    val assertion = causes(error).collectFirst { case a: AssertionError => a }.get
+    assertTrue(UnresolvedColumnOrNull.isSingleChildAssertion(assertion), assertion.toString)
+  }
+
+  /**
+   * An assertion raised anywhere other than the analyzer's single-child check is not taken for
+   * absence, so a failure in resolving the reference is not turned into a null.
+   */
+  @Test
+  def otherAssertionInResolutionIsNotTakenForAbsence(): Unit = {
+    val reference = new UnresolvedColumnOrNull("score", IntegerType)
+    val error = assertThrows(classOf[AssertionError], () => reference.mapChildren {
+      case _: GetViewColumnByNameAndOrdinal => throw new AssertionError("assertion failed")
+      case other => other
+    })
+    assertEquals("assertion failed", error.getMessage)
   }
 
   /**

@@ -18,6 +18,7 @@
 package au.csiro.pathling.io;
 
 import au.csiro.pathling.definition.DefinitionContext;
+import au.csiro.pathling.definition.NodeDefinition;
 import au.csiro.pathling.schema.DefinitionCanonicalStructure;
 import au.csiro.pathling.schema.LayoutEntry;
 import au.csiro.pathling.schema.LayoutFields;
@@ -77,6 +78,13 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  */
 @Slf4j
 final class ResourceTransformer {
+
+  /** The name of the field a decimal of an element is marked with, which no FHIR name can be. */
+  @Nonnull private static final String DECIMAL_MARKER = "$decimal$";
+
+  /** A marked decimal as the JSON writer writes it, capturing the decimal's text. */
+  @Nonnull
+  private static final String MARKED_DECIMAL = "\\{\"\\$decimal\\$\":\"(-?[0-9][0-9.eE+-]*)\"\\}";
 
   @Nonnull private final DefinitionContext definitions;
 
@@ -167,7 +175,51 @@ final class ResourceTransformer {
       @Nonnull final String resourceType, @Nonnull final Dataset<Row> stored) {
     final DefinitionCanonicalStructure canonical =
         DefinitionCanonicalStructure.forResource(definitions, resourceType);
-    return stored.select(egressFields(canonical, stored.schema(), functions::col));
+    return stored.select(egressFields(canonical, stored.schema(), functions::col, false));
+  }
+
+  /**
+   * Transforms the values of one element, in this layout, into what the JSON writer serialises as
+   * FHIR JSON, as {@link #toJsonShape} does for a resource (T100j).
+   *
+   * <p>The values are a structure, or an array of them, of the type the definition describes. A
+   * field the definition does not describe is left out rather than refused, because a value
+   * computed by a query can carry fields of its own beside the elements: the scale and canonical
+   * form of a quantity the engine builds, or a field identifier of the previous layout. Which
+   * fields are written is decided by the definition, never by a field's name. A decimal is marked
+   * rather than given as a double, for {@link #unmarkDecimals} to write it with its text.
+   *
+   * @param element the definition of the element
+   * @param stored the values
+   * @param type the type of the values, a structure or an array of them
+   * @return the values, in the JSON data model
+   * @throws IllegalArgumentException if the type is neither a structure nor an array of them
+   */
+  @Nonnull
+  static Column elementToJsonShape(
+      @Nonnull final NodeDefinition element,
+      @Nonnull final Column stored,
+      @Nonnull final DataType type) {
+    final DefinitionCanonicalStructure node = DefinitionCanonicalStructure.of(element, false);
+    return elementValue(node, stored, type);
+  }
+
+  @Nonnull
+  private static Column elementValue(
+      @Nonnull final DefinitionCanonicalStructure node,
+      @Nonnull final Column stored,
+      @Nonnull final DataType type) {
+    if (type instanceof final ArrayType array) {
+      return functions.transform(stored, value -> elementValue(node, value, array.elementType()));
+    }
+    if (type instanceof final StructType structure) {
+      return functions.when(
+          stored.isNotNull(),
+          functions.struct(egressFields(node, structure, stored::getField, true)));
+    }
+    throw new IllegalArgumentException(
+        "Expected a structure, or an array of structures, but the values are: "
+            + type.simpleString());
   }
 
   /**
@@ -428,14 +480,19 @@ final class ResourceTransformer {
     return Stream.of(observed.fields()).filter(field -> field.name().equals(name)).findFirst();
   }
 
-  /** Returns the fields of one structure of the document, in the order the layout stores them. */
+  /**
+   * Returns the fields of one structure of the document, in the order the layout stores them. A
+   * field the definitions do not describe is refused, or, for an element, left out.
+   */
   @Nonnull
   private static Column[] egressFields(
       @Nonnull final DefinitionCanonicalStructure node,
       @Nonnull final StructType schema,
-      @Nonnull final Function<String, Column> source) {
+      @Nonnull final Function<String, Column> source,
+      final boolean forElement) {
     return Stream.of(schema.fields())
-        .flatMap(field -> egressField(node, field, source.apply(field.name())).stream())
+        .filter(field -> !forElement || node.entry(field.name()).isPresent())
+        .flatMap(field -> egressField(node, field, source.apply(field.name()), forElement).stream())
         .toArray(Column[]::new);
   }
 
@@ -444,13 +501,15 @@ final class ResourceTransformer {
   private static Optional<Column> egressField(
       @Nonnull final DefinitionCanonicalStructure node,
       @Nonnull final StructField field,
-      @Nonnull final Column stored) {
+      @Nonnull final Column stored,
+      final boolean forElement) {
     final LayoutEntry entry = storedEntry(node, field);
     if (entry.isResourceType()) {
       return Optional.of(stored.alias(field.name()));
     }
     return entry.isElement()
-        ? Optional.of(egressValue(node, entry, stored, field.dataType()).alias(field.name()))
+        ? Optional.of(
+            egressValue(node, entry, stored, field.dataType(), forElement).alias(field.name()))
         : Optional.empty();
   }
 
@@ -470,12 +529,18 @@ final class ResourceTransformer {
       @Nonnull final DefinitionCanonicalStructure node,
       @Nonnull final LayoutEntry entry,
       @Nonnull final Column stored,
-      @Nonnull final DataType type) {
+      @Nonnull final DataType type,
+      final boolean forElement) {
     if (type instanceof final ArrayType array) {
       return functions.transform(
-          stored, element -> egressValue(node, entry, element, array.elementType()));
+          stored, element -> egressValue(node, entry, element, array.elementType(), forElement));
     }
     final Optional<FHIRDefinedType> primitive = entry.primitiveType();
+    if (forElement && primitive.filter(FHIRDefinedType.DECIMAL::equals).isPresent()) {
+      // A decimal of an element leaves as its text, marked, so that it is written as a number with
+      // that text rather than through a double.
+      return markedDecimal(stored);
+    }
     if (primitive.isPresent()) {
       // The converter that stored the value says what the JSON writer is given for it: a decimal
       // as a double so that it is written as a bare number, and base64Binary encoded again.
@@ -484,7 +549,33 @@ final class ResourceTransformer {
     final DefinitionCanonicalStructure child = node.elementStructure(entry).orElseThrow();
     return functions.when(
         stored.isNotNull(),
-        functions.struct(egressFields(child, (StructType) type, stored::getField)));
+        functions.struct(egressFields(child, (StructType) type, stored::getField, forElement)));
+  }
+
+  /**
+   * Marks the text of a decimal for {@link #unmarkDecimals}: a structure with one field, whose name
+   * no FHIR element or extension can have, holding the text. A null decimal stays null.
+   */
+  @Nonnull
+  private static Column markedDecimal(@Nonnull final Column stored) {
+    return functions.when(
+        stored.isNotNull(),
+        functions.struct(stored.cast(DataTypes.StringType).alias(DECIMAL_MARKER)));
+  }
+
+  /**
+   * Replaces each marked decimal in JSON text with a bare number of the decimal's text, so that a
+   * decimal of an element is written with the text it is stored as (T100j). The match needs the
+   * quotes and braces the JSON writer puts around the marker's structure, which the text of a
+   * string value cannot contain unescaped, and a number's characters, so no other content of the
+   * document can match it.
+   *
+   * @param json the JSON text, as the JSON writer wrote it
+   * @return the JSON text, with every marked decimal a bare number
+   */
+  @Nonnull
+  static Column unmarkDecimals(@Nonnull final Column json) {
+    return functions.regexp_replace(json, MARKED_DECIMAL, "$1");
   }
 
   @Nonnull

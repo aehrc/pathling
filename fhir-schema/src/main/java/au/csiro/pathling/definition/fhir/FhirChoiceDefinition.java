@@ -20,6 +20,7 @@ package au.csiro.pathling.definition.fhir;
 import au.csiro.pathling.definition.ChildDefinition;
 import au.csiro.pathling.definition.ChoiceDefinition;
 import au.csiro.pathling.definition.ElementDefinition;
+import ca.uhn.fhir.context.RuntimeChildAny;
 import ca.uhn.fhir.context.RuntimeChildChoiceDefinition;
 import jakarta.annotation.Nonnull;
 import java.util.List;
@@ -81,12 +82,14 @@ class FhirChoiceDefinition implements ChoiceDefinition {
     // annotation and so is declaration order verbatim. It deliberately does not come from the set
     // of valid child names, which is hash ordered: that order is neither reproducible by another
     // implementation nor stable across an upgrade of the definition library, and the order of an
-    // expansion is part of the type of every structure that carries the choice.
-    return childDefinition.getChoices().stream()
-        .map(this::nameOfDeclaredType)
-        .distinct()
-        .flatMap(name -> getChildByElementName(name).stream())
-        .toList();
+    // expansion is part of the type of every structure that carries the choice. An open choice
+    // declares no types, and the list the definition library reports for it is hash ordered too,
+    // so its order is taken from the specification's list of open types instead.
+    final List<String> names =
+        childDefinition.getChoices().stream().map(this::nameOfDeclaredType).distinct().toList();
+    final List<String> ordered =
+        childDefinition instanceof RuntimeChildAny ? OpenTypeOrder.order(getName(), names) : names;
+    return ordered.stream().flatMap(name -> getChildByElementName(name).stream()).toList();
   }
 
   /**

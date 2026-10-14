@@ -188,3 +188,5 @@ an order of magnitude above `Patient`.
 None of this is gated on: driver 1 is a hypothesis and nothing in the programme
 depends on the outcome. It is recorded so that the comparison at the flip
 measures the change rather than the machine.
+
+The comparison at the flip is in [t136-benchmark.md](t136-benchmark.md).

@@ -40,6 +40,10 @@ import org.apache.spark.sql.catalog.Table;
 /**
  * A class for making FHIR data in the Spark catalog available for query.
  *
+ * <p>The layout of each table is classified from its schema as it is read, and a table in a layout
+ * this release does not read, such as the layout written by earlier releases, is refused with an
+ * {@link UnsupportedLayoutException} (FR-037). This can be disabled per source.
+ *
  * @author John Grimes
  * @author Piotr Szul
  */
@@ -52,6 +56,9 @@ public class CatalogSource extends AbstractSource {
 
   private final Optional<Predicate<String>> filterResourcePredicate;
 
+  /** Whether the layout of each table is classified as it is read. */
+  private final boolean layoutDetection;
+
   /**
    * Constructs a CatalogSource with the specified PathlingContext and an empty schema.
    *
@@ -63,6 +70,7 @@ public class CatalogSource extends AbstractSource {
     this.transformation = Optional.empty(); // No transformation by default
     this.universalOperator = Optional.empty();
     this.filterResourcePredicate = Optional.empty();
+    this.layoutDetection = true;
   }
 
   /**
@@ -77,6 +85,7 @@ public class CatalogSource extends AbstractSource {
     this.transformation = Optional.empty(); // No transformation by default
     this.universalOperator = Optional.empty();
     this.filterResourcePredicate = Optional.empty();
+    this.layoutDetection = true;
   }
 
   /**
@@ -94,11 +103,39 @@ public class CatalogSource extends AbstractSource {
       @Nonnull final Optional<UnaryOperator<Dataset<Row>>> transformation,
       @Nonnull final Optional<BiFunction<String, Dataset<Row>, Dataset<Row>>> universalOperator,
       @Nonnull final Optional<Predicate<String>> filterResourcePredicate) {
+    this(context, schema, transformation, universalOperator, filterResourcePredicate, true);
+  }
+
+  /**
+   * Constructs a CatalogSource with full control over all optional parameters, and over whether the
+   * layout of each table is classified as it is read.
+   *
+   * <p>Layout detection is enabled by the other constructors. It classifies each table from its
+   * schema, which the catalog already holds, and refuses a table in a layout this release does not
+   * read, such as the layout written by earlier releases, with an {@link
+   * UnsupportedLayoutException}. Disabling it is an opt-out for conforming data the detector
+   * misclassifies, and applies to this source alone (FR-040).
+   *
+   * @param context the PathlingContext to use
+   * @param schema optional schema name for the catalog tables
+   * @param transformation optional transformation to apply to each dataset
+   * @param universalOperator optional operator to apply to each resource with its type
+   * @param filterResourcePredicate optional predicate to filter resource types
+   * @param layoutDetection whether the layout of each table is classified as it is read
+   */
+  public CatalogSource(
+      @Nonnull final PathlingContext context,
+      @Nonnull final Optional<String> schema,
+      @Nonnull final Optional<UnaryOperator<Dataset<Row>>> transformation,
+      @Nonnull final Optional<BiFunction<String, Dataset<Row>, Dataset<Row>>> universalOperator,
+      @Nonnull final Optional<Predicate<String>> filterResourcePredicate,
+      final boolean layoutDetection) {
     super(context);
     this.schema = schema;
     this.transformation = transformation;
     this.universalOperator = universalOperator;
     this.filterResourcePredicate = filterResourcePredicate;
+    this.layoutDetection = layoutDetection;
   }
 
   @Nonnull
@@ -111,6 +148,10 @@ public class CatalogSource extends AbstractSource {
     if (filterResourcePredicate.isPresent() && !filterResourcePredicate.get().test(resourceCode)) {
       // The resourceCode is meant to be excluded, no more mapping required
       return table.limit(0);
+    }
+    // The stored table is classified before any operator changes its schema.
+    if (layoutDetection) {
+      LayoutDetector.check(resourceCode, table.schema());
     }
     if (universalOperator.isPresent()) {
       table = universalOperator.get().apply(resourceCode, table);
@@ -175,14 +216,24 @@ public class CatalogSource extends AbstractSource {
   @Override
   public CatalogSource map(@Nonnull final BiFunction<String, Dataset<Row>, Dataset<Row>> operator) {
     return new CatalogSource(
-        context, schema, transformation, Optional.of(operator), filterResourcePredicate);
+        context,
+        schema,
+        transformation,
+        Optional.of(operator),
+        filterResourcePredicate,
+        layoutDetection);
   }
 
   @Override
   public @Nonnull QueryableDataSource filterByResourceType(
       @Nonnull final Predicate<String> resourceTypePredicate) {
     return new CatalogSource(
-        context, schema, transformation, universalOperator, Optional.of(resourceTypePredicate));
+        context,
+        schema,
+        transformation,
+        universalOperator,
+        Optional.of(resourceTypePredicate),
+        layoutDetection);
   }
 
   @Override

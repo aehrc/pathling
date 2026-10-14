@@ -1,5 +1,9 @@
 # M2 review: an engine-built column in a join condition
 
+**Resolved in M4 by T100k, with option C.** The rest of this file is the
+investigation as it stood before the fix; the section "The fix" at its end
+records what was implemented and how it was verified.
+
 **Result: a regression from M2, on both layouts, accepted by the owner as a
 known issue on 2026-09-29, to be revisited.** A column built by
 `fhirPathToColumn` or `searchToColumn` that reads a column, used directly in a
@@ -216,3 +220,52 @@ The patched classes go ahead of the jars on the classpath, so they replace the
 unpatched `UnresolvedColumnOrNull`. The unit runs under B and C use the same
 patch, with Spotless skipped and the variant property passed to the forked test
 JVM.
+
+## The fix
+
+T100k implemented option C in `UnresolvedColumnOrNull.mapChildren`:
+
+- The name is resolved first as a plain `UnresolvedAttribute`. The result is
+  accepted only where it is a resolved `Attribute`. A name can also resolve to a
+  lambda variable, an outer reference or a literal function such as
+  `current_date`, none of which is the table column; each of these falls
+  through to the view-column path, as does a name that stays unresolved.
+- The view-column path is unchanged, and also catches the `AssertionError` that
+  the view column raises in an operator with more than one child, answering the
+  typed null. It is reached there only where the plain attribute, which a join
+  resolves across both of its children, did not resolve, so no child has the
+  column. Ambiguity is raised by the plain attribute as `AMBIGUOUS_REFERENCE`.
+
+C's risk was contained without falling back to B. A lambda variable is never
+reached by a plain attribute, because the parser makes every name in a lambda's
+body a lambda-variable reference, and the analyzer binds only those; the test
+builds a lambda whose variable has the column's name to show the reference is
+the table column, or the fallback, and never the variable. A literal function is
+rejected because it is not an attribute; the test asks for an absent column
+named `current_date` and gets the typed null, where a plain reference gets the
+date. An outer reference is wrapped in `OuterReference`, which is not an
+attribute either.
+
+Verified at the M4 head, Spark 4.0.2:
+
+- `ResolveOrNullTest` (56): the join pin is replaced by
+  `tableColumnInJoinCondition` (a column of one side, a semi join, a column of
+  neither side, the fallback's type), `tableColumnInFilterAfterJoin` (the
+  control), `nameOnBothSidesOfAJoinFailsWithAmbiguousReference`,
+  `nameOfALiteralFunctionIsTheColumnOrTheFallback`,
+  `referenceInsideALambdaIsNotTheLambdaVariable`, and the plan-shape pin
+  `viewColumnInJoinConditionFailsTheSingleChildAssertion`, which asserts that a
+  bare view column in a join condition still fails Spark's single-child
+  assertion with `INTERNAL_ERROR`, present or absent. Three of the new tests
+  failed before the change. The ambiguity tests, the comma test and the
+  dropped-column pin pass unchanged, so the dropped-column limit stands.
+- `JoinConditionTest` in `fhirpath` (16): six FHIRPath expressions in a join
+  condition, present, absent and reading no column, a search, and a name on both
+  sides, on both layouts, each against joining first and then filtering. Before
+  the change 14 failed, with `INTERNAL_ERROR`.
+- `SelfJoinAmbiguityTest` and `ReferenceKeyJoinTest` pass unchanged.
+
+The decision table above changes in two rows: "Join condition,
+`not(text.exists())`, `text` on neither side" now gives the C column's 3697
+where the base gave `UNRESOLVED_COLUMN`, and the self-join rows give
+`AMBIGUOUS_REFERENCE`, as the base did.

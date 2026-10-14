@@ -63,6 +63,15 @@
       <artifactId>utilities</artifactId>
     </dependency>
     <dependency>
+      <groupId>au.csiro.pathling</groupId>
+      <artifactId>fhir-schema</artifactId>
+    </dependency>
+    <!-- Reads and writes resources as text in the Parquet on FHIR layout. -->
+    <dependency>
+      <groupId>au.csiro.pathling</groupId>
+      <artifactId>io</artifactId>
+    </dependency>
+    <dependency>
       <groupId>au.csiro.fhir</groupId>
       <artifactId>bulk-export</artifactId>
     </dependency>
@@ -175,7 +184,12 @@
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
-
+    <!-- Reads the engine's YAML conformance cases, which the expression-to-column tests run. -->
+    <dependency>
+      <groupId>com.fasterxml.jackson.dataformat</groupId>
+      <artifactId>jackson-dataformat-yaml</artifactId>
+      <scope>test</scope>
+    </dependency>
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-engine</artifactId>

@@ -81,6 +81,7 @@ graph TD
     library-api --> encoders
     library-api --> terminology
     library-api --> fhirpath
+    library-api --> io
     library-runtime --> library-api
     library-runtime --> fhir-schema
     library-runtime --> io

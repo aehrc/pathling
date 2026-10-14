@@ -131,6 +131,24 @@
           </filesets>
         </configuration>
       </plugin>
+      <!-- The shade plugin replaces the main jar with the shaded one, and the jar plugin, finding
+           nothing of this module's own changed, would otherwise keep that previous shaded jar as the
+           main artifact of the next build that does not clean. The shade plugin then merges the
+           freshly built modules into it, and where a class appears in both, the stale copy already in
+           the jar wins, so the runtime installed does not hold the current code. Forcing the jar to be
+           created afresh makes every build shade from this module's own content alone. -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>default-jar</id>
+            <configuration>
+              <forceCreation>true</forceCreation>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-shade-plugin</artifactId>

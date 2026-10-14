@@ -8,12 +8,26 @@ description: Examples of running streaming queries over FHIR data using the Path
 
 <iframe width="560" height="315" src="https://www.youtube.com/embed/e-hFKckQITw?si=fzgfFzdB8C0X4RIX" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
 
-Pathling supports streaming data sources, and all the operations available
-within the library are able to execute continuously across a stream of data.
+Pathling's query operations, including terminology functions, FHIRPath columns
+and SQL on FHIR views, can run continuously across a stream of data that has
+already been encoded.
 
-The following demonstrates streaming FHIR data
-from [Kafka](https://kafka.apache.org/), encoding the data, and performing
-terminology operations using Python:
+:::note
+
+Encoding a streaming dataset with `encode` or `encode_bundle` is not available
+in this release. Resources are stored with a schema fitted to the data they
+contain, and a stream cannot be scanned to fit one, so encoding a streaming
+dataset fails with an error. Streaming encoding will return when a schema
+derived from the FHIR definitions, rather than from the data, is available.
+
+Until then, encode each micro-batch of a stream within `foreachBatch`, where it
+is an ordinary dataset, as the example below does.
+
+:::
+
+The following demonstrates consuming FHIR bundles
+from [Kafka](https://kafka.apache.org/), encoding each micro-batch, and
+performing terminology operations using Python:
 
 ```python
 from pathling import PathlingContext, Coding, subsumes
@@ -29,27 +43,29 @@ df = (
     .selectExpr("CAST(value AS STRING) as json_bundle")
 )
 
-# Pull out the MedicationAdministration resources and put them into a dataset.
-med_administrations = (
-    pc.encode_bundle(df, "MedicationAdministration")
-    .selectExpr(
-        "id", "status",
-        "EXPLODE_OUTER(medicationCodeableConcept.coding) as coding"
-    )
-)
 
-# Perform a subsumes operation on the medication coding to determine whether it is a type of
-# anti-coagulant.
-result = med_administrations.select(
-    med_administrations.id,
-    med_administrations.status,
-    med_administrations.coding,
-    subsumes(
-        # 372862008 |Anticoagulant|
-        left_coding=Coding("http://snomed.info/sct", "372862008"),
-        right_coding_column="coding",
-    ).alias("is_anticoagulant"),
-)
+def process_batch(batch, batch_id):
+    # Pull out the MedicationAdministration resources and put them into a dataset.
+    med_administrations = pc.encode_bundle(
+        batch, "MedicationAdministration"
+    ).selectExpr("id", "status", "EXPLODE_OUTER(medicationCodeableConcept.coding) as coding")
+
+    # Perform a subsumes operation on the medication coding to determine whether it is a type
+    # of anti-coagulant.
+    result = med_administrations.select(
+        med_administrations.id,
+        med_administrations.status,
+        med_administrations.coding,
+        subsumes(
+            # 372862008 |Anticoagulant|
+            left_coding=Coding("http://snomed.info/sct", "372862008"),
+            right_coding_column="coding",
+        ).alias("is_anticoagulant"),
+    )
+    result.write.mode("append").parquet("/path/to/anticoagulants")
+
+
+query = df.writeStream.foreachBatch(process_batch).start()
 ```
 
 For more information about Spark's Kafka integration, see
@@ -61,6 +77,8 @@ This implementation shows an ETL (Extract, Transform, Load) pipeline that
 consumes FHIR resources from Kafka, transforms them using SQL on FHIR queries
 with terminology operations, and stores the results to PostgreSQL. This
 example illustrates how Pathling enables streaming analytics over clinical data.
+Because a streaming dataset cannot be encoded in this release, each micro-batch
+is encoded and transformed within `foreachBatch`.
 
 ## Overview
 
@@ -68,7 +86,7 @@ The pipeline processes data in real time by:
 
 1. Consumes FHIR bundles from Kafka topics
 2. Extracting and encoding specific resource types (Patient, Encounter,
-   Condition)
+   Condition) from each micro-batch
 3. Transforming the data using SQL on FHIR views with [FHIRPath](/docs/fhirpath)
    expressions
 4. Performing terminology operations including code translation and concept
@@ -110,8 +128,8 @@ This configuration incorporates:
 
 ## Consuming FHIR bundles from Kafka
 
-The pipeline subscribes to a Kafka topic containing FHIR bundles and converts
-these into typed resource streams:
+The pipeline subscribes to a Kafka topic containing FHIR bundles, and converts
+each micro-batch into datasets of resources of each type:
 
 ```python
 def _subscribe_to_kafka_topic(spark: SparkSession,
@@ -127,14 +145,14 @@ def _subscribe_to_kafka_topic(spark: SparkSession,
     )
 
 
-def _to_resource_stream(kafka_stream: DataFrame,
-                        resource_type: str,
-                        pc: PathlingContext) -> DataFrame:
-    """Convert raw Kafka stream into typed FHIR resource stream."""
+def _to_resources(kafka_batch: DataFrame,
+                  resource_type: str,
+                  pc: PathlingContext) -> DataFrame:
+    """Convert a micro-batch of Kafka messages into a dataset of FHIR resources."""
     from pyspark.sql.functions import explode, from_json
 
-    json_stream = (
-        kafka_stream.selectExpr("CAST(value AS STRING) AS bundle")
+    resources = (
+        kafka_batch.selectExpr("CAST(value AS STRING) AS bundle")
         .select(
             explode(
                 from_json(
@@ -150,12 +168,12 @@ def _to_resource_stream(kafka_stream: DataFrame,
             ).resourceType == resource_type
         )
     )
-    return pc.encode(json_stream, resource_type)
+    return pc.encode(resources, resource_type)
 ```
 
 This conversion process:
 
-1. Reads raw messages from Kafka
+1. Reads a micro-batch of raw messages from Kafka
 2. Parses FHIR bundles from JSON
 3. Extracts individual resources from bundle entries
 4. Filters by resource type
@@ -324,7 +342,7 @@ pc = PathlingContext.create(
 
 This enables:
 
-- Live code validation during streaming
+- Live code validation as each micro-batch is processed
 - Dynamic concept map translations
 - Subsumption testing against terminology hierarchies
 
@@ -376,7 +394,8 @@ This method:
 
 ## Orchestrating the complete pipeline
 
-The main consumer function brings all components together:
+The main consumer function brings all components together. Each micro-batch is
+encoded, passed through the views, and written to PostgreSQL:
 
 ```python
 def start_consumer(kafka_topic: str, kafka_bootstrap_servers: str,
@@ -391,48 +410,26 @@ def start_consumer(kafka_topic: str, kafka_bootstrap_servers: str,
     )
 
     # Subscribe to Kafka
-    update_stream = _subscribe_to_kafka_topic()
-
-    # Create resource streams for each type
-    data = pc.read.datasets({
-        resource_type: _to_resource_stream(update_stream, resource_type)
-        for resource_type in ["Patient", "Encounter", "Condition"]
-    })
+    update_stream = _subscribe_to_kafka_topic(
+        spark, kafka_bootstrap_servers, kafka_topic
+    )
 
     # Define views
     all_views = [view_patient, view_encounter, view_diagnosis]
 
-    # Create parallel sinks
-    console_sinks = []
-    postgresql_sinks = []
+    def process_batch(kafka_batch: DataFrame, batch_id: int):
+        # Encode the resources of each type that the micro-batch carries.
+        data = pc.read.datasets({
+            resource_type: _to_resources(kafka_batch, resource_type, pc)
+            for resource_type in ["Patient", "Encounter", "Condition"]
+        })
+        for view_f in all_views:
+            write_postgresql(view_f(data), db_name, schema, view_f.__name__)
 
-    for view_f in all_views:
-        view_name = view_f.__name__
-        view_data = view_f(data)
-
-        # Console sink for monitoring
-        console_sink = (
-            view_data.writeStream.outputMode("append")
-            .format("console")
-            .start(f"console_{view_name}")
-        )
-        console_sinks.append(console_sink)
-
-        # PostgreSQL sink for persistence
-        postgresql_sink = (
-            view_data.writeStream.foreachBatch(
-                lambda df, _, view_name=view_name: write_postgresql(
-                    df, db_name, schema, view_name
-                )
-            )
-            .outputMode("append")
-            .start()
-        )
-        postgresql_sinks.append(postgresql_sink)
+    query = update_stream.writeStream.foreachBatch(process_batch).start()
 
     # Block until termination
-    for sink in console_sinks + postgresql_sinks:
-        sink.awaitTermination()
+    query.awaitTermination()
 ```
 
 ## Key benefits
