@@ -391,13 +391,16 @@ class DataSourcesTest {
     data.write().saveMode("error").parquet(parquetDir.toString());
 
     // Verify that individual Parquet files exist (not directories).
-    // Files should follow the pattern {resourceType}.{partId}.parquet.
+    // Files should follow the pattern {resourceType}.{partId}-{writeId}.parquet.
     final boolean hasPatientFiles =
         Files.list(parquetDir)
-            .anyMatch(p -> p.getFileName().toString().matches("Patient\\.\\d+\\.parquet"));
+            .anyMatch(
+                p -> p.getFileName().toString().matches("Patient\\.\\d+-[0-9a-f-]{36}\\.parquet"));
     final boolean hasConditionFiles =
         Files.list(parquetDir)
-            .anyMatch(p -> p.getFileName().toString().matches("Condition\\.\\d+\\.parquet"));
+            .anyMatch(
+                p ->
+                    p.getFileName().toString().matches("Condition\\.\\d+-[0-9a-f-]{36}\\.parquet"));
 
     assertTrue(hasPatientFiles, "Expected Patient.*.parquet files to exist");
     assertTrue(hasConditionFiles, "Expected Condition.*.parquet files to exist");
