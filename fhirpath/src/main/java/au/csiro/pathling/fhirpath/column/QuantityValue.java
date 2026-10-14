@@ -209,6 +209,19 @@ public class QuantityValue {
   }
 
   /**
+   * Checks if this quantity carries a comparator ({@code <}, {@code <=}, {@code >=} or {@code >}).
+   *
+   * <p>Such a quantity records a bound rather than a known value (e.g. {@code <5 mg} is some value
+   * below 5 mg), so it cannot be compared as though its value were exact.
+   *
+   * @return Column of BooleanType indicating if this quantity is bounded
+   */
+  @Nonnull
+  public Column isBounded() {
+    return quantityColumn.getField(QuantityEncoding.COMPARATOR_COLUMN).isNotNull();
+  }
+
+  /**
    * Checks if this quantity uses the UCUM unit system.
    *
    * <p>Returns a boolean column that evaluates to true if the quantity's system field equals {@link

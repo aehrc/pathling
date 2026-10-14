@@ -69,6 +69,14 @@ specification for detailed semantics.
 | `>`      | Greater than             |
 | `>=`     | Greater than or equal to |
 
+A [Quantity](https://hl7.org/fhir/R4/datatypes.html#Quantity) that carries a
+`comparator` records a bound rather than a known value, so any comparison
+involving one returns an empty result. For example, if `Observation.value` is
+`<5 mg`, then `Observation.value.ofType(Quantity) = 5 'mg'` and
+`Observation.value.ofType(Quantity) < 6 'mg'` are both empty. Such a quantity
+is never equal to another, so it is not removed as a duplicate by `union` or
+`distinct`, and is not found by `in` or `contains`.
+
 #### Boolean operators
 
 | Operator  | Description         |
