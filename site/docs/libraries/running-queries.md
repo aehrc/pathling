@@ -168,6 +168,14 @@ and `getReferenceKey()` functions. See
 [SQL on FHIR functions](../fhirpath/sql-on-fhir-functions.md) for the keys that
 they produce and the references that they support.
 
+Recursive elements, such as `item` within a Questionnaire, are only encoded to
+the configured maximum nesting level. Paths that navigate deeper than this
+behave as if the data were absent: a `forEach` produces no rows, a
+`forEachOrNull` produces a single row of nulls, and a column is null, or an
+empty array if it is a collection column. See
+[Navigation beyond the encoded depth](../fhirpath/index.md#navigation-beyond-the-encoded-depth)
+for how this applies to FHIRPath expressions in general.
+
 For a more comprehensive example demonstrating SQL on FHIR queries with multiple
 views, complex transformations and joins, see
 the [SQL on FHIR example](examples/prostate-cancer.md).

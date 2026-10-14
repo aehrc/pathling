@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.fhirpath.collection;
 
+import static au.csiro.pathling.encoders.ValueFunctions.nullSafeField;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.struct;
 
@@ -173,10 +174,10 @@ public class QuantityCollection extends Collection implements Comparable, String
   private static Column toCoding(@Nonnull final Column quantity) {
     return struct(
             lit(null).cast(DataTypes.StringType).as(CodingSchema.ID_FIELD),
-            quantity.getField(QuantityEncoding.SYSTEM_COLUMN).as(CodingSchema.SYSTEM_FIELD),
+            nullSafeField(quantity, QuantityEncoding.SYSTEM_COLUMN).as(CodingSchema.SYSTEM_FIELD),
             lit(null).cast(DataTypes.StringType).as(CodingSchema.VERSION_FIELD),
-            quantity.getField(QuantityEncoding.CODE_COLUMN).as(CodingSchema.CODE_FIELD),
-            quantity.getField(QuantityEncoding.UNIT_COLUMN).as(CodingSchema.DISPLAY_FIELD),
+            nullSafeField(quantity, QuantityEncoding.CODE_COLUMN).as(CodingSchema.CODE_FIELD),
+            nullSafeField(quantity, QuantityEncoding.UNIT_COLUMN).as(CodingSchema.DISPLAY_FIELD),
             lit(null).cast(DataTypes.BooleanType).as(CodingSchema.USER_SELECTED_FIELD),
             lit(null).cast(DataTypes.IntegerType).as(CodingSchema.FID_FIELD))
         .cast(CodingSchema.DATA_TYPE);

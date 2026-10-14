@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.fhirpath.column;
 
+import static au.csiro.pathling.encoders.ValueFunctions.nullSafeField;
 import static au.csiro.pathling.sql.SqlFunctions.let;
 import static java.util.Objects.nonNull;
 import static java.util.Objects.requireNonNull;
@@ -107,8 +108,8 @@ public class QuantityValue {
     @Nonnull
     public static ValueWithUnit normalizedValueOf(@Nonnull final Column quantity) {
       return new ValueWithUnit(
-          quantity.getField(QuantityEncoding.CANONICALIZED_VALUE_COLUMN),
-          quantity.getField(QuantityEncoding.CANONICALIZED_CODE_COLUMN),
+          nullSafeField(quantity, QuantityEncoding.CANONICALIZED_VALUE_COLUMN),
+          nullSafeField(quantity, QuantityEncoding.CANONICALIZED_CODE_COLUMN),
           null);
     }
 
@@ -124,9 +125,9 @@ public class QuantityValue {
     @Nonnull
     public static ValueWithUnit originalValueOf(@Nonnull final Column quantity) {
       return new ValueWithUnit(
-          quantity.getField(QuantityEncoding.VALUE_COLUMN),
-          quantity.getField(QuantityEncoding.CODE_COLUMN),
-          quantity.getField(QuantityEncoding.SYSTEM_COLUMN));
+          nullSafeField(quantity, QuantityEncoding.VALUE_COLUMN),
+          nullSafeField(quantity, QuantityEncoding.CODE_COLUMN),
+          nullSafeField(quantity, QuantityEncoding.SYSTEM_COLUMN));
     }
 
     /**
@@ -141,8 +142,8 @@ public class QuantityValue {
     @Nonnull
     public static ValueWithUnit literalValueOf(@Nonnull final Column quantity) {
       return new ValueWithUnit(
-          quantity.getField(QuantityEncoding.VALUE_COLUMN),
-          quantity.getField(QuantityEncoding.UNIT_COLUMN),
+          nullSafeField(quantity, QuantityEncoding.VALUE_COLUMN),
+          nullSafeField(quantity, QuantityEncoding.UNIT_COLUMN),
           lit(null));
     }
 
@@ -218,8 +219,7 @@ public class QuantityValue {
    */
   @Nonnull
   public Column isUcum() {
-    return quantityColumn
-        .getField(QuantityEncoding.SYSTEM_COLUMN)
+    return nullSafeField(quantityColumn, QuantityEncoding.SYSTEM_COLUMN)
         .equalTo(lit(UcumUnit.UCUM_SYSTEM_URI));
   }
 
@@ -233,8 +233,7 @@ public class QuantityValue {
    */
   @Nonnull
   public Column isCalendarDuration() {
-    return quantityColumn
-        .getField(QuantityEncoding.SYSTEM_COLUMN)
+    return nullSafeField(quantityColumn, QuantityEncoding.SYSTEM_COLUMN)
         .equalTo(lit(CalendarDurationUnit.FHIRPATH_CALENDAR_DURATION_SYSTEM_URI));
   }
 

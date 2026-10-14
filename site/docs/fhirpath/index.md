@@ -266,6 +266,28 @@ The maximum depth can be configured:
 - In the **Pathling server**, via the `pathling.query.maxUnboundTraversalDepth`
   configuration property.
 
+#### Navigation beyond the encoded depth
+
+Recursive elements, such as `item` within a Questionnaire, are only encoded to
+the maximum nesting level, which defaults to 3. Navigating deeper than this
+returns an empty collection, as if the data were absent, and functions behave
+accordingly. With the default level, four levels of `item` are encoded, so
+`item.item.item.item.item.exists()` is `false` and
+`item.item.item.item.item.count()` is `0`, even if the source data has a fifth
+level of items. `repeat` and `repeatAll` stop at the deepest encoded level.
+
+Selecting a type with `ofType()` that is not one of the encoded open types, such
+as an extension value type that has been left out of the encoding, still raises
+an error. That indicates a configuration that omits the data, rather than a
+depth limit.
+
+The maximum nesting level can be configured:
+
+- In the **Pathling libraries**, via the `max_nesting_level` parameter (Python
+  and R) or the `maxNestingLevel` encoding configuration (Java and Scala).
+- In the **Pathling server**, via the `pathling.encoding.maxNestingLevel`
+  configuration property.
+
 ## Additional functions
 
 Pathling also supports additional functions beyond the standard FHIRPath

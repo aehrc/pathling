@@ -22,9 +22,12 @@
  */
 package au.csiro.pathling.encoders;
 
+import static au.csiro.pathling.encoders.ValueFunctions.castIfNullType;
+import static au.csiro.pathling.encoders.ValueFunctions.fieldOrNull;
 import static au.csiro.pathling.encoders.ValueFunctions.ifArray;
 import static au.csiro.pathling.encoders.ValueFunctions.ifArray2;
 import static au.csiro.pathling.encoders.ValueFunctions.nullIfMissingField;
+import static au.csiro.pathling.encoders.ValueFunctions.nullSafeField;
 import static au.csiro.pathling.encoders.ValueFunctions.unnest;
 import static au.csiro.pathling.encoders.ValueFunctions.variantTransformTree;
 import static au.csiro.pathling.encoders.ValueFunctions.variantUnwrap;
@@ -42,6 +45,7 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.functions;
+import org.apache.spark.sql.types.ArrayType;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.Metadata;
 import org.apache.spark.sql.types.StructField;
@@ -201,6 +205,24 @@ public class ExpressionsCodegenTest extends ExpressionsBothModesTest {
     assertEquals(200, CollectionConverters.asJava(arrayOfArraysResult2).getFirst());
     assertNotNull(secondRow.getAs("test_flatten_array_of_arrays"));
     assertNotNull(secondRow.getAs("test_with_filter"));
+  }
+
+  @Test
+  void ifArray2TreatsNullTypedValueAsArray() {
+    // A null-typed value is a collection that is known to be empty. It takes the branch for a
+    // plain array rather than failing because it is not an array.
+    final Dataset<Row> ds = spark.range(1).toDF();
+
+    final Dataset<Row> result =
+        ds.withColumn(
+            "result",
+            ifArray2(
+                functions.lit(null),
+                x -> functions.array(functions.lit(200)),
+                x -> functions.array(functions.lit(50))));
+
+    final Seq<?> value = result.collectAsList().getFirst().getAs("result");
+    assertEquals(List.of(50), CollectionConverters.asJava(value));
   }
 
   @Test
@@ -628,6 +650,159 @@ public class ExpressionsCodegenTest extends ExpressionsBothModesTest {
     assertNull(results.get(2).getAs("test_missing_address"));
     assertNull(results.get(2).getAs("test_missing_email"));
     assertNull(results.get(2).getAs("test_missing_salary"));
+  }
+
+  @Test
+  void fieldOrNullReturnsFieldWhenPresent() {
+    // A field that exists in the schema is extracted as usual.
+    final Dataset<Row> ds = createPersonDataset();
+
+    final Dataset<Row> result = ds.withColumn("result", fieldOrNull(ds.col("person"), "name"));
+
+    assertEquals(DataTypes.StringType, result.schema().apply("result").dataType());
+    assertEquals(
+        List.of("alice", "bob"),
+        result.collectAsList().stream().map(row -> row.<String>getAs("result")).toList());
+  }
+
+  @Test
+  void fieldOrNullReturnsNullWhenFieldMissing() {
+    // A field that is absent from the struct schema resolves to null rather than raising
+    // FIELD_NOT_FOUND, and navigating further from that null also resolves to null.
+    final Dataset<Row> ds = createPersonDataset();
+    final Column email = fieldOrNull(ds.col("person"), "email");
+
+    final Dataset<Row> result =
+        ds.withColumn("email", email).withColumn("domain", fieldOrNull(email, "domain"));
+
+    final List<Row> rows = result.collectAsList();
+    assertEquals(2, rows.size());
+    rows.forEach(
+        row -> {
+          assertNull(row.getAs("email"));
+          assertNull(row.getAs("domain"));
+        });
+  }
+
+  @Test
+  void fieldOrNullHandlesArraysOfStructsWithinLambdas() {
+    // Level 0 items have an "item" field; level 1 items do not. The lambda variable must be bound
+    // before the field can be checked against the element type.
+    final Dataset<Row> ds = createDivergentSchemaDataset();
+
+    final Dataset<Row> result =
+        ds.withColumn(
+                "present",
+                functions.transform(
+                    ds.col("items"), item -> fieldOrNull(item.getField("item"), "linkId")))
+            .withColumn(
+                "missing",
+                functions.transform(
+                    ds.col("items"), item -> fieldOrNull(item.getField("item"), "item")));
+
+    final Row row = result.collectAsList().getFirst();
+    assertEquals(List.of(List.of("child")), toNestedList(row.<Seq<Seq<String>>>getAs("present")));
+    final List<?> missing = CollectionConverters.asJava(row.<Seq<?>>getAs("missing"));
+    assertEquals(1, missing.size());
+    assertNull(missing.getFirst());
+  }
+
+  @Test
+  void nullSafeFieldRaisesWhenFieldMissing() {
+    // Only a null-typed value is tolerated: a field that is absent from a struct schema still
+    // raises FIELD_NOT_FOUND.
+    final Dataset<Row> ds = createPersonDataset();
+
+    final AnalysisException error =
+        assertThrows(
+            AnalysisException.class,
+            () -> ds.withColumn("result", nullSafeField(ds.col("person"), "email")));
+    assertEquals("FIELD_NOT_FOUND", error.getCondition());
+  }
+
+  @Test
+  void nullSafeFieldReturnsNullForNullTypedValue() {
+    // Extracting a field from a null-typed value resolves to null, instead of raising an error
+    // about extracting a field from a non-struct value.
+    final Dataset<Row> ds = createPersonDataset();
+
+    final Dataset<Row> result =
+        ds.withColumn("result", nullSafeField(functions.lit(null), "name"))
+            .withColumn("name", nullSafeField(ds.col("person"), "name"));
+
+    final List<Row> rows = result.collectAsList();
+    rows.forEach(row -> assertNull(row.getAs("result")));
+    assertEquals(List.of("alice", "bob"), rows.stream().map(r -> r.<String>getAs("name")).toList());
+  }
+
+  @Test
+  void castIfNullTypeTypesOnlyNullTypedValues() {
+    // Null-typed values, and arrays of them, are cast to the target type. Values that already
+    // have a type keep it, even if it differs from the target type.
+    final Dataset<Row> ds = createPersonDataset();
+    final ArrayType intArray = DataTypes.createArrayType(DataTypes.IntegerType);
+
+    final Dataset<Row> result =
+        ds.withColumn("nullValue", castIfNullType(functions.lit(null), DataTypes.StringType))
+            .withColumn("emptyArray", castIfNullType(functions.array(), intArray))
+            .withColumn(
+                "typedValue",
+                castIfNullType(ds.col("person").getField("name"), DataTypes.IntegerType));
+
+    final StructType schema = result.schema();
+    assertEquals(DataTypes.StringType, schema.apply("nullValue").dataType());
+    assertEquals(intArray, schema.apply("emptyArray").dataType());
+    assertEquals(DataTypes.StringType, schema.apply("typedValue").dataType());
+    final Row row = result.collectAsList().getFirst();
+    assertNull(row.getAs("nullValue"));
+    assertEquals(0, row.<Seq<?>>getAs("emptyArray").size());
+    assertEquals("alice", row.getAs("typedValue"));
+  }
+
+  @Test
+  void transformTreeTerminatesWhenTraversalReachesNull() {
+    // When a traversal resolves to a null-typed value, there are no further nodes to visit. This
+    // must end the descent rather than being treated as same-type recursion, which would exhaust
+    // the depth limit and raise an error.
+    final Dataset<Row> ds = createDivergentSchemaDataset();
+
+    final Dataset<Row> result =
+        ds.withColumn(
+            "collected",
+            ValueFunctions.transformTree(
+                ds.col("items"),
+                c -> c.getField("linkId"),
+                List.of(c -> unnest(fieldOrNull(c, "item"))),
+                1,
+                true));
+
+    final List<?> linkIds =
+        CollectionConverters.asJava(result.collectAsList().getFirst().<Seq<?>>getAs("collected"));
+    assertEquals(List.of("root", "child"), linkIds);
+  }
+
+  /**
+   * Creates a dataset with a person struct that has a name field but no email field.
+   *
+   * @return Dataset with two rows of person structs
+   */
+  private Dataset<Row> createPersonDataset() {
+    final Metadata metadata = Metadata.empty();
+    final StructType personType =
+        DataTypes.createStructType(
+            new StructField[] {new StructField("name", DataTypes.StringType, true, metadata)});
+    return spark.createDataFrame(
+        List.of(
+            RowFactory.create(RowFactory.create("alice")),
+            RowFactory.create(RowFactory.create("bob"))),
+        DataTypes.createStructType(
+            new StructField[] {new StructField("person", personType, true, metadata)}));
+  }
+
+  private static List<List<String>> toNestedList(final Seq<Seq<String>> nested) {
+    return CollectionConverters.asJava(nested).stream()
+        .map(inner -> CollectionConverters.asJava(inner).stream().toList())
+        .toList();
   }
 
   /**

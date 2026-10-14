@@ -321,8 +321,9 @@ public class Collection implements Equatable {
                   + " work in some FHIRPath implementations. Consider using ofType() to specify the"
                   + " type of element you want to traverse.",
               elementChildDefinition.getElementName());
+          return traverseElement(elementChildDefinition);
         }
-        return traverseElement(elementChildDefinition);
+        return navigateToElement(elementChildDefinition);
       }
       default ->
           throw new IllegalArgumentException(
@@ -334,6 +335,10 @@ public class Collection implements Equatable {
    * Return the child {@link Collection} that results from traversing to the given child element
    * definition.
    *
+   * <p>The element must be present in the schema. This is used for the options of choice elements,
+   * where a missing option means that its type has not been included in the encoding, which is a
+   * configuration error rather than an absence of data.
+   *
    * @param childDef the child element definition
    * @return a new {@link Collection} representing the child element
    */
@@ -343,6 +348,24 @@ public class Collection implements Equatable {
     final ColumnRepresentation columnRepresentation =
         getColumn().traverse(childDef.getElementName(), childDef.getFhirType());
     // Return a new Collection with the new column and the child definition.
+    return Collection.build(columnRepresentation, extensionMapColumn, childDef);
+  }
+
+  /**
+   * Return the child {@link Collection} that results from navigating to the given child element
+   * definition.
+   *
+   * <p>The result is empty if the element is not in the schema, as is the case for recursive
+   * elements beyond the maximum nesting level of the encoding. FHIRPath expressions then behave as
+   * they would if the data were absent.
+   *
+   * @param childDef the child element definition
+   * @return a new {@link Collection} representing the child element
+   */
+  @Nonnull
+  private Collection navigateToElement(@Nonnull final ElementDefinition childDef) {
+    final ColumnRepresentation columnRepresentation =
+        getColumn().traverseOrEmpty(childDef.getElementName(), childDef.getFhirType());
     return Collection.build(columnRepresentation, extensionMapColumn, childDef);
   }
 
@@ -447,10 +470,13 @@ public class Collection implements Equatable {
   public Collection project(@Nonnull final CollectionTransform transform) {
     final Collection resultTemplate = transform.apply(this);
     final ColumnTransform columnTransform = transform.toColumnTransformation(this);
+    // A projection that is empty for an element yields a null for that element, which is removed
+    // so that it does not count as an item of the result.
     final ColumnRepresentation projected =
         getColumn()
             .transform(col -> columnTransform.apply(getColumn().copyOf(col)).getValue())
-            .flatten();
+            .flatten()
+            .removeNulls();
     return resultTemplate.copyWith(projected);
   }
 
