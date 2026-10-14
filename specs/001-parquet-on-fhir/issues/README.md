@@ -11,7 +11,7 @@ They are not a strict sequence. Ticket 08, the spike, gates stages 3 and 5, so
 it starts during stage 1. Ticket 11 can likewise be settled early, and 26
 collects follow-ups throughout.
 
-## Stage 1: Retire the old layout
+## Stage 1: Retire the old layout (#2829)
 
 Only the new layout is read or written. Data in the old layout has a documented
 way out.
@@ -23,7 +23,7 @@ way out.
 - [06](06-legacy-export.md) Legacy export: legacy Parquet/Delta to FHIR NDJSON, as a component and CLI
 - [07](07-legacy-export-docs-and-server-followup.md) Document the legacy export and FR-053; raise the server migration issue
 
-## Stage 2: Harden and measure
+## Stage 2: Harden and measure (#2830)
 
 The known correctness gaps are closed and the benchmark can be trusted as the
 baseline for the reworks that follow.
@@ -38,7 +38,7 @@ baseline for the reworks that follow.
 - [24](24-benchmark-ndjson-branch.md) Remove or restore the benchmark's unreachable NDJSON source
 - [27](27-usc-bloodpressures-planning-regression.md) Investigate the UsCoreBloodPressures planning regression
 
-## Stage 3: Ingest and egress without HAPI
+## Stage 3: Ingest and egress without HAPI (#2831)
 
 JSON and XML are read and written without HAPI, and primitive ids and
 extensions are stored.
@@ -50,7 +50,7 @@ extensions are stored.
 
 Tickets 16 and 17 are rewritten from the spike's findings before they are built.
 
-## Stage 4: Schema annotations
+## Stage 4: Schema annotations (#2832)
 
 Quantity, decimal and date range annotations are emitted and read, each behind
 its own toggle, and their use is decided from the schema.
@@ -61,7 +61,7 @@ its own toggle, and their use is decided from the schema.
 - [14](14-date-range-annotation.md) Date range annotation
 - [15](15-schema-decided-plan-test-and-docs.md) Test that annotation use is decided from the schema, and document annotations
 
-## Stage 5: Dense mode and release
+## Stage 5: Dense mode and release (#2833)
 
 The dense schema mode matches the fitted one, and the release is checked.
 
