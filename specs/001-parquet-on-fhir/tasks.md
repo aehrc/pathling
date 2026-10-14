@@ -1,5 +1,16 @@
 # Tasks: Parquet on FHIR
 
+> **Frozen on 2026-10-14.** This file is the record of milestones M1 to M4, which
+> are implemented and merged. Remaining work is tracked as tickets under
+> `.scratch/parquet-on-fhir/issues/`. The M5 to M7 sections, the traceability
+> table and the dependency notes below are kept verbatim only as input to those
+> tickets, and are removed once every task in them maps to a ticket. They no
+> longer describe the plan: the legacy layout is retired before further features
+> ([ADR-0001](../../docs/adr/0001-engine-refuses-the-legacy-layout.md)), ingest and
+> egress are reworked after a spike (spec.md, OQ-1), and the spec was rewritten to
+> its end state. Requirement numbers below refer to the spec as it stood before
+> that rewrite.
+
 **Input**: Design documents in `specs/001-parquet-on-fhir/`
 **Prerequisites**: [plan.md](plan.md), [spec.md](spec.md), [research.md](research.md), [data-model.md](data-model.md), [contracts/](contracts/)
 
@@ -784,6 +795,9 @@ expensive — which is what makes it the input that orders M5._
 **Checkpoint**: The new layout is documented and its unaccelerated cost is on record.
 
 ---
+
+> **Superseded input, kept for ticket-writing only.** See the note at the top of
+> this file.
 
 # Milestone 5 — The gaps
 

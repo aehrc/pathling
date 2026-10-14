@@ -2,172 +2,136 @@
 
 **Feature**: `001-parquet-on-fhir`
 **Created**: 2026-09-14
-**Status**: Draft
+**Revised**: 2026-10-14, to state the end state only
+**Status**: In progress
 
 Replaces Pathling's Catalyst-encoder-based FHIR encoding with a schema-driven
 encoding conforming to the [Parquet on FHIR](https://github.com/aehrc/parquet-on-fhir)
-specification, and migrates the FHIRPath execution engine and its dependencies
-to the new layout.
+specification, and migrates the FHIRPath execution engine to read it.
 
 Tracks GitHub issue [#2367](https://github.com/aehrc/pathling/issues/2367).
 
-This specification is the single source of truth for the programme. It
-supersedes the earlier draft design and the five change proposals
-under `openspec/changes/` that belong to this work.
+This document states what holds when the programme is complete. It carries no
+history: how each requirement was reached is in
+[evidence/decisions.md](evidence/decisions.md) and [research.md](research.md),
+durable design decisions are in [`docs/adr/`](../../docs/adr/), vocabulary is in
+[`CONTEXT.md`](../../CONTEXT.md), and the work that remains is tracked as tickets
+under `.scratch/parquet-on-fhir/issues/`. [tasks.md](tasks.md) is the record of
+milestones M1 to M4. Everything ships together, in one release, when the last
+ticket closes.
 
 ## Why
 
-Five drivers, in the order they motivate the work.
-
-1. **Performance** of encoding and decoding, and of FHIRPath execution, through
-   reduced schema width. A hypothesis, not a measurement; nothing is gated on
-   it.
-2. **Lossless representation of FHIR**, permitting a full `JSON → storage → JSON`
+1. **Performance** of encoding, decoding and FHIRPath execution through reduced
+   schema width. A hypothesis, measured but not gated on (SC-007).
+2. **Lossless representation of FHIR**, permitting a `JSON → storage → JSON`
    round trip.
-3. **Attribute-level extensions and ids**, and unconstrained or data-inferred
-   depth for recursive types.
+3. **Attribute-level extensions and ids**, and recursive types whose depth the
+   data decides.
 4. **Automatic merging** of Parquet and Delta files written with differing
-   sparse schemas into a common schema.
-5. **Removal of the dependency on internal Spark Catalyst API in the encoding
-   path.** The current encoder is built from hand-authored Catalyst expression
-   trees against internal, partly deprecated API, which breaks on Spark version
-   upgrades.
-
-Driver 5 is why the encoder is replaced rather than modified.
+   fitted schemas.
+5. **No internal Spark Catalyst API in the encoding path**, which breaks on Spark
+   upgrades. This is why the encoder is replaced rather than modified
+   ([ADR-0004](../../docs/adr/0004-no-per-row-hapi-no-catalyst-in-encoding.md)).
 
 ## User Scenarios & Testing _(mandatory)_
 
-### User Story 1 - Data is stored in the Parquet on FHIR layout (Priority: P1)
+### User Story 1 - Data is stored in the PoF layout (Priority: P1)
 
-A user loads FHIR JSON through the library and the data is written in the
-Parquet on FHIR layout: decimals as strings with a numeric annotation,
-primitive ids and extensions in `_field` groups, extensions inline, dates
-carrying range annotations, and quantities carrying both the specification's
-canonical annotation and a magnitude-preserving one beside it.
+A user loads FHIR JSON or XML, as resources or bundles, and the data is written in
+the PoF layout: decimals as text with a numeric annotation, primitive ids and
+extensions in metadata groups, extensions inline, dates with range annotations,
+and quantities with both canonical annotations.
 
-**Staged.** M1 delivers the decimals as text, the inline extensions and the
-reporting of content this layout does not store. Every annotation, and the population of the `_field` groups,
-land in M5 — so scenarios 1, 2 and 4 below are met in part at M1 and in full at
-the end of M5. FR-021's staging note, FR-017's carve-out and decision 49 record
-why; nothing here is descoped.
-
-**Why this priority**: Every other story reads what this one writes. The layout
-is the object of the change.
-
-**Independent Test**: Load a corpus, inspect the stored schema and values
-against the specification, without any FHIRPath evaluation.
+**Independent Test**: Load a corpus; inspect the stored schema and values against
+the specification, without FHIRPath evaluation.
 
 **Acceptance Scenarios**:
 
 1. **Given** a resource carrying a decimal, **When** it is stored and read back,
-   **Then** the stored value is text numerically equal to the source and a numeric
-   annotation accompanies it. *(The annotation is staged to M5. The source's own
-   lexical form is not preserved — decision 68.)*
+   **Then** the stored value is text numerically equal to the source, and a
+   numeric annotation accompanies it.
 2. **Given** a resource carrying an extension on a primitive element, **When** it
-   is stored, **Then** the extension appears in the `_field` group beside that
-   element. *(Staged to M5. Until then the traversal declines to emit the group,
-   and the dropped content is reported rather than silent — FR-017's
-   carve-out.)*
+   is stored, **Then** the extension appears in the primitive metadata group
+   beside that element.
 3. **Given** a resource carrying an extension on a complex element, **When** it is
-   stored, **Then** the extension appears inline on that element and no
+   stored, **Then** the extension appears inline on that element, and no
    root-level extension map or field-id column is emitted.
 4. **Given** a quantity, **When** it is stored, **Then** the specification's
-   canonical annotation accompanies it, followed by a second annotation whose
-   precision preserves magnitude across unit conversion. *(Staged to M5.)*
+   canonical annotation accompanies it, followed by the exact canonical
+   annotation.
 5. **Given** content the definition set does not describe, **When** it is
-   loaded, **Then** the load succeeds, the content is discarded, and a warning
-   names it. *(Decision 68 removed the switch; there is no failing mode.)*
+   loaded, **Then** the load succeeds, the content is not stored, and a finding
+   names it.
+6. **Given** the same resources as JSON, as XML and inside bundles of either
+   format, **When** each is loaded, **Then** the stored data and the findings are
+   the same.
 
 ---
 
-### User Story 2 - FHIR JSON round-trips without loss (Priority: P1)
+### User Story 2 - FHIR round-trips without loss (Priority: P1)
 
-A user loads conformant FHIR JSON and exports it again, and receives
-semantically equal resources: object key order ignored, array order significant,
-numbers compared numerically, subject to the exceptions FR-016 lists.
-
-**Why this priority**: Driver 2. It is the claim the format is adopted for, and
-it is the strongest single check that the layout and its transforms are correct.
+A user loads conformant FHIR and exports it again, and receives semantically
+equal resources: object key order ignored, array order significant, numbers
+compared numerically, subject to FR-016's exceptions.
 
 **Independent Test**: Round-trip a corpus of FHIR R4 specification examples plus
-a Synthea dataset, asserting semantic equality resource by resource, with no
-FHIRPath evaluation involved.
+a Synthea dataset, asserting semantic equality resource by resource.
 
 **Acceptance Scenarios**:
 
-1. **Given** a conformant resource, **When** it is loaded and exported,
-   **Then** the exported resource is semantically equal to the source.
+1. **Given** a conformant resource, **When** it is loaded and exported, in JSON
+   or XML, **Then** the exported resource is semantically equal to the source.
 2. **Given** a resource with an element absent, **When** it is exported,
-   **Then** that element is absent from the output rather than present and null,
-   and no empty object or null-only array appears where the source had nothing.
-   *(Decision 71 defers the second half with FR-019, so nothing checks it. It
-   holds for conformant JSON, where every `{}` and bare `null` M1 writes stands
-   for source content it did not store, but it does not hold for layout data
-   written by another producer. Decision 71's addendum lists what M1 writes in
-   their place.)*
-3. **Given** a pruned schema, **When** conformant input is round-tripped,
-   **Then** the guarantee holds without reference to the dense bounds, subject
-   to FR-016's exceptions. *(Until M5 those include primitive id and extension
-   content, per FR-017's carve-out; the exclusion is asserted rather than
-   incidental, and T078c removes it. The scenario asserting that content the
-   dense bounds drop is detectable was withdrawn by decision 68 with
-   `BoundsCheck`.)*
+   **Then** that element is absent from the output, and no empty object or
+   null-only array appears where the source had nothing (FR-019).
+3. **Given** a fitted schema, **When** conformant input is round-tripped,
+   **Then** the guarantee holds without reference to the dense bounds.
 
 ---
 
-### User Story 3 - The FHIRPath engine evaluates over the new layout (Priority: P1)
+### User Story 3 - The FHIRPath engine evaluates over the PoF layout (Priority: P1)
 
-A user runs existing FHIRPath expressions, ViewDefinitions and searches over
-data in the new layout and gets the same answers as before.
-
-**Why this priority**: Without it the stored data is unusable. This is the
-"migration of the execution engine" that defines the scope of this work.
+A user runs FHIRPath expressions, ViewDefinitions and searches over data in the
+PoF layout and gets correct answers.
 
 **Independent Test**: Run the FHIRPath suite, both conformance baselines and the
-SQL-on-FHIR compliance suite over data in the new layout.
+SQL-on-FHIR compliance suite over data in the PoF layout.
 
 **Acceptance Scenarios**:
 
 1. **Given** a decimal stored as text, **When** an expression compares or
-   computes on it, **Then** the result matches the result over the previous
-   layout.
+   computes on it, **Then** it is compared and computed numerically.
 2. **Given** a file carrying no annotations at all, **When** any expression is
    evaluated, **Then** the result is the same as over an annotated file.
-3. **Given** a Coding column narrower than the canonical layout, **When** a
+3. **Given** a Coding column narrower than the canonical structure, **When** a
    terminology operation is applied, **Then** it reads the fields by name and
    the absent ones are null.
 4. **Given** a reference, **When** its `getReferenceKey()` is joined to the
    `getResourceKey()` of the resources it points to, **Then** the referenced
-   resources are joined without relying on a stored versioned-key column, and
-   `resolve()` still reports the target's type for `is` and `ofType()`.
-   *(Decision 73. This scenario assumed a `resolve()` that returns the referenced
-   resource. The engine's `resolve()` returns type information only, and joins
-   go through the key functions.)*
+   resources are joined without a stored versioned-key column, and `resolve()`
+   reports the target's type for `is` and `ofType()`.
 5. **Given** a quantity with no canonical annotation, **When** it is compared
    across units, **Then** the canonical value is computed and the comparison
    succeeds.
 
 ---
 
-### User Story 4 - Queries work over a schema fitted to the data (Priority: P1)
+### User Story 4 - Queries work over a fitted schema (Priority: P1)
 
 A user queries a dataset whose stored schema carries only the elements the data
 populates, and expressions naming elements absent from that schema evaluate to
 empty rather than failing.
 
-**Why this priority**: The sparse schema is what delivers drivers 1 and 4, and it
-is the behaviour most likely to break existing expressions.
-
-**Independent Test**: Run the suite in sparse mode; assert that an expression
-over an absent element yields empty.
+**Independent Test**: Run the suite over fitted schemas; assert that an
+expression over an absent element yields empty.
 
 **Acceptance Scenarios**:
 
 1. **Given** an element defined by FHIR but absent from the stored schema,
-   **When** an expression traverses to it, **Then** the result is an empty
-   collection.
-2. **Given** an element FHIR does not define, **When** an expression traverses to
-   it, **Then** an error is raised.
+   **When** an expression traverses to it, **Then** the result is empty.
+2. **Given** an element FHIR does not define, **When** an expression traverses
+   to it, **Then** the result is empty (FR-025).
 3. **Given** a choice element where only one variant was ever populated,
    **When** an expression selects an unpopulated variant by type, **Then** the
    result is empty.
@@ -178,12 +142,10 @@ over an absent element yields empty.
    primitive element, **When** the view runs, **Then** the output column carries
    the type the definitions give the element.
 6. **Given** an expression combining an absent element with a populated one,
-   **When** it is evaluated, **Then** it succeeds rather than failing on a type
-   mismatch.
+   **When** it is evaluated, **Then** it succeeds.
 7. **Given** one column expression, **When** it is applied to a fitted dataset
    and to a dense dataset holding the same resources, **Then** the results are
-   equal. *(Asserted at the flip across two fitted schemas of differing width,
-   and in this form in M6 with the dense mode; decision 69.)*
+   equal. *(Subject to OQ-2.)*
 8. **Given** two collections of the same FHIR type reached by different paths,
    whose fitted schemas differ, **When** they are combined, **Then** the result
    holds every element of both and can be traversed.
@@ -192,11 +154,8 @@ over an absent element yields empty.
 
 ### User Story 5 - Files written at different times read as one dataset (Priority: P2)
 
-A user loads a second batch containing elements the first batch did not carry,
-and queries the dataset as a whole without losing data from either batch.
-
-**Why this priority**: Driver 4, and the steady state for any incrementally
-loaded warehouse once schemas are fitted to data.
+A user loads a second batch containing elements the first did not carry, and
+queries the dataset as a whole without losing data from either.
 
 **Independent Test**: Write two batches with divergent schemas; query across
 both and assert every resource appears with correct cardinality.
@@ -217,12 +176,8 @@ both and assert every resource appears with correct cardinality.
 
 ### User Story 6 - Primitive ids and extensions are reachable from FHIRPath (Priority: P2)
 
-A user writes an expression that navigates to the id or extensions of a
-primitive element, which the previous layout could not represent at all.
-
-**Why this priority**: Driver 3 is only half delivered if the data is stored but
-unreadable. New capability rather than migration, so it follows the migration
-stories.
+A user navigates to the id or extensions of a primitive element
+([#437](https://github.com/aehrc/pathling/issues/437)).
 
 **Independent Test**: Evaluate expressions reaching a primitive's id and
 extensions over fixtures carrying them.
@@ -238,283 +193,200 @@ extensions over fixtures carrying them.
 
 ---
 
-### User Story 7 - Existing data is detected and users are told what to do (Priority: P2)
+### User Story 7 - Legacy-layout data is refused with an actionable message (Priority: P2)
 
-A user points the library at data written by an earlier release and gets an
-actionable error rather than a confusing failure or silently wrong answers.
+A user points the library at data in the legacy layout and gets an actionable
+error rather than a confusing failure or wrong answers
+([ADR-0001](../../docs/adr/0001-engine-refuses-the-legacy-layout.md)).
 
-**Why this priority**: The worst failure mode in the programme is old data
-flowing into an engine expecting new conventions. Correct against the current
-codebase, so it can land early.
-
-**Independent Test**: Read data in the previous layout through each source and
-assert the error.
+**Independent Test**: Read and write legacy-layout data through each file-based
+source and sink, and assert the error.
 
 **Acceptance Scenarios**:
 
-1. **Given** data in an unsupported layout, **When** it is read, **Then** an
-   error at read time names the resource type, the detected layout, the expected
-   layout and the remedy.
-2. **Given** data in a supported layout that is merely narrow, **When** it is
-   read, **Then** the read succeeds.
-3. **Given** a schema carrying no marker fields, **When** it is read, **Then** the
-   read succeeds, because marker absence is not evidence of an unsupported
-   layout.
-4. **Given** detection disabled for one source, **When** otherwise-rejected data
-   is read through it, **Then** the read proceeds and other sources are
-   unaffected.
+1. **Given** data in the legacy layout, **When** it is read, **Then** an error at
+   read time names the resource type, the detected layout, the expected layout
+   and the remedy: the legacy export, or re-import from source.
+2. **Given** a table in the legacy layout, **When** new data is appended or
+   merged into it, **Then** the write is refused before anything is written.
+3. **Given** data in the PoF layout that is merely narrow, or carries no marker
+   field, **When** it is read, **Then** the read succeeds.
+4. **Given** detection disabled for one source, **When** data is read through
+   it, **Then** the read proceeds, and other sources are unaffected.
+5. **Given** a legacy-layout column that reaches the engine by a route detection
+   does not cover, **When** an expression traverses it, **Then** evaluation
+   fails with an error naming the column, rather than answering from it.
 
 ---
 
 ### User Story 8 - Encoding no longer depends on internal Spark API (Priority: P3)
 
-A maintainer upgrades Spark without the encoding path breaking on changes to
-internal Catalyst API.
+A maintainer upgrades Spark without the encoding path breaking on internal
+Catalyst API.
 
-**Why this priority**: Driver 5 and the reason for replacement rather than
-modification, but it is a property of the finished system rather than a user
-journey, and it is verified by construction.
-
-**Independent Test**: The module holding FHIR definitions and schema derivation
-resolves no Spark Catalyst dependency, enforced by the build.
+**Independent Test**: The build enforces the boundary.
 
 **Acceptance Scenarios**:
 
 1. **Given** a dependency on internal Catalyst API added to the definition and
    schema module, **When** the build runs, **Then** it fails.
-2. **Given** an import of internal Catalyst API added to the new encoding code,
+2. **Given** an import of internal Catalyst API added to the encoding code,
    **When** the build runs, **Then** it fails.
-3. **Given** the new encoding path, **When** it is inspected, **Then** it
-   contains no expression encoder, no hand-authored serializer or deserializer
-   expression tree and no FHIR object in a per-row plan.
-4. **Given** the existing encoding implementation, **When** the work is
-   complete, **Then** it is unmodified and still resolves at its current Maven
-   coordinates.
+3. **Given** the encoding path, **When** it is inspected, **Then** it contains no
+   expression encoder, no hand-authored serializer or deserializer expression
+   tree, and no FHIR object, HAPI or otherwise, in a per-row plan.
+
+---
+
+### User Story 9 - A legacy warehouse can be moved to the PoF layout (Priority: P2)
+
+A user holding a warehouse in the legacy layout, with or without the source it
+was loaded from, moves it to the PoF layout.
+
+**Independent Test**: Export a legacy-layout Parquet and Delta table written by
+the legacy encoder, re-import the result, and compare it with the source data.
+
+**Acceptance Scenarios**:
+
+1. **Given** a legacy-layout table, **When** the legacy export runs over it,
+   **Then** it produces FHIR NDJSON, one resource per line, for every row.
+2. **Given** that NDJSON, **When** it is read with the NDJSON source and written
+   with any sink, **Then** the result is in the PoF layout.
+3. **Given** a decimal the legacy layout stored at its fixed scale, **When** it is
+   exported, **Then** it carries the stored value, and the documentation states
+   that precision beyond that scale is not recoverable.
 
 ---
 
 ### Edge Cases
 
-- A decimal exceeding a double's precision: stored at that precision, computed
-  at the documented cap. *(Decision 68; it was stored exactly while the lexical
-  form was preserved.)*
-- A decimal whose source form carries trailing zeros or an exponent: stored in
-  the form a double round trip produces, numerically equal to the source.
-- A FHIR element whose JSON encoding type contradicts the definitions, or whose
-  column a sibling value has re-typed: nulled for that column, and reported.
+- A decimal exceeding a double's precision: computed at the documented cap
+  (FR-035). How it is stored is OQ-1.
+- A FHIR element whose JSON type contradicts the definitions: not stored, and
+  reported. Whether the loss is that value alone or every value of the element
+  read with it is OQ-1.
 - A resource carrying `contained` resources: dropped and reported, never
   represented.
-- A struct whose every field is null in a given row: must not serialise as an
-  empty object. *(Deferred by decision 71, and not checked in M1. It is written
-  as `{}` where the structure's only content was primitive metadata, which is
-  kept on purpose until M5 (decision 72), and where non-conformant content
-  emptied it, including a value in another document that re-typed a shared
-  column.)*
-- An array whose every element is null: must not serialise as a null-only array.
-  *(Deferred by decision 71, and not checked in M1. A repeating primitive keeps
-  its positional nulls, and until M5 writes the `_x` array they align with they
-  are written bare, so `"given":[null]` can appear.)*
+- A structure whose every field is null, or an array whose every element is
+  null, in a given row: not written as `{}` or `[null]` (FR-019).
 - An array of arrays where a repeating element is declared, such as
-  `"given":[["a","b"]]`: FHIR JSON has no nested arrays, so this contradicts
-  the definitions as a single value does. It is reported as a shape mismatch
-  and stored as absent, never as the text of the inner array.
+  `"given":[["a","b"]]`: a shape mismatch, reported, and stored as absent.
 - A source key named like one of the layout's annotations, such as
   `__birthDate_start`: an annotation is derived, never read, so the key is
-  reported as undescribed content rather than checked as the element it
-  annotates.
-- A Bundle: accepted as a transport carrier and exploded to per-type tables,
-  never stored as a resource type.
-- XML input: converted to JSON before ingest; capability preserved.
-- An expression whose result is a complex type reaching a caller as a column:
-  its type reflects the data, and this is documented.
-- A view over an absent primitive element whose column declares no type: the
-  definitions supply the type, so it succeeds.
+  reported as undescribed content.
+- A Bundle: accepted as a transport carrier and exploded to one table per
+  resource type, never stored as a resource type. References between its
+  entries are resolved to relative references.
+- A custom resource type, such as `ViewDefinition`: read and written in every
+  format through the definition set.
+- An expression whose result is a complex value of a FHIR type reaching a caller
+  as a column: its shape is the fitted shape of the data it came from (FR-059).
 - Two collections of the same FHIR type reached by different paths, whose fitted
   schemas differ: combined by projecting both into the merged type, never by a
-  cast.
-- Two structures carrying the same fields in a different order: a hazard rather
-  than an inconvenience, because struct equality compares positionally and
-  ignores names. Canonical field order removes it.
+  cast ([ADR-0002](../../docs/adr/0002-reconcile-shapes-by-name.md)).
+- Two structures carrying the same fields in a different order: reconciled by
+  name, because struct equality compares positionally and ignores names.
 
 ## Requirements _(mandatory)_
+
+Identifiers are stable. FR-015, FR-018 and FR-020 are retired and not reused.
 
 ### Storage layout
 
 - **FR-001**: The system MUST store FHIR data in a layout conforming to the
-  Parquet on FHIR specification, with the deviations recorded in FR-002 to
-  FR-005.
-- **FR-002**: (Annotation staged to M5.) Decimals MUST be stored as text, accompanied
-  by a numeric annotation. The lexical form of the source is **not** preserved:
-  ingest routes a number through a double and stores its text, and egress casts
-  that text back to a double, so a stored decimal is numerically equal to the
-  source rather than textually identical to it (decision 68).
-- **FR-003**: (Primitive metadata group staged to M5; see FR-017's carve-out.) Primitive element ids and extensions MUST be stored in the
-  specification's `_field` groups; extensions on complex elements MUST be stored
-  inline. The previous root-level extension map and per-composite field id MUST
-  NOT be emitted.
-- **FR-004**: (Staged to M5.) Dates MUST carry the specification's range annotations.
-- **FR-005**: (Staged to M5.) Quantities MUST carry two canonical annotations: the
-  specification's own, at the fixed-point type the specification gives it, for
-  interchange; and, immediately after it, a second annotation whose precision
-  preserves magnitude across unit conversion. The second exists because the
-  fixed-point type makes quantities differing by orders of magnitude compare
-  equal, which no engine can compare on; the first exists because a consumer
-  reading the specification's layout must find the specification's annotation
-  under the specification's name.
-- **FR-006**: `contained` resources MUST NOT be represented. *(Decision 68
-  withdraws the requirement that their presence be governed by a switch, with
-  the switch itself. Their presence is still reported, as a warning.)*
+  Parquet on FHIR specification, with the deviations in FR-002 to FR-005.
+- **FR-002**: Decimals MUST be stored as text, accompanied by a numeric
+  annotation. The stored text MUST be numerically equal to the source; whether
+  it preserves the source's lexical form is OQ-1.
+- **FR-003**: Primitive element ids and extensions MUST be stored in the
+  primitive metadata group beside the element; extensions on complex elements
+  MUST be stored inline. No root-level extension map and no per-composite field
+  id is emitted.
+- **FR-004**: Dates MUST carry the specification's range annotations.
+- **FR-005**: Quantities MUST carry two canonical annotations: the
+  specification's own, at its fixed-point type, and immediately after it an
+  exact one carrying the canonicalised unit
+  ([ADR-0003](../../docs/adr/0003-annotations-are-optional.md)).
+- **FR-006**: `contained` resources MUST NOT be represented. Their presence is
+  reported as a finding.
 - **FR-007**: `Bundle` MUST NOT be stored as a resource type.
 
 ### Schema derivation
 
-- **FR-008**: The stored schema MUST be derived from FHIR structural
-  definitions, which determine element types and cardinality.
-- **FR-009**: The system MUST support a schema pruned to the elements the data
-  populates, and a dense schema comprising every element the definitions
-  describe. *(Staged by decision 69. The pruned schema is delivered in M1 and the
-  dense one in M6, after the annotations and the primitive metadata group, so
-  this requirement is unmet between the flip and M6.)*
+- **FR-008**: The stored schema MUST be derived from the definition set, which
+  alone determines element types and cardinality
+  ([ADR-0005](../../docs/adr/0005-types-from-definitions-only.md)).
+- **FR-009**: The system MUST support a fitted schema and a dense schema. The
+  fitted schema is the default.
 - **FR-010**: The dense schema MUST be produced by the same traversal as the
-  pruned one, differing only in the strategy that decides which children it
+  fitted one, differing only in the strategy that decides which children it
   descends into and where it stops, so the two cannot diverge in type,
-  cardinality or field order. *(Reworded by decision 68. The earlier wording —
-  "the same derivation, with pruning skipped" — described a derive-then-filter
-  step that no longer exists; one traversal with two strategies satisfies this
-  by construction rather than by agreement between two walks. Staged by decision
-  69: until the dense mode lands in M6 there is one traversal with one strategy,
-  so this is met vacuously, and met by construction when the second arrives.)*
-- **FR-011**: A complex element MUST appear in a pruned schema only where some
-  descendant leaf is populated, so that a field-less structure never arises. A
-  primitive the source carried only as its id and extensions counts as
-  populated, and is stored as a null of its declared type until M5 stores the
-  metadata beside it. *(Decision 72. It was otherwise omitted, and took the
-  structure holding it with it.)*
+  cardinality or field order.
+- **FR-011**: A complex element MUST appear in a fitted schema only where some
+  descendant leaf is populated. A primitive the source carried only as its id
+  and extensions counts as populated.
 - **FR-012**: The system MUST NOT determine element types or cardinality from
   the shape of the data.
 - **FR-013**: The definition abstraction MUST expose child enumeration in
-  declaration order, with a choice element appearing once as a choice rather
-  than pre-expanded.
+  declaration order, with a choice element appearing once as a choice.
 - **FR-014**: The definition abstraction MUST expose cardinality sufficient to
-  determine whether an element is singular or repeating.
-- **FR-015**: *Withdrawn by decision 67.* The definition abstraction reports a
-  type as a value of the R4 enumeration, as it did before this programme.
-  Representing a type code that enumeration does not contain belongs to whatever
-  delivers a provider for another version or for profiles.
+  determine whether an element repeats. It reports types as values of the R4
+  enumeration.
+
+### Ingest and egress
+
+- **FR-045**: JSON and XML MUST be accepted and produced, as single resources
+  and, on ingest, as bundles.
+- **FR-060**: Every ingest format MUST store the same data and report the same
+  findings for the same resources. XML and bundles MUST NOT behave differently
+  from JSON in what they keep, coerce, report or fail on.
+- **FR-061**: No ingest or egress route MAY parse into or build a FHIR object per
+  row, HAPI included. The mechanism is chosen by a spike against SC-011
+  ([ADR-0004](../../docs/adr/0004-no-per-row-hapi-no-catalyst-in-encoding.md)).
+- **FR-062**: References between the entries of a bundle MUST be resolved to the
+  relative reference of the target entry, keeping its version where the
+  reference carries one.
 
 ### Losslessness
 
-- **FR-016**: For input conforming to the active definition set, a
+- **FR-016**: For input conforming to the definition set, a
   `JSON → storage → JSON` round trip MUST produce a semantically equal resource,
   with object key order ignored, array order significant and numbers compared
-  **numerically**. *(Decision 68. Numbers were compared lexically while decimals
-  preserved their source form.)* The guarantee is subject to a stated list of
-  exceptions:
+  numerically, subject to these exceptions:
+  1. `contained` resources (FR-006) and `Bundle` (FR-007);
+  2. `base64Binary` whitespace, which decoding and re-encoding canonicalises;
+  3. content the definition set does not describe, or whose JSON type
+     contradicts it, which is not stored and is reported;
+  4. on a dense schema, content beyond the configured bounds (FR-017).
 
-  1. primitive element ids and extensions, until M5 (FR-017's carve-out). Where
-     they were a structure's only content, the structure keeps its place and is
-     written as an empty object, whatever other conformant documents are read
-     with it, because the primitive is stored as a null of its declared type
-     (decision 72). A metadata group in another outer shape keeps nothing,
-     including a conformant one that another document read with it re-typed
-     (item 6). A repeating primitive's positional nulls are written without the
-     `_x` array they align with. Either way the document is not conformant FHIR
-     (decision 71's addendum);
-  2. `contained` resources (FR-006) and `Bundle` (FR-007);
-  3. decimal lexical form — trailing zeros, exponent notation as written, and
-     precision beyond a double;
-  4. `base64Binary` whitespace, which decoding and re-encoding canonicalises
-     away although FHIR permits it;
-  5. non-FHIR fields and fields whose JSON encoding type contradicts the
-     definitions. Where that was an element's only content, the element is
-     written as an empty object if anything else in the file keeps its column,
-     and is omitted if nothing does, so the document is not conformant FHIR
-     (decision 71, which ended decision 66's shortening of the array);
-  6. a conformant value dropped because a sibling value re-typed its column —
-     one `1.5` among integers costs that element for every resource in the file.
-     Where it was an element's only content, that element is written as an empty
-     object, even in a document that is conformant on its own (decision 71's
-     addendum). Where the re-typed column is a primitive's metadata group, the
-     group keeps nothing, so the structure it alone kept is written as an empty
-     object if anything else read with it keeps its column, and omitted if
-     nothing does (decision 72);
-  7. content the dense bounds drop, which is no longer detectable (decision 68).
-- **FR-017**: On a pruned schema the guarantee in FR-016 MUST hold subject only
-  to that requirement's stated exceptions. On a dense schema it MUST hold within
-  the configured nesting, extension and open-type bounds. *(Decision 68 withdraws
-  the requirement that content those bounds would drop be detectable, with
-  `BoundsCheck`; it is a named follow-up. "Unconditional" on the pruned schema
-  is withdrawn with it, because FR-016 now carries exceptions that apply in both
-  modes. Decision 69 stages the dense sentence with the mode itself, to M6.)*
-
-  **Carve-out, until the primitive metadata group is populated.** Primitive
-  element ids and extensions are not stored before M5 — the traversal declines to
-  emit the group while nothing populates it, so on a pruned schema it does not
-  appear and on a dense one it is present and null — so the pruned-schema
-  guarantee excludes that content until then, and the exclusion MUST be reported
-  rather than silent. This is the deliberate cost of deferring FR-003's metadata
-  group past the flip; it is recorded as decision 49 and closed by T078c.
-- **FR-018**: *Withdrawn for this phase by decision 68.* Content the definition
-  set does not describe is ignored: the field is nulled and one warning names
-  what was dropped. There is no configurable switch and no failing mode, so
-  truncation is no longer prevented — it is reported. Restoring a fail mode, and
-  validation of values against their declared types, is a named follow-up
-  (T134g). Malformed JSON is unaffected and still fails the read, because a
-  document that is not JSON is not content outside the definition set.
-- **FR-019**: *Deferred by decision 71.* Export omits an absent element, which
-  is what a null field costs nothing to leave out. It no longer omits a
-  structure whose every field is null or an array holding only nulls, and
-  nothing checks for either. The assumption is decision 71's in full: a JSON
-  document carries no empty object, no empty array and no element whose only
-  content is undescribed or contradicts the definitions, and layout data from
-  any producer carries no structure whose every field is null and no array
-  holding nothing or holding a null other than a repeating primitive's
-  positional one, which this reader writes on purpose. That is true of this
-  milestone's corpora, not of conformant input. *(Decision 71's addendum.)*
-  Where every document read together conforms, two kinds of emptiness still
-  reach the output, and both are kept on purpose until M5 stores primitive
-  metadata: a structure whose only content was a primitive's id and extensions
-  is written as `{}` in its place (decision 72), and a repeating primitive's
-  positional null is written as a bare `null` without the `_x` array it aligns
-  with. Neither output is conformant FHIR. Beyond those, a structure emptied by
-  non-conformant content is written as `{}` wherever the documents read together
-  keep its column, and that includes a conformant document whose column was
-  re-typed by another document in the file. Detecting any of it is deferred to
-  the custom JSON serde that the decimal's lexical form also waits on (T134h).
-  The pruning that did it grew the expression exponentially with nesting depth,
-  which T080b pins, and T080c pins what is written instead.
-- **FR-020**: *Withdrawn by decision 68.* Lexical form is no longer preserved on
-  any ingest path, so there is no per-path limitation to document. The file path
-  and the `Dataset<String>` path now agree, because both route a number through
-  a double.
+  OQ-1 lists further exceptions that hold until the ingest spike decides
+  otherwise. The round trip through XML is held to the same guarantee.
+  Evidence: [null-and-empty-handling.md](evidence/null-and-empty-handling.md).
+- **FR-017**: On a dense schema the guarantee in FR-016 MUST hold within the
+  configured nesting, extension and open-type bounds, and content those bounds
+  drop MUST be reported.
+- **FR-019**: Export MUST omit an absent element, a structure whose every field
+  is null, and an array holding only nulls, except a repeating primitive's
+  positional nulls, which align with its metadata group. *(Subject to OQ-1.)*
+- **FR-063**: Non-conformant content MUST be reported, never silently dropped or
+  coerced. Malformed JSON or XML fails the read.
 
 ### Annotations
 
 - **FR-021**: The decimal, date and quantity annotations MUST be emitted by
-  default, each kind individually disableable. **Staged.** The layout ships
-  annotation-free at the flip and each kind lands afterwards, so this requirement
-  is met progressively and in full only at the end of M5. FR-022 is what makes
-  the staging safe, and decision 50 records it. A kind carried in more than one
-  field — the date range's two bounds, the quantity's two canonical forms — is
-  one kind and is governed by one switch.
+  default, each kind individually disableable. A kind carried in more than one
+  field is governed by one switch.
 - **FR-022**: The engine MUST compute correctly when any or all annotations are
-  absent, using an annotation only as a fast path. An annotation MUST NOT be
-  required for correctness.
-- **FR-023**: Whether an annotation is used MUST be decided from the schema
-  rather than per row. *That half is staged to M5, because it presupposes that an
-  annotation exists to choose.* The same rule governs the layout normalisation
-  the engine performs, and **that half binds from M2**: which layout a column is
-  read as MUST be settled from the resolved schema, never per row. That normalisation happens at one
-  site, the traversal expression, so that no code above it is written twice and
-  removing it later touches one file (decision 55).
+  absent, using an annotation only as a fast path.
+- **FR-023**: Whether an annotation is used MUST be decided from the schema,
+  never per row.
 
 ### Query engine
 
 - **FR-024**: Traversal to an element the definitions describe but the schema
   does not carry MUST yield an empty collection.
-- **FR-025**: Traversal to an element the definitions do not describe MUST
-  yield an empty collection, as the engine has done since `551c2a3050`
-  (amended by decision 76).
+- **FR-025**: Traversal to an element the definitions do not describe MUST yield
+  an empty collection.
 - **FR-026**: Selecting a choice variant absent from the schema MUST yield an
   empty collection.
 - **FR-027**: Combining an absent element with a populated one MUST succeed
@@ -523,301 +395,200 @@ resolves no Spark Catalyst dependency, enforced by the build.
   the output column.
 - **FR-029**: Deriving the output type of a column carrying no type information
   MUST fail with a message naming the column, its path and the remedy. An
-  element absent from the schema MUST NOT be such a column: FR-055 gives it a
-  type.
+  absent element is not such a column (FR-055).
 - **FR-030**: A column produced for an absent primitive element MUST carry the
-  type the definitions give that element, so that it can be written to Parquet
-  and reported with its FHIR type on every surface that returns a column.
+  type the definitions give that element.
 - **FR-031**: Coding-valued columns MUST be decoded by field name, resolved once
   per schema, with absent fields decoding as null and a structure carrying no
   recognisable field rejected with an error naming the expected and actual
   fields.
 - **FR-032**: Terminology operations MUST operate correctly on a Coding column
-  narrower than the canonical layout.
+  narrower than the canonical structure.
 - **FR-033**: Reference resolution MUST NOT depend on a stored versioned-key
-  column. If a precomputed key proves necessary for join performance it MUST be
-  expressed as an annotation, and the engine MUST work without it.
+  column. A precomputed key, if a join benchmark shows one is needed, MUST be an
+  annotation the engine works without. Evidence:
+  [t136-benchmark.md](evidence/t136-benchmark.md).
 - **FR-034**: The engine MUST be able to navigate to a primitive element's id
-  and extensions. **Deferred to M5**, with FR-003's writing half, per decision 49.
-  The previous layout cannot represent this content and the engine cannot
-  navigate it today, so deferring it regresses nothing.
-- **FR-035**: Query-time decimal precision MUST remain as it is today, and the
-  cap MUST be documented.
-- **FR-036**: Unnesting MUST NOT be implemented in a way that reduces a read to
-  a single leaf of a repeated element, because that silently drops rows from
-  files lacking that leaf.
-
-Requirements are numbered in the order they were added. FR-054 onward were added
-after the schema-binding decision and belong to this section.
-
-- **FR-054**: Traversal MUST tolerate a field absent from the input schema, and
-  MUST decide presence from the resolved input schema rather than when the
-  expression is built, so that a single column expression is valid over every
-  schema conforming to the definitions. This preserves the current contract, in
-  which an expression is converted to a column without reference to any dataset.
-- **FR-055**: An absent element MUST be represented as a null typed by the
-  principle: **the type the definitions give it wherever that type is
-  unambiguous, and the bottom type wherever a concrete shape would
-  over-constrain later combination**. Concretely, a singular primitive takes the
-  definition's type, a repeating primitive an array of it, a singular complex
-  element the bottom type, and a repeating complex element an array of the bottom
-  type. A concrete minimal structure MUST NOT be used for a complex element,
-  because it fails FR-027.
-- **FR-056**: An operation requiring two collections of the same FHIR type to
-  share a SQL type MUST reconcile them by projecting each **by name** into the
-  merged type. It MUST NOT reconcile by casting, because a struct cast of equal
-  arity reorders fields positionally and silently compares the wrong fields.
-- **FR-057**: Struct field order MUST be canonical wherever a struct type is
-  produced by Pathling: schema derivation, the merge of two element types, the
-  merge Pathling performs when it widens a target, and the reconciliation
-  projection. A schema obtained from storage — Spark's merged read schema, an
-  evolved Delta table's schema, or a schema the caller supplies — may carry its
-  fields in any order: a non-canonical order is one more divergent shape, and
-  FR-056 reconciles it by name like any other (decision 85). Canonical order is
-  definition order, restricted to the fields present, with the layout's own
-  fields — the annotations, and the metadata group beside a primitive — at fixed
-  positions relative to the element they accompany. Those fields have no
-  definition element, so without a stated position two implementations could both
-  claim to be canonical and still produce structs that compare positionally
-  wrong, which is the failure this requirement exists to prevent. The
-  reconciliation projection applies it only where the operands' shapes differ:
-  operands that already share one type are left as they are (owner-confirmed,
-  decision 79).
+  and extensions.
+- **FR-035**: Query-time decimal precision MUST remain as it was before this
+  programme, and the cap MUST be documented.
+- **FR-036**: Unnesting MUST NOT reduce a read to a single leaf of a repeated
+  element, because that drops rows from files lacking that leaf.
+- **FR-054**: A column expression MUST be valid over every schema conforming to
+  the definitions, deciding presence from the resolved input schema rather than
+  when the expression is built. *(Subject to OQ-2.)* Evidence:
+  [t009a-analyzer-gate.md](evidence/t009a-analyzer-gate.md),
+  [join-condition-limit.md](evidence/join-condition-limit.md).
+- **FR-055**: An absent element MUST be a null typed by the definitions where
+  unambiguous and by the bottom type where a concrete shape would over-constrain
+  combination: a singular primitive takes its type, a repeating primitive an
+  array of it, a singular complex element the bottom type, and a repeating
+  complex element an array of the bottom type. Evidence:
+  [spark-type-findings.md](evidence/spark-type-findings.md).
+- **FR-056**: Two collections of the same FHIR type that must share a SQL type
+  MUST be reconciled by projecting each by name into the merged type, never by
+  a cast ([ADR-0002](../../docs/adr/0002-reconcile-shapes-by-name.md)).
+- **FR-057**: Every struct type Pathling produces MUST be in canonical field
+  order. A schema obtained from storage may carry any order; FR-056 reconciles
+  it by name. Operands that already share a type are left unprojected.
 - **FR-058**: The merged type MUST be the recursive field-wise union of the
-  inputs, and one implementation MUST serve both FR-056 and the merging of
-  divergent file schemas in FR-041.
+  inputs, and one implementation MUST serve both FR-056 and FR-041.
+- **FR-059**: A complex value of a FHIR type MUST leave the engine in the fitted
+  shape of the data it came from, and this MUST be documented. A complex value
+  of a System type MUST have one fixed, complete shape, whatever produced it.
+  The engine-built `System.Quantity` MUST NOT carry the legacy layout's shape;
+  the same for `System.Coding` is
+  [#2804](https://github.com/aehrc/pathling/issues/2804).
 
 ### Reading and writing
 
 - **FR-037**: File-based sources MUST determine the layout of the data they read
-  and reject an unsupported layout at read time, naming the resource type, the
+  and refuse the legacy layout at read time, naming the resource type, the
   detected layout, the expected layout and the remedy.
 - **FR-037a**: File-based sinks MUST determine the layout of the target they
-  write into and reject an unsupported layout before any schema merge is
-  attempted, with the same message. Schema merging on append and upsert is
-  enabled by FR-042, so without this a write into a target holding an earlier
-  layout either fails with a storage-layer schema error or, where no type
-  conflicts, succeeds and leaves one table carrying both layouts.
+  append or merge into and refuse the legacy layout before any schema merge, with
+  the same message. An overwrite is not refused.
 - **FR-038**: Detection MUST be structural and MUST NOT require file access
   beyond the schema metadata the read already obtains.
-- **FR-039**: A sparse but conforming schema, and a schema carrying no marker
-  fields, MUST be accepted.
-- **FR-040**: Detection MUST be disableable per source without affecting other
-  sources.
+- **FR-039**: A fitted but conforming schema, and a schema carrying no marker
+  field, MUST be accepted.
+- **FR-040**: Detection MUST be disableable per source, for data the detector
+  misclassifies, without affecting other sources.
 - **FR-041**: Reading a dataset whose files carry differing schemas MUST return
   the union of their elements, with no resource lost and cardinality preserved.
+  Evidence: [merge-cost.md](evidence/merge-cost.md).
 - **FR-042**: Appending a batch whose schema differs from the table's MUST
-  succeed and widen the table schema, through every sink and every save mode
-  that writes into an existing table. A non-Delta catalog table, whose stored
-  schema cannot be widened at a nested level, MUST instead refuse a batch whose
-  schema differs from the table's in any way, before anything is written, with
-  a message naming the remedy (decision 86).
+  succeed and widen the table schema, through every sink and save mode that
+  writes into an existing table. A non-Delta catalog table MUST instead refuse a
+  batch whose schema differs, before anything is written, naming the remedy.
+  Evidence: [catalog-append-schema.md](evidence/catalog-append-schema.md).
+
+### Legacy layout
+
+- **FR-046**: The engine MUST read only the PoF layout. Legacy-layout data MUST
+  NOT be readable as though it were the PoF layout.
+- **FR-053**: Where a legacy-layout column reaches the engine by a route
+  detection does not cover — a source with detection disabled, a dataset the
+  caller supplies, a dataset built with the legacy encoders — the engine MUST
+  fail, once per schema, with an error naming the column, rather than answer
+  from it.
+- **FR-064**: A legacy export MUST convert a legacy-layout Parquet or Delta table
+  to FHIR NDJSON, as a reusable component and as a command-line tool, outside
+  `library-runtime` and the language bindings. Its losses MUST be documented.
 
 ### Compatibility
 
 - **FR-043**: `encode`, `encodeBundle` and `decode` MUST be preserved in Java,
-  Python and R.
-  *(Read by decision 87 as preserving the forms taking a resource name, which
-  Python and R expose. The Java overloads returning a dataset typed by a HAPI
-  class are removed, and encoding a streaming dataset fails until the dense
-  schema restores it in M6.)*
-- **FR-044**: The nesting, extension and open-type options MUST keep their
-  current meaning for the dense schema and MUST NOT apply to the pruned one.
-  *(Staged by decision 69. The options remain in the public API throughout, and
-  from the flip until M6 they are accepted and bound nothing, because the mode
-  they bound does not yet exist in this layout. They are kept rather than
-  deprecated or made to fail: FR-043 preserves the encoding signatures and SC-008
-  rules out an incompatible public API change.)*
-- **FR-045**: XML and Bundle ingest MUST be preserved.
-- **FR-046**: Data written by earlier releases MUST NOT be readable as though it
-  were the new layout; see FR-037.
-- **FR-047**: The published schema documentation MUST be replaced with the new
-  layout contract, including the compatibility statement for existing files and
-  the caveat for direct SQL consumers.
+  Python and R, in the forms taking a resource name. Encoding a streaming
+  dataset MUST work in the dense schema mode.
+- **FR-044**: The nesting, extension and open-type options MUST bound the dense
+  schema and MUST NOT apply to the fitted one. Evidence:
+  [encoder-scope.md](evidence/encoder-scope.md).
+- **FR-047**: The published documentation MUST describe the PoF layout, its
+  schema modes and annotations, the refusal of the legacy layout, the legacy
+  export, and the caveat for direct SQL consumers.
 
 ### Module boundary
 
-- **FR-048**: FHIR definition and schema-derivation code MUST NOT depend on
-  internal Spark Catalyst API, enforced by the build as a dependency
-  prohibition.
-- **FR-049**: The new encoding code MUST NOT reference internal Spark Catalyst
-  API, enforced by the build. Where a dependency prohibition is impossible
-  because column expressions require the wider Spark SQL dependency, enforcement
-  MUST be at the level of imports.
-- **FR-050**: The new encoding path MUST contain no expression encoder, no
+- **FR-048**: Definition and schema-derivation code MUST NOT depend on internal
+  Spark Catalyst API, enforced by a dependency prohibition in the build.
+- **FR-049**: Encoding code MUST NOT reference internal Spark Catalyst API,
+  enforced by the build at the level of imports.
+- **FR-050**: The encoding path MUST contain no expression encoder, no
   hand-authored serializer or deserializer expression tree, and no FHIR object
   in a per-row plan.
-- **FR-051**: The existing encoding implementation MUST be left in place and
-  MUST continue to resolve at its current Maven coordinates, so that it remains
-  available to migration tooling. It MUST NOT be modified, split or retired by
-  this work.
-- **FR-052**: The query-time expression toolkit MUST be preserved and MUST NOT be
-  relocated by this work. It MAY be extended: the prohibitions in FR-048 and
-  FR-049 are scoped to the definition, schema-derivation and encoding code, and
-  do not reach the evaluation path. Satisfying FR-054 and FR-056 by adding to
-  the toolkit is therefore permitted.
-- **FR-053**: On completion, the query engine MUST read only the new layout. It
-  MAY retain a reader for the previous layout until that reader is removed in M7,
-  which is what keeps the build green while the engine is converted and makes the
-  switch reversible until then. **This wording is provisional**: T100f settles it
-  before M7 opens, and T049a may bear on it, since a source boundary that routes
-  earlier-layout data rather than refusing it would make the previous-layout
-  reader a product feature rather than transitional scaffolding.
+- **FR-051**: The legacy `encoders` module MUST remain at its Maven coordinates,
+  unmodified in its encoding behaviour, because the legacy export depends on it.
+- **FR-052**: The query-time expression toolkit MAY use and extend internal
+  Catalyst API; FR-048 and FR-049 do not reach it.
 
 ### Key Entities
 
-- **Resource table**: the stored representation of one FHIR resource type. Its
-  schema is derived from the definitions and optionally pruned to the data.
-- **Element**: a node in a resource, with a FHIR type and a cardinality taken
-  from the definitions, present or absent from a given schema.
-- **Annotation**: a derived value stored beside an element to accelerate a
-  computation the engine can also perform from the element itself. Optional by
-  definition.
-- **Primitive metadata group**: the id and extensions belonging to a primitive
-  element, stored beside it.
-- **Schema mode**: whether a schema is pruned to the data or comprises every
-  element the definitions describe. *(The dense mode is delivered in M6, decision
-  69; the pruned one is the only mode before then.)*
-- **Strictness switch**: *withdrawn by decision 68.* Content outside the
-  definition set is ignored and reported; there is no setting.
-- **Layout**: the encoding convention a stored dataset follows, detectable from
-  its schema.
+See [`CONTEXT.md`](../../CONTEXT.md): resource table, layout (PoF and legacy),
+schema mode (fitted and dense), definition set, annotation, primitive metadata
+group, canonical field order, finding, absent element, FHIR type, System type,
+reconciliation, legacy export.
 
 ## Success Criteria _(mandatory)_
 
-### Measurable Outcomes
-
-- **SC-001**: A round trip over a structural subset of the FHIR R4 specification
-  examples produces semantically equal resources for 100% of conformant input,
-  with numbers compared numerically, including decimals with trailing zeros,
-  exponent notation, a leading sign, a very small magnitude and forty
-  significant digits. Equality is judged subject to FR-016's exception list.
-  Until M5 the measurement excludes primitive id and extension content, because
-  the metadata group is not populated before then and the R4 examples carry such
-  content; the exclusion is asserted in the harness rather than incidental
-  (T076), and T078c removes it. *(Decision 68: the Synthea corpus is deferred
-  with T077 and the specification-example corpus is reduced, so this criterion
-  is measured over less than it was.)*
+- **SC-001**: A round trip over the FHIR R4 specification examples and a Synthea
+  dataset produces semantically equal resources for 100% of conformant input,
+  through JSON and through XML, with numbers compared numerically, judged
+  subject to FR-016's exceptions.
 - **SC-002**: The FHIRPath test suite, both conformance baselines and the
-  SQL-on-FHIR compliance suite pass over data in the new layout, in the pruned
-  schema mode, with a curated subset also passing in the dense mode. *(The dense
-  half is measured in M6, with the mode; decision 69.)*
+  SQL-on-FHIR compliance suite pass over the PoF layout with fitted schemas, and
+  a curated subset passes with dense schemas.
 - **SC-003**: The conformance exclusion baselines gain no new entries, and every
-  entry that becomes obsolete is removed rather than left to self-report.
+  obsolete entry is removed.
 - **SC-004**: The full engine test suite passes over files written with every
   annotation disabled.
 - **SC-005**: A dataset whose files carry differing schemas returns every
-  resource with correct cardinality, on both raw files and a transactional
-  table.
-- **SC-006**: Reading data written by an earlier release fails at read time with
-  a message naming the resource type, the detected layout and the remedy, for
-  every file-based source; writing into such a dataset fails the same way, for
-  every file-based sink.
-- **SC-007**: Encode, decode and query execution are each measured separately
-  against a baseline captured before any change, with planning time measured
-  separately from execution time. No outcome is required; the measurement is.
+  resource with correct cardinality, on raw files and on a Delta table.
+- **SC-006**: Reading legacy-layout data fails at read time with a message naming
+  the resource type, the detected layout and the remedy, for every file-based
+  source; appending or merging into it fails the same way, for every file-based
+  sink.
+- **SC-007**: Encode, decode, planning and execution are each measured against
+  the baseline captured before any change. No outcome is required. Evidence:
+  [baseline.md](evidence/baseline.md),
+  [t136-benchmark.md](evidence/t136-benchmark.md).
 - **SC-008**: No public API of the library changes incompatibly in Java, Python
-  or R.
-- **SC-009**: The build fails if internal Spark Catalyst API is introduced into
-  the definition and schema module.
-- **SC-010**: One column expression, built once without reference to any dataset,
+  or R, except the removal of the Java `encode` overloads taking a HAPI class and
+  returning a dataset of it, which only the legacy encoder could produce.
+- **SC-009**: The build fails if internal Catalyst API is introduced into the
+  definition and schema module or the encoding code.
+- **SC-010**: One column expression, built without reference to any dataset,
   applied to a fitted and to a dense dataset holding the same resources, yields
   equal results for every expression in the engine's expression-level test set.
-  *(Satisfied in two parts by decision 69: at the flip across two fitted schemas
-  of differing width, and in its stated form in M6 with the dense mode.)*
+  *(Subject to OQ-2.)*
+- **SC-011**: Encode and decode are no slower than at the PoF switch, measured on
+  the same benchmark, within the measured drift of about 10%
+  ([t136-benchmark.md](evidence/t136-benchmark.md)).
+- **SC-012**: A legacy-layout table written by the legacy encoder, exported and
+  re-imported, holds every resource of the source, equal to it except for the
+  losses FR-064 documents.
 
 ## Assumptions
 
-- The FHIR version in scope is R4, as today. The definition abstraction is not
-  prepared for other versions: it reports R4 types (decision 67), and no other
-  provider is delivered.
-- Profiles are out of scope. The definition abstraction is prepared for a
-  provider backed by structure definitions, but none is delivered.
-- The server catches up separately, pinned to the last library release before
-  the first convention change and reaching the post-change line before the
-  pinned line stops receiving fixes. Server-side concerns — writes from objects,
-  reads to objects, the schema-as-contract sites and migration of persisted
-  warehouses — are out of scope here.
-- Removing internal Catalyst API from the *execution* path is out of scope. The
-  query-time toolkit stays exactly where it is, and is extended rather than
-  replaced.
-- Two alternative ways of reconciling the engine with a fitted schema are
-  recorded as future options, not chosen: binding the evaluator to the input
-  schema at evaluation time, and representing an unevaluated expression as an
-  unbound object that is bound to a schema when the dataset is known. Both are
-  compatible with what is built here, because the representation of absence and
-  the mechanism for reconciliation are the same under any of the three.
-- The existing encoding implementation is retained intact rather than split or
-  retired. Separating the query toolkit from the HAPI bridge, and retiring the
-  bridge, is deferred: what becomes of it depends on what the data-migration
-  tooling turns out to need, since that tooling may have to use it. The new
-  encoding is built alongside it.
-- The engine reads only the new layout **on completion**, and may read both
-  while it is being converted. The test estate therefore moves incrementally,
-  along two independent dimensions in the test framework: how much of the layout
-  a schema carries, and which conventions its fields follow. The earlier form of
-  this assumption — that the engine reads only the new layout throughout, and so
-  the test estate moves in one step — is what made a red window look
-  unavoidable. It was applied to the transition when it constrains only the end
-  state. See decision 40's addendum.
-- The schema mode and the per-annotation toggles are
-  configuration on a **new** surface beside the existing encoding configuration,
-  not on it. The existing configuration class sits in the module FR-051 protects,
-  and FR-052's carve-out reaches query-time expressions only, so adding to it is
-  not available. The public context accepts and exposes both, which is two
-  configuration objects for one conceptual thing — the cost of leaving the
-  existing implementation genuinely untouched. *(Decision 69: that surface has no
-  field before M5 and is deleted in M1, since the strictness switch is withdrawn,
-  the toggles are M5's and the mode is M6's. Whichever milestone needs it first
-  recreates it.)*
-- Migration of data at rest is a version gate plus an opt-in rewrite tool, and
-  is server-side work outside this specification. A migrated warehouse does not
-  carry the losslessness guarantee; a re-imported one does.
-- Lexical decimal preservation is not attempted on any path (decision 68).
-  Numeric equivalence is the guarantee, and a decimal is stored as the text of
-  a double. The earlier form of this assumption — that preservation was
-  achievable on the file path and not on the path taking resources as a dataset
-  of strings, and so was a documented per-path limitation with an upstream
-  report — no longer applies, because both paths now route a number through a
-  double and therefore agree.
-- Empty pruning is deferred, and M1 neither removes nor detects an empty
-  structure or a null-only array (decision 71). The assumption that the input
-  carries nothing needing pruning holds for this milestone's corpora and not for
-  conformant input. Conformant input yields `{}` where a structure's only
-  content was primitive metadata, and a bare positional `null` where the `_x`
-  array it aligns with is not stored. Both are kept on purpose until M5, because
-  the first is an element that exists and pruning it would change query answers,
-  and the second holds a position (decision 71's addendum). The first is kept
-  whatever other conformant documents are read with it, because the primitive is
-  stored as a null of its declared type (decision 72). That matches the released
-  encoder for a singular primitive; for a repeating one the released encoder
-  drops the element, because the parser it reads through discards an `_x` array
-  with no `x` array beside it, and the layout keeps it, as FHIR does.
-  Non-conformant content yields `{}` as well, including a value in another
-  document that re-types a shared column. The follow-up is the custom JSON serde
-  (T134h).
-- The strictness switch, value validation and dense-mode bounds reporting are
-  deferred rather than abandoned (decision 68). M1 reports what it drops and
-  fails on nothing but malformed JSON. The consequence is that M1's exit
-  criterion is "lossless for the resources we test" rather than "lossless, or
-  loud about what was lost", and that this reaches the M4 flag day. T134f and
-  T134g carry the follow-ups.
+- The FHIR version is R4. The definition abstraction reports R4 types, and HAPI
+  remains the source of the structural definitions
+  ([#2818](https://github.com/aehrc/pathling/issues/2818)).
+- Profiles are out of scope.
+- The server is pinned to the last release before the PoF layout. It moves to
+  the PoF layout separately, using the legacy export to migrate its warehouse,
+  and maps the library's refusal to its own errors. That work is outside this
+  specification.
+- Removing internal Catalyst API from the query-time toolkit is out of scope.
+- Distinguishing `System.Coding` from `FHIR.Coding` in the type system is
+  [#2804](https://github.com/aehrc/pathling/issues/2804), outside this
+  specification, except for the shape of the engine-built `System.Quantity`
+  (FR-059).
 
 ## Open questions
 
-- **OQ-1: Does a Coding result have a fixed type?** On the new layout a stored
-  Coding carries only the fields its data populates, and the engine returns a
-  Coding read from storage in that pruned structure, unless a union with a
-  wider Coding reconciles it. The struct type of a Coding result therefore
-  depends on the data, and so does the type of a SQL-on-FHIR view column that
-  projects a Coding without traversing into it: two tables holding the same
-  kind of resource can produce view columns of different types. Nothing here
-  violates a requirement as written. FR-031 and FR-032 require a narrower
-  Coding to be read and operated on correctly, and FR-028 to FR-030 fix the
-  type of a declared column and of an absent primitive, but none fixes the
-  type of a Coding result over populated data. The question is whether one
-  should: either a Coding result is widened to the canonical Coding structure
-  wherever it leaves the engine, or the data-dependent type is accepted and
-  documented. This is the engine's existing behaviour on the new layout, found
-  when the DSL tests first stored Codings pruned (T036a), where the test
-  harness now compares Coding results by field name.
+- **OQ-1: Which representation losses does the ingest and egress spike
+  remove?** The spike chooses between transforming the schema Spark's reader
+  infers and a parser of our own driven by the definitions, for JSON and XML,
+  in both directions, under FR-049, FR-050 and SC-011. Its outcome decides the
+  following, each stated here as the target with today's behaviour as the
+  fallback if the spike does not remove it:
+  - the decimal's lexical form (FR-002). Today a number passes through a double,
+    so trailing zeros, exponent notation and precision beyond a double are not
+    preserved;
+  - the granularity of a contradicting value (FR-016 item 3). Today one value
+    whose JSON type contradicts the definitions, or that re-types its column
+    beside conformant values, costs that element for every resource read with
+    it, and a number inferred as text beside strings is kept as text without a
+    finding;
+  - empty structures and null-only arrays on export (FR-019). Today a structure
+    emptied by non-conformant content is written as `{}`;
+  - per-value rather than per-column findings, and reporting of values a
+    converter cannot store, such as an integer beyond the range of an int.
+- **OQ-2: Are column expressions bound to a schema?** Today a column expression
+  is built without a dataset and resolves presence against whatever schema it
+  meets (FR-054), which lets callers combine FHIRPath and search columns with
+  other SQL filters, but rests on a fragile root reference that needed special
+  handling in join conditions. The alternatives are binding at evaluation time,
+  and an unbound expression bound to a schema when the dataset is known. The
+  answer decides FR-054, SC-010 and the fitted-versus-dense parity tests. Any
+  change is weighed against SC-008.
