@@ -21,6 +21,7 @@ import au.csiro.pathling.test.dsl.FhirPathDslTestBase;
 import au.csiro.pathling.test.dsl.FhirPathTest;
 import java.util.List;
 import java.util.stream.Stream;
+import org.hl7.fhir.r4.model.Patient;
 import org.junit.jupiter.api.DynamicTest;
 
 /** Tests for the FHIRPath select() function. */
@@ -81,6 +82,82 @@ public class SelectFunctionDslTest extends FhirPathDslTestBase {
             "important",
             "items.select(note)",
             "select() omits elements whose projection evaluates to empty")
+        .build();
+  }
+
+  @FhirPathTest
+  public Stream<DynamicTest> testSelectPartiallyEmptyMultiValued() {
+    // Some items have no values for the multi-valued projection, either because the element is
+    // absent or because it is an empty array. Their projections are empty and contribute nothing,
+    // but the other items' results must survive (#2801).
+    return builder()
+        .withSubject(
+            sb ->
+                sb.elementArray(
+                    "contacts",
+                    c1 -> c1.string("name", "Alice").stringArray("phones", "111", "222"),
+                    c2 -> c2.string("name", "Bob"),
+                    c3 -> c3.string("name", "Charlie").stringArray("phones"),
+                    c4 -> c4.string("name", "Dave").stringArray("phones", "444")))
+        .group("select() with some items projecting to empty")
+        .testEquals(
+            List.of("111", "222", "444"),
+            "contacts.select(phones)",
+            "select() keeps the results of items whose multi-valued projection is non-empty")
+        .testEquals(
+            3,
+            "contacts.select(phones).count()",
+            "count() after select() counts only the values that were projected")
+        .build();
+  }
+
+  @FhirPathTest
+  public Stream<DynamicTest> testSelectPartiallyEmptySingular() {
+    // A singular projection that is empty for some items must not leave gaps that later functions
+    // observe as items.
+    return builder()
+        .withSubject(
+            sb ->
+                sb.elementArray(
+                    "items",
+                    item1 -> item1.string("label", "first").stringEmpty("note"),
+                    item2 -> item2.string("label", "second").string("note", "important"),
+                    item3 -> item3.string("label", "third").stringEmpty("note")))
+        .group("select() singular projection empty for some items")
+        .testEquals(
+            1,
+            "items.select(note).count()",
+            "count() after select() ignores items whose projection is empty")
+        .testEquals(
+            "important",
+            "items.select(note).first()",
+            "first() after select() returns the first projected value, not an empty slot")
+        .build();
+  }
+
+  @FhirPathTest
+  public Stream<DynamicTest> testSelectPartiallyEmptyOnResource() {
+    // The scenario reported in #2801: a Patient with one name that has given names and one that
+    // has only a family name.
+    final Patient patient = new Patient();
+    patient.addName().addGiven("A").addGiven("B");
+    patient.addName().setFamily("F");
+    return builder()
+        .withResource(patient)
+        .group("select() on a FHIR resource with some items projecting to empty")
+        .testEquals(List.of("A", "B"), "name.given", "Traversal control: name.given")
+        .testEquals(
+            List.of("A", "B"),
+            "name.select(given)",
+            "select() keeps the given names of the name that has them")
+        .testEquals(2, "name.select(given).count()", "count() after select() returns 2")
+        .testEquals("F", "name.select(family)", "Singular projection empty for the first name")
+        .testEquals(
+            List.of("A", "B", "F"),
+            "name.select(given | family)",
+            "Union projection combines per-item results across both names")
+        .testEmpty("name.select(prefix)", "select() is empty when every projection is empty")
+        .testEquals(0, "name.select(prefix).count()", "count() is 0 when every projection is empty")
         .build();
   }
 
