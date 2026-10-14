@@ -149,6 +149,17 @@ an element in the same read, across all of its files, not only the offending
 one. Malformed JSON still fails
 the read.
 
+### A quantity the engine builds has a fixed shape
+
+**Behaviour change.** A `System.Quantity` that reaches a caller as a column —
+from the expression-to-column API, or a view column declared `Quantity` — has
+the fixed shape the [engine semantics](engine-semantics.md#quantities) give it:
+`id`, `value`, `comparator`, `unit`, `system` and `code`, each a string, with
+the value as the text of the decimal. It previously had the previous layout's
+shape, with a fixed-scale decimal value, its `value_scale`, the
+`_value_canonicalized` and `_code_canonicalized` fields and `_fid` (FR-059).
+A quantity read from the data keeps the fitted shape of the data it came from.
+
 ### Schema merging on by default
 
 Reading a dataset of raw files merges their schemas by default, because

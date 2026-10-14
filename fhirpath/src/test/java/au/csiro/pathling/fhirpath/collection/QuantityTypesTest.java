@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.fhirpath.collection;
 
+import static org.apache.spark.sql.functions.col;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
@@ -36,9 +37,11 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
+import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.types.ArrayType;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -52,16 +55,15 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 
 /**
- * Tests that the types profiled on Quantity, such as Duration and Age, are decoded at traversal as
- * a Quantity is, on both layouts (decision 80).
+ * Tests that the types profiled on Quantity, such as Duration and Age, are handled as a Quantity
+ * is, on both layouts (decision 80).
  *
- * <p>The previous layout stores each of them in the structure the engine computes with, with a
- * {@code DECIMAL(32,6)} value, its scale and a canonical form. Before the port, a single-instance
- * evaluation rendered their value as a number, and a projected column had that structure. Both must
- * hold on the previous layout after the port, where the traversal expression normalises the stored
- * element to text, and they hold on the new layout too, because the element is decoded there in the
- * same way. A whole value is rendered as FHIR JSON from the stored element, so its value is a
- * number with the text of the source, on both layouts (T100j).
+ * <p>The previous layout stores each of them with a {@code DECIMAL(32,6)} value, its scale and a
+ * canonical form, and the traversal expression normalises the stored element to text. A
+ * single-instance evaluation renders their value as a number, on both layouts. A projected column
+ * is a System quantity, in its fixed shape, which carries no canonical form; the canonical form is
+ * computed from it (FR-059). A whole value is rendered as FHIR JSON from the stored element, so its
+ * value is a number with the text of the source, on both layouts (T100j).
  *
  * <p>The fixtures cover a Duration at the resource root, an Age that is a choice at the root, a
  * Duration nested in a singular parent, and a Duration nested in a repeating one.
@@ -196,7 +198,7 @@ class QuantityTypesTest {
 
   @ParameterizedTest(name = "{2} over the {0} layout")
   @MethodSource("projectedColumns")
-  void projectedColumnHasTheDecodedStructure(
+  void projectedColumnIsASystemQuantity(
       @Nonnull final TestLayout layout,
       @Nonnull final String resourceType,
       @Nonnull final String expression,
@@ -214,22 +216,17 @@ class QuantityTypesTest {
     assertThat(projected.schema().apply("x").dataType().simpleString())
         .isEqualTo(expectedType.simpleString());
 
-    final Row decoded = firstQuantity(projected.first());
-    assertThat(decoded.<Integer>getAs("value_scale")).isZero();
-    assertThat(
-            decoded
-                .<Row>getAs(QuantityEncoding.CANONICALIZED_VALUE_COLUMN)
-                .<BigDecimal>getAs("value")
-                .toPlainString())
-        .isEqualTo(expectedCanonicalValue);
-    assertThat(decoded.<String>getAs(QuantityEncoding.CANONICALIZED_CODE_COLUMN))
-        .isEqualTo(expectedCanonicalCode);
-  }
-
-  @Nonnull
-  private static Row firstQuantity(@Nonnull final Row row) {
-    final Object value = row.get(0);
-    return value instanceof final Row struct ? struct : row.<Row>getList(0).get(0);
+    // The System quantity carries no canonical form (FR-059). It is computed from the quantity
+    // where the quantity is compared.
+    final Column quantity = expectedType instanceof ArrayType ? col("x").getItem(0) : col("x");
+    final Row canonical =
+        projected
+            .select(
+                QuantityEncoding.canonicalValue(quantity).getField("value"),
+                QuantityEncoding.canonicalCode(quantity))
+            .first();
+    assertThat(canonical.<BigDecimal>getAs(0).toPlainString()).isEqualTo(expectedCanonicalValue);
+    assertThat(canonical.<String>getAs(1)).isEqualTo(expectedCanonicalCode);
   }
 
   @Nonnull

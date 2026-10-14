@@ -17,9 +17,6 @@
 
 package au.csiro.pathling.fhirpath.evaluation;
 
-import static org.apache.spark.sql.classic.ExpressionUtils.column;
-import static org.apache.spark.sql.classic.ExpressionUtils.expression;
-
 import au.csiro.pathling.config.FhirpathConfiguration;
 import au.csiro.pathling.definition.ElementDefinition;
 import au.csiro.pathling.fhirpath.FhirPath;
@@ -31,13 +28,10 @@ import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.DecimalCollection;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
-import au.csiro.pathling.fhirpath.collection.QuantityCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.evaluation.SingleInstanceEvaluationResult.TraceResult;
 import au.csiro.pathling.fhirpath.evaluation.SingleInstanceEvaluationResult.TypedValue;
 import au.csiro.pathling.fhirpath.parser.Parser;
-import au.csiro.pathling.sql.NormaliseQuantity;
-import au.csiro.pathling.sql.SqlFunctions;
 import au.csiro.pathling.sql.SyntheticFieldUtils;
 import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
@@ -301,8 +295,9 @@ public class SingleInstanceEvaluator {
    * of the {@code io} module, adapting the structure recursively by the definition (T100j,
    * decisions 80 and 91). A structure that was read from the data is rendered as it is stored, so a
    * quantity keeps its extensions and a decimal its text, as a number. A structure the engine
-   * builds, such as a System quantity, is rendered by the definition it carries, and the fields it
-   * has beside the elements of its type are left out. Every other value is collected as it is.
+   * builds is rendered by the definition it carries, and the fields it has beside the elements of
+   * its type are left out. A System quantity has a fixed shape whose value is its text (FR-059), so
+   * it is rendered as it is, as a stored quantity is. Every other value is collected as it is.
    *
    * @param resourceDf the single-row encoded resource Dataset
    * @param result the result collection
@@ -317,7 +312,8 @@ public class SingleInstanceEvaluator {
       @Nonnull final String typeName,
       @Nonnull final ElementRenderer renderer) {
 
-    final Dataset<Row> valueDf = resourceDf.select(renderedValue(result).alias(RESULT_COLUMN));
+    final Dataset<Row> valueDf =
+        resourceDf.select(result.getColumn().getValue().alias(RESULT_COLUMN));
     final DataType valueType = valueDf.schema().fields()[0].dataType();
     final Dataset<Row> resultDf =
         asElementDefinition(result)
@@ -342,22 +338,6 @@ public class SingleInstanceEvaluator {
 
     final Object rawValue = row.get(0);
     return materialiseValues(rawValue, typeName);
-  }
-
-  /**
-   * Returns the column of a result in the shape it is rendered from. A quantity the engine builds,
-   * such as a System quantity, is in the structure the engine computes with, which has exactly the
-   * type of a previous-layout quantity, so it is normalised as one is, to the stored shape, whose
-   * value is its text at its own scale. Every other result is rendered as it is.
-   */
-  @Nonnull
-  private static Column renderedValue(@Nonnull final Collection result) {
-    final Column value = result.getColumn().getValue();
-    return result instanceof QuantityCollection && !result.holdsStoredStructures()
-        // The value is bound once, because the normalisation reads it once per field, and a traced
-        // value must be evaluated once (#2594).
-        ? SqlFunctions.let(value, bound -> column(new NormaliseQuantity(expression(bound))))
-        : value;
   }
 
   /** Returns the definition of the element a collection holds, where it has one. */

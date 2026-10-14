@@ -136,22 +136,16 @@ public class YamlSupport {
         throws IOException {
       final FhirPathQuantity quantity = FhirPathQuantity.parse(quantityLiteral.toString());
 
-      // No canonical form is written: the engine computes it from the value and code when it
-      // decodes a stored quantity, and does not read a stored one.
+      // The quantity is written in the fixed shape of a System quantity (FR-059): its value is the
+      // plain text of the literal's value, and no canonical form is written, because the engine
+      // computes it from the value and code.
       gen.writeStartObject();
-      // id field - always null for literals
       gen.writeNullField("id");
-      // value and value_scale
-      gen.writeNumberField("value", quantity.getValue());
-      gen.writeNumberField("value_scale", quantity.getValue().scale());
-      // comparator - not used in FhirPathQuantity
+      gen.writeStringField("value", quantity.getValue().toPlainString());
       gen.writeNullField("comparator");
-      // unit, system, code
       gen.writeStringField("unit", quantity.getUnitName());
       gen.writeStringField("system", quantity.getSystem());
       gen.writeStringField("code", quantity.getCode());
-      // _fid field - always null for literals
-      gen.writeNullField("_fid");
       gen.writeEndObject();
     }
   }

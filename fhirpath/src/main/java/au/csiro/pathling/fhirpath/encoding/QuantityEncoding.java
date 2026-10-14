@@ -18,58 +18,68 @@
 package au.csiro.pathling.fhirpath.encoding;
 
 import static au.csiro.pathling.sql.SqlFunctions.let;
-import static java.util.Objects.nonNull;
 import static java.util.stream.Collectors.toUnmodifiableMap;
 import static org.apache.spark.sql.functions.callUDF;
-import static org.apache.spark.sql.functions.coalesce;
-import static org.apache.spark.sql.functions.length;
 import static org.apache.spark.sql.functions.lit;
-import static org.apache.spark.sql.functions.regexp_extract;
+import static org.apache.spark.sql.functions.regexp_replace;
 import static org.apache.spark.sql.functions.struct;
 import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.encoders.ColumnFunctions;
-import au.csiro.pathling.encoders.ExtensionSupport;
-import au.csiro.pathling.encoders.QuantitySupport;
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
-import au.csiro.pathling.encoders.terminology.ucum.Ucum;
 import au.csiro.pathling.fhirpath.FhirPathQuantity;
 import au.csiro.pathling.fhirpath.unit.CalendarDurationUnit;
 import au.csiro.pathling.fhirpath.unit.UcumUnit;
 import au.csiro.pathling.sql.misc.CanonicalQuantityCode;
 import au.csiro.pathling.sql.misc.CanonicalQuantityValue;
-import au.csiro.pathling.sql.types.FlexiDecimal;
-import au.csiro.pathling.sql.types.FlexiDecimalSupport;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Map;
-import java.util.Optional;
 import java.util.stream.Stream;
-import lombok.Value;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.types.DataTypes;
-import org.apache.spark.sql.types.Metadata;
-import org.apache.spark.sql.types.MetadataBuilder;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 
 /**
- * Object encoders/decoders for FHIRPath Quantity values.
+ * The encoding of a {@code System.Quantity}, the quantity the engine builds itself, such as a
+ * literal, the result of a conversion or a stored quantity combined with one of these.
  *
- * <p>Provides conversion between {@link FhirPathQuantity} objects and Spark SQL Row representation.
+ * <p>A System quantity has one fixed, complete shape, whatever produced it (FR-059): the elements
+ * of a FHIR Quantity other than {@code extension}, in definition order, each of them present.
+ *
+ * <ul>
+ *   <li>{@code id}: always null for a quantity the engine builds, and the stored id for a stored
+ *       quantity it has taken as a System one;
+ *   <li>{@code value}: the text of a decimal, as the Parquet on FHIR layout stores one, so that it
+ *       keeps its own scale and every digit it was given;
+ *   <li>{@code comparator}, {@code unit}, {@code system} and {@code code}: text.
+ * </ul>
+ *
+ * <p>It carries nothing derived from these: no decimal value with a scale companion, no canonical
+ * form and no field identifier. The decimal value and the canonical form are computed from the
+ * value and the code where a quantity is computed with, by {@link #decodeValue(Column)}, {@link
+ * #canonicalValue(Column)} and {@link #canonicalCode(Column)}, as they are for a stored quantity.
  *
  * @author Piotr Szul
  */
-@Value(staticConstructor = "of")
-@SuppressWarnings({"checkstyle:MemberName", "checkstyle:ParameterName"})
-public class QuantityEncoding {
+public final class QuantityEncoding {
 
-  /** The name of the column containing the numeric value of the quantity. */
+  /** The name of the column containing the id of the quantity. */
+  public static final String ID_COLUMN = "id";
+
+  /** The name of the column containing the numeric value of the quantity, as text. */
   public static final String VALUE_COLUMN = "value";
+
+  /** The name of the column containing the comparator of the quantity. */
+  public static final String COMPARATOR_COLUMN = "comparator";
+
+  /** The name of the column containing the human-readable unit string. */
+  public static final String UNIT_COLUMN = "unit";
 
   /** The name of the column containing the code system URI of the quantity unit. */
   public static final String SYSTEM_COLUMN = "system";
@@ -77,31 +87,24 @@ public class QuantityEncoding {
   /** The name of the column containing the code representing the quantity unit. */
   public static final String CODE_COLUMN = "code";
 
-  /** The name of the column containing the human-readable unit string. */
-  public static final String UNIT_COLUMN = "unit";
+  private static final StructType DATA_TYPE =
+      new StructType(
+          Stream.of(
+                  ID_COLUMN,
+                  VALUE_COLUMN,
+                  COMPARATOR_COLUMN,
+                  UNIT_COLUMN,
+                  SYSTEM_COLUMN,
+                  CODE_COLUMN)
+              .map(name -> DataTypes.createStructField(name, DataTypes.StringType, true))
+              .toArray(StructField[]::new));
 
-  /** The name of the column containing the comparator of the quantity. */
-  private static final String COMPARATOR_COLUMN = "comparator";
+  private static final int VALUE_INDEX = DATA_TYPE.fieldIndex(VALUE_COLUMN);
+  private static final int UNIT_INDEX = DATA_TYPE.fieldIndex(UNIT_COLUMN);
+  private static final int SYSTEM_INDEX = DATA_TYPE.fieldIndex(SYSTEM_COLUMN);
+  private static final int CODE_INDEX = DATA_TYPE.fieldIndex(CODE_COLUMN);
 
-  /** The name of the column containing the canonicalised value of the quantity. */
-  public static final String CANONICALIZED_VALUE_COLUMN =
-      QuantitySupport.VALUE_CANONICALIZED_FIELD_NAME();
-
-  /** The name of the column containing the canonicalised code of the quantity unit. */
-  public static final String CANONICALIZED_CODE_COLUMN =
-      QuantitySupport.CODE_CANONICALIZED_FIELD_NAME();
-
-  @Nonnull Column id;
-  @Nonnull Column value;
-  @Nonnull Column value_scale;
-  @Nonnull Column comparator;
-  @Nonnull Column unit;
-  @Nonnull Column system;
-  @Nonnull Column code;
-  @Nonnull Column canonicalizedValue;
-  @Nonnull Column canonicalizedCode;
-  @Nonnull Column _fid;
-
+  /** The UCUM equivalent of each definite calendar duration, by its code. */
   private static final Map<String, String> CALENDAR_DURATION_TO_UCUM =
       Stream.of(CalendarDurationUnit.values())
           .filter(CalendarDurationUnit::isDefinite)
@@ -109,306 +112,286 @@ public class QuantityEncoding {
               toUnmodifiableMap(
                   CalendarDurationUnit::code, CalendarDurationUnit::getUcumEquivalent));
 
-  /**
-   * Converts this quantity to a struct column.
-   *
-   * @return the struct column representing the quantity.
-   */
-  @Nonnull
-  public Column toStruct() {
-    return struct(
-        id.as("id"),
-        // Safe cast so an out-of-range Quantity value yields NULL rather than raising under ANSI
-        // mode, independent of the session-wide setting.
-        value.try_cast(DecimalCustomCoder.decimalType()).as(VALUE_COLUMN),
-        value_scale.as("value_scale"),
-        comparator.as(COMPARATOR_COLUMN),
-        unit.as(UNIT_COLUMN),
-        system.as(SYSTEM_COLUMN),
-        code.as(CODE_COLUMN),
-        canonicalizedValue.as(CANONICALIZED_VALUE_COLUMN),
-        canonicalizedCode.as(CANONICALIZED_CODE_COLUMN),
-        _fid.as(ExtensionSupport.FID_FIELD_NAME()));
-  }
+  private QuantityEncoding() {}
 
   /**
-   * Creates the structure representing the quantity column from its fields.
+   * Returns the fixed type of a System quantity.
    *
-   * @param id the id column
-   * @param value the value column
-   * @param value_scale the scale of the value column
-   * @param comparator the comparator column
-   * @param unit the unit column
-   * @param system the system column
-   * @param code the code column
-   * @param canonicalizedValue the canonicalized value column
-   * @param canonicalizedCode the canonicalized code column
-   * @param _fid the _fid column
-   * @return the SQL struct for the Quantity type.
+   * @return A {@link StructType} for a System quantity
    */
+  @Nonnull
+  public static StructType dataType() {
+    return DATA_TYPE;
+  }
+
+  /** Creates the structure of a System quantity from its fields, typed as {@link #dataType()}. */
   @Nonnull
   private static Column toStruct(
       @Nonnull final Column id,
       @Nonnull final Column value,
-      @Nonnull final Column value_scale,
       @Nonnull final Column comparator,
       @Nonnull final Column unit,
       @Nonnull final Column system,
-      @Nonnull final Column code,
-      @Nonnull final Column canonicalizedValue,
-      @Nonnull final Column canonicalizedCode,
-      @Nonnull final Column _fid) {
-    return QuantityEncoding.of(
-            id,
-            value,
-            value_scale,
-            comparator,
-            unit,
-            system,
-            code,
-            canonicalizedValue,
-            canonicalizedCode,
-            _fid)
-        .toStruct();
+      @Nonnull final Column code) {
+    // The cast types every field set to lit(null), which would otherwise be Spark's NullType
+    // (VOID). A VOID-typed field prevents the struct from being converted to VARIANT, which is
+    // required by variantTransformTree in repeat() and repeatAll().
+    return struct(
+            id.as(ID_COLUMN),
+            value.as(VALUE_COLUMN),
+            comparator.as(COMPARATOR_COLUMN),
+            unit.as(UNIT_COLUMN),
+            system.as(SYSTEM_COLUMN),
+            code.as(CODE_COLUMN))
+        .cast(DATA_TYPE);
   }
 
   /**
-   * Decodes a stored quantity into the structure the engine computes with, which is the structure
-   * of {@link #dataType()} (T096).
+   * Takes a stored quantity as the System quantity it is computed with (decision 82).
    *
-   * <p>The stored quantity is the FHIR structure as the traversal expression yields it on either
-   * layout: its value is the text of a decimal, and it carries no canonical form, because the
-   * traversal expression normalises the previous layout's quantities to that shape too (T094b).
-   * Each field is read by name through the tolerant traversal, so a field the schema does not carry
-   * is null. The value is decoded to {@code DECIMAL(32,6)}, as {@link
-   * au.csiro.pathling.fhirpath.collection.DecimalCollection#decode} decodes any decimal, and its
-   * scale is taken from the text. The canonical form is computed from the stored text and code, as
-   * the previous layout's encoder computed it, so that no digit of the value is lost before
-   * canonicalisation. Taking the canonical form from an annotation is T096a.
+   * <p>The stored quantity is the FHIR structure as the traversal expression yields it: its value
+   * is the text of a decimal, and it carries no canonical form. Each field is read by name through
+   * the tolerant traversal, so a field the schema does not carry is null. Its extensions are not
+   * kept, because a System quantity has none.
    *
-   * <p>A null quantity decodes to null.
+   * <p>A null quantity is null.
    *
    * @param stored the stored quantity
-   * @return the quantity, in the structure the engine computes with
+   * @return the quantity, in the fixed shape of a System quantity
    */
   @Nonnull
-  public static Column decodeStored(@Nonnull final Column stored) {
-    final Column text = ColumnFunctions.resolveStringOrNull(stored, VALUE_COLUMN);
-    final Column code = ColumnFunctions.resolveStringOrNull(stored, CODE_COLUMN);
-    return when(
-            stored.isNotNull(),
-            toStruct(
-                ColumnFunctions.resolveStringOrNull(stored, "id"),
-                text,
-                scaleOf(text),
-                ColumnFunctions.resolveStringOrNull(stored, COMPARATOR_COLUMN),
-                ColumnFunctions.resolveStringOrNull(stored, UNIT_COLUMN),
-                ColumnFunctions.resolveStringOrNull(stored, SYSTEM_COLUMN),
-                code,
-                callUDF(CanonicalQuantityValue.FUNCTION_NAME, text, code),
-                callUDF(CanonicalQuantityCode.FUNCTION_NAME, text, code),
-                ColumnFunctions.resolveOrNull(
-                    stored, ExtensionSupport.FID_FIELD_NAME(), DataTypes.IntegerType)))
-        .cast(dataType());
+  public static Column fromStored(@Nonnull final Column stored) {
+    // The stored quantity is bound once, because it is read once per field, and a traced value
+    // must be evaluated once (#2594).
+    return let(
+        stored,
+        s ->
+            when(
+                s.isNotNull(),
+                toStruct(
+                    ColumnFunctions.resolveStringOrNull(s, ID_COLUMN),
+                    ColumnFunctions.resolveStringOrNull(s, VALUE_COLUMN),
+                    ColumnFunctions.resolveStringOrNull(s, COMPARATOR_COLUMN),
+                    ColumnFunctions.resolveStringOrNull(s, UNIT_COLUMN),
+                    ColumnFunctions.resolveStringOrNull(s, SYSTEM_COLUMN),
+                    ColumnFunctions.resolveStringOrNull(s, CODE_COLUMN))));
   }
 
   /**
-   * Computes the scale of the text of a decimal, as {@link BigDecimal#scale()} gives it: the number
-   * of digits after the decimal point, less the exponent where there is one.
+   * Takes a System quantity as one the engine built itself: its value and unit, without the {@code
+   * id} and {@code comparator} a stored quantity taken as a System one keeps.
    *
-   * <p>The text is referenced twice, once for each part, because on the previous layout it is the
-   * rendering of the stored value, and every reference repeats that rendering in the plan. A null
-   * text gives a null scale, because the digits of a null are null.
+   * @param quantity a System quantity
+   * @return the quantity, with a null id and comparator
    */
   @Nonnull
-  private static Column scaleOf(@Nonnull final Column text) {
-    final Column fractionDigits = length(regexp_extract(text, "^[^.eE]*(?:\\.([0-9]*))?", 1));
-    final Column exponent =
-        coalesce(
-            regexp_extract(text, "[eE]([-+]?[0-9]+)$", 1).try_cast(DataTypes.IntegerType), lit(0));
-    return fractionDigits.minus(exponent);
+  public static Column withoutStoredElements(@Nonnull final Column quantity) {
+    return toStruct(
+        lit(null),
+        quantity.getField(VALUE_COLUMN),
+        lit(null),
+        quantity.getField(UNIT_COLUMN),
+        quantity.getField(SYSTEM_COLUMN),
+        quantity.getField(CODE_COLUMN));
   }
 
   /**
-   * Decodes a FhirPathQuantity from a Row.
+   * Decodes the text of a quantity's value to {@code DECIMAL(32,6)}, as {@link
+   * au.csiro.pathling.fhirpath.collection.DecimalCollection} decodes any decimal. The cast is safe,
+   * so a value that is not a decimal, or does not fit, is null rather than raising under ANSI mode.
+   *
+   * @param value the text of the value
+   * @return the value, as a decimal
+   */
+  @Nonnull
+  public static Column decodeValue(@Nonnull final Column value) {
+    return value.try_cast(DecimalCustomCoder.decimalType());
+  }
+
+  /**
+   * Decodes the text of a value by the rule {@link #decodeValue(Column)} applies: to at most six
+   * fractional digits, rounding half up, and to null where it is not a decimal or has more than 26
+   * integer digits. Unlike that decode, which always gives six fractional digits, a value with
+   * fewer keeps its own scale, because this one feeds the quantity's string form and its
+   * conversion, where {@code 1.5} must not become {@code 1.500000}.
+   *
+   * @param text the text of the value
+   * @return the value, or null
+   */
+  @Nullable
+  static BigDecimal decodeValue(@Nullable final String text) {
+    if (text == null) {
+      return null;
+    }
+    final BigDecimal value;
+    try {
+      value = new BigDecimal(text.trim());
+    } catch (final NumberFormatException e) {
+      return null;
+    }
+    final int scale = DecimalCustomCoder.scale();
+    final BigDecimal decoded =
+        value.scale() > scale ? value.setScale(scale, RoundingMode.HALF_UP) : value;
+    return decoded.precision() - decoded.scale() > DecimalCustomCoder.precision() - scale
+        ? null
+        : decoded;
+  }
+
+  /**
+   * Computes the canonical value of a System quantity, as a flexible decimal, from its value and
+   * code (FR-022). The value is taken as its text, so that no digit is lost before
+   * canonicalisation.
+   *
+   * @param quantity a System quantity
+   * @return the canonical value, or null where the quantity has no canonical form
+   * @see #canonicalCode(Column)
+   */
+  @Nonnull
+  public static Column canonicalValue(@Nonnull final Column quantity) {
+    return callUDF(
+        CanonicalQuantityValue.FUNCTION_NAME,
+        quantity.getField(VALUE_COLUMN),
+        ucumCodeOf(quantity));
+  }
+
+  /**
+   * Computes the canonical unit code of a System quantity from its value and code (FR-022).
+   *
+   * @param quantity a System quantity
+   * @return the canonical unit code, or null where the quantity has no canonical form
+   * @see #canonicalValue(Column)
+   */
+  @Nonnull
+  public static Column canonicalCode(@Nonnull final Column quantity) {
+    return callUDF(
+        CanonicalQuantityCode.FUNCTION_NAME, quantity.getField(VALUE_COLUMN), ucumCodeOf(quantity));
+  }
+
+  /**
+   * Returns the UCUM code a quantity is canonicalised from. A calendar duration is canonicalised
+   * from the UCUM equivalent of its unit where it has one, which a definite duration does, as
+   * {@link FhirPathQuantity#asCanonical()} does for a literal. Every other quantity is
+   * canonicalised from its code, whatever its system (decision 77).
+   */
+  @Nonnull
+  private static Column ucumCodeOf(@Nonnull final Column quantity) {
+    return let(
+        quantity.getField(SYSTEM_COLUMN),
+        quantity.getField(CODE_COLUMN),
+        (system, code) ->
+            when(
+                    system.equalTo(lit(CalendarDurationUnit.FHIRPATH_CALENDAR_DURATION_SYSTEM_URI)),
+                    ucumEquivalentOf(code))
+                .otherwise(code));
+  }
+
+  /**
+   * Returns the UCUM equivalent of the code of a definite calendar duration, and null otherwise.
+   */
+  @Nonnull
+  private static Column ucumEquivalentOf(@Nonnull final Column code) {
+    return CALENDAR_DURATION_TO_UCUM.entrySet().stream()
+        .reduce(
+            lit(null).cast(DataTypes.StringType),
+            (otherwise, entry) ->
+                when(code.equalTo(lit(entry.getKey())), lit(entry.getValue())).otherwise(otherwise),
+            (first, second) -> first);
+  }
+
+  /**
+   * Decodes a FhirPathQuantity from a Row in the fixed shape of a System quantity.
    *
    * @param row the row to decode
-   * @return the resulting FhirPathQuantity
+   * @return the resulting FhirPathQuantity, or null where the row is null or is not a quantity
+   *     FHIRPath can represent
    */
   @Nullable
   public static FhirPathQuantity decode(@Nullable final Row row) {
     if (row == null) {
       return null;
     }
-    // Extract value with scale handling
-    @Nullable final Integer scale = !row.isNullAt(2) ? row.getInt(2) : null;
-    @Nullable
-    final BigDecimal value =
-        Optional.ofNullable(row.getDecimal(1))
-            .map(
-                bd ->
-                    nonNull(scale) && bd.scale() > scale
-                        ? bd.setScale(scale, RoundingMode.HALF_UP)
-                        : bd)
-            .orElse(null);
-
-    @Nullable final String unit = row.getString(4);
-    @Nullable final String system = row.getString(5);
-    @Nullable final String code = row.getString(6);
-    return FhirPathQuantity.of(value, system, code, unit);
+    return FhirPathQuantity.of(
+        decodeValue(row.getString(VALUE_INDEX)),
+        row.getString(SYSTEM_INDEX),
+        row.getString(CODE_INDEX),
+        row.getString(UNIT_INDEX));
   }
 
   /**
-   * Creates the data type for a Quantity struct.
+   * Encodes the quantity as a literal column, in the fixed shape of a System quantity.
    *
-   * @return A {@link StructType} for a Quantity
-   */
-  @Nonnull
-  public static StructType dataType() {
-    final Metadata metadata = new MetadataBuilder().build();
-    final StructField id = new StructField("id", DataTypes.StringType, true, metadata);
-    final StructField value =
-        new StructField(
-            VALUE_COLUMN,
-            DataTypes.createDecimalType(DecimalCustomCoder.precision(), DecimalCustomCoder.scale()),
-            true,
-            metadata);
-    final StructField valueScale =
-        new StructField("value_scale", DataTypes.IntegerType, true, metadata);
-    final StructField comparator =
-        new StructField(COMPARATOR_COLUMN, DataTypes.StringType, true, metadata);
-    final StructField unit = new StructField(UNIT_COLUMN, DataTypes.StringType, true, metadata);
-    final StructField system = new StructField(SYSTEM_COLUMN, DataTypes.StringType, true, metadata);
-    final StructField code = new StructField(CODE_COLUMN, DataTypes.StringType, true, metadata);
-    final StructField canonicalizedValue =
-        new StructField(CANONICALIZED_VALUE_COLUMN, FlexiDecimal.DATA_TYPE, true, metadata);
-    final StructField canonicalizedCode =
-        new StructField(CANONICALIZED_CODE_COLUMN, DataTypes.StringType, true, metadata);
-    final StructField fid =
-        new StructField(ExtensionSupport.FID_FIELD_NAME(), DataTypes.IntegerType, true, metadata);
-    return new StructType(
-        new StructField[] {
-          id,
-          value,
-          valueScale,
-          comparator,
-          unit,
-          system,
-          code,
-          canonicalizedValue,
-          canonicalizedCode,
-          fid
-        });
-  }
-
-  /**
-   * Creates a canonical ValueWithUnit from a FhirPathQuantity.
-   *
-   * @param quantity the quantity
-   * @return the canonical ValueWithUnit, or null if canonicalization fails
-   */
-  @Nullable
-  private static Ucum.ValueWithUnit canonicalOf(@Nonnull final FhirPathQuantity quantity) {
-    return quantity
-        .asCanonical()
-        .map(q -> new Ucum.ValueWithUnit(q.getValue(), q.getCode()))
-        .orElse(null);
-  }
-
-  /**
-   * Encodes the quantity as a literal column that includes appropriate canonicalization.
-   *
-   * @param quantity the quantity to encode.
-   * @return the column with the literal representation of the quantity.
+   * @param quantity the quantity to encode
+   * @return the column with the literal representation of the quantity
    */
   @Nonnull
   public static Column encodeLiteral(@Nonnull final FhirPathQuantity quantity) {
-    final BigDecimal value = quantity.getValue();
-    @Nullable final Ucum.ValueWithUnit canonical = canonicalOf(quantity);
-    // Cast the struct to the canonical Quantity schema so that fields set to lit(null) carry their
-    // declared types instead of Spark's NullType (VOID). VOID-typed fields prevent the struct from
-    // being converted to VARIANT, which is required by variantTransformTree in
-    // repeat()/repeatAll().
     return toStruct(
-            lit(null),
-            lit(value),
-            lit(value.scale()),
-            lit(null),
-            lit(quantity.getUnitName()),
-            lit(quantity.getSystem()),
-            lit(quantity.getCode()),
-            FlexiDecimalSupport.toLiteral(canonical != null ? canonical.value() : null),
-            lit(canonical != null ? canonical.unit() : null),
-            lit(null))
-        .cast(dataType());
+        lit(null),
+        lit(quantity.getValue().toPlainString()),
+        lit(null),
+        lit(quantity.getUnitName()),
+        lit(quantity.getSystem()),
+        lit(quantity.getCode()));
   }
 
   /**
-   * Encodes a numeric column as a quantity with unit "1" in the UCUM system. Returns a fully null
-   * struct when the input is null to ensure FHIRPath empty collection semantics.
+   * Encodes a numeric column as a quantity with unit "1" in the UCUM system. Returns null when the
+   * input is null to ensure FHIRPath empty collection semantics.
+   *
+   * <p>The value is the text of the number decoded to {@code DECIMAL(32,6)}, without trailing
+   * fractional zeros: {@code 5} reads as {@code 5}, {@code 1.5 * 2} as {@code 3} and {@code 1.25}
+   * as {@code 1.25}. The scale of the result of an arithmetic operation is not known, so the value
+   * is given the shortest text that represents it, rather than the scale of the decimal type.
    *
    * @param numericColumn the numeric column to encode
-   * @return the column with the representation of the quantity, or fully null struct if input is
-   *     null
+   * @return the column with the representation of the quantity, or null if the input is null
    */
   @Nonnull
   public static Column encodeNumeric(@Nonnull final Column numericColumn) {
-    // Return fully null struct when value is null to maintain FHIRPath empty collection semantics
     return let(
         numericColumn,
         nc ->
             when(
-                    nc.isNotNull(),
-                    toStruct(
-                        lit(null),
-                        // Safe cast to the canonical decimal type so an out-of-range value yields
-                        // NULL rather than raising under ANSI mode.
-                        nc.try_cast(DecimalCustomCoder.decimalType()),
-                        // We cannot encode the scale of the results of arithmetic operations.
-                        lit(null),
-                        lit(null),
-                        lit(UcumUnit.ONE.code()),
-                        lit(UcumUnit.UCUM_SYSTEM_URI),
-                        lit(UcumUnit.ONE.code()),
-                        // we do not need to normalize this as the unit is always "1"
-                        // so it will be comparable with other quantities with unit "1"
-                        lit(null),
-                        lit(null),
-                        lit(null)))
-                .otherwise(lit(null).cast(dataType())));
+                nc.isNotNull(),
+                toStruct(
+                    lit(null),
+                    // Safe cast to the decimal type so an out-of-range value yields NULL rather
+                    // than raising under ANSI mode.
+                    withoutTrailingZeros(
+                        nc.try_cast(DecimalCustomCoder.decimalType()).cast(DataTypes.StringType)),
+                    lit(null),
+                    lit(UcumUnit.ONE.code()),
+                    lit(UcumUnit.UCUM_SYSTEM_URI),
+                    lit(UcumUnit.ONE.code()))));
   }
 
   /**
-   * Encodes a FhirPathQuantity to a Row representation.
+   * Removes the trailing fractional zeros from the text of a decimal, and the decimal point where
+   * no fractional digit is left. The text always has a decimal point, because the decimal type has
+   * a scale of six, so no integer digit is removed.
+   */
+  @Nonnull
+  private static Column withoutTrailingZeros(@Nonnull final Column text) {
+    return regexp_replace(regexp_replace(text, "(\\.[0-9]*[1-9])0+$", "$1"), "\\.0+$", "");
+  }
+
+  /**
+   * Encodes a FhirPathQuantity to a Row in the fixed shape of a System quantity.
    *
-   * <p>This method converts a FhirPathQuantity into the Row representation used by Spark. It
-   * handles canonicalization for both UCUM units and calendar duration units.
+   * <p>The value is its plain text, with every digit it has, so that its canonical form is computed
+   * from the whole of it.
    *
    * @param quantity the FhirPathQuantity to encode
    * @return the Row representation of the quantity
    */
   @Nonnull
   public static Row encode(@Nonnull final FhirPathQuantity quantity) {
-    final BigDecimal value = quantity.getValue();
-    @Nullable final Ucum.ValueWithUnit canonical = canonicalOf(quantity);
-
-    // Create the Quantity Row with all fields:
-    // id, value, value_scale, comparator, unit, system, code,
-    // canonicalized_value, canonicalized_code, _fid
     return RowFactory.create(
-        null, // id
-        value, // value
-        value.scale(), // value_scale
-        null, // comparator
-        quantity.getUnitName(), // unit
-        quantity.getSystem(), // system
-        quantity.getCode(), // code
-        FlexiDecimal.toValue(
-            canonical != null
-                ? canonical.value()
-                : null), // canonicalized_value (as FlexiDecimal Row)
-        canonical != null ? canonical.unit() : null, // canonicalized_code
-        null // _fid
-        );
+        null,
+        quantity.getValue().toPlainString(),
+        null,
+        quantity.getUnitName(),
+        quantity.getSystem(),
+        quantity.getCode());
   }
 }

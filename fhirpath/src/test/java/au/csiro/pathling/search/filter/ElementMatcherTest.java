@@ -1022,7 +1022,8 @@ class ElementMatcherTest {
     // UCUM canonical base units:
     // - g (gram) is the base mass unit
     // - mg = 10^-3 g, kg = 10^3 g
-    // Canonical values are computed automatically by QuantityEncoding.encodeLiteral()
+    // Canonical values are computed from the element's value and code by the canonicalisation
+    // functions QuantityMatcher calls.
     return Stream.of(
         // ========== UCUM canonicalization - matching equivalent units ==========
         // Resource has 70 kg, canonical = (70000, "g")

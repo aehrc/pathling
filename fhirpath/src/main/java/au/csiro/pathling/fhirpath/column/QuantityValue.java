@@ -48,10 +48,10 @@ import org.apache.spark.sql.Column;
  * <p>This class centralizes all Quantity-related SQL column operations and provides a unified
  * abstraction through the {@link ValueWithUnit} record.
  *
- * <p>The wrapped column holds the structure the engine computes with, {@link
- * QuantityEncoding#dataType()}, so its fields are read directly. A stored quantity is decoded into
- * that structure when it is traversed to, which computes its canonical form from its value and code
- * (T096), so the canonical fields read here are computed rather than stored on either layout.
+ * <p>The wrapped column holds a System quantity, in the fixed shape {@link
+ * QuantityEncoding#dataType()}. A stored quantity is taken as one where it is computed with. The
+ * decimal value and the canonical form are not part of that shape, so they are computed here from
+ * the value and the code (T096, FR-022).
  *
  * @author Piotr Szul
  */
@@ -103,8 +103,8 @@ public class QuantityValue {
     /**
      * Extracts the normalized (canonicalized) value and unit from a Quantity column.
      *
-     * <p>Uses canonicalized_value and canonicalized_code fields, with null system (as canonicalized
-     * quantities are system-independent).
+     * <p>Uses the canonical value and code computed from the quantity, with null system (as
+     * canonicalized quantities are system-independent).
      *
      * @param quantity the Quantity column
      * @return a ValueWithUnit instance containing the normalized value and unit
@@ -112,15 +112,15 @@ public class QuantityValue {
     @Nonnull
     public static ValueWithUnit normalizedValueOf(@Nonnull final Column quantity) {
       return new ValueWithUnit(
-          quantity.getField(QuantityEncoding.CANONICALIZED_VALUE_COLUMN),
-          quantity.getField(QuantityEncoding.CANONICALIZED_CODE_COLUMN),
+          QuantityEncoding.canonicalValue(quantity),
+          QuantityEncoding.canonicalCode(quantity),
           null);
     }
 
     /**
      * Extracts the original value and unit from a Quantity column.
      *
-     * <p>Uses value, code (canonical unit code), and system fields. This representation is used for
+     * <p>Uses the decoded value, code, and system fields. This representation is used for
      * decimal-based comparisons.
      *
      * @param quantity the Quantity column
@@ -129,7 +129,7 @@ public class QuantityValue {
     @Nonnull
     public static ValueWithUnit originalValueOf(@Nonnull final Column quantity) {
       return new ValueWithUnit(
-          quantity.getField(QuantityEncoding.VALUE_COLUMN),
+          QuantityEncoding.decodeValue(quantity.getField(QuantityEncoding.VALUE_COLUMN)),
           quantity.getField(QuantityEncoding.CODE_COLUMN),
           quantity.getField(QuantityEncoding.SYSTEM_COLUMN));
     }
@@ -137,8 +137,9 @@ public class QuantityValue {
     /**
      * Extracts the literal value and unit from a Quantity column.
      *
-     * <p>Uses value, unit (literal unit string as written, e.g., "days" instead of "day"), and
-     * system fields. This representation is used for exact string matching in unit conversion.
+     * <p>Uses the decoded value, unit (literal unit string as written, e.g., "days" instead of
+     * "day"), and system fields. This representation is used for exact string matching in unit
+     * conversion.
      *
      * @param quantity the Quantity column
      * @return a ValueWithUnit instance containing the literal value and unit
@@ -146,7 +147,7 @@ public class QuantityValue {
     @Nonnull
     public static ValueWithUnit literalValueOf(@Nonnull final Column quantity) {
       return new ValueWithUnit(
-          quantity.getField(QuantityEncoding.VALUE_COLUMN),
+          QuantityEncoding.decodeValue(quantity.getField(QuantityEncoding.VALUE_COLUMN)),
           quantity.getField(QuantityEncoding.UNIT_COLUMN),
           lit(null));
     }
@@ -194,7 +195,9 @@ public class QuantityValue {
   /**
    * Gets the normalized (canonicalized) representation of this Quantity.
    *
-   * <p>Returns a ValueWithUnit with canonicalized_value, canonicalized_code, and null system.
+   * <p>Returns a ValueWithUnit with the canonical value and code computed from the quantity's value
+   * and code by {@link QuantityEncoding#canonicalValue(Column)} and {@link
+   * QuantityEncoding#canonicalCode(Column)}, and a null system.
    *
    * @return ValueWithUnit representing the normalized Quantity
    */
@@ -249,9 +252,9 @@ public class QuantityValue {
    * returning null when conversion is not possible.
    *
    * <p>First checks if this is a UCUM or calendar duration quantity. For exact unit match with
-   * valid system, returns the quantity as-is (fast path). Otherwise, attempts UCUM unit conversion
-   * via the UDF. Returns the converted quantity if conversion is successful, or null if conversion
-   * is not possible.
+   * valid system, returns the quantity without its id and comparator (fast path). Otherwise,
+   * attempts UCUM unit conversion via the UDF. Returns the converted quantity if conversion is
+   * successful, or null if conversion is not possible.
    *
    * <p>Non-UCUM/non-calendar quantities (e.g., Money with system "urn:iso:std:iso:4217") will
    * always return null, even if the unit string happens to match the target unit.
@@ -281,8 +284,9 @@ public class QuantityValue {
               literal.unit().equalTo(targetUnit).and(hasValidSystem);
 
           // Return exact match if available (fast path), otherwise UCUM conversion result (or
-          // null).
-          return when(exactMatchWithValidSystem, qc)
+          // null). Either way the result is a quantity the engine built, so the exact match drops
+          // the id and comparator of a stored quantity, as the conversion does.
+          return when(exactMatchWithValidSystem, QuantityEncoding.withoutStoredElements(qc))
               .otherwise(coalesce(ucumConverted, lit(null).cast(QuantityEncoding.dataType())));
         });
   }

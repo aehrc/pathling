@@ -22,12 +22,11 @@ import jakarta.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 
 /**
- * Implementation of Spark SQL comparator for quantities in the stored shape. It decodes each
- * operand into the structure the engine computes with, and compares the decoded quantities as
- * {@link QuantityComparator} does.
+ * Implementation of Spark SQL comparator for quantities in the stored shape. It takes each operand
+ * as the System quantity it is computed with, and compares them as {@link QuantityComparator} does.
  *
  * <p>A quantity reached by traversal is held in the stored shape, so that it keeps its extensions.
- * The decoding is therefore applied where the quantities are compared, rather than where they are
+ * The conversion is therefore applied where the quantities are compared, rather than where they are
  * traversed.
  *
  * @author Piotr Szul
@@ -52,35 +51,34 @@ public class StoredQuantityComparator implements ColumnComparator, ElementWiseEq
   @Nonnull
   public Column equalsTo(@Nonnull final Column left, @Nonnull final Column right) {
     return QuantityComparator.getInstance()
-        .equalsTo(QuantityEncoding.decodeStored(left), QuantityEncoding.decodeStored(right));
+        .equalsTo(QuantityEncoding.fromStored(left), QuantityEncoding.fromStored(right));
   }
 
   @Override
   @Nonnull
   public Column lessThan(@Nonnull final Column left, @Nonnull final Column right) {
     return QuantityComparator.getInstance()
-        .lessThan(QuantityEncoding.decodeStored(left), QuantityEncoding.decodeStored(right));
+        .lessThan(QuantityEncoding.fromStored(left), QuantityEncoding.fromStored(right));
   }
 
   @Override
   @Nonnull
   public Column lessThanOrEqual(@Nonnull final Column left, @Nonnull final Column right) {
     return QuantityComparator.getInstance()
-        .lessThanOrEqual(QuantityEncoding.decodeStored(left), QuantityEncoding.decodeStored(right));
+        .lessThanOrEqual(QuantityEncoding.fromStored(left), QuantityEncoding.fromStored(right));
   }
 
   @Override
   @Nonnull
   public Column greaterThan(@Nonnull final Column left, @Nonnull final Column right) {
     return QuantityComparator.getInstance()
-        .greaterThan(QuantityEncoding.decodeStored(left), QuantityEncoding.decodeStored(right));
+        .greaterThan(QuantityEncoding.fromStored(left), QuantityEncoding.fromStored(right));
   }
 
   @Override
   @Nonnull
   public Column greaterThanOrEqual(@Nonnull final Column left, @Nonnull final Column right) {
     return QuantityComparator.getInstance()
-        .greaterThanOrEqual(
-            QuantityEncoding.decodeStored(left), QuantityEncoding.decodeStored(right));
+        .greaterThanOrEqual(QuantityEncoding.fromStored(left), QuantityEncoding.fromStored(right));
   }
 }

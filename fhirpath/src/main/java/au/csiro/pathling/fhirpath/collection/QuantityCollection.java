@@ -59,8 +59,8 @@ public class QuantityCollection extends Collection implements Comparable, String
   /**
    * Quantity and the types profiled on it. A stored element of any of them is normalised at
    * traversal to the new layout's shape (T094b, decision 80), because the previous layout stores
-   * each of them with its canonical form and the scale of its value. It is decoded into the
-   * structure the engine computes with only where it is computed with.
+   * each of them with its canonical form and the scale of its value. It is taken as a System
+   * quantity only where it is computed with.
    */
   public static final Set<FHIRDefinedType> QUANTITY_TYPES =
       Set.of(
@@ -173,8 +173,8 @@ public class QuantityCollection extends Collection implements Comparable, String
   /**
    * Returns whether the values of a collection are quantities in the stored shape, as traversal
    * reached them from the data. A collection the engine builds, such as a literal or the result of
-   * a conversion, has no definition or only the synthetic one, and holds quantities in the
-   * structure the engine computes with. Those are System quantities, which never carry extensions.
+   * a conversion, has no definition or only the synthetic one, and holds System quantities, in the
+   * fixed shape {@link QuantityEncoding#dataType()}. They never carry extensions.
    *
    * <p>The definition is not required to be a FHIR definition, because the data of a resource
    * described by a definition of another origin is stored just the same.

@@ -901,17 +901,17 @@ public class Collection implements Equatable {
    * Gets this collection in the form the engine computes with.
    *
    * <p>A quantity reached by traversal, of any of the quantity types, is held in the stored shape,
-   * so as to keep the extensions that the structure the engine computes with cannot carry. Here it
-   * is decoded into that structure, computing the canonical form of each quantity from the quantity
-   * itself (T096, FR-022). The result is a collection of System quantities, which have no
-   * extensions (T097). Every other collection is returned as it is.
+   * so as to keep the extensions that a System quantity cannot carry. Here it is taken as a System
+   * quantity, in the fixed shape {@link QuantityEncoding#dataType()} (FR-059). The result is a
+   * collection of System quantities, which have no extensions (T097). Every other collection is
+   * returned as it is.
    *
    * @return the collection, in the form the engine computes with
    */
   @Nonnull
   public Collection toEngineForm() {
     return QuantityCollection.holdsStoredQuantities(this)
-        ? QuantityCollection.build(getColumn().transform(QuantityEncoding::decodeStored))
+        ? QuantityCollection.build(getColumn().transform(QuantityEncoding::fromStored))
         : this;
   }
 
