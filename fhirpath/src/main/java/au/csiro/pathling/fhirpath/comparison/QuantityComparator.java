@@ -58,17 +58,18 @@ public class QuantityComparator implements ColumnComparator, ElementWiseEquality
             left,
             right,
             (l, r) -> {
-              final Column eitherBounded =
-                  QuantityValue.of(l).isBounded().or(QuantityValue.of(r).isBounded());
+              final QuantityValue leftQuantity = QuantityValue.of(l);
+              final QuantityValue rightQuantity = QuantityValue.of(r);
+              final Column eitherBounded = leftQuantity.isBounded().or(rightQuantity.isBounded());
               return when(
                   not(eitherBounded),
                   coalesce(
-                      QuantityValue.of(l)
+                      leftQuantity
                           .normalizedValue()
-                          .compare(QuantityValue.of(r).normalizedValue(), flexComparator),
-                      QuantityValue.of(l)
+                          .compare(rightQuantity.normalizedValue(), flexComparator),
+                      leftQuantity
                           .originalValue()
-                          .compare(QuantityValue.of(r).originalValue(), decimalComparator)));
+                          .compare(rightQuantity.originalValue(), decimalComparator)));
             });
   }
 

@@ -167,6 +167,15 @@ public class BoundedQuantityDslTest extends FhirPathDslTestBase {
         .testTrue(
             "value.ofType(Quantity).combine(component[0].value.ofType(Quantity)).isDistinct()",
             "isDistinct() is true for a bounded quantity and its bound")
+        .group("Collection equality")
+        // Collections are equal only if every pair of items is equal, which a bounded item never
+        // is.
+        .testFalse(
+            "component.value.ofType(Quantity) = component.value.ofType(Quantity)",
+            "collections containing bounded quantities are not equal, even to themselves")
+        .testTrue(
+            "component.value.ofType(Quantity) != component.value.ofType(Quantity)",
+            "collections containing bounded quantities are unequal, even to themselves")
         .group("Membership")
         .testFalse(
             "value.ofType(Quantity) in (value.ofType(Quantity) |"
