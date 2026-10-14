@@ -20,6 +20,7 @@ Each directory holds:
 | `tasks.md` | Dependency-ordered tasks with traceability back to the requirements. |
 | `checklists/` | Quality checks applied to the specification itself, with findings recorded. |
 | `evidence/` | The measurements the decisions rest on, and scripts that reproduce them. |
+| `issues/` | The tickets for the work that remains, one file each, with a `README.md` grouping them into stages. Kept as the record once the specification is archived. |
 
 `evidence/` matters as much as the rest. Several requirements exist because a
 measurement ruled out the obvious alternative, and a decision whose evidence has

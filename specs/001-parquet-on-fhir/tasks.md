@@ -1,8 +1,8 @@
 # Tasks: Parquet on FHIR
 
 > **Frozen on 2026-10-14.** This file is the record of milestones M1 to M4, which
-> are implemented and merged. Remaining work is tracked as tickets under
-> `.scratch/parquet-on-fhir/issues/`. The M5 to M7 sections, the traceability
+> are implemented and merged. Remaining work is tracked as tickets in
+> [`issues/`](issues/). The M5 to M7 sections, the traceability
 > table and the dependency notes below are kept verbatim only as input to those
 > tickets, and are removed once every task in them maps to a ticket. They no
 > longer describe the plan: the legacy layout is retired before further features

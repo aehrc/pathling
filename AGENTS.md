@@ -9,7 +9,7 @@ codebase:
 
 ### Issue tracker
 
-Issues are tracked as local markdown files under `.scratch/<feature-slug>/`. See `docs/agents/issue-tracker.md`.
+Issues are tracked as local markdown files: a specified feature's tickets in `specs/NNN-short-name/issues/`, anything else under `.scratch/<feature-slug>/`. See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 

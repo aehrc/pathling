@@ -1,18 +1,18 @@
 # Issue tracker: Local Markdown
 
-Issues for this repo live as markdown files in `.scratch/`.
+Issues for this repo live as markdown files. A feature that has a specification keeps its tickets beside it, in `specs/NNN-short-name/issues/`, where they are tracked and reviewed with the spec. Anything else lives in `.scratch/`.
 
 ## Conventions
 
-- One feature per directory: `.scratch/<feature-slug>/`
-- Specifications live in `specs/NNN-short-name/spec.md` (see `specs/README.md`), not in `.scratch/`. A feature's issues may reference its spec by path.
-- Implementation issues are one file per ticket at `.scratch/<feature-slug>/issues/<NN>-<slug>.md`, numbered from `01` — never a single combined tickets file
+- One feature per directory: `specs/NNN-short-name/` when the feature has a specification (see `specs/README.md`), otherwise `.scratch/<feature-slug>/`
+- Implementation issues are one file per ticket at `<feature-dir>/issues/<NN>-<slug>.md`, numbered from `01` — never a single combined tickets file
+- Where a feature is delivered in stages, `issues/README.md` groups its tickets by stage, and each stage is a GitHub sub-issue of the feature's issue that links its tickets
 - Triage state is recorded as a `Status:` line near the top of each issue file (see `triage-labels.md` for the role strings)
 - Comments and conversation history append to the bottom of the file under a `## Comments` heading
 
 ## When a skill says "publish to the issue tracker"
 
-Create a new file under `.scratch/<feature-slug>/` (creating the directory if needed). A specification goes in `specs/` instead.
+Create a new file under `specs/NNN-short-name/issues/` if the feature has a specification, otherwise under `.scratch/<feature-slug>/` (creating the directory if needed). A specification itself goes in `specs/`.
 
 ## When a skill says "fetch the relevant ticket"
 

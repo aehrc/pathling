@@ -16,7 +16,7 @@ history: how each requirement was reached is in
 [evidence/decisions.md](evidence/decisions.md) and [research.md](research.md),
 durable design decisions are in [`docs/adr/`](../../docs/adr/), vocabulary is in
 [`CONTEXT.md`](../../CONTEXT.md), and the work that remains is tracked as tickets
-under `.scratch/parquet-on-fhir/issues/`. [tasks.md](tasks.md) is the record of
+in [`issues/`](issues/). [tasks.md](tasks.md) is the record of
 milestones M1 to M4. Everything ships together, in one release, when the last
 ticket closes.
 
