@@ -19,10 +19,7 @@ package au.csiro.pathling.test.layout;
 import static au.csiro.pathling.UnitTestDependencies.fhirContext;
 import static au.csiro.pathling.UnitTestDependencies.jsonParser;
 
-import au.csiro.pathling.definition.fhir.FhirDefinitionContext;
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.io.FhirReader;
-import ca.uhn.fhir.parser.IParser;
 import jakarta.annotation.Nonnull;
 import java.util.List;
 import org.apache.spark.api.java.function.MapFunction;
@@ -42,9 +39,10 @@ import org.hl7.fhir.instance.model.api.IBaseResource;
  * transform, which derives the stored schema from the definitions and the data (decision 68). A
  * fixture built as a HAPI object is serialised to JSON first, so the fluent builders survive
  * unchanged, and versioned references keep their version as the previous layout's encoder keeps it.
- * The schema the transform derives is always pruned, which is the only schema mode until M6, and
- * the active {@link TestSchemaMode} is checked so that a request for another mode fails rather than
- * being answered with this one.
+ * The new layout is built by {@link PofDatasets}, which a test that does not follow the dimension
+ * uses directly. The schema the transform derives is always pruned, which is the only schema mode
+ * until M6, and the active {@link TestSchemaMode} is checked so that a request for another mode
+ * fails rather than being answered with this one.
  *
  * @author Piotr Szul
  */
@@ -69,16 +67,10 @@ public final class LayoutDatasets {
       @Nonnull final TestLayout layout,
       @Nonnull final String resourceType,
       @Nonnull final List<IBaseResource> resources) {
-    TestSchemaMode.active();
     if (layout.isPof()) {
-      // HAPI strips the version from a versioned reference by default, which the previous layout's
-      // encoder does not, so the parser is told to keep it and the fixture means the same thing
-      // on both layouts.
-      final IParser parser = encoders.getContext().newJsonParser();
-      parser.setStripVersionsFromReferences(false);
-      final List<String> json = resources.stream().map(parser::encodeResourceToString).toList();
-      return newLayout(spark, encoders, resourceType, json);
+      return PofDatasets.fromResources(spark, encoders.getContext(), resourceType, resources);
     }
+    TestSchemaMode.active();
     final ExpressionEncoder<IBaseResource> encoder = encoders.of(resourceType);
     return spark.createDataset(resources, encoder).toDF();
   }
@@ -100,10 +92,10 @@ public final class LayoutDatasets {
       @Nonnull final TestLayout layout,
       @Nonnull final String resourceType,
       @Nonnull final List<String> json) {
-    TestSchemaMode.active();
     if (layout.isPof()) {
-      return newLayout(spark, encoders, resourceType, json);
+      return PofDatasets.fromJson(spark, encoders.getContext(), resourceType, json);
     }
+    TestSchemaMode.active();
     final Dataset<String> dataset = spark.createDataset(json, Encoders.STRING());
     final ExpressionEncoder<IBaseResource> encoder = encoders.of(resourceType);
     return dataset
@@ -112,16 +104,5 @@ public final class LayoutDatasets {
                 document -> jsonParser(fhirContext()).parseResource(document),
             encoder)
         .toDF();
-  }
-
-  @Nonnull
-  private static Dataset<Row> newLayout(
-      @Nonnull final SparkSession spark,
-      @Nonnull final FhirEncoders encoders,
-      @Nonnull final String resourceType,
-      @Nonnull final List<String> json) {
-    return FhirReader.of(spark, FhirDefinitionContext.of(encoders.getContext()))
-        .json()
-        .read(resourceType, spark.createDataset(json, Encoders.STRING()));
   }
 }

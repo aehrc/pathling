@@ -21,16 +21,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
-import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhirpath.collection.EmptyCollection;
 import au.csiro.pathling.fhirpath.path.Paths.Traversal;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.datasource.DatasetDataSource;
 import au.csiro.pathling.test.datasource.PrunedSchemaReader;
-import au.csiro.pathling.test.layout.LayoutDatasets;
-import au.csiro.pathling.test.layout.TestLayout;
+import au.csiro.pathling.test.layout.PofDatasets;
 import au.csiro.pathling.views.FhirView;
 import au.csiro.pathling.views.FhirViewExecutor;
+import ca.uhn.fhir.context.FhirContext;
 import com.google.gson.Gson;
 import jakarta.annotation.Nonnull;
 import java.nio.charset.StandardCharsets;
@@ -48,10 +47,13 @@ import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructField;
 import org.hl7.fhir.instance.model.api.IBaseResource;
+import org.hl7.fhir.r4.model.DateType;
 import org.hl7.fhir.r4.model.Enumerations.AdministrativeGender;
 import org.hl7.fhir.r4.model.Enumerations.PublicationStatus;
+import org.hl7.fhir.r4.model.IntegerType;
 import org.hl7.fhir.r4.model.Observation;
 import org.hl7.fhir.r4.model.Patient;
+import org.hl7.fhir.r4.model.Quantity;
 import org.hl7.fhir.r4.model.Questionnaire;
 import org.hl7.fhir.r4.model.Questionnaire.QuestionnaireItemType;
 import org.hl7.fhir.r4.model.StringType;
@@ -73,9 +75,11 @@ import org.springframework.beans.factory.annotation.Autowired;
  * schema from which the named elements are removed, which passes since T110. The removed elements
  * are never populated in the source, so the pruned run must also return the control's rows.
  *
- * <p>The resources are built in the active test layout. The new layout's schema is already pruned
- * to what the source populates, so there both runs read the elements as absent, and the control is
- * a control only on the previous layout.
+ * <p>The resources are read in the Parquet on FHIR layout, under a schema fitted to them together
+ * with filler resources that populate every element a case removes, and the fillers are left out of
+ * what is written. The full schema therefore carries each removed element as a null, as a table
+ * does where other resources populate it, so the control reads the element present but unpopulated
+ * and the test reads it absent.
  *
  * @author Piotr Szul
  */
@@ -91,7 +95,7 @@ class ProjectedColumnTypeTest {
 
   @Autowired SparkSession spark;
 
-  @Autowired FhirEncoders fhirEncoders;
+  @Autowired FhirContext fhirContext;
 
   @Autowired Gson gson;
 
@@ -374,18 +378,55 @@ class ProjectedColumnTypeTest {
         """
             .formatted(resourceType, selection);
     final FhirViewExecutor executor =
-        new FhirViewExecutor(
-            fhirEncoders.getContext(), new DatasetDataSource(Map.of(resourceType, dataset)));
+        new FhirViewExecutor(fhirContext, new DatasetDataSource(Map.of(resourceType, dataset)));
     return executor.buildQuery(gson.fromJson(json, FhirView.class));
   }
 
   @Nonnull
   private PrunedSchemaReader write(
       @Nonnull final String resourceType, @Nonnull final IBaseResource resource) {
-    final Dataset<Row> encoded =
-        LayoutDatasets.fromResources(
-            spark, fhirEncoders, TestLayout.active(), resourceType, List.of(resource));
     return PrunedSchemaReader.write(
-        encoded, tempDir.resolve(resourceType).toString(), fhirEncoders.of(resourceType).schema());
+        PofDatasets.fromResources(
+            spark, fhirContext, resourceType, List.of(resource), List.of(filler(resourceType))),
+        tempDir.resolve(resourceType).toString());
+  }
+
+  /** Returns a resource that populates every element a case removes from a resource type. */
+  @Nonnull
+  private static IBaseResource filler(@Nonnull final String resourceType) {
+    return switch (resourceType) {
+      case "Patient" -> {
+        final Patient patient = new Patient();
+        patient.setId("patient-filler");
+        patient.setActive(true);
+        patient.setMultipleBirth(new IntegerType(2));
+        patient.setBirthDateElement(new DateType("2000-01-01"));
+        patient.addName().setFamily("Fil").addPrefix("Dr");
+        yield patient;
+      }
+      case "Observation" -> {
+        final Observation observation = new Observation();
+        observation.setId("observation-filler");
+        observation.setValue(
+            new Quantity()
+                .setValue(1)
+                .setUnit("mg")
+                .setSystem("http://unitsofmeasure.org")
+                .setCode("mg"));
+        yield observation;
+      }
+      case "Questionnaire" -> {
+        final Questionnaire questionnaire = new Questionnaire();
+        questionnaire.setId("questionnaire-filler");
+        questionnaire.setStatus(PublicationStatus.ACTIVE);
+        questionnaire
+            .addItem()
+            .setLinkId("f")
+            .setText("Filler")
+            .setType(QuestionnaireItemType.DISPLAY);
+        yield questionnaire;
+      }
+      default -> throw new IllegalArgumentException("No filler for " + resourceType);
+    };
   }
 }

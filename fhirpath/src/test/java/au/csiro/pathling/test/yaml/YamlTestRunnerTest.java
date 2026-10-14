@@ -26,7 +26,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import au.csiro.pathling.definition.ChildDefinition;
 import au.csiro.pathling.definition.defaults.DefaultDefinitionContext;
 import au.csiro.pathling.definition.defaults.DefaultResourceDefinition;
-import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
@@ -38,7 +37,7 @@ import au.csiro.pathling.fhirpath.evaluation.SingleResourceEvaluator;
 import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.test.SpringBootUnitTest;
-import au.csiro.pathling.test.layout.LayoutDatasets;
+import au.csiro.pathling.test.layout.PofDatasets;
 import au.csiro.pathling.test.layout.TestLayout;
 import au.csiro.pathling.test.yaml.format.YamlTestFormat;
 import ca.uhn.fhir.context.FhirContext;
@@ -65,8 +64,6 @@ class YamlTestRunnerTest {
   @Autowired SparkSession spark;
 
   @Autowired FhirContext fhirContext;
-
-  @Autowired FhirEncoders fhirEncoders;
 
   private static final Yaml YAML_PARSER = new Yaml();
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
@@ -219,8 +216,7 @@ class YamlTestRunnerTest {
     assertEquals("Patient", resource.fhirType());
 
     final Dataset<Row> inputDS =
-        LayoutDatasets.fromResources(
-            spark, fhirEncoders, TestLayout.active(), resource.fhirType(), List.of(resource));
+        PofDatasets.fromJson(spark, fhirContext, resource.fhirType(), List.of(testPatient));
 
     assertNotNull(inputDS);
     assertEquals(1, inputDS.count());

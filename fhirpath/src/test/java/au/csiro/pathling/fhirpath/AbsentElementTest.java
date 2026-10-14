@@ -18,17 +18,18 @@
 package au.csiro.pathling.fhirpath;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Named.named;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
-import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.definition.ResourceDefinition;
+import au.csiro.pathling.definition.fhir.FhirDefinitionContext;
 import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluator;
 import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluatorBuilder;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.datasource.PrunedSchemaReader;
-import au.csiro.pathling.test.layout.LayoutDatasets;
-import au.csiro.pathling.test.layout.TestLayout;
-import ca.uhn.fhir.parser.IParser;
+import au.csiro.pathling.test.layout.PofDatasets;
+import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
 import java.nio.file.Path;
 import java.util.Arrays;
@@ -44,18 +45,24 @@ import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.instance.model.api.IBaseResource;
+import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.ContactPoint;
+import org.hl7.fhir.r4.model.DateTimeType;
 import org.hl7.fhir.r4.model.Enumerations.AdministrativeGender;
 import org.hl7.fhir.r4.model.Enumerations.PublicationStatus;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.hl7.fhir.r4.model.IntegerType;
 import org.hl7.fhir.r4.model.Observation;
 import org.hl7.fhir.r4.model.Observation.ObservationComponentComponent;
 import org.hl7.fhir.r4.model.Patient;
 import org.hl7.fhir.r4.model.Quantity;
 import org.hl7.fhir.r4.model.Questionnaire;
+import org.hl7.fhir.r4.model.Questionnaire.QuestionnaireItemOperator;
 import org.hl7.fhir.r4.model.Questionnaire.QuestionnaireItemType;
+import org.hl7.fhir.r4.model.StringType;
+import org.hl7.fhir.r4.model.Type;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -70,20 +77,20 @@ import org.springframework.beans.factory.annotation.Autowired;
  * Tests traversal to elements that the definitions describe but the input schema does not carry
  * (FR-024, FR-026 and FR-027), written ahead of the tolerant traversal that T110 emits.
  *
- * <p>The input is encoded, written to Parquet and read back twice: once with the schema it was
- * written with, and once with chosen elements removed from the schema, as they are from a pruned
- * table. The removed elements are never populated in the source, so every answer over the pruned
- * schema is the answer over the full schema. Each case is therefore run twice. The run over the
- * full schema is the control, and passed before T110; the run over the pruned schema is the test,
- * and passes since T110.
+ * <p>The input is read in the Parquet on FHIR layout, written to Parquet and read back twice: once
+ * with the schema it was written with, and once with chosen elements removed from the schema, as
+ * they are from a pruned table. The removed elements are never populated in the source, so every
+ * answer over the pruned schema is the answer over the full schema. Each case is therefore run
+ * twice. The run over the full schema is the control, and passed before T110; the run over the
+ * pruned schema is the test, and passes since T110.
+ *
+ * <p>The schema is fitted to the source together with filler resources that populate every element
+ * a case removes, and the fillers are left out of what is written. The full schema therefore
+ * carries each removed element as a null, as a table does where other resources populate it, so the
+ * control reads the element present but unpopulated and the test reads it absent.
  *
  * <p>The cases cover a missing top-level column and a missing nested field, each at singular and
  * repeating cardinality, for primitive and complex elements.
- *
- * <p>The input is built in the active test layout. The new layout's schema is already pruned to
- * what the source populates, so there both runs read the elements as absent, and the control is a
- * control only on the previous layout. The parity tests for decision 72 compare the new layout's
- * shape with the released encoder explicitly, whatever the active layout.
  *
  * @author Piotr Szul
  */
@@ -93,7 +100,7 @@ class AbsentElementTest {
 
   /**
    * The name of the known divergence from the released encoder that decision 72 records, so that a
-   * parity test over both layouts can refer to it rather than discover it.
+   * test of the layout's behaviour can refer to it rather than discover it.
    */
   static final String KNOWN_DIVERGENCE_DECISION_72 =
       "Known divergence (decision 72): a structure whose only content is a repeating primitive's"
@@ -103,7 +110,7 @@ class AbsentElementTest {
 
   @Autowired SparkSession spark;
 
-  @Autowired FhirEncoders fhirEncoders;
+  @Autowired FhirContext fhirContext;
 
   @TempDir static Path tempDir;
 
@@ -118,25 +125,25 @@ class AbsentElementTest {
   @BeforeAll
   void setUp() {
     patients =
-        PrunedSchemaReader.write(
-            encodeInLayout("Patient", patient1(), patient2()),
-            tempDir.resolve("Patient").toString(),
-            fhirEncoders.of("Patient").schema());
+        write("Patient", "Patient", List.of(patient1(), patient2()), List.of(patientFiller()));
     observations =
-        PrunedSchemaReader.write(
-            encodeInLayout("Observation", observation1(), observation2()),
-            tempDir.resolve("Observation").toString(),
-            fhirEncoders.of("Observation").schema());
+        write(
+            "Observation",
+            "Observation",
+            List.of(observation1(), observation2()),
+            observationFillers());
     questionnaires =
-        PrunedSchemaReader.write(
-            encodeInLayout("Questionnaire", questionnaire1(), questionnaire2()),
-            tempDir.resolve("Questionnaire").toString(),
-            fhirEncoders.of("Questionnaire").schema());
+        write(
+            "Questionnaire",
+            "Questionnaire",
+            List.of(questionnaire1(), questionnaire2()),
+            List.of(questionnaireFiller()));
     itemlessQuestionnaires =
-        PrunedSchemaReader.write(
-            encodeInLayout("Questionnaire", questionnaire2()),
-            tempDir.resolve("ItemlessQuestionnaire").toString(),
-            fhirEncoders.of("Questionnaire").schema());
+        write(
+            "Questionnaire",
+            "ItemlessQuestionnaire",
+            List.of(questionnaire2()),
+            List.of(questionnaireFiller()));
   }
 
   // T101: traversal to an element the definitions describe but the schema lacks yields empty.
@@ -178,64 +185,96 @@ class AbsentElementTest {
     assertEmpty(patients.readWithout(prunedPath), expression);
   }
 
-  @ParameterizedTest(name = "{0} is absent from the pruned schema")
-  @MethodSource("absentPatientElements")
+  /**
+   * Every element a case in this class removes, with the type and the reader it is removed from.
+   */
+  @Nonnull
+  Stream<Arguments> removedElements() {
+    final Stream<Arguments> fromPatients =
+        Stream.concat(
+                absentPatientElements().map(arguments -> (String) arguments.get()[0]),
+                Stream.of("active", "telecom", "name.period", "name.family"))
+            .distinct()
+            .map(path -> arguments("Patient", named("patients", patients), path));
+    final Stream<Arguments> fromObservations =
+        Stream.of(
+                "valueString",
+                "valueBoolean",
+                "valueCodeableConcept",
+                "valueInteger",
+                "component.valueString",
+                "component.valueCodeableConcept",
+                "component.valueInteger")
+            .map(path -> arguments("Observation", named("observations", observations), path));
+    final Stream<Arguments> fromQuestionnaires =
+        Stream.of(
+            arguments("Questionnaire", named("questionnaires", questionnaires), "item.enableWhen"),
+            arguments(
+                "Questionnaire", named("itemlessQuestionnaires", itemlessQuestionnaires), "item"));
+    return Stream.of(fromPatients, fromObservations, fromQuestionnaires).flatMap(s -> s);
+  }
+
+  @ParameterizedTest(name = "{2} is absent from the pruned schema of {1}")
+  @MethodSource("removedElements")
   void prunedSchemaLacksTheElement(
-      @Nonnull final String prunedPath, @Nonnull final String expression) {
-    // A control on the setup: the element is one the definitions describe, and the pruned schema
-    // does not carry it. The previous layout's full schema carries it, while the new layout prunes
-    // it itself, because the source never populates it.
-    assertThat(hasElement(fhirEncoders.of("Patient").schema(), prunedPath)).isTrue();
-    assertThat(hasElement(patients.read().schema(), prunedPath))
-        .isEqualTo(!TestLayout.active().isPof());
-    assertThat(hasElement(patients.readWithout(prunedPath).schema(), prunedPath)).isFalse();
+      @Nonnull final String resourceType,
+      @Nonnull final PrunedSchemaReader reader,
+      @Nonnull final String prunedPath) {
+    // A control on the setup: the element is one the definitions describe, the full schema carries
+    // it, because a filler populates it, and the pruned schema does not carry it. Without the
+    // second check, a filler that stopped populating the element would leave the control over the
+    // full schema reading it absent, the same as the test.
+    assertThat(PrunedSchemaReader.describes(definition(resourceType), prunedPath)).isTrue();
+    assertThat(hasElement(reader.read().schema(), prunedPath)).isTrue();
+    assertThat(hasElement(reader.readWithout(prunedPath).schema(), prunedPath)).isFalse();
   }
 
   @Test
-  void repeatingPrimitiveMetadataOnlyIsKnownDivergenceFromReleasedEncoder() {
-    // The layout keeps a name holding only `_given`, storing `given` as a null array of the type
-    // the definitions give it, so its fitted schema carries `given` and nothing else in `name`.
+  void nameHoldingOnlyRepeatingPrimitiveMetadataIsKept() {
+    // The layout keeps a name holding only `_given`, which the released encoder drops, because it
+    // reads through HAPI's parser, which discards an `_given` array with no `given` array beside
+    // it, and so the name that held only it. The layout does not yet store the metadata of a
+    // primitive, so the reader drops the `_given` content, and keeps the name with `given` as a
+    // null array of the type the definitions give it.
     final Dataset<Row> layout =
-        layoutPatient(
-            "{\"id\":\"p1\",\"name\":[{\"given\":null}]}",
-            DataTypes.createArrayType(DataTypes.StringType),
-            "given");
-    // The released encoder reads through HAPI's parser, which discards an `_given` array with no
-    // `given` array beside it, and so the name that held only it.
-    final Dataset<Row> released =
-        parseAndEncode(
-            "{\"resourceType\":\"Patient\",\"id\":\"p1\","
-                + "\"name\":[{\"_given\":[{\"id\":\"a\"},{\"id\":\"b\"}]}]}");
+        PofDatasets.fromJson(
+            spark,
+            fhirContext,
+            "Patient",
+            List.of(
+                "{\"resourceType\":\"Patient\",\"id\":\"p1\","
+                    + "\"name\":[{\"_given\":[{\"id\":\"a\"},{\"id\":\"b\"}]}]}"));
+    assertThat(nameElementType(layout))
+        .isEqualTo(new StructType().add("given", DataTypes.createArrayType(DataTypes.StringType)));
 
     assertThat(evaluate(layout, "Patient", "name.count()"))
         .as(KNOWN_DIVERGENCE_DECISION_72 + ": the layout answers 1")
         .containsExactly("p1=1");
-    assertThat(evaluate(released, "Patient", "name.count()"))
-        .as(KNOWN_DIVERGENCE_DECISION_72 + ": the released encoder answers 0")
-        .containsExactly("p1=0");
     // Against the specification rather than the released encoder: fhirpath.js answers 2, counting
-    // a value-less primitive per `_given` entry, while the layout stores `given` as a null array
-    // and
-    // answers 0 until M5. T061 decides the alignment that settles it.
+    // a value-less primitive per `_given` entry, while the layout, which stores none of them,
+    // answers 0. T061 decides the alignment that settles it.
     assertThat(evaluate(layout, "Patient", "name.given.count()"))
         .as(KNOWN_DIVERGENCE_DECISION_72 + ": the layout answers 0 for the value-less primitives")
         .containsExactly("p1=0");
   }
 
   @Test
-  void singularPrimitiveMetadataOnlyAgreesWithReleasedEncoder() {
-    // A name holding only `_family` is kept by both: the layout stores `family` as a typed null,
-    // and HAPI's parser keeps a singular primitive that carries only its metadata.
+  void nameHoldingOnlySingularPrimitiveMetadataIsKept() {
+    // A name holding only `_family` is kept, as HAPI's parser, and so the released encoder, keeps
+    // a singular primitive that carries only its metadata. The reader drops the `_family` content,
+    // as it does `_given`, and keeps the name with `family` as a typed null.
     final Dataset<Row> layout =
-        layoutPatient(
-            "{\"id\":\"p1\",\"name\":[{\"family\":null}]}", DataTypes.StringType, "family");
-    final Dataset<Row> released =
-        parseAndEncode(
-            "{\"resourceType\":\"Patient\",\"id\":\"p1\","
-                + "\"name\":[{\"_family\":{\"id\":\"a\"}}]}");
+        PofDatasets.fromJson(
+            spark,
+            fhirContext,
+            "Patient",
+            List.of(
+                "{\"resourceType\":\"Patient\",\"id\":\"p1\","
+                    + "\"name\":[{\"_family\":{\"id\":\"a\"}}]}"));
+    assertThat(nameElementType(layout))
+        .isEqualTo(new StructType().add("family", DataTypes.StringType));
 
     assertThat(evaluate(layout, "Patient", "name.count()")).containsExactly("p1=1");
-    assertThat(evaluate(released, "Patient", "name.count()")).containsExactly("p1=1");
     assertThat(evaluate(layout, "Patient", "name.family.count()")).containsExactly("p1=0");
   }
 
@@ -490,8 +529,7 @@ class AbsentElementTest {
       @Nonnull final String resourceType,
       @Nonnull final String expression) {
     final DatasetEvaluator evaluator =
-        DatasetEvaluatorBuilder.create(
-                ResourceType.fromCode(resourceType), fhirEncoders.getContext())
+        DatasetEvaluatorBuilder.create(ResourceType.fromCode(resourceType), fhirContext)
             .withDataset(dataset)
             .build();
     return evaluator
@@ -505,37 +543,24 @@ class AbsentElementTest {
   }
 
   @Nonnull
-  private Dataset<Row> encodeInLayout(
-      @Nonnull final String resourceType, @Nonnull final IBaseResource... resources) {
-    return LayoutDatasets.fromResources(
-        spark, fhirEncoders, TestLayout.active(), resourceType, Arrays.asList(resources));
-  }
-
-  /** Encodes resources with the released encoder, whatever the active layout. */
-  @Nonnull
-  private Dataset<Row> encode(
-      @Nonnull final String resourceType, @Nonnull final IBaseResource... resources) {
-    return spark.createDataset(Arrays.asList(resources), fhirEncoders.of(resourceType)).toDF();
+  private PrunedSchemaReader write(
+      @Nonnull final String resourceType,
+      @Nonnull final String directory,
+      @Nonnull final List<? extends IBaseResource> resources,
+      @Nonnull final List<? extends IBaseResource> fillers) {
+    return PrunedSchemaReader.write(
+        PofDatasets.fromResources(spark, fhirContext, resourceType, resources, fillers),
+        tempDir.resolve(directory).toString());
   }
 
   @Nonnull
-  private Dataset<Row> parseAndEncode(@Nonnull final String json) {
-    final IParser parser = fhirEncoders.getContext().newJsonParser();
-    return encode("Patient", parser.parseResource(json));
+  private static DataType nameElementType(@Nonnull final Dataset<Row> patients) {
+    return ((ArrayType) patients.schema().apply("name").dataType()).elementType();
   }
 
-  /**
-   * Reads a Patient in the layout's fitted shape, where {@code name} carries only the one named
-   * field, of the given type.
-   */
   @Nonnull
-  private Dataset<Row> layoutPatient(
-      @Nonnull final String json, @Nonnull final DataType fieldType, @Nonnull final String field) {
-    final StructType schema =
-        new StructType()
-            .add("id", DataTypes.StringType)
-            .add("name", DataTypes.createArrayType(new StructType().add(field, fieldType)));
-    return spark.read().schema(schema).json(spark.createDataset(List.of(json), Encoders.STRING()));
+  private ResourceDefinition definition(@Nonnull final String resourceType) {
+    return FhirDefinitionContext.of(fhirContext).findResourceDefinition(resourceType);
   }
 
   private static boolean hasElement(@Nonnull final StructType schema, @Nonnull final String path) {
@@ -581,6 +606,27 @@ class AbsentElementTest {
     return patient;
   }
 
+  /**
+   * Populates every Patient element a case removes, so that the full schema carries each of them.
+   */
+  @Nonnull
+  private static Patient patientFiller() {
+    final Patient patient = new Patient();
+    patient.setId("patient-filler");
+    patient.setActive(true);
+    patient.addTelecom().setValue("456");
+    patient.getManagingOrganization().setReference("Organization/o1");
+    patient
+        .addName()
+        .setFamily("Fil")
+        .addPrefix("Dr")
+        .getPeriod()
+        .setStartElement(new DateTimeType("2020-01-01"));
+    patient.getMaritalStatus().setText("married");
+    patient.addContact().getName().addGiven("Kin");
+    return patient;
+  }
+
   @Nonnull
   private static Questionnaire questionnaire1() {
     final Questionnaire questionnaire = new Questionnaire();
@@ -596,6 +642,50 @@ class AbsentElementTest {
     questionnaire.setId("q2");
     questionnaire.setStatus(PublicationStatus.ACTIVE);
     return questionnaire;
+  }
+
+  /** Populates every Questionnaire element a case removes, including {@code item} itself. */
+  @Nonnull
+  private static Questionnaire questionnaireFiller() {
+    final Questionnaire questionnaire = new Questionnaire();
+    questionnaire.setId("questionnaire-filler");
+    questionnaire.setStatus(PublicationStatus.ACTIVE);
+    questionnaire
+        .addItem()
+        .setLinkId("f")
+        .setType(QuestionnaireItemType.BOOLEAN)
+        .addEnableWhen()
+        .setQuestion("1")
+        .setOperator(QuestionnaireItemOperator.EXISTS)
+        .setAnswer(new BooleanType(true));
+    return questionnaire;
+  }
+
+  /**
+   * Populates every Observation element a case removes. A resource holds one variant of a choice,
+   * so each top-level variant needs its own filler, while one filler's components hold the nested
+   * ones.
+   */
+  @Nonnull
+  private static List<Observation> observationFillers() {
+    final Observation string = observationFiller("string", new StringType("s"));
+    string.addComponent().setValue(new StringType("s"));
+    string.addComponent().setValue(new CodeableConcept().setText("t"));
+    string.addComponent().setValue(new IntegerType(1));
+    return List.of(
+        string,
+        observationFiller("boolean", new BooleanType(true)),
+        observationFiller("concept", new CodeableConcept().setText("t")),
+        observationFiller("integer", new IntegerType(1)));
+  }
+
+  @Nonnull
+  private static Observation observationFiller(
+      @Nonnull final String variant, @Nonnull final Type value) {
+    final Observation observation = new Observation();
+    observation.setId("observation-filler-" + variant);
+    observation.setValue(value);
+    return observation;
   }
 
   @Nonnull

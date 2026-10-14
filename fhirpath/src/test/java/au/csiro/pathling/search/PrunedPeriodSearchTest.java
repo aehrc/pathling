@@ -20,12 +20,11 @@ package au.csiro.pathling.search;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
-import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.datasource.DatasetDataSource;
 import au.csiro.pathling.test.datasource.PrunedSchemaReader;
-import au.csiro.pathling.test.layout.LayoutDatasets;
-import au.csiro.pathling.test.layout.TestLayout;
+import au.csiro.pathling.test.layout.PofDatasets;
+import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.nio.file.Path;
@@ -35,7 +34,6 @@ import java.util.stream.Stream;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
-import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Coverage;
 import org.hl7.fhir.r4.model.DateTimeType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -56,8 +54,9 @@ import org.springframework.beans.factory.annotation.Autowired;
  * <p>A pruned schema carries only the elements the data populates, so a Period whose bounds are all
  * open at one end has no field for that bound. An absent bound is open, as a null one is.
  *
- * <p>The resources are built in the active test layout. The new layout prunes the bound itself, and
- * on the previous layout the bound is removed from the schema the files are read with.
+ * <p>The resources are read in the Parquet on FHIR layout, which prunes the bound itself, because
+ * the data populates none. Removing it from the schema the files are read with is checked against
+ * the definitions.
  *
  * @author Piotr Szul
  */
@@ -67,7 +66,7 @@ class PrunedPeriodSearchTest {
 
   @Autowired SparkSession spark;
 
-  @Autowired FhirEncoders encoders;
+  @Autowired FhirContext fhirContext;
 
   @TempDir static Path tempDir;
 
@@ -87,13 +86,15 @@ class PrunedPeriodSearchTest {
             PrunedSchemaReader.write(
                     encode(List.of(openEnded, noPeriod)),
                     tempDir.resolve("end").toString(),
-                    encoders.of("Coverage").schema())
+                    fhirContext,
+                    "Coverage")
                 .readWithout("period.end"),
             "withoutStart",
             PrunedSchemaReader.write(
                     encode(List.of(openStarted, noPeriod)),
                     tempDir.resolve("start").toString(),
-                    encoders.of("Coverage").schema())
+                    fhirContext,
+                    "Coverage")
                 .readWithout("period.start"));
   }
 
@@ -118,7 +119,7 @@ class PrunedPeriodSearchTest {
       @Nonnull final List<String> expectedIds) {
     final FhirSearchExecutor executor =
         FhirSearchExecutor.withRegistry(
-            encoders.getContext(),
+            fhirContext,
             new DatasetDataSource(Map.of("Coverage", datasets.get(dataset))),
             registry);
     final Dataset<Row> results =
@@ -130,8 +131,7 @@ class PrunedPeriodSearchTest {
 
   @Nonnull
   private Dataset<Row> encode(@Nonnull final List<Coverage> resources) {
-    return LayoutDatasets.fromResources(
-        spark, encoders, TestLayout.active(), "Coverage", List.<IBaseResource>copyOf(resources));
+    return PofDatasets.fromResources(spark, fhirContext, "Coverage", resources);
   }
 
   @Nonnull

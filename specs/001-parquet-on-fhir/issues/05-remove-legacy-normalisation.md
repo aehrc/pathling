@@ -14,6 +14,37 @@
 
 Before deleting `DecimalNormalisation`, move `SCALE_SUFFIX` to where `LayoutDetector` can still use it.
 
+The tests with a dual-layout arm, found by ticket 02's search, are below. Each one pins
+`TestLayout.PREVIOUS` beside its PoF arm, so it encodes through `FhirEncoders` on every run. Paths
+are relative to `fhirpath/src/test/java/au/csiro/pathling/`.
+
+- `test/layout/TestLayoutSwitchTest`, which tests the switch itself.
+- `search/SelfJoinAmbiguityTest`
+- `search/JoinConditionTest`
+- `search/QuantitySearchPrecisionTest`, whose expected rows at lines 100 to 106 hold only for the
+  previous layout.
+- `fhirpath/AbsentCodingTerminologyTest`
+- `fhirpath/AbsentReferenceTypeTest`
+- `fhirpath/ChoiceTypeInfoTest`
+- `fhirpath/IndexedQuantityExtensionTest`
+- `fhirpath/QuantityExtensionThroughProjectionTest`
+- `fhirpath/StoredQuantityTest`
+- `fhirpath/collection/ExtensionTraversalTest`
+- `fhirpath/collection/CodingCollectionTest`
+- `fhirpath/collection/DecimalCollectionTest`
+- `fhirpath/collection/QuantityCollectionTest`
+- `fhirpath/collection/QuantityTypesTest`
+- `fhirpath/operator/CombiningPlanSizeTest`
+- `fhirpath/operator/ShapeReconciliationTest`, which also builds its own nesting-bounded encoders
+  for the previous-layout Questionnaires.
+- `fhirpath/dsl/JoinKeyFunctionsDslTest`, which asserts that the previous layout stores
+  `id_versioned`.
+
+Several other tests encode through `FhirEncoders` only when the dimension selects the previous
+layout, through `ObjectDataSource`, `LayoutDatasets` or the YAML resolver factories. Removing the
+dimension removes that path for them; ticket 02's comments list them. `PofDatasets` is the PoF-only
+replacement for `LayoutDatasets`.
+
 **Out of scope:** `CodingSchema._fid` and the tolerance from decision 79 stay. They belong to #2804.
 
 **Blocked by:** 02, 03, 04

@@ -17,10 +17,16 @@
 
 package au.csiro.pathling.test.datasource;
 
+import au.csiro.pathling.definition.ChoiceDefinition;
+import au.csiro.pathling.definition.NodeDefinition;
+import au.csiro.pathling.definition.fhir.FhirDefinitionContext;
+import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
+import java.util.function.Predicate;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SaveMode;
@@ -39,11 +45,11 @@ import org.apache.spark.sql.types.StructType;
  * <p>An element is named by its dotted path from the resource root, such as {@code active} or
  * {@code name.family}. Each step below the root descends through a struct or an array of structs.
  *
- * <p>A reader may be given the schema the definitions describe for the resource, such as the
- * previous layout's dense schema. An element that schema describes may then be named for removal
- * even where the written schema does not carry it, because the new layout has already pruned it,
- * and it is left as it is. An element that neither schema carries is still refused, so that a
- * misspelt path fails rather than leaving the data unchanged.
+ * <p>A reader may be given the definition of the resource, or a schema carrying every element the
+ * definitions describe for it, such as the previous layout's dense schema. An element so described
+ * may then be named for removal even where the written schema does not carry it, because the new
+ * layout has already pruned it, and it is left as it is. An element that is neither described nor
+ * carried is still refused, so that a misspelt path fails rather than leaving the data unchanged.
  *
  * @author Piotr Szul
  */
@@ -55,17 +61,17 @@ public final class PrunedSchemaReader {
 
   @Nonnull private final StructType schema;
 
-  @Nullable private final StructType describedSchema;
+  @Nullable private final Predicate<List<String>> described;
 
   private PrunedSchemaReader(
       @Nonnull final SparkSession spark,
       @Nonnull final String path,
       @Nonnull final StructType schema,
-      @Nullable final StructType describedSchema) {
+      @Nullable final Predicate<List<String>> described) {
     this.spark = spark;
     this.path = path;
     this.schema = schema;
-    this.describedSchema = describedSchema;
+    this.described = described;
   }
 
   /**
@@ -78,8 +84,7 @@ public final class PrunedSchemaReader {
   @Nonnull
   public static PrunedSchemaReader write(
       @Nonnull final Dataset<Row> dataset, @Nonnull final String path) {
-    dataset.coalesce(1).write().mode(SaveMode.Overwrite).parquet(path);
-    return new PrunedSchemaReader(dataset.sparkSession(), path, dataset.schema(), null);
+    return writeChecking(dataset, path, null);
   }
 
   /**
@@ -97,8 +102,39 @@ public final class PrunedSchemaReader {
       @Nonnull final Dataset<Row> dataset,
       @Nonnull final String path,
       @Nonnull final StructType describedSchema) {
+    return writeChecking(dataset, path, steps -> carries(describedSchema, steps));
+  }
+
+  /**
+   * Writes a dataset to Parquet at the given location, and returns a reader over the written files
+   * that accepts the removal of an element the written schema has already pruned, provided the
+   * definitions describe it.
+   *
+   * @param dataset the dataset to write
+   * @param path the directory to write to
+   * @param fhirContext the FHIR context whose definitions a path absent from the written schema is
+   *     checked against
+   * @param resourceType the type of every resource in the dataset
+   * @return a reader over the written files
+   */
+  @Nonnull
+  public static PrunedSchemaReader write(
+      @Nonnull final Dataset<Row> dataset,
+      @Nonnull final String path,
+      @Nonnull final FhirContext fhirContext,
+      @Nonnull final String resourceType) {
+    final NodeDefinition definition =
+        FhirDefinitionContext.of(fhirContext).findResourceDefinition(resourceType);
+    return writeChecking(dataset, path, steps -> describes(definition, steps));
+  }
+
+  @Nonnull
+  private static PrunedSchemaReader writeChecking(
+      @Nonnull final Dataset<Row> dataset,
+      @Nonnull final String path,
+      @Nullable final Predicate<List<String>> described) {
     dataset.coalesce(1).write().mode(SaveMode.Overwrite).parquet(path);
-    return new PrunedSchemaReader(dataset.sparkSession(), path, dataset.schema(), describedSchema);
+    return new PrunedSchemaReader(dataset.sparkSession(), path, dataset.schema(), described);
   }
 
   /**
@@ -113,18 +149,19 @@ public final class PrunedSchemaReader {
 
   /**
    * Reads the written files back with the named elements removed from the schema. An element the
-   * written schema does not carry is left as it is where the described schema carries it.
+   * written schema does not carry is left as it is where it is described.
    *
    * @param elementPaths the dotted paths of the elements to remove
    * @return the dataset, without the named elements
-   * @throws IllegalArgumentException where an element is carried by neither schema
+   * @throws IllegalArgumentException where an element is neither carried by the written schema nor
+   *     described
    */
   @Nonnull
   public Dataset<Row> readWithout(@Nonnull final String... elementPaths) {
     StructType pruned = schema;
     for (final String elementPath : elementPaths) {
       final List<String> steps = Arrays.asList(elementPath.split("\\."));
-      if (carries(pruned, steps) || describedSchema == null || !carries(describedSchema, steps)) {
+      if (carries(pruned, steps) || described == null || !described.test(steps)) {
         pruned = without(pruned, steps);
       }
     }
@@ -145,6 +182,32 @@ public final class PrunedSchemaReader {
       current = struct.apply(step).dataType();
     }
     return true;
+  }
+
+  /**
+   * Returns whether the definitions describe the element at a dotted path, as a stored column names
+   * it. A step may name a choice variant, such as {@code valueString}, which its parent resolves,
+   * but not the choice itself, such as {@code value}, which is never stored as a column.
+   *
+   * @param definition the definition to resolve the path from
+   * @param elementPath the dotted path of the element
+   * @return true where every step of the path resolves
+   */
+  public static boolean describes(
+      @Nonnull final NodeDefinition definition, @Nonnull final String elementPath) {
+    return describes(definition, Arrays.asList(elementPath.split("\\.")));
+  }
+
+  private static boolean describes(
+      @Nonnull final NodeDefinition definition, @Nonnull final List<String> steps) {
+    Optional<? extends NodeDefinition> current = Optional.of(definition);
+    for (final String step : steps) {
+      current =
+          current
+              .flatMap(node -> node.getChildElement(step))
+              .filter(child -> !(child instanceof ChoiceDefinition));
+    }
+    return current.isPresent();
   }
 
   @Nonnull
