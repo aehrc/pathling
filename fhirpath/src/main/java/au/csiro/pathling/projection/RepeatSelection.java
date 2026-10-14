@@ -144,6 +144,7 @@ public record RepeatSelection(
     final UnaryOperator<Column> elementOperator = component.asColumnOperator(context);
     return new DefaultRepresentation(context.inputContext().getColumnValue())
         .transform(c -> ValueFunctions.rowCounterIncrement(elementOperator.apply(c), counter))
+        .removeNulls()
         .flatten()
         .getValue();
   }
