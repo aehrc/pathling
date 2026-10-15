@@ -9,11 +9,11 @@
 
 **Blocked by:** 06
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [x] The storage-layout page and the API docs (Java, Python, R) describe the refusal and the legacy export, with no mention of routing.
-- [ ] The server issue is raised on GitHub with the content above, and its number is recorded in this ticket's comments.
-- [ ] The server-docs link problem is either fixed here or stated in that issue as a release blocker.
+- [x] The server issue is raised on GitHub with the content above, and its number is recorded in this ticket's comments.
+- [x] The server-docs link problem is either fixed here or stated in that issue as a release blocker.
 
 ## Comments
 
@@ -110,3 +110,8 @@ docstrings, the R roxygen, the contract and the drafted server issue, by the sta
 is unsupported and its results undefined. No failure is promised. The remedy is still re-import or
 the legacy export.
 
+### Server issue raised
+
+Raised as [#2837](https://github.com/aehrc/pathling/issues/2837) on 2026-10-15, from the reviewed
+draft, with the `server` and `enhancement` labels. It states the server-docs link problem as a
+release blocker (decision 118), which meets the third criterion.
