@@ -211,6 +211,17 @@ current `name` element, matching `name.select(use | given)`.
 | `convertsToTime()`          | Check if convertible to Time     |
 | `convertsToQuantity(unit?)` | Check if convertible to Quantity |
 
+A FHIR [Quantity](https://hl7.org/fhir/R4/datatypes.html#Quantity) converts to
+a FHIRPath Quantity or String only if it
+[maps to a System.Quantity](https://hl7.org/fhir/R4/fhirpath.html#quantity):
+it must have a `value` and a `code`, its `system` must be
+`http://unitsofmeasure.org` (UCUM) or the FHIRPath calendar duration system
+(`https://hl7.org/fhirpath/N1/calendar-duration`), and it must not carry a
+`comparator`. For any other Quantity, `toQuantity()` and `toString()` return an
+empty result, and `convertsToQuantity()` and `convertsToString()` return
+`false`. For example, if `Observation.value` is `3 tab` with no system, or
+`<5 mg`, then `Observation.value.ofType(Quantity).toQuantity()` is empty.
+
 #### Utility functions
 
 | Function                   | Description                                                                                          |

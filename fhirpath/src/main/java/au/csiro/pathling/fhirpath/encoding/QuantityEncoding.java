@@ -170,12 +170,18 @@ public class QuantityEncoding {
   /**
    * Decodes a FhirPathQuantity from a Row.
    *
+   * <p>Returns null if the row cannot be represented as a FHIRPath System.Quantity: it lacks a
+   * value, system or code, its system is neither UCUM nor the FHIRPath calendar duration system, or
+   * it carries a comparator. This mirrors {@link
+   * au.csiro.pathling.fhirpath.column.QuantityValue#isSystemQuantity()}.
+   *
    * @param row the row to decode
-   * @return the resulting FhirPathQuantity
+   * @return the resulting FhirPathQuantity, or null if the row cannot be represented as one
    */
   @Nullable
   public static FhirPathQuantity decode(@Nullable final Row row) {
-    if (row == null) {
+    // A quantity with a comparator records a bound rather than a known value.
+    if (row == null || !row.isNullAt(3)) {
       return null;
     }
     // Extract value with scale handling

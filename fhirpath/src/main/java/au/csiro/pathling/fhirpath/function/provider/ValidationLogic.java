@@ -27,6 +27,7 @@ import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.EmptyCollection;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
+import au.csiro.pathling.fhirpath.column.QuantityValue;
 import jakarta.annotation.Nonnull;
 import java.util.Map;
 import java.util.function.BiFunction;
@@ -86,7 +87,9 @@ class ValidationLogic {
    * convertsToXXX functions.
    *
    * <p>The validation function is automatically determined from the target type using the internal
-   * registry.
+   * registry. A Quantity source is never trivially convertible to Quantity, because a FHIR Quantity
+   * converts to a System.Quantity only if it is representable as one (see {@link
+   * QuantityValue#isSystemQuantity()}).
    *
    * @param input The input collection to validate
    * @param targetType The target FHIRPath type
@@ -107,8 +110,8 @@ class ValidationLogic {
     final Column singularValue = input.getColumn().singular().getValue();
     // Use Nothing when the type is not known to enforce default value for a non-convertible type
     final FhirPathType sourceType = input.getType().orElse(FhirPathType.NOTHING);
-    final Column result =
-        sourceType == targetType ? lit(true) : validationLogic.apply(sourceType, singularValue);
+    final boolean isIdentity = sourceType == targetType && sourceType != FhirPathType.QUANTITY;
+    final Column result = isIdentity ? lit(true) : validationLogic.apply(sourceType, singularValue);
 
     return BooleanCollection.build(
         new DefaultRepresentation(
@@ -211,7 +214,8 @@ class ValidationLogic {
   }
 
   /**
-   * Validates if a value can be converted to String. All supported types can convert to String.
+   * Validates if a value can be converted to String. All primitive types and Coding can convert to
+   * String, as can a Quantity that is representable as a System.Quantity.
    *
    * @param sourceType The source FHIRPath type
    * @param value The source column value
@@ -220,9 +224,12 @@ class ValidationLogic {
   Column validateConversionToString(
       @Nonnull final FhirPathType sourceType, @Nonnull final Column value) {
     return switch (sourceType) {
-      case BOOLEAN, INTEGER, DECIMAL, DATE, DATETIME, TIME, QUANTITY, CODING ->
-          // All primitive types, Quantity and Coding can be converted to string.
+      case BOOLEAN, INTEGER, DECIMAL, DATE, DATETIME, TIME, CODING ->
+          // All primitive types and Coding can be converted to string.
           lit(true);
+      case QUANTITY ->
+          // Only a Quantity representable as a System.Quantity has a literal form.
+          let(value, v -> QuantityValue.of(v).isSystemQuantity());
       default ->
           // Other types cannot be converted.
           lit(false);
@@ -300,6 +307,7 @@ class ValidationLogic {
    * <ul>
    *   <li>BOOLEAN/INTEGER/DECIMAL: Always {@code true}
    *   <li>STRING: Check if matches quantity pattern (value + unit)
+   *   <li>QUANTITY: Check if representable as a System.Quantity
    * </ul>
    *
    * @param sourceType The source FHIRPath type
@@ -316,6 +324,10 @@ class ValidationLogic {
           // String can be converted only if it matches the quantity format:
           // value (optional +/-) + optional whitespace + unit (quoted UCUM or bareword calendar)
           value.rlike(QUANTITY_REGEX);
+      case QUANTITY ->
+          // A FHIR Quantity without a value, without a UCUM or calendar duration system and
+          // code, or with a comparator has no System.Quantity equivalent.
+          let(value, v -> QuantityValue.of(v).isSystemQuantity());
       default ->
           // Other types cannot be converted.
           lit(false);
