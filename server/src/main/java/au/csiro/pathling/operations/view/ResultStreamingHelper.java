@@ -39,6 +39,7 @@ import java.util.Map;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.catalyst.util.DateTimeUtils;
 import org.apache.spark.sql.types.ArrayType;
 import org.apache.spark.sql.types.BinaryType;
 import org.apache.spark.sql.types.BooleanType;
@@ -190,7 +191,11 @@ public class ResultStreamingHelper {
     return gson.toJson(rowToMap(row, schema));
   }
 
-  /** Converts a value for JSON serialisation. */
+  /**
+   * Converts a value for JSON serialisation. Rows and arrays are converted recursively. A {@code
+   * java.sql.Date} becomes an ISO-8601 date and a {@code java.sql.Timestamp} an ISO-8601 instant in
+   * UTC, because Gson would otherwise format them with the JVM's default locale and time zone.
+   */
   @Nullable
   public Object convertValue(
       @Nullable final Object value, @Nonnull final org.apache.spark.sql.types.DataType dataType) {
@@ -214,6 +219,12 @@ public class ResultStreamingHelper {
         return list.stream().map(item -> convertValue(item, arrayType.elementType())).toList();
       }
       return list;
+    }
+    if (value instanceof final java.sql.Date date) {
+      return formatDate(date);
+    }
+    if (value instanceof final java.sql.Timestamp timestamp) {
+      return formatInstant(timestamp);
     }
     return value;
   }
@@ -363,7 +374,10 @@ public class ResultStreamingHelper {
       return instant.toString();
     }
     if (value instanceof final java.sql.Timestamp ts) {
-      return ts.toInstant().toString();
+      // Spark rebases a timestamp before the Gregorian cutover onto the hybrid Julian calendar when
+      // it builds a Timestamp, so Timestamp.toInstant() would be days out. Reverse Spark's own
+      // conversion instead.
+      return DateTimeUtils.microsToInstant(DateTimeUtils.fromJavaTimestamp(ts)).toString();
     }
     return value.toString();
   }
@@ -388,7 +402,10 @@ public class ResultStreamingHelper {
     return values;
   }
 
-  /** Converts a value for CSV output. */
+  /**
+   * Converts a value for CSV output. Rows and arrays are written as JSON, and other values as they
+   * would be in JSON, so that dates and timestamps take the same ISO-8601 form in every format.
+   */
   @Nullable
   public Object convertValueForCsv(
       @Nullable final Object value, @Nonnull final org.apache.spark.sql.types.DataType dataType) {
@@ -398,6 +415,6 @@ public class ResultStreamingHelper {
     if (value instanceof Row || value instanceof scala.collection.Seq<?>) {
       return gson.toJson(convertValue(value, dataType));
     }
-    return value;
+    return convertValue(value, dataType);
   }
 }
