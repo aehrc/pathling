@@ -2,7 +2,7 @@
 
 **Spec:** `specs/001-parquet-on-fhir/spec.md` — FR-063. Old task: T124c. Ticket 16 may make this moot; check before starting.
 
-**What to build:** Egress currently throws on a stored field that the canonical structure does not know. It should ignore and report the field instead, as ingest already does. Such a field can come from a merge that appended a field, from another producer's file carrying `contained`, or from a legacy `_fid` or `_extension` column. Today any of these fails the whole write on its first unknown column.
+**What to build:** Egress currently throws on a stored field that the canonical structure does not know. It should ignore and report the field instead, as ingest already does. Such a field can come from a merge that appended a field, from another producer's file carrying `contained`, or from a legacy `_fid` or `_extension` column. Today any of these fails the whole write on its first unknown column. The layout column (ticket 29) is not an unknown field: egress skips it without reporting it.
 
 **Blocked by:** None — can start immediately
 

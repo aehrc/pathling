@@ -148,8 +148,8 @@ public class TypeInfo {
    * <p>Each choice field is tested for presence as it is stored, through the tolerant reference of
    * the parent's representation, so a field that the input schema does not carry is taken to be
    * unpopulated (FR-026), and a choice at the resource root is read from its table columns. The
-   * field is not traversed, because presence needs none of what a traversal adds: a quantity would
-   * otherwise be normalised, and a decimal decoded, only to be tested for null (T100n).
+   * field is not traversed, because presence needs none of what a traversal adds: a decimal would
+   * otherwise be decoded only to be tested for null (T100n).
    *
    * @param parent the representation of the element that holds the choice
    * @param choiceTypes the list of possible child element definitions for the choice

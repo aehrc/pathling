@@ -99,7 +99,7 @@ public class DateTimeCollection extends Collection
 
   /**
    * Returns a new instance based upon a {@link InstantType}. The instant is held as its text, as a
-   * traversed instant is on both layouts (decision 81).
+   * traversed instant is (decision 81).
    *
    * @param value The value to use
    * @return A new instance of {@link DateTimeCollection}
@@ -134,7 +134,7 @@ public class DateTimeCollection extends Collection
 
   /**
    * Returns the value as a string. An instant needs no formatting, because it is held as its text
-   * on both layouts (decision 81), like every other date and time.
+   * (decision 81), like every other date and time.
    *
    * @return the value as a string
    */

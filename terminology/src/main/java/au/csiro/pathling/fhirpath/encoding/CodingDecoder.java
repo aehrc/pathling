@@ -36,10 +36,9 @@ import org.hl7.fhir.r4.model.Coding;
  * (T091, FR-031).
  *
  * <p>A stored Coding need not have the canonical structure of {@link CodingSchema#DATA_TYPE}. A
- * pruned new-layout schema carries only the fields the data populates, the new layout orders them
- * as the definition does and may add an inline {@code extension}, and the previous layout adds a
- * {@code _fid}. So the position of each Coding field is resolved from the structure's field names,
- * and an absent field decodes as null.
+ * pruned schema carries only the fields the data populates, in the order of the definition, and may
+ * add an inline {@code extension}. So the position of each Coding field is resolved from the
+ * structure's field names, and an absent field decodes as null.
  *
  * <p>The positions are resolved once per schema, not per row. They depend on the names of the
  * structure's fields alone, so decoders are cached by the list of those names, which bounds the
@@ -56,8 +55,7 @@ import org.hl7.fhir.r4.model.Coding;
 public final class CodingDecoder {
 
   /**
-   * The fields a Coding structure may carry: the elements of a Coding, its inline extensions on the
-   * new layout, and its field identifier on the previous layout.
+   * The fields a Coding structure may carry: the elements of a Coding and its inline extensions.
    */
   @Nonnull
   private static final List<String> CODING_FIELDS =
@@ -68,8 +66,7 @@ public final class CodingDecoder {
           CodingSchema.CODE_FIELD,
           CodingSchema.DISPLAY_FIELD,
           CodingSchema.USER_SELECTED_FIELD,
-          ExtensionSupport.EXTENSION_ELEMENT_NAME(),
-          CodingSchema.FID_FIELD);
+          ExtensionSupport.EXTENSION_ELEMENT_NAME());
 
   /** The position that stands for a field the structure does not carry. */
   private static final int ABSENT = -1;

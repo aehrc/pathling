@@ -21,12 +21,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluator;
 import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluatorBuilder;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.test.SpringBootUnitTest;
-import au.csiro.pathling.test.layout.LayoutDatasets;
-import au.csiro.pathling.test.layout.TestLayout;
+import au.csiro.pathling.test.layout.PofDatasets;
 import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.Map;
@@ -50,7 +50,7 @@ import org.springframework.beans.factory.annotation.Autowired;
  *
  * <p>A stored quantity keeps its extensions through the operations that only select or combine
  * stored quantities. Where it meets a System quantity, such as a literal, it is taken as the System
- * quantity it decodes to, which has no extensions. Every case runs on both layouts in the same run.
+ * quantity it decodes to, which has no extensions.
  *
  * @author Piotr Szul
  */
@@ -60,12 +60,16 @@ class StoredQuantityTest {
 
   private static final Parser PARSER = new Parser();
 
-  /** An observation whose quantity and component quantities each carry a distinct extension. */
+  /**
+   * An observation whose quantity and component quantities each carry a distinct extension. Its
+   * quantity also carries an id and a comparator.
+   */
   private static final String EXTENDED =
       "{\"resourceType\":\"Observation\",\"id\":\"q1\",\"status\":\"final\","
           + "\"code\":{\"text\":\"x\"},\"valueQuantity\":{"
           + extension("urn:quantity")
-          + ",\"value\":1.5,\"unit\":\"g\",\"system\":\"http://unitsofmeasure.org\","
+          + ",\"id\":\"vq\",\"value\":1.5,\"comparator\":\"<\",\"unit\":\"g\","
+          + "\"system\":\"http://unitsofmeasure.org\","
           + "\"code\":\"g\"},\"component\":["
           + "{\"code\":{\"text\":\"a\"},\"valueQuantity\":{"
           + extension("urn:first")
@@ -93,11 +97,8 @@ class StoredQuantityTest {
     datasets =
         Map.of(
             "pof",
-            LayoutDatasets.fromJson(
-                spark, fhirEncoders, TestLayout.POF, "Observation", List.of(EXTENDED, BARE)),
-            "previous",
-            LayoutDatasets.fromJson(
-                spark, fhirEncoders, TestLayout.PREVIOUS, "Observation", List.of(EXTENDED, BARE)));
+            PofDatasets.fromJson(
+                spark, fhirEncoders.getContext(), "Observation", List.of(EXTENDED, BARE)));
   }
 
   @Nonnull
@@ -147,6 +148,8 @@ class StoredQuantityTest {
         arguments(value + ".toString()", "q1=1.5 'g'", "q2=4 'g'"),
         arguments(value + ".toQuantity('mg').value", "q1=1500.000000", "q2=4000.000000"),
         arguments(value + ".toQuantity().extension.exists()", "q1=false", "q2=false"),
+        // The stored quantity carries an id and a comparator.
+        arguments(value + ".comparator", "q1=<", "q2=null"),
         arguments(value + ".extension.exists()", "q1=true", "q2=false"));
   }
 
@@ -177,12 +180,50 @@ class StoredQuantityTest {
         .containsExactlyInAnyOrder(expected1, expected2);
   }
 
+  @Nonnull
+  Stream<Arguments> conversions() {
+    return datasets.keySet().stream()
+        .flatMap(dataset -> Stream.of("g", "mg").map(unit -> arguments(dataset, unit)));
+  }
+
+  /**
+   * A conversion builds a quantity, so it has no id or comparator, whether or not the quantity
+   * already had the unit. These are not reachable by navigation from a System quantity, so the
+   * fields of the result are read directly.
+   */
+  @ParameterizedTest(name = "toQuantity(''{1}'') over {0}")
+  @MethodSource("conversions")
+  void conversionDropsIdAndComparator(@Nonnull final String dataset, @Nonnull final String unit) {
+    final List<Row> results =
+        evaluateRows(datasets.get(dataset), "value.ofType(Quantity).toQuantity('" + unit + "')");
+    assertThat(results)
+        .hasSize(2)
+        .allSatisfy(
+            row -> {
+              final Row quantity = row.getStruct(1);
+              assertThat(quantity.<String>getAs(QuantityEncoding.ID_COLUMN)).isNull();
+              assertThat(quantity.<String>getAs(QuantityEncoding.COMPARATOR_COLUMN)).isNull();
+            });
+  }
+
   /**
    * Evaluates an expression over each observation in the dataset, returning one {@code id=value}
    * entry per observation.
    */
   @Nonnull
   private List<String> evaluate(
+      @Nonnull final Dataset<Row> dataset, @Nonnull final String expression) {
+    return evaluateRows(dataset, expression).stream()
+        .map(row -> row.getString(0) + "=" + Objects.toString(row.get(1)))
+        .toList();
+  }
+
+  /**
+   * Evaluates an expression over each observation in the dataset, returning one row of id and value
+   * per observation.
+   */
+  @Nonnull
+  private List<Row> evaluateRows(
       @Nonnull final Dataset<Row> dataset, @Nonnull final String expression) {
     final DatasetEvaluator evaluator =
         DatasetEvaluatorBuilder.create(ResourceType.OBSERVATION, fhirEncoders.getContext())
@@ -192,9 +233,6 @@ class StoredQuantityTest {
         .evaluate(PARSER.parse(expression))
         .toCanonical()
         .toIdValueDataset()
-        .collectAsList()
-        .stream()
-        .map(row -> row.getString(0) + "=" + Objects.toString(row.get(1)))
-        .toList();
+        .collectAsList();
   }
 }

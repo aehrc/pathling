@@ -343,6 +343,11 @@ You can make data that is already held in Spark datasets available for query
 using the `datasets` method. This method returns an object that can be populated
 with pairs of resource type and dataset, using the `dataset` method.
 
+The datasets are expected in the layout described in
+[Storage layout](./schema.md). Their layout is not checked. Datasets in the
+[layout of earlier releases](./schema.md#data-written-by-earlier-releases) are
+not supported, and the results of a query over them are undefined.
+
 <!--suppress CheckEmptyScriptTag -->
 <Tabs>
 <TabItem value="python" label="Python">
@@ -622,12 +627,17 @@ or gave wrong answers where the columns happened to line up.
 
 Data in the earlier layout cannot be converted in place. Re-import it from its
 source with this release, either into a new location or by overwriting the
-existing one.
+existing one. Where there is no source to re-import from, convert it to NDJSON
+with the legacy export and re-import that, which loses what the earlier layout
+did not store. Both are described under
+[Migrating data in the earlier layout](./schema.md#migrating-data-in-the-earlier-layout).
 
 If data that was written by this release is misclassified by the check, the
 check can be disabled for a single data source. Every other data source,
 including others created from the same context, keeps checking. The option is
-intended only for conforming data that is misclassified.
+intended only for conforming data that is misclassified. Data in the earlier
+layout read with the check disabled is not supported, and the results of a
+query over it are undefined.
 
 <!--suppress CheckEmptyScriptTag -->
 <Tabs>
@@ -683,7 +693,9 @@ refused when the write would add to that data (an append or a merge), with the
 same message that [reading it](#layout-detection) gives. The check is made for
 every resource type before anything is written, so a refused write leaves the
 target as it was. A write that replaces the data, with the `overwrite` save
-mode, is not refused, and is one way to re-import data into the same location.
+mode, is not refused, and is one way to re-import data into the same location,
+from its source or from the
+[legacy export](./schema.md#migrating-data-in-the-earlier-layout).
 
 ### Save modes
 

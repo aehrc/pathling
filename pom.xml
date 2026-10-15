@@ -117,6 +117,7 @@
     <module>fhir-schema</module>
     <module>encoders</module>
     <module>io</module>
+    <module>legacy-export</module>
     <module>terminology</module>
     <module>fhirpath</module>
     <module>library-api</module>

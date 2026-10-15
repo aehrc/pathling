@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.fhirpath.collection;
 
+import static org.apache.spark.sql.functions.col;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
@@ -28,17 +29,18 @@ import au.csiro.pathling.search.SearchColumnBuilder;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.datasource.PrunedSchemaReader;
 import au.csiro.pathling.test.helpers.JsonElementRenderer;
-import au.csiro.pathling.test.layout.LayoutDatasets;
-import au.csiro.pathling.test.layout.TestLayout;
+import au.csiro.pathling.test.layout.PofDatasets;
 import jakarta.annotation.Nonnull;
 import java.math.BigDecimal;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
+import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.types.ArrayType;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -52,16 +54,13 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 
 /**
- * Tests that the types profiled on Quantity, such as Duration and Age, are decoded at traversal as
- * a Quantity is, on both layouts (decision 80).
+ * Tests that the types profiled on Quantity, such as Duration and Age, are handled as a Quantity is
+ * (decision 80).
  *
- * <p>The previous layout stores each of them in the structure the engine computes with, with a
- * {@code DECIMAL(32,6)} value, its scale and a canonical form. Before the port, a single-instance
- * evaluation rendered their value as a number, and a projected column had that structure. Both must
- * hold on the previous layout after the port, where the traversal expression normalises the stored
- * element to text, and they hold on the new layout too, because the element is decoded there in the
- * same way. A whole value is rendered as FHIR JSON from the stored element, so its value is a
- * number with the text of the source, on both layouts (T100j).
+ * <p>A single-instance evaluation renders their value as a number. A projected column is a System
+ * quantity, in its fixed shape, which carries no canonical form; the canonical form is computed
+ * from it (FR-059). A whole value is rendered as FHIR JSON from the stored element, so its value is
+ * a number with the text of the source (T100j).
  *
  * <p>The fixtures cover a Duration at the resource root, an Age that is a choice at the root, a
  * Duration nested in a singular parent, and a Duration nested in a repeating one.
@@ -106,54 +105,49 @@ class QuantityTypesTest {
 
   @TempDir static Path tempDir;
 
-  private Map<TestLayout, Map<String, Dataset<Row>>> datasets;
+  private Map<String, Dataset<Row>> datasets;
 
   @BeforeAll
   void setUp() {
-    datasets =
-        Map.of(
-            TestLayout.PREVIOUS, stored(TestLayout.PREVIOUS),
-            TestLayout.POF, stored(TestLayout.POF));
+    datasets = stored();
   }
 
   @Nonnull
   Stream<Arguments> wholeValues() {
     return Stream.of(
-            arguments(
-                "Encounter",
-                "length",
-                "Duration",
-                "{\"value\":90,\"unit\":\"min\",\"system\":\"" + UCUM + "\",\"code\":\"min\"}"),
-            arguments(
-                "Condition",
-                "onset.ofType(Age)",
-                "Age",
-                "{\"value\":12,\"unit\":\"a\",\"system\":\"" + UCUM + "\",\"code\":\"a\"}"),
-            arguments(
-                "MedicationRequest",
-                "dispenseRequest.expectedSupplyDuration",
-                "Duration",
-                "{\"value\":30,\"unit\":\"days\",\"system\":\"" + UCUM + "\",\"code\":\"d\"}"),
-            arguments(
-                "MedicationRequest",
-                "dosageInstruction.timing.repeat.bounds.ofType(Duration)",
-                "Duration",
-                "{\"value\":7,\"unit\":\"days\",\"system\":\"" + UCUM + "\",\"code\":\"d\"}"),
-            arguments("Encounter", "length.value", "decimal", "90.000000"))
-        .flatMap(c -> bothLayouts(c.get()));
+        arguments(
+            "Encounter",
+            "length",
+            "Duration",
+            "{\"value\":90,\"unit\":\"min\",\"system\":\"" + UCUM + "\",\"code\":\"min\"}"),
+        arguments(
+            "Condition",
+            "onset.ofType(Age)",
+            "Age",
+            "{\"value\":12,\"unit\":\"a\",\"system\":\"" + UCUM + "\",\"code\":\"a\"}"),
+        arguments(
+            "MedicationRequest",
+            "dispenseRequest.expectedSupplyDuration",
+            "Duration",
+            "{\"value\":30,\"unit\":\"days\",\"system\":\"" + UCUM + "\",\"code\":\"d\"}"),
+        arguments(
+            "MedicationRequest",
+            "dosageInstruction.timing.repeat.bounds.ofType(Duration)",
+            "Duration",
+            "{\"value\":7,\"unit\":\"days\",\"system\":\"" + UCUM + "\",\"code\":\"d\"}"),
+        arguments("Encounter", "length.value", "decimal", "90.000000"));
   }
 
-  @ParameterizedTest(name = "{2} over the {0} layout")
+  @ParameterizedTest(name = "{1}")
   @MethodSource("wholeValues")
   void singleInstanceEvaluationRendersTheStoredValue(
-      @Nonnull final TestLayout layout,
       @Nonnull final String resourceType,
       @Nonnull final String expression,
       @Nonnull final String expectedType,
       @Nonnull final String expectedValue) {
     final SingleInstanceEvaluationResult result =
         SingleInstanceEvaluator.evaluate(
-            datasets.get(layout).get(resourceType),
+            datasets.get(resourceType),
             resourceType,
             fhirEncoders.getContext(),
             expression,
@@ -173,31 +167,29 @@ class QuantityTypesTest {
   Stream<Arguments> projectedColumns() {
     final DataType quantity = QuantityEncoding.dataType();
     return Stream.of(
-            // A Duration at the root: 90 min is 5400 s.
-            arguments("Encounter", "length", quantity, "5400", "s"),
-            // An Age at the root, reached through a choice: 12 a is 378691200 s.
-            arguments("Condition", "onset.ofType(Age)", quantity, "378691200", "s"),
-            // A Duration nested in a singular parent: 30 d is 2592000 s.
-            arguments(
-                "MedicationRequest",
-                "dispenseRequest.expectedSupplyDuration",
-                quantity,
-                "2592000",
-                "s"),
-            // A Duration nested in a repeating parent: 7 d is 604800 s.
-            arguments(
-                "MedicationRequest",
-                "dosageInstruction.timing.repeat.bounds.ofType(Duration)",
-                DataTypes.createArrayType(quantity),
-                "604800",
-                "s"))
-        .flatMap(c -> bothLayouts(c.get()));
+        // A Duration at the root: 90 min is 5400 s.
+        arguments("Encounter", "length", quantity, "5400", "s"),
+        // An Age at the root, reached through a choice: 12 a is 378691200 s.
+        arguments("Condition", "onset.ofType(Age)", quantity, "378691200", "s"),
+        // A Duration nested in a singular parent: 30 d is 2592000 s.
+        arguments(
+            "MedicationRequest",
+            "dispenseRequest.expectedSupplyDuration",
+            quantity,
+            "2592000",
+            "s"),
+        // A Duration nested in a repeating parent: 7 d is 604800 s.
+        arguments(
+            "MedicationRequest",
+            "dosageInstruction.timing.repeat.bounds.ofType(Duration)",
+            DataTypes.createArrayType(quantity),
+            "604800",
+            "s"));
   }
 
-  @ParameterizedTest(name = "{2} over the {0} layout")
+  @ParameterizedTest(name = "{1}")
   @MethodSource("projectedColumns")
-  void projectedColumnHasTheDecodedStructure(
-      @Nonnull final TestLayout layout,
+  void projectedColumnIsASystemQuantity(
       @Nonnull final String resourceType,
       @Nonnull final String expression,
       @Nonnull final DataType expectedType,
@@ -205,7 +197,6 @@ class QuantityTypesTest {
       @Nonnull final String expectedCanonicalCode) {
     final Dataset<Row> projected =
         datasets
-            .get(layout)
             .get(resourceType)
             .select(
                 SearchColumnBuilder.withDefaultRegistry(fhirEncoders.getContext())
@@ -214,54 +205,36 @@ class QuantityTypesTest {
     assertThat(projected.schema().apply("x").dataType().simpleString())
         .isEqualTo(expectedType.simpleString());
 
-    final Row decoded = firstQuantity(projected.first());
-    assertThat(decoded.<Integer>getAs("value_scale")).isZero();
-    assertThat(
-            decoded
-                .<Row>getAs(QuantityEncoding.CANONICALIZED_VALUE_COLUMN)
-                .<BigDecimal>getAs("value")
-                .toPlainString())
-        .isEqualTo(expectedCanonicalValue);
-    assertThat(decoded.<String>getAs(QuantityEncoding.CANONICALIZED_CODE_COLUMN))
-        .isEqualTo(expectedCanonicalCode);
-  }
-
-  @Nonnull
-  private static Row firstQuantity(@Nonnull final Row row) {
-    final Object value = row.get(0);
-    return value instanceof final Row struct ? struct : row.<Row>getList(0).get(0);
-  }
-
-  @Nonnull
-  private static Stream<Arguments> bothLayouts(@Nonnull final Object[] arguments) {
-    return Stream.of(TestLayout.PREVIOUS, TestLayout.POF)
-        .map(
-            layout -> {
-              final Object[] withLayout = new Object[arguments.length + 1];
-              withLayout[0] = layout;
-              System.arraycopy(arguments, 0, withLayout, 1, arguments.length);
-              return arguments(withLayout);
-            });
+    // The System quantity carries no canonical form (FR-059). It is computed from the quantity
+    // where the quantity is compared.
+    final Column quantity = expectedType instanceof ArrayType ? col("x").getItem(0) : col("x");
+    final Row canonical =
+        projected
+            .select(
+                QuantityEncoding.canonicalValue(quantity).getField("value"),
+                QuantityEncoding.canonicalCode(quantity))
+            .first();
+    assertThat(canonical.<BigDecimal>getAs(0).toPlainString()).isEqualTo(expectedCanonicalValue);
+    assertThat(canonical.<String>getAs(1)).isEqualTo(expectedCanonicalCode);
   }
 
   /**
-   * Builds the fixtures in a layout, and writes them to Parquet and reads them back, so that the
-   * engine reads stored files.
+   * Builds the fixtures, and writes them to Parquet and reads them back, so that the engine reads
+   * stored files.
    */
   @Nonnull
-  private Map<String, Dataset<Row>> stored(@Nonnull final TestLayout layout) {
+  private Map<String, Dataset<Row>> stored() {
     return Map.of(
-        "Encounter", stored(layout, "Encounter"),
-        "Condition", stored(layout, "Condition"),
-        "MedicationRequest", stored(layout, "MedicationRequest"));
+        "Encounter", stored("Encounter"),
+        "Condition", stored("Condition"),
+        "MedicationRequest", stored("MedicationRequest"));
   }
 
   @Nonnull
-  private Dataset<Row> stored(@Nonnull final TestLayout layout, @Nonnull final String type) {
+  private Dataset<Row> stored(@Nonnull final String type) {
     final Dataset<Row> dataset =
-        LayoutDatasets.fromJson(spark, fhirEncoders, layout, type, RESOURCES.get(type));
-    return PrunedSchemaReader.write(dataset, tempDir.resolve(layout + "-" + type).toString())
-        .read();
+        PofDatasets.fromJson(spark, fhirEncoders.getContext(), type, RESOURCES.get(type));
+    return PrunedSchemaReader.write(dataset, tempDir.resolve(type).toString()).read();
   }
 
   @Nonnull

@@ -38,6 +38,13 @@ import org.apache.spark.sql.types.StructType;
  * (FR-037). {@link #withLayoutDetection(boolean)} disables this for the sources a builder creates,
  * as an opt-out for conforming data the detector misclassifies (FR-040).
  *
+ * <p>Layout detection at read time is the only check made. Data in the earlier layout that bypasses
+ * it, through a source with layout detection disabled or through {@link #datasets()}, is not
+ * supported, and the results of a query over it are undefined. Such data is migrated by
+ * re-importing it from its source or, where there is none, by converting it to NDJSON with the
+ * legacy export, the separate {@code au.csiro.pathling:legacy-export} artifact, and reading that
+ * with {@link #ndjson(String)}.
+ *
  * @param context the {@link PathlingContext} to use for creating the data sources
  * @param layoutDetection whether the Parquet, Delta and catalog sources this builder creates
  *     classify the layout of the data they read

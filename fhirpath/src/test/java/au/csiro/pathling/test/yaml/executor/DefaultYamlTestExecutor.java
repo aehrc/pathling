@@ -24,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.definition.ChildDefinition;
+import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
 import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
@@ -36,6 +37,7 @@ import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.encoding.CodingSchema;
+import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluator;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.test.dsl.TypeInfoExpectation;
@@ -424,8 +426,8 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
   /**
    * Normalizes a Coding Row to the fields it holds, by name. A field the Row's structure does not
    * carry and a field holding null are both left out, so that a Coding narrowed to the fields its
-   * data populates equals the same Coding in the full structure. The element id and the previous
-   * layout's field id are left out too, as neither is part of the Coding's value.
+   * data populates equals the same Coding in the full structure. The element id is left out too, as
+   * it is not part of the Coding's value.
    *
    * @param codingRow the Coding Row to normalize
    * @return the populated fields of the Coding, by name
@@ -435,9 +437,7 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
     final Map<String, Object> normalized = new HashMap<>();
     for (final String field : codingRow.schema().fieldNames()) {
       final int index = codingRow.fieldIndex(field);
-      if (!field.equals(CodingSchema.ID_FIELD)
-          && !field.equals(CodingSchema.FID_FIELD)
-          && !codingRow.isNullAt(index)) {
+      if (!field.equals(CodingSchema.ID_FIELD) && !codingRow.isNullAt(index)) {
         normalized.put(field, codingRow.get(index));
       }
     }
@@ -469,44 +469,37 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
   }
 
   /**
-   * Normalizes a Quantity Row for comparison by removing implementation and derived fields. This
-   * allows comparing quantities based on their core semantic data (value, unit, system, code)
-   * without being affected by representation or canonicalization differences.
+   * Normalizes a Quantity Row for comparison. A System quantity holds its value as text (FR-059),
+   * so the value is compared as the engine compares it, as a decimal of six fractional digits,
+   * rather than as text, which would distinguish {@code 1.5} from {@code 1.50}.
    *
-   * <p>Quantity Row structure: [id, value, value_scale, comparator, unit, system, code,
-   * canonicalizedValue, canonicalizedCode, _fid]
-   *
-   * <p>The following fields are ignored: - value_scale (position 2): representation detail of
-   * decimal value storage - canonicalizedValue, canonicalizedCode (positions 7-8): derived
-   * canonical forms
+   * <p>Quantity Row structure: [id, value, comparator, unit, system, code].
    *
    * @param quantityRow the Quantity Row to normalize
-   * @return a List representing the normalized quantity (ignored fields set to null)
+   * @return a List representing the normalized quantity
    */
   @Nonnull
   private static java.util.List<Object> normalizeQuantityRow(@Nonnull final Row quantityRow) {
-    // Quantity rows should have 10 fields
-    final int expectedSize = 10;
-    if (quantityRow.size() < expectedSize) {
+    final int expectedSize = QuantityEncoding.dataType().size();
+    if (quantityRow.size() != expectedSize) {
       throw new IllegalArgumentException(
           "Expected Quantity row to have "
               + expectedSize
               + " fields, but got "
               + quantityRow.size());
     }
-
-    return java.util.Arrays.asList(
-        quantityRow.isNullAt(0) ? null : quantityRow.get(0), // id
-        quantityRow.isNullAt(1) ? null : quantityRow.get(1), // value
-        null, // value_scale - ignored
-        quantityRow.isNullAt(3) ? null : quantityRow.get(3), // comparator
-        quantityRow.isNullAt(4) ? null : quantityRow.get(4), // unit
-        quantityRow.isNullAt(5) ? null : quantityRow.get(5), // system
-        quantityRow.isNullAt(6) ? null : quantityRow.get(6), // code
-        null, // canonicalizedValue - ignored
-        null, // canonicalizedCode - ignored
-        quantityRow.isNullAt(9) ? null : quantityRow.get(9) // _fid
-        );
+    final java.util.List<Object> normalized = new java.util.ArrayList<>();
+    for (int i = 0; i < quantityRow.size(); i++) {
+      normalized.add(quantityRow.isNullAt(i) ? null : quantityRow.get(i));
+    }
+    final int valueIndex = quantityRow.fieldIndex(QuantityEncoding.VALUE_COLUMN);
+    normalized.set(
+        valueIndex,
+        quantityRow.isNullAt(valueIndex)
+            ? null
+            : new BigDecimal(quantityRow.getString(valueIndex))
+                .setScale(DecimalCustomCoder.scale(), RoundingMode.HALF_UP));
+    return normalized;
   }
 
   @Nonnull
@@ -600,7 +593,7 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
       return intValue.longValue();
     } else if (actualRaw instanceof final BigDecimal bdValue) {
       // Scale BigDecimal to 6 places and convert to Long.
-      return bdValue.setScale(6, RoundingMode.HALF_UP).longValue();
+      return bdValue.setScale(DecimalCustomCoder.scale(), RoundingMode.HALF_UP).longValue();
     } else {
       // Return other types unchanged.
       return actualRaw;

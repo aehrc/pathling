@@ -25,8 +25,7 @@ import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluator;
 import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluatorBuilder;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.test.SpringBootUnitTest;
-import au.csiro.pathling.test.layout.LayoutDatasets;
-import au.csiro.pathling.test.layout.TestLayout;
+import au.csiro.pathling.test.layout.PofDatasets;
 import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.Map;
@@ -49,8 +48,7 @@ import org.springframework.beans.factory.annotation.Autowired;
  * decoded only where they are computed with (T097, decision 80).
  *
  * <p>Indexing only selects among the elements, so it keeps the stored element. An extension of the
- * indexed quantity is therefore found on either layout, and it is the extension of the element at
- * that index. Every case runs on both layouts in the same run.
+ * indexed quantity is therefore found, and it is the extension of the element at that index.
  *
  * @author Piotr Szul
  */
@@ -91,11 +89,8 @@ class IndexedQuantityExtensionTest {
     datasets =
         Map.of(
             "pof",
-            LayoutDatasets.fromJson(
-                spark, fhirEncoders, TestLayout.POF, "Observation", List.of(EXTENDED, BARE)),
-            "previous",
-            LayoutDatasets.fromJson(
-                spark, fhirEncoders, TestLayout.PREVIOUS, "Observation", List.of(EXTENDED, BARE)));
+            PofDatasets.fromJson(
+                spark, fhirEncoders.getContext(), "Observation", List.of(EXTENDED, BARE)));
   }
 
   @Nonnull

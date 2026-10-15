@@ -2760,6 +2760,13 @@ expression, and gives the same answers as this tolerance for every present case.
 
 _Amends_ decision 75.
 
+_Superseded by ticket 05 (T124k, 2026-10-15)_: the tolerance this decision introduced is gone.
+The engine builds no structure with a `_fid` any more, neither a System Coding nor a System
+Quantity, and it no longer reads the previous layout's `_extension` map, so the tolerant
+`_extension` and `_fid` references at extension lookup have nothing to tolerate and are removed.
+`.extension` on a System value is still empty, because the value has no `extension` field. The
+rule for the combining functions, and the addendum below, are unchanged.
+
 ### Addendum to 79 — a stored Coding combined with a System Coding keeps its extensions
 
 Owner-confirmed (2026-09-28), prompted by T113b. This is a known deviation from
@@ -3479,6 +3486,16 @@ test estate is produced at test time by the previous encoder, whose `IdCustomCod
 _Consequence for the specification_: removing `_fid` from `CodingSchema` is not done in M4.
 It is recorded on T100e (M7), where the previous layout's reader goes.
 
+_Superseded in its reason by ticket 05 (T124k, 2026-10-15)_: the terminology functions no longer
+return a Coding with a `_fid`, so the reason given above, that this release writes a
+previous-layout marker itself, no longer holds. The rule stands, as decision 132's addendum relies
+on: the root `id_versioned` is still the only marker that classifies a table as the previous
+layout, and the others are still evidence cited in a refusal. It stands for two other reasons. The
+root versioned id is present in every previous-layout table whether or not the legacy encoder
+stored extensions, so the other markers add no case it misses; and each of them adds a way to
+misclassify a conforming table, such as one carrying a field of its own that happens to be named
+like one of them.
+
 ## 101. The server's move needs a warehouse migration story, decided at M7
 
 Owner decision (2026-10-12), for Phase 13b. No code.
@@ -4000,3 +4017,42 @@ apart by where it is raised. `ResolveOrNullTest.viewColumnInJoinConditionFailsTh
 now also pins that it is recognised, so an upgrade of Spark that moves it fails that test. Test:
 `ResolveOrNullTest.otherAssertionInResolutionIsNotTakenForAbsence`, failing before the fix, passing
 after; `JoinConditionTest` passes unchanged.
+
+## 132. The engine checks for the legacy layout only at detection, and the PoF layout carries a version
+
+Owner decision (2026-10-15).
+
+Ticket 04 built FR-053: a check in traversal that failed a query reaching a legacy-typed column by
+a route detection does not cover (detection disabled, a dataset the caller supplies, a dataset
+built with the legacy encoders). It worked, but it kept knowledge of the legacy layout in the
+engine indefinitely, and it could not be complete: the legacy layout's extensions, kept in a root
+`_extension` map keyed by `_fid`, pass it, and once ticket 05 removes their reader an extension
+traversal over such data answers empty.
+
+_Decision_: the engine makes no check for the legacy layout beyond detection (FR-037 to FR-040).
+Data that bypasses detection is unsupported, the caller owns the consequences, and the result of
+evaluating over it is undefined. FR-053 and User Story 7's fifth scenario are withdrawn, ticket 04
+is closed unmerged, and ticket 05 removes the normalisation without putting a check in its place.
+ADR-0001's consequence promising a loud failure is amended.
+
+Instead, the first line is made exact. Every PoF dataset carries a layout column at its root,
+`__layout_v1`: a nullable boolean whose every value is null, recognised by its name and type alone,
+so detection still needs only the schema (FR-038). A version this release supports is the PoF
+layout, and a higher one is refused as written by a newer release, so a layout change later in the
+programme, or after it, is told apart rather than read as though it were this one. The column is
+not an annotation: it is derived from nothing, always written, outside the annotation switches,
+never pruned by the fitted schema and never read as FHIR content. Field metadata was considered
+and rejected, because some Spark expressions drop it and other tools do not write it; a column
+survives wherever a column does. The version is in the name rather than the value, because
+reading a value would take a Spark job per table, and an empty table has none. See FR-065, FR-066
+and ADR-0006; built by ticket 29.
+
+_Addendum (owner, 2026-10-15)_: the layout column is added by ingest, by `FhirReader` and `encode()`
+from FHIR JSON or XML, and is otherwise an ordinary column. Sinks write it and sources read it
+unchanged; nothing adds it on write or drops it on read. The Parquet on FHIR specification is to be
+amended to require it (ticket 30), and its final name and version rule are taken from there. The
+column is built in stage 3 (ticket 29), after ingest and egress are rebuilt (ticket 16), so that it is
+built once, into the new code, rather than into code stage 3 replaces. Until then the refusal of the
+legacy layout rests on the root `id_versioned`, as decision 100 left it. The release is blocked on
+ticket 29, so every PoF dataset a release produces carries the column. Existing PoF test data is not
+regenerated: unmarked PoF data stays accepted, and that data is its regression test.

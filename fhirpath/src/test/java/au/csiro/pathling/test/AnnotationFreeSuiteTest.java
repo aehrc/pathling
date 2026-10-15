@@ -30,8 +30,7 @@ import au.csiro.pathling.schema.DefinitionCanonicalStructure;
 import au.csiro.pathling.schema.LayoutEntry;
 import au.csiro.pathling.schema.LayoutFields;
 import au.csiro.pathling.test.datasource.PrunedSchemaReader;
-import au.csiro.pathling.test.layout.LayoutDatasets;
-import au.csiro.pathling.test.layout.TestLayout;
+import au.csiro.pathling.test.layout.PofDatasets;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Nonnull;
@@ -83,10 +82,10 @@ import org.springframework.beans.factory.annotation.Autowired;
  * really is annotation-free. That is what this class asserts, rather than duplicating the suite:
  *
  * <ul>
- *   <li>The fixtures the layout dimension routes, built through {@link LayoutDatasets} on the new
- *       layout, carry no annotation at any depth. Both entry points are covered, JSON documents as
- *       the conformance suites supply them and HAPI objects as the DSL and data-source tests build
- *       them, and so is every resource in the conformance corpora.
+ *   <li>The fixtures the tests build, through {@link PofDatasets}, carry no annotation at any
+ *       depth. Both entry points are covered, JSON documents as the conformance suites supply them
+ *       and HAPI objects as the DSL and data-source tests build them, and so is every resource in
+ *       the conformance corpora.
  *   <li>The absence is not vacuous. The schema is fitted to the data, so an element that is absent
  *       has no annotation either, and a check for absent annotations could pass because the
  *       annotated elements were never there. Every check therefore records the annotation slots the
@@ -104,13 +103,6 @@ import org.springframework.beans.factory.annotation.Autowired;
  *       per-kind detail is in {@code DecimalCollectionTest}, {@code QuantityCollectionTest} and the
  *       conformance suites.
  * </ul>
- *
- * <p>The claim is scoped to the new layout, which is the one annotations belong to. The layout is
- * passed explicitly rather than taken from the active dimension, so a run with {@code
- * -Dpathling.testLayout=previous} asserts the same thing. A few test classes build previous-layout
- * data of their own regardless of the dimension, such as {@code DivergentSchemaViewTest}; that
- * layout has none of these annotations, so they do not weaken the claim, but they are not evidence
- * for it either.
  *
  * <p>At M5 each kind starts being emitted by default and becomes individually disableable (FR-021).
  * This class then changes from asserting that none is emitted to asserting that none is emitted
@@ -493,14 +485,14 @@ class AnnotationFreeSuiteTest {
   @Nonnull
   private Dataset<Row> fromJson(
       @Nonnull final String resourceType, @Nonnull final List<String> json) {
-    return LayoutDatasets.fromJson(spark, fhirEncoders, TestLayout.POF, resourceType, json);
+    return PofDatasets.fromJson(spark, fhirEncoders.getContext(), resourceType, json);
   }
 
   @Nonnull
   private Dataset<Row> fromResources(
       @Nonnull final String resourceType, @Nonnull final IBaseResource resource) {
-    return LayoutDatasets.fromResources(
-        spark, fhirEncoders, TestLayout.POF, resourceType, List.of(resource));
+    return PofDatasets.fromResources(
+        spark, fhirEncoders.getContext(), resourceType, List.of(resource));
   }
 
   @Nonnull

@@ -29,12 +29,10 @@ import au.csiro.pathling.sql.misc.CanonicalQuantityCode;
 import au.csiro.pathling.sql.misc.CanonicalQuantityValue;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.datasource.PrunedSchemaReader;
-import au.csiro.pathling.test.layout.LayoutDatasets;
-import au.csiro.pathling.test.layout.TestLayout;
+import au.csiro.pathling.test.layout.PofDatasets;
 import jakarta.annotation.Nonnull;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Stream;
 import org.apache.spark.sql.Dataset;
@@ -51,16 +49,14 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 
 /**
- * Tests that cross-unit quantity comparison computes canonicalisation when no annotation is
- * present, and that it continues to work over the previous layout's quantities, which carry {@code
- * _value_canonicalized} and {@code _code_canonicalized} (T087, FR-022).
+ * Tests that cross-unit quantity comparison computes canonicalisation when no annotation is present
+ * (T087, FR-022).
  *
- * <p>Each fixture is given once as FHIR JSON and read in both layouts, so every case runs over each
- * layout with the same expected answer, and the expected answers are the ones the previous layout
- * gives before the port. The new layout carries no canonical form of a quantity until M5, so there
- * the canonical form can only have been computed from the structure. Its schema is also pruned to
- * the elements the fixtures populate, so its quantities have a different shape from the previous
- * layout's and from the engine's own quantity literals.
+ * <p>Each fixture is given as FHIR JSON and read in the Parquet on FHIR layout. The expected
+ * answers are the ones the previous layout gave before the port. The layout carries no canonical
+ * form of a quantity until M5, so the canonical form can only have been computed from the
+ * structure. Its schema is also pruned to the elements the fixtures populate, so its quantities
+ * have a different shape from the engine's own quantity literals.
  *
  * <p>The fixtures cover a quantity at the resource root and under a repeating parent, units related
  * by a multiplicative factor and by an additive offset, a unit outside UCUM, and a value with more
@@ -98,106 +94,99 @@ class QuantityCollectionTest {
 
   @TempDir static Path tempDir;
 
-  private Map<String, Dataset<Row>> datasets;
+  private Dataset<Row> dataset;
 
   @BeforeAll
   void setUp() {
-    datasets = Map.of("previous", stored(TestLayout.PREVIOUS), "pof", stored(TestLayout.POF));
+    dataset = stored();
   }
 
   @Nonnull
   Stream<Arguments> cases() {
     return Stream.of(
-            // Equality across units related by a factor, against a literal.
-            arguments(
-                "value.ofType(Quantity) = 1500 'mg'",
-                List.of("o1=true", "o2=true", "o3=false", "o4=null", "o5=false", "o6=null")),
-            // Ordering across units, in both directions.
-            arguments(
-                "value.ofType(Quantity) > 1 'g'",
-                List.of("o1=true", "o2=true", "o3=true", "o4=null", "o5=false", "o6=null")),
-            arguments(
-                "value.ofType(Quantity) < 1 'kg'",
-                List.of("o1=true", "o2=true", "o3=false", "o4=null", "o5=true", "o6=null")),
-            arguments(
-                "1 'kg' >= value.ofType(Quantity)",
-                List.of("o1=true", "o2=true", "o3=false", "o4=null", "o5=true", "o6=null")),
-            // Units related by an additive offset.
-            arguments(
-                "value.ofType(Quantity) > 300 'K'",
-                List.of("o1=null", "o2=null", "o3=null", "o4=null", "o5=null", "o6=true")),
-            // Two stored quantities in different units, under a repeating parent.
-            arguments(
-                "component.value.ofType(Quantity)[0] = component.value.ofType(Quantity)[1]",
-                List.of("o1=null", "o2=null", "o3=true", "o4=null", "o5=null", "o6=null")),
-            arguments(
-                "component.value.ofType(Quantity).where($this >= 0.5 'g').count()",
-                List.of("o1=0", "o2=0", "o3=2", "o4=0", "o5=0", "o6=0")),
-            // A unit outside UCUM has no canonical form, and compares on its stored value.
-            arguments(
-                "value.ofType(Quantity) = value.ofType(Quantity)",
-                List.of("o1=true", "o2=true", "o3=true", "o4=true", "o5=true", "o6=true")),
-            // The elements of a quantity.
-            arguments(
-                "value.ofType(Quantity).value",
-                List.of(
-                    "o1=1.500000",
-                    "o2=1500.000000",
-                    "o3=2.000000",
-                    "o4=3.000000",
-                    "o5=0.000000",
-                    "o6=37.000000")),
-            arguments(
-                "value.ofType(Quantity).code",
-                List.of("o1=g", "o2=mg", "o3=kg", "o4=tab", "o5=kg", "o6=Cel")),
-            arguments(
-                "value.ofType(Quantity).unit",
-                List.of("o1=g", "o2=mg", "o3=kg", "o4=tab", "o5=kg", "o6=Cel")),
-            // Rendering, conversion and combination with a literal.
-            arguments(
-                "value.ofType(Quantity).toString()",
-                List.of(
-                    "o1=1.5 'g'",
-                    "o2=1500 'mg'",
-                    "o3=2 'kg'",
-                    "o4=null",
-                    "o5=0 'kg'",
-                    "o6=37 'Cel'")),
-            arguments(
-                "value.ofType(Quantity).toQuantity('g').value",
-                List.of(
-                    "o1=1.500000",
-                    "o2=1.500000",
-                    "o3=2000.000000",
-                    "o4=null",
-                    "o5=0.000000",
-                    "o6=null")),
-            arguments(
-                "value.ofType(Quantity).convertsToQuantity('g')",
-                List.of("o1=true", "o2=true", "o3=true", "o4=false", "o5=true", "o6=false")),
-            arguments(
-                "(value.ofType(Quantity) | 1 'g').count()",
-                List.of("o1=2", "o2=2", "o3=2", "o4=2", "o5=2", "o6=2")))
-        .flatMap(
-            c ->
-                Stream.of("previous", "pof")
-                    .map(layout -> arguments(layout, c.get()[0], c.get()[1])));
+        // Equality across units related by a factor, against a literal.
+        arguments(
+            "value.ofType(Quantity) = 1500 'mg'",
+            List.of("o1=true", "o2=true", "o3=false", "o4=null", "o5=false", "o6=null")),
+        // Ordering across units, in both directions.
+        arguments(
+            "value.ofType(Quantity) > 1 'g'",
+            List.of("o1=true", "o2=true", "o3=true", "o4=null", "o5=false", "o6=null")),
+        arguments(
+            "value.ofType(Quantity) < 1 'kg'",
+            List.of("o1=true", "o2=true", "o3=false", "o4=null", "o5=true", "o6=null")),
+        arguments(
+            "1 'kg' >= value.ofType(Quantity)",
+            List.of("o1=true", "o2=true", "o3=false", "o4=null", "o5=true", "o6=null")),
+        // Units related by an additive offset.
+        arguments(
+            "value.ofType(Quantity) > 300 'K'",
+            List.of("o1=null", "o2=null", "o3=null", "o4=null", "o5=null", "o6=true")),
+        // Two stored quantities in different units, under a repeating parent.
+        arguments(
+            "component.value.ofType(Quantity)[0] = component.value.ofType(Quantity)[1]",
+            List.of("o1=null", "o2=null", "o3=true", "o4=null", "o5=null", "o6=null")),
+        arguments(
+            "component.value.ofType(Quantity).where($this >= 0.5 'g').count()",
+            List.of("o1=0", "o2=0", "o3=2", "o4=0", "o5=0", "o6=0")),
+        // A unit outside UCUM has no canonical form, and compares on its stored value.
+        arguments(
+            "value.ofType(Quantity) = value.ofType(Quantity)",
+            List.of("o1=true", "o2=true", "o3=true", "o4=true", "o5=true", "o6=true")),
+        // The elements of a quantity.
+        arguments(
+            "value.ofType(Quantity).value",
+            List.of(
+                "o1=1.500000",
+                "o2=1500.000000",
+                "o3=2.000000",
+                "o4=3.000000",
+                "o5=0.000000",
+                "o6=37.000000")),
+        arguments(
+            "value.ofType(Quantity).code",
+            List.of("o1=g", "o2=mg", "o3=kg", "o4=tab", "o5=kg", "o6=Cel")),
+        arguments(
+            "value.ofType(Quantity).unit",
+            List.of("o1=g", "o2=mg", "o3=kg", "o4=tab", "o5=kg", "o6=Cel")),
+        // Rendering, conversion and combination with a literal.
+        arguments(
+            "value.ofType(Quantity).toString()",
+            List.of(
+                "o1=1.5 'g'",
+                "o2=1500 'mg'",
+                "o3=2 'kg'",
+                "o4=null",
+                "o5=0.0000002 'kg'",
+                "o6=37 'Cel'")),
+        arguments(
+            "value.ofType(Quantity).toQuantity('g').value",
+            List.of(
+                "o1=1.500000",
+                "o2=1.500000",
+                "o3=2000.000000",
+                "o4=null",
+                "o5=0.000200",
+                "o6=null")),
+        arguments(
+            "value.ofType(Quantity).convertsToQuantity('g')",
+            List.of("o1=true", "o2=true", "o3=true", "o4=false", "o5=true", "o6=false")),
+        arguments(
+            "(value.ofType(Quantity) | 1 'g').count()",
+            List.of("o1=2", "o2=2", "o3=2", "o4=2", "o5=2", "o6=2")));
   }
 
-  @ParameterizedTest(name = "{1} over the {0} layout")
+  @ParameterizedTest(name = "{0}")
   @MethodSource("cases")
-  void quantityOperationsMatchOnBothLayouts(
-      @Nonnull final String layout,
-      @Nonnull final String expression,
-      @Nonnull final List<String> expected) {
-    assertThat(evaluate(datasets.get(layout), expression))
-        .containsExactlyInAnyOrderElementsOf(expected);
+  void quantityOperationsOverStoredQuantities(
+      @Nonnull final String expression, @Nonnull final List<String> expected) {
+    assertThat(evaluate(dataset, expression)).containsExactlyInAnyOrderElementsOf(expected);
   }
 
   @Nonnull
   Stream<Arguments> precisionCases() {
-    // The new layout stores the source text, so a value with more than six fractional digits keeps
-    // its magnitude through canonicalisation. The previous layout's value column holds six.
+    // The layout stores the source text, so a value with more than six fractional digits keeps its
+    // magnitude through canonicalisation.
     return Stream.of(
         arguments(
             "value.ofType(Quantity) = 0.2 'mg'",
@@ -207,37 +196,26 @@ class QuantityCollectionTest {
             List.of("o1=true", "o2=true", "o3=true", "o4=null", "o5=true", "o6=null")));
   }
 
-  @ParameterizedTest(name = "{0} over the new layout")
+  @ParameterizedTest(name = "{0}")
   @MethodSource("precisionCases")
   void canonicalisationKeepsTheMagnitudeOfTheStoredText(
       @Nonnull final String expression, @Nonnull final List<String> expected) {
-    assertThat(evaluate(datasets.get("pof"), expression))
-        .containsExactlyInAnyOrderElementsOf(expected);
+    assertThat(evaluate(dataset, expression)).containsExactlyInAnyOrderElementsOf(expected);
   }
 
   @Nonnull
-  Stream<Arguments> fieldPlanCases() {
-    // The previous layout's value is rendered to text once, by one CASE WHEN over its scale. The
-    // new layout's value is text already.
-    return Stream.of(
-        arguments("previous", "value.ofType(Quantity).value", 1),
-        arguments("pof", "value.ofType(Quantity).value", 0),
-        arguments("previous", "component.value.ofType(Quantity).value", 1),
-        arguments("pof", "component.value.ofType(Quantity).value", 0));
+  Stream<String> fieldPlanCases() {
+    // The stored value is text already, so it is read without being rendered.
+    return Stream.of("value.ofType(Quantity).value", "component.value.ofType(Quantity).value");
   }
 
   /**
-   * A field of a decoded quantity is read from the stored quantity, which is normalised once. The
-   * decoded structure has the type of a previous-layout quantity, so reading the field from it
-   * would normalise it a second time, and compute its canonical form for nothing.
+   * A field of a decoded quantity is read from the stored quantity, without computing its canonical
+   * form for nothing.
    */
-  @ParameterizedTest(name = "{1} over the {0} layout")
+  @ParameterizedTest(name = "{0}")
   @MethodSource("fieldPlanCases")
-  void fieldOfADecodedQuantityIsNormalisedOnce(
-      @Nonnull final String layout,
-      @Nonnull final String expression,
-      final int expectedRenderings) {
-    final Dataset<Row> dataset = datasets.get(layout);
+  void fieldOfADecodedQuantityIsReadFromTheStoredQuantity(@Nonnull final String expression) {
     final String plan =
         dataset
             .select(
@@ -250,20 +228,19 @@ class QuantityCollectionTest {
             .mkString(",");
     assertThat(plan)
         .doesNotContain(CanonicalQuantityValue.FUNCTION_NAME)
-        .doesNotContain(CanonicalQuantityCode.FUNCTION_NAME);
-    assertThat(plan.split("CASE WHEN", -1)).hasSize(expectedRenderings + 1);
+        .doesNotContain(CanonicalQuantityCode.FUNCTION_NAME)
+        .doesNotContain("CASE WHEN");
   }
 
   /**
-   * Builds the fixtures in a layout, and writes them to Parquet and reads them back, so that the
-   * engine reads stored files.
+   * Builds the fixtures, and writes them to Parquet and reads them back, so that the engine reads
+   * stored files.
    */
   @Nonnull
-  private Dataset<Row> stored(@Nonnull final TestLayout layout) {
-    final Dataset<Row> dataset =
-        LayoutDatasets.fromJson(spark, fhirEncoders, layout, "Observation", OBSERVATIONS);
-    return PrunedSchemaReader.write(dataset, tempDir.resolve(layout + "-Observation").toString())
-        .read();
+  private Dataset<Row> stored() {
+    final Dataset<Row> observations =
+        PofDatasets.fromJson(spark, fhirEncoders.getContext(), "Observation", OBSERVATIONS);
+    return PrunedSchemaReader.write(observations, tempDir.resolve("Observation").toString()).read();
   }
 
   /**

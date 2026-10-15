@@ -81,6 +81,8 @@ made at planning time.
 | Primitive, element present | The Spark type for its FHIR type. |
 | Primitive, element absent from the schema | The same type, with a null value. |
 | Complex, element present | Reflects the stored schema, which is fitted to the data. |
+| `System.Quantity`, built by the engine | One fixed shape, whatever produced it (see [Quantities](#quantities)). |
+| `System.Coding`, built by the engine | One fixed shape, whatever produced it (see [Coding and terminology](#coding-and-terminology)). |
 | Complex, element absent | The bottom type, which never reaches a view column. |
 | View column declaring a FHIR type | That type, present or absent. |
 | View column declaring no type, primitive element absent | The definitions' type for the element. |
@@ -110,6 +112,29 @@ storage, not how much survives a calculation.
 
 ## Quantities
 
+A quantity read from the data keeps the fitted shape of the data it came from,
+with its extensions. A `System.Quantity` — one the engine builds itself, such as
+a literal, a number promoted to a quantity, the result of `toQuantity()`, or a
+stored quantity combined with one of these — has one fixed, complete shape,
+whatever produced it (FR-059):
+
+| Field | Type | Holds |
+| --- | --- | --- |
+| `id` | string | Null, except for a stored quantity taken as a System one, which keeps its id. |
+| `value` | string | The text of the decimal, as the layout stores a decimal, with the digits it was given. A number promoted to a quantity has the six fractional digits of the engine's decimal type. |
+| `comparator` | string | Null, except for a stored quantity taken as a System one. |
+| `unit` | string | The human-readable unit. |
+| `system` | string | The system of the unit's code. |
+| `code` | string | The unit's code. |
+
+These are the elements of a FHIR Quantity other than `extension`, in definition
+order, and every one is present. A System quantity has no extensions. Nothing
+derived is carried: no decimal value with a scale companion, no canonical form
+and no field identifier, so an engine-built quantity never looks like a
+previous-layout one. The decimal value and the canonical form are computed from
+the value and the code where a quantity is compared or converted, as they are
+for a stored quantity.
+
 Comparison across units uses the `_canonical_exact` annotation when present and
 computes the canonicalisation when not. That annotation's precision preserves
 magnitude, so quantities differing by orders of magnitude do not compare equal.
@@ -127,6 +152,30 @@ expected and the actual fields.
 Terminology operations work on a Coding column narrower than the canonical
 layout, since a fitted schema commonly carries only the fields the data
 populates.
+
+A Coding read from the data keeps the fitted shape of the data it came from,
+with its extensions. A `System.Coding` — one the engine builds itself, such as a
+Coding literal, the result of a terminology function such as `translate()` or
+`property()`, or the Coding a quantity's coded unit is taken as — has one fixed,
+complete shape, whatever produced it (FR-059):
+
+| Field | Type | Holds |
+| --- | --- | --- |
+| `id` | string | The element id, null unless the source Coding had one. |
+| `system` | string | The code system. |
+| `version` | string | The version of the code system. |
+| `code` | string | The code. |
+| `display` | string | The display text. |
+| `userSelected` | boolean | Whether the Coding was chosen directly by the user. |
+
+These are the elements of a FHIR Coding other than `extension`, in definition
+order, and every one is present. A System Coding has no extensions and no field
+identifier: it no longer carries the previous layout's `_fid`, so an
+engine-built Coding never looks like a previous-layout one. Telling
+`System.Coding` apart from `FHIR.Coding` in the type system is
+[#2804](https://github.com/aehrc/pathling/issues/2804); until then, a stored
+Coding combined with an engine-built one is reconciled with it by name and keeps
+its extensions (decision 79's addendum).
 
 ## References
 

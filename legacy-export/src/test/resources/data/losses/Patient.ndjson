@@ -1,0 +1,5 @@
+{"resourceType":"Patient","id":"primitive-metadata","birthDate":"1970-01-01","_birthDate":{"id":"bd","extension":[{"url":"http://example.org/birth-time","valueString":"morning"}]},"name":[{"family":"Smith","given":["Ann","Bea"],"_given":[null,{"extension":[{"url":"http://example.org/nickname","valueString":"B"}]}]}]}
+{"resourceType":"Patient","id":"contained","contained":[{"resourceType":"Organization","id":"org","name":"Clinic"}],"managingOrganization":{"reference":"#org"}}
+{"resourceType":"Patient","id":"modifier-extension","modifierExtension":[{"url":"http://example.org/flag","valueBoolean":true}],"gender":"female"}
+{"resourceType":"Patient","id":"extension-outside-open-types","extension":[{"url":"http://example.org/kept","valueString":"kept"},{"url":"http://example.org/dropped","valueHumanName":{"family":"Doe"}}],"active":true}
+{"resourceType":"Patient","id":"extension-decimal-scale","extension":[{"url":"http://example.org/score","valueDecimal":2.442019549037137}],"active":true}

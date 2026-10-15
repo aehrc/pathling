@@ -22,14 +22,11 @@
  */
 package au.csiro.pathling.encoders;
 
-import au.csiro.pathling.sql.DecimalNormalisation;
-import au.csiro.pathling.sql.InstantNormalisation;
+import au.csiro.pathling.sql.ExtensionTraversal;
 import au.csiro.pathling.sql.MergeCast;
-import au.csiro.pathling.sql.QuantityNormalisation;
 import au.csiro.pathling.sql.ResolveOrNull;
 import au.csiro.pathling.sql.UnresolvedMergeCombination;
 import au.csiro.pathling.sql.UnresolvedTraverseExtension;
-import au.csiro.pathling.sql.UnresolvedTraverseRootExtension;
 import au.csiro.pathling.utilities.CanonicalStructure;
 import jakarta.annotation.Nonnull;
 import java.util.Arrays;
@@ -123,7 +120,7 @@ public class ColumnFunctions {
   /**
    * Resolves a text field of a structure, or of every structure in an array, to a null string where
    * the structure does not carry the field, rather than failing (FR-054). The field is read as the
-   * text it is stored as on either layout.
+   * text it is stored as.
    *
    * @param child the structure, or array of structures
    * @param fieldName the name of the field
@@ -150,57 +147,8 @@ public class ColumnFunctions {
   }
 
   /**
-   * Creates a reference to a table-level decimal column that resolves to its text on either layout,
-   * and to a null of the fallback type where the input does not have the column. The previous
-   * layout's {@code DECIMAL(32,6)} value is normalised to its text at the scale of the source,
-   * which is read from the column's {@code _scale} companion (T094b).
-   *
-   * @param columnName the name of the table-level column
-   * @param fallback the type of the null returned when the column is absent
-   * @return a Column that yields the text of the decimal column
-   */
-  @Nonnull
-  public static Column decimalColumnOrNull(
-      @Nonnull final String columnName, @Nonnull final DataType fallback) {
-    return ExpressionUtils.column(DecimalNormalisation.tolerantColumn(columnName, fallback));
-  }
-
-  /**
-   * Creates a reference to a table-level instant column that resolves to its text on either layout,
-   * and to a null of the fallback type where the input does not have the column. The previous
-   * layout's timestamp is normalised to its text in UTC, which does not depend on the session time
-   * zone (decision 81).
-   *
-   * @param columnName the name of the table-level column
-   * @param fallback the type of the null returned when the column is absent
-   * @return a Column that yields the text of the instant column
-   */
-  @Nonnull
-  public static Column instantColumnOrNull(
-      @Nonnull final String columnName, @Nonnull final DataType fallback) {
-    return ExpressionUtils.column(InstantNormalisation.tolerantColumn(columnName, fallback));
-  }
-
-  /**
-   * Creates a reference to a table-level quantity column that resolves to the new layout's shape on
-   * either layout, and to a null of the fallback type where the input does not have the column. The
-   * previous layout's quantity is normalised to a structure without its canonical form, whose value
-   * is its text at the scale of the source (T094b).
-   *
-   * @param columnName the name of the table-level column
-   * @param fallback the type of the null returned when the column is absent
-   * @return a Column that yields the quantity in the new layout's shape
-   */
-  @Nonnull
-  public static Column quantityColumnOrNull(
-      @Nonnull final String columnName, @Nonnull final DataType fallback) {
-    return ExpressionUtils.column(QuantityNormalisation.tolerantColumn(columnName, fallback));
-  }
-
-  /**
-   * Creates the traversal to the extensions of an element, which reads the inline {@code extension}
-   * field on the new layout and looks the element's {@code _fid} up in the {@code _extension}
-   * column on the previous one.
+   * Creates the traversal to the extensions of an element, which reads its inline {@code extension}
+   * field, and finds no extensions where the element has none.
    *
    * @param parent the structure, or array of structures, whose extensions are wanted
    * @return a Column holding the extensions of the parent
@@ -213,14 +161,14 @@ public class ColumnFunctions {
 
   /**
    * Creates the traversal to the extensions of the resource itself, which reads the {@code
-   * extension} column on the new layout and looks the resource's {@code _fid} up in the {@code
-   * _extension} column on the previous one.
+   * extension} column, and finds no extensions where the table has no such column.
    *
    * @return a Column holding the extensions of the resource
    */
   @Nonnull
   public static Column traverseRootExtension() {
-    return ExpressionUtils.column(new UnresolvedTraverseRootExtension());
+    return columnOrNull(
+        ExtensionSupport.EXTENSION_ELEMENT_NAME(), ExtensionTraversal.ABSENT_TYPE());
   }
 
   /**

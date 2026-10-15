@@ -24,8 +24,7 @@ import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.datasource.DatasetDataSource;
 import au.csiro.pathling.test.datasource.PrunedSchemaReader;
-import au.csiro.pathling.test.layout.LayoutDatasets;
-import au.csiro.pathling.test.layout.TestLayout;
+import au.csiro.pathling.test.layout.PofDatasets;
 import jakarta.annotation.Nonnull;
 import java.nio.file.Path;
 import java.util.List;
@@ -47,14 +46,12 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 
 /**
- * Tests that a quantity search matches against the value as it is stored, so that on the new layout
- * a value with more than six fractional digits keeps them through canonicalisation (decision 77).
+ * Tests that a quantity search matches against the value as it is stored, so that a value with more
+ * than six fractional digits keeps them through canonicalisation (decision 77).
  *
  * <p>The engine decodes a quantity to a {@code DECIMAL(32,6)} value for computation, which keeps
- * six fractional digits. The new layout stores the source text, so {@code 0.0000002 kg}, which is
- * {@code 0.2 mg}, is found by a search in either unit. The previous layout's value column holds six
- * digits, so there the value is zero and the search finds nothing, as decision 77 accepts. A value
- * with six digits or fewer is found on both layouts.
+ * six fractional digits. The Parquet on FHIR layout stores the source text, so {@code 0.0000002
+ * kg}, which is {@code 0.2 mg}, is found by a search in either unit.
  *
  * @author Piotr Szul
  */
@@ -76,47 +73,35 @@ class QuantitySearchPrecisionTest {
 
   @TempDir static Path tempDir;
 
-  private Map<TestLayout, Dataset<Row>> datasets;
+  private Dataset<Row> dataset;
 
   @BeforeAll
   void setUp() {
-    datasets =
-        Map.of(
-            TestLayout.PREVIOUS, stored(TestLayout.PREVIOUS),
-            TestLayout.POF, stored(TestLayout.POF));
+    dataset = stored();
   }
 
   @Nonnull
   Stream<Arguments> cases() {
     return Stream.of(
         // A value with more than six fractional digits, found in its own unit and in others.
-        arguments(TestLayout.POF, "eq0.0000002|" + UCUM + "|kg", List.of("q2")),
-        arguments(TestLayout.POF, "eq2e-7|" + UCUM + "|kg", List.of("q2")),
-        arguments(TestLayout.POF, "eq0.2|" + UCUM + "|mg", List.of("q2")),
-        arguments(TestLayout.POF, "eq200|" + UCUM + "|ug", List.of("q2")),
-        arguments(TestLayout.POF, "gt0.1|" + UCUM + "|mg", List.of("q1", "q2")),
-        arguments(TestLayout.POF, "lt0.3|" + UCUM + "|mg", List.of("q2")),
-        // The previous layout keeps six digits, so the value is zero there.
-        arguments(TestLayout.PREVIOUS, "eq0.2|" + UCUM + "|mg", List.of()),
-        arguments(TestLayout.PREVIOUS, "gt0.1|" + UCUM + "|mg", List.of("q1")),
-        // A value with six digits or fewer is found on both layouts.
-        arguments(TestLayout.POF, "eq1500|" + UCUM + "|mg", List.of("q1")),
-        arguments(TestLayout.PREVIOUS, "eq1500|" + UCUM + "|mg", List.of("q1")),
-        arguments(TestLayout.POF, "eq1.5|" + UCUM + "|g", List.of("q1")),
-        arguments(TestLayout.PREVIOUS, "eq1.5|" + UCUM + "|g", List.of("q1")));
+        arguments("eq0.0000002|" + UCUM + "|kg", List.of("q2")),
+        arguments("eq2e-7|" + UCUM + "|kg", List.of("q2")),
+        arguments("eq0.2|" + UCUM + "|mg", List.of("q2")),
+        arguments("eq200|" + UCUM + "|ug", List.of("q2")),
+        arguments("gt0.1|" + UCUM + "|mg", List.of("q1", "q2")),
+        arguments("lt0.3|" + UCUM + "|mg", List.of("q2")),
+        // A value with six digits or fewer.
+        arguments("eq1500|" + UCUM + "|mg", List.of("q1")),
+        arguments("eq1.5|" + UCUM + "|g", List.of("q1")));
   }
 
-  @ParameterizedTest(name = "value-quantity={1} over the {0} layout")
+  @ParameterizedTest(name = "value-quantity={0}")
   @MethodSource("cases")
   void searchMatchesTheStoredValue(
-      @Nonnull final TestLayout layout,
-      @Nonnull final String searchValue,
-      @Nonnull final List<String> expectedIds) {
+      @Nonnull final String searchValue, @Nonnull final List<String> expectedIds) {
     final FhirSearchExecutor executor =
         FhirSearchExecutor.withRegistry(
-            encoders.getContext(),
-            new DatasetDataSource(Map.of("Observation", datasets.get(layout))),
-            registry);
+            encoders.getContext(), new DatasetDataSource(Map.of("Observation", dataset)), registry);
     final Dataset<Row> results =
         executor.execute(
             ResourceType.OBSERVATION,
@@ -126,15 +111,14 @@ class QuantitySearchPrecisionTest {
   }
 
   /**
-   * Builds the fixtures in a layout, and writes them to Parquet and reads them back, so that the
-   * search reads stored files.
+   * Builds the fixtures, and writes them to Parquet and reads them back, so that the search reads
+   * stored files.
    */
   @Nonnull
-  private Dataset<Row> stored(@Nonnull final TestLayout layout) {
-    final Dataset<Row> dataset =
-        LayoutDatasets.fromJson(spark, encoders, layout, "Observation", OBSERVATIONS);
-    return PrunedSchemaReader.write(dataset, tempDir.resolve(layout + "-Observation").toString())
-        .read();
+  private Dataset<Row> stored() {
+    final Dataset<Row> observations =
+        PofDatasets.fromJson(spark, encoders.getContext(), "Observation", OBSERVATIONS);
+    return PrunedSchemaReader.write(observations, tempDir.resolve("Observation").toString()).read();
   }
 
   @Nonnull

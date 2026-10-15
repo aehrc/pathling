@@ -22,8 +22,7 @@ import static java.util.stream.Collectors.groupingBy;
 
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.io.source.DataSource;
-import au.csiro.pathling.test.layout.LayoutDatasets;
-import au.csiro.pathling.test.layout.TestLayout;
+import au.csiro.pathling.test.layout.PofDatasets;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.HashMap;
@@ -37,46 +36,29 @@ import org.hl7.fhir.instance.model.api.IBase;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 
 /**
- * A data source over resources built as HAPI objects, in the layout the {@link TestLayout}
- * dimension selects (T036).
+ * A data source over resources built as HAPI objects, held in the Parquet on FHIR layout (T036).
  */
 public class ObjectDataSource implements DataSource {
 
   @Nonnull private final Map<String, Dataset<Row>> data = new HashMap<>();
 
   /**
-   * Creates a data source over resources, in the active test layout.
+   * Creates a data source over resources.
    *
    * @param spark the Spark session
-   * @param encoders the encoders for the previous layout, which also carry the FHIR context
+   * @param encoders the encoders, used only for the FHIR context they carry
    * @param resources the resources, of any mix of types
    */
   public ObjectDataSource(
       @Nonnull final SparkSession spark,
       @Nonnull final FhirEncoders encoders,
       @Nonnull final List<IBaseResource> resources) {
-    this(spark, encoders, resources, TestLayout.active());
-  }
-
-  /**
-   * Creates a data source over resources, in a chosen layout.
-   *
-   * @param spark the Spark session
-   * @param encoders the encoders for the previous layout, which also carry the FHIR context
-   * @param resources the resources, of any mix of types
-   * @param layout the layout to hold the resources in
-   */
-  public ObjectDataSource(
-      @Nonnull final SparkSession spark,
-      @Nonnull final FhirEncoders encoders,
-      @Nonnull final List<IBaseResource> resources,
-      @Nonnull final TestLayout layout) {
     final Map<String, List<IBaseResource>> groupedResources =
         resources.stream().collect(groupingBy(IBase::fhirType));
     groupedResources.forEach(
         (resourceType, resourceList) -> {
           final Dataset<Row> dataset =
-              LayoutDatasets.fromResources(spark, encoders, layout, resourceType, resourceList);
+              PofDatasets.fromResources(spark, encoders.getContext(), resourceType, resourceList);
           data.put(resourceType, dataset);
         });
   }

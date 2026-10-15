@@ -35,8 +35,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * singular complex element the null type, and a repeating complex element an array of the null
  * type.
  *
- * <p>A decimal takes the text it is stored as, because the traversal expression normalises the
- * previous layout's decimals to that text too (T094b), and every branch of the traversal yields the
+ * <p>A decimal takes the text it is stored as, so that every branch of the traversal yields the
  * same type. The engine decodes the text to {@code DECIMAL(32,6)} after traversal (FR-035).
  *
  * @author Piotr Szul

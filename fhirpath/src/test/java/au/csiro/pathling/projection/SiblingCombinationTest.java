@@ -20,14 +20,13 @@ package au.csiro.pathling.projection;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
-import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.datasource.DatasetDataSource;
 import au.csiro.pathling.test.datasource.PrunedSchemaReader;
-import au.csiro.pathling.test.layout.LayoutDatasets;
-import au.csiro.pathling.test.layout.TestLayout;
+import au.csiro.pathling.test.layout.PofDatasets;
 import au.csiro.pathling.views.FhirView;
 import au.csiro.pathling.views.FhirViewExecutor;
+import ca.uhn.fhir.context.FhirContext;
 import com.google.gson.Gson;
 import jakarta.annotation.Nonnull;
 import java.nio.file.Path;
@@ -41,10 +40,15 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.instance.model.api.IBaseResource;
+import org.hl7.fhir.r4.model.BooleanType;
+import org.hl7.fhir.r4.model.DateTimeType;
 import org.hl7.fhir.r4.model.Enumerations.PublicationStatus;
 import org.hl7.fhir.r4.model.Observation;
+import org.hl7.fhir.r4.model.Period;
 import org.hl7.fhir.r4.model.Questionnaire;
+import org.hl7.fhir.r4.model.Questionnaire.QuestionnaireItemOperator;
 import org.hl7.fhir.r4.model.Questionnaire.QuestionnaireItemType;
+import org.hl7.fhir.r4.model.SimpleQuantity;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
@@ -62,14 +66,16 @@ import org.springframework.beans.factory.annotation.Autowired;
  *
  * <p>The views take the shape of the two {@code deep_nesting.json} cases excluded under #2625, but
  * over a schema from which the element is genuinely absent rather than past the encoder's nesting
- * bound. On the previous layout that bound already omits {@code item.item} from the full schema, so
- * the nested cases use {@code item.enableWhen}, which the full schema carries. The removed elements
- * are never populated in the source, so each view is run twice: over the full schema as the
- * control, which passes before T110, and over the pruned schema, which passes since T110 and T113.
+ * bound. The nested cases use {@code item.enableWhen}, which the released encoder's dense schema
+ * carried where its nesting bound omitted {@code item.item}. The removed elements are never
+ * populated in the source, so each view is run twice: over the full schema as the control, which
+ * passes before T110, and over the pruned schema, which passes since T110 and T113.
  *
- * <p>The resources are built in the active test layout. The new layout's schema is already pruned
- * to what the source populates, so there both runs read the elements as absent, and the control is
- * a control only on the previous layout.
+ * <p>The resources are read in the Parquet on FHIR layout, under a schema fitted to them together
+ * with filler resources that populate every element a case removes, and the fillers are left out of
+ * what is written. The full schema therefore carries each removed element as a null, as a table
+ * does where other resources populate it, so the control reads the element present but unpopulated
+ * and the test reads it absent.
  *
  * @author Piotr Szul
  */
@@ -79,7 +85,7 @@ class SiblingCombinationTest {
 
   @Autowired SparkSession spark;
 
-  @Autowired FhirEncoders fhirEncoders;
+  @Autowired FhirContext fhirContext;
 
   @Autowired Gson gson;
 
@@ -99,28 +105,21 @@ class SiblingCombinationTest {
     final Questionnaire withItem = questionnaire("q1");
     withItem.addItem().setLinkId("1").setText("One").setType(QuestionnaireItemType.GROUP);
     questionnaires =
-        PrunedSchemaReader.write(
-            encode(withItem, questionnaire("q2")),
-            tempDir.resolve("nested").toString(),
-            fhirEncoders.of("Questionnaire").schema());
+        write(
+            "Questionnaire",
+            "nested",
+            List.of(withItem, questionnaire("q2")),
+            questionnaireFiller());
     itemless =
-        PrunedSchemaReader.write(
-            encode(questionnaire("q3"), questionnaire("q4")),
-            tempDir.resolve("root").toString(),
-            fhirEncoders.of("Questionnaire").schema());
+        write(
+            "Questionnaire",
+            "root",
+            List.of(questionnaire("q3"), questionnaire("q4")),
+            questionnaireFiller());
     final Observation observation = new Observation();
     observation.setId("o1");
     observation.addReferenceRange().setText("r");
-    observations =
-        PrunedSchemaReader.write(
-            LayoutDatasets.fromResources(
-                spark,
-                fhirEncoders,
-                TestLayout.active(),
-                "Observation",
-                List.<IBaseResource>of(observation)),
-            tempDir.resolve("Observation").toString(),
-            fhirEncoders.of("Observation").schema());
+    observations = write("Observation", "Observation", List.of(observation), observationFiller());
   }
 
   @Nonnull
@@ -366,8 +365,7 @@ class SiblingCombinationTest {
         """
             .formatted(resourceType, selection);
     final FhirViewExecutor executor =
-        new FhirViewExecutor(
-            fhirEncoders.getContext(), new DatasetDataSource(Map.of(resourceType, dataset)));
+        new FhirViewExecutor(fhirContext, new DatasetDataSource(Map.of(resourceType, dataset)));
     return executor.buildQuery(gson.fromJson(json, FhirView.class)).collectAsList().stream()
         .map(
             row ->
@@ -378,13 +376,46 @@ class SiblingCombinationTest {
   }
 
   @Nonnull
-  private Dataset<Row> encode(@Nonnull final Questionnaire... resources) {
-    return LayoutDatasets.fromResources(
-        spark,
-        fhirEncoders,
-        TestLayout.active(),
-        "Questionnaire",
-        List.<IBaseResource>of(resources));
+  private PrunedSchemaReader write(
+      @Nonnull final String resourceType,
+      @Nonnull final String directory,
+      @Nonnull final List<? extends IBaseResource> resources,
+      @Nonnull final IBaseResource filler) {
+    return PrunedSchemaReader.write(
+        PofDatasets.fromResources(spark, fhirContext, resourceType, resources, List.of(filler)),
+        tempDir.resolve(directory).toString());
+  }
+
+  /** Populates every Questionnaire element a case removes, including {@code item} itself. */
+  @Nonnull
+  private static Questionnaire questionnaireFiller() {
+    final Questionnaire questionnaire = questionnaire("questionnaire-filler");
+    questionnaire
+        .addItem()
+        .setLinkId("f")
+        .setText("Filler")
+        .setType(QuestionnaireItemType.BOOLEAN)
+        .addEnableWhen()
+        .setQuestion("1")
+        .setOperator(QuestionnaireItemOperator.EXISTS)
+        .setAnswer(new BooleanType(true));
+    return questionnaire;
+  }
+
+  /** Populates every Observation element a case removes. */
+  @Nonnull
+  private static Observation observationFiller() {
+    final Observation observation = new Observation();
+    observation.setId("observation-filler");
+    observation.setEffective(
+        new Period()
+            .setStartElement(new DateTimeType("2020-01-01"))
+            .setEndElement(new DateTimeType("2020-01-02")));
+    observation
+        .addReferenceRange()
+        .setText("f")
+        .setLow((SimpleQuantity) new SimpleQuantity().setValue(1).setUnit("mg"));
+    return observation;
   }
 
   @Nonnull

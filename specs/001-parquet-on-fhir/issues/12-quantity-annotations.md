@@ -11,6 +11,14 @@
 2. **Use them in the engine (T096a, T087a).** Quantity handling prefers `_canonical_exact`, falls back to `_canonical`, and computes canonicalisation only where neither exists. This includes `QuantityEncoding.decodeStored`, so the UDF calls leave the decode where the annotation is present. Repeat T100o's measurement afterwards.
 3. **Canonicalise only UCUM quantities in comparison (T096b).** Apply UCUM canonicalisation only where the system is UCUM, as quantity search already does. Any existing test whose expected value changes is listed for the owner's approval before it is updated.
 4. **Measure the codegen fallback (T096c).** Measure what the quantity `!=` costs by falling out of whole-stage code generation, and check `=`. Measure against plans that already fall back for Coding filtering (decision 126), with enough rows for the per-row cost to show. Report to the owner before rewriting anything. If the fallback matters engine-wide, raise that in the report.
+5. **Give the System.Quantity shape the canonical annotations.** Ticket 03 took the legacy canonical companions off an engine-built System.Quantity, so a quantity literal is now canonicalised once per row wherever it is compared, where before its canonical form was a constant. Restore that by making the two Parquet on FHIR canonical annotations part of the fixed System.Quantity shape, which amends FR-059.
+   - A literal fills them in Java when the plan is built, so they reach the plan as constants.
+   - A stored quantity taken as a System one copies its stored annotations where the schema has them, and computes them otherwise.
+   - A conversion or a promoted number computes them. Quantity arithmetic, when it is built, fills them from the canonical form it computes anyway.
+   - Comparison, union deduplication and the other set operations read them rather than canonicalising again. Carried in the struct, they survive unions, arrays and lambdas, which metadata kept on the collection would not.
+   - Where canonicalisation is computed, compute it once. Today `QuantityEncoding.canonicalValue` and `canonicalCode`, and `QuantityMatcher`, call two UDFs that each run the full `Ucum.getCanonical` on the same value and code. Replace them with one UDF returning the canonical value and code together, bound once and read for both fields. The UDF also takes the system and maps a definite calendar duration to its UCUM equivalent in Java, replacing the `when` chain `QuantityEncoding.ucumEquivalentOf` puts into the plan, which is currently copied once per canonicalisation call. `QuantityMatcher` uses the same shared canonicalisation and decode from `QuantityEncoding`, and so the annotations' fast path, instead of its own UDF calls and its `value()` helper, which repeats `QuantityEncoding.decodeValue`.
+   - Where a promoted number is encoded, `QuantityEncoding.withoutTrailingZeros` strips trailing zeros from the decimal's text with nested `regexp_replace` calls, which duplicates what the `DecimalToLiteral` UDF already does for `ConversionLogic.convertToString`. Reuse the one formatting rule, so that a quantity's value and a decimal's string form cannot drift apart, as the promoted-number path is reworked to fill the annotations.
+   - Decide how they leave the engine: whether rendering and the columns returned to callers keep or drop them, and whether the FR-021 annotation switches govern them.
 
 **Blocked by:** 11
 
@@ -22,4 +30,5 @@
 - [ ] T100o's measurement is repeated and recorded in the evidence.
 - [ ] The UCUM-only change is in place, and changed expectations were approved by the owner.
 - [ ] The T096c measurement is recorded and reported to the owner. Any rewrite happens only on the owner's go-ahead.
+- [ ] An engine-built System.Quantity carries the canonical annotations, FR-059 is amended to say so, and a plan test shows no canonicalisation call on the literal side of a comparison.
 - [ ] The benchmark (ticket 10) is re-run, with plans saved.

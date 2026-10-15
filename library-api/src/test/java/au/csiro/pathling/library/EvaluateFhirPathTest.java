@@ -486,6 +486,30 @@ public class EvaluateFhirPathTest {
   }
 
   @Test
+  void systemQuantityIsRenderedWithTheScaleOfItsValue() {
+    // A System quantity holds its value as text (FR-059), so the value is rendered with the digits
+    // it was given, without a scale companion.
+    final JsonObject quantity =
+        singleObject(pathling.evaluateFhirPath("Patient", PATIENT_JSON, "1.50 'mg'"));
+
+    assertEquals(Set.of("value", "unit", "system", "code"), quantity.keySet());
+    assertNumber("1.50", quantity.get("value"));
+  }
+
+  @Test
+  void numberPromotedToAQuantityIsRenderedAsAQuantity() {
+    // A quantity built from the result of an arithmetic operation has the same fixed shape as a
+    // literal, and is rendered as a quantity. Its scale is not known, so its value has no trailing
+    // fractional zeros.
+    final JsonObject quantity =
+        singleObject(pathling.evaluateFhirPath("Patient", PATIENT_JSON, "(1 + 2).toQuantity()"));
+
+    assertEquals(Set.of("value", "unit", "system", "code"), quantity.keySet());
+    assertNumber("3", quantity.get("value"));
+    assertEquals("1", quantity.get("code").getAsString());
+  }
+
+  @Test
   void unionOfAStoredAndASystemQuantityIsRenderedAsQuantities() {
     // The stored quantity meets a System quantity, so both are System quantities (decision 82).
     final SingleInstanceEvaluationResult result =

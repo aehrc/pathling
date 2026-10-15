@@ -340,9 +340,8 @@ public class Collection implements Equatable {
    */
   @Nonnull
   protected Collection traverseExtension(@Nonnull final ElementDefinition extensionDefinition) {
-    // Extension traversal reads the layout from the resolved parent: the inline extension field of
-    // the new layout, or the entry for the parent's field identifier in the extension map column of
-    // the previous one (decision 75). Above the traversal there is only the new layout's shape.
+    // Extension traversal reads the inline extension field of the resolved parent, and finds no
+    // extensions where the parent has none (decision 75).
     return Collection.build(getColumn().traverseExtension(), extensionDefinition);
   }
 
@@ -587,8 +586,7 @@ public class Collection implements Equatable {
     final Collection result = repeatAll(transform, maxDepth, true);
 
     // Deduplicate only for types with a FHIRPath type (primitives, Coding, Quantity, etc.).
-    // Complex backbone elements have no FHIRPath type and contain synthetic fields like _fid
-    // that make struct equality impractical.
+    // Complex backbone elements have no FHIRPath type, and their equality is not defined.
     if (result.getType().isPresent()) {
       final Column array = result.getColumn().plural().getValue();
       final ColumnEquality comparator = result.getComparator();
@@ -901,17 +899,17 @@ public class Collection implements Equatable {
    * Gets this collection in the form the engine computes with.
    *
    * <p>A quantity reached by traversal, of any of the quantity types, is held in the stored shape,
-   * so as to keep the extensions that the structure the engine computes with cannot carry. Here it
-   * is decoded into that structure, computing the canonical form of each quantity from the quantity
-   * itself (T096, FR-022). The result is a collection of System quantities, which have no
-   * extensions (T097). Every other collection is returned as it is.
+   * so as to keep the extensions that a System quantity cannot carry. Here it is taken as a System
+   * quantity, in the fixed shape {@link QuantityEncoding#dataType()} (FR-059). The result is a
+   * collection of System quantities, which have no extensions (T097). Every other collection is
+   * returned as it is.
    *
    * @return the collection, in the form the engine computes with
    */
   @Nonnull
   public Collection toEngineForm() {
     return QuantityCollection.holdsStoredQuantities(this)
-        ? QuantityCollection.build(getColumn().transform(QuantityEncoding::decodeStored))
+        ? QuantityCollection.build(getColumn().transform(QuantityEncoding::fromStored))
         : this;
   }
 

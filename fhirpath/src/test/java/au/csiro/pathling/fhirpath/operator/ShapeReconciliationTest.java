@@ -29,12 +29,10 @@ import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluatorBuilder;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.datasource.PrunedSchemaReader;
-import au.csiro.pathling.test.layout.LayoutDatasets;
-import au.csiro.pathling.test.layout.TestLayout;
+import au.csiro.pathling.test.layout.PofDatasets;
 import jakarta.annotation.Nonnull;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Stream;
 import org.apache.spark.sql.Dataset;
@@ -59,13 +57,11 @@ import org.springframework.beans.factory.annotation.Autowired;
  * Tests that two collections of the same FHIR type whose SQL shapes differ are reconciled wherever
  * they must share a type (T104a, T104b, FR-056, FR-057).
  *
- * <p>Each fixture is given once as FHIR JSON and read in both layouts. On the new layout the schema
- * is pruned to the elements the fixtures populate, so one type reached by two paths has two shapes.
- * On the previous layout the schema is dense, and the shapes differ only where the encoder
- * truncates a recursive type at its nesting bound, so that the same type met at two depths has two
- * shapes. Each shape-sensitive test asserts the shapes it relies on before it asserts anything
- * else, because a pruned schema is derived from the whole fixture set and a new fixture could
- * silently make the shapes agree (T109).
+ * <p>Each fixture is given as FHIR JSON and read in the Parquet on FHIR layout, whose schema is
+ * pruned to the elements the fixtures populate, so one type reached by two paths has two shapes,
+ * and so does one recursive type met at two depths. Each shape-sensitive test asserts the shapes it
+ * relies on before it asserts anything else, because a pruned schema is derived from the whole
+ * fixture set and a new fixture could silently make the shapes agree (T109).
  *
  * <p>Equality and membership are covered with the complex types that have a FHIRPath type, which
  * are Coding and Quantity. The engine does not support equality of any other complex type, which it
@@ -83,7 +79,7 @@ class ShapeReconciliationTest {
   private static final String UCUM = "http://unitsofmeasure.org";
 
   // The names of a Patient have a use and given names, and those of its contacts have text, so
-  // the two HumanName shapes of the new layout each carry a field the other lacks.
+  // the two stored HumanName shapes each carry a field the other lacks.
   private static final List<String> PATIENTS =
       List.of(
           "{\"resourceType\":\"Patient\",\"id\":\"p1\","
@@ -125,28 +121,17 @@ class ShapeReconciliationTest {
 
   @TempDir static Path tempDir;
 
-  private Map<String, Dataset<Row>> patients;
+  private Dataset<Row> patients;
 
-  private Map<String, Dataset<Row>> observations;
+  private Dataset<Row> observations;
 
-  private Map<String, Dataset<Row>> questionnaires;
+  private Dataset<Row> questionnaires;
 
   @BeforeAll
   void setUp() {
-    patients = bothLayouts(fhirEncoders, "Patient", "patients", PATIENTS);
-    observations = bothLayouts(fhirEncoders, "Observation", "observations", OBSERVATIONS);
-    // The encoders of the unit test context do not nest a recursive type at all, so the item
-    // beneath
-    // an item would be absent on the previous layout. These nest it three deep, as the released
-    // encoders do by default, so that it is present and truncated.
-    final FhirEncoders nestingEncoders =
-        FhirEncoders.forR4()
-            .withExtensionsEnabled(true)
-            .withAllOpenTypes()
-            .withMaxNestingLevel(3)
-            .getOrCreate();
-    questionnaires =
-        bothLayouts(nestingEncoders, "Questionnaire", "questionnaires", QUESTIONNAIRES);
+    patients = stored("Patient", "patients", PATIENTS);
+    observations = stored("Observation", "observations", OBSERVATIONS);
+    questionnaires = stored("Questionnaire", "questionnaires", QUESTIONNAIRES);
   }
 
   // -----------------------------------------------------------------------------------------------
@@ -154,9 +139,9 @@ class ShapeReconciliationTest {
   // -----------------------------------------------------------------------------------------------
 
   @Test
-  void humanNamesHaveTwoShapesOnTheNewLayout() {
+  void humanNamesHaveTwoShapes() {
     // The precondition of every HumanName case below (T109).
-    final Dataset<Row> dataset = patients.get("pof");
+    final Dataset<Row> dataset = patients;
     assertThat(elementFields(valueType(dataset, ResourceType.PATIENT, "name")))
         .containsExactly("use", "family", "given");
     assertThat(elementFields(valueType(dataset, ResourceType.PATIENT, "contact.name")))
@@ -165,7 +150,7 @@ class ShapeReconciliationTest {
 
   @Nonnull
   Stream<Arguments> humanNameCases() {
-    return onBothLayouts(
+    return Stream.of(
         arguments("(name | contact.name).family.join(',')", List.of("p1=F1,C1", "p2=F2")),
         arguments("name.combine(contact.name).family.join(',')", List.of("p1=F1,C1", "p2=F2")),
         arguments("(name | contact.name).count()", List.of("p1=2", "p2=1")),
@@ -180,13 +165,11 @@ class ShapeReconciliationTest {
         arguments("(name | contact.name | name).count()", List.of("p1=2", "p2=1")));
   }
 
-  @ParameterizedTest(name = "{1} over the {0} layout")
+  @ParameterizedTest(name = "{0}")
   @MethodSource("humanNameCases")
   void humanNamesOfDifferentShapesCombine(
-      @Nonnull final String layout,
-      @Nonnull final String expression,
-      @Nonnull final List<String> expected) {
-    assertThat(evaluate(patients.get(layout), ResourceType.PATIENT, expression))
+      @Nonnull final String expression, @Nonnull final List<String> expected) {
+    assertThat(evaluate(patients, ResourceType.PATIENT, expression))
         .containsExactlyInAnyOrderElementsOf(expected);
   }
 
@@ -196,14 +179,14 @@ class ShapeReconciliationTest {
   void combinedHumanNamesAreInDefinitionOrder(@Nonnull final String expression) {
     // The merged structure carries the fields of both shapes, in the order of the definition of
     // HumanName, whichever operand comes first (FR-057).
-    assertThat(elementFields(valueType(patients.get("pof"), ResourceType.PATIENT, expression)))
+    assertThat(elementFields(valueType(patients, ResourceType.PATIENT, expression)))
         .containsExactly("use", "text", "family", "given");
   }
 
   @Test
-  void codingsAndQuantitiesHaveTwoShapesOnTheNewLayout() {
+  void codingsAndQuantitiesHaveTwoShapes() {
     // The precondition of every Coding and Quantity case below (T109).
-    final Dataset<Row> dataset = observations.get("pof");
+    final Dataset<Row> dataset = observations;
     assertThat(elementFields(valueType(dataset, ResourceType.OBSERVATION, "code.coding")))
         .containsExactly("system", "code", "display");
     assertThat(elementFields(valueType(dataset, ResourceType.OBSERVATION, "component.code.coding")))
@@ -221,7 +204,7 @@ class ShapeReconciliationTest {
 
   @Nonnull
   Stream<Arguments> codingAndQuantityCases() {
-    return onBothLayouts(
+    return Stream.of(
         // Equality of complex values.
         arguments("code.coding = component.code.coding", List.of("o1=true", "o2=null")),
         arguments("component.code.coding != code.coding", List.of("o1=false", "o2=null")),
@@ -258,13 +241,11 @@ class ShapeReconciliationTest {
             List.of("o1=ArraySeq(kg)", "o2=null")));
   }
 
-  @ParameterizedTest(name = "{1} over the {0} layout")
+  @ParameterizedTest(name = "{0}")
   @MethodSource("codingAndQuantityCases")
   void codingsAndQuantitiesOfDifferentShapesCompareAndCombine(
-      @Nonnull final String layout,
-      @Nonnull final String expression,
-      @Nonnull final List<String> expected) {
-    assertThat(evaluate(observations.get(layout), ResourceType.OBSERVATION, expression))
+      @Nonnull final String expression, @Nonnull final List<String> expected) {
+    assertThat(evaluate(observations, ResourceType.OBSERVATION, expression))
         .containsExactlyInAnyOrderElementsOf(expected);
   }
 
@@ -274,7 +255,7 @@ class ShapeReconciliationTest {
 
   @Nonnull
   Stream<Arguments> decimalCases() {
-    return onBothLayouts(
+    return Stream.of(
         // Arithmetic keeps the precision of its operands. The quotient is computed at scale 7,
         // 0.0014975, and then rounded to 0.001498. Casting both operands to DECIMAL(32,6) first
         // would compute it at scale 6 and give 0.001497.
@@ -286,13 +267,11 @@ class ShapeReconciliationTest {
         arguments("1.5.combine(1001.75).combine(1.5).count()", List.of("p1=3", "p2=3")));
   }
 
-  @ParameterizedTest(name = "{1} over the {0} layout")
+  @ParameterizedTest(name = "{0}")
   @MethodSource("decimalCases")
   void decimalsShareOneTypeOnlyWhereCombined(
-      @Nonnull final String layout,
-      @Nonnull final String expression,
-      @Nonnull final List<String> expected) {
-    assertThat(evaluate(patients.get(layout), ResourceType.PATIENT, expression))
+      @Nonnull final String expression, @Nonnull final List<String> expected) {
+    assertThat(evaluate(patients, ResourceType.PATIENT, expression))
         .containsExactlyInAnyOrderElementsOf(expected);
   }
 
@@ -300,13 +279,11 @@ class ShapeReconciliationTest {
   // T104b: one recursive type met at two depths.
   // -----------------------------------------------------------------------------------------------
 
-  @ParameterizedTest(name = "over the {0} layout")
-  @ValueSource(strings = {"previous", "pof"})
-  void itemsAtTwoDepthsHaveTwoShapes(@Nonnull final String layout) {
-    // The precondition of every item case below (T109). On the previous layout the encoder
-    // truncates the recursion at its nesting bound, so the item beneath an item is one level
-    // shallower. On the new layout the innermost item has no items of its own.
-    final Dataset<Row> dataset = questionnaires.get(layout);
+  @Test
+  void itemsAtTwoDepthsHaveTwoShapes() {
+    // The precondition of every item case below (T109). The innermost item has no items of its
+    // own.
+    final Dataset<Row> dataset = questionnaires;
     final DataType item = valueType(dataset, ResourceType.QUESTIONNAIRE, "item");
     final DataType nested = valueType(dataset, ResourceType.QUESTIONNAIRE, "item.item");
     assertThat(elementFields(item)).contains("item");
@@ -315,7 +292,7 @@ class ShapeReconciliationTest {
 
   @Nonnull
   Stream<Arguments> itemCases() {
-    return onBothLayouts(
+    return Stream.of(
         arguments("(item | item.item).linkId.join(',')", List.of("q1=1,2,1.1", "q2=")),
         arguments("item.item.combine(item).linkId.join(',')", List.of("q1=1.1,1,2", "q2=")),
         arguments("(item | item.item).count()", List.of("q1=3", "q2=0")),
@@ -326,67 +303,35 @@ class ShapeReconciliationTest {
             List.of("q1=1,1.1", "q2=")));
   }
 
-  @ParameterizedTest(name = "{1} over the {0} layout")
+  @ParameterizedTest(name = "{0}")
   @MethodSource("itemCases")
   void itemsAtTwoDepthsCombine(
-      @Nonnull final String layout,
-      @Nonnull final String expression,
-      @Nonnull final List<String> expected) {
-    assertThat(evaluate(questionnaires.get(layout), ResourceType.QUESTIONNAIRE, expression))
+      @Nonnull final String expression, @Nonnull final List<String> expected) {
+    assertThat(evaluate(questionnaires, ResourceType.QUESTIONNAIRE, expression))
         .containsExactlyInAnyOrderElementsOf(expected);
   }
 
-  @ParameterizedTest(name = "over the {0} layout")
-  @ValueSource(strings = {"previous", "pof"})
-  void itemsAtTwoDepthsDoNotCompare(@Nonnull final String layout) {
+  @Test
+  void itemsAtTwoDepthsDoNotCompare() {
     // An item has no FHIRPath type, and the engine does not support equality of such a type. It
     // says so before any shape is consulted, so this is not a reconciliation failure.
     assertThatThrownBy(
-            () ->
-                evaluate(
-                    questionnaires.get(layout),
-                    ResourceType.QUESTIONNAIRE,
-                    "item.item.first() in item"))
+            () -> evaluate(questionnaires, ResourceType.QUESTIONNAIRE, "item.item.first() in item"))
         .hasRootCauseInstanceOf(UnsupportedFhirPathFeatureError.class);
   }
 
-  @Nonnull
-  private static Stream<Arguments> onBothLayouts(@Nonnull final Arguments... cases) {
-    return Stream.of(cases)
-        .flatMap(
-            c ->
-                Stream.of("previous", "pof")
-                    .map(layout -> arguments(layout, c.get()[0], c.get()[1])));
-  }
-
-  @Nonnull
-  private Map<String, Dataset<Row>> bothLayouts(
-      @Nonnull final FhirEncoders encoders,
-      @Nonnull final String resourceType,
-      @Nonnull final String name,
-      @Nonnull final List<String> json) {
-    return Map.of(
-        "previous",
-        stored(encoders, TestLayout.PREVIOUS, resourceType, name, json),
-        "pof",
-        stored(encoders, TestLayout.POF, resourceType, name, json));
-  }
-
   /**
-   * Builds the fixtures in a layout, and writes them to Parquet and reads them back, so that the
-   * engine reads stored files.
+   * Builds the fixtures, and writes them to Parquet and reads them back, so that the engine reads
+   * stored files.
    */
   @Nonnull
   private Dataset<Row> stored(
-      @Nonnull final FhirEncoders encoders,
-      @Nonnull final TestLayout layout,
       @Nonnull final String resourceType,
       @Nonnull final String name,
       @Nonnull final List<String> json) {
     final Dataset<Row> dataset =
-        LayoutDatasets.fromJson(spark, encoders, layout, resourceType, json);
-    return PrunedSchemaReader.write(dataset, tempDir.resolve(layout + "-" + name).toString())
-        .read();
+        PofDatasets.fromJson(spark, fhirEncoders.getContext(), resourceType, json);
+    return PrunedSchemaReader.write(dataset, tempDir.resolve(name).toString()).read();
   }
 
   @Nonnull

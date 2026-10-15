@@ -23,6 +23,12 @@ Catalyst-based encoders. Refused on read; reachable only through the legacy
 export.
 _Avoid_: previous layout, old layout, earlier layout
 
+**Layout column**:
+The root column, `__layout_v<n>`, that names the version of the PoF layout a
+dataset follows. Recognised by its name and type; its values are all null. Not
+an annotation.
+_Avoid_: layout marker, version column
+
 **Legacy export**:
 The conversion of a legacy-layout table to FHIR JSON, from which it is
 re-imported into the PoF layout. Lossy.

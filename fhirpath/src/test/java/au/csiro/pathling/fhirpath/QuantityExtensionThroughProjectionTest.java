@@ -25,8 +25,7 @@ import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluator;
 import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluatorBuilder;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.test.SpringBootUnitTest;
-import au.csiro.pathling.test.layout.LayoutDatasets;
-import au.csiro.pathling.test.layout.TestLayout;
+import au.csiro.pathling.test.layout.PofDatasets;
 import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.Map;
@@ -51,8 +50,7 @@ import org.springframework.beans.factory.annotation.Autowired;
  * <p>A quantity is held in the stored shape and decoded only where it is computed with (decision
  * 82). {@code distinct()} compares quantities by their decoded, unit-aware values, and keeps the
  * first stored element of each set of equal ones, so the extension of the result is that of the
- * first occurrence. {@code select(...)} returns what its projection returns. Every case runs on
- * both layouts in the same run.
+ * first occurrence. {@code select(...)} returns what its projection returns.
  *
  * @author Piotr Szul
  */
@@ -90,11 +88,8 @@ class QuantityExtensionThroughProjectionTest {
     datasets =
         Map.of(
             "pof",
-            LayoutDatasets.fromJson(
-                spark, fhirEncoders, TestLayout.POF, "Observation", List.of(EXTENDED, BARE)),
-            "previous",
-            LayoutDatasets.fromJson(
-                spark, fhirEncoders, TestLayout.PREVIOUS, "Observation", List.of(EXTENDED, BARE)));
+            PofDatasets.fromJson(
+                spark, fhirEncoders.getContext(), "Observation", List.of(EXTENDED, BARE)));
   }
 
   @Nonnull

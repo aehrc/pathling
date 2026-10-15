@@ -26,8 +26,8 @@ import java.util.Properties;
  * it was meant to select it but is spelled differently.
  *
  * <p>This repository has test configuration that silently does nothing when it is misnamed, so a
- * near miss such as {@code pathling.test.layout} or {@code pathling.testlayout} fails rather than
- * leaving the dimension on its default while the build reports green.
+ * near miss such as {@code pathling.test.schemaMode} or {@code pathling.testschemamode} fails
+ * rather than leaving the dimension on its default while the build reports green.
  *
  * @author Piotr Szul
  */

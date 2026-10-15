@@ -29,8 +29,7 @@ import au.csiro.pathling.test.SharedMocks;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.datasource.PrunedSchemaReader;
 import au.csiro.pathling.test.helpers.TerminologyServiceHelpers;
-import au.csiro.pathling.test.layout.LayoutDatasets;
-import au.csiro.pathling.test.layout.TestLayout;
+import au.csiro.pathling.test.layout.PofDatasets;
 import jakarta.annotation.Nonnull;
 import java.nio.file.Path;
 import java.util.List;
@@ -59,10 +58,8 @@ import org.springframework.beans.factory.annotation.Autowired;
  *
  * <p>The terminology functions read the codings of a CodeableConcept as one array per concept, so
  * that the concept is judged as a whole. Where the schema lacks the codings, the concept holds
- * none, and each function yields empty. The new layout omits an element that no row populates, so a
- * category holding only text, or no category at all, is ordinary data there. The previous layout
- * carries every element, so there the element is removed from the schema, as it is from a pruned
- * table. Every case runs on both layouts in the same run.
+ * none, and each function yields empty. The Parquet on FHIR layout omits an element that no row
+ * populates, so a category holding only text, or no category at all, is ordinary data.
  *
  * @author Piotr Szul
  */
@@ -111,34 +108,17 @@ class AbsentCodingTerminologyTest {
 
   @BeforeAll
   void setUp() {
-    final PrunedSchemaReader previousUncoded =
-        write(TestLayout.PREVIOUS, "previous-uncoded", TEXT_ONLY_CODE, NO_CODE, TEXT_ONLY_CATEGORY);
-    final PrunedSchemaReader previousCoded =
-        write(TestLayout.PREVIOUS, "previous-coded", CODED, TEXT_ONLY_CODE);
     // Every dataset here holds no coding in any code or category.
     uncoded =
         Map.of(
-            "pof, code with only text, category with only text",
-            write(TestLayout.POF, "pof-text", TEXT_ONLY_CODE, NO_CODE, TEXT_ONLY_CATEGORY).read(),
-            "pof, no code, category with only text",
-            write(TestLayout.POF, "pof-no-code", TEXT_ONLY_CATEGORY).read(),
-            "pof, neither code nor category",
-            write(TestLayout.POF, "pof-neither", NO_CODE).read(),
-            "previous, full schema",
-            previousUncoded.read(),
-            "previous, without code.coding and category.coding",
-            previousUncoded.readWithout("code.coding", "category.coding"),
-            "previous, without code and category",
-            previousUncoded.readWithout("code", "category"));
+            "code with only text, category with only text",
+            write("text", TEXT_ONLY_CODE, NO_CODE, TEXT_ONLY_CATEGORY).read(),
+            "no code, category with only text",
+            write("no-code", TEXT_ONLY_CATEGORY).read(),
+            "neither code nor category",
+            write("neither", NO_CODE).read());
     // Every dataset here holds a coded code, and no category.
-    coded =
-        Map.of(
-            "pof",
-            write(TestLayout.POF, "pof-coded", CODED, TEXT_ONLY_CODE).read(),
-            "previous, full schema",
-            previousCoded.read(),
-            "previous, without category",
-            previousCoded.readWithout("category"));
+    coded = Map.of("coded code, no category", write("coded", CODED, TEXT_ONLY_CODE).read());
   }
 
   @BeforeEach
@@ -157,9 +137,7 @@ class AbsentCodingTerminologyTest {
             arguments("code.subsumedBy(" + SNOMED + "|123).empty()", "true"),
             arguments("code.where(memberOf('" + VALUE_SET + "')).exists()", "false"),
             arguments("code.select(memberOf('" + VALUE_SET + "')).empty()", "true"),
-            // A repeating concept is compared by its value rather than by emptiness, because the
-            // previous layout gives a category without codings a null result that counts as an
-            // item.
+            // A repeating concept is compared by its value rather than by emptiness.
             arguments("category.memberOf('" + VALUE_SET + "')", "null"),
             arguments("category.where(memberOf('" + VALUE_SET + "')).exists()", "false"),
             arguments("category.select(subsumes(" + SNOMED + "|123))", "null"))
@@ -219,10 +197,9 @@ class AbsentCodingTerminologyTest {
   }
 
   @Nonnull
-  private PrunedSchemaReader write(
-      @Nonnull final TestLayout layout, @Nonnull final String name, @Nonnull final String... json) {
+  private PrunedSchemaReader write(@Nonnull final String name, @Nonnull final String... json) {
     final Dataset<Row> dataset =
-        LayoutDatasets.fromJson(spark, fhirEncoders, layout, "Condition", List.of(json));
+        PofDatasets.fromJson(spark, fhirEncoders.getContext(), "Condition", List.of(json));
     return PrunedSchemaReader.write(dataset, tempDir.resolve(name).toString());
   }
 

@@ -18,7 +18,6 @@
 package au.csiro.pathling.fhirpath.column;
 
 import au.csiro.pathling.encoders.ColumnFunctions;
-import au.csiro.pathling.fhirpath.collection.QuantityCollection;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import java.util.function.UnaryOperator;
@@ -214,35 +213,7 @@ public final class ResourceRepresentation extends ColumnRepresentation {
       @Nonnull final String fieldName,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final DataType fallback) {
-    return DefaultRepresentation.decodeField(
-        readField(fieldName, fhirType, fallback).removeNulls(), fhirType);
-  }
-
-  /**
-   * Reads a top-level field in the shape the new layout gives it, on either layout, normalising the
-   * previous layout's shape where the field's type is stored differently there.
-   */
-  @Nonnull
-  private ColumnRepresentation readField(
-      @Nonnull final String fieldName,
-      @Nonnull final Optional<FHIRDefinedType> fhirType,
-      @Nonnull final DataType fallback) {
-    if (fhirType.filter(FHIRDefinedType.DECIMAL::equals).isPresent()) {
-      // A decimal is read as text, with the previous layout's value and scale columns normalised
-      // to it.
-      return existing(ColumnFunctions.decimalColumnOrNull(fieldName, fallback));
-    }
-    if (fhirType.filter(QuantityCollection.QUANTITY_TYPES::contains).isPresent()) {
-      // A quantity, of any of the quantity types, is read with the previous layout's canonical
-      // form and value scale normalised away.
-      return existing(ColumnFunctions.quantityColumnOrNull(fieldName, fallback));
-    }
-    if (fhirType.filter(FHIRDefinedType.INSTANT::equals).isPresent()) {
-      // An instant is read as text, with the previous layout's timestamp normalised to its text in
-      // UTC (decision 81).
-      return existing(ColumnFunctions.instantColumnOrNull(fieldName, fallback));
-    }
-    return getField(fieldName, fallback);
+    return DefaultRepresentation.decodeField(getField(fieldName, fallback).removeNulls(), fhirType);
   }
 
   /**
@@ -269,9 +240,8 @@ public final class ResourceRepresentation extends ColumnRepresentation {
   }
 
   /**
-   * Traverses to the extensions of the resource itself, on either layout (decision 75). The
-   * resource's {@code extension}, {@code _fid} and {@code _extension} columns are all reached
-   * through the tolerant table-column reference.
+   * Traverses to the extensions of the resource itself (decision 75). The resource's {@code
+   * extension} column is reached through the tolerant table-column reference.
    *
    * @return a {@link DefaultRepresentation} holding the extensions of the resource
    */

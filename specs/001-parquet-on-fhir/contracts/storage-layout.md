@@ -144,18 +144,19 @@ the resource type, the detected layout and the remedy. Its sinks do the same for
 the target they write into, before any schema merge is attempted, so a write
 into a dataset written by an earlier release cannot quietly leave one table
 carrying both layouts. The check can be disabled per source for the case where
-the detector misclassifies conforming data; the data is then read as it is.
+the detector misclassifies conforming data. It does not make previous-layout
+data readable: the engine reads only this layout (ADR-0001, FR-046), and makes
+no layout check beyond detection at read time (decision 132). Previous-layout
+data that bypasses detection (a source with detection disabled, a dataset the
+caller supplies, a dataset built with the previous encoder) is unsupported: the
+caller owns the consequences, and results are undefined.
 
-**Provisional, pending T049a.** The query engine itself retains a reader for the
-previous layout from M2 until it is removed in M7, which is what lets the engine
-be converted behind a green build. Whether the *source boundary* keeps refusing
-earlier-layout data, refuses by default but routes under the existing opt-out, or
-routes outright is not yet settled. Only the first is described above, and it is
-what M4 implements. The site's storage layout page describes that refusal; no
-milestone is released before M7, so T049a must confirm or revise both this
-section and the page before the release (decision 117).
-
-Migration of data at rest is separate work: a version gate by default, and an
-opt-in rewrite tool built from the retained previous implementation. A migrated
-warehouse does not carry the round-trip guarantee — the previous layout had
-already truncated long decimals and dropped `contained`. A re-imported one does.
+Migration of data at rest is by re-import. Where the source still exists,
+re-importing it loses nothing. Where it does not, the legacy export (FR-064, the
+`legacy-export` module) decodes a previous-layout Parquet or Delta table with the
+previous encoder and writes FHIR NDJSON, which the NDJSON source re-imports. An
+exported warehouse does not carry the round-trip guarantee: the previous layout
+had already rounded decimals to six places and dropped `contained`, among the
+losses the module documents. A re-imported one does. The site's storage layout
+page describes the refusal, the unsupported bypass routes and both migration routes (decision 117,
+ticket 07).

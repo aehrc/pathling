@@ -8,9 +8,24 @@ It must not fire on System values the engine builds itself. Decision 100 is the 
 
 **Blocked by:** 03
 
-**Status:** ready-for-agent
+**Status:** wontfix
 
 - [ ] Tests come first. A failing test exists for each route: detection disabled, a caller-supplied legacy dataset, and a `FhirEncoders`-built dataset.
 - [ ] Each failure names the column and is raised once per schema. A test shows it is not evaluated per row, for example by asserting it is raised at analysis or plan time.
 - [ ] Engine-built System.Quantity values, and Coding values while #2804 is open, do not trigger it.
 - [ ] The full `fhirpath` suite passes over the PoF layout.
+
+## Comments
+
+### Dropped (decision 132, 2026-10-15)
+
+Implemented on `issue/2829-legacy-column-failure` and not merged. The owner decided that the engine
+makes no check for the legacy layout beyond detection: data that bypasses detection is unsupported,
+and the caller owns the consequences. FR-053 is withdrawn. The check could not have been complete
+in any case, because the legacy layout's extensions, kept in the root `_extension` map, are not
+told apart by type. Detection is made exact instead, by the layout column (ticket 29).
+
+The branch was deleted at `e6e9592935`, recoverable from the reflog while it lasts. Its one commit
+that did not belong to this ticket, `67ab046dc2`, which corrected a `library-api` rendering test
+ticket 03 had left failing, was cherry-picked onto `issue/2829`. The logs are in
+`.local/work/issue/2829-legacy-column-failure/` in the main checkout.

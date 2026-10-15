@@ -150,7 +150,7 @@ public class DefaultRepresentation extends ColumnRepresentation {
 
   /**
    * Decodes a traversed field for computation, by its FHIR type. The field has been read in the
-   * shape the new layout gives it, on either layout.
+   * shape it is stored in.
    *
    * <p>A quantity is not decoded here. It stays in the stored shape, so that it keeps its
    * extensions, and the quantity collection decodes it where it is computed with.
@@ -168,7 +168,7 @@ public class DefaultRepresentation extends ColumnRepresentation {
       // If the field is a base64Binary, represent it using a BinaryRepresentation.
       return DefaultRepresentation.fromBinaryColumn(field.getValue());
     } else if (FHIRDefinedType.DECIMAL.equals(resolvedFhirType)) {
-      // A decimal is read as text on either layout, and decoded for computation.
+      // A decimal is read as text, and decoded for computation.
       return DecimalCollection.decode(field);
     } else {
       // Otherwise, use the field as it was traversed.

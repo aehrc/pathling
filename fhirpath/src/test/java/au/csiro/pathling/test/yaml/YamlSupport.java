@@ -38,7 +38,6 @@ import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.encoding.CodingSchema;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import au.csiro.pathling.fhirpath.literal.CodingLiteral;
-import au.csiro.pathling.test.layout.TestLayout;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonSerializer;
@@ -136,22 +135,16 @@ public class YamlSupport {
         throws IOException {
       final FhirPathQuantity quantity = FhirPathQuantity.parse(quantityLiteral.toString());
 
-      // No canonical form is written: the engine computes it from the value and code when it
-      // decodes a stored quantity, and does not read a stored one.
+      // The quantity is written in the fixed shape of a System quantity (FR-059): its value is the
+      // plain text of the literal's value, and no canonical form is written, because the engine
+      // computes it from the value and code.
       gen.writeStartObject();
-      // id field - always null for literals
       gen.writeNullField("id");
-      // value and value_scale
-      gen.writeNumberField("value", quantity.getValue());
-      gen.writeNumberField("value_scale", quantity.getValue().scale());
-      // comparator - not used in FhirPathQuantity
+      gen.writeStringField("value", quantity.getValue().toPlainString());
       gen.writeNullField("comparator");
-      // unit, system, code
       gen.writeStringField("unit", quantity.getUnitName());
       gen.writeStringField("system", quantity.getSystem());
       gen.writeStringField("code", quantity.getCode());
-      // _fid field - always null for literals
-      gen.writeNullField("_fid");
       gen.writeEndObject();
     }
   }
@@ -490,27 +483,22 @@ public class YamlSupport {
   }
 
   /**
-   * Returns the schema a subject is stored with in a layout. On the new layout a decimal is stored
+   * Returns the schema a subject is stored with in the Parquet on FHIR layout. A decimal is stored
    * as text, which the engine decodes at traversal (FR-002), and a quantity as its FHIR structure,
    * with the value as text and no canonical form, which the engine computes at traversal (FR-022).
-   * A Coding is stored with only the fields that the codings at its path populate, without the
-   * previous layout's field id, as the new layout prunes it (FR-025). On the previous layout the
-   * subject keeps the types the engine computes with, as it always has.
+   * A Coding is stored with only the fields that the codings at its path populate, as the layout
+   * prunes it (FR-025).
    *
    * @param resourceDefinition the definition of the subject
    * @param subject the subject, which decides the fields of a pruned structure
-   * @param layout the layout to store the subject in
    * @return the schema of the stored subject
    */
   @Nonnull
   public static StructType definitionToStruct(
       @Nonnull final DefaultResourceDefinition resourceDefinition,
-      @Nonnull final Map<Object, Object> subject,
-      @Nonnull final TestLayout layout) {
+      @Nonnull final Map<Object, Object> subject) {
     return childrenToStruct(
-        resourceDefinition.getChildren(),
-        (type, values) -> storedType(type, values, layout),
-        List.of(subject));
+        resourceDefinition.getChildren(), YamlSupport::storedType, List.of(subject));
   }
 
   @Nonnull
@@ -521,12 +509,7 @@ public class YamlSupport {
 
   @Nullable
   private static DataType storedType(
-      @Nonnull final FHIRDefinedType type,
-      @Nonnull final List<?> values,
-      @Nonnull final TestLayout layout) {
-    if (!layout.isPof()) {
-      return FHIR_TO_SQL.get(type);
-    }
+      @Nonnull final FHIRDefinedType type, @Nonnull final List<?> values) {
     return switch (type) {
       case DECIMAL -> DataTypes.StringType;
       case QUANTITY -> STORED_QUANTITY;
@@ -660,29 +643,26 @@ public class YamlSupport {
   }
 
   /**
-   * Returns a subject as the JSON it is stored from in a layout, to be read with the schema {@link
-   * #definitionToStruct(DefaultResourceDefinition, Map, TestLayout)} gives it.
+   * Returns a subject as the JSON it is stored from, to be read with the schema {@link
+   * #definitionToStruct(DefaultResourceDefinition, Map)} gives it.
    *
-   * <p>On the new layout every decimal is written as a JSON string. Spark reads a string token into
-   * a text column verbatim, whereas it would re-serialise a number token, so a decimal given as a
-   * typed literal is stored with exactly the text of the literal. A decimal given as a number is
-   * stored as the text of the double. A quantity is written as its FHIR structure, with its value
-   * as text in the same way.
+   * <p>Every decimal is written as a JSON string. Spark reads a string token into a text column
+   * verbatim, whereas it would re-serialise a number token, so a decimal given as a typed literal
+   * is stored with exactly the text of the literal. A decimal given as a number is stored as the
+   * text of the double. A quantity is written as its FHIR structure, with its value as text in the
+   * same way.
    *
    * @param objectModel the subject
-   * @param layout the layout to store the subject in
    * @return the subject as JSON
    */
   @Nonnull
   @SuppressWarnings("unchecked")
-  public static String subjectToJson(
-      @Nonnull final Map<Object, Object> objectModel, @Nonnull final TestLayout layout) {
-    return omToJson(
-        layout.isPof() ? (Map<Object, Object>) asStoredOnNewLayout(objectModel) : objectModel);
+  public static String subjectToJson(@Nonnull final Map<Object, Object> objectModel) {
+    return omToJson((Map<Object, Object>) asStored(objectModel));
   }
 
   @Nullable
-  private static Object asStoredOnNewLayout(@Nullable final Object value) {
+  private static Object asStored(@Nullable final Object value) {
     return switch (value) {
       case final Double number -> Double.toString(number);
       case final FhirTypedLiteral literal
@@ -698,10 +678,10 @@ public class YamlSupport {
         // A map is copied entry by entry, because a subject can carry null values, which the
         // stream collectors reject.
         final Map<Object, Object> copy = new LinkedHashMap<>();
-        map.forEach((key, entry) -> copy.put(key, asStoredOnNewLayout(entry)));
+        map.forEach((key, entry) -> copy.put(key, asStored(entry)));
         yield copy;
       }
-      case final List<?> list -> list.stream().map(YamlSupport::asStoredOnNewLayout).toList();
+      case final List<?> list -> list.stream().map(YamlSupport::asStored).toList();
       case null, default -> value;
     };
   }
@@ -723,8 +703,7 @@ public class YamlSupport {
 
   /**
    * Returns a Coding with every field the new layout can store for it, including whether it was
-   * selected by the user, which the previous layout's writer leaves out. A field the schema has
-   * pruned is ignored when the subject is read.
+   * selected by the user. A field the schema has pruned is ignored when the subject is read.
    */
   @Nonnull
   private static Map<Object, Object> storedCoding(@Nonnull final Coding coding) {

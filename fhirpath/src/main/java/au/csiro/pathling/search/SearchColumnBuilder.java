@@ -217,8 +217,8 @@ public class SearchColumnBuilder {
     final Collection result = evaluator.evaluate(fhirPath);
 
     // Get the Column value - for boolean expressions this should be a scalar boolean. A value is
-    // returned in the form the engine computes with, so that a quantity has the same structure
-    // whatever the layout.
+    // returned in the form the engine computes with, so that a quantity is a System quantity, in
+    // its fixed shape, whatever the layout (FR-059).
     return result.toEngineForm().getColumn().getValue();
   }
 

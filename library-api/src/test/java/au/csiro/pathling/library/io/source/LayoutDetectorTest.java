@@ -286,8 +286,8 @@ class LayoutDetectorTest {
   }
 
   /**
-   * A new-layout table carrying a nested {@code _fid}, as a coding a terminology function returned
-   * does, is the new layout and accepted, with the field still cited as evidence (decision 100).
+   * A new-layout table carrying a nested {@code _fid}, without the root versioned id, is the new
+   * layout and accepted, with the field still cited as evidence (decision 100).
    */
   @Test
   void newLayoutSchemaWithOneNestedPreviousLayoutFieldIsAccepted() {

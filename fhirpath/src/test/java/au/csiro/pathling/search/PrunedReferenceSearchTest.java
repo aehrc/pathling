@@ -20,12 +20,11 @@ package au.csiro.pathling.search;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
-import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.datasource.DatasetDataSource;
 import au.csiro.pathling.test.datasource.PrunedSchemaReader;
-import au.csiro.pathling.test.layout.LayoutDatasets;
-import au.csiro.pathling.test.layout.TestLayout;
+import au.csiro.pathling.test.layout.PofDatasets;
+import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
 import java.nio.file.Path;
 import java.util.List;
@@ -67,7 +66,7 @@ class PrunedReferenceSearchTest {
 
   @Autowired SparkSession spark;
 
-  @Autowired FhirEncoders encoders;
+  @Autowired FhirContext fhirContext;
 
   @TempDir static Path tempDir;
 
@@ -83,16 +82,16 @@ class PrunedReferenceSearchTest {
   void setUp() {
     final PrunedSchemaReader observations =
         PrunedSchemaReader.write(
-            LayoutDatasets.fromResources(
+            PofDatasets.fromResources(
                 spark,
-                encoders,
-                TestLayout.active(),
+                fhirContext,
                 "Observation",
                 List.of(
                     observation("1", "Patient/p1", "Practitioner/pr1"),
                     observation("2", "Patient/p2", "Practitioner/pr2"))),
             tempDir.resolve("observations").toString(),
-            encoders.of("Observation").schema());
+            fhirContext,
+            "Observation");
     datasets =
         Map.of(
             "full", observations.read(),
@@ -129,7 +128,7 @@ class PrunedReferenceSearchTest {
       @Nonnull final List<String> expectedIds) {
     final FhirSearchExecutor executor =
         FhirSearchExecutor.withRegistry(
-            encoders.getContext(),
+            fhirContext,
             new DatasetDataSource(Map.of("Observation", datasets.get(dataset))),
             registry);
     final Dataset<Row> results =

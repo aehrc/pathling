@@ -47,8 +47,7 @@ coding_row <- function(system, code) {
     version = NA,
     code = code,
     display = NA,
-    userSelected = NA,
-    `_fid` = NA
+    userSelected = NA
   )
   jsonlite::toJSON(
     as.list(coding),

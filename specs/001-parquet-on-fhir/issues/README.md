@@ -18,10 +18,10 @@ way out.
 
 - [02](02-port-fhirencoders-tests-to-pof.md) Port the engine tests that encode via FhirEncoders to the PoF layout
 - [03](03-system-quantity-fixed-shape.md) Engine-built System.Quantity takes one fixed shape, not the legacy one
-- [04](04-loud-failure-legacy-column.md) Fail loudly on a legacy-typed column at traversal
+- ~~[04](04-loud-failure-legacy-column.md) Fail loudly on a legacy-typed column at traversal~~ (dropped, decision 132)
 - [05](05-remove-legacy-normalisation.md) Remove the legacy-layout normalisation, its test dimension and CI job
 - [06](06-legacy-export.md) Legacy export: legacy Parquet/Delta to FHIR NDJSON, as a component and CLI
-- [07](07-legacy-export-docs-and-server-followup.md) Document the legacy export and FR-053; raise the server migration issue
+- [07](07-legacy-export-docs-and-server-followup.md) Document the legacy export; raise the server migration issue
 
 ## Stage 2: Harden and measure (#2830)
 
@@ -47,8 +47,13 @@ extensions are stored.
 - [09](09-decide-column-binding.md) Decide whether column expressions are bound to a schema
 - [16](16-placeholder-ingest-egress-rework.md) PLACEHOLDER: ingest and egress rework per the spike
 - [17](17-placeholder-primitive-metadata-group.md) PLACEHOLDER: the primitive metadata group (US6, #437)
+- [29](29-layout-version-column.md) Identify the PoF layout by a versioned layout column
+- [30](30-pof-spec-layout-column.md) Propose the layout column as an amendment to the Parquet on FHIR specification
 
 Tickets 16 and 17 are rewritten from the spike's findings before they are built.
+Ticket 29 adds the layout column to the rebuilt ingest, so it follows 16. Until it
+lands, the refusal of the legacy layout rests on the root `id_versioned`. Ticket 30
+can start at any time; 29 takes its name from 30 if 30 is agreed first.
 
 ## Stage 4: Schema annotations (#2832)
 

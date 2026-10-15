@@ -27,12 +27,10 @@ import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluatorBuilder;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.datasource.PrunedSchemaReader;
-import au.csiro.pathling.test.layout.LayoutDatasets;
-import au.csiro.pathling.test.layout.TestLayout;
+import au.csiro.pathling.test.layout.PofDatasets;
 import jakarta.annotation.Nonnull;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -50,6 +48,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 
 /**
@@ -72,7 +71,7 @@ class CombiningPlanSizeTest {
   private static final Parser PARSER = new Parser();
 
   // The names of a Patient have given names, and those of its contacts have text, so that the two
-  // HumanName shapes of the new layout differ.
+  // stored HumanName shapes differ.
   private static final List<String> PATIENTS =
       List.of(
           "{\"resourceType\":\"Patient\",\"id\":\"p1\","
@@ -89,30 +88,18 @@ class CombiningPlanSizeTest {
 
   @TempDir static Path tempDir;
 
-  private Map<String, Dataset<Row>> patients;
+  private Dataset<Row> patients;
 
   @BeforeAll
   void setUp() {
-    patients =
-        Map.of(
-            "previous",
-            stored(TestLayout.PREVIOUS, "previous"),
-            "pof",
-            stored(TestLayout.POF, "pof"));
+    patients = stored();
     setUpObservations();
   }
 
-  @Nonnull
-  Stream<Arguments> chains() {
-    return Stream.of("previous", "pof")
-        .flatMap(layout -> Stream.of(arguments(layout, "union"), arguments(layout, "combine")));
-  }
-
-  @ParameterizedTest(name = "{1} over the {0} layout")
-  @MethodSource("chains")
-  void chainedCombinationGrowsThePlanLinearly(
-      @Nonnull final String layout, @Nonnull final String form) {
-    final Dataset<Row> dataset = patients.get(layout);
+  @ParameterizedTest(name = "{0}")
+  @ValueSource(strings = {"union", "combine"})
+  void chainedCombinationGrowsThePlanLinearly(@Nonnull final String form) {
+    final Dataset<Row> dataset = patients;
     final long shortSize = analysedSize(dataset, chain(form, SHORT_CHAIN));
     final long longSize = analysedSize(dataset, chain(form, LONG_CHAIN));
 
@@ -123,19 +110,19 @@ class CombiningPlanSizeTest {
         .isLessThanOrEqualTo(3 * shortSize);
   }
 
-  @ParameterizedTest(name = "{1} over the {0} layout")
-  @MethodSource("chains")
-  void chainedCombinationKeepsItsValues(@Nonnull final String layout, @Nonnull final String form) {
+  @ParameterizedTest(name = "{0}")
+  @ValueSource(strings = {"union", "combine"})
+  void chainedCombinationKeepsItsValues(@Nonnull final String form) {
     // The union of the alternating names is the two distinct names, and their combination keeps
     // every one of the nine operands.
     final String expected = "union".equals(form) ? "p1=F1,C1" : "p1=F1,C1,F1,C1,F1,C1,F1,C1,F1";
-    assertThat(evaluate(patients.get(layout), "(" + chain(form, LONG_CHAIN) + ").family.join(',')"))
+    assertThat(evaluate(patients, "(" + chain(form, LONG_CHAIN) + ").family.join(',')"))
         .containsExactly(expected);
   }
 
   // The Coding of an Observation's code carries a display and that of a component's code does not,
   // and the Observation's quantity carries a unit and the component's does not, so that each pair
-  // has two shapes on the new layout.
+  // has two stored shapes.
   private static final List<String> OBSERVATIONS =
       List.of(
           "{\"resourceType\":\"Observation\",\"id\":\"o1\",\"status\":\"final\","
@@ -146,27 +133,18 @@ class CombiningPlanSizeTest {
               + "\"valueQuantity\":{\"value\":3,\"system\":\"http://unitsofmeasure.org\","
               + "\"code\":\"g\"}}]}");
 
-  private Map<String, Dataset<Row>> observations;
+  private Dataset<Row> observations;
 
   private void setUpObservations() {
-    observations =
-        Map.of(
-            "previous",
-            storedObservations(TestLayout.PREVIOUS, "previous-observations"),
-            "pof",
-            storedObservations(TestLayout.POF, "pof-observations"));
+    observations = storedObservations();
   }
 
   @Nonnull
   Stream<Arguments> customEqualityChains() {
-    return Stream.of("previous", "pof")
-        .flatMap(
-            layout ->
-                Stream.of(
-                    arguments(layout, "code.coding", "component.code.coding"),
-                    arguments(layout, "code.coding", "code.coding"),
-                    arguments(
-                        layout, "value.ofType(Quantity)", "component.value.ofType(Quantity)")));
+    return Stream.of(
+        arguments("code.coding", "component.code.coding"),
+        arguments("code.coding", "code.coding"),
+        arguments("value.ofType(Quantity)", "component.value.ofType(Quantity)"));
   }
 
   /**
@@ -175,11 +153,11 @@ class CombiningPlanSizeTest {
    * held once for each reading, a chain would double at every level in both the analysed and the
    * optimised plan.
    */
-  @ParameterizedTest(name = "{1} | {2} over the {0} layout")
+  @ParameterizedTest(name = "{0} | {1}")
   @MethodSource("customEqualityChains")
   void chainedUnionWithCustomEqualityGrowsThePlanLinearly(
-      @Nonnull final String layout, @Nonnull final String even, @Nonnull final String odd) {
-    final Dataset<Row> dataset = observations.get(layout);
+      @Nonnull final String even, @Nonnull final String odd) {
+    final Dataset<Row> dataset = observations;
     final Dataset<Row> shortChain = unionChain(dataset, even, odd, SHORT_CHAIN);
     final Dataset<Row> longChain = unionChain(dataset, even, odd, LONG_CHAIN);
 
@@ -223,11 +201,10 @@ class CombiningPlanSizeTest {
   }
 
   @Nonnull
-  private Dataset<Row> storedObservations(
-      @Nonnull final TestLayout layout, @Nonnull final String name) {
+  private Dataset<Row> storedObservations() {
     final Dataset<Row> dataset =
-        LayoutDatasets.fromJson(spark, fhirEncoders, layout, "Observation", OBSERVATIONS);
-    return PrunedSchemaReader.write(dataset, tempDir.resolve(name).toString()).read();
+        PofDatasets.fromJson(spark, fhirEncoders.getContext(), "Observation", OBSERVATIONS);
+    return PrunedSchemaReader.write(dataset, tempDir.resolve("observations").toString()).read();
   }
 
   /**
@@ -277,14 +254,14 @@ class CombiningPlanSizeTest {
   }
 
   /**
-   * Builds the fixtures in a layout, and writes them to Parquet and reads them back, so that the
-   * engine reads stored files.
+   * Builds the fixtures, and writes them to Parquet and reads them back, so that the engine reads
+   * stored files.
    */
   @Nonnull
-  private Dataset<Row> stored(@Nonnull final TestLayout layout, @Nonnull final String name) {
+  private Dataset<Row> stored() {
     final Dataset<Row> dataset =
-        LayoutDatasets.fromJson(spark, fhirEncoders, layout, "Patient", PATIENTS);
-    return PrunedSchemaReader.write(dataset, tempDir.resolve(name).toString()).read();
+        PofDatasets.fromJson(spark, fhirEncoders.getContext(), "Patient", PATIENTS);
+    return PrunedSchemaReader.write(dataset, tempDir.resolve("patients").toString()).read();
   }
 
   @Nonnull

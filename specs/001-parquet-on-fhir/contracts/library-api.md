@@ -149,6 +149,30 @@ an element in the same read, across all of its files, not only the offending
 one. Malformed JSON still fails
 the read.
 
+### A quantity the engine builds has a fixed shape
+
+**Behaviour change.** A `System.Quantity` that reaches a caller as a column —
+from the expression-to-column API, or a view column declared `Quantity` — has
+the fixed shape the [engine semantics](engine-semantics.md#quantities) give it:
+`id`, `value`, `comparator`, `unit`, `system` and `code`, each a string, with
+the value as the text of the decimal. It previously had the previous layout's
+shape, with a fixed-scale decimal value, its `value_scale`, the
+`_value_canonicalized` and `_code_canonicalized` fields and `_fid` (FR-059).
+A quantity read from the data keeps the fitted shape of the data it came from.
+
+### A Coding the engine builds has six fields
+
+**Behaviour change.** A `System.Coding` that reaches a caller — from a
+terminology function such as `translate()`, through the expression-to-column
+API, a view column or a dataset written from either — has the six fields the
+[engine semantics](engine-semantics.md#coding-and-terminology) give it: `id`,
+`system`, `version`, `code`, `display` and `userSelected`. It previously had
+seven, the seventh being the previous layout's always-null `_fid` integer
+(FR-059). Code that selects the Coding's fields by name is unaffected; code that
+reads the structure by position, or compares its schema with a seven-field one,
+must drop `_fid`. A Coding read from the data keeps the fitted shape of the data
+it came from.
+
 ### Schema merging on by default
 
 Reading a dataset of raw files merges their schemas by default, because

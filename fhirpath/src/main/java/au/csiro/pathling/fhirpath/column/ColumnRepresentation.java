@@ -223,9 +223,8 @@ public abstract class ColumnRepresentation {
 
   /**
    * Returns a new {@link ColumnRepresentation} that represents the extensions of the elements in
-   * this representation, on either layout: the inline {@code extension} field of the new layout, or
-   * the entry for each element's {@code _fid} in the {@code _extension} column of the previous one
-   * (decision 75). The result is flattened.
+   * this representation, which are their inline {@code extension} fields (decision 75). The result
+   * is flattened.
    *
    * @return A new {@link ColumnRepresentation} representing the extensions
    */

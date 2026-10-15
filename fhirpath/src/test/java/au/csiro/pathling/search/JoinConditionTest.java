@@ -23,8 +23,7 @@ import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.test.SpringBootUnitTest;
-import au.csiro.pathling.test.layout.LayoutDatasets;
-import au.csiro.pathling.test.layout.TestLayout;
+import au.csiro.pathling.test.layout.PofDatasets;
 import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.stream.Stream;
@@ -35,6 +34,7 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -47,8 +47,7 @@ import org.springframework.beans.factory.annotation.Autowired;
  * <p>Such a column refers to the columns of the resource tolerantly, with no reference to any
  * dataset (decision 75). In a join condition it reads the column from whichever side has it, and
  * treats a column neither side has as absent, giving what joining first and then filtering gives,
- * which is the control. A name both sides have is ambiguous, as a plain reference to it is. Every
- * case runs on both layouts.
+ * which is the control. A name both sides have is ambiguous, as a plain reference to it is.
  *
  * @author Piotr Szul
  */
@@ -84,27 +83,24 @@ class JoinConditionTest {
 
   @Nonnull
   static Stream<Arguments> cases() {
-    return Stream.of(TestLayout.PREVIOUS, TestLayout.POF)
-        .flatMap(
-            layout ->
-                Stream.of(
-                    // An element that is present, of the patient side alone.
-                    arguments(layout, "gender = 'male'", 3L),
-                    arguments(layout, "name.family.exists()", 3L),
-                    arguments(layout, "birthDate > @1950-01-01", 2L),
-                    // An element absent from the data, which neither side has on the new layout.
-                    arguments(layout, "deceasedBoolean.empty()", 4L),
-                    arguments(layout, "photo.exists()", 0L),
-                    // An expression that reads no column.
-                    arguments(layout, "true", 4L)));
+    return Stream.of(
+        // An element that is present, of the patient side alone.
+        arguments("gender = 'male'", 3L),
+        arguments("name.family.exists()", 3L),
+        arguments("birthDate > @1950-01-01", 2L),
+        // An element absent from the data, which neither side has.
+        arguments("deceasedBoolean.empty()", 4L),
+        arguments("photo.exists()", 0L),
+        // An expression that reads no column.
+        arguments("true", 4L));
   }
 
-  @ParameterizedTest(name = "{1} over the {0} layout")
+  @ParameterizedTest(name = "{0}")
   @MethodSource("cases")
   void expressionInJoinConditionMatchesJoinThenFilter(
-      @Nonnull final TestLayout layout, @Nonnull final String expression, final long expected) {
-    final Dataset<Row> patients = patients(layout);
-    final Dataset<Row> encounters = encounters(layout);
+      @Nonnull final String expression, final long expected) {
+    final Dataset<Row> patients = patients();
+    final Dataset<Row> encounters = encounters();
     final Column column = builder().fromExpression(ResourceType.PATIENT, expression);
     final Column key = key(encounters, patients);
 
@@ -113,11 +109,10 @@ class JoinConditionTest {
     assertThat(encounters.join(patients, key).filter(column).count()).isEqualTo(expected);
   }
 
-  @ParameterizedTest(name = "a search over the {0} layout")
-  @MethodSource("layouts")
-  void searchInJoinConditionMatchesJoinThenFilter(@Nonnull final TestLayout layout) {
-    final Dataset<Row> patients = patients(layout);
-    final Dataset<Row> encounters = encounters(layout);
+  @Test
+  void searchInJoinConditionMatchesJoinThenFilter() {
+    final Dataset<Row> patients = patients();
+    final Dataset<Row> encounters = encounters();
     final Column search = builder().fromQueryString(ResourceType.PATIENT, "gender=male");
     final Column key = key(encounters, patients);
 
@@ -125,11 +120,10 @@ class JoinConditionTest {
     assertThat(encounters.join(patients, key).filter(search).count()).isEqualTo(3L);
   }
 
-  @ParameterizedTest(name = "a name on both sides over the {0} layout")
-  @MethodSource("layouts")
-  void nameOnBothSidesIsAmbiguous(@Nonnull final TestLayout layout) {
-    final Dataset<Row> patients = patients(layout);
-    final Dataset<Row> encounters = encounters(layout);
+  @Test
+  void nameOnBothSidesIsAmbiguous() {
+    final Dataset<Row> patients = patients();
+    final Dataset<Row> encounters = encounters();
     final Column column = builder().fromExpression(ResourceType.PATIENT, "id.exists()");
     final Column key = key(encounters, patients);
 
@@ -139,24 +133,19 @@ class JoinConditionTest {
   }
 
   @Nonnull
-  static Stream<TestLayout> layouts() {
-    return Stream.of(TestLayout.PREVIOUS, TestLayout.POF);
-  }
-
-  @Nonnull
   private SearchColumnBuilder builder() {
     return SearchColumnBuilder.withDefaultRegistry(encoders.getContext());
   }
 
   @Nonnull
-  private Dataset<Row> patients(@Nonnull final TestLayout layout) {
-    return LayoutDatasets.fromJson(spark, encoders, layout, "Patient", PATIENTS);
+  private Dataset<Row> patients() {
+    return PofDatasets.fromJson(spark, encoders.getContext(), "Patient", PATIENTS);
   }
 
   /** The encounters, keeping only their id, status and subject, as a caller selecting would. */
   @Nonnull
-  private Dataset<Row> encounters(@Nonnull final TestLayout layout) {
-    return LayoutDatasets.fromJson(spark, encoders, layout, "Encounter", ENCOUNTERS)
+  private Dataset<Row> encounters() {
+    return PofDatasets.fromJson(spark, encoders.getContext(), "Encounter", ENCOUNTERS)
         .select("id", "status", "subject");
   }
 
