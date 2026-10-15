@@ -113,6 +113,8 @@ dataset follows (decision 132, ADR-0006).
 - **Not an annotation.** It is derived from nothing, so it is always written,
   outside the annotation switches; it is never pruned by the fitted schema,
   although it holds no value; and it is never emitted as FHIR content.
+- **Added by ingest**, from FHIR JSON or XML, and otherwise an ordinary column
+  that sinks write and sources read unchanged.
 - **A higher version is refused**, so data written by a later layout is never
   read as though it were this one.
 

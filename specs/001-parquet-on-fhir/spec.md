@@ -458,13 +458,15 @@ Identifiers are stable. FR-015, FR-018 and FR-020 are retired and not reused.
   field, MUST be accepted.
 - **FR-040**: Detection MUST be disableable per source, for data the detector
   misclassifies, without affecting other sources.
-- **FR-065**: Every PoF dataset the library writes MUST carry a layout column at
-  its root, named `__layout_v<n>` for layout version `<n>` (1 in this release),
-  of a nullable boolean type, with every value null
+- **FR-065**: Every dataset ingest produces from FHIR JSON or XML MUST carry a
+  layout column at its root, named `__layout_v<n>` for layout version `<n>` (1 in
+  this release), of a nullable boolean type, with every value null
   ([ADR-0006](../../docs/adr/0006-layout-identified-by-a-versioned-column.md)).
-  It MUST be written whatever the schema mode and the annotation switches, MUST
-  NOT be pruned by the fitted schema, and MUST NOT be emitted as FHIR content on
-  egress.
+  It MUST be added whatever the schema mode and the annotation switches, MUST NOT
+  be pruned by the fitted schema, and MUST NOT be emitted as FHIR content on
+  egress. Everywhere else it is an ordinary column: sinks write it and sources
+  read it unchanged. Its final name and version rule are those of the Parquet on
+  FHIR specification, once amended to require it.
 - **FR-066**: Detection MUST identify the layout by its layout column first, by
   name and type alone. A version this release supports is the PoF layout. A
   higher version MUST be refused at read time and before an append or merge, as

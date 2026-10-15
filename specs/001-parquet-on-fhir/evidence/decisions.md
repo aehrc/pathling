@@ -4029,3 +4029,13 @@ and rejected, because some Spark expressions drop it and other tools do not writ
 survives wherever a column does. The version is in the name rather than the value, because
 reading a value would take a Spark job per table, and an empty table has none. See FR-065, FR-066
 and ADR-0006; built by ticket 29.
+
+_Addendum (owner, 2026-10-15)_: the layout column is added by ingest, by `FhirReader` and `encode()`
+from FHIR JSON or XML, and is otherwise an ordinary column. Sinks write it and sources read it
+unchanged; nothing adds it on write or drops it on read. The Parquet on FHIR specification is to be
+amended to require it (ticket 30), and its final name and version rule are taken from there. The
+column is built in stage 3 (ticket 29), after ingest and egress are rebuilt (ticket 16), so that it is
+built once, into the new code, rather than into code stage 3 replaces. Until then the refusal of the
+legacy layout rests on the root `id_versioned`, as decision 100 left it. The release is blocked on
+ticket 29, so every PoF dataset a release produces carries the column. Existing PoF test data is not
+regenerated: unmarked PoF data stays accepted, and that data is its regression test.
