@@ -80,8 +80,11 @@ export function SqlQueryStoredTab({
   onBindingChange,
   disabled = false,
 }: Readonly<SqlQueryStoredTabProps>) {
-  const hasQueries = (queries?.length ?? 0) > 0;
-  const hasViews = (views?.length ?? 0) > 0;
+  // Order each group by display title, independent of the server's return order.
+  const sortedQueries = [...(queries ?? [])].sort((a, b) => a.title.localeCompare(b.title));
+  const sortedViews = [...(views ?? [])].sort((a, b) => a.title.localeCompare(b.title));
+  const hasQueries = sortedQueries.length > 0;
+  const hasViews = sortedViews.length > 0;
 
   // The selection is by logical id, unique across the Library store, so the
   // active summary is located across both stored lists.
@@ -127,7 +130,7 @@ export function SqlQueryStoredTab({
             {hasQueries && (
               <Select.Group>
                 <Select.Label>SQL queries</Select.Label>
-                {queries!.map((lib) => (
+                {sortedQueries.map((lib) => (
                   <Select.Item key={lib.id} value={lib.id}>
                     {lib.title}
                   </Select.Item>
@@ -137,7 +140,7 @@ export function SqlQueryStoredTab({
             {hasViews && (
               <Select.Group>
                 <Select.Label>SQL views</Select.Label>
-                {views!.map((lib) => (
+                {sortedViews.map((lib) => (
                   <Select.Item key={lib.id} value={lib.id}>
                     {lib.title}
                   </Select.Item>
