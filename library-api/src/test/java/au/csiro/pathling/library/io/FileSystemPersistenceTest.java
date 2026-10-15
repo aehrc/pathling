@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.library.io;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -28,6 +29,7 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FilterFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -71,6 +73,30 @@ class FileSystemPersistenceTest {
 
     // assert that the partitioned files have been deleted
     assertFalse(fs.exists(new Path(hadoopPath, "Patient.ndjson")));
+  }
+
+  @Test
+  void test_a_failed_rename_is_an_error_and_keeps_the_partitioned_directory() throws IOException {
+    final Path partitionPath = new Path(hadoopPath, "Patient.ndjson");
+    final FileSystem refusingRenames =
+        new FilterFileSystem(fs) {
+          @Override
+          public boolean rename(final Path src, final Path dst) {
+            return false;
+          }
+        };
+    final String partitionUrl = partitionPath.toString();
+
+    final PersistenceError exception =
+        assertThrows(
+            PersistenceError.class,
+            () ->
+                FileSystemPersistence.renamePartitionedFiles(
+                    refusingRenames, partitionUrl, partitionUrl, "txt"));
+
+    assertTrue(exception.getMessage().contains("Could not rename the partition file"));
+    assertTrue(fs.exists(partitionPath));
+    assertEquals(4, fs.listStatus(partitionPath, p -> p.getName().endsWith(".txt")).length);
   }
 
   @Test

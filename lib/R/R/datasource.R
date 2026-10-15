@@ -299,8 +299,9 @@ invoke_datasink <- function(ds, name, save_mode = NULL, ...) {
 
 #' Write FHIR data to NDJSON files
 #'
-#' Writes the data from a data source to a directory of NDJSON files. The files will be named using
-#' the resource type and the ".ndjson" extension.
+#' Writes the data from a data source to a directory of NDJSON files. Each resource type is written
+#' to one or more files named with the resource type, a partition number and an identifier of the
+#' write, for example "Patient.00000-<write id>.ndjson".
 #'
 #' @param ds The DataSource object.
 #' @param path The URI of the directory to write the files to.
@@ -331,7 +332,9 @@ ds_write_ndjson <- function(ds, path, save_mode = SaveMode$ERROR, file_name_mapp
 
 #' Write FHIR data to Parquet files
 #'
-#' Writes the data from a data source to a directory of Parquet files.
+#' Writes the data from a data source to a directory of Parquet files. Each resource type is written
+#' to one or more files named with the resource type, a partition number and an identifier of the
+#' write, for example "Patient.00000-<write id>.parquet".
 #'
 #' @param ds The DataSource object.
 #' @param path The URI of the directory to write the files to.
