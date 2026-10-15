@@ -124,7 +124,8 @@ public class ConversionFunctions {
   /**
    * Converts the input to a String value. All primitive types can be converted to string, as can a
    * Quantity that is representable as a System.Quantity (it has a value and a code, a UCUM or
-   * calendar duration system, and no comparator).
+   * calendar duration system, and no comparator), rendered as a Quantity literal, and a Coding,
+   * rendered as a Coding literal.
    *
    * @param input The input collection
    * @return A {@link StringCollection} containing the converted value or empty

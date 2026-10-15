@@ -214,8 +214,8 @@ class ValidationLogic {
   }
 
   /**
-   * Validates if a value can be converted to String. All primitive types can convert to String, as
-   * can a Quantity that is representable as a System.Quantity.
+   * Validates if a value can be converted to String. All primitive types and Coding can convert to
+   * String, as can a Quantity that is representable as a System.Quantity.
    *
    * @param sourceType The source FHIRPath type
    * @param value The source column value
@@ -224,8 +224,8 @@ class ValidationLogic {
   Column validateConversionToString(
       @Nonnull final FhirPathType sourceType, @Nonnull final Column value) {
     return switch (sourceType) {
-      case BOOLEAN, INTEGER, DECIMAL, DATE, DATETIME, TIME ->
-          // All primitive types can be converted to string.
+      case BOOLEAN, INTEGER, DECIMAL, DATE, DATETIME, TIME, CODING ->
+          // All primitive types and Coding can be converted to string.
           lit(true);
       case QUANTITY ->
           // Only a Quantity representable as a System.Quantity has a literal form.

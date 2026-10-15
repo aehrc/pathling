@@ -37,6 +37,7 @@ import au.csiro.pathling.fhirpath.collection.TimeCollection;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.column.QuantityValue;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
+import au.csiro.pathling.sql.misc.CodingToLiteral;
 import au.csiro.pathling.sql.misc.DecimalToLiteral;
 import au.csiro.pathling.sql.misc.QuantityToLiteral;
 import au.csiro.pathling.sql.misc.StringToQuantity;
@@ -313,6 +314,7 @@ class ConversionLogic {
    *   <li>DECIMAL: Use DecimalToLiteral UDF to format with trailing zeros removed
    *   <li>QUANTITY: Use QuantityToLiteral UDF to format as FHIRPath quantity literal (null if the
    *       quantity is not representable as a System.Quantity)
+   *   <li>CODING: Use CodingToLiteral UDF to format as Coding literal
    * </ul>
    *
    * @param sourceType The source FHIRPath type
@@ -334,6 +336,11 @@ class ConversionLogic {
           // E.g., {value: 1, unitCode: "wk", system: "http://unitsofmeasure.org"} -> "1 'wk'"
           // The UDF returns null for a quantity that has no System.Quantity equivalent.
           callUDF(QuantityToLiteral.FUNCTION_NAME, value);
+      case CODING ->
+          // Coding: Use CodingToLiteral UDF to format as Coding literal.
+          // E.g., {system: "http://snomed.info/sct", code: "52101004"} ->
+          // "http://snomed.info/sct|52101004"
+          callUDF(CodingToLiteral.FUNCTION_NAME, value);
       default -> lit(null);
     };
   }
