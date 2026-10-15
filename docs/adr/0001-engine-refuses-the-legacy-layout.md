@@ -36,7 +36,11 @@ library API carries no legacy-layout surface.
   actionable. Legacy-layout data that bypasses it (the per-source opt-out,
   `DatasetSource`, datasets built with `getFhirEncoders()`) is unsupported, and
   the engine fails loudly, once per schema, where a stored column's type
-  contradicts the PoF layout rather than answering from it.
+  contradicts the PoF layout rather than answering from it. _Amended by
+  decision 132 (2026-10-15)_: the engine makes no such check. Data that bypasses
+  detection is unsupported and the result is undefined; detection is made exact
+  instead, by a versioned layout column
+  ([ADR-0006](0006-layout-identified-by-a-versioned-column.md)).
 - The before-and-after oracle the legacy-layout test arm provided is gone.
   Expected values are literals or come from the conformance suites.
 - The server's existing startup migration (additive schema drift against the

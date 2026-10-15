@@ -18,10 +18,11 @@ way out.
 
 - [02](02-port-fhirencoders-tests-to-pof.md) Port the engine tests that encode via FhirEncoders to the PoF layout
 - [03](03-system-quantity-fixed-shape.md) Engine-built System.Quantity takes one fixed shape, not the legacy one
-- [04](04-loud-failure-legacy-column.md) Fail loudly on a legacy-typed column at traversal
+- ~~[04](04-loud-failure-legacy-column.md) Fail loudly on a legacy-typed column at traversal~~ (dropped, decision 132)
 - [05](05-remove-legacy-normalisation.md) Remove the legacy-layout normalisation, its test dimension and CI job
 - [06](06-legacy-export.md) Legacy export: legacy Parquet/Delta to FHIR NDJSON, as a component and CLI
-- [07](07-legacy-export-docs-and-server-followup.md) Document the legacy export and FR-053; raise the server migration issue
+- [07](07-legacy-export-docs-and-server-followup.md) Document the legacy export; raise the server migration issue
+- [29](29-layout-version-column.md) Identify the PoF layout by a versioned layout column
 
 ## Stage 2: Harden and measure (#2830)
 

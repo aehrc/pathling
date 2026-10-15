@@ -4000,3 +4000,32 @@ apart by where it is raised. `ResolveOrNullTest.viewColumnInJoinConditionFailsTh
 now also pins that it is recognised, so an upgrade of Spark that moves it fails that test. Test:
 `ResolveOrNullTest.otherAssertionInResolutionIsNotTakenForAbsence`, failing before the fix, passing
 after; `JoinConditionTest` passes unchanged.
+
+## 132. The engine checks for the legacy layout only at detection, and the PoF layout carries a version
+
+Owner decision (2026-10-15).
+
+Ticket 04 built FR-053: a check in traversal that failed a query reaching a legacy-typed column by
+a route detection does not cover (detection disabled, a dataset the caller supplies, a dataset
+built with the legacy encoders). It worked, but it kept knowledge of the legacy layout in the
+engine indefinitely, and it could not be complete: the legacy layout's extensions, kept in a root
+`_extension` map keyed by `_fid`, pass it, and once ticket 05 removes their reader an extension
+traversal over such data answers empty.
+
+_Decision_: the engine makes no check for the legacy layout beyond detection (FR-037 to FR-040).
+Data that bypasses detection is unsupported, the caller owns the consequences, and the result of
+evaluating over it is undefined. FR-053 and User Story 7's fifth scenario are withdrawn, ticket 04
+is closed unmerged, and ticket 05 removes the normalisation without putting a check in its place.
+ADR-0001's consequence promising a loud failure is amended.
+
+Instead, the first line is made exact. Every PoF dataset carries a layout column at its root,
+`__layout_v1`: a nullable boolean whose every value is null, recognised by its name and type alone,
+so detection still needs only the schema (FR-038). A version this release supports is the PoF
+layout, and a higher one is refused as written by a newer release, so a layout change later in the
+programme, or after it, is told apart rather than read as though it were this one. The column is
+not an annotation: it is derived from nothing, always written, outside the annotation switches,
+never pruned by the fitted schema and never read as FHIR content. Field metadata was considered
+and rejected, because some Spark expressions drop it and other tools do not write it; a column
+survives wherever a column does. The version is in the name rather than the value, because
+reading a value would take a Spark job per table, and an empty table has none. See FR-065, FR-066
+and ADR-0006; built by ticket 29.

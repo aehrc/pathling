@@ -97,10 +97,24 @@ Properties that hold for every annotation:
 ### Layout
 
 The encoding convention a stored dataset follows, determined from its schema by
-structural markers rather than a full comparison. Three outcomes: the new
+its layout column, or failing that by structural markers rather than a full comparison. Three outcomes: the new
 layout, a previous layout, or unclassifiable. Only the first is readable; the
 second is rejected with an actionable message; the third is accepted, because
 marker absence is not evidence of a mismatch.
+
+### Layout column
+
+A root column, `__layout_v<n>`, that names the version of the PoF layout a
+dataset follows (decision 132, ADR-0006).
+
+- **Recognised by name and type alone**: a nullable boolean whose every value is
+  null. Detection reads only the schema, and an empty table is identified as
+  well as a full one.
+- **Not an annotation.** It is derived from nothing, so it is always written,
+  outside the annotation switches; it is never pruned by the fitted schema,
+  although it holds no value; and it is never emitted as FHIR content.
+- **A higher version is refused**, so data written by a later layout is never
+  read as though it were this one.
 
 ### Schema mode
 

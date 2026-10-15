@@ -213,9 +213,13 @@ source and sink, and assert the error.
    field, **When** it is read, **Then** the read succeeds.
 4. **Given** detection disabled for one source, **When** data is read through
    it, **Then** the read proceeds, and other sources are unaffected.
-5. **Given** a legacy-layout column that reaches the engine by a route detection
-   does not cover, **When** an expression traverses it, **Then** evaluation
-   fails with an error naming the column, rather than answering from it.
+5. _Withdrawn by decision 132._ Legacy-layout data that bypasses detection is
+   unsupported, and the engine makes no further check.
+6. **Given** a dataset written by this release, **When** it is read back,
+   **Then** its layout column identifies it as the PoF layout.
+7. **Given** a dataset whose layout column names a higher version than this
+   release supports, **When** it is read, **Then** an error at read time names
+   the version found and the version supported.
 
 ---
 
@@ -272,8 +276,8 @@ the legacy encoder, re-import the result, and compare it with the source data.
 - An array of arrays where a repeating element is declared, such as
   `"given":[["a","b"]]`: a shape mismatch, reported, and stored as absent.
 - A source key named like one of the layout's annotations, such as
-  `__birthDate_start`: an annotation is derived, never read, so the key is
-  reported as undescribed content.
+  `__birthDate_start`, or like the layout column, `__layout_v1`: neither is
+  read from the source, so the key is reported as undescribed content.
 - A Bundle: accepted as a transport carrier and exploded to one table per
   resource type, never stored as a resource type. References between its
   entries are resolved to relative references.
@@ -454,6 +458,20 @@ Identifiers are stable. FR-015, FR-018 and FR-020 are retired and not reused.
   field, MUST be accepted.
 - **FR-040**: Detection MUST be disableable per source, for data the detector
   misclassifies, without affecting other sources.
+- **FR-065**: Every PoF dataset the library writes MUST carry a layout column at
+  its root, named `__layout_v<n>` for layout version `<n>` (1 in this release),
+  of a nullable boolean type, with every value null
+  ([ADR-0006](../../docs/adr/0006-layout-identified-by-a-versioned-column.md)).
+  It MUST be written whatever the schema mode and the annotation switches, MUST
+  NOT be pruned by the fitted schema, and MUST NOT be emitted as FHIR content on
+  egress.
+- **FR-066**: Detection MUST identify the layout by its layout column first, by
+  name and type alone. A version this release supports is the PoF layout. A
+  higher version MUST be refused at read time and before an append or merge, as
+  FR-037 and FR-037a refuse the legacy layout, naming the version found and the
+  version supported. A schema carrying both a layout column and the legacy
+  layout's root marker is refused as mixed. Without a layout column, detection
+  proceeds by markers, and FR-039 still applies.
 - **FR-041**: Reading a dataset whose files carry differing schemas MUST return
   the union of their elements, with no resource lost and cardinality preserved.
   Evidence: [merge-cost.md](evidence/merge-cost.md).
@@ -467,11 +485,9 @@ Identifiers are stable. FR-015, FR-018 and FR-020 are retired and not reused.
 
 - **FR-046**: The engine MUST read only the PoF layout. Legacy-layout data MUST
   NOT be readable as though it were the PoF layout.
-- **FR-053**: Where a legacy-layout column reaches the engine by a route
-  detection does not cover — a source with detection disabled, a dataset the
-  caller supplies, a dataset built with the legacy encoders — the engine MUST
-  fail, once per schema, with an error naming the column, rather than answer
-  from it.
+- **FR-053**: _Withdrawn by decision 132._ The engine makes no check for the
+  legacy layout beyond detection (FR-037 to FR-040). Data that bypasses
+  detection is unsupported, and the result of evaluating over it is undefined.
 - **FR-064**: A legacy export MUST convert a legacy-layout Parquet or Delta table
   to FHIR NDJSON, as a reusable component and as a command-line tool, outside
   `library-runtime` and the language bindings. Its losses MUST be documented.
@@ -507,7 +523,7 @@ Identifiers are stable. FR-015, FR-018 and FR-020 are retired and not reused.
 See [`CONTEXT.md`](../../CONTEXT.md): resource table, layout (PoF and legacy),
 schema mode (fitted and dense), definition set, annotation, primitive metadata
 group, canonical field order, finding, absent element, FHIR type, System type,
-reconciliation, legacy export.
+reconciliation, legacy export, layout column.
 
 ## Success Criteria _(mandatory)_
 

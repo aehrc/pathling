@@ -4,7 +4,7 @@
 
 **What to build:** The checks that gate the single Parquet on FHIR release.
 
-**Blocked by:** 01–27
+**Blocked by:** 01–27, 29
 
 **Status:** ready-for-human
 

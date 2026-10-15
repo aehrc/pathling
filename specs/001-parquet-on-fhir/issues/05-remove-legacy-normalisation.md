@@ -1,6 +1,6 @@
 # 05 — Remove the legacy-layout normalisation, its test dimension and CI job
 
-**Spec:** `specs/001-parquet-on-fhir/spec.md` — FR-046, FR-053. Old tasks: T100e and the removal of T100i's job. T049a and T100f are settled by ADR-0001.
+**Spec:** `specs/001-parquet-on-fhir/spec.md` — FR-046; decision 132. Old tasks: T100e and the removal of T100i's job. T049a and T100f are settled by ADR-0001.
 
 **What to build:** The engine reads only the PoF layout. Every branch that converts the legacy layout at traversal goes, along with the machinery that exists only to test it:
 
@@ -45,13 +45,20 @@ layout, through `ObjectDataSource`, `LayoutDatasets` or the YAML resolver factor
 dimension removes that path for them; ticket 02's comments list them. `PofDatasets` is the PoF-only
 replacement for `LayoutDatasets`.
 
+**No check replaces them.** Under decision 132 the engine makes no check for the legacy layout
+beyond detection, and ticket 04 was dropped. Data that bypasses detection is unsupported, so do not
+add a check in place of what is removed, including for the root `_extension` map: an extension
+traversal over legacy data answering empty after this ticket is accepted.
+
+`fhirpath/.../search/filter/ElementMatcherTest` hand-builds quantities in the legacy shape, with a
+decimal value and the canonical fields. Convert them to the PoF shape.
+
 **Out of scope:** `CodingSchema._fid` and the tolerance from decision 79 stay. They belong to #2804.
 
-**Blocked by:** 02, 03, 04
+**Blocked by:** 02, 03
 
 **Status:** ready-for-agent
 
 - [ ] None of the listed classes, arms, the property or the CI job remain. `LayoutDetector` still compiles and detects the legacy layout.
-- [ ] Ticket 04's loud failure still fires on every route it covers.
 - [ ] The conformance baselines gain no entries. Exclusions made obsolete by the removal are taken out (SC-003, per the `pathling-yaml-exclusions` skill).
 - [ ] The core build passes. The Python and R suites pass after the Ivy cache is cleared.
