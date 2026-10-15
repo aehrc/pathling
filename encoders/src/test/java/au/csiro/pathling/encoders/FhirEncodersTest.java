@@ -57,6 +57,7 @@ import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema;
 import org.apache.spark.sql.functions;
 import org.hl7.fhir.exceptions.FHIRException;
 import org.hl7.fhir.r4.model.Annotation;
+import org.hl7.fhir.r4.model.CanonicalType;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Condition;
 import org.hl7.fhir.r4.model.DateTimeType;
@@ -902,5 +903,54 @@ class FhirEncodersTest {
     // The definition should be for the ViewDefinitionResource class.
     assertNotNull(definition);
     assertEquals(ViewDefinitionResource.class, definition.getImplementingClass());
+  }
+
+  @Test
+  void contextForDoesNotAddProfileToViewDefinition() {
+    // HAPI adds the profile from the @ResourceDef annotation of a custom resource type to
+    // meta.profile when encoding, unless told not to. A ViewDefinition without a meta.profile must
+    // be encoded without one, so that a client reads back what it stored.
+    final ViewDefinitionResource encoded = roundTripViewDefinition("");
+
+    assertFalse(encoded.hasMeta());
+  }
+
+  @Test
+  void contextForPreservesSuppliedViewDefinitionProfile() {
+    // A meta.profile supplied with the ViewDefinition must be encoded exactly as supplied, without
+    // the base logical model profile appended to it.
+    final ViewDefinitionResource encoded =
+        roundTripViewDefinition(
+            "\"meta\": {\"profile\": [\"http://example.org/StructureDefinition/my-view\"]},");
+
+    assertEquals(
+        List.of("http://example.org/StructureDefinition/my-view"),
+        encoded.getMeta().getProfile().stream().map(CanonicalType::getValue).toList());
+  }
+
+  /**
+   * Parses a minimal ViewDefinition with the context from {@link FhirEncoders#contextFor}, encodes
+   * it back to JSON with the same context, and parses the result.
+   *
+   * @param members JSON members to insert at the top level of the ViewDefinition, with a trailing
+   *     comma
+   * @return the ViewDefinition as it was encoded
+   */
+  private static ViewDefinitionResource roundTripViewDefinition(final String members) {
+    final IParser parser = FhirEncoders.contextFor(FhirVersionEnum.R4).newJsonParser();
+    final String json =
+        """
+        {
+          "resourceType": "ViewDefinition",
+          %s
+          "name": "patients",
+          "status": "active",
+          "resource": "Patient",
+          "select": [{"column": [{"name": "id", "path": "id"}]}]
+        }
+        """
+            .formatted(members);
+    final ViewDefinitionResource view = parser.parseResource(ViewDefinitionResource.class, json);
+    return parser.parseResource(ViewDefinitionResource.class, parser.encodeResourceToString(view));
   }
 }
