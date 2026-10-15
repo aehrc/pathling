@@ -153,7 +153,12 @@ class QuantityCollectionTest {
         arguments(
             "value.ofType(Quantity).toString()",
             List.of(
-                "o1=1.5 'g'", "o2=1500 'mg'", "o3=2 'kg'", "o4=null", "o5=0 'kg'", "o6=37 'Cel'")),
+                "o1=1.5 'g'",
+                "o2=1500 'mg'",
+                "o3=2 'kg'",
+                "o4=null",
+                "o5=0.0000002 'kg'",
+                "o6=37 'Cel'")),
         arguments(
             "value.ofType(Quantity).toQuantity('g').value",
             List.of(
@@ -161,7 +166,7 @@ class QuantityCollectionTest {
                 "o2=1.500000",
                 "o3=2000.000000",
                 "o4=null",
-                "o5=0.000000",
+                "o5=0.000200",
                 "o6=null")),
         arguments(
             "value.ofType(Quantity).convertsToQuantity('g')",

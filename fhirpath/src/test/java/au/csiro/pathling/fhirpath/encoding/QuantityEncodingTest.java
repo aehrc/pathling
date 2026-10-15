@@ -28,8 +28,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 
 /**
  * Tests the Row encoding of a System quantity, and the decoding of the text of its value, which
- * reproduces the decoding of a decimal to {@code DECIMAL(32,6)} that the engine applies to a
- * column.
+ * keeps every digit of the text.
  *
  * @author Piotr Szul
  */
@@ -38,17 +37,14 @@ class QuantityEncodingTest {
   @ParameterizedTest(name = "{0} decodes to {1}")
   @CsvSource(
       value = {
-        // A value with at most six fractional digits keeps its own scale.
+        // A value keeps its own scale.
         "1.50, 1.50",
         "90, 90",
         "1E+3, 1E+3",
-        // More digits are rounded half up to six.
-        "0.0000002, 0.000000",
-        "0.0000005, 0.000001",
-        "1.23456789, 1.234568",
-        // Twenty-six integer digits fit, and twenty-seven do not.
-        "12345678901234567890123456, 12345678901234567890123456",
-        "123456789012345678901234567, NULL",
+        // Digits beyond the sixth fractional digit, and beyond twenty-six integer digits, are kept.
+        "0.1234567891, 0.1234567891",
+        "0.0000002, 0.0000002",
+        "123456789012345678901234567, 123456789012345678901234567",
         // Text that is not a decimal, and no text, decode to null.
         "abc, NULL",
         "NULL, NULL"
@@ -63,6 +59,17 @@ class QuantityEncodingTest {
   void encodedQuantityDecodesToTheSameQuantity() {
     final FhirPathQuantity quantity = FhirPathQuantity.parse("1.50 'mg'");
     assertThat(QuantityEncoding.decode(QuantityEncoding.encode(quantity))).isEqualTo(quantity);
+  }
+
+  @Test
+  void valueBeyondSixFractionalDigitsIsKeptByTheStringFormAndASameUnitConversion() {
+    final FhirPathQuantity quantity = FhirPathQuantity.parse("0.1234567891 'mg'");
+    final FhirPathQuantity decoded = QuantityEncoding.decode(QuantityEncoding.encode(quantity));
+
+    assertThat(decoded).isNotNull();
+    assertThat(decoded.toString()).isEqualTo("0.1234567891 'mg'");
+    assertThat(decoded.convertToUnit("mg"))
+        .hasValueSatisfying(q -> assertThat(q.getValue()).isEqualByComparingTo("0.1234567891"));
   }
 
   @Test

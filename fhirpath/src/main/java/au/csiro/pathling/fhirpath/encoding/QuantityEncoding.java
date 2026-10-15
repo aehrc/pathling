@@ -35,7 +35,6 @@ import au.csiro.pathling.sql.misc.CanonicalQuantityValue;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.Map;
 import java.util.stream.Stream;
 import org.apache.spark.sql.Column;
@@ -209,32 +208,24 @@ public final class QuantityEncoding {
   }
 
   /**
-   * Decodes the text of a value by the rule {@link #decodeValue(Column)} applies: to at most six
-   * fractional digits, rounding half up, and to null where it is not a decimal or has more than 26
-   * integer digits. Unlike that decode, which always gives six fractional digits, a value with
-   * fewer keeps its own scale, because this one feeds the quantity's string form and its
-   * conversion, where {@code 1.5} must not become {@code 1.500000}.
+   * Decodes the text of a quantity's value to a decimal with every digit it has. The value is kept
+   * as text, not as {@code DECIMAL(32,6)}, so nothing is rounded here: conversion, the string form
+   * and the canonical form all work from the same digits. Only {@link #decodeValue(Column)}, which
+   * produces a Spark decimal, is bound to the scale of that type.
    *
    * @param text the text of the value
-   * @return the value, or null
+   * @return the value, or null where there is no text or it is not a decimal
    */
   @Nullable
   static BigDecimal decodeValue(@Nullable final String text) {
     if (text == null) {
       return null;
     }
-    final BigDecimal value;
     try {
-      value = new BigDecimal(text.trim());
+      return new BigDecimal(text.trim());
     } catch (final NumberFormatException e) {
       return null;
     }
-    final int scale = DecimalCustomCoder.scale();
-    final BigDecimal decoded =
-        value.scale() > scale ? value.setScale(scale, RoundingMode.HALF_UP) : value;
-    return decoded.precision() - decoded.scale() > DecimalCustomCoder.precision() - scale
-        ? null
-        : decoded;
   }
 
   /**
