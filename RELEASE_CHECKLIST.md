@@ -39,6 +39,7 @@ The version number needs to be changed in the following places:
 - `site/pom.xml`
 - `library-runtime/pom.xml`
 - `benchmark/pom.xml`
+- `legacy-export/pom.xml`
 
 The following should only be updated for release versions, not snapshots:
 
