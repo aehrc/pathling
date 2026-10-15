@@ -173,6 +173,27 @@ describe("SqlQueryStoredTab", () => {
     expect(onSelect).toHaveBeenCalledWith("active-patients");
   });
 
+  // Each group lists its options alphabetically by display name, ignoring
+  // case, regardless of the order the server returned them in.
+  it("orders the options in each group alphabetically by title", async () => {
+    const lowerCaseQuery = makeSummary({ id: "bed-occupancy", title: "bed occupancy" });
+    const laterView = makeSummary({ id: "zero-dose", title: "Zero dose" });
+    const { user } = renderTab({
+      queries: [QUERY, lowerCaseQuery, PLAIN_QUERY],
+      views: [laterView, VIEW],
+    });
+
+    await user.click(screen.getByRole("combobox"));
+
+    expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
+      "All patients",
+      "bed occupancy",
+      "Patients by condition",
+      "Active patients",
+      "Zero dose",
+    ]);
+  });
+
   // A selected SQLView (located across both arrays) previews its decoded SQL.
   it("shows the SQL preview for a selected SQLView", () => {
     renderTab({ selectedId: "active-patients" });
