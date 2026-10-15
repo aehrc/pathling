@@ -340,9 +340,8 @@ public class Collection implements Equatable {
    */
   @Nonnull
   protected Collection traverseExtension(@Nonnull final ElementDefinition extensionDefinition) {
-    // Extension traversal reads the layout from the resolved parent: the inline extension field of
-    // the new layout, or the entry for the parent's field identifier in the extension map column of
-    // the previous one (decision 75). Above the traversal there is only the new layout's shape.
+    // Extension traversal reads the inline extension field of the resolved parent, and finds no
+    // extensions where the parent has none (decision 75).
     return Collection.build(getColumn().traverseExtension(), extensionDefinition);
   }
 
@@ -587,8 +586,7 @@ public class Collection implements Equatable {
     final Collection result = repeatAll(transform, maxDepth, true);
 
     // Deduplicate only for types with a FHIRPath type (primitives, Coding, Quantity, etc.).
-    // Complex backbone elements have no FHIRPath type and contain synthetic fields like _fid
-    // that make struct equality impractical.
+    // Complex backbone elements have no FHIRPath type, and their equality is not defined.
     if (result.getType().isPresent()) {
       final Column array = result.getColumn().plural().getValue();
       final ColumnEquality comparator = result.getComparator();

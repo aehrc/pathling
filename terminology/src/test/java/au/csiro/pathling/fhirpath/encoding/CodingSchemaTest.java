@@ -24,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import au.csiro.pathling.encoders.ExtensionSupport;
 import jakarta.annotation.Nonnull;
 import java.util.stream.Stream;
 import org.apache.spark.sql.Row;
@@ -121,13 +122,14 @@ class CodingSchemaTest {
   }
 
   @Test
-  void previousLayoutStructureWithFieldIdentifierDecodesByName() {
-    // The previous layout's Coding carries a field identifier after its canonical fields.
+  void structureWithAFieldThatIsNoCodingElementDecodesByName() {
+    // A field that is not an element of a Coding, such as the previous layout's field identifier,
+    // is ignored.
     final StructType schema =
         new StructType()
             .add(CodingSchema.SYSTEM_FIELD, DataTypes.StringType)
             .add(CodingSchema.CODE_FIELD, DataTypes.StringType)
-            .add(CodingSchema.FID_FIELD, DataTypes.IntegerType);
+            .add(ExtensionSupport.FID_FIELD_NAME(), DataTypes.IntegerType);
     final Row row = new GenericRowWithSchema(new Object[] {SYSTEM, "404684003", 7}, schema);
 
     final Coding decoded = CodingSchema.decode(row);

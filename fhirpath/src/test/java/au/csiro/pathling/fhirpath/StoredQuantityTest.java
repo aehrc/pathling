@@ -26,8 +26,7 @@ import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluator;
 import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluatorBuilder;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.test.SpringBootUnitTest;
-import au.csiro.pathling.test.layout.LayoutDatasets;
-import au.csiro.pathling.test.layout.TestLayout;
+import au.csiro.pathling.test.layout.PofDatasets;
 import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.Map;
@@ -51,7 +50,7 @@ import org.springframework.beans.factory.annotation.Autowired;
  *
  * <p>A stored quantity keeps its extensions through the operations that only select or combine
  * stored quantities. Where it meets a System quantity, such as a literal, it is taken as the System
- * quantity it decodes to, which has no extensions. Every case runs on both layouts in the same run.
+ * quantity it decodes to, which has no extensions.
  *
  * @author Piotr Szul
  */
@@ -98,11 +97,8 @@ class StoredQuantityTest {
     datasets =
         Map.of(
             "pof",
-            LayoutDatasets.fromJson(
-                spark, fhirEncoders, TestLayout.POF, "Observation", List.of(EXTENDED, BARE)),
-            "previous",
-            LayoutDatasets.fromJson(
-                spark, fhirEncoders, TestLayout.PREVIOUS, "Observation", List.of(EXTENDED, BARE)));
+            PofDatasets.fromJson(
+                spark, fhirEncoders.getContext(), "Observation", List.of(EXTENDED, BARE)));
   }
 
   @Nonnull

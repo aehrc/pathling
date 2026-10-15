@@ -36,8 +36,8 @@ import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 
 /**
- * Builds the dataset for a set of test fixtures in the Parquet on FHIR layout, whatever layout the
- * {@link TestLayout} dimension selects, by reading them as FHIR JSON through the public read path.
+ * Builds the dataset for a set of test fixtures in the Parquet on FHIR layout, by reading them as
+ * FHIR JSON through the public read path.
  *
  * <p>A fixture built as a HAPI object is serialised to JSON first, so the fluent builders survive
  * unchanged. The schema the read derives is always the fitted one, and the active {@link

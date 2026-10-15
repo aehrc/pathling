@@ -55,9 +55,6 @@ public interface CodingSchema {
   /** Field name for the userSelected property. */
   String USER_SELECTED_FIELD = "userSelected";
 
-  /** Field name for the fid property. */
-  String FID_FIELD = "_fid";
-
   /**
    * Creates the Spark StructType for a Coding.
    *
@@ -75,9 +72,7 @@ public interface CodingSchema {
         new StructField(DISPLAY_FIELD, DataTypes.StringType, true, metadata);
     final StructField userSelected =
         new StructField(USER_SELECTED_FIELD, DataTypes.BooleanType, true, metadata);
-    final StructField fid = new StructField(FID_FIELD, DataTypes.IntegerType, true, metadata);
-    return new StructType(
-        new StructField[] {id, system, version, code, display, userSelected, fid});
+    return new StructType(new StructField[] {id, system, version, code, display, userSelected});
   }
 
   /** A {@link StructType} for a Coding. */
@@ -101,8 +96,7 @@ public interface CodingSchema {
           coding.getVersion(),
           coding.getCode(),
           coding.getDisplay(),
-          userSelected,
-          null /* _fid */);
+          userSelected);
     }
   }
 
@@ -169,8 +163,7 @@ public interface CodingSchema {
         version.as(VERSION_FIELD),
         code.as(CODE_FIELD),
         display.as(DISPLAY_FIELD),
-        userSelected.as(USER_SELECTED_FIELD),
-        lit(null).as(FID_FIELD));
+        userSelected.as(USER_SELECTED_FIELD));
   }
 
   @Nonnull

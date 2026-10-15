@@ -4,14 +4,6 @@ excludeSet:
   - title: Global exclusions
     glob: "*.yaml"
     exclude:
-      - title: Unsupported resources
-        type: feature
-        id: "#2418"
-        comment: |
-          The previous layout's encoder refuses StructureDefinition. The new layout
-          reads it, so this rule applies to the previous layout only (T100h).
-        spel:
-          - "#testCase.expression matches '^StructureDefinition.*' and !T(au.csiro.pathling.test.layout.TestLayout).active().isPof()"
       - title: "Primitive .id extension not accessible after trace"
         type: bug
         id: "#2580"
@@ -686,14 +678,3 @@ excludeSet:
           This is correct behavior per spec operator precedence rules.
         any:
           - "1 | 1 is Integer"
-      - title: "Recursive ValueSet.expansion.contains not encoded"
-        type: feature
-        outcome: failure
-        comment: |
-          The encoder explicitly skips the recursive 'contains' field within
-          ValueSetExpansionContainsComponent (see R4DataTypeMappings.skipField).
-          This means nested contains entries are not available in the Spark schema,
-          so repeat(contains) only finds top-level entries. The new layout keeps the
-          field, so this rule applies to the previous layout only (T100h).
-        spel:
-          - "#testCase.expression == 'ValueSet.expansion.repeat(contains).count() = 10' and !T(au.csiro.pathling.test.layout.TestLayout).active().isPof()"

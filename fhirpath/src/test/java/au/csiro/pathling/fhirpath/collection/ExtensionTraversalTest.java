@@ -29,12 +29,10 @@ import au.csiro.pathling.test.SharedMocks;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.datasource.PrunedSchemaReader;
 import au.csiro.pathling.test.helpers.TerminologyServiceHelpers;
-import au.csiro.pathling.test.layout.LayoutDatasets;
-import au.csiro.pathling.test.layout.TestLayout;
+import au.csiro.pathling.test.layout.PofDatasets;
 import jakarta.annotation.Nonnull;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Stream;
 import org.apache.spark.sql.Dataset;
@@ -45,24 +43,22 @@ import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 
 /**
- * Tests that extension traversal reads inline extensions on the new layout and continues to read
- * the previous layout's extension map, keyed by {@code _fid} (T097).
+ * Tests that extension traversal reads inline extensions (T097).
  *
- * <p>Each fixture is given once as FHIR JSON and read in both layouts, so every case runs over each
- * layout with the same expected answer. The new layout's schema is pruned to the elements the
- * fixtures populate, so a structure that carries no extension in any resource has no {@code
- * extension} field, and a table whose resources carry none at all has no {@code extension} column
- * and no {@code _extension} column either. Neither can be produced on the previous layout.
+ * <p>Each fixture is given as FHIR JSON and read in the Parquet on FHIR layout, whose schema is
+ * pruned to the elements the fixtures populate, so a structure that carries no extension in any
+ * resource has no {@code extension} field, and a table whose resources carry none at all has no
+ * {@code extension} column.
  *
  * <p>The cases cover extensions at the resource root, under a singular and a repeating parent,
  * inside a lambda, nested extensions, and extensions on a Coding and on a quantity, which the
@@ -100,8 +96,8 @@ class ExtensionTraversalTest {
               + "]}]}",
           "{\"resourceType\":\"Patient\",\"id\":\"p3\",\"name\":[{\"family\":\"F4\"}]}");
 
-  // Resources that carry no extension anywhere, so that the new layout's pruned table has neither
-  // an extension column, nor an extension field in any structure, nor an extension map.
+  // Resources that carry no extension anywhere, so that the pruned table has neither an extension
+  // column nor an extension field in any structure.
   private static final List<String> PLAIN_PATIENTS =
       List.of(
           "{\"resourceType\":\"Patient\",\"id\":\"q1\",\"name\":[{\"family\":\"G1\"}],"
@@ -127,7 +123,7 @@ class ExtensionTraversalTest {
               + quantityFields("4", "g")
               + "}}");
 
-  // Quantities that carry no extension, so that the new layout's quantity has no extension field.
+  // Quantities that carry no extension, so that the stored quantity has no extension field.
   private static final List<String> PLAIN_OBSERVATIONS =
       List.of(
           "{\"resourceType\":\"Observation\",\"id\":\"o3\",\"status\":\"final\","
@@ -145,25 +141,25 @@ class ExtensionTraversalTest {
 
   @TempDir static Path tempDir;
 
-  private Map<String, Dataset<Row>> patients;
+  private Dataset<Row> patients;
 
-  private Map<String, Dataset<Row>> plainPatients;
+  private Dataset<Row> plainPatients;
 
-  private Map<String, Dataset<Row>> observations;
+  private Dataset<Row> observations;
 
-  private Map<String, Dataset<Row>> plainObservations;
+  private Dataset<Row> plainObservations;
 
   @BeforeAll
   void setUp() {
-    patients = bothLayouts("Patient", "patients", PATIENTS);
-    plainPatients = bothLayouts("Patient", "plainPatients", PLAIN_PATIENTS);
-    observations = bothLayouts("Observation", "observations", OBSERVATIONS);
-    plainObservations = bothLayouts("Observation", "plainObservations", PLAIN_OBSERVATIONS);
+    patients = stored("Patient", "patients", PATIENTS);
+    plainPatients = stored("Patient", "plainPatients", PLAIN_PATIENTS);
+    observations = stored("Observation", "observations", OBSERVATIONS);
+    plainObservations = stored("Observation", "plainObservations", PLAIN_OBSERVATIONS);
   }
 
   @Nonnull
   Stream<Arguments> patientCases() {
-    return onBothLayouts(
+    return Stream.of(
         // At the resource root.
         arguments(
             "extension.url.join(',')", List.of("p1=urn:root,urn:nested", "p2=null", "p3=null")),
@@ -198,19 +194,17 @@ class ExtensionTraversalTest {
             List.of("p1=ArraySeq(urn:name)", "p2=ArraySeq(urn:name)", "p3=null")));
   }
 
-  @ParameterizedTest(name = "{1} over the {0} layout")
+  @ParameterizedTest(name = "{0}")
   @MethodSource("patientCases")
-  void extensionsOfPatientsMatchOnBothLayouts(
-      @Nonnull final String layout,
-      @Nonnull final String expression,
-      @Nonnull final List<String> expected) {
-    assertThat(evaluate(patients.get(layout), ResourceType.PATIENT, expression))
+  void extensionsOfPatients(
+      @Nonnull final String expression, @Nonnull final List<String> expected) {
+    assertThat(evaluate(patients, ResourceType.PATIENT, expression))
         .containsExactlyInAnyOrderElementsOf(expected);
   }
 
   @Nonnull
   Stream<Arguments> plainPatientCases() {
-    return onBothLayouts(
+    return Stream.of(
         arguments("extension.url.count()", List.of("q1=0", "q2=0")),
         arguments("extension.extension.url.count()", List.of("q1=0", "q2=0")),
         arguments("name.extension.url.count()", List.of("q1=0", "q2=0")),
@@ -218,19 +212,17 @@ class ExtensionTraversalTest {
         arguments("maritalStatus.coding.extension.exists()", List.of("q1=false", "q2=false")));
   }
 
-  @ParameterizedTest(name = "{1} over the {0} layout, with no extensions stored")
+  @ParameterizedTest(name = "{0}, with no extensions stored")
   @MethodSource("plainPatientCases")
-  void noExtensionsStoredIsEmptyOnBothLayouts(
-      @Nonnull final String layout,
-      @Nonnull final String expression,
-      @Nonnull final List<String> expected) {
-    assertThat(evaluate(plainPatients.get(layout), ResourceType.PATIENT, expression))
+  void noExtensionsStoredIsEmpty(
+      @Nonnull final String expression, @Nonnull final List<String> expected) {
+    assertThat(evaluate(plainPatients, ResourceType.PATIENT, expression))
         .containsExactlyInAnyOrderElementsOf(expected);
   }
 
   @Nonnull
   Stream<Arguments> quantityCases() {
-    return onBothLayouts(
+    return Stream.of(
         // A quantity at the resource root, through a choice.
         arguments(
             "value.ofType(Quantity).extension('urn:quantity').value.ofType(string)",
@@ -255,13 +247,11 @@ class ExtensionTraversalTest {
         arguments("(value.ofType(Quantity) | 1 'g').count()", List.of("o1=2", "o2=2")));
   }
 
-  @ParameterizedTest(name = "{1} over the {0} layout")
+  @ParameterizedTest(name = "{0}")
   @MethodSource("quantityCases")
-  void extensionsOfQuantitiesMatchOnBothLayouts(
-      @Nonnull final String layout,
-      @Nonnull final String expression,
-      @Nonnull final List<String> expected) {
-    assertThat(evaluate(observations.get(layout), ResourceType.OBSERVATION, expression))
+  void extensionsOfQuantities(
+      @Nonnull final String expression, @Nonnull final List<String> expected) {
+    assertThat(evaluate(observations, ResourceType.OBSERVATION, expression))
         .containsExactlyInAnyOrderElementsOf(expected);
   }
 
@@ -275,45 +265,40 @@ class ExtensionTraversalTest {
 
   /**
    * A union or combination of two stored quantities keeps the stored structures, reconciled by
-   * name, so extension traversal after it finds the quantities' extensions on both layouts (T113b,
-   * decision 79). The new layout reads them inline, and the previous layout through the stored
-   * structure's {@code _fid}. Before T113b the new layout's answer was empty, because the
-   * combination rebuilt the quantities into the engine's own structure, which has no extensions.
-   * Conditional selection is not covered, because the engine does not implement {@code iif()}.
+   * name, so extension traversal after it finds the quantities' extensions inline (T113b, decision
+   * 79). Before T113b the answer was empty, because the combination rebuilt the quantities into the
+   * engine's own structure, which has no extensions. Conditional selection is not covered, because
+   * the engine does not implement {@code iif()}.
    */
   @ParameterizedTest(name = "{0}")
   @MethodSource("combinedQuantityCases")
-  void extensionsOfCombinedQuantitiesMatchOnBothLayouts(@Nonnull final String expression) {
-    // Both stored quantities carry inline extensions on the new layout, which is what the
-    // combination must keep (T109).
-    final StructType schema = observations.get("pof").schema();
+  void extensionsOfCombinedQuantities(@Nonnull final String expression) {
+    // Both stored quantities carry inline extensions, which is what the combination must keep
+    // (T109).
+    final StructType schema = observations.schema();
     final StructType component =
         (StructType) ((ArrayType) schema.apply("component").dataType()).elementType();
     assertThat(((StructType) schema.apply("valueQuantity").dataType()).fieldNames())
         .contains("extension");
     assertThat(((StructType) component.apply("valueQuantity").dataType()).fieldNames())
         .contains("extension");
-    assertThat(evaluate(observations.get("previous"), ResourceType.OBSERVATION, expression))
-        .containsExactlyInAnyOrder("o1=2", "o2=0");
-    assertThat(evaluate(observations.get("pof"), ResourceType.OBSERVATION, expression))
+    assertThat(evaluate(observations, ResourceType.OBSERVATION, expression))
         .containsExactlyInAnyOrder("o1=2", "o2=0");
   }
 
   /**
    * A stored Coding combined with a Coding literal is reconciled with it by name rather than
-   * converted to the engine's Coding structure, so the stored Coding keeps its extensions on both
-   * layouts. The new layout reads them inline, and the previous layout through the stored Coding's
-   * {@code _fid}. The literal has none.
+   * converted to the engine's Coding structure, so the stored Coding keeps its inline extensions.
+   * The literal has none.
    */
-  @ParameterizedTest(name = "over the {0} layout")
-  @ValueSource(strings = {"previous", "pof"})
-  void storedCodingCombinedWithALiteralKeepsItsExtensions(@Nonnull final String layout) {
+  @Test
+  void storedCodingCombinedWithALiteralKeepsItsExtensions() {
     final String combined = "(maritalStatus.coding | urn:other|X)";
-    assertThat(evaluate(patients.get(layout), ResourceType.PATIENT, combined + ".count()"))
+    assertThat(evaluate(patients, ResourceType.PATIENT, combined + ".count()"))
         .containsExactlyInAnyOrder("p1=2", "p2=1", "p3=1");
     assertThat(
             evaluate(
-                patients.get(layout),
+                patients,
                 ResourceType.PATIENT,
                 combined + ".extension('urn:coding').value.ofType(string)"))
         .containsExactlyInAnyOrder("p1=ArraySeq(c1)", "p2=null", "p3=null");
@@ -321,26 +306,23 @@ class ExtensionTraversalTest {
 
   @Nonnull
   Stream<Arguments> plainQuantityCases() {
-    return onBothLayouts(
+    return Stream.of(
         arguments("value.ofType(Quantity).extension.exists()", List.of("o3=false")),
         arguments("component.value.ofType(Quantity).extension.exists()", List.of("o3=false")));
   }
 
-  @ParameterizedTest(name = "{1} over the {0} layout, with no extensions stored")
+  @ParameterizedTest(name = "{0}, with no extensions stored")
   @MethodSource("plainQuantityCases")
-  void quantityWithNoExtensionsStoredIsEmptyOnBothLayouts(
-      @Nonnull final String layout,
-      @Nonnull final String expression,
-      @Nonnull final List<String> expected) {
-    assertThat(evaluate(plainObservations.get(layout), ResourceType.OBSERVATION, expression))
+  void quantityWithNoExtensionsStoredIsEmpty(
+      @Nonnull final String expression, @Nonnull final List<String> expected) {
+    assertThat(evaluate(plainObservations, ResourceType.OBSERVATION, expression))
         .containsExactlyInAnyOrderElementsOf(expected);
   }
 
-  @ParameterizedTest(name = "over the {0} layout")
-  @ValueSource(strings = {"previous", "pof"})
-  void codingBuiltByTheEngineHasNoExtensions(@Nonnull final String layout) {
-    // A Coding returned by a terminology operation is built by the engine and carries a null
-    // field identifier. It has no extensions to reach on either layout.
+  @Test
+  void codingBuiltByTheEngineHasNoExtensions() {
+    // A Coding returned by a terminology operation is built by the engine. It has no extensions
+    // to reach.
     SharedMocks.resetAll();
     TerminologyServiceHelpers.setupLookup(terminologyService)
         .withProperty(
@@ -350,48 +332,24 @@ class ExtensionTraversalTest {
             new Coding("urn:category", "C", "Category"))
         .done();
     final String property = "maritalStatus.coding.property('category', 'Coding')";
-    assertThat(evaluate(patients.get(layout), ResourceType.PATIENT, property + ".code.exists()"))
+    assertThat(evaluate(patients, ResourceType.PATIENT, property + ".code.exists()"))
         .containsExactlyInAnyOrder("p1=true", "p2=false", "p3=false");
-    assertThat(
-            evaluate(patients.get(layout), ResourceType.PATIENT, property + ".extension.exists()"))
+    assertThat(evaluate(patients, ResourceType.PATIENT, property + ".extension.exists()"))
         .containsExactlyInAnyOrder("p1=false", "p2=false", "p3=false");
   }
 
-  @Nonnull
-  private static Stream<Arguments> onBothLayouts(@Nonnull final Arguments... cases) {
-    return Stream.of(cases)
-        .flatMap(
-            c ->
-                Stream.of("previous", "pof")
-                    .map(layout -> arguments(layout, c.get()[0], c.get()[1])));
-  }
-
-  @Nonnull
-  private Map<String, Dataset<Row>> bothLayouts(
-      @Nonnull final String resourceType,
-      @Nonnull final String name,
-      @Nonnull final List<String> json) {
-    return Map.of(
-        "previous",
-        stored(TestLayout.PREVIOUS, resourceType, name, json),
-        "pof",
-        stored(TestLayout.POF, resourceType, name, json));
-  }
-
   /**
-   * Builds the fixtures in a layout, and writes them to Parquet and reads them back, so that the
-   * engine reads stored files.
+   * Builds the fixtures, and writes them to Parquet and reads them back, so that the engine reads
+   * stored files.
    */
   @Nonnull
   private Dataset<Row> stored(
-      @Nonnull final TestLayout layout,
       @Nonnull final String resourceType,
       @Nonnull final String name,
       @Nonnull final List<String> json) {
     final Dataset<Row> dataset =
-        LayoutDatasets.fromJson(spark, fhirEncoders, layout, resourceType, json);
-    return PrunedSchemaReader.write(dataset, tempDir.resolve(layout + "-" + name).toString())
-        .read();
+        PofDatasets.fromJson(spark, fhirEncoders.getContext(), resourceType, json);
+    return PrunedSchemaReader.write(dataset, tempDir.resolve(name).toString()).read();
   }
 
   /**

@@ -426,8 +426,8 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
   /**
    * Normalizes a Coding Row to the fields it holds, by name. A field the Row's structure does not
    * carry and a field holding null are both left out, so that a Coding narrowed to the fields its
-   * data populates equals the same Coding in the full structure. The element id and the previous
-   * layout's field id are left out too, as neither is part of the Coding's value.
+   * data populates equals the same Coding in the full structure. The element id is left out too, as
+   * it is not part of the Coding's value.
    *
    * @param codingRow the Coding Row to normalize
    * @return the populated fields of the Coding, by name
@@ -437,9 +437,7 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
     final Map<String, Object> normalized = new HashMap<>();
     for (final String field : codingRow.schema().fieldNames()) {
       final int index = codingRow.fieldIndex(field);
-      if (!field.equals(CodingSchema.ID_FIELD)
-          && !field.equals(CodingSchema.FID_FIELD)
-          && !codingRow.isNullAt(index)) {
+      if (!field.equals(CodingSchema.ID_FIELD) && !codingRow.isNullAt(index)) {
         normalized.put(field, codingRow.get(index));
       }
     }

@@ -2760,6 +2760,13 @@ expression, and gives the same answers as this tolerance for every present case.
 
 _Amends_ decision 75.
 
+_Superseded by ticket 05 (T124k, 2026-10-15)_: the tolerance this decision introduced is gone.
+The engine builds no structure with a `_fid` any more, neither a System Coding nor a System
+Quantity, and it no longer reads the previous layout's `_extension` map, so the tolerant
+`_extension` and `_fid` references at extension lookup have nothing to tolerate and are removed.
+`.extension` on a System value is still empty, because the value has no `extension` field. The
+rule for the combining functions, and the addendum below, are unchanged.
+
 ### Addendum to 79 — a stored Coding combined with a System Coding keeps its extensions
 
 Owner-confirmed (2026-09-28), prompted by T113b. This is a known deviation from
@@ -3478,6 +3485,16 @@ test estate is produced at test time by the previous encoder, whose `IdCustomCod
 
 _Consequence for the specification_: removing `_fid` from `CodingSchema` is not done in M4.
 It is recorded on T100e (M7), where the previous layout's reader goes.
+
+_Superseded in its reason by ticket 05 (T124k, 2026-10-15)_: the terminology functions no longer
+return a Coding with a `_fid`, so the reason given above, that this release writes a
+previous-layout marker itself, no longer holds. The rule stands, as decision 132's addendum relies
+on: the root `id_versioned` is still the only marker that classifies a table as the previous
+layout, and the others are still evidence cited in a refusal. It stands for two other reasons. The
+root versioned id is present in every previous-layout table whether or not the legacy encoder
+stored extensions, so the other markers add no case it misses; and each of them adds a way to
+misclassify a conforming table, such as one carrying a field of its own that happens to be named
+like one of them.
 
 ## 101. The server's move needs a warehouse migration story, decided at M7
 

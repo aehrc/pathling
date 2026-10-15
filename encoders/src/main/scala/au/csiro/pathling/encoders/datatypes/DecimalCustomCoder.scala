@@ -23,7 +23,7 @@
 package au.csiro.pathling.encoders.datatypes
 
 import au.csiro.pathling.encoders.EncoderUtils.arrayExpression
-import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder.decimalType
+import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder.{SCALE_SUFFIX, decimalType}
 import au.csiro.pathling.encoders.{Catalyst, ExpressionWithName}
 import org.apache.spark.sql.catalyst.expressions.objects.{Invoke, NewInstance}
 import org.apache.spark.sql.catalyst.expressions.{Expression, Literal}
@@ -49,7 +49,7 @@ case class DecimalCustomCoder(elementName: String) extends CustomCoder {
 
   def primitiveClass: Class[DecimalType] = classOf[DecimalType]
 
-  val scaleFieldName: String = elementName + "_scale"
+  val scaleFieldName: String = elementName + SCALE_SUFFIX
 
   override def customDeserializer(addToPath: String => Expression,
                                   isCollection: Boolean): Seq[ExpressionWithName] = {
@@ -121,6 +121,9 @@ case class DecimalCustomCoder(elementName: String) extends CustomCoder {
 }
 
 object DecimalCustomCoder {
+
+  /** The suffix of the name of the companion column that holds a decimal's source scale. */
+  val SCALE_SUFFIX = "_scale"
 
   /**
    * SQL DecimalType used to represent FHIR Decimal

@@ -28,13 +28,11 @@ import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.datasource.PrunedSchemaReader;
 import au.csiro.pathling.test.helpers.TerminologyServiceHelpers;
-import au.csiro.pathling.test.layout.LayoutDatasets;
-import au.csiro.pathling.test.layout.TestLayout;
+import au.csiro.pathling.test.layout.PofDatasets;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Stream;
 import org.apache.spark.sql.Dataset;
@@ -56,11 +54,10 @@ import org.springframework.beans.factory.annotation.Autowired;
  * Tests that Coding equality and the terminology functions read a Coding by field name, so that
  * they work over a Coding narrower than the canonical structure (T083–T085, FR-031, FR-032).
  *
- * <p>Each fixture is given once as FHIR JSON and read in both layouts, so every case runs over each
- * layout with the same expected answer, and the expected answers are the ones the previous layout
- * gives before the port. The new layout's schema is pruned to the elements the fixtures populate.
- * No fixture populates a Coding's {@code version} or {@code userSelected}, so the new layout's
- * Codings carry neither.
+ * <p>Each fixture is given as FHIR JSON and read in the Parquet on FHIR layout, whose schema is
+ * pruned to the elements the fixtures populate. The expected answers are the ones the previous
+ * layout gave before the port. No fixture populates a Coding's {@code version} or {@code
+ * userSelected}, so the stored Codings carry neither.
  *
  * @author Piotr Szul
  */
@@ -91,11 +88,11 @@ class CodingCollectionTest {
 
   @TempDir static Path tempDir;
 
-  private Map<String, Dataset<Row>> datasets;
+  private Dataset<Row> dataset;
 
   @BeforeAll
   void setUp() {
-    datasets = Map.of("previous", stored(TestLayout.PREVIOUS), "pof", stored(TestLayout.POF));
+    dataset = stored();
   }
 
   @BeforeEach
@@ -109,57 +106,47 @@ class CodingCollectionTest {
   @Nonnull
   Stream<Arguments> cases() {
     return Stream.of(
-            // Equality compares every Coding property, and an absent property is an empty one.
-            arguments(
-                "code.coding.first() = " + SYSTEM_S + "|A||Alpha",
-                List.of("o1=true", "o2=false", "o3=null")),
-            arguments(
-                "code.coding.first() = " + SYSTEM_S + "|B",
-                List.of("o1=false", "o2=true", "o3=null")),
-            arguments(
-                "code.coding contains " + SYSTEM_T + "|C||Gamma",
-                List.of("o1=false", "o2=true", "o3=false")),
-            arguments(
-                "code.coding.where($this = " + SYSTEM_S + "|B).count()",
-                List.of("o1=0", "o2=1", "o3=0")),
-            // The terminology functions, over a singular and a repeating Coding.
-            arguments(
-                "code.coding.first().subsumes(" + SYSTEM_S + "|B)",
-                List.of("o1=true", "o2=true", "o3=null")),
-            arguments(
-                "code.coding.where(subsumedBy(" + SYSTEM_S + "|A)).count()",
-                List.of("o1=1", "o2=1", "o3=0")),
-            arguments(
-                "code.coding.where(memberOf('" + VALUE_SET + "')).count()",
-                List.of("o1=0", "o2=1", "o3=0")),
-            arguments(
-                "code.memberOf('" + VALUE_SET + "')", List.of("o1=false", "o2=true", "o3=null")))
-        .flatMap(
-            c ->
-                Stream.of("previous", "pof")
-                    .map(layout -> arguments(layout, c.get()[0], c.get()[1])));
+        // Equality compares every Coding property, and an absent property is an empty one.
+        arguments(
+            "code.coding.first() = " + SYSTEM_S + "|A||Alpha",
+            List.of("o1=true", "o2=false", "o3=null")),
+        arguments(
+            "code.coding.first() = " + SYSTEM_S + "|B", List.of("o1=false", "o2=true", "o3=null")),
+        arguments(
+            "code.coding contains " + SYSTEM_T + "|C||Gamma",
+            List.of("o1=false", "o2=true", "o3=false")),
+        arguments(
+            "code.coding.where($this = " + SYSTEM_S + "|B).count()",
+            List.of("o1=0", "o2=1", "o3=0")),
+        // The terminology functions, over a singular and a repeating Coding.
+        arguments(
+            "code.coding.first().subsumes(" + SYSTEM_S + "|B)",
+            List.of("o1=true", "o2=true", "o3=null")),
+        arguments(
+            "code.coding.where(subsumedBy(" + SYSTEM_S + "|A)).count()",
+            List.of("o1=1", "o2=1", "o3=0")),
+        arguments(
+            "code.coding.where(memberOf('" + VALUE_SET + "')).count()",
+            List.of("o1=0", "o2=1", "o3=0")),
+        arguments("code.memberOf('" + VALUE_SET + "')", List.of("o1=false", "o2=true", "o3=null")));
   }
 
-  @ParameterizedTest(name = "{1} over the {0} layout")
+  @ParameterizedTest(name = "{0}")
   @MethodSource("cases")
-  void codingOperationsMatchOnBothLayouts(
-      @Nonnull final String layout,
-      @Nonnull final String expression,
-      @Nonnull final List<String> expected) {
-    assertThat(evaluate(datasets.get(layout), expression))
-        .containsExactlyInAnyOrderElementsOf(expected);
+  void codingOperationsReadCodingsByName(
+      @Nonnull final String expression, @Nonnull final List<String> expected) {
+    assertThat(evaluate(dataset, expression)).containsExactlyInAnyOrderElementsOf(expected);
   }
 
   /**
-   * Builds the fixtures in a layout, and writes them to Parquet and reads them back, so that the
-   * engine reads stored files.
+   * Builds the fixtures, and writes them to Parquet and reads them back, so that the engine reads
+   * stored files.
    */
   @Nonnull
-  private Dataset<Row> stored(@Nonnull final TestLayout layout) {
-    final Dataset<Row> dataset =
-        LayoutDatasets.fromJson(spark, fhirEncoders, layout, "Observation", OBSERVATIONS);
-    return PrunedSchemaReader.write(dataset, tempDir.resolve(layout + "-Observation").toString())
-        .read();
+  private Dataset<Row> stored() {
+    final Dataset<Row> observations =
+        PofDatasets.fromJson(spark, fhirEncoders.getContext(), "Observation", OBSERVATIONS);
+    return PrunedSchemaReader.write(observations, tempDir.resolve("Observation").toString()).read();
   }
 
   /**

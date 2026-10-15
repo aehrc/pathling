@@ -142,8 +142,7 @@ public class CodingCollection extends Collection implements StringCoercible {
         lit(coding.getDisplay()).cast(DataTypes.StringType).as("display"),
         lit(coding.hasUserSelected() ? coding.getUserSelected() : null)
             .cast(DataTypes.BooleanType)
-            .as("userSelected"),
-        lit(null).cast(DataTypes.IntegerType).as("_fid"));
+            .as("userSelected"));
   }
 
   @Override

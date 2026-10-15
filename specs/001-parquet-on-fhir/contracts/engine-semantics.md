@@ -82,6 +82,7 @@ made at planning time.
 | Primitive, element absent from the schema | The same type, with a null value. |
 | Complex, element present | Reflects the stored schema, which is fitted to the data. |
 | `System.Quantity`, built by the engine | One fixed shape, whatever produced it (see [Quantities](#quantities)). |
+| `System.Coding`, built by the engine | One fixed shape, whatever produced it (see [Coding and terminology](#coding-and-terminology)). |
 | Complex, element absent | The bottom type, which never reaches a view column. |
 | View column declaring a FHIR type | That type, present or absent. |
 | View column declaring no type, primitive element absent | The definitions' type for the element. |
@@ -151,6 +152,30 @@ expected and the actual fields.
 Terminology operations work on a Coding column narrower than the canonical
 layout, since a fitted schema commonly carries only the fields the data
 populates.
+
+A Coding read from the data keeps the fitted shape of the data it came from,
+with its extensions. A `System.Coding` — one the engine builds itself, such as a
+Coding literal, the result of a terminology function such as `translate()` or
+`property()`, or the Coding a quantity's coded unit is taken as — has one fixed,
+complete shape, whatever produced it (FR-059):
+
+| Field | Type | Holds |
+| --- | --- | --- |
+| `id` | string | The element id, null unless the source Coding had one. |
+| `system` | string | The code system. |
+| `version` | string | The version of the code system. |
+| `code` | string | The code. |
+| `display` | string | The display text. |
+| `userSelected` | boolean | Whether the Coding was chosen directly by the user. |
+
+These are the elements of a FHIR Coding other than `extension`, in definition
+order, and every one is present. A System Coding has no extensions and no field
+identifier: it no longer carries the previous layout's `_fid`, so an
+engine-built Coding never looks like a previous-layout one. Telling
+`System.Coding` apart from `FHIR.Coding` in the type system is
+[#2804](https://github.com/aehrc/pathling/issues/2804); until then, a stored
+Coding combined with an engine-built one is reconciled with it by name and keeps
+its extensions (decision 79's addendum).
 
 ## References
 

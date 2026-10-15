@@ -23,7 +23,6 @@ import static org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType.REFERENCE;
 import au.csiro.pathling.test.datasource.ObjectDataSource;
 import au.csiro.pathling.test.dsl.FhirPathDslTestBase;
 import au.csiro.pathling.test.dsl.FhirPathTest;
-import au.csiro.pathling.test.layout.TestLayout;
 import au.csiro.pathling.utilities.Streams;
 import au.csiro.pathling.views.FhirView;
 import au.csiro.pathling.views.FhirViewExecutor;
@@ -41,6 +40,7 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.types.ArrayType;
 import org.apache.spark.sql.types.DataType;
+import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.instance.model.api.IBaseResource;
@@ -50,8 +50,6 @@ import org.hl7.fhir.r4.model.Patient;
 import org.hl7.fhir.r4.model.Reference;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 
 /**
@@ -60,15 +58,15 @@ import org.springframework.beans.factory.annotation.Autowired;
  * <p>These functions are required by the SQL on FHIR shareable view profile.
  *
  * <p>The keys, and the join they feed, are also tested over the reference fixtures in {@code
- * viewTests/references.json} in both layouts, whichever layout is active (T088). The new layout
- * stores no versioned key, so these show that neither key depends on one (FR-033).
+ * viewTests/references.json} (T088). The Parquet on FHIR layout stores no versioned key, so these
+ * show that neither key depends on one (FR-033).
  */
 public class JoinKeyFunctionsDslTest extends FhirPathDslTestBase {
 
   private static final String FIXTURE = "/viewTests/references.json";
 
-  // Observations whose references carry no reference string anywhere, so that the new layout's
-  // Reference structure has no reference field.
+  // Observations whose references carry no reference string anywhere, so that the stored Reference
+  // structure has no reference field.
   private static final List<String> LOGICAL_OBSERVATIONS =
       List.of(
           "{\"resourceType\":\"Observation\",\"id\":\"l1\",\"status\":\"final\","
@@ -211,10 +209,9 @@ public class JoinKeyFunctionsDslTest extends FhirPathDslTestBase {
   }
 
   @FhirPathTest
-  public Stream<DynamicTest> testVersionedKeysOverTheActiveLayout() {
+  public Stream<DynamicTest> testVersionedKeys() {
     // A versioned reference keeps its version under the current rule (#2797), and a resource
-    // whose id carries a version still has an unversioned key. On the previous layout the version
-    // is also stored in id_versioned, which the key must not read.
+    // whose id carries a version still has an unversioned key.
     final Observation observation = new Observation();
     observation.setId("o4");
     observation.setSubject(new Reference("Patient/p2/_history/3"));
@@ -248,24 +245,18 @@ public class JoinKeyFunctionsDslTest extends FhirPathDslTestBase {
 
   @Test
   void newLayoutStoresNoVersionedKey() throws IOException {
-    final List<String> newLayout = versionedFields(dataSource(TestLayout.POF));
-    final List<String> previousLayout = versionedFields(dataSource(TestLayout.PREVIOUS));
+    // The control: the search finds a versioned key where a schema has one.
+    final StructType control =
+        new StructType().add("id", DataTypes.StringType).add("id_versioned", DataTypes.StringType);
+    assertThat(fieldPaths(control, "Patient")).contains("Patient.id_versioned");
 
-    // The previous layout stores a versioned key beside each id, which shows that the search
-    // finds one where it exists. The new layout stores none, at any depth.
-    assertThat(previousLayout).contains("Patient.id_versioned", "Observation.id_versioned");
-    assertThat(newLayout).isEmpty();
+    // The layout stores none, at any depth.
+    assertThat(versionedFields(dataSource())).isEmpty();
   }
 
-  @Nonnull
-  static Stream<TestLayout> layouts() {
-    return Stream.of(TestLayout.PREVIOUS, TestLayout.POF);
-  }
-
-  @ParameterizedTest(name = "over the {0} layout")
-  @MethodSource("layouts")
-  void keysOverEachLayout(@Nonnull final TestLayout layout) throws IOException {
-    final FhirViewExecutor executor = executor(dataSource(layout));
+  @Test
+  void keysOverTheFixtures() throws IOException {
+    final FhirViewExecutor executor = executor(dataSource());
 
     assertThat(rows(executor, resourceKeyView("Patient")))
         .containsExactlyInAnyOrder("p1|Patient/p1", "p2|Patient/p2");
@@ -294,10 +285,9 @@ public class JoinKeyFunctionsDslTest extends FhirPathDslTestBase {
             "o5|null|null");
   }
 
-  @ParameterizedTest(name = "over the {0} layout")
-  @MethodSource("layouts")
-  void joinOverEachLayout(@Nonnull final TestLayout layout) throws IOException {
-    final FhirViewExecutor executor = executor(dataSource(layout));
+  @Test
+  void joinOverTheFixtures() throws IOException {
+    final FhirViewExecutor executor = executor(dataSource());
     final Dataset<Row> targets =
         run(executor, resourceKeyView("Patient"))
             .unionByName(run(executor, resourceKeyView("Practitioner")))
@@ -336,24 +326,19 @@ public class JoinKeyFunctionsDslTest extends FhirPathDslTestBase {
         .containsExactlyInAnyOrder("o1|p1", "o1|pr1", "o1|p2");
   }
 
-  @ParameterizedTest(name = "over the {0} layout")
-  @MethodSource("layouts")
-  void referencesWithoutReferenceStringsJoinNothing(@Nonnull final TestLayout layout)
-      throws IOException {
+  @Test
+  void referencesWithoutReferenceStringsJoinNothing() throws IOException {
     final List<IBaseResource> resources = new ArrayList<>(fixtureResources());
     resources.removeIf(resource -> resource.fhirType().equals("Observation"));
     final IParser parser = fhirEncoders.getContext().newJsonParser();
     LOGICAL_OBSERVATIONS.forEach(json -> resources.add(parser.parseResource(json)));
-    final ObjectDataSource dataSource =
-        new ObjectDataSource(spark, fhirEncoders, resources, layout);
+    final ObjectDataSource dataSource = new ObjectDataSource(spark, fhirEncoders, resources);
     final FhirViewExecutor executor = executor(dataSource);
 
-    // On the new layout, no stored Reference carries a reference field.
-    if (layout.isPof()) {
-      assertThat(fieldPaths(dataSource.read("Observation").schema(), "Observation"))
-          .contains("Observation.subject.type", "Observation.performer.display")
-          .doesNotContain("Observation.subject.reference", "Observation.performer.reference");
-    }
+    // No stored Reference carries a reference field.
+    assertThat(fieldPaths(dataSource.read("Observation").schema(), "Observation"))
+        .contains("Observation.subject.type", "Observation.performer.display")
+        .doesNotContain("Observation.subject.reference", "Observation.performer.reference");
     final Dataset<Row> keys =
         run(
                 executor,
@@ -402,8 +387,8 @@ public class JoinKeyFunctionsDslTest extends FhirPathDslTestBase {
   }
 
   @Nonnull
-  private ObjectDataSource dataSource(@Nonnull final TestLayout layout) throws IOException {
-    return new ObjectDataSource(spark, fhirEncoders, fixtureResources(), layout);
+  private ObjectDataSource dataSource() throws IOException {
+    return new ObjectDataSource(spark, fhirEncoders, fixtureResources());
   }
 
   @Nonnull

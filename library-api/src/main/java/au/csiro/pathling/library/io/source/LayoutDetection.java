@@ -57,7 +57,7 @@ public class LayoutDetection {
    * Returns whether the schema was classified as the previous layout and also carries markers of
    * the Parquet on FHIR layout, as an append of new-layout data into a previous-layout table
    * produces. A Parquet on FHIR schema carrying a previous-layout marker that does not classify it,
-   * such as the {@code _fid} of a coding a terminology function returned, is not mixed.
+   * such as a nested field named {@code _fid}, is not mixed.
    *
    * @return true if the schema is the previous layout and carries markers of both layouts
    */

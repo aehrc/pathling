@@ -26,8 +26,7 @@ import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluatorBuilder;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.datasource.PrunedSchemaReader;
-import au.csiro.pathling.test.layout.LayoutDatasets;
-import au.csiro.pathling.test.layout.TestLayout;
+import au.csiro.pathling.test.layout.PofDatasets;
 import jakarta.annotation.Nonnull;
 import java.nio.file.Path;
 import java.util.List;
@@ -52,10 +51,9 @@ import org.springframework.beans.factory.annotation.Autowired;
  * (FR-025).
  *
  * <p>The type of a resolved reference is taken from its {@code type} where it has one, and parsed
- * from its {@code reference} where it does not. The new layout omits {@code type} where no row
- * populates it, which is the ordinary shape of references, so the type must be read as a typed null
- * there. The previous layout carries every element, so there {@code type} is removed from the
- * schema, as it is from a pruned table. Every case runs on both layouts in the same run.
+ * from its {@code reference} where it does not. The Parquet on FHIR layout omits {@code type} where
+ * no row populates it, which is the ordinary shape of references, so the type must be read as a
+ * typed null.
  *
  * @author Piotr Szul
  */
@@ -91,26 +89,10 @@ class AbsentReferenceTypeTest {
 
   @BeforeAll
   void setUp() {
-    final PrunedSchemaReader previousUntyped =
-        write(TestLayout.PREVIOUS, "previous-untyped", UNTYPED);
-    final PrunedSchemaReader previousMixed =
-        write(TestLayout.PREVIOUS, "previous-mixed", UNTYPED, TYPED);
     // No reference in these datasets has a type.
-    untyped =
-        Map.of(
-            "pof",
-            write(TestLayout.POF, "pof-untyped", UNTYPED).read(),
-            "previous, full schema",
-            previousUntyped.read(),
-            "previous, without performer.type and subject.type",
-            previousUntyped.readWithout("performer.type", "subject.type"));
+    untyped = Map.of("untyped", write("untyped", UNTYPED).read());
     // The positive controls: typed references beside untyped ones.
-    mixed =
-        Map.of(
-            "pof",
-            write(TestLayout.POF, "pof-mixed", UNTYPED, TYPED).read(),
-            "previous, full schema",
-            previousMixed.read());
+    mixed = Map.of("mixed", write("mixed", UNTYPED, TYPED).read());
     setUpAbsentReferences();
   }
 
@@ -193,30 +175,10 @@ class AbsentReferenceTypeTest {
   private Map<String, Dataset<Row>> identified;
 
   private void setUpAbsentReferences() {
-    // No reference in these datasets has a reference, and the new layout omits it. The previous
-    // layout carries it, so it is removed from the schema there, as it is from a pruned table.
-    final PrunedSchemaReader previousLogical =
-        write(TestLayout.PREVIOUS, "previous-logical", LOGICAL);
-    logical =
-        Map.of(
-            "pof",
-            write(TestLayout.POF, "pof-logical", LOGICAL).read(),
-            "previous, full schema",
-            previousLogical.read(),
-            "previous, without performer.reference and subject.reference",
-            previousLogical.readWithout("performer.reference", "subject.reference"));
+    // No reference in these datasets has a reference, and the layout omits it.
+    logical = Map.of("logical", write("logical", LOGICAL).read());
     // No reference in these datasets has either a type or a reference.
-    final PrunedSchemaReader previousIdentified =
-        write(TestLayout.PREVIOUS, "previous-identified", IDENTIFIED);
-    identified =
-        Map.of(
-            "pof",
-            write(TestLayout.POF, "pof-identified", IDENTIFIED).read(),
-            "previous, full schema",
-            previousIdentified.read(),
-            "previous, without the type and reference of performer and subject",
-            previousIdentified.readWithout(
-                "performer.reference", "performer.type", "subject.reference", "subject.type"));
+    identified = Map.of("identified", write("identified", IDENTIFIED).read());
   }
 
   @Nonnull
@@ -268,10 +230,9 @@ class AbsentReferenceTypeTest {
   }
 
   @Nonnull
-  private PrunedSchemaReader write(
-      @Nonnull final TestLayout layout, @Nonnull final String name, @Nonnull final String... json) {
+  private PrunedSchemaReader write(@Nonnull final String name, @Nonnull final String... json) {
     final Dataset<Row> dataset =
-        LayoutDatasets.fromJson(spark, fhirEncoders, layout, "Observation", List.of(json));
+        PofDatasets.fromJson(spark, fhirEncoders.getContext(), "Observation", List.of(json));
     return PrunedSchemaReader.write(dataset, tempDir.resolve(name).toString());
   }
 

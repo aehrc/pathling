@@ -18,8 +18,8 @@ package au.csiro.pathling.library.io.source;
 
 import au.csiro.pathling.encoders.ExtensionSupport;
 import au.csiro.pathling.encoders.QuantitySupport;
+import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
 import au.csiro.pathling.schema.LayoutFields;
-import au.csiro.pathling.sql.DecimalNormalisation;
 import jakarta.annotation.Nonnull;
 import java.util.Arrays;
 import java.util.List;
@@ -63,8 +63,10 @@ import org.apache.spark.sql.types.StructType;
  * carries: a table holding both layouts, as an append of new data into an earlier table produces,
  * keeps it, and is the case the engine assumes never arises (decision 47), so it is refused rather
  * than read. The other previous-layout markers are evidence, cited in a refusal, but do not
- * classify a table by themselves, because this release still writes one of them: the codings the
- * terminology functions return carry a {@code _fid}, and data holding them must read back.
+ * classify a table by themselves. The root versioned id is present in every previous-layout table,
+ * whether or not the previous encoder stored extensions, so the other markers would add no table it
+ * misses, and each of them would add a way to misclassify a conforming table that happens to carry
+ * a field of that name.
  *
  * <p>Without the root versioned id, a schema is the Parquet on FHIR layout where it carries a
  * marker of that layout, and is otherwise unclassifiable and accepted, because marker absence is
@@ -272,7 +274,7 @@ public final class LayoutDetector {
   private static boolean isScaleCompanion(
       @Nonnull final StructField field, @Nonnull final StructType parent) {
     final String name = field.name();
-    final String suffix = DecimalNormalisation.SCALE_SUFFIX();
+    final String suffix = DecimalCustomCoder.SCALE_SUFFIX();
     return name.endsWith(suffix)
         && name.length() > suffix.length()
         && holds(field.dataType(), DataTypes.IntegerType)

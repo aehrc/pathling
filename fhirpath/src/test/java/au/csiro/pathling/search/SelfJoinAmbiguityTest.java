@@ -23,8 +23,7 @@ import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.test.SpringBootUnitTest;
-import au.csiro.pathling.test.layout.LayoutDatasets;
-import au.csiro.pathling.test.layout.TestLayout;
+import au.csiro.pathling.test.layout.PofDatasets;
 import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.function.Function;
@@ -71,22 +70,17 @@ class SelfJoinAmbiguityTest {
     final Function<Dataset<Row>, Dataset<Row>> aliased =
         ds -> ds.as("l").join(ds.as("r"), functions.col("l.id").equalTo(functions.col("r.id")));
     final Function<Dataset<Row>, Dataset<Row>> using = ds -> ds.join(ds, "id");
-    return Stream.of(TestLayout.PREVIOUS, TestLayout.POF)
-        .flatMap(
-            layout ->
-                Stream.of(
-                    arguments(layout, "an aliased self-join", aliased),
-                    arguments(layout, "a self-join on the id", using)));
+    return Stream.of(
+        arguments("an aliased self-join", aliased), arguments("a self-join on the id", using));
   }
 
-  @ParameterizedTest(name = "{1} over the {0} layout")
+  @ParameterizedTest(name = "{0}")
   @MethodSource("cases")
   void referenceToAnAmbiguousColumnFails(
-      @Nonnull final TestLayout layout,
       @Nonnull final String ignoredName,
       @Nonnull final Function<Dataset<Row>, Dataset<Row>> selfJoin) {
     final Dataset<Row> patients =
-        LayoutDatasets.fromJson(spark, encoders, layout, "Patient", PATIENTS);
+        PofDatasets.fromJson(spark, encoders.getContext(), "Patient", PATIENTS);
     final SearchColumnBuilder builder =
         SearchColumnBuilder.withDefaultRegistry(encoders.getContext());
     final Column male = builder.fromExpression(ResourceType.PATIENT, "gender = 'male'");

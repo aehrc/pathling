@@ -57,10 +57,8 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 public class QuantityCollection extends Collection implements Comparable, StringCoercible, Numeric {
 
   /**
-   * Quantity and the types profiled on it. A stored element of any of them is normalised at
-   * traversal to the new layout's shape (T094b, decision 80), because the previous layout stores
-   * each of them with its canonical form and the scale of its value. It is taken as a System
-   * quantity only where it is computed with.
+   * Quantity and the types profiled on it. A stored element of any of them is held in the shape it
+   * is stored in (decision 80), and taken as a System quantity only where it is computed with.
    */
   public static final Set<FHIRDefinedType> QUANTITY_TYPES =
       Set.of(
@@ -222,8 +220,7 @@ public class QuantityCollection extends Collection implements Comparable, String
             lit(null).cast(DataTypes.StringType).as(CodingSchema.VERSION_FIELD),
             quantity.getField(QuantityEncoding.CODE_COLUMN).as(CodingSchema.CODE_FIELD),
             quantity.getField(QuantityEncoding.UNIT_COLUMN).as(CodingSchema.DISPLAY_FIELD),
-            lit(null).cast(DataTypes.BooleanType).as(CodingSchema.USER_SELECTED_FIELD),
-            lit(null).cast(DataTypes.IntegerType).as(CodingSchema.FID_FIELD))
+            lit(null).cast(DataTypes.BooleanType).as(CodingSchema.USER_SELECTED_FIELD))
         .cast(CodingSchema.DATA_TYPE);
   }
 

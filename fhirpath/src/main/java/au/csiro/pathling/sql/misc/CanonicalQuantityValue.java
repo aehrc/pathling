@@ -33,7 +33,7 @@ import org.apache.spark.sql.types.DataType;
  * canonicalisation, and the canonical form is the one the previous layout's encoder stored beside
  * each quantity: {@link Ucum#getCanonicalValue} of the value and the code, whatever the system.
  * Until annotations are emitted, this is how the engine obtains the canonical form of a stored
- * quantity on either layout (FR-022).
+ * quantity (FR-022).
  *
  * <p>Returns null if either input is null, if the value is not a decimal, or if the code cannot be
  * canonicalised.

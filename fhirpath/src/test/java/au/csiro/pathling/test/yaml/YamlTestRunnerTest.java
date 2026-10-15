@@ -38,7 +38,6 @@ import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.layout.PofDatasets;
-import au.csiro.pathling.test.layout.TestLayout;
 import au.csiro.pathling.test.yaml.format.YamlTestFormat;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
@@ -101,11 +100,11 @@ class YamlTestRunnerTest {
     System.out.println(subjectDefinition);
 
     final StructType subjectSchema =
-        YamlSupport.definitionToStruct(subjectDefinition, subjectYamlModel, TestLayout.active());
+        YamlSupport.definitionToStruct(subjectDefinition, subjectYamlModel);
     System.out.println("Struct definition:");
     subjectSchema.printTreeString();
 
-    final String subjectJson = YamlSupport.subjectToJson(subjectYamlModel, TestLayout.active());
+    final String subjectJson = YamlSupport.subjectToJson(subjectYamlModel);
     System.out.println(subjectJson);
 
     final Dataset<Row> inputDS =

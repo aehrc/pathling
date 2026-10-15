@@ -25,35 +25,12 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 /**
- * Tests that the layout and schema mode dimensions accept exactly the values they can honour, and
- * refuse every other request loudly rather than falling back to a default (T038).
+ * Tests that the schema mode dimension accepts exactly the values it can honour, and refuses every
+ * other request loudly rather than falling back to a default (T038).
  *
  * @author Piotr Szul
  */
 class TestDimensionsTest {
-
-  @Test
-  void unsetLayoutIsTheNewLayout() {
-    assertThat(TestLayout.parse(null)).isSameAs(TestLayout.POF);
-    assertThat(TestLayout.fromProperties(new Properties())).isSameAs(TestLayout.POF);
-  }
-
-  @Test
-  void knownLayoutsAreAccepted() {
-    assertThat(TestLayout.parse("previous")).isSameAs(TestLayout.PREVIOUS);
-    assertThat(TestLayout.parse("pof")).isSameAs(TestLayout.POF);
-    assertThat(TestLayout.POF.isPof()).isTrue();
-    assertThat(TestLayout.PREVIOUS.isPof()).isFalse();
-  }
-
-  @ParameterizedTest
-  @ValueSource(strings = {"", "true", "POF", "Previous", "new", "parquet", " pof"})
-  void unknownLayoutFails(final String value) {
-    assertThatThrownBy(() -> TestLayout.parse(value))
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("Unknown test layout")
-        .hasMessageContaining(TestLayout.PROPERTY);
-  }
 
   @Test
   void unsetSchemaModeIsPruned() {
@@ -79,23 +56,6 @@ class TestDimensionsTest {
   }
 
   @ParameterizedTest
-  @ValueSource(
-      strings = {
-        "pathling.testlayout",
-        "pathling.test.layout",
-        "PATHLING.TESTLAYOUT",
-        "pathling_testLayout"
-      })
-  void nearMissOfTheLayoutPropertyFails(final String name) {
-    final Properties properties = new Properties();
-    properties.setProperty(name, "pof");
-    assertThatThrownBy(() -> TestLayout.fromProperties(properties))
-        .isInstanceOf(IllegalStateException.class)
-        .hasMessageContaining(name)
-        .hasMessageContaining(TestLayout.PROPERTY);
-  }
-
-  @ParameterizedTest
   @ValueSource(strings = {"pathling.testschemamode", "pathling.test.schemaMode"})
   void nearMissOfTheSchemaModePropertyFails(final String name) {
     final Properties properties = new Properties();
@@ -109,8 +69,8 @@ class TestDimensionsTest {
   @Test
   void exactPropertyIsRead() {
     final Properties properties = new Properties();
-    properties.setProperty(TestLayout.PROPERTY, "pof");
+    properties.setProperty(TestSchemaMode.PROPERTY, "pruned");
     properties.setProperty("pathling.testForkCount", "4");
-    assertThat(TestLayout.fromProperties(properties)).isSameAs(TestLayout.POF);
+    assertThat(TestSchemaMode.fromProperties(properties)).isSameAs(TestSchemaMode.PRUNED);
   }
 }

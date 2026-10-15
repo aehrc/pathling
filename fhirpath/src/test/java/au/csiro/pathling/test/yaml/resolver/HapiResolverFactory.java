@@ -20,8 +20,7 @@ package au.csiro.pathling.test.yaml.resolver;
 import au.csiro.pathling.fhirpath.evaluation.CrossResourceStrategy;
 import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluator;
 import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluatorBuilder;
-import au.csiro.pathling.test.layout.LayoutDatasets;
-import au.csiro.pathling.test.layout.TestLayout;
+import au.csiro.pathling.test.layout.PofDatasets;
 import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.function.Function;
@@ -35,9 +34,8 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 /**
  * Factory for creating DatasetEvaluator instances from HAPI FHIR resources. This implementation
  * handles the conversion of HAPI FHIR resource objects into a format suitable for FHIRPath
- * expression evaluation using flat schema, in the layout the {@link TestLayout} dimension selects
- * (T036). On the new layout the resource is serialised to FHIR JSON and read through the new-layout
- * transform, instead of being encoded with the FHIR encoders.
+ * expression evaluation using flat schema. The resource is serialised to FHIR JSON and read in the
+ * Parquet on FHIR layout (T036).
  */
 @Value
 @AllArgsConstructor(staticName = "of")
@@ -45,28 +43,17 @@ public class HapiResolverFactory implements Function<RuntimeContext, DatasetEval
 
   @Nonnull IBaseResource resource;
 
-  @Nonnull TestLayout layout;
-
-  /**
-   * Returns a factory over a resource, in the active test layout.
-   *
-   * @param resource the resource to evaluate against
-   * @return the factory
-   */
-  @Nonnull
-  public static HapiResolverFactory of(@Nonnull final IBaseResource resource) {
-    return of(resource, TestLayout.active());
-  }
-
   @Override
   @Nonnull
   public DatasetEvaluator apply(final RuntimeContext rt) {
     final ResourceType resourceType = ResourceType.fromCode(resource.fhirType());
 
-    // Create flat dataset using FHIR encoders, or the new-layout transform.
     final Dataset<Row> resourceDS =
-        LayoutDatasets.fromResources(
-            rt.getSpark(), rt.getFhirEncoders(), layout, resource.fhirType(), List.of(resource));
+        PofDatasets.fromResources(
+            rt.getSpark(),
+            rt.getFhirEncoders().getContext(),
+            resource.fhirType(),
+            List.of(resource));
 
     // Build DatasetEvaluator using the builder
     // Use EMPTY strategy for cross-resource references to return empty collections
