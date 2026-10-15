@@ -228,14 +228,22 @@ public class QuantityValue {
    *
    * <p>That requires a value and a code, a system that is UCUM or the FHIRPath calendar duration
    * system, and no comparator. For example, {@code 3 tab} with no system, or {@code <5 mg}, cannot
-   * be represented.
+   * be represented. This mirrors {@link QuantityEncoding#decode}, which returns null for such a
+   * quantity.
    *
    * @return Column of BooleanType that is false rather than null when any field is missing
    * @see <a href="https://hl7.org/fhir/R4/fhirpath.html#quantity">FHIRPath - Quantity</a>
    */
   @Nonnull
   public Column isSystemQuantity() {
-    final Column hasSupportedSystem = coalesce(isUcum().or(isCalendarDuration()), lit(false));
+    final Column hasSupportedSystem =
+        coalesce(
+            quantityColumn
+                .getField(QuantityEncoding.SYSTEM_COLUMN)
+                .isin(
+                    UcumUnit.UCUM_SYSTEM_URI,
+                    CalendarDurationUnit.FHIRPATH_CALENDAR_DURATION_SYSTEM_URI),
+            lit(false));
     return quantityColumn
         .getField(QuantityEncoding.VALUE_COLUMN)
         .isNotNull()

@@ -110,6 +110,14 @@ public class FhirQuantityConversionDslTest extends FhirPathDslTestBase {
         .testEmpty(
             "component[4].value.ofType(Quantity).toString()", "quantity without a value is empty")
         .testEmpty("component[5].value.ofType(Quantity).toString()", "bounded quantity is empty")
+        .group("Array-backed input with one item")
+        .testEquals(
+            "3 days",
+            "component.value.ofType(Quantity).where(code = 'day').toString()",
+            "representable quantity is converted")
+        .testEmpty(
+            "component.value.ofType(Quantity).where(comparator.exists()).toString()",
+            "bounded quantity is empty")
         .group("Multiple items")
         .testError("component.value.ofType(Quantity).toString()", "multiple quantities is an error")
         .build();
@@ -140,6 +148,13 @@ public class FhirQuantityConversionDslTest extends FhirPathDslTestBase {
             "quantity without a value does not convert")
         .testFalse(
             "component[5].value.ofType(Quantity).convertsToString()",
+            "bounded quantity does not convert")
+        .group("Array-backed input with one item")
+        .testTrue(
+            "component.value.ofType(Quantity).where(code = 'day').convertsToString()",
+            "representable quantity converts")
+        .testFalse(
+            "component.value.ofType(Quantity).where(comparator.exists()).convertsToString()",
             "bounded quantity does not convert")
         .group("Multiple items")
         .testError(
@@ -180,6 +195,13 @@ public class FhirQuantityConversionDslTest extends FhirPathDslTestBase {
         .testEmpty(
             "value.ofType(Quantity).toQuantity('tab')",
             "quantity without a system is not converted to its own unit")
+        .group("Array-backed input with one item")
+        .testTrue(
+            "component.value.ofType(Quantity).where(code = 'day').toQuantity() = 3 days",
+            "representable quantity is returned unchanged")
+        .testEmpty(
+            "component.value.ofType(Quantity).where(comparator.exists()).toQuantity()",
+            "bounded quantity is empty")
         .group("Multiple items")
         .testError(
             "component.value.ofType(Quantity).toQuantity()", "multiple quantities is an error")
@@ -225,6 +247,13 @@ public class FhirQuantityConversionDslTest extends FhirPathDslTestBase {
         .testFalse(
             "value.ofType(Quantity).convertsToQuantity('tab')",
             "quantity without a system does not convert to its own unit")
+        .group("Array-backed input with one item")
+        .testTrue(
+            "component.value.ofType(Quantity).where(code = 'day').convertsToQuantity()",
+            "representable quantity converts")
+        .testFalse(
+            "component.value.ofType(Quantity).where(comparator.exists()).convertsToQuantity()",
+            "bounded quantity does not convert")
         .group("Multiple items")
         .testError(
             "component.value.ofType(Quantity).convertsToQuantity()",

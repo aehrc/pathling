@@ -311,8 +311,8 @@ class ConversionLogic {
    * <ul>
    *   <li>BOOLEAN, INTEGER, DATE, DATETIME, TIME: Direct cast to String
    *   <li>DECIMAL: Use DecimalToLiteral UDF to format with trailing zeros removed
-   *   <li>QUANTITY: Use QuantityToLiteral UDF to format as FHIRPath quantity literal, if the
-   *       quantity is representable as a System.Quantity
+   *   <li>QUANTITY: Use QuantityToLiteral UDF to format as FHIRPath quantity literal (null if the
+   *       quantity is not representable as a System.Quantity)
    * </ul>
    *
    * @param sourceType The source FHIRPath type
@@ -332,12 +332,8 @@ class ConversionLogic {
       case QUANTITY ->
           // Quantity: Use QuantityToLiteral UDF to format as FHIRPath quantity literal.
           // E.g., {value: 1, unitCode: "wk", system: "http://unitsofmeasure.org"} -> "1 'wk'"
-          let(
-              value,
-              v ->
-                  when(
-                      QuantityValue.of(v).isSystemQuantity(),
-                      callUDF(QuantityToLiteral.FUNCTION_NAME, v)));
+          // The UDF returns null for a quantity that has no System.Quantity equivalent.
+          callUDF(QuantityToLiteral.FUNCTION_NAME, value);
       default -> lit(null);
     };
   }
