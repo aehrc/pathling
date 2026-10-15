@@ -39,6 +39,10 @@ together with the core. They are also child modules of the main `pom.xml`.
 - `site` - A website that contains documentation for Pathling.
 - `benchmark` - A benchmark for evaluating the performance of Pathling query
   execution.
+- `legacy-export` - A component and command-line tool that converts tables in
+  the legacy layout, written by the `encoders` module, to FHIR NDJSON for
+  re-import into the Parquet on FHIR layout. It depends on `encoders` and on
+  nothing newer in the core chain, and is not part of `library-runtime`.
 
 The following modules are versioned independently and are **not** children of
 the main `pom.xml`:
@@ -66,6 +70,7 @@ graph TD
     r[lib/R<br/>R bindings]
     site[site<br/>Documentation website]
     benchmark[benchmark<br/>Performance benchmarks]
+    legacy-export[legacy-export<br/>Legacy layout export]
     server[server<br/>FHIR server]
     ui[ui<br/>Admin UI]
     test-data[test-data<br/>Test data generation]
@@ -94,6 +99,7 @@ graph TD
     site --> python
     site --> r
     benchmark --> test-data
+    legacy-export --> encoders
 ```
 
 The "public API" of Pathling is defined as the public API of the library API

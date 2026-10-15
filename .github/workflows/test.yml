@@ -34,6 +34,7 @@ jobs:
               - 'fhir-schema/**'
               - 'encoders/**'
               - 'io/**'
+              - 'legacy-export/**'
               - 'terminology/**'
               - 'fhirpath/**'
               - 'library-api/**'
@@ -114,6 +115,7 @@ jobs:
           - fhir-schema
           - encoders
           - io
+          - legacy-export
           - terminology
           - fhirpath
           - library-api
