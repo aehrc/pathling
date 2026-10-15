@@ -42,7 +42,7 @@
     <pathling.sparkVersion>4.0.2</pathling.sparkVersion>
     <pathling.hadoopVersion>3.4.1</pathling.hadoopVersion>
     <pathling.scalaVersion>2.13</pathling.scalaVersion>
-    <pathling.deltaVersion>4.0.0</pathling.deltaVersion>
+    <pathling.deltaVersion>4.0.1</pathling.deltaVersion>
     <pathling.nettyVersion>4.1.137.Final</pathling.nettyVersion>
     <pathling.httpClient5Version>5.6.4</pathling.httpClient5Version>
     <pathling.httpCore5Version>5.4.3</pathling.httpCore5Version>
