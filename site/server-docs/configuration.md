@@ -205,7 +205,7 @@ These settings govern the resolution of a query's dependency graph, for both
   referenced as a SQLQuery or SQLView dependency may have. Must be at least
   `1`. A value set with exactly this many members is accepted; one with more is
   rejected with a `422` naming the label, the canonical URL and the maximum,
-  before any SQL runs. In `SERVER` mode an expansion page whose `total` exceeds
+  before any SQL runs. In `server` mode an expansion page whose `total` exceeds
   the maximum is rejected at once, without fetching further pages. The `total`
   is trusted for this even though abstract entries, which contribute no member,
   are counted in it. Where no `total` is reported, no page beyond the one that
@@ -265,7 +265,7 @@ terminology server that cannot be reached during the value set lookup ends
 resolution at once with a `422`, since the concept map lookup would fail the
 same way. Where every lookup finds nothing, the request is a `404`.
 
-In `SERVER` mode the value set lookup is the `ValueSet/$expand` described
+In `server` mode the value set lookup is the `ValueSet/$expand` described
 above: a `404` means that there is no value set at the URL, and any other
 failure status on the first page means that the lookup cannot tell. A concept
 map dependency therefore costs one `$expand` of its URL before its concept map
@@ -285,13 +285,13 @@ SNOMED CT implicit concept maps only from the local store, so a `fhir_cm` URL
 that the search does not return is a `404` stating that such maps are resolved
 only in local terminology mode.
 
-In `LOCAL` mode concept maps come from the local terminology store at
+In `local` mode concept maps come from the local terminology store at
 `pathling.terminology.local.storagePath`, from two sources:
 
 - the ConceptMap resources imported into the store (see
   [local terminology mode](/docs/libraries/terminology/local)), matched by
   canonical URL and version under the same pinned and unpinned rules as in
-  `SERVER` mode; and
+  `server` mode; and
 - the SNOMED CT implicit concept maps that HL7 Terminology (THO) defines over
   four association reference sets, named by
   `http://snomed.info/sct?fhir_cm=[refsetId]`: SAME AS (`900000000000527005`)
