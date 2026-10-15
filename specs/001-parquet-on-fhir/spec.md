@@ -440,8 +440,9 @@ Identifiers are stable. FR-015, FR-018 and FR-020 are retired and not reused.
 - **FR-059**: A complex value of a FHIR type MUST leave the engine in the fitted
   shape of the data it came from, and this MUST be documented. A complex value
   of a System type MUST have one fixed, complete shape, whatever produced it.
-  The engine-built `System.Quantity` MUST NOT carry the legacy layout's shape;
-  the same for `System.Coding` is
+  The engine-built `System.Quantity` and `System.Coding` MUST NOT carry the
+  legacy layout's shape, including its `_fid` field. Distinguishing
+  `System.Coding` from `FHIR.Coding` in the type system is
   [#2804](https://github.com/aehrc/pathling/issues/2804).
 
 ### Reading and writing
@@ -580,7 +581,7 @@ reconciliation, legacy export, layout column.
 - Distinguishing `System.Coding` from `FHIR.Coding` in the type system is
   [#2804](https://github.com/aehrc/pathling/issues/2804), outside this
   specification, except for the shape of the engine-built `System.Quantity`
-  (FR-059).
+  and the absence of `_fid` from the engine-built `System.Coding` (FR-059).
 
 ## Open questions
 
