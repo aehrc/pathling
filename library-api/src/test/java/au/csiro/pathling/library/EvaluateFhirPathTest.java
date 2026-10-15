@@ -499,12 +499,13 @@ public class EvaluateFhirPathTest {
   @Test
   void numberPromotedToAQuantityIsRenderedAsAQuantity() {
     // A quantity built from the result of an arithmetic operation has the same fixed shape as a
-    // literal, and is rendered as a quantity.
+    // literal, and is rendered as a quantity. Its scale is not known, so its value has no trailing
+    // fractional zeros.
     final JsonObject quantity =
         singleObject(pathling.evaluateFhirPath("Patient", PATIENT_JSON, "(1 + 2).toQuantity()"));
 
     assertEquals(Set.of("value", "unit", "system", "code"), quantity.keySet());
-    assertNumber("3.000000", quantity.get("value"));
+    assertNumber("3", quantity.get("value"));
     assertEquals("1", quantity.get("code").getAsString());
   }
 
