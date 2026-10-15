@@ -247,13 +247,13 @@ class LegacyExportTest {
             LegacyTables.encode(LIBRARY_DEFAULTS, PATIENT, LegacyTables.lines(PATIENTS)),
             temp.resolve("Patient.parquet"));
     final Path output = temp.resolve("out");
-    final List<String> first =
-        export.export(PATIENT, table, LegacyTableFormat.PARQUET, output.toString());
+    final String outputPath = output.toString();
+    final List<String> first = export.export(PATIENT, table, LegacyTableFormat.PARQUET, outputPath);
 
     final LegacyExportException error =
         assertThrows(
             LegacyExportException.class,
-            () -> export.export(PATIENT, table, LegacyTableFormat.PARQUET, output.toString()));
+            () -> export.export(PATIENT, table, LegacyTableFormat.PARQUET, outputPath));
 
     assertTrue(error.getMessage().contains(PATIENT), "message: " + error.getMessage());
     // The local file system keeps a hidden checksum beside each file, which is left out here.

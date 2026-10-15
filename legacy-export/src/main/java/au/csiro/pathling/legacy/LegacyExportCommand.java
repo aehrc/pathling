@@ -88,7 +88,9 @@ public final class LegacyExportCommand {
    * @param args the arguments, as the usage describes
    */
   public static void main(@Nonnull final String[] args) {
-    System.exit(run(args, System.out, System.err));
+    // The report and the errors are the output of the command, so they go to the standard streams
+    // rather than to a logger, whose configuration could silence them.
+    System.exit(run(args, System.out, System.err)); // NOSONAR
   }
 
   /**

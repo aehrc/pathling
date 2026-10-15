@@ -142,6 +142,7 @@ class SystemQuantityShapeTest {
     final StructType type = (StructType) elementTypeOf(expression);
     assertThat(type.fieldNames()).doesNotContainAnyElementsOf(LEGACY_FIELDS);
     assertThat(Arrays.stream(type.fields()).map(StructField::dataType))
+        .isNotEmpty()
         .allMatch(DataTypes.StringType::equals);
   }
 

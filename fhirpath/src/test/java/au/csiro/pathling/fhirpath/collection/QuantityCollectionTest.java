@@ -228,8 +228,8 @@ class QuantityCollectionTest {
             .mkString(",");
     assertThat(plan)
         .doesNotContain(CanonicalQuantityValue.FUNCTION_NAME)
-        .doesNotContain(CanonicalQuantityCode.FUNCTION_NAME);
-    assertThat(plan).doesNotContain("CASE WHEN");
+        .doesNotContain(CanonicalQuantityCode.FUNCTION_NAME)
+        .doesNotContain("CASE WHEN");
   }
 
   /**

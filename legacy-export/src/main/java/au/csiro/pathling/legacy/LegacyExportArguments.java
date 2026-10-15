@@ -19,6 +19,8 @@ package au.csiro.pathling.legacy;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import lombok.AccessLevel;
@@ -72,16 +74,18 @@ class LegacyExportArguments {
   static LegacyExportArguments parse(@Nonnull final String[] args) {
     final List<String> positional = new ArrayList<>();
     String resourceType = null;
-    for (int index = 0; index < args.length; index++) {
-      if (RESOURCE_TYPE_OPTION.equals(args[index])) {
-        if (index + 1 >= args.length) {
+    final Iterator<String> remaining = Arrays.asList(args).iterator();
+    while (remaining.hasNext()) {
+      final String arg = remaining.next();
+      if (RESOURCE_TYPE_OPTION.equals(arg)) {
+        if (!remaining.hasNext()) {
           throw new IllegalArgumentException(RESOURCE_TYPE_OPTION + " needs a resource type.");
         }
-        resourceType = args[++index];
-      } else if (args[index].startsWith("--")) {
-        throw new IllegalArgumentException("Unknown option: " + args[index] + ".");
+        resourceType = remaining.next();
+      } else if (arg.startsWith("--")) {
+        throw new IllegalArgumentException("Unknown option: " + arg + ".");
       } else {
-        positional.add(args[index]);
+        positional.add(arg);
       }
     }
     if (positional.size() != 3) {
