@@ -36,12 +36,14 @@
  * }</pre>
  *
  * <p>As a command, through {@link au.csiro.pathling.legacy.LegacyExportCommand}, run as a Spark
- * application. Spark and Delta Lake are provided by the environment, and the module's other
- * dependencies, {@code encoders} and HAPI FHIR, are put on the classpath beside it:
+ * application. Spark is provided by the environment. The jar of this module is not shaded, so the
+ * jars of its runtime dependencies, which include {@code encoders} and HAPI FHIR, are put on the
+ * classpath with {@code --jars}. A Delta source also needs the {@code delta-spark} and {@code
+ * delta-storage} jars, where the Spark installation does not provide Delta Lake:
  *
  * <pre>
  * spark-submit --class au.csiro.pathling.legacy.LegacyExportCommand \
- *   --packages au.csiro.pathling:encoders:&lt;version&gt;,io.delta:delta-spark_2.13:&lt;version&gt; \
+ *   --jars &lt;runtime dependency jars&gt; \
  *   legacy-export-&lt;version&gt;.jar &lt;source&gt; &lt;parquet|delta&gt; &lt;output&gt; \
  *   [--resource-type &lt;type&gt;]
  * </pre>
@@ -74,14 +76,15 @@
  *       {@code 2020-01-01T10:00:00+10:00} is exported as {@code 2020-01-01T00:00:00.000+00:00}. The
  *       instant is the same; its offset and precision are lost.
  *   <li><b>Nesting</b> was bounded. An element nested within more elements of its own type than the
- *       encoder's nesting level, three by default, was not stored, so a {@code Questionnaire.item}
- *       is exported to a depth of four items. Extensions are not bounded in this way.
- *   <li><b>Extensions</b> were stored only where they were enabled, which they were by default. Of
- *       an extension's value, only a type among the encoder's open types was stored, which by
- *       default are {@code boolean}, {@code code}, {@code date}, {@code dateTime}, {@code decimal},
- *       {@code integer}, {@code string}, {@code Coding}, {@code CodeableConcept}, {@code Address},
- *       {@code Identifier} and {@code Reference}. An extension that carried only a value of another
- *       type is absent from the export.
+ *       encoder's nesting level, three by default in the Pathling library, was not stored, so a
+ *       {@code Questionnaire.item} is exported to a depth of four items. Extensions are not bounded
+ *       in this way.
+ *   <li><b>Extensions</b> were stored only where they were enabled, which they were by default in
+ *       the Pathling library. Of an extension's value, only a type among the encoder's open types
+ *       was stored, which by default are {@code boolean}, {@code code}, {@code date}, {@code
+ *       dateTime}, {@code decimal}, {@code integer}, {@code string}, {@code Coding}, {@code
+ *       CodeableConcept}, {@code Address}, {@code Identifier} and {@code Reference}. An extension
+ *       that carried only a value of another type is absent from the export.
  *   <li><b>Modifier extensions</b> were not stored.
  *   <li><b>The id and extensions of a primitive element</b>, carried in FHIR JSON by a key such as
  *       {@code _birthDate}, were not stored. The primitive's value is exported.

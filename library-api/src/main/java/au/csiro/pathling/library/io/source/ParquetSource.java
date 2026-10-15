@@ -211,7 +211,8 @@ public class ParquetSource extends FileSource {
    * data from the schema the read already resolves, and refuses data in a layout this release does
    * not read, such as the layout written by earlier releases, with an {@link
    * UnsupportedLayoutException}. Disabling it is an opt-out for conforming data the detector
-   * misclassifies, and applies to this source alone (FR-040).
+   * misclassifies, and applies to this source alone (FR-040). Data in the earlier layout read with
+   * it disabled is not supported, and the results of a query over it are undefined.
    *
    * @param context the PathlingContext to use
    * @param path the path to the Parquet file or directory

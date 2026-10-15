@@ -35,6 +35,10 @@ import org.apache.spark.sql.Row;
 /**
  * A class for making FHIR data with Spark datasets available for query.
  *
+ * <p>The datasets are expected in the Parquet on FHIR layout. Their layout is not classified. A
+ * dataset in the layout written by earlier releases, such as one built with the encoder of those
+ * releases, is not supported, and the results of a query over it are undefined.
+ *
  * @author John Grimes
  * @author Piotr Szul
  */

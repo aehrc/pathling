@@ -25,6 +25,12 @@ import lombok.Getter;
  * written by earlier releases. The message names the resource type, the detected layout, the
  * expected layout, the evidence and the remedy.
  *
+ * <p>The remedy is a re-import of the data from its source, which loses nothing. Where there is no
+ * source, the legacy export, the separate {@code au.csiro.pathling:legacy-export} artifact,
+ * converts a table in the earlier layout to NDJSON for re-import, losing what that layout did not
+ * store. Data in the earlier layout that bypasses detection is not supported, and the results of a
+ * query over it are undefined.
+ *
  * <p>It is not an {@code InvalidUserInputError}, because the library does not claim whose fault
  * stored data is: a table in an earlier layout may belong to an operator, a deployment or a client.
  * A caller that knows decides how to report it (decision 98).

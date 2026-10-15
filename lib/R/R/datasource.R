@@ -146,6 +146,10 @@ pathling_read_bundles <- function(pc, path, resource_types, mime_type = MimeType
 #' Creates an immutable, ad-hoc data source from a named list of Spark datasets indexed with
 #' resource type codes.
 #'
+#' The datasets are expected in the Parquet on FHIR layout. Their layout is not checked. Datasets in
+#' the layout written by earlier releases of Pathling are not supported, and the results of a query
+#' over them are undefined.
+#'
 #' @param pc The PathlingContext object.
 #' @param resources A name list of Spark datasets, where the keys are resource type codes
 #'   and the values are the data frames containing the resource data.
@@ -192,7 +196,9 @@ pathling_read_datasets <- function(pc, resources) {
 #'
 #' The layout of each resource type's data is classified as it is read, and data in the layout
 #' written by earlier releases of Pathling is refused with a message naming the remedy, which is to
-#' re-import it from its source.
+#' re-import it from its source. Where there is no source, the legacy export converts it to NDJSON
+#' for re-import, losing what that layout did not store. The legacy export is a separate tool,
+#' described in the Pathling documentation on the storage layout.
 #'
 #' @param pc The PathlingContext object.
 #' @param path The URI of the directory containing the Parquet tables.
@@ -203,7 +209,8 @@ pathling_read_datasets <- function(pc, resources) {
 #' @param layout_detection Whether to classify the layout of each resource type's data as it is
 #'   read, refusing data in the layout written by earlier releases of Pathling. Defaults to
 #'   \code{TRUE}. Set it to \code{FALSE} only for conforming data that the detector misclassifies;
-#'   it applies to this data source alone.
+#'   it applies to this data source alone. Data in the earlier layout read with it disabled is
+#'   not supported, and the results of a query over it are undefined.
 #' @return A DataSource object that can be used to run queries against the data.
 #'
 #' @seealso \href{https://pathling.csiro.au/docs/libraries/io#parquet}{Pathling documentation - Reading Parquet}
@@ -276,14 +283,17 @@ to_java_schema_map <- function(sc, schemas) {
 #'
 #' The layout of each resource type's data is classified as it is read, and data in the layout
 #' written by earlier releases of Pathling is refused with a message naming the remedy, which is to
-#' re-import it from its source.
+#' re-import it from its source. Where there is no source, the legacy export converts it to NDJSON
+#' for re-import, losing what that layout did not store. The legacy export is a separate tool,
+#' described in the Pathling documentation on the storage layout.
 #'
 #' @param pc The PathlingContext object.
 #' @param path The URI of the directory containing the Delta tables.
 #' @param layout_detection Whether to classify the layout of each resource type's data as it is
 #'   read, refusing data in the layout written by earlier releases of Pathling. Defaults to
 #'   \code{TRUE}. Set it to \code{FALSE} only for conforming data that the detector misclassifies;
-#'   it applies to this data source alone.
+#'   it applies to this data source alone. Data in the earlier layout read with it disabled is
+#'   not supported, and the results of a query over it are undefined.
 #' @return A DataSource object that can be used to run queries against the data.
 #'
 #' @seealso \href{https://pathling.csiro.au/docs/libraries/io#delta-lake}{Pathling documentation - Reading Delta}
@@ -309,14 +319,17 @@ pathling_read_delta <- function(pc, path, layout_detection = TRUE) {
 #'
 #' The layout of each resource type's data is classified as it is read, and data in the layout
 #' written by earlier releases of Pathling is refused with a message naming the remedy, which is to
-#' re-import it from its source.
+#' re-import it from its source. Where there is no source, the legacy export converts it to NDJSON
+#' for re-import, losing what that layout did not store. The legacy export is a separate tool,
+#' described in the Pathling documentation on the storage layout.
 #'
 #' @param pc The PathlingContext object.
 #' @param schema An optional schema name that should be used to qualify the table names.
 #' @param layout_detection Whether to classify the layout of each resource type's data as it is
 #'   read, refusing data in the layout written by earlier releases of Pathling. Defaults to
 #'   \code{TRUE}. Set it to \code{FALSE} only for conforming data that the detector misclassifies;
-#'   it applies to this data source alone.
+#'   it applies to this data source alone. Data in the earlier layout read with it disabled is
+#'   not supported, and the results of a query over it are undefined.
 #' @return A DataSource object that can be used to run queries against the data.
 #'
 #' @seealso \href{https://pathling.csiro.au/docs/libraries/io#managed-tables}{Pathling documentation - Reading managed tables}

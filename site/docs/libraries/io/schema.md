@@ -294,13 +294,116 @@ In this release:
   it (the `ignore` save mode) is not refused. With the `error` save mode, the
   write fails anyway, because the target already holds data.
 
-The remedy is to re-import the data from its source with this release, either
-into a new location or by overwriting the existing one. Where the data is a
-directory of Parquet files that also holds files written by this release, the
-earlier files can be removed instead.
+In Java and Scala, the refusal is an `UnsupportedLayoutException`, which
+carries the resource type and the classification of its schema. It is not
+reported as a fault of the caller's input, because the library cannot tell
+whose data it is: an application that knows can report it as it sees fit.
+
+Detection at read time is the only check that is made. Data in the earlier
+layout that bypasses it, because layout detection was disabled for its data
+source, or because it was supplied as a Spark dataset of your own, such as one
+built with the encoder of earlier releases, is not supported. The results of a
+query over such data are undefined: it may fail with an error that does not
+explain the cause, or it may return wrong answers. Move the data into the
+current layout instead, as described below.
 
 Data is recognised as being in the earlier layout by the `id_versioned` column
 at the root of its schema. If conforming data is misclassified by this check,
 the check can be disabled for a single data source with its layout detection
 option, as described under [Reading FHIR data](./index.md#layout-detection).
 That option is intended only for conforming data that is misclassified.
+
+### Migrating data in the earlier layout
+
+There are two ways to move data into the layout this release reads.
+
+1. **Re-import the data from its source** with this release, either into a new
+   location or by overwriting the existing one. This is the better way wherever
+   the original FHIR data still exists, because it loses nothing. Where the data
+   is a directory of Parquet files that also holds files written by this
+   release, the earlier files can be removed instead.
+2. **Export the data with the legacy export**, and re-import the export. Use
+   this where there is no source to re-import from. It loses whatever the
+   earlier layout did not store, as listed below.
+
+The legacy export is a separate component, published as the
+`au.csiro.pathling:legacy-export` Maven artifact. It reads a Parquet or Delta
+table in the earlier layout and writes its resources as FHIR NDJSON, which the
+[NDJSON data source](./index.md#ndjson) reads directly. It is not part of the
+Pathling library runtime, or of the Python and R libraries, so it is run on its
+own.
+
+The export is a command-line tool that runs as a Spark application. Spark is
+provided by the environment it runs in. The `legacy-export` jar is passed to
+`spark-submit`, and the jars of its runtime dependencies, which include the
+`au.csiro.pathling:encoders` artifact of the same version, are put on the
+classpath with `--jars`. A Delta table also needs Delta Lake, as the
+`delta-spark` and `delta-storage` jars, where the Spark installation does not
+provide it.
+
+```bash
+spark-submit --class au.csiro.pathling.legacy.LegacyExportCommand \
+  --jars <runtime dependency jars> \
+  legacy-export-<version>.jar <source> <parquet|delta> <output> \
+  [--resource-type <type>]
+```
+
+- **The source** is one table, or a directory of tables such as a whole
+  warehouse. A table holds the resource type that its name starts with, as in
+  `Patient.parquet`, unless `--resource-type` names it.
+- **The format** is `parquet` or `delta`.
+- **The output** is a directory, into which a file named
+  `<type>.<part>.ndjson` is written for each part of each table. An output that
+  already holds files of a resource type is refused.
+
+The command exits with status 0 when every table is exported, 1 when an export
+fails and 2 when its arguments are wrong. A table that is not in the earlier
+layout is refused, with a message saying why, as is a table holding a column
+that the export would not read, such as a table of another resource type. A
+table that mixes the two layouts, as appending new data to a table of the
+earlier layout produces, is refused too: export a copy of it that holds only
+the rows in the earlier layout, which are those with a non-null `id_versioned`.
+When
+a directory of tables fails part of the way through, the resource types already
+exported are left in the output.
+
+The export can also be called from Java or Scala, through the
+`au.csiro.pathling.legacy.LegacyExport` class, to export a table or to convert a
+dataset that has already been read.
+
+Once the data has been exported, read the output directory with the NDJSON data
+source and write it with any data sink, into a new location or by overwriting
+the old one.
+
+### What the legacy export loses
+
+The export writes what the earlier layout stored, and the earlier encoder did
+not store everything. What it dropped or changed when the data was written
+cannot be recovered:
+
+- **Decimals** were stored at a fixed scale of six, rounding half up. Digits
+  beyond the sixth decimal place are lost. The original scale is kept up to six,
+  so `1.50` is still exported as `1.50`. A decimal with more than 26 digits
+  before the point was not stored at all.
+- **Instants** were stored as timestamps. They are exported in UTC, to the
+  millisecond, so the instant is the same but its offset and precision are lost.
+- **Nesting** was bounded. An element nested within more elements of its own
+  type than the encoder's nesting level, which was three by default in the
+  Pathling library, was not stored. Extensions were not bounded in this way.
+- **Extensions** were stored only where they were enabled, as they were by
+  default in the Pathling library, and an extension's value only where its type
+  was among the encoder's open types. An extension that carried only a value of
+  another type is absent from the export.
+- **Modifier extensions** were not stored.
+- **The id and extensions of primitive elements** were not stored. The
+  primitive's value is exported.
+- **Contained resources** were not stored. A reference to one is exported, but
+  resolves to nothing.
+- **Value set expansions** were stored without the nested `contains` of
+  `ValueSet.expansion.contains`.
+- **Some resource types**, `Bundle`, `Parameters`, `StructureDefinition` and
+  `StructureMap`, were never stored in the earlier layout.
+
+The re-imported data is then subject to the limits of this layout, as any data
+read from FHIR JSON is, as described under [What is not stored](#what-is-not-stored)
+and [Round trip](#round-trip).
