@@ -18,10 +18,16 @@
 package au.csiro.pathling.fhirpath.encoding;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import au.csiro.pathling.fhirpath.FhirPathQuantity;
 import jakarta.annotation.Nullable;
 import java.math.BigDecimal;
+import java.util.stream.IntStream;
+import org.apache.spark.sql.Row;
+import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema;
+import org.apache.spark.sql.types.DataTypes;
+import org.apache.spark.sql.types.StructType;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -76,6 +82,28 @@ class QuantityEncodingTest {
   void encodedRowHasOneFieldPerFieldOfTheFixedShape() {
     assertThat(QuantityEncoding.encode(FhirPathQuantity.parse("4 days")).size())
         .isEqualTo(QuantityEncoding.dataType().size());
+  }
+
+  @Test
+  void rowWithTheFixedShapeAndASchemaDecodes() {
+    final FhirPathQuantity quantity = FhirPathQuantity.parse("1.50 'mg'");
+    final Row encoded = QuantityEncoding.encode(quantity);
+    final Row row =
+        new GenericRowWithSchema(
+            IntStream.range(0, encoded.size()).mapToObj(encoded::get).toArray(),
+            QuantityEncoding.dataType());
+    assertThat(QuantityEncoding.decode(row)).isEqualTo(quantity);
+  }
+
+  @Test
+  void rowWithADifferentShapeIsRejected() {
+    final StructType schema =
+        new StructType().add("code", DataTypes.StringType).add("value", DataTypes.StringType);
+    final Row row = new GenericRowWithSchema(new Object[] {"mg", "1.5"}, schema);
+    assertThatThrownBy(() -> QuantityEncoding.decode(row))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Expected a System quantity")
+        .hasMessageContaining(schema.simpleString());
   }
 
   @Test

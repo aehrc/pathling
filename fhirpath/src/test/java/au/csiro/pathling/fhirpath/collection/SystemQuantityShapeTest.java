@@ -18,6 +18,7 @@
 package au.csiro.pathling.fhirpath.collection;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluator;
@@ -41,6 +42,7 @@ import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -114,6 +116,16 @@ class SystemQuantityShapeTest {
         arguments("a union of a literal with a stored quantity", "value.ofType(Quantity) | 1 'g'"),
         arguments("a union of a stored quantity with a literal", "1 'g' | value.ofType(Quantity)"),
         arguments("a union of two literals", "1 'g' | 2 'kg'"));
+  }
+
+  @Test
+  void quantityUdfRejectsAStructThatIsNotTheFixedShape() {
+    assertThatThrownBy(
+            () ->
+                spark
+                    .sql("SELECT quantity_to_literal(named_struct('code', 'mg', 'value', '1.5'))")
+                    .collectAsList())
+        .hasStackTraceContaining("Expected a System quantity");
   }
 
   @ParameterizedTest(name = "{0}")

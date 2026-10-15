@@ -36,6 +36,7 @@ import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.math.BigDecimal;
 import java.util.Map;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Row;
@@ -292,20 +293,43 @@ public final class QuantityEncoding {
   /**
    * Decodes a FhirPathQuantity from a Row in the fixed shape of a System quantity.
    *
+   * <p>The fields are read by position, so a row that carries a schema must have the fixed shape. A
+   * row without a schema, such as one built by {@link #encode(FhirPathQuantity)}, is taken to.
+   *
    * @param row the row to decode
    * @return the resulting FhirPathQuantity, or null where the row is null or is not a quantity
    *     FHIRPath can represent
+   * @throws IllegalArgumentException if the row has a schema that is not the fixed shape
    */
   @Nullable
   public static FhirPathQuantity decode(@Nullable final Row row) {
     if (row == null) {
       return null;
     }
+    final StructType schema = row.schema();
+    if (schema != null && !hasQuantityShape(schema)) {
+      throw new IllegalArgumentException(
+          "Expected a System quantity of type "
+              + DATA_TYPE.simpleString()
+              + " but got "
+              + schema.simpleString());
+    }
     return FhirPathQuantity.of(
         decodeValue(row.getString(VALUE_INDEX)),
         row.getString(SYSTEM_INDEX),
         row.getString(CODE_INDEX),
         row.getString(UNIT_INDEX));
+  }
+
+  /** Whether a schema has the fields of the fixed shape, by name and type, in order. */
+  private static boolean hasQuantityShape(@Nonnull final StructType schema) {
+    return schema == DATA_TYPE
+        || (schema.length() == DATA_TYPE.length()
+            && IntStream.range(0, DATA_TYPE.length())
+                .allMatch(
+                    i ->
+                        schema.apply(i).name().equals(DATA_TYPE.apply(i).name())
+                            && schema.apply(i).dataType().equals(DATA_TYPE.apply(i).dataType())));
   }
 
   /**
