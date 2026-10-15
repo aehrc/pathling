@@ -122,7 +122,8 @@ public class ConversionFunctions {
   }
 
   /**
-   * Converts the input to a String value. All primitive types can be converted to string.
+   * Converts the input to a String value. All primitive types can be converted to string, as can a
+   * Quantity (rendered as a Quantity literal) and a Coding (rendered as a Coding literal).
    *
    * @param input The input collection
    * @return A {@link StringCollection} containing the converted value or empty

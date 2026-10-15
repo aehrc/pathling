@@ -220,8 +220,8 @@ class ValidationLogic {
   Column validateConversionToString(
       @Nonnull final FhirPathType sourceType, @Nonnull final Column value) {
     return switch (sourceType) {
-      case BOOLEAN, INTEGER, DECIMAL, DATE, DATETIME, TIME, QUANTITY ->
-          // All primitive types can be converted to string.
+      case BOOLEAN, INTEGER, DECIMAL, DATE, DATETIME, TIME, QUANTITY, CODING ->
+          // All primitive types, Quantity and Coding can be converted to string.
           lit(true);
       default ->
           // Other types cannot be converted.

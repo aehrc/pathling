@@ -36,6 +36,7 @@ import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.collection.TimeCollection;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
+import au.csiro.pathling.sql.misc.CodingToLiteral;
 import au.csiro.pathling.sql.misc.DecimalToLiteral;
 import au.csiro.pathling.sql.misc.QuantityToLiteral;
 import au.csiro.pathling.sql.misc.StringToQuantity;
@@ -305,6 +306,7 @@ class ConversionLogic {
    *   <li>BOOLEAN, INTEGER, DATE, DATETIME, TIME: Direct cast to String
    *   <li>DECIMAL: Use DecimalToLiteral UDF to format with trailing zeros removed
    *   <li>QUANTITY: Use QuantityToLiteral UDF to format as FHIRPath quantity literal
+   *   <li>CODING: Use CodingToLiteral UDF to format as Coding literal
    * </ul>
    *
    * @param sourceType The source FHIRPath type
@@ -325,6 +327,11 @@ class ConversionLogic {
           // Quantity: Use QuantityToLiteral UDF to format as FHIRPath quantity literal.
           // E.g., {value: 1, unitCode: "wk", system: "http://unitsofmeasure.org"} -> "1 'wk'"
           callUDF(QuantityToLiteral.FUNCTION_NAME, value);
+      case CODING ->
+          // Coding: Use CodingToLiteral UDF to format as Coding literal.
+          // E.g., {system: "http://snomed.info/sct", code: "52101004"} ->
+          // "http://snomed.info/sct|52101004"
+          callUDF(CodingToLiteral.FUNCTION_NAME, value);
       default -> lit(null);
     };
   }
