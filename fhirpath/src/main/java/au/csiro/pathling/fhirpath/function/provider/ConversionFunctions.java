@@ -122,7 +122,9 @@ public class ConversionFunctions {
   }
 
   /**
-   * Converts the input to a String value. All primitive types can be converted to string.
+   * Converts the input to a String value. All primitive types can be converted to string, as can a
+   * Quantity that is representable as a System.Quantity (it has a value and a code, a UCUM or
+   * calendar duration system, and no comparator).
    *
    * @param input The input collection
    * @return A {@link StringCollection} containing the converted value or empty
@@ -187,7 +189,8 @@ public class ConversionFunctions {
    * <ul>
    *   <li>Boolean: true → 1.0 '1', false → 0.0 '1'
    *   <li>Integer/Decimal: Convert to Quantity with default unitCode '1'
-   *   <li>Quantity: returns as-is
+   *   <li>Quantity: returned as-is if representable as a System.Quantity (it has a value and a
+   *       code, a UCUM or calendar duration system, and no comparator), otherwise empty
    *   <li>String: Parse as FHIRPath quantity literal (e.g., "10 'mg'", "4 days")
    *   <li>All other inputs → empty
    * </ul>
