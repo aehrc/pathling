@@ -75,6 +75,12 @@ The formats on offer depend on the kind of subject:
 | `parquet` | no             | yes                | `application/vnd.apache.parquet` |
 | `fhir`    | no             | yes                | `application/fhir+json`          |
 
+In the `ndjson`, `json` and `csv` formats, a `DATE` value is written as an ISO
+8601 date (`2026-01-02`) and a `TIMESTAMP` value as an ISO 8601 instant in UTC
+(`2026-01-02T03:04:05Z`), whatever the locale and time zone of the server. These
+are the same strings that the `fhir` format carries in `valueDate` and
+`valueInstant`.
+
 An explicit `_format` is parsed strictly: an unrecognised value, or one not
 available for the resolved kind, is a `400` naming `_format`. With no
 `_format`, the format is negotiated from the `Accept` header, falling back to

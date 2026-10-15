@@ -21,6 +21,7 @@ import static au.csiro.pathling.operations.sqlquery.SqlLibraryParser.LIBRARY_TYP
 import static au.csiro.pathling.operations.sqlquery.SqlLibraryParser.SQL_QUERY_TYPE_CODE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.entry;
 import static org.assertj.core.api.Assumptions.assumeThat;
 
 import ca.uhn.fhir.context.FhirContext;
@@ -68,6 +69,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.ResourceAccessMode;
 import org.junit.jupiter.api.parallel.ResourceLock;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -540,6 +542,33 @@ class SqlRunProviderIT {
   }
 
   // -------------------------------------------------------------------------
+  // Columns Spark materialises as java.sql values.
+  // -------------------------------------------------------------------------
+
+  // Spark hands a DATE column to the streamer as a java.sql.Date and a TIMESTAMP column as a
+  // java.sql.Timestamp. Each format must render them as ISO-8601 strings that depend on neither the
+  // locale nor the time zone of the JVM. The timestamp literals carry an explicit zone so that the
+  // expected instants do not depend on the Spark session time zone, and the second one predates the
+  // Gregorian cutover, before which Spark rebases the values it builds onto the Julian calendar.
+  @ParameterizedTest
+  @EnumSource(
+      value = SqlRunFormat.class,
+      names = {"NDJSON", "JSON", "CSV", "FHIR"})
+  void serialisesDateAndTimestampAsIso8601Strings(final SqlRunFormat format) {
+    final Map<String, String> row =
+        onlyRowAsStrings(
+            "SELECT DATE'2026-01-02' AS d, TIMESTAMP'2026-01-02 03:04:05Z' AS ts,"
+                + " TIMESTAMP'1000-01-01 00:00:00Z' AS ancient_ts FROM adh LIMIT 1",
+            format);
+
+    assertThat(row)
+        .containsExactly(
+            entry("d", "2026-01-02"),
+            entry("ts", "2026-01-02T03:04:05Z"),
+            entry("ancient_ts", "1000-01-01T00:00:00Z"));
+  }
+
+  // -------------------------------------------------------------------------
   // Evaluation failures.
   // -------------------------------------------------------------------------
 
@@ -645,6 +674,64 @@ class SqlRunProviderIT {
             resourceParameter("context", adHocViewJson()),
             stringParameter("_format", format)));
     return GSON.toJson(parameters);
+  }
+
+  /**
+   * Runs the given SQL as an inline SQLQuery in the given format, asserts that it produced exactly
+   * one row, and returns that row as column names mapped to the string form of their values.
+   */
+  @Nonnull
+  private Map<String, String> onlyRowAsStrings(
+      @Nonnull final String sql, @Nonnull final SqlRunFormat format) {
+    final String body = postOk(inlineSqlQueryRequest(sql, format.getCode()), format);
+    final Map<String, String> row = new LinkedHashMap<>();
+    switch (format) {
+      case NDJSON -> {
+        final List<String> lines = body.lines().filter(line -> !line.isBlank()).toList();
+        assertThat(lines).hasSize(1);
+        JsonParser.parseString(lines.get(0))
+            .getAsJsonObject()
+            .entrySet()
+            .forEach(member -> row.put(member.getKey(), member.getValue().getAsString()));
+      }
+      case JSON -> {
+        final JsonArray rows = JsonParser.parseString(body).getAsJsonArray();
+        assertThat(rows.size()).isEqualTo(1);
+        rows.get(0)
+            .getAsJsonObject()
+            .entrySet()
+            .forEach(member -> row.put(member.getKey(), member.getValue().getAsString()));
+      }
+      case CSV -> {
+        final List<String> lines = body.lines().filter(line -> !line.isBlank()).toList();
+        assertThat(lines).hasSize(2);
+        final String[] names = lines.get(0).split(",", -1);
+        final String[] values = lines.get(1).split(",", -1);
+        for (int i = 0; i < names.length; i++) {
+          row.put(names[i], values[i]);
+        }
+      }
+      case FHIR -> {
+        final JsonArray rows =
+            JsonParser.parseString(body).getAsJsonObject().getAsJsonArray("parameter");
+        assertThat(rows.size()).isEqualTo(1);
+        // Each part carries its column name and a single typed value[x] member.
+        rows.get(0)
+            .getAsJsonObject()
+            .getAsJsonArray("part")
+            .forEach(
+                part ->
+                    part.getAsJsonObject().entrySet().stream()
+                        .filter(member -> member.getKey().startsWith("value"))
+                        .forEach(
+                            member ->
+                                row.put(
+                                    part.getAsJsonObject().get("name").getAsString(),
+                                    member.getValue().getAsString())));
+      }
+      default -> throw new IllegalArgumentException("Unsupported format: " + format);
+    }
+    return row;
   }
 
   /**
