@@ -73,5 +73,7 @@ Spark clustering solutions.
   Docker
 - [Configuration](/docs/server/configuration) - Environment variables and server
   settings
+- [Terminology](/docs/server/terminology) - Remote terminology server or local
+  terminology store
 - [Deployment](/docs/server/deployment/kubernetes) - Kubernetes and AWS
   deployment options

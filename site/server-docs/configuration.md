@@ -514,6 +514,9 @@ spark:
 
 ### Terminology service
 
+See [terminology](./terminology.md) for a guide to setting up a remote
+terminology server or a local terminology store.
+
 - `pathling.terminology.enabled` - (default: `true`) Enables use of terminology
   functions within queries.
 - `pathling.terminology.mode` - (default: `server`) Selects where terminology
