@@ -63,7 +63,7 @@
           "rid": "ServiceRequest/123"
         },
         {
-          "rid": "https://example.org/fhir/ServiceRequest/456"
+          "rid": null
         },
         {
           "rid": "CarePlan/123"
@@ -114,9 +114,6 @@
       "expect": [
         {
           "rid": "ServiceRequest/123"
-        },
-        {
-          "rid": "https://example.org/fhir/ServiceRequest/456"
         },
         {
           "rid": "ServiceRequest/789"

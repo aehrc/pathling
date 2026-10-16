@@ -44,6 +44,12 @@ public class ReferenceCollection extends Collection {
   /** Matches the version segment at the end of a version-specific reference. */
   private static final String VERSION_SUFFIX_PATTERN = "/_history/[^/]+$";
 
+  /** Matches a FHIR id, which is also the format of a version id. */
+  private static final String ID_PATTERN = "[A-Za-z0-9\\-.]{1,64}";
+
+  /** Matches any resource type name, used when no type is specified. */
+  private static final String ANY_TYPE_PATTERN = "[A-Z][A-Za-z]*";
+
   /**
    * Creates a new ReferenceCollection.
    *
@@ -70,8 +76,12 @@ public class ReferenceCollection extends Collection {
    * alone. A version-specific reference therefore joins to whichever version of its target is
    * present, e.g. {@code Patient/p2/_history/3} gives the key {@code Patient/p2}.
    *
-   * <p>If a type is specified, only references whose final {@code [type]/[id]} segments name that
-   * exact type are kept, so {@code Person} does not match {@code RelatedPerson/r1}.
+   * <p>Only relative references ({@code [type]/[id]}, with an optional {@code /_history/[version]}
+   * suffix) produce a key. Absolute URLs, contained references and URNs are excluded, because they
+   * can never equal a resource key - per the SQL on FHIR specification, the implementation is
+   * unable to resolve them and must return the empty collection. If a type is specified, the
+   * reference must name exactly that type, so {@code Person} does not match {@code
+   * RelatedPerson/r1}.
    *
    * @param typeSpecifier The type specifier to filter by
    * @return a {@link Collection} containing the keys of the references in this collection, suitable
@@ -79,18 +89,14 @@ public class ReferenceCollection extends Collection {
    */
   @Nonnull
   public Collection getKeyCollection(@Nonnull final Optional<TypeSpecifier> typeSpecifier) {
-    return typeSpecifier
-        // If a type was specified, create a regular expression that matches references whose final
-        // [type]/[id] segments, ignoring any version, name exactly that type.
-        .map(ts -> "(^|/)" + ts.toFhirType().toCode() + "/[^/]+(/_history/[^/]+)?$")
-        // Get a ColumnTransform that filters the reference column based on the regular expression.
-        .map(this::keyFilter)
-        // Apply the filter to the reference column.
-        .map(this::filter)
-        // Return a StringCollection of the reference elements.
-        .flatMap(c -> c.traverse(FhirFieldNames.REFERENCE))
-        // If no type was specified, return the reference column as is.
-        .or(() -> this.traverse(FhirFieldNames.REFERENCE))
+    final String typePattern =
+        typeSpecifier.map(ts -> ts.toFhirType().toCode()).orElse(ANY_TYPE_PATTERN);
+    final String pattern =
+        "^" + typePattern + "/" + ID_PATTERN + "(/_history/" + ID_PATTERN + ")?$";
+    // Keep only the references that match the pattern, then return a StringCollection of their
+    // reference elements.
+    return filter(keyFilter(pattern))
+        .traverse(FhirFieldNames.REFERENCE)
         // Strip the version from versioned references so they join to resource keys.
         .map(this::stripVersionFromKey)
         // If the reference column is not present, return an empty collection.
