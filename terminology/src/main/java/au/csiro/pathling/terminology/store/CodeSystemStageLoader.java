@@ -57,9 +57,12 @@ import static org.apache.spark.sql.functions.when;
 
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
-import java.time.Instant;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
@@ -69,12 +72,14 @@ import org.apache.spark.sql.types.StructType;
 import org.apache.spark.storage.StorageLevel;
 
 /**
- * Reads a CodeSystem's staging files through Spark and writes the store tables. Duplicate concept
- * codes are resolved to their first occurrence, Coding-valued properties and property-derived
- * hierarchy edges are resolved to dense identifiers by joining on the surviving concepts, and the
- * transitive closure is computed from the combined is-a edges. All writes carry the system-version
- * key, and the manifest entry is written last so a failure mid-write leaves an identifiable,
- * repairable partial version.
+ * Reads the staging files of the CodeSystems of an import through Spark and writes the store
+ * tables, each once for every CodeSystem staged. Every staging row carries the system version of
+ * its CodeSystem, and every resolution step is keyed by it, so CodeSystems staged together never
+ * mix. Duplicate concept codes are resolved to their first occurrence, Coding-valued properties and
+ * property-derived hierarchy edges are resolved to dense identifiers by joining on the surviving
+ * concepts, and the transitive closure is computed from the combined is-a edges. The manifest is
+ * left to the caller, which writes it last so a failure mid-write leaves identifiable, repairable
+ * partial versions.
  *
  * @author John Grimes
  */
@@ -82,6 +87,12 @@ import org.apache.spark.storage.StorageLevel;
 public class CodeSystemStageLoader {
 
   private static final String IS_A = "is-a";
+
+  // The surviving concepts are joined under these names so that neither side of a join shares a
+  // column name with the other.
+  private static final String SURVIVOR_SYSTEM_VERSION = "survivor_system_version_id";
+  private static final String SURVIVOR_CODE = "survivor_code";
+  private static final String SURVIVOR_DENSE_ID = "survivor_dense_id";
 
   @Nonnull private final SparkSession spark;
   @Nonnull private final TerminologyStoreWriter writer;
@@ -99,128 +110,140 @@ public class CodeSystemStageLoader {
   }
 
   /**
-   * Loads a flattened CodeSystem's staging into the store.
+   * A CodeSystem staged for loading.
    *
-   * @param staging the sealed staging holding the CodeSystem's rows
    * @param url the CodeSystem canonical URL
    * @param version the CodeSystem version, or null
    * @param hierarchyMeaning the CodeSystem hierarchy meaning, or null (defaults to {@code is-a})
-   * @param provenance where the content came from, recorded in the manifest
+   */
+  public record StagedCodeSystem(
+      @Nonnull String url, @Nullable String version, @Nullable String hierarchyMeaning) {
+
+    /**
+     * Returns the system version identifier that keys this CodeSystem's rows.
+     *
+     * @return the system version identifier
+     */
+    @Nonnull
+    public String systemVersionId() {
+      return TerminologyStoreSchema.systemVersionId(url, version == null ? "" : version);
+    }
+  }
+
+  /**
+   * Loads the staged CodeSystems into the store, writing each content table once. The rows of each
+   * CodeSystem replace any stored rows of the same system version.
+   *
+   * @param staging the sealed staging holding the rows of every CodeSystem in {@code codeSystems}
+   * @param codeSystems the staged CodeSystems, each with a distinct system version, not empty
    */
   public void load(
-      @Nonnull final CodeSystemStaging staging,
-      @Nonnull final String url,
-      @Nullable final String version,
-      @Nullable final String hierarchyMeaning,
-      @Nonnull final ImportProvenance provenance) {
-    final String systemVersionId =
-        TerminologyStoreSchema.systemVersionId(url, version == null ? "" : version);
+      @Nonnull final CodeSystemStaging staging, @Nonnull final List<StagedCodeSystem> codeSystems) {
+    final Map<String, StagedCodeSystem> bySystemVersion = new LinkedHashMap<>();
+    for (final StagedCodeSystem codeSystem : codeSystems) {
+      bySystemVersion.put(codeSystem.systemVersionId(), codeSystem);
+    }
+    final List<String> systemVersionIds = List.copyOf(bySystemVersion.keySet());
 
     // Duplicate resolution: the minimum dense identifier per code survives (first occurrence).
     final Dataset<Row> rawConcepts =
         spark.read().schema(CodeSystemStaging.conceptSchema()).json(staging.conceptPath());
     final Dataset<Row> minByCode =
         rawConcepts
-            .groupBy(col(COLUMN_CODE).alias("dup_code"))
+            .groupBy(
+                col(COLUMN_SYSTEM_VERSION_ID).alias("dup_system_version_id"),
+                col(COLUMN_CODE).alias("dup_code"))
             .agg(min(COLUMN_DENSE_ID).alias("dup_dense"));
     final Dataset<Row> survivors =
         rawConcepts
             .join(
                 minByCode,
-                col(COLUMN_CODE)
-                    .equalTo(col("dup_code"))
+                col(COLUMN_SYSTEM_VERSION_ID)
+                    .equalTo(col("dup_system_version_id"))
+                    .and(col(COLUMN_CODE).equalTo(col("dup_code")))
                     .and(col(COLUMN_DENSE_ID).equalTo(col("dup_dense"))))
             .select(
+                col(COLUMN_SYSTEM_VERSION_ID),
                 col(COLUMN_CODE),
                 col(COLUMN_DENSE_ID),
                 col(COLUMN_ACTIVE),
                 col(COLUMN_DEFINED),
                 col(COLUMN_DISPLAY))
             .persist(StorageLevel.DISK_ONLY());
-    final long totalConcepts = rawConcepts.count();
-    final long survivingConcepts = survivors.count();
-    if (totalConcepts > survivingConcepts) {
-      log.warn(
-          "Dropped {} duplicate concept code(s) in CodeSystem {}, keeping the first occurrence",
-          totalConcepts - survivingConcepts,
-          url);
-    }
+    final Map<String, Long> survivingBySystem = countBySystemVersion(survivors);
+    warnOfDropped(
+        countBySystemVersion(rawConcepts),
+        survivingBySystem,
+        bySystemVersion,
+        "Dropped {} duplicate concept code(s) in CodeSystem {}, keeping the first occurrence");
 
-    final Dataset<Row> survivingDense = survivors.select(col(COLUMN_DENSE_ID));
-    final Dataset<Row> codeToDense = survivors.select(col(COLUMN_CODE), col(COLUMN_DENSE_ID));
+    final Dataset<Row> survivorKeys =
+        survivors.select(
+            col(COLUMN_SYSTEM_VERSION_ID).alias(SURVIVOR_SYSTEM_VERSION),
+            col(COLUMN_CODE).alias(SURVIVOR_CODE),
+            col(COLUMN_DENSE_ID).alias(SURVIVOR_DENSE_ID));
 
     final Dataset<Row> relationships =
-        resolveCodingProperties(staging, survivingDense, codeToDense, url);
-    final Dataset<Row> isaEdges =
-        resolveIsaEdges(staging, survivingDense, codeToDense, systemVersionId, url);
+        resolveCodingProperties(staging, survivorKeys, bySystemVersion);
+    final Dataset<Row> isaEdges = resolveIsaEdges(staging, survivorKeys, bySystemVersion);
 
-    // Everything parsed; write the content tables, then the manifest last.
-    log.info("Loading CodeSystem {} ({} concepts) into the store", url, survivingConcepts);
-    writer.writePartitionedBySystemVersion(
-        codeSystemRow(systemVersionId, url, version, hierarchyMeaning, survivingConcepts),
-        CODE_SYSTEM,
-        systemVersionId);
-    writer.writePartitionedBySystemVersion(
-        conceptTable(survivors, systemVersionId), CONCEPT, systemVersionId);
-    writer.writePartitionedBySystemVersion(
-        descriptionTable(staging, survivingDense, systemVersionId), DESCRIPTION, systemVersionId);
-    writer.writePartitionedBySystemVersion(
-        propertyTable(staging, survivingDense, systemVersionId), PROPERTY, systemVersionId);
-    writer.writePartitionedBySystemVersion(
-        withSystemVersion(relationships, systemVersionId), RELATIONSHIP, systemVersionId);
-    log.info("Computing the transitive closure for CodeSystem {}", url);
+    // Everything parsed; write the content tables. The caller writes the manifest last.
+    log.info(
+        "Loading {} CodeSystem(s) ({} concepts) into the store",
+        systemVersionIds.size(),
+        survivingBySystem.values().stream().mapToLong(Long::longValue).sum());
+    write(codeSystemRows(bySystemVersion, survivingBySystem), CODE_SYSTEM, systemVersionIds);
+    write(conceptTable(survivors), CONCEPT, systemVersionIds);
+    write(descriptionTable(staging, survivorKeys), DESCRIPTION, systemVersionIds);
+    write(propertyTable(staging, survivorKeys), PROPERTY, systemVersionIds);
+    write(relationships, RELATIONSHIP, systemVersionIds);
+    log.info("Computing the transitive closure for {} CodeSystem(s)", systemVersionIds.size());
     final Dataset<Row> closure = new TransitiveClosureBuilder().build(isaEdges);
-    writer.writePartitionedBySystemVersion(closure, CLOSURE, systemVersionId);
+    write(closure, CLOSURE, systemVersionIds);
     closure.unpersist();
-    writer.upsertManifestEntry(
-        ManifestEntry.forImport("code_system", url, version, provenance, Instant.now()));
     survivors.unpersist();
     relationships.unpersist();
   }
 
+  /** Writes a content table, replacing the partitions of the CodeSystems being loaded. */
+  private void write(
+      @Nonnull final Dataset<Row> data,
+      @Nonnull final String tableName,
+      @Nonnull final List<String> systemVersionIds) {
+    writer.writePartitions(data, tableName, COLUMN_SYSTEM_VERSION_ID, systemVersionIds);
+  }
+
   /**
    * Resolves Coding-valued properties to relationship edges by joining the target code to a
-   * surviving concept, dropping and counting unmatched (dangling) targets.
+   * surviving concept of the same CodeSystem, dropping and counting unmatched (dangling) targets.
    */
   @Nonnull
   private Dataset<Row> resolveCodingProperties(
       @Nonnull final CodeSystemStaging staging,
-      @Nonnull final Dataset<Row> survivingDense,
-      @Nonnull final Dataset<Row> codeToDense,
-      @Nonnull final String url) {
+      @Nonnull final Dataset<Row> survivorKeys,
+      @Nonnull final Map<String, StagedCodeSystem> bySystemVersion) {
     final Dataset<Row> codingProperties =
         spark
             .read()
             .schema(CodeSystemStaging.codingPropertySchema())
             .json(staging.codingPropertyPath())
-            .join(
-                survivingDense,
-                col(COLUMN_SOURCE_DENSE_ID).equalTo(survivingDense.col(COLUMN_DENSE_ID)),
-                "left_semi")
+            .join(survivorKeys, survivorByDenseId(COLUMN_SOURCE_DENSE_ID), "left_semi")
             .persist(StorageLevel.DISK_ONLY());
-    final Dataset<Row> targetByCode =
-        codeToDense.select(
-            col(COLUMN_CODE).alias("target_code_join"),
-            col(COLUMN_DENSE_ID).alias(COLUMN_TARGET_DENSE_ID));
     final Dataset<Row> resolved =
         codingProperties
-            .join(
-                targetByCode,
-                codingProperties.col(COLUMN_TARGET_CODE).equalTo(col("target_code_join")))
+            .join(survivorKeys, survivorByCode(COLUMN_TARGET_CODE))
             .select(
                 col(COLUMN_SOURCE_DENSE_ID),
                 col(COLUMN_PROPERTY_CODE).alias(COLUMN_TYPE_CODE),
-                col(COLUMN_TARGET_DENSE_ID),
-                lit(null).cast(DataTypes.IntegerType).alias(COLUMN_ROLE_GROUP))
+                col(SURVIVOR_DENSE_ID).alias(COLUMN_TARGET_DENSE_ID),
+                lit(null).cast(DataTypes.IntegerType).alias(COLUMN_ROLE_GROUP),
+                col(COLUMN_SYSTEM_VERSION_ID))
             .persist(StorageLevel.DISK_ONLY());
-    final long dangling = codingProperties.count() - resolved.count();
-    if (dangling > 0) {
-      log.warn(
-          "Dropped {} Coding-valued property reference(s) with no matching concept in CodeSystem"
-              + " {}",
-          dangling,
-          url);
-    }
+    warnOfDropped(
+        countBySystemVersion(codingProperties),
+        countBySystemVersion(resolved),
+        bySystemVersion,
+        "Dropped {} Coding-valued property reference(s) with no matching concept in CodeSystem {}");
     codingProperties.unpersist();
     return resolved;
   }
@@ -233,27 +256,20 @@ public class CodeSystemStageLoader {
   @Nonnull
   private Dataset<Row> resolveIsaEdges(
       @Nonnull final CodeSystemStaging staging,
-      @Nonnull final Dataset<Row> survivingDense,
-      @Nonnull final Dataset<Row> codeToDense,
-      @Nonnull final String systemVersionId,
-      @Nonnull final String url) {
+      @Nonnull final Dataset<Row> survivorKeys,
+      @Nonnull final Map<String, StagedCodeSystem> bySystemVersion) {
     final Dataset<Row> denseEdges =
         spark
             .read()
             .schema(CodeSystemStaging.denseEdgeSchema())
             .json(staging.denseEdgePath())
-            .join(
-                survivingDense.withColumnRenamed(COLUMN_DENSE_ID, "src_survive"),
-                col(COLUMN_SOURCE_DENSE_ID).equalTo(col("src_survive")),
-                "left_semi")
-            .join(
-                survivingDense.withColumnRenamed(COLUMN_DENSE_ID, "tgt_survive"),
-                col(COLUMN_TARGET_DENSE_ID).equalTo(col("tgt_survive")),
-                "left_semi")
-            .select(col(COLUMN_SOURCE_DENSE_ID), col(COLUMN_TARGET_DENSE_ID));
-    final Dataset<Row> edges =
-        denseEdges.union(propertyEdges(staging, survivingDense, codeToDense, url)).distinct();
-    return withSystemVersion(edges, systemVersionId);
+            .join(survivorKeys, survivorByDenseId(COLUMN_SOURCE_DENSE_ID), "left_semi")
+            .join(survivorKeys, survivorByDenseId(COLUMN_TARGET_DENSE_ID), "left_semi")
+            .select(
+                col(COLUMN_SYSTEM_VERSION_ID),
+                col(COLUMN_SOURCE_DENSE_ID),
+                col(COLUMN_TARGET_DENSE_ID));
+    return denseEdges.union(propertyEdges(staging, survivorKeys, bySystemVersion)).distinct();
   }
 
   /**
@@ -261,17 +277,16 @@ public class CodeSystemStageLoader {
    * dense (child, parent) pairs, dropping and counting dangling references.
    *
    * @param staging the sealed staging
-   * @param survivingDense the surviving concept dense identifiers
-   * @param codeToDense the surviving code-to-dense mapping
-   * @param url the CodeSystem URL, for the dangling-edge warning
-   * @return the resolved property-derived edges as (source_dense_id, target_dense_id)
+   * @param survivorKeys the surviving concepts of every staged CodeSystem
+   * @param bySystemVersion the staged CodeSystems by system version, for the dangling-edge warning
+   * @return the resolved property-derived edges as (system_version_id, source_dense_id,
+   *     target_dense_id)
    */
   @Nonnull
   private Dataset<Row> propertyEdges(
       @Nonnull final CodeSystemStaging staging,
-      @Nonnull final Dataset<Row> survivingDense,
-      @Nonnull final Dataset<Row> codeToDense,
-      @Nonnull final String url) {
+      @Nonnull final Dataset<Row> survivorKeys,
+      @Nonnull final Map<String, StagedCodeSystem> bySystemVersion) {
     // The known side must belong to a surviving concept; edges owned by a dropped duplicate go too.
     final Dataset<Row> codeEdges =
         spark
@@ -279,39 +294,32 @@ public class CodeSystemStageLoader {
             .schema(CodeSystemStaging.codeEdgeSchema())
             .json(staging.codeEdgePath())
             .join(
-                survivingDense,
-                col(CodeSystemStaging.COLUMN_KNOWN_DENSE_ID)
-                    .equalTo(survivingDense.col(COLUMN_DENSE_ID)),
+                survivorKeys,
+                survivorByDenseId(CodeSystemStaging.COLUMN_KNOWN_DENSE_ID),
                 "left_semi");
-    final Dataset<Row> otherByCode =
-        codeToDense.select(
-            col(COLUMN_CODE).alias("other_code_join"), col(COLUMN_DENSE_ID).alias("other_dense"));
     final Dataset<Row> resolved =
-        codeEdges.join(
-            otherByCode,
-            codeEdges.col(CodeSystemStaging.COLUMN_OTHER_CODE).equalTo(col("other_code_join")));
-    final long dangling = codeEdges.count() - resolved.count();
-    if (dangling > 0) {
-      log.warn("Dropped {} dangling parent/child reference(s) in CodeSystem {}", dangling, url);
-    }
+        codeEdges.join(survivorKeys, survivorByCode(CodeSystemStaging.COLUMN_OTHER_CODE));
+    warnOfDropped(
+        countBySystemVersion(codeEdges),
+        countBySystemVersion(resolved),
+        bySystemVersion,
+        "Dropped {} dangling parent/child reference(s) in CodeSystem {}");
     // Orient each edge: the child is the known side for a parent property, the other side for a
     // child property.
+    final Column knownIsChild =
+        col(CodeSystemStaging.COLUMN_KNOWN_ROLE).equalTo(lit(CodeSystemStaging.ROLE_CHILD));
     return resolved.select(
-        when(
-                col(CodeSystemStaging.COLUMN_KNOWN_ROLE).equalTo(lit(CodeSystemStaging.ROLE_CHILD)),
-                col(CodeSystemStaging.COLUMN_KNOWN_DENSE_ID))
-            .otherwise(col("other_dense"))
+        col(COLUMN_SYSTEM_VERSION_ID),
+        when(knownIsChild, col(CodeSystemStaging.COLUMN_KNOWN_DENSE_ID))
+            .otherwise(col(SURVIVOR_DENSE_ID))
             .alias(COLUMN_SOURCE_DENSE_ID),
-        when(
-                col(CodeSystemStaging.COLUMN_KNOWN_ROLE).equalTo(lit(CodeSystemStaging.ROLE_CHILD)),
-                col("other_dense"))
+        when(knownIsChild, col(SURVIVOR_DENSE_ID))
             .otherwise(col(CodeSystemStaging.COLUMN_KNOWN_DENSE_ID))
             .alias(COLUMN_TARGET_DENSE_ID));
   }
 
   @Nonnull
-  private Dataset<Row> conceptTable(
-      @Nonnull final Dataset<Row> survivors, @Nonnull final String systemVersionId) {
+  private static Dataset<Row> conceptTable(@Nonnull final Dataset<Row> survivors) {
     return survivors.select(
         col(COLUMN_CODE),
         col(COLUMN_DENSE_ID),
@@ -320,22 +328,17 @@ public class CodeSystemStageLoader {
         lit(null).cast(DataTypes.StringType).alias(COLUMN_MODULE_ID),
         col(COLUMN_DEFINED),
         col(COLUMN_DISPLAY),
-        lit(systemVersionId).alias(COLUMN_SYSTEM_VERSION_ID));
+        col(COLUMN_SYSTEM_VERSION_ID));
   }
 
   @Nonnull
   private Dataset<Row> descriptionTable(
-      @Nonnull final CodeSystemStaging staging,
-      @Nonnull final Dataset<Row> survivingDense,
-      @Nonnull final String systemVersionId) {
+      @Nonnull final CodeSystemStaging staging, @Nonnull final Dataset<Row> survivorKeys) {
     return spark
         .read()
         .schema(CodeSystemStaging.descriptionSchema())
         .json(staging.descriptionPath())
-        .join(
-            survivingDense,
-            col(COLUMN_CONCEPT_DENSE_ID).equalTo(survivingDense.col(COLUMN_DENSE_ID)),
-            "left_semi")
+        .join(survivorKeys, survivorByDenseId(COLUMN_CONCEPT_DENSE_ID), "left_semi")
         .select(
             col(COLUMN_CONCEPT_DENSE_ID),
             col(COLUMN_TERM),
@@ -345,37 +348,30 @@ public class CodeSystemStageLoader {
             lit(null)
                 .cast(DataTypes.createMapType(DataTypes.StringType, DataTypes.StringType))
                 .alias(COLUMN_ACCEPTABILITY),
-            lit(systemVersionId).alias(COLUMN_SYSTEM_VERSION_ID));
+            col(COLUMN_SYSTEM_VERSION_ID));
   }
 
   @Nonnull
   private Dataset<Row> propertyTable(
-      @Nonnull final CodeSystemStaging staging,
-      @Nonnull final Dataset<Row> survivingDense,
-      @Nonnull final String systemVersionId) {
+      @Nonnull final CodeSystemStaging staging, @Nonnull final Dataset<Row> survivorKeys) {
     return spark
         .read()
         .schema(CodeSystemStaging.propertySchema())
         .json(staging.propertyPath())
-        .join(
-            survivingDense,
-            col(COLUMN_CONCEPT_DENSE_ID).equalTo(survivingDense.col(COLUMN_DENSE_ID)),
-            "left_semi")
+        .join(survivorKeys, survivorByDenseId(COLUMN_CONCEPT_DENSE_ID), "left_semi")
         .select(
             col(COLUMN_CONCEPT_DENSE_ID),
             col(COLUMN_PROPERTY_CODE),
             col(COLUMN_VALUE_TYPE),
             col(COLUMN_VALUE),
-            lit(systemVersionId).alias(COLUMN_SYSTEM_VERSION_ID));
+            col(COLUMN_SYSTEM_VERSION_ID));
   }
 
+  /** Builds one code system row per staged CodeSystem, carrying its surviving concept count. */
   @Nonnull
-  private Dataset<Row> codeSystemRow(
-      @Nonnull final String systemVersionId,
-      @Nonnull final String url,
-      @Nullable final String version,
-      @Nullable final String hierarchyMeaning,
-      final long conceptCount) {
+  private Dataset<Row> codeSystemRows(
+      @Nonnull final Map<String, StagedCodeSystem> bySystemVersion,
+      @Nonnull final Map<String, Long> survivingBySystem) {
     final StructType schema =
         new StructType()
             .add(COLUMN_SYSTEM_VERSION_ID, DataTypes.StringType, false)
@@ -385,21 +381,62 @@ public class CodeSystemStageLoader {
             .add(COLUMN_SNOMED_EFFECTIVE_TIME, DataTypes.StringType, true)
             .add(COLUMN_CONCEPT_COUNT, DataTypes.LongType, false)
             .add(COLUMN_HIERARCHY_MEANING, DataTypes.StringType, true);
-    final Row row =
-        RowFactory.create(
-            systemVersionId,
-            url,
-            version,
-            null,
-            null,
-            conceptCount,
-            hierarchyMeaning == null ? IS_A : hierarchyMeaning);
-    return spark.createDataFrame(List.of(row), schema);
+    final List<Row> rows =
+        bySystemVersion.entrySet().stream()
+            .map(
+                entry -> {
+                  final StagedCodeSystem codeSystem = entry.getValue();
+                  return RowFactory.create(
+                      entry.getKey(),
+                      codeSystem.url(),
+                      codeSystem.version(),
+                      null,
+                      null,
+                      survivingBySystem.getOrDefault(entry.getKey(), 0L),
+                      codeSystem.hierarchyMeaning() == null ? IS_A : codeSystem.hierarchyMeaning());
+                })
+            .toList();
+    return spark.createDataFrame(rows, schema);
   }
 
+  /** Matches a staging row's dense identifier to a surviving concept of the same CodeSystem. */
   @Nonnull
-  private static Dataset<Row> withSystemVersion(
-      @Nonnull final Dataset<Row> data, @Nonnull final String systemVersionId) {
-    return data.withColumn(COLUMN_SYSTEM_VERSION_ID, lit(systemVersionId));
+  private static Column survivorByDenseId(@Nonnull final String denseIdColumn) {
+    return col(COLUMN_SYSTEM_VERSION_ID)
+        .equalTo(col(SURVIVOR_SYSTEM_VERSION))
+        .and(col(denseIdColumn).equalTo(col(SURVIVOR_DENSE_ID)));
+  }
+
+  /** Matches a staging row's referenced code to a surviving concept of the same CodeSystem. */
+  @Nonnull
+  private static Column survivorByCode(@Nonnull final String codeColumn) {
+    return col(COLUMN_SYSTEM_VERSION_ID)
+        .equalTo(col(SURVIVOR_SYSTEM_VERSION))
+        .and(col(codeColumn).equalTo(col(SURVIVOR_CODE)));
+  }
+
+  /** Counts the rows of a dataset per system version. */
+  @Nonnull
+  private static Map<String, Long> countBySystemVersion(@Nonnull final Dataset<Row> data) {
+    final Map<String, Long> counts = new HashMap<>();
+    for (final Row row : data.groupBy(col(COLUMN_SYSTEM_VERSION_ID)).count().collectAsList()) {
+      counts.put(row.getString(0), row.getLong(1));
+    }
+    return counts;
+  }
+
+  /** Logs a warning for each CodeSystem that kept fewer rows than it staged. */
+  private static void warnOfDropped(
+      @Nonnull final Map<String, Long> staged,
+      @Nonnull final Map<String, Long> kept,
+      @Nonnull final Map<String, StagedCodeSystem> bySystemVersion,
+      @Nonnull final String message) {
+    staged.forEach(
+        (systemVersionId, count) -> {
+          final long dropped = count - kept.getOrDefault(systemVersionId, 0L);
+          if (dropped > 0) {
+            log.warn(message, dropped, bySystemVersion.get(systemVersionId).url());
+          }
+        });
   }
 }

@@ -304,6 +304,19 @@ ValueSets are stored whole, so a single ValueSet must fit in memory; one larger
 than 1 GB, standalone or in a Bundle, fails with an actionable error naming the
 resource rather than an opaque memory error.
 
+### Sources of many resources
+
+An import reads every resource of the source into temporary files on the
+driver before it writes anything to the store, then writes each table of the
+store once for the whole source, rather than once per resource. A package of
+thousands of small resources, such as `hl7.fhir.r4.core` with its 2,458
+CodeSystems, ValueSets and ConceptMaps, is imported with one write per table
+rather than thousands.
+
+Where a source holds the same resource (the same resource type, canonical URL
+and version) more than once, the last occurrence is imported and the earlier
+ones are skipped with a warning.
+
 ### Stores written by earlier versions
 
 Format version 2 changed how ConceptMaps are stored, from one JSON document per
@@ -319,17 +332,16 @@ too new.
 
 ### Recovering from a failed import
 
-If an import fails after it has begun writing (for example, because a
-CodeSystem later in the source is truncated or corrupt), it reports that the
-store may hold a partial version of the CodeSystem or ConceptMap concerned and
-advises re-running the import. Because content is keyed by resource version,
-re-running with a corrected source fully replaces the partial version and
-repairs the store.
+A resource that cannot be read (for example, a CodeSystem that is truncated or
+corrupt, or a ConceptMap that carries an unrecognised equivalence) fails the
+import with an error naming it. Because the whole source is read before anything
+is written, the store is left unchanged.
 
-A ConceptMap that cannot be read, for example because it is truncated or
-carries an unrecognised equivalence, is rejected before any of it is written,
-with an error naming it. Resources earlier in the same source have already been
-imported by then; re-running the import with a corrected source completes it.
+If an import fails while it is writing the store, it reports that the store may
+hold partial versions of the resources being imported and advises re-running
+the import. The manifest is written last, so none of them is recorded as
+imported. Because content is keyed by resource version, re-running with a
+corrected source fully replaces the partial versions and repairs the store.
 
 ### Provenance and verification
 

@@ -448,9 +448,9 @@ resolved, which is how a shortfall is detected. The same section gives a
 Large imports run for many minutes. With `--verbose`, the command streams a
 running count of parsed concepts and stage-transition messages so progress is
 visible; without it, the startup spinner covers the wait. If an import fails
-partway through writing a CodeSystem, it reports that the store may hold a
-partial version and advises re-running; because content is keyed by system
-version, re-running with a corrected source repairs the store.
+partway through writing the store, it reports that the store may hold partial
+versions of what it was importing and advises re-running; because content is
+keyed by version, re-running with a corrected source repairs the store.
 
 Peak memory does not grow with the number of concepts, but the largest
 vocabularies still need more driver heap than the 1 GB default to hold the

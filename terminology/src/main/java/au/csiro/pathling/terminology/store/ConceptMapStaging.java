@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.terminology.store;
 
+import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_CONCEPT_MAP_ID;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_EQUIVALENCE;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_ORDINAL;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_SOURCE_CODE;
@@ -47,13 +48,16 @@ import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructType;
 
 /**
- * The transient staging of one ConceptMap streamed to disk: an NDJSON file with one line per
- * mapping and another with one line per group, written by the flattener and read back through
- * Spark, so the driver never holds the mappings or the groups of a map in memory. Each mapping
- * refers to its group by index, because a group's systems may follow its elements in the source.
- * The files live in a driver-local temporary directory that is deleted when the staging is closed.
- * The one thing held in memory is the first fault recorded, the reason the map cannot be read as a
- * concept map relation, which the importer records in the manifest.
+ * The transient staging of the ConceptMaps of an import streamed to disk: an NDJSON file with one
+ * line per mapping and another with one line per group, written by the flattener and read back
+ * through Spark, so the driver never holds the mappings or the groups of a map in memory. Every
+ * ConceptMap of an import is staged into the same files, each row carrying the identifier of the
+ * map it belongs to, so the importer writes the mapping table once for the whole import. Each
+ * mapping refers to its group by index within its map, because a group's systems may follow its
+ * elements in the source. The files live in a driver-local temporary directory that is deleted when
+ * the staging is closed. The one thing held in memory is the first fault recorded for the current
+ * map, the reason it cannot be read as a concept map relation, which the importer collects for the
+ * manifest before the next map begins.
  *
  * @author John Grimes
  */
@@ -71,9 +75,13 @@ public class ConceptMapStaging implements AutoCloseable {
   /** The staging column holding the index of a group in the group file. */
   private static final String COLUMN_GROUP_INDEX = "group_index";
 
+  /** The staging column holding the identifier of the map a group belongs to. */
+  private static final String COLUMN_GROUP_CONCEPT_MAP_ID = "group_concept_map_id";
+
   @Nonnull private final Path directory;
   @Nonnull private final JsonGenerator mappingGenerator;
   @Nonnull private final JsonGenerator groupGenerator;
+  @Nullable private String conceptMapId;
   private int groupCount;
   private int mappingCount;
   private boolean sealed;
@@ -124,6 +132,19 @@ public class ConceptMapStaging implements AutoCloseable {
   }
 
   /**
+   * Starts the rows of the next ConceptMap. Every row appended until the next call carries this
+   * identifier, and the group count, the mapping count and the fault start afresh.
+   *
+   * @param conceptMapId the concept map identifier the following rows belong to
+   */
+  public void beginConceptMap(@Nonnull final String conceptMapId) {
+    this.conceptMapId = conceptMapId;
+    groupCount = 0;
+    mappingCount = 0;
+    fault = null;
+  }
+
+  /**
    * Returns the number of groups registered so far, which is the index the next group will take.
    *
    * @return the number of registered groups
@@ -148,6 +169,7 @@ public class ConceptMapStaging implements AutoCloseable {
     requireUnsealed();
     try {
       groupGenerator.writeStartObject();
+      groupGenerator.writeStringField(COLUMN_GROUP_CONCEPT_MAP_ID, conceptMapId);
       groupGenerator.writeNumberField(COLUMN_GROUP_INDEX, groupCount);
       groupGenerator.writeStringField(COLUMN_SOURCE_SYSTEM, sourceSystem);
       groupGenerator.writeStringField(COLUMN_SOURCE_VERSION, sourceVersion);
@@ -185,6 +207,7 @@ public class ConceptMapStaging implements AutoCloseable {
     }
     try {
       mappingGenerator.writeStartObject();
+      mappingGenerator.writeStringField(COLUMN_CONCEPT_MAP_ID, conceptMapId);
       mappingGenerator.writeNumberField(COLUMN_ORDINAL, mappingCount);
       mappingGenerator.writeNumberField(COLUMN_GROUP, group);
       mappingGenerator.writeStringField(COLUMN_SOURCE_CODE, sourceCode);
@@ -200,8 +223,8 @@ public class ConceptMapStaging implements AutoCloseable {
   }
 
   /**
-   * Records a reason that the map cannot be read as a concept map relation. Only the first reason
-   * recorded is kept, so the caller records them in the order the map is to be checked.
+   * Records a reason that the current map cannot be read as a concept map relation. Only the first
+   * reason recorded is kept, so the caller records them in the order the map is to be checked.
    *
    * @param reason the reason
    */
@@ -213,7 +236,8 @@ public class ConceptMapStaging implements AutoCloseable {
   }
 
   /**
-   * Returns the first reason recorded that the map cannot be read as a concept map relation.
+   * Returns the first reason recorded that the current map cannot be read as a concept map
+   * relation.
    *
    * @return the reason, or null where none was recorded
    */
@@ -223,7 +247,7 @@ public class ConceptMapStaging implements AutoCloseable {
   }
 
   /**
-   * Returns the number of mappings appended so far.
+   * Returns the number of mappings appended to the current map so far.
    *
    * @return the mapping count
    */
@@ -234,6 +258,9 @@ public class ConceptMapStaging implements AutoCloseable {
   private void requireUnsealed() {
     if (sealed) {
       throw new IllegalStateException("Staging has been sealed for reading and cannot be appended");
+    }
+    if (conceptMapId == null) {
+      throw new IllegalStateException("No ConceptMap has been begun in the staging");
     }
   }
 
@@ -256,9 +283,9 @@ public class ConceptMapStaging implements AutoCloseable {
 
   /**
    * Reads the sealed staging back as mappings that carry their group's systems and versions, in the
-   * columns {@code ordinal}, {@code source_system}, {@code source_version}, {@code source_code},
-   * {@code source_display}, {@code target_system}, {@code target_version}, {@code target_code},
-   * {@code target_display} and {@code equivalence}.
+   * columns {@code concept_map_id}, {@code ordinal}, {@code source_system}, {@code source_version},
+   * {@code source_code}, {@code source_display}, {@code target_system}, {@code target_version},
+   * {@code target_code}, {@code target_display} and {@code equivalence}.
    *
    * @param spark the Spark session to read with
    * @return the mappings, lazily read from the staging files
@@ -267,6 +294,7 @@ public class ConceptMapStaging implements AutoCloseable {
   public Dataset<Row> read(@Nonnull final SparkSession spark) {
     final StructType mappingSchema =
         new StructType()
+            .add(COLUMN_CONCEPT_MAP_ID, DataTypes.StringType, false)
             .add(COLUMN_ORDINAL, DataTypes.IntegerType, false)
             .add(COLUMN_GROUP, DataTypes.IntegerType, false)
             .add(COLUMN_SOURCE_CODE, DataTypes.StringType, false)
@@ -276,6 +304,7 @@ public class ConceptMapStaging implements AutoCloseable {
             .add(COLUMN_EQUIVALENCE, DataTypes.StringType, false);
     final StructType groupSchema =
         new StructType()
+            .add(COLUMN_GROUP_CONCEPT_MAP_ID, DataTypes.StringType, false)
             .add(COLUMN_GROUP_INDEX, DataTypes.IntegerType, false)
             .add(COLUMN_SOURCE_SYSTEM, DataTypes.StringType, true)
             .add(COLUMN_SOURCE_VERSION, DataTypes.StringType, true)
@@ -288,8 +317,13 @@ public class ConceptMapStaging implements AutoCloseable {
     final Dataset<Row> groups =
         spark.read().schema(groupSchema).json(directory.resolve(FILE_GROUP).toUri().toString());
     return mappings
-        .join(groups, col(COLUMN_GROUP).equalTo(col(COLUMN_GROUP_INDEX)))
+        .join(
+            groups,
+            col(COLUMN_CONCEPT_MAP_ID)
+                .equalTo(col(COLUMN_GROUP_CONCEPT_MAP_ID))
+                .and(col(COLUMN_GROUP).equalTo(col(COLUMN_GROUP_INDEX))))
         .select(
+            col(COLUMN_CONCEPT_MAP_ID),
             col(COLUMN_ORDINAL),
             col(COLUMN_SOURCE_SYSTEM),
             col(COLUMN_SOURCE_VERSION),
