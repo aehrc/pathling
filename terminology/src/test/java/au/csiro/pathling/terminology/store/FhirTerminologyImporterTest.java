@@ -18,17 +18,21 @@
 package au.csiro.pathling.terminology.store;
 
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.CLOSURE;
+import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.CODE_SYSTEM;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_ACTIVE;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_ANCESTOR_DENSE_ID;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_CANONICAL_URL;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_CODE;
+import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_CONCEPT_COUNT;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_CONCEPT_DENSE_ID;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_DENSE_ID;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_DESCENDANT_DENSE_ID;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_DISPLAY;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_EQUIVALENCE;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_PROPERTY_CODE;
+import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_RESOURCE_JSON;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_SOURCE_CODE;
+import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_SYSTEM_VERSION_ID;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_TARGET_CODE;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_TERM;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_VALUE;
@@ -36,7 +40,10 @@ import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.CONCEPT;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.CONCEPT_MAPPING;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.DESCRIPTION;
+import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.MANIFEST;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.PROPERTY;
+import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.RELATIONSHIP;
+import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.VALUE_SET;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -44,19 +51,23 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.test.FhirFixtures;
+import ca.uhn.fhir.context.FhirContext;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.spark.sql.SparkSession;
+import org.hl7.fhir.r4.model.ValueSet;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -347,11 +358,11 @@ class FhirTerminologyImporterTest {
   }
 
   @Test
-  void reportsPartialVersionOnMidStreamCorruptionAndRepairsOnReRun(@TempDir final Path dir)
+  void rejectsMidStreamCorruptionBeforeAnyWriteAndImportsOnReRun(@TempDir final Path dir)
       throws Exception {
     final String store = dir.resolve("store").toString();
-    // A package whose second CodeSystem is corrupt: the first has already been written, so the
-    // failure is reported as a possibly-partial version that a re-run repairs.
+    // A package whose second CodeSystem is corrupt. Every resource is read before anything is
+    // written, so the valid CodeSystem that precedes it is not written either.
     final Path corruptPackage =
         FhirPackageFixtures.buildPackage(
             dir, "corrupt.tgz", "simple-valid.json", "corrupt-concepts.json");
@@ -363,10 +374,9 @@ class FhirTerminologyImporterTest {
             () -> importer.importFrom(corruptPackage.toString(), false, null));
     final String message = e.getMessage();
     assertTrue(message.contains("http://example.org/fhir/CodeSystem/corrupt"), message);
-    assertTrue(message.toLowerCase().contains("partial"), message);
-    assertTrue(message.toLowerCase().contains("re-run"), message);
+    assertTrue(Files.notExists(Path.of(store)), "nothing was written to the store");
 
-    // Re-running with a corrected source repairs the store.
+    // Re-running with a corrected source imports both CodeSystems.
     final Path fixedPackage =
         FhirPackageFixtures.buildPackage(
             dir, "fixed.tgz", "simple-valid.json", "corrupt-concepts-fixed.json");
@@ -642,6 +652,404 @@ class FhirTerminologyImporterTest {
     assertTrue(e.getMessage().contains("No importable"), e.getMessage());
   }
 
+  // --- Batched writes (issue 2849). ---
+
+  @Test
+  void writesEachTableOnceForASourceOfManyResources(@TempDir final Path dir) throws Exception {
+    // A source of many small resources is written with one Delta commit per table rather than one
+    // per resource, which is what makes a package of thousands of resources quick to import.
+    final Path source =
+        bundle(
+            dir,
+            "many.json",
+            codeSystemJson("http://example.org/cs1", "1", "A", "B"),
+            codeSystemJson("http://example.org/cs2", "1", "A", "C"),
+            codeSystemJson("http://example.org/cs3", "1", "X", "Y"),
+            valueSetJson("http://example.org/vs1", "1", "first"),
+            valueSetJson("http://example.org/vs2", null, "first"),
+            conceptMapJson("http://example.org/cm1", "1", "a", "b"),
+            conceptMapJson("http://example.org/cm2", "1", "a", "c"));
+    final String store = dir.resolve("store").toString();
+    final List<String> tables =
+        List.of(
+            CODE_SYSTEM,
+            CONCEPT,
+            DESCRIPTION,
+            PROPERTY,
+            RELATIONSHIP,
+            CLOSURE,
+            CONCEPT_MAPPING,
+            VALUE_SET,
+            MANIFEST);
+
+    new FhirTerminologyImporter(spark, store).importFrom(source.toString(), false, null);
+    for (final String table : tables) {
+      assertEquals(1, commits(store, table), table);
+    }
+
+    // Re-importing the same source replaces its content with at most one more commit per table.
+    // Delta makes no commit where there is nothing to replace, as with the empty description
+    // table, so a table may gain none.
+    new FhirTerminologyImporter(spark, store).importFrom(source.toString(), false, null);
+    for (final String table : tables) {
+      assertTrue(commits(store, table) <= 2, table);
+    }
+    assertEquals(2, commits(store, CONCEPT));
+    assertEquals(7, manifest(store).size());
+  }
+
+  @Test
+  void keepsTheContentOfEachResourceInABatchSeparate(@TempDir final Path dir) throws Exception {
+    // Two CodeSystems share the code A but not its child, and two ConceptMaps share a source code
+    // but only one of them can be read as a relation.
+    final Path source =
+        bundle(
+            dir,
+            "shared.json",
+            codeSystemJson("http://example.org/cs1", "1", "A", "B"),
+            codeSystemJson("http://example.org/cs2", "1", "A", "C"),
+            valueSetJson("http://example.org/vs1", "1", "one"),
+            valueSetJson("http://example.org/vs2", "1", "two"),
+            conceptMapJson("http://example.org/cm1", "1", "a", "b")
+                .replace(",\"equivalence\":\"equivalent\"", ""),
+            conceptMapJson("http://example.org/cm2", "1", "a", "z"));
+    final String store = dir.resolve("store").toString();
+
+    new FhirTerminologyImporter(spark, store).importFrom(source.toString(), false, null);
+
+    // Neither the shared code nor the hierarchy leaks from one CodeSystem into the other.
+    final String cs1 = TerminologyStoreSchema.systemVersionId("http://example.org/cs1", "1");
+    final String cs2 = TerminologyStoreSchema.systemVersionId("http://example.org/cs2", "1");
+    assertEquals(Map.of(cs1, Set.of("A", "B"), cs2, Set.of("A", "C")), codesBySystem(store));
+    assertEquals(Map.of(cs1, Set.of("A->B"), cs2, Set.of("A->C")), closureBySystem(store));
+    assertEquals(Map.of(cs1, 2L, cs2, 2L), conceptCountBySystem(store));
+
+    // Each ValueSet is stored as its own resource.
+    final Map<String, String> valueSetNames = valueSetNames(store);
+    assertEquals(
+        Map.of("http://example.org/vs1|1", "one", "http://example.org/vs2|1", "two"),
+        valueSetNames);
+
+    // Each map keeps its own mappings, and the fault of one is not attributed to the other.
+    assertEquals(
+        Set.of(
+            mapping("http://example.org/cm1", "1", "a", "b", "relatedto"),
+            mapping("http://example.org/cm2", "1", "a", "z", "equivalent")),
+        mappings(store));
+    final Map<String, String> faults = new HashMap<>();
+    for (final ManifestEntry entry : manifest(store)) {
+      if ("concept_map".equals(entry.getEntryType())) {
+        faults.put(entry.getCanonicalUrl(), String.valueOf(entry.getFault()));
+      }
+    }
+    assertEquals(
+        Map.of(
+            "http://example.org/cm1",
+            "the mapping for source code 'a' has no equivalence",
+            "http://example.org/cm2",
+            "null"),
+        faults);
+  }
+
+  @Test
+  void theLastOccurrenceOfARepeatedResourceWins(@TempDir final Path dir) throws Exception {
+    // Each resource appears twice with the same URL and version; the later occurrence is the one
+    // stored, as it was when each resource was written in turn.
+    final Path source =
+        bundle(
+            dir,
+            "repeated.json",
+            codeSystemJson("http://example.org/cs", "1", "A", "B"),
+            valueSetJson("http://example.org/vs", null, "earlier"),
+            conceptMapJson("http://example.org/cm", "1", "a", "b"),
+            codeSystemJson("http://example.org/cs", "1", "A", "C"),
+            valueSetJson("http://example.org/vs", null, "later"),
+            conceptMapJson("http://example.org/cm", "1", "a", "z"));
+    final String store = dir.resolve("store").toString();
+
+    new FhirTerminologyImporter(spark, store).importFrom(source.toString(), false, null);
+
+    final String cs = TerminologyStoreSchema.systemVersionId("http://example.org/cs", "1");
+    assertEquals(Map.of(cs, Set.of("A", "C")), codesBySystem(store));
+    assertEquals(Map.of(cs, Set.of("A->C")), closureBySystem(store));
+    assertEquals(Map.of("http://example.org/vs|null", "later"), valueSetNames(store));
+    assertEquals(
+        Set.of(mapping("http://example.org/cm", "1", "a", "z", "equivalent")), mappings(store));
+    assertEquals(3, manifest(store).size());
+  }
+
+  @Test
+  void anEmptyValueSetVersionRepeatsAnAbsentOne(@TempDir final Path dir) throws Exception {
+    // HAPI reads an empty version as absent, so these two ValueSets are stored under the same key
+    // and the later one alone must be kept.
+    final Path source =
+        bundle(
+            dir,
+            "repeated.json",
+            valueSetJson("http://example.org/vs", "", "earlier"),
+            valueSetJson("http://example.org/vs", null, "later"));
+    final String store = dir.resolve("store").toString();
+
+    new FhirTerminologyImporter(spark, store).importFrom(source.toString(), false, null);
+
+    assertEquals(Map.of("http://example.org/vs|null", "later"), valueSetNames(store));
+    assertEquals(1, manifest(store).size());
+  }
+
+  @Test
+  void reimportingABatchReplacesOnlyTheVersionsItHolds(@TempDir final Path dir) throws Exception {
+    final String store = dir.resolve("store").toString();
+    final Path first =
+        bundle(
+            dir,
+            "first.json",
+            codeSystemJson("http://example.org/x", "1", "A", "B"),
+            codeSystemJson("http://example.org/y", "1", "P", "Q"),
+            valueSetJson("http://example.org/vs", "1", "versioned"),
+            valueSetJson("http://example.org/vs", null, "unversioned"),
+            conceptMapJson("http://example.org/cm", "1", "a", "b"),
+            conceptMapJson("http://example.org/cm", "2", "c", "d"));
+    final Path second =
+        bundle(
+            dir,
+            "second.json",
+            codeSystemJson("http://example.org/x", "1", "A", "C"),
+            codeSystemJson("http://example.org/z", "1", "M", "N"),
+            valueSetJson("http://example.org/vs", null, "revised"),
+            conceptMapJson("http://example.org/cm", "1", "a", "z"));
+
+    new FhirTerminologyImporter(spark, store).importFrom(first.toString(), false, null);
+    new FhirTerminologyImporter(spark, store).importFrom(second.toString(), false, null);
+
+    // The versions in the second source replaced their predecessors; the others were left alone.
+    assertEquals(
+        Map.of(
+            TerminologyStoreSchema.systemVersionId("http://example.org/x", "1"),
+            Set.of("A", "C"),
+            TerminologyStoreSchema.systemVersionId("http://example.org/y", "1"),
+            Set.of("P", "Q"),
+            TerminologyStoreSchema.systemVersionId("http://example.org/z", "1"),
+            Set.of("M", "N")),
+        codesBySystem(store));
+    assertEquals(
+        Map.of("http://example.org/vs|1", "versioned", "http://example.org/vs|null", "revised"),
+        valueSetNames(store));
+    assertEquals(
+        Set.of(
+            mapping("http://example.org/cm", "1", "a", "z", "equivalent"),
+            mapping("http://example.org/cm", "2", "c", "d", "equivalent")),
+        mappings(store));
+    assertEquals(7, manifest(store).size());
+  }
+
+  @Test
+  void importsAndReimportsResourcesWhoseUrlAndVersionContainQuotes(@TempDir final Path dir)
+      throws Exception {
+    // Canonical URLs and versions are spliced into the predicates that replace stored versions,
+    // so a quote or a backslash in either must not break or widen the replacement.
+    final String url = "http://example.org/o'brien\\\\x";
+    final String version = "1'0";
+    final String storedUrl = "http://example.org/o'brien\\x";
+    final Path first =
+        bundle(
+            dir,
+            "first.json",
+            codeSystemJson(url, version, "A", "B"),
+            valueSetJson(url, version, "first"),
+            conceptMapJson(url, version, "a", "b"));
+    final Path second =
+        bundle(
+            dir,
+            "second.json",
+            codeSystemJson(url, version, "A", "C"),
+            valueSetJson(url, version, "second"),
+            conceptMapJson(url, version, "a", "z"));
+    final String store = dir.resolve("store").toString();
+
+    new FhirTerminologyImporter(spark, store).importFrom(first.toString(), false, null);
+    new FhirTerminologyImporter(spark, store).importFrom(second.toString(), false, null);
+
+    assertEquals(
+        Map.of(TerminologyStoreSchema.systemVersionId(storedUrl, version), Set.of("A", "C")),
+        codesBySystem(store));
+    assertEquals(Map.of(storedUrl + "|" + version, "second"), valueSetNames(store));
+    assertEquals(Set.of(mapping(storedUrl, version, "a", "z", "equivalent")), mappings(store));
+    assertEquals(3, manifest(store).size());
+  }
+
+  @Test
+  void importsAValueSetBeyondTheDefaultJsonStringLimit(@TempDir final Path dir) throws Exception {
+    // A ValueSet is staged as a single JSON string, which here is longer than the 20 MB that Spark
+    // reads by default; it must be stored whole rather than read back as null.
+    final String description = "x".repeat(25 * 1024 * 1024);
+    final Path source = dir.resolve("large.json");
+    Files.writeString(
+        source,
+        valueSetJson("http://example.org/vs", "1", "large")
+            .replace("\"status\"", "\"description\":\"" + description + "\",\"status\""));
+    final String store = dir.resolve("store").toString();
+
+    new FhirTerminologyImporter(spark, store).importFrom(source.toString(), false, null);
+
+    final List<Integer> lengths = new ArrayList<>();
+    TerminologyStoreReader.open(store, Map.of())
+        .readTable(VALUE_SET, row -> lengths.add(row.getString(COLUMN_RESOURCE_JSON).length()));
+    assertEquals(1, lengths.size());
+    assertTrue(lengths.get(0) > description.length(), "the whole ValueSet is stored");
+  }
+
+  @Test
+  void reportsAPossiblyPartialImportWhenAWriteFailsAndRepairsOnReRun(@TempDir final Path dir)
+      throws Exception {
+    final Path source =
+        bundle(
+            dir,
+            "source.json",
+            codeSystemJson("http://example.org/cs", "1", "A", "B"),
+            conceptMapJson("http://example.org/cm", "1", "a", "b"));
+    final Path storeDir = dir.resolve("store");
+    final String store = storeDir.toString();
+    // A plain file where the concept mapping table belongs makes that write fail after the
+    // CodeSystem tables have been written.
+    Files.createDirectories(storeDir);
+    final Path blocker = storeDir.resolve(CONCEPT_MAPPING);
+    Files.writeString(blocker, "not a table");
+    final FhirTerminologyImporter importer = new FhirTerminologyImporter(spark, store);
+
+    final TerminologyImportException e =
+        assertThrows(
+            TerminologyImportException.class,
+            () -> importer.importFrom(source.toString(), false, null));
+    final String message = e.getMessage().toLowerCase();
+    assertTrue(message.contains("partial"), message);
+    assertTrue(message.contains("re-run"), message);
+    // The manifest is written last, so nothing is recorded as imported.
+    assertTrue(Files.notExists(storeDir.resolve(MANIFEST)));
+
+    // Re-running once the obstruction is gone completes the import.
+    Files.delete(blocker);
+    new FhirTerminologyImporter(spark, store).importFrom(source.toString(), false, null);
+    assertEquals(2, manifest(store).size());
+    assertEquals(
+        Set.of(mapping("http://example.org/cm", "1", "a", "b", "equivalent")), mappings(store));
+  }
+
+  /** Writes a collection Bundle holding the given resources to a file. */
+  private static Path bundle(final Path dir, final String name, final String... resources)
+      throws IOException {
+    final StringBuilder json =
+        new StringBuilder("{\"resourceType\":\"Bundle\",\"type\":\"collection\",\"entry\":[");
+    for (int i = 0; i < resources.length; i++) {
+      if (i > 0) {
+        json.append(',');
+      }
+      json.append("{\"resource\":").append(resources[i]).append('}');
+    }
+    json.append("]}");
+    final Path file = dir.resolve(name);
+    Files.writeString(file, json.toString());
+    return file;
+  }
+
+  /** A CodeSystem whose one root concept has one nested child. */
+  private static String codeSystemJson(
+      final String url, final String version, final String root, final String child) {
+    return "{\"resourceType\":\"CodeSystem\",\"url\":\""
+        + url
+        + "\",\"version\":\""
+        + version
+        + "\",\"status\":\"active\",\"content\":\"complete\",\"concept\":[{\"code\":\""
+        + root
+        + "\",\"concept\":[{\"code\":\""
+        + child
+        + "\"}]}]}";
+  }
+
+  /** A ValueSet with the given name, and no version when the version is null. */
+  private static String valueSetJson(final String url, final String version, final String name) {
+    return "{\"resourceType\":\"ValueSet\",\"url\":\""
+        + url
+        + "\","
+        + (version == null ? "" : "\"version\":\"" + version + "\",")
+        + "\"name\":\""
+        + name
+        + "\",\"status\":\"active\"}";
+  }
+
+  /** The number of Delta commits made to a table of a store. */
+  private static long commits(final String store, final String table) throws IOException {
+    try (Stream<Path> files = Files.list(Path.of(store, table, "_delta_log"))) {
+      return files.filter(file -> file.getFileName().toString().matches("\\d{20}\\.json")).count();
+    }
+  }
+
+  /** The codes of each stored CodeSystem version, keyed by system version. */
+  private static Map<String, Set<String>> codesBySystem(final String store) {
+    final Map<String, Set<String>> codes = new HashMap<>();
+    TerminologyStoreReader.open(store, Map.of())
+        .readTable(
+            CONCEPT,
+            row ->
+                codes
+                    .computeIfAbsent(row.getString(COLUMN_SYSTEM_VERSION_ID), k -> new HashSet<>())
+                    .add(row.getString(COLUMN_CODE)));
+    return codes;
+  }
+
+  /** The closure of each stored CodeSystem version as code pairs, keyed by system version. */
+  private static Map<String, Set<String>> closureBySystem(final String store) {
+    final TerminologyStoreReader reader = TerminologyStoreReader.open(store, Map.of());
+    final Map<String, String> codeByDense = new HashMap<>();
+    reader.readTable(
+        CONCEPT,
+        row ->
+            codeByDense.put(
+                row.getString(COLUMN_SYSTEM_VERSION_ID) + "#" + row.getInt(COLUMN_DENSE_ID),
+                row.getString(COLUMN_CODE)));
+    final Map<String, Set<String>> pairs = new HashMap<>();
+    reader.readTable(
+        CLOSURE,
+        row -> {
+          final String system = row.getString(COLUMN_SYSTEM_VERSION_ID);
+          pairs
+              .computeIfAbsent(system, k -> new HashSet<>())
+              .add(
+                  codeByDense.get(system + "#" + row.getInt(COLUMN_ANCESTOR_DENSE_ID))
+                      + "->"
+                      + codeByDense.get(system + "#" + row.getInt(COLUMN_DESCENDANT_DENSE_ID)));
+        });
+    return pairs;
+  }
+
+  /** The concept count recorded for each stored CodeSystem version, keyed by system version. */
+  private static Map<String, Long> conceptCountBySystem(final String store) {
+    final Map<String, Long> counts = new HashMap<>();
+    TerminologyStoreReader.open(store, Map.of())
+        .readTable(
+            CODE_SYSTEM,
+            row ->
+                counts.put(
+                    row.getString(COLUMN_SYSTEM_VERSION_ID), row.getLong(COLUMN_CONCEPT_COUNT)));
+    return counts;
+  }
+
+  /** The name inside each stored ValueSet, keyed by {@code url|version}. */
+  private static Map<String, String> valueSetNames(final String store) {
+    final Map<String, String> names = new HashMap<>();
+    TerminologyStoreReader.open(store, Map.of())
+        .readTable(
+            VALUE_SET,
+            row -> {
+              final String json = row.getString(COLUMN_RESOURCE_JSON);
+              final ValueSet valueSet =
+                  FhirContext.forR4Cached().newJsonParser().parseResource(ValueSet.class, json);
+              names.put(
+                  row.getString(COLUMN_CANONICAL_URL) + "|" + row.getString(COLUMN_VERSION),
+                  valueSet.getName());
+            });
+    return names;
+  }
+
   private void assertBundleMixedImported(final String store) {
     final Map<String, Set<String>> byType = manifestByType(store);
     assertTrue(byType.get("code_system").contains("http://example.org/fhir/CodeSystem/bundled"));
@@ -662,7 +1070,15 @@ class FhirTerminologyImporterTest {
   /** A one-mapping ConceptMap with the given version, source code and target code. */
   private static String conceptMapJson(
       final String version, final String sourceCode, final String targetCode) {
-    return "{\"resourceType\":\"ConceptMap\",\"url\":\"http://example.org/cm\",\"version\":\""
+    return conceptMapJson("http://example.org/cm", version, sourceCode, targetCode);
+  }
+
+  /** A one-mapping ConceptMap with the given URL, version, source code and target code. */
+  private static String conceptMapJson(
+      final String url, final String version, final String sourceCode, final String targetCode) {
+    return "{\"resourceType\":\"ConceptMap\",\"url\":\""
+        + url
+        + "\",\"version\":\""
         + version
         + "\",\"group\":[{\"source\":\"http://s\",\"target\":\"http://t\",\"element\":[{\"code\":\""
         + sourceCode

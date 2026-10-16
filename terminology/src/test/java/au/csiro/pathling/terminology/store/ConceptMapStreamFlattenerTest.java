@@ -207,6 +207,7 @@ class ConceptMapStreamFlattenerTest {
             FhirFixtures.jsonDirectory().resolve("conceptmap-species-to-category.json"));
     try (ConceptMapStaging staging = ConceptMapStaging.create();
         JsonParser parser = FACTORY.createParser(json.getBytes(StandardCharsets.UTF_8))) {
+      staging.beginConceptMap("cm");
       assertEquals(4, new ConceptMapStreamFlattener(staging).flatten(parser));
     }
   }
@@ -275,6 +276,7 @@ class ConceptMapStreamFlattenerTest {
   private static String fault(final String json) throws IOException {
     try (ConceptMapStaging staging = ConceptMapStaging.create();
         JsonParser parser = FACTORY.createParser(json.getBytes(StandardCharsets.UTF_8))) {
+      staging.beginConceptMap("cm");
       new ConceptMapStreamFlattener(staging).flatten(parser);
       return staging.fault();
     }
@@ -283,6 +285,7 @@ class ConceptMapStreamFlattenerTest {
   /** Flattens a ConceptMap and reads every staging row back, collected before cleanup. */
   private static Dataset<Row> staged(final String json) throws IOException {
     try (ConceptMapStaging staging = ConceptMapStaging.create()) {
+      staging.beginConceptMap("cm");
       try (JsonParser parser = FACTORY.createParser(json.getBytes(StandardCharsets.UTF_8))) {
         new ConceptMapStreamFlattener(staging).flatten(parser);
       }
