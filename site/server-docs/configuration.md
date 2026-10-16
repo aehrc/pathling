@@ -1,5 +1,5 @@
 ---
-sidebar_position: 7
+sidebar_position: 8
 description: Configuration options for the Pathling server.
 ---
 
@@ -192,7 +192,7 @@ These settings govern the resolution of a query's dependency graph, for both
   SQLQuery or SQLView `relatedArtifact` names this external table. Each
   configured table is a read-only Delta or Parquet table, outside the
   warehouse, that a SQL subject may join to its FHIR views; see
-  [$sql-run](./operations/sql-run#supporting-artefacts).
+  [external tables](./sql-on-fhir#external-tables).
 - `pathling.sqlQuery.externalTables.N.path` - The location of the table.
   Accepts the same URL schemes as `pathling.storage.warehouseUrl`.
 - `pathling.sqlQuery.externalTables.N.format` - (default: `delta`) The storage
@@ -201,7 +201,7 @@ These settings govern the resolution of a query's dependency graph, for both
   `delta` fails to read, but a Delta table declared `parquet` is read as its
   raw data files, including those superseded by later commits.
 - `pathling.sqlQuery.valueSetMaxMembers` - (default: `100000`) The maximum
-  number of members a single [value set](./operations/sql-run#value-sets)
+  number of members a single [value set](./sql-on-fhir#value-sets)
   referenced as a SQLQuery or SQLView dependency may have. Must be at least
   `1`. A value set with exactly this many members is accepted; one with more is
   rejected with a `422` naming the label, the canonical URL and the maximum,
@@ -211,7 +211,7 @@ These settings govern the resolution of a query's dependency graph, for both
   are counted in it. Where no `total` is reported, no page beyond the one that
   reveals the excess is fetched.
 - `pathling.sqlQuery.conceptMapMaxMappings` - (default: `100000`) The maximum
-  number of rows a single [concept map](./operations/sql-run#concept-maps)
+  number of rows a single [concept map](./sql-on-fhir#concept-maps)
   referenced as a SQLQuery or SQLView dependency may have, counted after
   duplicate mappings are removed. Must be at least `1`. A concept map with
   exactly this many rows is accepted; one with more is rejected with a `422`

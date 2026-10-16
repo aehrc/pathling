@@ -1,5 +1,5 @@
 ---
-sidebar_position: 4
+sidebar_position: 5
 description: Pathling can perform the role of a resource server within the OpenID Connect framework.
 ---
 
@@ -114,7 +114,7 @@ dependencies alongside it are unaffected: a ViewDefinition or SQLView joined to
 an external table keeps its own resource-type read requirements, and the
 storage read checks below.
 
-A [value set](operations/sql-run#value-sets) referenced as a dependency of a
+A [value set](sql-on-fhir#value-sets) referenced as a dependency of a
 SQL subject likewise requires only the operation authority. Its membership
 comes from the terminology layer, or from a ValueSet supplied in the request's
 `context`, rather than from FHIR data held by the server, so no resource-type
@@ -124,7 +124,7 @@ to nor waives the requirements of the dependencies alongside it; a ViewDefinitio
 joined to a value set still requires `read` authority for the resource type it
 projects.
 
-A [concept map](operations/sql-run#concept-maps) referenced as a dependency of
+A [concept map](sql-on-fhir#concept-maps) referenced as a dependency of
 a SQL subject also requires only the operation authority. Its mappings come
 from the terminology layer, or from a ConceptMap supplied in the request's
 `context`, and never from FHIR data held by the server, so no resource-type

@@ -8,7 +8,9 @@ description: The sql-export operation asynchronously exports one or more ViewDef
 The `$sql-export` operation is the asynchronous counterpart to
 [`$sql-run`](sql-run.md). It exports one or more _subjects_ - in any mixture of
 the three kinds - to downloadable files, following the
-[FHIR Asynchronous Request Pattern](https://hl7.org/fhir/R4/async.html).
+[FHIR Asynchronous Request Pattern](https://hl7.org/fhir/R4/async.html). The
+kinds of subject, their dependencies and their use of value sets and concept
+maps are described on the [SQL on FHIR](../sql-on-fhir.md) page.
 
 One job carries every subject, which is what makes the outputs comparable:
 every subject in a job is computed against a single snapshot of the data, so a
@@ -60,7 +62,7 @@ meaningless for a bulk file set, and is refused as `invalid`.
   the warehouse only: a configured
   [external table](../configuration#sql-query) is outside it and is read at its
   current state when the subject that references it is materialised. A
-  [value set](sql-run#value-sets) or [concept map](sql-run#concept-maps) is
+  [value set](../sql-on-fhir#value-sets) or [concept map](../sql-on-fhir#concept-maps) is
   outside it too, but is fixed differently: its membership or mappings are
   obtained at kick-off and do not change for the life of the job.
 - **One resolution per canonical URL.** Dependency resolution is memoised
