@@ -152,7 +152,7 @@ session is built. Hadoop can also load any `fs.*` property from an encrypted
 [credential provider](https://hadoop.apache.org/docs/r3.4.1/hadoop-project-dist/hadoop-common/CredentialProviderAPI.html)
 file, referenced with `spark.hadoop.hadoop.security.credential.provider.path`.
 
-The [command line interface](../cli#spark-configuration) accepts the same
+The [command line interface](../cli/configuration.md#spark-configuration) accepts the same
 properties in its `[spark]` configuration table, and can read secret values
 from a file.
 

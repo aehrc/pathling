@@ -35,7 +35,7 @@ pathling --help
 ## Global options
 
 The following options are accepted before any command and may also be supplied
-through a configuration file.
+through the [configuration file](./configuration.md).
 
 | Option                                                                      | Config key                   | Default                                 |
 | --------------------------------------------------------------------------- | ---------------------------- | --------------------------------------- |
@@ -48,7 +48,8 @@ through a configuration file.
 | `--config PATH`                                                             | -                            | `$XDG_CONFIG_HOME/pathling/config.toml` |
 | `--verbose`                                                                 | -                            | off                                     |
 
-Values are resolved with the precedence flag > config file > built-in default.
+Values are resolved with the precedence flag > config file > built-in default;
+see [configuration](./configuration.md) for every config key.
 The `--verbose` flag re-enables Spark and JVM logging and prints full stack
 traces on error.
 
@@ -181,7 +182,9 @@ SMART backend services authentication is configured with `--client-id`,
 `--token-endpoint`, `--scope`, and exactly one of `--private-key-jwk` or
 `--client-secret`. Secret values accept a literal, a `@/path/to/file` reference,
 or fall back to the `PATHLING_PRIVATE_KEY_JWK` / `PATHLING_CLIENT_SECRET`
-environment variables so that they need not appear in shell history.
+environment variables so that they need not appear in shell history. The same
+settings can be recorded in the [`[bulk-auth]`](./configuration.md#bulk-auth)
+config table.
 
 ### run
 
@@ -286,7 +289,7 @@ pathling translate codes.csv --code-column code \
 In [local terminology mode](#local-terminology-mode), the forms accepted by
 `--value-set` and `--concept-map` - imported canonical URLs, the SNOMED CT
 implicit forms, ECL, and VCL - are listed under
-[value set and concept map expressions](terminology/local#value-set-and-concept-map-expressions).
+[value set and concept map expressions](../terminology/local.md#value-set-and-concept-map-expressions).
 Against a terminology server, they are whatever that server supports.
 
 The input format is set with `--from csv|parquet|delta`. When omitted, it is
@@ -360,7 +363,7 @@ starts.
 
 The `import-snomed` and `import-fhir-terminology` commands import terminology
 content into a local terminology store for use with
-[local terminology mode](terminology/local). Both take a
+[local terminology mode](../terminology/local.md). Both take a
 `SOURCE` path and a `STORAGE_PATH` for the store, report progress, and print a
 completion summary.
 
@@ -374,7 +377,7 @@ edition/version, and `--dense-id-order pre-order` to assign internal concept
 identifiers by a depth-first traversal of the is-a hierarchy, which makes the
 hierarchy index materially smaller at query time in exchange for identifiers that
 shift more between releases - see
-[reducing the memory the hierarchy takes at query time](terminology/local#reducing-the-memory-the-hierarchy-takes-at-query-time).
+[reducing the memory the hierarchy takes at query time](../terminology/local.md#reducing-the-memory-the-hierarchy-takes-at-query-time).
 
 It also accepts `--default-dialect`, which names the dialect whose preferred
 synonyms become each concept's stored display: a tag such as `en-GB`, or a
@@ -382,7 +385,7 @@ language reference set identifier. When the flag is omitted, the
 `tx-store.default-dialect` config key applies; when neither is set, the dialect
 is chosen from the release. A release holding several language reference sets
 that is not the International edition fails the import, listing the candidates,
-so that one can be named - see [dialects](terminology/local#dialects).
+so that one can be named - see [dialects](../terminology/local.md#dialects).
 
 ```bash
 pathling import-snomed --default-dialect en-GB /data/rf2.zip /data/tx-store
@@ -401,7 +404,7 @@ leaves the store unchanged, and reports the expected and computed SHA-1
 followed by `Re-run with --no-verify to import it anyway.` Where no comparison
 can be made, because the registry publishes no checksum for the version, does
 not list it, or cannot be reached, the import warns and proceeds. See
-[provenance and verification](terminology/local#provenance-and-verification)
+[provenance and verification](../terminology/local.md#provenance-and-verification)
 for what the store records.
 
 Two options control the check. Both apply only when `SOURCE` is a `.tgz` or
@@ -411,8 +414,8 @@ Two options control the check. Both apply only when `SOURCE` is a `.tgz` or
   import, or a package that was never published to a registry.
 - `--package-registry URL` names the registry to check against. The flag
   overrides the `package-registry` config key (see
-  [configuration file](#configuration-file)), which overrides the default of
-  `https://packages.fhir.org`.
+  [configuration](./configuration.md#top-level-keys)), which overrides the
+  default of `https://packages.fhir.org`.
 
 `import-snomed` takes neither option, since an RF2 release is not distributed
 through a package registry.
@@ -438,12 +441,12 @@ in the library's warning log, which `--verbose` shows, as for every other
 import message.
 
 An RF2 source given to `import-snomed` must be
-[self-contained](terminology/local#rf2-sources-must-be-self-contained): rows
+[self-contained](../terminology/local.md#rf2-sources-must-be-self-contained): rows
 referencing concepts the source does not itself ship are dropped, which is the
 ordinary shape of a derived or extension package supplied without the release it
 depends on. The import reports, for each file, how many of its active rows
 resolved, which is how a shortfall is detected. The same section gives a
-[recipe for combining a package with its dependency](terminology/local#combining-a-derived-package-with-its-dependency).
+[recipe for combining a package with its dependency](../terminology/local.md#combining-a-derived-package-with-its-dependency).
 
 Large imports run for many minutes. With `--verbose`, the command streams a
 running count of parsed concepts and stage-transition messages so progress is
@@ -457,7 +460,7 @@ vocabularies still need more driver heap than the 1 GB default to hold the
 working set of the Spark joins that build the store. The OMOP vocabulary (around
 6.6 million concepts), for example, imports comfortably with a 4 GB heap. Set
 the heap with `--spark-conf spark.driver.memory=4g`, or with the same key in the
-[`[spark]` table](#spark-configuration) or the `SPARK_DRIVER_MEMORY` environment
+[`[spark]` table](./configuration.md#spark-configuration) or the `SPARK_DRIVER_MEMORY` environment
 variable.
 
 ```bash
@@ -483,8 +486,8 @@ pathling --tx-store /data/tx-store member-of codes.csv \
   --value-set 'http://snomed.info/sct?fhir_vs=ecl/<404684003'
 ```
 
-The `[tx-store]` config table records the store once, along with optional tuning
-values:
+The [`[tx-store]`](./configuration.md#tx-store) config table records the store
+once, along with optional tuning values:
 
 ```toml
 [tx-store]
@@ -497,151 +500,8 @@ default-dialect = "en-AU"                    # optional, used by import-snomed
 en-NZ = "271000210107"
 ```
 
-The `[tx-store.dialect-aliases]` table registers additional dialect tags,
-mapping a language tag to the identifier of the SNOMED CT language reference set
-that serves it. An entry for a tag that is already recognised replaces the
-built-in mapping for it. A value that is not a table of strings is reported and
-ignored rather than being fatal, since an unrecognised tag simply expresses no
-preference. See [dialects](terminology/local#dialects).
-
 The presence of a store selects local mode. When a store is configured, the
 store wins over any explicitly set `--tx-server` or terminology authentication:
 each is ignored and a warning is printed. The built-in default server URL never
 triggers this warning. A runtime failure in local mode names the store path and
 suggests the import commands rather than a terminology server URL.
-
-## Configuration file
-
-Defaults for the global options can be set in a TOML file at
-`${XDG_CONFIG_HOME:-~/.config}/pathling/config.toml`:
-
-```toml
-tx-server = "https://tx.example.org/fhir"
-fhir-version = "R4"
-package-registry = "https://packages.simplifier.net"
-
-[terminology-auth]
-client-id = "my-client"
-client-secret = "..."
-token-endpoint = "https://auth.example.org/token"
-
-[bulk-auth]
-client-id = "bulk-client"
-token-endpoint = "https://auth.example.org/token"
-
-[spark]
-"spark.sql.shuffle.partitions" = 16
-"spark.executor.memory" = "4g"
-
-[tx-store]
-path = "/data/tx-store"
-default-snomed-edition = "32506021000036107"
-expansion-cache-size = 200
-default-dialect = "en-AU"
-
-[tx-store.dialect-aliases]
-en-NZ = "271000210107"
-```
-
-Command-line flags always take precedence over the config file. Unknown keys
-produce a warning that names the key and lists the valid keys. The `[tx-store]`
-table selects [local terminology mode](#local-terminology-mode); its tuning keys
-are config-file only, while the store path can also be set with `--tx-store`,
-and `default-dialect` with the `import-snomed` command's `--default-dialect`
-flag.
-
-The optional `package-registry` key names the FHIR package registry that
-`import-fhir-terminology` checks a package against, and is overridden by
-`--package-registry`. It is a top-level key rather than part of `[tx-store]`,
-because it concerns where a package was distributed from rather than the store
-the package is imported into.
-
-### Spark configuration
-
-The `[spark]` table sets arbitrary [Apache Spark](https://spark.apache.org/)
-properties on the session that every data command builds. Use it to tune the
-engine - for example to raise executor memory, change the shuffle partition
-count, or add a cloud storage connector - or pass one or more
-`--spark-conf KEY=VALUE` flags for a single invocation. The flag is repeatable
-and overrides the `[spark]` value for the same key; when the same key is given
-more than once on the command line, the last occurrence wins. Because the value
-is split on the first `=` only, a value may itself contain `=` (for example
-`--spark-conf spark.driver.extraJavaOptions=-Dfoo=bar`).
-
-```toml
-[spark]
-"spark.sql.shuffle.partitions" = 16
-"spark.sql.adaptive.enabled" = true
-"spark.executor.memory" = "4g"
-"spark.jars.packages" = "org.apache.hadoop:hadoop-aws:3.4.1"
-"spark.hadoop.fs.s3a.secret.key" = "@/run/secrets/s3-key"
-```
-
-The resolved settings are merged with Pathling's own required Spark defaults
-rather than replacing them, so Pathling keeps working while your tuning takes
-effect. The full precedence, highest first, is:
-
-1. A `--spark-conf` flag value.
-2. The `[spark]` table value in the chosen config file.
-3. The CLI's quiet-mode logging settings (applied only when not `--verbose`, and
-   only for keys you did not set).
-4. Pathling's managed defaults (always present for the managed keys below).
-
-**Keys and values.** Every key must begin with `spark.`; any other key is an
-error that names the offending key and aborts before a Spark session starts.
-Values may be strings, integers, floats, or booleans, and are coerced to the
-strings Spark expects (booleans become `true`/`false`). TOML arrays and tables
-are not accepted; list-valued properties use Spark's native comma-separated
-string. A string value may be a `@/path/to/file` secret reference, read exactly
-as authentication secrets are.
-
-**Managed keys.** Three keys are owned by Pathling and merged item by item so
-the library is never broken:
-
-- `spark.jars.packages` - your coordinates are unioned with Pathling's managed
-  coordinates (the library runtime and Delta Lake) and deduplicated. Supplying a
-  managed coordinate at a different version is allowed and applies your version,
-  but prints a warning naming the coordinate, since a non-default version may not
-  be supported.
-- `spark.sql.extensions` - your extension class names are unioned with
-  Pathling's, and the Delta extension always remains present.
-- `spark.sql.catalog.spark_catalog` - this is locked to Pathling's Delta
-  catalog. Setting it to that value is a no-op; setting it to anything else is an
-  error.
-
-**Quiet-mode logging.** By default the CLI suppresses Spark and JVM logging by
-setting `spark.driver.extraJavaOptions`. If you set that key yourself, your value
-replaces the CLI's, so Spark logging is no longer suppressed. To keep both, run
-with `--verbose`, or include the quiet log4j2 option in the value you supply.
-
-### Project-local configuration
-
-The CLI also looks for a file named `pathling.toml` in the current working
-directory. When present, it is used in place of the user-level config file -
-not merged with it. This lets a project carry its own settings (for example a
-particular terminology server) without editing your personal config or passing
-`--config` on every command.
-
-Exactly one config file is ever read, chosen by this precedence (highest
-first):
-
-1. The path given to `--config`.
-2. A `pathling.toml` in the current working directory.
-3. The user-level `config.toml`.
-4. None, in which case built-in defaults apply.
-
-Because files are never merged, any key the chosen file omits falls back to its
-built-in default rather than to a value from another file. Discovery is limited
-to the current working directory; the CLI does not search parent directories.
-
-When a `pathling.toml` is discovered and used, the CLI prints a one-line notice
-on standard error naming the file (and the user-level file it overrides, when
-one exists), so the active configuration is never a surprise:
-
-```text
-Using project config /path/to/pathling.toml (overrides ~/.config/pathling/config.toml).
-```
-
-Passing an explicit `--config` skips project-local discovery, and no such notice
-is printed. An explicit `--config` path must exist; a missing path is an error
-rather than a silent fall-back to another config file.
