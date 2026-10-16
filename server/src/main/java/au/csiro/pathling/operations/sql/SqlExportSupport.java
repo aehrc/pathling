@@ -17,6 +17,8 @@
 
 package au.csiro.pathling.operations.sql;
 
+import static au.csiro.pathling.operations.sqlquery.ResolvedDependency.encode;
+import static au.csiro.pathling.operations.sqlquery.ResolvedDependency.encodeEntries;
 import static au.csiro.pathling.security.SecurityAspect.getCurrentUserId;
 
 import au.csiro.pathling.async.AsyncJobContext;
@@ -221,14 +223,18 @@ public class SqlExportSupport {
     }
 
     if (request.clientTrackingId() != null) {
-      key.append("|clientTrackingId=").append(request.clientTrackingId());
+      key.append("|clientTrackingId=").append(encode(request.clientTrackingId()));
     }
     key.append("|format=").append(request.format());
     key.append("|header=").append(request.includeHeader());
 
     if (!request.patientIds().isEmpty()) {
       key.append("|patientIds=[")
-          .append(request.patientIds().stream().sorted().collect(Collectors.joining(",")))
+          .append(
+              request.patientIds().stream()
+                  .sorted()
+                  .map(patientId -> encode(patientId))
+                  .collect(Collectors.joining(",")))
           .append("]");
     }
     if (request.since() != null) {
@@ -241,6 +247,11 @@ public class SqlExportSupport {
    * Renders the resolved content of every dependency the request's subjects reached, ordered by
    * canonical key so that the same graph always renders the same way. A dependency shared by two
    * subjects is resolved once, and is described once here.
+   *
+   * <p>Both the node key and the content description are length-prefixed (see {@link
+   * ResolvedDependency#encode(String)}), closing this section together with the content
+   * descriptions themselves: a key or body containing '=', ',' or ':' cannot shift the boundary
+   * between entries or between a key and its content.
    */
   @Nonnull
   private static String describeDependencies(@Nonnull final List<SubjectInput> subjects) {
@@ -257,7 +268,7 @@ public class SqlExportSupport {
       }
     }
     return contentByKey.entrySet().stream()
-        .map(entry -> entry.getKey() + '=' + entry.getValue())
+        .map(entry -> encode(entry.getKey()) + '=' + encode(entry.getValue()))
         .collect(Collectors.joining(","));
   }
 
@@ -266,21 +277,26 @@ public class SqlExportSupport {
    * described by its resolved SQL, its bindings and the dependencies its table labels point at, and
    * a view subject by its parsed projection, so two kick-offs that would produce different data
    * never share a job.
+   *
+   * <p>Every free-text component is {@link ResolvedDependency#encode(String) encoded} so that
+   * client-controlled values cannot forge the structural delimiters (':', ',', '=') and shift the
+   * parse of the key - see issues #2768 and #2757.
    */
   @Nonnull
   private static String describe(@Nonnull final SubjectInput subject) {
-    final StringBuilder description = new StringBuilder(subject.name()).append(':');
-    description.append(subject.kind()).append(':');
+    final StringBuilder description = new StringBuilder(encode(subject.name()));
+    description.append(':').append(subject.kind().name());
     final PreparedSqlQuery prepared = subject.preparedQuery();
     if (prepared != null) {
       description
-          .append(prepared.getRequest().getParsedQuery().getSql())
           .append(':')
-          .append(prepared.getRequest().getParameterBindings())
+          .append(encode(prepared.getRequest().getParsedQuery().getSql()))
           .append(':')
-          .append(prepared.getDependencyGraph().getTopLevelKeysByLabel());
+          .append(encodeEntries(prepared.getRequest().getParameterBindings()))
+          .append(':')
+          .append(encodeEntries(prepared.getDependencyGraph().getTopLevelKeysByLabel()));
     } else {
-      description.append(Objects.requireNonNull(subject.view()).toString());
+      description.append(':').append(encode(Objects.requireNonNull(subject.view()).toString()));
     }
     return description.toString();
   }

@@ -42,13 +42,19 @@ public class ResolvedSqlView implements ResolvedDependency {
 
   /**
    * A SQLView produces rows by running its SQL over its children, so both the SQL and the children
-   * it is wired to are part of its content.
+   * it is wired to are part of its content. Each component is length-prefixed (see {@link
+   * ResolvedDependency#encode(String)}): the raw SQL can contain any of the structural delimiters,
+   * and a {@link Map#toString()} rendering of the label mapping would let one entry whose value
+   * contains ", " forge a second entry.
    *
    * @return the content description
    */
   @Override
   @Nonnull
   public String describeContent() {
-    return "sql-view:" + sql + ':' + childKeysByLabel;
+    return "sql-view:"
+        + ResolvedDependency.encode(sql)
+        + ':'
+        + ResolvedDependency.encodeEntries(childKeysByLabel);
   }
 }
