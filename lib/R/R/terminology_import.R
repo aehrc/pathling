@@ -74,19 +74,41 @@ pathling_import_snomed <- function(pc, source, storage_path, edition_uri = NULL,
 #' Imports FHIR R4 CodeSystem, ValueSet, and ConceptMap resources into a local terminology store.
 #' The source may be a JSON file, a directory of JSON files, or a FHIR NPM package (.tgz).
 #'
+#' When the source is a package, its checksum is compared with the one its registry publishes
+#' before anything is written, and the import fails if the two differ. Turning verification off
+#' imports without consulting a registry, which is also how an import runs offline; the store then
+#' records the verification as skipped.
+#'
 #' @param pc The PathlingContext object.
 #' @param source The path to a JSON file, a directory of JSON files, or a FHIR NPM package, on any
 #'   filesystem accessible through the Hadoop FileSystem API.
 #' @param storage_path The terminology store location, created if absent.
+#' @param verify_package Whether a FHIR NPM package is checked against the checksum its registry
+#'   publishes. Defaults to TRUE.
+#' @param package_registry The base URL of the registry consulted for the checksum. When NULL, the
+#'   default registry (https://packages.fhir.org) is used. Defaults to NULL.
 #'
 #' @return The PathlingContext object, invisibly.
 #'
 #' @family terminology import functions
 #'
-#' @importFrom sparklyr j_invoke
+#' @importFrom sparklyr j_invoke j_invoke_static spark_connection
 #'
 #' @export
-pathling_import_fhir_terminology <- function(pc, source, storage_path) {
-  j_invoke(pc, "importFhirTerminology", source, storage_path)
+pathling_import_fhir_terminology <- function(pc, source, storage_path, verify_package = TRUE,
+                                             package_registry = NULL) {
+  options <- NULL
+  if (!verify_package || !is.null(package_registry)) {
+    builder <- j_invoke_static(
+      spark_connection(pc),
+      "au.csiro.pathling.library.terminology.FhirImportOptions", "builder"
+    )
+    builder <- j_invoke(builder, "verifyPackage", as.logical(verify_package))
+    if (!is.null(package_registry)) {
+      builder <- j_invoke(builder, "packageRegistry", package_registry)
+    }
+    options <- j_invoke(builder, "build")
+  }
+  j_invoke(pc, "importFhirTerminology", source, storage_path, options)
   invisible(pc)
 }

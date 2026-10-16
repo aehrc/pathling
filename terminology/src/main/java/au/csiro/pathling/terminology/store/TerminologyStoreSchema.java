@@ -18,6 +18,7 @@
 package au.csiro.pathling.terminology.store;
 
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -39,9 +40,16 @@ public final class TerminologyStoreSchema {
 
   /**
    * The format version of the store. A reader refuses to open a store whose manifest reports a
-   * greater version, since it may not understand the layout.
+   * greater version, since it may not understand the layout. Version 2 replaced the whole-resource
+   * ConceptMap table of version 1 with {@link #CONCEPT_MAPPING}.
    */
-  public static final int STORE_FORMAT_VERSION = 1;
+  public static final int STORE_FORMAT_VERSION = 2;
+
+  /**
+   * The earliest format version whose ConceptMaps this version of Pathling can read. A store whose
+   * manifest records a ConceptMap written under an earlier version must be re-imported.
+   */
+  public static final int MIN_CONCEPT_MAP_FORMAT_VERSION = 2;
 
   /** The manifest table, recording what content is loaded and the store format version. */
   public static final String MANIFEST = "manifest";
@@ -70,8 +78,14 @@ public final class TerminologyStoreSchema {
   /** The imported FHIR ValueSet resources. */
   public static final String VALUE_SET = "value_set";
 
-  /** The imported FHIR ConceptMap resources. */
-  public static final String CONCEPT_MAP = "concept_map";
+  /**
+   * The mappings of the imported FHIR ConceptMaps, one row per target of each source element, keyed
+   * by the canonical URL and version of the map.
+   */
+  public static final String CONCEPT_MAPPING = "concept_mapping";
+
+  /** The manifest entry type of an imported ConceptMap. */
+  public static final String ENTRY_TYPE_CONCEPT_MAP = "concept_map";
 
   /** The manifest column holding the store format version. */
   public static final String COLUMN_STORE_FORMAT_VERSION = "store_format_version";
@@ -90,6 +104,29 @@ public final class TerminologyStoreSchema {
 
   /** The manifest column recording when the entry was imported. */
   public static final String COLUMN_IMPORTED_AT = "imported_at";
+
+  /** The manifest column recording the SHA-256 of the source file bytes. */
+  public static final String COLUMN_SOURCE_SHA256 = "source_sha256";
+
+  /** The manifest column recording the name of the package the entry was imported from. */
+  public static final String COLUMN_PACKAGE_NAME = "package_name";
+
+  /** The manifest column recording the version of the package the entry was imported from. */
+  public static final String COLUMN_PACKAGE_VERSION = "package_version";
+
+  /** The manifest column recording the registry verification outcome of the package. */
+  public static final String COLUMN_PACKAGE_VERIFICATION = "package_verification";
+
+  /** The manifest column recording the registry that vouched for the package bytes. */
+  public static final String COLUMN_PACKAGE_REGISTRY = "package_registry";
+
+  /**
+   * The manifest column recording why a ConceptMap cannot be read as the rows of a concept map
+   * relation: the first content in the map that the rows cannot carry, in the order {@code
+   * ConceptMapContent.fromResource} checks a resource. Null where the map can be read in full, and
+   * for every entry that is not a ConceptMap. {@code translate} does not consult it.
+   */
+  public static final String COLUMN_FAULT = "fault";
 
   /**
    * The stable identifier of a code system version, a hash of its URL and version. This is the
@@ -184,11 +221,54 @@ public final class TerminologyStoreSchema {
   /** The dense identifier of a reference set member's referenced concept. */
   public static final String COLUMN_REFERENCED_DENSE_ID = "referenced_dense_id";
 
-  /** The association target code of a reference set member (drives {@code ?fhir_cm}). */
+  /**
+   * The target of a reference set member (the target concept of an association, or the map target
+   * of a simple map, which drives {@code ?fhir_cm}), or the code of the target concept of a
+   * ConceptMap mapping.
+   */
   public static final String COLUMN_TARGET_CODE = "target_code";
 
-  /** The full R4 resource JSON of an imported ValueSet or ConceptMap. */
+  /** The full R4 resource JSON of an imported ValueSet. */
   public static final String COLUMN_RESOURCE_JSON = "resource_json";
+
+  /**
+   * The system of the source concept of a ConceptMap mapping, as its group's {@code source} gives
+   * it, null where the group names none.
+   */
+  public static final String COLUMN_SOURCE_SYSTEM = "source_system";
+
+  /** The {@code sourceVersion} of the group of a ConceptMap mapping, null where it gives none. */
+  public static final String COLUMN_SOURCE_VERSION = "source_version";
+
+  /** The code of the source concept of a ConceptMap mapping. */
+  public static final String COLUMN_SOURCE_CODE = "source_code";
+
+  /** The display of the source element of a ConceptMap mapping, null where it gives none. */
+  public static final String COLUMN_SOURCE_DISPLAY = "source_display";
+
+  /**
+   * The system of the target concept of a ConceptMap mapping, as its group's {@code target} gives
+   * it, null where the group names none.
+   */
+  public static final String COLUMN_TARGET_SYSTEM = "target_system";
+
+  /** The {@code targetVersion} of the group of a ConceptMap mapping, null where it gives none. */
+  public static final String COLUMN_TARGET_VERSION = "target_version";
+
+  /** The display of the target of a ConceptMap mapping, null where it gives none. */
+  public static final String COLUMN_TARGET_DISPLAY = "target_display";
+
+  /** The equivalence code of a ConceptMap mapping (for example {@code equivalent}). */
+  public static final String COLUMN_EQUIVALENCE = "equivalence";
+
+  /** The position of a ConceptMap mapping within its map, in document order from zero. */
+  public static final String COLUMN_ORDINAL = "ordinal";
+
+  /**
+   * The stable identifier of a ConceptMap version, the partition column of {@link
+   * #CONCEPT_MAPPING}, so that the mappings of one version can be read and replaced on their own.
+   */
+  public static final String COLUMN_CONCEPT_MAP_ID = "concept_map_id";
 
   /**
    * Derives the stable identifier of a code system version from its URL and version. This is the
@@ -200,9 +280,27 @@ public final class TerminologyStoreSchema {
    */
   @Nonnull
   public static String systemVersionId(@Nonnull final String url, @Nonnull final String version) {
+    return shortHash(url + "|" + version);
+  }
+
+  /**
+   * Derives the stable identifier of a ConceptMap version from its URL and version, distinguishing
+   * an absent version from an empty one as the manifest does.
+   *
+   * @param url the ConceptMap canonical URL
+   * @param version the ConceptMap version, or null
+   * @return a short hexadecimal hash of the URL and version
+   */
+  @Nonnull
+  public static String conceptMapId(@Nonnull final String url, @Nullable final String version) {
+    return shortHash(version == null ? url : url + "|" + version);
+  }
+
+  @Nonnull
+  private static String shortHash(@Nonnull final String value) {
     try {
       final MessageDigest digest = MessageDigest.getInstance("SHA-256");
-      final byte[] hash = digest.digest((url + "|" + version).getBytes(StandardCharsets.UTF_8));
+      final byte[] hash = digest.digest(value.getBytes(StandardCharsets.UTF_8));
       final StringBuilder builder = new StringBuilder();
       for (int i = 0; i < 8; i++) {
         builder.append(String.format("%02x", hash[i]));
@@ -228,8 +326,8 @@ public final class TerminologyStoreSchema {
   }
 
   /**
-   * Returns the Spark schema of a resource table ({@code value_set} or {@code concept_map}), which
-   * stores each imported FHIR resource as JSON keyed by its canonical URL and version.
+   * Returns the Spark schema of the {@code value_set} table, which stores each imported FHIR
+   * ValueSet as JSON keyed by its canonical URL and version.
    *
    * @return the resource table schema
    */
@@ -254,6 +352,12 @@ public final class TerminologyStoreSchema {
         .add(COLUMN_CANONICAL_URL, DataTypes.StringType, false)
         .add(COLUMN_VERSION, DataTypes.StringType, true)
         .add(COLUMN_SOURCE, DataTypes.StringType, true)
-        .add(COLUMN_IMPORTED_AT, DataTypes.TimestampType, true);
+        .add(COLUMN_IMPORTED_AT, DataTypes.TimestampType, true)
+        .add(COLUMN_SOURCE_SHA256, DataTypes.StringType, true)
+        .add(COLUMN_PACKAGE_NAME, DataTypes.StringType, true)
+        .add(COLUMN_PACKAGE_VERSION, DataTypes.StringType, true)
+        .add(COLUMN_PACKAGE_VERIFICATION, DataTypes.StringType, true)
+        .add(COLUMN_PACKAGE_REGISTRY, DataTypes.StringType, true)
+        .add(COLUMN_FAULT, DataTypes.StringType, true);
   }
 }

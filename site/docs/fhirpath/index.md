@@ -69,6 +69,15 @@ specification for detailed semantics.
 | `>`      | Greater than             |
 | `>=`     | Greater than or equal to |
 
+A [Quantity](https://hl7.org/fhir/R4/datatypes.html#Quantity) that carries a
+`comparator` records a bound rather than a known value, so comparing it with a
+single value returns an empty result. For example, if `Observation.value` is
+`<5 mg`, then `Observation.value.ofType(Quantity) = 5 'mg'` and
+`Observation.value.ofType(Quantity) < 6 'mg'` are both empty. Such a quantity
+is never equal to another value, so collections that contain one are not
+equal, it is not removed as a duplicate by `union` or `distinct`, and it is not
+found by `in` or `contains`.
+
 #### Boolean operators
 
 | Operator  | Description         |
@@ -164,9 +173,12 @@ current `name` element, matching `name.select(use | given)`.
 
 #### String functions
 
-| Function           | Description                          |
-| ------------------ | ------------------------------------ |
-| `join(separator?)` | Join strings with optional separator |
+| Function              | Description                                          |
+| --------------------- | ---------------------------------------------------- |
+| `join(separator?)`    | Join strings with optional separator                 |
+| `startsWith(prefix)`  | Test whether the string starts with the given prefix |
+| `endsWith(suffix)`    | Test whether the string ends with the given suffix   |
+| `contains(substring)` | Test whether the string contains the given substring |
 
 #### Type functions
 
@@ -198,6 +210,17 @@ current `name` element, matching `name.select(use | given)`.
 | `convertsToDateTime()`      | Check if convertible to DateTime |
 | `convertsToTime()`          | Check if convertible to Time     |
 | `convertsToQuantity(unit?)` | Check if convertible to Quantity |
+
+A FHIR [Quantity](https://hl7.org/fhir/R4/datatypes.html#Quantity) converts to
+a FHIRPath Quantity or String only if it
+[maps to a System.Quantity](https://hl7.org/fhir/R4/fhirpath.html#quantity):
+it must have a `value` and a `code`, its `system` must be
+`http://unitsofmeasure.org` (UCUM) or the FHIRPath calendar duration system
+(`https://hl7.org/fhirpath/N1/calendar-duration`), and it must not carry a
+`comparator`. For any other Quantity, `toQuantity()` and `toString()` return an
+empty result, and `convertsToQuantity()` and `convertsToString()` return
+`false`. For example, if `Observation.value` is `3 tab` with no system, or
+`<5 mg`, then `Observation.value.ofType(Quantity).toQuantity()` is empty.
 
 #### Utility functions
 
@@ -271,6 +294,9 @@ specification:
 - [FHIR-specific functions](fhir-functions.md) - Functions defined in the FHIR
   specification for use with FHIR data, including `extension`, `resolve`,
   `memberOf`, `subsumes`, and `subsumedBy`.
+- [SQL on FHIR functions](sql-on-fhir-functions.md) - Functions defined in the
+  SQL on FHIR specification for joining views: `getResourceKey` and
+  `getReferenceKey`.
 - [Extension functions](extension-functions.md) - Functions unique to Pathling,
   including terminology functions like `designation`, `display`, `property`, and
   `translate`, plus the Coding literal data type.

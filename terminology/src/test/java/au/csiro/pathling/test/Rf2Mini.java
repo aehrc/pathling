@@ -81,11 +81,22 @@ public final class Rf2Mini {
   public static final String ASSOCIATED_FILLER_2 = "1139006";
   public static final String ASSOCIATED_FILLER_3 = "1159005";
 
+  // Filler concepts that stand as the sources of the remaining association reference sets. The
+  // POSSIBLY EQUIVALENT TO source has two targets, TYPE2_DIABETES and TYPE1_DIABETES.
+  public static final String REPLACED_BY_SOURCE = "1014004";
+  public static final String POSSIBLY_EQUIVALENT_TO_SOURCE = "1015003";
+  public static final String ALTERNATIVE_SOURCE = "1016002";
+  public static final String WAS_A_SOURCE = "1017006";
+
   // Metadata codes.
   public static final String IS_A = "116680003";
   public static final String FINDING_SITE = "363698007";
   public static final String ASSOCIATED_MORPHOLOGY = "116676008";
   public static final String SAME_AS_REFSET = "900000000000527005";
+  public static final String REPLACED_BY_REFSET = "900000000000526001";
+  public static final String POSSIBLY_EQUIVALENT_TO_REFSET = "900000000000523009";
+  public static final String ALTERNATIVE_REFSET = "900000000000530003";
+  public static final String WAS_A_REFSET = "900000000000528000";
   public static final String CORE_MODULE = "900000000000207008";
 
   // The language reference sets of the fixture, and the module of its national release.

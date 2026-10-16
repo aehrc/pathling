@@ -67,7 +67,8 @@ final class FhirTerminologyFixture {
     } catch (final IOException e) {
       throw new UncheckedIOException(e);
     }
-    new FhirTerminologyImporter(spark, path).importFrom(FhirFixtures.jsonDirectory().toString());
+    new FhirTerminologyImporter(spark, path)
+        .importFrom(FhirFixtures.jsonDirectory().toString(), false, null);
     storagePath = path;
   }
 

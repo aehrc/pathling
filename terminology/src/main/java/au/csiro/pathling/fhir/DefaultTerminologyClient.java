@@ -20,16 +20,21 @@ package au.csiro.pathling.fhir;
 import static java.util.Objects.nonNull;
 
 import au.csiro.pathling.utilities.ResourceCloser;
+import ca.uhn.fhir.rest.api.SummaryEnum;
 import ca.uhn.fhir.rest.client.api.IGenericClient;
 import ca.uhn.fhir.rest.gclient.IOperationUntypedWithInput;
+import ca.uhn.fhir.rest.gclient.IQuery;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.io.Closeable;
 import org.apache.http.HttpHeaders;
 import org.hl7.fhir.r4.model.BooleanType;
+import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.CodeSystem;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.ConceptMap;
+import org.hl7.fhir.r4.model.IdType;
+import org.hl7.fhir.r4.model.IntegerType;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.UriType;
@@ -192,5 +197,82 @@ class DefaultTerminologyClient extends ResourceCloser implements TerminologyClie
     return nonNull(preferredLanguage)
         ? operation.withAdditionalHeader(HttpHeaders.ACCEPT_LANGUAGE, preferredLanguage.getValue())
         : operation;
+  }
+
+  @Nonnull
+  @Override
+  public ValueSet expand(
+      @Nonnull final UriType url,
+      @Nullable final StringType valueSetVersion,
+      @Nonnull final IntegerType count,
+      @Nonnull final IntegerType offset) {
+    final Parameters params = new Parameters();
+    params.addParameter().setName("url").setValue(url);
+    if (valueSetVersion != null) {
+      params.addParameter().setName("valueSetVersion").setValue(valueSetVersion);
+    }
+    params.addParameter().setName("count").setValue(count);
+    params.addParameter().setName("offset").setValue(offset);
+    return fhirClient
+        .operation()
+        .onType(ValueSet.class)
+        .named("$expand")
+        .withParameters(params)
+        .useHttpGet()
+        .returnResourceType(ValueSet.class)
+        .execute();
+  }
+
+  @Nonnull
+  @Override
+  public ValueSet expand(
+      @Nonnull final ValueSet valueSet,
+      @Nonnull final IntegerType count,
+      @Nonnull final IntegerType offset) {
+    final Parameters params = new Parameters();
+    params.addParameter().setName("valueSet").setResource(valueSet);
+    params.addParameter().setName("count").setValue(count);
+    params.addParameter().setName("offset").setValue(offset);
+    return fhirClient
+        .operation()
+        .onType(ValueSet.class)
+        .named("$expand")
+        .withParameters(params)
+        .returnResourceType(ValueSet.class)
+        .execute();
+  }
+
+  @Nonnull
+  @Override
+  public Bundle searchConceptMaps(@Nonnull final UriType url, @Nullable final StringType version) {
+    final IQuery<Bundle> query =
+        fhirClient
+            .search()
+            .forResource(ConceptMap.class)
+            .where(ConceptMap.URL.matches().value(url.getValue()))
+            .summaryMode(SummaryEnum.TRUE)
+            .returnBundle(Bundle.class);
+    if (version != null) {
+      query.and(ConceptMap.VERSION.exactly().code(version.getValue()));
+    }
+    return query.execute();
+  }
+
+  @Nonnull
+  @Override
+  public Bundle nextPage(@Nonnull final Bundle bundle) {
+    return fhirClient.loadPage().next(bundle).execute();
+  }
+
+  @Nonnull
+  @Override
+  public ConceptMap readConceptMap(@Nonnull final IdType id) {
+    return fhirClient.read().resource(ConceptMap.class).withId(id).execute();
+  }
+
+  @Nonnull
+  @Override
+  public String getServerUrl() {
+    return fhirClient.getServerBase();
   }
 }

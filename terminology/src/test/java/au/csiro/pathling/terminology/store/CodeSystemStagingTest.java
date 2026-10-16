@@ -78,6 +78,7 @@ class CodeSystemStagingTest {
     final Path directory;
     try (CodeSystemStaging staging = CodeSystemStaging.create()) {
       directory = staging.getDirectory();
+      staging.beginCodeSystem("sv");
       staging.appendConcept("A", 0, true, false, "Alpha");
       staging.appendConcept("B", 1, false, false, "Beta");
       staging.appendDescription(0, "AlphaSyn", "en", "synonym", "http://use");
@@ -95,6 +96,7 @@ class CodeSystemStagingTest {
               .orderBy(COLUMN_CODE)
               .collectAsList();
       assertEquals(2, concepts.size());
+      assertEquals("sv", concepts.get(0).getAs(TerminologyStoreSchema.COLUMN_SYSTEM_VERSION_ID));
       assertEquals("Alpha", concepts.get(0).getAs(TerminologyStoreSchema.COLUMN_DISPLAY));
       assertTrue((Boolean) concepts.get(0).getAs(TerminologyStoreSchema.COLUMN_ACTIVE));
       assertFalse((Boolean) concepts.get(1).getAs(TerminologyStoreSchema.COLUMN_ACTIVE));
@@ -167,6 +169,7 @@ class CodeSystemStagingTest {
     Path directory = null;
     try (CodeSystemStaging staging = CodeSystemStaging.create()) {
       directory = staging.getDirectory();
+      staging.beginCodeSystem("sv");
       staging.appendConcept("A", 0, true, false, "Alpha");
       // Simulate a failure mid-import before the staging is sealed.
       throw new IllegalStateException("simulated failure");

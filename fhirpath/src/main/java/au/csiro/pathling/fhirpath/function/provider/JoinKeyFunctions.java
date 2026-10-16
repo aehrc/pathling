@@ -32,6 +32,7 @@ import java.util.Optional;
  * FHIRPath functions for generating keys for joining between resources.
  *
  * @author Piotr Szul
+ * @author John Grimes
  * @see <a
  *     href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ViewDefinition.html#required-additional-functions">SQL
  *     on FHIR specification - Required Additional Functions</a>
@@ -59,6 +60,11 @@ public class JoinKeyFunctions {
 
   /**
    * Returns a {@link Collection} of keys for the input {@link ReferenceCollection}.
+   *
+   * <p>The key of a relative reference is the reference string without any {@code
+   * /_history/[version]} segment, which equals the {@link #getResourceKey} value of its target,
+   * e.g. {@code Patient/p2/_history/3} gives {@code Patient/p2}. A type specifier keeps only
+   * references to exactly that type.
    *
    * @param input The input {@link ReferenceCollection}
    * @param typeSpecifier An optional {@link TypeSpecifier} to filter the reference keys by

@@ -104,15 +104,17 @@ class DataSinks(SparkConversionsMixin):
         file_name_mapper: Callable[[str], str] = None,
     ) -> WriteDetails:
         """
-        Writes the data to a directory of NDJSON files. The files will be named using the resource
-        type and the ".ndjson" extension.
+        Writes the data to a directory of NDJSON files. Each resource type is written to one or
+        more files named with the resource type, a partition number and an identifier of the
+        write, for example "Patient.00000-<write id>.ndjson".
 
         :param path: The URI of the directory to write the files to.
-        :param save_mode: The save mode to use when writing the data:
-            - "overwrite" will overwrite any existing data.
-            - "append" will append the new data to the existing data.
-            - "ignore" will only save the data if the file does not already exist.
-            - "error" will raise an error if the file already exists.
+        :param save_mode: The save mode to use when writing the data, applied to the files
+            each resource type already has in the directory:
+            - "overwrite" will replace any existing files of the resource type.
+            - "append" will add files beside the existing files of the resource type.
+            - "ignore" will only save the resource type if it has no files already.
+            - "error" will raise an error if any resource type already has files.
         :param file_name_mapper: An optional function that can be used to customise the mapping of
         the resource type to the file name.
         :returns: Details about the files that were written.
@@ -130,14 +132,17 @@ class DataSinks(SparkConversionsMixin):
         self, path: str, save_mode: Optional[str] = SaveMode.ERROR
     ) -> WriteDetails:
         """
-        Writes the data to a directory of Parquet files.
+        Writes the data to a directory of Parquet files. Each resource type is written to one or
+        more files named with the resource type, a partition number and an identifier of the
+        write, for example "Patient.00000-<write id>.parquet".
 
         :param path: The URI of the directory to write the files to.
-        :param save_mode: The save mode to use when writing the data:
-            - "overwrite" will overwrite any existing data.
-            - "append" will append the new data to the existing data.
-            - "ignore" will only save the data if the file does not already exist.
-            - "error" will raise an error if the file already exists.
+        :param save_mode: The save mode to use when writing the data, applied to the files
+            each resource type already has in the directory:
+            - "overwrite" will replace any existing files of the resource type.
+            - "append" will add files beside the existing files of the resource type.
+            - "ignore" will only save the resource type if it has no files already.
+            - "error" will raise an error if any resource type already has files.
         :returns: Details about the files that were written.
         """
         result = self._datasinks.saveMode(save_mode).parquet(path)

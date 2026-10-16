@@ -43,7 +43,7 @@ spark = (
     SparkSession.builder.config(
         "spark.jars.packages",
         "au.csiro.pathling:library-runtime:9.9.0,"
-        + "io.delta:delta-spark_2.13:4.0.0,"
+        + "io.delta:delta-spark_2.13:4.0.1,"
         + "org.apache.hadoop:hadoop-aws:3.4.1",
     )
     .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
@@ -71,7 +71,7 @@ library(pathling)
 
 sc <- spark_connect(master = "local",
                     packages = c(paste0("au.csiro.pathling:library-runtime:", pathling_version()),
-                                 "io.delta:delta-spark_2.13:4.0.0",
+                                 "io.delta:delta-spark_2.13:4.0.1",
                                  "org.apache.hadoop:hadoop-aws:3.4.1"),
                     config = list("sparklyr.shell.conf" = c(
                             "spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension",
@@ -95,7 +95,7 @@ import org.apache.spark.sql.SparkSession
 
 val spark = SparkSession.builder
         .config("spark.jars.packages", "au.csiro.pathling:library-runtime:9.9.0," +
-                "io.delta:delta-spark_2.13:4.0.0," +
+                "io.delta:delta-spark_2.13:4.0.1," +
                 "org.apache.hadoop:hadoop-aws:3.4.1")
         .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
         .config("spark.sql.catalog.spark_catalog",
@@ -124,7 +124,7 @@ class MyApp {
         SparkSession spark = SparkSession.builder()
                 .config("spark.jars.packages",
                         "au.csiro.pathling:library-runtime:9.9.0," +
-                                "io.delta:delta-spark_2.13:4.0.0," +
+                                "io.delta:delta-spark_2.13:4.0.1," +
                                 "org.apache.hadoop:hadoop-aws:3.4.1")
                 .config("spark.sql.extensions",
                         "io.delta.sql.DeltaSparkSessionExtension")
@@ -152,7 +152,7 @@ session is built. Hadoop can also load any `fs.*` property from an encrypted
 [credential provider](https://hadoop.apache.org/docs/r3.4.1/hadoop-project-dist/hadoop-common/CredentialProviderAPI.html)
 file, referenced with `spark.hadoop.hadoop.security.credential.provider.path`.
 
-The [command line interface](../cli#spark-configuration) accepts the same
+The [command line interface](../cli/configuration.md#spark-configuration) accepts the same
 properties in its `[spark]` configuration table, and can read secret values
 from a file.
 

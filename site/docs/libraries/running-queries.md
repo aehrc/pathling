@@ -156,14 +156,18 @@ result.show()
 The result of this query would look something like this:
 
 | patient_id | street                     | use  | city       | zip   |
-|------------|----------------------------|------|------------|-------|
+| ---------- | -------------------------- | ---- | ---------- | ----- |
 | 1          | 398 Kautzer Walk Suite 62  | home | Barnstable | 02675 |
 | 1          | 186 Nitzsche Forge         | work | Revere     | 02151 |
 | 2          | 1087 Quitzon Club          | home | Plymouth   | NULL  |
 | 3          | 442 Bruen Arcade           | home | Nantucket  | NULL  |
 | 4          | 858 Miller Junction Apt 61 | work | Brockton   | 02301 |
 
+To join the rows of one view to the rows of another, use the `getResourceKey()`
+and `getReferenceKey()` functions. See
+[SQL on FHIR functions](../fhirpath/sql-on-fhir-functions.md) for the keys that
+they produce and the references that they support.
+
 For a more comprehensive example demonstrating SQL on FHIR queries with multiple
 views, complex transformations and joins, see
 the [SQL on FHIR example](examples/prostate-cancer.md).
-

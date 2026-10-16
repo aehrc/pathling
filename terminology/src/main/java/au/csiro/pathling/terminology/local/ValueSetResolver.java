@@ -38,6 +38,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Pattern;
+import org.hl7.fhir.r4.model.ValueSet;
 
 /**
  * Resolves a value set URL to the code system version it evaluates over and the {@link
@@ -53,7 +54,14 @@ public class ValueSetResolver {
   private static final String SNOMED_URI = "http://snomed.info/sct";
   private static final String VCL_URI_PREFIX = "http://fhir.org/VCL";
   private static final String CONCEPT = "concept";
-  private static final Pattern SNOMED_VERSIONED =
+
+  /**
+   * Matches a SNOMED CT edition/version URI, the base of an implicit value set or concept map URL
+   * that selects a version. Shared with {@link
+   * au.csiro.pathling.terminology.ImplicitTerminologyUrls} so that the grammar and the store agree
+   * on what is implicit.
+   */
+  public static final Pattern SNOMED_VERSIONED =
       Pattern.compile("^http://snomed\\.info/x?sct/\\d+/version/\\d+$");
 
   /** The maximum number of memoised URL resolutions retained. */
@@ -167,6 +175,33 @@ public class ValueSetResolver {
                         id ->
                             new ResolvedValueSet(
                                 id, compose.getSystemUrl(), compose.getExpression())));
+  }
+
+  /**
+   * Translates a supplied value set resource to its code system and membership expression, with any
+   * value set it references by canonical URL resolved against the store.
+   *
+   * @param valueSet the value set resource
+   * @return the translation, or empty if the store holds no imported value sets or the resource
+   *     references no known code system
+   */
+  @Nonnull
+  public Optional<ComposeResult> translate(@Nonnull final ValueSet valueSet) {
+    return composeTranslator == null ? Optional.empty() : composeTranslator.translate(valueSet);
+  }
+
+  /**
+   * Returns the version string of a stored code system version.
+   *
+   * @param systemVersionId the stable system version identifier
+   * @return the version, or empty if the identifier is unknown or the version is unversioned
+   */
+  @Nonnull
+  public Optional<String> versionOf(@Nonnull final String systemVersionId) {
+    return catalogue.stream()
+        .filter(entry -> systemVersionId.equals(entry.getSystemVersionId()))
+        .findFirst()
+        .map(CodeSystemEntry::getVersion);
   }
 
   @Nonnull

@@ -4,7 +4,7 @@ A small, synthetic SNOMED CT RF2 snapshot release used by the local terminology
 tests. It is not derived from any real SNOMED CT content: the clinical concepts
 carry synthetic (but structurally valid, Verhoeff-checked) short-format SCTIDs,
 while the metadata identifiers (module, description types, acceptability, is-a
-and attribute types, association reference set) are the real International
+and attribute types, association reference sets) are the real International
 metadata SCTIDs so that a real terminology server can load the same files for
 differential testing.
 
@@ -101,6 +101,15 @@ TYPE2_DIABETES → TYPE2_WITH_COMPLICATION` is five levels below the root.
   that order into the store - it resolves reference set rows against the concept
   dictionary with a join that streams the dictionary, so they land in concept
   code order regardless.
+- **Implicit concept maps**: one source concept per remaining association
+  reference set, so that the relationship each carries is observable:
+  REPLACED BY (`900000000000526001`) maps `DIABETES_FILLER_1` (`1014004`) to
+  `TYPE1_DIABETES`, POSSIBLY EQUIVALENT TO (`900000000000523009`) maps
+  `DIABETES_FILLER_2` (`1015003`) to both `TYPE2_DIABETES` and `TYPE1_DIABETES`,
+  and ALTERNATIVE (`900000000000530003`) maps `DIABETES_FILLER_3` (`1016002`) to
+  `GESTATIONAL_DIABETES`. WAS A (`900000000000528000`) maps `DIABETES_FILLER_4`
+  (`1017006`) to `DIABETES`; it carries association targets but is not a
+  reference set that can be used as an implicit concept map.
 - **Dialects that disagree**: the two language reference sets prefer the same term
   for every concept except three, described below.
 - **Inactive concepts**: `DIABETES_INACTIVE` is inactive and is excluded from
@@ -156,7 +165,7 @@ means updating that test:
 | `sct2_Description_Snapshot-en_INT_*`     | 404      | 404         |
 | `sct2_Relationship_Snapshot_INT_*`       | 199      | 203         |
 | `der2_Refset_SimpleSnapshot_INT_*`       | 3        | 3           |
-| `der2_cRefset_AssociationSnapshot_INT_*` | 4        | 4           |
+| `der2_cRefset_AssociationSnapshot_INT_*` | 9        | 9           |
 
 The concept file, the language reference set and (where a test adds one) the
 Module Dependency reference set produce no figures, because none of them is
@@ -195,4 +204,6 @@ Real International metadata SCTIDs also present as referenced identifiers:
 `900000000000003001` (FSN), `900000000000013009` (synonym),
 `900000000000509007` (US English language reference set),
 `900000000000548007` / `900000000000549004` (preferred / acceptable),
-`900000000000527005` (SAME AS association reference set).
+`900000000000527005` (SAME AS), `900000000000526001` (REPLACED BY),
+`900000000000523009` (POSSIBLY EQUIVALENT TO), `900000000000530003`
+(ALTERNATIVE) and `900000000000528000` (WAS A) association reference sets.
