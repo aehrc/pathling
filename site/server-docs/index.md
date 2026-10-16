@@ -45,9 +45,10 @@ flowchart LR
 
 The server implements:
 
-- **SQL on FHIR**: [Run](/docs/server/operations/sql-run) view definitions to
-  preview tabular projections of FHIR data,
-  then [export](/docs/server/operations/sql-export) to NDJSON, CSV, or Parquet
+- **[SQL on FHIR](/docs/server/sql-on-fhir)**: [Run](/docs/server/operations/sql-run)
+  view definitions, SQL queries and SQL views to preview tabular projections of
+  FHIR data, then [export](/docs/server/operations/sql-export) to NDJSON, CSV,
+  or Parquet
 - **Bulk Data Access**: [Export data](/docs/server/operations/export) at system,
   patient, or group level using the FHIR Bulk Data Access specification
 - **Bulk Import**: [Import data](/docs/server/operations/import) from NDJSON,
@@ -72,5 +73,7 @@ Spark clustering solutions.
   Docker
 - [Configuration](/docs/server/configuration) - Environment variables and server
   settings
+- [Terminology](/docs/server/terminology) - Remote terminology server or local
+  terminology store
 - [Deployment](/docs/server/deployment/kubernetes) - Kubernetes and AWS
   deployment options

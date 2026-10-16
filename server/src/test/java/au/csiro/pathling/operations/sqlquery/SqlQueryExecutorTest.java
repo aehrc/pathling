@@ -18,14 +18,22 @@
 package au.csiro.pathling.operations.sqlquery;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.io.source.DataSource;
+import au.csiro.pathling.terminology.conceptmap.ConceptMapContent;
+import au.csiro.pathling.terminology.conceptmap.ConceptMapRelationship;
+import au.csiro.pathling.terminology.conceptmap.ConceptMapping;
+import au.csiro.pathling.terminology.expand.ValueSetExpansion;
+import au.csiro.pathling.terminology.expand.ValueSetMember;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -39,6 +47,7 @@ import org.apache.spark.sql.catalyst.expressions.Literal;
 import org.apache.spark.sql.catalyst.plans.logical.GlobalLimit;
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
 import scala.jdk.javaapi.CollectionConverters;
@@ -57,7 +66,14 @@ import scala.jdk.javaapi.CollectionConverters;
  *       {@code validateAnalyzed} sequence the executor uses and yields the engine's describe rows.
  *       This exercises the analysed-mode carve-out end to end in the JVM, since the executor calls
  *       {@link SqlValidator#validateAnalyzed} on the eagerly-executed command plan (spec 029 US1).
+ *   <li>That a configured external table leaf is materialised under its request-scoped temp view
+ *       and so passes the analysed-plan check, while naming the same data by path is still rejected
+ *       (spec 060 US1).
+ *   <li>That a value set leaf is materialised as its five-column relation under its request-scoped
+ *       temp view, so the top-level SQL can select from its label (spec 061 US1).
  * </ul>
+ *
+ * @author John Grimes
  */
 @Import(SqlValidator.class)
 @SpringBootUnitTest
@@ -207,7 +223,6 @@ class SqlQueryExecutorTest {
               request(SELF_CONTAINED_SQL, null),
               new ResolvedDependencyGraph(List.of(), Map.of(), Map.of()),
               mock(DataSource.class),
-              REQUEST_ID,
               dataset -> groupInsideConsumer.set(currentJobGroup()));
 
       assertThat(groupInsideConsumer.get()).isEqualTo(ambientJobGroup);
@@ -215,6 +230,163 @@ class SqlQueryExecutorTest {
     } finally {
       sparkSession.sparkContext().clearJobGroup();
     }
+  }
+
+  // -------------------------------------------------------------------------
+  // External table leaves: reachable under the declared label only.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void executesAQueryOverAnExternalTableLeaf(@TempDir final Path tempDir) {
+    // The table's relation sits beneath the trusted temp-view alias the executor registers for the
+    // leaf, so validateAnalyzed accepts the plan and the rows flow through.
+    final ResolvedExternalTable table = writeExternalTable(tempDir);
+    final AtomicReference<List<Row>> rows = new AtomicReference<>();
+
+    newExecutor()
+        .execute(
+            request("SELECT * FROM t ORDER BY id", null, table.getCanonicalKey()),
+            graphOf(table),
+            mock(DataSource.class),
+            dataset -> rows.set(dataset.collectAsList()));
+
+    assertThat(rows.get()).extracting(row -> row.getInt(0)).containsExactly(1, 2);
+    assertThat(rows.get()).extracting(row -> row.getString(1)).containsExactly("alice", "bob");
+  }
+
+  @Test
+  void rejectsNamingTheExternalTableByPathInsteadOfLabel(@TempDir final Path tempDir) {
+    // A data-source short name bypasses the label and must fall foul of the existing allow-list.
+    final ResolvedExternalTable table = writeExternalTable(tempDir);
+    final SqlQueryRequest byPath =
+        request("SELECT * FROM parquet.`" + table.getPath() + "`", null, table.getCanonicalKey());
+
+    assertThatThrownBy(
+            () ->
+                newExecutor()
+                    .execute(byPath, graphOf(table), mock(DataSource.class), dataset -> {}))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("SQL references an undeclared table");
+  }
+
+  /** Writes a two-row Delta table into the temp directory and returns the leaf that reads it. */
+  @Nonnull
+  private ResolvedExternalTable writeExternalTable(@Nonnull final Path tempDir) {
+    final String path = "file://" + tempDir.resolve("external_delta").toAbsolutePath();
+    sparkSession
+        .sql("SELECT * FROM (VALUES (1, 'alice'), (2, 'bob')) AS t(id, name)")
+        .write()
+        .format("delta")
+        .save(path);
+    return new ResolvedExternalTable("https://example.org/data/external", path, "delta");
+  }
+
+  /** Builds a graph whose only node is the given leaf, exposed under the top-level label t. */
+  @Nonnull
+  private static ResolvedDependencyGraph graphOf(@Nonnull final ResolvedExternalTable table) {
+    return new ResolvedDependencyGraph(
+        List.of(table),
+        Map.of("t", table.getCanonicalKey()),
+        Map.of(table.getCanonicalKey(), table));
+  }
+
+  // -------------------------------------------------------------------------
+  // Value set leaves: materialised as the five-column relation under the label.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void executesAQueryOverAValueSetLeaf() {
+    final ResolvedValueSet valueSet =
+        new ResolvedValueSet(
+            "http://example.org/ValueSet/cvd|2026",
+            new ValueSetExpansion(
+                "http://example.org/ValueSet/cvd",
+                "2026",
+                null,
+                null,
+                List.of(),
+                List.of(
+                    new ValueSetMember(
+                        "http://snomed.info/sct", "20260131", "22298006", "MI", null),
+                    new ValueSetMember(
+                        "http://hl7.org/fhir/sid/icd-10", null, "I21", null, true))));
+    final AtomicReference<List<Row>> rows = new AtomicReference<>();
+
+    newExecutor()
+        .execute(
+            request(
+                "SELECT system, version, code, display, inactive FROM t ORDER BY code",
+                null,
+                valueSet.getCanonicalKey()),
+            new ResolvedDependencyGraph(
+                List.of(valueSet),
+                Map.of("t", valueSet.getCanonicalKey()),
+                Map.of(valueSet.getCanonicalKey(), valueSet)),
+            mock(DataSource.class),
+            dataset -> rows.set(dataset.collectAsList()));
+
+    assertThat(rows.get()).extracting(row -> row.getString(2)).containsExactly("22298006", "I21");
+    assertThat(rows.get().get(0).getString(1)).isEqualTo("20260131");
+    assertThat(rows.get().get(0).isNullAt(4)).isTrue();
+    assertThat(rows.get().get(1).isNullAt(1)).isTrue();
+    assertThat(rows.get().get(1).getBoolean(4)).isTrue();
+  }
+
+  // -------------------------------------------------------------------------
+  // Concept map leaves: materialised as the nine-column relation under the label.
+  // -------------------------------------------------------------------------
+
+  @Test
+  void executesAQueryOverAConceptMapLeaf() {
+    final ResolvedConceptMap conceptMap =
+        new ResolvedConceptMap(
+            "http://example.org/ConceptMap/sct-to-icd10|2026",
+            new ConceptMapContent(
+                "http://example.org/ConceptMap/sct-to-icd10",
+                "2026",
+                List.of(
+                    new ConceptMapping(
+                        "http://snomed.info/sct",
+                        null,
+                        "22298006",
+                        "Myocardial infarction",
+                        "http://hl7.org/fhir/sid/icd-10",
+                        "2019",
+                        "I21",
+                        "Acute myocardial infarction",
+                        ConceptMapRelationship.EQUIVALENT),
+                    new ConceptMapping(
+                        "http://snomed.info/sct",
+                        null,
+                        "102499006",
+                        "Fit and well",
+                        "http://hl7.org/fhir/sid/icd-10",
+                        "2019",
+                        null,
+                        null,
+                        null))));
+    final AtomicReference<List<Row>> rows = new AtomicReference<>();
+
+    newExecutor()
+        .execute(
+            request(
+                "SELECT source_code, target_code, relationship FROM t ORDER BY source_code",
+                null,
+                conceptMap.getCanonicalKey()),
+            new ResolvedDependencyGraph(
+                List.of(conceptMap),
+                Map.of("t", conceptMap.getCanonicalKey()),
+                Map.of(conceptMap.getCanonicalKey(), conceptMap)),
+            mock(DataSource.class),
+            dataset -> rows.set(dataset.collectAsList()));
+
+    assertThat(rows.get())
+        .extracting(row -> row.getString(0))
+        .containsExactly("102499006", "22298006");
+    assertThat(rows.get().get(0).isNullAt(1)).isTrue();
+    assertThat(rows.get().get(0).isNullAt(2)).isTrue();
+    assertThat(rows.get().get(1).getString(1)).isEqualTo("I21");
+    assertThat(rows.get().get(1).getString(2)).isEqualTo(ConceptMapRelationship.EQUIVALENT);
   }
 
   // -------------------------------------------------------------------------
@@ -231,7 +403,6 @@ class SqlQueryExecutorTest {
             request(sql, limit),
             new ResolvedDependencyGraph(List.of(), Map.of(), Map.of()),
             mock(DataSource.class),
-            REQUEST_ID,
             dataset -> consumedPlan.set(dataset.queryExecution().analyzed()));
     return Objects.requireNonNull(consumedPlan.get());
   }
@@ -267,8 +438,20 @@ class SqlQueryExecutorTest {
   private static SqlQueryRequest request(@Nonnull final String sql, @Nullable final Integer limit) {
     return new SqlQueryRequest(
         new ParsedSqlQuery(sql, List.of(), List.of(), SqlLibraryParser.SQL_QUERY_TYPE_CODE),
-        SqlQueryOutputFormat.NDJSON,
-        /* includeHeader= */ true,
+        limit,
+        Map.of());
+  }
+
+  /** Builds a request over SQL that declares one dependency under the label t. */
+  @Nonnull
+  private static SqlQueryRequest request(
+      @Nonnull final String sql, @Nullable final Integer limit, @Nonnull final String resource) {
+    return new SqlQueryRequest(
+        new ParsedSqlQuery(
+            sql,
+            List.of(new ViewArtifactReference("t", resource)),
+            List.of(),
+            SqlLibraryParser.SQL_QUERY_TYPE_CODE),
         limit,
         Map.of());
   }

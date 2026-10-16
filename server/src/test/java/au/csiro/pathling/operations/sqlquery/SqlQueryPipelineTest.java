@@ -26,6 +26,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.io.source.DataSource;
+import au.csiro.pathling.operations.sql.SuppliedArtefact;
 import au.csiro.pathling.operations.sql.SuppliedArtefacts;
 import au.csiro.pathling.views.FhirView;
 import java.util.List;
@@ -71,7 +72,7 @@ class SqlQueryPipelineTest {
             List.of(new ViewArtifactReference("patients", "ViewDefinition/patient-view")),
             List.of(),
             SqlLibraryParser.SQL_QUERY_TYPE_CODE);
-    request = new SqlQueryRequest(parsedQuery, SqlQueryOutputFormat.NDJSON, true, null, Map.of());
+    request = new SqlQueryRequest(parsedQuery, null, Map.of());
     final ResolvedViewDefinition leaf =
         new ResolvedViewDefinition("ViewDefinition/patient-view", mock(FhirView.class));
     graph =
@@ -85,18 +86,16 @@ class SqlQueryPipelineTest {
   void prepareParsesAndResolvesDependencyGraphWithSuppliedViews() {
     final FhirView suppliedView = mock(FhirView.class);
     final SuppliedArtefacts supplied =
-        SuppliedArtefacts.ofViews(Map.of("patient-view", suppliedView));
-    when(requestParser.parse(eq(library), eq("ndjson"), any(), any(), any(), any()))
-        .thenReturn(request);
+        SuppliedArtefacts.of(List.of(SuppliedArtefact.ofView("patient-view", null, suppliedView)));
+    when(requestParser.parse(eq(library), any(), any())).thenReturn(request);
     when(dependencyResolver.resolve(eq(request.getParsedQuery()), eq(supplied), any()))
         .thenReturn(graph);
 
-    final PreparedSqlQuery prepared =
-        pipeline.prepare(library, "ndjson", null, null, null, null, supplied);
+    final PreparedSqlQuery prepared = pipeline.prepare(library, null, null, supplied);
 
     assertThat(prepared.getRequest()).isSameAs(request);
     assertThat(prepared.getDependencyGraph()).isSameAs(graph);
-    verify(requestParser).parse(eq(library), eq("ndjson"), any(), any(), any(), any());
+    verify(requestParser).parse(eq(library), any(), any());
     verify(dependencyResolver).resolve(eq(request.getParsedQuery()), eq(supplied), any());
   }
 
@@ -106,10 +105,10 @@ class SqlQueryPipelineTest {
   void prepareThreadsTheSharedMemoisationMapToTheResolver() {
     final Map<String, ResolvedDependency> shared = new java.util.LinkedHashMap<>();
     final SuppliedArtefacts supplied = SuppliedArtefacts.empty();
-    when(requestParser.parse(eq(library), any(), any(), any(), any(), any())).thenReturn(request);
+    when(requestParser.parse(eq(library), any(), any())).thenReturn(request);
     when(dependencyResolver.resolve(request.getParsedQuery(), supplied, shared)).thenReturn(graph);
 
-    pipeline.prepare(library, null, null, null, null, null, supplied, shared);
+    pipeline.prepare(library, null, null, supplied, shared);
 
     verify(dependencyResolver).resolve(request.getParsedQuery(), supplied, shared);
   }
@@ -133,17 +132,17 @@ class SqlQueryPipelineTest {
     // Have the mocked executor invoke the terminal consumer with the dataset, as the real one does.
     doAnswer(
             invocation -> {
-              final Consumer<Dataset<Row>> consumer = invocation.getArgument(4);
+              final Consumer<Dataset<Row>> consumer = invocation.getArgument(3);
               consumer.accept(dataset);
               return null;
             })
         .when(executor)
-        .execute(eq(request), eq(graph), eq(dataSource), eq("req-1"), any());
+        .execute(eq(request), eq(graph), eq(dataSource), any());
 
     final AtomicReference<Dataset<Row>> received = new AtomicReference<>();
-    pipeline.execute(prepared, dataSource, "req-1", received::set);
+    pipeline.execute(prepared, dataSource, received::set);
 
     assertThat(received.get()).isSameAs(dataset);
-    verify(executor).execute(eq(request), eq(graph), eq(dataSource), eq("req-1"), any());
+    verify(executor).execute(eq(request), eq(graph), eq(dataSource), any());
   }
 }

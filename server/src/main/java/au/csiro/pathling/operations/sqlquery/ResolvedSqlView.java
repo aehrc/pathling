@@ -39,4 +39,16 @@ public class ResolvedSqlView implements ResolvedDependency {
 
   /** This view's local table label to the canonical key of the resolved child it references. */
   @Nonnull Map<String, String> childKeysByLabel;
+
+  /**
+   * A SQLView produces rows by running its SQL over its children, so both the SQL and the children
+   * it is wired to are part of its content.
+   *
+   * @return the content description
+   */
+  @Override
+  @Nonnull
+  public String describeContent() {
+    return "sql-view:" + sql + ':' + childKeysByLabel;
+  }
 }

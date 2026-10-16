@@ -24,26 +24,18 @@
  * @author John Grimes
  */
 
-import {
-  decodeSql,
-  flattenFhirParameters,
-  parseCsvResponse,
-  parseNdjsonResponse,
-} from "../utils";
+import { decodeSql, parseNdjsonResponse } from "../utils";
 
 import type { SubjectSource } from "../api";
 import type {
   SourceOption,
-  SqlQueryBinaryResult,
   SqlQueryLibrary,
   SqlQueryLibrarySummary,
-  SqlQueryOutputFormat,
   SqlQueryParameterType,
   SqlQueryRelatedArtifact,
   SqlQueryRequest,
   SqlQueryResult,
   SqlQueryRuntimeBindings,
-  SqlQueryTabularResult,
 } from "../types/sqlQuery";
 import type { Bundle, Library, Parameters, ParametersParameter } from "fhir/r4";
 
@@ -206,86 +198,20 @@ export function findSourceByUrl(
 }
 
 /**
- * Reads the body of a `$sql-run` response and assembles it into a
- * format-aware result.
- *
- * Tabular formats (`csv`, `ndjson`, `json`, `fhir`) are parsed into a
- * `{columns, rows}` shape and the original body is preserved as a Blob so
- * the UI can offer a verbatim download. Parquet is not parsed; the body
- * is returned as a Blob only.
+ * Reads the NDJSON body of a `$sql-run` response into a `{columns, rows}`
+ * result. Empty bodies produce zero rows.
  *
  * @param response - The fetch Response from `sqlRun` or `sqlRunStored`.
- * @param format - The output format requested with the request.
- * @returns The parsed and/or downloadable result.
+ * @returns The parsed result.
  *
  * @example
- * const result = await readSqlQueryResponse(response, "csv");
+ * const { columns, rows } = await readSqlQueryResponse(response);
  */
 export async function readSqlQueryResponse(
   response: Response,
-  format: SqlQueryOutputFormat,
 ): Promise<SqlQueryResult> {
-  if (format === "parquet") {
-    const blob = await response.blob();
-    const binary: SqlQueryBinaryResult = {
-      kind: "binary",
-      format: "parquet",
-      blob,
-    };
-    return binary;
-  }
-
-  const text = await response.text();
-  const tabular = parseTabularBody(text, format);
-  const blob = new Blob([text], { type: tabularContentType(format) });
-  const result: SqlQueryTabularResult = {
-    kind: "tabular",
-    format,
-    columns: tabular.columns,
-    rows: tabular.rows,
-    rawBody: blob,
-  };
-  return result;
-}
-
-/**
- * Parses a tabular body into `{columns, rows}` based on the requested
- * format. Empty bodies produce zero rows.
- *
- * @param body - The response body text.
- * @param format - The format the server was asked to produce.
- * @returns The parsed `{columns, rows}` view.
- */
-export function parseTabularBody(
-  body: string,
-  format: Exclude<SqlQueryOutputFormat, "parquet">,
-): { columns: string[]; rows: Record<string, unknown>[] } {
-  if (format === "csv") {
-    const rows = parseCsvResponse(body);
-    return { columns: extractColumns(rows), rows };
-  }
-  if (format === "ndjson") {
-    const rows = parseNdjsonResponse(body);
-    return { columns: extractColumns(rows), rows };
-  }
-  if (format === "json") {
-    const trimmed = body.trim();
-    if (trimmed.length === 0) {
-      return { columns: [], rows: [] };
-    }
-    const parsed = JSON.parse(trimmed) as Record<string, unknown>[];
-    const rows = Array.isArray(parsed) ? parsed : [];
-    return { columns: extractColumns(rows), rows };
-  }
-  // FHIR format: parse a Parameters resource and flatten one row per
-  // `row` parameter.
-  const trimmed = body.trim();
-  if (trimmed.length === 0) {
-    return { columns: [], rows: [] };
-  }
-  const parameters = JSON.parse(trimmed);
-  const flattened = flattenFhirParameters(parameters);
-  return flattened;
+  const rows = parseNdjsonResponse(await response.text());
+  return { columns: extractColumns(rows), rows };
 }
 
 /**
@@ -309,28 +235,6 @@ function extractColumns(rows: Record<string, unknown>[]): string[] {
     }
   }
   return columns;
-}
-
-/**
- * Returns the MIME type to attach to the downloadable Blob produced from
- * a tabular response body.
- *
- * @param format - The output format the body was produced with.
- * @returns The MIME type to attach to the Blob.
- */
-function tabularContentType(
-  format: Exclude<SqlQueryOutputFormat, "parquet">,
-): string {
-  switch (format) {
-    case "csv":
-      return "text/csv";
-    case "ndjson":
-      return "application/x-ndjson";
-    case "json":
-      return "application/json";
-    case "fhir":
-      return "application/fhir+json";
-  }
 }
 
 /**

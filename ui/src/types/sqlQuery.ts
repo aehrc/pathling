@@ -22,16 +22,6 @@
  */
 
 /**
- * Output formats accepted by the `$sql-run` operation.
- */
-export type SqlQueryOutputFormat =
-  | "ndjson"
-  | "csv"
-  | "json"
-  | "parquet"
-  | "fhir";
-
-/**
  * FHIR primitive types supported as runtime parameter values in the UI.
  *
  * The server's request parser handles a wider range of types, but the UI
@@ -57,23 +47,23 @@ export interface SourceOption {
   name: string;
   /**
    * Canonical URL the dependency reference resolves against. A source with no
-   * URL cannot be referenced and is shown disabled in the picker.
+   * URL cannot be referenced and is not offered in the picker.
    */
   url?: string;
 }
 
 /**
  * A `relatedArtifact` entry on a SQLQuery Library, expressed in form-state
- * terms. A row binds a SQL table label to a chosen stored source by the
- * source's canonical URL, which is emitted verbatim as
- * `relatedArtifact.resource` on save.
+ * terms. A row binds a SQL table label to a canonical URL - chosen from the
+ * stored sources for a view row, or typed for a value set or concept map row -
+ * which is emitted as `relatedArtifact.resource` on save.
  */
 export interface SqlQueryRelatedArtifact {
   /** Stable identifier for use as a React `key`. */
   rowId: string;
   /** Table name referenced by the SQL. */
   label: string;
-  /** Canonical URL of the chosen source; empty until a source is picked. */
+  /** Canonical URL of the dependency; empty until one is picked or typed. */
   referenceUrl: string;
 }
 
@@ -115,7 +105,7 @@ export interface SqlQueryLibrarySummary {
   url?: string;
   /** Decoded SQL text from `Library.content[0].data`. */
   sql: string;
-  /** Related-artifact entries with label and ViewDefinition reference. */
+  /** Related-artifact entries with label and dependency reference. */
   relatedArtifacts: Array<{ label: string; reference: string }>;
   /** Declared parameters extracted from `Library.parameter`. */
   parameters: Array<{ name: string; type: SqlQueryParameterType }>;
@@ -165,12 +155,6 @@ export interface SqlQueryLibrary {
  * supplied.
  */
 export interface SqlQueryExecutionOptions {
-  /** Output format (defaults to ndjson on the server when omitted). */
-  format?: SqlQueryOutputFormat;
-  /** Maximum number of rows to return. */
-  limit?: number;
-  /** Whether to include a header row when format is `csv`. */
-  header?: boolean;
   /** Values bound to the parameters, keyed by declared parameter name. */
   bindings?: SqlQueryRuntimeBindings;
   /**
@@ -202,37 +186,14 @@ export type SqlQueryRequest =
     });
 
 /**
- * Successful tabular result from a `$sql-run` execution.
+ * Successful result from a `$sql-run` execution, parsed from NDJSON.
  */
-export interface SqlQueryTabularResult {
-  /** Discriminator. */
-  kind: "tabular";
-  /** Output format that produced this result. */
-  format: Exclude<SqlQueryOutputFormat, "parquet">;
+export interface SqlQueryResult {
   /** Column names in display order. */
   columns: string[];
   /** Parsed result rows. */
   rows: Record<string, unknown>[];
-  /** Raw response body, retained for download. */
-  rawBody: Blob;
 }
-
-/**
- * Successful binary (parquet) result from a `$sql-run` execution.
- */
-export interface SqlQueryBinaryResult {
-  /** Discriminator. */
-  kind: "binary";
-  /** Output format that produced this result. */
-  format: "parquet";
-  /** Response body as a Blob, ready for download. */
-  blob: Blob;
-}
-
-/**
- * Either form of successful result.
- */
-export type SqlQueryResult = SqlQueryTabularResult | SqlQueryBinaryResult;
 
 /**
  * Active or completed SQL query job tracked in the page's job list.
@@ -259,10 +220,8 @@ export interface SaveSqlQueryLibraryResult {
 }
 
 /**
- * Output formats accepted by the asynchronous `$sql-export` operation.
- *
- * Narrower than {@link SqlQueryOutputFormat}: an export writes bulk files, so it offers only the
- * file-friendly formats.
+ * Output formats accepted by the asynchronous `$sql-export` operation, limited to
+ * file-friendly formats because an export writes bulk files.
  */
 export type SqlQueryExportFormat = "ndjson" | "csv" | "parquet";
 

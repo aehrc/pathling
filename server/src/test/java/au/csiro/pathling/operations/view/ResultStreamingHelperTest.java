@@ -38,6 +38,7 @@ import java.util.Iterator;
 import java.util.List;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
+import org.apache.spark.sql.catalyst.util.DateTimeUtils;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructType;
 import org.junit.jupiter.api.BeforeEach;
@@ -46,9 +47,9 @@ import scala.jdk.javaapi.CollectionConverters;
 
 /**
  * Tests for {@link ResultStreamingHelper} - covers the typed Spark to FHIR mapping, the NDJSON,
- * JSON and CSV output forms, NULL handling, the serialisation of the {@code java.time} values Spark
- * materialises for {@code TIMESTAMP_NTZ} and the interval types, and rejection of column types the
- * FHIR Parameters format cannot express.
+ * JSON and CSV output forms, NULL handling, the serialisation of the {@code java.sql} and {@code
+ * java.time} values Spark materialises for date, timestamp and interval columns, and rejection of
+ * column types the FHIR Parameters format cannot express.
  *
  * @author John Grimes
  */
@@ -251,12 +252,36 @@ class ResultStreamingHelperTest {
   // ---------------------------------------------------------------------------
 
   @Test
-  void writeCsvHeaderEmitsCommaSeparatedColumnNames() throws Exception {
+  void streamsCsvHeaderBeforeTheRowsWhenRequested() throws Exception {
+    final List<Row> rows = List.of(RowFactory.create(1, "alice"));
     final ByteArrayOutputStream out = new ByteArrayOutputStream();
 
-    helper.writeCsvHeader(out, List.of("id", "name", "active"));
+    helper.streamCsv(out, rows.iterator(), idNameSchema(), true);
 
-    assertThat(out.toString(StandardCharsets.UTF_8)).startsWith("id,name,active");
+    assertThat(out.toString(StandardCharsets.UTF_8).lines()).containsExactly("id,name", "1,alice");
+  }
+
+  @Test
+  void streamsCsvHeaderAloneForAnEmptyResult() throws Exception {
+    // An empty result is still a well-formed CSV document, and the header names its columns.
+    final ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+    helper.streamCsv(out, List.<Row>of().iterator(), idNameSchema(), true);
+
+    assertThat(out.toString(StandardCharsets.UTF_8).lines()).containsExactly("id,name");
+  }
+
+  @Test
+  void streamsCsvWritesNothingWhenTheFirstRowFails() {
+    // Evaluation of the result happens when the first row is requested. A failure there must leave
+    // the output untouched, so that the caller can still report it with an error status rather than
+    // a 200 that carries only the header.
+    final ByteArrayOutputStream out = new ByteArrayOutputStream();
+    final IllegalStateException failure = new IllegalStateException("evaluation failed");
+
+    assertThatThrownBy(() -> helper.streamCsv(out, failingIterator(failure), idNameSchema(), true))
+        .isSameAs(failure);
+    assertThat(out.size()).isZero();
   }
 
   @Test
@@ -265,7 +290,7 @@ class ResultStreamingHelperTest {
     final List<Row> rows = List.of(RowFactory.create(1, "alice"), RowFactory.create(2, "bob"));
     final ByteArrayOutputStream out = new ByteArrayOutputStream();
 
-    helper.streamCsv(out, rows.iterator(), schema);
+    helper.streamCsv(out, rows.iterator(), schema, false);
 
     final String body = out.toString(StandardCharsets.UTF_8);
     assertThat(body).contains("1,alice").contains("2,bob");
@@ -277,7 +302,7 @@ class ResultStreamingHelperTest {
     final List<Row> rows = List.of(RowFactory.create(1, "smith, john"));
     final ByteArrayOutputStream out = new ByteArrayOutputStream();
 
-    helper.streamCsv(out, rows.iterator(), schema);
+    helper.streamCsv(out, rows.iterator(), schema, false);
 
     assertThat(out.toString(StandardCharsets.UTF_8)).contains("\"smith, john\"");
   }
@@ -478,7 +503,7 @@ class ResultStreamingHelperTest {
             LocalDateTime.parse("2020-01-01T12:00:00"), Duration.ofHours(1), Period.ofYears(1));
     final ByteArrayOutputStream out = new ByteArrayOutputStream();
 
-    helper.streamCsv(out, rows.iterator(), schema);
+    helper.streamCsv(out, rows.iterator(), schema, false);
 
     assertThat(out.toString(StandardCharsets.UTF_8).trim()).isEqualTo("2020-01-01T12:00,PT1H,P1Y");
   }
@@ -507,6 +532,123 @@ class ResultStreamingHelperTest {
     assertThatThrownBy(() -> helper.streamFhirJson(out, rows, schema))
         .isInstanceOf(UnprocessableEntityException.class)
         .hasMessageContaining("dt");
+  }
+
+  // ---------------------------------------------------------------------------
+  // java.sql-backed values.
+  //
+  // Spark materialises DATE as java.sql.Date and TIMESTAMP as java.sql.Timestamp unless its Java 8
+  // datetime API is enabled. Gson's built-in adapters for these types format them with the JVM's
+  // default locale and time zone, and Timestamp.toString() is neither ISO-8601 nor independent of
+  // the time zone, so every tabular format renders them explicitly: a DATE as an ISO-8601 date,
+  // and a TIMESTAMP as an ISO-8601 instant in UTC, the same strings the FHIR format puts in
+  // valueDate and valueInstant.
+  // ---------------------------------------------------------------------------
+
+  /** Verifies NDJSON renders DATE and TIMESTAMP values as ISO-8601 strings. */
+  @Test
+  void serialisesSqlDateAndTimestampAsIso8601StringsInNdjson() throws Exception {
+    final JsonObject json = onlyNdjsonObject(sqlDateTimeRows(), sqlDateTimeSchema());
+
+    assertThat(json.get("d").getAsString()).isEqualTo("2026-01-02");
+    assertThat(json.get("ts").getAsString()).isEqualTo("2026-01-02T03:04:05Z");
+  }
+
+  /** Verifies the single-document JSON array carries the same strings as the NDJSON output. */
+  @Test
+  void serialisesSqlDateAndTimestampAsIso8601StringsInJson() throws Exception {
+    final ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+    helper.writeJson(out, sqlDateTimeRows().iterator(), sqlDateTimeSchema());
+
+    final JsonArray array =
+        JsonParser.parseString(out.toString(StandardCharsets.UTF_8)).getAsJsonArray();
+    assertThat(array.size()).isEqualTo(1);
+    final JsonObject json = array.get(0).getAsJsonObject();
+    assertThat(json.get("d").getAsString()).isEqualTo("2026-01-02");
+    assertThat(json.get("ts").getAsString()).isEqualTo("2026-01-02T03:04:05Z");
+  }
+
+  /**
+   * Verifies CSV renders a TIMESTAMP as an ISO-8601 instant in UTC rather than as {@link
+   * Timestamp#toString()}, which uses a space separator and the JVM's default time zone.
+   */
+  @Test
+  void streamsCsvWithIso8601StringsForSqlDateAndTimestamp() throws Exception {
+    final ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+    helper.streamCsv(out, sqlDateTimeRows().iterator(), sqlDateTimeSchema(), false);
+
+    assertThat(out.toString(StandardCharsets.UTF_8).trim())
+        .isEqualTo("2026-01-02,2026-01-02T03:04:05Z");
+  }
+
+  /** Verifies the microsecond precision Spark keeps for a TIMESTAMP is not truncated. */
+  @Test
+  void serialisesTimestampWithFractionalSecondsAsIso8601String() throws Exception {
+    final StructType schema = schemaOf(nullableField("ts", DataTypes.TimestampType));
+    final List<Row> rows =
+        List.of(RowFactory.create(Timestamp.from(Instant.parse("2026-01-02T03:04:05.123456Z"))));
+
+    final JsonObject json = onlyNdjsonObject(rows, schema);
+
+    assertThat(json.get("ts").getAsString()).isEqualTo("2026-01-02T03:04:05.123456Z");
+  }
+
+  /**
+   * Verifies DATE and TIMESTAMP values nested in array and struct columns are rendered the same way
+   * as top-level ones, in both the JSON forms and the JSON-encoded cells of CSV.
+   */
+  @Test
+  void serialisesSqlDateAndTimestampInsideArrayAndStruct() throws Exception {
+    final StructType event = schemaOf(nullableField("recorded", DataTypes.TimestampType));
+    final StructType schema =
+        schemaOf(
+            nullableField("dates", DataTypes.createArrayType(DataTypes.DateType)),
+            nullableField("event", event));
+    final scala.collection.Seq<Object> dates =
+        CollectionConverters.asScala(
+                List.<Object>of(Date.valueOf("2026-01-02"), Date.valueOf("2026-12-31")))
+            .toSeq();
+    final Row eventRow = RowFactory.create(Timestamp.from(Instant.parse("2026-01-02T03:04:05Z")));
+    final List<Row> rows = List.of(RowFactory.create(dates, eventRow));
+
+    final JsonObject json = onlyNdjsonObject(rows, schema);
+    final ByteArrayOutputStream csv = new ByteArrayOutputStream();
+    helper.streamCsv(csv, rows.iterator(), schema, false);
+
+    final JsonArray jsonDates = json.getAsJsonArray("dates");
+    assertThat(jsonDates.get(0).getAsString()).isEqualTo("2026-01-02");
+    assertThat(jsonDates.get(1).getAsString()).isEqualTo("2026-12-31");
+    assertThat(json.getAsJsonObject("event").get("recorded").getAsString())
+        .isEqualTo("2026-01-02T03:04:05Z");
+    assertThat(csv.toString(StandardCharsets.UTF_8).trim())
+        .isEqualTo(
+            "\"[\"\"2026-01-02\"\",\"\"2026-12-31\"\"]\","
+                + "\"{\"\"recorded\"\":\"\"2026-01-02T03:04:05Z\"\"}\"");
+  }
+
+  /**
+   * Verifies a TIMESTAMP before the Gregorian cutover renders as the instant Spark holds. Spark
+   * rebases such a value onto the hybrid Julian calendar when it builds the {@link Timestamp}, so
+   * {@link Timestamp#toInstant()} would be days out; the value is built here the way Spark builds
+   * it.
+   */
+  @Test
+  void serialisesTimestampBeforeGregorianCutoverAsSparkInstant() throws Exception {
+    final StructType schema = schemaOf(nullableField("ts", DataTypes.TimestampType));
+    final Timestamp ancient =
+        DateTimeUtils.toJavaTimestamp(
+            DateTimeUtils.instantToMicros(Instant.parse("1000-01-01T00:00:00Z")));
+    final List<Row> rows = List.of(RowFactory.create(ancient));
+    final ByteArrayOutputStream csv = new ByteArrayOutputStream();
+    helper.streamCsv(csv, rows.iterator(), schema, false);
+
+    assertThat(onlyNdjsonObject(rows, schema).get("ts").getAsString())
+        .isEqualTo("1000-01-01T00:00:00Z");
+    assertThat(csv.toString(StandardCharsets.UTF_8).trim()).isEqualTo("1000-01-01T00:00:00Z");
+    assertThat(onlyPart("ts", DataTypes.TimestampType, ancient).get("valueInstant").getAsString())
+        .isEqualTo("1000-01-01T00:00:00Z");
   }
 
   // ---------------------------------------------------------------------------
@@ -603,6 +745,22 @@ class ResultStreamingHelperTest {
         nullableField("ym", DataTypes.createYearMonthIntervalType()));
   }
 
+  /** Schema with a DATE and a TIMESTAMP column. */
+  private static StructType sqlDateTimeSchema() {
+    return schemaOf(
+        nullableField("d", DataTypes.DateType), nullableField("ts", DataTypes.TimestampType));
+  }
+
+  /**
+   * Builds a single row matching {@link #sqlDateTimeSchema()}, holding the Java types Spark
+   * materialises for those columns by default.
+   */
+  private static List<Row> sqlDateTimeRows() {
+    return List.of(
+        RowFactory.create(
+            Date.valueOf("2026-01-02"), Timestamp.from(Instant.parse("2026-01-02T03:04:05Z"))));
+  }
+
   /** Builds a single row matching the column order of {@link #javaTimeSchema()}. */
   private static List<Row> javaTimeRows(
       final LocalDateTime timestamp, final Duration dayTime, final Period yearMonth) {
@@ -625,5 +783,23 @@ class ResultStreamingHelperTest {
     assertThat(json.get("ts_ntz").getAsString()).isEqualTo(timestamp);
     assertThat(json.get("dt").getAsString()).isEqualTo(dayTime);
     assertThat(json.get("ym").getAsString()).isEqualTo(yearMonth);
+  }
+
+  /**
+   * Builds a row iterator whose first {@code hasNext()} throws the given failure, standing in for a
+   * Spark result that fails while its first partition is evaluated.
+   */
+  private static Iterator<Row> failingIterator(final RuntimeException failure) {
+    return new Iterator<>() {
+      @Override
+      public boolean hasNext() {
+        throw failure;
+      }
+
+      @Override
+      public Row next() {
+        throw failure;
+      }
+    };
   }
 }
