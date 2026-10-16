@@ -91,8 +91,7 @@ public class JoinKeyFunctionsDslTest extends FhirPathDslTestBase {
                         ref ->
                             ref.fhirType(REFERENCE)
                                 .string(
-                                    "reference",
-                                    "https://example.org/fhir/Patient/patient-123"))
+                                    "reference", "https://example.org/fhir/Patient/patient-123"))
                     .element(
                         "containedReference",
                         ref -> ref.fhirType(REFERENCE).string("reference", "#p1"))
@@ -101,8 +100,15 @@ public class JoinKeyFunctionsDslTest extends FhirPathDslTestBase {
                         ref ->
                             ref.fhirType(REFERENCE)
                                 .string(
-                                    "reference",
-                                    "urn:uuid:550e8400-e29b-41d4-a716-446655440000"))
+                                    "reference", "urn:uuid:550e8400-e29b-41d4-a716-446655440000"))
+                    // Ids may only contain [A-Za-z0-9\-.], so these are not valid references.
+                    .element(
+                        "invalidIdReference",
+                        ref -> ref.fhirType(REFERENCE).string("reference", "Patient/p:1"))
+                    .element(
+                        "invalidVersionReference",
+                        ref ->
+                            ref.fhirType(REFERENCE).string("reference", "Patient/p1/_history/2#x"))
                     // Define a collection of references
                     .elementArray(
                         "multipleReferences",
@@ -131,8 +137,13 @@ public class JoinKeyFunctionsDslTest extends FhirPathDslTestBase {
             "containedReference.getReferenceKey()",
             "getReferenceKey() returns empty for a contained reference")
         .testEmpty(
-            "urnReference.getReferenceKey()",
-            "getReferenceKey() returns empty for a URN reference")
+            "urnReference.getReferenceKey()", "getReferenceKey() returns empty for a URN reference")
+        .testEmpty(
+            "invalidIdReference.getReferenceKey()",
+            "getReferenceKey() returns empty for a reference whose id has invalid characters")
+        .testEmpty(
+            "invalidVersionReference.getReferenceKey()",
+            "getReferenceKey() returns empty for a reference whose version has invalid characters")
         .testEquals(
             List.of("Patient/patient-123", "Practitioner/pract-456"),
             "multipleReferences.getReferenceKey()",
@@ -182,10 +193,23 @@ public class JoinKeyFunctionsDslTest extends FhirPathDslTestBase {
             "versionedReference.getReferenceKey(Observation)",
             "getReferenceKey(Observation) with non-matching type returns empty for a versioned"
                 + " reference")
-        .testEquals(
-            "https://example.org/fhir/Patient/patient-123",
+        .testEmpty(
             "absoluteVersionedReference.getReferenceKey(Patient)",
-            "getReferenceKey(Patient) strips the /_history version from an absolute reference")
+            "getReferenceKey(Patient) returns empty for a versioned absolute reference")
+        .group("getReferenceKey() with type parameter excludes non-relative references")
+        .testEmpty(
+            "absoluteReference.getReferenceKey(Patient)",
+            "getReferenceKey(Patient) returns empty for an absolute URL reference")
+        .testEmpty(
+            "containedReference.getReferenceKey(Patient)",
+            "getReferenceKey(Patient) returns empty for a contained reference")
+        .testEmpty(
+            "urnReference.getReferenceKey(Patient)",
+            "getReferenceKey(Patient) returns empty for a URN reference")
+        .testEmpty(
+            "invalidIdReference.getReferenceKey(Patient)",
+            "getReferenceKey(Patient) returns empty for a reference whose id has invalid"
+                + " characters")
         .group("getReferenceKey() type parameter matches the whole type name")
         .testEmpty(
             "relatedPersonReference.getReferenceKey(Person)",

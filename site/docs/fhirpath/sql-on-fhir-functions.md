@@ -46,22 +46,24 @@ reference to `RelatedPerson/r1`.
 
 The key is derived from `Reference.reference`:
 
-| Reference                             | Key                                   | Joins to `getResourceKey()` |
-| ------------------------------------- | ------------------------------------- | --------------------------- |
-| `Patient/123`                         | `Patient/123`                         | Yes                         |
-| `Patient/123/_history/2`              | `Patient/123`                         | Yes                         |
-| `http://example.org/fhir/Patient/123` | `http://example.org/fhir/Patient/123` | No                          |
-| `#p1` (contained resource)            | `#p1`                                 | No                          |
-| `urn:uuid:9d0a6e7c-...`               | `urn:uuid:9d0a6e7c-...`               | No                          |
-| Not present (identifier only)         | Empty collection                      | No                          |
+| Reference                             | Key              | Joins to `getResourceKey()` |
+| ------------------------------------- | ---------------- | --------------------------- |
+| `Patient/123`                         | `Patient/123`    | Yes                         |
+| `Patient/123/_history/2`              | `Patient/123`    | Yes                         |
+| `http://example.org/fhir/Patient/123` | Empty collection | No                          |
+| `#p1` (contained resource)            | Empty collection | No                          |
+| `urn:uuid:9d0a6e7c-...`               | Empty collection | No                          |
+| Not present (identifier only)         | Empty collection | No                          |
 
 A [version-specific reference](https://hl7.org/fhir/R4/references.html#literal)
 joins to whichever version of the resource is present in the data. The version
 named in the reference is not checked.
 
-Absolute, contained and URN references produce a key that never equals a
-resource key. A future major release will return an empty collection for these
-instead (see [#2808](https://github.com/aehrc/pathling/issues/2808)).
+Only relative references produce a key, as absolute, contained and URN
+references can never equal a resource key. A reference whose id or version
+contains characters outside the [FHIR id](https://hl7.org/fhir/R4/datatypes.html#id)
+character set (`A-Z`, `a-z`, `0-9`, `-` and `.`) also produces an empty
+collection.
 
 Example:
 
