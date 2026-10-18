@@ -52,9 +52,16 @@ import org.roaringbitmap.RoaringBitmap;
  * {@code inactive = true} property filter) is evaluated over the whole concept universe instead, so
  * such concepts survive.
  *
+ * <p>On SNOMED CT, a {@code concept in} (or {@code not-in}) filter names reference sets rather than
+ * concepts, matching the SNOMED CT filters defined by FHIR: {@code concept in X} selects the
+ * members of reference set X, as the ECL {@code ^ X} does. On other code systems it selects the
+ * listed concepts.
+ *
  * @author John Grimes
  */
 public class VclEvaluator {
+
+  private static final String SNOMED_URI = "http://snomed.info/sct";
 
   static final String PROPERTY_CONCEPT = "concept";
   static final String PROPERTY_PARENT = "parent";
@@ -245,16 +252,17 @@ public class VclEvaluator {
     final HierarchyIndex hierarchy = indexes.hierarchy();
     final VclFilterOperator operator = filter.getOperator();
     if (operator == VclFilterOperator.IN || operator == VclFilterOperator.NOT_IN) {
-      final RoaringBitmap listed = new RoaringBitmap();
+      final boolean snomed = SNOMED_URI.equals(systemUrl);
+      final RoaringBitmap matched = new RoaringBitmap();
       for (final String code : codeList(filter.getValue())) {
-        listed.or(single(code));
+        matched.or(snomed ? indexes.refsets().membersOf(code) : single(code));
       }
       if (operator == VclFilterOperator.NOT_IN) {
         final RoaringBitmap all = dictionary().activeConcepts();
-        all.andNot(listed);
+        all.andNot(matched);
         return all;
       }
-      return listed;
+      return matched;
     }
     final Integer dense = dictionary().denseId(codeValue(filter.getValue()));
     if (dense == null) {

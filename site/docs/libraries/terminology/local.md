@@ -867,6 +867,13 @@ indexes. Members are restricted to active concepts, matching the behaviour of a
 terminology server on an implicit value set, unless the expression explicitly
 asks for inactive concepts with an `inactive = true` filter.
 
+An imported FHIR ValueSet's compose is translated into the same model, so its
+filters behave as the matching VCL filters below. The `in` and `not-in`
+operators take a comma-separated list of codes. Over SNOMED CT, `concept in X`
+selects the members of reference set X rather than the concept X, as the
+[SNOMED CT filters](https://hl7.org/fhir/R4/snomedct.html#filters) in FHIR
+define it, and `not-in` selects every active concept outside those members.
+
 ### SNOMED CT Expression Constraint Language
 
 The grammar recognises the whole of ECL v2, and the translator maps the subset
@@ -946,7 +953,7 @@ all is treated as unknown content.
 | Generalises            | `concept >> X`                            | ancestors of the concept, and itself                       |
 | Descendant leaves      | `concept !!< X`                           | descendants that have no children                          |
 | Regular expression     | `code / "A.*"`                            | a property value fully matching the pattern                |
-| In, not in a code list | `concept ^ {A,B}`, `concept ~^ {A,B}`     | membership in an enumerated list                           |
+| In, not in a code list | `concept ^ {A,B}`, `concept ~^ {A,B}`     | membership in an enumerated list (SNOMED CT: see below)    |
 | In a filter list       | `363698007 ^ {concept << X}`              | membership in a nested constraint                          |
 | Exists                 | `ingredient ? true`                       | whether the property is present                            |
 | Navigation             | `X.parent`, `{A,B}.parent`, `*.116676008` | the values a property takes                                |
@@ -957,6 +964,9 @@ The properties a filter may name are:
   a code system that is not SNOMED CT that graph comes from the CodeSystem's
   nesting and its `parent` and `child` properties, as described under
   [hierarchies from parent and child properties](#hierarchies-from-parent-and-child-properties).
+  Over SNOMED CT, `concept ^ {A,B}` names reference sets: it selects the members
+  of reference set A or B, as `^ A OR ^ B` does in ECL, and `~^` selects every
+  active concept outside them.
 - `parent` and `child`, which take one edge rather than the closure, so
   `parent = X` selects the children of X and `child = X` selects its parents.
 - `inactive`, `moduleId`, `sufficientlyDefined` and `effectiveTime`, which are
