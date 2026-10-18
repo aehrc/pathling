@@ -52,10 +52,11 @@ import org.roaringbitmap.RoaringBitmap;
  * {@code inactive = true} property filter) is evaluated over the whole concept universe instead, so
  * such concepts survive.
  *
- * <p>On SNOMED CT, a {@code concept in} (or {@code not-in}) filter names reference sets rather than
- * concepts, matching the SNOMED CT filters defined by FHIR: {@code concept in X} selects the
- * members of reference set X, as the ECL {@code ^ X} does. On other code systems it selects the
- * listed concepts.
+ * <p>On SNOMED CT, a {@code concept in} (or {@code not-in}) filter with a single code names a
+ * reference set rather than a concept, matching the SNOMED CT filters defined by FHIR: {@code
+ * concept in X} selects the members of reference set X, as the ECL {@code ^ X} does. A list of
+ * codes names the listed concepts themselves, as any {@code concept in} filter does on other code
+ * systems.
  *
  * @author John Grimes
  */
@@ -252,11 +253,7 @@ public class VclEvaluator {
     final HierarchyIndex hierarchy = indexes.hierarchy();
     final VclFilterOperator operator = filter.getOperator();
     if (operator == VclFilterOperator.IN || operator == VclFilterOperator.NOT_IN) {
-      final boolean snomed = SNOMED_URI.equals(systemUrl);
-      final RoaringBitmap matched = new RoaringBitmap();
-      for (final String code : codeList(filter.getValue())) {
-        matched.or(snomed ? indexes.refsets().membersOf(code) : single(code));
-      }
+      final RoaringBitmap matched = conceptMembership(filter.getValue());
       if (operator == VclFilterOperator.NOT_IN) {
         final RoaringBitmap all = dictionary().activeConcepts();
         all.andNot(matched);
@@ -290,6 +287,23 @@ public class VclEvaluator {
       default:
         return new RoaringBitmap();
     }
+  }
+
+  /**
+   * Resolves the value of a {@code concept in} or {@code not-in} filter. On SNOMED CT a single code
+   * names a reference set, whose members are selected. A list of codes, or any value on another
+   * code system, names the concepts themselves.
+   */
+  @Nonnull
+  private RoaringBitmap conceptMembership(@Nonnull final VclFilterValue value) {
+    if (SNOMED_URI.equals(systemUrl) && value instanceof final VclCodeValue codeValue) {
+      return indexes.refsets().membersOf(codeValue.getCode());
+    }
+    final RoaringBitmap matched = new RoaringBitmap();
+    for (final String code : codeList(value)) {
+      matched.or(single(code));
+    }
+    return matched;
   }
 
   @Nonnull

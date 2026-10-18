@@ -869,10 +869,14 @@ asks for inactive concepts with an `inactive = true` filter.
 
 An imported FHIR ValueSet's compose is translated into the same model, so its
 filters behave as the matching VCL filters below. The `in` and `not-in`
-operators take a comma-separated list of codes. Over SNOMED CT, `concept in X`
-selects the members of reference set X rather than the concept X, as the
+operators take a comma-separated list of codes, which selects (or, for
+`not-in`, excludes) the listed concepts. Over SNOMED CT, a single code is
+instead read as a reference set: `concept in X` selects the members of reference
+set X rather than the concept X, as the
 [SNOMED CT filters](https://hl7.org/fhir/R4/snomedct.html#filters) in FHIR
-define it, and `not-in` selects every active concept outside those members.
+define it, and `not-in` selects every active concept outside those members. For
+example, `concept in 929360061000036106` selects the members of that reference
+set, while `concept in 73211009,46635009` selects those two concepts.
 
 ### SNOMED CT Expression Constraint Language
 

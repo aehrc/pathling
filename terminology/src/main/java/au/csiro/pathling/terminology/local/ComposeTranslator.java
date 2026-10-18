@@ -183,7 +183,8 @@ public class ComposeTranslator {
 
   /**
    * Translates a filter value. The {@code in} and {@code not-in} operators take a comma-separated
-   * list of codes, which becomes a code list.
+   * list of codes, which becomes a code list. A single code stays a single code, which on SNOMED CT
+   * names a reference set rather than a concept.
    */
   @Nonnull
   private static VclFilterValue filterValue(

@@ -128,23 +128,33 @@ class VclEvaluatorTest {
   }
 
   @Test
-  void snomedConceptInCodeListUnionsReferenceSetsAndExcludesInactiveMembers() {
-    // Members of either reference set. The SAME AS reference set also references the inactive
-    // DIABETES_INACTIVE concept, which the active-only default removes.
+  void snomedConceptInCodeListSelectsTheListedConceptsAndExcludesInactiveOnes() {
+    // A list of codes names individual concepts, even on SNOMED CT: the reference set concept is
+    // selected, not its members. The inactive DIABETES_INACTIVE is removed by the active-only
+    // default.
     final VclFilter filter =
         new VclFilter(
             "concept",
             VclFilterOperator.IN,
-            new VclCodeListValue(List.of(Rf2Mini.SIMPLE_REFSET, Rf2Mini.SAME_AS_REFSET)));
-    assertEquals(
-        Set.of(
-            Rf2Mini.TYPE1_DIABETES,
-            Rf2Mini.TYPE2_DIABETES,
-            Rf2Mini.GESTATIONAL_DIABETES,
-            Rf2Mini.ASSOCIATED_FILLER_1,
-            Rf2Mini.ASSOCIATED_FILLER_2,
-            Rf2Mini.ASSOCIATED_FILLER_3),
-        codes(filter));
+            new VclCodeListValue(
+                List.of(Rf2Mini.SIMPLE_REFSET, Rf2Mini.DIABETES, Rf2Mini.DIABETES_INACTIVE)));
+    assertEquals(Set.of(Rf2Mini.SIMPLE_REFSET, Rf2Mini.DIABETES), codes(filter));
+  }
+
+  @Test
+  void snomedConceptNotInCodeListExcludesOnlyTheListedConcepts() {
+    // The complement of the listed concepts over the active concepts. Members of the listed
+    // reference set are not excluded, because the list names concepts rather than reference sets.
+    final Set<String> expected = codes(new VclWildcard());
+    expected.removeAll(Set.of(Rf2Mini.SIMPLE_REFSET, Rf2Mini.DIABETES));
+    final VclFilter filter =
+        new VclFilter(
+            "concept",
+            VclFilterOperator.NOT_IN,
+            new VclCodeListValue(List.of(Rf2Mini.SIMPLE_REFSET, Rf2Mini.DIABETES)));
+    final Set<String> result = codes(filter);
+    assertEquals(expected, result);
+    assertTrue(result.contains(Rf2Mini.TYPE1_DIABETES));
   }
 
   @Test

@@ -411,26 +411,36 @@ class LocalTerminologyServiceExpandTest {
   }
 
   @Test
-  void suppliedSnomedConceptInFilterWithCommaSeparatedValuesUnionsReferenceSets() {
-    // A comma-separated value names several reference sets; whitespace around the commas is
-    // ignored.
+  void suppliedSnomedConceptInFilterWithCommaSeparatedValuesSelectsTheListedConcepts() {
+    // Several comma-separated values name individual concepts rather than reference sets, so the
+    // reference set concept itself is selected and its members are not. Whitespace around the
+    // commas is ignored.
     final ValueSetExpansion expansion =
         snomedService.expand(
             conceptFilterValueSet(
                 Rf2Mini.SNOMED_URI,
                 ValueSet.FilterOperator.IN,
-                Rf2Mini.SIMPLE_REFSET + " , " + Rf2Mini.SAME_AS_REFSET),
+                Rf2Mini.SIMPLE_REFSET + " , " + Rf2Mini.DIABETES),
             NO_LIMIT);
 
-    assertEquals(
-        Set.of(
-            Rf2Mini.TYPE1_DIABETES,
-            Rf2Mini.TYPE2_DIABETES,
-            Rf2Mini.GESTATIONAL_DIABETES,
-            Rf2Mini.ASSOCIATED_FILLER_1,
-            Rf2Mini.ASSOCIATED_FILLER_2,
-            Rf2Mini.ASSOCIATED_FILLER_3),
-        Set.copyOf(codes(expansion)));
+    assertEquals(Set.of(Rf2Mini.SIMPLE_REFSET, Rf2Mini.DIABETES), Set.copyOf(codes(expansion)));
+  }
+
+  @Test
+  void suppliedSnomedConceptNotInFilterWithCommaSeparatedValuesExcludesTheListedConcepts() {
+    final List<String> codes =
+        codes(
+            snomedService.expand(
+                conceptFilterValueSet(
+                    Rf2Mini.SNOMED_URI,
+                    ValueSet.FilterOperator.NOTIN,
+                    Rf2Mini.SIMPLE_REFSET + "," + Rf2Mini.DIABETES),
+                NO_LIMIT));
+
+    assertFalse(codes.contains(Rf2Mini.SIMPLE_REFSET));
+    assertFalse(codes.contains(Rf2Mini.DIABETES));
+    // Members of the listed reference set remain, because the list names concepts.
+    assertTrue(codes.contains(Rf2Mini.TYPE1_DIABETES));
   }
 
   @Test
