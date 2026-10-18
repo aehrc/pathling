@@ -43,9 +43,11 @@ import java.io.UncheckedIOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.ValueSet;
 import org.hl7.fhir.r4.model.ValueSet.ConceptSetComponent;
@@ -374,6 +376,121 @@ class LocalTerminologyServiceExpandTest {
 
     assertEquals(
         List.of(Rf2Mini.TYPE2_DIABETES, Rf2Mini.TYPE2_WITH_COMPLICATION), codes(expansion));
+  }
+
+  @Nonnull
+  private static ValueSet conceptFilterValueSet(
+      @Nonnull final String system,
+      @Nonnull final ValueSet.FilterOperator operator,
+      @Nonnull final String value) {
+    final ValueSet supplied = valueSet("http://example.org/ValueSet/supplied");
+    supplied
+        .getCompose()
+        .addInclude()
+        .setSystem(system)
+        .addFilter()
+        .setProperty("concept")
+        .setOp(operator)
+        .setValue(value);
+    return supplied;
+  }
+
+  @Test
+  void suppliedSnomedConceptInFilterSelectsReferenceSetMembers() {
+    // The compose form used by NCTS value sets such as australian-medication-1: on SNOMED CT,
+    // "concept in X" is membership of reference set X.
+    final ValueSetExpansion expansion =
+        snomedService.expand(
+            conceptFilterValueSet(
+                Rf2Mini.SNOMED_URI, ValueSet.FilterOperator.IN, Rf2Mini.SIMPLE_REFSET),
+            NO_LIMIT);
+
+    assertEquals(
+        Set.of(Rf2Mini.TYPE1_DIABETES, Rf2Mini.TYPE2_DIABETES, Rf2Mini.GESTATIONAL_DIABETES),
+        Set.copyOf(codes(expansion)));
+  }
+
+  @Test
+  void suppliedSnomedConceptInFilterWithCommaSeparatedValuesSelectsTheListedConcepts() {
+    // Several comma-separated values name individual concepts rather than reference sets, so the
+    // reference set concept itself is selected and its members are not. Whitespace around the
+    // commas is ignored.
+    final ValueSetExpansion expansion =
+        snomedService.expand(
+            conceptFilterValueSet(
+                Rf2Mini.SNOMED_URI,
+                ValueSet.FilterOperator.IN,
+                Rf2Mini.SIMPLE_REFSET + " , " + Rf2Mini.DIABETES),
+            NO_LIMIT);
+
+    assertEquals(Set.of(Rf2Mini.SIMPLE_REFSET, Rf2Mini.DIABETES), Set.copyOf(codes(expansion)));
+  }
+
+  @Test
+  void suppliedSnomedConceptNotInFilterWithCommaSeparatedValuesExcludesTheListedConcepts() {
+    final List<String> codes =
+        codes(
+            snomedService.expand(
+                conceptFilterValueSet(
+                    Rf2Mini.SNOMED_URI,
+                    ValueSet.FilterOperator.NOTIN,
+                    Rf2Mini.SIMPLE_REFSET + "," + Rf2Mini.DIABETES),
+                NO_LIMIT));
+
+    assertFalse(codes.contains(Rf2Mini.SIMPLE_REFSET));
+    assertFalse(codes.contains(Rf2Mini.DIABETES));
+    // Members of the listed reference set remain, because the list names concepts.
+    assertTrue(codes.contains(Rf2Mini.TYPE1_DIABETES));
+  }
+
+  @Test
+  void suppliedSnomedConceptNotInFilterExcludesReferenceSetMembers() {
+    final List<String> codes =
+        codes(
+            snomedService.expand(
+                conceptFilterValueSet(
+                    Rf2Mini.SNOMED_URI, ValueSet.FilterOperator.NOTIN, Rf2Mini.SIMPLE_REFSET),
+                NO_LIMIT));
+
+    assertFalse(codes.contains(Rf2Mini.TYPE1_DIABETES));
+    assertFalse(codes.contains(Rf2Mini.TYPE2_DIABETES));
+    assertFalse(codes.contains(Rf2Mini.GESTATIONAL_DIABETES));
+    // Concepts outside the reference set remain, including the reference set concept itself.
+    assertTrue(codes.contains(Rf2Mini.DIABETES));
+    assertTrue(codes.contains(Rf2Mini.SIMPLE_REFSET));
+  }
+
+  @Test
+  void suppliedNonSnomedConceptInFilterSelectsCommaSeparatedCodes() {
+    // Outside SNOMED CT, "concept in" selects the listed codes.
+    final ValueSetExpansion expansion =
+        fhirService.expand(
+            conceptFilterValueSet(
+                FhirFixtures.ANIMAL_SPECIES,
+                ValueSet.FilterOperator.IN,
+                FhirFixtures.DOG + "," + FhirFixtures.WHALE),
+            NO_LIMIT);
+
+    assertEquals(Set.of(FhirFixtures.DOG, FhirFixtures.WHALE), Set.copyOf(codes(expansion)));
+  }
+
+  @Test
+  void suppliedNonSnomedConceptNotInFilterExcludesCommaSeparatedCodes() {
+    final ValueSet whole = valueSet("http://example.org/ValueSet/whole");
+    whole.getCompose().addInclude().setSystem(FhirFixtures.ANIMAL_SPECIES);
+    final Set<String> expected = new HashSet<>(codes(fhirService.expand(whole, NO_LIMIT)));
+    expected.removeAll(Set.of(FhirFixtures.DOG, FhirFixtures.WHALE));
+
+    final ValueSetExpansion expansion =
+        fhirService.expand(
+            conceptFilterValueSet(
+                FhirFixtures.ANIMAL_SPECIES,
+                ValueSet.FilterOperator.NOTIN,
+                FhirFixtures.DOG + "," + FhirFixtures.WHALE),
+            NO_LIMIT);
+
+    assertTrue(expected.contains(FhirFixtures.CAT));
+    assertEquals(expected, Set.copyOf(codes(expansion)));
   }
 
   @Test
