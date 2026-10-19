@@ -97,7 +97,7 @@ public class TerminologyServiceHelpers {
     public ValidateExpectations withCodes(
         @Nonnull final String valueSetUrl, @Nonnull final String... codes) {
       for (final String code : codes) {
-        when(mockService.validateCodeInferringSystem(eq(valueSetUrl), eq(code))).thenReturn(true);
+        when(mockService.validateCodeInferringSystem(valueSetUrl, code)).thenReturn(true);
       }
       return this;
     }

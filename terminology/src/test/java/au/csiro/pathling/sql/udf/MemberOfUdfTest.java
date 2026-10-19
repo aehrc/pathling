@@ -76,6 +76,8 @@ class MemberOfUdfTest extends AbstractTerminologyTestBase {
   @Test
   void testNullValueSetUrl() {
     assertNull(memberUdf.call(encode(CODING_LACERATION_OF_FOOT), null));
+    assertNull(memberUdf.call(CODE_A, null));
+    verifyNoMoreInteractions(terminologyService);
   }
 
   @Test

@@ -157,6 +157,17 @@ class CachingTerminologyServiceTest {
             true,
             false),
 
+        // Validate a code without a system against a value set that the server cannot find. The
+        // unknown result is cached, as it is for a coding.
+        new TestParameters(
+            "invalid validate-code inferring system",
+            () ->
+                terminologyService.validateCodeInferringSystem(
+                    NON_EXISTENT_VALUE_SET, CHLOROQUINE_POISONING_CODING.getCode()),
+            null,
+            true,
+            false),
+
         // Invalid subsumes request (parameters that do not pass validation).
         new TestParameters(
             "invalid subsumes",
