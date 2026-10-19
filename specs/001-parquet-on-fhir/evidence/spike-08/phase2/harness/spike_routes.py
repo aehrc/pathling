@@ -4,8 +4,9 @@
                  documents (the fit pass), the inferred schema compared with the definitions path by path,
                  from_json per value where a complex path disagrees, and SQL generated from the definitions
                  that checks every value and builds the stored layout and the findings. Egress: to_json with
-                 every decimal marked and unmarked after (the existing T100j mechanism), and empty structures
-                 and null-only arrays left out (FR-019).
+                 every decimal marked and unmarked after (the existing T100j mechanism). Like A0's egress,
+                 it leaves a null structure null and passes an all-null structure or a null-holding array
+                 through as it is (decision 71), relying on the stored layout to carry neither.
   APlusRoute     A+, XML: the from_xml route, with the gaps closed that a fair comparison needs (a prefixed
                  FHIR namespace is read, a missing one is refused, text or a second root after the document
                  is refused through Spike08XmlDocCheck), and the same generated checks. Egress: to_xml, the
@@ -782,28 +783,6 @@ def _keep(route, node, observed):
 
 # ---------------------------------------------------------------------------------------- egress (A+)
 
-def _first(arr):
-    return F.try_element_at(arr, F.lit(1))
-
-
-def _nonempty_struct(s, names):
-    """The struct, or null where every field is null (FR-019), evaluating the struct once."""
-    if not names:
-        return F.lit(None)
-    return _first(F.filter(F.array(s), lambda y: _any([y[n].isNotNull() for n in names])))
-
-
-def _nonempty_array(a):
-    return _first(F.filter(F.array(a), lambda y: F.size(y) > 0))
-
-
-def _any(conds):
-    out = conds[0]
-    for c in conds[1:]:
-        out = out | c
-    return out
-
-
 def _egress_fields(node, stype, acc, xml):
     cols, names = [], []
     for f in stype.fields:
@@ -825,7 +804,7 @@ def _egress_fields(node, stype, acc, xml):
             child, inner = node.child(e), _inner(f.dataType)
             one = _struct_out(child, inner, xml)
         if isinstance(f.dataType, ArrayType):
-            out = _nonempty_array(F.filter(F.transform(col, lambda v: one(v)), lambda v: v.isNotNull()))
+            out = F.transform(col, lambda v: one(v))
         else:
             out = one(col)
         cols.append(out.alias(f.name))
@@ -834,9 +813,11 @@ def _egress_fields(node, stype, acc, xml):
 
 
 def _struct_out(child, inner, xml):
+    """A stored structure that is null stays null; one whose every field is null, and an array holding
+    nulls, pass through as they are (decision 71), as A0's egress does."""
     def one(v):
-        cols, names = _egress_fields(child, inner, lambda n: v[n], xml)
-        return _nonempty_struct(F.struct(*cols), names) if cols else F.lit(None)
+        cols, _ = _egress_fields(child, inner, lambda n: v[n], xml)
+        return F.when(v.isNotNull(), F.struct(*cols)) if cols else F.lit(None)
     return one
 
 

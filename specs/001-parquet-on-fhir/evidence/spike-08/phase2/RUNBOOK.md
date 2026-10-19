@@ -49,7 +49,7 @@ plan-building time in Python, which does not grow with the data.
 | Label | Expected | Plausible range | Note |
 |---|---|---|---|
 | `p2-a0-r1`, `p2-a0-r2`, `p2-a0-r3` | 60 min each | 55 to 70 | Phase 1 took 59 to 63 minutes |
-| `p2-aplus-r1` and `-r2` | 1 h each | 0.75 to 2 h | Its egress SQL for Condition and Encounter exceeds the JVM's 64 KB method limit, so Spark falls back from code generation to interpreted evaluation. How slow that is over half a million rows is the main unknown |
+| `p2-aplus-r1` and `-r2` | 1 h each | 0.75 to 2 h | Estimated when its egress still overflowed the JVM's 64 KB method limit for Condition and Encounter, which it no longer does at size `s` (README, deviation 6), so probably high |
 | `p2-b-r1` and `-r2` | 12 min each | 8 to 23 | |
 | `p2-avariant-r1` and `-r2` | 23 min each | 15 to 45 | Its encode at size `s` was about 20 times B's |
 | `p2-messy-pathling`, `-aplus`, `-avariant`, `-b` | 2, 8, 23 and 2 min | | JSON only, extensions on only |
@@ -157,6 +157,10 @@ minimum of fewer samples runs higher. So a candidate is compared only on its two
 `pooled_phases.py` does when given the quoted glob `p2-<candidate>-r?-514f8f8`, because it globs the label
 into the results directory. A ratio from one candidate label alone is biased against the candidate. The messy
 labels have five samples each, A0's included, so they compare with each other directly.
+
+**Code generation.** Grep every label's logs and `.err` files for `Code grows beyond 64 KB`, and attribute
+each one to the fit, encode or decode phase it occurred in. None occurred at size `s`, but the fitted schema at
+size `l` is larger.
 
 `--py4j` subtracts the time A+ and A-variant spend building their plans in Python, which is recorded per sample.
 It is a prototype artefact: a JVM implementation builds the same plan in milliseconds. Report the figures both

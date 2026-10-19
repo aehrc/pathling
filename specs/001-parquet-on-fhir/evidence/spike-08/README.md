@@ -462,7 +462,7 @@ names the resource, the path and the value, and `drop`, with an opt-in `_finding
 
 | | Ingest | Egress | Where |
 |---|---|---|---|
-| **A+** | Then `spark.read.json` with the inferred schema of the marked documents, which is the fit pass, and comparison with the definitions path by path. A complex path that widened to text is resolved per value with `from_json`, typed by a second inference over just its values of the declared shape. Generated SQL makes the checks and builds the stored values and the findings | `to_json`, with each decimal marked and unmarked after (the existing T100j mechanism), so it is written with its text; empty structures and null-only arrays left out (FR-019) | `Spike08Marker.java`; `spike_routes.py` (`MarkedJson`, `Gen`, `APlusRoute`, egress) |
+| **A+** | Then `spark.read.json` with the inferred schema of the marked documents, which is the fit pass, and comparison with the definitions path by path. A complex path that widened to text is resolved per value with `from_json`, typed by a second inference over just its values of the declared shape. Generated SQL makes the checks and builds the stored values and the findings | `to_json`, with each decimal marked and unmarked after (the existing T100j mechanism), so it is written with its text. Like A0, a null structure stays null and an all-null structure or a null-holding array passes through (decision 71) | `Spike08Marker.java`; `spike_routes.py` (`MarkedJson`, `Gen`, `APlusRoute`, egress) |
 | **A+, XML** | The `from_xml` route with the gaps phase 1 found closed: a prefixed FHIR namespace is rewritten and read; a missing namespace, text after the root and a second root are refused (`Spike08XmlDocCheck`, a full StAX pass per document); a primitive is parsed in the shape the definitions give it, so text content or a repeated singular element is a finding for that row, not a column lost. The same generated checks follow | `to_xml`, decimal text as stored, empty elements left out | `XmlText`, `APlusRoute.fit_xml`; `Spike08XmlDocCheck.java` |
 | **A-variant** | `parse_json`, then `schema_of_variant_agg` as the fit pass. A path whose rows disagree, merged to `VARIANT`, is resolved by a second aggregation over its values of the declared shape. Objects are read as `map<string, variant>`, so extra keys are found; token types come from `schema_of_variant`. `Spike08JsonDocCheck`, a Jackson pass per document, refuses a top-level array and text after the object, which `parse_json` accepts | HEAD's, as ticket 08 says | `Variant`, `AVariantRoute`; `Spike08JsonDocCheck.java` |
 | **B** | A streaming parser of our own over Jackson (JSON) and Woodstox StAX (XML), on one definitions-driven core. The fit pass is one job: each partition streams its documents and returns the paths it saw. Encode parses each document straight into a stored row, checking each value as it goes. Bundles take one pass: every entry's `fullUrl` and id are collected, the type's resources are parsed, and their `urn:` references are patched (FR-062). The narrative is copied by the parser's character offsets | A renderer of our own for JSON and XML, a decimal written with its stored text, empty elements left out | `Spike08B`, `Spike08Json`, `Spike08Xml`, `Spike08Layout`, `Spike08Def`, `Spike08Checks`, `Spike08Findings` |
@@ -502,9 +502,14 @@ compared with HEAD's encoding of the JSON, and the decoded documents with the in
     Encounters and 10,085 Observations.
   - All three candidates lose it in the one bad row only, with one per-value finding naming the path and the
     value.
-- **Code generation.** A+'s generated SQL exceeds the JVM's 64 KB method limit on its egress for Condition and
-  Encounter. Spark then falls back from whole-stage code generation, logging the compile error. The results
-  are correct; the cost is measured at size `l`.
+- **Code generation.** As first built, A+'s egress left out every all-null structure and null-only array
+  itself (the deferred part of FR-019), and the gate then logged nine "Code grows beyond 64 KB" errors for
+  Condition and Encounter, after which Spark fell back from whole-stage code generation. The gate decodes the
+  lazy encoded plan, so ingest and egress were compiled as one stage, and which of them overflowed alone was
+  not established. Once A+'s egress followed decision 71 as A0's does (deviation 6), the same gate, with
+  ingest and egress still in one stage, logged none, and its output was unchanged. Ingest at size `l` has a
+  larger fitted schema than at size `s`, so the size-`l` logs are still to be read for these errors, phase by
+  phase.
 
 ### Coverage (`fixtures/fixtures_candidates.py`, output `fixtures/fixtures_candidates.txt`)
 
@@ -591,3 +596,10 @@ implementation, so their counts indicate size, not a final figure. All three als
 
    Both leave the phase 1 routes' behaviour and recorded fields unchanged. The phase 1 versions are in
    `harness/`, and the extended ones in `phase2/harness/`.
+6. **A+'s egress follows decision 71, as A0's does.** It leaves a null structure null and passes an all-null
+   structure or a null-holding array through as it is, relying on the stored layout to carry neither, as
+   A0's egress does. As first built, it left them out itself at every level, which A0 and A-variant (HEAD's
+   egress) do not do. That nested a filter in every structure and array of the generated expression, and
+   would have timed A+ against a requirement the others do not meet. The owner chose the change on
+   2026-10-19, before any size-`l` run. B's renderer still leaves empty elements out as it writes, which costs
+   it nothing measurable. The size-`s` gate's output is unchanged.
