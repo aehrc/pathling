@@ -10,7 +10,7 @@ the re-measured bar, and the fixture coverage of decision 133. No candidate is c
 |---|---|
 | `probes/` | The four probes, each with its raw output as a `.txt` file of the same name |
 | `harness/` | Copies of the phase harness (`phases.py`, `run-phases.sh`), the `from_xml` prototype (`fromxml_route.py`), its correctness gate (`gate_fromxml.py`), and the comparison scripts (`compare_phases.py`, `summary_phases.py`, `pooled_phases.py`) |
-| `gate/` | The gate's output at size `s` |
+| `gate/` | The gate's output at size `s`, and the direct comparison of the two XML decoders (`decoders_equal.py` and its output) |
 | `fixtures/` | The added JSON and XML fixtures, the runner and its output |
 | `results/` | The result files of the three size-`l` labels with their conditions and notes (`<label>/`), every sample (`comparison.txt`), the per-type tables (`tables.md`), and the pooled ratios (`pooled.txt`) |
 
@@ -19,13 +19,14 @@ evidence stays together. They follow that directory's style.
 
 ## Summary
 
-- **A0 meets the bar.** Pooling the ten samples each label has per item, A0 at `514f8f8` is 0.87 to 1.10 of the
-  PoF switch (`26d7332`) on every source, type and phase. The highest are JSON decode of Encounter (1.10) and
-  Observation (1.07), and XML lines decode of Patient (1.07). The session's own noise is larger than SC-011's
-  10%, so this says "no regression visible", not "within 10%" (see [Noise](#noise)).
+- **No regression visible against the bar, but 10% is not resolved.** Replicates of identical code ranged
+  from 0.59 to 1.51 of each other in this session. Pooled over the ten samples each label has per item, A0 at
+  `514f8f8` is 0.87 to 1.10 of the PoF switch (`26d7332`) on every source, type and phase. The highest are JSON
+  decode of Encounter (1.10) and Observation (1.07), and XML lines decode of Patient (1.07). See
+  [Noise](#noise).
 - **Fit and encode separate cleanly on HEAD**, through public API, and identically on every route. Spark infers
-  the schema eagerly inside `pc.encode`, so the fit is that call and encode is the write. Each phase ran exactly
-  one Spark job on every route.
+  the schema eagerly inside `pc.encode`, so the fit is that call and encode is the write. Every sample of every
+  phase ran exactly one Spark job, on every route (88 result entries checked).
 - **HEAD's XML routes run the HAPI conversion twice**, once in the fit and once in the encode, because it is
   not cached. Every route parses its input twice, once to infer and once to read; on HEAD's XML routes each
   of those parses is a HAPI parse plus a JSON round trip. On XML lines the fit is about 90% of the encode's
@@ -61,8 +62,8 @@ The definitions were fixed before anything was timed, and are in `harness/phases
   Observations under a 16g driver would spill. Decode is a `noop` write of the decoded text, from
   `pc._jpc.decode` on HEAD and `XmlRoute.decode` (`to_xml`) on `from_xml`. A control, the `noop` write of the
   Parquet read alone, gives the scan's share (`parquetScanControlMs`). It is 0.2 to 0.6 s for the large types.
-- Each phase runs in a Spark job group of its own, and its number of jobs is recorded. Every phase of every
-  route ran exactly one job, so no work was found in an unexpected phase.
+- Each phase runs in a Spark job group of its own, and its number of jobs is recorded. Every sample of every
+  phase of every route ran exactly one job, so no work was found in an unexpected phase.
 
 **Fusion.** HEAD does not fuse fit and encode where public API can see it. The fit's scan does, however, include
 the HAPI XML-to-JSON conversion on the XML routes. Because that conversion is not cached, encode runs it again.
@@ -132,8 +133,9 @@ on every source:
 - 421 of 500 for XML Observation.
 
 The XML Observation losses are OQ-1's decimal: `0` becomes `0.0`. The JSON check compares numbers by value and
-cannot see that loss. The `from_xml` route decodes byte for byte what HEAD's decoder decodes: at size `s` its
-decode and HEAD's decode of the same stored data are equal in all 24,424 documents (`gate/gate-s.txt`).
+cannot see that loss. The `from_xml` route decodes byte for byte what HEAD's decoder decodes. At size `s`, both
+decoders were run over the same stored data, and their outputs are string-equal in all 24,424 documents
+(`gate/decoders_equal.py`, output `gate/decoders_equal.txt`).
 
 **Correctness gate (`gate/gate-s.txt`, size `s`).** The datasets the `from_xml` route encodes from XML lines,
 collection Bundles and transaction Bundles are equal, in schema and in every row, to the ones HEAD encodes from
@@ -142,6 +144,11 @@ resolved to `Type/id` through the generated `Reference` columns. The gate's firs
 the optimiser inlined the per-Bundle map of `urn:` URLs into the per-entry lambda, rebuilding it for every
 reference (7.1 s against 0.36 s for HAPI on Observation at size `s`). The map is now materialised once per
 Bundle, behind an `explode` of a one-element array, and the gate was rerun before anything was timed at `l`.
+
+**What the benchmark data does not exercise.** The `clinical-wide` data has no primitive extensions and no
+`contained` resources, and only Patient carries a narrative. The `from_xml` route's metadata groups (`_x`),
+its narrative alignment across Bundle entries other than Patient, and its handling of undescribed content were
+exercised only by the fixtures, and none of them was timed.
 
 ## Noise
 
@@ -156,7 +163,8 @@ example:
 
 The per-setting ratios in `results/tables.md` swing accordingly. A0 against the bar on JSON is 1.02 to 1.27
 with extensions off and 0.66 to 1.01 with them on. Pooling the replicates gives the steadier 0.87 to 1.10
-above. A difference under about 20% between two labels in this session is not resolved by these runs.
+above. That says no regression is visible. A difference of 10%, which is SC-011's tolerance, is not resolved
+by these runs.
 
 ## Conditions
 
@@ -170,7 +178,7 @@ above. A difference under about 20% between two labels in this session is not re
 | Data | `clinical-wide` size `l` from `sql-on-fhir.js` `794e8a7f`: Patient 11,853, Condition 459,617, Encounter 598,548, Observation 1,004,979. XML and Bundles from the harness's `data/` (2026-10-16) |
 | Settings | One warmup plus five iterations in a warm JVM, raw input cached untimed, `max_nesting_level` 3, `--driver-memory 16g`, private Ivy home per label |
 | Schedule | One batch, 2026-10-19: bar 13:11 to 14:14, A0 14:14 to 15:14, `from_xml` 15:14 to 16:00. Nothing else of mine ran during it |
-| Other processes | Two `jdtls` language servers (idle) throughout. IntelliJ with SonarLint was resident at 12:31 and had exited by 13:10. At 13:10 macOS agents (AmbientDisplayAgent, WallpaperAgent, coreaudiod) used about four cores for under a minute, and the batch started after they went idle. Jamf Protect and Microsoft Defender ran at a few percent throughout. During the runs the load average reached 80 to 90. That came from the benchmark JVM itself: no other process was above 12% CPU when checked at 14:24 |
+| Other processes | Two `jdtls` language servers (idle) throughout. IntelliJ with SonarLint was resident at 12:31 and had exited by 13:10. At 13:10 macOS agents (AmbientDisplayAgent, WallpaperAgent, coreaudiod) used about four cores for under a minute, and the batch started after they went idle. Jamf Protect and Microsoft Defender ran at a few percent throughout. During the runs the load average reached 80 to 90. **That it came from the benchmark JVM's own threads is an inference**: no other process was above 12% CPU when checked at 14:24, but the cause was not established. Swap was in use after the batch (`vm.swapusage`: 2.79 GB of 4 GB used at 16:20), which is a possible lead. The 2026-10-17 runs, on the same harness, saw about 5% noise between labels, against up to 50% between replicates here |
 
 ## The four unknowns
 
@@ -313,8 +321,8 @@ Each fixture is encoded alone and decoded. The outcome is compared with what dec
 | Loss | JSON route | `from_xml` | HAPI XML |
 |---|---|---|---|
 | The decimal's lexical form (T124b, T132, T134h) | `1.50` → `1.5`, `0.000000123456789` → `1.23456789E-7`, `12345678901234567890.12345` → `1.2345678901234567E19`, `1.0e2` → `100.0`. An integral decimal is stored as `100` or `100.0` depending on the rest of the batch | Same, through a double | Same |
-| The granularity of a contradicting value (T124j) | **Whole column, for every row of the batch.** In one batch of 38 Patients, one `name` given as an object removed `name` from all 38, and one `gender` given as an array nulled every `gender` | Same: one repeated `gender` nulls `gender` for every Patient in the batch | Not observed: HAPI keeps the first value, per row |
-| Numbers stored as text without a finding (T124j) | `"family": 123` alone is nulled with a column finding. In a batch with string families it is **stored as `"123"` silently**. A `birthDate` given as an array, in a batch, is stored as the **text `["1980-01-01"]`** | Not applicable (all values are text) | Not applicable |
+| The granularity of a contradicting value (T124j) | **Whole column, for every row of the batch.** In one batch of 38 Patients, one `"active": "true"` nulled `active` in every row, and one `name` given as an object removed `name` from every Patient that carried one | Same: one repeated `gender` nulls `gender` for every Patient in the batch, and one repeated `family` nulls every `family` | Not observed: HAPI keeps the first value, per row |
+| Numbers and structures stored as text without a finding (T124j) | `"family": 123` alone is nulled with a column finding. In a batch with string families it is **stored as `"123"` silently**. In the same batch, `gender` and `birthDate` given as arrays are stored as the **text `["male","female"]` and `["1980-01-01"]`**: the column widened to string, so the bad row holds a wrong value and the other rows keep theirs | Not applicable (all values are text) | Not applicable |
 | Empty structures and null-only arrays on export (T134h) | `maritalStatus: {}` alone disappears. In a batch it is stored as `{coding: null}`, a present structure holding nothing, which egress writes back | Same: `<maritalStatus/>` in a batch is stored as a present, empty structure | - |
 | Per-value findings, and values a converter cannot store (T124a, T134g) | None per value. An integer overflow and bad base64 become null silently | Same | Fails the job instead |
 | The `_x` array without `x` (T078e) | Element kept (`given: null`), extension lost with a column finding | Same; in a batch, `given: [null]` | Dropped, as HAPI drops it |
@@ -360,7 +368,7 @@ That is `fixtures_run.txt`, under "batch".
 - **B** is unaffected by the probes. It is the only candidate whose parser would see JSON syntax errors (a
   duplicate key, a top-level array, trailing text) as a matter of course.
 - **Ticket 31.** An unparseable stored decimal is already empty and never fails, so principle 7 holds for
-  decimals today, unlike dates. Three things contradict principle 1's one-grammar intent: surrounding
+  decimals today, unlike dates. Three things contradict principle 7's one grammar: surrounding
   whitespace is accepted, a valid 40-digit decimal reads as empty, and the quantity comparison reads that
   decimal differently from the decimal path.
 
@@ -423,6 +431,7 @@ export PYSPARK_PYTHON=$P PYSPARK_DRIVER_PYTHON=$P PYSPARK_SUBMIT_ARGS="--driver-
 S=/Users/szu004/dev/sql-on-fhir.js/benchmark/data/synthea-clinical-wide/1/s
 $P scripts/gate_fromxml.py $S data/xml/s data/xml-bundles/s data/xml-bundles-txn/s Patient Condition Encounter Observation
 E=<pathling>/specs/001-parquet-on-fhir/evidence
+(cd $E/spike-08/gate && $P decoders_equal.py $H/scripts $H/data/xml/s Patient Condition Encounter Observation)
 (cd $E/spike-08/fixtures && $P fixtures_run.py $H/scripts $E/ingress-strictness .)   # writes fixtures_run.txt
 (cd $E/spike-08/probes && $P -I engine_decimal_probe.py)
 # Probes 1 to 3 on the project's PySpark 4.0.2:

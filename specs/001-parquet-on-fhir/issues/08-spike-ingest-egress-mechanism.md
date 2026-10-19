@@ -105,8 +105,9 @@ Evidence: `evidence/spike-08/README.md`. A0, the floor, measured on a harness th
 and decode apart. The bar `26d7332` was re-measured on the same harness (SC-011 names the JMH benchmark, which
 moves to ticket 16).
 
-- Pooled over both replicates, A0 is 0.87 to 1.10 of the bar on every source, type and phase. Replicate noise
-  in the session was up to ±25%.
+- No regression is visible against the bar, but 10% is not resolved. Replicates of identical code ranged from
+  0.59 to 1.51 of each other in this session. Pooled over both replicates, A0 is 0.87 to 1.10 of the bar on
+  every source, type and phase.
 - The `from_xml` XML route, generated from the definitions, matches HEAD's JSON encoding at size `s`. At size
   `l`, against HEAD's HAPI route on the large types, it fits lines at 0.50 to 0.61, encodes at 0.67 to 0.99 and
   decodes at about 0.5 to 0.65. Its Bundle fit is a constant per type.

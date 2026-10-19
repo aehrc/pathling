@@ -1,0 +1,4 @@
+Patient      documents 125  from_xml decoder 125  byte-identical 125  differ 0
+Condition    documents 6406  from_xml decoder 6406  byte-identical 6406  differ 0
+Encounter    documents 7808  from_xml decoder 7808  byte-identical 7808  differ 0
+Observation  documents 10085  from_xml decoder 10085  byte-identical 10085  differ 0

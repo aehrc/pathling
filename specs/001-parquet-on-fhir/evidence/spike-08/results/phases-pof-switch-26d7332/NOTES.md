@@ -11,5 +11,6 @@ extensions off and on. The definitions are in `scripts/phases.py` and in the spi
 
 Other processes: two `jdtls` language servers (idle). IntelliJ and SonarLint, resident at 12:31, had exited
 before the run. Before the run, macOS agents (AmbientDisplayAgent, WallpaperAgent and coreaudiod) briefly used
-about four cores. The batch started once they were idle. During the runs the load average reached 80 to 90, which
-came from the benchmark JVM's own threads: no other process was above 12% CPU when checked at 14:24.
+about four cores. The batch started once they were idle. During the runs the load average reached 80 to 90. That it
+came from the benchmark JVM's own threads is an inference, not established: no other process was above 12% CPU
+when checked at 14:24. Swap was in use after the batch (2.79 GB of 4 GB at 16:20), which is a possible lead.
