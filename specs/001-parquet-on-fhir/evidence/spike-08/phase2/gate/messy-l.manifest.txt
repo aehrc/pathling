@@ -1,0 +1,4 @@
+Patient line 5927 id 80d505a7-0242-d806-93eb-8ba6aa847b4f path name
+Condition line 229809 id 7fda51fc-4959-8512-dc58-7d6876e6fde8 path code.coding
+Encounter line 299275 id 7fdf137e-fdd3-d0fd-2963-e32df0e573bb path type
+Observation line 502490 id 8001518b-6fd8-3772-4b76-29946a4b7a65 path code.coding

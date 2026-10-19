@@ -1,0 +1,104 @@
+##### b
+== Patient
+   json             rows 125 vs 125  schema equal  value diffs 0  decimal-text diffs 1
+      decode: 125 documents, equal by value 125, lexically 125
+   xml-lines        rows 125 vs 125  schema equal  value diffs 0  decimal-text diffs 1
+      decode: 125 documents, exact 125, canonical 125
+   xml-bundles      rows 125 vs 125  schema equal  value diffs 0  decimal-text diffs 1
+      decode: 125 documents, exact 125, canonical 125
+   xml-bundles-txn  rows 125 vs 125  schema equal  value diffs 0  decimal-text diffs 1
+      decode: 125 documents, exact 125, canonical 125
+== Condition
+   json             rows 6406 vs 6406  schema equal  value diffs 0  decimal-text diffs 0
+      decode: 6406 documents, equal by value 6406, lexically 6406
+   xml-lines        rows 6406 vs 6406  schema equal  value diffs 0  decimal-text diffs 0
+      decode: 6406 documents, exact 6406, canonical 6406
+   xml-bundles      rows 6406 vs 6406  schema equal  value diffs 0  decimal-text diffs 0
+      decode: 6406 documents, exact 6406, canonical 6406
+   xml-bundles-txn  rows 6406 vs 6406  schema equal  value diffs 0  decimal-text diffs 0
+      decode: 6406 documents, exact 6406, canonical 6406
+== Encounter
+   json             rows 7808 vs 7808  schema equal  value diffs 0  decimal-text diffs 0
+      decode: 7808 documents, equal by value 7808, lexically 7808
+   xml-lines        rows 7808 vs 7808  schema equal  value diffs 0  decimal-text diffs 0
+      decode: 7808 documents, exact 7808, canonical 7808
+   xml-bundles      rows 7808 vs 7808  schema equal  value diffs 0  decimal-text diffs 0
+      decode: 7808 documents, exact 7808, canonical 7808
+   xml-bundles-txn  rows 7808 vs 7808  schema equal  value diffs 0  decimal-text diffs 0
+      decode: 7808 documents, exact 7808, canonical 7808
+== Observation
+   json             rows 10085 vs 10085  schema equal  value diffs 0  decimal-text diffs 2411
+      decode: 10085 documents, equal by value 10085, lexically 10085
+   xml-lines        rows 10085 vs 10085  schema equal  value diffs 0  decimal-text diffs 2411
+      decode: 10085 documents, exact 10085, canonical 10085
+   xml-bundles      rows 10085 vs 10085  schema equal  value diffs 0  decimal-text diffs 2411
+      decode: 10085 documents, exact 10085, canonical 10085
+   xml-bundles-txn  rows 10085 vs 10085  schema equal  value diffs 0  decimal-text diffs 2411
+      decode: 10085 documents, exact 10085, canonical 10085
+##### aplus
+== Patient
+   json             rows 125 vs 125  schema equal  value diffs 0  decimal-text diffs 1
+      decode: 125 documents, equal by value 125, lexically 125
+   xml-lines        rows 125 vs 125  schema equal  value diffs 0  decimal-text diffs 1
+      decode: 125 documents, exact 125, canonical 125
+   xml-bundles      rows 125 vs 125  schema equal  value diffs 0  decimal-text diffs 1
+      decode: 125 documents, exact 125, canonical 125
+   xml-bundles-txn  rows 125 vs 125  schema equal  value diffs 0  decimal-text diffs 1
+      decode: 125 documents, exact 125, canonical 125
+== Condition
+   json             rows 6406 vs 6406  schema equal  value diffs 0  decimal-text diffs 0
+      decode: 6406 documents, equal by value 6406, lexically 6406
+   xml-lines        rows 6406 vs 6406  schema equal  value diffs 0  decimal-text diffs 0
+      decode: 6406 documents, exact 6406, canonical 6406
+   xml-bundles      rows 6406 vs 6406  schema equal  value diffs 0  decimal-text diffs 0
+      decode: 6406 documents, exact 6406, canonical 6406
+   xml-bundles-txn  rows 6406 vs 6406  schema equal  value diffs 0  decimal-text diffs 0
+      decode: 6406 documents, exact 6406, canonical 6406
+== Encounter
+   json             rows 7808 vs 7808  schema equal  value diffs 0  decimal-text diffs 0
+      decode: 7808 documents, equal by value 7808, lexically 7808
+   xml-lines        rows 7808 vs 7808  schema equal  value diffs 0  decimal-text diffs 0
+      decode: 7808 documents, exact 7808, canonical 7808
+   xml-bundles      rows 7808 vs 7808  schema equal  value diffs 0  decimal-text diffs 0
+      decode: 7808 documents, exact 7808, canonical 7808
+   xml-bundles-txn  rows 7808 vs 7808  schema equal  value diffs 0  decimal-text diffs 0
+      decode: 7808 documents, exact 7808, canonical 7808
+== Observation
+   json             rows 10085 vs 10085  schema equal  value diffs 0  decimal-text diffs 2411
+      decode: 10085 documents, equal by value 10085, lexically 10085
+   xml-lines        rows 10085 vs 10085  schema equal  value diffs 0  decimal-text diffs 2411
+      decode: 10085 documents, exact 10085, canonical 10085
+   xml-bundles      rows 10085 vs 10085  schema equal  value diffs 0  decimal-text diffs 2411
+      decode: 10085 documents, exact 10085, canonical 10085
+   xml-bundles-txn  rows 10085 vs 10085  schema equal  value diffs 0  decimal-text diffs 2411
+      decode: 10085 documents, exact 10085, canonical 10085
+##### avariant
+== Patient
+   json             rows 125 vs 125  schema equal  value diffs 0  decimal-text diffs 29
+      decode: 125 documents, equal by value 125, lexically 124
+== Condition
+   json             rows 6406 vs 6406  schema equal  value diffs 0  decimal-text diffs 0
+      decode: 6406 documents, equal by value 6406, lexically 6406
+== Encounter
+   json             rows 7808 vs 7808  schema equal  value diffs 0  decimal-text diffs 0
+      decode: 7808 documents, equal by value 7808, lexically 7808
+== Observation
+   json             rows 10085 vs 10085  schema equal  value diffs 0  decimal-text diffs 2411
+      decode: 10085 documents, equal by value 10085, lexically 8088
+##### messy (drop), against HEAD's encoding of the clean data
+pathling  Patient      rows 125 vs 125  differing rows 125  in ['name']  findings 0
+pathling  Condition    rows 6406 vs 6406  differing rows 6406  in ['code']  findings 0
+pathling  Encounter    rows 7808 vs 7808  differing rows 7808  in ['type']  findings 0
+pathling  Observation  rows 10085 vs 10085  differing rows 10085  in ['code']  findings 0
+aplus     Patient      rows 125 vs 125  differing rows 1  in ['name']  findings 1  e.g. {'path': 'Patient.name', 'kind': 'shape', 'value': '{"use":"official","family":"Weber641","given":["Brett333","Timothy142"],"prefix":["Mr."]}'}
+aplus     Condition    rows 6406 vs 6406  differing rows 1  in ['code']  findings 1  e.g. {'path': 'Condition.code.coding', 'kind': 'shape', 'value': '{"system":"http://snomed.info/sct","code":"274531002","display":"Abnormal findings diagnostic imaging heart+coronary circulat (finding)"}'}
+aplus     Encounter    rows 7808 vs 7808  differing rows 1  in ['type']  findings 1  e.g. {'path': 'Encounter.type', 'kind': 'shape', 'value': '{"coding":[{"system":"http://snomed.info/sct","code":"162673000","display":"General examination of patient (procedure)"}],"text":"General examination of patient (procedure)"}'}
+aplus     Observation  rows 10085 vs 10085  differing rows 1  in ['code']  findings 1  e.g. {'path': 'Observation.code.coding', 'kind': 'shape', 'value': '{"system":"http://loinc.org","code":"20454-5","display":"Protein [Presence] in Urine by Test strip"}'}
+avariant  Patient      rows 125 vs 125  differing rows 1  in ['name']  findings 1  e.g. {'path': 'Patient.name', 'kind': 'shape', 'value': '{"family":"Weber641","given":["Brett333","Timothy142"],"prefix":["Mr."],"use":"official"}'}
+avariant  Condition    rows 6406 vs 6406  differing rows 1  in ['code']  findings 1  e.g. {'path': 'Condition.code.coding', 'kind': 'shape', 'value': '{"code":"274531002","display":"Abnormal findings diagnostic imaging heart+coronary circulat (finding)","system":"http://snomed.info/sct"}'}
+avariant  Encounter    rows 7808 vs 7808  differing rows 1  in ['type']  findings 1  e.g. {'path': 'Encounter.type', 'kind': 'shape', 'value': '{"coding":[{"code":"162673000","display":"General examination of patient (procedure)","system":"http://snomed.info/sct"}],"text":"General examination of patient (procedure)"}'}
+avariant  Observation  rows 10085 vs 10085  differing rows 1  in ['code']  findings 1  e.g. {'path': 'Observation.code.coding', 'kind': 'shape', 'value': '{"code":"20454-5","display":"Protein [Presence] in Urine by Test strip","system":"http://loinc.org"}'}
+b         Patient      rows 125 vs 125  differing rows 1  in ['name']  findings 1  e.g. {'path': 'Patient.name', 'kind': 'shape', 'value': '{...}'}
+b         Condition    rows 6406 vs 6406  differing rows 1  in ['code']  findings 1  e.g. {'path': 'Condition.code.coding', 'kind': 'shape', 'value': '{...}'}
+b         Encounter    rows 7808 vs 7808  differing rows 1  in ['type']  findings 1  e.g. {'path': 'Encounter.type', 'kind': 'shape', 'value': '{...}'}
+b         Observation  rows 10085 vs 10085  differing rows 1  in ['code']  findings 1  e.g. {'path': 'Observation.code.coding', 'kind': 'shape', 'value': '{...}'}

@@ -1,0 +1,568 @@
+spark 4.0.4
+aplus/json    c0-conformant                      store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+aplus/json    c0-decimal-text                    store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+aplus/json    c0-prim-ext-only                   store     no                                   fail: ok
+                                                                                                drop: ok rows=1 roundtrip=False findings: 
+aplus/json    c0-prim-ext-array                  store     no                                   fail: ok
+                                                                                                drop: ok rows=1 roundtrip=False findings: 
+aplus/json    c2-null                            invalid   yes                                  fail: ERROR Invalid content in Resource/p4 at Resource.active (empty): null
+                                                                                                drop: ok rows=1 roundtrip=False findings: Resource.active empty: null
+aplus/json    c2-empty-obj                       invalid   yes                                  fail: ERROR Invalid content in Resource/p5 at Resource.maritalStatus (empty): {}
+                                                                                                drop: ok rows=1 roundtrip=False findings: Resource.maritalStatus empty: {}
+aplus/json    c2-empty-arr                       invalid   yes                                  fail: ERROR Invalid content in Resource/p6 at Resource.identifier (empty): []
+                                                                                                drop: ok rows=1 roundtrip=False findings: Resource.identifier empty: []
+aplus/json    c2-empty-string                    invalid   yes                                  fail: ERROR Invalid content in Resource/p7 at Resource.name[0].family (empty): ""
+                                                                                                drop: ok rows=1 roundtrip=False findings: Resource.name[0].family empty: ""
+aplus/json    c2-fhir-comments                   invalid   yes                                  fail: ERROR Invalid content in Patient/p8: [{"path":"Patient.fhir_comments","kind":"undescribed","value":"[[\"hello\
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.fhir_comments undescribed: [["hello"]]
+aplus/json    c3-unknown-root                    invalid   yes                                  fail: ERROR Invalid content in Patient/p9: [{"path":"Patient.foo","kind":"undescribed","value":"bar"}] SQLSTATE: P00
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.foo undescribed: bar
+aplus/json    c3-unknown-nested                  invalid   yes                                  fail: ERROR Invalid content in Patient/p10: [{"path":"Patient.name[0].nickname","kind":"undescribed","value":"Y"}] S
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.name[0].nickname undescribed: Y
+aplus/json    c3-r5-field                        invalid   yes                                  fail: ERROR Invalid content in Observation/o2: [{"path":"Observation.triggeredBy","kind":"undescribed","value":"[[{\
+                                                                                                drop: ok rows=1 roundtrip=False findings: Observation.triggeredBy undescribed: [[{"observation":{"reference":"Observation/1"},"type":"reflex"}]]
+aplus/json    c4-string-for-integer              invalid   yes                                  fail: ERROR Invalid content in Observation/o3: [{"path":"Observation.valueInteger","kind":"type","value":"5"}] SQLST
+                                                                                                drop: ok rows=1 roundtrip=False findings: Observation.valueInteger type: 5
+aplus/json    c4-string-for-decimal              invalid   yes                                  fail: ERROR Invalid content in Observation/o4: [{"path":"Observation.valueQuantity.value","kind":"type","value":"1.5
+                                                                                                drop: ok rows=1 roundtrip=False findings: Observation.valueQuantity.value type: 1.50
+aplus/json    c4-number-for-string               invalid   yes                                  fail: ERROR Invalid content in Patient/p11: [{"path":"Patient.name[0].family","kind":"type","value":"123"}] SQLSTATE
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.name[0].family type: 123
+aplus/json    c4-string-for-boolean              invalid   yes                                  fail: ERROR Invalid content in Patient/p12: [{"path":"Patient.active","kind":"type","value":"true"}] SQLSTATE: P0001
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.active type: true
+aplus/json    c4-object-for-string               invalid   yes                                  fail: ERROR Invalid content in Patient/p13: [{"path":"Patient.name[0].family","kind":"type","value":"[{\"x\":\"\\u00
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.name[0].family type: [{"x":"\u001E#1"}]
+aplus/json    c5-scalar-for-array                invalid   yes                                  fail: ERROR Invalid content in Patient/p14: [{"path":"Patient.name","kind":"shape","value":"{\"family\":\"X\",\"give
+                                                                                                drop: ERROR 'StringType' o rows=1 roundtrip=None findings: Patient.name shape: {"family":"X","given":"Ann"}
+aplus/json    c5-array-for-scalar                invalid   yes                                  fail: ERROR Invalid content in Patient/p15: [{"path":"Patient.gender","kind":"shape","value":"[\"male\",\"female\"]"
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.gender shape: ["male","female"]; Patient.birthDate shape: ["1980-01-01"]
+aplus/json    c5-nested-array                    invalid   yes                                  fail: ERROR Invalid content in Patient/p16: [{"path":"Patient.name[0].given[0]","kind":"type","value":"[[\"a\",\"b\"
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.name[0].given[0] type: [["a","b"]]
+aplus/json    c6-bad-date                        invalid   yes                                  fail: ERROR Invalid content in Patient/p17: [{"path":"Patient.birthDate","kind":"invalid","value":"1980-13-45"}] SQL
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.birthDate invalid: 1980-13-45
+aplus/json    c6-bad-code-required               store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+aplus/json    c6-int-overflow                    invalid   yes                                  fail: ERROR Invalid content in Observation/o5: [{"path":"Observation.valueInteger","kind":"invalid","value":"9999999
+                                                                                                drop: ok rows=1 roundtrip=False findings: Observation.valueInteger invalid: 99999999999
+aplus/json    c6-bad-id                          store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+aplus/json    c6-bad-uri-ws                      store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+aplus/json    c6-ext-value-and-nested            store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+aplus/json    c6-choice-two-types                unsettled -                                    fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+aplus/json    c7-contained                       contained yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.contained contained: not stored
+aplus/json    c7-no-resourcetype                 unsettled -                                    fail: ok
+                                                                                                drop: ok rows=1 roundtrip=False findings: 
+aplus/json    c7-unknown-resourcetype            left-out  yes                                  fail: ok
+                                                                                                drop: ok rows=0 roundtrip=None findings: 
+aplus/json    c7-wrong-resourcetype              left-out  yes                                  fail: ok
+                                                                                                drop: ok rows=0 roundtrip=None findings: 
+aplus/json    c1-malformed                       reject    yes                                  fail: ERROR Invalid content in Resource/p25 at Resource (malformed): Unexpected end-of-input: expected close marker 
+                                                                                                drop: ERROR MALFORMED_RECO rows=None roundtrip=None findings: 
+aplus/json    c1-duplicate-key                   reject    yes                                  fail: ERROR Invalid content in Resource/p26 at Resource (duplicate): Duplicate field 'gender'
+                                                                                                drop: ERROR MALFORMED_RECO rows=None roundtrip=None findings: 
+aplus/json    c1-top-level-array                 reject    yes                                  fail: ERROR Invalid content in Resource/null at Resource (shape): the document is not one JSON object
+                                                                                                drop: ERROR MALFORMED_RECO rows=None roundtrip=None findings: 
+aplus/json    c1-trailing-text                   reject    yes                                  fail: ERROR Invalid content in Resource/p28 at Resource (malformed): Unrecognized token 'xyz': was expecting (JSON S
+                                                                                                drop: ERROR MALFORMED_RECO rows=None roundtrip=None findings: 
+aplus/json    c5-array-for-string-primitive      invalid   yes                                  fail: ERROR Invalid content in Patient/p29: [{"path":"Patient.name[0].family","kind":"shape","value":"[\"A\",\"B\"]"
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.name[0].family shape: ["A","B"]
+aplus/json    l-datetime-no-tz                   invalid   yes                                  fail: ERROR Invalid content in Patient/q1: [{"path":"Patient.deceasedDateTime","kind":"invalid","value":"2020-01-01T
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.deceasedDateTime invalid: 2020-01-01T10:00:00
+aplus/json    l-datetime-no-seconds              invalid   yes                                  fail: ERROR Invalid content in Patient/q2: [{"path":"Patient.deceasedDateTime","kind":"invalid","value":"2020-01-01T
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.deceasedDateTime invalid: 2020-01-01T10:00Z
+aplus/json    l-date-no-padding                  invalid   yes                                  fail: ERROR Invalid content in Patient/q3: [{"path":"Patient.birthDate","kind":"invalid","value":"2020-1-5"}] SQLSTA
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.birthDate invalid: 2020-1-5
+aplus/json    l-date-with-time                   invalid   yes                                  fail: ERROR Invalid content in Patient/q4: [{"path":"Patient.birthDate","kind":"invalid","value":"2020-01-05T00:00:0
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.birthDate invalid: 2020-01-05T00:00:00Z
+aplus/json    l-instant-date-only                invalid   yes                                  fail: ERROR Invalid content in Observation/q5: [{"path":"Observation.issued","kind":"invalid","value":"2020-01-05"}]
+                                                                                                drop: ok rows=1 roundtrip=False findings: Observation.issued invalid: 2020-01-05
+aplus/json    l-instant-no-tz                    invalid   yes                                  fail: ERROR Invalid content in Observation/q6: [{"path":"Observation.issued","kind":"invalid","value":"2020-01-05T10
+                                                                                                drop: ok rows=1 roundtrip=False findings: Observation.issued invalid: 2020-01-05T10:00:00.000
+aplus/json    l-time-bad                         invalid   yes                                  fail: ERROR Invalid content in Observation/q7: [{"path":"Observation.valueTime","kind":"invalid","value":"25:61:00"}
+                                                                                                drop: ok rows=1 roundtrip=False findings: Observation.valueTime invalid: 25:61:00
+aplus/json    l-code-whitespace                  store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+aplus/json    l-code-required-case               store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+aplus/json    l-positiveint-zero                 invalid   yes                                  fail: ERROR Invalid content in Patient/q10: [{"path":"Patient.photo[0].size","kind":"invalid","value":"-5"}] SQLSTAT
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.photo[0].size invalid: -5
+aplus/json    l-decimal-string-bad               invalid   yes                                  fail: ERROR Invalid content in Observation/q11: [{"path":"Observation.valueQuantity.value","kind":"type","value":"1.
+                                                                                                drop: ok rows=1 roundtrip=False findings: Observation.valueQuantity.value type: 1.2.3
+aplus/json    l-uuid-no-prefix                   store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+aplus/json    l-base64-bad                       invalid   yes                                  fail: ERROR Invalid content in Patient/q13: [{"path":"Patient.photo[0].data","kind":"invalid","value":"not base64 !!
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.photo[0].data invalid: not base64 !!!
+aplus/json    l-string-whitespace-only           store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+aplus/json    c0-prim-ext-array-only             store     no                                   fail: ok
+                                                                                                drop: ok rows=1 roundtrip=False findings: 
+aplus/json    c0-value-integer                   store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+aplus/json    c0-marital                         store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+aplus/json    c0-family                          store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+aplus/json    c0-identifier                      store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+aplus/json    c0-quantity-integral               store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+avariant/json c0-conformant                      store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+avariant/json c0-decimal-text                    store     no                                   fail: ok
+                                                                                                drop: ok rows=1 roundtrip=False findings: 
+avariant/json c0-prim-ext-only                   store     no                                   fail: ok
+                                                                                                drop: ok rows=1 roundtrip=False findings: 
+avariant/json c0-prim-ext-array                  store     no                                   fail: ok
+                                                                                                drop: ok rows=1 roundtrip=False findings: 
+avariant/json c2-null                            invalid   yes                                  fail: ERROR Invalid content in Patient/p4: [{"path":"Patient.active","kind":"empty","value":"null"}] SQLSTATE: P0001
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.active empty: null
+avariant/json c2-empty-obj                       invalid   yes                                  fail: ERROR Invalid content in Patient/p5: [{"path":"Patient.maritalStatus","kind":"empty","value":"{}"}] SQLSTATE: 
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.maritalStatus empty: {}
+avariant/json c2-empty-arr                       invalid   yes                                  fail: ERROR Invalid content in Patient/p6: [{"path":"Patient.identifier","kind":"empty","value":"[]"}] SQLSTATE: P00
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.identifier empty: []
+avariant/json c2-empty-string                    invalid   yes                                  fail: ERROR Invalid content in Patient/p7: [{"path":"Patient.name[0].family","kind":"empty","value":""}] SQLSTATE: P
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.name[0].family empty: 
+avariant/json c2-fhir-comments                   invalid   yes                                  fail: ERROR Invalid content in Patient/p8: [{"path":"Patient.fhir_comments","kind":"undescribed","value":"[\"hello\"
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.fhir_comments undescribed: ["hello"]
+avariant/json c3-unknown-root                    invalid   yes                                  fail: ERROR Invalid content in Patient/p9: [{"path":"Patient.foo","kind":"undescribed","value":"\"bar\""}] SQLSTATE:
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.foo undescribed: "bar"
+avariant/json c3-unknown-nested                  invalid   yes                                  fail: ERROR Invalid content in Patient/p10: [{"path":"Patient.name[0].nickname","kind":"undescribed","value":"\"Y\""
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.name[0].nickname undescribed: "Y"
+avariant/json c3-r5-field                        invalid   yes                                  fail: ERROR Invalid content in Observation/o2: [{"path":"Observation.triggeredBy","kind":"undescribed","value":"[{\"
+                                                                                                drop: ok rows=1 roundtrip=False findings: Observation.triggeredBy undescribed: [{"observation":{"reference":"Observation/1"},"type":"reflex"}]
+avariant/json c4-string-for-integer              invalid   yes                                  fail: ERROR Invalid content in Observation/o3: [{"path":"Observation.valueInteger","kind":"type","value":"5"}] SQLST
+                                                                                                drop: ok rows=1 roundtrip=False findings: Observation.valueInteger type: 5
+avariant/json c4-string-for-decimal              invalid   yes                                  fail: ERROR Invalid content in Observation/o4: [{"path":"Observation.valueQuantity.value","kind":"type","value":"1.5
+                                                                                                drop: ok rows=1 roundtrip=False findings: Observation.valueQuantity.value type: 1.50
+avariant/json c4-number-for-string               invalid   yes                                  fail: ERROR Invalid content in Patient/p11: [{"path":"Patient.name[0].family","kind":"type","value":"123"}] SQLSTATE
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.name[0].family type: 123
+avariant/json c4-string-for-boolean              invalid   yes                                  fail: ERROR Invalid content in Patient/p12: [{"path":"Patient.active","kind":"type","value":"true"}] SQLSTATE: P0001
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.active type: true
+avariant/json c4-object-for-string               invalid   yes                                  fail: ERROR Invalid content in Patient/p13: [{"path":"Patient.name[0].family","kind":"type","value":"{\"x\":1}"}] SQ
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.name[0].family type: {"x":1}
+avariant/json c5-scalar-for-array                invalid   yes                                  fail: ERROR Invalid content in Patient/p14: [{"path":"Patient.name","kind":"shape","value":"{\"family\":\"X\",\"give
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.name shape: {"family":"X","given":"Ann"}
+avariant/json c5-array-for-scalar                invalid   yes                                  fail: ERROR Invalid content in Patient/p15: [{"path":"Patient.gender","kind":"type","value":"[\"male\",\"female\"]"}
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.gender type: ["male","female"]; Patient.birthDate type: ["1980-01-01"]
+avariant/json c5-nested-array                    invalid   yes                                  fail: ERROR Invalid content in Patient/p16: [{"path":"Patient.name[0].given[0]","kind":"type","value":"[\"a\",\"b\"]
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.name[0].given[0] type: ["a","b"]
+avariant/json c6-bad-date                        invalid   yes                                  fail: ERROR Invalid content in Patient/p17: [{"path":"Patient.birthDate","kind":"invalid","value":"1980-13-45"}] SQL
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.birthDate invalid: 1980-13-45
+avariant/json c6-bad-code-required               store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+avariant/json c6-int-overflow                    invalid   yes                                  fail: ERROR Invalid content in Observation/o5: [{"path":"Observation.valueInteger","kind":"invalid","value":"9999999
+                                                                                                drop: ok rows=1 roundtrip=False findings: Observation.valueInteger invalid: 99999999999
+avariant/json c6-bad-id                          store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+avariant/json c6-bad-uri-ws                      store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+avariant/json c6-ext-value-and-nested            store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+avariant/json c6-choice-two-types                unsettled -                                    fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+avariant/json c7-contained                       contained yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.contained contained: not stored
+avariant/json c7-no-resourcetype                 unsettled -                                    fail: ok
+                                                                                                drop: ok rows=1 roundtrip=False findings: 
+avariant/json c7-unknown-resourcetype            left-out  yes                                  fail: ok
+                                                                                                drop: ok rows=0 roundtrip=None findings: 
+avariant/json c7-wrong-resourcetype              left-out  yes                                  fail: ok
+                                                                                                drop: ok rows=0 roundtrip=None findings: 
+avariant/json c1-malformed                       reject    yes                                  fail: ERROR MALFORMED_RECORD_IN_PARSING.WITHOUT_SUGGESTION : org.apache.spark.SparkException: [MALFORMED_RECORD_IN_P
+                                                                                                drop: ok rows=0 roundtrip=None findings: 
+avariant/json c1-duplicate-key                   reject    yes                                  fail: ERROR MALFORMED_RECORD_IN_PARSING.WITHOUT_SUGGESTION VARIANT_DUPLICATE_KEY : org.apache.spark.SparkException: 
+                                                                                                drop: ok rows=0 roundtrip=None findings: 
+avariant/json c1-top-level-array                 reject    yes                                  fail: ERROR Invalid Patient document: shape SQLSTATE: P0001
+                                                                                                drop: ok rows=0 roundtrip=None findings: 
+avariant/json c1-trailing-text                   reject    yes                                  fail: ERROR Invalid Patient document: malformed SQLSTATE: P0001
+                                                                                                drop: ok rows=0 roundtrip=None findings: 
+avariant/json c5-array-for-string-primitive      invalid   yes                                  fail: ERROR Invalid content in Patient/p29: [{"path":"Patient.name[0].family","kind":"type","value":"[\"A\",\"B\"]"}
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.name[0].family type: ["A","B"]
+avariant/json l-datetime-no-tz                   invalid   yes                                  fail: ERROR Invalid content in Patient/q1: [{"path":"Patient.deceasedDateTime","kind":"invalid","value":"2020-01-01T
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.deceasedDateTime invalid: 2020-01-01T10:00:00
+avariant/json l-datetime-no-seconds              invalid   yes                                  fail: ERROR Invalid content in Patient/q2: [{"path":"Patient.deceasedDateTime","kind":"invalid","value":"2020-01-01T
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.deceasedDateTime invalid: 2020-01-01T10:00Z
+avariant/json l-date-no-padding                  invalid   yes                                  fail: ERROR Invalid content in Patient/q3: [{"path":"Patient.birthDate","kind":"invalid","value":"2020-1-5"}] SQLSTA
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.birthDate invalid: 2020-1-5
+avariant/json l-date-with-time                   invalid   yes                                  fail: ERROR Invalid content in Patient/q4: [{"path":"Patient.birthDate","kind":"invalid","value":"2020-01-05T00:00:0
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.birthDate invalid: 2020-01-05T00:00:00Z
+avariant/json l-instant-date-only                invalid   yes                                  fail: ERROR Invalid content in Observation/q5: [{"path":"Observation.issued","kind":"invalid","value":"2020-01-05"}]
+                                                                                                drop: ok rows=1 roundtrip=False findings: Observation.issued invalid: 2020-01-05
+avariant/json l-instant-no-tz                    invalid   yes                                  fail: ERROR Invalid content in Observation/q6: [{"path":"Observation.issued","kind":"invalid","value":"2020-01-05T10
+                                                                                                drop: ok rows=1 roundtrip=False findings: Observation.issued invalid: 2020-01-05T10:00:00.000
+avariant/json l-time-bad                         invalid   yes                                  fail: ERROR Invalid content in Observation/q7: [{"path":"Observation.valueTime","kind":"invalid","value":"25:61:00"}
+                                                                                                drop: ok rows=1 roundtrip=False findings: Observation.valueTime invalid: 25:61:00
+avariant/json l-code-whitespace                  store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+avariant/json l-code-required-case               store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+avariant/json l-positiveint-zero                 invalid   yes                                  fail: ERROR Invalid content in Patient/q10: [{"path":"Patient.photo[0].size","kind":"invalid","value":"-5"}] SQLSTAT
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.photo[0].size invalid: -5
+avariant/json l-decimal-string-bad               invalid   yes                                  fail: ERROR Invalid content in Observation/q11: [{"path":"Observation.valueQuantity.value","kind":"type","value":"1.
+                                                                                                drop: ok rows=1 roundtrip=False findings: Observation.valueQuantity.value type: 1.2.3
+avariant/json l-uuid-no-prefix                   store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+avariant/json l-base64-bad                       invalid   yes                                  fail: ERROR Invalid content in Patient/q13: [{"path":"Patient.photo[0].data","kind":"invalid","value":"not base64 !!
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.photo[0].data invalid: not base64 !!!
+avariant/json l-string-whitespace-only           store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+avariant/json c0-prim-ext-array-only             store     no                                   fail: ok
+                                                                                                drop: ok rows=1 roundtrip=False findings: 
+avariant/json c0-value-integer                   store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+avariant/json c0-marital                         store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+avariant/json c0-family                          store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+avariant/json c0-identifier                      store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+avariant/json c0-quantity-integral               store     no                                   fail: ok
+                                                                                                drop: ok rows=1 roundtrip=False findings: 
+b/json        c0-conformant                      store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+b/json        c0-decimal-text                    store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+b/json        c0-prim-ext-only                   store     no                                   fail: ok
+                                                                                                drop: ok rows=1 roundtrip=False findings: 
+b/json        c0-prim-ext-array                  store     no                                   fail: ok
+                                                                                                drop: ok rows=1 roundtrip=False findings: 
+b/json        c2-null                            invalid   yes                                  fail: ERROR Invalid content in Patient/p4 at Patient.active (empty): null
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.active empty: null
+b/json        c2-empty-obj                       invalid   yes                                  fail: ERROR Invalid content in Patient/p5 at Patient.maritalStatus (undescribed): {...}
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.maritalStatus undescribed: {...}
+b/json        c2-empty-arr                       invalid   yes                                  fail: ERROR Invalid content in Patient/p6 at Patient.identifier (undescribed): [...]
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.identifier undescribed: [...]
+b/json        c2-empty-string                    invalid   yes                                  fail: ERROR Invalid content in Patient/p7 at Patient.name[0].family (empty): 
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.name[0].family empty: 
+b/json        c2-fhir-comments                   invalid   yes                                  fail: ERROR Invalid content in Patient/p8 at Patient.fhir_comments (undescribed): [...]
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.fhir_comments undescribed: [...]
+b/json        c3-unknown-root                    invalid   yes                                  fail: ERROR Invalid content in Patient/p9 at Patient.foo (undescribed): bar
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.foo undescribed: bar
+b/json        c3-unknown-nested                  invalid   yes                                  fail: ERROR Invalid content in Patient/p10 at Patient.name[0].nickname (undescribed): Y
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.name[0].nickname undescribed: Y
+b/json        c3-r5-field                        invalid   yes                                  fail: ERROR Invalid content in Observation/o2 at Observation.triggeredBy (undescribed): [...]
+                                                                                                drop: ok rows=1 roundtrip=False findings: Observation.triggeredBy undescribed: [...]
+b/json        c4-string-for-integer              invalid   yes                                  fail: ERROR Invalid content in Observation/o3 at Observation.valueInteger (type): 5
+                                                                                                drop: ok rows=1 roundtrip=False findings: Observation.valueInteger type: 5
+b/json        c4-string-for-decimal              invalid   yes                                  fail: ERROR Invalid content in Observation/o4 at Observation.valueQuantity.value (type): 1.50
+                                                                                                drop: ok rows=1 roundtrip=False findings: Observation.valueQuantity.value type: 1.50
+b/json        c4-number-for-string               invalid   yes                                  fail: ERROR Invalid content in Patient/p11 at Patient.name[0].family (type): 123
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.name[0].family type: 123
+b/json        c4-string-for-boolean              invalid   yes                                  fail: ERROR Invalid content in Patient/p12 at Patient.active (type): true
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.active type: true
+b/json        c4-object-for-string               invalid   yes                                  fail: ERROR Invalid content in Patient/p13 at Patient.name[0].family (type): {...}
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.name[0].family type: {...}
+b/json        c5-scalar-for-array                invalid   yes                                  fail: ERROR Invalid content in Patient/p14 at Patient.name (shape): {...}
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.name shape: {...}
+b/json        c5-array-for-scalar                invalid   yes                                  fail: ERROR Invalid content in Patient/p15 at Patient.gender (shape): [...]
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.gender shape: [...]; Patient.birthDate shape: [...]
+b/json        c5-nested-array                    invalid   yes                                  fail: ERROR Invalid content in Patient/p16 at Patient.name[0].given[0] (type): [...]
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.name[0].given[0] type: [...]
+b/json        c6-bad-date                        invalid   yes                                  fail: ERROR Invalid content in Patient/p17 at Patient.birthDate (invalid): 1980-13-45
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.birthDate invalid: 1980-13-45
+b/json        c6-bad-code-required               store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+b/json        c6-int-overflow                    invalid   yes                                  fail: ERROR Invalid content in Observation/o5 at Observation.valueInteger (invalid): 99999999999
+                                                                                                drop: ok rows=1 roundtrip=False findings: Observation.valueInteger invalid: 99999999999
+b/json        c6-bad-id                          store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+b/json        c6-bad-uri-ws                      store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+b/json        c6-ext-value-and-nested            store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+b/json        c6-choice-two-types                unsettled -                                    fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+b/json        c7-contained                       contained yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.contained contained: not stored
+b/json        c7-no-resourcetype                 unsettled -                                    fail: ok
+                                                                                                drop: ok rows=1 roundtrip=False findings: 
+b/json        c7-unknown-resourcetype            left-out  yes                                  fail: ok
+                                                                                                drop: ok rows=0 roundtrip=None findings: 
+b/json        c7-wrong-resourcetype              left-out  yes                                  fail: ok
+                                                                                                drop: ok rows=0 roundtrip=None findings: 
+b/json        c1-malformed                       reject    yes                                  fail: ERROR Invalid content in Patient/p25 at Patient (malformed): Unexpected end-of-input: expected close marker fo
+                                                                                                drop: ok rows=0 roundtrip=None findings: 
+b/json        c1-duplicate-key                   reject    yes                                  fail: ERROR Invalid content in Patient/p26 at Patient (duplicate): Duplicate field 'gender'
+                                                                                                drop: ok rows=0 roundtrip=None findings: 
+b/json        c1-top-level-array                 reject    yes                                  fail: ERROR Invalid content in Patient/null at Patient (shape): the document is not one JSON object
+                                                                                                drop: ok rows=0 roundtrip=None findings: 
+b/json        c1-trailing-text                   reject    yes                                  fail: ERROR Invalid content in Patient/p28 at Patient (malformed): Unrecognized token 'xyz': was expecting (JSON Str
+                                                                                                drop: ok rows=0 roundtrip=None findings: 
+b/json        c5-array-for-string-primitive      invalid   yes                                  fail: ERROR Invalid content in Patient/p29 at Patient.name[0].family (shape): [...]
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.name[0].family shape: [...]
+b/json        l-datetime-no-tz                   invalid   yes                                  fail: ERROR Invalid content in Patient/q1 at Patient.deceasedDateTime (invalid): 2020-01-01T10:00:00
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.deceasedDateTime invalid: 2020-01-01T10:00:00
+b/json        l-datetime-no-seconds              invalid   yes                                  fail: ERROR Invalid content in Patient/q2 at Patient.deceasedDateTime (invalid): 2020-01-01T10:00Z
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.deceasedDateTime invalid: 2020-01-01T10:00Z
+b/json        l-date-no-padding                  invalid   yes                                  fail: ERROR Invalid content in Patient/q3 at Patient.birthDate (invalid): 2020-1-5
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.birthDate invalid: 2020-1-5
+b/json        l-date-with-time                   invalid   yes                                  fail: ERROR Invalid content in Patient/q4 at Patient.birthDate (invalid): 2020-01-05T00:00:00Z
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.birthDate invalid: 2020-01-05T00:00:00Z
+b/json        l-instant-date-only                invalid   yes                                  fail: ERROR Invalid content in Observation/q5 at Observation.issued (invalid): 2020-01-05
+                                                                                                drop: ok rows=1 roundtrip=False findings: Observation.issued invalid: 2020-01-05
+b/json        l-instant-no-tz                    invalid   yes                                  fail: ERROR Invalid content in Observation/q6 at Observation.issued (invalid): 2020-01-05T10:00:00.000
+                                                                                                drop: ok rows=1 roundtrip=False findings: Observation.issued invalid: 2020-01-05T10:00:00.000
+b/json        l-time-bad                         invalid   yes                                  fail: ERROR Invalid content in Observation/q7 at Observation.valueTime (invalid): 25:61:00
+                                                                                                drop: ok rows=1 roundtrip=False findings: Observation.valueTime invalid: 25:61:00
+b/json        l-code-whitespace                  store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+b/json        l-code-required-case               store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+b/json        l-positiveint-zero                 invalid   yes                                  fail: ERROR Invalid content in Patient/q10 at Patient.photo[0].size (invalid): -5
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.photo[0].size invalid: -5
+b/json        l-decimal-string-bad               invalid   yes                                  fail: ERROR Invalid content in Observation/q11 at Observation.valueQuantity.value (type): 1.2.3
+                                                                                                drop: ok rows=1 roundtrip=False findings: Observation.valueQuantity.value type: 1.2.3
+b/json        l-uuid-no-prefix                   store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+b/json        l-base64-bad                       invalid   yes                                  fail: ERROR Invalid content in Patient/q13 at Patient.photo[0].data (invalid): not base64 !!!
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.photo[0].data invalid: not base64 !!!
+b/json        l-string-whitespace-only           store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+b/json        c0-prim-ext-array-only             store     no                                   fail: ok
+                                                                                                drop: ok rows=1 roundtrip=False findings: 
+b/json        c0-value-integer                   store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+b/json        c0-marital                         store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+b/json        c0-family                          store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+b/json        c0-identifier                      store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+b/json        c0-quantity-integral               store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+aplus/xml     x-c0-conformant                    store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+aplus/xml     x-c0-decimal-text                  store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+aplus/xml     x-c0-prim-ext-only                 store     no                                   fail: ok
+                                                                                                drop: ok rows=1 roundtrip=False findings: 
+aplus/xml     x-c0-prim-ext-array                store     no                                   fail: ok
+                                                                                                drop: ok rows=1 roundtrip=False findings: 
+aplus/xml     x-c0-prim-ext-array-only           store     no                                   fail: ok
+                                                                                                drop: ok rows=1 roundtrip=False findings: 
+aplus/xml     x-c0-value-integer                 store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+aplus/xml     x-c0-marital                       store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+aplus/xml     x-c0-family                        store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+aplus/xml     x-c0-identifier                    store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+aplus/xml     x-c0-quantity-integral             store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+aplus/xml     x-c2-null                          invalid   yes                                  fail: ERROR Invalid content in Patient/p4: [{"path":"Patient.active","kind":"empty","value":"no value"}] SQLSTATE: P
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.active empty: no value
+aplus/xml     x-c2-empty-obj                     invalid   yes                                  fail: ERROR Invalid content in Patient/p5: [{"path":"Patient.maritalStatus","kind":"type","value":""}] SQLSTATE: P00
+                                                                                                drop: ERROR 'StringType' o rows=1 roundtrip=None findings: Patient.maritalStatus type: 
+aplus/xml     x-c2-empty-string                  invalid   yes                                  fail: ERROR Invalid content in Patient/p7: [{"path":"Patient.name[0].family","kind":"empty","value":""}] SQLSTATE: P
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.name[0].family empty: 
+aplus/xml     x-c2-fhir-comments                 store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+aplus/xml     x-c3-unknown-root                  invalid   yes                                  fail: ERROR Invalid content in Patient/p9: [{"path":"Patient.foo","kind":"undescribed","value":"foo"}] SQLSTATE: P00
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.foo undescribed: foo
+aplus/xml     x-c3-unknown-nested                invalid   yes                                  fail: ERROR Invalid content in Patient/p10: [{"path":"Patient.name[0].nickname","kind":"undescribed","value":"nickna
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.name[0].nickname undescribed: nickname
+aplus/xml     x-c3-r5-field                      invalid   yes                                  fail: ERROR Invalid content in Observation/o2: [{"path":"Observation.triggeredBy","kind":"undescribed","value":"trig
+                                                                                                drop: ok rows=1 roundtrip=False findings: Observation.triggeredBy undescribed: triggeredBy
+aplus/xml     x-c4-object-for-string             invalid   yes                                  fail: ERROR Invalid content in Patient/p13: [{"path":"Patient.name[0].family","kind":"empty","value":"no value"}] SQ
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.name[0].family empty: no value; Patient.name[0].family.x undescribed: x
+aplus/xml     x-c5-array-for-scalar              invalid   yes                                  fail: ERROR Invalid content in Patient/p15: [{"path":"Patient.gender","kind":"shape","value":"a singular element giv
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.gender shape: a singular element given more than once
+aplus/xml     x-c5-array-for-string-primitive    invalid   yes                                  fail: ERROR Invalid content in Patient/p29: [{"path":"Patient.name[0].family","kind":"shape","value":"a singular ele
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.name[0].family shape: a singular element given more than once
+aplus/xml     x-c6-bad-date                      invalid   yes                                  fail: ERROR Invalid content in Patient/p17: [{"path":"Patient.birthDate","kind":"invalid","value":"1980-13-45"}] SQL
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.birthDate invalid: 1980-13-45
+aplus/xml     x-c6-bad-code-required             store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+aplus/xml     x-c6-int-overflow                  invalid   yes                                  fail: ERROR Invalid content in Observation/o5: [{"path":"Observation.valueInteger","kind":"invalid","value":"9999999
+                                                                                                drop: ok rows=1 roundtrip=False findings: Observation.valueInteger invalid: 99999999999
+aplus/xml     x-c6-bad-id                        store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+aplus/xml     x-c6-bad-uri-ws                    store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+aplus/xml     x-c6-ext-value-and-nested          store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+aplus/xml     x-c6-choice-two-types              unsettled -                                    fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+aplus/xml     x-c7-contained                     contained yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.contained contained: not stored
+aplus/xml     x-c7-unknown-resourcetype          left-out  yes                                  fail: ok
+                                                                                                drop: ok rows=0 roundtrip=None findings: 
+aplus/xml     x-c7-wrong-resourcetype            left-out  yes                                  fail: ok
+                                                                                                drop: ok rows=0 roundtrip=None findings: 
+aplus/xml     x-c1-malformed                     reject    yes                                  fail: ERROR MALFORMED_RECORD_IN_PARSING.WITHOUT_SUGGESTION : org.apache.spark.SparkException: [MALFORMED_RECORD_IN_P
+                                                                                                drop: ERROR MALFORMED_RECO rows=None roundtrip=None findings: 
+aplus/xml     x-c1-duplicate-attribute           reject    yes                                  fail: ERROR MALFORMED_RECORD_IN_PARSING.WITHOUT_SUGGESTION : org.apache.spark.SparkException: [MALFORMED_RECORD_IN_P
+                                                                                                drop: ERROR MALFORMED_RECO rows=None roundtrip=None findings: 
+aplus/xml     x-c1-trailing-text                 reject    yes                                  fail: ERROR Invalid Patient document: malformed SQLSTATE: P0001
+                                                                                                drop: ok rows=0 roundtrip=None findings: 
+aplus/xml     x-c1-two-roots                     reject    yes                                  fail: ERROR Invalid Patient document: malformed SQLSTATE: P0001
+                                                                                                drop: ok rows=0 roundtrip=None findings: 
+aplus/xml     x-l-datetime-no-tz                 invalid   yes                                  fail: ERROR Invalid content in Patient/q1: [{"path":"Patient.deceasedDateTime","kind":"invalid","value":"2020-01-01T
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.deceasedDateTime invalid: 2020-01-01T10:00:00
+aplus/xml     x-l-datetime-no-seconds            invalid   yes                                  fail: ERROR Invalid content in Patient/q2: [{"path":"Patient.deceasedDateTime","kind":"invalid","value":"2020-01-01T
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.deceasedDateTime invalid: 2020-01-01T10:00Z
+aplus/xml     x-l-date-no-padding                invalid   yes                                  fail: ERROR Invalid content in Patient/q3: [{"path":"Patient.birthDate","kind":"invalid","value":"2020-1-5"}] SQLSTA
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.birthDate invalid: 2020-1-5
+aplus/xml     x-l-date-with-time                 invalid   yes                                  fail: ERROR Invalid content in Patient/q4: [{"path":"Patient.birthDate","kind":"invalid","value":"2020-01-05T00:00:0
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.birthDate invalid: 2020-01-05T00:00:00Z
+aplus/xml     x-l-instant-date-only              invalid   yes                                  fail: ERROR Invalid content in Observation/q5: [{"path":"Observation.issued","kind":"invalid","value":"2020-01-05"}]
+                                                                                                drop: ok rows=1 roundtrip=False findings: Observation.issued invalid: 2020-01-05
+aplus/xml     x-l-instant-no-tz                  invalid   yes                                  fail: ERROR Invalid content in Observation/q6: [{"path":"Observation.issued","kind":"invalid","value":"2020-01-05T10
+                                                                                                drop: ok rows=1 roundtrip=False findings: Observation.issued invalid: 2020-01-05T10:00:00.000
+aplus/xml     x-l-time-bad                       invalid   yes                                  fail: ERROR Invalid content in Observation/q7: [{"path":"Observation.valueTime","kind":"invalid","value":"25:61:00"}
+                                                                                                drop: ok rows=1 roundtrip=False findings: Observation.valueTime invalid: 25:61:00
+aplus/xml     x-l-code-whitespace                store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+aplus/xml     x-l-code-required-case             store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+aplus/xml     x-l-positiveint-zero               invalid   yes                                  fail: ERROR Invalid content in Patient/q10: [{"path":"Patient.photo[0].size","kind":"invalid","value":"-5"}] SQLSTAT
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.photo[0].size invalid: -5
+aplus/xml     x-l-decimal-string-bad             invalid   yes                                  fail: ERROR Invalid content in Observation/q11: [{"path":"Observation.valueQuantity.value","kind":"invalid","value":
+                                                                                                drop: ok rows=1 roundtrip=False findings: Observation.valueQuantity.value invalid: 1.2.3
+aplus/xml     x-l-uuid-no-prefix                 store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+aplus/xml     x-l-base64-bad                     invalid   yes                                  fail: ERROR Invalid content in Patient/q13: [{"path":"Patient.photo[0].data","kind":"invalid","value":"not base64 !!
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.photo[0].data invalid: not base64 !!!
+aplus/xml     x-l-string-whitespace-only         store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+aplus/xml     x-no-namespace                     reject    yes                                  fail: ERROR Invalid Patient document: namespace SQLSTATE: P0001
+                                                                                                drop: ok rows=0 roundtrip=None findings: 
+aplus/xml     x-prefixed                         store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+aplus/xml     x-value-surrounding-space          store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+aplus/xml     x-text-content                     invalid   yes                                  fail: ERROR Invalid content in Patient/x4: [{"path":"Patient.gender","kind":"empty","value":"no value"}] SQLSTATE: P
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.gender empty: no value; Patient.gender type: male
+aplus/xml     x-attr-on-resource                 invalid   yes                                  fail: ERROR Invalid content in Patient/x5: [{"path":"Patient.foo","kind":"undescribed","value":"_foo"}] SQLSTATE: P0
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.foo undescribed: _foo
+aplus/xml     x-narrative-markup                 store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+b/xml         x-c0-conformant                    store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+b/xml         x-c0-decimal-text                  store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+b/xml         x-c0-prim-ext-only                 store     no                                   fail: ok
+                                                                                                drop: ok rows=1 roundtrip=False findings: 
+b/xml         x-c0-prim-ext-array                store     no                                   fail: ok
+                                                                                                drop: ok rows=1 roundtrip=False findings: 
+b/xml         x-c0-prim-ext-array-only           store     no                                   fail: ok
+                                                                                                drop: ok rows=1 roundtrip=False findings: 
+b/xml         x-c0-value-integer                 store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+b/xml         x-c0-marital                       store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+b/xml         x-c0-family                        store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+b/xml         x-c0-identifier                    store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+b/xml         x-c0-quantity-integral             store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+b/xml         x-c2-null                          invalid   yes                                  fail: ERROR Invalid content in Patient/p4 at Patient.active (empty): no value
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.active empty: no value
+b/xml         x-c2-empty-obj                     invalid   yes                                  fail: ERROR Invalid content in Patient/p5 at Patient.maritalStatus (undescribed): <maritalStatus>
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.maritalStatus undescribed: <maritalStatus>
+b/xml         x-c2-empty-string                  invalid   yes                                  fail: ERROR Invalid content in Patient/p7 at Patient.name.family (empty): 
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.name.family empty: 
+b/xml         x-c2-fhir-comments                 store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+b/xml         x-c3-unknown-root                  invalid   yes                                  fail: ERROR Invalid content in Patient/p9 at Patient.foo (undescribed): <foo>
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.foo undescribed: <foo>
+b/xml         x-c3-unknown-nested                invalid   yes                                  fail: ERROR Invalid content in Patient/p10 at Patient.name.nickname (undescribed): <nickname>
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.name.nickname undescribed: <nickname>
+b/xml         x-c3-r5-field                      invalid   yes                                  fail: ERROR Invalid content in Observation/o2 at Observation.triggeredBy (undescribed): <triggeredBy>
+                                                                                                drop: ok rows=1 roundtrip=False findings: Observation.triggeredBy undescribed: <triggeredBy>
+b/xml         x-c4-object-for-string             invalid   yes                                  fail: ERROR Invalid content in Patient/p13 at Patient.name.family.x (undescribed): <x>
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.name.family.x undescribed: <x>; Patient.name.family empty: no value
+b/xml         x-c5-array-for-scalar              invalid   yes                                  fail: ERROR Invalid content in Patient/p15 at Patient.gender (shape): a singular element given more than once
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.gender shape: a singular element given more than once
+b/xml         x-c5-array-for-string-primitive    invalid   yes                                  fail: ERROR Invalid content in Patient/p29 at Patient.name.family (shape): a singular element given more than once
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.name.family shape: a singular element given more than once
+b/xml         x-c6-bad-date                      invalid   yes                                  fail: ERROR Invalid content in Patient/p17 at Patient.birthDate (invalid): 1980-13-45
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.birthDate invalid: 1980-13-45
+b/xml         x-c6-bad-code-required             store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+b/xml         x-c6-int-overflow                  invalid   yes                                  fail: ERROR Invalid content in Observation/o5 at Observation.valueInteger (invalid): 99999999999
+                                                                                                drop: ok rows=1 roundtrip=False findings: Observation.valueInteger invalid: 99999999999
+b/xml         x-c6-bad-id                        store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+b/xml         x-c6-bad-uri-ws                    store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+b/xml         x-c6-ext-value-and-nested          store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+b/xml         x-c6-choice-two-types              unsettled -                                    fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+b/xml         x-c7-contained                     contained yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.contained contained: not stored
+b/xml         x-c7-unknown-resourcetype          left-out  yes                                  fail: ok
+                                                                                                drop: ok rows=0 roundtrip=None findings: 
+b/xml         x-c7-wrong-resourcetype            left-out  yes                                  fail: ok
+                                                                                                drop: ok rows=0 roundtrip=None findings: 
+b/xml         x-c1-malformed                     reject    yes                                  fail: ERROR Invalid content in Patient/p25 at Patient (malformed): Unexpected EOF; was expecting a close tag for ele
+                                                                                                drop: ok rows=0 roundtrip=None findings: 
+b/xml         x-c1-duplicate-attribute           reject    yes                                  fail: ERROR Invalid content in Patient/p26 at Patient (malformed): Duplicate attribute 'value'.
+                                                                                                drop: ok rows=0 roundtrip=None findings: 
+b/xml         x-c1-trailing-text                 reject    yes                                  fail: ERROR Invalid content in Patient/p28 at Patient (malformed): Unexpected character 'x' (code 120) in epilog; ex
+                                                                                                drop: ok rows=0 roundtrip=None findings: 
+b/xml         x-c1-two-roots                     reject    yes                                  fail: ERROR Invalid content in Patient/p27a at Patient (malformed): Illegal to have multiple roots (start tag in epi
+                                                                                                drop: ok rows=0 roundtrip=None findings: 
+b/xml         x-l-datetime-no-tz                 invalid   yes                                  fail: ERROR Invalid content in Patient/q1 at Patient.deceasedDateTime (invalid): 2020-01-01T10:00:00
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.deceasedDateTime invalid: 2020-01-01T10:00:00
+b/xml         x-l-datetime-no-seconds            invalid   yes                                  fail: ERROR Invalid content in Patient/q2 at Patient.deceasedDateTime (invalid): 2020-01-01T10:00Z
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.deceasedDateTime invalid: 2020-01-01T10:00Z
+b/xml         x-l-date-no-padding                invalid   yes                                  fail: ERROR Invalid content in Patient/q3 at Patient.birthDate (invalid): 2020-1-5
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.birthDate invalid: 2020-1-5
+b/xml         x-l-date-with-time                 invalid   yes                                  fail: ERROR Invalid content in Patient/q4 at Patient.birthDate (invalid): 2020-01-05T00:00:00Z
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.birthDate invalid: 2020-01-05T00:00:00Z
+b/xml         x-l-instant-date-only              invalid   yes                                  fail: ERROR Invalid content in Observation/q5 at Observation.issued (invalid): 2020-01-05
+                                                                                                drop: ok rows=1 roundtrip=False findings: Observation.issued invalid: 2020-01-05
+b/xml         x-l-instant-no-tz                  invalid   yes                                  fail: ERROR Invalid content in Observation/q6 at Observation.issued (invalid): 2020-01-05T10:00:00.000
+                                                                                                drop: ok rows=1 roundtrip=False findings: Observation.issued invalid: 2020-01-05T10:00:00.000
+b/xml         x-l-time-bad                       invalid   yes                                  fail: ERROR Invalid content in Observation/q7 at Observation.valueTime (invalid): 25:61:00
+                                                                                                drop: ok rows=1 roundtrip=False findings: Observation.valueTime invalid: 25:61:00
+b/xml         x-l-code-whitespace                store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+b/xml         x-l-code-required-case             store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+b/xml         x-l-positiveint-zero               invalid   yes                                  fail: ERROR Invalid content in Patient/q10 at Patient.photo.size (invalid): -5
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.photo.size invalid: -5
+b/xml         x-l-decimal-string-bad             invalid   yes                                  fail: ERROR Invalid content in Observation/q11 at Observation.valueQuantity.value (invalid): 1.2.3
+                                                                                                drop: ok rows=1 roundtrip=False findings: Observation.valueQuantity.value invalid: 1.2.3
+b/xml         x-l-uuid-no-prefix                 store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+b/xml         x-l-base64-bad                     invalid   yes                                  fail: ERROR Invalid content in Patient/q13 at Patient.photo.data (invalid): not base64 !!!
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.photo.data invalid: not base64 !!!
+b/xml         x-l-string-whitespace-only         store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+b/xml         x-no-namespace                     reject    yes                                  fail: ERROR Invalid content in Patient/null at Patient (namespace): root namespace 
+                                                                                                drop: ok rows=0 roundtrip=None findings: 
+b/xml         x-prefixed                         store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+b/xml         x-value-surrounding-space          store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+b/xml         x-text-content                     invalid   yes                                  fail: ERROR Invalid content in Patient/x4 at Patient.gender (undescribed): text content: male
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.gender undescribed: text content: male; Patient.gender empty: no value
+b/xml         x-attr-on-resource                 invalid   yes                                  fail: ERROR Invalid content in Patient/null at Patient.@foo (undescribed): bar
+                                                                                                drop: ok rows=1 roundtrip=False findings: Patient.@foo undescribed: bar
+b/xml         x-narrative-markup                 store     yes                                  fail: ok
+                                                                                                drop: ok rows=1 roundtrip=True findings: 
+
+== batch under drop: a stored row that differs from the row stored alone (principle 6)
+aplus/json      Observation  batch of 13: 0 stored differently
+aplus/json      Patient      batch of 37: 1 stored differently
+                       c2-empty-string                    name: null -> [{}]
+avariant/json      Observation  batch of 13: 0 stored differently
+avariant/json      Patient      batch of 37: 1 stored differently
+                       c2-empty-arr                       identifier: null -> []
+b/json      Observation  batch of 13: 0 stored differently
+b/json      Patient      batch of 37: 0 stored differently
+aplus/xml-lines Observation  batch of 11: 0 stored differently
+aplus/xml-lines Patient      batch of 36: 1 stored differently
+                       x-c2-empty-obj                     maritalStatus: null -> {}
+b/xml-lines Observation  batch of 11: 0 stored differently
+b/xml-lines Patient      batch of 36: 0 stored differently

@@ -1,0 +1,4 @@
+Patient line 63 id 7b48b519-ad47-9335-e269-cb12b010abde path name
+Condition line 3204 id 7e43ebff-fcdf-82f9-7cb3-799c62932219 path code.coding
+Encounter line 3905 id 7e68210f-ee4c-463d-512f-465972428118 path type
+Observation line 5043 id 80a8756b-c51c-0e4b-0789-0e4701722718 path code.coding

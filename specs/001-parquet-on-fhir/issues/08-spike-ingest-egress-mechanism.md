@@ -120,3 +120,19 @@ moves to ticket 16).
 - On the fixtures, A0 meets none of decision 133's validation scope, on any route. Every OQ-1 loss is present.
 
 B, A+ and A-variant are not started.
+
+### Phase 2: B, A+ and A-variant built, size `l` pending (branch issue/2831-spike-08)
+
+Evidence: `evidence/spike-08/README.md`, "Phase 2". The three candidates are built for the four benchmark
+types, ingest and egress, generated from the definitions. Each passes the correctness gate at size `s`,
+storing what HEAD stores apart from decimal text, and each has run on the fixtures.
+
+- On the fixtures, every candidate fails on every invalid value under `fail` and records it per value under
+  `drop`.
+- A+ and B keep the decimal's text and decode lexically equal. A-variant does not.
+- On data with one shape error per file, all three lose only the bad row's element, where A0 loses it in every
+  row.
+
+Whether FR-050 admits Spark's generic row encoder (`Encoders.row`), which B uses, is open for the owner.
+
+The size-`l` timing runs unattended after a machine restart: `evidence/spike-08/phase2/RUNBOOK.md`.

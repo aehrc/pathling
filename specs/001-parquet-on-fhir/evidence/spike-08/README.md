@@ -12,6 +12,7 @@ the re-measured bar, and the fixture coverage of decision 133. No candidate is c
 | `harness/` | Copies of the phase harness (`phases.py`, `run-phases.sh`), the `from_xml` prototype (`fromxml_route.py`), its correctness gate (`gate_fromxml.py`), and the comparison scripts (`compare_phases.py`, `summary_phases.py`, `pooled_phases.py`) |
 | `gate/` | The gate's output at size `s`, and the direct comparison of the two XML decoders (`decoders_equal.py` and its output) |
 | `fixtures/` | The added JSON and XML fixtures, the runner and its output |
+| `phase2/` | Phase 2: the candidates' prototype code (`proto/`, Java; `harness/`, Python and the extended harness), their gates (`gate/`), and the unattended size-`l` batch with its runbook (`batch-l.sh`, `RUNBOOK.md`) |
 | `results/` | The result files of the three size-`l` labels with their conditions and notes (`<label>/`), every sample (`comparison.txt`), the per-type tables (`tables.md`), and the pooled ratios (`pooled.txt`) |
 
 **Where the probes live.** They are in this directory, not in `../ingress-strictness/`, so that the spike's
@@ -438,3 +439,146 @@ E=<pathling>/specs/001-parquet-on-fhir/evidence
 Q=<pathling>/lib/python/.venv/bin/python
 (cd $E/spike-08/probes && for p in parse_json widening observe; do PYSPARK_PYTHON=$Q PYSPARK_DRIVER_PYTHON=$Q $Q -I ${p}_probe.py; done)
 ```
+
+## Phase 2: B, A+ and A-variant
+
+Phase 2 was approved on 2026-10-19. The owner chose "quiet first, then go". The three candidates are built,
+gated at size `s` and run against the fixtures. **Nothing has been timed at size `l` yet.** The owner restarts
+the machine first, and the whole size-`l` sequence then runs unattended from `phase2/batch-l.sh`, following
+`phase2/RUNBOOK.md`. Its numbers will be added here. The smoke figures at size `s` in `phase2/gate/` are not
+for the record.
+
+### The candidates as built
+
+Every candidate covers the four benchmark types, ingest and egress. Each is generated from the definitions
+(`DefinitionCanonicalStructure`), with nothing written per type. Each builds the stored layout itself, and at
+size `s` that layout equals the schema and rows HEAD's `toLayout` produces, apart from decimal text. Each
+applies decision 133's datatype checks: dates, times and instants by regex and calendar parse; decimals and
+the integer family by regex and range; booleans; base64. The text-only types pass through, and the empty
+string is invalid. Undescribed content is found per value; `null`, `{}`, `[]` and `""` are invalid; `contained`
+is an informational finding. The policies are `fail`, the default, which stops at the first invalid value and
+names the resource, the path and the value, and `drop`, with an opt-in `_findings` column of
+`(path, kind, value)`. Timing uses `fail`, so every check is evaluated.
+
+| | Ingest | Egress | Where |
+|---|---|---|---|
+| **A+** | Then `spark.read.json` with the inferred schema of the marked documents, which is the fit pass, and comparison with the definitions path by path. A complex path that widened to text is resolved per value with `from_json`, typed by a second inference over just its values of the declared shape. Generated SQL makes the checks and builds the stored values and the findings | `to_json`, with each decimal marked and unmarked after (the existing T100j mechanism), so it is written with its text; empty structures and null-only arrays left out (FR-019) | `Spike08Marker.java`; `spike_routes.py` (`MarkedJson`, `Gen`, `APlusRoute`, egress) |
+| **A+, XML** | The `from_xml` route with the gaps phase 1 found closed: a prefixed FHIR namespace is rewritten and read; a missing namespace, text after the root and a second root are refused (`Spike08XmlDocCheck`, a full StAX pass per document); a primitive is parsed in the shape the definitions give it, so text content or a repeated singular element is a finding for that row, not a column lost. The same generated checks follow | `to_xml`, decimal text as stored, empty elements left out | `XmlText`, `APlusRoute.fit_xml`; `Spike08XmlDocCheck.java` |
+| **A-variant** | `parse_json`, then `schema_of_variant_agg` as the fit pass. A path whose rows disagree, merged to `VARIANT`, is resolved by a second aggregation over its values of the declared shape. Objects are read as `map<string, variant>`, so extra keys are found; token types come from `schema_of_variant`. `Spike08JsonDocCheck`, a Jackson pass per document, refuses a top-level array and text after the object, which `parse_json` accepts | HEAD's, as ticket 08 says | `Variant`, `AVariantRoute`; `Spike08JsonDocCheck.java` |
+| **B** | A streaming parser of our own over Jackson (JSON) and Woodstox StAX (XML), on one definitions-driven core. The fit pass is one job: each partition streams its documents and returns the paths it saw. Encode parses each document straight into a stored row, checking each value as it goes. Bundles take one pass: every entry's `fullUrl` and id are collected, the type's resources are parsed, and their `urn:` references are patched (FR-062). The narrative is copied by the parser's character offsets | A renderer of our own for JSON and XML, a decimal written with its stored text, empty elements left out | `Spike08B`, `Spike08Json`, `Spike08Xml`, `Spike08Layout`, `Spike08Def`, `Spike08Checks`, `Spike08Findings` |
+
+**A+'s pre-pass and A-variant's XML.** A+'s Jackson pre-pass (`Spike08Marker`) marks every number with its own
+text, and marks any string that could be mistaken for another token's text once a column widens. It removes
+and records `null`, `{}`, `[]` and `""`, and refuses a duplicate key, a top-level array and text after the
+object. A-variant has no XML route of its own (Spark 4.0.2 cannot parse XML into a variant), so its XML is
+served by A+'s XML route.
+
+**FR-049 and FR-050.** No prototype imports Catalyst. The Java uses `org.apache.spark.sql` public API only:
+`Dataset`, `Encoders`, `Row`, `RowFactory`, the `types` package and Java UDFs. B hands its rows to Spark
+through `Encoders.row(schema)`, Spark's generic row encoder. A+'s pre-pass and the document checks use
+`Encoders.STRING()`, as HEAD's `XmlConversion` does. Neither is an encoder of our own or a FHIR object per row,
+but both are, internally, Spark expression encoders. **Whether FR-050's "no expression encoder" admits
+Spark's generic row encoder is for the owner to say.** B depends on the answer.
+
+**Built as a separate jar.** The prototype jar is compiled with `javac` against A0's unmodified runtime jar
+(`phase2/proto/build.sh`) and added through `--jars`. So there is no Pathling build, no new version, and
+nothing written to `~/.m2`. The A+ and A-variant generators are Python over py4j, as the `from_xml` route
+was. Their plan-building time is recorded per sample, as in phase 1.
+
+### Correctness at size `s` (`phase2/gate/gate-s.txt`)
+
+For all four types (24,424 resources) and every source each candidate supports, the stored dataset was
+compared with HEAD's encoding of the JSON, and the decoded documents with the input:
+
+- **Schema and values: equal for every candidate and source.** The only differences are decimal text: 2,412 values where HEAD stores a
+  double's text (`0.0`, `8.823084504462283E-4`) and A+ and B store the source's (`0`,
+  `0.0008823084504462283`). A-variant stores the variant's form instead (`1.50` becomes `1.5`).
+- **Decode.**
+  - A+ and B decode every document **lexically equal** to the JSON input, and **byte-identical** to the XML
+    input: 10,085 of 10,085 Observations, against A0's 8,090.
+  - A-variant decodes through HEAD, so it keeps A0's losses: Observation is 8,088 of 10,085 lexically equal.
+- **Messy data (`gate_messy.py`).** One shape error at an intermediate node per file, under `drop`:
+  - A0 loses that element in every row of the file. That is all 125 Patients, 6,406 Conditions, 7,808
+    Encounters and 10,085 Observations.
+  - All three candidates lose it in the one bad row only, with one per-value finding naming the path and the
+    value.
+- **Code generation.** A+'s generated SQL exceeds the JVM's 64 KB method limit on its egress for Condition and
+  Encounter. Spark then falls back from whole-stage code generation, logging the compile error. The results
+  are correct; the cost is measured at size `l`.
+
+### Coverage (`fixtures/fixtures_candidates.py`, output `fixtures/fixtures_candidates.txt`)
+
+The A0 columns are from phase 1. The expectations are unchanged, and `c6-choice-two-types` and
+`c7-no-resourcetype` stay unsettled. For a candidate, "invalid" is met only where `fail` stops the job
+**and** `drop` records a finding that is not informational.
+
+| Expectation | A0 JSON | A0 `from_xml` | HAPI XML | A+ JSON | A+ XML | A-variant | B JSON | B XML |
+|---|---|---|---|---|---|---|---|---|
+| store | 13 of 18 | 16 of 22 | 13 of 22 | 15 of 18 | 19 of 22 | 13 of 18 | 15 of 18 | 19 of 22 |
+| invalid: fails, and recorded per value under `drop` | 0 of 29 | 0 of 23 | 5 of 23 (fails, no findings) | **29 of 29** | **23 of 23** | **29 of 29** | **29 of 29** | **23 of 23** |
+| contained: info finding | partial | partial | no | yes | yes | yes | yes | yes |
+| left-out | 2 of 2 | 2 of 2 | 1 of 2 | 2 of 2 | 2 of 2 | 2 of 2 | 2 of 2 | 2 of 2 |
+| reject | 2 of 4 | 2 of 5 | 4 of 5 | 4 of 4 | 5 of 5 | 4 of 4 | 4 of 4 | 5 of 5 |
+| Principle 6: rows of a batch stored differently from alone | 16 of 38 | 21 of 38 | - | 1 of 37 | 1 of 36 | 1 of 37 | **0 of 37** | **0 of 36** |
+
+**The "store" misses.**
+
+- **All three:** the three `c0-prim-ext-*` fixtures fail on every candidate, because the stage-1 layout
+  stores no primitive metadata before M5. The element is kept and its extensions are lost. That is the
+  layout's limit, not any mechanism's.
+- **A-variant** also misses `c0-decimal-text` and `c0-quantity-integral`, the decimal's text.
+
+**The one batch row each for A+ and A-variant** is a structure that every value of which was invalid. It is
+stored as an empty structure (`[{}]` or `[]`) in a batch and as absent alone. B stores no empty structure.
+
+### OQ-1's losses, per candidate
+
+| Loss | A+ | A-variant | B |
+|---|---|---|---|
+| The decimal's lexical form | Removed (JSON and XML) | **Kept**: the variant normalises `1.50` to `1.5` and an exponent to a double | Removed (JSON and XML) |
+| The granularity of a contradicting value | Removed: per value, also on the messy data | Removed | Removed |
+| Numbers as text without a finding | Removed: a type finding | Removed | Removed |
+| Empty structures and null-only arrays on export | Removed by the egress post-pass | Kept (HEAD's egress) | Removed by the renderer |
+| Per-value findings, unstorable values | Removed | Removed | Removed |
+| The `_x` array without `x` | Element kept, metadata not stored (M5) | Same | Same |
+
+### Code each candidate owns
+
+Rough counts of non-blank, non-comment lines in the prototypes. The Python generators would be Java in a real
+implementation, so their counts indicate size, not a final figure. All three also rely on the definitions
+(`fhir-schema`) and on Spark.
+
+| Candidate | Components | Lines |
+|---|---|---|
+| A+ | Pre-pass (`Spike08Marker` 162); XML document check (28); generator core (`Gen` and helpers, about 100); JSON adapter (`MarkedJson`, 105); XML adapter (`XmlText`, 86); route, resolution and Bundle handling (`APlusRoute` and the parse schema, about 175); egress (about 70); checks in SQL (`spike_checks.py`, 85); reused from the `from_xml` route (inference, definitions access, narrative; about 150) | about 960 |
+| A-variant | Document check (`Spike08JsonDocCheck`, 23); generator core (shared with A+, about 100); variant adapter (88); type parser (57); route (52); checks in SQL (shared, 85); egress is HEAD's | about 400 |
+| B | Definitions graph (`Spike08Def`, 84); checks (97); findings (60); layout and fitted schema (104); JSON parser, presence and renderer (384); XML parser, presence, Bundles and renderer (452); entry points (86) | about 1,270 |
+
+### Prototype limits
+
+- **Resolution below an array.** A+ and A-variant resolve a widened path per value only where no array lies
+  above it. That covers `name`, `code.coding` and `type`, the paths the messy data exercises. Below an array,
+  the prototypes report the values as findings instead of resolving them.
+- **Narratives.** A+'s XML takes the narrative by regular expression, xml-native.md's option 3, with its known
+  cases. B takes it by the parser's offsets.
+- **JSON Bundles** were not built for B or A+, because the benchmark has none.
+- **Primitive metadata** is not stored by any candidate (M5).
+
+### Deviations in phase 2
+
+1. **Size `l` deferred.** As instructed on 2026-10-19, nothing was timed at size `l`. The batch and runbook
+   are ready.
+2. **A separate prototype jar,** not a Pathling build under a new version. A0's jar stays as it is, and
+   nothing enters `~/.m2`.
+3. **Replicates.** Each candidate's two replicates are the two extensions settings within one label, which
+   run the same code (phase 1). The noise check uses two separate A0 labels, as asked, plus a closing A0 label
+   to bracket the candidates.
+4. **The messy data is run on all four routes**, not on A+ alone, so that A+'s worst case has the others
+   beside it. Under `drop`.
+5. **The harness** gained `scripts/spike_routes.py`, `spike_checks.py`, `gate_candidates.py`, `gate_messy.py`,
+   `p2_spread.py` and `tools/make_messy.py`. Two existing scripts were extended:
+   - `phases.py` gained the candidate routes and a lexical fidelity count for them;
+   - `run-phases.sh` gained the optional `EXTRA_JARS`, `JSON_DIR`, `SOURCES_OVERRIDE` and `SPIKE_POLICY`.
+
+   Both leave the phase 1 routes' behaviour and recorded fields unchanged. The phase 1 versions are in
+   `harness/`, and the extended ones in `phase2/harness/`.
