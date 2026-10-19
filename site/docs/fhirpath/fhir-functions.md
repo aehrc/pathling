@@ -93,9 +93,12 @@ The input may be a [Coding](/docs/fhirpath/extension-functions#coding), a
   the value set, using the `inferSystem` parameter of
   [$validate-code](https://build.fhir.org/valueset-operation-validate-code.html).
   A terminology server that does not support this parameter cannot answer the
-  question, and the result is empty. In
-  [local mode](/docs/libraries/terminology/local), the code takes the system of
-  the code system that the value set is evaluated over.
+  question, and the result is empty. Where the value set contains more than one
+  code system, FHIR defines the result as empty, but the terminology server
+  decides: Ontoserver, for example, returns `true` for a code found in exactly
+  one of the code systems and `false` otherwise. In
+  [local mode](/docs/libraries/terminology/local), a value set is evaluated over
+  a single code system, and the code takes that system.
 - As an extension to the FHIR definition, a `Quantity` is also accepted, in which
   case the concept is the coded unit. See
   [Quantity as a concept](#quantity-as-a-concept).

@@ -403,6 +403,7 @@ public class TerminologyFunctionsDslTest extends FhirPathDslTestBase {
                     // Strings, which are validated as bare codes
                     .string("genderCode", "male")
                     .stringArray("genderCodes", "male", "female")
+                    .stringArray("singleGenderCodeArray", "male")
                     .stringEmpty("emptyString")
                     // CodeableConcepts with single coding
                     .element(
@@ -532,6 +533,9 @@ public class TerminologyFunctionsDslTest extends FhirPathDslTestBase {
         .testEmpty(
             "genderCodes.memberOf('" + genderValueSet + "')",
             "memberOf() returns empty for a collection of more than one string")
+        .testTrue(
+            "singleGenderCodeArray.memberOf('" + genderValueSet + "')",
+            "memberOf() returns a result for a collection holding a single string")
         .testEmpty(
             "emptyString.memberOf('" + genderValueSet + "')",
             "memberOf() returns empty for an empty string")

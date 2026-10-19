@@ -49,10 +49,10 @@ import org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence;
 public interface Terminology {
 
   /**
-   * Takes a Coding or an array of Codings column as its input. Returns the column which, contains a
-   * Boolean value, indicating whether any of the input Codings is the member of the specified FHIR
-   * ValueSet. The value is null where membership cannot be determined, for example because the
-   * value set cannot be resolved.
+   * Takes a Coding, an array of Codings or a string column of codes as its input. Returns the
+   * column which contains a Boolean value, indicating whether any of the input Codings, or the
+   * code, is a member of the specified FHIR ValueSet. The value is null where membership cannot be
+   * determined, for example because the value set cannot be resolved.
    *
    * @param coding a Column containing the struct representation of a Coding or an array of such
    *     structs, or a string column of codes whose system is inferred from the value set.
@@ -65,10 +65,10 @@ public interface Terminology {
   }
 
   /**
-   * Takes a Coding or an array of Codings column as its input. Returns the column which, contains a
-   * Boolean value, indicating whether any of the input Codings is the member of the specified FHIR
-   * ValueSet. The value is null where membership cannot be determined, for example because the
-   * value set cannot be resolved.
+   * Takes a Coding, an array of Codings or a string column of codes as its input. Returns the
+   * column which contains a Boolean value, indicating whether any of the input Codings, or the
+   * code, is a member of the specified FHIR ValueSet. The value is null where membership cannot be
+   * determined, for example because the value set cannot be resolved.
    *
    * @param coding a Column containing the struct representation of a Coding or an array of such
    *     structs, or a string column of codes whose system is inferred from the value set.

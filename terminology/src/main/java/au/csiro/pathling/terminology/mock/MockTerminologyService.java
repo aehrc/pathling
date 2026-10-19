@@ -112,8 +112,6 @@ public class MockTerminologyService implements TerminologyService {
           .map(member -> new ValueSetMember(member.system(), null, member.code(), null, null))
           .toList();
     }
-
-    public static final ValueSet EMPTY = new ValueSet();
   }
 
   private final Map<String, ValueSet> valueSets = new HashMap<>();
