@@ -1,0 +1,6 @@
+c0-prim-ext-array-only	C0	{"resourceType":"Patient","id":"p30","name":[{"family":"X","_given":[{"extension":[{"url":"http://e/x","valueString":"y"}]}]}]}
+c0-value-integer	C0	{"resourceType":"Observation","id":"o8","status":"final","code":{"text":"x"},"valueInteger":5}
+c0-marital	C0	{"resourceType":"Patient","id":"p31","maritalStatus":{"coding":[{"system":"http://terminology.hl7.org/CodeSystem/v3-MaritalStatus","code":"M"}]},"gender":"male"}
+c0-family	C0	{"resourceType":"Patient","id":"p32","name":[{"family":"Jones","given":["Al"]}]}
+c0-identifier	C0	{"resourceType":"Patient","id":"p33","identifier":[{"system":"http://x","value":"1"}],"gender":"male"}
+c0-quantity-integral	C0	{"resourceType":"Observation","id":"o9","status":"final","code":{"text":"x"},"valueQuantity":{"value":100,"unit":"mg"}}

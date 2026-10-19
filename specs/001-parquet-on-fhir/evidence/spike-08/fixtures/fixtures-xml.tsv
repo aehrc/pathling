@@ -1,0 +1,54 @@
+x-c0-conformant	C0	<Patient xmlns="http://hl7.org/fhir"><id value="p1"/><active value="true"/><name><family value="Smith"/><given value="Ann"/><given value="B"/></name><gender value="female"/><birthDate value="1980-02-03"/><deceasedDateTime value="2020-01-01T10:00:00+10:00"/></Patient>
+x-c0-decimal-text	C0	<Observation xmlns="http://hl7.org/fhir"><id value="o1"/><status value="final"/><code><text value="x"/></code><valueQuantity><value value="1.50"/><unit value="mg"/></valueQuantity><component><code><text value="a"/></code><valueQuantity><value value="0.000000123456789"/></valueQuantity></component><component><code><text value="b"/></code><valueQuantity><value value="12345678901234567890.12345"/></valueQuantity></component><component><code><text value="c"/></code><valueQuantity><value value="1.0e2"/></valueQuantity></component></Observation>
+x-c0-prim-ext-only	C0	<Patient xmlns="http://hl7.org/fhir"><id value="p2"/><birthDate><extension url="http://hl7.org/fhir/StructureDefinition/data-absent-reason"><valueCode value="unknown"/></extension></birthDate></Patient>
+x-c0-prim-ext-array	C0	<Patient xmlns="http://hl7.org/fhir"><id value="p3"/><name><given value="Ann"/><given><extension url="http://e/x"><valueString value="y"/></extension></given></name></Patient>
+x-c0-prim-ext-array-only	C0	<Patient xmlns="http://hl7.org/fhir"><id value="p30"/><name><family value="X"/><given><extension url="http://e/x"><valueString value="y"/></extension></given></name></Patient>
+x-c0-value-integer	C0	<Observation xmlns="http://hl7.org/fhir"><id value="o8"/><status value="final"/><code><text value="x"/></code><valueInteger value="5"/></Observation>
+x-c0-marital	C0	<Patient xmlns="http://hl7.org/fhir"><id value="p31"/><gender value="male"/><maritalStatus><coding><system value="http://terminology.hl7.org/CodeSystem/v3-MaritalStatus"/><code value="M"/></coding></maritalStatus></Patient>
+x-c0-family	C0	<Patient xmlns="http://hl7.org/fhir"><id value="p32"/><name><family value="Jones"/><given value="Al"/></name></Patient>
+x-c0-identifier	C0	<Patient xmlns="http://hl7.org/fhir"><id value="p33"/><identifier><system value="http://x"/><value value="1"/></identifier><gender value="male"/></Patient>
+x-c0-quantity-integral	C0	<Observation xmlns="http://hl7.org/fhir"><id value="o9"/><status value="final"/><code><text value="x"/></code><valueQuantity><value value="100"/><unit value="mg"/></valueQuantity></Observation>
+x-c2-null	C2	<Patient xmlns="http://hl7.org/fhir"><id value="p4"/><active/><gender value="male"/></Patient>
+x-c2-empty-obj	C2	<Patient xmlns="http://hl7.org/fhir"><id value="p5"/><gender value="male"/><maritalStatus/></Patient>
+x-c2-empty-string	C2	<Patient xmlns="http://hl7.org/fhir"><id value="p7"/><name><family value=""/></name><gender value="male"/></Patient>
+x-c2-fhir-comments	C2	<Patient xmlns="http://hl7.org/fhir"><!-- hello --><id value="p8"/><gender value="male"/></Patient>
+x-c3-unknown-root	C3	<Patient xmlns="http://hl7.org/fhir"><id value="p9"/><foo value="bar"/><gender value="male"/></Patient>
+x-c3-unknown-nested	C3	<Patient xmlns="http://hl7.org/fhir"><id value="p10"/><name><family value="X"/><nickname value="Y"/></name></Patient>
+x-c3-r5-field	C3	<Observation xmlns="http://hl7.org/fhir"><id value="o2"/><triggeredBy><observation><reference value="Observation/1"/></observation><type value="reflex"/></triggeredBy><status value="final"/><code><text value="x"/></code></Observation>
+x-c4-object-for-string	C4	<Patient xmlns="http://hl7.org/fhir"><id value="p13"/><name><family><x value="1"/></family></name></Patient>
+x-c5-array-for-scalar	C5	<Patient xmlns="http://hl7.org/fhir"><id value="p15"/><gender value="male"/><gender value="female"/><birthDate value="1980-01-01"/></Patient>
+x-c5-array-for-string-primitive	C5	<Patient xmlns="http://hl7.org/fhir"><id value="p29"/><name><family value="A"/><family value="B"/></name></Patient>
+x-c6-bad-date	C6	<Patient xmlns="http://hl7.org/fhir"><id value="p17"/><birthDate value="1980-13-45"/></Patient>
+x-c6-bad-code-required	C6	<Patient xmlns="http://hl7.org/fhir"><id value="p18"/><gender value="xyz"/></Patient>
+x-c6-int-overflow	C6	<Observation xmlns="http://hl7.org/fhir"><id value="o5"/><status value="final"/><code><text value="x"/></code><valueInteger value="99999999999"/></Observation>
+x-c6-bad-id	C6	<Patient xmlns="http://hl7.org/fhir"><id value="p 19 has spaces and is far too long to be a valid FHIR id at all really"/><gender value="male"/></Patient>
+x-c6-bad-uri-ws	C6	<Patient xmlns="http://hl7.org/fhir"><id value="p20"/><identifier><system value="http://x y"/><value value="1"/></identifier></Patient>
+x-c6-ext-value-and-nested	C6	<Patient xmlns="http://hl7.org/fhir"><id value="p21"/><extension url="http://e/x"><extension url="a"><valueString value="b"/></extension><valueString value="v"/></extension></Patient>
+x-c6-choice-two-types	C6	<Observation xmlns="http://hl7.org/fhir"><id value="o6"/><status value="final"/><code><text value="x"/></code><valueString value="a"/><valueInteger value="5"/></Observation>
+x-c7-contained	C7	<Patient xmlns="http://hl7.org/fhir"><id value="p22"/><contained><Organization><id value="org1"/><name value="O"/></Organization></contained><managingOrganization><reference value="#org1"/></managingOrganization></Patient>
+x-c7-unknown-resourcetype	C7	<Florb xmlns="http://hl7.org/fhir"><id value="p24"/></Florb>
+x-c7-wrong-resourcetype	C7	<Observation xmlns="http://hl7.org/fhir"><id value="o7"/><status value="final"/><code><text value="x"/></code></Observation>
+x-c1-malformed	C1	<Patient xmlns="http://hl7.org/fhir"><id value="p25"/><gender value="male"/>
+x-c1-duplicate-attribute	C1	<Patient xmlns="http://hl7.org/fhir"><id value="p26"/><gender value="male" value="female"/></Patient>
+x-c1-trailing-text	C1	<Patient xmlns="http://hl7.org/fhir"><id value="p28"/></Patient> xyz
+x-c1-two-roots	C1	<Patient xmlns="http://hl7.org/fhir"><id value="p27a"/></Patient><Patient xmlns="http://hl7.org/fhir"><id value="p27b"/></Patient>
+x-l-datetime-no-tz	C6	<Patient xmlns="http://hl7.org/fhir"><id value="q1"/><deceasedDateTime value="2020-01-01T10:00:00"/></Patient>
+x-l-datetime-no-seconds	C6	<Patient xmlns="http://hl7.org/fhir"><id value="q2"/><deceasedDateTime value="2020-01-01T10:00Z"/></Patient>
+x-l-date-no-padding	C6	<Patient xmlns="http://hl7.org/fhir"><id value="q3"/><birthDate value="2020-1-5"/></Patient>
+x-l-date-with-time	C6	<Patient xmlns="http://hl7.org/fhir"><id value="q4"/><birthDate value="2020-01-05T00:00:00Z"/></Patient>
+x-l-instant-date-only	C6	<Observation xmlns="http://hl7.org/fhir"><id value="q5"/><status value="final"/><code><text value="x"/></code><issued value="2020-01-05"/></Observation>
+x-l-instant-no-tz	C6	<Observation xmlns="http://hl7.org/fhir"><id value="q6"/><status value="final"/><code><text value="x"/></code><issued value="2020-01-05T10:00:00.000"/></Observation>
+x-l-time-bad	C6	<Observation xmlns="http://hl7.org/fhir"><id value="q7"/><status value="final"/><code><text value="x"/></code><valueTime value="25:61:00"/></Observation>
+x-l-code-whitespace	C6	<Observation xmlns="http://hl7.org/fhir"><id value="q8"/><status value="final"/><code><coding><system value="http://loinc.org"/><code value=" 1234-5  x "/></coding></code></Observation>
+x-l-code-required-case	C6	<Patient xmlns="http://hl7.org/fhir"><id value="q9"/><gender value="Male"/></Patient>
+x-l-positiveint-zero	C6	<Patient xmlns="http://hl7.org/fhir"><id value="q10"/><multipleBirthInteger value="0"/><photo><size value="-5"/></photo></Patient>
+x-l-decimal-string-bad	C6	<Observation xmlns="http://hl7.org/fhir"><id value="q11"/><status value="final"/><code><text value="x"/></code><valueQuantity><value value="1.2.3"/></valueQuantity></Observation>
+x-l-uuid-no-prefix	C6	<Patient xmlns="http://hl7.org/fhir"><id value="q12"/><identifier><system value="urn:ietf:rfc:3986"/><value value="x"/></identifier><managingOrganization><reference value="Organization/1"/><identifier><system value="urn:ietf:rfc:3986"/><value value="6f1e"/></identifier></managingOrganization></Patient>
+x-l-base64-bad	C6	<Patient xmlns="http://hl7.org/fhir"><id value="q13"/><photo><data value="not base64 !!!"/></photo></Patient>
+x-l-string-whitespace-only	C6	<Patient xmlns="http://hl7.org/fhir"><id value="q14"/><name><family value="   "/></name></Patient>
+x-no-namespace	X	<Patient><id value="x1"/><gender value="male"/></Patient>
+x-prefixed	X	<f:Patient xmlns:f="http://hl7.org/fhir"><f:id value="x2"/><f:gender value="male"/></f:Patient>
+x-value-surrounding-space	X	<Patient xmlns="http://hl7.org/fhir"><id value="x3"/><name><family value=" Smith "/></name></Patient>
+x-text-content	X	<Patient xmlns="http://hl7.org/fhir"><id value="x4"/><gender>male</gender></Patient>
+x-attr-on-resource	X	<Patient xmlns="http://hl7.org/fhir" foo="bar"><id value="x5"/><gender value="male"/></Patient>
+x-narrative-markup	X	<Patient xmlns="http://hl7.org/fhir"><id value="x6"/><text><status value="generated"/><div xmlns="http://www.w3.org/1999/xhtml"><p>Dose &lt; 5 mg &amp; <b>bold</b></p></div></text><gender value="male"/></Patient>

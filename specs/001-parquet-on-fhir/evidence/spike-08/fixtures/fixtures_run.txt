@@ -1,0 +1,245 @@
+spark 4.0.4
+pathling jar au.csiro.pathling_library-runtime-10.0.0-SNAPSHOT.jar 3eb0a768fa6c27052d6eaa66f8499c30558aeab9b14d125277fd7571d54f2320
+json     c0-conformant                      store     yes                                    stored; round-trips equal
+json     c0-decimal-text                    store     no                                     stored; differs: valueQuantity.value: 1.50 -> 1.5; component[0].valueQuantity.value: 0.000000123456789 -> 1.23456789E-7; component[1].valueQuantity.value: 12345678901234567890.12345 -> 1.2345678901234567E19; component[2].valueQuantity.value
+json     c0-prim-ext-only                   store     no                                     stored; differs: _birthDate: {"extension": [{"url": "http://hl7.org/f -> "<absent>"
+                                            findings: Patient._birthDate: the id and extensions of a primitive element are not yet stored
+json     c0-prim-ext-array                  store     no                                     stored; differs: name[0]._given: [null, {"extension": [{"url": "http://e/ -> "<absent>"
+                                            findings: Patient.name._given: the id and extensions of a primitive element are not yet stored
+json     c2-null                            invalid   no (column-level finding only)         stored; differs: active: null -> "<absent>"
+                                            findings: Patient.active: the definitions declare a boolean and the source carries a string column
+json     c2-empty-obj                       invalid   no (silent)                            stored; differs: maritalStatus: {} -> "<absent>"
+json     c2-empty-arr                       invalid   no (column-level finding only)         stored; differs: identifier: [] -> "<absent>"
+                                            findings: Patient.identifier: the definitions declare a structure and the source carries a value
+json     c2-empty-string                    invalid   no (silent)                            stored; round-trips equal
+json     c2-fhir-comments                   invalid   no (column-level finding only)         stored; differs: fhir_comments: ["hello"] -> "<absent>"
+                                            findings: Patient.fhir_comments: the definitions describe no element of this name
+json     c3-unknown-root                    invalid   no (column-level finding only)         stored; differs: foo: "bar" -> "<absent>"
+                                            findings: Patient.foo: the definitions describe no element of this name
+json     c3-unknown-nested                  invalid   no (column-level finding only)         stored; differs: name[0].nickname: "Y" -> "<absent>"
+                                            findings: Patient.name.nickname: the definitions describe no element of this name
+json     c3-r5-field                        invalid   no (column-level finding only)         stored; differs: triggeredBy: [{"observation": {"reference": "Observat -> "<absent>"
+                                            findings: Observation.triggeredBy: the definitions describe no element of this name
+json     c4-string-for-integer              invalid   no (column-level finding only)         stored; differs: valueInteger: "5" -> "<absent>"
+                                            findings: Observation.valueInteger: the definitions declare a integer and the source carries a string column
+json     c4-string-for-decimal              invalid   no (column-level finding only)         stored; differs: valueQuantity.value: "1.50" -> "<absent>"
+                                            findings: Observation.valueQuantity.value: the definitions declare a decimal and the source carries a string column
+json     c4-number-for-string               invalid   no (column-level finding only)         stored; differs: name[0].family: 123 -> "<absent>"
+                                            findings: Patient.name.family: the definitions declare a string and the source carries a bigint column
+json     c4-string-for-boolean              invalid   no (column-level finding only)         stored; differs: active: "true" -> "<absent>"
+                                            findings: Patient.active: the definitions declare a boolean and the source carries a string column
+json     c4-object-for-string               invalid   no (column-level finding only)         stored; differs: name[0].family: {"x": ["num", "1"]} -> "<absent>"
+                                            findings: Patient.name.family: the definitions declare a primitive and the source carries a structure
+json     c5-scalar-for-array                invalid   no (column-level finding only)         stored; differs: name: {"family": "X", "given": "Ann"} -> "<absent>"
+                                            findings: Patient.name: the definitions declare a repeating element and the source carries a single value
+json     c5-array-for-scalar                invalid   no (column-level finding only)         stored; differs: gender: ["male", "female"] -> "<absent>"; birthDate: ["1980-01-01"] -> "<absent>"
+                                            findings: Patient.birthDate: the definitions declare a singular element and the source carries an array; Patient.gender: the definitions declare a singular element and the source carries an array
+json     c5-nested-array                    invalid   no (column-level finding only)         stored; differs: name[0].given: [["a", "b"]] -> "<absent>"
+                                            findings: Patient.name.given: the definitions declare a repeating element and the source carries an array of arrays
+json     c6-bad-date                        invalid   no (silent)                            stored; round-trips equal
+json     c6-bad-code-required               store     yes                                    stored; round-trips equal
+json     c6-int-overflow                    invalid   no (silent)                            stored; differs: valueInteger: 99999999999 -> "<absent>"
+json     c6-bad-id                          store     yes                                    stored; round-trips equal
+json     c6-bad-uri-ws                      store     yes                                    stored; round-trips equal
+json     c6-ext-value-and-nested            store     yes                                    stored; round-trips equal
+json     c6-choice-two-types                unsettled -                                      stored; round-trips equal
+json     c7-contained                       contained partial (dropped, column-level finding) stored; differs: contained: [{"resourceType": "Organization", "id":  -> "<absent>"
+                                            findings: Patient.contained: contained resources are not represented in this layout
+json     c7-no-resourcetype                 unsettled -                                      stored; differs: resourceType: "<absent>" -> "Patient"
+json     c7-unknown-resourcetype            left-out  yes                                    0 rows
+json     c7-wrong-resourcetype              left-out  yes                                    0 rows
+                                            findings: Patient.code: the definitions describe no element of this name; Patient.status: the definitions describe no element of this name
+json     c1-malformed                       reject    yes (fails, whole job)                 ERROR MALFORMED_RECORD_IN_PARSING.WITHOUT_SUGGESTION : org.apache.spark.SparkException: [MALFORMED_RECORD_IN_PARSING.WITHOUT_SUGGESTION] Malformed records are detected in record parsing: _corrupt_record.
+json     c1-duplicate-key                   reject    yes (fails, whole job)                 ERROR AMBIGUOUS_REFERENCE [AMBIGUOUS_REFERENCE] Reference `gender` is ambiguous, could be: [`gender`, `gender`]. SQLSTATE: 42704
+json     c1-top-level-array                 reject    no (silent)                            2 rows; differs: the input is not one JSON object, so it cannot be compared
+json     c1-trailing-text                   reject    no (silent)                            stored; differs: the input is not one JSON object, so it cannot be compared
+json     c5-array-for-string-primitive      invalid   no (column-level finding only)         stored; differs: name[0].family: ["A", "B"] -> "<absent>"
+                                            findings: Patient.name.family: the definitions declare a singular element and the source carries an array
+json     l-datetime-no-tz                   invalid   no (silent)                            stored; round-trips equal
+json     l-datetime-no-seconds              invalid   no (silent)                            stored; round-trips equal
+json     l-date-no-padding                  invalid   no (silent)                            stored; round-trips equal
+json     l-date-with-time                   invalid   no (silent)                            stored; round-trips equal
+json     l-instant-date-only                invalid   no (silent)                            stored; round-trips equal
+json     l-instant-no-tz                    invalid   no (silent)                            stored; round-trips equal
+json     l-time-bad                         invalid   no (silent)                            stored; round-trips equal
+json     l-code-whitespace                  store     yes                                    stored; round-trips equal
+json     l-code-required-case               store     yes                                    stored; round-trips equal
+json     l-positiveint-zero                 invalid   no (silent)                            stored; round-trips equal
+json     l-decimal-string-bad               invalid   no (column-level finding only)         stored; differs: valueQuantity.value: "1.2.3" -> "<absent>"
+                                            findings: Observation.valueQuantity.value: the definitions declare a decimal and the source carries a string column
+json     l-uuid-no-prefix                   store     yes                                    stored; round-trips equal
+json     l-base64-bad                       invalid   no (silent)                            stored; differs: photo[0].data: "not base64 !!!" -> "<absent>"
+json     l-string-whitespace-only           store     yes                                    stored; round-trips equal
+json     c0-prim-ext-array-only             store     no                                     stored; differs: name[0]._given: [{"extension": [{"url": "http://e/x", "v -> "<absent>"
+                                            findings: Patient.name._given: the id and extensions of a primitive element are not yet stored
+json     c0-value-integer                   store     yes                                    stored; round-trips equal
+json     c0-marital                         store     yes                                    stored; round-trips equal
+json     c0-family                          store     yes                                    stored; round-trips equal
+json     c0-identifier                      store     yes                                    stored; round-trips equal
+json     c0-quantity-integral               store     no                                     stored; differs: valueQuantity.value: 100 -> 100.0
+fromxml  x-c0-conformant                    store     yes                                    stored; round-trips equal
+hapi     x-c0-conformant                    store     yes                                    stored; round-trips equal
+fromxml  x-c0-decimal-text                  store     no                                     stored; differs: @244: 'ue xmlns:n1="" value="1.50"></n0:value><n0:unit xmlns:n1="" ' -> 'ue xmlns:n1="" value="1.5"></n0:value><n0:unit xmlns:n1="" v'
+hapi     x-c0-decimal-text                  store     no                                     stored; differs: @244: 'ue xmlns:n1="" value="1.50"></n0:value><n0:unit xmlns:n1="" ' -> 'ue xmlns:n1="" value="1.5"></n0:value><n0:unit xmlns:n1="" v'
+fromxml  x-c0-prim-ext-only                 store     no                                     stored; differs: @82: '1="" value="p2"></n0:id><n0:birthDate><n0:extension xmlns:n1' -> '1="" value="p2"></n0:id></n0:Patient>'
+                                            findings: Patient._birthDate: the id and extensions of a primitive element are not yet stored
+hapi     x-c0-prim-ext-only                 store     no                                     stored; differs: @82: '1="" value="p2"></n0:id><n0:birthDate><n0:extension xmlns:n1' -> '1="" value="p2"></n0:id></n0:Patient>'
+fromxml  x-c0-prim-ext-array                store     no                                     stored; differs: @136: ' value="Ann"></n0:given><n0:given><n0:extension xmlns:n1="" ' -> ' value="Ann"></n0:given></n0:name></n0:Patient>'
+                                            findings: Patient.name._given: the id and extensions of a primitive element are not yet stored
+hapi     x-c0-prim-ext-array                store     no                                     stored; differs: @136: ' value="Ann"></n0:given><n0:given><n0:extension xmlns:n1="" ' -> ' value="Ann"></n0:given></n0:name></n0:Patient>'
+fromxml  x-c0-prim-ext-array-only           store     no                                     stored; differs: @137: '" value="X"></n0:family><n0:given><n0:extension xmlns:n1="" ' -> '" value="X"></n0:family></n0:name></n0:Patient>'
+                                            findings: Patient.name._given: the id and extensions of a primitive element are not yet stored
+hapi     x-c0-prim-ext-array-only           store     no                                     stored; differs: @137: '" value="X"></n0:family><n0:given><n0:extension xmlns:n1="" ' -> '" value="X"></n0:family></n0:name></n0:Patient>'
+fromxml  x-c0-value-integer                 store     yes                                    stored; round-trips equal
+hapi     x-c0-value-integer                 store     yes                                    stored; round-trips equal
+fromxml  x-c0-marital                       store     yes                                    stored; round-trips equal
+hapi     x-c0-marital                       store     yes                                    stored; round-trips equal
+fromxml  x-c0-family                        store     yes                                    stored; round-trips equal
+hapi     x-c0-family                        store     yes                                    stored; round-trips equal
+fromxml  x-c0-identifier                    store     yes                                    stored; round-trips equal
+hapi     x-c0-identifier                    store     yes                                    stored; round-trips equal
+fromxml  x-c0-quantity-integral             store     no                                     stored; differs: @244: 'ue xmlns:n1="" value="100"></n0:value><n0:unit xmlns:n1="" v' -> 'ue xmlns:n1="" value="100.0"></n0:value><n0:unit xmlns:n1=""'
+hapi     x-c0-quantity-integral             store     no                                     stored; differs: @244: 'ue xmlns:n1="" value="100"></n0:value><n0:unit xmlns:n1="" v' -> 'ue xmlns:n1="" value="100.0"></n0:value><n0:unit xmlns:n1=""'
+fromxml  x-c2-null                          invalid   no (silent)                            stored; differs: @85: '" value="p4"></n0:id><n0:active></n0:active><n0:gender xmlns' -> '" value="p4"></n0:id><n0:gender xmlns:n1="" value="male"></n'
+hapi     x-c2-null                          invalid   no (silent)                            stored; differs: @85: '" value="p4"></n0:id><n0:active></n0:active><n0:gender xmlns' -> '" value="p4"></n0:id><n0:gender xmlns:n1="" value="male"></n'
+fromxml  x-c2-empty-obj                     invalid   no (silent)                            stored; differs: @130: 'alue="male"></n0:gender><n0:maritalStatus></n0:maritalStatus' -> 'alue="male"></n0:gender></n0:Patient>'
+hapi     x-c2-empty-obj                     invalid   no (silent)                            stored; differs: @130: 'alue="male"></n0:gender><n0:maritalStatus></n0:maritalStatus' -> 'alue="male"></n0:gender></n0:Patient>'
+fromxml  x-c2-empty-string                  invalid   no (silent)                            stored; round-trips equal
+hapi     x-c2-empty-string                  invalid   no (silent)                            stored; differs: @85: '" value="p7"></n0:id><n0:name><n0:family xmlns:n1="" value="' -> '" value="p7"></n0:id><n0:gender xmlns:n1="" value="male"></n'
+fromxml  x-c2-fhir-comments                 store     yes                                    stored; round-trips equal
+hapi     x-c2-fhir-comments                 store     yes                                    stored; round-trips equal
+fromxml  x-c3-unknown-root                  invalid   no (column-level finding only)         stored; differs: @85: '" value="p9"></n0:id><n0:foo xmlns:n1="" value="bar"></n0:fo' -> '" value="p9"></n0:id><n0:gender xmlns:n1="" value="male"></n'
+                                            findings: Patient/foo
+hapi     x-c3-unknown-root                  invalid   no (silent)                            stored; differs: @85: '" value="p9"></n0:id><n0:foo xmlns:n1="" value="bar"></n0:fo' -> '" value="p9"></n0:id><n0:gender xmlns:n1="" value="male"></n'
+fromxml  x-c3-unknown-nested                invalid   no (column-level finding only)         stored; differs: @137: '" value="X"></n0:family><n0:nickname xmlns:n1="" value="Y"><' -> '" value="X"></n0:family></n0:name></n0:Patient>'
+                                            findings: Patient/name/nickname
+hapi     x-c3-unknown-nested                invalid   no (silent)                            stored; differs: @137: '" value="X"></n0:family><n0:nickname xmlns:n1="" value="Y"><' -> '" value="X"></n0:family></n0:name></n0:Patient>'
+fromxml  x-c3-r5-field                      invalid   no (column-level finding only)         stored; differs: @89: '" value="o2"></n0:id><n0:triggeredBy><n0:observation><n0:ref' -> '" value="o2"></n0:id><n0:status xmlns:n1="" value="final"></'
+                                            findings: Observation/triggeredBy
+hapi     x-c3-r5-field                      invalid   no (silent)                            stored; differs: @89: '" value="o2"></n0:id><n0:triggeredBy><n0:observation><n0:ref' -> '" value="o2"></n0:id><n0:status xmlns:n1="" value="final"></'
+fromxml  x-c4-object-for-string             invalid   no (column-level finding only)         stored; differs: @83: '="" value="p13"></n0:id><n0:name><n0:family><n0:x xmlns:n1="' -> '="" value="p13"></n0:id></n0:Patient>'
+                                            findings: Patient/name/family/x
+hapi     x-c4-object-for-string             invalid   no (silent)                            stored; differs: @83: '="" value="p13"></n0:id><n0:name><n0:family><n0:x xmlns:n1="' -> '="" value="p13"></n0:id></n0:Patient>'
+fromxml  x-c5-array-for-scalar              invalid   no (column-level finding only)         stored; differs: @86: ' value="p15"></n0:id><n0:gender xmlns:n1="" value="male"></n' -> ' value="p15"></n0:id><n0:birthDate xmlns:n1="" value="1980-0'
+                                            findings: Patient.gender: the definitions declare a singular element and the source carries an array
+hapi     x-c5-array-for-scalar              invalid   no (silent)                            stored; differs: @134: 'e="male"></n0:gender><n0:gender xmlns:n1="" value="female"><' -> 'e="male"></n0:gender><n0:birthDate xmlns:n1="" value="1980-0'
+fromxml  x-c5-array-for-string-primitive    invalid   no (column-level finding only)         stored; differs: @92: '="p29"></n0:id><n0:name><n0:family xmlns:n1="" value="A"></n' -> '="p29"></n0:id><n0:name></n0:name></n0:Patient>'
+                                            findings: Patient.name.family: the definitions declare a singular element and the source carries an array
+hapi     x-c5-array-for-string-primitive    invalid   no (silent)                            stored; differs: @137: '" value="A"></n0:family><n0:family xmlns:n1="" value="B"></n' -> '" value="A"></n0:family></n0:name></n0:Patient>'
+fromxml  x-c6-bad-date                      invalid   no (silent)                            stored; round-trips equal
+hapi     x-c6-bad-date                      invalid   yes (fails, whole job)                 ERROR HAPI HAPI-1851: DataFormatException at [[row,col {unknown-source}]: [1,55]]: HAPI-1821: [element="birthDate"] Invalid attribute value "1980-13-45": Invalid
+fromxml  x-c6-bad-code-required             store     yes                                    stored; round-trips equal
+hapi     x-c6-bad-code-required             store     no                                     ERROR HAPI HAPI-1851: DataFormatException at [[row,col {unknown-source}]: [1,55]]: HAPI-1821: [element="gender"] Invalid attribute value "xyz": Unknown Administra
+fromxml  x-c6-int-overflow                  invalid   no (silent)                            stored; differs: @195: '"x"></n0:text></n0:code><n0:valueInteger xmlns:n1="" value="' -> '"x"></n0:text></n0:code></n0:Observation>'
+hapi     x-c6-int-overflow                  invalid   yes (fails, whole job)                 ERROR HAPI HAPI-1851: DataFormatException at [[row,col {unknown-source}]: [1,111]]: HAPI-1821: [element="valueInteger"] Invalid attribute value "99999999999": jav
+fromxml  x-c6-bad-id                        store     yes                                    stored; round-trips equal
+hapi     x-c6-bad-id                        store     yes                                    stored; round-trips equal
+fromxml  x-c6-bad-uri-ws                    store     yes                                    stored; round-trips equal
+hapi     x-c6-bad-uri-ws                    store     yes                                    stored; round-trips equal
+fromxml  x-c6-ext-value-and-nested          store     yes                                    stored; round-trips equal
+hapi     x-c6-ext-value-and-nested          store     no                                     ERROR HAPI HAPI-1851: DataFormatException at [[row,col {unknown-source}]: [1,162]]: HAPI-1811: Extension (URL='http://e/x') must not have both a value and other c
+fromxml  x-c6-choice-two-types              unsettled -                                      stored; round-trips equal
+hapi     x-c6-choice-two-types              unsettled -                                      stored; differs: @250: 'ue="a"></n0:valueString><n0:valueInteger xmlns:n1="" value="' -> 'ue="a"></n0:valueString></n0:Observation>'
+fromxml  x-c7-contained                     contained partial (dropped, column-level finding) stored; differs: @86: ' value="p22"></n0:id><n0:contained><n0:Organization><n0:id x' -> ' value="p22"></n0:id><n0:managingOrganization><n0:reference '
+                                            findings: Patient/contained
+hapi     x-c7-contained                     contained no (dropped silently)                  stored; differs: @86: ' value="p22"></n0:id><n0:contained><n0:Organization><n0:id x' -> ' value="p22"></n0:id><n0:managingOrganization><n0:reference '
+fromxml  x-c7-unknown-resourcetype          left-out  yes                                    0 rows
+hapi     x-c7-unknown-resourcetype          left-out  no                                     ERROR HAPI HAPI-1851: DataFormatException at [[row,col {unknown-source}]: [1,1]]: HAPI-1684: Unknown resource name "Florb" (this name is not known in FHIR version
+fromxml  x-c7-wrong-resourcetype            left-out  yes                                    0 rows
+hapi     x-c7-wrong-resourcetype            left-out  yes                                    0 rows
+fromxml  x-c1-malformed                     reject    yes (fails, whole job)                 ERROR MALFORMED_RECORD_IN_PARSING.WITHOUT_SUGGESTION : org.apache.spark.SparkException: [MALFORMED_RECORD_IN_PARSING.WITHOUT_SUGGESTION] Malformed records are detected in record parsing: _corrupt_record.
+hapi     x-c1-malformed                     reject    yes (fails, whole job)                 ERROR HAPI HAPI-1852: Failed to parse XML content: Unexpected EOF; was expecting a close tag for element <Patient>
+fromxml  x-c1-duplicate-attribute           reject    yes (fails, whole job)                 ERROR MALFORMED_RECORD_IN_PARSING.WITHOUT_SUGGESTION : org.apache.spark.SparkException: [MALFORMED_RECORD_IN_PARSING.WITHOUT_SUGGESTION] Malformed records are detected in record parsing: _corrupt_record.
+hapi     x-c1-duplicate-attribute           reject    yes (fails, whole job)                 ERROR HAPI HAPI-1852: Failed to parse XML content: Duplicate attribute 'value'.
+fromxml  x-c1-trailing-text                 reject    no (silent)                            stored; differs: the input is not well-formed XML, so it cannot be compared
+hapi     x-c1-trailing-text                 reject    yes (fails, whole job)                 ERROR HAPI HAPI-1852: Failed to parse XML content: Unexpected character 'x' (code 120) in epilog; expected '<'
+fromxml  x-c1-two-roots                     reject    no (silent)                            stored; differs: the input is not well-formed XML, so it cannot be compared
+hapi     x-c1-two-roots                     reject    yes (fails, whole job)                 ERROR HAPI HAPI-1852: Failed to parse XML content: Illegal to have multiple roots (start tag in epilog?).
+fromxml  x-l-datetime-no-tz                 invalid   no (silent)                            stored; round-trips equal
+hapi     x-l-datetime-no-tz                 invalid   no (silent)                            stored; round-trips equal
+fromxml  x-l-datetime-no-seconds            invalid   no (silent)                            stored; round-trips equal
+hapi     x-l-datetime-no-seconds            invalid   no (silent)                            stored; round-trips equal
+fromxml  x-l-date-no-padding                invalid   no (silent)                            stored; round-trips equal
+hapi     x-l-date-no-padding                invalid   yes (fails, whole job)                 ERROR HAPI HAPI-1851: DataFormatException at [[row,col {unknown-source}]: [1,54]]: HAPI-1821: [element="birthDate"] Invalid attribute value "2020-1-5": Invalid da
+fromxml  x-l-date-with-time                 invalid   no (silent)                            stored; round-trips equal
+hapi     x-l-date-with-time                 invalid   no (silent)                            stored; round-trips equal
+fromxml  x-l-instant-date-only              invalid   no (silent)                            stored; round-trips equal
+hapi     x-l-instant-date-only              invalid   no (silent)                            stored; round-trips equal
+fromxml  x-l-instant-no-tz                  invalid   no (silent)                            stored; round-trips equal
+hapi     x-l-instant-no-tz                  invalid   no (silent)                            stored; round-trips equal
+fromxml  x-l-time-bad                       invalid   no (silent)                            stored; round-trips equal
+hapi     x-l-time-bad                       invalid   no (silent)                            stored; round-trips equal
+fromxml  x-l-code-whitespace                store     yes                                    stored; round-trips equal
+hapi     x-l-code-whitespace                store     yes                                    stored; round-trips equal
+fromxml  x-l-code-required-case             store     yes                                    stored; round-trips equal
+hapi     x-l-code-required-case             store     no                                     ERROR HAPI HAPI-1851: DataFormatException at [[row,col {unknown-source}]: [1,54]]: HAPI-1821: [element="gender"] Invalid attribute value "Male": Case discrepancy
+fromxml  x-l-positiveint-zero               invalid   no (silent)                            stored; round-trips equal
+hapi     x-l-positiveint-zero               invalid   no (silent)                            stored; round-trips equal
+fromxml  x-l-decimal-string-bad             invalid   no (silent)                            stored; differs: @214: ':code><n0:valueQuantity><n0:value xmlns:n1="" value="1.2.3">' -> ':code><n0:valueQuantity></n0:valueQuantity></n0:Observation>'
+hapi     x-l-decimal-string-bad             invalid   yes (fails, whole job)                 ERROR HAPI HAPI-1851: DataFormatException at [[row,col {unknown-source}]: [1,127]]: HAPI-1821: [element="value"] Invalid attribute value "1.2.3": Character array
+fromxml  x-l-uuid-no-prefix                 store     yes                                    stored; round-trips equal
+hapi     x-l-uuid-no-prefix                 store     yes                                    stored; round-trips equal
+fromxml  x-l-base64-bad                     invalid   no (silent)                            stored; differs: @93: '"q13"></n0:id><n0:photo><n0:data xmlns:n1="" value="not base' -> '"q13"></n0:id><n0:photo></n0:photo></n0:Patient>'
+hapi     x-l-base64-bad                     invalid   yes (fails, whole job)                 ERROR HAPI HAPI-1851: DataFormatException at [[row,col {unknown-source}]: [1,62]]: HAPI-1821: [element="data"] Invalid attribute value "not base64 !!!":
+fromxml  x-l-string-whitespace-only         store     yes                                    stored; round-trips equal
+hapi     x-l-string-whitespace-only         store     no                                     stored; differs: @83: '="" value="q14"></n0:id><n0:name><n0:family xmlns:n1="" valu' -> '="" value="q14"></n0:id></n0:Patient>'
+fromxml  x-no-namespace                     reject    no (silent)                            stored; differs: @22: '<n0:Patient xmlns:n0=""><n0:id value="x1"></n0:id><n0:gen' -> '<n0:Patient xmlns:n0="http://hl7.org/fhir"><n0:id xmlns:n'
+hapi     x-no-namespace                     reject    no (silent)                            stored; differs: @22: '<n0:Patient xmlns:n0=""><n0:id value="x1"></n0:id><n0:gen' -> '<n0:Patient xmlns:n0="http://hl7.org/fhir"><n0:id xmlns:n'
+fromxml  x-prefixed                         store     no                                     0 rows
+hapi     x-prefixed                         store     yes                                    stored; round-trips equal
+fromxml  x-value-surrounding-space          store     yes                                    stored; round-trips equal
+hapi     x-value-surrounding-space          store     yes                                    stored; round-trips equal
+fromxml  x-text-content                     invalid   no (silent)                            stored; differs: @82: '1="" value="x4"></n0:id><n0:gender>male</n0:gender></n0:Pati' -> '1="" value="x4"></n0:id></n0:Patient>'
+hapi     x-text-content                     invalid   no (silent)                            stored; differs: @82: '1="" value="x4"></n0:id><n0:gender>male</n0:gender></n0:Pati' -> '1="" value="x4"></n0:id></n0:Patient>'
+fromxml  x-attr-on-resource                 invalid   no (column-level finding only)         stored; differs: @2: '<n1:Patient xmlns:n0="" xmlns:n1="htt' -> '<n0:Patient xmlns:n0="http://hl7.org/'
+                                            findings: Patient/@foo
+hapi     x-attr-on-resource                 invalid   no (silent)                            stored; differs: @2: '<n1:Patient xmlns:n0="" xmlns:n1="htt' -> '<n0:Patient xmlns:n0="http://hl7.org/'
+fromxml  x-narrative-markup                 store     yes                                    stored; round-trips equal
+hapi     x-narrative-markup                 store     yes                                    stored; round-trips equal
+
+== batch: a stored row that differs from the row stored alone (principle 6)
+json     Observation  batch of 13: 4 stored differently
+                        c0-decimal-text                    valueQuantity.value: "1.5" -> null
+                        c6-choice-two-types                valueInteger: 5 -> null
+                        c0-value-integer                   valueInteger: 5 -> null
+                        c0-quantity-integral               valueQuantity.value: "100" -> null
+json     Patient      batch of 38: 16 stored differently
+                        c0-conformant                      active: true -> null; name: [{"family": "Smith", "given": ["Ann", "B -> "<absent>"
+                        c0-prim-ext-array                  name: [{"given": ["Ann", null]}] -> "<absent>"
+                        c2-empty-obj                       maritalStatus: "<absent>" -> {"coding": null}
+                        c2-empty-arr                       identifier: "<absent>" -> []
+                        c2-empty-string                    name: [{"family": ""}] -> "<absent>"
+                        c3-unknown-nested                  name: [{"family": "X"}] -> "<absent>"
+                        c4-number-for-string               name: [{"family": null}] -> "<absent>"
+                        c4-object-for-string               name: [{"family": null}] -> "<absent>"
+                        c5-scalar-for-array                name: null -> "<absent>"
+                        c5-array-for-scalar                birthDate: null -> "[\"1980-01-01\"]"; gender: null -> "[\"male\",\"female\"]"
+                        c5-nested-array                    name: [{"given": null}] -> "<absent>"
+                        c7-no-resourcetype                 resourceType: "Patient" -> null
+                        c5-array-for-string-primitive      name: [{"family": null}] -> "<absent>"
+                        l-string-whitespace-only           name: [{"family": "   "}] -> "<absent>"
+                        c0-prim-ext-array-only             name: [{"family": "X", "given": null}] -> "<absent>"
+                        c0-family                          name: [{"family": "Jones", "given": ["Al"]}] -> "<absent>"
+fromxml  Observation  batch of 11: 0 stored differently
+fromxml  Patient      batch of 38: 21 stored differently
+                        x-c0-conformant                    gender: "female" -> "<absent>"; name[0].family: "Smith" -> null
+                        x-c0-prim-ext-array-only           name[0].family: "X" -> null; name[0].given: null -> [null]
+                        x-c0-marital                       gender: "male" -> "<absent>"
+                        x-c0-family                        name[0].family: "Jones" -> null
+                        x-c0-identifier                    gender: "male" -> "<absent>"
+                        x-c2-null                          gender: "male" -> "<absent>"
+                        x-c2-empty-obj                     gender: "male" -> "<absent>"; maritalStatus: "<absent>" -> {"coding": null}
+                        x-c2-empty-string                  gender: "male" -> "<absent>"; name[0].family: "" -> null
+                        x-c2-fhir-comments                 gender: "male" -> "<absent>"
+                        x-c3-unknown-root                  gender: "male" -> "<absent>"
+                        x-c3-unknown-nested                name[0].family: "X" -> null
+                        x-c4-object-for-string             name: "<absent>" -> [{"family": null, "given": null}]
+                        x-c5-array-for-scalar              gender: null -> "<absent>"
+                        x-c6-bad-code-required             gender: "xyz" -> "<absent>"
+                        x-c6-bad-id                        gender: "male" -> "<absent>"
+                        x-l-code-required-case             gender: "Male" -> "<absent>"
+                        x-l-string-whitespace-only         name[0].family: "   " -> null
+                        x-no-namespace                     gender: "male" -> "<absent>"
+                        x-value-surrounding-space          name[0].family: " Smith " -> null
+                        x-attr-on-resource                 gender: "male" -> "<absent>"
+                        x-narrative-markup                 gender: "male" -> "<absent>"

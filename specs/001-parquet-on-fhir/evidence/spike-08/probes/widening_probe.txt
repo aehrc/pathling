@@ -1,0 +1,306 @@
+spark 4.0.2
+
+== leaf: string vs number, in a struct in an array
+   row 1: {"name":[{"family":"A","period":{"start":"2020"}}]}
+   row 2: {"name":[{"family":"B","period":{"start":5}}]}
+   row 1 alone:
+      name                               array<struct<family:string,period:struct<start:string>>>
+      name[]                             struct<family:string,period:struct<start:string>>
+      name[].family                      string
+      name[].period                      struct<start:string>
+      name[].period.start                string
+   row 2 alone:
+      name                               array<struct<family:string,period:struct<start:bigint>>>
+      name[]                             struct<family:string,period:struct<start:bigint>>
+      name[].family                      string
+      name[].period                      struct<start:bigint>
+      name[].period.start                bigint
+   both rows:
+      name                               array<struct<family:string,period:struct<start:string>>>
+      name[]                             struct<family:string,period:struct<start:string>>
+      name[].family                      string
+      name[].period                      struct<start:string>
+      name[].period.start                string
+      row: {"name": [{"family": "A", "period": {"start": "2020"}}]}
+      row: {"name": [{"family": "B", "period": {"start": "5"}}]}
+
+== leaf: string vs boolean, in a struct in an array
+   row 1: {"name":[{"family":"A","use":"x"}]}
+   row 2: {"name":[{"family":"B","use":true}]}
+   row 1 alone:
+      name                               array<struct<family:string,use:string>>
+      name[]                             struct<family:string,use:string>
+      name[].family                      string
+      name[].use                         string
+   row 2 alone:
+      name                               array<struct<family:string,use:boolean>>
+      name[]                             struct<family:string,use:boolean>
+      name[].family                      string
+      name[].use                         boolean
+   both rows:
+      name                               array<struct<family:string,use:string>>
+      name[]                             struct<family:string,use:string>
+      name[].family                      string
+      name[].use                         string
+      row: {"name": [{"family": "A", "use": "x"}]}
+      row: {"name": [{"family": "B", "use": "true"}]}
+
+== leaf: number vs boolean, deep
+   row 1: {"component":[{"valueQuantity":{"value":1.5,"unit":"mg"}}]}
+   row 2: {"component":[{"valueQuantity":{"value":true,"unit":"mg"}}]}
+   row 1 alone:
+      component                          array<struct<valueQuantity:struct<unit:string,value:double>>>
+      component[]                        struct<valueQuantity:struct<unit:string,value:double>>
+      component[].valueQuantity          struct<unit:string,value:double>
+      component[].valueQuantity.unit     string
+      component[].valueQuantity.value    double
+   row 2 alone:
+      component                          array<struct<valueQuantity:struct<unit:string,value:boolean>>>
+      component[]                        struct<valueQuantity:struct<unit:string,value:boolean>>
+      component[].valueQuantity          struct<unit:string,value:boolean>
+      component[].valueQuantity.unit     string
+      component[].valueQuantity.value    boolean
+   both rows:
+      component                          array<struct<valueQuantity:struct<unit:string,value:string>>>
+      component[]                        struct<valueQuantity:struct<unit:string,value:string>>
+      component[].valueQuantity          struct<unit:string,value:string>
+      component[].valueQuantity.unit     string
+      component[].valueQuantity.value    string
+      row: {"component": [{"valueQuantity": {"unit": "mg", "value": "1.5"}}]}
+      row: {"component": [{"valueQuantity": {"unit": "mg", "value": "true"}}]}
+
+== leaf: string vs object, deep in an array of structs
+   row 1: {"code":{"coding":[{"system":"s","code":"c"}]}}
+   row 2: {"code":{"coding":[{"system":"s","code":{"x":1}}]}}
+   row 1 alone:
+      code                               struct<coding:array<struct<code:string,system:string>>>
+      code.coding                        array<struct<code:string,system:string>>
+      code.coding[]                      struct<code:string,system:string>
+      code.coding[].code                 string
+      code.coding[].system               string
+   row 2 alone:
+      code                               struct<coding:array<struct<code:struct<x:bigint>,system:string>>>
+      code.coding                        array<struct<code:struct<x:bigint>,system:string>>
+      code.coding[]                      struct<code:struct<x:bigint>,system:string>
+      code.coding[].code                 struct<x:bigint>
+      code.coding[].code.x               bigint
+      code.coding[].system               string
+   both rows:
+      code                               struct<coding:array<struct<code:string,system:string>>>
+      code.coding                        array<struct<code:string,system:string>>
+      code.coding[]                      struct<code:string,system:string>
+      code.coding[].code                 string
+      code.coding[].system               string
+      row: {"code": {"coding": [{"code": "c", "system": "s"}]}}
+      row: {"code": {"coding": [{"code": "{\"x\":1}", "system": "s"}]}}
+
+== leaf: string vs array (c5-array-for-string-primitive)
+   row 1: {"name":[{"family":"A","given":["x"]}]}
+   row 2: {"name":[{"family":["A","B"],"given":["y"]}]}
+   row 1 alone:
+      name                               array<struct<family:string,given:array<string>>>
+      name[]                             struct<family:string,given:array<string>>
+      name[].family                      string
+      name[].given                       array<string>
+      name[].given[]                     string
+   row 2 alone:
+      name                               array<struct<family:array<string>,given:array<string>>>
+      name[]                             struct<family:array<string>,given:array<string>>
+      name[].family                      array<string>
+      name[].family[]                    string
+      name[].given                       array<string>
+      name[].given[]                     string
+   both rows:
+      name                               array<struct<family:string,given:array<string>>>
+      name[]                             struct<family:string,given:array<string>>
+      name[].family                      string
+      name[].given                       array<string>
+      name[].given[]                     string
+      row: {"name": [{"family": "A", "given": ["x"]}]}
+      row: {"name": [{"family": "[\"A\",\"B\"]", "given": ["y"]}]}
+
+== array element: string vs number
+   row 1: {"name":[{"given":["a"]}]}
+   row 2: {"name":[{"given":[1]}]}
+   row 1 alone:
+      name                               array<struct<given:array<string>>>
+      name[]                             struct<given:array<string>>
+      name[].given                       array<string>
+      name[].given[]                     string
+   row 2 alone:
+      name                               array<struct<given:array<bigint>>>
+      name[]                             struct<given:array<bigint>>
+      name[].given                       array<bigint>
+      name[].given[]                     bigint
+   both rows:
+      name                               array<struct<given:array<string>>>
+      name[]                             struct<given:array<string>>
+      name[].given                       array<string>
+      name[].given[]                     string
+      row: {"name": [{"given": ["a"]}]}
+      row: {"name": [{"given": ["1"]}]}
+
+== array element: string vs object
+   row 1: {"name":[{"given":["a"]}]}
+   row 2: {"name":[{"given":[{"x":1}]}]}
+   row 1 alone:
+      name                               array<struct<given:array<string>>>
+      name[]                             struct<given:array<string>>
+      name[].given                       array<string>
+      name[].given[]                     string
+   row 2 alone:
+      name                               array<struct<given:array<struct<x:bigint>>>>
+      name[]                             struct<given:array<struct<x:bigint>>>
+      name[].given                       array<struct<x:bigint>>
+      name[].given[]                     struct<x:bigint>
+      name[].given[].x                   bigint
+   both rows:
+      name                               array<struct<given:array<string>>>
+      name[]                             struct<given:array<string>>
+      name[].given                       array<string>
+      name[].given[]                     string
+      row: {"name": [{"given": ["a"]}]}
+      row: {"name": [{"given": ["{\"x\":1}"]}]}
+
+== array element: string vs nested array (c5-nested-array)
+   row 1: {"name":[{"given":["a"]}]}
+   row 2: {"name":[{"given":[["a","b"]]}]}
+   row 1 alone:
+      name                               array<struct<given:array<string>>>
+      name[]                             struct<given:array<string>>
+      name[].given                       array<string>
+      name[].given[]                     string
+   row 2 alone:
+      name                               array<struct<given:array<array<string>>>>
+      name[]                             struct<given:array<array<string>>>
+      name[].given                       array<array<string>>
+      name[].given[]                     array<string>
+      name[].given[][]                   string
+   both rows:
+      name                               array<struct<given:array<string>>>
+      name[]                             struct<given:array<string>>
+      name[].given                       array<string>
+      name[].given[]                     string
+      row: {"name": [{"given": ["a"]}]}
+      row: {"name": [{"given": ["[\"a\",\"b\"]"]}]}
+
+== intermediate: array of structs vs struct (c5-scalar-for-array)
+   row 1: {"name":[{"family":"X","given":["Ann"]}],"gender":"male"}
+   row 2: {"name":{"family":"Y","given":["Bo"]},"gender":"female"}
+   row 1 alone:
+      gender                             string
+      name                               array<struct<family:string,given:array<string>>>
+      name[]                             struct<family:string,given:array<string>>
+      name[].family                      string
+      name[].given                       array<string>
+      name[].given[]                     string
+   row 2 alone:
+      gender                             string
+      name                               struct<family:string,given:array<string>>
+      name.family                        string
+      name.given                         array<string>
+      name.given[]                       string
+   both rows:
+      gender                             string
+      name                               string
+      row: {"gender": "male", "name": "[{\"family\":\"X\",\"given\":[\"Ann\"]}]"}
+      row: {"gender": "female", "name": "{\"family\":\"Y\",\"given\":[\"Bo\"]}"}
+
+== intermediate: struct vs array of structs, one level down
+   row 1: {"code":{"coding":[{"system":"s","code":"c"}],"text":"t"}}
+   row 2: {"code":{"coding":{"system":"s","code":"c"},"text":"t"}}
+   row 1 alone:
+      code                               struct<coding:array<struct<code:string,system:string>>,text:string>
+      code.coding                        array<struct<code:string,system:string>>
+      code.coding[]                      struct<code:string,system:string>
+      code.coding[].code                 string
+      code.coding[].system               string
+      code.text                          string
+   row 2 alone:
+      code                               struct<coding:struct<code:string,system:string>,text:string>
+      code.coding                        struct<code:string,system:string>
+      code.coding.code                   string
+      code.coding.system                 string
+      code.text                          string
+   both rows:
+      code                               struct<coding:string,text:string>
+      code.coding                        string
+      code.text                          string
+      row: {"code": {"coding": "[{\"system\":\"s\",\"code\":\"c\"}]", "text": "t"}}
+      row: {"code": {"coding": "{\"system\":\"s\",\"code\":\"c\"}", "text": "t"}}
+
+== intermediate: struct vs string
+   row 1: {"code":{"coding":[{"system":"s"}],"text":"t"}}
+   row 2: {"code":"just text"}
+   row 1 alone:
+      code                               struct<coding:array<struct<system:string>>,text:string>
+      code.coding                        array<struct<system:string>>
+      code.coding[]                      struct<system:string>
+      code.coding[].system               string
+      code.text                          string
+   row 2 alone:
+      code                               string
+   both rows:
+      code                               string
+      row: {"code": "{\"coding\":[{\"system\":\"s\"}],\"text\":\"t\"}"}
+      row: {"code": "just text"}
+
+== intermediate: array of structs vs array of strings
+   row 1: {"name":[{"family":"X"}]}
+   row 2: {"name":["X"]}
+   row 1 alone:
+      name                               array<struct<family:string>>
+      name[]                             struct<family:string>
+      name[].family                      string
+   row 2 alone:
+      name                               array<string>
+      name[]                             string
+   both rows:
+      name                               array<string>
+      name[]                             string
+      row: {"name": ["{\"family\":\"X\"}"]}
+      row: {"name": ["X"]}
+
+== intermediate: struct vs empty object, and vs empty array
+   row 1: {"code":{"text":"t"}}
+   row 2: {"code":{}}
+   row 1 alone:
+      code                               struct<text:string>
+      code.text                          string
+   row 2 alone:
+   both rows:
+      code                               struct<text:string>
+      code.text                          string
+      row: {"code": {"text": "t"}}
+      row: {"code": {"text": null}}
+
+== intermediate: array of structs vs empty array
+   row 1: {"name":[{"family":"X"}]}
+   row 2: {"name":[]}
+   row 1 alone:
+      name                               array<struct<family:string>>
+      name[]                             struct<family:string>
+      name[].family                      string
+   row 2 alone:
+      name                               array<string>
+      name[]                             string
+   both rows:
+      name                               array<struct<family:string>>
+      name[]                             struct<family:string>
+      name[].family                      string
+      row: {"name": [{"family": "X"}]}
+      row: {"name": []}
+
+== intermediate: struct vs null
+   row 1: {"code":{"text":"t"}}
+   row 2: {"code":null}
+   row 1 alone:
+      code                               struct<text:string>
+      code.text                          string
+   row 2 alone:
+      code                               string
+   both rows:
+      code                               struct<text:string>
+      code.text                          string
+      row: {"code": {"text": "t"}}
+      row: {"code": null}

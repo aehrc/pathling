@@ -1,0 +1,48 @@
+spark 4.0.2
+conf spark.sql.variant.allowDuplicateKeys = false
+conf spark.sql.json.enablePartialResults = true
+conf spark.sql.ansi.enabled = true
+
+== parse_json, spark.sql.variant.allowDuplicateKeys=false
+   conformant object                accepted  null=False  schema=OBJECT<id: STRING, resourceType: STRING>  json={"id":"p1","resourceType":"Patient"}
+   duplicate key, top level         REJECTED  MALFORMED_RECORD_IN_PARSING.WITHOUT_SUGGESTION VARIANT_DUPLICATE_KEY
+   duplicate key, nested            REJECTED  MALFORMED_RECORD_IN_PARSING.WITHOUT_SUGGESTION VARIANT_DUPLICATE_KEY
+   top-level array                  accepted  null=False  schema=ARRAY<OBJECT<id: STRING, resourceType: STRING>>  json=[{"id":"p27a","resourceType":"Patient"},{"id":"p27b","resourceType":"Patient"}]
+   text after the object            accepted  null=False  schema=OBJECT<id: STRING, resourceType: STRING>  json={"id":"p28","resourceType":"Patient"}
+   second object after the object   accepted  null=False  schema=OBJECT<id: STRING, resourceType: STRING>  json={"id":"a","resourceType":"Patient"}
+   whitespace after the object      accepted  null=False  schema=OBJECT<id: STRING, resourceType: STRING>  json={"id":"p28","resourceType":"Patient"}
+   top-level scalar                 accepted  null=False  schema=STRING  json="just a string"
+   malformed (unclosed)             REJECTED  MALFORMED_RECORD_IN_PARSING.WITHOUT_SUGGESTION JsonEOFException
+
+== try_parse_json, spark.sql.variant.allowDuplicateKeys=false
+   conformant object                accepted  null=False  schema=OBJECT<id: STRING, resourceType: STRING>  json={"id":"p1","resourceType":"Patient"}
+   duplicate key, top level         accepted  null=True  schema=None  json=None
+   duplicate key, nested            accepted  null=True  schema=None  json=None
+   top-level array                  accepted  null=False  schema=ARRAY<OBJECT<id: STRING, resourceType: STRING>>  json=[{"id":"p27a","resourceType":"Patient"},{"id":"p27b","resourceType":"Patient"}]
+   text after the object            accepted  null=False  schema=OBJECT<id: STRING, resourceType: STRING>  json={"id":"p28","resourceType":"Patient"}
+   second object after the object   accepted  null=False  schema=OBJECT<id: STRING, resourceType: STRING>  json={"id":"a","resourceType":"Patient"}
+   whitespace after the object      accepted  null=False  schema=OBJECT<id: STRING, resourceType: STRING>  json={"id":"p28","resourceType":"Patient"}
+   top-level scalar                 accepted  null=False  schema=STRING  json="just a string"
+   malformed (unclosed)             accepted  null=True  schema=None  json=None
+
+== parse_json, spark.sql.variant.allowDuplicateKeys=true
+   conformant object                accepted  null=False  schema=OBJECT<id: STRING, resourceType: STRING>  json={"id":"p1","resourceType":"Patient"}
+   duplicate key, top level         accepted  null=False  schema=OBJECT<gender: STRING, id: STRING, resourceType: STRING>  json={"gender":"female","id":"p26","resourceType":"Patient"}
+   duplicate key, nested            accepted  null=False  schema=OBJECT<name: ARRAY<OBJECT<family: STRING>>, resourceType: STRING>  json={"name":[{"family":"B"}],"resourceType":"Patient"}
+   top-level array                  accepted  null=False  schema=ARRAY<OBJECT<id: STRING, resourceType: STRING>>  json=[{"id":"p27a","resourceType":"Patient"},{"id":"p27b","resourceType":"Patient"}]
+   text after the object            accepted  null=False  schema=OBJECT<id: STRING, resourceType: STRING>  json={"id":"p28","resourceType":"Patient"}
+   second object after the object   accepted  null=False  schema=OBJECT<id: STRING, resourceType: STRING>  json={"id":"a","resourceType":"Patient"}
+   whitespace after the object      accepted  null=False  schema=OBJECT<id: STRING, resourceType: STRING>  json={"id":"p28","resourceType":"Patient"}
+   top-level scalar                 accepted  null=False  schema=STRING  json="just a string"
+   malformed (unclosed)             REJECTED  MALFORMED_RECORD_IN_PARSING.WITHOUT_SUGGESTION JsonEOFException
+
+== try_parse_json, spark.sql.variant.allowDuplicateKeys=true
+   conformant object                accepted  null=False  schema=OBJECT<id: STRING, resourceType: STRING>  json={"id":"p1","resourceType":"Patient"}
+   duplicate key, top level         accepted  null=False  schema=OBJECT<gender: STRING, id: STRING, resourceType: STRING>  json={"gender":"female","id":"p26","resourceType":"Patient"}
+   duplicate key, nested            accepted  null=False  schema=OBJECT<name: ARRAY<OBJECT<family: STRING>>, resourceType: STRING>  json={"name":[{"family":"B"}],"resourceType":"Patient"}
+   top-level array                  accepted  null=False  schema=ARRAY<OBJECT<id: STRING, resourceType: STRING>>  json=[{"id":"p27a","resourceType":"Patient"},{"id":"p27b","resourceType":"Patient"}]
+   text after the object            accepted  null=False  schema=OBJECT<id: STRING, resourceType: STRING>  json={"id":"p28","resourceType":"Patient"}
+   second object after the object   accepted  null=False  schema=OBJECT<id: STRING, resourceType: STRING>  json={"id":"a","resourceType":"Patient"}
+   whitespace after the object      accepted  null=False  schema=OBJECT<id: STRING, resourceType: STRING>  json={"id":"p28","resourceType":"Patient"}
+   top-level scalar                 accepted  null=False  schema=STRING  json="just a string"
+   malformed (unclosed)             accepted  null=True  schema=None  json=None

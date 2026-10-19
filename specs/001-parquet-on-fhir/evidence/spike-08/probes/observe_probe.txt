@@ -1,0 +1,28 @@
+spark 4.0.2
+
+== counts: accepted
+   rows: 100000
+   findings: 23377
+   rows_affected: 22078
+
+== collect_list + slice: accepted
+   sample: ArraySeq([p75005,ArraySeq([birthDate,invalid,1980-13-45])], [p75009,ArraySeq([foo,undescribed,bar])], [p75012,ArraySeq([birthDate,invalid,1980-13-45])], [p75019,ArraySeq([birthDate,invalid,1980-13-45])], [p75020,ArraySeq([foo,undescribed,bar])])
+   list_size_before_slice: 22078
+
+== min(struct) per kind: accepted
+   example_invalid: [p0,birthDate,1980-13-45]
+   example_undescribed: [p0,foo,bar]
+
+== k per kind via hash buckets: accepted
+   invalid_1: [p10003,1980-13-45]
+   invalid_0: [p1001,1980-13-45]
+   undescribed_0: [p1001,bar]
+   undescribed_1: [p10021,bar]
+   undescribed_2: [p0,bar]
+   invalid_2: [p0,1980-13-45]
+
+== max_by per kind: accepted
+   example_invalid: [p31367,ArraySeq([birthDate,invalid,1980-13-45])]
+
+== non-aggregate expression: REJECTED INVALID_OBSERVED_METRICS.NON_AGGREGATE_FUNC_ARG_IS_ATTRIBUTE
+   [INVALID_OBSERVED_METRICS.NON_AGGREGATE_FUNC_ARG_IS_ATTRIBUTE] Invalid observed metrics. Attribute "id AS not_an_aggregate" can only be used as an argument to an aggregate function. SQLSTATE: 42K0E;

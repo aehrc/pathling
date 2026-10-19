@@ -1,0 +1,36 @@
+== Patient
+   HAPI xml lines (HEAD)        rows 125 vs 125  schema equal  value diffs 0  decimal-text diffs 0
+   undescribed dropped by the from_xml prune: []
+   from_xml lines               rows 125 vs 125  schema equal  value diffs 0  decimal-text diffs 0
+   from_xml bundles             rows 125 vs 125  schema equal  value diffs 0  decimal-text diffs 0
+   from_xml txn bundles         rows 125 vs 125  schema equal  value diffs 0  decimal-text diffs 0
+   from_xml decode              exact 125/125  canonical 125/125
+   HEAD decode of from_xml data exact 125/125  canonical 125/125
+== Condition
+   HAPI xml lines (HEAD)        rows 6406 vs 6406  schema equal  value diffs 0  decimal-text diffs 0
+   undescribed dropped by the from_xml prune: []
+   from_xml lines               rows 6406 vs 6406  schema equal  value diffs 0  decimal-text diffs 0
+   from_xml bundles             rows 6406 vs 6406  schema equal  value diffs 0  decimal-text diffs 0
+   from_xml txn bundles         rows 6406 vs 6406  schema equal  value diffs 0  decimal-text diffs 0
+   from_xml decode              exact 6406/6406  canonical 6406/6406
+   HEAD decode of from_xml data exact 6406/6406  canonical 6406/6406
+== Encounter
+   HAPI xml lines (HEAD)        rows 7808 vs 7808  schema equal  value diffs 0  decimal-text diffs 0
+   undescribed dropped by the from_xml prune: []
+   from_xml lines               rows 7808 vs 7808  schema equal  value diffs 0  decimal-text diffs 0
+   from_xml bundles             rows 7808 vs 7808  schema equal  value diffs 0  decimal-text diffs 0
+   from_xml txn bundles         rows 7808 vs 7808  schema equal  value diffs 0  decimal-text diffs 0
+   from_xml decode              exact 7808/7808  canonical 7808/7808
+   HEAD decode of from_xml data exact 7808/7808  canonical 7808/7808
+== Observation
+   HAPI xml lines (HEAD)        rows 10085 vs 10085  schema equal  value diffs 0  decimal-text diffs 0
+   undescribed dropped by the from_xml prune: []
+   from_xml lines               rows 10085 vs 10085  schema equal  value diffs 0  decimal-text diffs 0
+   from_xml bundles             rows 10085 vs 10085  schema equal  value diffs 0  decimal-text diffs 0
+   from_xml txn bundles         rows 10085 vs 10085  schema equal  value diffs 0  decimal-text diffs 0
+   from_xml decode              exact 8090/10085  canonical 8090/10085
+      first canonical difference at 947: in ...'T04:32:38.215+00:00"></issued><valueQuantity><value value="0"></value><unit value="{score}"></unit><system value="http://unitsofmeasure.org"'
+                                     out ...'T04:32:38.215+00:00"></issued><valueQuantity><value value="0.0"></value><unit value="{score}"></unit><system value="http://unitsofmeasure.or'
+   HEAD decode of from_xml data exact 8090/10085  canonical 8090/10085
+      first canonical difference at 947: in ...'T04:32:38.215+00:00"></issued><valueQuantity><value value="0"></value><unit value="{score}"></unit><system value="http://unitsofmeasure.org"'
+                                     out ...'T04:32:38.215+00:00"></issued><valueQuantity><value value="0.0"></value><unit value="{score}"></unit><system value="http://unitsofmeasure.or'
