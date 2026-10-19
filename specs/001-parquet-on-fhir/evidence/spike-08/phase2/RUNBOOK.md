@@ -9,54 +9,65 @@ may benchmark, build or run Spark while it runs.
 
 ## What it runs
 
-`batch-l.sh`, in this order. Each label is one `run-phases.sh` call: the four types, and one warmup plus five
-iterations of each phase. The phases are fit, encode and decode, as phase 1 defined them.
+`batch-l.sh` runs in **slices, one per source**: JSON, XML lines, XML Bundles, transaction Bundles, and last
+the messy JSON. A slice runs every route on its source, then appends its comparison to `slices.md`, so the
+results arrive slice by slice rather than at the end. Each step is one `run-phases.sh` call for one route and
+one source: the four types, and one warmup plus five iterations of each phase. The phases are fit, encode and
+decode, as phase 1 defined them. Within a slice the routes are interleaved, so that a drift in the machine
+does not fall on one route alone:
+
+| Order in a slice | Label (results directory) | Route | Extensions |
+|---|---|---|---|
+| 1 | `p2-a0-r1-514f8f8` | A0 (`pathling`) | off and on |
+| 2 | `p2-aplus-r1-514f8f8` | A+ | on |
+| 3 | `p2-b-r1-514f8f8` | B | on |
+| 4 | `p2-avariant-r1-514f8f8` | A-variant, JSON slice only | on |
+| 5 to 8 | the same four as `-r2-` | | |
+
+After the JSON slice comes **the noise gate** (below). The **messy slice** runs `p2-messy-{pathling,aplus,
+avariant,b}-514f8f8` once each on `data/json-messy/l`, under the `drop` policy, extensions on. Each label holds
+one results file per source and setting, so `p2-aplus-r1-514f8f8` ends with four, one per source.
 
 **Extensions.** The extensions setting configures only the legacy encoders. A candidate fits the schema as the
-data has it, so the candidates run with extensions on only, and no candidate reads the flag. Each candidate
-therefore runs as two replicate labels, `r1` and `r2`, alternating across the candidates so that a drift in the
-machine does not fall on one candidate alone. The messy labels run with extensions on only as well, A0's
-included, so that they compare like with like. The A0 labels run both settings, as in phase 1. A0 does not read
-the flag on these paths either, so its two runs are replicates, and each A0 label holds ten samples.
-
-| Step | Label | Route | Sources |
-|---|---|---|---|
-| Noise check | `p2-a0-r1-514f8f8`, `p2-a0-r2-514f8f8` | A0 (`pathling`) | JSON, XML lines, both Bundle shapes |
-| Gate | `p2_spread.py` on the two labels | | It stops here if the spread is too wide (below) |
-| Candidates, replicate 1 | `p2-aplus-r1-514f8f8` | A+ | JSON, XML lines, both Bundle shapes |
-| | `p2-b-r1-514f8f8` | B | JSON, XML lines, both Bundle shapes |
-| | `p2-avariant-r1-514f8f8` | A-variant | JSON |
-| Candidates, replicate 2 | `p2-{aplus,b,avariant}-r2-514f8f8` | as above | as above |
-| Messy data (policy `drop`) | `p2-messy-{pathling,aplus,avariant,b}-514f8f8` | each | JSON (`data/json-messy/l`), extensions on |
-| Closing A0 | `p2-a0-r3-514f8f8` | A0 | as above |
+data has it, so the candidates run with extensions on only, and no candidate reads the flag. A0 runs both
+settings, as in phase 1. A0 does not read the flag on these paths either, so its two runs are replicates, and
+an A0 label holds ten samples per source where a candidate label holds five. A candidate is therefore always
+compared on its `r1` and `r2` pooled (ten samples) against one A0 label (ten samples).
 
 The candidates run under the `fail` policy, which is decision 133's default and runs every check. The messy data
 needs `drop`, because under `fail` its one bad document would stop the job.
 
-**The spread check.** `p2_spread.py` compares the two A0 noise-check labels item by item: source, type and
-phase, on the minimum of the ten samples each label has. It judges only items whose minimum is at least 1 s.
-The spread is acceptable when every judged ratio is within 0.85 to 1.15 and their median distance from 1 is
-at most 0.05. Otherwise the script stops with exit status 8 before any candidate runs. That outcome is
+**The noise gate.** After the JSON slice, `p2_spread.py` compares A0's `r1` and `r2` item by item: source, type
+and phase, on the minimum of the ten samples each label has. It judges only items whose minimum is at least
+1 s. The spread is acceptable when every judged ratio is within 0.85 to 1.15 and their median distance from 1
+is at most 0.05. Otherwise the script stops with exit status 8 before any further slice. That outcome is
 reported to the owner, not routed around. Setting `IGNORE_SPREAD=1` overrides it, but only on the owner's say.
+The owner chose on 2026-10-19 to gate after the first slice, where the JSON candidates have already run, in
+place of a 2-hour A0-only check before any candidate. The spread is reported after every later slice as well,
+but only the JSON one stops the batch. `r2` brackets `r1` within every slice, so there is no closing A0 label.
+
+**Progress.** `slices.md`, beside the logs, gains after each slice: each candidate against `p2-a0-r1` on that
+source (pooled minimums and ratios, with and without A+'s and A-variant's py4j plan building), and A0's `r1`
+against `r2`. Read it with `cat` from a terminal while the batch runs.
 
 ## Expected duration
 
-About **7 hours**, and anywhere from 5.5 to 9.5. These are extrapolations, not measurements: nothing has been
+About **6 hours**, and anywhere from 4.5 to 8.5. These are extrapolations, not measurements: nothing has been
 timed at size `l` for phase 2. Each figure takes A0's phase 1 duration per source at size `l`, scales it by the
 candidate's cost relative to A0 on Observation in the size-`s` smoke runs, and adds A+'s and A-variant's
 plan-building time in Python, which does not grow with the data.
 
-| Label | Expected | Plausible range | Note |
-|---|---|---|---|
-| `p2-a0-r1`, `p2-a0-r2`, `p2-a0-r3` | 60 min each | 55 to 70 | Phase 1 took 59 to 63 minutes |
-| `p2-aplus-r1` and `-r2` | 1 h each | 0.75 to 2 h | Estimated when its egress still overflowed the JVM's 64 KB method limit for Condition and Encounter, which it no longer does at size `s` (README, deviation 6), so probably high |
-| `p2-b-r1` and `-r2` | 12 min each | 8 to 23 | |
-| `p2-avariant-r1` and `-r2` | 23 min each | 15 to 45 | Its encode at size `s` was about 20 times B's |
-| `p2-messy-pathling`, `-aplus`, `-avariant`, `-b` | 2, 8, 23 and 2 min | | JSON only, extensions on only |
+| Slice | Expected | Note |
+|---|---|---|
+| JSON, then the gate | about 2 h | A0 about 15 min per replicate; A-variant about 23 min per replicate is the largest share |
+| XML lines, XML Bundles, transaction Bundles | 1 to 1.5 h each | A0, A+ and B, two replicates each |
+| Messy JSON | about 35 min | 2, 8, 23 and 2 min for A0, A+, A-variant and B |
 
-If the spread check stops the batch, it ends after about 2 hours. To tell slow from hung, look at the newest
-file in `pathling-compare/results/<label>/`: each source and setting writes its `.json` when it finishes, and
-none of them should take more than about 90 minutes.
+A+'s figures were estimated when its egress still overflowed the JVM's 64 KB method limit for Condition and
+Encounter, which it no longer does at size `s` (README, deviation 6), so they are probably high. If the gate
+stops the batch, it ends after about 2 hours. To tell slow from hung, look at the newest file in
+`pathling-compare/results/<label>/`: each source and setting writes its `.json` when it finishes, and none of
+them should take more than about 90 minutes.
 
 ## Prerequisites
 
@@ -82,7 +93,7 @@ Each of these is checked by the script, which stops with a message where one is 
   - The harness's XML at `pathling-compare/data/{xml,xml-bundles,xml-bundles-txn}/l`.
   - The messy JSON at `pathling-compare/data/json-messy/l`. The script makes it with `make_messy.py` if it is
     missing, which takes about a minute.
-- **Disk.** At least 15 GiB free before every label. The script stops (exit status 2) below that. About 48
+- **Disk.** At least 15 GiB free before every step. The script stops (exit status 2) below that. About 48
   GiB was free on 2026-10-19.
 
 ## Command
@@ -93,11 +104,12 @@ nohup specs/001-parquet-on-fhir/evidence/spike-08/phase2/batch-l.sh \
   > .local/work/issue/2831-spike-08/batch-p2.log 2>&1 &
 ```
 
-To follow progress, run `grep === .local/work/issue/2831-spike-08/batch-p2.log`. Each label logs to
-`.local/work/issue/2831-spike-08/batch-p2/<label>.log`, beside the machine's state before it
-(`<label>.conditions-before.txt`). The results go to `pathling-compare/results/<label>/`.
+To follow progress, run `cat .local/work/issue/2831-spike-08/batch-p2/slices.md` for the results so far, and
+`grep === .local/work/issue/2831-spike-08/batch-p2.log` for the steps. Each step logs to
+`.local/work/issue/2831-spike-08/batch-p2/<label>.<source>.log`, beside the machine's state before it
+(`<label>.<source>.conditions-before.txt`). The results go to `pathling-compare/results/<label>/`.
 
-Before each label the script checks the disk and waits up to 15 minutes for the one-minute load average to
+Before each step the script checks the disk and waits up to 15 minutes for the one-minute load average to
 fall under 3. It records swap, the load, the Java processes and the busiest processes.
 
 ## If it stops
@@ -105,21 +117,22 @@ fall under 3. It records swap, the load, the Java processes and the busiest proc
 | Exit status | Meaning | What to do |
 |---|---|---|
 | 2 | Under 15 GiB free | Free space, then resume |
-| 3 | A label's directory exists but is incomplete | Resume with `RESUME=1` |
-| 4 | A label failed | Read its log. Fix nothing in the candidates without reporting it, because a fix changes what is measured |
+| 3 | A step was started and is incomplete | Resume with `RESUME=1` |
+| 4 | An A0 step failed (a failed candidate or messy step is recorded in `failed-labels.txt`, and the batch goes on) | Read its log. Fix nothing in the candidates without reporting it, because a fix changes what is measured |
 | 5 | A0's jar in `~/.m2` is not `514f8f8`'s | Rebuild it as above |
 | 6 | A Java process is running | Close it (`ALLOW_JAVA=1` goes on regardless, against the protocol) |
 | 7 | A harness script differs from the committed copy | Restore it from `phase2/harness/` |
-| 8 | The A0 replicate spread is too wide | Stop and report: `batch-p2/spread.txt`, the conditions files, and the likely cause |
+| 8 | The A0 replicate spread is too wide | Stop and report: `batch-p2/spread-json.txt`, `slices.md`, the conditions files, and the likely cause |
 
-**Resume.** Run the same command with `RESUME=1` in front of `nohup`. A label whose `conditions-end.txt` exists
-is complete and is skipped. An interrupted label continues from its first unfinished source and setting:
-`run-phases.sh` skips the result files that already exist and redoes the step that was interrupted. Never delete
+**Resume.** Run the same command with `RESUME=1` in front of `nohup`. A step whose results files
+(`phases-<source>-ext<setting>.json`) all exist is complete and is skipped. An interrupted step continues from
+its first unfinished setting: `run-phases.sh` skips the result files that already exist and redoes the one
+that was interrupted. A resumed run appends to `slices.md` again for the slices it passes through. Never delete
 a complete label. Results are never overwritten.
 
 ## Dry run
 
-The whole sequence was dry-run on 2026-10-19 at size `s`, with Patient only and extensions off:
+The first, unsliced sequence was dry-run on 2026-10-19 at size `s`, with Patient only and extensions off:
 
 ```bash
 ALLOW_JAVA=1 SIZE=s PREFIX=dry IGNORE_SPREAD=1 QUIET_MINUTES=0 RESOURCES_OVERRIDE=Patient EXTS_OVERRIDE=0 \
@@ -137,19 +150,32 @@ At size `s` nothing is over 1 s, so the spread check had nothing to judge. On th
 34 items and printed its verdict. The dry run's results are in `pathling-compare/results/dry-*`. They are not
 measurements, and their prefix cannot collide with `p2-*`.
 
+The sliced sequence was dry-run the same evening in the same way, with `PREFIX=dry2`:
+
+- all 30 steps ran in slice order, each route interleaved as `r1` then `r2`, and each label ended with one
+  results file per source;
+- `slices.md` gained a section per slice, and the messy slice compared each candidate with A0's messy label;
+- with one results file removed, a run without `RESUME=1` stopped with exit status 3 at that step, and a run
+  with it reran that step alone and skipped the other 29.
+
+With Patient only, `pooled_phases.py` fails on the types it expects and the report records its error, which is
+how a failed step shows in `slices.md` too. At size `s` the gate had nothing to judge, and `IGNORE_SPREAD=1`
+let the dry run go on. Its results are in `pathling-compare/results/dry2-*`.
+
 ## Afterwards
 
 From `pathling-compare`:
 
 ```bash
-python3 p2_spread.py p2-a0-r1-514f8f8 p2-a0-r2-514f8f8                     # noise check (also in batch-p2/spread.txt)
-python3 p2_spread.py p2-a0-r1-514f8f8 p2-a0-r3-514f8f8                     # drift across the batch
+python3 p2_spread.py p2-a0-r1-514f8f8 p2-a0-r2-514f8f8                     # noise, every source
 for c in aplus b avariant; do
-  python3 pooled_phases.py p2-a0-r3-514f8f8 "p2-$c-r?-514f8f8" --py4j       # each candidate against the fresh A0
+  for a0 in p2-a0-r1-514f8f8 p2-a0-r2-514f8f8; do                          # against each A0 replicate
+    python3 pooled_phases.py $a0 "p2-$c-r?-514f8f8" --py4j
+  done
   python3 pooled_phases.py pof-switch-26d7332 "p2-$c-r?-514f8f8" --py4j     # and against phase 1's bar label
 done
 for r in aplus avariant b; do python3 pooled_phases.py p2-messy-pathling-514f8f8 p2-messy-$r-514f8f8; done
-python3 compare_phases.py p2-a0-r3-514f8f8 p2-{aplus,b,avariant}-r{1,2}-514f8f8
+python3 compare_phases.py p2-a0-r1-514f8f8 p2-{aplus,b,avariant}-r{1,2}-514f8f8
 ```
 
 **Pool a candidate's two labels.** A candidate label holds five samples, where an A0 label holds ten, and the
@@ -167,6 +193,6 @@ It is a prototype artefact: a JVM implementation builds the same plan in millise
 with and without it.
 
 Then copy each `results/p2-*` label (its `*.json`, `*.out`, `meta.json`, `conditions-*.txt`,
-`resolved-jar.sha256` and `p2-notes.txt`) and the `batch-p2` logs into `evidence/spike-08/phase2/results/`.
+`resolved-jar.sha256` and `p2-notes-*.txt`) and the `batch-p2` logs into `evidence/spike-08/phase2/results/`.
 Write the numbers into `../README.md` under "Phase 2", commit on `issue/2831-spike-08`, and report. Do not
 update OQ-1, FR-063, ticket 16, the decisions or ticket 08's Status line.

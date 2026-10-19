@@ -3,17 +3,19 @@
 #
 #   1. Pre-flight: the A0 runtime jar's hash, the harness scripts against the committed copies, the
 #      prototype jar built from the committed sources, and the machine's state.
-#   2. Noise check: two fresh A0 labels, then p2_spread.py. If the replicate spread is too wide, stop here.
-#   3. The candidates, each as two replicate labels (r1, r2) run with extensions on only: the extensions
-#      setting configures only the legacy encoders, and a candidate fits the schema as the data has it.
-#      A+ and B on JSON and the three XML sources, A-variant on JSON.
-#   4. The messy JSON variant (one shape error per file), under the drop policy, extensions on only: A0, A+,
-#      A-variant, B.
-#   5. A closing fresh A0 label, to bracket the candidates.
-# Labels are <PREFIX>-* (p2 by default). A label whose conditions-end.txt exists is complete and is skipped.
-# With RESUME=1 an interrupted label is continued (run-phases.sh skips its finished steps); without it the
-# script stops. An A0 label that fails stops the batch; a candidate or messy label that fails is recorded in
-# failed-labels.txt and the batch goes on, so one candidate cannot cost the others their measurement.
+#   2. One slice per source, in the order JSON, XML lines, XML Bundles, transaction Bundles. Each slice runs
+#      every route on that source, interleaved: A0, A+, B and (JSON only) A-variant as replicate r1, then
+#      the same as r2. A0 runs extensions off and on, as in phase 1. The candidates run with extensions on
+#      only: the extensions setting configures only the legacy encoders, and a candidate fits the schema as
+#      the data has it. After each slice, its comparison is appended to slices.md.
+#   3. The noise gate, after the JSON slice: p2_spread.py on A0's r1 and r2. If the spread is too wide, stop.
+#   4. A last slice: the messy JSON variant (one shape error per file), under the drop policy, extensions on
+#      only: A0, A+, A-variant, B.
+# Labels are <PREFIX>-<route>-<r1|r2>-514f8f8 (p2 by default); each holds one results file per source and
+# setting. A step whose results files all exist is complete and is skipped. With RESUME=1 an interrupted
+# step is continued (run-phases.sh skips its finished files); without it the script stops. An A0 step that
+# fails stops the batch; a candidate or messy step that fails is recorded in failed-labels.txt and the batch
+# goes on, so one candidate cannot cost the others their measurement.
 # For a dry run: SIZE=s PREFIX=dry IGNORE_SPREAD=1, with RESOURCES_OVERRIDE and EXTS_OVERRIDE to shorten it.
 # Runs on macOS's bash 3.2.
 set -uo pipefail
@@ -53,27 +55,69 @@ preflight_label() {
   if [ "$free" -lt 15 ]; then say "STOP: ${free} GiB free, under 15"; exit 2; fi
   quiet
 }
-label() {
-  # label <name> <route> [env assignments...]
-  local name=$PREFIX-$1 route=$2; shift 2
+step() {
+  # step <name> <route> <source> <critical: 1 stops the batch on failure> [env assignments...]
+  # Runs one route on one source into results/<PREFIX>-<name>/, through run-phases.sh.
+  local name=$PREFIX-$1 route=$2 src=$3 critical=$4; shift 4
   local out="$H/results/$name"
-  if [ -e "$out/conditions-end.txt" ]; then say "skip $name (complete)"; return 0; fi
-  if [ -e "$out" ] && [ "${RESUME:-}" != 1 ]; then say "STOP: $out exists and is incomplete; rerun with RESUME=1"; exit 3; fi
+  # The settings this step runs: the candidates' EXTS_OVERRIDE=1, or A0's own (both, unless a dry run says).
+  local exts="${EXTS_OVERRIDE:-0 1}" a e missing=0
+  for a in ${@+"$@"}; do case "$a" in EXTS_OVERRIDE=*) exts="${a#EXTS_OVERRIDE=}";; esac; done
+  for e in $exts; do [ -e "$out/phases-$src-ext$e.json" ] || missing=1; done
+  if [ $missing = 0 ]; then say "skip $name $src (complete)"; return 0; fi
+  if ls "$out"/phases-"$src"-ext*.out >/dev/null 2>&1 && [ "${RESUME:-}" != 1 ]; then
+    say "STOP: $name $src is incomplete; rerun with RESUME=1"; exit 3
+  fi
   preflight_label
-  say "start $name ($route $*)"
-  conditions > "$LOG/$name.conditions-before.txt"
+  say "start $name $src ($route $*)"
+  conditions > "$LOG/$name.$src.conditions-before.txt"
   # The prototype jar goes on the classpath of the candidates only, so A0 runs exactly as in phase 1.
   local jars=""; [ "$route" = pathling ] || jars="$JAR"
-  env ${@+"$@"} EXTRA_JARS="$jars" PATHLING_SRC="$WT/bench-514f8f8" RESUME="${RESUME:-}" \
-    "$H/run-phases.sh" "$name" "$VENV" "$route" "$SIZE" > "$LOG/$name.log" 2>&1
+  env ${@+"$@"} EXTRA_JARS="$jars" PATHLING_SRC="$WT/bench-514f8f8" RESUME=1 SOURCES_OVERRIDE="$src" \
+    "$H/run-phases.sh" "$name" "$VENV" "$route" "$SIZE" > "$LOG/$name.$src.log" 2>&1
   local status=$?
-  say "end $name (exit $status)"
-  { echo "prototype jar: $(shasum -a 256 "$JAR")"; echo "env: $*"; echo "exit: $status"; } > "$out/p2-notes.txt"
+  say "end $name $src (exit $status)"
+  { echo "prototype jar: $(shasum -a 256 "$JAR")"; echo "env: $*"; echo "exit: $status"; } > "$out/p2-notes-$src.txt"
   if [ $status -ne 0 ]; then
-    if [ "$route" = pathling ] && [ -z "$*" ]; then say "STOP: $name failed; see $LOG/$name.log"; exit 4; fi
-    say "FAILED: $name (exit $status), going on; see $LOG/$name.log"
-    echo "$name exit $status" >> "$LOG/failed-labels.txt"
+    if [ "$critical" = 1 ]; then say "STOP: $name $src failed; see $LOG/$name.$src.log"; exit 4; fi
+    say "FAILED: $name $src (exit $status), going on; see $LOG/$name.$src.log"
+    echo "$name $src exit $status" >> "$LOG/failed-labels.txt"
   fi
+}
+pooled() {
+  # pooled <source> <baseline-label> <label> [--py4j]: pooled_phases.py's header and this source's rows, or
+  # the last line of its error where it fails.
+  local src=$1 out; shift
+  if out=$(python3 "$H/pooled_phases.py" "$@" 2>&1); then
+    echo "$out" | sed -n 1p; echo "$out" | grep "^$src " || echo "(no rows for $src)"
+  else
+    echo "(pooled_phases.py failed: $(echo "$out" | tail -1))"
+  fi
+}
+report() {
+  # report <source> <title> <baseline-label> <label>...: the slice's rows of pooled_phases.py, into slices.md.
+  local src=$1 title=$2 base=$3 l; shift 3
+  {
+    echo; echo "## $title, $(date '+%F %T')"
+    for l in "$@"; do
+      echo; echo "### $l against $base (pooled minimum in ms, and the ratio)"; echo '```'
+      pooled "$src" "$base" "$l"
+      if [ "$l" != "${l#*aplus}" ] || [ "$l" != "${l#*avariant}" ]; then
+        echo "-- without py4j plan building:"; pooled "$src" "$base" "$l" --py4j | sed 1d
+      fi
+      echo '```'
+    done
+  } >> "$LOG/slices.md"
+}
+spread() {
+  # spread <source>: A0's r1 against r2 on this source, into slices.md; returns p2_spread.py's verdict.
+  local src=$1 status
+  python3 "$H/p2_spread.py" "$PREFIX-a0-r1-514f8f8" "$PREFIX-a0-r2-514f8f8" > "$LOG/spread-$src.txt"
+  status=$?
+  { echo; echo "### A0 r1 against r2 (the noise check; the verdict covers every source so far)"; echo '```'
+    sed -n 1p "$LOG/spread-$src.txt"
+    grep "^$src " "$LOG/spread-$src.txt"; tail -1 "$LOG/spread-$src.txt"; echo '```'; } >> "$LOG/slices.md"
+  return $status
 }
 
 # ---------------------------------------------------------------- 1. pre-flight
@@ -90,30 +134,34 @@ done
 [ -d "$H/data/json-messy/$SIZE" ] || python3 "$P2/harness/make_messy.py" /Users/szu004/dev/sql-on-fhir.js/benchmark/data/synthea-clinical-wide/1/$SIZE "$H/data/json-messy/$SIZE"
 "$P2/proto/build.sh" "$RUNTIME" "$VENV/lib/python3.12/site-packages/pyspark/jars" "$JAR" | tee "$LOG/jar.sha256"
 
-# ---------------------------------------------------------------- 2. noise check
-label a0-r1-514f8f8 pathling
-label a0-r2-514f8f8 pathling
-say "replicate spread between the two A0 labels"
-if ! python3 "$H/p2_spread.py" $PREFIX-a0-r1-514f8f8 $PREFIX-a0-r2-514f8f8 | tee "$LOG/spread.txt"; then
-  if [ "${IGNORE_SPREAD:-}" != 1 ]; then say "STOP: the A0 replicate spread is too wide (spread.txt); the candidates were not run"; exit 8; fi
-  say "spread too wide, going on because IGNORE_SPREAD=1"
-fi
-
-# ---------------------------------------------------------------- 3. candidates (two replicates each)
-# The replicates alternate across candidates, so a drift in the machine does not fall on one candidate alone.
-for rep in r1 r2; do
-  label "aplus-$rep-514f8f8" aplus EXTS_OVERRIDE=1
-  label "b-$rep-514f8f8" b EXTS_OVERRIDE=1
-  label "avariant-$rep-514f8f8" avariant EXTS_OVERRIDE=1
+# ---------------------------------------------------------------- 2 and 3. a slice per source
+for src in json xml-lines xml-bundles xml-bundles-txn; do
+  for rep in r1 r2; do
+    step "a0-$rep-514f8f8" pathling "$src" 1
+    step "aplus-$rep-514f8f8" aplus "$src" 0 EXTS_OVERRIDE=1
+    step "b-$rep-514f8f8" b "$src" 0 EXTS_OVERRIDE=1
+    [ "$src" = json ] && step "avariant-$rep-514f8f8" avariant "$src" 0 EXTS_OVERRIDE=1
+  done
+  cands="aplus b"; [ "$src" = json ] && cands="aplus b avariant"
+  labels=""; for c in $cands; do labels="$labels $PREFIX-$c-r?-514f8f8"; done
+  set -f   # The labels are globs for pooled_phases.py, not for the shell.
+  report "$src" "Slice: $src" "$PREFIX-a0-r1-514f8f8" $labels
+  set +f
+  if spread "$src"; then
+    say "slice $src done; A0 spread acceptable"
+  elif [ "$src" = json ] && [ "${IGNORE_SPREAD:-}" != 1 ]; then
+    say "STOP: the A0 replicate spread on JSON is too wide (spread-json.txt); no further slice was run"; exit 8
+  else
+    say "slice $src done; A0 spread too wide (spread-$src.txt)"
+  fi
 done
 
 # ---------------------------------------------------------------- 4. the messy variant, under drop
 for r in pathling aplus avariant b; do
-  label "messy-$r-514f8f8" "$r" JSON_DIR="$H/data/json-messy/$SIZE" SOURCES_OVERRIDE=json SPIKE_POLICY=drop EXTS_OVERRIDE=1
+  step "messy-$r-514f8f8" "$r" json 0 JSON_DIR="$H/data/json-messy/$SIZE" SPIKE_POLICY=drop EXTS_OVERRIDE=1
 done
-
-# ---------------------------------------------------------------- 5. closing A0
-label a0-r3-514f8f8 pathling
+report json "Slice: messy JSON, under drop" "$PREFIX-messy-pathling-514f8f8" \
+  "$PREFIX-messy-aplus-514f8f8" "$PREFIX-messy-avariant-514f8f8" "$PREFIX-messy-b-514f8f8"
 conditions > "$LOG/after.txt"
 [ -e "$LOG/failed-labels.txt" ] && { say "labels that failed:"; cat "$LOG/failed-labels.txt"; }
 say "batch done"

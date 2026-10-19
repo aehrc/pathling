@@ -586,7 +586,10 @@ implementation, so their counts indicate size, not a final figure. All three als
    encoders, and that a candidate fits the schema as the data has it. No candidate reads the flag, so phase 1's
    off-and-on pairing would only have relabelled two identical runs. The messy labels run with extensions on
    only too, A0's included. The A0 labels keep both settings as in phase 1, where they are replicates. The
-   noise check uses two separate A0 labels, as asked, plus a closing A0 label to bracket the candidates.
+   noise check uses two separate A0 labels, as asked. The owner then chose to run the batch in slices, one
+   per source, with every route interleaved within a slice (A0, A+, B and A-variant as `r1`, then as `r2`)
+   and the results reported after each slice. So the noise gate runs after the JSON slice rather than before
+   any candidate, and `r2` brackets `r1` in every slice in place of a closing A0 label.
 4. **The messy data is run on all four routes**, not on A+ alone, so that A+'s worst case has the others
    beside it. Under `drop`.
 5. **The harness** gained `scripts/spike_routes.py`, `spike_checks.py`, `gate_candidates.py`, `gate_messy.py`,
