@@ -118,10 +118,21 @@ public abstract class CachingTerminologyService extends BaseTerminologyService {
     lookupCache = buildCache(cacheManager, LOOKUP_CACHE_NAME, PropertyOrDesignationList.class);
   }
 
+  @Nullable
   @Override
-  public boolean validateCode(@Nonnull final String valueSetUrl, @Nonnull final Coding coding) {
+  public Boolean validateCode(@Nonnull final String valueSetUrl, @Nonnull final Coding coding) {
     final ValidateCodeParameters parameters =
         new ValidateCodeParameters(valueSetUrl, ImmutableCoding.of(coding));
+    final ValidateCodeExecutor executor = new ValidateCodeExecutor(terminologyClient, parameters);
+    return getFromCache(validateCodeCache, parameters, executor);
+  }
+
+  @Nullable
+  @Override
+  public Boolean validateCodeInferringSystem(
+      @Nonnull final String valueSetUrl, @Nonnull final String code) {
+    final ValidateCodeParameters parameters =
+        ValidateCodeParameters.inferringSystem(valueSetUrl, code);
     final ValidateCodeExecutor executor = new ValidateCodeExecutor(terminologyClient, parameters);
     return getFromCache(validateCodeCache, parameters, executor);
   }
@@ -136,7 +147,7 @@ public abstract class CachingTerminologyService extends BaseTerminologyService {
     final TranslateParameters parameters =
         new TranslateParameters(ImmutableCoding.of(coding), conceptMapUrl, reverse, target);
     final TranslateExecutor executor = new TranslateExecutor(terminologyClient, parameters);
-    return getFromCache(translateCache, parameters, executor);
+    return requireNonNull(getFromCache(translateCache, parameters, executor));
   }
 
   @Nonnull
@@ -146,7 +157,7 @@ public abstract class CachingTerminologyService extends BaseTerminologyService {
     final SubsumesParameters parameters =
         new SubsumesParameters(ImmutableCoding.of(codingA), ImmutableCoding.of(codingB));
     final SubsumesExecutor executor = new SubsumesExecutor(terminologyClient, parameters);
-    return getFromCache(subsumesCache, parameters, executor);
+    return requireNonNull(getFromCache(subsumesCache, parameters, executor));
   }
 
   @Nonnull
@@ -158,7 +169,7 @@ public abstract class CachingTerminologyService extends BaseTerminologyService {
     final LookupParameters parameters =
         new LookupParameters(ImmutableCoding.of(coding), property, acceptLanguage);
     final LookupExecutor executor = new LookupExecutor(terminologyClient, parameters);
-    return getFromCache(lookupCache, parameters, executor);
+    return requireNonNull(getFromCache(lookupCache, parameters, executor));
   }
 
   // Expansions are not held in the terminology cache. A membership can run to the caller's limit
@@ -200,8 +211,9 @@ public abstract class CachingTerminologyService extends BaseTerminologyService {
    * @param <P> The type of the parameters that are input to the operation
    * @param <S> The type of the response returned by the terminology client
    * @param <R> The type of the final result that is extracted from the response
-   * @return The operation result
+   * @return The operation result, which is null where the result is unknown
    */
+  @Nullable
   private <P extends TerminologyParameters, S, R extends Serializable> R getFromCache(
       @Nonnull final Cache<Integer, TerminologyResult<R>> cache,
       @Nonnull final P parameters,
@@ -213,7 +225,7 @@ public abstract class CachingTerminologyService extends BaseTerminologyService {
       // Cache miss.
       final TerminologyResult<R> result = fetch(operation, Optional.empty());
       cache.put(key, result);
-      return requireNonNull(result.getData());
+      return result.getData();
     } else {
       final boolean expired =
           cached.getExpires() != null && System.currentTimeMillis() > cached.getExpires();
@@ -227,7 +239,7 @@ public abstract class CachingTerminologyService extends BaseTerminologyService {
                       // Cache hit, and the entry is still valid.
                       : v);
       requireNonNull(result);
-      return requireNonNull(result.getData());
+      return result.getData();
     }
   }
 

@@ -47,6 +47,7 @@ import org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome;
  * Abstraction layer for the terminology related operations.
  *
  * @author Piotr Szul
+ * @author John Grimes
  */
 public interface TerminologyService {
 
@@ -88,11 +89,33 @@ public interface TerminologyService {
    * href="https://www.hl7.org/fhir/R4/valueset-operation-validate-code.html">ValueSet/$validate-code</a>
    * operation.
    *
+   * <p>A coding that lacks a system or a code is not a member of any value set. The membership is
+   * unknown where the value set cannot be resolved, or the terminology server rejects the request.
+   *
    * @param valueSetUrl the URL of the value set to validate against
    * @param coding the coding to test
-   * @return true if the coding is a valid member of the value set
+   * @return true if the coding is a member of the value set, false if it is not, or null if the
+   *     membership is unknown
    */
-  boolean validateCode(@Nonnull String valueSetUrl, @Nonnull Coding coding);
+  @Nullable
+  Boolean validateCode(@Nonnull String valueSetUrl, @Nonnull Coding coding);
+
+  /**
+   * Validates that a code without a system is in a value set, inferring the system from the value
+   * set. Abstracts the FHIR <a
+   * href="https://build.fhir.org/valueset-operation-validate-code.html">ValueSet/$validate-code</a>
+   * operation with the {@code inferSystem} parameter.
+   *
+   * <p>The membership is unknown where the value set cannot be resolved, or the terminology server
+   * rejects the request, for example because it does not support system inference.
+   *
+   * @param valueSetUrl the URL of the value set to validate against
+   * @param code the code to test
+   * @return true if the code is a member of the value set, false if it is not, or null if the
+   *     membership is unknown
+   */
+  @Nullable
+  Boolean validateCodeInferringSystem(@Nonnull String valueSetUrl, @Nonnull String code);
 
   /**
    * Translates a code from one value set to another, based on the existing concept map. Abstracts

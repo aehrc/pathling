@@ -66,11 +66,22 @@ public class DefaultTerminologyService extends BaseTerminologyService {
     super(terminologyClient, resourcesToClose);
   }
 
+  @Nullable
   @Override
-  public boolean validateCode(@Nonnull final String valueSetUrl, @Nonnull final Coding coding) {
+  public Boolean validateCode(@Nonnull final String valueSetUrl, @Nonnull final Coding coding) {
     final ValidateCodeParameters parameters =
         new ValidateCodeParameters(valueSetUrl, ImmutableCoding.of(coding));
     final ValidateCodeExecutor executor = new ValidateCodeExecutor(terminologyClient, parameters);
+    return execute(executor);
+  }
+
+  @Nullable
+  @Override
+  public Boolean validateCodeInferringSystem(
+      @Nonnull final String valueSetUrl, @Nonnull final String code) {
+    final ValidateCodeExecutor executor =
+        new ValidateCodeExecutor(
+            terminologyClient, ValidateCodeParameters.inferringSystem(valueSetUrl, code));
     return execute(executor);
   }
 
@@ -130,7 +141,7 @@ public class DefaultTerminologyService extends BaseTerminologyService {
         .read(url, version, maxMappings);
   }
 
-  @Nonnull
+  @Nullable
   private static <S, R> R execute(@Nonnull final TerminologyOperation<S, R> operation) {
     final Optional<R> invalidResult = operation.validate();
     if (invalidResult.isPresent()) {
@@ -143,7 +154,7 @@ public class DefaultTerminologyService extends BaseTerminologyService {
       return operation.extractResult(response);
 
     } catch (final BaseServerResponseException e) {
-      // If the terminology server rejects the request as invalid, use false as the result.
+      // If the terminology server rejects the request as invalid, use the fallback result.
       final R fallback = operation.invalidRequestFallback();
       return handleError(e, fallback);
     }

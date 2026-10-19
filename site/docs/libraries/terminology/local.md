@@ -794,7 +794,12 @@ SNOMED CT, so it falls back to its plain language subtag.
 Local `member_of` resolves three kinds of value set reference, and local
 `translate` two kinds of concept map reference. A reference that resolves to
 content the store does not hold yields the same "unknown content" results as
-remote mode rather than an error.
+remote mode rather than an error: a null membership from `member_of`, and no
+translations from `translate`.
+
+A value set is evaluated over a single code system version, so a code without a
+system, such as a string passed to `member_of` or to the FHIRPath `memberOf`
+function, takes the system of that code system.
 
 | Reference                        | Form                                               |
 | -------------------------------- | -------------------------------------------------- |

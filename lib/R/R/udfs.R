@@ -107,10 +107,11 @@ Equivalence <- list(
 #'
 #' Takes a Coding or array of Codings column as its input. Returns the column which contains a
 #' Boolean value, indicating whether any of the input Codings is a member of the specified FHIR
-#' ValueSet.
+#' ValueSet. The value is null where membership cannot be determined, for example because the
+#' value set cannot be resolved.
 #'
 #' @param codings A Column containing a struct representation of a Coding or an array of such
-#' structs.
+#' structs, or a string column of codes whose system is inferred from the value set.
 #' @param value_set_uri An identifier for a FHIR ValueSet.
 #'
 #' @return A Column containing the result of the operation.

@@ -255,6 +255,21 @@ public abstract class ColumnRepresentation {
   }
 
   /**
+   * Returns the single value from the current {@link ColumnRepresentation}, or null where it holds
+   * more than one value. This suits functions that FHIRPath defines as empty, rather than an error,
+   * for input of more than one item.
+   *
+   * @return A new {@link ColumnRepresentation} that is a singular value
+   */
+  @Nonnull
+  public ColumnRepresentation singularOrNull() {
+    // Both size(x) and getAt(x, 0) reference the operand; let() ensures a nondeterministic
+    // operand fires exactly once per row rather than twice.
+    return vectorize(
+        c -> let(c, x -> when(size(x).equalTo(1), getAt(x, 0))), UnaryOperator.identity());
+  }
+
+  /**
    * Creates a Column expression that enforces the singularity constraint. This should be called
    * when a singular value is required but will not be directly used, to ensure the constraint is
    * checked during evaluation.

@@ -58,22 +58,28 @@ class DefaultTerminologyClient extends ResourceCloser implements TerminologyClie
       @Nonnull final UriType system,
       @Nullable final StringType version,
       @Nonnull final CodeType code) {
-    return buildValidateCode(url, system, version, code).execute();
+    return buildValidateCode(url, system, version, code, null).execute();
   }
 
   @Nonnull
   @Override
   public IOperationUntypedWithInput<Parameters> buildValidateCode(
       @Nonnull final UriType url,
-      @Nonnull final UriType system,
+      @Nullable final UriType system,
       @Nullable final StringType version,
-      @Nonnull final CodeType code) {
+      @Nonnull final CodeType code,
+      @Nullable final BooleanType inferSystem) {
     final Parameters params = new Parameters();
     params.addParameter().setName("url").setValue(url);
-    params.addParameter().setName("system").setValue(system);
+    if (system != null) {
+      params.addParameter().setName("system").setValue(system);
+    }
     params.addParameter().setName("code").setValue(code);
     if (version != null) {
       params.addParameter().setName("systemVersion").setValue(version);
+    }
+    if (inferSystem != null) {
+      params.addParameter().setName("inferSystem").setValue(inferSystem);
     }
 
     return fhirClient

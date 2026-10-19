@@ -113,10 +113,11 @@ def member_of(coding: CodingArg, value_set_uri: str) -> Column:
     """
     Takes a Coding or array of Codings column as its input. Returns the column which contains a
     Boolean value, indicating whether any of the input Codings is the member of the specified FHIR
-    ValueSet.
+    ValueSet. The value is null where membership cannot be determined, for example because the
+    value set cannot be resolved.
 
     :param coding: a Column containing a struct representation of a Coding or an array of such
-           structs.
+           structs, or a string column of codes whose system is inferred from the value set.
     :param value_set_uri: an identifier for a FHIR ValueSet
     :return: a Column containing the result of the operation.
     """

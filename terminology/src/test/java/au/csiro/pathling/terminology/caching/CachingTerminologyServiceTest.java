@@ -45,6 +45,7 @@ import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.github.tomakehurst.wiremock.recording.RecordSpecBuilder;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.util.List;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
@@ -90,13 +91,14 @@ class CachingTerminologyServiceTest {
   /**
    * @param name A display name for the test.
    * @param supplier A function to execute the terminology service operation.
-   * @param expectedResult The expected result of the operation.
+   * @param expectedResult The expected result of the operation, which is null where the result is
+   *     unknown.
    * @param badRequest Whether the request was intended to be invalid.
    */
   record TestParameters(
       @Nonnull String name,
       @Nonnull Supplier<Object> supplier,
-      @Nonnull Object expectedResult,
+      @Nullable Object expectedResult,
       boolean badRequest,
       boolean invalidParameters) {
 
@@ -144,13 +146,14 @@ class CachingTerminologyServiceTest {
             false,
             false),
 
-        // Invalid validate code request (not found from the server).
+        // Validate code against a value set that the server cannot find. The membership is
+        // unknown, so the result is null rather than false.
         new TestParameters(
             "invalid validate-code",
             () ->
                 terminologyService.validateCode(
                     NON_EXISTENT_VALUE_SET, CHLOROQUINE_POISONING_CODING),
-            false,
+            null,
             true,
             false),
 
@@ -215,7 +218,7 @@ class CachingTerminologyServiceTest {
     // Execute the request 2 times.
     for (int i = 0; i < 2; i++) {
       // Execute the request.
-      final Object result = requireNonNull(parameters.supplier().get());
+      final Object result = parameters.supplier().get();
       // Assert that the result equals the expected result.
       assertEquals(parameters.expectedResult(), result);
     }
@@ -241,7 +244,7 @@ class CachingTerminologyServiceTest {
     // Execute the request 2 times.
     for (int i = 0; i < 2; i++) {
       // Execute the request.
-      final Object result = requireNonNull(parameters.supplier().get());
+      final Object result = parameters.supplier().get();
       // Assert that the result equals the expected result.
       assertEquals(parameters.expectedResult(), result);
 

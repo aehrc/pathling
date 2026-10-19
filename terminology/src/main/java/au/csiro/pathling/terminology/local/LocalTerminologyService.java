@@ -17,6 +17,8 @@
 
 package au.csiro.pathling.terminology.local;
 
+import static java.lang.Boolean.TRUE;
+
 import au.csiro.pathling.config.LocalTerminologyConfiguration;
 import au.csiro.pathling.config.TerminologyConfiguration;
 import au.csiro.pathling.ecl.EclParseException;
@@ -215,8 +217,9 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
     return hadoopConfiguration;
   }
 
+  @Nullable
   @Override
-  public boolean validateCode(@Nonnull final String valueSetUrl, @Nonnull final Coding coding) {
+  public Boolean validateCode(@Nonnull final String valueSetUrl, @Nonnull final Coding coding) {
     if (coding.getSystem() == null || coding.getCode() == null) {
       return false;
     }
@@ -224,15 +227,35 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
 
     final Optional<ResolvedValueSet> resolved = valueSetResolver.resolve(valueSetUrl);
     if (resolved.isEmpty()) {
-      // Unknown value set: the coding is not a member (unknown-content fallback).
-      return false;
+      // Unknown value set: the membership is unknown (unknown-content fallback).
+      return null;
     }
     final ResolvedValueSet valueSet = resolved.get();
     if (!valueSet.getSystemUrl().equals(coding.getSystem())) {
       return false;
     }
+    return isMember(valueSetUrl, valueSet, coding.getCode());
+  }
+
+  @Nullable
+  @Override
+  public Boolean validateCodeInferringSystem(
+      @Nonnull final String valueSetUrl, @Nonnull final String code) {
+    ensureInitialised();
+
+    // A value set is evaluated over a single code system, so the code takes that system.
+    return valueSetResolver
+        .resolve(valueSetUrl)
+        .map(valueSet -> isMember(valueSetUrl, valueSet, code))
+        .orElse(null);
+  }
+
+  private boolean isMember(
+      @Nonnull final String valueSetUrl,
+      @Nonnull final ResolvedValueSet valueSet,
+      @Nonnull final String code) {
     final CodeSystemIndexes indexes = indexesFor(valueSet.getSystemVersionId());
-    final Integer dense = indexes.dictionary().denseId(coding.getCode());
+    final Integer dense = indexes.dictionary().denseId(code);
     if (dense == null) {
       return false;
     }
@@ -269,7 +292,7 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
     // The target names the value set in which a translation is sought: keep only translations
     // whose concept is a member of it, matching remote-mode behaviour.
     return translations.stream()
-        .filter(translation -> validateCode(target, translation.getConcept()))
+        .filter(translation -> TRUE.equals(validateCode(target, translation.getConcept())))
         .toList();
   }
 

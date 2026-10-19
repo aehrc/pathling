@@ -82,18 +82,20 @@ public interface TerminologyClient extends Closeable {
    * Builds a validate code operation that can be customized and executed later.
    *
    * @param url the URL of the value set to validate against
-   * @param system the system of the code to validate
+   * @param system the system of the code to validate, which is omitted when inferring the system
    * @param version the version of the code system to validate against
    * @param code the code to validate
+   * @param inferSystem whether the server should infer the system of the code from the value set
    * @return an {@link IOperationUntypedWithInput} that can be customized and executed later
    * @see <a
-   *     href="https://www.hl7.org/fhir/R4/valueset-operation-validate-code.html">ValueSet/$validate-code</a>
+   *     href="https://build.fhir.org/valueset-operation-validate-code.html">ValueSet/$validate-code</a>
    */
   IOperationUntypedWithInput<Parameters> buildValidateCode(
       @Nonnull UriType url,
-      @Nonnull UriType system,
+      @Nullable UriType system,
       @Nullable StringType version,
-      @Nonnull CodeType code);
+      @Nonnull CodeType code,
+      @Nullable BooleanType inferSystem);
 
   /**
    * Translates a code using a concept map.
