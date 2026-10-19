@@ -4056,3 +4056,63 @@ built once, into the new code, rather than into code stage 3 replaces. Until the
 legacy layout rests on the root `id_versioned`, as decision 100 left it. The release is blocked on
 ticket 29, so every PoF dataset a release produces carries the column. Existing PoF test data is not
 regenerated: unmarked PoF data stays accepted, and that data is its regression test.
+
+## 133. Ingest validates what the layout depends on, fails by default, and reports per value
+
+Owner decision (2026-10-19). Evidence and probes are in `ingress-strictness/README.md`.
+
+Decision 68 settled ingest tolerance in the shape Spark's reader allowed: undescribed or contradicting content is
+nulled, one warning per column names it, and there is no failing mode (decision 44, reversed by its addendum). The
+probes for ticket 08 showed that this shape decided the policy rather than following from one. The reader cannot
+tell `null` from absent. It widens a whole column when one value contradicts it, and records nothing when it
+does. It passes a number given for a string through a double. It reports a mismatch per row at best. HAPI, which
+9.9.0 used, did not ignore by default either. Its default lenient handler fails the whole parse on an invalid date,
+an integer that overflows, malformed base64, or a code outside a required binding it had generated an enum for.
+It warns, without a path, for unknown elements and cardinality problems. And it silently coerces a primitive's
+JSON type in both of its modes.
+
+_Decision_: ingest is governed by seven principles, recorded in full in the evidence:
+
+1. no data loss on compliant input, with a closed list of exceptions;
+2. no invisible loss on any input;
+3. a change of encoding is not a loss;
+4. fail early;
+5. tolerance is explicit and never silent;
+6. the same input gives the same outcome;
+7. one grammar, validated at ingest, and the engine never fails on a stored value.
+
+The scope of this programme is:
+
+- **Repair `none`.** Only the exact FHIR encoding of the input format is accepted. Repairs that widen a type
+  (`widen`) or depend on the value (`narrow`) are follow-ups.
+- **The policies `fail`, which is the default, and `drop`.** They apply alike to invalid values and to content
+  the definitions do not describe. `keep` is a follow-up.
+- **Datatype-level checks wherever the layout or the engine depends on them.**
+  - Checked: dates, times and instants (the regex and a successful parse), decimals, the integer family,
+    `boolean` and `base64Binary`.
+  - Passed through unvalidated: the text-only types. Their regex checks are a follow-up.
+  - Never checked: element-level constraints (bindings, minimum cardinality, invariants, profiles). Those are a
+    validator's concern.
+- **Empty values.** `null`, `{}`, `[]` and `""` are invalid, except a `null` that aligns a repeating primitive with
+  its `_x` partner.
+- **A `dateTime` or `instant` with a time but no timezone** is invalid, per the regex.
+- **`contained`** is dropped with an informational finding and never fails.
+- **Findings are data.** Each row carries an opt-in `_findings` column of path, kind and value. A summary from
+  `Dataset.observe` reaches the driver during the write.
+- **`fail` stops at the first invalid value**, naming the resource, the path and the value. A validate-only
+  operation lists every finding.
+
+Storing undescribed content is a follow-up. The direction is typed columns, first from definitions the user
+supplies, then optionally from types inferred from the data.
+
+_Consequences_:
+
+- The "ignore, never fail" rule of decisions 44 and 68 is reversed. The decimal path of decision 68 was already
+  reopened by OQ-1.
+- Failing on content that 9.9.0 and the previous implementation accepted is a behaviour change. It joins the
+  changes `contracts/library-api.md` requires a caller to be told about, and the release notes must state it
+  with the way to opt into `drop`. SC-008 is unaffected, because no signature changes.
+- Codes outside a required binding, which 9.9.0 rejected, now load.
+- The engine's date comparisons, which throw on invalid stored text, contradict principle 7 (ticket 31).
+- Ticket 08's candidates are measured against this scope.
+- OQ-1, FR-063 and ticket 16's acceptance criteria are rewritten once the spike reports, not before.

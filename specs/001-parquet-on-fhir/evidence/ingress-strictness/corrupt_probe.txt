@@ -1,0 +1,24 @@
+ok       {"id": "1", "s": "123"}                                 
+ok       {"id": "2", "s": "true"}                                
+ok       {"id": "3", "s": "{\"x\":1}"}                           
+ok       {"id": "4", "s": "[\"a\",\"b\"]"}                       
+CORRUPT  {"id": "5"}                                             <- {"id":"5","i":"5"}
+CORRUPT  {"id": "6"}                                             <- {"id":"6","i":5.0}
+CORRUPT  {"id": "7"}                                             <- {"id":"7","i":99999999999}
+CORRUPT  {"id": "8"}                                             <- {"id":"8","b":"true"}
+CORRUPT  {"id": "9"}                                             <- {"id":"9","b":1}
+CORRUPT  {"id": "10"}                                            <- {"id":"10","d":"1.5"}
+ok       {"id": "11", "d": NaN}                                  
+CORRUPT  {"id": "12"}                                            <- {"id":"12","arr":"a"}
+CORRUPT  {"id": "13"}                                            <- {"id":"13","arr":{"x":"a"}}
+ok       {"id": "14", "arr": ["[\"a\",\"b\"]"]}                  
+ok       {"id": "15", "arr": ["1", "2"]}                         
+CORRUPT  {"id": "16"}                                            <- {"id":"16","obj":"a"}
+CORRUPT  {"id": "17"}                                            <- {"id":"17","obj":[{"x":"a"}]}
+ok       {"id": "18", "obj": {"x": "a"}}                         
+ok       {"id": "19", "s": "second"}                             
+CORRUPT  {}                                                      <- "just a string"
+ok       {"id": "21a"}                                           
+ok       {"id": "21b"}                                           
+CORRUPT  {}                                                      <- {"id":"22","s":"x"
+ok       {"id": "23"}                                            

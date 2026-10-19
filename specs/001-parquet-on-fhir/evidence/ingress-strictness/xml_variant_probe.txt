@@ -1,0 +1,13 @@
+== from_xml(x, 'variant')
+   ERROR [INVALID_SCHEMA.NON_STRUCT_TYPE] The input schema "variant" is not a valid schema string. The input expression should be evaluated to struct type, but got "VARIANT". SQLSTATE: 42K07; line 1 pos 12
+== from_xml(x, 'v variant')
+   None
+== schema_of_variant
+   ERROR [INVALID_SCHEMA.NON_STRUCT_TYPE] The input schema "variant" is not a valid schema string. The input expression should be evaluated to struct type, but got "VARIANT". SQLSTATE: 42K07; line 1 pos 25
+== reader singleVariantColumn
+   ERROR [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `v` cannot be resolved. Did you mean one of the following? [`id`, `name`, `active`, `_xmlns`, `birthDate`]. SQLSTATE: 42703; line 1 
+== from_xml with per-field variant schema
+   id: None
+   name: None
+   extension: None
+   birthDate: None
