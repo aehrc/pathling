@@ -1,0 +1,3 @@
+prototype jar: 7a44177b411c22d6baa0a7215b9df532baa190e56e8a8dabc68648947c7c5f52  /Users/szu004/dev/pathling/.local/work/issue/2367/pathling-compare/tools/spike08-proto.jar
+env: 
+exit: 0

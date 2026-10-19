@@ -1,0 +1,52 @@
+== p2_spread.py p2-a0-r1-514f8f8 p2-a0-r2-514f8f8
+source           type         phase   p2-a0-r1- p2-a0-r2- ratio
+json             Condition    decode        291       287  0.99  (under 1 s, not judged)
+json             Condition    encode        828       788  0.95  (under 1 s, not judged)
+json             Condition    fit           486       444  0.91  (under 1 s, not judged)
+json             Encounter    decode        641       637  0.99  (under 1 s, not judged)
+json             Encounter    encode      1,611     1,577  0.98
+json             Encounter    fit           855       853  1.00  (under 1 s, not judged)
+json             Observation  decode        754       710  0.94  (under 1 s, not judged)
+json             Observation  encode      1,719     1,707  0.99
+json             Observation  fit           992       984  0.99  (under 1 s, not judged)
+json             Patient      decode        108       108  1.00  (under 1 s, not judged)
+json             Patient      encode        135       132  0.98  (under 1 s, not judged)
+json             Patient      fit            82        95  1.15  (under 1 s, not judged)
+xml-bundles      Condition    decode      3,953     3,978  1.01
+xml-bundles      Condition    encode      6,384     6,409  1.00
+xml-bundles      Condition    fit         6,051     6,078  1.00
+xml-bundles      Encounter    decode      9,156     9,133  1.00
+xml-bundles      Encounter    encode      8,832     8,762  0.99
+xml-bundles      Encounter    fit         7,990     7,974  1.00
+xml-bundles      Observation  decode     15,159    15,140  1.00
+xml-bundles      Observation  encode      9,516     9,539  1.00
+xml-bundles      Observation  fit         8,702     8,776  1.01
+xml-bundles      Patient      decode        599       584  0.98  (under 1 s, not judged)
+xml-bundles      Patient      encode      4,539     4,429  0.98
+xml-bundles      Patient      fit         4,297     4,230  0.98
+xml-bundles-txn  Condition    decode      3,909     3,955  1.01
+xml-bundles-txn  Condition    encode      7,089     7,092  1.00
+xml-bundles-txn  Condition    fit         6,734     6,650  0.99
+xml-bundles-txn  Encounter    decode      8,969     9,156  1.02
+xml-bundles-txn  Encounter    encode      9,345     9,366  1.00
+xml-bundles-txn  Encounter    fit         8,534     8,581  1.01
+xml-bundles-txn  Observation  decode     14,758    15,037  1.02
+xml-bundles-txn  Observation  encode     10,204    10,132  0.99
+xml-bundles-txn  Observation  fit         9,390     9,369  1.00
+xml-bundles-txn  Patient      decode        557       567  1.02  (under 1 s, not judged)
+xml-bundles-txn  Patient      encode      4,956     4,907  0.99
+xml-bundles-txn  Patient      fit         4,746     4,677  0.99
+xml-lines        Condition    decode      2,354     2,383  1.01
+xml-lines        Condition    encode      2,534     2,581  1.02
+xml-lines        Condition    fit         2,237     2,247  1.00
+xml-lines        Encounter    decode      4,817     4,874  1.01
+xml-lines        Encounter    encode      5,201     5,204  1.00
+xml-lines        Encounter    fit         4,490     4,590  1.02
+xml-lines        Observation  decode      5,545     5,676  1.02
+xml-lines        Observation  encode      6,056     6,095  1.01
+xml-lines        Observation  fit         5,262     5,307  1.01
+xml-lines        Patient      decode        313       318  1.02  (under 1 s, not judged)
+xml-lines        Patient      encode        303       299  0.99  (under 1 s, not judged)
+xml-lines        Patient      fit           273       248  0.91  (under 1 s, not judged)
+
+judged items 33; worst |ratio - 1| 0.024; median 0.008; ACCEPTABLE (limits 0.15 and 0.05)

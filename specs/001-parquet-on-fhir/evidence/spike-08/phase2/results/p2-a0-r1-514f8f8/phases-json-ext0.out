@@ -1,0 +1,20 @@
+2026-10-19 19:47:51 WARN  NativeCodeLoader:60 - Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+2026-10-19 19:47:53 INFO  Version:21 - HV000001: Hibernate Validator null
+2026-10-19 19:47:53 DEBUG AbstractConfigurationImpl:176 - Setting custom MessageInterpolator of type au.csiro.pathling.shaded.org.hibernate.validator.messageinterpolation.ParameterMessageInterpolator
+2026-10-19 19:47:53 DEBUG ValidationXmlParser:122 - Trying to load META-INF/validation.xml for XML based Validator configuration.
+2026-10-19 19:47:53 DEBUG ResourceLoaderHelper:61 - Trying to load META-INF/validation.xml via TCCL
+2026-10-19 19:47:53 DEBUG ResourceLoaderHelper:67 - Trying to load META-INF/validation.xml via Hibernate Validator's class loader
+2026-10-19 19:47:53 DEBUG ValidationXmlParser:129 - No META-INF/validation.xml found. Using annotation based configuration only.
+2026-10-19 19:47:53 DEBUG TraversableResolvers:61 - Cannot find jakarta.persistence.Persistence on classpath. Assuming non JPA 2 environment. All properties will per default be traversable.
+2026-10-19 19:47:53 DEBUG ValidatorFactoryConfigurationHelper:355 - HV000252: Using au.csiro.pathling.shaded.org.hibernate.validator.internal.engine.DefaultPropertyNodeNameProvider as property node name provider.
+2026-10-19 19:47:53 DEBUG ValidatorFactoryConfigurationHelper:447 - HV000234: Using au.csiro.pathling.shaded.org.hibernate.validator.messageinterpolation.ParameterMessageInterpolator as ValidatorFactory-scoped message interpolator.
+2026-10-19 19:47:53 DEBUG ValidatorFactoryConfigurationHelper:448 - HV000234: Using au.csiro.pathling.shaded.org.hibernate.validator.internal.engine.resolver.TraverseAllTraversableResolver as ValidatorFactory-scoped traversable resolver.
+2026-10-19 19:47:53 DEBUG ValidatorFactoryConfigurationHelper:449 - HV000234: Using au.csiro.pathling.shaded.org.hibernate.validator.internal.util.ExecutableParameterNameProvider as ValidatorFactory-scoped parameter name provider.
+2026-10-19 19:47:53 DEBUG ValidatorFactoryConfigurationHelper:450 - HV000234: Using au.csiro.pathling.shaded.org.hibernate.validator.internal.engine.DefaultClockProvider as ValidatorFactory-scoped clock provider.
+2026-10-19 19:47:53 DEBUG ValidatorFactoryConfigurationHelper:451 - HV000234: Using au.csiro.pathling.shaded.org.hibernate.validator.internal.engine.scripting.DefaultScriptEvaluatorFactory as ValidatorFactory-scoped script evaluator factory.
+2026-10-19 19:47:53 DEBUG ConstraintDescriptorImpl:646 - Adding composing constraint: ConstraintDescriptorImpl{annotation=j.v.c.Pattern, payloads=[], hasComposingConstraints=true, isReportAsSingleInvalidConstraint=false, constraintLocationKind=FIELD, definedOn=DEFINED_LOCALLY, groups=[interface jakarta.validation.groups.Default], attributes={flags=[Ljakarta.validation.constraints.Pattern$Flag;@4e72c5bb, groups=[Ljava.lang.Class;@15951272, regexp=.*, message={jakarta.validation.constraints.Pattern.message}, payload=[Ljava.lang.Class;@4a1959e7}, constraintType=GENERIC, valueUnwrapping=DEFAULT}.
+2026-10-19 19:47:53 DEBUG ConstraintDescriptorImpl:646 - Adding composing constraint: ConstraintDescriptorImpl{annotation=j.v.c.Pattern, payloads=[], hasComposingConstraints=true, isReportAsSingleInvalidConstraint=false, constraintLocationKind=FIELD, definedOn=DEFINED_LOCALLY, groups=[interface jakarta.validation.groups.Default], attributes={flags=[Ljakarta.validation.constraints.Pattern$Flag;@4e72c5bb, groups=[Ljava.lang.Class;@5957f518, regexp=.*, message={jakarta.validation.constraints.Pattern.message}, payload=[Ljava.lang.Class;@5df74d6d}, constraintType=GENERIC, valueUnwrapping=DEFAULT}.
+Patient 11853 11853 11853 exact=500/500 fit 131 encode 160 decode 145 scan 53 jobs 1 1 1
+Condition 459617 459617 459617 exact=500/500 fit 531 encode 920 decode 317 scan 120 jobs 1 1 1
+Encounter 598548 598548 598548 exact=500/500 fit 968 encode 1760 decode 724 scan 180 jobs 1 1 1
+Observation 1004979 1004979 1004979 exact=500/500 fit 1127 encode 1926 decode 921 scan 239 jobs 1 1 1

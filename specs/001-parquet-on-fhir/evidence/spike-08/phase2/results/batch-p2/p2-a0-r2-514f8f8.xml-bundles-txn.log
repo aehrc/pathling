@@ -1,0 +1,11 @@
+phases-xml-bundles-txn-ext0 Patient 11853 11853 11853 exact=500/500 canonical=500/500 fit 5440 encode 5671 decode 681 scan 239 jobs 1 1 1
+phases-xml-bundles-txn-ext0 Condition 459617 459617 459617 exact=500/500 canonical=500/500 fit 7312 encode 7743 decode 4218 scan 165 jobs 1 1 1
+phases-xml-bundles-txn-ext0 Encounter 598548 598548 598548 exact=500/500 canonical=500/500 fit 9222 encode 10054 decode 9813 scan 277 jobs 1 1 1
+phases-xml-bundles-txn-ext0 Observation 1004979 1004979 1004979 exact=421/500 canonical=421/500 fit 10063 encode 10911 decode 16004 scan 501 jobs 1 1 1
+/dev/disk3s1   926Gi   856Gi    45Gi    95%    5.4M  476M    1%   /System/Volumes/Data
+phases-xml-bundles-txn-ext1 Patient 11853 11853 11853 exact=500/500 canonical=500/500 fit 4762 encode 4993 decode 686 scan 263 jobs 1 1 1
+phases-xml-bundles-txn-ext1 Condition 459617 459617 459617 exact=500/500 canonical=500/500 fit 6720 encode 7122 decode 4004 scan 186 jobs 1 1 1
+phases-xml-bundles-txn-ext1 Encounter 598548 598548 598548 exact=500/500 canonical=500/500 fit 8599 encode 9443 decode 9235 scan 290 jobs 1 1 1
+phases-xml-bundles-txn-ext1 Observation 1004979 1004979 1004979 exact=421/500 canonical=421/500 fit 9386 encode 10199 decode 15066 scan 501 jobs 1 1 1
+/dev/disk3s1   926Gi   856Gi    45Gi    95%    5.4M  476M    1%   /System/Volumes/Data
+done p2-a0-r2-514f8f8

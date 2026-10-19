@@ -1,0 +1,20 @@
+2026-10-20 01:19:53 WARN  NativeCodeLoader:60 - Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+2026-10-20 01:19:55 INFO  Version:21 - HV000001: Hibernate Validator null
+2026-10-20 01:19:55 DEBUG AbstractConfigurationImpl:176 - Setting custom MessageInterpolator of type au.csiro.pathling.shaded.org.hibernate.validator.messageinterpolation.ParameterMessageInterpolator
+2026-10-20 01:19:55 DEBUG ValidationXmlParser:122 - Trying to load META-INF/validation.xml for XML based Validator configuration.
+2026-10-20 01:19:55 DEBUG ResourceLoaderHelper:61 - Trying to load META-INF/validation.xml via TCCL
+2026-10-20 01:19:55 DEBUG ResourceLoaderHelper:67 - Trying to load META-INF/validation.xml via Hibernate Validator's class loader
+2026-10-20 01:19:55 DEBUG ValidationXmlParser:129 - No META-INF/validation.xml found. Using annotation based configuration only.
+2026-10-20 01:19:55 DEBUG TraversableResolvers:61 - Cannot find jakarta.persistence.Persistence on classpath. Assuming non JPA 2 environment. All properties will per default be traversable.
+2026-10-20 01:19:55 DEBUG ValidatorFactoryConfigurationHelper:355 - HV000252: Using au.csiro.pathling.shaded.org.hibernate.validator.internal.engine.DefaultPropertyNodeNameProvider as property node name provider.
+2026-10-20 01:19:55 DEBUG ValidatorFactoryConfigurationHelper:447 - HV000234: Using au.csiro.pathling.shaded.org.hibernate.validator.messageinterpolation.ParameterMessageInterpolator as ValidatorFactory-scoped message interpolator.
+2026-10-20 01:19:55 DEBUG ValidatorFactoryConfigurationHelper:448 - HV000234: Using au.csiro.pathling.shaded.org.hibernate.validator.internal.engine.resolver.TraverseAllTraversableResolver as ValidatorFactory-scoped traversable resolver.
+2026-10-20 01:19:55 DEBUG ValidatorFactoryConfigurationHelper:449 - HV000234: Using au.csiro.pathling.shaded.org.hibernate.validator.internal.util.ExecutableParameterNameProvider as ValidatorFactory-scoped parameter name provider.
+2026-10-20 01:19:55 DEBUG ValidatorFactoryConfigurationHelper:450 - HV000234: Using au.csiro.pathling.shaded.org.hibernate.validator.internal.engine.DefaultClockProvider as ValidatorFactory-scoped clock provider.
+2026-10-20 01:19:55 DEBUG ValidatorFactoryConfigurationHelper:451 - HV000234: Using au.csiro.pathling.shaded.org.hibernate.validator.internal.engine.scripting.DefaultScriptEvaluatorFactory as ValidatorFactory-scoped script evaluator factory.
+2026-10-20 01:19:55 DEBUG ConstraintDescriptorImpl:646 - Adding composing constraint: ConstraintDescriptorImpl{annotation=j.v.c.Pattern, payloads=[], hasComposingConstraints=true, isReportAsSingleInvalidConstraint=false, constraintLocationKind=FIELD, definedOn=DEFINED_LOCALLY, groups=[interface jakarta.validation.groups.Default], attributes={flags=[Ljakarta.validation.constraints.Pattern$Flag;@59e3a8fd, groups=[Ljava.lang.Class;@64d60384, regexp=.*, message={jakarta.validation.constraints.Pattern.message}, payload=[Ljava.lang.Class;@5d997257}, constraintType=GENERIC, valueUnwrapping=DEFAULT}.
+2026-10-20 01:19:55 DEBUG ConstraintDescriptorImpl:646 - Adding composing constraint: ConstraintDescriptorImpl{annotation=j.v.c.Pattern, payloads=[], hasComposingConstraints=true, isReportAsSingleInvalidConstraint=false, constraintLocationKind=FIELD, definedOn=DEFINED_LOCALLY, groups=[interface jakarta.validation.groups.Default], attributes={flags=[Ljakarta.validation.constraints.Pattern$Flag;@59e3a8fd, groups=[Ljava.lang.Class;@8a42a16, regexp=.*, message={jakarta.validation.constraints.Pattern.message}, payload=[Ljava.lang.Class;@5e1b5433}, constraintType=GENERIC, valueUnwrapping=DEFAULT}.
+Patient 11853 11853 11853 exact=500/500 lexical=495/500 fit 3574 encode 3298 decode 123 scan 50 jobs 4 1 1
+Condition 459617 459617 459617 exact=500/500 lexical=500/500 fit 2917 encode 8566 decode 413 scan 92 jobs 4 1 1
+Encounter 598548 598548 598548 exact=500/500 lexical=500/500 fit 5467 encode 37439 decode 771 scan 172 jobs 4 1 1
+Observation 1004979 1004979 1004979 exact=500/500 lexical=421/500 fit 5636 encode 26852 decode 818 scan 235 jobs 4 1 1

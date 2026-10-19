@@ -1,0 +1,79 @@
+=== 2026-10-19 19:47:34 pre-flight
+date: Mon 19 Oct 2026 19:47:34 AEST
+uptime: 19:47  up  1:32, 3 users, load averages: 3.01 2.69 3.12
+swap: total = 0.00M  used = 0.00M  free = 0.00M  (encrypted)
+disk: /dev/disk3s1       926  853        48    95% 5402418 504143920    1%   /System/Volumes/Data
+java processes:
+  none
+top cpu:
+ 79.7 /Applications/Microsoft Defender.app/Contents/MacOS/wdavdaemon_enterprise.app/Contents/MacOS/wdavdaemon_enterprise
+ 23.7 /Library/SystemExtensions/4263FE4D-84E9-4B8B-B305-A7B7F23E5B37/com.jamf.protect.security-extension.systemextension/Contents/MacOS/com.jamf.protect.security-extension
+ 22.0 claude
+ 13.5 /usr/libexec/trustd
+  7.7 /usr/libexec/logd
+7a44177b411c22d6baa0a7215b9df532baa190e56e8a8dabc68648947c7c5f52  /Users/szu004/dev/pathling/.local/work/issue/2367/pathling-compare/tools/spike08-proto.jar
+=== 2026-10-19 19:47:36 start p2-a0-r1-514f8f8 json (pathling )
+=== 2026-10-19 19:50:33 end p2-a0-r1-514f8f8 json (exit 0)
+=== 2026-10-19 19:53:33 start p2-aplus-r1-514f8f8 json (aplus EXTS_OVERRIDE=1)
+=== 2026-10-19 19:58:00 end p2-aplus-r1-514f8f8 json (exit 0)
+=== 2026-10-19 20:01:01 start p2-b-r1-514f8f8 json (b EXTS_OVERRIDE=1)
+=== 2026-10-19 20:02:40 end p2-b-r1-514f8f8 json (exit 0)
+=== 2026-10-19 20:05:10 start p2-avariant-r1-514f8f8 json (avariant EXTS_OVERRIDE=1)
+=== 2026-10-19 20:24:25 end p2-avariant-r1-514f8f8 json (exit 0)
+=== 2026-10-19 20:27:55 start p2-a0-r2-514f8f8 json (pathling )
+=== 2026-10-19 20:30:46 end p2-a0-r2-514f8f8 json (exit 0)
+=== 2026-10-19 20:33:17 start p2-aplus-r2-514f8f8 json (aplus EXTS_OVERRIDE=1)
+=== 2026-10-19 20:37:41 end p2-aplus-r2-514f8f8 json (exit 0)
+=== 2026-10-19 20:40:41 start p2-b-r2-514f8f8 json (b EXTS_OVERRIDE=1)
+=== 2026-10-19 20:42:20 end p2-b-r2-514f8f8 json (exit 0)
+=== 2026-10-19 20:45:50 start p2-avariant-r2-514f8f8 json (avariant EXTS_OVERRIDE=1)
+=== 2026-10-19 21:04:57 end p2-avariant-r2-514f8f8 json (exit 0)
+=== 2026-10-19 21:04:58 slice json done; A0 spread acceptable
+=== 2026-10-19 21:08:28 start p2-a0-r1-514f8f8 xml-lines (pathling )
+=== 2026-10-19 21:18:11 end p2-a0-r1-514f8f8 xml-lines (exit 0)
+=== 2026-10-19 21:21:41 start p2-aplus-r1-514f8f8 xml-lines (aplus EXTS_OVERRIDE=1)
+=== 2026-10-19 21:31:26 end p2-aplus-r1-514f8f8 xml-lines (exit 0)
+=== 2026-10-19 21:34:57 start p2-b-r1-514f8f8 xml-lines (b EXTS_OVERRIDE=1)
+=== 2026-10-19 21:36:29 end p2-b-r1-514f8f8 xml-lines (exit 0)
+=== 2026-10-19 21:40:00 start p2-a0-r2-514f8f8 xml-lines (pathling )
+=== 2026-10-19 21:49:48 end p2-a0-r2-514f8f8 xml-lines (exit 0)
+=== 2026-10-19 21:52:19 start p2-aplus-r2-514f8f8 xml-lines (aplus EXTS_OVERRIDE=1)
+=== 2026-10-19 22:02:05 end p2-aplus-r2-514f8f8 xml-lines (exit 0)
+=== 2026-10-19 22:05:06 start p2-b-r2-514f8f8 xml-lines (b EXTS_OVERRIDE=1)
+=== 2026-10-19 22:06:39 end p2-b-r2-514f8f8 xml-lines (exit 0)
+=== 2026-10-19 22:06:39 slice xml-lines done; A0 spread acceptable
+=== 2026-10-19 22:09:40 start p2-a0-r1-514f8f8 xml-bundles (pathling )
+=== 2026-10-19 22:30:37 end p2-a0-r1-514f8f8 xml-bundles (exit 0)
+=== 2026-10-19 22:32:07 start p2-aplus-r1-514f8f8 xml-bundles (aplus EXTS_OVERRIDE=1)
+=== 2026-10-19 22:44:50 end p2-aplus-r1-514f8f8 xml-bundles (exit 0)
+=== 2026-10-19 22:48:20 start p2-b-r1-514f8f8 xml-bundles (b EXTS_OVERRIDE=1)
+=== 2026-10-19 22:51:09 end p2-b-r1-514f8f8 xml-bundles (exit 0)
+=== 2026-10-19 22:53:40 start p2-a0-r2-514f8f8 xml-bundles (pathling )
+=== 2026-10-19 23:14:34 end p2-a0-r2-514f8f8 xml-bundles (exit 0)
+=== 2026-10-19 23:16:04 start p2-aplus-r2-514f8f8 xml-bundles (aplus EXTS_OVERRIDE=1)
+=== 2026-10-19 23:28:12 end p2-aplus-r2-514f8f8 xml-bundles (exit 0)
+=== 2026-10-19 23:30:12 start p2-b-r2-514f8f8 xml-bundles (b EXTS_OVERRIDE=1)
+=== 2026-10-19 23:33:01 end p2-b-r2-514f8f8 xml-bundles (exit 0)
+=== 2026-10-19 23:33:01 slice xml-bundles done; A0 spread acceptable
+=== 2026-10-19 23:35:32 start p2-a0-r1-514f8f8 xml-bundles-txn (pathling )
+=== 2026-10-19 23:58:01 end p2-a0-r1-514f8f8 xml-bundles-txn (exit 0)
+=== 2026-10-19 23:59:31 start p2-aplus-r1-514f8f8 xml-bundles-txn (aplus EXTS_OVERRIDE=1)
+=== 2026-10-20 00:12:59 end p2-aplus-r1-514f8f8 xml-bundles-txn (exit 0)
+=== 2026-10-20 00:15:30 start p2-b-r1-514f8f8 xml-bundles-txn (b EXTS_OVERRIDE=1)
+=== 2026-10-20 00:18:26 end p2-b-r1-514f8f8 xml-bundles-txn (exit 0)
+=== 2026-10-20 00:20:57 start p2-a0-r2-514f8f8 xml-bundles-txn (pathling )
+=== 2026-10-20 00:43:31 end p2-a0-r2-514f8f8 xml-bundles-txn (exit 0)
+=== 2026-10-20 00:46:01 start p2-aplus-r2-514f8f8 xml-bundles-txn (aplus EXTS_OVERRIDE=1)
+=== 2026-10-20 00:59:48 end p2-aplus-r2-514f8f8 xml-bundles-txn (exit 0)
+=== 2026-10-20 01:02:18 start p2-b-r2-514f8f8 xml-bundles-txn (b EXTS_OVERRIDE=1)
+=== 2026-10-20 01:05:10 end p2-b-r2-514f8f8 xml-bundles-txn (exit 0)
+=== 2026-10-20 01:05:11 slice xml-bundles-txn done; A0 spread acceptable
+=== 2026-10-20 01:07:41 start p2-messy-pathling-514f8f8 json (pathling JSON_DIR=/Users/szu004/dev/pathling/.local/work/issue/2367/pathling-compare/data/json-messy/l SPIKE_POLICY=drop EXTS_OVERRIDE=1)
+=== 2026-10-20 01:09:10 end p2-messy-pathling-514f8f8 json (exit 0)
+=== 2026-10-20 01:11:41 start p2-messy-aplus-514f8f8 json (aplus JSON_DIR=/Users/szu004/dev/pathling/.local/work/issue/2367/pathling-compare/data/json-messy/l SPIKE_POLICY=drop EXTS_OVERRIDE=1)
+=== 2026-10-20 01:16:08 end p2-messy-aplus-514f8f8 json (exit 0)
+=== 2026-10-20 01:19:39 start p2-messy-avariant-514f8f8 json (avariant JSON_DIR=/Users/szu004/dev/pathling/.local/work/issue/2367/pathling-compare/data/json-messy/l SPIKE_POLICY=drop EXTS_OVERRIDE=1)
+=== 2026-10-20 01:31:15 end p2-messy-avariant-514f8f8 json (exit 0)
+=== 2026-10-20 01:34:45 start p2-messy-b-514f8f8 json (b JSON_DIR=/Users/szu004/dev/pathling/.local/work/issue/2367/pathling-compare/data/json-messy/l SPIKE_POLICY=drop EXTS_OVERRIDE=1)
+=== 2026-10-20 01:36:22 end p2-messy-b-514f8f8 json (exit 0)
+=== 2026-10-20 01:36:22 batch done

@@ -1,0 +1,6 @@
+phases-xml-bundles-txn-ext1 Patient 11853 11853 11853 exact=500/500 canonical=500/500 fit 1228 encode 1383 decode 306 scan 245 jobs 1 1 1
+phases-xml-bundles-txn-ext1 Condition 459617 459617 459617 exact=500/500 canonical=500/500 fit 1220 encode 2170 decode 462 scan 170 jobs 1 1 1
+phases-xml-bundles-txn-ext1 Encounter 598548 598548 598548 exact=500/500 canonical=500/500 fit 1329 encode 3170 decode 1063 scan 282 jobs 1 1 1
+phases-xml-bundles-txn-ext1 Observation 1004979 1004979 1004979 exact=500/500 canonical=500/500 fit 1430 encode 3501 decode 1688 scan 503 jobs 1 1 1
+/dev/disk3s1   926Gi   856Gi    45Gi    95%    5.4M  476M    1%   /System/Volumes/Data
+done p2-b-r2-514f8f8

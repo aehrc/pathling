@@ -1,0 +1,6 @@
+phases-xml-lines-ext1 Patient 11853 11853 11853 exact=500/500 canonical=500/500 fit 3310 encode 2846 decode 546 scan 57 jobs 1 1 1
+phases-xml-lines-ext1 Condition 459617 459617 459617 exact=500/500 canonical=500/500 fit 2249 encode 7397 decode 2231 scan 116 jobs 1 1 1
+phases-xml-lines-ext1 Encounter 598548 598548 598548 exact=500/500 canonical=500/500 fit 4513 encode 15186 decode 4502 scan 263 jobs 1 1 1
+phases-xml-lines-ext1 Observation 1004979 1004979 1004979 exact=500/500 canonical=500/500 fit 5295 encode 29889 decode 5073 scan 334 jobs 1 1 1
+/dev/disk3s1   926Gi   856Gi    46Gi    95%    5.4M  479M    1%   /System/Volumes/Data
+done p2-aplus-r2-514f8f8

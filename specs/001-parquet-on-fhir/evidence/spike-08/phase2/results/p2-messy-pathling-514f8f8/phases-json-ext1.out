@@ -1,0 +1,44 @@
+2026-10-20 01:07:57 WARN  NativeCodeLoader:60 - Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+2026-10-20 01:07:59 INFO  Version:21 - HV000001: Hibernate Validator null
+2026-10-20 01:07:59 DEBUG AbstractConfigurationImpl:176 - Setting custom MessageInterpolator of type au.csiro.pathling.shaded.org.hibernate.validator.messageinterpolation.ParameterMessageInterpolator
+2026-10-20 01:07:59 DEBUG ValidationXmlParser:122 - Trying to load META-INF/validation.xml for XML based Validator configuration.
+2026-10-20 01:07:59 DEBUG ResourceLoaderHelper:61 - Trying to load META-INF/validation.xml via TCCL
+2026-10-20 01:07:59 DEBUG ResourceLoaderHelper:67 - Trying to load META-INF/validation.xml via Hibernate Validator's class loader
+2026-10-20 01:07:59 DEBUG ValidationXmlParser:129 - No META-INF/validation.xml found. Using annotation based configuration only.
+2026-10-20 01:07:59 DEBUG TraversableResolvers:61 - Cannot find jakarta.persistence.Persistence on classpath. Assuming non JPA 2 environment. All properties will per default be traversable.
+2026-10-20 01:07:59 DEBUG ValidatorFactoryConfigurationHelper:355 - HV000252: Using au.csiro.pathling.shaded.org.hibernate.validator.internal.engine.DefaultPropertyNodeNameProvider as property node name provider.
+2026-10-20 01:07:59 DEBUG ValidatorFactoryConfigurationHelper:447 - HV000234: Using au.csiro.pathling.shaded.org.hibernate.validator.messageinterpolation.ParameterMessageInterpolator as ValidatorFactory-scoped message interpolator.
+2026-10-20 01:07:59 DEBUG ValidatorFactoryConfigurationHelper:448 - HV000234: Using au.csiro.pathling.shaded.org.hibernate.validator.internal.engine.resolver.TraverseAllTraversableResolver as ValidatorFactory-scoped traversable resolver.
+2026-10-20 01:07:59 DEBUG ValidatorFactoryConfigurationHelper:449 - HV000234: Using au.csiro.pathling.shaded.org.hibernate.validator.internal.util.ExecutableParameterNameProvider as ValidatorFactory-scoped parameter name provider.
+2026-10-20 01:07:59 DEBUG ValidatorFactoryConfigurationHelper:450 - HV000234: Using au.csiro.pathling.shaded.org.hibernate.validator.internal.engine.DefaultClockProvider as ValidatorFactory-scoped clock provider.
+2026-10-20 01:07:59 DEBUG ValidatorFactoryConfigurationHelper:451 - HV000234: Using au.csiro.pathling.shaded.org.hibernate.validator.internal.engine.scripting.DefaultScriptEvaluatorFactory as ValidatorFactory-scoped script evaluator factory.
+2026-10-20 01:07:59 DEBUG ConstraintDescriptorImpl:646 - Adding composing constraint: ConstraintDescriptorImpl{annotation=j.v.c.Pattern, payloads=[], hasComposingConstraints=true, isReportAsSingleInvalidConstraint=false, constraintLocationKind=FIELD, definedOn=DEFINED_LOCALLY, groups=[interface jakarta.validation.groups.Default], attributes={flags=[Ljakarta.validation.constraints.Pattern$Flag;@7ed7e5c7, groups=[Ljava.lang.Class;@112d90ca, regexp=.*, message={jakarta.validation.constraints.Pattern.message}, payload=[Ljava.lang.Class;@7dcae433}, constraintType=GENERIC, valueUnwrapping=DEFAULT}.
+2026-10-20 01:07:59 DEBUG ConstraintDescriptorImpl:646 - Adding composing constraint: ConstraintDescriptorImpl{annotation=j.v.c.Pattern, payloads=[], hasComposingConstraints=true, isReportAsSingleInvalidConstraint=false, constraintLocationKind=FIELD, definedOn=DEFINED_LOCALLY, groups=[interface jakarta.validation.groups.Default], attributes={flags=[Ljakarta.validation.constraints.Pattern$Flag;@7ed7e5c7, groups=[Ljava.lang.Class;@7aac1e00, regexp=.*, message={jakarta.validation.constraints.Pattern.message}, payload=[Ljava.lang.Class;@860488c}, constraintType=GENERIC, valueUnwrapping=DEFAULT}.
+2026-10-20 01:08:02 WARN  ResourceTransformer:474 - Ignoring content that this layout does not store: Patient.name: the definitions declare a repeating element and the source carries a single value
+2026-10-20 01:08:03 WARN  ResourceTransformer:474 - Ignoring content that this layout does not store: Patient.name: the definitions declare a repeating element and the source carries a single value
+2026-10-20 01:08:03 WARN  ResourceTransformer:474 - Ignoring content that this layout does not store: Patient.name: the definitions declare a repeating element and the source carries a single value
+2026-10-20 01:08:03 WARN  ResourceTransformer:474 - Ignoring content that this layout does not store: Patient.name: the definitions declare a repeating element and the source carries a single value
+2026-10-20 01:08:04 WARN  ResourceTransformer:474 - Ignoring content that this layout does not store: Patient.name: the definitions declare a repeating element and the source carries a single value
+2026-10-20 01:08:04 WARN  ResourceTransformer:474 - Ignoring content that this layout does not store: Patient.name: the definitions declare a repeating element and the source carries a single value
+Patient 11853 11853 11853 exact=0/500 fit 129 encode 158 decode 109 scan 60 jobs 1 1 1
+2026-10-20 01:08:08 WARN  ResourceTransformer:474 - Ignoring content that this layout does not store: Condition.code.coding: the definitions declare a repeating element and the source carries a single value
+2026-10-20 01:08:10 WARN  ResourceTransformer:474 - Ignoring content that this layout does not store: Condition.code.coding: the definitions declare a repeating element and the source carries a single value
+2026-10-20 01:08:11 WARN  ResourceTransformer:474 - Ignoring content that this layout does not store: Condition.code.coding: the definitions declare a repeating element and the source carries a single value
+2026-10-20 01:08:12 WARN  ResourceTransformer:474 - Ignoring content that this layout does not store: Condition.code.coding: the definitions declare a repeating element and the source carries a single value
+2026-10-20 01:08:14 WARN  ResourceTransformer:474 - Ignoring content that this layout does not store: Condition.code.coding: the definitions declare a repeating element and the source carries a single value
+2026-10-20 01:08:15 WARN  ResourceTransformer:474 - Ignoring content that this layout does not store: Condition.code.coding: the definitions declare a repeating element and the source carries a single value
+Condition 459617 459617 459617 exact=0/500 fit 517 encode 838 decode 278 scan 84 jobs 1 1 1
+2026-10-20 01:08:22 WARN  ResourceTransformer:474 - Ignoring content that this layout does not store: Encounter.type: the definitions declare a repeating element and the source carries a single value
+2026-10-20 01:08:24 WARN  ResourceTransformer:474 - Ignoring content that this layout does not store: Encounter.type: the definitions declare a repeating element and the source carries a single value
+2026-10-20 01:08:27 WARN  ResourceTransformer:474 - Ignoring content that this layout does not store: Encounter.type: the definitions declare a repeating element and the source carries a single value
+2026-10-20 01:08:29 WARN  ResourceTransformer:474 - Ignoring content that this layout does not store: Encounter.type: the definitions declare a repeating element and the source carries a single value
+2026-10-20 01:08:32 WARN  ResourceTransformer:474 - Ignoring content that this layout does not store: Encounter.type: the definitions declare a repeating element and the source carries a single value
+2026-10-20 01:08:34 WARN  ResourceTransformer:474 - Ignoring content that this layout does not store: Encounter.type: the definitions declare a repeating element and the source carries a single value
+Encounter 598548 598548 598548 exact=0/500 fit 906 encode 1583 decode 614 scan 146 jobs 1 1 1
+2026-10-20 01:08:46 WARN  ResourceTransformer:474 - Ignoring content that this layout does not store: Observation.code.coding: the definitions declare a repeating element and the source carries a single value
+2026-10-20 01:08:49 WARN  ResourceTransformer:474 - Ignoring content that this layout does not store: Observation.code.coding: the definitions declare a repeating element and the source carries a single value
+2026-10-20 01:08:51 WARN  ResourceTransformer:474 - Ignoring content that this layout does not store: Observation.code.coding: the definitions declare a repeating element and the source carries a single value
+2026-10-20 01:08:54 WARN  ResourceTransformer:474 - Ignoring content that this layout does not store: Observation.code.coding: the definitions declare a repeating element and the source carries a single value
+2026-10-20 01:08:57 WARN  ResourceTransformer:474 - Ignoring content that this layout does not store: Observation.code.coding: the definitions declare a repeating element and the source carries a single value
+2026-10-20 01:08:59 WARN  ResourceTransformer:474 - Ignoring content that this layout does not store: Observation.code.coding: the definitions declare a repeating element and the source carries a single value
+Observation 1004979 1004979 1004979 exact=0/500 fit 1033 encode 1674 decode 645 scan 235 jobs 1 1 1
