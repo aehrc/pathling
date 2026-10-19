@@ -9,18 +9,25 @@ may benchmark, build or run Spark while it runs.
 
 ## What it runs
 
-`batch-l.sh`, in this order. Each label is one `run-phases.sh` call: the four types, extensions off and on (two
-replicates of the same code), and one warmup plus five iterations of each phase. The phases are fit, encode and
-decode, as phase 1 defined them.
+`batch-l.sh`, in this order. Each label is one `run-phases.sh` call: the four types, and one warmup plus five
+iterations of each phase. The phases are fit, encode and decode, as phase 1 defined them.
+
+**Extensions.** The extensions setting configures only the legacy encoders. A candidate fits the schema as the
+data has it, so the candidates run with extensions on only, and no candidate reads the flag. Each candidate
+therefore runs as two replicate labels, `r1` and `r2`, alternating across the candidates so that a drift in the
+machine does not fall on one candidate alone. The messy labels run with extensions on only as well, A0's
+included, so that they compare like with like. The A0 labels run both settings, as in phase 1. A0 does not read
+the flag on these paths either, so its two runs are replicates, and each A0 label holds ten samples.
 
 | Step | Label | Route | Sources |
 |---|---|---|---|
 | Noise check | `p2-a0-r1-514f8f8`, `p2-a0-r2-514f8f8` | A0 (`pathling`) | JSON, XML lines, both Bundle shapes |
 | Gate | `p2_spread.py` on the two labels | | It stops here if the spread is too wide (below) |
-| Candidates | `p2-aplus-514f8f8` | A+ | JSON, XML lines, both Bundle shapes |
-| | `p2-b-514f8f8` | B | JSON, XML lines, both Bundle shapes |
-| | `p2-avariant-514f8f8` | A-variant | JSON |
-| Messy data (policy `drop`) | `p2-messy-{pathling,aplus,avariant,b}-514f8f8` | each | JSON (`data/json-messy/l`) |
+| Candidates, replicate 1 | `p2-aplus-r1-514f8f8` | A+ | JSON, XML lines, both Bundle shapes |
+| | `p2-b-r1-514f8f8` | B | JSON, XML lines, both Bundle shapes |
+| | `p2-avariant-r1-514f8f8` | A-variant | JSON |
+| Candidates, replicate 2 | `p2-{aplus,b,avariant}-r2-514f8f8` | as above | as above |
+| Messy data (policy `drop`) | `p2-messy-{pathling,aplus,avariant,b}-514f8f8` | each | JSON (`data/json-messy/l`), extensions on |
 | Closing A0 | `p2-a0-r3-514f8f8` | A0 | as above |
 
 The candidates run under the `fail` policy, which is decision 133's default and runs every check. The messy data
@@ -34,7 +41,7 @@ reported to the owner, not routed around. Setting `IGNORE_SPREAD=1` overrides it
 
 ## Expected duration
 
-About **7.5 hours**, and anywhere from 6 to 10. These are extrapolations, not measurements: nothing has been
+About **7 hours**, and anywhere from 5.5 to 9.5. These are extrapolations, not measurements: nothing has been
 timed at size `l` for phase 2. Each figure takes A0's phase 1 duration per source at size `l`, scales it by the
 candidate's cost relative to A0 on Observation in the size-`s` smoke runs, and adds A+'s and A-variant's
 plan-building time in Python, which does not grow with the data.
@@ -42,10 +49,10 @@ plan-building time in Python, which does not grow with the data.
 | Label | Expected | Plausible range | Note |
 |---|---|---|---|
 | `p2-a0-r1`, `p2-a0-r2`, `p2-a0-r3` | 60 min each | 55 to 70 | Phase 1 took 59 to 63 minutes |
-| `p2-aplus` | 2 h | 1.5 to 4 h | Its egress SQL for Condition and Encounter exceeds the JVM's 64 KB method limit, so Spark falls back from code generation to interpreted evaluation. How slow that is over half a million rows is the main unknown |
-| `p2-b` | 25 min | 15 to 45 | |
-| `p2-avariant` | 45 min | 30 to 90 | Its encode at size `s` was about 20 times B's |
-| `p2-messy-pathling`, `-aplus`, `-avariant`, `-b` | 4, 15, 45 and 4 min | | JSON only |
+| `p2-aplus-r1` and `-r2` | 1 h each | 0.75 to 2 h | Its egress SQL for Condition and Encounter exceeds the JVM's 64 KB method limit, so Spark falls back from code generation to interpreted evaluation. How slow that is over half a million rows is the main unknown |
+| `p2-b-r1` and `-r2` | 12 min each | 8 to 23 | |
+| `p2-avariant-r1` and `-r2` | 23 min each | 15 to 45 | Its encode at size `s` was about 20 times B's |
+| `p2-messy-pathling`, `-aplus`, `-avariant`, `-b` | 2, 8, 23 and 2 min | | JSON only, extensions on only |
 
 If the spread check stops the batch, it ends after about 2 hours. To tell slow from hung, look at the newest
 file in `pathling-compare/results/<label>/`: each source and setting writes its `.json` when it finishes, and
@@ -138,12 +145,18 @@ From `pathling-compare`:
 python3 p2_spread.py p2-a0-r1-514f8f8 p2-a0-r2-514f8f8                     # noise check (also in batch-p2/spread.txt)
 python3 p2_spread.py p2-a0-r1-514f8f8 p2-a0-r3-514f8f8                     # drift across the batch
 for c in aplus b avariant; do
-  python3 pooled_phases.py p2-a0-r3-514f8f8 p2-$c-514f8f8 --py4j           # each candidate against the fresh A0
-  python3 pooled_phases.py pof-switch-26d7332 p2-$c-514f8f8 --py4j         # and against phase 1's bar label
+  python3 pooled_phases.py p2-a0-r3-514f8f8 "p2-$c-r?-514f8f8" --py4j       # each candidate against the fresh A0
+  python3 pooled_phases.py pof-switch-26d7332 "p2-$c-r?-514f8f8" --py4j     # and against phase 1's bar label
 done
 for r in aplus avariant b; do python3 pooled_phases.py p2-messy-pathling-514f8f8 p2-messy-$r-514f8f8; done
-python3 compare_phases.py p2-a0-r3-514f8f8 p2-aplus-514f8f8 p2-b-514f8f8 p2-avariant-514f8f8
+python3 compare_phases.py p2-a0-r3-514f8f8 p2-{aplus,b,avariant}-r{1,2}-514f8f8
 ```
+
+**Pool a candidate's two labels.** A candidate label holds five samples, where an A0 label holds ten, and the
+minimum of fewer samples runs higher. So a candidate is compared only on its two labels pooled, which
+`pooled_phases.py` does when given the quoted glob `p2-<candidate>-r?-514f8f8`, because it globs the label
+into the results directory. A ratio from one candidate label alone is biased against the candidate. The messy
+labels have five samples each, A0's included, so they compare with each other directly.
 
 `--py4j` subtracts the time A+ and A-variant spend building their plans in Python, which is recorded per sample.
 It is a prototype artefact: a JVM implementation builds the same plan in milliseconds. Report the figures both

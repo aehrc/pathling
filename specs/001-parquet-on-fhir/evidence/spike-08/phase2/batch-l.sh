@@ -4,9 +4,11 @@
 #   1. Pre-flight: the A0 runtime jar's hash, the harness scripts against the committed copies, the
 #      prototype jar built from the committed sources, and the machine's state.
 #   2. Noise check: two fresh A0 labels, then p2_spread.py. If the replicate spread is too wide, stop here.
-#   3. The candidates, each one label holding two replicates (extensions off and on, the same code):
+#   3. The candidates, each as two replicate labels (r1, r2) run with extensions on only: the extensions
+#      setting configures only the legacy encoders, and a candidate fits the schema as the data has it.
 #      A+ and B on JSON and the three XML sources, A-variant on JSON.
-#   4. The messy JSON variant (one shape error per file), under the drop policy: A0, A+, A-variant, B.
+#   4. The messy JSON variant (one shape error per file), under the drop policy, extensions on only: A0, A+,
+#      A-variant, B.
 #   5. A closing fresh A0 label, to bracket the candidates.
 # Labels are <PREFIX>-* (p2 by default). A label whose conditions-end.txt exists is complete and is skipped.
 # With RESUME=1 an interrupted label is continued (run-phases.sh skips its finished steps); without it the
@@ -98,13 +100,16 @@ if ! python3 "$H/p2_spread.py" $PREFIX-a0-r1-514f8f8 $PREFIX-a0-r2-514f8f8 | tee
 fi
 
 # ---------------------------------------------------------------- 3. candidates (two replicates each)
-label aplus-514f8f8 aplus
-label b-514f8f8 b
-label avariant-514f8f8 avariant
+# The replicates alternate across candidates, so a drift in the machine does not fall on one candidate alone.
+for rep in r1 r2; do
+  label "aplus-$rep-514f8f8" aplus EXTS_OVERRIDE=1
+  label "b-$rep-514f8f8" b EXTS_OVERRIDE=1
+  label "avariant-$rep-514f8f8" avariant EXTS_OVERRIDE=1
+done
 
 # ---------------------------------------------------------------- 4. the messy variant, under drop
 for r in pathling aplus avariant b; do
-  label "messy-$r-514f8f8" "$r" JSON_DIR="$H/data/json-messy/$SIZE" SOURCES_OVERRIDE=json SPIKE_POLICY=drop
+  label "messy-$r-514f8f8" "$r" JSON_DIR="$H/data/json-messy/$SIZE" SOURCES_OVERRIDE=json SPIKE_POLICY=drop EXTS_OVERRIDE=1
 done
 
 # ---------------------------------------------------------------- 5. closing A0
