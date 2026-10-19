@@ -508,7 +508,10 @@ compared with HEAD's encoding of the JSON, and the decoded documents with the in
 
 ### Coverage (`fixtures/fixtures_candidates.py`, output `fixtures/fixtures_candidates.txt`)
 
-The A0 columns are from phase 1. The expectations are unchanged, and `c6-choice-two-types` and
+The A0 columns are from phase 1. Every failure counted for a candidate is the route's own message (`Invalid
+content in <Type>/<id> at <path> ...` or `Invalid <Type> document: <reason>`), or, for four of the reject
+fixtures, Spark's malformed-record or duplicate-key error. None is an analysis, cast or code generation
+error. The expectations are unchanged, and `c6-choice-two-types` and
 `c7-no-resourcetype` stay unsettled. For a candidate, "invalid" is met only where `fail` stops the job
 **and** `drop` records a finding that is not informational.
 
@@ -567,7 +570,10 @@ implementation, so their counts indicate size, not a final figure. All three als
 ### Deviations in phase 2
 
 1. **Size `l` deferred.** As instructed on 2026-10-19, nothing was timed at size `l`. The batch and runbook
-   are ready.
+   are ready, and the batch was dry-run end to end at size `s` (`phase2/RUNBOOK.md`, "Dry run"). An A0 label
+   that fails stops the batch. A candidate or messy label that fails is recorded and the batch goes on.
+   A grep of the size-`l` JSON found no empty string, `null`, `{}`, `[]` or `dateTime` without a zone, so the
+   clean data is not expected to trip `fail`.
 2. **A separate prototype jar,** not a Pathling build under a new version. A0's jar stays as it is, and
    nothing enters `~/.m2`.
 3. **Replicates.** Each candidate's two replicates are the two extensions settings within one label, which

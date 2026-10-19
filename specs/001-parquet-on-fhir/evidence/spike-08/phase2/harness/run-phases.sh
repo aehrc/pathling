@@ -10,7 +10,8 @@
 #   EXTRA_JARS   a jar for --jars (the Spike08*.java prototype jar, which the candidate routes need);
 #   JSON_DIR     a JSON data directory in place of the benchmark's (the messy variant);
 #   SOURCES_OVERRIDE the sources to run, space-separated, in place of the route's default;
-#   SPIKE_POLICY fail (the default in spike_routes.py) or drop.
+#   SPIKE_POLICY fail (the default in spike_routes.py) or drop;
+#   RESOURCES_OVERRIDE, EXTS_OVERRIDE  fewer types, or one extensions setting, for a dry run.
 # Never overwrites an existing results/<label>/ directory; RESUME=1 continues an interrupted run.
 set -euo pipefail
 
@@ -20,6 +21,10 @@ REPO=/Users/szu004/dev/sql-on-fhir.js
 OUT="$HERE/results/$LABEL"
 DATA="$REPO/benchmark/data/synthea-clinical-wide/1/$SIZE"
 RESOURCES=(Patient Condition Encounter Observation)
+# Phase 2 dry runs only: fewer types or one extensions setting. Unset, nothing changes.
+[ -n "${RESOURCES_OVERRIDE:-}" ] && read -r -a RESOURCES <<< "$RESOURCES_OVERRIDE"
+EXTS=(0 1)
+[ -n "${EXTS_OVERRIDE:-}" ] && read -r -a EXTS <<< "$EXTS_OVERRIDE"
 
 [ -e "$OUT" ] && [ "${RESUME:-}" != 1 ] && { echo "refusing to overwrite $OUT" >&2; exit 1; }
 mkdir -p "$OUT"
@@ -40,7 +45,7 @@ SOURCES=(xml-lines xml-bundles xml-bundles-txn)
 [ "$ROUTE" = avariant ] && SOURCES=(json)
 [ -n "${SOURCES_OVERRIDE:-}" ] && read -r -a SOURCES <<< "$SOURCES_OVERRIDE"
 JSON_DATA="${JSON_DIR:-$DATA}"
-for EXT in 0 1; do
+for EXT in "${EXTS[@]}"; do
   for SRC in "${SOURCES[@]}"; do
     DIR="$HERE/data/xml-bundles/$SIZE"; [ "$SRC" = xml-bundles-txn ] && DIR="$HERE/data/xml-bundles-txn/$SIZE"
     NAME="phases-$SRC-ext$EXT"

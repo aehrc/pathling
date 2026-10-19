@@ -34,10 +34,22 @@ reported to the owner, not routed around. Setting `IGNORE_SPREAD=1` overrides it
 
 ## Expected duration
 
-About **6 hours**, and anywhere from 5 to 7. An A0 label took 60 to 63 minutes in phase 1, and there are
-three. A+ is expected to take about 1.5 hours, B about 45 minutes, A-variant about 15 minutes and the four
-messy labels about 30 minutes together. These are estimates from phase 1 and from smoke tests at size `s`;
-nothing has been timed at `l` for phase 2. If the spread check stops the batch, it ends after about 2 hours.
+About **7.5 hours**, and anywhere from 6 to 10. These are extrapolations, not measurements: nothing has been
+timed at size `l` for phase 2. Each figure takes A0's phase 1 duration per source at size `l`, scales it by the
+candidate's cost relative to A0 on Observation in the size-`s` smoke runs, and adds A+'s and A-variant's
+plan-building time in Python, which does not grow with the data.
+
+| Label | Expected | Plausible range | Note |
+|---|---|---|---|
+| `p2-a0-r1`, `p2-a0-r2`, `p2-a0-r3` | 60 min each | 55 to 70 | Phase 1 took 59 to 63 minutes |
+| `p2-aplus` | 2 h | 1.5 to 4 h | Its egress SQL for Condition and Encounter exceeds the JVM's 64 KB method limit, so Spark falls back from code generation to interpreted evaluation. How slow that is over half a million rows is the main unknown |
+| `p2-b` | 25 min | 15 to 45 | |
+| `p2-avariant` | 45 min | 30 to 90 | Its encode at size `s` was about 20 times B's |
+| `p2-messy-pathling`, `-aplus`, `-avariant`, `-b` | 4, 15, 45 and 4 min | | JSON only |
+
+If the spread check stops the batch, it ends after about 2 hours. To tell slow from hung, look at the newest
+file in `pathling-compare/results/<label>/`: each source and setting writes its `.json` when it finishes, and
+none of them should take more than about 90 minutes.
 
 ## Prerequisites
 
@@ -97,6 +109,26 @@ fall under 3. It records swap, the load, the Java processes and the busiest proc
 is complete and is skipped. An interrupted label continues from its first unfinished source and setting:
 `run-phases.sh` skips the result files that already exist and redoes the step that was interrupted. Never delete
 a complete label. Results are never overwritten.
+
+## Dry run
+
+The whole sequence was dry-run on 2026-10-19 at size `s`, with Patient only and extensions off:
+
+```bash
+ALLOW_JAVA=1 SIZE=s PREFIX=dry IGNORE_SPREAD=1 QUIET_MINUTES=0 RESOURCES_OVERRIDE=Patient EXTS_OVERRIDE=0 \
+  specs/001-parquet-on-fhir/evidence/spike-08/phase2/batch-l.sh
+```
+
+Every label ran and wrote its results:
+
+- the messy labels read the messy data under `drop`;
+- every label resolved A0's jar;
+- a second run with `RESUME=1` skipped every label;
+- a label left incomplete stopped the run with exit status 3 until `RESUME=1` finished it.
+
+At size `s` nothing is over 1 s, so the spread check had nothing to judge. On the two phase 1 labels it judged
+34 items and printed its verdict. The dry run's results are in `pathling-compare/results/dry-*`. They are not
+measurements, and their prefix cannot collide with `p2-*`.
 
 ## Afterwards
 
