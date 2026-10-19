@@ -1,0 +1,106 @@
+== A0 (514f8f8) against the bar (26d7332)
+source           type                            fit                  encode                  decode
+json             Patient           107      105 0.98       160      151 0.94       107      106 0.99
+json             Condition         509      460 0.90       871      843 0.97       302      299 0.99
+json             Encounter         859      844 0.98     1,656    1,585 0.96       666      730 1.10
+json             Observation     1,071    1,037 0.97     1,918    1,824 0.95       754      809 1.07
+xml-lines        Patient           292      273 0.93       322      320 0.99       317      339 1.07
+xml-lines        Condition       2,362    2,276 0.96     2,685    2,616 0.97     2,555    2,417 0.95
+xml-lines        Encounter       4,846    4,640 0.96     5,521    5,351 0.97     5,116    5,046 0.99
+xml-lines        Observation     5,687    5,637 0.99     6,457    6,358 0.98     5,908    5,843 0.99
+xml-bundles      Patient         4,347    4,392 1.01     4,557    4,657 1.02       620      580 0.93
+xml-bundles      Condition       6,240    6,289 1.01     6,666    6,690 1.00     4,037    4,049 1.00
+xml-bundles      Encounter       8,125    8,246 1.01     8,999    9,106 1.01     9,221    9,236 1.00
+xml-bundles      Observation     9,011    8,889 0.99     9,884    9,540 0.97    15,230   15,009 0.99
+xml-bundles-txn  Patient         5,192    4,857 0.94     5,707    5,025 0.88       715      633 0.89
+xml-bundles-txn  Condition       7,676    6,652 0.87     8,264    7,209 0.87     4,272    3,953 0.93
+xml-bundles-txn  Encounter      10,054    8,712 0.87    10,819    9,497 0.88     9,676    9,111 0.94
+xml-bundles-txn  Observation    10,753    9,523 0.89    11,619   10,158 0.87    15,501   15,005 0.97
+
+json             fit     0.90-0.98
+json             encode  0.94-0.97
+json             decode  0.99-1.10
+xml-lines        fit     0.93-0.99
+xml-lines        encode  0.97-0.99
+xml-lines        decode  0.95-1.07
+xml-bundles      fit     0.99-1.01
+xml-bundles      encode  0.97-1.02
+xml-bundles      decode  0.93-1.00
+xml-bundles-txn  fit     0.87-0.94
+xml-bundles-txn  encode  0.87-0.88
+xml-bundles-txn  decode  0.89-0.97
+
+== from_xml against HEAD's HAPI route (both 514f8f8)
+source           type                            fit                  encode                  decode
+xml-lines        Patient           273      383 1.40       320      322 1.01       339      605 1.78
+xml-lines        Condition       2,276    1,140 0.50     2,616    1,744 0.67     2,417    1,383 0.57
+xml-lines        Encounter       4,640    2,609 0.56     5,351    4,383 0.82     5,046    2,803 0.56
+xml-lines        Observation     5,637    3,440 0.61     6,358    4,579 0.72     5,843    3,064 0.52
+xml-bundles      Patient         4,392    7,867 1.79     4,657    4,874 1.05       580      803 1.38
+xml-bundles      Condition       6,289    7,269 1.16     6,690    5,251 0.78     4,049    2,519 0.62
+xml-bundles      Encounter       8,246    7,708 0.93     9,106    8,075 0.89     9,236    5,385 0.58
+xml-bundles      Observation     8,889    7,356 0.83     9,540    8,334 0.87    15,009    7,461 0.50
+xml-bundles-txn  Patient         4,857    8,433 1.74     5,025    5,811 1.16       633      814 1.29
+xml-bundles-txn  Condition       6,652    8,336 1.25     7,209    6,613 0.92     3,953    2,565 0.65
+xml-bundles-txn  Encounter       8,712    8,368 0.96     9,497    8,704 0.92     9,111    5,571 0.61
+xml-bundles-txn  Observation     9,523    8,423 0.88    10,158   10,038 0.99    15,005    7,556 0.50
+
+xml-lines        fit     0.50-1.40
+xml-lines        encode  0.67-1.01
+xml-lines        decode  0.52-1.78
+xml-bundles      fit     0.83-1.79
+xml-bundles      encode  0.78-1.05
+xml-bundles      decode  0.50-1.38
+xml-bundles-txn  fit     0.88-1.74
+xml-bundles-txn  encode  0.92-1.16
+xml-bundles-txn  decode  0.50-1.29
+
+== the same, the py4j plan building subtracted from from_xml
+source           type                            fit                  encode                  decode
+xml-lines        Patient           273      174 0.64       320      322 1.01       339      254 0.75
+xml-lines        Condition       2,276    1,047 0.46     2,616    1,744 0.67     2,417    1,253 0.52
+xml-lines        Encounter       4,640    2,455 0.53     5,351    4,383 0.82     5,046    2,573 0.51
+xml-lines        Observation     5,637    3,296 0.58     6,358    4,579 0.72     5,843    2,816 0.48
+xml-bundles      Patient         4,392    7,623 1.74     4,657    4,874 1.05       580      452 0.78
+xml-bundles      Condition       6,289    7,161 1.14     6,690    5,251 0.78     4,049    2,385 0.59
+xml-bundles      Encounter       8,246    7,545 0.91     9,106    8,075 0.89     9,236    5,158 0.56
+xml-bundles      Observation     8,889    7,184 0.81     9,540    8,334 0.87    15,009    7,219 0.48
+xml-bundles-txn  Patient         4,857    8,119 1.67     5,025    5,811 1.16       633      461 0.73
+xml-bundles-txn  Condition       6,652    8,185 1.23     7,209    6,613 0.92     3,953    2,429 0.61
+xml-bundles-txn  Encounter       8,712    8,164 0.94     9,497    8,704 0.92     9,111    5,343 0.59
+xml-bundles-txn  Observation     9,523    8,217 0.86    10,158   10,038 0.99    15,005    7,310 0.49
+
+xml-lines        fit     0.46-0.64
+xml-lines        encode  0.67-1.01
+xml-lines        decode  0.48-0.75
+xml-bundles      fit     0.81-1.74
+xml-bundles      encode  0.78-1.05
+xml-bundles      decode  0.48-0.78
+xml-bundles-txn  fit     0.86-1.67
+xml-bundles-txn  encode  0.92-1.16
+xml-bundles-txn  decode  0.49-0.73
+
+== from_xml against the bar
+source           type                            fit                  encode                  decode
+xml-lines        Patient           292      383 1.31       322      322 1.00       317      605 1.91
+xml-lines        Condition       2,362    1,140 0.48     2,685    1,744 0.65     2,555    1,383 0.54
+xml-lines        Encounter       4,846    2,609 0.54     5,521    4,383 0.79     5,116    2,803 0.55
+xml-lines        Observation     5,687    3,440 0.60     6,457    4,579 0.71     5,908    3,064 0.52
+xml-bundles      Patient         4,347    7,867 1.81     4,557    4,874 1.07       620      803 1.29
+xml-bundles      Condition       6,240    7,269 1.16     6,666    5,251 0.79     4,037    2,519 0.62
+xml-bundles      Encounter       8,125    7,708 0.95     8,999    8,075 0.90     9,221    5,385 0.58
+xml-bundles      Observation     9,011    7,356 0.82     9,884    8,334 0.84    15,230    7,461 0.49
+xml-bundles-txn  Patient         5,192    8,433 1.62     5,707    5,811 1.02       715      814 1.14
+xml-bundles-txn  Condition       7,676    8,336 1.09     8,264    6,613 0.80     4,272    2,565 0.60
+xml-bundles-txn  Encounter      10,054    8,368 0.83    10,819    8,704 0.80     9,676    5,571 0.58
+xml-bundles-txn  Observation    10,753    8,423 0.78    11,619   10,038 0.86    15,501    7,556 0.49
+
+xml-lines        fit     0.48-1.31
+xml-lines        encode  0.65-1.00
+xml-lines        decode  0.52-1.91
+xml-bundles      fit     0.82-1.81
+xml-bundles      encode  0.79-1.07
+xml-bundles      decode  0.49-1.29
+xml-bundles-txn  fit     0.78-1.62
+xml-bundles-txn  encode  0.80-1.02
+xml-bundles-txn  decode  0.49-1.14

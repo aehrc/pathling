@@ -1,0 +1,16 @@
+{
+  "label": "phases-pof-switch-26d7332",
+  "venv": "/Users/szu004/dev/pathling/.local/work/issue/2367/pathling-compare/venv-26d7332",
+  "data": "/Users/szu004/dev/sql-on-fhir.js/benchmark/data/synthea-clinical-wide/1/l",
+  "python": "3.12.7",
+  "pyspark": "4.0.4",
+  "java": "java version \"21.0.3\" 2024-04-16 LTS",
+  "timestamp": "2026-10-19T13:11:30.458144",
+  "sqlOnFhirJsSha": "794e8a7f4b57ddc9c20c95e688fa234e8c2f5492",
+  "machine": "Apple M3 Pro, 11 cpus",
+  "pathlingSha": "26d7332e79fdcd8f37dd563303be770c2ddaccd6",
+  "pathlingDirty": true,
+  "pathlingSubject": "docs: Record where a format without a schema writes",
+  "builtJar": "/Users/szu004/dev/pathling/.claude/worktrees/bench-26d7332/library-runtime/target/library-runtime-9.9.0-pofswitch-26d7332.jar",
+  "builtJarSha256": "5180983e6e7efa7c09fe3f3b78344966a6789ef8b13a338f24a7d202d619b0c8"
+}

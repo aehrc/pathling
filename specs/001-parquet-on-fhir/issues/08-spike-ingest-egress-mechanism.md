@@ -98,3 +98,24 @@ benchmark or run `mvn install` on the machine while measurements run.
 
 **Coverage.** Each candidate runs the fixtures in `evidence/ingress-strictness/fixtures*.tsv`,
 extended as needed. That gives a pass/fail table against the agreed decisions and the OQ-1 losses.
+
+### Phase 1: A0 (branch issue/2831-spike-08)
+
+Evidence: `evidence/spike-08/README.md`. A0, the floor, measured on a harness that times the fit pass, encode
+and decode apart. The bar `26d7332` was re-measured on the same harness (SC-011 names the JMH benchmark, which
+moves to ticket 16).
+
+- Pooled over both replicates, A0 is 0.87 to 1.10 of the bar on every source, type and phase. Replicate noise
+  in the session was up to ±25%.
+- The `from_xml` XML route, generated from the definitions, matches HEAD's JSON encoding at size `s`. At size
+  `l`, against HEAD's HAPI route on the large types, it fits lines at 0.50 to 0.61, encodes at 0.67 to 0.99 and
+  decodes at about 0.5 to 0.65. Its Bundle fit is a constant per type.
+- The four unknowns are settled.
+  - `parse_json` rejects only a duplicate key; it accepts a top-level array and ignores trailing text.
+  - Only a shape disagreement widens an ancestor (its subtree, for every row); a leaf disagreement widens only
+    the leaf.
+  - `observe` can carry a bounded, deterministic sample through `min(struct)` per kind.
+  - The engine reads an unparseable stored decimal as empty and never fails.
+- On the fixtures, A0 meets none of decision 133's validation scope, on any route. Every OQ-1 loss is present.
+
+B, A+ and A-variant are not started.
