@@ -112,8 +112,6 @@ public class MockTerminologyService implements TerminologyService {
           .map(member -> new ValueSetMember(member.system(), null, member.code(), null, null))
           .toList();
     }
-
-    public static final ValueSet EMPTY = new ValueSet();
   }
 
   private final Map<String, ValueSet> valueSets = new HashMap<>();
@@ -154,9 +152,23 @@ public class MockTerminologyService implements TerminologyService {
                     Translation.of(EQUIVALENT, new Coding(LOINC_URI, "55916-3", null))))));
   }
 
+  @Nullable
   @Override
-  public boolean validateCode(@Nonnull final String codeSystemUrl, @Nonnull final Coding coding) {
-    return valueSets.getOrDefault(codeSystemUrl, ValueSet.EMPTY).contains(coding);
+  public Boolean validateCode(@Nonnull final String valueSetUrl, @Nonnull final Coding coding) {
+    final ValueSet valueSet = valueSets.get(valueSetUrl);
+    return valueSet == null ? null : valueSet.contains(coding);
+  }
+
+  @Nullable
+  @Override
+  public Boolean validateCodeInferringSystem(
+      @Nonnull final String valueSetUrl, @Nonnull final String code) {
+    final ValueSet valueSet = valueSets.get(valueSetUrl);
+    // As with a terminology server, the code is a member only where a single system within the
+    // value set holds it.
+    return valueSet == null
+        ? null
+        : valueSet.members.stream().filter(member -> member.code().equals(code)).count() == 1;
   }
 
   @Nonnull

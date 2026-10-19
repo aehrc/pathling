@@ -18,6 +18,7 @@
 package au.csiro.pathling.terminology.local;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.terminology.TerminologyService;
@@ -106,15 +107,15 @@ class ComposeEvaluationTest {
         service.validateCode(
             FhirFixtures.VS_MAMMALS_ENUMERATED + "|" + FhirFixtures.VERSION,
             species(FhirFixtures.DOG)));
-    // A version that was not imported is unknown content.
-    assertFalse(
+    // A version that was not imported is unknown content, so the membership is unknown.
+    assertNull(
         service.validateCode(
             FhirFixtures.VS_MAMMALS_ENUMERATED + "|9.9.9", species(FhirFixtures.DOG)));
   }
 
   @Test
   void unknownValueSetIsUnknownContent() {
-    assertFalse(
+    assertNull(
         service.validateCode(
             "http://example.org/fhir/ValueSet/does-not-exist", species(FhirFixtures.DOG)));
   }
