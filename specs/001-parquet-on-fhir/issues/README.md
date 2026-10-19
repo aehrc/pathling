@@ -37,6 +37,7 @@ baseline for the reworks that follow.
 - [10](10-benchmark-fix-and-extend.md) Benchmark: fix warm planning, add missing views, re-measure
 - [24](24-benchmark-ndjson-branch.md) Remove or restore the benchmark's unreachable NDJSON source
 - [27](27-usc-bloodpressures-planning-regression.md) Investigate the UsCoreBloodPressures planning regression
+- [31](31-engine-tolerates-invalid-stored-temporal.md) The engine never fails on an invalid stored date or decimal
 
 ## Stage 3: Ingest and egress without HAPI (#2831)
 

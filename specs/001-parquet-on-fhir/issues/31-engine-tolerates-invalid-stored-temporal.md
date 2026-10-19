@@ -15,7 +15,7 @@ The engine therefore needs a defined behaviour regardless. The loss is reported 
 Recommended fix:
 
 - The boundary functions return null for text that does not parse.
-- The date and decimal grammars move to a module that both `io` and `fhirpath` can use (`fhir-schema` or `utilities`), so that ingest and engine cannot disagree on what is valid.
+- The date and decimal grammars move to a module that both `io` and `fhirpath` can use (`fhir-schema` or `utilities`), and the engine parses with them from there. Ticket 16 reuses them for ingest validation, so that ingest and engine cannot disagree on what is valid.
 
 **Unverified, to check first:** the engine decodes stored decimal text to `DECIMAL(32,6)`. If that cast returns null for bad text, an invalid decimal already drops out of results silently. The behaviour would then be right but undocumented and untested. Pin it with a test either way.
 
@@ -25,5 +25,5 @@ Recommended fix:
 
 - [ ] A comparison over an element holding an invalid stored date, dateTime, instant or time returns the result for an empty value, and does not fail the query. This is pinned by tests on both a singular and a repeating element.
 - [ ] The behaviour of an invalid stored decimal is established, made empty if it is not, and pinned by a test.
-- [ ] Ingest and the engine parse dates and decimals with one shared grammar.
+- [ ] The engine parses dates and decimals with a grammar in a module that `io` can use, ready for ticket 16.
 - [ ] The documentation states that an invalid stored value evaluates to empty.

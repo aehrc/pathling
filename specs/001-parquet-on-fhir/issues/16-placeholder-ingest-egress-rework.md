@@ -22,6 +22,7 @@ Criteria that hold either way:
 - [ ] An `_x` array with no `x` beside it is kept on every route.
 - [ ] Encode and decode meet SC-011.
 - [ ] The reflection workaround that finds custom resource types on an executor-side `FhirContext` is gone.
+- [ ] Ingest validates dates and decimals with the grammar ticket 31 moved down, so ingest and engine agree on what is valid (decision 133, principle 7).
 
 ## Comments
 
