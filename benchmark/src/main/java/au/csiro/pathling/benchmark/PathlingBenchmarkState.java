@@ -81,9 +81,8 @@ public class PathlingBenchmarkState {
   @Nonnull private final PathlingContext pathlingContext;
 
   /**
-   * The data source containing FHIR resources for benchmark testing. This can be either an
-   * NDJSON-based source or a Delta Lake source, depending on the benchmark configuration.
-   * Initialized during setup phase.
+   * The data source containing FHIR resources for benchmark testing, read from Delta tables written
+   * during setup. Initialized during setup phase.
    */
   @Nullable private QueryableDataSource dataSource;
 
@@ -101,20 +100,6 @@ public class PathlingBenchmarkState {
   @Nullable private Dataset<Row> preparedQuery;
 
   /**
-   * JMH parameter that controls which data source type to use for benchmarking. Supports two
-   * values: - "ndjson": Uses newline-delimited JSON files as the data source - "delta": Uses Delta
-   * Lake tables for optimized columnar storage and querying
-   *
-   * <p>Only "delta" is exercised. An NDJSON source holds a lazy encode over the raw text, so a
-   * query over it measures encoding as well as querying, which is the conflation that these
-   * benchmarks exist to remove; encoding now has its own benchmark. Adding "ndjson" back to this
-   * list restores the earlier behaviour.
-   */
-  @Nullable
-  @Param({"delta"})
-  private String sourceType;
-
-  /**
    * JMH parameter that selects the view definition to benchmark. The values are the keys of {@link
    * #VIEW_SUBJECTS}, which they must be kept in step with, as an annotation cannot refer to the
    * map.
@@ -130,17 +115,6 @@ public class PathlingBenchmarkState {
     "QuestionnaireResponseFlat"
   })
   private String view;
-
-  /**
-   * Setter for the source type parameter. Used by JMH framework to inject parameter values during
-   * benchmark execution.
-   *
-   * @param sourceType The type of data source to use ("ndjson" or "delta")
-   */
-  @SuppressWarnings("unused")
-  public void setSourceType(@Nullable final String sourceType) {
-    this.sourceType = sourceType;
-  }
 
   /**
    * Setter for the view parameter. Used by JMH framework to inject parameter values during
@@ -167,27 +141,19 @@ public class PathlingBenchmarkState {
    * JMH setup method executed once per benchmark trial to prepare test data and resources.
    *
    * <p>This method performs expensive initialization that should be amortized across all benchmark
-   * iterations: it loads the subject resource of the selected view in the specified format, and
-   * loads the view definition itself. Only the subject resource is loaded, because the cost of
-   * loading a resource type that the view does not read would fall entirely within setup and serve
-   * no purpose.
+   * iterations: it loads the subject resource of the selected view into Delta tables, and loads the
+   * view definition itself. Only the subject resource is loaded, because the cost of loading a
+   * resource type that the view does not read would fall entirely within setup and serve no
+   * purpose.
    *
-   * @throws IllegalArgumentException if an unsupported source type is specified
+   * <p>The query always reads stored Delta tables. Querying the encoded datasets directly would
+   * encode the data lazily as part of every query, so the figures would measure encoding as well as
+   * querying, which is the conflation these benchmarks exist to remove. Encoding has its own
+   * benchmark.
    */
   @Setup(Level.Trial)
   public void setup() {
-    final String subjectResource = getSubjectResource();
-
-    // Initialize the appropriate data source based on the benchmark parameter.
-    if ("ndjson".equals(sourceType)) {
-      // Use NDJSON files for row-oriented processing and simple data access.
-      this.dataSource = initialiseNdjsonSource(List.of(subjectResource));
-    } else if ("delta".equals(sourceType)) {
-      // Use Delta Lake for columnar storage, ACID transactions, and optimized queries.
-      this.dataSource = initialiseDeltaSource(List.of(subjectResource));
-    } else {
-      throw new IllegalArgumentException("Unknown source type: " + sourceType);
-    }
+    this.dataSource = initialiseDeltaSource(List.of(getSubjectResource()));
 
     // Pre-load the view definition to avoid I/O overhead during benchmark execution.
     try (final InputStream in =
@@ -245,21 +211,22 @@ public class PathlingBenchmarkState {
   }
 
   /**
-   * Initializes a dataset source from NDJSON files containing FHIR resources.
+   * Encodes the NDJSON test data for each resource type into a dataset source, ready to be written
+   * to storage.
    *
    * <p>This method creates an in-memory dataset source by: 1. Extracting NDJSON files from JAR
    * resources to temporary files 2. Loading each file as a text dataset in Spark 3. Encoding the
    * JSON strings into Pathling's internal FHIR representation 4. Registering each encoded dataset
    * with the data source
    *
-   * <p>The encoding is lazy, so a query over the resulting source encodes the data as part of the
-   * query.
+   * <p>The encoding is lazy, so a query over the resulting source would encode the data as part of
+   * the query. It is therefore only written out, never queried.
    *
    * @param resourceTypes The FHIR resource types to load (e.g., Patient, Observation)
    * @return A configured DatasetSource containing the encoded FHIR data
    */
   @Nonnull
-  private DatasetSource initialiseNdjsonSource(@Nonnull final Iterable<String> resourceTypes) {
+  private DatasetSource encodeResources(@Nonnull final Iterable<String> resourceTypes) {
     // Create a DatasetSource.
     final DatasetSource datasetSource = pathlingContext.read().datasets();
     for (final String resourceType : resourceTypes) {
@@ -282,8 +249,8 @@ public class PathlingBenchmarkState {
    */
   @Nonnull
   private QueryableDataSource initialiseDeltaSource(@Nonnull final Iterable<String> resourceTypes) {
-    // First, create datasets from NDJSON files using the standard process.
-    final DatasetSource datasetSource = initialiseNdjsonSource(resourceTypes);
+    // First, encode the NDJSON test data into datasets.
+    final DatasetSource datasetSource = encodeResources(resourceTypes);
 
     // Create a temporary directory for the Delta tables.
     final Path tempDir = BenchmarkResources.createTempDirectory("pathling-benchmark-delta-");
