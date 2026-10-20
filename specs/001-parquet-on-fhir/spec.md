@@ -354,6 +354,9 @@ Identifiers are stable. FR-015, FR-018 and FR-020 are retired and not reused.
 - **FR-061**: No ingest or egress route MAY parse into or build a FHIR object per
   row, HAPI included. The mechanism is chosen by a spike against SC-011
   ([ADR-0004](../../docs/adr/0004-no-per-row-hapi-no-catalyst-in-encoding.md)).
+  The spike reported without a choice; until the choice is made, JSON is read
+  with Spark's reader and XML with `from_xml`, both through a transform
+  generated from the definitions (decision 134).
 - **FR-062**: References between the entries of a bundle MUST be resolved to the
   relative reference of the target entry, keeping its version where the
   reference carries one.
@@ -380,7 +383,9 @@ Identifiers are stable. FR-015, FR-018 and FR-020 are retired and not reused.
   is null, and an array holding only nulls, except a repeating primitive's
   positional nulls, which align with its metadata group. *(Subject to OQ-1.)*
 - **FR-063**: Non-conformant content MUST be reported, never silently dropped or
-  coerced. Malformed JSON or XML fails the read.
+  coerced. Malformed JSON or XML fails the read. Until OQ-1 is answered, the
+  losses its interim answer lists are an exception: they are reported per
+  column at most, or not at all (decision 134).
 
 ### Annotations
 
@@ -610,6 +615,12 @@ reconciliation, legacy export, layout column.
     emptied by non-conformant content is written as `{}`;
   - per-value rather than per-column findings, and reporting of values a
     converter cannot store, such as an integer beyond the range of an int.
+
+  _Interim answer (decision 134)_: the spike measured four candidates and
+  reported without a choice, which is deferred to ticket 16. Until then every
+  loss above is kept, as today's behaviour, on JSON and on XML alike. In
+  addition, `null`, `{}` and `[]` are dropped silently and `""` is stored, and
+  the per-value scope of decision 133 does not apply.
 - **OQ-2: Are column expressions bound to a schema?** Today a column expression
   is built without a dataset and resolves presence against whatever schema it
   meets (FR-054), which lets callers combine FHIRPath and search columns with

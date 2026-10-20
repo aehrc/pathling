@@ -6,7 +6,7 @@
 
 Take the column's name and version rule from the Parquet on FHIR specification amendment (ticket 30) if it has been agreed by the time this is built, and `__layout_v1` otherwise. A later rename before the release is expected to be cheap.
 
-- **Ingest.** `FhirReader` and `encode()` add the column to every dataset they produce, from JSON and XML, single resources and bundles, in both schema modes and with every annotation switch off. This is the ingest that ticket 16 rebuilds, so the column goes into the rebuilt code.
+- **Ingest.** `FhirReader` and `encode()` add the column to every dataset they produce, from JSON and XML, single resources and bundles, in both schema modes and with every annotation switch off. This is the interim ingest of decision 134, with XML and bundles as ticket 32 rebuilds them, so the column goes into that code. If ticket 16 later changes what is stored, it bumps the version.
 - **Fitting.** The fitted schema drops structure the data does not use (FR-055), and an all-null column looks exactly like that. The layout column is exempt.
 - **Egress.** Egress skips the column, so a dataset carrying it is written out as FHIR without error. It is not reported as an unknown field (ticket 20).
 - **Detection.** `LayoutDetector` recognises `__layout_v<n>` by name and type alone. A version this release supports is the PoF layout. A higher version is refused at read time and before an append or merge, with `UnsupportedLayoutException` naming the version found and the version supported. A schema with both a layout column and the legacy root `id_versioned` is refused as mixed. Without a layout column, detection proceeds by markers as today, and unmarked PoF data is accepted (FR-039).
@@ -23,7 +23,7 @@ If a probe contradicts the design, stop and report to the owner.
 
 **Out of scope:** existing PoF test data and the R package's example data are not regenerated. Unmarked PoF data stays accepted, and that data is its regression test.
 
-**Blocked by:** 16
+**Blocked by:** 32
 
 **Status:** ready-for-agent
 

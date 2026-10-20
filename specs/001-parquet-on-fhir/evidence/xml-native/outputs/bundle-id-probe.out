@@ -1,0 +1,7 @@
+fullUrl=urn:uuid:o1                id=o1     -> idElement=urn:uuid:o1                        json={"resourceType":"Observation","status":"final","code":{"text":"c"}}
+fullUrl=urn:uuid:zzz               id=o1     -> idElement=Observation/o1                     json={"resourceType":"Observation","id":"o1","status":"final","code":{"text":"c"}}
+fullUrl=urn:uuid:o1                id=other  -> idElement=Observation/other                  json={"resourceType":"Observation","id":"other","status":"final","code":{"text":"c"}}
+fullUrl=http://ex/Observation/o1   id=o1     -> idElement=http://ex/Observation/o1           json={"resourceType":"Observation","id":"o1","status":"final","code":{"text":"c"}}
+fullUrl=urn:uuid:p1                id=o1     -> idElement=Observation/o1                     json={"resourceType":"Observation","id":"o1","status":"final","code":{"text":"c"}}
+fullUrl=null                       id=o1     -> idElement=Observation/o1                     json={"resourceType":"Observation","id":"o1","status":"final","code":{"text":"c"}}
+fullUrl=urn:uuid:zzz               id=null   -> idElement=urn:uuid:zzz                       json={"resourceType":"Observation","status":"final","code":{"text":"c"}}

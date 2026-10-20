@@ -1,47 +1,39 @@
-# 16 — PLACEHOLDER: ingest and egress rework per the spike
+# 16 — DEFERRED: the ingest mechanism, per-value validation and lossless decimals
 
-**Spec:** `specs/001-parquet-on-fhir/spec.md` — FR-045, FR-060, FR-061, FR-062, FR-016, FR-019, FR-063, SC-001, SC-011. Old task: T078e. T124c is likely made moot.
+**Spec:** `specs/001-parquet-on-fhir/spec.md` — OQ-1, FR-002, FR-016, FR-019, FR-049, FR-050, FR-060, FR-063, SC-011. Decisions 133 and 134. Old task: T078e. T124c is likely made moot.
 
-**What to build:** Ingest and egress rebuilt on the mechanism ticket 08 chooses. This covers:
+**What to build:** The ingest and egress mechanism ticket 08 measured, chosen and built, so that ingest meets decision 133's per-value scope and removes OQ-1's losses. Decision 134 deferred the choice until the owner has settled the requirements with colleagues: how much of decision 133's per-value scope is needed, and how much code the project is willing to own for it. Until then, ingest runs on the interim of decision 134, and ticket 32 takes XML and bundles off HAPI.
 
-- XML in and out;
-- bundles in both formats;
-- JSON as well, if option B is chosen.
+**The evidence to start from:** `evidence/spike-08/README.md`, "Summary of phase 2". It sets A+, A-variant and B, with B both through `Encoders.row` and through a Java UDF, side by side against decision 133's scope, OQ-1's losses, SC-011's bar and A0, and lists what was not measured. The prototypes, harness and batch scripts are under `evidence/spike-08/phase2/`. They were built on the stage-1 code at `514f8f818e`. Once ticket 32 lands, the XML baseline they compare against is no longer HEAD's HAPI route.
 
-To be rewritten with concrete criteria once ticket 08 reports.
+**What was not measured, should the choice need it:**
 
-**Blocked by:** 08
+- B's XML encode under `hugeMethodLimit=8000` or through a UDF. B's XML rows go through `Encoders.row` too, so its XML figures may include the same uncompiled serializer that triples its JSON encode.
+- B through a UDF on XML, bundles, the messy data and the fixtures.
+- A UDF that returns zero or more rows to be exploded, which would need no non-deterministic flag and is the shape bundles need.
+- JSON bundles, for any candidate.
+- The formal JMH check of SC-011 (`evidence/t136-benchmark.md`).
 
-**Status:** needs-triage
+**Blocked by:** The owner's choice of mechanism (decision 134). Ticket 32, because the rework replaces what it builds.
 
-Criteria that hold either way:
+**Status:** needs-info
 
+Criteria that hold whichever mechanism is chosen:
+
+- [ ] The choice is recorded as a decision, and OQ-1's interim answer is replaced: each loss is removed, with its FR text tightened, or kept as a stated exception. FR-063's interim exception is removed or narrowed to match.
 - [ ] No ingest or egress route parses into, or builds, a FHIR object per row, HAPI included (FR-061).
 - [ ] XML and bundles keep, coerce, report and fail on exactly what JSON does (FR-060).
 - [ ] Bundle references resolve to the target entry's relative reference, keeping its version (FR-062, decision 83).
 - [ ] An `_x` array with no `x` beside it is kept on every route.
 - [ ] Encode and decode meet SC-011.
-- [ ] The reflection workaround that finds custom resource types on an executor-side `FhirContext` is gone.
 - [ ] Ingest validates dates and decimals with the grammar ticket 31 moved down, so ingest and engine agree on what is valid (decision 133, principle 7).
+- [ ] If the stored form of any value changes from the interim's, such as a decimal's text, the layout column's version (ticket 29) is bumped, and data written by the interim is read or refused as that rule says.
+- [ ] Any thread that outlives this programme, such as the upstream Spark issue T132 describes, is handed to ticket 26.
 
 ## Comments
 
-### XML egress has no file format (found while baselining ticket 08, 2026-10-17)
+### Rewritten as the deferred rework (decision 134, 2026-10-20)
 
-XML egress produces strings and nothing can store them as files that read back. `decode(…, "application/fhir+xml")`
-returns one document per row, and there is no XML sink: the sinks are NDJSON, Parquet, Delta and tables. Writing the
-strings with Spark's `write.text` looks like it works but does not round-trip. The XML encoder writes a narrative's line
-feed literally, which is valid XML, and every Synthea Patient narrative has one. On 9.9.0 at the benchmark's size `s`,
-125 Patients became 250 lines, and encoding those lines back failed the whole job with `HAPI-1852: Failed to parse XML
-content: Unexpected EOF; was expecting a close tag for element <div>`. Line feeds inside attribute values are already
-escaped as `&#xa;`, so only element content is affected.
-
-The current branch has the same gap, because its XML egress converts through the same encoder. The rework should
-either:
-
-- provide an XML sink, or a line-delimited XML form, that writes a remaining line feed as `&#xa;`, which parses back
-  to the same character; or
-- state that XML egress yields strings only, and document how to store them.
-
-The benchmark harness writes its XML input the first way. See `.local/work/issue/2367/pathling-compare/README.md`,
-"The XML data".
+Ticket 08 reported without a choice. This placeholder is now the deferred rework, and the work it held that does
+not wait on the choice moved to ticket 32: XML and bundles without HAPI, the reflection workaround, and the XML
+file format comment from 2026-10-17.
