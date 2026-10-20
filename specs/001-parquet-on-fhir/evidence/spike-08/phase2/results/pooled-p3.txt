@@ -1,0 +1,54 @@
+source           type                            fit                  encode                  decode
+json             Patient           107       58 0.55       160      176 1.10       107      105 0.98
+json             Condition         509      210 0.41       871    1,265 1.45       302      264 0.88
+json             Encounter         859      362 0.42     1,656    2,347 1.42       666      546 0.82
+json             Observation     1,071      409 0.38     1,918    2,538 1.32       754      669 0.89
+
+json             fit     0.38-0.55
+json             encode  1.10-1.45
+json             decode  0.82-0.98
+source           type                            fit                  encode                  decode
+json             Patient           107       66 0.62       160      122 0.76       107      100 0.93
+json             Condition         509      171 0.34       871      503 0.58       302      293 0.97
+json             Encounter         859      328 0.38     1,656      994 0.60       666      665 1.00
+json             Observation     1,071      397 0.37     1,918    1,060 0.55       754      777 1.03
+
+json             fit     0.34-0.62
+json             encode  0.55-0.76
+json             decode  0.93-1.03
+source           type                            fit                  encode                  decode
+json             Patient            94       58 0.62       142      176 1.24       109      105 0.96
+json             Condition         445      210 0.47       800    1,265 1.58       283      264 0.93
+json             Encounter         816      362 0.44     1,531    2,347 1.53       631      546 0.86
+json             Observation       991      409 0.41     1,741    2,538 1.46       740      669 0.90
+
+json             fit     0.41-0.62
+json             encode  1.24-1.58
+json             decode  0.86-0.96
+source           type                            fit                  encode                  decode
+json             Patient            94       66 0.71       142      122 0.86       109      100 0.91
+json             Condition         445      171 0.39       800      503 0.63       283      293 1.03
+json             Encounter         816      328 0.40     1,531      994 0.65       631      665 1.05
+json             Observation       991      397 0.40     1,741    1,060 0.61       740      777 1.05
+
+json             fit     0.39-0.71
+json             encode  0.61-0.86
+json             decode  0.91-1.05
+source           type                            fit                  encode                  decode
+json             Patient            99       58 0.59       134      176 1.32       100      105 1.04
+json             Condition         444      210 0.47       770    1,265 1.64       282      264 0.94
+json             Encounter         796      362 0.45     1,497    2,347 1.57       640      546 0.85
+json             Observation       984      409 0.42     1,688    2,538 1.50       693      669 0.96
+
+json             fit     0.42-0.59
+json             encode  1.32-1.64
+json             decode  0.85-1.04
+source           type                            fit                  encode                  decode
+json             Patient            99       66 0.67       134      122 0.91       100      100 0.99
+json             Condition         444      171 0.39       770      503 0.65       282      293 1.04
+json             Encounter         796      328 0.41     1,497      994 0.66       640      665 1.04
+json             Observation       984      397 0.40     1,688    1,060 0.63       693      777 1.12
+
+json             fit     0.39-0.67
+json             encode  0.63-0.91
+json             decode  0.99-1.12

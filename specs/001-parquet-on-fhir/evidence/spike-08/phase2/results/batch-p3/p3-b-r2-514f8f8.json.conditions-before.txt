@@ -1,0 +1,12 @@
+date: Tue 20 Oct 2026 10:45:49 AEST
+uptime: 10:45  up 16:30, 4 users, load averages: 2.55 5.60 6.51
+swap: total = 0.00M  used = 0.00M  free = 0.00M  (encrypted)
+disk: /dev/disk3s1       926  858        42    96% 5404077 450240720    1%   /System/Volumes/Data
+java processes:
+  none
+top cpu:
+ 77.6 /System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/Metadata.framework/Versions/A/Support/mds
+ 51.4 /sbin/launchd
+ 24.7 /System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/Metadata.framework/Versions/A/Support/mds_stores
+ 17.6 claude
+ 15.5 /Library/SystemExtensions/4263FE4D-84E9-4B8B-B305-A7B7F23E5B37/com.jamf.protect.security-extension.systemextension/Contents/MacOS/com.jamf.protect.security-extension

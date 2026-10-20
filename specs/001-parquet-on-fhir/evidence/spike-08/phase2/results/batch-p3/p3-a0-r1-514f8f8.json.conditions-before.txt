@@ -1,0 +1,12 @@
+date: Tue 20 Oct 2026 10:11:10 AEST
+uptime: 10:11  up 15:56, 4 users, load averages: 2.49 3.65 3.79
+swap: total = 0.00M  used = 0.00M  free = 0.00M  (encrypted)
+disk: /dev/disk3s1       926  857        44    96% 5403508 462098200    1%   /System/Volumes/Data
+java processes:
+  none
+top cpu:
+ 50.9 /Library/NessusAgent/run/sbin/nessus-agent-module
+ 29.2 /Library/SystemExtensions/4263FE4D-84E9-4B8B-B305-A7B7F23E5B37/com.jamf.protect.security-extension.systemextension/Contents/MacOS/com.jamf.protect.security-extension
+  9.9 /usr/libexec/trustd
+  8.0 /System/Library/PrivateFrameworks/TCC.framework/Support/tccd
+  6.1 /Applications/Microsoft Defender.app/Contents/MacOS/wdavdaemon_enterprise.app/Contents/MacOS/wdavdaemon_enterprise

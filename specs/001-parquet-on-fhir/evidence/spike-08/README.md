@@ -789,6 +789,39 @@ python3 compare_phases.py p2-messy-pathling-514f8f8 p2-messy-{aplus,avariant,b}-
 (cd results && python3 <evidence>/spike-08/phase2/results/tables.py $PWD)   # writes tables.md to stdout
 ```
 
+### The original spike, beside A0 and B (JSON, 2026-10-20)
+
+At the owner's request, the original Parquet on FHIR spike was timed on JSON at size `l`, in a batch of its own
+with fresh A0 and B labels (`p3-*`), so that all three come from one session. The original spike is the branch
+`spike/parquet-on-fhir`, linked from #2367, whose ingest dates from July 2024. Its reader and writer are
+ported into the prototype jar (`proto/src/au/csiro/pathling/spike08/orig/`, entry points `Spike08Orig`), with
+only the changes Spark 4 forces (deviation 9).
+
+**It is a reference, not a candidate.** It is Spark's JSON inference followed by a transform that walks HAPI's
+definitions over the inferred schema. The transform keeps each decimal's inferred value as text, adds a
+`decimal(38,6)` column beside it, casts the integer types, decodes base64 and drops `contained`. It makes none
+of decision 133's checks and does not build the stored layout. Its egress casts each decimal to
+`decimal(38,6)` and renders the row with `to_json`. Its fidelity follows from that design: exact 0/500 for
+Patient and Observation and 2/500 for Encounter, from decimals cut to six places and absent structures written
+as `{}`, while Condition is 500/500. A0 and B are 500/500 on every type.
+
+Pooled minimums, as the range over the four types, against this batch's A0 `r1` (`phase2/results/pooled-p3.txt`
+holds every row, against the bar and both A0 labels):
+
+| | Fit | Encode | Decode | Fit and encode, summed |
+|---|---|---|---|---|
+| B | 0.41–0.62 | 1.24–1.58 | 0.86–0.96 | 0.99–1.18 |
+| Original spike | 0.39–0.71 | 0.61–0.86 | 0.91–1.05 | 0.53–0.80 |
+
+The last column sums each phase's pooled minimum, an approximation of the minimum of the sum. Against the
+bar it is 0.88 to 1.08 for B and 0.49 to 0.70 for the original spike. A0's two labels were within 0.031 of
+each other (2 items judged), and no "Code grows beyond 64 KB" error was logged.
+
+**A0's fit costs about 2.5 times the original spike's, though both infer with `spark.read.json`.** The likely
+cause, not measured on its own, is A0's selection of the requested type before inference
+(`PathlingContext.selectForJson`, a `get_json_object` on `$.resourceType`), which parses every document once
+more inside the fit's scan, and again in the encode. The original spike has no such step.
+
 ### Deviations in phase 2
 
 1. **Size `l` deferred.** As instructed on 2026-10-19, nothing was timed at size `l`. The batch and runbook
@@ -833,3 +866,12 @@ python3 compare_phases.py p2-messy-pathling-514f8f8 p2-messy-{aplus,avariant,b}-
    does. Each candidate was compared with both A0 labels and with the bar, with and without py4j plan
    building, as the runbook lists. The comparisons of A0's two labels with the bar and with phase 1's A0, and
    the messy runs with py4j plan building removed, were added.
+9. **The original spike's port.** Four classes of `spike/parquet-on-fhir`'s `io` module (`FhirJsonReader`,
+   `FhirJsonWriter`, `DatasetTransformer`, `ColumnDescriptor`) are copied into the package
+   `au.csiro.pathling.spike08.orig`. The changes are: the package; `scala.jdk.javaapi.OptionConverters` in
+   place of Scala 2.12's `scala.compat.java8`; a column's type taken from the dataset's schema in place of
+   `column.expr().dataType()`, which is Catalyst; a `read(Dataset<String>)` for the documents the harness holds
+   in memory; and the writer's transform exposed as `transform`, so that decode renders with `to_json` rather
+   than writing files, as every other route's decode does. `batch-l.sh` gained `SLICES`, `CANDIDATES` and
+   `MESSY`, whose defaults leave the size-`l` batch as it ran; the run was
+   `PREFIX=p3 SLICES=json CANDIDATES="b orig" MESSY=0 batch-l.sh`.

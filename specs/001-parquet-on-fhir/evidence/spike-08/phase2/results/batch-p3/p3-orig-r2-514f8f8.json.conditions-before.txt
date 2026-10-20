@@ -1,0 +1,12 @@
+date: Tue 20 Oct 2026 10:49:58 AEST
+uptime: 10:49  up 16:35, 4 users, load averages: 2.70 5.88 6.60
+swap: total = 0.00M  used = 0.00M  free = 0.00M  (encrypted)
+disk: /dev/disk3s1       926  859        42    96% 5404251 447427960    1%   /System/Volumes/Data
+java processes:
+  none
+top cpu:
+ 14.2 /Library/SystemExtensions/4263FE4D-84E9-4B8B-B305-A7B7F23E5B37/com.jamf.protect.security-extension.systemextension/Contents/MacOS/com.jamf.protect.security-extension
+  3.2 /usr/libexec/trustd
+  3.1 /System/Library/CoreServices/launchservicesd
+  2.8 Contents/MacOS/DisplayLinkPrivilegedHelper.app/Contents/MacOS/DisplayLinkPrivilegedHelper
+  2.4 /Library/Application Support/JAMF/Jamf.app/Contents/MacOS/JamfDaemon.app/Contents/MacOS/JamfDaemon

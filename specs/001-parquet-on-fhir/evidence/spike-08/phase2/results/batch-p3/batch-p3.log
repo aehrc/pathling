@@ -1,0 +1,28 @@
+=== 2026-10-20 10:08:07 pre-flight
+date: Tue 20 Oct 2026 10:08:07 AEST
+uptime: 10:08  up 15:53, 4 users, load averages: 3.93 4.04 3.90
+swap: total = 0.00M  used = 0.00M  free = 0.00M  (encrypted)
+disk: /dev/disk3s1       926  857        44    96% 5403506 462024200    1%   /System/Volumes/Data
+java processes:
+  none
+top cpu:
+ 98.4 /Library/SystemExtensions/4263FE4D-84E9-4B8B-B305-A7B7F23E5B37/com.jamf.protect.security-extension.systemextension/Contents/MacOS/com.jamf.protect.security-extension
+ 38.0 /Applications/Microsoft Defender.app/Contents/MacOS/wdavdaemon_enterprise.app/Contents/MacOS/wdavdaemon_enterprise
+ 25.4 /Library/Application Support/JAMF/Jamf.app/Contents/MacOS/JamfDaemon.app/Contents/MacOS/JamfDaemon
+ 25.3 claude
+ 18.4 /Library/NessusAgent/run/sbin/nessus-agent-module
+f409c54b9fd2d2989fa2579029ee889aed8fd3dc9570da911c2933039a66414b  /Users/szu004/dev/pathling/.local/work/issue/2367/pathling-compare/tools/spike08-proto.jar
+=== 2026-10-20 10:11:10 start p3-a0-r1-514f8f8 json (pathling )
+=== 2026-10-20 10:14:02 end p3-a0-r1-514f8f8 json (exit 0)
+=== 2026-10-20 10:27:04 start p3-b-r1-514f8f8 json (b EXTS_OVERRIDE=1)
+=== 2026-10-20 10:28:43 end p3-b-r1-514f8f8 json (exit 0)
+=== 2026-10-20 10:36:15 start p3-orig-r1-514f8f8 json (orig EXTS_OVERRIDE=1)
+=== 2026-10-20 10:37:30 end p3-orig-r1-514f8f8 json (exit 0)
+=== 2026-10-20 10:40:31 start p3-a0-r2-514f8f8 json (pathling )
+=== 2026-10-20 10:43:19 end p3-a0-r2-514f8f8 json (exit 0)
+=== 2026-10-20 10:45:49 start p3-b-r2-514f8f8 json (b EXTS_OVERRIDE=1)
+=== 2026-10-20 10:47:28 end p3-b-r2-514f8f8 json (exit 0)
+=== 2026-10-20 10:49:58 start p3-orig-r2-514f8f8 json (orig EXTS_OVERRIDE=1)
+=== 2026-10-20 10:51:11 end p3-orig-r2-514f8f8 json (exit 0)
+=== 2026-10-20 10:51:11 slice json done; A0 spread acceptable
+=== 2026-10-20 10:51:11 batch done
