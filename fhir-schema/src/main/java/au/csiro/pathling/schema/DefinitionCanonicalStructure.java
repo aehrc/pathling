@@ -48,7 +48,8 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * self-recursive, and a reference carries an identifier that carries a reference — so the expanded
  * tree is infinite and the depth needed is set by whatever asks. Memoised on the identity of the
  * definition, not on the FHIR type code, because every backbone element reports the same code while
- * describing different children.
+ * describing different children. Whether the node is a resource is part of the key too, because it
+ * decides whether {@code resourceType} is added and {@code contained} dropped.
  *
  * <p>A structure is not thread-safe. Each tree is built for one call, used on the thread that makes
  * it while a query is planned, and then discarded, so neither the expansion nor the memo is
@@ -101,7 +102,7 @@ public final class DefinitionCanonicalStructure implements CanonicalStructure {
     final Map<Object, DefinitionCanonicalStructure> memo = new HashMap<>();
     final DefinitionCanonicalStructure structure =
         new DefinitionCanonicalStructure(node, resource, memo);
-    memo.put(node.getTypeIdentity(), structure);
+    memo.put(memoKey(node, resource), structure);
     return structure;
   }
 
@@ -120,7 +121,20 @@ public final class DefinitionCanonicalStructure implements CanonicalStructure {
       final boolean resource,
       @Nonnull final Map<Object, DefinitionCanonicalStructure> memo) {
     return memo.computeIfAbsent(
-        node.getTypeIdentity(), unused -> new DefinitionCanonicalStructure(node, resource, memo));
+        memoKey(node, resource), unused -> new DefinitionCanonicalStructure(node, resource, memo));
+  }
+
+  /**
+   * Returns the key a node's structure is memoised under, which every entry into the memo must use
+   * so that a type reached again finds the structure already built for it.
+   *
+   * @param node the definition of the node
+   * @param resource whether the node is a resource
+   * @return the key for that node
+   */
+  @Nonnull
+  private static Object memoKey(@Nonnull final NodeDefinition node, final boolean resource) {
+    return List.of(node.getTypeIdentity(), resource);
   }
 
   /**

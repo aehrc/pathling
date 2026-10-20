@@ -24,14 +24,18 @@ import static au.csiro.pathling.schema.SchemaFixtures.names;
 import static au.csiro.pathling.schema.SchemaFixtures.struct;
 import static au.csiro.pathling.schema.SchemaFixtures.structAt;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import au.csiro.pathling.definition.NodeDefinition;
 import au.csiro.pathling.utilities.CanonicalStructure;
 import au.csiro.pathling.utilities.StructureMerge;
 import jakarta.annotation.Nonnull;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructType;
 import org.junit.jupiter.api.Test;
@@ -330,5 +334,24 @@ class DefinitionCanonicalStructureTest {
     assertEquals(
         List.of("valueString", "valueCoding"), names(structAt(merged, "extension", "extension")));
     assertEquals(merged, StructureMerge.merge(right, left, patient()));
+  }
+
+  /**
+   * Whether a node is a resource decides whether it carries {@code resourceType}, so one type
+   * reached both as a resource and not within one memo must yield a structure for each.
+   */
+  @Test
+  void keepsAResourceAndTheSameTypeReachedAsAnElementApart() {
+    final NodeDefinition patient = DEFINITIONS.findResourceDefinition("Patient");
+    final Map<Object, DefinitionCanonicalStructure> memo = new HashMap<>();
+
+    final DefinitionCanonicalStructure asResource =
+        DefinitionCanonicalStructure.of(patient, true, memo);
+    final DefinitionCanonicalStructure asElement =
+        DefinitionCanonicalStructure.of(patient, false, memo);
+
+    assertTrue(asResource.fieldOrder().contains("resourceType"));
+    assertFalse(asElement.fieldOrder().contains("resourceType"));
+    assertSame(asResource, DefinitionCanonicalStructure.of(patient, true, memo));
   }
 }
