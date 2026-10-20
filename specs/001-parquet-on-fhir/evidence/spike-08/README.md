@@ -822,6 +822,23 @@ cause, not measured on its own, is A0's selection of the requested type before i
 (`PathlingContext.selectForJson`, a `get_json_object` on `$.resourceType`), which parses every document once
 more inside the fit's scan, and again in the encode. The original spike has no such step.
 
+**The empty values.** Decision 133 makes `null`, `{}`, `[]` and `""` invalid. The four `c2-*` fixtures were run
+through the ported original spike, each alone and in a batch beside a Patient with the same elements populated
+(`phase2/orig/orig_empty.py`, output `orig_empty.txt`). A0's outcomes are phase 1's (`fixtures/fixtures_run.txt`),
+where each fixture is encoded alone.
+
+| Fixture | A0 | Original spike, alone | Original spike, in the batch |
+|---|---|---|---|
+| `c2-null` (`"active": null`) | absent; a column-level finding only | absent | absent |
+| `c2-empty-obj` (`"maritalStatus": {}`) | absent, silently | absent, no column | stored as a structure of nulls, written back as `{}` |
+| `c2-empty-arr` (`"identifier": []`) | absent; a column-level finding only | stored `[]` in an `array<string>` column, written back as `[]` | stored `[]`, written back as `[]` |
+| `c2-empty-string` (`"family": ""`) | stored and written back, silently | stored and written back | stored and written back |
+
+Neither fails or records a finding per value. The original spike stores `{}` differently alone and in the
+batch, which principle 6 forbids. B and A+ fail on all four under `fail` and record and drop them under `drop`.
+Under `none`, B leaves `null`, `{}` and `[]` absent and stores `""`, as A0 does; A+ leaves `null`, `{}`, `[]`
+and `""` absent, as its pre-pass removes them before Spark reads the document.
+
 ### Profile of B's encode (Observation, JSON, 2026-10-20)
 
 At the owner's request, B's encode of Observation at size `l` (1,004,979 rows) was recorded with Java Flight

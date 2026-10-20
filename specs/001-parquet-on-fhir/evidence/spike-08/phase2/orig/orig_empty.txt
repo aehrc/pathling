@@ -1,0 +1,8 @@
+c2-null          alone column active: string                                   stored None                         written back "<absent>"
+c2-null          batch column active: boolean                                  stored None                         written back "<absent>"
+c2-empty-obj     alone column maritalStatus: (no column)                              stored None                         written back "<absent>"
+c2-empty-obj     batch column maritalStatus: struct<text:string>                      stored Row(text=None)               written back {}
+c2-empty-arr     alone column identifier: array<string>                            stored []                           written back []
+c2-empty-arr     batch column identifier: array<struct<value:string>>              stored []                           written back []
+c2-empty-string  alone column name: array<struct<family:string>>             stored [Row(family='')]             written back [{"family": ""}]
+c2-empty-string  batch column name: array<struct<family:string>>             stored [Row(family='')]             written back [{"family": ""}]
