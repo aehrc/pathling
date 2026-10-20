@@ -17,6 +17,9 @@
 # fails stops the batch; a candidate or messy step that fails is recorded in failed-labels.txt and the batch
 # goes on, so one candidate cannot cost the others their measurement.
 # For a dry run: SIZE=s PREFIX=dry IGNORE_SPREAD=1, with RESOURCES_OVERRIDE and EXTS_OVERRIDE to shorten it.
+# A narrower batch: SLICES (the sources, default all four), CANDIDATES (default "aplus b avariant"; avariant
+# and orig run on JSON only) and MESSY=0 (no messy slice). The run of the original spike beside A0 and B was
+#   PREFIX=p3 SLICES=json CANDIDATES="b orig" MESSY=0 batch-l.sh
 # Runs on macOS's bash 3.2.
 set -uo pipefail
 SIZE="${SIZE:-l}"
@@ -135,14 +138,16 @@ done
 "$P2/proto/build.sh" "$RUNTIME" "$VENV/lib/python3.12/site-packages/pyspark/jars" "$JAR" | tee "$LOG/jar.sha256"
 
 # ---------------------------------------------------------------- 2 and 3. a slice per source
-for src in json xml-lines xml-bundles xml-bundles-txn; do
+json_only() { [ "$1" = avariant ] || [ "$1" = orig ]; }
+for src in ${SLICES:-json xml-lines xml-bundles xml-bundles-txn}; do
+  cands=""
+  for c in ${CANDIDATES:-aplus b avariant}; do
+    [ "$src" = json ] || ! json_only "$c" && cands="$cands $c"
+  done
   for rep in r1 r2; do
     step "a0-$rep-514f8f8" pathling "$src" 1
-    step "aplus-$rep-514f8f8" aplus "$src" 0 EXTS_OVERRIDE=1
-    step "b-$rep-514f8f8" b "$src" 0 EXTS_OVERRIDE=1
-    [ "$src" = json ] && step "avariant-$rep-514f8f8" avariant "$src" 0 EXTS_OVERRIDE=1
+    for c in $cands; do step "$c-$rep-514f8f8" "$c" "$src" 0 EXTS_OVERRIDE=1; done
   done
-  cands="aplus b"; [ "$src" = json ] && cands="aplus b avariant"
   labels=""; for c in $cands; do labels="$labels $PREFIX-$c-r?-514f8f8"; done
   set -f   # The labels are globs for pooled_phases.py, not for the shell.
   report "$src" "Slice: $src" "$PREFIX-a0-r1-514f8f8" $labels
@@ -157,10 +162,10 @@ for src in json xml-lines xml-bundles xml-bundles-txn; do
 done
 
 # ---------------------------------------------------------------- 4. the messy variant, under drop
-for r in pathling aplus avariant b; do
+[ "${MESSY:-1}" = 1 ] && for r in pathling aplus avariant b; do
   step "messy-$r-514f8f8" "$r" json 0 JSON_DIR="$H/data/json-messy/$SIZE" SPIKE_POLICY=drop EXTS_OVERRIDE=1
 done
-report json "Slice: messy JSON, under drop" "$PREFIX-messy-pathling-514f8f8" \
+[ "${MESSY:-1}" = 1 ] && report json "Slice: messy JSON, under drop" "$PREFIX-messy-pathling-514f8f8" \
   "$PREFIX-messy-aplus-514f8f8" "$PREFIX-messy-avariant-514f8f8" "$PREFIX-messy-b-514f8f8"
 conditions > "$LOG/after.txt"
 [ -e "$LOG/failed-labels.txt" ] && { say "labels that failed:"; cat "$LOG/failed-labels.txt"; }

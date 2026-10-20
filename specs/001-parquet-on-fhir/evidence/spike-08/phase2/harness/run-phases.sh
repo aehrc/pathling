@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 # Spike 08: runs scripts/phases.py (fit, encode and decode timed apart) for one build and one route, at size l by
 # default, into results/<label>/. Added beside run-revision.sh, which it does not change.
-# Usage: run-phases.sh <label> <venv-dir> <pathling|fromxml|aplus|avariant|b> [size]
+# Usage: run-phases.sh <label> <venv-dir> <pathling|fromxml|aplus|avariant|b|orig> [size]
 #   pathling  HEAD's own routes: JSON lines, and XML lines and both Bundle shapes through HAPI.
 #   fromxml   the from_xml prototype (scripts/fromxml_route.py) for the three XML sources; no JSON.
 #   aplus, b  phase 2's candidates (scripts/spike_routes.py), JSON and the three XML sources.
 #   avariant  phase 2's A-variant, JSON only.
+#   orig      the original Parquet on FHIR spike (Spike08Orig), JSON only, for reference.
 # Phase 2 options, all unset by default, which leaves the phase 1 behaviour unchanged:
 #   EXTRA_JARS   a jar for --jars (the Spike08*.java prototype jar, which the candidate routes need);
 #   JSON_DIR     a JSON data directory in place of the benchmark's (the messy variant);
@@ -42,7 +43,7 @@ export PYSPARK_PYTHON="$PY" PYSPARK_DRIVER_PYTHON="$PY"
 XML_DIR="$HERE/data/xml/$SIZE"
 SOURCES=(xml-lines xml-bundles xml-bundles-txn)
 [ "$ROUTE" = pathling ] || [ "$ROUTE" = aplus ] || [ "$ROUTE" = b ] && SOURCES=(json "${SOURCES[@]}")
-[ "$ROUTE" = avariant ] && SOURCES=(json)
+[ "$ROUTE" = avariant ] || [ "$ROUTE" = orig ] && SOURCES=(json)
 [ -n "${SOURCES_OVERRIDE:-}" ] && read -r -a SOURCES <<< "$SOURCES_OVERRIDE"
 JSON_DATA="${JSON_DIR:-$DATA}"
 for EXT in "${EXTS[@]}"; do

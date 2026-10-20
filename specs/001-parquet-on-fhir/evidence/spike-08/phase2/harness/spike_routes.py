@@ -931,4 +931,13 @@ class BRoute(_Route):
             stored._jdf, ctx, t, "json" if source == "json" else "xml"), self.spark)
 
 
-ROUTES = {"aplus": APlusRoute, "avariant": AVariantRoute, "b": BRoute}
+class OrigRoute(_Route):
+    """The original Parquet on FHIR spike (spike/parquet-on-fhir), ported in Spike08Orig, JSON only; for reference."""
+    def fit(self, source, raw, t):
+        return DataFrame(self.jvm.au.csiro.pathling.io.Spike08Orig.fit(self.strings(raw), t), self.spark)
+
+    def decode(self, source, stored, t):
+        return DataFrame(self.jvm.au.csiro.pathling.io.Spike08Orig.decode(stored._jdf, t), self.spark)
+
+
+ROUTES = {"aplus": APlusRoute, "avariant": AVariantRoute, "b": BRoute, "orig": OrigRoute}

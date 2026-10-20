@@ -21,7 +21,7 @@ Fidelity, untimed, as the existing scripts check it: the decoded documents of th
 the input, JSON as parsed objects (numbers compared by value), XML exactly (narrative line feeds as &#xa;) and
 after canonicalisation. For bundles the reference is the resource's line in <xmlDir>/<Type>.ndxml.
 
-Usage: phases.py <json|xml-lines|xml-bundles|xml-bundles-txn> <pathling|fromxml|aplus|avariant|b> <jsonDir> <xmlDir>
+Usage: phases.py <json|xml-lines|xml-bundles|xml-bundles-txn> <pathling|fromxml|aplus|avariant|b|orig> <jsonDir> <xmlDir>
                  <bundleDir> <outJson> <Type> [<Type> ...]
 Env: ENABLE_EXTENSIONS=1 to encode extensions; PATHLING_LABEL names the build. Phase 2 (2026-10-19) added the
 candidate routes aplus, avariant and b (scripts/spike_routes.py, with the jar of Spike08*.java on --jars), whose
@@ -35,9 +35,9 @@ from pathling import PathlingContext
 
 source, route_name, json_dir, xml_dir, bundle_dir, out_file, *resources = sys.argv[1:]
 assert source in ("json", "xml-lines", "xml-bundles", "xml-bundles-txn")
-assert route_name in ("pathling", "fromxml", "aplus", "avariant", "b")
+assert route_name in ("pathling", "fromxml", "aplus", "avariant", "b", "orig")
 assert not (source == "json" and route_name == "fromxml")
-assert not (source != "json" and route_name == "avariant")
+assert not (source != "json" and route_name in ("avariant", "orig"))
 WARMUP, N, FIDELITY_SAMPLE = 1, 5, 500
 XML = "application/fhir+xml"
 JSON = "application/fhir+json"
