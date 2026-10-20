@@ -81,8 +81,17 @@ class LocalTerminologyServiceConceptMapTest {
   private static final String POSSIBLY_EQUIVALENT_TO = "900000000000523009";
   private static final String ALTERNATIVE = "900000000000530003";
 
-  /** An association reference set for which THO defines no implicit concept map. */
-  private static final String MOVED_FROM = "900000000000497000";
+  /** The CTV3 simple map reference set, which {@code translate} uses as an implicit concept map. */
+  private static final String CTV3_SIMPLE_MAP = "900000000000497000";
+
+  /**
+   * The reason given for an implicit concept map URL whose reference set is not one of the four
+   * association reference sets, with {@code %s} standing for the reference set.
+   */
+  private static final String NOT_READABLE_REASON =
+      "reference set %s is not one of the four association reference sets that can be read as a"
+          + " concept map (POSSIBLY EQUIVALENT TO, REPLACED BY, SAME AS and ALTERNATIVE); a simple"
+          + " map reference set can be used with translate, but not read as a concept map";
 
   /** An association target that is not in the release's concept dictionary. */
   private static final String ABSENT_CONCEPT = "9999999003";
@@ -460,15 +469,10 @@ class LocalTerminologyServiceConceptMapTest {
   }
 
   @Test
-  void experimentalBaseWithOtherReferenceSetReturnsEmpty() {
-    assertTrue(
-        implicitService
-            .readConceptMap(implicitUrl(XSCT_VERSION, MOVED_FROM), null, NO_LIMIT)
-            .isEmpty());
-    assertTrue(
-        implicitService
-            .readConceptMap(implicitUrl(XSCT_VERSION, "12345"), null, NO_LIMIT)
-            .isEmpty());
+  void experimentalBaseWithOtherReferenceSetIsRejected() {
+    // The reference set is checked before the base, so an experimental base gives the same reason.
+    assertNotReadable(XSCT_VERSION, CTV3_SIMPLE_MAP);
+    assertNotReadable(XSCT_VERSION, "12345");
   }
 
   @Test
@@ -480,15 +484,29 @@ class LocalTerminologyServiceConceptMapTest {
   }
 
   @Test
-  void otherReferenceSetReturnsEmpty() {
-    assertTrue(
-        implicitService
-            .readConceptMap(implicitUrl(Rf2Mini.SNOMED_URI, MOVED_FROM), null, NO_LIMIT)
-            .isEmpty());
-    assertTrue(
-        implicitService
-            .readConceptMap(implicitUrl(Rf2Mini.SNOMED_URI, Rf2Mini.SIMPLE_REFSET), null, NO_LIMIT)
-            .isEmpty());
+  void simpleMapIsRejectedWithTheReason() {
+    // A simple map translates, so reporting it as unresolvable would be misleading.
+    assertNotReadable(Rf2Mini.SNOMED_URI, CTV3_SIMPLE_MAP);
+    assertNotReadable(Rf2Mini.VERSION_20230601, "446608001");
+  }
+
+  @Test
+  void otherReferenceSetIsRejectedWithTheReason() {
+    assertNotReadable(Rf2Mini.SNOMED_URI, Rf2Mini.SIMPLE_REFSET);
+  }
+
+  @Test
+  void otherReferenceSetIsRejectedWithoutSnomedCt() {
+    // The reason does not depend on the store, so a store without SNOMED CT gives it too.
+    final ConceptMapContentException e =
+        assertThrows(
+            ConceptMapContentException.class,
+            () ->
+                FhirTerminologyFixture.service()
+                    .readConceptMap(
+                        implicitUrl(Rf2Mini.SNOMED_URI, CTV3_SIMPLE_MAP), null, NO_LIMIT));
+
+    assertEquals(NOT_READABLE_REASON.formatted(CTV3_SIMPLE_MAP), e.getMessage());
   }
 
   @Test
@@ -513,6 +531,15 @@ class LocalTerminologyServiceConceptMapTest {
         () ->
             implicitService.readConceptMap(
                 implicitUrl(Rf2Mini.VERSION_20230601, SAME_AS), null, 3));
+  }
+
+  private static void assertNotReadable(@Nonnull final String base, @Nonnull final String refset) {
+    final ConceptMapContentException e =
+        assertThrows(
+            ConceptMapContentException.class,
+            () -> implicitService.readConceptMap(implicitUrl(base, refset), null, NO_LIMIT));
+
+    assertEquals(NOT_READABLE_REASON.formatted(refset), e.getMessage());
   }
 
   @Nonnull

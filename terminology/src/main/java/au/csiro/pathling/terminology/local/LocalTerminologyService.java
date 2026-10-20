@@ -581,16 +581,19 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
    * both versions the resolved version URI and the store's displays.
    *
    * <p>Only the four association reference sets for which HL7 Terminology defines an implicit
-   * concept map are recognised. The rows are ordered by code rather than emitted in the index's
-   * iteration order, for the reason given at {@link #byConceptCode}.
+   * concept map are read. A simple map reference set is also an implicit concept map, and {@link
+   * #translate} uses one, but its rows are not read here, so a URL naming any other reference set
+   * is rejected with that reason rather than reported as unknown. The rows are ordered by code
+   * rather than emitted in the index's iteration order, for the reason given at {@link
+   * #byConceptCode}.
    *
    * @param url the implicit concept map URL
    * @param refsetId the reference set named by the URL's {@code fhir_cm} parameter
    * @param version the pinned version, which an implicit concept map URL cannot carry
    * @param maxMappings the largest number of rows the caller will accept
-   * @return the content, or empty if the reference set is not one of the four or the store holds no
-   *     SNOMED CT version that the base selects
-   * @throws ConceptMapContentException if a version is pinned
+   * @return the content, or empty if the store holds no SNOMED CT version that the base selects
+   * @throws ConceptMapContentException if the reference set is not one of the four, or a version is
+   *     pinned
    * @throws ConceptMapVersionException if a bare base cannot select a single default edition
    */
   @Nonnull
@@ -601,7 +604,12 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
       final int maxMappings) {
     final ConceptMapEquivalence equivalence = IMPLICIT_CONCEPT_MAP_RELATIONSHIPS.get(refsetId);
     if (equivalence == null) {
-      return Optional.empty();
+      throw new ConceptMapContentException(
+          "reference set "
+              + refsetId
+              + " is not one of the four association reference sets that can be read as a concept"
+              + " map (POSSIBLY EQUIVALENT TO, REPLACED BY, SAME AS and ALTERNATIVE); a simple map"
+              + " reference set can be used with translate, but not read as a concept map");
     }
     final String relationship =
         ConceptMapRelationship.of(
