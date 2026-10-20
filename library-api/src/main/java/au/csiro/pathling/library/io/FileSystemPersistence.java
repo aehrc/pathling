@@ -101,6 +101,8 @@ public class FileSystemPersistence {
    * @param departitionedLocation the desired URL of the resulting file
    * @param extension the file extension used within the partitioned directory
    * @return the locations of the resulting (renamed) file
+   * @throws PersistenceError if there is a problem renaming a partition file, in which case the
+   *     partitioned directory is left in place
    */
   @Nonnull
   public static Collection<String> renamePartitionedFiles(
@@ -125,7 +127,8 @@ public class FileSystemPersistence {
    * @param departitionedUrl the desired URL of the resulting file
    * @param extension the file extension used within the partitioned directory
    * @return the locations of the resulting (renamed) file
-   * @throws PersistenceError if there is a problem copying the partition file
+   * @throws PersistenceError if there is a problem renaming a partition file, in which case the
+   *     partitioned directory is left in place
    */
   @Nonnull
   public static Collection<String> renamePartitionedFiles(
@@ -174,7 +177,15 @@ public class FileSystemPersistence {
                     departitionFilenameAndExt[0], partIdSplit[1], departitionFilenameAndExt[1]);
         final Path renamedPath = new Path(new Path(departitionedUrl).getParent(), renamedFilename);
         log.info("Renaming result to: {}", renamedPath);
-        partitionedLocation.rename(new Path(fileName), renamedPath);
+        // A rename that fails, as one onto an existing file may, must not be followed by the
+        // removal of the partitioned directory, which still holds the file.
+        if (!partitionedLocation.rename(new Path(fileName), renamedPath)) {
+          throw new PersistenceError(
+              ("Could not rename the partition file %s to %s; the partitioned directory %s has "
+                      + "been left in place")
+                  .formatted(fileName, renamedPath, partitionedUrl),
+              null);
+        }
         renamedFiles.add(renamedPath.toString());
       }
       log.info("Cleaning up: {}", partitionedUrl);

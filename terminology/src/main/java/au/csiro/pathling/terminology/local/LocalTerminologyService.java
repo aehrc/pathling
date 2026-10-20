@@ -17,11 +17,19 @@
 
 package au.csiro.pathling.terminology.local;
 
+import static java.lang.Boolean.TRUE;
+
 import au.csiro.pathling.config.LocalTerminologyConfiguration;
 import au.csiro.pathling.config.TerminologyConfiguration;
 import au.csiro.pathling.ecl.EclParseException;
 import au.csiro.pathling.ecl.UnsupportedEclConstructError;
+import au.csiro.pathling.terminology.ImplicitTerminologyUrls;
 import au.csiro.pathling.terminology.TerminologyService;
+import au.csiro.pathling.terminology.conceptmap.ConceptMapContent;
+import au.csiro.pathling.terminology.conceptmap.ConceptMapContentException;
+import au.csiro.pathling.terminology.conceptmap.ConceptMapRelationship;
+import au.csiro.pathling.terminology.conceptmap.ConceptMapVersionException;
+import au.csiro.pathling.terminology.conceptmap.ConceptMapping;
 import au.csiro.pathling.terminology.expand.ExpansionLimitExceededException;
 import au.csiro.pathling.terminology.expand.ValueSetExpansion;
 import au.csiro.pathling.terminology.expand.ValueSetExpansionException;
@@ -49,6 +57,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.BooleanType;
@@ -170,6 +179,7 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
 
   private volatile boolean initialised;
   private TerminologyStoreReader reader;
+  private VersionResolver versionResolver;
   private ValueSetResolver valueSetResolver;
   private ExpansionCache expansionCache;
   private ConceptMapIndex conceptMapIndex;
@@ -208,8 +218,9 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
     return hadoopConfiguration;
   }
 
+  @Nullable
   @Override
-  public boolean validateCode(@Nonnull final String valueSetUrl, @Nonnull final Coding coding) {
+  public Boolean validateCode(@Nonnull final String valueSetUrl, @Nonnull final Coding coding) {
     if (coding.getSystem() == null || coding.getCode() == null) {
       return false;
     }
@@ -217,15 +228,35 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
 
     final Optional<ResolvedValueSet> resolved = valueSetResolver.resolve(valueSetUrl);
     if (resolved.isEmpty()) {
-      // Unknown value set: the coding is not a member (unknown-content fallback).
-      return false;
+      // Unknown value set: the membership is unknown (unknown-content fallback).
+      return null;
     }
     final ResolvedValueSet valueSet = resolved.get();
     if (!valueSet.getSystemUrl().equals(coding.getSystem())) {
       return false;
     }
+    return isMember(valueSetUrl, valueSet, coding.getCode());
+  }
+
+  @Nullable
+  @Override
+  public Boolean validateCodeInferringSystem(
+      @Nonnull final String valueSetUrl, @Nonnull final String code) {
+    ensureInitialised();
+
+    // A value set is evaluated over a single code system, so the code takes that system.
+    return valueSetResolver
+        .resolve(valueSetUrl)
+        .map(valueSet -> isMember(valueSetUrl, valueSet, code))
+        .orElse(null);
+  }
+
+  private boolean isMember(
+      @Nonnull final String valueSetUrl,
+      @Nonnull final ResolvedValueSet valueSet,
+      @Nonnull final String code) {
     final CodeSystemIndexes indexes = indexesFor(valueSet.getSystemVersionId());
-    final Integer dense = indexes.dictionary().denseId(coding.getCode());
+    final Integer dense = indexes.dictionary().denseId(code);
     if (dense == null) {
       return false;
     }
@@ -262,7 +293,7 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
     // The target names the value set in which a translation is sought: keep only translations
     // whose concept is a member of it, matching remote-mode behaviour.
     return translations.stream()
-        .filter(translation -> validateCode(target, translation.getConcept()))
+        .filter(translation -> TRUE.equals(validateCode(target, translation.getConcept())))
         .toList();
   }
 
@@ -313,16 +344,11 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
     if (!reverse && !SNOMED_URI.equals(coding.getSystem())) {
       return Collections.emptyList();
     }
-    final int base = conceptMapUrl.indexOf('?');
-    final String baseUri = base < 0 ? conceptMapUrl : conceptMapUrl.substring(0, base);
-    final String requestedVersion = SNOMED_URI.equals(baseUri) ? null : baseUri;
-    final Optional<String> systemVersionId =
-        valueSetResolver.resolveCodeSystemVersion(SNOMED_URI, requestedVersion);
+    final Optional<String> systemVersionId = snomedVersionOf(conceptMapUrl);
     if (systemVersionId.isEmpty()) {
       return Collections.emptyList();
     }
     final CodeSystemIndexes indexes = indexesFor(systemVersionId.get());
-    final ConceptDictionary dictionary = indexes.dictionary();
 
     final ConceptMapEquivalence equivalence;
     @Nullable final String targetSystem;
@@ -342,26 +368,39 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
       return Collections.emptyList();
     }
 
-    final Map<Integer, List<String>> targets = indexes.refsets().targets(refsetId);
-    final List<String> codes = new ArrayList<>();
-    if (reverse) {
-      // Find the referenced concepts that have the requested code among their targets.
-      for (final Map.Entry<Integer, List<String>> entry : targets.entrySet()) {
-        if (entry.getValue().contains(coding.getCode())) {
-          codes.add(dictionary.code(entry.getKey()));
-        }
-      }
-    } else {
-      final Integer dense = dictionary.denseId(coding.getCode());
-      if (dense != null) {
-        codes.addAll(targets.getOrDefault(dense, List.of()));
-      }
-    }
-    Collections.sort(codes);
+    final List<String> codes =
+        implicitMapCodes(
+            indexes.refsets().targets(refsetId), indexes.dictionary(), coding, reverse);
     final String resultSystem = reverse ? SNOMED_URI : targetSystem;
     return codes.stream()
         .map(
             code -> Translation.of(equivalence, new Coding().setSystem(resultSystem).setCode(code)))
+        .toList();
+  }
+
+  /**
+   * Returns the codes a coding translates to through a reference set's targets, ordered by code:
+   * the targets of the coding's concept or, reversed, the referenced concepts that have the
+   * coding's code among their targets.
+   */
+  @Nonnull
+  private static List<String> implicitMapCodes(
+      @Nonnull final Map<Integer, List<String>> targets,
+      @Nonnull final ConceptDictionary dictionary,
+      @Nonnull final Coding coding,
+      final boolean reverse) {
+    if (reverse) {
+      return targets.entrySet().stream()
+          .filter(entry -> entry.getValue().contains(coding.getCode()))
+          .map(entry -> dictionary.code(entry.getKey()))
+          .sorted()
+          .toList();
+    }
+    return Optional.ofNullable(dictionary.denseId(coding.getCode()))
+        .map(dense -> targets.getOrDefault(dense, List.of()))
+        .orElse(List.of())
+        .stream()
+        .sorted()
         .toList();
   }
 
@@ -446,9 +485,10 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
   @Override
   public Optional<ValueSetExpansion> expand(
       @Nonnull final String url, @Nullable final String version, final int maxMembers) {
-    if (version != null && url.indexOf('?') >= 0) {
+    if (version != null && ImplicitTerminologyUrls.isImplicitValueSet(url)) {
       // An implicit value set URL carries its version in its base, so a pinned version cannot be
-      // applied to it and is not silently ignored.
+      // applied to it and is not silently ignored. Any other URL, whether or not it carries a
+      // query, is resolved with its pin as an explicit value set.
       throw new ValueSetExpansionException(
           "cannot determine which version to use: '"
               + url
@@ -490,12 +530,11 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
     if (!valueSet.hasUrl()) {
       throw new ValueSetExpansionException("the value set carries no url");
     }
-    final Set<String> systems = new TreeSet<>();
-    for (final ConceptSetComponent include : valueSet.getCompose().getInclude()) {
-      if (include.hasSystem()) {
-        systems.add(include.getSystem());
-      }
-    }
+    final Set<String> systems =
+        valueSet.getCompose().getInclude().stream()
+            .filter(ConceptSetComponent::hasSystem)
+            .map(ConceptSetComponent::getSystem)
+            .collect(Collectors.toCollection(TreeSet::new));
     if (systems.size() > 1) {
       throw new ValueSetExpansionException(
           "the compose spans several code systems (" + String.join(", ", systems) + ")");
@@ -532,6 +571,119 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
         indexes,
         members,
         maxMembers);
+  }
+
+  @Nonnull
+  @Override
+  public Optional<ConceptMapContent> readConceptMap(
+      @Nonnull final String url, @Nullable final String version, final int maxMappings) {
+    // One grammar both classifies the URL and yields its reference set, so that every base it
+    // accepts, including an experimental (xsct) edition/version URI, is read here.
+    final String implicitRefset = ImplicitTerminologyUrls.implicitConceptMapRefset(url);
+    if (implicitRefset != null) {
+      return readSnomedImplicitConceptMap(url, implicitRefset, version, maxMappings);
+    }
+    ensureInitialised();
+    return ConceptMapStore.read(reader, url, version, versionResolver, maxMappings);
+  }
+
+  /**
+   * Reads a SNOMED CT implicit concept map: one row per association row of the reference set in the
+   * SNOMED CT version the URL's base selects, ordered by source code and then target code, with
+   * both versions the resolved version URI and the store's displays.
+   *
+   * <p>Only the four association reference sets for which HL7 Terminology defines an implicit
+   * concept map are read. A simple map reference set is also an implicit concept map, and {@link
+   * #translate} uses one, but its rows are not read here, so a URL naming any other reference set
+   * is rejected with that reason rather than reported as unknown. The rows are ordered by code
+   * rather than emitted in the index's iteration order, for the reason given at {@link
+   * #byConceptCode}.
+   *
+   * @param url the implicit concept map URL
+   * @param refsetId the reference set named by the URL's {@code fhir_cm} parameter
+   * @param version the pinned version, which an implicit concept map URL cannot carry
+   * @param maxMappings the largest number of rows the caller will accept
+   * @return the content, or empty if the store holds no SNOMED CT version that the base selects
+   * @throws ConceptMapContentException if the reference set is not one of the four, or a version is
+   *     pinned
+   * @throws ConceptMapVersionException if a bare base cannot select a single default edition
+   */
+  @Nonnull
+  private Optional<ConceptMapContent> readSnomedImplicitConceptMap(
+      @Nonnull final String url,
+      @Nonnull final String refsetId,
+      @Nullable final String version,
+      final int maxMappings) {
+    final ConceptMapEquivalence equivalence = IMPLICIT_CONCEPT_MAP_RELATIONSHIPS.get(refsetId);
+    if (equivalence == null) {
+      throw new ConceptMapContentException(
+          "reference set "
+              + refsetId
+              + " is not one of the four association reference sets that can be read as a concept"
+              + " map (POSSIBLY EQUIVALENT TO, REPLACED BY, SAME AS and ALTERNATIVE); a simple map"
+              + " reference set can be used with translate, but not read as a concept map");
+    }
+    final String relationship =
+        ConceptMapRelationship.of(
+            org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence.fromCode(
+                equivalence.toCode()));
+    if (version != null) {
+      throw new ConceptMapContentException(
+          "cannot determine which version to use: an implicit concept map URL carries its version"
+              + " in its base");
+    }
+    ensureInitialised();
+    final Optional<String> systemVersionId;
+    try {
+      systemVersionId = snomedVersionOf(url);
+    } catch (final AmbiguousVersionException e) {
+      throw new ConceptMapVersionException(e.getMessage(), e);
+    }
+    if (systemVersionId.isEmpty()) {
+      return Optional.empty();
+    }
+    final String versionUri = valueSetResolver.versionOf(systemVersionId.get()).orElse(null);
+    final CodeSystemIndexes indexes = indexesFor(systemVersionId.get());
+    final Map<Integer, List<String>> associations = indexes.refsets().targets(refsetId);
+    final ConceptDictionary dictionary = indexes.dictionary();
+    final List<Integer> sources = new ArrayList<>(associations.keySet());
+    sources.sort(Comparator.comparing(dictionary::code));
+    final List<ConceptMapping> rows = new ArrayList<>();
+    for (final int source : sources) {
+      final String sourceCode = dictionary.code(source);
+      final String sourceDisplay = dictionary.display(source);
+      // The index does not order a concept's targets, so they are put in code order here.
+      for (final String target : associations.get(source).stream().sorted().toList()) {
+        final Integer targetDense = dictionary.denseId(target);
+        rows.add(
+            new ConceptMapping(
+                SNOMED_URI,
+                versionUri,
+                sourceCode,
+                sourceDisplay,
+                SNOMED_URI,
+                versionUri,
+                target,
+                targetDense == null ? null : dictionary.display(targetDense),
+                relationship));
+      }
+    }
+    return Optional.of(ConceptMapContent.fromMappings(url, versionUri, rows, maxMappings));
+  }
+
+  /**
+   * Resolves the SNOMED CT version that the base of an implicit concept map URL selects: the store
+   * default for a bare {@code http://snomed.info/sct} base, or exactly the edition/version URI.
+   *
+   * @param conceptMapUrl the implicit concept map URL
+   * @return the stable system version identifier, or empty if the store holds no such version
+   */
+  @Nonnull
+  private Optional<String> snomedVersionOf(@Nonnull final String conceptMapUrl) {
+    final int base = conceptMapUrl.indexOf('?');
+    final String baseUri = base < 0 ? conceptMapUrl : conceptMapUrl.substring(0, base);
+    final String requestedVersion = SNOMED_URI.equals(baseUri) ? null : baseUri;
+    return valueSetResolver.resolveCodeSystemVersion(SNOMED_URI, requestedVersion);
   }
 
   /**
@@ -585,20 +737,20 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
     final String systemVersion =
         valueSetResolver.versionOf(valueSet.getSystemVersionId()).orElse(null);
     final ConceptDictionary dictionary = indexes.dictionary();
-    final List<ValueSetMember> result = new ArrayList<>(members.getCardinality());
-    for (final int dense : byConceptCode(members, dictionary)) {
-      result.add(
-          new ValueSetMember(
-              systemUrl,
-              systemVersion,
-              dictionary.code(dense),
-              dictionary.display(dense),
-              dictionary.isActive(dense) ? null : Boolean.TRUE));
-    }
+    final List<ValueSetMember> result =
+        byConceptCode(members, dictionary).stream()
+            .map(
+                dense ->
+                    new ValueSetMember(
+                        systemUrl,
+                        systemVersion,
+                        dictionary.code(dense),
+                        dictionary.display(dense),
+                        dictionary.isActive(dense) ? null : Boolean.TRUE))
+            .toList();
     final String codeSystemVersion =
         systemVersion == null ? systemUrl : systemUrl + "|" + systemVersion;
-    return new ValueSetExpansion(
-        url, version, null, null, List.of(codeSystemVersion), Collections.unmodifiableList(result));
+    return new ValueSetExpansion(url, version, null, null, List.of(codeSystemVersion), result);
   }
 
   /**
@@ -1075,6 +1227,7 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
   public synchronized void close() {
     indexesCache.clear();
     reader = null;
+    versionResolver = null;
     valueSetResolver = null;
     expansionCache = null;
     conceptMapIndex = null;
@@ -1103,14 +1256,14 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
           Objects.requireNonNull(local.getStoragePath(), "A terminology storage path is required");
       log.debug("Opening local terminology store: {}", storagePath);
       reader = TerminologyStoreReader.open(storagePath, hadoopConfiguration);
-      final VersionResolver versionResolver = new VersionResolver(local.getDefaultSnomedEdition());
+      versionResolver = new VersionResolver(local.getDefaultSnomedEdition());
       valueSetResolver =
           new ValueSetResolver(
               CodeSystemEntry.loadCatalogue(reader),
               versionResolver,
               ValueSetStore.load(reader, versionResolver));
       expansionCache = new ExpansionCache(local.getExpansionCacheSize());
-      conceptMapIndex = ConceptMapIndex.load(reader);
+      conceptMapIndex = ConceptMapIndex.load(reader, versionResolver);
       dialectResolver = new DialectResolver(local.getDialectAliases());
       initialised = true;
     }

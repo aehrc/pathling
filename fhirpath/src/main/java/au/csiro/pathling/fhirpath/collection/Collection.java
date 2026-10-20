@@ -475,8 +475,8 @@ public class Collection implements Equatable {
     final ColumnRepresentation projected =
         getColumn()
             .transform(col -> columnTransform.apply(getColumn().copyOf(col)).getValue())
-            .flatten()
-            .removeNulls();
+            .removeNulls()
+            .flatten();
     return resultTemplate.copyWith(projected);
   }
 

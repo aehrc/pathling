@@ -29,6 +29,8 @@ import lombok.Value;
 /**
  * Represents a set of concepts, which can be either a single concept or a union of multiple
  * concepts.
+ *
+ * @author John Grimes
  */
 public sealed interface TerminologyConcepts
     permits TerminologyConcepts.Set, TerminologyConcepts.Union {
@@ -42,6 +44,18 @@ public sealed interface TerminologyConcepts
    */
   @Nonnull
   ColumnRepresentation apply(
+      @Nonnull final String name, @Nonnull final ColumnRepresentation... args);
+
+  /**
+   * Apply a user defined function to the single concept in this collection. The result is null
+   * where the collection holds more than one concept.
+   *
+   * @param name the name of the UDF
+   * @param args the arguments to the UDF
+   * @return the result of applying the UDF
+   */
+  @Nonnull
+  ColumnRepresentation applyToSingular(
       @Nonnull final String name, @Nonnull final ColumnRepresentation... args);
 
   /**
@@ -76,6 +90,13 @@ public sealed interface TerminologyConcepts
       // representing individual concepts
       // so this is easy to discern - just transform with udf
       return codings.transformWithUdf(name, args);
+    }
+
+    @Override
+    @Nonnull
+    public ColumnRepresentation applyToSingular(
+        @Nonnull final String name, @Nonnull final ColumnRepresentation... args) {
+      return codings.singularOrNull().callUdf(name, args);
     }
 
     @Override
@@ -115,6 +136,21 @@ public sealed interface TerminologyConcepts
                   c,
                   // array of arrays
                   aa -> new DefaultRepresentation(aa).transformWithUdf(name, args).getValue(),
+                  as -> new DefaultRepresentation(as).callUdf(name, args).getValue()));
+    }
+
+    @Override
+    @Nonnull
+    public ColumnRepresentation applyToSingular(
+        @Nonnull final String name, @Nonnull final ColumnRepresentation... args) {
+      // An array of arrays holds a codings array for each concept, while a single array holds the
+      // codings of a single concept.
+      return codingUnion.map(
+          c ->
+              ValueFunctions.ifArray2(
+                  c,
+                  aa ->
+                      new DefaultRepresentation(aa).singularOrNull().callUdf(name, args).getValue(),
                   as -> new DefaultRepresentation(as).callUdf(name, args).getValue()));
     }
 

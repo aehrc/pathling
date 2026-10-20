@@ -256,21 +256,109 @@ hierarchies just as they do over nested ones. A `parent` or `child` reference to
 a code absent from the CodeSystem is skipped with a warning, and duplicate
 concept codes resolve to their first occurrence with a warning.
 
+### Large ConceptMaps
+
+ConceptMaps are imported with bounded memory regardless of their size, in the
+same way as CodeSystems: each is streamed from the source to temporary files on
+the driver and loaded with Spark, so the driver never holds a map's mappings in
+memory. Each target of each source element is stored as a row of the store's
+`concept_mapping` table, and a running count of parsed mappings is logged
+during a long import.
+
+At query time a map's mappings are read the first time `translate` uses it,
+and only those of the version that answers, so maps that are never used cost
+nothing. The mappings are then held in memory on each executor for the life of
+the session, in a compact form that stores each distinct code once as UTF-8
+bytes and each mapping as a few integers. In measurements of maps of up to 20
+million mappings, where nearly every code was distinct, this came to about 53
+bytes per mapping: 267 MB for 5 million mappings and 1 GB for 20 million.
+Executor memory must accommodate the maps a query uses.
+
+Where the store holds several versions of a ConceptMap, `translate` uses the
+latest, chosen by the same version ordering as for ValueSets. The versions are
+never combined.
+
+Only the parts of a ConceptMap that Pathling reads are stored: the source and
+target systems and versions of each group, the code and display of each
+element, and the code, display and equivalence of each of its targets. For
+`translate`, a target without an equivalence is treated as `relatedto`, and an
+element without a code is skipped. A map is also read in full, as rows of
+source and target codes; content those rows cannot carry (a group without a
+source, an element without a code, or a target with `dependsOn` or `product`,
+without an equivalence, or without a code when it is not `unmatched`) does not
+stop the import or `translate`, but reading the map in full fails, naming the
+first such fault in the map, which the import records in the `fault` column of
+the manifest. An unrecognised equivalence fails the import, naming the map,
+before any of the map is written.
+
 ### Bundles and non-CodeSystem resources
 
-ValueSets and ConceptMaps are stored whole, so a single resource must fit in
-memory; one larger than 1 GB fails with an actionable error naming the resource
-rather than an opaque memory error. Bundle-wrapped sources are also parsed in
-memory, so a Bundle is subject to the same in-memory limit; supply large
-CodeSystems as standalone resources to benefit from the streaming path.
+A Bundle is streamed entry by entry, so CodeSystems and ConceptMaps inside a
+Bundle are imported with the same bounded memory as standalone ones. Of each
+entry, only its type, canonical URL and version are held in memory, never its
+content. The entries are validated before anything is written: each
+CodeSystem, ValueSet or ConceptMap must carry a canonical URL, and an entry
+holding any other kind of resource is skipped.
+
+ValueSets are stored whole, so a single ValueSet must fit in memory; one larger
+than 1 GB, standalone or in a Bundle, fails with an actionable error naming the
+resource rather than an opaque memory error.
+
+### Sources of many resources
+
+An import reads every resource of the source into temporary files on the
+driver before it writes anything to the store, then writes each table of the
+store once for the whole source, rather than once per resource. A package of
+thousands of small resources, such as `hl7.fhir.r4.core` with its 2,458
+CodeSystems, ValueSets and ConceptMaps, is imported with one write per table
+rather than thousands.
+
+Where a source holds the same resource (the same resource type, canonical URL
+and version) more than once, the last occurrence is imported and the earlier
+ones are skipped with a warning.
+
+### Stores written by earlier versions
+
+Format version 2 changed how ConceptMaps are stored, from one JSON document per
+map to one row per mapping, which is what makes large maps possible. A store
+written by Pathling 9.9.0 or earlier is migrated to format version 2 in place
+when a Pathling context is created with it in local mode. Each ConceptMap is
+read from its stored JSON and written as mapping rows, exactly as importing it
+would write them, and its manifest row is updated to format version 2 and given
+the `fault` an import would record, keeping its `source` and `imported_at`.
+The table that held the JSON documents is then removed. Code systems and value
+sets did not change layout, so they are left as they are and their manifest rows
+keep format version 1. A store with no ConceptMaps in the earlier layout has
+nothing to migrate, so it may be read-only.
+
+Migration needs write access to the store. If it cannot write, context creation
+fails with an error naming the store; nothing is recorded as migrated until the
+mappings are written, so creating the context again with write access completes
+the migration. Re-importing the FHIR terminology content into a new store also
+works.
+
+A SNOMED CT edition imported by Pathling 9.9.0 or earlier did not record the
+targets of simple map reference sets, which cannot be recovered from the store,
+so translation through those reference sets as
+[implicit concept maps](#value-set-and-concept-map-expressions) finds nothing.
+Context creation logs a warning naming each such edition until it is
+re-imported. Everything else about the edition works unchanged.
+
+A store written or migrated by this version of Pathling does not open with
+Pathling 9.9.0, which reports the format version as too new.
 
 ### Recovering from a failed import
 
-If an import fails partway through writing a CodeSystem (for example, because the
-source is truncated or corrupt), it reports that the store may hold a partial
-version of that CodeSystem and advises re-running the import. Because content is
-keyed by system version, re-running with a corrected source fully replaces the
-partial version and repairs the store.
+A resource that cannot be read (for example, a CodeSystem that is truncated or
+corrupt, or a ConceptMap that carries an unrecognised equivalence) fails the
+import with an error naming it. Because the whole source is read before anything
+is written, the store is left unchanged.
+
+If an import fails while it is writing the store, it reports that the store may
+hold partial versions of the resources being imported and advises re-running
+the import. The manifest is written last, so none of them is recorded as
+imported. Because content is keyed by resource version, re-running with a
+corrected source fully replaces the partial versions and repairs the store.
 
 ### Provenance and verification
 
@@ -283,7 +371,7 @@ same provenance values.
 
 | Column                 | Type      | Null | Meaning                                                                                                                                                                                             |
 | ---------------------- | --------- | ---- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `store_format_version` | int       | no   | The store layout version, always `1`.                                                                                                                                                               |
+| `store_format_version` | int       | no   | The store layout version the row was written under: `2`, or `1` for a code system or value set row written by Pathling 9.9.0 and earlier.                                                           |
 | `entry_type`           | string    | no   | `code_system`, `value_set` or `concept_map`.                                                                                                                                                        |
 | `canonical_url`        | string    | no   | The canonical URL of the imported resource.                                                                                                                                                         |
 | `version`              | string    | yes  | Its version, where the resource declares one.                                                                                                                                                       |
@@ -294,11 +382,11 @@ same provenance values.
 | `package_version`      | string    | yes  | The `version` from the package's `package.json`, with the same nullability as `package_name`.                                                                                                       |
 | `package_verification` | string    | yes  | `verified`, `unverified` or `skipped`. Null when the source was not a package.                                                                                                                      |
 | `package_registry`     | string    | yes  | The registry that vouched for the bytes, with any trailing slash removed. Set only when `package_verification` is `verified`.                                                                       |
+| `fault`                | string    | yes  | Why a ConceptMap cannot be read in full as rows of source and target codes, naming the first such fault in the map. Null where it can, and for code systems and value sets.                         |
 
-The store format version is unchanged by the last five columns, so a store
-built before they were recorded opens, answers queries and accepts new imports
-without migration, its existing rows reading back as null; and a store carrying
-them opens with the preceding version of Pathling, which ignores them.
+The store format version is unchanged by the last six columns, so a store built
+before they were recorded opens, answers queries and accepts new imports without
+migration, its existing rows reading back as null.
 
 The SHA-256 is taken from the bytes the import already reads, so it adds no
 further pass over an archive, and it covers the whole file: it agrees with
@@ -723,7 +811,12 @@ SNOMED CT, so it falls back to its plain language subtag.
 Local `member_of` resolves three kinds of value set reference, and local
 `translate` two kinds of concept map reference. A reference that resolves to
 content the store does not hold yields the same "unknown content" results as
-remote mode rather than an error.
+remote mode rather than an error: a null membership from `member_of`, and no
+translations from `translate`.
+
+A value set is evaluated over a single code system version, so a code without a
+system, such as a string passed to `member_of` or to the FHIRPath `memberOf`
+function, takes the system of that code system.
 
 | Reference                        | Form                                               |
 | -------------------------------- | -------------------------------------------------- |
@@ -782,6 +875,12 @@ possibly equivalent to several others, translates to all of them. Any other
 `fhir_cm` reference set, including other association reference sets such as WAS
 A, is treated as unknown content.
 
+Only the four association reference sets can also be read as a table with
+`concept_map` (`pathling_concept_map` in R, `conceptMap` in Java and Scala), as
+described in [Terminology in SQL](./sql.md#concept-maps). A simple map
+reference set can be used with `translate` but not read as a table, and is
+rejected with an error that says so.
+
 A store imported by Pathling 9.9 holds no simple map targets, so translation
 through a simple map finds nothing until the release is imported again.
 
@@ -795,6 +894,17 @@ translated into the VCL model, and the result is evaluated against the store's
 indexes. Members are restricted to active concepts, matching the behaviour of a
 terminology server on an implicit value set, unless the expression explicitly
 asks for inactive concepts with an `inactive = true` filter.
+
+An imported FHIR ValueSet's compose is translated into the same model, so its
+filters behave as the matching VCL filters below. The `in` and `not-in`
+operators take a comma-separated list of codes, which selects (or, for
+`not-in`, excludes) the listed concepts. Over SNOMED CT, a single code is
+instead read as a reference set: `concept in X` selects the members of reference
+set X rather than the concept X, as the
+[SNOMED CT filters](https://hl7.org/fhir/R4/snomedct.html#filters) in FHIR
+define it, and `not-in` selects every active concept outside those members. For
+example, `concept in 929360061000036106` selects the members of that reference
+set, while `concept in 73211009,46635009` selects those two concepts.
 
 ### SNOMED CT Expression Constraint Language
 
@@ -875,7 +985,7 @@ all is treated as unknown content.
 | Generalises            | `concept >> X`                            | ancestors of the concept, and itself                       |
 | Descendant leaves      | `concept !!< X`                           | descendants that have no children                          |
 | Regular expression     | `code / "A.*"`                            | a property value fully matching the pattern                |
-| In, not in a code list | `concept ^ {A,B}`, `concept ~^ {A,B}`     | membership in an enumerated list                           |
+| In, not in a code list | `concept ^ {A,B}`, `concept ~^ {A,B}`     | membership in an enumerated list (SNOMED CT: see below)    |
 | In a filter list       | `363698007 ^ {concept << X}`              | membership in a nested constraint                          |
 | Exists                 | `ingredient ? true`                       | whether the property is present                            |
 | Navigation             | `X.parent`, `{A,B}.parent`, `*.116676008` | the values a property takes                                |
@@ -886,6 +996,9 @@ The properties a filter may name are:
   a code system that is not SNOMED CT that graph comes from the CodeSystem's
   nesting and its `parent` and `child` properties, as described under
   [hierarchies from parent and child properties](#hierarchies-from-parent-and-child-properties).
+  Over SNOMED CT, `concept ^ {A,B}` names reference sets: it selects the members
+  of reference set A or B, as `^ A OR ^ B` does in ECL, and `~^` selects every
+  active concept outside them.
 - `parent` and `child`, which take one edge rather than the closure, so
   `parent = X` selects the children of X and `child = X` selects its parents.
 - `inactive`, `moduleId`, `sufficientlyDefined` and `effectiveTime`, which are

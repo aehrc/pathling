@@ -20,6 +20,7 @@ package au.csiro.pathling.fhirpath.function.provider;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
 import au.csiro.pathling.config.TerminologyConfiguration;
+import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.TerminologyConcepts;
 import au.csiro.pathling.fhirpath.TerminologyConcepts.Set;
 import au.csiro.pathling.fhirpath.annotations.SqlOnFhirConformance;
@@ -27,6 +28,7 @@ import au.csiro.pathling.fhirpath.annotations.SqlOnFhirConformance.Profile;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.CodingCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.EmptyCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
@@ -196,24 +198,46 @@ public abstract class TerminologyFunctions {
   }
 
   /**
-   * This function can be invoked on a collection of {@code Coding}, {@code CodeableConcept} or
-   * {@code Quantity} values, returning a collection of {@code Boolean} values based on whether each
-   * concept is a member of the ValueSet with the specified url.
+   * Returns whether the single concept in the input collection is a member of the ValueSet with the
+   * specified URL, as defined by the FHIR <a
+   * href="https://hl7.org/fhir/fhirpath.html#functions">memberOf</a> function.
    *
-   * <p>For a {@code CodeableConcept}, the function will return true if any of the codings are
-   * members of the value set. For a {@code Quantity}, the concept is the coded unit.
+   * <p>The input may be a {@code Coding}, a {@code CodeableConcept}, a {@code code} or a {@code
+   * string}. A {@code CodeableConcept} is a member if any of its codings is a member. A {@code
+   * code} or {@code string} is a code without a system, which is inferred from the value set. As an
+   * extension to the FHIR definition, the input may also be a {@code Quantity}, in which case the
+   * concept is the coded unit.
    *
-   * @param input The input collection of Codings, CodeableConcepts or Quantities
+   * <p>The result is empty where the input is empty or has more than one item, or where the
+   * membership cannot be determined, for example because the value set cannot be resolved.
+   *
+   * @param input The input collection of Codings, CodeableConcepts, Quantities, codes or strings
    * @param valueSetUrl The URL of the ValueSet to check membership against
-   * @return A collection of boolean values
+   * @return A collection containing a single boolean value, or an empty collection
+   * @throws InvalidUserInputError if the input is not of a supported type
    * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#memberof">Pathling
    *     documentation - memberOf</a>
    */
   @FhirPathFunction
   @Nonnull
   public static BooleanCollection memberOf(
-      @Nonnull final TerminologyConcepts input, @Nonnull final StringCollection valueSetUrl) {
-    return BooleanCollection.build(input.apply("member_of", valueSetUrl.getColumn().singular()));
+      @Nonnull final Collection input, @Nonnull final StringCollection valueSetUrl) {
+    final ColumnRepresentation url = valueSetUrl.getColumn().singular();
+    if (input instanceof EmptyCollection) {
+      return BooleanCollection.empty();
+    }
+    if (input instanceof StringCollection) {
+      return BooleanCollection.build(input.getColumn().singularOrNull().callUdf("member_of", url));
+    }
+    return input
+        .toConcepts()
+        .map(concepts -> BooleanCollection.build(concepts.applyToSingular("member_of", url)))
+        .orElseThrow(
+            () ->
+                new InvalidUserInputError(
+                    "memberOf() requires input of type Coding, CodeableConcept, Quantity, code or"
+                        + " string, but got "
+                        + input.getClass().getSimpleName()));
   }
 
   /**
