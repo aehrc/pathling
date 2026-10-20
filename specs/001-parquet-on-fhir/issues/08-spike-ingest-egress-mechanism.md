@@ -159,4 +159,6 @@ The owner did not choose. The requirements behind decision 133's per-value scope
 colleagues first, and that must not hold up the engine or the annotations. Decision 134 defers the choice to
 ticket 16 and sets the interim: JSON stays on A0, XML and Bundles move off HAPI onto `from_xml` (ticket 32),
 and OQ-1's losses are accepted as interim exceptions. The spike's throwaway prototypes, harness and results stay
-on the local branch `issue/2831-spike-08` and in the evidence directory, as the starting point for ticket 16.
+on the branch `issue/2831-spike-08`, pushed to `origin` and not to be merged, as the starting point for
+ticket 16. `issue/2367` carries the spec, decision and ticket changes, and a pointer page at
+`evidence/spike-08/README.md`.
