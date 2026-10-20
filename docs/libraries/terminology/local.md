@@ -529,6 +529,8 @@ CTV3 is accepted even though current releases no longer place it under the simpl
 
 A concept with more than one target, such as an ambiguous concept that is possibly equivalent to several others, translates to all of them. Any other `fhir_cm` reference set, including other association reference sets such as WAS A, is treated as unknown content.
 
+Only the four association reference sets can also be read as a table with `concept_map` (`pathling_concept_map` in R, `conceptMap` in Java and Scala), as described in [Terminology in SQL](/docs/libraries/terminology/sql.md#concept-maps). A simple map reference set can be used with `translate` but not read as a table, and is rejected with an error that says so.
+
 A store imported by Pathling 9.9 holds no simple map targets, so translation through a simple map finds nothing until the release is imported again.
 
 The expression carried by an `ecl/` or `v1=` URL is percent-decoded before it is parsed, so it must be percent-encoded when the URL is built. For ECL, `to_ecl_value_set` does this (`tx_to_ecl_value_set` in R, `toEclValueSet` in Java and Scala); there is no equivalent helper for VCL, so encode it yourself.
