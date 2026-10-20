@@ -54,8 +54,8 @@ extensions are stored.
 
 Decision 134 deferred the choice of ingest mechanism. Until the owner makes it,
 JSON stays on Spark's reader and ticket 32 takes XML and bundles off HAPI; ticket
-16 is the deferred rework, and ticket 17 is rewritten once it is clear which
-ingest it builds on. Ticket 29 adds the layout column to the ingest the release
+16 is the deferred rework. Tickets 17 and 18 build on the interim ingest, so they
+follow 32. Ticket 29 adds the layout column to the ingest the release
 ships, so it follows 32. Until it
 lands, the refusal of the legacy layout rests on the root `id_versioned`. Ticket 30
 can start at any time; 29 takes its name from 30 if 30 is agreed first.
