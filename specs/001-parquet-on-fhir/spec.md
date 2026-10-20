@@ -317,9 +317,11 @@ Identifiers are stable. FR-015, FR-018 and FR-020 are retired and not reused.
 
 ### Schema derivation
 
-- **FR-008**: The stored schema MUST be derived from the definition set, which
-  alone determines element types and cardinality
-  ([ADR-0005](../../docs/adr/0005-types-from-definitions-only.md)).
+- **FR-008**: The stored schema MUST be derived from the definition set for the
+  content it describes, and the definition set alone determines the types and
+  cardinality of those elements
+  ([ADR-0005](../../docs/adr/0005-types-from-definitions-only.md)). Content it
+  does not describe is typed only as FR-012 allows.
 - **FR-009**: The system MUST support a fitted schema and a dense schema. The
   fitted schema is the default.
 - **FR-010**: The dense schema MUST be produced by the same traversal as the
@@ -329,8 +331,13 @@ Identifiers are stable. FR-015, FR-018 and FR-020 are retired and not reused.
 - **FR-011**: A complex element MUST appear in a fitted schema only where some
   descendant leaf is populated. A primitive the source carried only as its id
   and extensions counts as populated.
-- **FR-012**: The system MUST NOT determine element types or cardinality from
-  the shape of the data.
+- **FR-012**: The type and cardinality of an element the definition set
+  describes MUST NOT be determined from the shape of the data. Types MAY be
+  inferred from the data only for content the definition set does not describe,
+  only when the user opts in, and every such column MUST be marked as not FHIR,
+  so that FHIRPath and egress can tell it apart. That mode is a follow-up to
+  this specification (D2 in
+  [ingress-strictness](evidence/ingress-strictness/README.md)).
 - **FR-013**: The definition abstraction MUST expose child enumeration in
   declaration order, with a choice element appearing once as a choice.
 - **FR-014**: The definition abstraction MUST expose cardinality sufficient to
