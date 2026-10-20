@@ -50,7 +50,8 @@ class Out:
 class Gen:
     """Walks the definitions beside a source's schema, through an adapter, and generates one of:
     'store' (the stored value and validity, for fail), 'findings' (the findings alone, for fail's message),
-    or 'drop' (the stored value with invalid values left out, and the findings)."""
+    'drop' (the stored value with invalid values left out, and the findings), or 'none' (the stored value
+    alone, nothing checked: the none policy, a timing reference only)."""
 
     def __init__(self, adapter, mode):
         self.a, self.mode = adapter, mode
@@ -106,6 +107,8 @@ class Gen:
         if self.mode == "findings":
             return Out(None, None, F.when(arr.isNotNull(), F.flatten(F.transform(
                 arr, lambda x, i: _or_empty(element(x, self.index(path, i)).fs)))).otherwise(C.no_findings()))
+        if self.mode == "none":
+            return Out(F.transform(arr, lambda x: element(x, path).stored))
         if self.mode == "store":
             def pair(x):
                 o = element(x, path)
@@ -123,6 +126,8 @@ class Gen:
         """One primitive value: has (present and not null), its text, and whether its token type is right."""
         valid = token_ok if prim == "boolean" and typed is not None else (token_ok & C.valid_text(prim, text))
         value = typed if typed is not None else C.stored_value(prim, text)
+        if self.mode == "none":
+            return Out(F.when(has, value))
         bad = has & ~valid
         if self.mode == "store":
             return Out(F.when(has, value), ~bad)
@@ -133,6 +138,8 @@ class Gen:
 
     def problem(self, has, kind, text, path, stored_type):
         """A value the layout cannot hold (a shape or type the definitions contradict): stored as null."""
+        if self.mode == "none":
+            return Out(F.lit(None).cast(stored_type))
         if self.mode == "store":
             return Out(F.lit(None).cast(stored_type), ~has)
         return Out(F.lit(None).cast(stored_type), None,
@@ -241,6 +248,8 @@ class MarkedJson:
 
     def extras(self, gen, node, stype, acc, path, ctx, root):
         out = []
+        if gen.mode == "none":
+            return out
         for f in stype.fields:
             name = f.name
             if root and name in ("resourceType", PRE_F, PRE_D):
@@ -566,7 +575,10 @@ class _Route:
 
     def finish(self, df, node, stype, acc, path, ctx, adapter, keep=None):
         """Builds the stored dataset from a source: the stored columns, and under fail a filter that raises
-        on the first invalid row, naming the resource, the path and the value; under drop the findings."""
+        on the first invalid row, naming the resource, the path and the value; under drop the findings; under
+        none (a timing reference only) the stored columns alone, with nothing checked."""
+        if self.policy == "none":
+            return df.select(*Gen(adapter, "none").node(node, stype, acc, path, ctx, root=True)[0])
         if self.policy == "fail":
             cols, ok, _ = Gen(adapter, "store").node(node, stype, acc, path, ctx, root=True)
             _, _, fs = Gen(adapter, "findings").node(node, stype, acc, path, ctx, root=True)

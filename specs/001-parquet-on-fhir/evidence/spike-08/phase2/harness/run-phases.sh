@@ -11,7 +11,7 @@
 #   EXTRA_JARS   a jar for --jars (the Spike08*.java prototype jar, which the candidate routes need);
 #   JSON_DIR     a JSON data directory in place of the benchmark's (the messy variant);
 #   SOURCES_OVERRIDE the sources to run, space-separated, in place of the route's default;
-#   SPIKE_POLICY fail (the default in spike_routes.py), drop, or none (B only: no checks, timing reference);
+#   SPIKE_POLICY fail (the default in spike_routes.py), drop, or none (B and A+ on JSON: no checks, a timing reference);
 #   SPARK_CONF   one Spark setting, key=value, passed to spark-submit as --conf;
 #   RESOURCES_OVERRIDE, EXTS_OVERRIDE  fewer types, or one extensions setting, for a dry run.
 # Never overwrites an existing results/<label>/ directory; RESUME=1 continues an interrupted run.

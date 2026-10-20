@@ -26,7 +26,7 @@ final class Spike08Json {
 
   static final JsonFactory FACTORY = JsonFactory.builder()
       .enable(com.fasterxml.jackson.core.StreamReadFeature.STRICT_DUPLICATE_DETECTION).build();
-  private static final JsonFactory PLAIN = new JsonFactory();
+  static final JsonFactory PLAIN = new JsonFactory();
 
   private Spike08Json() {}
 

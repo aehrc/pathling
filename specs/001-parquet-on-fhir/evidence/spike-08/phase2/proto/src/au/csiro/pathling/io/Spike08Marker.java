@@ -43,7 +43,7 @@ public final class Spike08Marker {
   public static Dataset<String> mark(Dataset<String> docs, String policy) {
     final boolean fail = "fail".equals(policy);
     final MapPartitionsFunction<String, String> f = rows -> new Iterator<>() {
-      final Spike08Findings findings = new Spike08Findings(fail, "Resource");
+      final Spike08Findings findings = offUnder(new Spike08Findings(fail, "Resource"), policy);
 
       @Override
       public boolean hasNext() {
@@ -58,13 +58,19 @@ public final class Spike08Marker {
     return docs.mapPartitions(f, Encoders.STRING());
   }
 
+  /** The none policy, a timing reference only: no duplicate keys refused and nothing recorded. */
+  private static Spike08Findings offUnder(Spike08Findings f, String policy) {
+    f.off = "none".equals(policy);
+    return f;
+  }
+
   static String markOne(String doc, Spike08Findings f) {
     f.reset();
     if (doc == null) {
       return null;
     }
     final StringWriter w = new StringWriter(doc.length() + 64);
-    try (JsonParser p = Spike08Json.FACTORY.createParser(doc);
+    try (JsonParser p = (f.off ? Spike08Json.PLAIN : Spike08Json.FACTORY).createParser(doc);
         JsonGenerator g = OUT.createGenerator(w)) {
       final JsonToken first = p.nextToken();
       if (first != JsonToken.START_OBJECT) {
