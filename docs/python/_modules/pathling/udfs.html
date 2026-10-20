@@ -182,12 +182,13 @@
 
 <div class="viewcode-block" id="member_of"><a class="viewcode-back" href="../../pathling.html#pathling.udfs.member_of">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">member_of</span><span class="p">(</span><span class="n">coding</span><span class="p">:</span> <span class="n">CodingArg</span><span class="p">,</span> <span class="n">value_set_uri</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Column</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Takes a Coding or array of Codings column as its input. Returns the column which contains a</span>
-<span class="sd">    Boolean value, indicating whether any of the input Codings is the member of the specified FHIR</span>
-<span class="sd">    ValueSet.</span>
+<span class="sd">    Takes a Coding, an array of Codings or a string column of codes as its input. Returns the</span>
+<span class="sd">    column which contains a Boolean value, indicating whether any of the input Codings, or the code,</span>
+<span class="sd">    is a member of the specified FHIR ValueSet. The value is null where membership cannot be</span>
+<span class="sd">    determined, for example because the value set cannot be resolved.</span>
 
 <span class="sd">    :param coding: a Column containing a struct representation of a Coding or an array of such</span>
-<span class="sd">           structs.</span>
+<span class="sd">           structs, or a string column of codes whose system is inferred from the value set.</span>
 <span class="sd">    :param value_set_uri: an identifier for a FHIR ValueSet</span>
 <span class="sd">    :return: a Column containing the result of the operation.</span>
 <span class="sd">    &quot;&quot;&quot;</span>

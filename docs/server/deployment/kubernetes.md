@@ -61,8 +61,6 @@ This is the list of the configuration values that the chart supports, along with
 | `pathling.truststore.type`            | `jks`                           | The trust store format, either `jks` or `pkcs12`                                                                                                                            |
 | `pathling.truststore.mountPath`       | `/truststore`                   | The directory within the pod at which the trust store secret is mounted                                                                                                     |
 
-Note that the chart only sets `JAVA_TOOL_OPTIONS` (and therefore `maxHeapSize`, `additionalJavaOptions` and the trust store options) when at least one entry is present in `pathling.config` or `pathling.secretConfig`.
-
 ## Custom trust store[​](#custom-trust-store "Direct link to Custom trust store")
 
 If Pathling needs to connect to a terminology server, object store or other service that presents a certificate issued by a private certificate authority, the chart can mount a complete JVM trust store (JKS or PKCS12) and point the server's JVM at it.
@@ -109,7 +107,7 @@ This configuration is suitable for a single node deployment of Pathling. In this
 
 ```
 pathling:
-    image: ghcr.io/aehrc/pathling:8
+    image: ghcr.io/aehrc/pathling
     resources:
         requests:
             cpu: 2
@@ -141,7 +139,7 @@ This configuration is suitable for the processing of larger datasets, or scenari
 
 ```
 pathling:
-    image: ghcr.io/aehrc/pathling:8
+    image: ghcr.io/aehrc/pathling
     resources:
         requests:
             cpu: 1
@@ -166,7 +164,7 @@ pathling:
         logging.level.au.csiro.pathling: debug
         spark.master: k8s://https://kubernetes.default.svc
         spark.kubernetes.namespace: pathling
-        spark.kubernetes.executor.container.image: ghcr.io/aehrc/pathling:8
+        spark.kubernetes.executor.container.image: ghcr.io/aehrc/pathling
         spark.kubernetes.executor.volumes.hostPath.warehouse.options.path: /home/user/data/pathling
         spark.kubernetes.executor.volumes.hostPath.warehouse.mount.path: /usr/share/warehouse
         spark.kubernetes.executor.volumes.hostPath.warehouse.mount.readOnly: false
@@ -178,7 +176,7 @@ pathling:
         spark.kubernetes.executor.limit.memory: 4G
 ```
 
-### Cluster with SeaweedFS object storage[​](#cluster-with-seaweedfs-object-storage "Direct link to Cluster with SeaweedFS object storage")
+### SeaweedFS object storage[​](#seaweedfs-object-storage "Direct link to SeaweedFS object storage")
 
 A cluster deployment writes to the warehouse from every executor pod at once, with many small Parquet and Delta log files created, renamed and deleted during each import or query. Some Kubernetes storage classes cope poorly with this access pattern, even when they support `ReadWriteMany`. Network file systems such as NFS and CIFS can be slow under this many concurrent metadata operations, and some provisioners do not support `ReadWriteMany` at all, which prevents executor pods on different nodes from mounting the warehouse.
 
@@ -238,7 +236,7 @@ Then configure Pathling to use the bucket as its warehouse. The warehouse volume
 
 ```
 pathling:
-    image: ghcr.io/aehrc/pathling:8
+    image: ghcr.io/aehrc/pathling
     serviceAccount: spark-service-account
     config:
         pathling.storage.warehouseUrl: s3a://pathling-warehouse
@@ -250,7 +248,7 @@ pathling:
         spark.sql.parquet.output.committer.class: org.apache.spark.internal.io.cloud.BindingParquetOutputCommitter
         spark.master: k8s://https://kubernetes.default.svc
         spark.kubernetes.namespace: pathling
-        spark.kubernetes.executor.container.image: ghcr.io/aehrc/pathling:8
+        spark.kubernetes.executor.container.image: ghcr.io/aehrc/pathling
         spark.executor.instances: 3
         spark.executor.memory: 3G
         spark.kubernetes.executor.request.cores: 2

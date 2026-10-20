@@ -126,7 +126,15 @@
 
 <span class="c1"># Valid top-level keys in the config file.</span>
 <span class="n">VALID_CONFIG_KEYS</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">(</span>
-    <span class="p">{</span><span class="s2">&quot;tx-server&quot;</span><span class="p">,</span> <span class="s2">&quot;fhir-version&quot;</span><span class="p">,</span> <span class="s2">&quot;terminology-auth&quot;</span><span class="p">,</span> <span class="s2">&quot;bulk-auth&quot;</span><span class="p">,</span> <span class="s2">&quot;spark&quot;</span><span class="p">,</span> <span class="s2">&quot;tx-store&quot;</span><span class="p">}</span>
+    <span class="p">{</span>
+        <span class="s2">&quot;tx-server&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;fhir-version&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;terminology-auth&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;bulk-auth&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;spark&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;tx-store&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;package-registry&quot;</span><span class="p">,</span>
+    <span class="p">}</span>
 <span class="p">)</span>
 
 <span class="c1"># Valid keys within the [terminology-auth] and [bulk-auth] tables.</span>
@@ -252,6 +260,10 @@
 <span class="sd">    :param tx_server_explicit: whether the terminology server URL was set</span>
 <span class="sd">           explicitly (via flag or config key) rather than falling back to the</span>
 <span class="sd">           built-in default. Drives the store-wins conflict warning.</span>
+<span class="sd">    :param package_registry: the FHIR package registry that a package import</span>
+<span class="sd">           checks a package against, or None to leave the choice to the library</span>
+<span class="sd">           default. Concerns package distribution rather than the store, so it</span>
+<span class="sd">           is a top-level key rather than part of ``[tx-store]``.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">tx_server</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DEFAULT_TX_SERVER</span>
@@ -262,7 +274,8 @@
     <span class="n">spark_conf</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span>
     <span class="n">bulk_auth_table</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="n">tx_store</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">TxStore</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
-    <span class="n">tx_server_explicit</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span></div>
+    <span class="n">tx_server_explicit</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">package_registry</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span></div>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_load_toml</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
@@ -822,6 +835,7 @@
         <span class="n">bulk_auth_table</span><span class="o">=</span><span class="n">file_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;bulk-auth&quot;</span><span class="p">),</span>
         <span class="n">tx_store</span><span class="o">=</span><span class="n">resolved_tx_store</span><span class="p">,</span>
         <span class="n">tx_server_explicit</span><span class="o">=</span><span class="n">tx_server_explicit</span><span class="p">,</span>
+        <span class="n">package_registry</span><span class="o">=</span><span class="n">file_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;package-registry&quot;</span><span class="p">),</span>
     <span class="p">)</span></div>
 </pre></div>
 

@@ -91,8 +91,9 @@
 <span class="sd">The Spark session is created only when a command actually needs it, behind a</span>
 <span class="sd">status spinner on stderr. Spark and JVM logging is suppressed by default by</span>
 <span class="sd">pointing the driver JVM at a packaged log4j2 configuration before launch, and</span>
-<span class="sd">lowering the log level once the context exists; ``--verbose`` leaves logging at</span>
-<span class="sd">its defaults.</span>
+<span class="sd">lowering the log level once the context exists; ``--verbose`` instead sets the</span>
+<span class="sd">level on Pathling&#39;s own logger namespace so the library&#39;s informational logging</span>
+<span class="sd">reaches the operator.</span>
 
 <span class="sd">Author: John Grimes.</span>
 <span class="sd">&quot;&quot;&quot;</span>
@@ -119,7 +120,8 @@
 <span class="c1"># The packaged log4j2 configuration that silences Spark and JVM logging. It is</span>
 <span class="c1"># supplied to the driver JVM before launch so that startup noise, and</span>
 <span class="c1"># task-failure stack traces, are suppressed (the CLI surfaces its own concise</span>
-<span class="c1"># error message instead). The level is raised again by ``--verbose``.</span>
+<span class="c1"># error message instead). ``--verbose`` raises the level on Pathling&#39;s own</span>
+<span class="c1"># logger namespace instead of using this configuration.</span>
 <span class="n">_QUIET_LOG4J2_RESOURCE</span> <span class="o">=</span> <span class="s2">&quot;quiet-log4j2.properties&quot;</span>
 
 <span class="c1"># Keeps the materialised packaged resource path valid for the process lifetime.</span>
@@ -211,6 +213,39 @@
     <span class="k">return</span> <span class="n">_build_spark_session</span><span class="p">(</span><span class="n">extra_configs</span><span class="p">)</span>
 
 
+<span class="k">def</span><span class="w"> </span><span class="nf">_apply_log_level</span><span class="p">(</span><span class="n">spark</span><span class="p">:</span> <span class="n">SparkSession</span><span class="p">,</span> <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Applies the CLI log level to an already-built Spark session.</span>
+
+<span class="sd">    Quiet mode lowers Spark&#39;s own loggers to OFF, which also hides</span>
+<span class="sd">    task-failure stack traces (the CLI surfaces its own concise message</span>
+<span class="sd">    instead). Verbose mode explicitly sets the level on Pathling&#39;s own logger</span>
+<span class="sd">    namespace (``au.csiro.pathling``) to INFO so the library&#39;s informational</span>
+<span class="sd">    logging - e.g. the importer&#39;s stage narration - reaches the operator</span>
+<span class="sd">    (#2691). Spark&#39;s own loggers are left at their defaults, keeping its</span>
+<span class="sd">    chatter out of the operator&#39;s way.</span>
+
+<span class="sd">    ``SparkContext.setLogLevel`` cannot do the verbose part: on the Spark</span>
+<span class="sd">    version the CLI depends on it short-circuits when the requested level</span>
+<span class="sd">    matches the root level, and the INFO records are then dropped by the</span>
+<span class="sd">    WARN-threshold filter the PySpark shell installs on the console appender.</span>
+<span class="sd">    A logger with an explicitly configured level bypasses that filter, so</span>
+<span class="sd">    setting the level on Pathling&#39;s namespace is what actually surfaces the</span>
+<span class="sd">    library&#39;s records.</span>
+
+<span class="sd">    :param spark: the Spark session whose JVM logging is configured.</span>
+<span class="sd">    :param verbose: whether ``--verbose`` was passed.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">verbose</span><span class="p">:</span>
+        <span class="c1"># In local mode the driver JVM is launched before builder-level Java</span>
+        <span class="c1"># options apply, so log suppression relies on lowering the level here.</span>
+        <span class="c1"># OFF (rather than ERROR) also hides task-failure stack traces, which</span>
+        <span class="c1"># the CLI surfaces as its own concise message.</span>
+        <span class="n">spark</span><span class="o">.</span><span class="n">sparkContext</span><span class="o">.</span><span class="n">setLogLevel</span><span class="p">(</span><span class="s2">&quot;OFF&quot;</span><span class="p">)</span>
+        <span class="k">return</span>
+    <span class="n">log4j</span> <span class="o">=</span> <span class="n">spark</span><span class="o">.</span><span class="n">_jvm</span><span class="o">.</span><span class="n">org</span><span class="o">.</span><span class="n">apache</span><span class="o">.</span><span class="n">logging</span><span class="o">.</span><span class="n">log4j</span>
+    <span class="n">log4j</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">Configurator</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="s2">&quot;au.csiro.pathling&quot;</span><span class="p">,</span> <span class="n">log4j</span><span class="o">.</span><span class="n">Level</span><span class="o">.</span><span class="n">INFO</span><span class="p">)</span>
+
+
 <span class="k">def</span><span class="w"> </span><span class="nf">_create_pathling_context</span><span class="p">(</span><span class="n">config</span><span class="p">:</span> <span class="n">CliConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PathlingContext</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Builds the Spark session and Pathling context from the configuration.</span>
 
@@ -220,12 +255,7 @@
     <span class="kn">from</span><span class="w"> </span><span class="nn">pathling</span><span class="w"> </span><span class="kn">import</span> <span class="n">PathlingContext</span>
 
     <span class="n">spark</span> <span class="o">=</span> <span class="n">_build_quiet_spark</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">config</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
-        <span class="c1"># In local mode the driver JVM is launched before builder-level Java</span>
-        <span class="c1"># options apply, so log suppression relies on lowering the level here.</span>
-        <span class="c1"># OFF (rather than ERROR) also hides task-failure stack traces, which</span>
-        <span class="c1"># the CLI surfaces as its own concise message.</span>
-        <span class="n">spark</span><span class="o">.</span><span class="n">sparkContext</span><span class="o">.</span><span class="n">setLogLevel</span><span class="p">(</span><span class="s2">&quot;OFF&quot;</span><span class="p">)</span>
+    <span class="n">_apply_log_level</span><span class="p">(</span><span class="n">spark</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">verbose</span><span class="p">)</span>
 
     <span class="n">store</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">tx_store</span>
     <span class="k">if</span> <span class="n">store</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>

@@ -71,7 +71,7 @@ pathling --tx-server https://tx.example.org/fhir member-of codes.csv \
   --value-set 'http://snomed.info/sct?fhir_vs=ecl/<< 73211009'
 ```
 
-The server can also be recorded once as `tx-server` in the configuration file. See the [command line interface documentation](/docs/libraries/cli.md#global-options) for details.
+The server can also be recorded once as `tx-server` in the configuration file. See the [CLI configuration reference](/docs/libraries/cli/configuration.md#top-level-keys) for details.
 
 The following parameters control the connection to the server. The Python and R names are given first, with the corresponding Java configuration in brackets.
 
@@ -185,7 +185,7 @@ pathling --tx-server https://ontology.nhs.uk/production1/fhir \
   display codes.csv --code-column code --system 'http://snomed.info/sct'
 ```
 
-The credentials can also be recorded in the `[terminology-auth]` table of the configuration file. See the [command line interface documentation](/docs/libraries/cli.md#configuration-file) for details.
+The credentials can also be recorded in the `[terminology-auth]` table of the configuration file. See the [CLI configuration reference](/docs/libraries/cli/configuration.md#terminology-auth) for details.
 
 The following parameters control authentication:
 

@@ -53,6 +53,8 @@ See [Operators](https://hl7.org/fhirpath/#operators) in the FHIRPath specificati
 | `>`      | Greater than             |
 | `>=`     | Greater than or equal to |
 
+A [Quantity](https://hl7.org/fhir/R4/datatypes.html#Quantity) that carries a `comparator` records a bound rather than a known value, so comparing it with a single value returns an empty result. For example, if `Observation.value` is `<5 mg`, then `Observation.value.ofType(Quantity) = 5 'mg'` and `Observation.value.ofType(Quantity) < 6 'mg'` are both empty. Such a quantity is never equal to another value, so collections that contain one are not equal, it is not removed as a duplicate by `union` or `distinct`, and it is not found by `in` or `contains`.
+
 #### Boolean operators[​](#boolean-operators "Direct link to Boolean operators")
 
 | Operator  | Description         |
@@ -141,9 +143,12 @@ Both functions follow the type-reconciliation rules used by the `|` operator (fo
 
 #### String functions[​](#string-functions "Direct link to String functions")
 
-| Function           | Description                          |
-| ------------------ | ------------------------------------ |
-| `join(separator?)` | Join strings with optional separator |
+| Function              | Description                                          |
+| --------------------- | ---------------------------------------------------- |
+| `join(separator?)`    | Join strings with optional separator                 |
+| `startsWith(prefix)`  | Test whether the string starts with the given prefix |
+| `endsWith(suffix)`    | Test whether the string ends with the given suffix   |
+| `contains(substring)` | Test whether the string contains the given substring |
 
 #### Type functions[​](#type-functions "Direct link to Type functions")
 
@@ -176,6 +181,32 @@ Both functions follow the type-reconciliation rules used by the `|` operator (fo
 | `convertsToTime()`          | Check if convertible to Time     |
 | `convertsToQuantity(unit?)` | Check if convertible to Quantity |
 
+A FHIR [Quantity](https://hl7.org/fhir/R4/datatypes.html#Quantity) converts to a FHIRPath Quantity or String only if it [maps to a System.Quantity](https://hl7.org/fhir/R4/fhirpath.html#quantity): it must have a `value` and a `code`, its `system` must be `http://unitsofmeasure.org` (UCUM) or the FHIRPath calendar duration system (`https://hl7.org/fhirpath/N1/calendar-duration`), and it must not carry a `comparator`. For any other Quantity, `toQuantity()` and `toString()` return an empty result, and `convertsToQuantity()` and `convertsToString()` return `false`. For example, if `Observation.value` is `3 tab` with no system, or `<5 mg`, then `Observation.value.ofType(Quantity).toQuantity()` is empty.
+
+#### Utility functions[​](#utility-functions "Direct link to Utility functions")
+
+| Function                   | Description                                                                                          |
+| -------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `trace(name, projection?)` | Log the current value under the given name and return it unchanged, optionally applying a projection |
+
+The `name` argument must be a string literal.
+
+info
+
+A column returned by `fhirPathToColumn` (`fhirpath_to_column` in Python, `pathling_fhirpath_to_column` in R) that contains `trace()` cannot be passed directly to a Spark aggregate function such as `sum` or `collect_list`. Spark treats the expression as non-deterministic because of its side effects and rejects it with `AGGREGATE_FUNCTION_WITH_NONDETERMINISTIC_EXPRESSION`. This does not affect FHIRPath functions such as `count()`, `extract`, or ViewDefinitions.
+
+To aggregate over such a column, project it first and aggregate the projected column. The trace still fires for every row.
+
+```
+given_count = pc.fhirpath_to_column("Patient", "name.trace('t').given.count()")
+
+# Fails.
+patients.agg(F.sum(given_count))
+
+# Works.
+patients.withColumn("given_count", given_count).agg(F.sum("given_count"))
+```
+
 ### Limitations[​](#limitations "Direct link to Limitations")
 
 The following FHIRPath features are **not currently supported**:
@@ -204,4 +235,5 @@ The maximum depth can be configured:
 Pathling also supports additional functions beyond the standard FHIRPath specification:
 
 * [FHIR-specific functions](/docs/fhirpath/fhir-functions.md) - Functions defined in the FHIR specification for use with FHIR data, including `extension`, `resolve`, `memberOf`, `subsumes`, and `subsumedBy`.
+* [SQL on FHIR functions](/docs/fhirpath/sql-on-fhir-functions.md) - Functions defined in the SQL on FHIR specification for joining views: `getResourceKey` and `getReferenceKey`.
 * [Extension functions](/docs/fhirpath/extension-functions.md) - Functions unique to Pathling, including terminology functions like `designation`, `display`, `property`, and `translate`, plus the Coding literal data type.

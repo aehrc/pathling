@@ -88,16 +88,17 @@
 
 <span class="sd">&quot;&quot;&quot;Parsing, validation, coercion, and merge for user-supplied Spark settings.</span>
 
-<span class="sd">This module holds the pure logic that turns ``[spark]`` config-table entries and</span>
-<span class="sd">``--spark-conf KEY=VALUE`` flags into the effective Spark configuration applied</span>
-<span class="sd">when a session is built. Keys must begin with ``spark.``; scalar values are</span>
-<span class="sd">coerced to the string form Spark expects; values support the existing</span>
-<span class="sd">``@file``/environment secret resolution. The three managed keys</span>
-<span class="sd">(``spark.jars.packages``, ``spark.sql.extensions``,</span>
-<span class="sd">``spark.sql.catalog.spark_catalog``) are merged with item-level protection</span>
-<span class="sd">against Pathling&#39;s managed defaults so the library keeps working while user</span>
-<span class="sd">additions take effect. None of this requires PySpark, so it runs before any</span>
-<span class="sd">Spark session starts.</span>
+<span class="sd">This module holds the CLI-specific logic that turns ``[spark]`` config-table</span>
+<span class="sd">entries and ``--spark-conf KEY=VALUE`` flags into the effective Spark</span>
+<span class="sd">configuration applied when a session is built. Keys must begin with ``spark.``;</span>
+<span class="sd">scalar values are coerced to the string form Spark expects; values support the</span>
+<span class="sd">existing ``@file``/environment secret resolution. The merge of the resolved map</span>
+<span class="sd">with Pathling&#39;s managed defaults (with item-level protection for the managed</span>
+<span class="sd">keys ``spark.jars.packages``, ``spark.sql.extensions`` and</span>
+<span class="sd">``spark.sql.catalog.spark_catalog``) lives in :mod:`pathling._spark_defaults`,</span>
+<span class="sd">shared with the Python library API; this module wraps it so CLI usage errors</span>
+<span class="sd">keep their exit code 2 contract. None of this requires PySpark, so it runs</span>
+<span class="sd">before any Spark session starts.</span>
 
 <span class="sd">Author: John Grimes.</span>
 <span class="sd">&quot;&quot;&quot;</span>
@@ -106,13 +107,7 @@
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Optional</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">pathling._spark_defaults</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
-    <span class="n">CATALOG_KEY</span><span class="p">,</span>
-    <span class="n">EXTENSIONS_KEY</span><span class="p">,</span>
-    <span class="n">MANAGED_COORDINATES</span><span class="p">,</span>
-    <span class="n">PACKAGES_KEY</span><span class="p">,</span>
-    <span class="n">managed_spark_defaults</span><span class="p">,</span>
-<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathling._spark_defaults</span><span class="w"> </span><span class="kn">import</span> <span class="n">merge_spark_conf</span> <span class="k">as</span> <span class="n">_shared_merge_spark_conf</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathling.cli.errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">EXIT_USAGE</span><span class="p">,</span> <span class="n">CliError</span>
 
 
@@ -206,140 +201,27 @@
     <span class="k">return</span> <span class="n">resolved</span></div>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_split_list</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Splits a comma-separated Spark list value, dropping empty entries.</span>
-
-<span class="sd">    :param value: a comma-separated string such as a packages or extensions list.</span>
-<span class="sd">    :return: the non-empty, stripped items in order.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="p">[</span><span class="n">item</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">value</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;,&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="n">item</span><span class="o">.</span><span class="n">strip</span><span class="p">()]</span>
-
-
-<span class="k">def</span><span class="w"> </span><span class="nf">_group_artifact</span><span class="p">(</span><span class="n">coordinate</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Returns the ``group:artifact`` identity of a Maven coordinate.</span>
-
-<span class="sd">    :param coordinate: a ``group:artifact:version`` Maven coordinate.</span>
-<span class="sd">    :return: the ``group:artifact`` prefix used to detect a version override.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="s2">&quot;:&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">coordinate</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;:&quot;</span><span class="p">)[:</span><span class="mi">2</span><span class="p">])</span>
-
-
-<span class="k">def</span><span class="w"> </span><span class="nf">_merge_packages</span><span class="p">(</span>
-    <span class="n">user_value</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-    <span class="n">on_warning</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="kc">None</span><span class="p">]],</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Unions user package coordinates with the managed defaults.</span>
-
-<span class="sd">    Managed coordinates appear first. A user coordinate whose ``group:artifact``</span>
-<span class="sd">    is new is appended. A user coordinate that matches a managed</span>
-<span class="sd">    ``group:artifact`` at a different version replaces the managed entry and, for</span>
-<span class="sd">    a Pathling-managed coordinate, emits a single warning naming it.</span>
-
-<span class="sd">    :param user_value: the user&#39;s comma-separated ``spark.jars.packages`` value.</span>
-<span class="sd">    :param on_warning: a callback for the managed-version-override warning, or</span>
-<span class="sd">           None to suppress it.</span>
-<span class="sd">    :return: the merged, deduplicated comma-separated packages string.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">result</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="c1"># Map each ``group:artifact`` to its index in ``result`` for deduplication.</span>
-    <span class="n">index_of</span> <span class="o">=</span> <span class="p">{}</span>
-
-    <span class="k">def</span><span class="w"> </span><span class="nf">add</span><span class="p">(</span><span class="n">coordinate</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">identity</span> <span class="o">=</span> <span class="n">_group_artifact</span><span class="p">(</span><span class="n">coordinate</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">identity</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">index_of</span><span class="p">:</span>
-            <span class="n">index_of</span><span class="p">[</span><span class="n">identity</span><span class="p">]</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
-            <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">coordinate</span><span class="p">)</span>
-            <span class="k">return</span>
-        <span class="n">existing</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="n">index_of</span><span class="p">[</span><span class="n">identity</span><span class="p">]]</span>
-        <span class="k">if</span> <span class="n">existing</span> <span class="o">==</span> <span class="n">coordinate</span><span class="p">:</span>
-            <span class="k">return</span>
-        <span class="c1"># A different version of an already-present coordinate: the user wins.</span>
-        <span class="n">result</span><span class="p">[</span><span class="n">index_of</span><span class="p">[</span><span class="n">identity</span><span class="p">]]</span> <span class="o">=</span> <span class="n">coordinate</span>
-        <span class="k">if</span> <span class="n">identity</span> <span class="ow">in</span> <span class="n">MANAGED_COORDINATES</span> <span class="ow">and</span> <span class="n">on_warning</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">on_warning</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;The Spark configuration overrides the managed package &quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;&#39;</span><span class="si">{</span><span class="n">identity</span><span class="si">}</span><span class="s2">&#39; with &#39;</span><span class="si">{</span><span class="n">coordinate</span><span class="si">}</span><span class="s2">&#39;. This non-default version &quot;</span>
-                <span class="s2">&quot;may not be supported.&quot;</span>
-            <span class="p">)</span>
-
-    <span class="k">for</span> <span class="n">coordinate</span> <span class="ow">in</span> <span class="n">_split_list</span><span class="p">(</span><span class="n">managed_spark_defaults</span><span class="p">()[</span><span class="n">PACKAGES_KEY</span><span class="p">]):</span>
-        <span class="n">add</span><span class="p">(</span><span class="n">coordinate</span><span class="p">)</span>
-    <span class="k">for</span> <span class="n">coordinate</span> <span class="ow">in</span> <span class="n">_split_list</span><span class="p">(</span><span class="n">user_value</span><span class="p">):</span>
-        <span class="n">add</span><span class="p">(</span><span class="n">coordinate</span><span class="p">)</span>
-    <span class="k">return</span> <span class="s2">&quot;,&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
-
-
-<span class="k">def</span><span class="w"> </span><span class="nf">_merge_extensions</span><span class="p">(</span><span class="n">user_value</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Unions user SQL extension classes with the managed defaults.</span>
-
-<span class="sd">    The Delta extension (listed in the managed defaults) is always retained and</span>
-<span class="sd">    appears first; user extensions are appended, deduplicated.</span>
-
-<span class="sd">    :param user_value: the user&#39;s comma-separated ``spark.sql.extensions`` value.</span>
-<span class="sd">    :return: the merged, deduplicated comma-separated extensions string.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">result</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="n">seen</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
-    <span class="n">managed</span> <span class="o">=</span> <span class="n">_split_list</span><span class="p">(</span><span class="n">managed_spark_defaults</span><span class="p">()[</span><span class="n">EXTENSIONS_KEY</span><span class="p">])</span>
-    <span class="k">for</span> <span class="n">extension</span> <span class="ow">in</span> <span class="n">managed</span> <span class="o">+</span> <span class="n">_split_list</span><span class="p">(</span><span class="n">user_value</span><span class="p">):</span>
-        <span class="k">if</span> <span class="n">extension</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">seen</span><span class="p">:</span>
-            <span class="n">seen</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">extension</span><span class="p">)</span>
-            <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">extension</span><span class="p">)</span>
-    <span class="k">return</span> <span class="s2">&quot;,&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
-
-
-<span class="k">def</span><span class="w"> </span><span class="nf">_merge_catalog</span><span class="p">(</span><span class="n">user_value</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Validates the session catalog against the managed Delta catalog.</span>
-
-<span class="sd">    :param user_value: the user&#39;s ``spark.sql.catalog.spark_catalog`` value.</span>
-<span class="sd">    :param key: the configuration key, for the error message.</span>
-<span class="sd">    :return: None when the value equals the managed Delta catalog (a no-op the</span>
-<span class="sd">             builder already applies); the function never returns another value.</span>
-<span class="sd">    :raises CliError: if the value differs from the managed Delta catalog (exit</span>
-<span class="sd">            code 2).</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">managed</span> <span class="o">=</span> <span class="n">managed_spark_defaults</span><span class="p">()[</span><span class="n">CATALOG_KEY</span><span class="p">]</span>
-    <span class="k">if</span> <span class="n">user_value</span> <span class="o">==</span> <span class="n">managed</span><span class="p">:</span>
-        <span class="k">return</span> <span class="kc">None</span>
-    <span class="k">raise</span> <span class="n">CliError</span><span class="p">(</span>
-        <span class="sa">f</span><span class="s2">&quot;The Spark configuration key &#39;</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">&#39; is managed by Pathling and must be &quot;</span>
-        <span class="sa">f</span><span class="s2">&quot;&#39;</span><span class="si">{</span><span class="n">managed</span><span class="si">}</span><span class="s2">&#39;. Remove it or set it to the Delta catalog.&quot;</span><span class="p">,</span>
-        <span class="n">exit_code</span><span class="o">=</span><span class="n">EXIT_USAGE</span><span class="p">,</span>
-    <span class="p">)</span>
-
-
 <div class="viewcode-block" id="merge_spark_conf"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.sparkconf.merge_spark_conf">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">merge_spark_conf</span><span class="p">(</span>
     <span class="n">user_map</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
     <span class="n">on_warning</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="kc">None</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Merges the user Spark map with Pathling&#39;s managed defaults.</span>
 
-<span class="sd">    Plain keys pass through unchanged. The managed list keys</span>
-<span class="sd">    (``spark.jars.packages``, ``spark.sql.extensions``) are unioned with the</span>
-<span class="sd">    managed defaults and deduplicated. ``spark.sql.catalog.spark_catalog`` is</span>
-<span class="sd">    dropped when it equals the managed Delta catalog and is an error otherwise.</span>
-<span class="sd">    Only keys the user actually set appear in the result; keys they did not touch</span>
-<span class="sd">    are left to the session builder&#39;s managed defaults.</span>
+<span class="sd">    Delegates to :func:`pathling._spark_defaults.merge_spark_conf` and maps</span>
+<span class="sd">    validation failures onto :class:`CliError`, preserving the CLI&#39;s usage-error</span>
+<span class="sd">    (exit code 2) contract.</span>
 
 <span class="sd">    :param user_map: the validated, coerced, and resolved user Spark map.</span>
 <span class="sd">    :param on_warning: a callback for the managed-version-override warning, or</span>
 <span class="sd">           None to suppress it.</span>
 <span class="sd">    :return: the effective Spark configuration to apply on top of the defaults.</span>
-<span class="sd">    :raises CliError: if the session catalog is set to a non-Delta value.</span>
+<span class="sd">    :raises CliError: if the session catalog is set to a non-Delta value (exit</span>
+<span class="sd">            code 2).</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">result</span> <span class="o">=</span> <span class="p">{}</span>
-    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">user_map</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-        <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="n">PACKAGES_KEY</span><span class="p">:</span>
-            <span class="n">result</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">_merge_packages</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">on_warning</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="n">EXTENSIONS_KEY</span><span class="p">:</span>
-            <span class="n">result</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">_merge_extensions</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="n">CATALOG_KEY</span><span class="p">:</span>
-            <span class="n">merged</span> <span class="o">=</span> <span class="n">_merge_catalog</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">merged</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="n">result</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">merged</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">result</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
-    <span class="k">return</span> <span class="n">result</span></div>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_shared_merge_spark_conf</span><span class="p">(</span><span class="n">user_map</span><span class="p">,</span> <span class="n">on_warning</span><span class="o">=</span><span class="n">on_warning</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">CliError</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">),</span> <span class="n">exit_code</span><span class="o">=</span><span class="n">EXIT_USAGE</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">e</span></div>
 </pre></div>
 
            </div>

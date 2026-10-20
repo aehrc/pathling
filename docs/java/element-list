@@ -42,6 +42,8 @@ au.csiro.pathling.sql.misc
 au.csiro.pathling.sql.udf
 au.csiro.pathling.terminology
 au.csiro.pathling.terminology.caching
+au.csiro.pathling.terminology.conceptmap
+au.csiro.pathling.terminology.expand
 au.csiro.pathling.terminology.local
 au.csiro.pathling.terminology.local.index
 au.csiro.pathling.terminology.lookup

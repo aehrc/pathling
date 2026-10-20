@@ -18,7 +18,7 @@ The source may be a JSON file, a directory of JSON files, or a FHIR NPM package 
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">pathling</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">9.9.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">10.0.0</span>
       </span>
     </div>
 
@@ -55,7 +55,13 @@ The source may be a JSON file, a directory of JSON files, or a FHIR NPM package 
     </div>
 
     <div id="ref-usage">
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">pathling_import_fhir_terminology</span><span class="op">(</span><span class="va">pc</span>, <span class="va">source</span>, <span class="va">storage_path</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">pathling_import_fhir_terminology</span><span class="op">(</span></span>
+<span>  <span class="va">pc</span>,</span>
+<span>  <span class="va">source</span>,</span>
+<span>  <span class="va">storage_path</span>,</span>
+<span>  verify_package <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  package_registry <span class="op">=</span> <span class="cn">NULL</span></span>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div id="arguments">
@@ -74,10 +80,27 @@ filesystem accessible through the Hadoop FileSystem API.</p></dd>
 <dt id="arg-storage-path">storage_path<a class="anchor" aria-label="anchor" href="#arg-storage-path"></a></dt>
 <dd><p>The terminology store location, created if absent.</p></dd>
 
+
+<dt id="arg-verify-package">verify_package<a class="anchor" aria-label="anchor" href="#arg-verify-package"></a></dt>
+<dd><p>Whether a FHIR NPM package is checked against the checksum its registry
+publishes. Defaults to TRUE.</p></dd>
+
+
+<dt id="arg-package-registry">package_registry<a class="anchor" aria-label="anchor" href="#arg-package-registry"></a></dt>
+<dd><p>The base URL of the registry consulted for the checksum. When NULL, the
+default registry (https://packages.fhir.org) is used. Defaults to NULL.</p></dd>
+
 </dl></div>
     <div id="value">
     <h2>Value</h2>
     <p>The PathlingContext object, invisibly.</p>
+    </div>
+    <div id="details">
+    <h2>Details</h2>
+    <p>When the source is a package, its checksum is compared with the one its registry publishes
+before anything is written, and the import fails if the two differ. Turning verification off
+imports without consulting a registry, which is also how an import runs offline; the store then
+records the verification as skipped.</p>
     </div>
     <div id="see-also">
     <h2>See also</h2>

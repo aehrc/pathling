@@ -111,6 +111,28 @@ The response will be:
 
 Note that delete operations are not idempotent in Pathling - attempting to delete a resource that has already been deleted will return a `404` error.
 
+## ViewDefinition resources[​](#viewdefinition-resources "Direct link to ViewDefinition resources")
+
+The server stores ViewDefinition resources as defined by [SQL on FHIR ViewDefinition 3.0.0-ballot](https://build.fhir.org/ig/HL7/sql-on-fhir/en/StructureDefinition-ViewDefinition.html). Every root element of the resource is retained, so a ViewDefinition reads back as it was written.
+
+Complex elements are stored using the FHIR R4 datatypes. Sub-elements that are defined only in later releases of FHIR are therefore not retained:
+
+* `useContext.valueCanonical`
+* `relatedArtifact.classifier`
+* `relatedArtifact.resourceReference`
+* `relatedArtifact.publicationStatus`
+* `relatedArtifact.publicationDate`
+* `relatedArtifact.document.height`
+* `relatedArtifact.document.width`
+* `relatedArtifact.document.frames`
+* `relatedArtifact.document.duration`
+* `relatedArtifact.document.pages`
+* `constant.valueInteger64`
+
+Codes that exist only in later releases, such as a `relatedArtifact.type` of `part-of`, are rejected with a `400` error rather than dropped.
+
+A warehouse that holds a ViewDefinition table written by an earlier version of Pathling needs [`pathling.storage.schemaAutoMerge`](/docs/server/configuration.md#storage) enabled when upgrading, so that the table gains the columns for the additional elements.
+
 ## Batch operations[​](#batch-operations "Direct link to Batch operations")
 
 To perform multiple create, update, or delete operations in a single request, see the [Batch](/docs/server/operations/batch.md) documentation.

@@ -12,9 +12,25 @@ Because the setting is session-wide, you may keep it disabled (`spark.sql.ansi.e
 
 ## Session configuration[​](#session-configuration "Direct link to Session configuration")
 
-When you create a `PathlingContext` within your Spark application, it will detect the presence of an existing `SparkSession` and use it. If there is no existing session, it will create one for you with some sensible default configuration. You can override this default configuration by passing a `SparkSession` object to the `PathlingContext` constructor.
+When you create a `PathlingContext` within your Spark application, it will detect the presence of an existing `SparkSession` and use it. If there is no existing session, it will create one for you with some sensible default configuration. You can override this default configuration with the `spark_conf` parameter of `PathlingContext.create`.
 
-This can be useful if you want to set other Spark configuration, for example to increase the available memory.
+This can be useful if you want to set other Spark configuration, for example to increase the available memory for a local terminology store:
+
+```
+from pathling import PathlingContext
+
+pc = PathlingContext.create(
+    spark_conf={"spark.driver.memory": "8g"},
+    terminology_mode="local",
+    terminology_storage_path="/data/tx-store",
+)
+```
+
+note
+
+Settings such as `spark.driver.memory` and `spark.jars.packages` are fixed when the driver JVM launches. `spark_conf` takes effect because `PathlingContext.create` launches that JVM when it builds the session. If a JVM is already running in the process - because a session was created earlier (even one that has since been stopped), or because the code runs in a notebook, the `pyspark` shell or under `spark-submit` - `create` raises an error rather than silently ignoring the configuration. In those environments, set driver memory at launch instead, for example with the `SPARK_DRIVER_MEMORY` environment variable or `spark-submit --driver-memory`.
+
+If you need full control over how the session is set up, you can still build the `SparkSession` yourself and pass it to `PathlingContext.create`.
 
 The session that you provide must have the Pathling library API on the classpath. You can also optionally enable [Delta Lake](https://delta.io/) support. Here is an example of how to programmatically configure a session that has Delta enabled:
 
@@ -32,8 +48,8 @@ from pyspark.sql import SparkSession
 spark = (
     SparkSession.builder.config(
         "spark.jars.packages",
-        "au.csiro.pathling:library-runtime:9.9.0," +
-        "io.delta:delta-spark_2.13:4.0.0"
+        "au.csiro.pathling:library-runtime:10.0.0," +
+        "io.delta:delta-spark_2.13:4.0.1"
     )
     .config(
         "spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension"
@@ -53,7 +69,7 @@ library(pathling)
 
 sc <- spark_connect(master = "local",
                     packages = c(paste0("au.csiro.pathling:library-runtime:", pathling_version()),
-                                 "io.delta:delta-spark_2.13:4.0.0"),
+                                 "io.delta:delta-spark_2.13:4.0.1"),
                     config = list("sparklyr.shell.conf" = c(
                             "spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension",
                             "spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog"
@@ -66,8 +82,8 @@ pc <- pathling_connect(sc)
 import au.csiro.pathling.library.PathlingContext
 
 val spark = SparkSession.builder
-        .config("spark.jars.packages", "au.csiro.pathling:library-runtime:9.9.0," +
-                "io.delta:delta-spark_2.13:4.0.0")
+        .config("spark.jars.packages", "au.csiro.pathling:library-runtime:10.0.0," +
+                "io.delta:delta-spark_2.13:4.0.1")
         .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
         .config("spark.sql.catalog.spark_catalog",
             "org.apache.spark.sql.delta.catalog.DeltaCatalog")
@@ -85,8 +101,8 @@ class MyApp {
     public static void main(String[] args) {
         SparkSession spark = SparkSession.builder()
                 .config("spark.jars.packages",
-                        "au.csiro.pathling:library-runtime:9.9.0," +
-                                "io.delta:delta-spark_2.13:4.0.0")
+                        "au.csiro.pathling:library-runtime:10.0.0," +
+                                "io.delta:delta-spark_2.13:4.0.1")
                 .config("spark.sql.extensions",
                         "io.delta.sql.DeltaSparkSessionExtension")
                 .config("spark.sql.catalog.spark_catalog",

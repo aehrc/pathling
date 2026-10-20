@@ -21,7 +21,7 @@ pathling --help
 
 ## Global options[​](#global-options "Direct link to Global options")
 
-The following options are accepted before any command and may also be supplied through a configuration file.
+The following options are accepted before any command and may also be supplied through the [configuration file](/docs/libraries/cli/configuration.md).
 
 | Option                                                                      | Config key                   | Default                                 |
 | --------------------------------------------------------------------------- | ---------------------------- | --------------------------------------- |
@@ -34,7 +34,7 @@ The following options are accepted before any command and may also be supplied t
 | `--config PATH`                                                             | -                            | `$XDG_CONFIG_HOME/pathling/config.toml` |
 | `--verbose`                                                                 | -                            | off                                     |
 
-Values are resolved with the precedence flag > config file > built-in default. The `--verbose` flag re-enables Spark and JVM logging and prints full stack traces on error.
+Values are resolved with the precedence flag > config file > built-in default; see [configuration](/docs/libraries/cli/configuration.md) for every config key. The `--verbose` flag re-enables Spark and JVM logging and prints full stack traces on error.
 
 Exit codes are `0` for success, `1` for a runtime failure, and `2` for a usage error.
 
@@ -125,7 +125,7 @@ pathling export https://server/fhir -o out/ --group 123
 
 A system-level export runs by default; `--group ID` and repeatable `--patient REF` select group-level and patient-level exports (the two are mutually exclusive). The export supports `--type`, `--elements`, `--since`, `--type-filter`, `--include-associated-data`, `--timeout`, and `--max-downloads`.
 
-SMART backend services authentication is configured with `--client-id`, `--token-endpoint`, `--scope`, and exactly one of `--private-key-jwk` or `--client-secret`. Secret values accept a literal, a `@/path/to/file` reference, or fall back to the `PATHLING_PRIVATE_KEY_JWK` / `PATHLING_CLIENT_SECRET` environment variables so that they need not appear in shell history.
+SMART backend services authentication is configured with `--client-id`, `--token-endpoint`, `--scope`, and exactly one of `--private-key-jwk` or `--client-secret`. Secret values accept a literal, a `@/path/to/file` reference, or fall back to the `PATHLING_PRIVATE_KEY_JWK` / `PATHLING_CLIENT_SECRET` environment variables so that they need not appear in shell history. The same settings can be recorded in the [`[bulk-auth]`](/docs/libraries/cli/configuration.md#bulk-auth) config table.
 
 ### run[​](#run "Direct link to run")
 
@@ -250,14 +250,35 @@ pathling import-snomed --default-dialect en-GB /data/rf2.zip /data/tx-store
 
 `import-fhir-terminology` accepts a JSON file, a directory of JSON files, or a FHIR NPM package (`.tgz`), and imports CodeSystems of any size with bounded memory (for example, the multi-gigabyte OMOP vocabulary CodeSystem).
 
+A package source is checked against the checksum its registry publishes before anything is written: the import reads the package name and version from the package's `package.json`, fetches the registry's version listing, and compares the SHA-1 the registry publishes for that version with the SHA-1 of the tarball in hand. A package whose checksum differs fails the import with exit code 1, leaves the store unchanged, and reports the expected and computed SHA-1 followed by `Re-run with --no-verify to import it anyway.` Where no comparison can be made, because the registry publishes no checksum for the version, does not list it, or cannot be reached, the import warns and proceeds. See [provenance and verification](/docs/libraries/terminology/local.md#provenance-and-verification) for what the store records.
+
+Two options control the check. Both apply only when `SOURCE` is a `.tgz` or `.tar.gz`; for any other source they are accepted and have no effect.
+
+* `--no-verify` imports without consulting a registry. Use it for an offline import, or a package that was never published to a registry.
+* `--package-registry URL` names the registry to check against. The flag overrides the `package-registry` config key (see [configuration](/docs/libraries/cli/configuration.md#top-level-keys)), which overrides the default of `https://packages.fhir.org`.
+
+`import-snomed` takes neither option, since an RF2 release is not distributed through a package registry.
+
+Each command prints one completion line naming what was imported, from where and into where, such as `Imported FHIR terminology from SRC into STORE`, followed by what the store recorded of the source:
+
+| Case                          | Suffix on the completion line                                                                      |
+| ----------------------------- | -------------------------------------------------------------------------------------------------- |
+| Directory source              | none                                                                                               |
+| RF2 `.zip` or JSON file       | `(sha256 HEX)`                                                                                     |
+| Package, verified             | `(verified NAME VERSION against REGISTRY; sha256 HEX)`                                             |
+| Package, not verified         | `(NAME VERSION not verified against a registry; re-run with --verbose for the reason; sha256 HEX)` |
+| Package, verification skipped | `(NAME VERSION, verification skipped; sha256 HEX)`                                                 |
+
+A directory has no single set of bytes to fingerprint, so it carries no hash and no verification statement. Where the package declares no name or version, `NAME VERSION` is replaced by the word `package`, giving `(package not verified against a registry; …)` and `(package verification skipped; …)`. The reason a package was not verified is in the library's warning log, which `--verbose` shows, as for every other import message.
+
 An RF2 source given to `import-snomed` must be [self-contained](/docs/libraries/terminology/local.md#rf2-sources-must-be-self-contained): rows referencing concepts the source does not itself ship are dropped, which is the ordinary shape of a derived or extension package supplied without the release it depends on. The import reports, for each file, how many of its active rows resolved, which is how a shortfall is detected. The same section gives a [recipe for combining a package with its dependency](/docs/libraries/terminology/local.md#combining-a-derived-package-with-its-dependency).
 
-Large imports run for many minutes. With `--verbose`, the command streams a running count of parsed concepts and stage-transition messages so progress is visible; without it, the startup spinner covers the wait. If an import fails partway through writing a CodeSystem, it reports that the store may hold a partial version and advises re-running; because content is keyed by system version, re-running with a corrected source repairs the store.
+Large imports run for many minutes. With `--verbose`, the command streams a running count of parsed concepts and stage-transition messages so progress is visible; without it, the startup spinner covers the wait. If an import fails partway through writing the store, it reports that the store may hold partial versions of what it was importing and advises re-running; because content is keyed by version, re-running with a corrected source repairs the store.
 
-Peak memory does not grow with the number of concepts, but the largest vocabularies still need more driver heap than the 1 GB default to hold the working set of the Spark joins that build the store. The OMOP vocabulary (around 6.6 million concepts), for example, imports comfortably with a 4 GB heap. Set the heap with the `SPARK_DRIVER_MEMORY` environment variable; in local mode the driver JVM starts before `--spark-conf` can size its heap, so that flag has no effect on driver memory.
+Peak memory does not grow with the number of concepts, but the largest vocabularies still need more driver heap than the 1 GB default to hold the working set of the Spark joins that build the store. The OMOP vocabulary (around 6.6 million concepts), for example, imports comfortably with a 4 GB heap. Set the heap with `--spark-conf spark.driver.memory=4g`, or with the same key in the [`[spark]` table](/docs/libraries/cli/configuration.md#spark-configuration) or the `SPARK_DRIVER_MEMORY` environment variable.
 
 ```
-SPARK_DRIVER_MEMORY=4g pathling import-fhir-terminology \
+pathling --spark-conf spark.driver.memory=4g import-fhir-terminology \
   /data/ohdsi.fhir.omop-0.1.0.tgz /data/tx-store
 ```
 
@@ -273,7 +294,7 @@ pathling --tx-store /data/tx-store member-of codes.csv \
   --value-set 'http://snomed.info/sct?fhir_vs=ecl/<404684003'
 ```
 
-The `[tx-store]` config table records the store once, along with optional tuning values:
+The [`[tx-store]`](/docs/libraries/cli/configuration.md#tx-store) config table records the store once, along with optional tuning values:
 
 ```
 [tx-store]
@@ -286,90 +307,4 @@ default-dialect = "en-AU"                    # optional, used by import-snomed
 en-NZ = "271000210107"
 ```
 
-The `[tx-store.dialect-aliases]` table registers additional dialect tags, mapping a language tag to the identifier of the SNOMED CT language reference set that serves it. An entry for a tag that is already recognised replaces the built-in mapping for it. A value that is not a table of strings is reported and ignored rather than being fatal, since an unrecognised tag simply expresses no preference. See [dialects](/docs/libraries/terminology/local.md#dialects).
-
 The presence of a store selects local mode. When a store is configured, the store wins over any explicitly set `--tx-server` or terminology authentication: each is ignored and a warning is printed. The built-in default server URL never triggers this warning. A runtime failure in local mode names the store path and suggests the import commands rather than a terminology server URL.
-
-## Configuration file[​](#configuration-file "Direct link to Configuration file")
-
-Defaults for the global options can be set in a TOML file at `${XDG_CONFIG_HOME:-~/.config}/pathling/config.toml`:
-
-```
-tx-server = "https://tx.example.org/fhir"
-fhir-version = "R4"
-
-[terminology-auth]
-client-id = "my-client"
-client-secret = "..."
-token-endpoint = "https://auth.example.org/token"
-
-[bulk-auth]
-client-id = "bulk-client"
-token-endpoint = "https://auth.example.org/token"
-
-[spark]
-"spark.sql.shuffle.partitions" = 16
-"spark.executor.memory" = "4g"
-
-[tx-store]
-path = "/data/tx-store"
-default-snomed-edition = "32506021000036107"
-expansion-cache-size = 200
-default-dialect = "en-AU"
-
-[tx-store.dialect-aliases]
-en-NZ = "271000210107"
-```
-
-Command-line flags always take precedence over the config file. Unknown keys produce a warning that names the key and lists the valid keys. The `[tx-store]` table selects [local terminology mode](#local-terminology-mode); its tuning keys are config-file only, while the store path can also be set with `--tx-store`, and `default-dialect` with the `import-snomed` command's `--default-dialect` flag.
-
-### Spark configuration[​](#spark-configuration "Direct link to Spark configuration")
-
-The `[spark]` table sets arbitrary [Apache Spark](https://spark.apache.org/) properties on the session that every data command builds. Use it to tune the engine - for example to raise executor memory, change the shuffle partition count, or add a cloud storage connector - or pass one or more `--spark-conf KEY=VALUE` flags for a single invocation. The flag is repeatable and overrides the `[spark]` value for the same key; when the same key is given more than once on the command line, the last occurrence wins. Because the value is split on the first `=` only, a value may itself contain `=` (for example `--spark-conf spark.driver.extraJavaOptions=-Dfoo=bar`).
-
-```
-[spark]
-"spark.sql.shuffle.partitions" = 16
-"spark.sql.adaptive.enabled" = true
-"spark.executor.memory" = "4g"
-"spark.jars.packages" = "org.apache.hadoop:hadoop-aws:3.4.1"
-"spark.hadoop.fs.s3a.secret.key" = "@/run/secrets/s3-key"
-```
-
-The resolved settings are merged with Pathling's own required Spark defaults rather than replacing them, so Pathling keeps working while your tuning takes effect. The full precedence, highest first, is:
-
-1. A `--spark-conf` flag value.
-2. The `[spark]` table value in the chosen config file.
-3. The CLI's quiet-mode logging settings (applied only when not `--verbose`, and only for keys you did not set).
-4. Pathling's managed defaults (always present for the managed keys below).
-
-**Keys and values.** Every key must begin with `spark.`; any other key is an error that names the offending key and aborts before a Spark session starts. Values may be strings, integers, floats, or booleans, and are coerced to the strings Spark expects (booleans become `true`/`false`). TOML arrays and tables are not accepted; list-valued properties use Spark's native comma-separated string. A string value may be a `@/path/to/file` secret reference, read exactly as authentication secrets are.
-
-**Managed keys.** Three keys are owned by Pathling and merged item by item so the library is never broken:
-
-* `spark.jars.packages` - your coordinates are unioned with Pathling's managed coordinates (the library runtime and Delta Lake) and deduplicated. Supplying a managed coordinate at a different version is allowed and applies your version, but prints a warning naming the coordinate, since a non-default version may not be supported.
-* `spark.sql.extensions` - your extension class names are unioned with Pathling's, and the Delta extension always remains present.
-* `spark.sql.catalog.spark_catalog` - this is locked to Pathling's Delta catalog. Setting it to that value is a no-op; setting it to anything else is an error.
-
-**Quiet-mode logging.** By default the CLI suppresses Spark and JVM logging by setting `spark.driver.extraJavaOptions`. If you set that key yourself, your value replaces the CLI's, so Spark logging is no longer suppressed. To keep both, run with `--verbose`, or include the quiet log4j2 option in the value you supply.
-
-### Project-local configuration[​](#project-local-configuration "Direct link to Project-local configuration")
-
-The CLI also looks for a file named `pathling.toml` in the current working directory. When present, it is used in place of the user-level config file - not merged with it. This lets a project carry its own settings (for example a particular terminology server) without editing your personal config or passing `--config` on every command.
-
-Exactly one config file is ever read, chosen by this precedence (highest first):
-
-1. The path given to `--config`.
-2. A `pathling.toml` in the current working directory.
-3. The user-level `config.toml`.
-4. None, in which case built-in defaults apply.
-
-Because files are never merged, any key the chosen file omits falls back to its built-in default rather than to a value from another file. Discovery is limited to the current working directory; the CLI does not search parent directories.
-
-When a `pathling.toml` is discovered and used, the CLI prints a one-line notice on standard error naming the file (and the user-level file it overrides, when one exists), so the active configuration is never a surprise:
-
-```
-Using project config /path/to/pathling.toml (overrides ~/.config/pathling/config.toml).
-```
-
-Passing an explicit `--config` skips project-local discovery, and no such notice is printed. An explicit `--config` path must exist; a missing path is an error rather than a silent fall-back to another config file.

@@ -19,6 +19,8 @@
 <url><loc>/reference/ds_write_parquet.html</loc></url>
 <url><loc>/reference/ds_write_tables.html</loc></url>
 <url><loc>/reference/index.html</loc></url>
+<url><loc>/reference/pathling_concept_map.html</loc></url>
+<url><loc>/reference/pathling_concept_map_from_json.html</loc></url>
 <url><loc>/reference/pathling_connect.html</loc></url>
 <url><loc>/reference/pathling_disconnect.html</loc></url>
 <url><loc>/reference/pathling_disconnect_all.html</loc></url>
@@ -43,6 +45,8 @@
 <url><loc>/reference/pathling_search_to_column.html</loc></url>
 <url><loc>/reference/pathling_spark.html</loc></url>
 <url><loc>/reference/pathling_spark_info.html</loc></url>
+<url><loc>/reference/pathling_value_set.html</loc></url>
+<url><loc>/reference/pathling_value_set_from_json.html</loc></url>
 <url><loc>/reference/pathling_version.html</loc></url>
 <url><loc>/reference/pathling_with_column.html</loc></url>
 <url><loc>/reference/reexports.html</loc></url>

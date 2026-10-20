@@ -407,7 +407,7 @@ Once you have read data in from a data source, you can also optionally write it 
 
 ### NDJSON[​](#ndjson-1 "Direct link to NDJSON")
 
-You can write data to a directory containing NDJSON files. The files are named according to their resource type (`[resource type].ndjson`), e.g. `Patient.ndjson`, `Condition.ndjson`.
+You can write data to a directory containing NDJSON files. Each resource type is written to one or more files, named with the resource type, a partition number and an identifier of the write (`[resource type].[partition]-[write id].ndjson`), e.g. `Patient.00000-7a60a041-0e7d-4e24-b23d-82405a665677.ndjson`. Because every write has its own identifier, an append adds files beside those of earlier writes rather than replacing them. The NDJSON source reads all of a type's files as that type.
 
 * Python
 * R
@@ -434,7 +434,7 @@ ndjson("/tmp/ndjson");
 
 ### Parquet[​](#parquet-1 "Direct link to Parquet")
 
-You can write data to a directory containing [Parquet](https://parquet.apache.org/) files. The files are named according to their resource type (`[resource type].parquet`), e.g. `Patient.parquet`, `Condition.parquet`.
+You can write data to a directory containing [Parquet](https://parquet.apache.org/) files. Each resource type is written to one or more files, named with the resource type, a partition number and an identifier of the write (`[resource type].[partition]-[write id].parquet`), e.g. `Patient.00000-7a60a041-0e7d-4e24-b23d-82405a665677.parquet`. Because every write has its own identifier, an append adds files beside those of earlier writes rather than replacing them. The Parquet source reads all of a type's files as that type, including files named `[resource type].parquet` or `[resource type].[partition].parquet`.
 
 * Python
 * R

@@ -175,15 +175,17 @@
         <span class="n">file_name_mapper</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">WriteDetails</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Writes the data to a directory of NDJSON files. The files will be named using the resource</span>
-<span class="sd">        type and the &quot;.ndjson&quot; extension.</span>
+<span class="sd">        Writes the data to a directory of NDJSON files. Each resource type is written to one or</span>
+<span class="sd">        more files named with the resource type, a partition number and an identifier of the</span>
+<span class="sd">        write, for example &quot;Patient.00000-&lt;write id&gt;.ndjson&quot;.</span>
 
 <span class="sd">        :param path: The URI of the directory to write the files to.</span>
-<span class="sd">        :param save_mode: The save mode to use when writing the data:</span>
-<span class="sd">            - &quot;overwrite&quot; will overwrite any existing data.</span>
-<span class="sd">            - &quot;append&quot; will append the new data to the existing data.</span>
-<span class="sd">            - &quot;ignore&quot; will only save the data if the file does not already exist.</span>
-<span class="sd">            - &quot;error&quot; will raise an error if the file already exists.</span>
+<span class="sd">        :param save_mode: The save mode to use when writing the data, applied to the files</span>
+<span class="sd">            each resource type already has in the directory:</span>
+<span class="sd">            - &quot;overwrite&quot; will replace any existing files of the resource type.</span>
+<span class="sd">            - &quot;append&quot; will add files beside the existing files of the resource type.</span>
+<span class="sd">            - &quot;ignore&quot; will only save the resource type if it has no files already.</span>
+<span class="sd">            - &quot;error&quot; will raise an error if any resource type already has files.</span>
 <span class="sd">        :param file_name_mapper: An optional function that can be used to customise the mapping of</span>
 <span class="sd">        the resource type to the file name.</span>
 <span class="sd">        :returns: Details about the files that were written.</span>
@@ -201,14 +203,17 @@
         <span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">save_mode</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">SaveMode</span><span class="o">.</span><span class="n">ERROR</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">WriteDetails</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Writes the data to a directory of Parquet files.</span>
+<span class="sd">        Writes the data to a directory of Parquet files. Each resource type is written to one or</span>
+<span class="sd">        more files named with the resource type, a partition number and an identifier of the</span>
+<span class="sd">        write, for example &quot;Patient.00000-&lt;write id&gt;.parquet&quot;.</span>
 
 <span class="sd">        :param path: The URI of the directory to write the files to.</span>
-<span class="sd">        :param save_mode: The save mode to use when writing the data:</span>
-<span class="sd">            - &quot;overwrite&quot; will overwrite any existing data.</span>
-<span class="sd">            - &quot;append&quot; will append the new data to the existing data.</span>
-<span class="sd">            - &quot;ignore&quot; will only save the data if the file does not already exist.</span>
-<span class="sd">            - &quot;error&quot; will raise an error if the file already exists.</span>
+<span class="sd">        :param save_mode: The save mode to use when writing the data, applied to the files</span>
+<span class="sd">            each resource type already has in the directory:</span>
+<span class="sd">            - &quot;overwrite&quot; will replace any existing files of the resource type.</span>
+<span class="sd">            - &quot;append&quot; will add files beside the existing files of the resource type.</span>
+<span class="sd">            - &quot;ignore&quot; will only save the resource type if it has no files already.</span>
+<span class="sd">            - &quot;error&quot; will raise an error if any resource type already has files.</span>
 <span class="sd">        :returns: Details about the files that were written.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_datasinks</span><span class="o">.</span><span class="n">saveMode</span><span class="p">(</span><span class="n">save_mode</span><span class="p">)</span><span class="o">.</span><span class="n">parquet</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>

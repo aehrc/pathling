@@ -149,13 +149,159 @@ During a long import, a running count of parsed concepts is logged at a fixed in
 
 Many flat CodeSystems express their hierarchy through `parent` (or `child`) concept properties rather than nested concepts. The import derives is-a edges from code-valued `parent` and `child` properties, recognised by the standard `parent`/`child` property codes or a property declaration carrying the standard [concept-properties](https://hl7.org/fhir/codesystem-concept-properties.html) URI, in addition to concept nesting. Edges from both sources are combined, so subsumption and descendant-based membership queries work over property-based hierarchies just as they do over nested ones. A `parent` or `child` reference to a code absent from the CodeSystem is skipped with a warning, and duplicate concept codes resolve to their first occurrence with a warning.
 
+### Large ConceptMaps[​](#large-conceptmaps "Direct link to Large ConceptMaps")
+
+ConceptMaps are imported with bounded memory regardless of their size, in the same way as CodeSystems: each is streamed from the source to temporary files on the driver and loaded with Spark, so the driver never holds a map's mappings in memory. Each target of each source element is stored as a row of the store's `concept_mapping` table, and a running count of parsed mappings is logged during a long import.
+
+At query time a map's mappings are read the first time `translate` uses it, and only those of the version that answers, so maps that are never used cost nothing. The mappings are then held in memory on each executor for the life of the session, in a compact form that stores each distinct code once as UTF-8 bytes and each mapping as a few integers. In measurements of maps of up to 20 million mappings, where nearly every code was distinct, this came to about 53 bytes per mapping: 267 MB for 5 million mappings and 1 GB for 20 million. Executor memory must accommodate the maps a query uses.
+
+Where the store holds several versions of a ConceptMap, `translate` uses the latest, chosen by the same version ordering as for ValueSets. The versions are never combined.
+
+Only the parts of a ConceptMap that Pathling reads are stored: the source and target systems and versions of each group, the code and display of each element, and the code, display and equivalence of each of its targets. For `translate`, a target without an equivalence is treated as `relatedto`, and an element without a code is skipped. A map is also read in full, as rows of source and target codes; content those rows cannot carry (a group without a source, an element without a code, or a target with `dependsOn` or `product`, without an equivalence, or without a code when it is not `unmatched`) does not stop the import or `translate`, but reading the map in full fails, naming the first such fault in the map, which the import records in the `fault` column of the manifest. An unrecognised equivalence fails the import, naming the map, before any of the map is written.
+
 ### Bundles and non-CodeSystem resources[​](#bundles-and-non-codesystem-resources "Direct link to Bundles and non-CodeSystem resources")
 
-ValueSets and ConceptMaps are stored whole, so a single resource must fit in memory; one larger than 1 GB fails with an actionable error naming the resource rather than an opaque memory error. Bundle-wrapped sources are also parsed in memory, so a Bundle is subject to the same in-memory limit; supply large CodeSystems as standalone resources to benefit from the streaming path.
+A Bundle is streamed entry by entry, so CodeSystems and ConceptMaps inside a Bundle are imported with the same bounded memory as standalone ones. Of each entry, only its type, canonical URL and version are held in memory, never its content. The entries are validated before anything is written: each CodeSystem, ValueSet or ConceptMap must carry a canonical URL, and an entry holding any other kind of resource is skipped.
+
+ValueSets are stored whole, so a single ValueSet must fit in memory; one larger than 1 GB, standalone or in a Bundle, fails with an actionable error naming the resource rather than an opaque memory error.
+
+### Sources of many resources[​](#sources-of-many-resources "Direct link to Sources of many resources")
+
+An import reads every resource of the source into temporary files on the driver before it writes anything to the store, then writes each table of the store once for the whole source, rather than once per resource. A package of thousands of small resources, such as `hl7.fhir.r4.core` with its 2,458 CodeSystems, ValueSets and ConceptMaps, is imported with one write per table rather than thousands.
+
+Where a source holds the same resource (the same resource type, canonical URL and version) more than once, the last occurrence is imported and the earlier ones are skipped with a warning.
+
+### Stores written by earlier versions[​](#stores-written-by-earlier-versions "Direct link to Stores written by earlier versions")
+
+Format version 2 changed how ConceptMaps are stored, from one JSON document per map to one row per mapping, which is what makes large maps possible. A store written by Pathling 9.9.0 or earlier that holds any ConceptMap fails to open, naming the maps, rather than translating as though they were absent. Re-import the FHIR terminology content into a new store to upgrade it; the SNOMED CT content of such a store needs no change, but importing it again into the new store is the simplest way to carry it over. A store written by Pathling 9.9.0 that holds no ConceptMaps opens unchanged. A store written by this version of Pathling does not open with Pathling 9.9.0, which reports the format version as too new.
 
 ### Recovering from a failed import[​](#recovering-from-a-failed-import "Direct link to Recovering from a failed import")
 
-If an import fails partway through writing a CodeSystem (for example, because the source is truncated or corrupt), it reports that the store may hold a partial version of that CodeSystem and advises re-running the import. Because content is keyed by system version, re-running with a corrected source fully replaces the partial version and repairs the store.
+A resource that cannot be read (for example, a CodeSystem that is truncated or corrupt, or a ConceptMap that carries an unrecognised equivalence) fails the import with an error naming it. Because the whole source is read before anything is written, the store is left unchanged.
+
+If an import fails while it is writing the store, it reports that the store may hold partial versions of the resources being imported and advises re-running the import. The manifest is written last, so none of them is recorded as imported. Because content is keyed by resource version, re-running with a corrected source fully replaces the partial versions and repairs the store.
+
+### Provenance and verification[​](#provenance-and-verification "Direct link to Provenance and verification")
+
+Every import records the provenance of what it loaded in the store's `manifest` table, a Delta table under the store root. There is one row per imported CodeSystem, ValueSet or ConceptMap, keyed by canonical URL and version; re-importing replaces the row, so a row always describes the most recent import of that content. Every row written by a single import carries the same provenance values.
+
+| Column                 | Type      | Null | Meaning                                                                                                                                                                                             |
+| ---------------------- | --------- | ---- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `store_format_version` | int       | no   | The store layout version the row was written under: `2`, or `1` for rows written by Pathling 9.9.0 and earlier.                                                                                     |
+| `entry_type`           | string    | no   | `code_system`, `value_set` or `concept_map`.                                                                                                                                                        |
+| `canonical_url`        | string    | no   | The canonical URL of the imported resource.                                                                                                                                                         |
+| `version`              | string    | yes  | Its version, where the resource declares one.                                                                                                                                                       |
+| `source`               | string    | yes  | The source path, as passed to the import.                                                                                                                                                           |
+| `imported_at`          | timestamp | yes  | When the import wrote the row.                                                                                                                                                                      |
+| `source_sha256`        | string    | yes  | The SHA-256 of the source file's bytes, as 64 lowercase hexadecimal characters. Null for a directory source, which has no single set of bytes, and for rows written before provenance was recorded. |
+| `package_name`         | string    | yes  | The `name` from the package's `package.json`. Null unless the source is a FHIR NPM package that declares one.                                                                                       |
+| `package_version`      | string    | yes  | The `version` from the package's `package.json`, with the same nullability as `package_name`.                                                                                                       |
+| `package_verification` | string    | yes  | `verified`, `unverified` or `skipped`. Null when the source was not a package.                                                                                                                      |
+| `package_registry`     | string    | yes  | The registry that vouched for the bytes, with any trailing slash removed. Set only when `package_verification` is `verified`.                                                                       |
+| `fault`                | string    | yes  | Why a ConceptMap cannot be read in full as rows of source and target codes, naming the first such fault in the map. Null where it can, and for code systems and value sets.                         |
+
+The store format version is unchanged by the last six columns, so a store built before they were recorded opens, answers queries and accepts new imports without migration, its existing rows reading back as null.
+
+The SHA-256 is taken from the bytes the import already reads, so it adds no further pass over an archive, and it covers the whole file: it agrees with `shasum -a 256` run on the same file. Where a publisher gives a SHA-256 out of band, for example in an NCTS syndication feed entry, `source_sha256` can be compared with it directly. This is the only fingerprint available for an RF2 release or an unpublished package, neither of which has a registry checksum.
+
+#### What is checked against the registry[​](#what-is-checked-against-the-registry "Direct link to What is checked against the registry")
+
+FHIR package registries implement the npm registry protocol: `GET {registry}/{name}` returns a listing of every published version, and a version may carry `dist.shasum`, the SHA-1 of the tarball the registry distributes. When the source of a FHIR terminology import is a package (`.tgz` or `.tar.gz`), the import reads the name and version from the package's `package.json`, fetches that listing, and compares the `dist.shasum` published for that version, case-insensitively, with the SHA-1 of the tarball in hand.
+
+The check applies to packages only. An RF2 release, a directory of JSON files and a single JSON file are not distributed through a package registry, so no registry is consulted for them, no verification warning is raised, and `package_verification` and `package_registry` are left null. That holds for a directory even when it contains a `package.json`. The check is made at import time, against the bytes being read; nothing is re-checked when the store is later opened for querying.
+
+The outcome recorded in `package_verification` is one of:
+
+* `verified`: the registry published a `shasum` for the version and it equals the tarball's SHA-1. `package_registry` names the registry consulted.
+* `unverified`: the source was a package, but no comparison could be made. The import warns with the reason and proceeds, and `package_registry` is null. The reasons are: the package has no `package.json`, or it declares no name or version, in which case no registry is contacted at all; the registry could not be reached, or did not answer within the timeout; it answered with an error status, or with something that is not a version listing; it does not list the package, or does not list the version; or it lists the version without a `shasum`. A registry that cannot answer is not evidence that the bytes are wrong, so none of these fails the import.
+* `skipped`: the source was a package and verification was turned off. No registry is contacted, and the package name and version are still recorded.
+* null: the source was not a package.
+
+A published checksum that differs is the only outcome that fails the import. The failure comes before any table or manifest row is written, so a store that did not exist beforehand is not created, and an existing store is left as it was. The message names the package, the version, the registry, the expected SHA-1 and the SHA-1 of the source in hand, and how to import the package anyway:
+
+```
+The package hl7.terminology.r4 6.5.0 does not match the registry checksum published by https://packages.fhir.org: expected SHA-1 8a7a096866b9b6e96e288ce8d72bf99aa31714a3 but the source has SHA-1 3b1f0f16d6f0e14a29b0a4ba3a0b0e9d7c5a1f42. The source may be corrupt or tampered with; import it anyway by turning off the verifyPackage option.
+```
+
+The library logs the outcome: a verified package at `INFO`, naming the package, its version, the registry and the SHA-1; an unverified one at `WARN`, naming the reason. Both appear wherever logging for `au.csiro.pathling` is enabled at that level. The CLI runs the library at `WARN`, so `--verbose` shows the reason for an unverified package; the verified outcome is reported on the completion line instead.
+
+#### Importing offline, and choosing a registry[​](#importing-offline-and-choosing-a-registry "Direct link to Importing offline, and choosing a registry")
+
+Verification is on by default and can be turned off for a single import, which is how a package is imported with no network access, or a package that was never published to a registry. The registry can also be pointed elsewhere, for instance at Simplifier for a package that `packages.fhir.org` does not mirror. The default registry is `https://packages.fhir.org`, and a trailing slash on a supplied URL makes no difference. Both settings are accepted for a source that is not a package, where they have no effect.
+
+* Python
+* R
+* CLI
+
+```
+pc.import_fhir_terminology(
+    "/data/my-own-package.tgz", "/data/tx-store", verify_package=False
+)
+pc.import_fhir_terminology(
+    "/data/hl7.terminology.r4-6.5.0.tgz",
+    "/data/tx-store",
+    package_registry="https://packages.simplifier.net",
+)
+```
+
+```
+pathling_import_fhir_terminology(
+  pc, "/data/my-own-package.tgz", "/data/tx-store",
+  verify_package = FALSE
+)
+pathling_import_fhir_terminology(
+  pc, "/data/hl7.terminology.tgz", "/data/tx-store",
+  package_registry = "https://packages.simplifier.net"
+)
+```
+
+```
+pathling import-fhir-terminology --no-verify \
+  /data/my-own-package.tgz /data/tx-store
+pathling import-fhir-terminology \
+  --package-registry https://packages.simplifier.net \
+  /data/hl7.terminology.tgz /data/tx-store
+```
+
+A registry used routinely can be recorded once as the top-level `package-registry` config key, and the outcome of the check is reported on the completion line of each import. See the [command line interface documentation](/docs/libraries/cli.md#terminology-import-commands).
+
+In Java, both are set on `FhirImportOptions`, passed to `PathlingContext.importFhirTerminology`.
+
+#### Comparing two stores[​](#comparing-two-stores "Direct link to Comparing two stores")
+
+Two environments that imported the same content can be compared by reading both manifests and taking the rows that appear in one and not in the other. An empty result means the two imported byte-identical sources.
+
+* Python
+* R
+
+```
+from pyspark.sql import SparkSession
+
+spark = SparkSession.builder.getOrCreate()
+columns = [
+    "canonical_url",
+    "version",
+    "source_sha256",
+    "package_verification",
+    "package_registry",
+]
+a = spark.read.format("delta").load("/env-a/tx-store/manifest").select(columns)
+b = spark.read.format("delta").load("/env-b/tx-store/manifest").select(columns)
+a.exceptAll(b).union(b.exceptAll(a)).show(truncate=False)
+```
+
+```
+library(dplyr)
+
+sc <- pathling_spark(pc)
+a <- spark_read_delta(sc, name = "manifest_a", path = "/env-a/tx-store/manifest") %>%
+        select(canonical_url, version, source_sha256, package_verification,
+               package_registry)
+b <- spark_read_delta(sc, name = "manifest_b", path = "/env-b/tx-store/manifest") %>%
+        select(canonical_url, version, source_sha256, package_verification,
+               package_registry)
+union_all(setdiff(a, b), setdiff(b, a)) %>% collect()
+```
 
 ## Querying in local mode[​](#querying-in-local-mode "Direct link to Querying in local mode")
 
@@ -243,7 +389,7 @@ The `accept_language` context parameter, and the parameter of the same name on `
 
 ```
 pc = PathlingContext.create(
-    spark,
+    spark_conf={"spark.driver.memory": "8g"},
     terminology_mode="local",
     terminology_storage_path="/data/tx-store",
 )
@@ -306,7 +452,7 @@ A deployment can register its own dialect tags, which is how a reference set def
 
 ```
 pc = PathlingContext.create(
-    spark,
+    spark_conf={"spark.driver.memory": "8g"},
     terminology_mode="local",
     terminology_storage_path="/data/tx-store",
     dialect_aliases={"en-NZ": "271000210107"},
@@ -339,24 +485,51 @@ A FHIR CodeSystem carries plain BCP-47 designation languages with no reference s
 
 ## Value set and concept map expressions[​](#value-set-and-concept-map-expressions "Direct link to Value set and concept map expressions")
 
-Local `member_of` resolves three kinds of value set reference, and local `translate` two kinds of concept map reference. A reference that resolves to content the store does not hold yields the same "unknown content" results as remote mode rather than an error.
+Local `member_of` resolves three kinds of value set reference, and local `translate` two kinds of concept map reference. A reference that resolves to content the store does not hold yields the same "unknown content" results as remote mode rather than an error: a null membership from `member_of`, and no translations from `translate`.
 
-| Reference                             | Form                                               |
-| ------------------------------------- | -------------------------------------------------- |
-| An imported FHIR ValueSet             | its canonical URL, optionally with `\|version`     |
-| Every SNOMED CT concept               | `http://snomed.info/sct?fhir_vs`                   |
-| A SNOMED CT reference set             | `http://snomed.info/sct?fhir_vs=refset/[refsetId]` |
-| A SNOMED CT subtype hierarchy         | `http://snomed.info/sct?fhir_vs=isa/[conceptId]`   |
-| A SNOMED CT ECL expression            | `http://snomed.info/sct?fhir_vs=ecl/[expression]`  |
-| A VCL expression                      | `http://fhir.org/VCL?v1=[expression]`              |
-| An imported FHIR ConceptMap           | its canonical URL                                  |
-| A SNOMED CT association reference set | `http://snomed.info/sct?fhir_cm=[refsetId]`        |
+A value set is evaluated over a single code system version, so a code without a system, such as a string passed to `member_of` or to the FHIRPath `memberOf` function, takes the system of that code system.
+
+| Reference                        | Form                                               |
+| -------------------------------- | -------------------------------------------------- |
+| An imported FHIR ValueSet        | its canonical URL, optionally with `\|version`     |
+| Every SNOMED CT concept          | `http://snomed.info/sct?fhir_vs`                   |
+| A SNOMED CT reference set        | `http://snomed.info/sct?fhir_vs=refset/[refsetId]` |
+| A SNOMED CT subtype hierarchy    | `http://snomed.info/sct?fhir_vs=isa/[conceptId]`   |
+| A SNOMED CT ECL expression       | `http://snomed.info/sct?fhir_vs=ecl/[expression]`  |
+| A VCL expression                 | `http://fhir.org/VCL?v1=[expression]`              |
+| An imported FHIR ConceptMap      | its canonical URL                                  |
+| A SNOMED CT implicit concept map | `http://snomed.info/sct?fhir_cm=[refsetId]`        |
 
 The `isa/` form is the subtype hierarchy including the named concept itself, so it is equivalent to `ecl/<<[conceptId]`. Every SNOMED form is also accepted on an edition and version qualified URI, for example `http://snomed.info/sct/32506021000036107/version/20250630?fhir_vs=ecl/...`, which evaluates against that version rather than the store default. Any other `fhir_vs` value is treated as unknown content.
+
+A SNOMED CT implicit concept map is either one of the four association reference sets or a simple map reference set, which are the two kinds [THO defines as implicit concept maps](https://terminology.hl7.org/en/SNOMEDCT.html#snomed-ct-implicit-concept-maps). Each translation through an association reference set carries the equivalence defined for that reference set, in either direction:
+
+| Reference set          | Identifier           | Equivalence  |
+| ---------------------- | -------------------- | ------------ |
+| POSSIBLY EQUIVALENT TO | `900000000000523009` | `inexact`    |
+| REPLACED BY            | `900000000000526001` | `equivalent` |
+| SAME AS                | `900000000000527005` | `equal`      |
+| ALTERNATIVE            | `900000000000530003` | `inexact`    |
+
+A simple map reference set is any reference set that descends from `900000000000496009 |Simple map type reference set|` in the release, or one of the three simple maps in the table below, which Ontoserver also supports. It maps SNOMED CT concepts to codes in another code system. RF2 does not say which code system a map's targets belong to, so the target system is taken from the same table Ontoserver uses, along with the equivalence it reports, in either direction:
+
+| Simple map | Identifier           | Target system                                                  | Equivalence  |
+| ---------- | -------------------- | -------------------------------------------------------------- | ------------ |
+| ICD-O      | `446608001`          | `http://hl7.org/fhir/sid/icd-o-3`                              | `inexact`    |
+| CTV3       | `900000000000497000` | `http://read.info/ctv3`                                        | `equivalent` |
+| ARTG       | `11000168105`        | `https://www.tga.gov.au/australian-register-therapeutic-goods` | `inexact`    |
+
+CTV3 is accepted even though current releases no longer place it under the simple map type. A translation through any other simple map is `inexact`, and its target is returned as a code with no system. In the reverse direction, the coding being translated must be in the map's target system where the table names one, and is matched on its code alone where it does not. The extended and complex maps, such as the ICD-10 map, are not simple maps and are not translated.
+
+A concept with more than one target, such as an ambiguous concept that is possibly equivalent to several others, translates to all of them. Any other `fhir_cm` reference set, including other association reference sets such as WAS A, is treated as unknown content.
+
+A store imported by Pathling 9.9 holds no simple map targets, so translation through a simple map finds nothing until the release is imported again.
 
 The expression carried by an `ecl/` or `v1=` URL is percent-decoded before it is parsed, so it must be percent-encoded when the URL is built. For ECL, `to_ecl_value_set` does this (`tx_to_ecl_value_set` in R, `toEclValueSet` in Java and Scala); there is no equivalent helper for VCL, so encode it yourself.
 
 Both expression languages are evaluated by the same engine: an ECL expression is translated into the VCL model, and the result is evaluated against the store's indexes. Members are restricted to active concepts, matching the behaviour of a terminology server on an implicit value set, unless the expression explicitly asks for inactive concepts with an `inactive = true` filter.
+
+An imported FHIR ValueSet's compose is translated into the same model, so its filters behave as the matching VCL filters below. The `in` and `not-in` operators take a comma-separated list of codes, which selects (or, for `not-in`, excludes) the listed concepts. Over SNOMED CT, a single code is instead read as a reference set: `concept in X` selects the members of reference set X rather than the concept X, as the [SNOMED CT filters](https://hl7.org/fhir/R4/snomedct.html#filters) in FHIR define it, and `not-in` selects every active concept outside those members. For example, `concept in 929360061000036106` selects the members of that reference set, while `concept in 73211009,46635009` selects those two concepts.
 
 ### SNOMED CT Expression Constraint Language[​](#snomed-ct-expression-constraint-language "Direct link to SNOMED CT Expression Constraint Language")
 
@@ -423,14 +596,14 @@ An expression must name its code system with a `(systemUri)` scope, because a va
 | Generalises            | `concept >> X`                            | ancestors of the concept, and itself                       |
 | Descendant leaves      | `concept !!< X`                           | descendants that have no children                          |
 | Regular expression     | `code / "A.*"`                            | a property value fully matching the pattern                |
-| In, not in a code list | `concept ^ {A,B}`, `concept ~^ {A,B}`     | membership in an enumerated list                           |
+| In, not in a code list | `concept ^ {A,B}`, `concept ~^ {A,B}`     | membership in an enumerated list (SNOMED CT: see below)    |
 | In a filter list       | `363698007 ^ {concept << X}`              | membership in a nested constraint                          |
 | Exists                 | `ingredient ? true`                       | whether the property is present                            |
 | Navigation             | `X.parent`, `{A,B}.parent`, `*.116676008` | the values a property takes                                |
 
 The properties a filter may name are:
 
-* `concept`, which applies the hierarchy operators to the subsumption graph. For a code system that is not SNOMED CT that graph comes from the CodeSystem's nesting and its `parent` and `child` properties, as described under [hierarchies from parent and child properties](#hierarchies-from-parent-and-child-properties).
+* `concept`, which applies the hierarchy operators to the subsumption graph. For a code system that is not SNOMED CT that graph comes from the CodeSystem's nesting and its `parent` and `child` properties, as described under [hierarchies from parent and child properties](#hierarchies-from-parent-and-child-properties). Over SNOMED CT, `concept ^ {A,B}` names reference sets: it selects the members of reference set A or B, as `^ A OR ^ B` does in ECL, and `~^` selects every active concept outside them.
 * `parent` and `child`, which take one edge rather than the closure, so `parent = X` selects the children of X and `child = X` selects its parents.
 * `inactive`, `moduleId`, `sufficientlyDefined` and `effectiveTime`, which are the SNOMED CT concept metadata held in the store.
 * Any property declared by an imported FHIR CodeSystem, over which `=`, `/`, `^`, `~^` and `?` behave as described above and any other operator falls back to an exact match.

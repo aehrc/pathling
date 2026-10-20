@@ -142,4 +142,6 @@ The result of this query would look something like this:
 | 3           | 442 Bruen Arcade           | home | Nantucket  | NULL  |
 | 4           | 858 Miller Junction Apt 61 | work | Brockton   | 02301 |
 
+To join the rows of one view to the rows of another, use the `getResourceKey()` and `getReferenceKey()` functions. See [SQL on FHIR functions](/docs/fhirpath/sql-on-fhir-functions.md) for the keys that they produce and the references that they support.
+
 For a more comprehensive example demonstrating SQL on FHIR queries with multiple views, complex transformations and joins, see the [SQL on FHIR example](/docs/libraries/examples/prostate-cancer.md).

@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>pathling.cli.import_terminology &mdash; pathling  documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+        <script src="../../../_static/sphinx_highlight.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            pathling
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../pathling.html">pathling package</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">pathling</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">pathling.cli.import_terminology</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for pathling.cli.import_terminology</h1><div class="highlight"><pre>
+<span></span><span class="c1">#</span>
+<span class="c1"># Copyright © 2018-2026 Commonwealth Scientific and Industrial Research</span>
+<span class="c1"># Organisation (CSIRO) ABN 41 687 119 230.</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+<span class="c1">#</span>
+
+<span class="sd">&quot;&quot;&quot;The Pathling terminology import commands.</span>
+
+<span class="sd">Each command creates a session, imports terminology content into a local store</span>
+<span class="sd">through the library API, and reports progress and a completion summary. Import</span>
+<span class="sd">runs as Spark jobs; per-stage progress is logged by the library and, in verbose</span>
+<span class="sd">mode, streamed to stderr.</span>
+
+<span class="sd">Author: John Grimes.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">dataclasses</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Optional</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">click</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rich.console</span><span class="w"> </span><span class="kn">import</span> <span class="n">Console</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathling.cli</span><span class="w"> </span><span class="kn">import</span> <span class="n">session</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathling.cli.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">CliConfig</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathling.cli.errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">EXIT_USAGE</span><span class="p">,</span> <span class="n">CliError</span><span class="p">,</span> <span class="n">unwrap_java_exception</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathling.cli.render</span><span class="w"> </span><span class="kn">import</span> <span class="n">progress_status</span>
+
+<span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">pyspark.sql</span><span class="w"> </span><span class="kn">import</span> <span class="n">Row</span><span class="p">,</span> <span class="n">SparkSession</span>
+
+    <span class="kn">from</span><span class="w"> </span><span class="nn">pathling</span><span class="w"> </span><span class="kn">import</span> <span class="n">PathlingContext</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">pathling.cli.main</span><span class="w"> </span><span class="kn">import</span> <span class="n">CliContext</span>
+
+<span class="c1"># The name of the manifest table within a terminology store.</span>
+<span class="n">MANIFEST_TABLE</span> <span class="o">=</span> <span class="s2">&quot;manifest&quot;</span>
+
+<span class="c1"># The fixed phrase the library uses when a package does not match the checksum</span>
+<span class="c1"># its registry publishes. The library must not name a CLI flag, so the hint</span>
+<span class="c1"># naming --no-verify is added here, keyed off this phrase.</span>
+<span class="n">MISMATCH_PHRASE</span> <span class="o">=</span> <span class="s2">&quot;does not match the registry checksum&quot;</span>
+
+<span class="c1"># The hint appended to a checksum mismatch failure.</span>
+<span class="n">MISMATCH_HINT</span> <span class="o">=</span> <span class="s2">&quot;Re-run with --no-verify to import it anyway.&quot;</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_import_context</span><span class="p">(</span><span class="n">config</span><span class="p">:</span> <span class="n">CliConfig</span><span class="p">,</span> <span class="n">console</span><span class="p">:</span> <span class="n">Console</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PathlingContext</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Creates a context for importing into a store.</span>
+
+<span class="sd">    The import commands populate a store rather than query terminology, so the</span>
+<span class="sd">    context must not enter local mode: doing so would eagerly validate the</span>
+<span class="sd">    target store and reject a not-yet-created one, breaking the first import</span>
+<span class="sd">    into a configured store (FR-010). Clearing ``tx_store`` restores the plain</span>
+<span class="sd">    context used before local mode existed; the resolved import target is passed</span>
+<span class="sd">    to the import methods directly.</span>
+
+<span class="sd">    :param config: the resolved CLI configuration.</span>
+<span class="sd">    :param console: the stderr console for the status spinner.</span>
+<span class="sd">    :return: a configured :class:`PathlingContext` not bound to any store.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">session</span><span class="o">.</span><span class="n">create_context</span><span class="p">(</span><span class="n">dataclasses</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">tx_store</span><span class="o">=</span><span class="kc">None</span><span class="p">),</span> <span class="n">console</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_resolve_storage_path</span><span class="p">(</span><span class="n">config</span><span class="p">:</span> <span class="n">CliConfig</span><span class="p">,</span> <span class="n">storage_path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Resolves the target store path, falling back to the configured store.</span>
+
+<span class="sd">    The explicit ``STORAGE_PATH`` positional wins; otherwise the configured</span>
+<span class="sd">    ``tx-store.path`` is used. When neither is available the command is a usage</span>
+<span class="sd">    error naming both mechanisms (FR-010).</span>
+
+<span class="sd">    :param config: the resolved CLI configuration.</span>
+<span class="sd">    :param storage_path: the ``STORAGE_PATH`` positional, or None when omitted.</span>
+<span class="sd">    :return: the resolved store path.</span>
+<span class="sd">    :raises CliError: with EXIT_USAGE when no path is available from either</span>
+<span class="sd">            source.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">storage_path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">storage_path</span>
+    <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">tx_store</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">config</span><span class="o">.</span><span class="n">tx_store</span><span class="o">.</span><span class="n">path</span>
+    <span class="k">raise</span> <span class="n">CliError</span><span class="p">(</span>
+        <span class="s2">&quot;No storage path given. Provide the STORAGE_PATH argument, or configure &quot;</span>
+        <span class="s2">&quot;&#39;tx-store.path&#39; (or the --tx-store flag).&quot;</span><span class="p">,</span>
+        <span class="n">exit_code</span><span class="o">=</span><span class="n">EXIT_USAGE</span><span class="p">,</span>
+    <span class="p">)</span>
+
+
+<div class="viewcode-block" id="read_latest_import_row"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.import_terminology.read_latest_import_row">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">read_latest_import_row</span><span class="p">(</span>
+    <span class="n">spark</span><span class="p">:</span> <span class="n">SparkSession</span><span class="p">,</span> <span class="n">store</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">source</span><span class="p">:</span> <span class="nb">str</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Row</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Reads the most recent manifest row recorded for a source.</span>
+
+<span class="sd">    The store manifest carries the provenance of each import: the source hash,</span>
+<span class="sd">    the package identity, and the outcome of the registry check. The latest row</span>
+<span class="sd">    for this source describes the import that has just completed.</span>
+
+<span class="sd">    A failure to read the manifest yields None rather than an error: the import</span>
+<span class="sd">    has already committed, and reporting less detail is better than failing a</span>
+<span class="sd">    command whose work succeeded.</span>
+
+<span class="sd">    :param spark: the Spark session to read with.</span>
+<span class="sd">    :param store: the terminology store path.</span>
+<span class="sd">    :param source: the import source, matched against the manifest ``source``</span>
+<span class="sd">           column.</span>
+<span class="sd">    :return: the latest manifest row for the source, or None when there is none</span>
+<span class="sd">             or the manifest cannot be read.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">pyspark.sql</span><span class="w"> </span><span class="kn">import</span> <span class="n">functions</span> <span class="k">as</span> <span class="n">F</span>
+
+    <span class="n">manifest_path</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">store</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">MANIFEST_TABLE</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">rows</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">spark</span><span class="o">.</span><span class="n">read</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s2">&quot;delta&quot;</span><span class="p">)</span>
+            <span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">manifest_path</span><span class="p">)</span>
+            <span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">F</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="s2">&quot;source&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="n">source</span><span class="p">)</span>
+            <span class="o">.</span><span class="n">orderBy</span><span class="p">(</span><span class="n">F</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="s2">&quot;imported_at&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">desc</span><span class="p">())</span>
+            <span class="o">.</span><span class="n">take</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># noqa: BLE001 - detail only; the import already committed.</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">return</span> <span class="n">rows</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">rows</span> <span class="k">else</span> <span class="kc">None</span></div>
+
+
+<div class="viewcode-block" id="format_import_summary"><a class="viewcode-back" href="../../../pathling.cli.html#pathling.cli.import_terminology.format_import_summary">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">format_import_summary</span><span class="p">(</span>
+    <span class="n">command_noun</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">source</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">store</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">row</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Row</span><span class="p">]</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Renders the completion line for a finished import.</span>
+
+<span class="sd">    The line always names what was imported, from where, and into where. Where</span>
+<span class="sd">    the manifest records provenance it is reported in parentheses: the source</span>
+<span class="sd">    hash, and for a package the identity and the outcome of the registry check.</span>
+
+<span class="sd">    :param command_noun: what was imported, such as ``&quot;SNOMED CT&quot;``.</span>
+<span class="sd">    :param source: the import source as given on the command line.</span>
+<span class="sd">    :param store: the resolved store path.</span>
+<span class="sd">    :param row: the manifest row describing the import, or None when it could</span>
+<span class="sd">           not be read.</span>
+<span class="sd">    :return: the completion line.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">summary</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Imported </span><span class="si">{</span><span class="n">command_noun</span><span class="si">}</span><span class="s2"> from </span><span class="si">{</span><span class="n">source</span><span class="si">}</span><span class="s2"> into </span><span class="si">{</span><span class="n">store</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="k">if</span> <span class="n">row</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">summary</span>
+    <span class="n">values</span> <span class="o">=</span> <span class="n">row</span><span class="o">.</span><span class="n">asDict</span><span class="p">()</span> <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="s2">&quot;asDict&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="nb">dict</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
+    <span class="n">sha256</span> <span class="o">=</span> <span class="n">values</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;source_sha256&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">sha256</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># A directory source has no single set of bytes to fingerprint.</span>
+        <span class="k">return</span> <span class="n">summary</span>
+    <span class="n">status</span> <span class="o">=</span> <span class="n">values</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;package_verification&quot;</span><span class="p">)</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">values</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;package_name&quot;</span><span class="p">)</span>
+    <span class="n">version</span> <span class="o">=</span> <span class="n">values</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;package_version&quot;</span><span class="p">)</span>
+    <span class="n">identity</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">version</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">if</span> <span class="n">name</span> <span class="ow">and</span> <span class="n">version</span> <span class="k">else</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">status</span> <span class="o">==</span> <span class="s2">&quot;verified&quot;</span><span class="p">:</span>
+        <span class="n">registry</span> <span class="o">=</span> <span class="n">values</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;package_registry&quot;</span><span class="p">)</span>
+        <span class="n">detail</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;verified </span><span class="si">{</span><span class="n">identity</span><span class="si">}</span><span class="s2"> against </span><span class="si">{</span><span class="n">registry</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="k">elif</span> <span class="n">status</span> <span class="o">==</span> <span class="s2">&quot;unverified&quot;</span><span class="p">:</span>
+        <span class="n">subject</span> <span class="o">=</span> <span class="n">identity</span> <span class="k">if</span> <span class="n">identity</span> <span class="k">else</span> <span class="s2">&quot;package&quot;</span>
+        <span class="n">detail</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">subject</span><span class="si">}</span><span class="s2"> not verified against a registry; re-run with --verbose &quot;</span>
+            <span class="s2">&quot;for the reason&quot;</span>
+        <span class="p">)</span>
+    <span class="k">elif</span> <span class="n">status</span> <span class="o">==</span> <span class="s2">&quot;skipped&quot;</span><span class="p">:</span>
+        <span class="n">detail</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">identity</span><span class="si">}</span><span class="s2">, verification skipped&quot;</span>
+            <span class="k">if</span> <span class="n">identity</span>
+            <span class="k">else</span> <span class="s2">&quot;package verification skipped&quot;</span>
+        <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># Not a package: the hash alone is the provenance.</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">summary</span><span class="si">}</span><span class="s2"> (sha256 </span><span class="si">{</span><span class="n">sha256</span><span class="si">}</span><span class="s2">)&quot;</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">summary</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">detail</span><span class="si">}</span><span class="s2">; sha256 </span><span class="si">{</span><span class="n">sha256</span><span class="si">}</span><span class="s2">)&quot;</span></div>
+
+
+<span class="nd">@click</span><span class="o">.</span><span class="n">command</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;import-snomed&quot;</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">argument</span><span class="p">(</span><span class="s2">&quot;source&quot;</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">argument</span><span class="p">(</span><span class="s2">&quot;storage_path&quot;</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span>
+    <span class="s2">&quot;--edition-uri&quot;</span><span class="p">,</span> <span class="s2">&quot;edition_uri&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Override the SNOMED edition/version URI.&quot;</span>
+<span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span>
+    <span class="s2">&quot;--dense-id-order&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;dense_id_order&quot;</span><span class="p">,</span>
+    <span class="nb">type</span><span class="o">=</span><span class="n">click</span><span class="o">.</span><span class="n">Choice</span><span class="p">([</span><span class="s2">&quot;code-order&quot;</span><span class="p">,</span> <span class="s2">&quot;pre-order&quot;</span><span class="p">]),</span>
+    <span class="n">default</span><span class="o">=</span><span class="s2">&quot;code-order&quot;</span><span class="p">,</span>
+    <span class="n">show_default</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">help</span><span class="o">=</span><span class="p">(</span>
+        <span class="s2">&quot;How internal concept identifiers are assigned. &#39;pre-order&#39; makes the &quot;</span>
+        <span class="s2">&quot;hierarchy index materially smaller, in exchange for identifiers that &quot;</span>
+        <span class="s2">&quot;shift more between releases.&quot;</span>
+    <span class="p">),</span>
+<span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span>
+    <span class="s2">&quot;--default-dialect&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;default_dialect&quot;</span><span class="p">,</span>
+    <span class="n">help</span><span class="o">=</span><span class="p">(</span>
+        <span class="s2">&quot;The dialect whose preferred synonyms become the stored display: a tag &quot;</span>
+        <span class="s2">&quot;such as &#39;en-GB&#39;, or a language reference set identifier. Falls back to &quot;</span>
+        <span class="s2">&quot;the &#39;tx-store.default-dialect&#39; config key; chosen from the release &quot;</span>
+        <span class="s2">&quot;when neither is set.&quot;</span>
+    <span class="p">),</span>
+<span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">pass_obj</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">import_snomed</span><span class="p">(</span>
+    <span class="n">obj</span><span class="p">:</span> <span class="n">CliContext</span><span class="p">,</span>
+    <span class="n">source</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">storage_path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+    <span class="n">edition_uri</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+    <span class="n">dense_id_order</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">default_dialect</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Import a SNOMED CT RF2 snapshot release into a local terminology store.</span>
+
+<span class="sd">    STORAGE_PATH may be omitted when &#39;tx-store.path&#39; (or --tx-store) is set.</span>
+
+<span class="sd">    Example:</span>
+
+<span class="sd">        pathling import-snomed /data/rf2.zip /data/tx-store</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">obj</span><span class="o">.</span><span class="n">config</span>
+    <span class="n">console</span> <span class="o">=</span> <span class="n">obj</span><span class="o">.</span><span class="n">console</span>
+    <span class="n">resolved_path</span> <span class="o">=</span> <span class="n">_resolve_storage_path</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">storage_path</span><span class="p">)</span>
+    <span class="n">resolved_dialect</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">default_dialect</span>
+        <span class="k">if</span> <span class="n">default_dialect</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+        <span class="k">else</span> <span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">tx_store</span><span class="o">.</span><span class="n">default_dialect</span> <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">tx_store</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="p">)</span>
+    <span class="n">pc</span> <span class="o">=</span> <span class="n">_import_context</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">console</span><span class="p">)</span>
+    <span class="k">with</span> <span class="n">progress_status</span><span class="p">(</span><span class="n">console</span><span class="p">,</span> <span class="s2">&quot;Importing SNOMED CT...&quot;</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">verbose</span><span class="p">):</span>
+        <span class="n">pc</span><span class="o">.</span><span class="n">import_snomed</span><span class="p">(</span>
+            <span class="n">source</span><span class="p">,</span> <span class="n">resolved_path</span><span class="p">,</span> <span class="n">edition_uri</span><span class="p">,</span> <span class="n">dense_id_order</span><span class="p">,</span> <span class="n">resolved_dialect</span>
+        <span class="p">)</span>
+    <span class="n">row</span> <span class="o">=</span> <span class="n">read_latest_import_row</span><span class="p">(</span><span class="n">pc</span><span class="o">.</span><span class="n">spark</span><span class="p">,</span> <span class="n">resolved_path</span><span class="p">,</span> <span class="n">source</span><span class="p">)</span>
+    <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="n">format_import_summary</span><span class="p">(</span><span class="s2">&quot;SNOMED CT&quot;</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span> <span class="n">resolved_path</span><span class="p">,</span> <span class="n">row</span><span class="p">))</span>
+
+
+<span class="nd">@click</span><span class="o">.</span><span class="n">command</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;import-fhir-terminology&quot;</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">argument</span><span class="p">(</span><span class="s2">&quot;source&quot;</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">argument</span><span class="p">(</span><span class="s2">&quot;storage_path&quot;</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span>
+    <span class="s2">&quot;--no-verify&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;no_verify&quot;</span><span class="p">,</span>
+    <span class="n">is_flag</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">help</span><span class="o">=</span><span class="p">(</span>
+        <span class="s2">&quot;Do not check a FHIR NPM package against its registry&#39;s published &quot;</span>
+        <span class="s2">&quot;checksum. Use for offline imports or packages not published to a &quot;</span>
+        <span class="s2">&quot;registry.&quot;</span>
+    <span class="p">),</span>
+<span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span>
+    <span class="s2">&quot;--package-registry&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;package_registry&quot;</span><span class="p">,</span>
+    <span class="n">metavar</span><span class="o">=</span><span class="s2">&quot;URL&quot;</span><span class="p">,</span>
+    <span class="n">help</span><span class="o">=</span><span class="p">(</span>
+        <span class="s2">&quot;The FHIR package registry to check a package against. Falls back to &quot;</span>
+        <span class="s2">&quot;the &#39;package-registry&#39; config key, then https://packages.fhir.org.&quot;</span>
+    <span class="p">),</span>
+<span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">pass_obj</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">import_fhir_terminology</span><span class="p">(</span>
+    <span class="n">obj</span><span class="p">:</span> <span class="n">CliContext</span><span class="p">,</span>
+    <span class="n">source</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">storage_path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+    <span class="n">no_verify</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+    <span class="n">package_registry</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Import FHIR CodeSystem, ValueSet, and ConceptMap resources into a store.</span>
+
+<span class="sd">    The source may be a JSON file, a directory of JSON files, or a FHIR NPM</span>
+<span class="sd">    package (.tgz). A package is checked against the checksum its registry</span>
+<span class="sd">    publishes; a package that does not match fails the import and leaves the</span>
+<span class="sd">    store unchanged. STORAGE_PATH may be omitted when &#39;tx-store.path&#39; (or</span>
+<span class="sd">    --tx-store) is set.</span>
+
+<span class="sd">    Example:</span>
+
+<span class="sd">        pathling import-fhir-terminology /data/hl7.terminology.tgz /data/tx-store</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">obj</span><span class="o">.</span><span class="n">config</span>
+    <span class="n">console</span> <span class="o">=</span> <span class="n">obj</span><span class="o">.</span><span class="n">console</span>
+    <span class="n">resolved_path</span> <span class="o">=</span> <span class="n">_resolve_storage_path</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">storage_path</span><span class="p">)</span>
+    <span class="c1"># The flag wins over the config key; with neither set no registry is named</span>
+    <span class="c1"># and the library default applies, so the CLI never holds that URL.</span>
+    <span class="n">resolved_registry</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">package_registry</span> <span class="k">if</span> <span class="n">package_registry</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">config</span><span class="o">.</span><span class="n">package_registry</span>
+    <span class="p">)</span>
+    <span class="n">pc</span> <span class="o">=</span> <span class="n">_import_context</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">console</span><span class="p">)</span>
+    <span class="k">with</span> <span class="n">progress_status</span><span class="p">(</span><span class="n">console</span><span class="p">,</span> <span class="s2">&quot;Importing FHIR terminology...&quot;</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">verbose</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">pc</span><span class="o">.</span><span class="n">import_fhir_terminology</span><span class="p">(</span>
+                <span class="n">source</span><span class="p">,</span>
+                <span class="n">resolved_path</span><span class="p">,</span>
+                <span class="n">verify_package</span><span class="o">=</span><span class="ow">not</span> <span class="n">no_verify</span><span class="p">,</span>
+                <span class="n">package_registry</span><span class="o">=</span><span class="n">resolved_registry</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>  <span class="c1"># noqa: BLE001 - enrich a mismatch failure.</span>
+            <span class="n">root_message</span> <span class="o">=</span> <span class="n">unwrap_java_exception</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">MISMATCH_PHRASE</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">root_message</span><span class="p">:</span>
+                <span class="k">raise</span>
+            <span class="k">raise</span> <span class="n">CliError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">root_message</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">MISMATCH_HINT</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
+    <span class="n">row</span> <span class="o">=</span> <span class="n">read_latest_import_row</span><span class="p">(</span><span class="n">pc</span><span class="o">.</span><span class="n">spark</span><span class="p">,</span> <span class="n">resolved_path</span><span class="p">,</span> <span class="n">source</span><span class="p">)</span>
+    <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="n">format_import_summary</span><span class="p">(</span><span class="s2">&quot;FHIR terminology&quot;</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span> <span class="n">resolved_path</span><span class="p">,</span> <span class="n">row</span><span class="p">))</span>
+
+
+<span class="c1">#: The terminology import commands registered by the root command group.</span>
+<span class="n">IMPORT_COMMANDS</span> <span class="o">=</span> <span class="p">(</span><span class="n">import_snomed</span><span class="p">,</span> <span class="n">import_fhir_terminology</span><span class="p">)</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2018-2022 CSIRO, dedicated to the public domain via CC0 1.0.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

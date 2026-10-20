@@ -4,6 +4,8 @@ The library also provides a set of functions for querying a FHIR terminology ser
 
 By default the functions are evaluated by a remote FHIR terminology server. See [terminology server support](/docs/libraries/terminology/server.md) for how to configure the server, including caching and authentication. The same functions can also be evaluated against a [local terminology store](/docs/libraries/terminology/local.md) with no network dependency.
 
+A value set or concept map can also be returned as a table and joined to in Spark SQL; see [terminology in SQL](/docs/libraries/terminology/sql.md).
+
 <!-- -->
 
 ### Value set membership[​](#value-set-membership "Direct link to Value set membership")
@@ -130,6 +132,10 @@ Results in:
 | 444814009 | Viral sinusitis           | true             |
 | 444814009 | Viral sinusitis           | true             |
 | 43878008  | Streptococcal sore throat | false            |
+
+The input column may hold a single Coding, an array of Codings that together represent one concept (as in a CodeableConcept), or a string holding a code without a system. A string code is validated by asking the terminology server to infer its system from the value set.
+
+The result is null where membership cannot be determined: where the value set cannot be resolved, or the terminology server rejects the request (for example, because it does not support inferring the system of a code). For an array of Codings, the result is `true` if any Coding is a member, otherwise null if the membership of any Coding is unknown, otherwise `false`.
 
 ### Concept translation[​](#concept-translation "Direct link to Concept translation")
 

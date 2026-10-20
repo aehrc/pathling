@@ -161,6 +161,8 @@ http://terminology.hl7.org/CodeSystem/condition-category|problem-list-item|4.0.1
 http://snomed.info/sct|'397956004 |Prosthetic arthroplasty of the hip|: 363704007 |Procedure site| = ( 24136001 |Hip joint structure|: 272741003 |Laterality| =  7771000 |Left| )'
 ```
 
+The `toString()` function converts a Coding, whether a literal or a Coding element within a resource, to its Coding literal. Components containing special characters are single-quoted, and trailing empty components are omitted. For example, `code.coding.first().toString()` might return `http://snomed.info/sct|52101004||Present`. Accordingly, `convertsToString()` returns `true` for a Coding.
+
 note
 
 The Coding literal is not within the FHIRPath specification, and is currently unique to the Pathling implementation.
