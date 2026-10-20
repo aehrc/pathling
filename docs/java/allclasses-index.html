@@ -1859,415 +1859,419 @@ loadScripts(document, 'script');</script>
 <div class="block">Thrown when a terminology store cannot be opened or read: the path does not exist, the manifest
  is missing or unreadable, or the store's format version is newer than this reader understands.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/terminology/store/TerminologyStoreReader.html" title="class in au.csiro.pathling.terminology.store">TerminologyStoreReader</a></div>
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/terminology/store/TerminologyStoreMigrator.html" title="class in au.csiro.pathling.terminology.store">TerminologyStoreMigrator</a></div>
 <div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="block">Migrates a terminology store written in an earlier format version to the current one, in place.</div>
+</div>
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/terminology/store/TerminologyStoreReader.html" title="class in au.csiro.pathling.terminology.store">TerminologyStoreReader</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Reads a terminology store on executors through the Hadoop FileSystem API using Delta Kernel, with
  no Spark dependency at query time.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/terminology/store/TerminologyStoreRow.html" title="class in au.csiro.pathling.terminology.store">TerminologyStoreRow</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/terminology/store/TerminologyStoreRow.html" title="class in au.csiro.pathling.terminology.store">TerminologyStoreRow</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
 <div class="block">A read-only, column-name addressable view over a single row read from a terminology store table.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/terminology/store/TerminologyStoreSchema.html" title="class in au.csiro.pathling.terminology.store">TerminologyStoreSchema</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/terminology/store/TerminologyStoreSchema.html" title="class in au.csiro.pathling.terminology.store">TerminologyStoreSchema</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Defines the on-disk layout of the terminology store: the store format version, the names of the
  Delta tables, and the schema of the manifest.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/terminology/store/TerminologyStoreWriter.html" title="class in au.csiro.pathling.terminology.store">TerminologyStoreWriter</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/terminology/store/TerminologyStoreWriter.html" title="class in au.csiro.pathling.terminology.store">TerminologyStoreWriter</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Writes terminology store tables using Spark and Delta Lake.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab4"><a href="au/csiro/pathling/terminology/store/TerminologyStoreWriter.CanonicalVersion.html" title="class in au.csiro.pathling.terminology.store">TerminologyStoreWriter.CanonicalVersion</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab4">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab4"><a href="au/csiro/pathling/terminology/store/TerminologyStoreWriter.CanonicalVersion.html" title="class in au.csiro.pathling.terminology.store">TerminologyStoreWriter.CanonicalVersion</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab4">
 <div class="block">The canonical URL and version that key a resource in the manifest and the value set table.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab1"><a href="au/csiro/pathling/sql/TerminologySupport.html" title="interface in au.csiro.pathling.sql">TerminologySupport</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab1">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab1"><a href="au/csiro/pathling/sql/TerminologySupport.html" title="interface in au.csiro.pathling.sql">TerminologySupport</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab1">
 <div class="block">Supporting functions for <a href="au/csiro/pathling/sql/Terminology.html" title="interface in au.csiro.pathling.sql"><code>Terminology</code></a> interface.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/sql/udf/TerminologyUdfHelpers.html" title="class in au.csiro.pathling.sql.udf">TerminologyUdfHelpers</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/sql/udf/TerminologyUdfHelpers.html" title="class in au.csiro.pathling.sql.udf">TerminologyUdfHelpers</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Helper functions for terminology UDFs.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/sql/udf/TerminologyUdfRegistrar.html" title="class in au.csiro.pathling.sql.udf">TerminologyUdfRegistrar</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/sql/udf/TerminologyUdfRegistrar.html" title="class in au.csiro.pathling.sql.udf">TerminologyUdfRegistrar</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
 <div class="block">The <a href="https://pathling.csiro.au/utilities/apidocs/au/csiro/pathling/sql/udf/SqlFunctionRegistrar.html" title="class or interface in au.csiro.pathling.sql.udf" class="external-link"><code>SqlFunctionRegistrar</code></a> for terminology UDFs.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/fhirpath/collection/TimeCollection.html" title="class in au.csiro.pathling.fhirpath.collection">TimeCollection</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/fhirpath/collection/TimeCollection.html" title="class in au.csiro.pathling.fhirpath.collection">TimeCollection</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Represents a FHIRPath expression which refers to a time typed element.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/search/filter/TokenMatcher.html" title="class in au.csiro.pathling.search.filter">TokenMatcher</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/search/filter/TokenMatcher.html" title="class in au.csiro.pathling.search.filter">TokenMatcher</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Matches elements using token search semantics for various FHIR types.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/search/TokenSearchValue.html" title="class in au.csiro.pathling.search">TokenSearchValue</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/search/TokenSearchValue.html" title="class in au.csiro.pathling.search">TokenSearchValue</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Represents a parsed token search value.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/sql/misc/ToNull.html" title="class in au.csiro.pathling.sql.misc">ToNull</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/sql/misc/ToNull.html" title="class in au.csiro.pathling.sql.misc">ToNull</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Spark UDF that always returns null but evaluates the input column to ensure that side effect are
  triggered.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/fhirpath/TraceCollectorProxy.html" title="class in au.csiro.pathling.fhirpath">TraceCollectorProxy</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/fhirpath/TraceCollectorProxy.html" title="class in au.csiro.pathling.fhirpath">TraceCollectorProxy</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
 <div class="block">A serializable <a href="https://pathling.csiro.au/terminology/apidocs/au/csiro/pathling/sql/TraceCollector.html" title="class or interface in au.csiro.pathling.sql" class="external-link"><code>TraceCollector</code></a> proxy that delegates to a registered collector via a static
  registry.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/terminology/store/TransitiveClosureBuilder.html" title="class in au.csiro.pathling.terminology.store">TransitiveClosureBuilder</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/terminology/store/TransitiveClosureBuilder.html" title="class in au.csiro.pathling.terminology.store">TransitiveClosureBuilder</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Computes the transitive closure of a concept hierarchy at import time using iterative Spark
  self-joins (the semi-naive algorithm).</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/terminology/translate/TranslateExecutor.html" title="class in au.csiro.pathling.terminology.translate">TranslateExecutor</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/terminology/translate/TranslateExecutor.html" title="class in au.csiro.pathling.terminology.translate">TranslateExecutor</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
 <div class="block">An implementation of <a href="au/csiro/pathling/terminology/TerminologyOperation.html" title="interface in au.csiro.pathling.terminology"><code>TerminologyOperation</code></a> for the translate operation.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab4"><a href="au/csiro/pathling/terminology/translate/TranslateParameters.html" title="class in au.csiro.pathling.terminology.translate">TranslateParameters</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab4">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab4"><a href="au/csiro/pathling/terminology/translate/TranslateParameters.html" title="class in au.csiro.pathling.terminology.translate">TranslateParameters</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab4">
 <div class="block">Represents the input parameters to the translate operation.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/sql/udf/TranslateUdf.html" title="class in au.csiro.pathling.sql.udf">TranslateUdf</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/sql/udf/TranslateUdf.html" title="class in au.csiro.pathling.sql.udf">TranslateUdf</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
 <div class="block">The implementation of the 'translate()' udf.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/terminology/TranslationList.html" title="class in au.csiro.pathling.terminology">TranslationList</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/terminology/TranslationList.html" title="class in au.csiro.pathling.terminology">TranslationList</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
 <div class="block">A list of translations, used to represent the results of a terminology translation operation.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/terminology/caching/TranslationListCollector.html" title="class in au.csiro.pathling.terminology.caching">TranslationListCollector</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/terminology/caching/TranslationListCollector.html" title="class in au.csiro.pathling.terminology.caching">TranslationListCollector</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
 <div class="block">A collector that collects a stream of items into a <a href="au/csiro/pathling/terminology/TranslationList.html" title="class in au.csiro.pathling.terminology"><code>TranslationList</code></a>.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/fhirpath/function/provider/TypeFunctions.html" title="class in au.csiro.pathling.fhirpath.function.provider">TypeFunctions</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/fhirpath/function/provider/TypeFunctions.html" title="class in au.csiro.pathling.fhirpath.function.provider">TypeFunctions</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Contains functions for type checking and type operations.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/fhirpath/TypeInfo.html" title="class in au.csiro.pathling.fhirpath">TypeInfo</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/fhirpath/TypeInfo.html" title="class in au.csiro.pathling.fhirpath">TypeInfo</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Represents type information returned by the FHIRPath <code>type()</code> reflection function.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/fhirpath/TypeSpecifier.html" title="class in au.csiro.pathling.fhirpath">TypeSpecifier</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/fhirpath/TypeSpecifier.html" title="class in au.csiro.pathling.fhirpath">TypeSpecifier</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Represents a FHIRPath type specifier, which is a namespace and a type name.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab4"><a href="au/csiro/pathling/fhirpath/unit/UcumUnit.html" title="class in au.csiro.pathling.fhirpath.unit">UcumUnit</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab4">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab4"><a href="au/csiro/pathling/fhirpath/unit/UcumUnit.html" title="class in au.csiro.pathling.fhirpath.unit">UcumUnit</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab4">
 <div class="block">Represents a UCUM (Unified Code for Units of Measure) unit.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab1"><a href="au/csiro/pathling/fhirpath/operator/UnaryOperator.html" title="interface in au.csiro.pathling.fhirpath.operator">UnaryOperator</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab1">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab1"><a href="au/csiro/pathling/fhirpath/operator/UnaryOperator.html" title="interface in au.csiro.pathling.fhirpath.operator">UnaryOperator</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab1">
 <div class="block">Represents a unary operator in FHIRPath.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab4"><a href="au/csiro/pathling/fhirpath/operator/UnaryOperator.UnaryOperatorInput.html" title="class in au.csiro.pathling.fhirpath.operator">UnaryOperator.UnaryOperatorInput</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab4">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab4"><a href="au/csiro/pathling/fhirpath/operator/UnaryOperator.UnaryOperatorInput.html" title="class in au.csiro.pathling.fhirpath.operator">UnaryOperator.UnaryOperatorInput</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab4">
 <div class="block">Represents the input to a unary operator.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab1"><a href="au/csiro/pathling/projection/UnarySelection.html" title="interface in au.csiro.pathling.projection">UnarySelection</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab1">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab1"><a href="au/csiro/pathling/projection/UnarySelection.html" title="interface in au.csiro.pathling.projection">UnarySelection</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab1">
 <div class="block">Represents a selection that wraps a single child component.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/fhirpath/operator/UnionOperator.html" title="class in au.csiro.pathling.fhirpath.operator">UnionOperator</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/fhirpath/operator/UnionOperator.html" title="class in au.csiro.pathling.fhirpath.operator">UnionOperator</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Provides the functionality of the union operator within FHIRPath, i.e.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab4"><a href="au/csiro/pathling/projection/UnionSelection.html" title="class in au.csiro.pathling.projection">UnionSelection</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab4">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab4"><a href="au/csiro/pathling/projection/UnionSelection.html" title="class in au.csiro.pathling.projection">UnionSelection</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab4">
 <div class="block">Groups multiple selections together using a union (concatenation).</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab6"><a href="au/csiro/pathling/views/validation/UniqueColumnNames.html" title="annotation interface in au.csiro.pathling.views.validation">UniqueColumnNames</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab6">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab6"><a href="au/csiro/pathling/views/validation/UniqueColumnNames.html" title="annotation interface in au.csiro.pathling.views.validation">UniqueColumnNames</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab6">
 <div class="block">Validation constraint that ensures all Column names within a FhirView are unique.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/views/validation/UniqueColumnNamesValidator.html" title="class in au.csiro.pathling.views.validation">UniqueColumnNamesValidator</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/views/validation/UniqueColumnNamesValidator.html" title="class in au.csiro.pathling.views.validation">UniqueColumnNamesValidator</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Validator implementation for the <a href="au/csiro/pathling/views/validation/UniqueColumnNames.html" title="annotation interface in au.csiro.pathling.views.validation"><code>UniqueColumnNames</code></a> constraint.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab6"><a href="au/csiro/pathling/views/validation/UniqueTags.html" title="annotation interface in au.csiro.pathling.views.validation">UniqueTags</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab6">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab6"><a href="au/csiro/pathling/views/validation/UniqueTags.html" title="annotation interface in au.csiro.pathling.views.validation">UniqueTags</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab6">
 <div class="block">Validates that a list of tags does not have more than one tag with any of the specified names.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/views/validation/UniqueTagsValidator.html" title="class in au.csiro.pathling.views.validation">UniqueTagsValidator</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/views/validation/UniqueTagsValidator.html" title="class in au.csiro.pathling.views.validation">UniqueTagsValidator</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Validator that checks a list of tags does not have more than one tag with any of the specified
  names.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab5"><a href="au/csiro/pathling/search/UnknownSearchParameterException.html" title="class in au.csiro.pathling.search">UnknownSearchParameterException</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab5">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab5"><a href="au/csiro/pathling/search/UnknownSearchParameterException.html" title="class in au.csiro.pathling.search">UnknownSearchParameterException</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab5">
 <div class="block">Exception thrown when a search parameter is not found in the registry.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab4"><a href="au/csiro/pathling/projection/UnnestingSelection.html" title="class in au.csiro.pathling.projection">UnnestingSelection</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab4">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab4"><a href="au/csiro/pathling/projection/UnnestingSelection.html" title="class in au.csiro.pathling.projection">UnnestingSelection</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab4">
 <div class="block">Represents a selection that unnests a nested data structure, with either inner or outer join
  semantics.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab5"><a href="au/csiro/pathling/ecl/UnsupportedEclConstructError.html" title="class in au.csiro.pathling.ecl">UnsupportedEclConstructError</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab5">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab5"><a href="au/csiro/pathling/ecl/UnsupportedEclConstructError.html" title="class in au.csiro.pathling.ecl">UnsupportedEclConstructError</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab5">
 <div class="block">Thrown when an ECL expression is syntactically valid but uses a construct outside the subset that
  Pathling's local terminology engine supports.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/fhirpath/column/UnsupportedRepresentation.html" title="class in au.csiro.pathling.fhirpath.column">UnsupportedRepresentation</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/fhirpath/column/UnsupportedRepresentation.html" title="class in au.csiro.pathling.fhirpath.column">UnsupportedRepresentation</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Used when a collection does not have a representation that can be expressed within a Spark
  dataframe.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/fhirpath/variable/UnsupportedVariableResolver.html" title="class in au.csiro.pathling.fhirpath.variable">UnsupportedVariableResolver</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/fhirpath/variable/UnsupportedVariableResolver.html" title="class in au.csiro.pathling.fhirpath.variable">UnsupportedVariableResolver</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
 <div class="block">This resolver throws errors for known unsupported environment variables in FHIRPath.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/search/filter/UriMatcher.html" title="class in au.csiro.pathling.search.filter">UriMatcher</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/search/filter/UriMatcher.html" title="class in au.csiro.pathling.search.filter">UriMatcher</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Matches URI elements against a search value using one of three modes: exact equality, prefix
  matching (<code>:below</code>), or inverse prefix matching (<code>:above</code>).</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/fhir/export/download/UrlDownloadTemplate.html" title="class in au.csiro.fhir.export.download">UrlDownloadTemplate</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/fhir/export/download/UrlDownloadTemplate.html" title="class in au.csiro.fhir.export.download">UrlDownloadTemplate</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
 <div class="block">A template class for concurrent download of multiple URLs into a file store.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/fhir/export/download/UrlDownloadTemplate.UrlDownloadEntry.html" title="class in au.csiro.fhir.export.download">UrlDownloadTemplate.UrlDownloadEntry</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/fhir/export/download/UrlDownloadTemplate.UrlDownloadEntry.html" title="class in au.csiro.fhir.export.download">UrlDownloadTemplate.UrlDownloadEntry</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
 <div class="block">A single entry in the list of URLs to download.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/fhir/UserAgentInterceptor.html" title="class in au.csiro.pathling.fhir">UserAgentInterceptor</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/fhir/UserAgentInterceptor.html" title="class in au.csiro.pathling.fhir">UserAgentInterceptor</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
 <div class="block">HTTP interceptor that adds User-Agent header to FHIR client requests.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/fhirpath/function/provider/UtilityFunctions.html" title="class in au.csiro.pathling.fhirpath.function.provider">UtilityFunctions</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/fhirpath/function/provider/UtilityFunctions.html" title="class in au.csiro.pathling.fhirpath.function.provider">UtilityFunctions</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Contains FHIRPath utility functions.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/terminology/validatecode/ValidateCodeExecutor.html" title="class in au.csiro.pathling.terminology.validatecode">ValidateCodeExecutor</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/terminology/validatecode/ValidateCodeExecutor.html" title="class in au.csiro.pathling.terminology.validatecode">ValidateCodeExecutor</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
 <div class="block">An implementation of <a href="au/csiro/pathling/terminology/TerminologyOperation.html" title="interface in au.csiro.pathling.terminology"><code>TerminologyOperation</code></a> for the validate-code operation.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab4"><a href="au/csiro/pathling/terminology/validatecode/ValidateCodeParameters.html" title="class in au.csiro.pathling.terminology.validatecode">ValidateCodeParameters</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab4">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab4"><a href="au/csiro/pathling/terminology/validatecode/ValidateCodeParameters.html" title="class in au.csiro.pathling.terminology.validatecode">ValidateCodeParameters</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab4">
 <div class="block">Represents the input parameters to the validate-code operation.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab6"><a href="au/csiro/pathling/views/validation/ValidName.html" title="annotation interface in au.csiro.pathling.views.validation">ValidName</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab6">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab6"><a href="au/csiro/pathling/views/validation/ValidName.html" title="annotation interface in au.csiro.pathling.views.validation">ValidName</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab6">
 <div class="block">Validation constraint that ensures a field contains a valid name.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/terminology/expand/ValueSetExpansion.html" title="class in au.csiro.pathling.terminology.expand">ValueSetExpansion</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/terminology/expand/ValueSetExpansion.html" title="class in au.csiro.pathling.terminology.expand">ValueSetExpansion</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
 <div class="block">The membership of one value set at one resolution, with the provenance of that resolution.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab5"><a href="au/csiro/pathling/terminology/expand/ValueSetExpansionException.html" title="class in au.csiro.pathling.terminology.expand">ValueSetExpansionException</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab5">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab5"><a href="au/csiro/pathling/terminology/expand/ValueSetExpansionException.html" title="class in au.csiro.pathling.terminology.expand">ValueSetExpansionException</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab5">
 <div class="block">Thrown when a value set resolves but its membership cannot be determined: the terminology source
  cannot expand it, cannot be reached, or the supplied resource does not describe a complete and
  valid membership.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab5"><a href="au/csiro/pathling/terminology/expand/ValueSetLookupException.html" title="class in au.csiro.pathling.terminology.expand">ValueSetLookupException</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab5">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab5"><a href="au/csiro/pathling/terminology/expand/ValueSetLookupException.html" title="class in au.csiro.pathling.terminology.expand">ValueSetLookupException</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab5">
 <div class="block">Thrown in SERVER mode when the first page of a canonical expansion is answered with a failure
  status other than 404, or cannot be fetched because the terminology server cannot be reached, so
  that whether the URL names a value set at all is unknown.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/terminology/expand/ValueSetMember.html" title="class in au.csiro.pathling.terminology.expand">ValueSetMember</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/terminology/expand/ValueSetMember.html" title="class in au.csiro.pathling.terminology.expand">ValueSetMember</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
 <div class="block">One member of an expanded value set.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/terminology/local/ValueSetResolver.html" title="class in au.csiro.pathling.terminology.local">ValueSetResolver</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/terminology/local/ValueSetResolver.html" title="class in au.csiro.pathling.terminology.local">ValueSetResolver</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Resolves a value set URL to the code system version it evaluates over and the <a href="au/csiro/pathling/vcl/VclExpression.html" title="interface in au.csiro.pathling.vcl"><code>VclExpression</code></a> that defines its members.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/terminology/store/ValueSetStaging.html" title="class in au.csiro.pathling.terminology.store">ValueSetStaging</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/terminology/store/ValueSetStaging.html" title="class in au.csiro.pathling.terminology.store">ValueSetStaging</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
 <div class="block">The transient staging of the ValueSets of an import: an NDJSON file with one line per ValueSet,
  holding the row the value set table stores for it, read back through Spark so the importer writes
  the table once for the whole import without holding every ValueSet in driver memory.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/terminology/local/ValueSetStore.html" title="class in au.csiro.pathling.terminology.local">ValueSetStore</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/terminology/local/ValueSetStore.html" title="class in au.csiro.pathling.terminology.local">ValueSetStore</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
 <div class="block">The catalogue of imported FHIR ValueSet resources, keyed by canonical URL and version.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab4"><a href="au/csiro/pathling/fhirpath/variable/VariableResolverChain.html" title="class in au.csiro.pathling.fhirpath.variable">VariableResolverChain</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab4">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab4"><a href="au/csiro/pathling/fhirpath/variable/VariableResolverChain.html" title="class in au.csiro.pathling.fhirpath.variable">VariableResolverChain</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab4">
 <div class="block">A chain of variable resolvers that can be queried in sequence.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/Vcl.html" title="class in au.csiro.pathling.vcl">Vcl</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/Vcl.html" title="class in au.csiro.pathling.vcl">Vcl</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Entry point for parsing VCL (ValueSet Compose Language) expressions into a <a href="au/csiro/pathling/vcl/VclExpression.html" title="interface in au.csiro.pathling.vcl"><code>VclExpression</code></a>
  abstract syntax tree.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/VclAttributeConstraint.html" title="class in au.csiro.pathling.vcl">VclAttributeConstraint</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/VclAttributeConstraint.html" title="class in au.csiro.pathling.vcl">VclAttributeConstraint</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Selects the concepts that have an attribute relationship of a given type whose value falls in a
  value set.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/generated/VclBaseListener.html" title="class in au.csiro.pathling.vcl.generated">VclBaseListener</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/generated/VclBaseListener.html" title="class in au.csiro.pathling.vcl.generated">VclBaseListener</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
 <div class="block">This class provides an empty implementation of <a href="au/csiro/pathling/vcl/generated/VclListener.html" title="interface in au.csiro.pathling.vcl.generated"><code>VclListener</code></a>,
  which can be extended to create a listener which only needs to handle a subset
  of the available methods.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/generated/VclBaseVisitor.html" title="class in au.csiro.pathling.vcl.generated">VclBaseVisitor&lt;T&gt;</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/generated/VclBaseVisitor.html" title="class in au.csiro.pathling.vcl.generated">VclBaseVisitor&lt;T&gt;</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
 <div class="block">This class provides an empty implementation of <a href="au/csiro/pathling/vcl/generated/VclVisitor.html" title="interface in au.csiro.pathling.vcl.generated"><code>VclVisitor</code></a>,
  which can be extended to create a visitor which only needs to handle a subset
  of the available methods.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/VclCode.html" title="class in au.csiro.pathling.vcl">VclCode</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/VclCode.html" title="class in au.csiro.pathling.vcl">VclCode</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
 <div class="block">A single enumerated concept code.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/VclCodeListValue.html" title="class in au.csiro.pathling.vcl">VclCodeListValue</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/VclCodeListValue.html" title="class in au.csiro.pathling.vcl">VclCodeListValue</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
 <div class="block">An enumerated list of codes used as a filter right-hand side (for <code>^</code>/<code>~^</code>) or a
  property navigation source.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/VclCodeValue.html" title="class in au.csiro.pathling.vcl">VclCodeValue</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/VclCodeValue.html" title="class in au.csiro.pathling.vcl">VclCodeValue</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
 <div class="block">A single code used as a filter right-hand side or property navigation source.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/VclConjunction.html" title="class in au.csiro.pathling.vcl">VclConjunction</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/VclConjunction.html" title="class in au.csiro.pathling.vcl">VclConjunction</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
 <div class="block">A conjunction (<code>,</code>) of sub-expressions, evaluated as the intersection of their concept
  sets.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/VclDisjunction.html" title="class in au.csiro.pathling.vcl">VclDisjunction</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/VclDisjunction.html" title="class in au.csiro.pathling.vcl">VclDisjunction</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
 <div class="block">A disjunction (<code>;</code>) of sub-expressions, evaluated as the union of their concept sets.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/terminology/local/VclEvaluator.html" title="class in au.csiro.pathling.terminology.local">VclEvaluator</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/terminology/local/VclEvaluator.html" title="class in au.csiro.pathling.terminology.local">VclEvaluator</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Evaluates a <a href="au/csiro/pathling/vcl/VclExpression.html" title="interface in au.csiro.pathling.vcl"><code>VclExpression</code></a> against the runtime indexes of one code system version,
  producing the set of member concepts as a <code>RoaringBitmap</code> of dense identifiers.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/VclExclusion.html" title="class in au.csiro.pathling.vcl">VclExclusion</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/VclExclusion.html" title="class in au.csiro.pathling.vcl">VclExclusion</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
 <div class="block">An exclusion (<code>-</code>), evaluated as the concepts of the included expression with the concepts
  of the excluded expression removed.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab1"><a href="au/csiro/pathling/vcl/VclExpression.html" title="interface in au.csiro.pathling.vcl">VclExpression</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab1">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab1"><a href="au/csiro/pathling/vcl/VclExpression.html" title="interface in au.csiro.pathling.vcl">VclExpression</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab1">
 <div class="block">The root type of the VCL abstract syntax tree.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/VclFilter.html" title="class in au.csiro.pathling.vcl">VclFilter</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/VclFilter.html" title="class in au.csiro.pathling.vcl">VclFilter</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
 <div class="block">A property filter of the form <code>property OP value</code>, mapping to a <code>
  ValueSet.compose.include.filter</code> triple.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/VclFilterListValue.html" title="class in au.csiro.pathling.vcl">VclFilterListValue</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/VclFilterListValue.html" title="class in au.csiro.pathling.vcl">VclFilterListValue</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
 <div class="block">A nested list of filters used as the right-hand side of an <code>^</code>/<code>~^</code> filter, evaluated
  conjunctively against the property's target concepts.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab3"><a href="au/csiro/pathling/vcl/VclFilterOperator.html" title="enum class in au.csiro.pathling.vcl">VclFilterOperator</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab3">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab3"><a href="au/csiro/pathling/vcl/VclFilterOperator.html" title="enum class in au.csiro.pathling.vcl">VclFilterOperator</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab3">
 <div class="block">The filter operators of the VCL v1 grammar, each mapping to a <code>
  ValueSet.compose.include.filter</code> operation.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab1"><a href="au/csiro/pathling/vcl/VclFilterValue.html" title="interface in au.csiro.pathling.vcl">VclFilterValue</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab1">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab1"><a href="au/csiro/pathling/vcl/VclFilterValue.html" title="interface in au.csiro.pathling.vcl">VclFilterValue</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab1">
 <div class="block">The right-hand side of a VCL filter, or the source of a property navigation.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/VclIncludeValueSet.html" title="class in au.csiro.pathling.vcl">VclIncludeValueSet</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/VclIncludeValueSet.html" title="class in au.csiro.pathling.vcl">VclIncludeValueSet</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
 <div class="block">A top-level value set inclusion (<code>^URI</code>), mapping to a <code>compose.include.valueSet</code>
  entry.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/generated/VclLexer.html" title="class in au.csiro.pathling.vcl.generated">VclLexer</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab2">&nbsp;</div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab1"><a href="au/csiro/pathling/vcl/generated/VclListener.html" title="interface in au.csiro.pathling.vcl.generated">VclListener</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab1">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/generated/VclLexer.html" title="class in au.csiro.pathling.vcl.generated">VclLexer</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">&nbsp;</div>
+<div class="col-first even-row-color all-classes-table all-classes-table-tab1"><a href="au/csiro/pathling/vcl/generated/VclListener.html" title="interface in au.csiro.pathling.vcl.generated">VclListener</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab1">
 <div class="block">This interface defines a complete listener for a parse tree produced by
  <a href="au/csiro/pathling/vcl/generated/VclParser.html" title="class in au.csiro.pathling.vcl.generated"><code>VclParser</code></a>.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/VclNavigation.html" title="class in au.csiro.pathling.vcl">VclNavigation</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/VclNavigation.html" title="class in au.csiro.pathling.vcl">VclNavigation</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
 <div class="block">A reverse property navigation of the form <code>source.property</code> (read as "the property values
  of the source concepts").</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab5"><a href="au/csiro/pathling/vcl/VclParseException.html" title="class in au.csiro.pathling.vcl">VclParseException</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab5">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab5"><a href="au/csiro/pathling/vcl/VclParseException.html" title="class in au.csiro.pathling.vcl">VclParseException</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab5">
 <div class="block">Thrown when a VCL expression cannot be parsed.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/generated/VclParser.html" title="class in au.csiro.pathling.vcl.generated">VclParser</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab2">&nbsp;</div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/generated/VclParser.CodeContext.html" title="class in au.csiro.pathling.vcl.generated">VclParser.CodeContext</a></div>
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/generated/VclParser.html" title="class in au.csiro.pathling.vcl.generated">VclParser</a></div>
 <div class="col-last odd-row-color all-classes-table all-classes-table-tab2">&nbsp;</div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/generated/VclParser.CodeListContext.html" title="class in au.csiro.pathling.vcl.generated">VclParser.CodeListContext</a></div>
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/generated/VclParser.CodeContext.html" title="class in au.csiro.pathling.vcl.generated">VclParser.CodeContext</a></div>
 <div class="col-last even-row-color all-classes-table all-classes-table-tab2">&nbsp;</div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/generated/VclParser.ConjunctionContext.html" title="class in au.csiro.pathling.vcl.generated">VclParser.ConjunctionContext</a></div>
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/generated/VclParser.CodeListContext.html" title="class in au.csiro.pathling.vcl.generated">VclParser.CodeListContext</a></div>
 <div class="col-last odd-row-color all-classes-table all-classes-table-tab2">&nbsp;</div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/generated/VclParser.DisjunctionContext.html" title="class in au.csiro.pathling.vcl.generated">VclParser.DisjunctionContext</a></div>
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/generated/VclParser.ConjunctionContext.html" title="class in au.csiro.pathling.vcl.generated">VclParser.ConjunctionContext</a></div>
 <div class="col-last even-row-color all-classes-table all-classes-table-tab2">&nbsp;</div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/generated/VclParser.ExclusionContext.html" title="class in au.csiro.pathling.vcl.generated">VclParser.ExclusionContext</a></div>
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/generated/VclParser.DisjunctionContext.html" title="class in au.csiro.pathling.vcl.generated">VclParser.DisjunctionContext</a></div>
 <div class="col-last odd-row-color all-classes-table all-classes-table-tab2">&nbsp;</div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/generated/VclParser.ExprContext.html" title="class in au.csiro.pathling.vcl.generated">VclParser.ExprContext</a></div>
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/generated/VclParser.ExclusionContext.html" title="class in au.csiro.pathling.vcl.generated">VclParser.ExclusionContext</a></div>
 <div class="col-last even-row-color all-classes-table all-classes-table-tab2">&nbsp;</div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/generated/VclParser.FilterContext.html" title="class in au.csiro.pathling.vcl.generated">VclParser.FilterContext</a></div>
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/generated/VclParser.ExprContext.html" title="class in au.csiro.pathling.vcl.generated">VclParser.ExprContext</a></div>
 <div class="col-last odd-row-color all-classes-table all-classes-table-tab2">&nbsp;</div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/generated/VclParser.FilterListContext.html" title="class in au.csiro.pathling.vcl.generated">VclParser.FilterListContext</a></div>
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/generated/VclParser.FilterContext.html" title="class in au.csiro.pathling.vcl.generated">VclParser.FilterContext</a></div>
 <div class="col-last even-row-color all-classes-table all-classes-table-tab2">&nbsp;</div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/generated/VclParser.IncludeVsContext.html" title="class in au.csiro.pathling.vcl.generated">VclParser.IncludeVsContext</a></div>
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/generated/VclParser.FilterListContext.html" title="class in au.csiro.pathling.vcl.generated">VclParser.FilterListContext</a></div>
 <div class="col-last odd-row-color all-classes-table all-classes-table-tab2">&nbsp;</div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/generated/VclParser.PropertyContext.html" title="class in au.csiro.pathling.vcl.generated">VclParser.PropertyContext</a></div>
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/generated/VclParser.IncludeVsContext.html" title="class in au.csiro.pathling.vcl.generated">VclParser.IncludeVsContext</a></div>
 <div class="col-last even-row-color all-classes-table all-classes-table-tab2">&nbsp;</div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/generated/VclParser.SimpleExprContext.html" title="class in au.csiro.pathling.vcl.generated">VclParser.SimpleExprContext</a></div>
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/generated/VclParser.PropertyContext.html" title="class in au.csiro.pathling.vcl.generated">VclParser.PropertyContext</a></div>
 <div class="col-last odd-row-color all-classes-table all-classes-table-tab2">&nbsp;</div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/generated/VclParser.StrContext.html" title="class in au.csiro.pathling.vcl.generated">VclParser.StrContext</a></div>
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/generated/VclParser.SimpleExprContext.html" title="class in au.csiro.pathling.vcl.generated">VclParser.SimpleExprContext</a></div>
 <div class="col-last even-row-color all-classes-table all-classes-table-tab2">&nbsp;</div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/generated/VclParser.SubExprContext.html" title="class in au.csiro.pathling.vcl.generated">VclParser.SubExprContext</a></div>
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/generated/VclParser.StrContext.html" title="class in au.csiro.pathling.vcl.generated">VclParser.StrContext</a></div>
 <div class="col-last odd-row-color all-classes-table all-classes-table-tab2">&nbsp;</div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/generated/VclParser.SystemUriContext.html" title="class in au.csiro.pathling.vcl.generated">VclParser.SystemUriContext</a></div>
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/generated/VclParser.SubExprContext.html" title="class in au.csiro.pathling.vcl.generated">VclParser.SubExprContext</a></div>
 <div class="col-last even-row-color all-classes-table all-classes-table-tab2">&nbsp;</div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/generated/VclParser.VclContext.html" title="class in au.csiro.pathling.vcl.generated">VclParser.VclContext</a></div>
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/generated/VclParser.SystemUriContext.html" title="class in au.csiro.pathling.vcl.generated">VclParser.SystemUriContext</a></div>
 <div class="col-last odd-row-color all-classes-table all-classes-table-tab2">&nbsp;</div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/VclRefsetMembership.html" title="class in au.csiro.pathling.vcl">VclRefsetMembership</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/generated/VclParser.VclContext.html" title="class in au.csiro.pathling.vcl.generated">VclParser.VclContext</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">&nbsp;</div>
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/VclRefsetMembership.html" title="class in au.csiro.pathling.vcl">VclRefsetMembership</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Selects the members of a SNOMED CT reference set.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/VclStringValue.html" title="class in au.csiro.pathling.vcl">VclStringValue</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/VclStringValue.html" title="class in au.csiro.pathling.vcl">VclStringValue</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
 <div class="block">A quoted string used as the right-hand side of a regular expression filter.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/VclSystemScoped.html" title="class in au.csiro.pathling.vcl">VclSystemScoped</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/VclSystemScoped.html" title="class in au.csiro.pathling.vcl">VclSystemScoped</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
 <div class="block">An expression scoped to a particular code system by a <code>(systemUri)</code> prefix.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/VclSystemUri.html" title="class in au.csiro.pathling.vcl">VclSystemUri</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/VclSystemUri.html" title="class in au.csiro.pathling.vcl">VclSystemUri</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
 <div class="block">A code system URI, with an optional version pinned after a <code>|</code>.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/VclUriValue.html" title="class in au.csiro.pathling.vcl">VclUriValue</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/VclUriValue.html" title="class in au.csiro.pathling.vcl">VclUriValue</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
 <div class="block">A value set URI used as the right-hand side of an <code>^</code>/<code>~^</code> filter.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab1"><a href="au/csiro/pathling/vcl/generated/VclVisitor.html" title="interface in au.csiro.pathling.vcl.generated">VclVisitor&lt;T&gt;</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab1">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab1"><a href="au/csiro/pathling/vcl/generated/VclVisitor.html" title="interface in au.csiro.pathling.vcl.generated">VclVisitor&lt;T&gt;</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab1">
 <div class="block">This interface defines a complete generic visitor for a parse tree produced
  by <a href="au/csiro/pathling/vcl/generated/VclParser.html" title="class in au.csiro.pathling.vcl.generated"><code>VclParser</code></a>.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/VclWildcard.html" title="class in au.csiro.pathling.vcl">VclWildcard</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/VclWildcard.html" title="class in au.csiro.pathling.vcl">VclWildcard</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
 <div class="block">The wildcard (<code>*</code>), denoting every concept in the relevant code system.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/VclWildcardValue.html" title="class in au.csiro.pathling.vcl">VclWildcardValue</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/vcl/VclWildcardValue.html" title="class in au.csiro.pathling.vcl">VclWildcardValue</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
 <div class="block">The wildcard (<code>*</code>) used as a property navigation source, denoting every concept in the
  relevant code system.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/terminology/local/VersionResolver.html" title="class in au.csiro.pathling.terminology.local">VersionResolver</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/terminology/local/VersionResolver.html" title="class in au.csiro.pathling.terminology.local">VersionResolver</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Resolves the default (latest) version from a set of candidate versions of the same code system,
  replicating the version-ordering behaviour of the reference terminology server (Ontoserver's
  <code>FhirResourceUtils</code>).</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/views/ViewDefinitionGson.html" title="class in au.csiro.pathling.views">ViewDefinitionGson</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/views/ViewDefinitionGson.html" title="class in au.csiro.pathling.views">ViewDefinitionGson</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Factory for creating Gson instances configured for SQL on FHIR view definition parsing and for
  serialising query result rows.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/views/WhereClause.html" title="class in au.csiro.pathling.views">WhereClause</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="au/csiro/pathling/views/WhereClause.html" title="class in au.csiro.pathling.views">WhereClause</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
 <div class="block">'where' filters are FHIRPath expressions joined with an implicit "and".</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab4"><a href="au/csiro/pathling/library/io/sink/WriteDetails.html" title="class in au.csiro.pathling.library.io.sink">WriteDetails</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab4">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab4"><a href="au/csiro/pathling/library/io/sink/WriteDetails.html" title="class in au.csiro.pathling.library.io.sink">WriteDetails</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab4">
 <div class="block">Capture changes made by the write operation methods on the filesystem.</div>
 </div>
 </div>

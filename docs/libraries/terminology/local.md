@@ -173,7 +173,13 @@ Where a source holds the same resource (the same resource type, canonical URL an
 
 ### Stores written by earlier versions[​](#stores-written-by-earlier-versions "Direct link to Stores written by earlier versions")
 
-Format version 2 changed how ConceptMaps are stored, from one JSON document per map to one row per mapping, which is what makes large maps possible. A store written by Pathling 9.9.0 or earlier that holds any ConceptMap fails to open, naming the maps, rather than translating as though they were absent. Re-import the FHIR terminology content into a new store to upgrade it; the SNOMED CT content of such a store needs no change, but importing it again into the new store is the simplest way to carry it over. A store written by Pathling 9.9.0 that holds no ConceptMaps opens unchanged. A store written by this version of Pathling does not open with Pathling 9.9.0, which reports the format version as too new.
+Format version 2 changed how ConceptMaps are stored, from one JSON document per map to one row per mapping, which is what makes large maps possible. A store written by Pathling 9.9.0 or earlier is migrated to format version 2 in place when a Pathling context is created with it in local mode. Each ConceptMap is read from its stored JSON and written as mapping rows, exactly as importing it would write them, and its manifest row is updated to format version 2 and given the `fault` an import would record, keeping its `source` and `imported_at`. The table that held the JSON documents is then removed. Code systems and value sets did not change layout, so they are left as they are and their manifest rows keep format version 1. A store with no ConceptMaps in the earlier layout has nothing to migrate, so it may be read-only.
+
+Migration needs write access to the store. If it cannot write, context creation fails with an error naming the store; nothing is recorded as migrated until the mappings are written, so creating the context again with write access completes the migration. Re-importing the FHIR terminology content into a new store also works.
+
+A SNOMED CT edition imported by Pathling 9.9.0 or earlier did not record the targets of simple map reference sets, which cannot be recovered from the store, so translation through those reference sets as [implicit concept maps](#value-set-and-concept-map-expressions) finds nothing. Context creation logs a warning naming each such edition until it is re-imported. Everything else about the edition works unchanged.
+
+A store written or migrated by this version of Pathling does not open with Pathling 9.9.0, which reports the format version as too new.
 
 ### Recovering from a failed import[​](#recovering-from-a-failed-import "Direct link to Recovering from a failed import")
 
@@ -187,7 +193,7 @@ Every import records the provenance of what it loaded in the store's `manifest` 
 
 | Column                 | Type      | Null | Meaning                                                                                                                                                                                             |
 | ---------------------- | --------- | ---- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `store_format_version` | int       | no   | The store layout version the row was written under: `2`, or `1` for rows written by Pathling 9.9.0 and earlier.                                                                                     |
+| `store_format_version` | int       | no   | The store layout version the row was written under: `2`, or `1` for a code system or value set row written by Pathling 9.9.0 and earlier.                                                           |
 | `entry_type`           | string    | no   | `code_system`, `value_set` or `concept_map`.                                                                                                                                                        |
 | `canonical_url`        | string    | no   | The canonical URL of the imported resource.                                                                                                                                                         |
 | `version`              | string    | yes  | Its version, where the resource declares one.                                                                                                                                                       |

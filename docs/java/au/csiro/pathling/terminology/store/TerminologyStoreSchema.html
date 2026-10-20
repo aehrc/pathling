@@ -521,7 +521,8 @@ loadScripts(document, 'script');</script>
 <div class="member-signature"><span class="modifiers">public static final</span>&nbsp;<span class="return-type">int</span>&nbsp;<span class="element-name">STORE_FORMAT_VERSION</span></div>
 <div class="block">The format version of the store. A reader refuses to open a store whose manifest reports a
  greater version, since it may not understand the layout. Version 2 replaced the whole-resource
- ConceptMap table of version 1 with <a href="#CONCEPT_MAPPING"><code>CONCEPT_MAPPING</code></a>.</div>
+ ConceptMap table of version 1 with <a href="#CONCEPT_MAPPING"><code>CONCEPT_MAPPING</code></a>. <a href="TerminologyStoreMigrator.html" title="class in au.csiro.pathling.terminology.store"><code>TerminologyStoreMigrator</code></a>
+ brings a store of an earlier version up to this one.</div>
 <dl class="notes">
 <dt>See Also:</dt>
 <dd>
@@ -537,7 +538,7 @@ loadScripts(document, 'script');</script>
 <h3>MIN_CONCEPT_MAP_FORMAT_VERSION</h3>
 <div class="member-signature"><span class="modifiers">public static final</span>&nbsp;<span class="return-type">int</span>&nbsp;<span class="element-name">MIN_CONCEPT_MAP_FORMAT_VERSION</span></div>
 <div class="block">The earliest format version whose ConceptMaps this version of Pathling can read. A store whose
- manifest records a ConceptMap written under an earlier version must be re-imported.</div>
+ manifest records a ConceptMap written under an earlier version must be migrated by <a href="TerminologyStoreMigrator.html" title="class in au.csiro.pathling.terminology.store"><code>TerminologyStoreMigrator</code></a> or re-imported.</div>
 <dl class="notes">
 <dt>See Also:</dt>
 <dd>

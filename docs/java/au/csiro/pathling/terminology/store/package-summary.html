@@ -205,35 +205,39 @@ loadScripts(document, 'script');</script>
 <div class="block">Thrown when a terminology store cannot be opened or read: the path does not exist, the manifest
  is missing or unreadable, or the store's format version is newer than this reader understands.</div>
 </div>
-<div class="col-first odd-row-color class-summary class-summary-tab2"><a href="TerminologyStoreReader.html" title="class in au.csiro.pathling.terminology.store">TerminologyStoreReader</a></div>
+<div class="col-first odd-row-color class-summary class-summary-tab2"><a href="TerminologyStoreMigrator.html" title="class in au.csiro.pathling.terminology.store">TerminologyStoreMigrator</a></div>
 <div class="col-last odd-row-color class-summary class-summary-tab2">
+<div class="block">Migrates a terminology store written in an earlier format version to the current one, in place.</div>
+</div>
+<div class="col-first even-row-color class-summary class-summary-tab2"><a href="TerminologyStoreReader.html" title="class in au.csiro.pathling.terminology.store">TerminologyStoreReader</a></div>
+<div class="col-last even-row-color class-summary class-summary-tab2">
 <div class="block">Reads a terminology store on executors through the Hadoop FileSystem API using Delta Kernel, with
  no Spark dependency at query time.</div>
 </div>
-<div class="col-first even-row-color class-summary class-summary-tab2"><a href="TerminologyStoreRow.html" title="class in au.csiro.pathling.terminology.store">TerminologyStoreRow</a></div>
-<div class="col-last even-row-color class-summary class-summary-tab2">
+<div class="col-first odd-row-color class-summary class-summary-tab2"><a href="TerminologyStoreRow.html" title="class in au.csiro.pathling.terminology.store">TerminologyStoreRow</a></div>
+<div class="col-last odd-row-color class-summary class-summary-tab2">
 <div class="block">A read-only, column-name addressable view over a single row read from a terminology store table.</div>
 </div>
-<div class="col-first odd-row-color class-summary class-summary-tab2"><a href="TerminologyStoreSchema.html" title="class in au.csiro.pathling.terminology.store">TerminologyStoreSchema</a></div>
-<div class="col-last odd-row-color class-summary class-summary-tab2">
+<div class="col-first even-row-color class-summary class-summary-tab2"><a href="TerminologyStoreSchema.html" title="class in au.csiro.pathling.terminology.store">TerminologyStoreSchema</a></div>
+<div class="col-last even-row-color class-summary class-summary-tab2">
 <div class="block">Defines the on-disk layout of the terminology store: the store format version, the names of the
  Delta tables, and the schema of the manifest.</div>
 </div>
-<div class="col-first even-row-color class-summary class-summary-tab2"><a href="TerminologyStoreWriter.html" title="class in au.csiro.pathling.terminology.store">TerminologyStoreWriter</a></div>
-<div class="col-last even-row-color class-summary class-summary-tab2">
+<div class="col-first odd-row-color class-summary class-summary-tab2"><a href="TerminologyStoreWriter.html" title="class in au.csiro.pathling.terminology.store">TerminologyStoreWriter</a></div>
+<div class="col-last odd-row-color class-summary class-summary-tab2">
 <div class="block">Writes terminology store tables using Spark and Delta Lake.</div>
 </div>
-<div class="col-first odd-row-color class-summary class-summary-tab4"><a href="TerminologyStoreWriter.CanonicalVersion.html" title="class in au.csiro.pathling.terminology.store">TerminologyStoreWriter.CanonicalVersion</a></div>
-<div class="col-last odd-row-color class-summary class-summary-tab4">
+<div class="col-first even-row-color class-summary class-summary-tab4"><a href="TerminologyStoreWriter.CanonicalVersion.html" title="class in au.csiro.pathling.terminology.store">TerminologyStoreWriter.CanonicalVersion</a></div>
+<div class="col-last even-row-color class-summary class-summary-tab4">
 <div class="block">The canonical URL and version that key a resource in the manifest and the value set table.</div>
 </div>
-<div class="col-first even-row-color class-summary class-summary-tab2"><a href="TransitiveClosureBuilder.html" title="class in au.csiro.pathling.terminology.store">TransitiveClosureBuilder</a></div>
-<div class="col-last even-row-color class-summary class-summary-tab2">
+<div class="col-first odd-row-color class-summary class-summary-tab2"><a href="TransitiveClosureBuilder.html" title="class in au.csiro.pathling.terminology.store">TransitiveClosureBuilder</a></div>
+<div class="col-last odd-row-color class-summary class-summary-tab2">
 <div class="block">Computes the transitive closure of a concept hierarchy at import time using iterative Spark
  self-joins (the semi-naive algorithm).</div>
 </div>
-<div class="col-first odd-row-color class-summary class-summary-tab2"><a href="ValueSetStaging.html" title="class in au.csiro.pathling.terminology.store">ValueSetStaging</a></div>
-<div class="col-last odd-row-color class-summary class-summary-tab2">
+<div class="col-first even-row-color class-summary class-summary-tab2"><a href="ValueSetStaging.html" title="class in au.csiro.pathling.terminology.store">ValueSetStaging</a></div>
+<div class="col-last even-row-color class-summary class-summary-tab2">
 <div class="block">The transient staging of the ValueSets of an import: an NDJSON file with one line per ValueSet,
  holding the row the value set table stores for it, read back through Spark so the importer writes
  the table once for the whole import without holding every ValueSet in driver memory.</div>
