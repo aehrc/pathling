@@ -11,7 +11,8 @@
 #   EXTRA_JARS   a jar for --jars (the Spike08*.java prototype jar, which the candidate routes need);
 #   JSON_DIR     a JSON data directory in place of the benchmark's (the messy variant);
 #   SOURCES_OVERRIDE the sources to run, space-separated, in place of the route's default;
-#   SPIKE_POLICY fail (the default in spike_routes.py) or drop;
+#   SPIKE_POLICY fail (the default in spike_routes.py), drop, or none (B only: no checks, timing reference);
+#   SPARK_CONF   one Spark setting, key=value, passed to spark-submit as --conf;
 #   RESOURCES_OVERRIDE, EXTS_OVERRIDE  fewer types, or one extensions setting, for a dry run.
 # Never overwrites an existing results/<label>/ directory; RESUME=1 continues an interrupted run.
 set -euo pipefail
@@ -33,7 +34,7 @@ export PATHLING_LABEL="$LABEL"
 # A private Ivy home per label, as run-revision.sh does, with cache and jars made up front.
 IVY="$HERE/ivy/$LABEL"
 mkdir -p "$IVY/cache" "$IVY/jars"
-export PYSPARK_SUBMIT_ARGS="--driver-memory 16g ${EXTRA_JARS:+--jars $EXTRA_JARS }--conf spark.jars.ivy=$IVY pyspark-shell"
+export PYSPARK_SUBMIT_ARGS="--driver-memory 16g ${EXTRA_JARS:+--jars $EXTRA_JARS }${SPARK_CONF:+--conf $SPARK_CONF }--conf spark.jars.ivy=$IVY pyspark-shell"
 PY="$VENV/bin/python"
 export PYSPARK_PYTHON="$PY" PYSPARK_DRIVER_PYTHON="$PY"
 

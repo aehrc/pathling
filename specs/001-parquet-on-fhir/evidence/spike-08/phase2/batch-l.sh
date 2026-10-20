@@ -20,6 +20,8 @@
 # A narrower batch: SLICES (the sources, default all four), CANDIDATES (default "aplus b avariant"; avariant
 # and orig run on JSON only) and MESSY=0 (no messy slice). The run of the original spike beside A0 and B was
 #   PREFIX=p3 SLICES=json CANDIDATES="b orig" MESSY=0 batch-l.sh
+# A candidate may be given as name:route:VAR=value[,VAR=value...], a label of its own for a route run with
+# settings of its own, such as name:b:SPIKE_POLICY=none,SPARK_CONF=spark.sql.codegen.hugeMethodLimit=8000.
 # Runs on macOS's bash 3.2.
 set -uo pipefail
 SIZE="${SIZE:-l}"
@@ -142,13 +144,19 @@ json_only() { [ "$1" = avariant ] || [ "$1" = orig ]; }
 for src in ${SLICES:-json xml-lines xml-bundles xml-bundles-txn}; do
   cands=""
   for c in ${CANDIDATES:-aplus b avariant}; do
-    [ "$src" = json ] || ! json_only "$c" && cands="$cands $c"
+    r=$(echo "$c:$c" | cut -d: -f2)
+    [ "$src" = json ] || ! json_only "$r" && cands="$cands $c"
   done
   for rep in r1 r2; do
     step "a0-$rep-514f8f8" pathling "$src" 1
-    for c in $cands; do step "$c-$rep-514f8f8" "$c" "$src" 0 EXTS_OVERRIDE=1; done
+    for c in $cands; do
+      name=${c%%:*}; r=$(echo "$c:$c" | cut -d: -f2); envs=""
+      case "$c" in *:*:*) envs=$(echo "$c" | cut -d: -f3- | tr ',' ' ');; esac
+      # shellcheck disable=SC2086  # The settings are VAR=value words without spaces.
+      step "$name-$rep-514f8f8" "$r" "$src" 0 EXTS_OVERRIDE=1 $envs
+    done
   done
-  labels=""; for c in $cands; do labels="$labels $PREFIX-$c-r?-514f8f8"; done
+  labels=""; for c in $cands; do labels="$labels $PREFIX-${c%%:*}-r?-514f8f8"; done
   set -f   # The labels are globs for pooled_phases.py, not for the shell.
   report "$src" "Slice: $src" "$PREFIX-a0-r1-514f8f8" $labels
   set +f

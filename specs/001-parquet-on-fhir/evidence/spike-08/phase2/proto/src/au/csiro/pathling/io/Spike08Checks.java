@@ -107,6 +107,15 @@ final class Spike08Checks {
     }
   }
 
+  /** The bytes of a base64 value with no check of its form, for the none policy; null where it fails. */
+  static byte[] base64Unchecked(String text) {
+    try {
+      return Base64.getMimeDecoder().decode(text);
+    } catch (IllegalArgumentException e) {
+      return null;
+    }
+  }
+
   private static String strict(String text) {
     final String compact = text.replaceAll("\\s", "");
     if (!compact.matches("[A-Za-z0-9+/]*={0,2}") || compact.length() % 4 != 0) {

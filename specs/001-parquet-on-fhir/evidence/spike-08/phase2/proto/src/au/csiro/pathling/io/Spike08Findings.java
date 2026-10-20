@@ -14,6 +14,8 @@ import org.apache.spark.sql.RowFactory;
 final class Spike08Findings {
 
   final boolean fail;
+  // The none policy, a timing reference only: no value is checked and nothing is recorded.
+  boolean off;
   final String resourceType;
   String resourceId;
   final List<Row> found = new ArrayList<>();
@@ -62,6 +64,9 @@ final class Spike08Findings {
 
   /** Records a finding at the current path, with an optional leaf name below it. */
   void add(String leaf, String kind, String value) {
+    if (off) {
+      return;
+    }
     final boolean info = "contained".equals(kind);
     final String path = path(leaf);
     if (fail && !info) {

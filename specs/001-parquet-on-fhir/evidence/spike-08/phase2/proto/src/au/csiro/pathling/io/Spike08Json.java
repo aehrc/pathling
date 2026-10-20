@@ -134,7 +134,7 @@ final class Spike08Json {
     if (doc == null) {
       return null;
     }
-    try (JsonParser p = FACTORY.createParser(doc)) {
+    try (JsonParser p = (f.off ? PLAIN : FACTORY).createParser(doc)) {
       final JsonToken first = p.nextToken();
       if (first != JsonToken.START_OBJECT) {
         f.add(null, "shape", "the document is not one JSON object");
@@ -307,6 +307,9 @@ final class Spike08Json {
       case "positiveInt":
       case "integer64":
         if (t == JsonToken.VALUE_NUMBER_INT) {
+          if (f.off) {
+            return "integer64".equals(prim) ? (Object) p.getLongValue() : (Object) p.getIntValue();
+          }
           final Object v = Spike08Checks.integer(prim, p.getText());
           if (v == null) {
             f.add(null, "invalid", p.getText());
@@ -317,6 +320,9 @@ final class Spike08Json {
       default:
         if (t == JsonToken.VALUE_STRING) {
           final String s = p.getText();
+          if (f.off) {
+            return "base64Binary".equals(prim) ? Spike08Checks.base64Unchecked(s) : s;
+          }
           final String kind = Spike08Checks.checkText(prim, s);
           if (kind != null) {
             f.add(null, kind, s);

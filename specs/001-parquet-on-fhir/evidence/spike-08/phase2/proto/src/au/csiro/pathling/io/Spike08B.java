@@ -48,7 +48,7 @@ public final class Spike08B {
     final Spike08Layout layout = Spike08Layout.fitted(def, paths, findingsColumn);
     final boolean fail = "fail".equals(policy);
     final MapPartitionsFunction<String, Row> encode = rows -> new Iterator<>() {
-      final Spike08Findings f = new Spike08Findings(fail, type);
+      final Spike08Findings f = findings(fail, type, policy);
       Iterator<Row> pending = List.<Row>of().iterator();
 
       @Override
@@ -73,6 +73,13 @@ public final class Spike08B {
       }
     };
     return docs.mapPartitions(encode, Encoders.row(layout.schema));
+  }
+
+  /** Policies: fail and drop (decision 133), and none, which checks nothing, for timing reference only. */
+  private static Spike08Findings findings(boolean fail, String type, String policy) {
+    final Spike08Findings f = new Spike08Findings(fail, type);
+    f.off = "none".equals(policy);
+    return f;
   }
 
   private static void add(List<Row> out, Row row) {
