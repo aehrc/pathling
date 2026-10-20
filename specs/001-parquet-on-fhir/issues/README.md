@@ -29,7 +29,7 @@ The known correctness gaps are closed and the benchmark can be trusted as the
 baseline for the reworks that follow.
 
 - [01](01-keep-file-counter-on-rename.md) Keep the file counter so split partition files do not collide on rename
-- [20](20-egress-ignores-unknown-field.md) Egress ignores and reports a stored field it does not know
+- [20](20-egress-ignores-unknown-field.md) DEFERRED: Egress ignores and reports a stored field it does not know
 - [21](21-pin-type-over-choice.md) Pin FHIRPath type() over a choice element
 - [22](22-canonical-structure-memo-key.md) Key the canonical-structure memo on the resource flag
 - [23](23-remove-duplicate-cardinality-accessor.md) Remove the duplicate cardinality accessor on the default definitions
