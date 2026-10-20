@@ -3982,6 +3982,14 @@ after the rows are written; on the local file system the rename is refused and t
 a probe confirmed. On `main` the counter was dropped too, and the collision ignored. It is
 scheduled on T046a, with a check of the Databricks name on a cluster at release.
 
+Since fixed, under ticket `01-keep-file-counter-on-rename` (2026-10-14): every file of a partition
+after the first keeps its counter in the qualifier, `<Type>.<partId>-<writeId>-c001.<ext>`. The
+first, numbered `c000`, keeps the name a partition that is not split is given, so writes that Spark
+does not split are named as before. Databricks' task attempt, between the write id and the counter,
+is still dropped, so two attempts of one partition would take one name. Test:
+`FileSinkSaveModeTest.aPartitionSplitIntoSeveralFilesKeepsEveryRow`, for Parquet and NDJSON,
+failing before the fix with the rename error, passing after.
+
 ## 130. The save modes find a type's files under a file name that is not only letters
 
 Raised by the automated review of the M4 pull request; owner decision (2026-10-13).

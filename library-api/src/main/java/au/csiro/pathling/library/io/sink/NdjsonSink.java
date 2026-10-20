@@ -164,7 +164,8 @@ final class NdjsonSink implements DataSink {
       // Remove the partitioned directory and replace it with the renamed partitioned files
       // <resource_type>.<partId>-<writeId>.ndjson, e.g.
       // Patient.00000-7a60a041-0e7d-4e24-b23d-82405a665677.ndjson, so that a write never takes the
-      // names of an earlier write's files.
+      // names of an earlier write's files. See TypeFiles.renameKeepingWriteId for
+      // the names of a partition Spark splits into several files.
       final List<String> renamed =
           TypeFiles.renameKeepingWriteId(context.getSpark(), resultUrl, JSON_EXTENSION);
       if (saveMode == SaveMode.OVERWRITE) {

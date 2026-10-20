@@ -755,8 +755,11 @@ You can write data to a directory containing NDJSON files. Each resource type
 is written to one or more files, named with the resource type, a partition
 number and an identifier of the write
 (`[resource type].[partition]-[write id].ndjson`), e.g.
-`Patient.00000-7a60a041-0e7d-4e24-b23d-82405a665677.ndjson`. Because every write
-has its own identifier, an append adds files beside those of earlier writes
+`Patient.00000-7a60a041-0e7d-4e24-b23d-82405a665677.ndjson`. Where Spark splits
+a partition into several files, as `spark.sql.files.maxRecordsPerFile` makes it,
+every file after the first also keeps its file counter, e.g.
+`Patient.00000-7a60a041-0e7d-4e24-b23d-82405a665677-c001.ndjson`. Because every
+write has its own identifier, an append adds files beside those of earlier writes
 rather than replacing them. The NDJSON source reads all of a type's files as
 that type.
 
@@ -803,7 +806,10 @@ You can write data to a directory
 containing [Parquet](https://parquet.apache.org/) files. Each resource type is
 written to one or more files, named with the resource type, a partition number
 and an identifier of the write (`[resource type].[partition]-[write id].parquet`),
-e.g. `Patient.00000-7a60a041-0e7d-4e24-b23d-82405a665677.parquet`. Because every
+e.g. `Patient.00000-7a60a041-0e7d-4e24-b23d-82405a665677.parquet`. Where Spark
+splits a partition into several files, as `spark.sql.files.maxRecordsPerFile`
+makes it, every file after the first also keeps its file counter, e.g.
+`Patient.00000-7a60a041-0e7d-4e24-b23d-82405a665677-c001.parquet`. Because every
 write has its own identifier, an append adds files beside those of earlier
 writes rather than replacing them. The Parquet source reads all of a type's
 files as that type, including files named `[resource type].parquet` or

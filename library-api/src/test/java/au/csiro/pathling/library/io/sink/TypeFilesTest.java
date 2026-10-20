@@ -23,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.library.io.PersistenceError;
+import jakarta.annotation.Nonnull;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
@@ -34,6 +35,8 @@ import org.apache.hadoop.fs.Path;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 /**
  * Tests the renaming of a sink's partition files that keeps the id Spark gave the write.
@@ -93,6 +96,66 @@ class TypeFilesTest {
       assertTrue(fs.exists(new Path(directory, "Condition." + part + "-" + WRITE_ID + ".ndjson")));
     }
     assertFalse(fs.exists(table));
+  }
+
+  /**
+   * Spark splits a partition into several files, numbered by a file counter, where {@code
+   * spark.sql.files.maxRecordsPerFile} limits the rows of each. The first keeps the name a file
+   * that is not split is given, and the others keep their counter, so no two take the same name.
+   * Databricks names its files with a task attempt before the counter, which is not kept.
+   *
+   * @param prefix the start of each file's name, before the id of the write
+   * @param suffix the end of each file's name, after the id of the write and before the counter
+   */
+  @ParameterizedTest
+  @CsvSource({"'part-00000-', '-'", "'part-00000-tid-5046671251912249212-', '-5-1-'"})
+  void filesOfOnePartitionKeepTheFileCounter(
+      @Nonnull final String prefix, @Nonnull final String suffix) throws IOException {
+    final Path table = new Path(directory, "Observation.ndjson");
+    fs.mkdirs(table);
+    for (final String counter : List.of("c000", "c001", "c010", "c1000")) {
+      fs.create(new Path(table, prefix + WRITE_ID + suffix + counter + ".txt")).close();
+    }
+
+    final List<String> renamed = TypeFiles.renameKeepingWriteId(fs, table.toString(), "txt");
+
+    assertEquals(4, renamed.size());
+    for (final String qualifier :
+        List.of(
+            "00000-" + WRITE_ID,
+            "00000-" + WRITE_ID + "-c001",
+            "00000-" + WRITE_ID + "-c010",
+            "00000-" + WRITE_ID + "-c1000")) {
+      assertTrue(fs.exists(new Path(directory, "Observation." + qualifier + ".ndjson")));
+    }
+    assertFalse(fs.exists(table));
+  }
+
+  /**
+   * Databricks' task attempt is dropped from the name, so two attempts of one partition take the
+   * same name. The second rename is refused and the table, which still holds its file, is left in
+   * place rather than one file replacing the other.
+   */
+  @Test
+  void twoAttemptsOfOnePartitionAreRefused() throws IOException {
+    final Path table = new Path(directory, "Encounter.ndjson");
+    fs.mkdirs(table);
+    for (final String attempt : List.of("1", "2")) {
+      fs.create(
+              new Path(
+                  table,
+                  "part-00000-tid-5046671251912249212-" + WRITE_ID + "-5-" + attempt + "-c000.txt"))
+          .close();
+    }
+    final String tableUrl = table.toString();
+
+    final PersistenceError exception =
+        assertThrows(
+            PersistenceError.class, () -> TypeFiles.renameKeepingWriteId(fs, tableUrl, "txt"));
+
+    assertTrue(exception.getMessage().contains("Could not rename"), exception::getMessage);
+    assertTrue(fs.exists(table));
+    assertEquals(1, fs.listStatus(table).length);
   }
 
   @Test

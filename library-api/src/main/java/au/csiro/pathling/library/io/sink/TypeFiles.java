@@ -48,13 +48,23 @@ final class TypeFiles {
   /**
    * The name Spark gives a file it writes: the partition id and the id of the write, then an
    * optional file counter and the extensions. Databricks puts a transaction id, {@code
-   * tid-<number>}, between the partition id and the id of the write.
+   * tid-<number>}, between the partition id and the id of the write, and a task attempt before the
+   * counter. What follows the id of the write, up to the extensions, is the {@code tail}.
    */
   @Nonnull
   private static final Pattern SPARK_PART_FILE =
       Pattern.compile(
-          "^part-(\\d+)-(?:tid--?\\d+-)?([0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12})"
-              + "(?:[-.].*)?$");
+          "^part-(?<partition>\\d+)-(?:tid--?\\d+-)?"
+              + "(?<writeId>[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12})"
+              + "(?<tail>(?:-[^.]*)?)(?:\\..*)?$");
+
+  /**
+   * A file counter other than the first, {@code c<number>}, at the end of what follows the id of
+   * the write. Spark numbers each file it splits a partition into, where {@code
+   * spark.sql.files.maxRecordsPerFile} limits the rows of a file, from {@code c000}.
+   */
+  @Nonnull
+  private static final Pattern LATER_FILE_COUNTER = Pattern.compile("-(?<counter>c0*[1-9]\\d*)$");
 
   private TypeFiles() {}
 
@@ -177,7 +187,9 @@ final class TypeFiles {
    * Patient.00000-7a60a041-0e7d-4e24-b23d-82405a665677.parquet}, where the table is {@code
    * <name>.<extension>}. Spark gives every write an id of its own, so the files of a write never
    * take the names of an earlier write's files in the same directory, and a write can be added
-   * beside them.
+   * beside them. Where Spark splits a partition into several files, as {@code
+   * spark.sql.files.maxRecordsPerFile} makes it, every file after the first keeps its file counter,
+   * {@code <name>.<partId>-<writeId>-c<number>.<extension>}, so that no two take the same name.
    *
    * <p>A file in the table that Spark did not name, which a table assembled by hand can hold, is
    * left there, and so is the table: it is still read as the type, so the rows it holds are kept.
@@ -242,7 +254,9 @@ final class TypeFiles {
                 tablePath.getParent(),
                 "%s.%s.%s"
                     .formatted(
-                        nameAndExtension[0], partitionAndWriteId(part), nameAndExtension[1]));
+                        nameAndExtension[0],
+                        partitionWriteIdAndCounter(part),
+                        nameAndExtension[1]));
         log.info("Renaming result to: {}", target);
         // A rename that fails must not be followed by the removal of the table, which still holds
         // the file.
@@ -267,15 +281,21 @@ final class TypeFiles {
   }
 
   /**
-   * Returns the partition id and the write id of a file Spark wrote, for example {@code
-   * 00000-<writeId>} from {@code part-00000-<writeId>-c000.snappy.parquet}.
+   * Returns the partition id, the write id and the file counter of a file Spark wrote, for example
+   * {@code 00000-<writeId>-c001} from {@code part-00000-<writeId>-c001.snappy.parquet}. The first
+   * file of a partition, numbered {@code c000}, and a file without a counter keep only the
+   * partition and write ids, so that a partition Spark does not split is named as before.
    */
   @Nonnull
-  private static String partitionAndWriteId(@Nonnull final Path part) {
+  private static String partitionWriteIdAndCounter(@Nonnull final Path part) {
     final Matcher matcher = SPARK_PART_FILE.matcher(part.getName());
     if (!matcher.matches()) {
       throw new IllegalArgumentException("Not a file Spark named: " + part);
     }
-    return matcher.group(1) + "-" + matcher.group(2);
+    final String partitionAndWriteId = matcher.group("partition") + "-" + matcher.group("writeId");
+    final Matcher counter = LATER_FILE_COUNTER.matcher(matcher.group("tail"));
+    return counter.find()
+        ? partitionAndWriteId + "-" + counter.group("counter")
+        : partitionAndWriteId;
   }
 }
