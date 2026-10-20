@@ -23,6 +23,7 @@ import java.io.Serial;
 import java.io.Serializable;
 import java.time.Instant;
 import lombok.Value;
+import lombok.With;
 
 /**
  * One entry of the store manifest, describing an imported code system, value set or concept map and
@@ -36,7 +37,7 @@ public class ManifestEntry implements Serializable {
   @Serial private static final long serialVersionUID = 2L;
 
   /** The store format version at the time this entry was written. */
-  int storeFormatVersion;
+  @With int storeFormatVersion;
 
   /** The kind of entry: {@code code_system}, {@code value_set} or {@code concept_map}. */
   @Nonnull String entryType;
@@ -72,7 +73,7 @@ public class ManifestEntry implements Serializable {
    * Why a ConceptMap cannot be read as the rows of a concept map relation, or null where it can or
    * the entry is not a ConceptMap.
    */
-  @Nullable String fault;
+  @With @Nullable String fault;
 
   /**
    * Creates an entry describing a resource written by an import, taking the provenance values from

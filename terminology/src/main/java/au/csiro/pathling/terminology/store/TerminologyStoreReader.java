@@ -94,10 +94,7 @@ public class TerminologyStoreReader {
   @Nonnull
   public static TerminologyStoreReader open(
       @Nonnull final String storagePath, @Nonnull final Map<String, String> hadoopConfiguration) {
-    final Configuration configuration = new Configuration();
-    hadoopConfiguration.forEach(configuration::set);
-    final Engine engine = DefaultEngine.create(configuration);
-    final TerminologyStoreReader reader = new TerminologyStoreReader(engine, storagePath);
+    final TerminologyStoreReader reader = unchecked(storagePath, hadoopConfiguration);
 
     final List<ManifestEntry> manifest;
     try {
@@ -127,6 +124,23 @@ public class TerminologyStoreReader {
     }
     requireCurrentConceptMaps(manifest, storagePath);
     return reader;
+  }
+
+  /**
+   * Creates a reader over a store without validating it, for the migration of a store that {@link
+   * #open} would reject.
+   *
+   * @param storagePath the root path of the store
+   * @param hadoopConfiguration a snapshot of the Hadoop configuration, used to reach the store's
+   *     filesystem
+   * @return a reader that has not read anything from the store
+   */
+  @Nonnull
+  static TerminologyStoreReader unchecked(
+      @Nonnull final String storagePath, @Nonnull final Map<String, String> hadoopConfiguration) {
+    final Configuration configuration = new Configuration();
+    hadoopConfiguration.forEach(configuration::set);
+    return new TerminologyStoreReader(DefaultEngine.create(configuration), storagePath);
   }
 
   /**

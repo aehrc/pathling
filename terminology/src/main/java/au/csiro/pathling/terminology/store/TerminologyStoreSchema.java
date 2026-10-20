@@ -41,13 +41,15 @@ public final class TerminologyStoreSchema {
   /**
    * The format version of the store. A reader refuses to open a store whose manifest reports a
    * greater version, since it may not understand the layout. Version 2 replaced the whole-resource
-   * ConceptMap table of version 1 with {@link #CONCEPT_MAPPING}.
+   * ConceptMap table of version 1 with {@link #CONCEPT_MAPPING}. {@link TerminologyStoreMigrator}
+   * brings a store of an earlier version up to this one.
    */
   public static final int STORE_FORMAT_VERSION = 2;
 
   /**
    * The earliest format version whose ConceptMaps this version of Pathling can read. A store whose
-   * manifest records a ConceptMap written under an earlier version must be re-imported.
+   * manifest records a ConceptMap written under an earlier version must be migrated by {@link
+   * TerminologyStoreMigrator} or re-imported.
    */
   public static final int MIN_CONCEPT_MAP_FORMAT_VERSION = 2;
 
