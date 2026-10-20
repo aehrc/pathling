@@ -51,9 +51,6 @@ public class FhirDefinitionContext implements DefinitionContext {
   @Override
   @Nonnull
   public ResourceDefinition findResourceDefinition(@Nonnull final String resourceCode) {
-    // Resolving the resource code to a tag allows custom types (like ViewDefinition) as well as
-    // standard ones, and is also where FhirResourceTag itself resolves the code.
-    final FhirResourceTag resourceTag = FhirResourceTag.of(resourceCode);
     final RuntimeResourceDefinition hapiDefinition;
     try {
       hapiDefinition = fhirContext.getResourceDefinition(resourceCode);
@@ -66,6 +63,10 @@ public class FhirDefinitionContext implements DefinitionContext {
     if (!resourceCode.equals(requireNonNull(hapiDefinition).getName())) {
       throw new IllegalArgumentException("Resource type not found: " + resourceCode);
     }
+    // Resolving the resource code to a tag allows custom types (like ViewDefinition) as well as
+    // standard ones. It is done once the name is known to be a resource type's, so that a name
+    // that is refused is not resolved for nothing.
+    final FhirResourceTag resourceTag = FhirResourceTag.of(resourceCode);
     return new FhirResourceDefinition(resourceCode, resourceTag.getResourceType(), hapiDefinition);
   }
 

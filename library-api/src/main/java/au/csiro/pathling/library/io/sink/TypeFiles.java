@@ -24,7 +24,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
@@ -49,22 +52,27 @@ final class TypeFiles {
    * The name Spark gives a file it writes: the partition id and the id of the write, then an
    * optional file counter and the extensions. Databricks puts a transaction id, {@code
    * tid-<number>}, between the partition id and the id of the write, and a task attempt before the
-   * counter. What follows the id of the write, up to the extensions, is the {@code tail}.
+   * counter. What follows the id of the write, up to the extensions, is the {@code tail}. Spark
+   * introduces the counter with a hyphen, at the end of the tail, where it writes a single
+   * directory, or with a period, as the first of the extensions, where it writes partitions
+   * dynamically: that is the {@code dotCounter}.
    */
   @Nonnull
   private static final Pattern SPARK_PART_FILE =
       Pattern.compile(
           "^part-(?<partition>\\d+)-(?:tid--?\\d+-)?"
               + "(?<writeId>[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12})"
-              + "(?<tail>(?:-[^.]*)?)(?:\\..*)?$");
+              + "(?<tail>(?:-[^.]*)?)(?:\\.(?<dotCounter>c\\d+)(?=\\.|$))?(?:\\..*)?$");
 
   /**
-   * A file counter other than the first, {@code c<number>}, at the end of what follows the id of
-   * the write. Spark numbers each file it splits a partition into, where {@code
-   * spark.sql.files.maxRecordsPerFile} limits the rows of a file, from {@code c000}.
+   * A file counter, {@code c<number>}, at the end of what follows the id of the write. Spark
+   * numbers each file it splits a partition into, where {@code spark.sql.files.maxRecordsPerFile}
+   * limits the rows of a file, from {@code c000}.
    */
-  @Nonnull
-  private static final Pattern LATER_FILE_COUNTER = Pattern.compile("-(?<counter>c0*[1-9]\\d*)$");
+  @Nonnull private static final Pattern TAIL_FILE_COUNTER = Pattern.compile("-(?<counter>c\\d+)$");
+
+  /** A file counter other than the first, {@code c000}. */
+  @Nonnull private static final Pattern LATER_FILE_COUNTER = Pattern.compile("c0*[1-9]\\d*");
 
   private TypeFiles() {}
 
@@ -194,12 +202,18 @@ final class TypeFiles {
    * <p>A file in the table that Spark did not name, which a table assembled by hand can hold, is
    * left there, and so is the table: it is still read as the type, so the rows it holds are kept.
    *
+   * <p>A table is renamed whole or not at all. Where two of its files would take one name, as two
+   * attempts of one Databricks task would, none is renamed. Where a rename fails, the files already
+   * renamed are returned to the table, so that the rows of the write are not read twice, from the
+   * table and from beside it.
+   *
    * @param spark the Spark session
    * @param table the directory the write was made into, {@code <name>.<extension>}
    * @param partExtension the extension of the files Spark wrote in the table
    * @return the paths of the renamed files
-   * @throws PersistenceError if the table holds no file named as Spark names them, or there is a
-   *     problem renaming one, in which case the table is left in place
+   * @throws PersistenceError if the table holds no file named as Spark names them, two of its files
+   *     would take one name, or there is a problem renaming one, in which case the table is left in
+   *     place
    */
   @Nonnull
   static List<String> renameKeepingWriteId(
@@ -218,9 +232,9 @@ final class TypeFiles {
    * @param table the directory the write was made into, {@code <name>.<extension>}
    * @param partExtension the extension of the files Spark wrote in the table
    * @return the paths of the renamed files
-   * @throws PersistenceError if the table is not named {@code <name>.<extension>} or holds no file
-   *     with the extension named as Spark names them, or there is a problem renaming one, in which
-   *     case the table is left in place
+   * @throws PersistenceError if the table is not named {@code <name>.<extension>}, holds no file
+   *     with the extension named as Spark names them or two that would take one name, or there is a
+   *     problem renaming one, in which case the table is left in place
    */
   @Nonnull
   static List<String> renameKeepingWriteId(
@@ -247,25 +261,31 @@ final class TypeFiles {
                 .formatted(table),
             null);
       }
+      final Map<Path, Path> targets = targetsOf(tablePath, nameAndExtension, parts);
       final List<String> renamed = new ArrayList<>();
-      for (final Path part : parts) {
-        final Path target =
-            new Path(
-                tablePath.getParent(),
-                "%s.%s.%s"
-                    .formatted(
-                        nameAndExtension[0],
-                        partitionWriteIdAndCounter(part),
-                        nameAndExtension[1]));
+      final Map<Path, Path> moved = new LinkedHashMap<>();
+      for (final Map.Entry<Path, Path> entry : targets.entrySet()) {
+        final Path part = entry.getKey();
+        final Path target = entry.getValue();
         log.info("Renaming result to: {}", target);
         // A rename that fails must not be followed by the removal of the table, which still holds
-        // the file.
-        if (!fileSystem.rename(part, target)) {
+        // the file, and the files renamed before it are returned to the table.
+        final boolean isRenamed;
+        try {
+          isRenamed = fileSystem.rename(part, target);
+        } catch (final IOException e) {
           throw new PersistenceError(
-              "Could not rename the partition file %s to %s; the table %s has been left in place"
-                  .formatted(part, target, table),
+              "Problem renaming the partition file %s to %s; the table %s has been left in place%s"
+                  .formatted(part, target, table, restore(fileSystem, moved)),
+              e);
+        }
+        if (!isRenamed) {
+          throw new PersistenceError(
+              "Could not rename the partition file %s to %s; the table %s has been left in place%s"
+                  .formatted(part, target, table, restore(fileSystem, moved)),
               null);
         }
+        moved.put(part, target);
         renamed.add(target.toString());
       }
       if (parts.size() == files.size()) {
@@ -281,10 +301,72 @@ final class TypeFiles {
   }
 
   /**
+   * Returns the name each file Spark wrote in a table is renamed to, beside the table, in the order
+   * of the files.
+   *
+   * @throws PersistenceError if two of the files would take one name
+   */
+  @Nonnull
+  private static Map<Path, Path> targetsOf(
+      @Nonnull final Path tablePath,
+      @Nonnull final String[] nameAndExtension,
+      @Nonnull final List<Path> parts) {
+    final Map<Path, Path> targets = new LinkedHashMap<>();
+    final Map<Path, Path> partsByTarget = new HashMap<>();
+    for (final Path part : parts) {
+      final Path target =
+          new Path(
+              tablePath.getParent(),
+              "%s.%s.%s"
+                  .formatted(
+                      nameAndExtension[0], partitionWriteIdAndCounter(part), nameAndExtension[1]));
+      final Path other = partsByTarget.putIfAbsent(target, part);
+      if (other != null) {
+        throw new PersistenceError(
+            ("The partition files %s and %s would both be renamed to %s; the table %s has been "
+                    + "left in place")
+                .formatted(other, part, target, tablePath),
+            null);
+      }
+      targets.put(part, target);
+    }
+    return targets;
+  }
+
+  /**
+   * Returns files already renamed out of a table to it, the latest first, after a later rename has
+   * failed.
+   *
+   * @return a sentence naming the files that could not be returned, or an empty string
+   */
+  @Nonnull
+  private static String restore(
+      @Nonnull final FileSystem fileSystem, @Nonnull final Map<Path, Path> moved) {
+    final List<Path> parts = new ArrayList<>(moved.keySet());
+    final List<Path> stranded = new ArrayList<>();
+    for (int i = parts.size() - 1; i >= 0; i--) {
+      final Path part = parts.get(i);
+      final Path target = moved.get(part);
+      try {
+        if (!fileSystem.rename(target, part)) {
+          stranded.add(target);
+        }
+      } catch (final IOException e) {
+        log.error("Could not return {} to {}", target, part, e);
+        stranded.add(target);
+      }
+    }
+    return stranded.isEmpty()
+        ? ""
+        : ", but these renamed files could not be returned to it: " + stranded;
+  }
+
+  /**
    * Returns the partition id, the write id and the file counter of a file Spark wrote, for example
-   * {@code 00000-<writeId>-c001} from {@code part-00000-<writeId>-c001.snappy.parquet}. The first
-   * file of a partition, numbered {@code c000}, and a file without a counter keep only the
-   * partition and write ids, so that a partition Spark does not split is named as before.
+   * {@code 00000-<writeId>-c001} from {@code part-00000-<writeId>-c001.snappy.parquet} or {@code
+   * part-00000-<writeId>.c001.snappy.parquet}. The first file of a partition, numbered {@code
+   * c000}, and a file without a counter keep only the partition and write ids, so that a partition
+   * Spark does not split is named as before.
    */
   @Nonnull
   private static String partitionWriteIdAndCounter(@Nonnull final Path part) {
@@ -293,9 +375,11 @@ final class TypeFiles {
       throw new IllegalArgumentException("Not a file Spark named: " + part);
     }
     final String partitionAndWriteId = matcher.group("partition") + "-" + matcher.group("writeId");
-    final Matcher counter = LATER_FILE_COUNTER.matcher(matcher.group("tail"));
-    return counter.find()
-        ? partitionAndWriteId + "-" + counter.group("counter")
+    final Matcher tailCounter = TAIL_FILE_COUNTER.matcher(matcher.group("tail"));
+    final String counter =
+        tailCounter.find() ? tailCounter.group("counter") : matcher.group("dotCounter");
+    return counter != null && LATER_FILE_COUNTER.matcher(counter).matches()
+        ? partitionAndWriteId + "-" + counter
         : partitionAndWriteId;
   }
 }

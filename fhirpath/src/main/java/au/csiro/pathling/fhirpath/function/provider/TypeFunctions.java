@@ -114,7 +114,9 @@ public class TypeFunctions {
       final ColumnRepresentation parent = choice.getParent().getColumn();
       final UnaryOperator<Column> mapper =
           TypeInfo.choiceTypeInfoMapper(parent, choice.getChoiceDefinition().getAllChildTypes());
-      final Column mappedValue = parent.transform(mapper).getValue();
+      // An element of the parent whose choice holds no value is not an item of the input, so the
+      // null the mapper gives it is removed rather than returned as an entry.
+      final Column mappedValue = parent.transform(mapper).removeNulls().getValue();
       return Collection.buildWithDefinition(
           new DefaultRepresentation(mappedValue), TypeInfo.DEFINITION);
     }
