@@ -179,6 +179,14 @@ rejected rather than partially returned. The `group.unmapped` default is not
 applied; write `COALESCE(sct_to_icd10.target_code, conditions.code)` to pass
 unmapped codes through.
 
+A SNOMED CT implicit concept map, `http://snomed.info/sct?fhir_cm=[refsetId]`,
+can be read only from the [local terminology store](./local.md#value-set-and-concept-map-expressions),
+and only for the four association reference sets: POSSIBLY EQUIVALENT TO,
+REPLACED BY, SAME AS and ALTERNATIVE. A simple map reference set, such as ICD-O
+(`446608001`), can be used with `translate` but is rejected here with an error
+that says so. A terminology server is searched only for the ConceptMap
+resources it holds, so an implicit concept map cannot be read from one.
+
 A `LEFT JOIN` translates each code and keeps the codes that the map does not
 translate. The `relationship` test belongs in the `ON` clause, and admits null
 so that rows stating there is no mapping are kept:

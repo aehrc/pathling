@@ -875,6 +875,12 @@ possibly equivalent to several others, translates to all of them. Any other
 `fhir_cm` reference set, including other association reference sets such as WAS
 A, is treated as unknown content.
 
+Only the four association reference sets can also be read as a table with
+`concept_map` (`pathling_concept_map` in R, `conceptMap` in Java and Scala), as
+described in [Terminology in SQL](./sql.md#concept-maps). A simple map
+reference set can be used with `translate` but not read as a table, and is
+rejected with an error that says so.
+
 A store imported by Pathling 9.9 holds no simple map targets, so translation
 through a simple map finds nothing until the release is imported again.
 

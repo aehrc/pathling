@@ -136,4 +136,23 @@ class LocalTerminologyRelationsTest {
         TerminologyRelationException.class,
         () -> pathling.conceptMap("http://example.org/fhir/ConceptMap/unknown"));
   }
+
+  @Test
+  void simpleMapIsRejectedWithTheReason() {
+    // A simple map translates in local mode, so the error says why it cannot be read rather than
+    // reporting it as unresolvable.
+    final String url = "http://snomed.info/sct?fhir_cm=446608001";
+
+    final TerminologyRelationException error =
+        assertThrows(TerminologyRelationException.class, () -> pathling.conceptMap(url));
+
+    assertEquals(
+        "Concept map '"
+            + url
+            + "' could not be resolved: reference set 446608001 is not one of the four association"
+            + " reference sets that can be read as a concept map (POSSIBLY EQUIVALENT TO, REPLACED"
+            + " BY, SAME AS and ALTERNATIVE); a simple map reference set can be used with"
+            + " translate, but not read as a concept map",
+        error.getMessage());
+  }
 }
