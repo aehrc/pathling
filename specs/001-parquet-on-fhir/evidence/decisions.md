@@ -4116,3 +4116,49 @@ _Consequences_:
 - The engine's date comparisons, which throw on invalid stored text, contradict principle 7 (ticket 31).
 - Ticket 08's candidates are measured against this scope.
 - OQ-1, FR-063 and ticket 16's acceptance criteria are rewritten once the spike reports, not before.
+
+_Addendum (owner, 2026-10-20)_: the per-value scope above is deferred with the ingest mechanism, and the
+interim ingest validates by column type only (decision 134).
+
+## 134. The ingest mechanism is deferred; the interim is A0 for JSON and `from_xml` for XML
+
+Owner decision (2026-10-20). Evidence is in `spike-08/README.md`, whose "Summary of phase 2" sets the
+candidates side by side, and in `xml-native/xml-native.md`.
+
+Ticket 08 measured A0 (HEAD), A+, A-variant and B against decision 133's scope and SC-011. It did not end in a
+choice. Which candidate fits depends on requirements the owner has to settle with colleagues first: how much of
+decision 133's per-value scope is needed, and how much code the project is willing to own for it. That
+consultation must not hold up the rest of the programme, in particular the engine and the annotations.
+
+_Decision_: the choice of ingest mechanism is deferred to a later phase (ticket 16). Until then, ingest and egress
+make three simplifying assumptions.
+
+- **JSON stays on A0**, HEAD's route: Spark's reader with an inferred schema, then the generated transform to the
+  layout, and `to_json` on egress. A0 was preferred to the original spike (`spike/parquet-on-fhir`), which
+  truncates decimals to six places, stores `{}` differently alone and in a batch, and drops `contained`.
+- **XML moves off HAPI onto the `from_xml` route**: one document per string, `from_xml`, and a transform
+  generated from the definitions, with `to_xml` on egress. It is the route phase 1 prototyped and measured. It
+  stores what the JSON route stores, value for value. Bundles leave HAPI too (ticket 32).
+- **The losses OQ-1 lists are accepted for now.** They are stated as interim exceptions rather than removed:
+  - a decimal passes through a double, on ingest and on egress, so its lexical form, and precision beyond a
+    double, are lost;
+  - empty values are handled as Spark's reader handles them: `null`, `{}` and `[]` are dropped silently, `""`
+    is stored, and an empty structure in a batch can be stored as a present structure holding nothing;
+  - validation is by column type, not per value. A contradicting value costs its element for every resource
+    read with it, and is reported once per column, as a log line;
+  - an integer out of range and malformed base64 become null without a finding.
+
+_Consequences_:
+
+- Decision 133 stands as the target, but its per-value scope is deferred with the mechanism: the datatype
+  checks, the empty-value rule, the `fail` and `drop` policies, the `_findings` column, the `observe` summary
+  and the validate-only run. Until ticket 16 lands, ingest neither fails nor reports per value, and principle 6
+  does not hold for the contradicting values and empty structures above.
+- OQ-1 stays open, with these losses as its interim answer. FR-063 gains an interim exception for them. FR-002,
+  FR-016 and FR-019 already defer to OQ-1 and are unchanged.
+- Ticket 31 matters more: the engine must not fail on invalid stored values that ingest now lets through.
+- Data ingested before ticket 16 keeps its losses. If ticket 16 later stores decimals or empty values
+  differently, the layout column of ticket 29 is what tells the two apart, and its version is bumped then.
+- Ticket 08 closes as a completed spike. Ticket 32 replaces HAPI on the XML and Bundle routes. Ticket 29 adds
+  the layout column to that interim ingest, since that is the ingest the release ships. Ticket 16 is rewritten as
+  the deferred rework, blocked on the owner's consultation.

@@ -44,15 +44,19 @@ baseline for the reworks that follow.
 JSON and XML are read and written without HAPI, and primitive ids and
 extensions are stored.
 
-- [08](08-spike-ingest-egress-mechanism.md) Spike: the ingest and egress mechanism for JSON and XML
+- ~~[08](08-spike-ingest-egress-mechanism.md) Spike: the ingest and egress mechanism for JSON and XML~~ (done; choice deferred, decision 134)
 - [09](09-decide-column-binding.md) Decide whether column expressions are bound to a schema
-- [16](16-placeholder-ingest-egress-rework.md) PLACEHOLDER: ingest and egress rework per the spike
+- [32](32-xml-and-bundles-without-hapi.md) XML and bundles without HAPI, on the interim ingest
+- [16](16-placeholder-ingest-egress-rework.md) DEFERRED: the ingest mechanism, per-value validation and lossless decimals
 - [17](17-placeholder-primitive-metadata-group.md) PLACEHOLDER: the primitive metadata group (US6, #437)
 - [29](29-layout-version-column.md) Identify the PoF layout by a versioned layout column
 - [30](30-pof-spec-layout-column.md) Propose the layout column as an amendment to the Parquet on FHIR specification
 
-Tickets 16 and 17 are rewritten from the spike's findings before they are built.
-Ticket 29 adds the layout column to the rebuilt ingest, so it follows 16. Until it
+Decision 134 deferred the choice of ingest mechanism. Until the owner makes it,
+JSON stays on Spark's reader and ticket 32 takes XML and bundles off HAPI; ticket
+16 is the deferred rework, and ticket 17 is rewritten once it is clear which
+ingest it builds on. Ticket 29 adds the layout column to the ingest the release
+ships, so it follows 32. Until it
 lands, the refusal of the legacy layout rests on the root `id_versioned`. Ticket 30
 can start at any time; 29 takes its name from 30 if 30 is agreed first.
 

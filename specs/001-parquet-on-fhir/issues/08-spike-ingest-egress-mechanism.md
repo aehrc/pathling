@@ -25,14 +25,14 @@ The spike also records what each candidate means for XML and bundles. Today's HA
 
 **Blocked by:** None — can start immediately
 
-**Status:** ready-for-human
+**Status:** done
 
-- [ ] Both candidates are prototyped far enough to measure encode and decode on the benchmark that SC-011 names, and to show which OQ-1 losses each removes. Prototypes are throwaway.
-- [ ] Evidence, numbers and reproductions are saved under the spec's `evidence/`.
-- [ ] The owner chooses A or B. The choice is recorded as a decision.
-- [ ] OQ-1 in the spec is updated either way. Each loss is either removed, with its FR text tightened, or kept as a stated exception.
-- [ ] Ticket 16's placeholder is rewritten with concrete acceptance criteria.
-- [ ] Any thread that outlives this programme, such as the upstream Spark issue T132 describes, is handed to ticket 26.
+- [x] Both candidates are prototyped far enough to measure encode and decode on the benchmark that SC-011 names, and to show which OQ-1 losses each removes. Prototypes are throwaway.
+- [x] Evidence, numbers and reproductions are saved under the spec's `evidence/`.
+- [ ] ~~The owner chooses A or B. The choice is recorded as a decision.~~ Deferred to ticket 16; the interim is recorded as decision 134.
+- [x] OQ-1 in the spec is updated either way. Each loss is either removed, with its FR text tightened, or kept as a stated exception.
+- [x] Ticket 16's placeholder is rewritten with concrete acceptance criteria.
+- [ ] ~~Any thread that outlives this programme, such as the upstream Spark issue T132 describes, is handed to ticket 26.~~ Moved to ticket 16 with the choice.
 
 ## Comments
 
@@ -136,3 +136,27 @@ storing what HEAD stores apart from decimal text, and each has run on the fixtur
 Whether FR-050 admits Spark's generic row encoder (`Encoders.row`), which B uses, is open for the owner.
 
 The size-`l` timing runs unattended after a machine restart: `evidence/spike-08/phase2/RUNBOOK.md`.
+
+### Outcome: the choice is deferred, and the interim is A0 with `from_xml` (decision 134, 2026-10-20)
+
+The size-`l` batch and four follow-up JSON batches ran on 2026-10-19 and 2026-10-20. Evidence:
+`evidence/spike-08/README.md`. Its "Summary of phase 2" sets the candidates side by side, each row linked to its
+evidence, and lists what was not measured.
+
+- **Scope.** A+, A-variant and B meet decision 133's per-value scope on the fixtures; A0 meets none of it.
+  A+ and B remove every OQ-1 loss except the `_x` metadata (M5); A-variant keeps the decimal's text loss and
+  the empty structures on export. B alone stores every fixture the same in a batch as alone (principle 6).
+- **Timing.** On JSON, ingest (fit plus encode) is 0.39 to 0.48 of the bar for B handing its rows over through a
+  Java UDF, about 2.8 for A+ and about 17 for A-variant (Observation). On XML, B ingests at 0.21 to 0.29 of
+  the bar and A+ at 1.4 to 2.7. B through `Encoders.row` is about three times slower on encode under Spark's
+  default `hugeMethodLimit`, because its generated serializer is too large to be compiled; the UDF avoids that.
+- **What the checks cost.** About a third of B's JSON encode, and most of A+'s.
+- **Code owned.** About 400 lines for A-variant, 960 for A+ and 1,270 for B.
+- **FR-050.** The owner answered that Spark's generic row encoder (`Encoders.row`) is allowed. The fixtures
+  `c6-choice-two-types` and `c7-no-resourcetype` are rejected.
+
+The owner did not choose. The requirements behind decision 133's per-value scope are to be settled with
+colleagues first, and that must not hold up the engine or the annotations. Decision 134 defers the choice to
+ticket 16 and sets the interim: JSON stays on A0, XML and Bundles move off HAPI onto `from_xml` (ticket 32),
+and OQ-1's losses are accepted as interim exceptions. The spike's throwaway prototypes, harness and results stay
+on the local branch `issue/2831-spike-08` and in the evidence directory, as the starting point for ticket 16.
