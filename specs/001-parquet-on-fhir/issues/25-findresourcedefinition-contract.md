@@ -31,7 +31,16 @@ One thing did change: the message of an unknown-type refusal at ingest. It reads
 unchanged, and nothing in the repository, including the Python and R libraries, matches on the
 text. `FhirReaderTest.refusesATypeThatMayNotBeStored` passes unchanged.
 
-The server is not affected. Its `DataFormatException` handling, in `ExportOperationValidator`, calls
-HAPI directly, not through `DefinitionContext`.
+The other callers of the lookup, as checked:
 
-- Test runs: `fhir-schema` 41 run, 0 failed; `io` 480 run, 0 failed, 1 skipped.
+- Within FHIRPath, a resource name in an expression is checked with `isKnownResourceType` before it
+  reaches the lookup. So only a subject resource type supplied by the caller can reach it unknown,
+  and there it now raises an `IllegalArgumentException` where it raised HAPI's `DataFormatException`.
+- The server's own `DataFormatException` handling, in `ExportOperationValidator`, calls HAPI
+  directly, so it is unchanged.
+- `ErrorHandlingInterceptor` maps a `DataFormatException` to a 400 but has no mapping for an
+  `IllegalArgumentException`, which becomes a 500. If any server route lets an unknown subject type
+  reach this lookup, its response would change from a 400 to a 500 once the server takes this
+  release. Whether any route does has not been established. It is handed to ticket 26.
+
+- Test runs: `fhir-schema` 41 run, 0 failed; `io` 480 run, 0 failed, 1 skipped; `library-api` 315 run, 0 failed.
