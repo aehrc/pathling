@@ -25,8 +25,9 @@ import jakarta.annotation.Nullable;
  * The URL grammar of the implicit value sets and concept maps that a terminology source defines
  * without a resource: SNOMED CT implicit value sets ({@code fhir_vs}), VCL implicit value sets, and
  * SNOMED CT implicit concept maps ({@code fhir_cm}). A SNOMED CT base is {@code
- * http://snomed.info/sct} or an edition/version URI, exactly as the local store understands it, so
- * that the grammar here and the store's resolution agree on what is implicit.
+ * http://snomed.info/sct} or an edition URI, optionally qualified by a version, exactly as the
+ * local store understands it, so that the grammar here and the store's resolution agree on what is
+ * implicit.
  *
  * @author John Grimes
  */
@@ -96,7 +97,8 @@ public final class ImplicitTerminologyUrls {
       return null;
     }
     final String base = url.substring(0, query);
-    if (!SNOMED_URI.equals(base) && !ValueSetResolver.SNOMED_VERSIONED.matcher(base).matches()) {
+    if (!SNOMED_URI.equals(base)
+        && !ValueSetResolver.SNOMED_EDITION_OR_VERSION.matcher(base).matches()) {
       return null;
     }
     return url.substring(query + 1);

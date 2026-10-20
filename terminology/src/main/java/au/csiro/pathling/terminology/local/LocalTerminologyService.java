@@ -123,6 +123,7 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
   @Nonnull private final Map<String, CodeSystemIndexes> indexesCache = new ConcurrentHashMap<>();
 
   private static final String SNOMED_URI = "http://snomed.info/sct";
+  private static final String SNOMED_EXPERIMENTAL_URI = "http://snomed.info/xsct";
 
   /**
    * The association reference sets that can be used as SNOMED CT implicit concept maps, and the
@@ -306,7 +307,9 @@ public class LocalTerminologyService implements TerminologyService, Closeable {
   @Nullable
   private static String snomedImplicitConceptMap(@Nonnull final String conceptMapUrl) {
     final int query = conceptMapUrl.indexOf('?');
-    if (query < 0 || !conceptMapUrl.startsWith(SNOMED_URI)) {
+    if (query < 0
+        || !(conceptMapUrl.startsWith(SNOMED_URI)
+            || conceptMapUrl.startsWith(SNOMED_EXPERIMENTAL_URI))) {
       return null;
     }
     final String queryString = conceptMapUrl.substring(query + 1);

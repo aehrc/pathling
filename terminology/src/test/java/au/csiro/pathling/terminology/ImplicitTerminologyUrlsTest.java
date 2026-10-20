@@ -40,6 +40,9 @@ class ImplicitTerminologyUrlsTest {
         "http://snomed.info/sct/900000000000207008/version/20230601?fhir_vs",
         "http://snomed.info/sct/900000000000207008/version/20230601?fhir_vs=isa/73211009",
         "http://snomed.info/xsct/900000000000207008/version/20230601?fhir_vs=isa/73211009",
+        // An edition URI without a version selects the latest version of that edition.
+        "http://snomed.info/sct/32506021000036107?fhir_vs=isa/73211009",
+        "http://snomed.info/xsct/32506021000036107?fhir_vs",
         "http://fhir.org/VCL?v1=%28http%3A%2F%2Fsnomed.info%2Fsct%29inactive%3Dtrue"
       })
   void implicitValueSets(final String url) {
@@ -65,7 +68,8 @@ class ImplicitTerminologyUrlsTest {
       strings = {
         "http://snomed.info/sct?fhir_cm=900000000000526001",
         "http://snomed.info/sct/900000000000207008/version/20230601?fhir_cm=900000000000526001",
-        "http://snomed.info/xsct/900000000000207008/version/20230601?fhir_cm=900000000000527005"
+        "http://snomed.info/xsct/900000000000207008/version/20230601?fhir_cm=900000000000527005",
+        "http://snomed.info/sct/900000000000207008?fhir_cm=900000000000526001"
       })
   void implicitConceptMaps(final String url) {
     assertTrue(ImplicitTerminologyUrls.isImplicitConceptMap(url), url);
