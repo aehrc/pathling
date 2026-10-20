@@ -17,8 +17,8 @@
 # fails stops the batch; a candidate or messy step that fails is recorded in failed-labels.txt and the batch
 # goes on, so one candidate cannot cost the others their measurement.
 # For a dry run: SIZE=s PREFIX=dry IGNORE_SPREAD=1, with RESOURCES_OVERRIDE and EXTS_OVERRIDE to shorten it.
-# A narrower batch: SLICES (the sources, default all four), CANDIDATES (default "aplus b avariant"; avariant
-# and orig run on JSON only) and MESSY=0 (no messy slice). The run of the original spike beside A0 and B was
+# A narrower batch: SLICES (the sources, default all four), CANDIDATES (default "aplus b avariant"; avariant,
+# orig and budf run on JSON only) and MESSY=0 (no messy slice). The run of the original spike beside A0 and B was
 #   PREFIX=p3 SLICES=json CANDIDATES="b orig" MESSY=0 batch-l.sh
 # A candidate may be given as name:route:VAR=value[,VAR=value...], a label of its own for a route run with
 # settings of its own, such as name:b:SPIKE_POLICY=none,SPARK_CONF=spark.sql.codegen.hugeMethodLimit=8000.
@@ -140,7 +140,7 @@ done
 "$P2/proto/build.sh" "$RUNTIME" "$VENV/lib/python3.12/site-packages/pyspark/jars" "$JAR" | tee "$LOG/jar.sha256"
 
 # ---------------------------------------------------------------- 2 and 3. a slice per source
-json_only() { [ "$1" = avariant ] || [ "$1" = orig ]; }
+json_only() { [ "$1" = avariant ] || [ "$1" = orig ] || [ "$1" = budf ]; }
 for src in ${SLICES:-json xml-lines xml-bundles xml-bundles-txn}; do
   cands=""
   for c in ${CANDIDATES:-aplus b avariant}; do

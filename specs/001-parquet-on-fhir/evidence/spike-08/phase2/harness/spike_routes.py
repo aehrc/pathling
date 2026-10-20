@@ -952,4 +952,12 @@ class OrigRoute(_Route):
         return DataFrame(self.jvm.au.csiro.pathling.io.Spike08Orig.decode(stored._jdf, t), self.spark)
 
 
-ROUTES = {"aplus": APlusRoute, "avariant": AVariantRoute, "b": BRoute, "orig": OrigRoute}
+class BUdfRoute(BRoute):
+    """B with its JSON encode handed to Spark through a Java UDF in place of Encoders.row (Spike08BUdf)."""
+    def fit(self, source, raw, t):
+        ctx = self.pc._jpc.getFhirEncoders().getContext()
+        return DataFrame(self.jvm.au.csiro.pathling.io.Spike08BUdf.fit(
+            self.strings(raw), ctx, t, self.policy, self.findings_column), self.spark)
+
+
+ROUTES = {"aplus": APlusRoute, "avariant": AVariantRoute, "b": BRoute, "orig": OrigRoute, "budf": BUdfRoute}

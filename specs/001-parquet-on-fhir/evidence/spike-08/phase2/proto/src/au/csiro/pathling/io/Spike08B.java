@@ -26,26 +26,7 @@ public final class Spike08B {
   /** Formats: json (one resource per row), xml (one resource per row), xml-bundle (one Bundle per row). */
   public static Dataset<Row> fit(Dataset<String> docs, FhirContext context, String type,
       String format, String policy, boolean findingsColumn) {
-    final Spike08Def def = Spike08Def.forResource(FhirDefinitionContext.of(context), type);
-    final MapPartitionsFunction<String, String> presence = rows -> {
-      final Set<String> seen = new HashSet<>();
-      while (rows.hasNext()) {
-        final String doc = rows.next();
-        switch (format) {
-          case "json" -> Spike08Json.presence(doc, def, type, seen);
-          case "xml" -> Spike08Xml.presence(doc, def, type, seen);
-          default -> Spike08Xml.presenceBundle(doc, def, type, seen);
-        }
-      }
-      return List.of(String.join("\n", seen)).iterator();
-    };
-    final Set<String> paths = new HashSet<>();
-    for (final String part : docs.mapPartitions(presence, Encoders.STRING()).collectAsList()) {
-      if (!part.isEmpty()) {
-        paths.addAll(List.of(part.split("\n")));
-      }
-    }
-    final Spike08Layout layout = Spike08Layout.fitted(def, paths, findingsColumn);
+    final Spike08Layout layout = fitLayout(docs, context, type, format, findingsColumn);
     final boolean fail = "fail".equals(policy);
     final MapPartitionsFunction<String, Row> encode = rows -> new Iterator<>() {
       final Spike08Findings f = findings(fail, type, policy);
@@ -75,8 +56,33 @@ public final class Spike08B {
     return docs.mapPartitions(encode, Encoders.row(layout.schema));
   }
 
+  /** The fit pass: one job that returns the paths each partition saw, and the layout fitted to them. */
+  static Spike08Layout fitLayout(Dataset<String> docs, FhirContext context, String type, String format,
+      boolean findingsColumn) {
+    final Spike08Def def = Spike08Def.forResource(FhirDefinitionContext.of(context), type);
+    final MapPartitionsFunction<String, String> presence = rows -> {
+      final Set<String> seen = new HashSet<>();
+      while (rows.hasNext()) {
+        final String doc = rows.next();
+        switch (format) {
+          case "json" -> Spike08Json.presence(doc, def, type, seen);
+          case "xml" -> Spike08Xml.presence(doc, def, type, seen);
+          default -> Spike08Xml.presenceBundle(doc, def, type, seen);
+        }
+      }
+      return List.of(String.join("\n", seen)).iterator();
+    };
+    final Set<String> paths = new HashSet<>();
+    for (final String part : docs.mapPartitions(presence, Encoders.STRING()).collectAsList()) {
+      if (!part.isEmpty()) {
+        paths.addAll(List.of(part.split("\n")));
+      }
+    }
+    return Spike08Layout.fitted(def, paths, findingsColumn);
+  }
+
   /** Policies: fail and drop (decision 133), and none, which checks nothing, for timing reference only. */
-  private static Spike08Findings findings(boolean fail, String type, String policy) {
+  static Spike08Findings findings(boolean fail, String type, String policy) {
     final Spike08Findings f = new Spike08Findings(fail, type);
     f.off = "none".equals(policy);
     return f;

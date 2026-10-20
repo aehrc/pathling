@@ -8,3 +8,8 @@ orig-huge-jvm-flag: encode 0: 2400 ms encode 1: 1179 ms encode 2: 1141 ms encode
 b-hugeMethodLimit-8000: encode 0: 1967 ms encode 1: 993 ms encode 2: 908 ms encode 3: 902 ms encode 4: 817 ms 
 b-methodSplitThreshold-256: encode 0: 3144 ms encode 1: 2735 ms encode 2: 2686 ms encode 3: 2692 ms encode 4: 2676 ms 
 b-wholeStage-false: encode 0: 1841 ms encode 1: 1035 ms encode 2: 869 ms encode 3: 846 ms encode 4: 816 ms 
+
+UDF hand-over (Spike08BUdf), the same day, one session after another:
+b-default: encode 0: 3605 ms encode 1: 3012 ms encode 2: 2812 ms encode 3: 2750 ms encode 4: 2740 ms 
+b-hugeMethodLimit-8000: encode 0: 2000 ms encode 1: 1019 ms encode 2: 915 ms encode 3: 878 ms encode 4: 866 ms 
+budf-default: encode 0: 1642 ms encode 1: 896 ms encode 2: 896 ms encode 3: 895 ms encode 4: 873 ms 

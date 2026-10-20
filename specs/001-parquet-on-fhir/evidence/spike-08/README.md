@@ -872,6 +872,16 @@ building 13%. `hugeMethodLimit` is a runtime SQL setting: above it, Spark stops 
 generated method. The size-`l` timings of B elsewhere in this README were taken with the default, and B's XML
 encodes, which also hand their rows over through `Encoders.row`, were not profiled.
 
+**A UDF in place of `Encoders.row`.** At the owner's request, B's JSON encode was also built to hand its rows
+to Spark through a Java UDF (`Spike08BUdf`, route `budf`): the UDF returns the stored `Row`, typed with the
+fitted schema, and Spark converts it with its precompiled `CatalystTypeConverters`, so the generated code holds
+only the call. It is marked non-deterministic so that the optimizer does not copy it into each top-level column
+it is expanded into. Fit and parser are B's. At size `s` it was exact on all four types. On Observation at
+size `l`, runs 2 to 5 (`profile/encode-times.txt`): B 2.74 to 3.01 s by default, 0.87 to 1.02 s under
+`hugeMethodLimit=8000`, and 0.87 to 0.90 s through the UDF with Spark's defaults. In its profile, Spark's
+converters took 10% of the samples and generated code 10%, and 5% of the innermost frames were interpreted.
+It uses no `Encoders.row`, so the question FR-050 raised for B does not arise for it.
+
 ### B and A+ with and without their checks (JSON, 2026-10-20)
 
 At the owner's request, B and A+ were also timed with nothing checked, so that their JSON timings can be read
