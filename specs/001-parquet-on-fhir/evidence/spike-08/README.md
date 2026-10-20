@@ -882,6 +882,20 @@ size `l`, runs 2 to 5 (`profile/encode-times.txt`): B 2.74 to 3.01 s by default,
 converters took 10% of the samples and generated code 10%, and 5% of the innermost frames were interpreted.
 It uses no `Encoders.row`, so the question FR-050 raised for B does not arise for it.
 
+A JSON batch (`p6`, fresh A0 labels as shipped, no Spark setting changed) then timed the UDF route with B's checks
+(`budf`) and without them (`budfnc`, policy `none`), beside B under `hugeMethodLimit=8000` (`b`). Ratios of
+pooled minimums to the batch's A0 `r1`; the encode in brackets is the pooled minimum in ms:
+
+| Type | `b`, fit / encode / decode | `budf`, fit / encode / decode | `budfnc`, fit / encode / decode | Ingest, `b` / `budf` / `budfnc` |
+|---|---|---|---|---|
+| Patient | 0.58 / 0.97 (142) / 0.94 | 0.57 / 0.47 (69) / 1.03 | 0.61 / 0.38 (56) / 1.10 | 0.81 / 0.51 / 0.47 |
+| Condition | 0.44 / 0.49 (396) / 0.95 | 0.45 / 0.50 (404) / 0.92 | 0.47 / 0.29 (239) / 0.93 | 0.47 / 0.48 / 0.36 |
+| Encounter | 0.42 / 0.49 (774) / 0.80 | 0.43 / 0.48 (756) / 0.79 | 0.43 / 0.29 (457) / 0.78 | 0.47 / 0.46 / 0.34 |
+| Observation | 0.41 / 0.44 (764) / 0.90 | 0.40 / 0.45 (773) / 0.89 | 0.41 / 0.30 (520) / 0.91 | 0.43 / 0.43 / 0.34 |
+
+Fidelity was exact on every type, A0's spread was 0.042 (2 items judged), no step failed, and no "Code grows
+beyond 64 KB" error was logged. Per-type rows are in `phase2/results/batch-p6/slices.md`.
+
 ### B and A+ with and without their checks (JSON, 2026-10-20)
 
 At the owner's request, B and A+ were also timed with nothing checked, so that their JSON timings can be read

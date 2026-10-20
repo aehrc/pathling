@@ -1,0 +1,32 @@
+=== 2026-10-20 13:45:30 pre-flight
+date: Tue 20 Oct 2026 13:45:30 AEST
+uptime: 13:45  up 19:30, 4 users, load averages: 6.54 4.41 3.39
+swap: total = 0.00M  used = 0.00M  free = 0.00M  (encrypted)
+disk: /dev/disk3s1       926  865        36    96% 5408750 381351120    1%   /System/Volumes/Data
+java processes:
+  none
+top cpu:
+ 51.0 /Library/SystemExtensions/4263FE4D-84E9-4B8B-B305-A7B7F23E5B37/com.jamf.protect.security-extension.systemextension/Contents/MacOS/com.jamf.protect.security-extension
+ 27.0 /Applications/Microsoft Defender.app/Contents/MacOS/wdavdaemon_enterprise.app/Contents/MacOS/wdavdaemon_enterprise
+ 18.3 /usr/libexec/trustd
+ 16.3 claude
+ 14.1 /System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer
+43c893b378f5b579a60696c8c1516e4c918c9e21f29316c9324e6deb7f367fa9  /Users/szu004/dev/pathling/.local/work/issue/2367/pathling-compare/tools/spike08-proto.jar
+=== 2026-10-20 13:47:02 start p6-a0-r1-514f8f8 json (pathling )
+=== 2026-10-20 13:49:53 end p6-a0-r1-514f8f8 json (exit 0)
+=== 2026-10-20 13:52:54 start p6-budf-r1-514f8f8 json (budf EXTS_OVERRIDE=1)
+=== 2026-10-20 13:54:01 end p6-budf-r1-514f8f8 json (exit 0)
+=== 2026-10-20 13:55:31 start p6-budfnc-r1-514f8f8 json (budf EXTS_OVERRIDE=1 SPIKE_POLICY=none)
+=== 2026-10-20 13:56:33 end p6-budfnc-r1-514f8f8 json (exit 0)
+=== 2026-10-20 13:59:03 start p6-b-r1-514f8f8 json (b EXTS_OVERRIDE=1 SPARK_CONF=spark.sql.codegen.hugeMethodLimit=8000)
+=== 2026-10-20 14:00:13 end p6-b-r1-514f8f8 json (exit 0)
+=== 2026-10-20 14:02:13 start p6-a0-r2-514f8f8 json (pathling )
+=== 2026-10-20 14:05:02 end p6-a0-r2-514f8f8 json (exit 0)
+=== 2026-10-20 14:07:33 start p6-budf-r2-514f8f8 json (budf EXTS_OVERRIDE=1)
+=== 2026-10-20 14:08:39 end p6-budf-r2-514f8f8 json (exit 0)
+=== 2026-10-20 14:11:10 start p6-budfnc-r2-514f8f8 json (budf EXTS_OVERRIDE=1 SPIKE_POLICY=none)
+=== 2026-10-20 14:12:11 end p6-budfnc-r2-514f8f8 json (exit 0)
+=== 2026-10-20 14:14:41 start p6-b-r2-514f8f8 json (b EXTS_OVERRIDE=1 SPARK_CONF=spark.sql.codegen.hugeMethodLimit=8000)
+=== 2026-10-20 14:15:50 end p6-b-r2-514f8f8 json (exit 0)
+=== 2026-10-20 14:15:50 slice json done; A0 spread acceptable
+=== 2026-10-20 14:15:50 batch done

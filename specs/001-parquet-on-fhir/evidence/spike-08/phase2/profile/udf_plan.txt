@@ -1,0 +1,12 @@
+nondeterministic=True: columns 14, UDF calls in optimized plan 1, in physical plan 1, encode 824 ms
+  optimized plan, first lines:
+    Project [r#71.resourceType AS resourceType#72, r#71.id AS id#73, r#71.meta AS meta#74, r#71.status AS status#75, r#71.category AS category#76, r#71.code AS code#77, r#71.subject AS subject#78, r#7
+    +- Filter isnotnull(r#71)
+       +- Project [UDF(value#0) AS r#71]
+          +- InMemoryRelation [value#0], StorageLevel(disk, memory, deserialized, 1 replicas)
+nondeterministic=False: columns 14, UDF calls in optimized plan 2, in physical plan 3, encode 1490 ms
+  optimized plan, first lines:
+    Project [r#171.resourceType AS resourceType#172, r#171.id AS id#173, r#171.meta AS meta#174, r#171.status AS status#175, r#171.category AS category#176, r#171.code AS code#177, r#171.subject AS su
+    +- Project [UDF(value#0) AS r#171]
+       +- Filter isnotnull(UDF(value#0))
+          +- InMemoryRelation [value#0], StorageLevel(disk, memory, deserialized, 1 replicas)

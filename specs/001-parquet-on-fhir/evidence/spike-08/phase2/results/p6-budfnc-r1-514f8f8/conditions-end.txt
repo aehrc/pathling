@@ -1,0 +1,4 @@
+Tue 20 Oct 2026 13:56:33 AEST
+13:56  up 19:41, 4 users, load averages: 8.75 6.01 4.94
+54830 /Library/Java/JavaVirtualMachines/jdk-21.jdk/Contents/Home/bin/java -cp hive-jackson/*:/Users/szu004/.config/spark/default/:/Users/szu004/dev/pathling/.local/work/issue/2367/pathling-compare/ven
+/dev/disk3s1   926Gi   866Gi    35Gi    97%    5.4M  372M    1%   /System/Volumes/Data

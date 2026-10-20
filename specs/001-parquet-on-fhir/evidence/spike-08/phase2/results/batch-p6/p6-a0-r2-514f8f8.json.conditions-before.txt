@@ -1,0 +1,12 @@
+date: Tue 20 Oct 2026 14:02:13 AEST
+uptime: 14:02  up 19:47, 4 users, load averages: 2.85 4.45 4.55
+swap: total = 0.00M  used = 0.00M  free = 0.00M  (encrypted)
+disk: /dev/disk3s1       926  866        35    97% 5409400 370634280    1%   /System/Volumes/Data
+java processes:
+  none
+top cpu:
+152.6 /System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/Metadata.framework/Versions/A/Support/corespotlightd
+ 25.2 /Library/SystemExtensions/4263FE4D-84E9-4B8B-B305-A7B7F23E5B37/com.jamf.protect.security-extension.systemextension/Contents/MacOS/com.jamf.protect.security-extension
+ 12.0 /Applications/Microsoft Defender.app/Contents/MacOS/wdavdaemon_enterprise.app/Contents/MacOS/wdavdaemon_enterprise
+  8.0 /usr/libexec/sysmond
+  6.7 /Applications/Microsoft Defender.app/Contents/MacOS/wdavdaemon_enterprise.app/Contents/Frameworks/osqueryi

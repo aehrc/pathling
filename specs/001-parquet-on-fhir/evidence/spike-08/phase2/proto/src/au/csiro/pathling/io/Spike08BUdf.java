@@ -15,8 +15,9 @@ import org.apache.spark.sql.expressions.UserDefinedFunction;
  * of {@code Encoders.row}. The UDF returns the stored row as a {@code Row} typed with the fitted schema,
  * which Spark converts with its own precompiled converters, so the generated code holds only the call and
  * stays small however wide the schema. The fit pass and the parser are B's, unchanged. The UDF is marked
- * non-deterministic so that the optimizer does not copy it into each of the top-level columns it is
- * expanded into.
+ * non-deterministic so that the optimizer does not push the filter that drops the documents of other types
+ * below it, which would rewrite the filter as a second call of the UDF and parse every document twice
+ * (phase2/profile/udf_plan.txt).
  */
 public final class Spike08BUdf {
 
@@ -24,9 +25,16 @@ public final class Spike08BUdf {
 
   public static Dataset<Row> fit(Dataset<String> docs, FhirContext context, String type, String policy,
       boolean findingsColumn) {
+    return fit(docs, context, type, policy, findingsColumn, true);
+  }
+
+  /** As above; nondeterministic false leaves the UDF deterministic, to inspect the plan Spark makes. */
+  public static Dataset<Row> fit(Dataset<String> docs, FhirContext context, String type, String policy,
+      boolean findingsColumn, boolean nondeterministic) {
     final Spike08Layout layout = Spike08B.fitLayout(docs, context, type, "json", findingsColumn);
+    final UserDefinedFunction deterministic = udf(new Parse(layout, type, policy), layout.schema);
     final UserDefinedFunction parse =
-        udf(new Parse(layout, type, policy), layout.schema).asNondeterministic();
+        nondeterministic ? deterministic.asNondeterministic() : deterministic;
     final Column doc = col(docs.columns()[0]);
     return docs.select(parse.apply(doc).alias("r")).filter(col("r").isNotNull()).select("r.*");
   }

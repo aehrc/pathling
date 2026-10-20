@@ -1,0 +1,6 @@
+phases-json-ext1 Patient 11853 11853 11853 exact=500/500 lexical=500/500 fit 78 encode 180 decode 140 scan 56 jobs 1 1 1
+phases-json-ext1 Condition 459617 459617 459617 exact=500/500 lexical=500/500 fit 216 encode 429 decode 284 scan 106 jobs 1 1 1
+phases-json-ext1 Encounter 598548 598548 598548 exact=500/500 lexical=500/500 fit 373 encode 811 decode 575 scan 163 jobs 1 1 1
+phases-json-ext1 Observation 1004979 1004979 1004979 exact=500/500 lexical=500/500 fit 420 encode 789 decode 669 scan 249 jobs 1 1 1
+/dev/disk3s1   926Gi   868Gi    34Gi    97%    5.4M  358M    1%   /System/Volumes/Data
+done p6-b-r2-514f8f8

@@ -1,0 +1,15 @@
+source           type         phase   p6-a0-r1- p6-a0-r2- ratio
+json             Condition    decode        280       276  0.99  (under 1 s, not judged)
+json             Condition    encode        816       805  0.99  (under 1 s, not judged)
+json             Condition    fit           455       442  0.97  (under 1 s, not judged)
+json             Encounter    decode        669       638  0.95  (under 1 s, not judged)
+json             Encounter    encode      1,584     1,518  0.96
+json             Encounter    fit           838       788  0.94  (under 1 s, not judged)
+json             Observation  decode        697       707  1.01  (under 1 s, not judged)
+json             Observation  encode      1,724     1,706  0.99
+json             Observation  fit           980       992  1.01  (under 1 s, not judged)
+json             Patient      decode        105       110  1.05  (under 1 s, not judged)
+json             Patient      encode        147       147  1.00  (under 1 s, not judged)
+json             Patient      fit           102        96  0.95  (under 1 s, not judged)
+
+judged items 2; worst |ratio - 1| 0.042; median 0.026; ACCEPTABLE (limits 0.15 and 0.05)

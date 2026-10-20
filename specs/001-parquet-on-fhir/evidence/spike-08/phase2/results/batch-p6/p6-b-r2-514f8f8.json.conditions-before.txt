@@ -1,0 +1,12 @@
+date: Tue 20 Oct 2026 14:14:41 AEST
+uptime: 14:14  up 19:59, 4 users, load averages: 2.76 4.94 5.31
+swap: total = 0.00M  used = 0.00M  free = 0.00M  (encrypted)
+disk: /dev/disk3s1       926  867        34    97% 5409902 362460120    1%   /System/Volumes/Data
+java processes:
+  none
+top cpu:
+ 34.3 /Library/SystemExtensions/4263FE4D-84E9-4B8B-B305-A7B7F23E5B37/com.jamf.protect.security-extension.systemextension/Contents/MacOS/com.jamf.protect.security-extension
+  9.9 /Applications/Microsoft Defender.app/Contents/MacOS/wdavdaemon_enterprise.app/Contents/MacOS/wdavdaemon_enterprise
+  6.9 /Library/Application Support/JAMF/Jamf.app/Contents/MacOS/JamfDaemon.app/Contents/MacOS/JamfDaemon
+  4.9 /Library/SystemExtensions/F3BD795F-764A-4848-BFAF-BDC9138B7563/com.microsoft.wdav.epsext.systemextension/Contents/MacOS/epsext
+  4.7 /usr/libexec/trustd
