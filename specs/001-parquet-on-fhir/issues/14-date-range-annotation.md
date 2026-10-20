@@ -10,4 +10,3 @@
 
 - [ ] Tests show the range annotations for each precision, from year to full date-time, with and without a time zone (T053).
 - [ ] Date comparison with the annotations gives the same results as without them. With the annotation disabled, the suite passes.
-- [ ] The benchmark's date-range view (ticket 10) is re-run, with plans saved.

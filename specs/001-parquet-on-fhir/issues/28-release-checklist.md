@@ -4,7 +4,7 @@
 
 **What to build:** The checks that gate the single Parquet on FHIR release.
 
-**Blocked by:** 01–15, 17–19, 21–27, 29, 30, 32. Not 16, which decision 134 deferred: the release ships the interim ingest. Nor 20, which waits on the same choice.
+**Blocked by:** 01–15, 17–19, 21–27, 29, 30, 32. Not 16, which decision 134 deferred: the release ships the interim ingest. Nor 33, which needs a specification of its own.
 
 **Status:** ready-for-human
 

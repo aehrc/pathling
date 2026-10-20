@@ -6,7 +6,7 @@
 
 **Blocked by:** 16, the choice of ingest and egress mechanism that decision 134 deferred
 
-**Status:** needs-info
+**Status:** wontfix
 
 - [ ] If ticket 16 has landed or settled egress, confirm whether this still applies. Close it as moot with a comment if not.
 - [ ] Tests write out a dataset carrying an unknown field: the write succeeds, the field is omitted and a finding is reported.
@@ -20,3 +20,10 @@ treated, so this waits for that choice rather than fixing the interim egress. An
 interim is parked, unpushed, on the local branch `issue/2830-egress-unknown-field` (`bead739730`): it leaves
 the field out and reports it once per column, and is tested for JSON and XML. When the choice is made, check
 whether it still applies, then land it or close this ticket as moot.
+
+### Folded into ticket 33 (2026-10-21)
+
+Owner decision. A stored field the definitions do not describe is one case of content outside the definitions,
+which ticket 33 is to carry through ingest, egress and the engine, with options, under a specification of its
+own. Ignoring and reporting the field at egress is one answer that specification may give, so it is not built
+separately. The parked branch `issue/2830-egress-unknown-field` (`bead739730`) moves to ticket 33 as prior work.
