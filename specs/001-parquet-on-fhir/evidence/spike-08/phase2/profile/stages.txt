@@ -1,0 +1,37 @@
+== B, default JVM (b-encode-default.jfr)
+2032 samples
+ 34.9%    709  Encoders.row: Row to internal row
+ 26.9%    546  Jackson parse
+ 24.3%    494  checks (regex, calendar, base64, duplicate keys)
+ 12.9%    263  B's own row building (Spike08Json, findings, maps, lists)
+  0.8%     16  other
+  0.2%      4  input: internal row to String
+
+Top 'other' leaf frames:
+      5  scala.collection.Iterator$$anon$9.next
+      2  java.lang.String.charAt
+      2  org.apache.spark.sql.catalyst.expressions.GeneratedClass$GeneratedIteratorForCodegenStage1.processNext
+      1  java.lang.AbstractStringBuilder.appendChars
+      1  java.io.ObjectInputStream$BlockDataInputStream.readUTFSpan
+      1  scala.collection.mutable.MutationTracker$CheckedIterator.hasNext
+      1  org.apache.spark.util.MetricUtils$.metricNeedsMax
+      1  scala.collection.StringOps$$$Lambda+0x000000b00122f310.94919826.apply
+
+== B, -XX:-DontCompileHugeMethods (b-encode-huge.jfr)
+1191 samples
+ 36.9%    439  Jackson parse
+ 28.2%    336  checks (regex, calendar, base64, duplicate keys)
+ 20.1%    239  Encoders.row: Row to internal row
+ 12.8%    152  B's own row building (Spike08Json, findings, maps, lists)
+  1.2%     14  other
+  0.9%     11  input: internal row to String
+
+Top 'other' leaf frames:
+      2  scala.collection.Iterator$$anon$9.hasNext
+      2  org.apache.spark.sql.catalyst.expressions.GeneratedClass$GeneratedIteratorForCodegenStage1.processNext
+      2  scala.collection.StringOps$$$Lambda+0x000000880122f8e8.94919826.apply
+      1  java.lang.String.charAt
+      1  java.lang.Class.getDeclaredMethod
+      1  org.apache.spark.sql.execution.metric.SQLMetric.$plus$eq
+      1  org.apache.spark.sql.connector.write.DataWriter.writeAll
+      1  org.apache.spark.resource.ResourceProfile.$anonfun$getCustomTaskResources$1$adapted

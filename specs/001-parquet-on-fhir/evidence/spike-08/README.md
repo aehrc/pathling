@@ -822,6 +822,39 @@ cause, not measured on its own, is A0's selection of the requested type before i
 (`PathlingContext.selectForJson`, a `get_json_object` on `$.resourceType`), which parses every document once
 more inside the fit's scan, and again in the encode. The original spike has no such step.
 
+### Profile of B's encode (Observation, JSON, 2026-10-20)
+
+At the owner's request, B's encode of Observation at size `l` (1,004,979 rows) was recorded with Java Flight
+Recorder, over five encodes after one warm-up (`phase2/profile/`: `profile_encode.py` records,
+`jfr_stages.py` groups each CPU sample by the innermost stage on its stack). This is a diagnosis on the
+harness's JVM, not a timing under the batch's conditions.
+
+| Stage | Share of CPU samples |
+|---|---|
+| `Encoders.row`, `Row` to Spark's internal row (generated code) | 35% |
+| Jackson parse | 27% |
+| Checks: regular expressions 13%, calendar parse 5%, duplicate keys 4%, other 2% | 24% |
+| B's own row building (`Spike08Json`, findings, maps, lists) | 13% |
+| Input, Spark's internal row to `String` | under 1% |
+
+**The serializer runs interpreted.** Every sample in Spark's generated `serializefromobject_doConsume_0` was
+an interpreted frame. HotSpot does not compile a method over 8,000 bytes of bytecode, and the serializer
+generated for Observation's nested schema exceeds that. Encode times, runs 2 to 5 (`profile/encode-times.txt`):
+
+| Setting | A0 | Original spike | B |
+|---|---|---|---|
+| Default | 1.89 s | 1.25 s | 2.80 s |
+| JVM `-XX:-DontCompileHugeMethods` | 1.85 s | 1.15 s | 0.89 s |
+| `spark.sql.codegen.hugeMethodLimit=8000` | | | 0.91 s |
+| `spark.sql.codegen.wholeStage=false` | | | 0.85 s |
+| `spark.sql.codegen.methodSplitThreshold=256` | | | 2.70 s |
+
+The limit costs B about two thirds of its encode and costs A0 and the original spike little. With the
+generated code compiled, the samples spread as Jackson 37%, checks 28%, `Encoders.row` 20% and B's row
+building 13%. `hugeMethodLimit` is a runtime SQL setting: above it, Spark stops fusing the stage into one
+generated method. The size-`l` timings of B elsewhere in this README were taken with the default, and B's XML
+encodes, which also hand their rows over through `Encoders.row`, were not profiled.
+
 ### Deviations in phase 2
 
 1. **Size `l` deferred.** As instructed on 2026-10-19, nothing was timed at size `l`. The batch and runbook

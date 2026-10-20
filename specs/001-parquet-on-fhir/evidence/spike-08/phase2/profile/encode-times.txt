@@ -1,0 +1,10 @@
+Encode of Observation at size l (1,004,979 rows), five recorded runs after one warm-up, 2026-10-20.
+b-default: encode 0: 3360 ms encode 1: 2851 ms encode 2: 2793 ms encode 3: 2784 ms encode 4: 2768 ms 
+b-huge-jvm-flag: encode 0: 2154 ms encode 1: 980 ms encode 2: 910 ms encode 3: 889 ms encode 4: 870 ms 
+a0-default: encode 0: 3483 ms encode 1: 1901 ms encode 2: 1893 ms encode 3: 1887 ms encode 4: 1888 ms 
+a0-huge-jvm-flag: encode 0: 3177 ms encode 1: 1872 ms encode 2: 1873 ms encode 3: 1843 ms encode 4: 1829 ms 
+orig-default: encode 0: 2625 ms encode 1: 1323 ms encode 2: 1264 ms encode 3: 1235 ms encode 4: 1160 ms 
+orig-huge-jvm-flag: encode 0: 2400 ms encode 1: 1179 ms encode 2: 1141 ms encode 3: 1153 ms encode 4: 1103 ms 
+b-hugeMethodLimit-8000: encode 0: 1967 ms encode 1: 993 ms encode 2: 908 ms encode 3: 902 ms encode 4: 817 ms 
+b-methodSplitThreshold-256: encode 0: 3144 ms encode 1: 2735 ms encode 2: 2686 ms encode 3: 2692 ms encode 4: 2676 ms 
+b-wholeStage-false: encode 0: 1841 ms encode 1: 1035 ms encode 2: 869 ms encode 3: 846 ms encode 4: 816 ms 
