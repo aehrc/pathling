@@ -35,7 +35,9 @@ import au.csiro.pathling.fhirpath.collection.QuantityCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.collection.TimeCollection;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
+import au.csiro.pathling.fhirpath.column.QuantityValue;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
+import au.csiro.pathling.sql.misc.CodingToLiteral;
 import au.csiro.pathling.sql.misc.DecimalToLiteral;
 import au.csiro.pathling.sql.misc.QuantityToLiteral;
 import au.csiro.pathling.sql.misc.StringToQuantity;
@@ -55,6 +57,7 @@ import org.apache.spark.sql.types.DataTypes;
  * conversion helper methods used by {@link ConversionFunctions}.
  *
  * @author Piotr Szul
+ * @author John Grimes
  */
 @UtilityClass
 class ConversionLogic {
@@ -178,6 +181,10 @@ class ConversionLogic {
    * Template method for performing type conversions. Handles common orchestration: empty check,
    * singular check, identity conversion, delegation to conversion logic, and result building.
    *
+   * <p>A Quantity source is never an identity conversion, because a FHIR Quantity converts to a
+   * System.Quantity only if it is representable as one (see {@link
+   * QuantityValue#isSystemQuantity()}).
+   *
    * <p>The conversion function and collection builder are automatically determined from the target
    * type using internal registries.
    *
@@ -202,8 +209,9 @@ class ConversionLogic {
     final Column singularValue = input.getColumn().singular().getValue();
     // Use Nothing when the type is not known to enforce default value for a non-convertible type
     final FhirPathType sourceType = input.getType().orElse(FhirPathType.NOTHING);
+    final boolean isIdentity = sourceType == targetType && sourceType != FhirPathType.QUANTITY;
     final Column result =
-        sourceType == targetType ? singularValue : conversionLogic.apply(sourceType, singularValue);
+        isIdentity ? singularValue : conversionLogic.apply(sourceType, singularValue);
 
     return collectionBuilder.apply(
         new DefaultRepresentation(
@@ -304,7 +312,9 @@ class ConversionLogic {
    * <ul>
    *   <li>BOOLEAN, INTEGER, DATE, DATETIME, TIME: Direct cast to String
    *   <li>DECIMAL: Use DecimalToLiteral UDF to format with trailing zeros removed
-   *   <li>QUANTITY: Use QuantityToLiteral UDF to format as FHIRPath quantity literal
+   *   <li>QUANTITY: Use QuantityToLiteral UDF to format as FHIRPath quantity literal (null if the
+   *       quantity is not representable as a System.Quantity)
+   *   <li>CODING: Use CodingToLiteral UDF to format as Coding literal
    * </ul>
    *
    * @param sourceType The source FHIRPath type
@@ -324,7 +334,13 @@ class ConversionLogic {
       case QUANTITY ->
           // Quantity: Use QuantityToLiteral UDF to format as FHIRPath quantity literal.
           // E.g., {value: 1, unitCode: "wk", system: "http://unitsofmeasure.org"} -> "1 'wk'"
+          // The UDF returns null for a quantity that has no System.Quantity equivalent.
           callUDF(QuantityToLiteral.FUNCTION_NAME, value);
+      case CODING ->
+          // Coding: Use CodingToLiteral UDF to format as Coding literal.
+          // E.g., {system: "http://snomed.info/sct", code: "52101004"} ->
+          // "http://snomed.info/sct|52101004"
+          callUDF(CodingToLiteral.FUNCTION_NAME, value);
       default -> lit(null);
     };
   }
@@ -400,6 +416,7 @@ class ConversionLogic {
    *   <li>INTEGER/DECIMAL: Encode as quantity with unitCode '1' (null → null)
    *   <li>STRING: Parse as FHIRPath quantity literal (validates format then calls StringToQuantity
    *       UDF)
+   *   <li>QUANTITY: Returned unchanged if representable as a System.Quantity (null otherwise)
    * </ul>
    *
    * @param sourceType The source FHIRPath type
@@ -422,6 +439,10 @@ class ConversionLogic {
           // String: Parse as FHIRPath quantity literal using UDF
           // UDF returns null if string doesn't match quantity format
           callUDF(StringToQuantity.FUNCTION_NAME, value);
+      case QUANTITY ->
+          // Quantity: A FHIR Quantity without a value, without a UCUM or calendar duration
+          // system and code, or with a comparator has no System.Quantity equivalent.
+          let(value, v -> when(QuantityValue.of(v).isSystemQuantity(), v));
       default -> lit(null).try_cast(QuantityEncoding.dataType());
     };
   }

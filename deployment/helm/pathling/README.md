@@ -75,10 +75,6 @@ their default values.
 | `pathling.truststore.type`            | `jks`                           | The trust store format, either `jks` or `pkcs12`                                                                                                                            |
 | `pathling.truststore.mountPath`       | `/truststore`                   | The directory within the pod at which the trust store secret is mounted                                                                                                     |
 
-Note that the chart only sets `JAVA_TOOL_OPTIONS` (and therefore
-`maxHeapSize`, `additionalJavaOptions` and the trust store options) when at
-least one entry is present in `pathling.config` or `pathling.secretConfig`.
-
 ## Custom trust store
 
 If Pathling needs to connect to a terminology server, object store or other

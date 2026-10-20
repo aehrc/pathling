@@ -18,6 +18,7 @@
 package au.csiro.pathling.fhirpath.dsl;
 
 import static au.csiro.pathling.test.yaml.FhirTypedLiteral.toQuantity;
+import static org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType.CODEABLECONCEPT;
 
 import au.csiro.pathling.test.dsl.FhirPathDslTestBase;
 import au.csiro.pathling.test.dsl.FhirPathTest;
@@ -276,7 +277,23 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
                     .dateArray("dateArray", "2023-01-15", "2023-12-25")
                     .stringEmpty("emptyStr")
                     .decimalEmpty("emptyDec")
-                    .dateEmpty("emptyDate"))
+                    .dateEmpty("emptyDate")
+                    .coding("codingVal", "http://snomed.info/sct|52101004")
+                    .coding("fullCoding", "http://loinc.org|8867-4|2.73|'Heart rate, bpm'")
+                    .codingEmpty("emptyCoding")
+                    .codingArray(
+                        "codingArray",
+                        "http://loinc.org|8867-4||'Heart rate'",
+                        "http://loinc.org|8480-6||'Systolic blood pressure'")
+                    .element(
+                        "code",
+                        concept ->
+                            concept
+                                .fhirType(CODEABLECONCEPT)
+                                .codingArray(
+                                    "coding",
+                                    "http://snomed.info/sct|52101004||'Present'",
+                                    "http://loinc.org|LA9633-4||'Present'")))
         .group("toString() with primitive type literals")
         .testEquals("true", "true.toString()", "toString() converts true")
         .testEquals("false", "false.toString()", "toString() converts false")
@@ -290,16 +307,52 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
             "@2023-01-15T10:30:00Z.toString()",
             "toString() converts datetime")
         .testEquals("10:30:00", "@T10:30:00.toString()", "toString() converts time")
+        .group("toString() with Coding literals")
+        // A Coding renders as its Coding literal, as a Quantity renders as its Quantity literal.
+        .testEquals(
+            "http://snomed.info/sct|52101004",
+            "(http://snomed.info/sct|52101004).toString()",
+            "toString() converts Coding literal with system and code")
+        .testEquals(
+            "http://loinc.org|8867-4||'Heart rate'",
+            "(http://loinc.org|8867-4||'Heart rate').toString()",
+            "toString() quotes Coding literal components containing special characters")
+        .testEquals(
+            "http://loinc.org|8867-4|2.73|'Heart rate, bpm'|true",
+            "(http://loinc.org|8867-4|2.73|'Heart rate, bpm'|true).toString()",
+            "toString() renders version, display and userSelected of Coding literal")
+        .group("toString() with Coding elements")
+        .testEquals(
+            "http://snomed.info/sct|52101004",
+            "codingVal.toString()",
+            "toString() converts singular Coding element")
+        .testEquals(
+            "http://loinc.org|8867-4|2.73|'Heart rate, bpm'",
+            "fullCoding.toString()",
+            "toString() renders version and display of Coding element")
+        .testEquals(
+            "http://snomed.info/sct|52101004||Present",
+            "code.coding.first().toString()",
+            "toString() converts Coding selected from a CodeableConcept")
+        .testTrue(
+            "(http://snomed.info/sct|52101004).toString() = codingVal.toString()",
+            "toString() renders Coding literal and equal Coding element identically")
         .group("toString() with empty values")
         .testEmpty("emptyStr.toString()", "toString() returns empty for empty String")
         .testEmpty("emptyDec.toString()", "toString() returns empty for empty Decimal")
         .testEmpty("emptyDate.toString()", "toString() returns empty for empty Date")
+        .testEmpty("emptyCoding.toString()", "toString() returns empty for empty Coding")
         .group("toString() error cases with arrays")
         .testEmpty("{}.toString()", "toString() returns empty for empty collection")
         .testError("stringArray.toString()", "toString() errors on array of source type (String)")
         .testError(
             "decArray.toString()", "toString() errors on array of convertible type (Decimal)")
         .testError("dateArray.toString()", "toString() errors on array of convertible type (Date)")
+        .testError(
+            "codingArray.toString()", "toString() errors on array of convertible type (Coding)")
+        .testError(
+            "code.coding.toString()",
+            "toString() errors on multiple Codings from a CodeableConcept")
         .build();
   }
 
@@ -313,7 +366,13 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
                     .dateArray("dateArray", "2023-01-15", "2023-12-25")
                     .stringEmpty("emptyStr")
                     .integerEmpty("emptyInt")
-                    .dateEmpty("emptyDate"))
+                    .dateEmpty("emptyDate")
+                    .coding("codingVal", "http://snomed.info/sct|52101004")
+                    .codingEmpty("emptyCoding")
+                    .codingArray(
+                        "codingArray",
+                        "http://loinc.org|8867-4||'Heart rate'",
+                        "http://loinc.org|8480-6||'Systolic blood pressure'"))
         .group("convertsToString() with convertible types")
         .testTrue("true.convertsToString()", "convertsToString() returns true for Boolean")
         .testTrue("42.convertsToString()", "convertsToString() returns true for Integer")
@@ -324,6 +383,10 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
             "@2023-01-15T10:30:00Z.convertsToString()",
             "convertsToString() returns true for DateTime")
         .testTrue("@T10:30:00.convertsToString()", "convertsToString() returns true for Time")
+        .testTrue(
+            "(http://snomed.info/sct|52101004).convertsToString()",
+            "convertsToString() returns true for Coding literal")
+        .testTrue("codingVal.convertsToString()", "convertsToString() returns true for Coding")
         .group("convertsToString() with empty values")
         .testEmpty(
             "emptyStr.convertsToString()", "convertsToString() returns empty for empty String")
@@ -331,6 +394,8 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
             "emptyInt.convertsToString()", "convertsToString() returns empty for empty Integer")
         .testEmpty(
             "emptyDate.convertsToString()", "convertsToString() returns empty for empty Date")
+        .testEmpty(
+            "emptyCoding.convertsToString()", "convertsToString() returns empty for empty Coding")
         .group("convertsToString() error cases with arrays")
         .testEmpty("{}.convertsToString()", "convertsToString() returns empty for empty collection")
         .testError(
@@ -342,6 +407,9 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
         .testError(
             "dateArray.convertsToString()",
             "convertsToString() errors on array of convertible type (Date)")
+        .testError(
+            "codingArray.convertsToString()",
+            "convertsToString() errors on array of convertible type (Coding)")
         .build();
   }
 

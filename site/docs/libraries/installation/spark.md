@@ -79,8 +79,8 @@ from pyspark.sql import SparkSession
 spark = (
     SparkSession.builder.config(
         "spark.jars.packages",
-        "au.csiro.pathling:library-runtime:9.9.0," +
-        "io.delta:delta-spark_2.13:4.0.0"
+        "au.csiro.pathling:library-runtime:10.0.0," +
+        "io.delta:delta-spark_2.13:4.0.1"
     )
     .config(
         "spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension"
@@ -103,7 +103,7 @@ library(pathling)
 
 sc <- spark_connect(master = "local",
                     packages = c(paste0("au.csiro.pathling:library-runtime:", pathling_version()),
-                                 "io.delta:delta-spark_2.13:4.0.0"),
+                                 "io.delta:delta-spark_2.13:4.0.1"),
                     config = list("sparklyr.shell.conf" = c(
                             "spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension",
                             "spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog"
@@ -119,8 +119,8 @@ pc <- pathling_connect(sc)
 import au.csiro.pathling.library.PathlingContext
 
 val spark = SparkSession.builder
-        .config("spark.jars.packages", "au.csiro.pathling:library-runtime:9.9.0," +
-                "io.delta:delta-spark_2.13:4.0.0")
+        .config("spark.jars.packages", "au.csiro.pathling:library-runtime:10.0.0," +
+                "io.delta:delta-spark_2.13:4.0.1")
         .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
         .config("spark.sql.catalog.spark_catalog",
             "org.apache.spark.sql.delta.catalog.DeltaCatalog")
@@ -141,8 +141,8 @@ class MyApp {
     public static void main(String[] args) {
         SparkSession spark = SparkSession.builder()
                 .config("spark.jars.packages",
-                        "au.csiro.pathling:library-runtime:9.9.0," +
-                                "io.delta:delta-spark_2.13:4.0.0")
+                        "au.csiro.pathling:library-runtime:10.0.0," +
+                                "io.delta:delta-spark_2.13:4.0.1")
                 .config("spark.sql.extensions",
                         "io.delta.sql.DeltaSparkSessionExtension")
                 .config("spark.sql.catalog.spark_catalog",

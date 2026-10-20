@@ -1,0 +1,15 @@
+# Trivy configuration for the security scan action.
+#
+# Trivy fetches POMs it cannot find in the local Maven repository from Maven Central. Sonatype
+# rate-limits Maven Central per IP address, and GitHub-hosted runners share addresses, so these
+# requests routinely receive 429 responses, which Trivy treats as fatal. Google's mirror of Maven
+# Central is not subject to those limits.
+#
+# Author: John Grimes
+
+scan:
+  maven:
+    mirrors:
+      - source: https://repo.maven.apache.org/maven2/
+        targets:
+          - https://maven-central.storage-download.googleapis.com/maven2/

@@ -56,8 +56,13 @@ public class ValueSetResolver {
   private static final String VCL_URI_PREFIX = "http://fhir.org/VCL";
   private static final String CONCEPT = "concept";
 
-  /** A SNOMED CT edition URI, optionally qualified by a version. */
-  private static final Pattern SNOMED_EDITION_OR_VERSION =
+  /**
+   * Matches a SNOMED CT edition URI, optionally qualified by a version: the base of an implicit
+   * value set or concept map URL that selects an edition or version. Shared with {@link
+   * au.csiro.pathling.terminology.ImplicitTerminologyUrls} so that the grammar and the store agree
+   * on what is implicit.
+   */
+  public static final Pattern SNOMED_EDITION_OR_VERSION =
       Pattern.compile("^http://snomed\\.info/x?sct/\\d+(/version/\\d+)?$");
 
   /** A SNOMED CT edition URI that names no version. */

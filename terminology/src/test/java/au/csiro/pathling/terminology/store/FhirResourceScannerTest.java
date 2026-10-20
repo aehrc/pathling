@@ -145,6 +145,84 @@ class FhirResourceScannerTest {
     assertNull(scanned.getUrl());
   }
 
+  // --- Bundle members. ---
+
+  @Test
+  void scansEveryMemberOfABundleInEntryOrder() throws Exception {
+    final byte[] bytes =
+        FhirPackageFixtures.read("bundle-mixed.json").getBytes(StandardCharsets.UTF_8);
+
+    final ScannedResource bundle =
+        FhirResourceScanner.scanStream(
+            new ByteArrayInputStream(bytes), "bundle-mixed.json", bytes.length);
+
+    assertEquals("Bundle", bundle.getResourceType());
+    // One member per entry, including the entry without a resource, so that the import pass can
+    // pair each entry with its member by position.
+    final List<ScannedResource> members = bundle.getMembers();
+    assertEquals(5, members.size());
+    assertEquals("CodeSystem", members.get(0).getResourceType());
+    assertEquals("http://example.org/fhir/CodeSystem/bundled", members.get(0).getUrl());
+    assertEquals("1.0.0", members.get(0).getVersion());
+    assertEquals("Patient", members.get(1).getResourceType());
+    assertFalse(members.get(1).isImportable());
+    assertNull(members.get(2).getResourceType());
+    assertEquals("ValueSet", members.get(3).getResourceType());
+    assertEquals("http://example.org/fhir/ValueSet/bundled", members.get(3).getUrl());
+    assertEquals("ConceptMap", members.get(4).getResourceType());
+    assertEquals("http://example.org/fhir/ConceptMap/bundled", members.get(4).getUrl());
+    // Each member is named after its position, for error messages.
+    assertEquals("bundle-mixed.json#entry[4]", members.get(4).getEntryName());
+  }
+
+  @Test
+  void measuresTheByteSizeOfEachBundleMember() throws Exception {
+    final String valueSet =
+        "{\"resourceType\":\"ValueSet\",\"url\":\"http://x/vs\",\"text\":{\"div\":\""
+            + "x".repeat(10_000)
+            + "\"}}";
+    final String json =
+        "{\"resourceType\":\"Bundle\",\"entry\":[{\"resource\":"
+            + valueSet
+            + "},{\"resource\":{\"resourceType\":\"ValueSet\",\"url\":\"http://x/small\"}}]}";
+    final byte[] bytes = json.getBytes(StandardCharsets.UTF_8);
+
+    final List<ScannedResource> members =
+        FhirResourceScanner.scanStream(new ByteArrayInputStream(bytes), "b.json", bytes.length)
+            .getMembers();
+
+    // The size of a member is the size of its resource object, not of the whole Bundle.
+    assertEquals(valueSet.length(), members.get(0).getByteSize());
+    assertTrue(members.get(1).getByteSize() < 100);
+  }
+
+  @Test
+  void scansBundleMembersWhenTheEntryArrayPrecedesTheResourceType() throws Exception {
+    final String json =
+        "{\"entry\":[{\"resource\":{\"url\":\"http://x/cm\",\"resourceType\":\"ConceptMap\"}}],"
+            + "\"resourceType\":\"Bundle\"}";
+    final byte[] bytes = json.getBytes(StandardCharsets.UTF_8);
+
+    final ScannedResource bundle =
+        FhirResourceScanner.scanStream(new ByteArrayInputStream(bytes), "b.json", bytes.length);
+
+    assertEquals("Bundle", bundle.getResourceType());
+    assertEquals(1, bundle.getMembers().size());
+    assertEquals("ConceptMap", bundle.getMembers().get(0).getResourceType());
+    assertEquals("http://x/cm", bundle.getMembers().get(0).getUrl());
+  }
+
+  @Test
+  void aResourceThatIsNotABundleHasNoMembers() throws Exception {
+    final byte[] bytes =
+        FhirPackageFixtures.read("valueset-simple.json").getBytes(StandardCharsets.UTF_8);
+
+    final ScannedResource scanned =
+        FhirResourceScanner.scanStream(new ByteArrayInputStream(bytes), "vs.json", bytes.length);
+
+    assertTrue(scanned.getMembers().isEmpty());
+  }
+
   @Test
   void skipsPackageMetadataEntries(@TempDir final Path dir) throws Exception {
     // The package helper always writes a package.json metadata entry, which must not be scanned.

@@ -44,7 +44,7 @@ The following should only be updated for release versions, not snapshots:
 - [ ] `examples/scala/PathlingScalaApp/build.sbt`
 - [ ] `lib/python/Dockerfile`
 - [ ] `site/docs/libraries/installation/spark.md`
-- [ ] `site/docusaurus.config.js`
+- [ ] `site/docs/libraries/io/cloud-storage.md`
 
 ## After release
 

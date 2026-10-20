@@ -19,6 +19,7 @@ package au.csiro.pathling.terminology.store;
 
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_CANONICAL_URL;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_ENTRY_TYPE;
+import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_FAULT;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_IMPORTED_AT;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_PACKAGE_NAME;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_PACKAGE_REGISTRY;
@@ -28,6 +29,8 @@ import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_SOURCE_SHA256;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_STORE_FORMAT_VERSION;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_VERSION;
+import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.ENTRY_TYPE_CONCEPT_MAP;
+import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.MIN_CONCEPT_MAP_FORMAT_VERSION;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.STORE_FORMAT_VERSION;
 
 import io.delta.kernel.Scan;
@@ -39,6 +42,9 @@ import io.delta.kernel.data.Row;
 import io.delta.kernel.defaults.engine.DefaultEngine;
 import io.delta.kernel.engine.Engine;
 import io.delta.kernel.exceptions.TableNotFoundException;
+import io.delta.kernel.expressions.Column;
+import io.delta.kernel.expressions.Literal;
+import io.delta.kernel.expressions.Predicate;
 import io.delta.kernel.internal.InternalScanFileUtils;
 import io.delta.kernel.internal.data.ScanStateRow;
 import io.delta.kernel.internal.util.Utils;
@@ -88,10 +94,7 @@ public class TerminologyStoreReader {
   @Nonnull
   public static TerminologyStoreReader open(
       @Nonnull final String storagePath, @Nonnull final Map<String, String> hadoopConfiguration) {
-    final Configuration configuration = new Configuration();
-    hadoopConfiguration.forEach(configuration::set);
-    final Engine engine = DefaultEngine.create(configuration);
-    final TerminologyStoreReader reader = new TerminologyStoreReader(engine, storagePath);
+    final TerminologyStoreReader reader = unchecked(storagePath, hadoopConfiguration);
 
     final List<ManifestEntry> manifest;
     try {
@@ -119,7 +122,51 @@ public class TerminologyStoreReader {
               + STORE_FORMAT_VERSION
               + ". Please upgrade Pathling to read this store.");
     }
+    requireCurrentConceptMaps(manifest, storagePath);
     return reader;
+  }
+
+  /**
+   * Creates a reader over a store without validating it, for the migration of a store that {@link
+   * #open} would reject.
+   *
+   * @param storagePath the root path of the store
+   * @param hadoopConfiguration a snapshot of the Hadoop configuration, used to reach the store's
+   *     filesystem
+   * @return a reader that has not read anything from the store
+   */
+  @Nonnull
+  static TerminologyStoreReader unchecked(
+      @Nonnull final String storagePath, @Nonnull final Map<String, String> hadoopConfiguration) {
+    final Configuration configuration = new Configuration();
+    hadoopConfiguration.forEach(configuration::set);
+    return new TerminologyStoreReader(DefaultEngine.create(configuration), storagePath);
+  }
+
+  /**
+   * Rejects a store holding a ConceptMap written in a layout that this version of Pathling no
+   * longer reads, naming the maps that need to be re-imported rather than silently omitting them
+   * from translation.
+   */
+  private static void requireCurrentConceptMaps(
+      @Nonnull final List<ManifestEntry> manifest, @Nonnull final String storagePath) {
+    final List<String> stale =
+        manifest.stream()
+            .filter(entry -> ENTRY_TYPE_CONCEPT_MAP.equals(entry.getEntryType()))
+            .filter(entry -> entry.getStoreFormatVersion() < MIN_CONCEPT_MAP_FORMAT_VERSION)
+            .map(ManifestEntry::getCanonicalUrl)
+            .distinct()
+            .sorted()
+            .toList();
+    if (!stale.isEmpty()) {
+      throw new TerminologyStoreException(
+          "Terminology store at '"
+              + storagePath
+              + "' holds ConceptMaps written by an earlier version of Pathling in a layout that"
+              + " is no longer supported: "
+              + String.join(", ", stale)
+              + ". Please re-import the FHIR terminology content into a new store.");
+    }
   }
 
   /**
@@ -137,7 +184,7 @@ public class TerminologyStoreReader {
 
   /**
    * Builds a manifest entry from a manifest row, tolerating a manifest written before the
-   * provenance columns existed by reading them only where they are present.
+   * provenance and fault columns existed by reading them only where they are present.
    */
   @Nonnull
   private static ManifestEntry manifestEntry(@Nonnull final TerminologyStoreRow row) {
@@ -153,7 +200,8 @@ public class TerminologyStoreReader {
         stringIfPresent(row, COLUMN_PACKAGE_NAME),
         stringIfPresent(row, COLUMN_PACKAGE_VERSION),
         verification == null ? null : PackageVerification.fromCode(verification),
-        stringIfPresent(row, COLUMN_PACKAGE_REGISTRY));
+        stringIfPresent(row, COLUMN_PACKAGE_REGISTRY),
+        stringIfPresent(row, COLUMN_FAULT));
   }
 
   @Nullable
@@ -205,12 +253,44 @@ public class TerminologyStoreReader {
     readSnapshot(tableName, snapshot, consumer);
   }
 
+  /**
+   * Streams the rows of one partition of an optional store table to a consumer, doing nothing if
+   * the table has never been written. Only the files of the partition are read.
+   *
+   * @param tableName the table name (a {@link TerminologyStoreSchema} constant)
+   * @param partitionColumn the partition column of the table
+   * @param partitionValue the value of the partition column whose rows are read
+   * @param consumer receives each row in turn
+   * @throws TerminologyStoreException if the table exists but cannot be read
+   */
+  public void readPartitionIfPresent(
+      @Nonnull final String tableName,
+      @Nonnull final String partitionColumn,
+      @Nonnull final String partitionValue,
+      @Nonnull final Consumer<TerminologyStoreRow> consumer) {
+    final String path = TerminologyStoreSchema.tablePath(storagePath, tableName);
+    final Snapshot snapshot;
+    try {
+      snapshot = Table.forPath(engine, path).getLatestSnapshot(engine);
+    } catch (final TableNotFoundException e) {
+      return;
+    }
+    final Predicate partition =
+        new Predicate("=", new Column(partitionColumn), Literal.ofString(partitionValue));
+    readScan(tableName, snapshot.getScanBuilder().withFilter(partition).build(), consumer);
+  }
+
   private void readSnapshot(
       @Nonnull final String tableName,
       @Nonnull final Snapshot snapshot,
       @Nonnull final Consumer<TerminologyStoreRow> consumer) {
+    readScan(tableName, snapshot.getScanBuilder().build(), consumer);
+  }
 
-    final Scan scan = snapshot.getScanBuilder().build();
+  private void readScan(
+      @Nonnull final String tableName,
+      @Nonnull final Scan scan,
+      @Nonnull final Consumer<TerminologyStoreRow> consumer) {
     final Row scanState = scan.getScanState(engine);
     final StructType physicalReadSchema = ScanStateRow.getPhysicalDataReadSchema(engine, scanState);
 

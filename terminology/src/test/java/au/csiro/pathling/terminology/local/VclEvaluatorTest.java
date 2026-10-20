@@ -25,6 +25,7 @@ import au.csiro.pathling.ecl.EclToVclTranslator;
 import au.csiro.pathling.terminology.local.index.CodeSystemIndexes;
 import au.csiro.pathling.terminology.local.index.ConceptDictionary;
 import au.csiro.pathling.test.Rf2Mini;
+import au.csiro.pathling.vcl.VclCodeListValue;
 import au.csiro.pathling.vcl.VclCodeValue;
 import au.csiro.pathling.vcl.VclConjunction;
 import au.csiro.pathling.vcl.VclExpression;
@@ -115,6 +116,80 @@ class VclEvaluatorTest {
     assertEquals(
         Set.of(Rf2Mini.TYPE1_DIABETES, Rf2Mini.TYPE2_DIABETES, Rf2Mini.GESTATIONAL_DIABETES),
         codes(new VclRefsetMembership(Rf2Mini.SIMPLE_REFSET)));
+  }
+
+  @Test
+  void snomedConceptInSelectsReferenceSetMembers() {
+    // On SNOMED CT, "concept in X" means membership of reference set X (ECL "^ X"), not the
+    // concept X itself.
+    assertEquals(
+        Set.of(Rf2Mini.TYPE1_DIABETES, Rf2Mini.TYPE2_DIABETES, Rf2Mini.GESTATIONAL_DIABETES),
+        codes(concept(VclFilterOperator.IN, Rf2Mini.SIMPLE_REFSET)));
+  }
+
+  @Test
+  void snomedConceptInCodeListSelectsTheListedConceptsAndExcludesInactiveOnes() {
+    // A list of codes names individual concepts, even on SNOMED CT: the reference set concept is
+    // selected, not its members. The inactive DIABETES_INACTIVE is removed by the active-only
+    // default.
+    final VclFilter filter =
+        new VclFilter(
+            "concept",
+            VclFilterOperator.IN,
+            new VclCodeListValue(
+                List.of(Rf2Mini.SIMPLE_REFSET, Rf2Mini.DIABETES, Rf2Mini.DIABETES_INACTIVE)));
+    assertEquals(Set.of(Rf2Mini.SIMPLE_REFSET, Rf2Mini.DIABETES), codes(filter));
+  }
+
+  @Test
+  void snomedConceptNotInCodeListExcludesOnlyTheListedConcepts() {
+    // The complement of the listed concepts over the active concepts. Members of the listed
+    // reference set are not excluded, because the list names concepts rather than reference sets.
+    final Set<String> expected = codes(new VclWildcard());
+    expected.removeAll(Set.of(Rf2Mini.SIMPLE_REFSET, Rf2Mini.DIABETES));
+    final VclFilter filter =
+        new VclFilter(
+            "concept",
+            VclFilterOperator.NOT_IN,
+            new VclCodeListValue(List.of(Rf2Mini.SIMPLE_REFSET, Rf2Mini.DIABETES)));
+    final Set<String> result = codes(filter);
+    assertEquals(expected, result);
+    assertTrue(result.contains(Rf2Mini.TYPE1_DIABETES));
+  }
+
+  @Test
+  void snomedConceptNotInSelectsActiveConceptsOutsideReferenceSet() {
+    // The complement of reference set membership over the active concepts. The reference set
+    // concept itself is not a member, so it is included.
+    final Set<String> expected = codes(new VclWildcard());
+    expected.removeAll(
+        Set.of(Rf2Mini.TYPE1_DIABETES, Rf2Mini.TYPE2_DIABETES, Rf2Mini.GESTATIONAL_DIABETES));
+    final Set<String> result = codes(concept(VclFilterOperator.NOT_IN, Rf2Mini.SIMPLE_REFSET));
+    assertEquals(expected, result);
+    assertTrue(result.contains(Rf2Mini.SIMPLE_REFSET));
+    assertFalse(result.contains(Rf2Mini.DIABETES_INACTIVE));
+  }
+
+  @Test
+  void snomedConceptInUnknownReferenceSetIsEmpty() {
+    // A concept that is not a reference set has no members, even though the concept exists.
+    assertTrue(codes(concept(VclFilterOperator.IN, Rf2Mini.DIABETES)).isEmpty());
+  }
+
+  @Test
+  void nonSnomedConceptInSelectsTheListedConcepts() {
+    // Outside SNOMED CT, "concept in" keeps its general FHIR meaning: one of the listed codes.
+    final VclEvaluator other = new VclEvaluator(indexes, "http://example.org/CodeSystem/other");
+    final VclFilter filter =
+        new VclFilter(
+            "concept",
+            VclFilterOperator.IN,
+            new VclCodeListValue(List.of(Rf2Mini.SIMPLE_REFSET, Rf2Mini.DIABETES)));
+    final Set<String> result = new HashSet<>();
+    other
+        .evaluate(filter)
+        .forEach((org.roaringbitmap.IntConsumer) dense -> result.add(dictionary.code(dense)));
+    assertEquals(Set.of(Rf2Mini.SIMPLE_REFSET, Rf2Mini.DIABETES), result);
   }
 
   @Test

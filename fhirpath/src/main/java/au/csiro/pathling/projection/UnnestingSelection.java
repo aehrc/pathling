@@ -61,6 +61,7 @@ public record UnnestingSelection(
                     component
                         .evaluate(unnestingContext.withInputColumn(element).withRowIndex(index))
                         .getResultColumn())
+            .removeNulls()
             .flatten()
             .getValue();
 

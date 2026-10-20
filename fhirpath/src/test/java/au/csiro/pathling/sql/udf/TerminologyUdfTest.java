@@ -186,6 +186,51 @@ class TerminologyUdfTest extends AbstractTerminologyTestBase {
   }
 
   @Test
+  void testValidateCodingUnresolvableValueSet() {
+    // Membership in a value set that cannot be resolved is null rather than false.
+    TerminologyServiceHelpers.setupValidate(terminologyService)
+        .withUnresolvableValueSet(CODING_1_VALUE_SET_URI);
+    final Dataset<Row> df =
+        codingDatasetBuilder()
+            .withRow("id-1", CodingSchema.encode(CODING_1))
+            .withRow("id-2", CodingSchema.encode(CODING_2))
+            .build();
+
+    final Dataset<Row> result = df.select(member_of(df.col("code"), CODING_1_VALUE_SET_URI));
+
+    DatasetAssert.of(result)
+        .hasRows(RowFactory.create((Boolean) null), RowFactory.create((Boolean) null));
+  }
+
+  @Test
+  void testValidateCode() {
+    // A string column holds bare codes, which are validated by inferring their system.
+    TerminologyServiceHelpers.setupValidate(terminologyService)
+        .withCodes(CODING_1_VALUE_SET_URI, CODING_1.getCode())
+        .withUnresolvableValueSet(CODING_2_VALUE_SET_URI);
+    final Dataset<Row> df =
+        DatasetBuilder.of(spark)
+            .withIdColumn("id")
+            .withColumn("code", DataTypes.StringType)
+            .withRow("id-1", CODING_1.getCode())
+            .withRow("id-2", CODING_2.getCode())
+            .withRow("id-3", null)
+            .build();
+
+    final Dataset<Row> result1 = df.select(member_of(df.col("code"), CODING_1_VALUE_SET_URI));
+    final Dataset<Row> result2 = df.select(member_of(df.col("code"), CODING_2_VALUE_SET_URI));
+
+    DatasetAssert.of(result1)
+        .hasRows(
+            RowFactory.create(true), RowFactory.create(false), RowFactory.create((Boolean) null));
+    DatasetAssert.of(result2)
+        .hasRows(
+            RowFactory.create((Boolean) null),
+            RowFactory.create((Boolean) null),
+            RowFactory.create((Boolean) null));
+  }
+
+  @Test
   void testValidateCodingArray() {
     setupValidateCodingExpectations();
     final Dataset<Row> ds =
