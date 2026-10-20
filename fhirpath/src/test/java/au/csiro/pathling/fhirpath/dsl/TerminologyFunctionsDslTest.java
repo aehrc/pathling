@@ -34,7 +34,9 @@ import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.DateTimeType;
+import org.hl7.fhir.r4.model.Enumerations.AdministrativeGender;
 import org.hl7.fhir.r4.model.IntegerType;
+import org.hl7.fhir.r4.model.Patient;
 import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence;
 import org.junit.jupiter.api.DynamicTest;
@@ -357,6 +359,8 @@ public class TerminologyFunctionsDslTest extends FhirPathDslTestBase {
     final String labTestsValueSet = "http://example.org/fhir/ValueSet/lab-tests";
     final String proceduresValueSet = "http://example.org/fhir/ValueSet/procedures";
     final String vitalSignsValueSet = "http://example.org/fhir/ValueSet/vital-signs";
+    final String genderValueSet = "http://hl7.org/fhir/ValueSet/administrative-gender";
+    final String unresolvableValueSet = "http://example.org/fhir/ValueSet/unresolvable";
 
     // Setup terminology service expectations for memberOf
     TerminologyServiceHelpers.setupValidate(terminologyService)
@@ -365,7 +369,11 @@ public class TerminologyFunctionsDslTest extends FhirPathDslTestBase {
         // Procedures value set includes SNOMED coding but not LOINC
         .withValueSet(proceduresValueSet, snomedCoding)
         // Vital signs value set includes weight coding
-        .withValueSet(vitalSignsValueSet, weightCoding);
+        .withValueSet(vitalSignsValueSet, weightCoding)
+        // The gender value set includes the bare code "male", once its system is inferred
+        .withCodes(genderValueSet, "male")
+        // A value set that cannot be resolved gives no answer for any concept
+        .withUnresolvableValueSet(unresolvableValueSet);
 
     return builder()
         .withSubject(
@@ -387,6 +395,16 @@ public class TerminologyFunctionsDslTest extends FhirPathDslTestBase {
                             + " spinal fluid by Electrophoresis'",
                         "http://snomed.info/sct|63816008||'Left hepatectomy'",
                         "http://loinc.org|29463-7||'Body weight'")
+                    // Array holding a single coding
+                    .codingArray(
+                        "singleCodingArray",
+                        "http://loinc.org|55915-3||'Beta 2 globulin [Mass/volume] in Cerebral"
+                            + " spinal fluid by Electrophoresis'")
+                    // Strings, which are validated as bare codes
+                    .string("genderCode", "male")
+                    .stringArray("genderCodes", "male", "female")
+                    .stringArray("singleGenderCodeArray", "male")
+                    .stringEmpty("emptyString")
                     // CodeableConcepts with single coding
                     .element(
                         "loincConcept",
@@ -431,7 +449,17 @@ public class TerminologyFunctionsDslTest extends FhirPathDslTestBase {
                                 .fhirType(CODEABLECONCEPT)
                                 .codingArray(
                                     "coding",
-                                    "http://snomed.info/sct|63816008||'Left hepatectomy'")))
+                                    "http://snomed.info/sct|63816008||'Left hepatectomy'"))
+                    // Array holding a single CodeableConcept
+                    .elementArray(
+                        "singleConceptArray",
+                        concept ->
+                            concept
+                                .fhirType(CODEABLECONCEPT)
+                                .codingArray(
+                                    "coding",
+                                    "http://loinc.org|55915-3||'Beta 2 globulin [Mass/volume] in"
+                                        + " Cerebral spinal fluid by Electrophoresis'")))
         .group("memberOf() function with Coding")
         .testTrue(
             "loinc.memberOf('" + labTestsValueSet + "')",
@@ -449,21 +477,21 @@ public class TerminologyFunctionsDslTest extends FhirPathDslTestBase {
             "emptyCoding.memberOf('" + labTestsValueSet + "')",
             "memberOf() returns empty for an empty coding")
         .group("memberOf() function with collections of Codings")
-        .testEquals(
-            List.of(true, false, false),
+        .testEmpty(
             "multipleCodings.memberOf('" + labTestsValueSet + "')",
-            "memberOf() returns correct results for a collection of codings with lab tests value"
-                + " set")
-        .testEquals(
-            List.of(false, true, false),
-            "multipleCodings.memberOf('" + proceduresValueSet + "')",
-            "memberOf() returns correct results for a collection of codings with procedures value"
-                + " set")
-        .testEquals(
-            List.of(false, false, true),
-            "multipleCodings.memberOf('" + vitalSignsValueSet + "')",
-            "memberOf() returns correct results for a collection of codings with vital signs value"
-                + " set")
+            "memberOf() returns empty for a collection of more than one coding")
+        .testTrue(
+            "singleCodingArray.memberOf('" + labTestsValueSet + "')",
+            "memberOf() returns a result for a collection holding a single coding")
+        .testTrue(
+            "multipleCodings.first().memberOf('" + labTestsValueSet + "')",
+            "memberOf() returns a result for a single coding taken from a collection")
+        .testTrue(
+            "multipleCodings.where(memberOf('" + vitalSignsValueSet + "')).exists()",
+            "memberOf() within where() tests each coding of a collection on its own")
+        .testFalse(
+            "multipleCodings.where(memberOf('" + genderValueSet + "')).exists()",
+            "memberOf() within where() finds no member when no coding is a member")
         .group("memberOf() function with CodeableConcept")
         .testTrue(
             "loincConcept.memberOf('" + labTestsValueSet + "')",
@@ -483,24 +511,91 @@ public class TerminologyFunctionsDslTest extends FhirPathDslTestBase {
             "memberOf() returns true for a CodeableConcept with at least one coding in the value"
                 + " set")
         .group("memberOf() function with collections of CodeableConcepts")
-        .testEquals(
-            List.of(true, false),
+        .testEmpty(
             "multipleConcepts.memberOf('" + labTestsValueSet + "')",
-            "memberOf() returns correct results for a collection of CodeableConcepts with lab tests"
-                + " value set")
-        .testEquals(
-            List.of(false, true),
-            "multipleConcepts.memberOf('" + proceduresValueSet + "')",
-            "memberOf() returns correct results for a collection of CodeableConcepts with"
-                + " procedures value set")
+            "memberOf() returns empty for a collection of more than one CodeableConcept")
+        .testTrue(
+            "singleConceptArray.memberOf('" + labTestsValueSet + "')",
+            "memberOf() returns a result for a collection holding a single CodeableConcept")
+        .testTrue(
+            "multipleConcepts.where(memberOf('" + proceduresValueSet + "')).exists()",
+            "memberOf() within where() tests each CodeableConcept of a collection on its own")
+        .group("memberOf() function with string")
+        .testTrue(
+            "genderCode.memberOf('" + genderValueSet + "')",
+            "memberOf() returns true for a string that is a code in the value set")
+        .testTrue(
+            "'male'.memberOf('" + genderValueSet + "')",
+            "memberOf() returns true for a string literal that is a code in the value set")
+        .testFalse(
+            "genderCode.memberOf('" + labTestsValueSet + "')",
+            "memberOf() returns false for a string that is not a code in the value set")
+        .testEmpty(
+            "genderCodes.memberOf('" + genderValueSet + "')",
+            "memberOf() returns empty for a collection of more than one string")
+        .testTrue(
+            "singleGenderCodeArray.memberOf('" + genderValueSet + "')",
+            "memberOf() returns a result for a collection holding a single string")
+        .testEmpty(
+            "emptyString.memberOf('" + genderValueSet + "')",
+            "memberOf() returns empty for an empty string")
+        .group("memberOf() function with an unresolvable value set")
+        .testEmpty(
+            "loinc.memberOf('" + unresolvableValueSet + "')",
+            "memberOf() returns empty for a coding when the value set cannot be resolved")
+        .testEmpty(
+            "mixedConcept.memberOf('" + unresolvableValueSet + "')",
+            "memberOf() returns empty for a CodeableConcept when the value set cannot be resolved")
+        .testEmpty(
+            "genderCode.memberOf('" + unresolvableValueSet + "')",
+            "memberOf() returns empty for a string when the value set cannot be resolved")
+        .group("memberOf() function with empty input")
+        .testEmpty(
+            "{}.memberOf('" + labTestsValueSet + "')",
+            "memberOf() returns empty for an empty collection")
         .group("memberOf() function error cases")
         .testError(
-            "'string'.memberOf('" + labTestsValueSet + "')",
-            "memberOf() throws an error when called on a non-coding/non-codeableconcept type")
+            "1.memberOf('" + labTestsValueSet + "')",
+            "memberOf() throws an error when called on an integer")
+        .testError(
+            "true.memberOf('" + labTestsValueSet + "')",
+            "memberOf() throws an error when called on a boolean")
         .testError("loinc.memberOf()", "memberOf() throws an error when called with no parameters")
         .testError(
             "loinc.memberOf('" + labTestsValueSet + "', 'extra')",
             "memberOf() throws an error when called with more than one parameter")
+        .build();
+  }
+
+  @FhirPathTest
+  public Stream<DynamicTest> testMemberOfFunctionWithCode() {
+    SharedMocks.resetAll();
+
+    final String genderValueSet = "http://hl7.org/fhir/ValueSet/administrative-gender";
+    final String otherValueSet = "http://example.org/fhir/ValueSet/other";
+    TerminologyServiceHelpers.setupValidate(terminologyService).withCodes(genderValueSet, "male");
+
+    // A patient whose gender is a code, with two contacts whose genders are also codes.
+    final Patient patient = new Patient();
+    patient.setGender(AdministrativeGender.MALE);
+    patient.addContact().setGender(AdministrativeGender.MALE);
+    patient.addContact().setGender(AdministrativeGender.FEMALE);
+
+    return builder()
+        .withResource(patient)
+        .group("memberOf() function with code")
+        .testTrue(
+            "gender.memberOf('" + genderValueSet + "')",
+            "memberOf() returns true for a code that is in the value set")
+        .testFalse(
+            "gender.memberOf('" + otherValueSet + "')",
+            "memberOf() returns false for a code that is not in the value set")
+        .testEmpty(
+            "contact.gender.memberOf('" + genderValueSet + "')",
+            "memberOf() returns empty for a collection of more than one code")
+        .testTrue(
+            "contact.gender.where(memberOf('" + genderValueSet + "')).exists()",
+            "memberOf() within where() tests each code of a collection on its own")
         .build();
   }
 
@@ -798,10 +893,12 @@ public class TerminologyFunctionsDslTest extends FhirPathDslTestBase {
         .testFalse(
             "freeTextQuantity.memberOf('" + massUnitsValueSet + "')",
             "memberOf() returns false for a quantity with a free-text unit")
-        .testEquals(
-            List.of(true, true),
+        .testEmpty(
             "measurements.memberOf('" + massUnitsValueSet + "')",
-            "memberOf() returns a result for each quantity within a collection")
+            "memberOf() returns empty for a collection of more than one quantity")
+        .testTrue(
+            "measurements.where(memberOf('" + massUnitsValueSet + "')).exists()",
+            "memberOf() within where() tests each quantity of a collection on its own")
         .group("subsumes() function with Quantity")
         .testTrue(
             "bulk.subsumes(http://unitsofmeasure.org|mg)",

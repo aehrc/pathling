@@ -17,7 +17,9 @@
 
 package au.csiro.pathling.terminology.local;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.config.LocalTerminologyConfiguration;
@@ -103,8 +105,9 @@ class LocalTerminologyServiceValidateCodeTest {
   }
 
   @Test
-  void returnsFalseForUnknownValueSet() {
-    assertFalse(service.validateCode("http://loinc.org/vs", snomed(Rf2Mini.DIABETES)));
+  void returnsUnknownForUnresolvableValueSet() {
+    // A value set that cannot be resolved gives no answer, rather than a non-member.
+    assertNull(service.validateCode("http://loinc.org/vs", snomed(Rf2Mini.DIABETES)));
   }
 
   @Test
@@ -127,5 +130,19 @@ class LocalTerminologyServiceValidateCodeTest {
     // A second call over the same value set must return the same result from the cached expansion.
     assertTrue(service.validateCode(valueSet, snomed(Rf2Mini.TYPE2_DIABETES)));
     assertTrue(service.validateCode(valueSet, snomed(Rf2Mini.TYPE2_DIABETES)));
+  }
+
+  @Test
+  void validatesCodeByInferringSystemFromValueSet() {
+    // A bare code takes the system of the value set it is validated against.
+    final String valueSet = eclValueSet("<< " + Rf2Mini.DIABETES);
+    assertEquals(true, service.validateCodeInferringSystem(valueSet, Rf2Mini.TYPE1_DIABETES));
+    assertEquals(false, service.validateCodeInferringSystem(valueSet, Rf2Mini.HYPERTENSION));
+    assertEquals(false, service.validateCodeInferringSystem(valueSet, "999999999"));
+  }
+
+  @Test
+  void returnsUnknownForCodeAgainstUnresolvableValueSet() {
+    assertNull(service.validateCodeInferringSystem("http://loinc.org/vs", Rf2Mini.DIABETES));
   }
 }

@@ -25,7 +25,16 @@ not start Spark.
 Author: John Grimes.
 """
 
-from pathling._spark_defaults import MANAGED_COORDINATES, managed_spark_defaults
+import pytest
+
+from pathling._spark_defaults import (
+    CATALOG_KEY,
+    DELTA_CATALOG,
+    MANAGED_COORDINATES,
+    managed_spark_defaults,
+    merge_spark_conf,
+    validate_spark_conf,
+)
 from pathling._version import (
     __delta_version__,
     __java_version__,
@@ -61,3 +70,42 @@ def test_managed_coordinate_identities():
     assert f"io.delta:delta-spark_{__scala_version__}" in MANAGED_COORDINATES
     # Exactly the two coordinates Pathling manages, no more.
     assert len(MANAGED_COORDINATES) == 2
+
+
+# ========== validate_spark_conf ==========
+
+
+def test_validate_spark_conf_accepts_plain_string_map():
+    """A plain string map with spark.-prefixed keys validates unchanged."""
+    user_map = {"spark.driver.memory": "8g", "spark.executor.memory": "4g"}
+    assert validate_spark_conf(user_map) == user_map
+
+
+def test_validate_spark_conf_rejects_non_spark_key():
+    """A key that does not begin with spark. raises ValueError naming the key."""
+    with pytest.raises(ValueError, match="executor.memory"):
+        validate_spark_conf({"executor.memory": "4g"})
+
+
+def test_validate_spark_conf_rejects_non_string_value():
+    """A non-string value raises TypeError naming the key."""
+    with pytest.raises(TypeError, match="spark.executor.memory"):
+        validate_spark_conf({"spark.executor.memory": 4})
+
+
+# ========== merge_spark_conf (shared implementation) ==========
+
+
+def test_shared_merge_plain_key_passes_through():
+    """A non-managed key is passed through unchanged."""
+    assert merge_spark_conf({"spark.executor.memory": "4g"}) == {
+        "spark.executor.memory": "4g"
+    }
+
+
+def test_shared_merge_catalog_mismatch_raises_value_error():
+    """Setting the catalog to a non-Delta value raises ValueError (not CliError)."""
+    with pytest.raises(ValueError, match=CATALOG_KEY):
+        merge_spark_conf({CATALOG_KEY: "com.example.OtherCatalog"})
+    # The managed Delta catalog itself is a no-op and is dropped.
+    assert merge_spark_conf({CATALOG_KEY: DELTA_CATALOG}) == {}

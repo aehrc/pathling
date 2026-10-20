@@ -17,16 +17,17 @@
 
 """Parsing, validation, coercion, and merge for user-supplied Spark settings.
 
-This module holds the pure logic that turns ``[spark]`` config-table entries and
-``--spark-conf KEY=VALUE`` flags into the effective Spark configuration applied
-when a session is built. Keys must begin with ``spark.``; scalar values are
-coerced to the string form Spark expects; values support the existing
-``@file``/environment secret resolution. The three managed keys
-(``spark.jars.packages``, ``spark.sql.extensions``,
-``spark.sql.catalog.spark_catalog``) are merged with item-level protection
-against Pathling's managed defaults so the library keeps working while user
-additions take effect. None of this requires PySpark, so it runs before any
-Spark session starts.
+This module holds the CLI-specific logic that turns ``[spark]`` config-table
+entries and ``--spark-conf KEY=VALUE`` flags into the effective Spark
+configuration applied when a session is built. Keys must begin with ``spark.``;
+scalar values are coerced to the string form Spark expects; values support the
+existing ``@file``/environment secret resolution. The merge of the resolved map
+with Pathling's managed defaults (with item-level protection for the managed
+keys ``spark.jars.packages``, ``spark.sql.extensions`` and
+``spark.sql.catalog.spark_catalog``) lives in :mod:`pathling._spark_defaults`,
+shared with the Python library API; this module wraps it so CLI usage errors
+keep their exit code 2 contract. None of this requires PySpark, so it runs
+before any Spark session starts.
 
 Author: John Grimes.
 """
@@ -35,13 +36,7 @@ from __future__ import annotations
 
 from typing import Callable, Iterable, Optional
 
-from pathling._spark_defaults import (
-    CATALOG_KEY,
-    EXTENSIONS_KEY,
-    MANAGED_COORDINATES,
-    PACKAGES_KEY,
-    managed_spark_defaults,
-)
+from pathling._spark_defaults import merge_spark_conf as _shared_merge_spark_conf
 from pathling.cli.errors import EXIT_USAGE, CliError
 
 
@@ -135,137 +130,24 @@ def resolve_spark_conf(
     return resolved
 
 
-def _split_list(value: str) -> list:
-    """Splits a comma-separated Spark list value, dropping empty entries.
-
-    :param value: a comma-separated string such as a packages or extensions list.
-    :return: the non-empty, stripped items in order.
-    """
-    return [item.strip() for item in value.split(",") if item.strip()]
-
-
-def _group_artifact(coordinate: str) -> str:
-    """Returns the ``group:artifact`` identity of a Maven coordinate.
-
-    :param coordinate: a ``group:artifact:version`` Maven coordinate.
-    :return: the ``group:artifact`` prefix used to detect a version override.
-    """
-    return ":".join(coordinate.split(":")[:2])
-
-
-def _merge_packages(
-    user_value: str,
-    on_warning: Optional[Callable[[str], None]],
-) -> str:
-    """Unions user package coordinates with the managed defaults.
-
-    Managed coordinates appear first. A user coordinate whose ``group:artifact``
-    is new is appended. A user coordinate that matches a managed
-    ``group:artifact`` at a different version replaces the managed entry and, for
-    a Pathling-managed coordinate, emits a single warning naming it.
-
-    :param user_value: the user's comma-separated ``spark.jars.packages`` value.
-    :param on_warning: a callback for the managed-version-override warning, or
-           None to suppress it.
-    :return: the merged, deduplicated comma-separated packages string.
-    """
-    result = []
-    # Map each ``group:artifact`` to its index in ``result`` for deduplication.
-    index_of = {}
-
-    def add(coordinate: str) -> None:
-        identity = _group_artifact(coordinate)
-        if identity not in index_of:
-            index_of[identity] = len(result)
-            result.append(coordinate)
-            return
-        existing = result[index_of[identity]]
-        if existing == coordinate:
-            return
-        # A different version of an already-present coordinate: the user wins.
-        result[index_of[identity]] = coordinate
-        if identity in MANAGED_COORDINATES and on_warning is not None:
-            on_warning(
-                f"The Spark configuration overrides the managed package "
-                f"'{identity}' with '{coordinate}'. This non-default version "
-                "may not be supported."
-            )
-
-    for coordinate in _split_list(managed_spark_defaults()[PACKAGES_KEY]):
-        add(coordinate)
-    for coordinate in _split_list(user_value):
-        add(coordinate)
-    return ",".join(result)
-
-
-def _merge_extensions(user_value: str) -> str:
-    """Unions user SQL extension classes with the managed defaults.
-
-    The Delta extension (listed in the managed defaults) is always retained and
-    appears first; user extensions are appended, deduplicated.
-
-    :param user_value: the user's comma-separated ``spark.sql.extensions`` value.
-    :return: the merged, deduplicated comma-separated extensions string.
-    """
-    result = []
-    seen = set()
-    managed = _split_list(managed_spark_defaults()[EXTENSIONS_KEY])
-    for extension in managed + _split_list(user_value):
-        if extension not in seen:
-            seen.add(extension)
-            result.append(extension)
-    return ",".join(result)
-
-
-def _merge_catalog(user_value: str, key: str) -> Optional[str]:
-    """Validates the session catalog against the managed Delta catalog.
-
-    :param user_value: the user's ``spark.sql.catalog.spark_catalog`` value.
-    :param key: the configuration key, for the error message.
-    :return: None when the value equals the managed Delta catalog (a no-op the
-             builder already applies); the function never returns another value.
-    :raises CliError: if the value differs from the managed Delta catalog (exit
-            code 2).
-    """
-    managed = managed_spark_defaults()[CATALOG_KEY]
-    if user_value == managed:
-        return None
-    raise CliError(
-        f"The Spark configuration key '{key}' is managed by Pathling and must be "
-        f"'{managed}'. Remove it or set it to the Delta catalog.",
-        exit_code=EXIT_USAGE,
-    )
-
-
 def merge_spark_conf(
     user_map: dict,
     on_warning: Optional[Callable[[str], None]] = None,
 ) -> dict:
     """Merges the user Spark map with Pathling's managed defaults.
 
-    Plain keys pass through unchanged. The managed list keys
-    (``spark.jars.packages``, ``spark.sql.extensions``) are unioned with the
-    managed defaults and deduplicated. ``spark.sql.catalog.spark_catalog`` is
-    dropped when it equals the managed Delta catalog and is an error otherwise.
-    Only keys the user actually set appear in the result; keys they did not touch
-    are left to the session builder's managed defaults.
+    Delegates to :func:`pathling._spark_defaults.merge_spark_conf` and maps
+    validation failures onto :class:`CliError`, preserving the CLI's usage-error
+    (exit code 2) contract.
 
     :param user_map: the validated, coerced, and resolved user Spark map.
     :param on_warning: a callback for the managed-version-override warning, or
            None to suppress it.
     :return: the effective Spark configuration to apply on top of the defaults.
-    :raises CliError: if the session catalog is set to a non-Delta value.
+    :raises CliError: if the session catalog is set to a non-Delta value (exit
+            code 2).
     """
-    result = {}
-    for key, value in user_map.items():
-        if key == PACKAGES_KEY:
-            result[key] = _merge_packages(value, on_warning)
-        elif key == EXTENSIONS_KEY:
-            result[key] = _merge_extensions(value)
-        elif key == CATALOG_KEY:
-            merged = _merge_catalog(value, key)
-            if merged is not None:
-                result[key] = merged
-        else:
-            result[key] = value
-    return result
+    try:
+        return _shared_merge_spark_conf(user_map, on_warning=on_warning)
+    except ValueError as e:
+        raise CliError(str(e), exit_code=EXIT_USAGE) from e

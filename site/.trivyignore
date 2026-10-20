@@ -78,3 +78,19 @@ CVE-2026-14257
 # sees a request-supplied buffer, and it is not deployed with the static site.
 CVE-2025-71329
 CVE-2025-71330
+
+# braces stack-overflow DoS, no fixed release available (3.0.3 is the latest published version).
+# braces is a build-time transitive of micromatch, used by Docusaurus to glob trusted source
+# files. It is not deployed with the static site.
+CVE-2026-93687
+
+# sprintf-js DoS via unbounded precision specifiers, no fixed release available (1.1.3 is the
+# latest published version and is also affected). sprintf-js is reached only via argparse, which
+# js-yaml 3.x uses solely in its CLI binary; the Docusaurus build never invokes it, and it is not
+# deployed with the static site.
+CVE-2026-97058
+
+# postcss-selector-parser selector-parsing DoS — build-time CSS processing of trusted source
+# files via Docusaurus postcss plugins, not deployed. The fix needs a broad lock refresh, and a
+# bun override would force 7.x onto cssnano plugins that require ^6.
+CVE-2026-104844

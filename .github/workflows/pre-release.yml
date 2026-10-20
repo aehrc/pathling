@@ -226,15 +226,27 @@ jobs:
           echo "$GPG_KEY" | gpg --batch --import
           gpg --list-secret-keys --keyid-format LONG
 
+      # Maven 3.10 only offers a server's credentials to repositories it can associate with that
+      # server id. The snapshot repository is created inside central-publishing-maven-plugin, so
+      # its origin has to be declared, otherwise the upload is sent without credentials and fails
+      # with a 401.
       - name: Configure Maven settings
-        uses: s4u/maven-settings-action@v3.1.0
-        with:
-          servers: |
-            [{
-              "id": "central",
-              "username": "${{ secrets.OSSRH_USERNAME }}",
-              "password": "${{ secrets.OSSRH_PASSWORD }}"
-            }]
+        run: |
+          mkdir -p ~/.m2
+          cat > ~/.m2/settings.xml <<'EOF'
+          <settings>
+            <servers>
+              <server>
+                <id>central</id>
+                <username>${env.CENTRAL_USERNAME}</username>
+                <password>${env.CENTRAL_PASSWORD}</password>
+                <repositoryOrigins>
+                  <repositoryOrigin>https://central.sonatype.com</repositoryOrigin>
+                </repositoryOrigins>
+              </server>
+            </servers>
+          </settings>
+          EOF
 
       - name: Run security scan
         uses: ./.github/actions/trivy-scan
@@ -274,6 +286,8 @@ jobs:
           R_KEEP_PKG_SOURCE: yes
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+          CENTRAL_USERNAME: ${{ secrets.OSSRH_USERNAME }}
+          CENTRAL_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
         run: |
           mvn --batch-mode deploy -DskipTests \
           org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
