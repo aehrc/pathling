@@ -23,9 +23,9 @@ import java.util.stream.Collectors;
 
 /**
  * A resolved node in a SQL on FHIR dependency graph: a {@link ResolvedViewDefinition} leaf, a
- * {@link ResolvedExternalTable} leaf or a {@link ResolvedSqlView}. Each node is identified by a
- * stable canonical key that is the basis of its request-scoped temp-view name and of diamond
- * deduplication.
+ * {@link ResolvedExternalTable} leaf, a {@link ResolvedValueSet} leaf, a {@link ResolvedConceptMap}
+ * leaf or a {@link ResolvedSqlView}. Each node is identified by a stable canonical key that is the
+ * basis of its request-scoped temp-view name and of diamond deduplication.
  *
  * @author John Grimes
  */

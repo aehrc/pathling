@@ -132,17 +132,17 @@ class SqlQueryPipelineTest {
     // Have the mocked executor invoke the terminal consumer with the dataset, as the real one does.
     doAnswer(
             invocation -> {
-              final Consumer<Dataset<Row>> consumer = invocation.getArgument(4);
+              final Consumer<Dataset<Row>> consumer = invocation.getArgument(3);
               consumer.accept(dataset);
               return null;
             })
         .when(executor)
-        .execute(eq(request), eq(graph), eq(dataSource), eq("req-1"), any());
+        .execute(eq(request), eq(graph), eq(dataSource), any());
 
     final AtomicReference<Dataset<Row>> received = new AtomicReference<>();
-    pipeline.execute(prepared, dataSource, "req-1", received::set);
+    pipeline.execute(prepared, dataSource, received::set);
 
     assertThat(received.get()).isSameAs(dataset);
-    verify(executor).execute(eq(request), eq(graph), eq(dataSource), eq("req-1"), any());
+    verify(executor).execute(eq(request), eq(graph), eq(dataSource), any());
   }
 }

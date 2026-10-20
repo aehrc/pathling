@@ -29,7 +29,6 @@ import static au.csiro.pathling.util.TestConstants.RESOLVE_PATIENT;
 import static au.csiro.pathling.util.TestConstants.WAREHOUSE_PLACEHOLDER;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.assertj.core.api.Assertions.tuple;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 import au.csiro.pathling.config.ServerConfiguration;
@@ -37,7 +36,6 @@ import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.io.JobDirectoryFileSystem;
 import au.csiro.pathling.io.StubFileSystem;
 import au.csiro.pathling.library.PathlingContext;
-import au.csiro.pathling.library.io.sink.FileInformation;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.operations.compartment.PatientCompartmentService;
 import au.csiro.pathling.test.SharedMocks;
@@ -60,6 +58,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
@@ -591,12 +590,29 @@ class ExportOperationExecutorTest {
     softly.assertThat(actual.getWriteDetails()).isNotNull();
     softly
         .assertThat(actual.getWriteDetails().fileInfos())
-        .extracting(FileInformation::fhirResourceType, FileInformation::absoluteUrl)
-        .containsAnyElementsOf(
-            expected.getWriteDetails().fileInfos().stream()
-                .map(fi -> tuple(fi.fhirResourceType(), fi.absoluteUrl()))
-                .toList());
+        .anySatisfy(
+            actualFile ->
+                assertThat(expected.getWriteDetails().fileInfos())
+                    .anySatisfy(
+                        expectedFile -> {
+                          assertThat(actualFile.fhirResourceType())
+                              .isEqualTo(expectedFile.fhirResourceType());
+                          assertThat(actualFile.absoluteUrl())
+                              .matches(withWriteId(expectedFile.absoluteUrl()));
+                        }));
     softly.assertAll();
+  }
+
+  /**
+   * Builds a pattern matching the given file URL once the sink has added the id of the Spark write
+   * that produced it, as in {@code Patient.00000-<writeId>.ndjson} for {@code
+   * Patient.00000.ndjson}.
+   */
+  private static String withWriteId(final String url) {
+    final int extension = url.lastIndexOf('.');
+    return Pattern.quote(url.substring(0, extension))
+        + "-[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}"
+        + Pattern.quote(url.substring(extension));
   }
 
   /**

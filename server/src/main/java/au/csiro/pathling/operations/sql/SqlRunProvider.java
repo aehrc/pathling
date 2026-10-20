@@ -201,16 +201,7 @@ public class SqlRunProvider {
       runViewDefinition(
           subject, supplied, inlineResources, filters, outputFormat, header, limit, response);
     } else {
-      runSqlLibrary(
-          subject,
-          supplied,
-          parameters,
-          filters,
-          outputFormat,
-          header,
-          limit,
-          requestDetails,
-          response);
+      runSqlLibrary(subject, supplied, parameters, filters, outputFormat, header, limit, response);
     }
   }
 
@@ -249,7 +240,6 @@ public class SqlRunProvider {
       @Nonnull final SqlRunFormat outputFormat,
       final boolean header,
       @Nullable final IntegerType limit,
-      @Nonnull final ServletRequestDetails requestDetails,
       @Nonnull final HttpServletResponse response) {
 
     final PreparedSqlQuery prepared;
@@ -268,7 +258,6 @@ public class SqlRunProvider {
       pipeline.execute(
           prepared,
           filteredSource(filters),
-          requestDetails.getRequestId(),
           result ->
               streamer.stream(result, toSqlQueryOutputFormat(outputFormat), header, response));
     } catch (final Exception e) {
