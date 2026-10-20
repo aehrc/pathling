@@ -595,7 +595,7 @@ public class YamlSupport {
         return Stream.of(
             new StructField(
                 primitiveDefinition.getName(),
-                primitiveDefinition.getCardinality() < 0
+                primitiveDefinition.getMaxCardinality() < 0
                     ? new ArrayType(elementType, true)
                     : elementType,
                 true,
@@ -612,7 +612,7 @@ public class YamlSupport {
         return Stream.of(
             new StructField(
                 compositeDefinition.getName(),
-                compositeDefinition.getCardinality() < 0
+                compositeDefinition.getMaxCardinality() < 0
                     ? new ArrayType(elementType, true)
                     : elementType,
                 true,
