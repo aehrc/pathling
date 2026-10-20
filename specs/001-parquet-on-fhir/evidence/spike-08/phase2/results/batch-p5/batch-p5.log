@@ -1,0 +1,32 @@
+=== 2026-10-20 12:16:30 pre-flight
+date: Tue 20 Oct 2026 12:16:30 AEST
+uptime: 12:16  up 18:01, 4 users, load averages: 3.24 4.52 5.29
+swap: total = 0.00M  used = 0.00M  free = 0.00M  (encrypted)
+disk: /dev/disk3s1       926  862        39    96% 5405889 409591400    1%   /System/Volumes/Data
+java processes:
+  none
+top cpu:
+ 28.4 claude
+ 24.2 /Applications/Microsoft Defender.app/Contents/MacOS/wdavdaemon_enterprise.app/Contents/MacOS/wdavdaemon_enterprise
+ 13.8 /Library/SystemExtensions/4263FE4D-84E9-4B8B-B305-A7B7F23E5B37/com.jamf.protect.security-extension.systemextension/Contents/MacOS/com.jamf.protect.security-extension
+ 11.0 /Library/Application Support/JAMF/Jamf.app/Contents/MacOS/JamfDaemon.app/Contents/MacOS/JamfDaemon
+ 10.5 /usr/libexec/trustd
+c9c6f6e5bbeeaeac3263bf0e4f89313ac0a094725a4a1416fa9f348a6ff1a0e0  /Users/szu004/dev/pathling/.local/work/issue/2367/pathling-compare/tools/spike08-proto.jar
+=== 2026-10-20 12:17:32 start p5-a0-r1-514f8f8 json (pathling )
+=== 2026-10-20 12:20:20 end p5-a0-r1-514f8f8 json (exit 0)
+=== 2026-10-20 12:23:20 start p5-aplus-r1-514f8f8 json (aplus EXTS_OVERRIDE=1 SPARK_CONF=spark.sql.codegen.hugeMethodLimit=8000)
+=== 2026-10-20 12:27:46 end p5-aplus-r1-514f8f8 json (exit 0)
+=== 2026-10-20 12:30:16 start p5-aplusnc-r1-514f8f8 json (aplus EXTS_OVERRIDE=1 SPIKE_POLICY=none SPARK_CONF=spark.sql.codegen.hugeMethodLimit=8000)
+=== 2026-10-20 12:32:31 end p5-aplusnc-r1-514f8f8 json (exit 0)
+=== 2026-10-20 12:35:01 start p5-aplusdef-r1-514f8f8 json (aplus EXTS_OVERRIDE=1)
+=== 2026-10-20 12:39:26 end p5-aplusdef-r1-514f8f8 json (exit 0)
+=== 2026-10-20 12:41:56 start p5-a0-r2-514f8f8 json (pathling )
+=== 2026-10-20 12:44:50 end p5-a0-r2-514f8f8 json (exit 0)
+=== 2026-10-20 12:47:51 start p5-aplus-r2-514f8f8 json (aplus EXTS_OVERRIDE=1 SPARK_CONF=spark.sql.codegen.hugeMethodLimit=8000)
+=== 2026-10-20 12:52:16 end p5-aplus-r2-514f8f8 json (exit 0)
+=== 2026-10-20 12:54:46 start p5-aplusnc-r2-514f8f8 json (aplus EXTS_OVERRIDE=1 SPIKE_POLICY=none SPARK_CONF=spark.sql.codegen.hugeMethodLimit=8000)
+=== 2026-10-20 12:57:03 end p5-aplusnc-r2-514f8f8 json (exit 0)
+=== 2026-10-20 12:59:33 start p5-aplusdef-r2-514f8f8 json (aplus EXTS_OVERRIDE=1)
+=== 2026-10-20 13:03:59 end p5-aplusdef-r2-514f8f8 json (exit 0)
+=== 2026-10-20 13:03:59 slice json done; A0 spread acceptable
+=== 2026-10-20 13:03:59 batch done

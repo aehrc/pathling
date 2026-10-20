@@ -1,0 +1,16 @@
+{
+  "label": "p5-a0-r2-514f8f8",
+  "venv": "/Users/szu004/dev/pathling/.local/work/issue/2367/pathling-compare/venv-514f8f8",
+  "data": "/Users/szu004/dev/sql-on-fhir.js/benchmark/data/synthea-clinical-wide/1/l",
+  "python": "3.12.7",
+  "pyspark": "4.0.4",
+  "java": "java version \"21.0.3\" 2024-04-16 LTS",
+  "timestamp": "2026-10-20T12:41:57.305368",
+  "sqlOnFhirJsSha": "794e8a7f4b57ddc9c20c95e688fa234e8c2f5492",
+  "machine": "Apple M3 Pro, 11 cpus",
+  "pathlingSha": "514f8f818e9e863f1b51785b3f185799d715ebd0",
+  "pathlingDirty": false,
+  "pathlingSubject": "Merge pull request #2838 from aehrc/issue/2829",
+  "builtJar": "/Users/szu004/dev/pathling/.claude/worktrees/bench-514f8f8/library-runtime/target/library-runtime-10.0.0-SNAPSHOT.jar",
+  "builtJarSha256": "3eb0a768fa6c27052d6eaa66f8499c30558aeab9b14d125277fd7571d54f2320"
+}

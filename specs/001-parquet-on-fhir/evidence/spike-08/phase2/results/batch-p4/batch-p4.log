@@ -1,0 +1,36 @@
+=== 2026-10-20 11:37:13 pre-flight
+date: Tue 20 Oct 2026 11:37:13 AEST
+uptime: 11:37  up 17:22, 4 users, load averages: 2.25 3.05 3.50
+swap: total = 0.00M  used = 0.00M  free = 0.00M  (encrypted)
+disk: /dev/disk3s1       926  859        41    96% 5404352 438865360    1%   /System/Volumes/Data
+java processes:
+  none
+top cpu:
+ 66.0 /Library/SystemExtensions/4263FE4D-84E9-4B8B-B305-A7B7F23E5B37/com.jamf.protect.security-extension.systemextension/Contents/MacOS/com.jamf.protect.security-extension
+ 57.6 claude
+ 12.1 /Applications/Microsoft Defender.app/Contents/MacOS/wdavdaemon_enterprise.app/Contents/MacOS/wdavdaemon_enterprise
+  8.5 /Library/Application Support/JAMF/Jamf.app/Contents/MacOS/JamfDaemon.app/Contents/MacOS/JamfDaemon
+  7.8 /Library/SystemExtensions/F3BD795F-764A-4848-BFAF-BDC9138B7563/com.microsoft.wdav.epsext.systemextension/Contents/MacOS/epsext
+9f39dedcdee26047bf5056b4fd26254052e56682ab4f8b372fd8f84154614f6f  /Users/szu004/dev/pathling/.local/work/issue/2367/pathling-compare/tools/spike08-proto.jar
+=== 2026-10-20 11:37:15 start p4-a0-r1-514f8f8 json (pathling )
+=== 2026-10-20 11:40:05 end p4-a0-r1-514f8f8 json (exit 0)
+=== 2026-10-20 11:42:35 start p4-a0hml-r1-514f8f8 json (pathling EXTS_OVERRIDE=1 SPARK_CONF=spark.sql.codegen.hugeMethodLimit=8000)
+=== 2026-10-20 11:44:07 end p4-a0hml-r1-514f8f8 json (exit 0)
+=== 2026-10-20 11:46:07 start p4-orig-r1-514f8f8 json (orig EXTS_OVERRIDE=1 SPARK_CONF=spark.sql.codegen.hugeMethodLimit=8000)
+=== 2026-10-20 11:47:18 end p4-orig-r1-514f8f8 json (exit 0)
+=== 2026-10-20 11:50:49 start p4-b-r1-514f8f8 json (b EXTS_OVERRIDE=1 SPARK_CONF=spark.sql.codegen.hugeMethodLimit=8000)
+=== 2026-10-20 11:51:57 end p4-b-r1-514f8f8 json (exit 0)
+=== 2026-10-20 11:54:58 start p4-bnc-r1-514f8f8 json (b EXTS_OVERRIDE=1 SPIKE_POLICY=none SPARK_CONF=spark.sql.codegen.hugeMethodLimit=8000)
+=== 2026-10-20 11:56:01 end p4-bnc-r1-514f8f8 json (exit 0)
+=== 2026-10-20 11:58:02 start p4-a0-r2-514f8f8 json (pathling )
+=== 2026-10-20 12:00:50 end p4-a0-r2-514f8f8 json (exit 0)
+=== 2026-10-20 12:03:20 start p4-a0hml-r2-514f8f8 json (pathling EXTS_OVERRIDE=1 SPARK_CONF=spark.sql.codegen.hugeMethodLimit=8000)
+=== 2026-10-20 12:04:51 end p4-a0hml-r2-514f8f8 json (exit 0)
+=== 2026-10-20 12:06:21 start p4-orig-r2-514f8f8 json (orig EXTS_OVERRIDE=1 SPARK_CONF=spark.sql.codegen.hugeMethodLimit=8000)
+=== 2026-10-20 12:07:33 end p4-orig-r2-514f8f8 json (exit 0)
+=== 2026-10-20 12:09:34 start p4-b-r2-514f8f8 json (b EXTS_OVERRIDE=1 SPARK_CONF=spark.sql.codegen.hugeMethodLimit=8000)
+=== 2026-10-20 12:10:40 end p4-b-r2-514f8f8 json (exit 0)
+=== 2026-10-20 12:12:41 start p4-bnc-r2-514f8f8 json (b EXTS_OVERRIDE=1 SPIKE_POLICY=none SPARK_CONF=spark.sql.codegen.hugeMethodLimit=8000)
+=== 2026-10-20 12:13:43 end p4-bnc-r2-514f8f8 json (exit 0)
+=== 2026-10-20 12:13:43 slice json done; A0 spread acceptable
+=== 2026-10-20 12:13:43 batch done

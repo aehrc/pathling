@@ -1,0 +1,6 @@
+phases-json-ext1 Patient 11853 11853 11853 exact=500/500 fit 139 encode 171 decode 132 scan 68 jobs 1 1 1
+phases-json-ext1 Condition 459617 459617 459617 exact=500/500 fit 510 encode 867 decode 324 scan 96 jobs 1 1 1
+phases-json-ext1 Encounter 598548 598548 598548 exact=500/500 fit 886 encode 1607 decode 685 scan 165 jobs 1 1 1
+phases-json-ext1 Observation 1004979 1004979 1004979 exact=500/500 fit 1023 encode 1727 decode 768 scan 247 jobs 1 1 1
+/dev/disk3s1   926Gi   862Gi    40Gi    96%    5.4M  421M    1%   /System/Volumes/Data
+done p4-a0hml-r2-514f8f8

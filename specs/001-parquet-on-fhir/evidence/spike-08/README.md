@@ -855,6 +855,36 @@ building 13%. `hugeMethodLimit` is a runtime SQL setting: above it, Spark stops 
 generated method. The size-`l` timings of B elsewhere in this README were taken with the default, and B's XML
 encodes, which also hand their rows over through `Encoders.row`, were not profiled.
 
+### B and A+ with and without their checks (JSON, 2026-10-20)
+
+At the owner's request, B and A+ were also timed with nothing checked, so that their JSON timings can be read
+against A0's and the original spike's, which check nothing. The policy `none` (deviation 10) keeps the parsing
+and the stored row, decimal text included, and skips every check of decision 133 and every finding. Two
+JSON-only batches ran, each with fresh A0 labels as shipped: `p4` (A0 under `hugeMethodLimit=8000`, the original
+spike, B, B under `none`) and `p5` (A+, A+ under `none`, A+ with Spark's default limit). Every route but the A0
+reference ran under `spark.sql.codegen.hugeMethodLimit=8000` (see the profile above), except `p5-aplusdef`.
+Fidelity was exact on every type for A0, B and A+ under both policies. A0's spread was 0.049 and 0.022 (2 items
+judged in each), no step failed, and no "Code grows beyond 64 KB" error was logged.
+
+JSON ingest, fit and encode summed, as the ratio of pooled minimums to the same batch's A0 `r1` (A+ with py4j
+plan building removed; the sum approximates the minimum of the sum):
+
+| Type | A0 (ms, `p4`) | Original spike | B | B, `none` | A+ | A+, `none` |
+|---|---|---|---|---|---|---|
+| Patient | 248 | 0.71 | 0.69 | 0.72 | 4.85 | 1.29 |
+| Condition | 1,290 | 0.53 | 0.44 | 0.35 | 2.88 | 1.46 |
+| Encounter | 2,309 | 0.58 | 0.49 | 0.35 | 4.27 | 1.45 |
+| Observation | 2,720 | 0.54 | 0.44 | 0.34 | 3.03 | 1.38 |
+
+- **The checks cost B about a third of its encode** (Observation 0.78 s with them, 0.50 s without), and cost
+  A+ most of its encode: A+'s encode is 3.6 to 7.1 times A0's with them and 1.30 to 1.41 without.
+- **`hugeMethodLimit=8000` changes neither A0 (0.99 to 1.05 of A0 as shipped) nor A+** (`p5-aplusdef` and
+  `p5-aplus` are within 0.13 of each other on every item). It is B's serializer alone that it helps.
+- **Decode**, against the same A0: B 0.83 to 0.94, B under `none` 0.85 to 1.09, the original spike 0.95 to
+  1.08, A+ (py4j removed) 0.92 to 1.21, A+ under `none` 0.95 to 1.24.
+- The `p4` and `p5` batches are separate sessions; each candidate is compared with its own batch's A0.
+  Per-type rows are in `phase2/results/batch-p4/slices.md` and `batch-p5/slices.md`.
+
 ### Deviations in phase 2
 
 1. **Size `l` deferred.** As instructed on 2026-10-19, nothing was timed at size `l`. The batch and runbook
@@ -908,3 +938,11 @@ encodes, which also hand their rows over through `Encoders.row`, were not profil
    than writing files, as every other route's decode does. `batch-l.sh` gained `SLICES`, `CANDIDATES` and
    `MESSY`, whose defaults leave the size-`l` batch as it ran; the run was
    `PREFIX=p3 SLICES=json CANDIDATES="b orig" MESSY=0 batch-l.sh`.
+10. **The `none` policy and per-route Spark settings.** B (`Spike08Json`, `Spike08B`) and A+ (`Spike08Marker`,
+    `spike_routes.py`'s `Gen` mode `none`) gained a policy that checks nothing, a timing reference only: no
+    datatype, token-type or duplicate-key check, and no findings; integers are parsed and base64 decoded
+    without a check of their form. `run-phases.sh` gained `SPARK_CONF`, one Spark setting, and `batch-l.sh`
+    candidates of the form `name:route:VAR=value[,...]`. The runs were
+    `PREFIX=p4 SLICES=json MESSY=0 CANDIDATES="a0hml:pathling:$HML orig:orig:$HML b:b:$HML bnc:b:SPIKE_POLICY=none,$HML"`
+    and `PREFIX=p5 SLICES=json MESSY=0 CANDIDATES="aplus:aplus:$HML aplusnc:aplus:SPIKE_POLICY=none,$HML aplusdef:aplus"`,
+    where `HML=SPARK_CONF=spark.sql.codegen.hugeMethodLimit=8000`.

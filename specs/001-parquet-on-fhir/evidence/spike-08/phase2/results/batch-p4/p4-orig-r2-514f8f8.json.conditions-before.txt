@@ -1,0 +1,12 @@
+date: Tue 20 Oct 2026 12:06:21 AEST
+uptime: 12:06  up 17:51, 4 users, load averages: 2.77 5.34 5.81
+swap: total = 0.00M  used = 0.00M  free = 0.00M  (encrypted)
+disk: /dev/disk3s1       926  861        40    96% 5405016 422940560    1%   /System/Volumes/Data
+java processes:
+  none
+top cpu:
+ 14.5 /Applications/Microsoft Defender.app/Contents/MacOS/wdavdaemon_enterprise.app/Contents/MacOS/wdavdaemon_enterprise
+ 13.0 /Library/NessusAgent/run/sbin/nessus-agent-module
+ 11.1 /Library/SystemExtensions/4263FE4D-84E9-4B8B-B305-A7B7F23E5B37/com.jamf.protect.security-extension.systemextension/Contents/MacOS/com.jamf.protect.security-extension
+  9.9 /Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Versions/155.0.8059.85/Helpers/Google Chrome Helper (Aperitif Renderer).app/Contents/MacOS/Google Chrome Helper (Aperitif Renderer)
+  9.5 /Library/Application Support/JAMF/Jamf.app/Contents/MacOS/JamfDaemon.app/Contents/MacOS/JamfDaemon

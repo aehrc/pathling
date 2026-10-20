@@ -1,0 +1,3 @@
+prototype jar: c9c6f6e5bbeeaeac3263bf0e4f89313ac0a094725a4a1416fa9f348a6ff1a0e0  /Users/szu004/dev/pathling/.local/work/issue/2367/pathling-compare/tools/spike08-proto.jar
+env: EXTS_OVERRIDE=1 SPARK_CONF=spark.sql.codegen.hugeMethodLimit=8000
+exit: 0

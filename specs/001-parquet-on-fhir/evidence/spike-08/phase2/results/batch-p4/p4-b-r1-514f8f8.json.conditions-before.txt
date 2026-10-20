@@ -1,0 +1,12 @@
+date: Tue 20 Oct 2026 11:50:49 AEST
+uptime: 11:50  up 17:35, 4 users, load averages: 2.61 5.37 5.45
+swap: total = 0.00M  used = 0.00M  free = 0.00M  (encrypted)
+disk: /dev/disk3s1       926  860        41    96% 5404390 433756320    1%   /System/Volumes/Data
+java processes:
+  none
+top cpu:
+ 51.7 /sbin/launchd
+ 31.5 /Library/SystemExtensions/4263FE4D-84E9-4B8B-B305-A7B7F23E5B37/com.jamf.protect.security-extension.systemextension/Contents/MacOS/com.jamf.protect.security-extension
+ 12.4 /Applications/Microsoft Defender.app/Contents/MacOS/wdavdaemon_enterprise.app/Contents/MacOS/wdavdaemon_enterprise
+  7.7 /Library/Application Support/JAMF/Jamf.app/Contents/MacOS/JamfDaemon.app/Contents/MacOS/JamfDaemon
+  7.2 /Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Versions/155.0.8059.85/Helpers/Google Chrome Helper (Aperitif Renderer).app/Contents/MacOS/Google Chrome Helper (Aperitif Renderer)

@@ -1,0 +1,3 @@
+Tue 20 Oct 2026 12:06:22 AEST
+12:06  up 17:51, 4 users, load averages: 2.77 5.34 5.81
+/dev/disk3s1   926Gi   861Gi    40Gi    96%    5.4M  423M    1%   /System/Volumes/Data
