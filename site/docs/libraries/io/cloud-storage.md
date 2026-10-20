@@ -42,7 +42,7 @@ from pyspark.sql import SparkSession
 spark = (
     SparkSession.builder.config(
         "spark.jars.packages",
-        "au.csiro.pathling:library-runtime:9.9.0,"
+        "au.csiro.pathling:library-runtime:10.0.0,"
         + "io.delta:delta-spark_2.13:4.0.1,"
         + "org.apache.hadoop:hadoop-aws:3.4.1",
     )
@@ -94,7 +94,7 @@ import au.csiro.pathling.library.PathlingContext
 import org.apache.spark.sql.SparkSession
 
 val spark = SparkSession.builder
-        .config("spark.jars.packages", "au.csiro.pathling:library-runtime:9.9.0," +
+        .config("spark.jars.packages", "au.csiro.pathling:library-runtime:10.0.0," +
                 "io.delta:delta-spark_2.13:4.0.1," +
                 "org.apache.hadoop:hadoop-aws:3.4.1")
         .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
@@ -123,7 +123,7 @@ class MyApp {
     public static void main(String[] args) {
         SparkSession spark = SparkSession.builder()
                 .config("spark.jars.packages",
-                        "au.csiro.pathling:library-runtime:9.9.0," +
+                        "au.csiro.pathling:library-runtime:10.0.0," +
                                 "io.delta:delta-spark_2.13:4.0.1," +
                                 "org.apache.hadoop:hadoop-aws:3.4.1")
                 .config("spark.sql.extensions",
