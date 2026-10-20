@@ -32,6 +32,7 @@ import ca.uhn.fhir.context.RuntimeChildChoiceDefinition;
 import ca.uhn.fhir.context.RuntimeChildExtension;
 import ca.uhn.fhir.context.RuntimeChildResourceDefinition;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
+import ca.uhn.fhir.parser.DataFormatException;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import lombok.Value;
@@ -53,8 +54,13 @@ public class FhirDefinitionContext implements DefinitionContext {
     // Resolving the resource code to a tag allows custom types (like ViewDefinition) as well as
     // standard ones, and is also where FhirResourceTag itself resolves the code.
     final FhirResourceTag resourceTag = FhirResourceTag.of(resourceCode);
-    final RuntimeResourceDefinition hapiDefinition =
-        fhirContext.getResourceDefinition(resourceCode);
+    final RuntimeResourceDefinition hapiDefinition;
+    try {
+      hapiDefinition = fhirContext.getResourceDefinition(resourceCode);
+    } catch (final DataFormatException e) {
+      // HAPI reports a name it does not know in its own way, which the interface translates.
+      throw new IllegalArgumentException("Resource type not found: " + resourceCode, e);
+    }
     // HAPI matches a name without regard to case, but a resource type is its canonical name only,
     // as the other definition contexts treat it, so a name that differs from it is not found.
     if (!resourceCode.equals(requireNonNull(hapiDefinition).getName())) {

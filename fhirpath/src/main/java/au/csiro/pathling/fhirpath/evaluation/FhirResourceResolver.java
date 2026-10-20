@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.fhirpath.evaluation;
 
+import au.csiro.pathling.definition.fhir.FhirDefinitionContext;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.column.EmptyRepresentation;
 import au.csiro.pathling.fhirpath.column.ResourceRepresentation;
@@ -130,18 +131,20 @@ public record FhirResourceResolver(
   /**
    * Checks if a resource code represents a known resource type in the FHIR context.
    *
-   * <p>This method attempts to look up the resource definition in the FHIR context, which handles
-   * both standard FHIR types (e.g., "Patient", "Observation") and custom registered types (e.g.,
-   * "ViewDefinition").
+   * <p>This method looks up the resource definition through the {@link FhirDefinitionContext},
+   * which handles both standard FHIR types (e.g., "Patient", "Observation") and custom registered
+   * types (e.g., "ViewDefinition"). The lookup accepts a type's canonical name only, so a name that
+   * differs from it in case is treated as a field reference, consistent with the definition that
+   * would later be built for it.
    *
    * @param resourceCode the resource type code
    * @return true if the resource type is known, false otherwise
    */
   private boolean isKnownResourceType(@Nonnull final String resourceCode) {
     try {
-      fhirContext.getResourceDefinition(resourceCode);
+      FhirDefinitionContext.of(fhirContext).findResourceDefinition(resourceCode);
       return true;
-    } catch (final Exception e) {
+    } catch (final IllegalArgumentException e) {
       return false;
     }
   }

@@ -6,6 +6,21 @@
 
 **Blocked by:** None — can start immediately
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] A test requests one type both as a resource and not, and gets the correct structure each time, or the assertion fires.
+- [x] A test requests one type both as a resource and not, and gets the correct structure each time, or the assertion fires.
+
+## Comments
+
+### Implementation (branch `issue/2830-small-tickets`)
+
+The flag is added to the memo key, rather than asserted never to vary, because the fix costs one
+line and the assertion would still let the next caller trip over it. The key is built in one place,
+`memoKey`, which both the root entry and every later lookup use. That includes the lookup from a
+metadata group's extensions. A root stored under one key and found under another would otherwise
+build a second structure for a cycle back to it.
+
+- `DefinitionCanonicalStructureTest.keepsAResourceAndTheSameTypeReachedAsAnElementApart` requests
+  Patient as a resource and then as an element within one memo. It failed before the fix: the
+  element came back with `resourceType`. It now passes, and asking for the resource again returns the
+  same instance.

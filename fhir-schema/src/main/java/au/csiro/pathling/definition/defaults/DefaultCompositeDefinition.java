@@ -34,24 +34,13 @@ public class DefaultCompositeDefinition implements ElementDefinition {
 
   String name;
   List<ChildDefinition> children;
-  int cardinality;
+  int maxCardinality;
   FHIRDefinedType type;
 
   @Override
   @Nonnull
   public String getElementName() {
     return name;
-  }
-
-  /**
-   * The field keeps the name it had before the interface declared this method, so that the accessor
-   * Lombok derives from it stays the one the existing callers use.
-   *
-   * @return the maximum number of values this element may hold
-   */
-  @Override
-  public int getMaxCardinality() {
-    return cardinality;
   }
 
   @Override
@@ -65,15 +54,15 @@ public class DefaultCompositeDefinition implements ElementDefinition {
    *
    * @param name the element name
    * @param children the child definitions
-   * @param cardinality the cardinality
+   * @param maxCardinality the maximum number of values the element may hold
    * @return a new DefaultCompositeDefinition for a backbone element
    */
   @Nonnull
   public static DefaultCompositeDefinition backbone(
       @Nonnull final String name,
       @Nonnull final List<ChildDefinition> children,
-      final int cardinality) {
+      final int maxCardinality) {
     return new DefaultCompositeDefinition(
-        name, children, cardinality, FHIRDefinedType.BACKBONEELEMENT);
+        name, children, maxCardinality, FHIRDefinedType.BACKBONEELEMENT);
   }
 }
