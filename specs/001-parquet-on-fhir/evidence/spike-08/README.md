@@ -875,8 +875,10 @@ encodes, which also hand their rows over through `Encoders.row`, were not profil
 **A UDF in place of `Encoders.row`.** At the owner's request, B's JSON encode was also built to hand its rows
 to Spark through a Java UDF (`Spike08BUdf`, route `budf`): the UDF returns the stored `Row`, typed with the
 fitted schema, and Spark converts it with its precompiled `CatalystTypeConverters`, so the generated code holds
-only the call. It is marked non-deterministic so that the optimizer does not copy it into each top-level column
-it is expanded into. Fit and parser are B's. At size `s` it was exact on all four types. On Observation at
+only the call. It is marked non-deterministic so that the optimizer does not push the filter that drops other
+types' documents below it: deterministic, the filter became a second call of the UDF, and the Observation encode
+took 1.49 s against 0.82 s (`profile/udf_plan.py`, `udf_plan.txt`). Spark 4 did not copy the call into the
+top-level columns either way. Fit and parser are B's. At size `s` it was exact on all four types. On Observation at
 size `l`, runs 2 to 5 (`profile/encode-times.txt`): B 2.74 to 3.01 s by default, 0.87 to 1.02 s under
 `hugeMethodLimit=8000`, and 0.87 to 0.90 s through the UDF with Spark's defaults. In its profile, Spark's
 converters took 10% of the samples and generated code 10%, and 5% of the innermost frames were interpreted.
