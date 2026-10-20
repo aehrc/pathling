@@ -498,25 +498,22 @@ class LocalTerminologyServiceConceptMapTest {
   @Test
   void otherReferenceSetIsRejectedWithoutSnomedCt() {
     // The reason does not depend on the store, so a store without SNOMED CT gives it too.
+    final LocalTerminologyService service = FhirTerminologyFixture.service();
+    final String url = implicitUrl(Rf2Mini.SNOMED_URI, CTV3_SIMPLE_MAP);
     final ConceptMapContentException e =
         assertThrows(
-            ConceptMapContentException.class,
-            () ->
-                FhirTerminologyFixture.service()
-                    .readConceptMap(
-                        implicitUrl(Rf2Mini.SNOMED_URI, CTV3_SIMPLE_MAP), null, NO_LIMIT));
+            ConceptMapContentException.class, () -> service.readConceptMap(url, null, NO_LIMIT));
 
     assertEquals(NOT_READABLE_REASON.formatted(CTV3_SIMPLE_MAP), e.getMessage());
   }
 
   @Test
   void pinnedImplicitMapIsRejected() {
+    final String url = implicitUrl(Rf2Mini.SNOMED_URI, REPLACED_BY);
     final ConceptMapContentException e =
         assertThrows(
             ConceptMapContentException.class,
-            () ->
-                implicitService.readConceptMap(
-                    implicitUrl(Rf2Mini.SNOMED_URI, REPLACED_BY), "x", NO_LIMIT));
+            () -> implicitService.readConceptMap(url, "x", NO_LIMIT));
 
     assertEquals(
         "cannot determine which version to use: an implicit concept map URL carries its version"
@@ -526,18 +523,17 @@ class LocalTerminologyServiceConceptMapTest {
 
   @Test
   void implicitMapOverTheLimitIsRejected() {
+    final String url = implicitUrl(Rf2Mini.VERSION_20230601, SAME_AS);
     assertThrows(
-        ConceptMapLimitExceededException.class,
-        () ->
-            implicitService.readConceptMap(
-                implicitUrl(Rf2Mini.VERSION_20230601, SAME_AS), null, 3));
+        ConceptMapLimitExceededException.class, () -> implicitService.readConceptMap(url, null, 3));
   }
 
   private static void assertNotReadable(@Nonnull final String base, @Nonnull final String refset) {
+    final String url = implicitUrl(base, refset);
     final ConceptMapContentException e =
         assertThrows(
             ConceptMapContentException.class,
-            () -> implicitService.readConceptMap(implicitUrl(base, refset), null, NO_LIMIT));
+            () -> implicitService.readConceptMap(url, null, NO_LIMIT));
 
     assertEquals(NOT_READABLE_REASON.formatted(refset), e.getMessage());
   }
