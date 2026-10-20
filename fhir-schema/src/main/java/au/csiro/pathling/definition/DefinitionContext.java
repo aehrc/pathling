@@ -25,9 +25,12 @@ public interface DefinitionContext {
   /**
    * Finds the definition of a resource type.
    *
+   * <p>Every implementation reports a name it does not describe as a resource type in the same way,
+   * so that a caller can tell an unknown name from any other failure of the lookup.
+   *
    * @param resourceType the type of the resource to find
-   * @return the definition of the resource type Throws IllegalArgumentException if the resource
-   *     type is not found.
+   * @return the definition of the resource type
+   * @throws IllegalArgumentException if the name is not a resource type these definitions describe
    */
   @Nonnull
   ResourceDefinition findResourceDefinition(@Nonnull final String resourceType);

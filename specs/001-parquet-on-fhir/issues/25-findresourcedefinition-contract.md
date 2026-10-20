@@ -6,7 +6,32 @@
 
 **Blocked by:** None — can start immediately
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The interface documents the exception, and both implementations throw `IllegalArgumentException` for an unknown name, pinned by tests.
-- [ ] `StorableResourceType` no longer catches HAPI's exception, and FR-007's unknown-type reporting is unchanged.
+- [x] The interface documents the exception, and both implementations throw `IllegalArgumentException` for an unknown name, pinned by tests.
+- [x] `StorableResourceType` no longer catches HAPI's exception, and FR-007's unknown-type reporting is unchanged.
+
+## Comments
+
+### Implementation (branch `issue/2830-small-tickets`)
+
+Done as recommended.
+
+- `DefinitionContext.findResourceDefinition` documents `@throws IllegalArgumentException` for a name
+  the definitions do not describe as a resource type.
+- `FhirDefinitionContext` translates HAPI's `DataFormatException` into that exception, keeping the
+  cause.
+- `StorableResourceType` calls the lookup without a try/catch or a HAPI import.
+- `DefinitionContextAgreementTest.bothImplementationsRefuseAnUnknownNameInTheSameWay` pins both
+  implementations. It uses an unknown name, and also a lower-case name, which HAPI would match
+  without regard to case.
+
+One thing did change: the message of an unknown-type refusal at ingest. It reads
+`Resource type not found: X` where it read `Not a resource type: X`. The exception type is
+unchanged, and nothing in the repository, including the Python and R libraries, matches on the
+text. `FhirReaderTest.refusesATypeThatMayNotBeStored` passes unchanged.
+
+The server is not affected. Its `DataFormatException` handling, in `ExportOperationValidator`, calls
+HAPI directly, not through `DefinitionContext`.
+
+- Test runs: `fhir-schema` 41 run, 0 failed; `io` 480 run, 0 failed, 1 skipped.
