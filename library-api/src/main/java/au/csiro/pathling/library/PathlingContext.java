@@ -45,6 +45,7 @@ import au.csiro.pathling.terminology.store.DenseIdOrder;
 import au.csiro.pathling.terminology.store.FhirTerminologyImporter;
 import au.csiro.pathling.terminology.store.SnomedRf2Importer;
 import au.csiro.pathling.terminology.store.TerminologyStoreException;
+import au.csiro.pathling.terminology.store.TerminologyStoreMigrator;
 import au.csiro.pathling.terminology.store.TerminologyStoreReader;
 import au.csiro.pathling.validation.ValidationUtils;
 import au.csiro.pathling.views.ConstantDeclarationTypeAdapterFactory;
@@ -1102,11 +1103,12 @@ public class PathlingContext {
   }
 
   /**
-   * Builds the local-mode terminology service factory. The store is opened eagerly here on the
-   * driver so that a missing path, an unreadable manifest, or an incompatible store format fails at
-   * context creation rather than at first query. The driver's Hadoop configuration is snapshotted
-   * into a serialisable map so the store is reachable on executors, where a Hadoop configuration is
-   * neither supplied nor serialisable.
+   * Builds the local-mode terminology service factory. The store is migrated to the current format
+   * version if it was written by an earlier version of Pathling, then opened eagerly here on the
+   * driver so that a missing path, an unreadable manifest, an incompatible store format, or a
+   * failed migration fails at context creation rather than at first query. The driver's Hadoop
+   * configuration is snapshotted into a serialisable map so the store is reachable on executors,
+   * where a Hadoop configuration is neither supplied nor serialisable.
    */
   @Nonnull
   private static TerminologyServiceFactory getLocalTerminologyServiceFactory(
@@ -1118,7 +1120,12 @@ public class PathlingContext {
     final Map<String, String> hadoopConfiguration =
         snapshotHadoopConfiguration(spark.sessionState().newHadoopConf());
 
-    // Fail fast at context creation if the store cannot be opened.
+    // Fail fast at context creation if the store cannot be migrated or opened.
+    try {
+      TerminologyStoreMigrator.migrate(spark, storagePath, hadoopConfiguration);
+    } catch (final TerminologyStoreException e) {
+      throw new IllegalStateException(e.getMessage(), e);
+    }
     try {
       TerminologyStoreReader.open(storagePath, hadoopConfiguration);
     } catch (final TerminologyStoreException e) {

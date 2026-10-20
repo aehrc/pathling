@@ -53,6 +53,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
@@ -633,12 +634,8 @@ public class FhirTerminologyImporter {
       @Nullable final String version,
       @Nonnull final ImportBatch batch) {
     log.info("Streaming ConceptMap {}", url);
-    final ConceptMapStaging staging = batch.conceptMapStaging;
-    final String conceptMapId = TerminologyStoreSchema.conceptMapId(url, version);
-    staging.beginConceptMap(conceptMapId);
-    final int mappings;
     try {
-      mappings = new ConceptMapStreamFlattener(staging).flatten(parser);
+      batch.conceptMaps.add(flattenConceptMap(parser, url, version, batch.conceptMapStaging));
     } catch (final IOException | RuntimeException e) {
       throw new TerminologyImportException(
           "Unable to read ConceptMap "
@@ -649,10 +646,32 @@ public class FhirTerminologyImporter {
               + e.getMessage(),
           e);
     }
+  }
+
+  /**
+   * Flattens a ConceptMap from a parser positioned before its opening brace into a staging.
+   *
+   * @param parser the parser
+   * @param url the canonical URL of the map
+   * @param version the version of the map, or null
+   * @param staging the staging to flatten into
+   * @return the staged map, with the fault recorded while it was read, if any
+   * @throws IOException if the map cannot be read
+   */
+  @Nonnull
+  static StagedConceptMap flattenConceptMap(
+      @Nonnull final JsonParser parser,
+      @Nonnull final String url,
+      @Nullable final String version,
+      @Nonnull final ConceptMapStaging staging)
+      throws IOException {
+    final String conceptMapId = TerminologyStoreSchema.conceptMapId(url, version);
+    staging.beginConceptMap(conceptMapId);
+    final int mappings = new ConceptMapStreamFlattener(staging).flatten(parser);
     log.info("Read ConceptMap {} ({} mappings)", url, mappings);
     // The reason the map cannot be read as a concept map relation, if any, describes the version as
     // a whole, so it is recorded with the version rather than among its mappings.
-    batch.conceptMaps.add(new StagedConceptMap(conceptMapId, url, version, staging.fault()));
+    return new StagedConceptMap(conceptMapId, url, version, staging.fault());
   }
 
   /** Stages a ValueSet, already bounded by the pre-scan, through the whole-resource HAPI path. */
@@ -692,7 +711,7 @@ public class FhirTerminologyImporter {
     if (!batch.conceptMaps.isEmpty()) {
       log.info("Loading {} concept map(s) into the store", batch.conceptMaps.size());
       writer.writePartitions(
-          conceptMappings(batch),
+          conceptMappings(spark, batch.conceptMapStaging, batch.conceptMaps),
           CONCEPT_MAPPING,
           COLUMN_CONCEPT_MAP_ID,
           batch.conceptMaps.stream().map(StagedConceptMap::conceptMapId).toList());
@@ -704,9 +723,19 @@ public class FhirTerminologyImporter {
     writer.upsertManifestEntries(manifestEntries(batch));
   }
 
-  /** Reads the staged mappings of every ConceptMap as rows of the concept mapping table. */
+  /**
+   * Reads the staged mappings of ConceptMaps as rows of the concept mapping table.
+   *
+   * @param spark the Spark session
+   * @param staging the sealed staging the maps were flattened into
+   * @param conceptMaps the staged maps
+   * @return the concept mapping rows
+   */
   @Nonnull
-  private Dataset<Row> conceptMappings(@Nonnull final ImportBatch batch) {
+  static Dataset<Row> conceptMappings(
+      @Nonnull final SparkSession spark,
+      @Nonnull final ConceptMapStaging staging,
+      @Nonnull final Collection<StagedConceptMap> conceptMaps) {
     final String mapId = "map_concept_map_id";
     final StructType mapSchema =
         new StructType()
@@ -715,12 +744,11 @@ public class FhirTerminologyImporter {
             .add(COLUMN_VERSION, DataTypes.StringType, true);
     final Dataset<Row> maps =
         spark.createDataFrame(
-            batch.conceptMaps.stream()
+            conceptMaps.stream()
                 .map(map -> RowFactory.create(map.conceptMapId(), map.url(), map.version()))
                 .toList(),
             mapSchema);
-    return batch
-        .conceptMapStaging
+    return staging
         .read(spark)
         .join(maps, col(COLUMN_CONCEPT_MAP_ID).equalTo(col(mapId)))
         .select(
@@ -768,8 +796,15 @@ public class FhirTerminologyImporter {
     return entries;
   }
 
-  /** A ConceptMap staged for writing, with the fault recorded while it was read, if any. */
-  private record StagedConceptMap(
+  /**
+   * A ConceptMap staged for writing, with the fault recorded while it was read, if any.
+   *
+   * @param conceptMapId the identifier of the map version
+   * @param url the canonical URL of the map
+   * @param version the version of the map, or null
+   * @param fault why the map cannot be read as a concept map relation, or null
+   */
+  record StagedConceptMap(
       @Nonnull String conceptMapId,
       @Nonnull String url,
       @Nullable String version,
