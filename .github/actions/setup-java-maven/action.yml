@@ -28,6 +28,14 @@ runs:
         java-version: ${{ inputs.java-version }}
         distribution: ${{ inputs.distribution }}
 
+    # With Maven 3.10.0, central-publishing-maven-plugin leaves maven-metadata-local.xml at the
+    # artifactId level of its bundle, and Central rejects the bundle as having content without a
+    # POM. See https://github.com/mavenplugins/central-publishing-maven-plugin/issues/78.
+    - name: Set up Maven
+      uses: stCarolas/setup-maven@v5.1
+      with:
+        maven-version: 3.9.16
+
     - name: Cache local Maven repository
       uses: actions/cache@v4
       with:
