@@ -21,9 +21,9 @@ interim is parked, unpushed, on the local branch `issue/2830-egress-unknown-fiel
 the field out and reports it once per column, and is tested for JSON and XML. When the choice is made, check
 whether it still applies, then land it or close this ticket as moot.
 
-### Folded into ticket 33 (2026-10-21)
+### Folded into ticket 34 (2026-10-21)
 
 Owner decision. A stored field the definitions do not describe is one case of content outside the definitions,
-which ticket 33 is to carry through ingest, egress and the engine, with options, under a specification of its
+which ticket 34 is to carry through ingest, egress and the engine, with options, under a specification of its
 own. Ignoring and reporting the field at egress is one answer that specification may give, so it is not built
-separately. The parked branch `issue/2830-egress-unknown-field` (`bead739730`) moves to ticket 33 as prior work.
+separately. The parked branch `issue/2830-egress-unknown-field` (`bead739730`) moves to ticket 34 as prior work.

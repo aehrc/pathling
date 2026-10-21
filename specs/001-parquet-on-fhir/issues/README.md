@@ -29,13 +29,12 @@ The known correctness gaps are closed. The benchmark moved to stage 5, so that i
 measures the finished layout, annotations included.
 
 - [01](01-keep-file-counter-on-rename.md) Keep the file counter so split partition files do not collide on rename
-- ~~[20](20-egress-ignores-unknown-field.md) Egress ignores and reports a stored field it does not know~~ (folded into 33)
+- ~~[20](20-egress-ignores-unknown-field.md) Egress ignores and reports a stored field it does not know~~ (folded into 34)
 - [21](21-pin-type-over-choice.md) Pin FHIRPath type() over a choice element
 - [22](22-canonical-structure-memo-key.md) Key the canonical-structure memo on the resource flag
 - [23](23-remove-duplicate-cardinality-accessor.md) Remove the duplicate cardinality accessor on the default definitions
 - [25](25-findresourcedefinition-contract.md) State what findResourceDefinition throws for an unknown name
 - [24](24-benchmark-ndjson-branch.md) Remove or restore the benchmark's unreachable NDJSON source
-- [31](31-engine-tolerates-invalid-stored-temporal.md) The engine never fails on an invalid stored date or decimal
 
 ## Stage 3: Ingest and egress without HAPI (#2831)
 
@@ -68,19 +67,27 @@ its own toggle, and their use is decided from the schema.
 - [13](13-decimal-annotation.md) Decimal numeric annotation
 - [14](14-date-range-annotation.md) Date range annotation
 - [15](15-schema-decided-plan-test-and-docs.md) Test that annotation use is decided from the schema, and document annotations
-- [33](33-placeholder-content-outside-definitions.md) PLACEHOLDER: Carry content the definitions do not describe through ingest, egress and the engine
+- [34](34-placeholder-content-outside-definitions.md) PLACEHOLDER: Carry content the definitions do not describe through ingest, egress and the engine
 
-Ticket 33 follows the annotations and needs a specification of its own before
+Ticket 34 follows the annotations and needs a specification of its own before
 any work starts. The release does not wait for it.
 
-## Stage 5: Dense mode, measurement and release (#2833)
+## Stage 5: Dense mode, measurement, engine tolerance and release (#2833)
 
 The dense schema mode matches the fitted one, the benchmark is re-measured
-against the finished layout, and the release is checked.
+against the finished layout, the engine handles non-conformant stored data by a
+chosen mode rather than by accident, and the release is checked.
 
 - [18](18-dense-mode.md) Dense schema mode, with bounds reporting and streaming encode
 - [19](19-dense-parity.md) Dense parity
 - [10](10-benchmark-fix-and-extend.md) Benchmark: fix warm planning, add missing views, re-measure
 - [27](27-usc-bloodpressures-planning-regression.md) Investigate the UsCoreBloodPressures planning regression
+- [31](31-engine-value-tolerance-modes.md) The engine handles invalid stored values in one of three modes: strict, tolerant and trust
+- [33](33-engine-layout-tolerance-modes.md) The engine handles non-conformant layout shapes in the same three modes
+
+Ticket 31 follows stage 4, because its annotation path needs the decimal and
+date annotations. Ticket 33 follows 31, which defines the modes, and 17, whose
+stored metadata is what separates Pathling's placeholders from shapes with no
+content.
 - [26](26-raise-github-followups.md) Raise the GitHub follow-up issues
 - [28](28-release-checklist.md) Release checklist
