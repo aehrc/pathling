@@ -14,7 +14,7 @@
 - JSON bundles, for any candidate.
 - The formal JMH check of SC-011 (`evidence/t136-benchmark.md`).
 
-**Blocked by:** The owner's choice of mechanism (decision 134). Ticket 32, because the rework replaces what it builds. Ticket 31, whose grammar it validates with.
+**Blocked by:** The owner's choice of mechanism (decision 134). Ticket 32, because the rework replaces what it builds. Ticket 31, for the date grammar it puts in `fhir-schema`.
 
 **Status:** needs-info
 
@@ -26,9 +26,10 @@ Criteria that hold whichever mechanism is chosen:
 - [ ] Bundle references resolve to the target entry's relative reference, keeping its version (FR-062, decision 83).
 - [ ] The rework carries over what was built on the interim ingest: the primitive metadata group of ticket 17, with its `_x` arrays that have no `x` beside them, and the dense mode of ticket 18. Both pass their own tests on the new mechanism.
 - [ ] Encode and decode meet SC-011.
-- [ ] Ingest validates dates and decimals with the grammar ticket 31 moved down, so ingest and engine agree on what is valid (decision 133, principle 7).
+- [ ] Ingest validates dates and decimals with the shared grammar in `fhir-schema`, so ingest and engine agree on what is valid (decision 133, principle 7). Ticket 31 puts the date grammar there; the decimal grammar, and whether ingest validates per value at all, come with the follow-up issue that ticket 26 raises.
+- [ ] Ingest's handling of non-conformant data, the modes of "Modes" in `evidence/ingress-strictness/README.md` among it, follows the follow-up issue that ticket 26 raises. #2367's ingest is `trust` (decision 133's addendum of 2026-10-22).
 - [ ] If the stored form of any value changes from the interim's, such as a decimal's text, the layout column's version (ticket 29) is bumped, and data written by the interim is read or refused as that rule says.
-- [ ] Any thread that outlives this programme, such as the upstream Spark issue T132 describes, is raised as a GitHub issue by this ticket. Ticket 26 closes before the release, which does not wait for this one.
+- [ ] Any thread that outlives this programme, such as the upstream Spark issue T132 describes, is raised as a GitHub issue by this ticket. Ticket 26 closes before #2367 does, which does not wait for this one.
 
 ## Comments
 

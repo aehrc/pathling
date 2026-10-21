@@ -15,7 +15,7 @@ The spike's harness, fixtures and prototypes named below are on branch `issue/28
 
 **Interim behaviour, as decision 134 sets it.** The XML route stores what the JSON route stores, value for value: a decimal passes through a double, empty values are dropped as the JSON route drops them, and validation is by column type, reported once per column. It does not take on decision 133's per-value scope. Primitive ids and extensions are stored as the JSON route stores them until ticket 17.
 
-This is a behaviour change for XML. HAPI fails the read on an invalid date, such as `1980-13-45`, and the `from_xml` route stores it as text, as interim JSON does. Ticket 31 keeps queries over such a value working, and ticket 28 carries the release note (owner, 2026-10-21).
+This is a behaviour change for XML. HAPI fails the read on an invalid date, such as `1980-13-45`, and the `from_xml` route stores it as text, as interim JSON does. The engine runs in `trust` (ticket 31), so a query over such a value has undefined behaviour, and ticket 28 hands the release note on (owner, 2026-10-22).
 
 **Classpath risk.** xml-native.md, "Classpath", found `to_xml` failing with the `library-runtime` jar on the classpath (`Unrecognized property …wstx.outputValidateStructure`). The jar bundles Woodstox without relocating it, and it clashes with Hadoop's shaded copy. Python and R load that jar, so the clash would show there. How it is fixed, by relocating or excluding Woodstox, is the implementer's choice.
 

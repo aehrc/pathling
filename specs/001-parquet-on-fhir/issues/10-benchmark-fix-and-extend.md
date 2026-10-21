@@ -10,7 +10,7 @@
   - a date range, for ticket 14;
   - views that join on references and call `resolve()`, measured on the computed key.
 - **Re-measure.** Record encode, decode, planning and execution separately, and save every view's optimised plan beside its timings, for ticket 27.
-- **Check SC-011 (owner, 2026-10-21).** Run encode and decode for JSON and XML, lines and bundles, against SC-011's bar, and record the result. This is the release's SC-011 check. The formal JMH check stays with ticket 16.
+- **Check SC-011 (owner, 2026-10-21).** Run encode and decode for JSON and XML, lines and bundles, against SC-011's bar, and record the result. This is #2367's SC-011 check. The formal JMH check stays with ticket 16.
 - **Measure the annotations.** Run every view with each annotation kind on and off, using ticket 11's toggles, so that the computed path and the fast path of tickets 12, 13 and 14 are compared at the same revision.
 
 **Blocked by:** 12, 13, 14

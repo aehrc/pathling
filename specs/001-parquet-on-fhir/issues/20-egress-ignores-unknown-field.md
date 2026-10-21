@@ -27,3 +27,6 @@ Owner decision. A stored field the definitions do not describe is one case of co
 which ticket 34 is to carry through ingest, egress and the engine, with options, under a specification of its
 own. Ignoring and reporting the field at egress is one answer that specification may give, so it is not built
 separately. The parked branch `issue/2830-egress-unknown-field` (`bead739730`) moves to ticket 34 as prior work.
+
+Ticket 34 closed as wontfix on 2026-10-22. Its scope, with this branch, moves to the follow-up issue on content
+the definitions do not describe, which ticket 26 raises.

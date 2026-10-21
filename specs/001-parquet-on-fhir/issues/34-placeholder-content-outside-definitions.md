@@ -24,6 +24,7 @@ It can also reach a stored table without going through ingest. Ticket 20 lists t
   - D2, types inferred from the data, opt-in, with every such column marked as not FHIR.
 
   It rejected a JSON overlay column and VARIANT as the main direction, but either could be revisited if D2's drift proves unmanageable.
+- **The JSON type of inferred content.** A proposal (owner, 2026-10-21): infer FHIRPath System types, not FHIR types, and store a number as its text with a JSON-type marker in the Parquet metadata, so that the engine reads it as a `Decimal` and egress writes it as a number. Level 2 of "Conformance levels" in `evidence/ingress-strictness/README.md` applies to such content, since it needs no definitions.
 - **The options.** What the user chooses between, and what the default is. Dropping and reporting, as today, is one option.
 - **Ingest.** How it fits whichever ingest mechanism ticket 16 settles. A key named like a layout field must still never be read as layout content.
 - **Egress.** How stored extras are written back out, and what happens to a stored field that is neither described nor stored by ingest, which was ticket 20's case.
@@ -42,8 +43,18 @@ It can also reach a stored table without going through ingest. Ticket 20 lists t
 
 **Blocked by:** 11–15, by the owner's decision to follow the annotations. It is related to ticket 16, because the ingest mechanism decides how extras are carried.
 
-**Status:** needs-info
+**Status:** wontfix
 
 - [ ] A specification is written under `specs/` and agreed with the owner.
 - [ ] This ticket is replaced by that specification's tickets.
 - [ ] The parked branch is landed or deleted, as the specification decides.
+
+## Comments
+
+### Moved to a follow-up issue (owner, 2026-10-22)
+
+The round-trip invariant holds only for FHIR that conforms to a given definition set, and content the definitions
+do not describe is outside it. This ticket, and the exploration of metadata that would preserve such content's
+representation even only in datasets Pathling wrote, become one follow-up issue raised by ticket 26. The options
+recorded so far are in `evidence/ingress-strictness/README.md`: D1 and D2 under "Extra elements", the JSON-type
+marker, and the XML attributes and comment carrier under "Typing undescribed content in XML".
