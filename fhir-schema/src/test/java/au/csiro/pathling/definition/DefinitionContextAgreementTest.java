@@ -17,6 +17,7 @@
 package au.csiro.pathling.definition;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import au.csiro.pathling.definition.defaults.DefaultDefinitionContext;
 import au.csiro.pathling.definition.defaults.DefaultPrimitiveDefinition;
@@ -86,5 +87,20 @@ class DefinitionContextAgreementTest {
     assertEquals(
         cardinalities(EXPLICIT_DEFINITIONS.findResourceDefinition("Basic")),
         cardinalities(FHIR_DEFINITIONS.findResourceDefinition("Basic")));
+  }
+
+  /**
+   * Both implementations refuse a name they do not describe in the way the interface states, so
+   * that a caller need not know which one it holds. The lower-case name is one HAPI would match
+   * without regard to case, but a resource type is its canonical name only.
+   */
+  @Test
+  void bothImplementationsRefuseAnUnknownNameInTheSameWay() {
+    for (final DefinitionContext definitions : List.of(EXPLICIT_DEFINITIONS, FHIR_DEFINITIONS)) {
+      assertThrows(
+          IllegalArgumentException.class, () -> definitions.findResourceDefinition("NotAResource"));
+      assertThrows(
+          IllegalArgumentException.class, () -> definitions.findResourceDefinition("basic"));
+    }
   }
 }

@@ -32,6 +32,7 @@ import ca.uhn.fhir.context.RuntimeChildChoiceDefinition;
 import ca.uhn.fhir.context.RuntimeChildExtension;
 import ca.uhn.fhir.context.RuntimeChildResourceDefinition;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
+import ca.uhn.fhir.parser.DataFormatException;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import lombok.Value;
@@ -50,16 +51,14 @@ public class FhirDefinitionContext implements DefinitionContext {
   @Override
   @Nonnull
   public ResourceDefinition findResourceDefinition(@Nonnull final String resourceCode) {
-    // Resolving the resource code to a tag allows custom types (like ViewDefinition) as well as
-    // standard ones, and is also where FhirResourceTag itself resolves the code.
-    final FhirResourceTag resourceTag = FhirResourceTag.of(resourceCode);
     final RuntimeResourceDefinition hapiDefinition =
-        fhirContext.getResourceDefinition(resourceCode);
-    // HAPI matches a name without regard to case, but a resource type is its canonical name only,
-    // as the other definition contexts treat it, so a name that differs from it is not found.
-    if (!resourceCode.equals(requireNonNull(hapiDefinition).getName())) {
-      throw new IllegalArgumentException("Resource type not found: " + resourceCode);
-    }
+        findHapiDefinition(resourceCode)
+            .orElseThrow(
+                () -> new IllegalArgumentException("Resource type not found: " + resourceCode));
+    // Resolving the resource code to a tag allows custom types (like ViewDefinition) as well as
+    // standard ones. It is done once the name is known to be a resource type's, so that a name
+    // that is refused is not resolved for nothing.
+    final FhirResourceTag resourceTag = FhirResourceTag.of(resourceCode);
     return new FhirResourceDefinition(resourceCode, resourceTag.getResourceType(), hapiDefinition);
   }
 
@@ -72,6 +71,36 @@ public class FhirDefinitionContext implements DefinitionContext {
   @Nonnull
   public ResourceDefinition findResourceDefinition(@Nonnull final ResourceType resourceType) {
     return findResourceDefinition(resourceType.toCode());
+  }
+
+  /**
+   * Checks whether a name is a resource type these definitions describe, as {@link
+   * #findResourceDefinition(String)} would accept it, without building its definition. This handles
+   * both standard FHIR types (e.g., "Patient") and custom registered types (e.g.,
+   * "ViewDefinition").
+   *
+   * @param resourceCode the resource type code
+   * @return true if the name is a resource type's canonical name, false otherwise
+   */
+  public boolean isResourceType(@Nonnull final String resourceCode) {
+    return findHapiDefinition(resourceCode).isPresent();
+  }
+
+  /**
+   * Finds HAPI's definition of a resource type by its canonical name. HAPI matches a name without
+   * regard to case, but a resource type is its canonical name only, as the other definition
+   * contexts treat it, so a name that differs from it is not found.
+   */
+  @Nonnull
+  private Optional<RuntimeResourceDefinition> findHapiDefinition(
+      @Nonnull final String resourceCode) {
+    try {
+      return Optional.ofNullable(fhirContext.getResourceDefinition(resourceCode))
+          .filter(definition -> resourceCode.equals(definition.getName()));
+    } catch (final DataFormatException e) {
+      // HAPI reports a name it does not know as a data format error.
+      return Optional.empty();
+    }
   }
 
   /**

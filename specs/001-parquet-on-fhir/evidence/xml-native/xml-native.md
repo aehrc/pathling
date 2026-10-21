@@ -222,8 +222,11 @@ prototype of both passes, using StAX from the JDK API (Woodstox was the provider
   attribute sits under `text`, parses the attribute and copies its events in place of the element.
 
 The cases that defeated the regular expression above (a comment before `</text>`, a prefixed `div`,
-and `</div></text>` inside CDATA) are all handled, because the parser decides what is markup.
-Results (`outputs/narrative-stax-*.out`, PySpark 4.0.2, Java 21):
+and `</div></text>` inside CDATA) are all handled, because the parser decides what is markup. The
+fourth, a narrative only in a contained resource, is not taken for the resource's own, because the
+pre-pass skips a `div` with a `contained` ancestor.
+Results (`outputs/narrative-stax-*.out`, Java 21; the outputs do not record the Spark version, and
+the environment above says every run was on PySpark 4.0.1):
 
 | Check                                                                                       | Result                                                    |
 | ------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
@@ -414,4 +417,10 @@ java -cp $CP NarrativeCheck.java corpus <repo>/io/src/test/resources/data/fhir-s
 python -I narrative_stax.py <library-runtime.jar> <slf4j-api.jar> <scratch-dir>
 java -cp $CP NarrativeCheck.java bundles <repo>/io/src/test/resources/data/fhir-spec/R4/Bundle.ndjson \
   <repo>/.local/work/r4-examples/extracted
+java -cp $CP BundleIdProbe.java
 ```
+
+The last command is not rerun: it was added afterwards to name how `outputs/bundle-id-probe.out` was produced.
+
+The `bundles` run reads `.local/work/r4-examples/extracted`, a local, untracked extract of the R4
+examples, so it cannot be rerun from a fresh checkout as written.

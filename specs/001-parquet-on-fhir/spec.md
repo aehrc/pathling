@@ -17,8 +17,9 @@ history: how each requirement was reached is in
 durable design decisions are in [`docs/adr/`](../../docs/adr/), vocabulary is in
 [`CONTEXT.md`](../../CONTEXT.md), and the work that remains is tracked as tickets
 in [`issues/`](issues/). [tasks.md](tasks.md) is the record of
-milestones M1 to M4. Everything ships together, in one release, when the last
-ticket closes.
+milestones M1 to M4. Everything ships together, in one release, when ticket 28,
+the release checklist, closes. Tickets that the release does not wait for are
+named on that ticket.
 
 ## Why
 
@@ -49,8 +50,9 @@ the specification, without FHIRPath evaluation.
 **Acceptance Scenarios**:
 
 1. **Given** a resource carrying a decimal, **When** it is stored and read back,
-   **Then** the stored value is text numerically equal to the source, and a
-   numeric annotation accompanies it.
+   **Then** the stored value is text numerically equal to the source, as a
+   double holds it until OQ-1 is answered, and a numeric annotation accompanies
+   it.
 2. **Given** a resource carrying an extension on a primitive element, **When** it
    is stored, **Then** the extension appears in the primitive metadata group
    beside that element.
@@ -300,8 +302,9 @@ Identifiers are stable. FR-015, FR-018 and FR-020 are retired and not reused.
 - **FR-001**: The system MUST store FHIR data in a layout conforming to the
   Parquet on FHIR specification, with the deviations in FR-002 to FR-005.
 - **FR-002**: Decimals MUST be stored as text, accompanied by a numeric
-  annotation. The stored text MUST be numerically equal to the source; whether
-  it preserves the source's lexical form is OQ-1.
+  annotation. The stored text MUST be numerically equal to the source, as a
+  double holds it until OQ-1 is answered; whether it preserves the source's
+  lexical form, and its precision beyond a double, is OQ-1.
 - **FR-003**: Primitive element ids and extensions MUST be stored in the
   primitive metadata group beside the element; extensions on complex elements
   MUST be stored inline. No root-level extension map and no per-composite field
@@ -373,7 +376,7 @@ Identifiers are stable. FR-015, FR-018 and FR-020 are retired and not reused.
      contradicts it, which is not stored and is reported;
   4. on a dense schema, content beyond the configured bounds (FR-017).
 
-  OQ-1 lists further exceptions that hold until the ingest spike decides
+  OQ-1 lists further exceptions that hold until ticket 16 decides
   otherwise. The round trip through XML is held to the same guarantee.
   Evidence: [null-and-empty-handling.md](evidence/null-and-empty-handling.md).
 - **FR-017**: On a dense schema the guarantee in FR-016 MUST hold within the
@@ -597,12 +600,13 @@ reconciliation, legacy export, layout column.
 
 ## Open questions
 
-- **OQ-1: Which representation losses does the ingest and egress spike
-  remove?** The spike chooses between transforming the schema Spark's reader
+- **OQ-1: Which representation losses does the ingest and egress rework
+  remove?** Ticket 16 chooses between transforming the schema Spark's reader
   infers and a parser of our own driven by the definitions, for JSON and XML,
-  in both directions, under FR-049, FR-050 and SC-011. Its outcome decides the
-  following, each stated here as the target with today's behaviour as the
-  fallback if the spike does not remove it:
+  in both directions, under FR-049, FR-050 and SC-011, on the evidence of the
+  ingest spike (ticket 08). Its outcome decides the following, each stated here
+  as the target with today's behaviour as the fallback if the rework does not
+  remove it:
   - the decimal's lexical form (FR-002). Today a number passes through a double,
     so trailing zeros, exponent notation and precision beyond a double are not
     preserved;
@@ -619,8 +623,16 @@ reconciliation, legacy export, layout column.
   _Interim answer (decision 134)_: the spike measured four candidates and
   reported without a choice, which is deferred to ticket 16. Until then every
   loss above is kept, as today's behaviour, on JSON and on XML alike. In
-  addition, `null`, `{}` and `[]` are dropped silently and `""` is stored, and
-  the per-value scope of decision 133 does not apply.
+  addition, empty values are handled as Spark's reader handles them. `{}` is
+  dropped silently. `null` and `[]` are dropped with no more than a per-column
+  finding, which describes a type contradiction rather than an empty value. In
+  a batch, `[]` can instead be stored as an empty array and `{}` as a present
+  structure holding nothing. `""` is stored. Malformed base64 becomes null
+  without a finding. On JSON only, a malformed document is accepted silently:
+  text after the object is ignored, a top-level array becomes several
+  resources, and a duplicate key keeps its last value. XML fails the read on
+  its malformed cases, so the two formats differ here until ticket 16. The
+  per-value scope of decision 133 does not apply.
 - **OQ-2: Are column expressions bound to a schema?** Today a column expression
   is built without a dataset and resolves presence against whatever schema it
   meets (FR-054), which lets callers combine FHIRPath and search columns with

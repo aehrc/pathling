@@ -89,8 +89,11 @@ line as [#2823](https://github.com/aehrc/pathling/issues/2823).
 Output file names now carry the id of the write that produced them,
 `<Type>.<partId>-<writeId>.<ext>` (for example
 `Patient.00000-7a60a041-0e7d-4e24-b23d-82405a665677.parquet`), where they were
-`<Type>.<partId>.<ext>`. Files named by earlier releases are still read as the
-type.
+`<Type>.<partId>.<ext>`. Where Spark splits a partition into several files, as
+`spark.sql.files.maxRecordsPerFile` makes it, every file after the first also
+keeps its file counter, `<Type>.<partId>-<writeId>-c<n>.<ext>` (for example
+`Patient.00000-7a60a041-0e7d-4e24-b23d-82405a665677-c001.parquet`). Files named
+by earlier releases are still read as the type.
 
 ### A column expression stays valid over any conformant schema
 

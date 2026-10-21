@@ -84,9 +84,10 @@ These govern everything below.
 
 7. **One grammar, validated at ingest, and the engine never fails on a stored value (owner, 2026-10-19).**
    Ingest and the engine parse dates, times and decimals with the same code, kept in a module both can use
-   (`fhir-schema` or `utilities`). Ingest is where a bad value is detected and reported, because only there can
+   (`fhir-schema`, owner, 2026-10-21). Ingest is where a bad value is detected and reported, because only there can
    it be attributed. A stored value the engine cannot parse evaluates to empty, never to an error. Such values
-   can still arrive from PoF data written by other tools, or once the `keep` policy exists. Today's engine breaks
+   can still arrive from PoF data written by other tools, or once the `keep` policy exists. Until ticket 16,
+   they also arrive from the interim ingest, which validates no lexical form (decision 134). Today's engine breaks
    this principle: see ticket 31.
 
 
@@ -129,6 +130,9 @@ finding.
 handled under the policy like any other invalid value. Under `drop` the whole value is lost, which is a known pain
 point for EHR extracts, where this is common, and must be documented. A follow-up should handle it, through the
 `keep` policy or a named repair, with its range annotation widened by ±14 hours.
+
+_Reversed (owner, 2026-10-21)_: such a value is accepted, by ingest and the engine alike (decision 133's
+addendum).
 
 ## Delivering findings (owner, 2026-10-19)
 
@@ -207,7 +211,7 @@ raw output means the warning carried no location: HAPI names the element but not
 
 | Fixture | Input | HAPI lenient (= 9.9.0) | HAPI strict |
 |---|---|---|---|
-| C0 decimal text | `1.50`, 44 digits, `1.0e2` | kept exactly, exponent normalised to `100`; **9.9.0's encoder then cut to scale 6** | same |
+| C0 decimal text | `1.50`, 25 digits, `1.0e2` | kept exactly, exponent normalised to `100`; **9.9.0's encoder then cut to scale 6** | same |
 | C0 `_birthDate` only | extension, no value | kept | kept |
 | C0 `_given` with `null` padding | aligned arrays | kept | kept |
 | C2 `null`, `{}`, `[]` | | dropped, **no callback** | same |
@@ -267,6 +271,11 @@ HAPI validates only what its own Java types need in order to parse a value, so i
 - It drops, silently with no callback, a whitespace-only string.
 
 ### Can Spark's reader attribute findings to a value? (`sql_findings_probe.py`, output `sql_findings_probe.txt`)
+
+The "Inferred schema" column also rests on `infer_probe.py` (output `infer_probe.txt`), which shows how the
+reader infers a type from the token or the content, and on `inferred_silent_probe.py` (output
+`inferred_silent_probe.txt`), which reruns the silent cases below with an inferred schema. The `"active": null`
+cell under an explicit schema has no recorded output.
 
 Spark 4.0.2, reading in-memory strings.
 
@@ -336,7 +345,7 @@ top-level arrays and text after the object.
 - `{}` (`OBJECT<>`) and `[]` (`ARRAY<VOID>`);
 - the keys at any depth (`variant_explode`).
 
-It loses the decimal's text: `1.50` reads as `DECIMAL(2,1)` `1.5`, a value of 30 digits becomes a double, and
+It loses the decimal's text: `1.50` reads as `DECIMAL(2,1)` `1.5`, a value of 44 digits becomes a double, and
 `1.0e2` becomes `100.0`. A transform built on `parse_json` and SQL generated from the definitions ("A-variant")
 could therefore implement the agreed scope, except for the exact text of decimals. Its performance and its XML
 route are unmeasured.
@@ -358,8 +367,8 @@ the text it arrived as. Two cases lose the value invisibly, becoming null with n
 - an integer beyond the range of an int (`try_cast`);
 - invalid base64 (`try_to_binary`).
 
-It never fails on content (decision 68). Unknown content, contained, shape mismatches: ignored, one warning per
-**column path** found in the inferred schema, no row ids. Type contradiction: per OQ-1, the whole element is lost for
+It never fails on content (decision 68). Unknown content, contained, shape mismatches: ignored, one finding per
+**column path** found in the inferred schema, all logged in one warning per read, no row ids. Type contradiction: per OQ-1, the whole element is lost for
 every row read with it. Invalid values: not checked beyond what Spark's cast does (null).
 
 ## Superseded: the first draft of levels

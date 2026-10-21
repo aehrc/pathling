@@ -31,4 +31,3 @@
 - [ ] The UCUM-only change is in place, and changed expectations were approved by the owner.
 - [ ] The T096c measurement is recorded and reported to the owner. Any rewrite happens only on the owner's go-ahead.
 - [ ] An engine-built System.Quantity carries the canonical annotations, FR-059 is amended to say so, and a plan test shows no canonicalisation call on the literal side of a comparison.
-- [ ] The benchmark (ticket 10) is re-run, with plans saved.

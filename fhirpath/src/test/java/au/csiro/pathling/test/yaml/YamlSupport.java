@@ -595,9 +595,7 @@ public class YamlSupport {
         return Stream.of(
             new StructField(
                 primitiveDefinition.getName(),
-                primitiveDefinition.getCardinality() < 0
-                    ? new ArrayType(elementType, true)
-                    : elementType,
+                primitiveDefinition.isRepeating() ? new ArrayType(elementType, true) : elementType,
                 true,
                 Metadata.empty()));
       }
@@ -612,9 +610,7 @@ public class YamlSupport {
         return Stream.of(
             new StructField(
                 compositeDefinition.getName(),
-                compositeDefinition.getCardinality() < 0
-                    ? new ArrayType(elementType, true)
-                    : elementType,
+                compositeDefinition.isRepeating() ? new ArrayType(elementType, true) : elementType,
                 true,
                 Metadata.empty()));
       }

@@ -12,3 +12,9 @@ Build the baseline revision `4bfadac552`, capture the view's optimised and execu
 
 - [ ] Both revisions' plans are saved in the evidence.
 - [ ] The cause is recorded, along with whether it is worth reducing. Any fix that outlives the spec is handed to ticket 26.
+
+## Comments
+
+### Moved to stage 5 (2026-10-21)
+
+Owner decision, with ticket 10, whose cold-planning re-run it needs.

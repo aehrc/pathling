@@ -11,4 +11,3 @@
 - [ ] A test shows a decimal carries the annotation beside its stored text, at the agreed type and position (T050a).
 - [ ] Decimal comparison, arithmetic and ordering with the annotation give results equal to the computed path T086 pins (T086a).
 - [ ] Decoding takes the annotation where the schema carries it (T095a). With the annotation disabled, the suite passes on the lexical path.
-- [ ] The benchmark (ticket 10) is re-run, with plans saved.

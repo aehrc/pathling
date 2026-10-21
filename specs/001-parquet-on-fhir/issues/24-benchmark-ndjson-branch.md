@@ -6,6 +6,27 @@
 
 **Blocked by:** None — can start immediately
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] No unreachable source branch remains. The benchmark compiles and a short run succeeds.
+- [x] No unreachable source branch remains. The benchmark compiles and a short run succeeds.
+
+## Comments
+
+### Implementation (branch `issue/2830-small-tickets`)
+
+Removed rather than restored, because a query over an NDJSON source encodes the data lazily within
+every query, which is the conflation the benchmark's split into encode, decode, planning and
+execution exists to remove.
+
+The ticket was half right. The `ndjson` branch of `setup()` was unreachable, but
+`initialiseNdjsonSource` was not: the Delta source calls it to encode the data before writing it. So
+the `sourceType` parameter, its setter and the branch are removed. The helper is kept and renamed
+`encodeResources`, after what it does. Its documentation now says that its result is only written
+out, never queried.
+
+A result from before this change carries `sourceType = delta` among its parameters, and one from
+after carries no such parameter. The view is the only parameter of the query pair now. The scripts
+that compare revisions do not key on parameters.
+
+- The benchmark compiles. A short run of the query pair, `-p view=PatientDemographics -f 1 -wi 0 -i 1`,
+  succeeds.

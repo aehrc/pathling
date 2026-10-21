@@ -46,23 +46,12 @@ public class DefaultPrimitiveDefinition implements ElementDefinition {
 
   String name;
   FHIRDefinedType type;
-  int cardinality;
+  int maxCardinality;
 
   @Override
   @Nonnull
   public String getElementName() {
     return name;
-  }
-
-  /**
-   * The field keeps the name it had before the interface declared this method, so that the accessor
-   * Lombok derives from it stays the one the existing callers use.
-   *
-   * @return the maximum number of values this element may hold
-   */
-  @Override
-  public int getMaxCardinality() {
-    return cardinality;
   }
 
   @Override

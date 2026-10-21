@@ -18,7 +18,7 @@ Invalid values reach storage whatever ingest does:
 - There is no single grammar. The boundary UDFs check the calendar, `toDateTime()` and `toDate()` check only the pattern and return `2020-02-30` unchanged, the decimal decode trims whitespace, and the Quantity comparison decodes a decimal differently from the decimal itself.
 - A date carrying a time, and a dateTime or instant with no timezone, are compared under an assumption rather than treated as invalid.
 
-**The modes.** All three use one detector, FHIR's grammar for the type: the regex and, for temporal types, a successful calendar parse. It lives in a module that `io` and `fhirpath` can both use (`fhir-schema` or `utilities`), so that ingest, `validate()` and the engine cannot disagree on what is valid. The modes differ only in what happens when the detector finds an invalid value.
+**The modes.** All three use one detector, FHIR's grammar for the type: the regex and, for temporal types, a successful calendar parse. It lives in `fhir-schema` (owner, 2026-10-21), a module that `io` and `fhirpath` can both use, so that ingest, `validate()` and the engine cannot disagree on what is valid. The modes differ only in what happens when the detector finds an invalid value.
 
 | Mode | An invalid stored value | Cost |
 |---|---|---|
@@ -30,8 +30,8 @@ On conformant data the three modes give identical results. Only non-conformant d
 
 **Scope of the values.**
 
-- `date`, `dateTime`, `instant` and `time` against FHIR's regex and the calendar. A date carrying a time and a dateTime or instant without a timezone are invalid, as decision 133 has it for ingest. The named repair that widens the range annotation by ±14 hours for a missing timezone is ingest's follow-up, not the engine's.
-- `decimal` against FHIR's decimal grammar, so a value with leading or trailing whitespace is invalid rather than trimmed.
+- `date`, `dateTime`, `instant` and `time` against FHIR's regex and the calendar. A date carrying a time is invalid. The grammar is lenient about the timezone (owner, 2026-10-21): a dateTime or instant with a time but no timezone is valid, as `FhirPathDateTime` accepts it today. Ingest, stored values and date search arguments (`DateMatcher`) all use it. This reverses decision 133's rule that such a value is invalid, so nothing stored today becomes absent and no search that works today is rejected. The named repair that widens the range annotation by ±14 hours for a missing timezone is ingest's follow-up, not the engine's.
+- `decimal` against FHIR's decimal grammar. Probe 4 of `evidence/spike-08/README.md` (`probes/engine_decimal_probe.py`, on branch `issue/2831-spike-08`) found two cases that disagree with principle 7: text with surrounding whitespace, `" 1.5"` or `"1.5 "`, reads as `1.5`, so a value FHIR rejects reads as valid; and a valid decimal of 40 digits reads as empty on the decimal path, yet `valueQuantity > 1 'mg'` is true for it, so the Quantity path reads the value differently. How each is resolved is decided when the ticket is picked up (owner, 2026-10-21). Stop and ask the owner before changing the behaviour of either.
 - An empty string in any primitive, invalid for every type as decision 133 has it.
 - The range of `positiveInt` and `unsignedInt`, which their integer columns do not enforce.
 
@@ -45,7 +45,7 @@ On conformant data the three modes give identical results. Only non-conformant d
 
 **Out of scope.**
 
-- A valid decimal beyond `DECIMAL(32,6)`, which the engine rounds or loses (FR-035). It is that requirement's consequence, and changing it is a separate question.
+- A valid decimal beyond `DECIMAL(32,6)`, which the engine rounds or loses (FR-035). It is that requirement's consequence, and changing it is a separate question. That the decimal and Quantity paths disagree over such a value is in scope, and is decided at pickup, as above.
 - A `strict` that refuses a source carrying no record of validation, which needs the validate-only run of ticket 16 and a marker defined for it.
 - Whether annotations agree with their text, which only a validation pass can check.
 
@@ -59,11 +59,13 @@ On conformant data the three modes give identical results. Only non-conformant d
 **Status:** needs-triage
 
 - [ ] A decision records the modes and the default, amending decision 133's principle 7, which says the engine never fails on a stored value. `strict` fails, so the principle becomes "never fails unless `strict` is chosen".
-- [ ] One grammar for dates, times, instants and decimals lives in a module that `io` can use, ready for ticket 16. The boundary functions, the decimal decode, the Quantity decode and the conversion functions all use it.
+- [ ] One grammar for dates, times, instants and decimals lives in `fhir-schema`, ready for ticket 16 to use at ingest. The boundary functions, the decimal decode, the Quantity decode and the conversion functions all use it.
 - [ ] In `tolerant`, an invalid stored value of each type in scope is absent: `exists()` false, select null, and comparisons, arithmetic and boundaries empty. Each type is pinned by tests on a singular and a repeating element, with and without annotations.
 - [ ] In `strict`, the same values fail the query, naming the resource id, the path and the stored text.
 - [ ] In `trust`, if kept, the full suite passes over conformant data, and the documentation states that results on non-conformant data are unspecified.
 - [ ] The full test suite gives identical results in every mode over conformant data.
+- [ ] The whitespace and 40-digit decimal cases are resolved as the owner decides at pickup, and pinned by tests.
+- [ ] A dateTime and an instant with a time but no timezone are valid in every mode, and pinned by tests.
 - [ ] `toDate()` and `toDateTime()` return empty for `2020-02-30`, `2020-13-45` and `…T25:00:00Z`.
 - [ ] A benchmark over a few million values compares today's boundary UDFs with native decoding in each mode, for `date` and `dateTime`. It decides whether `trust` is kept, and its results are added to the evidence.
 - [ ] The documentation states the modes, the default, and what each does with an invalid value.

@@ -150,7 +150,8 @@ final class ParquetSink implements DataSink {
       // Remove the partitioned directory and replace it with the renamed partitioned files. Files
       // follow the pattern {resourceType}.{partId}-{writeId}.parquet, e.g.
       // Patient.00000-7a60a041-0e7d-4e24-b23d-82405a665677.parquet, so that a write never takes
-      // the names of an earlier write's files.
+      // the names of an earlier write's files. See TypeFiles.renameKeepingWriteId for
+      // the names of a partition Spark splits into several files.
       final List<String> renamed =
           TypeFiles.renameKeepingWriteId(context.getSpark(), tablePath, PARQUET_EXTENSION);
       if (saveMode == SaveMode.OVERWRITE) {
