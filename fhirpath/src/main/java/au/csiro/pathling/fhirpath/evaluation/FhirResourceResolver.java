@@ -22,8 +22,6 @@ import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.column.EmptyRepresentation;
 import au.csiro.pathling.fhirpath.column.ResourceRepresentation;
 import ca.uhn.fhir.context.FhirContext;
-import ca.uhn.fhir.context.RuntimeResourceDefinition;
-import ca.uhn.fhir.parser.DataFormatException;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 
@@ -133,26 +131,15 @@ public record FhirResourceResolver(
   /**
    * Checks if a resource code represents a known resource type in the FHIR context.
    *
-   * <p>This method looks up the resource definition in the FHIR context, which handles both
-   * standard FHIR types (e.g., "Patient", "Observation") and custom registered types (e.g.,
-   * "ViewDefinition"). HAPI matches a name without regard to case, but only a type's canonical name
-   * is accepted, as {@link FhirDefinitionContext} accepts it when the definition is built, so a
-   * name that differs from it in case is treated as a field reference. The check is made directly,
-   * rather than by building the definition, because it is made for every capitalised identifier at
-   * the root of an expression, most of which are not resource types.
+   * <p>Only a type's canonical name is accepted, as {@link FhirDefinitionContext} accepts it when
+   * the definition is built, so a name that differs from it in case is treated as a field
+   * reference. The check is made without building the definition, because it is made for every
+   * capitalised identifier at the root of an expression, most of which are not resource types.
    *
    * @param resourceCode the resource type code
    * @return true if the resource type is known, false otherwise
    */
   private boolean isKnownResourceType(@Nonnull final String resourceCode) {
-    try {
-      return Optional.ofNullable(fhirContext.getResourceDefinition(resourceCode))
-          .map(RuntimeResourceDefinition::getName)
-          .filter(resourceCode::equals)
-          .isPresent();
-    } catch (final DataFormatException e) {
-      // HAPI reports a name it does not know as a data format error.
-      return false;
-    }
+    return FhirDefinitionContext.of(fhirContext).isResourceType(resourceCode);
   }
 }
