@@ -55,6 +55,8 @@ A FHIR R4 analytics server implementing SQL on FHIR and Bulk Data Access.
 - [Search](/docs/server/operations/search.md): Pathling supports both standard FHIR search parameters and FHIRPath-based search for filtering resources.
 - [Export](/docs/server/operations/sql-export.md): The sql-export operation asynchronously exports one or more ViewDefinition, SQLQuery or SQLView subjects to downloadable files.
 - [Run](/docs/server/operations/sql-run.md): The sql-run operation synchronously executes a ViewDefinition, SQLQuery or SQLView and returns the result.
+- [SQL on FHIR](/docs/server/sql-on-fhir.md): How Pathling Server runs SQL on FHIR ViewDefinitions, SQLQueries and SQLViews, resolves their dependencies and exposes value sets and concept maps to SQL.
+- [Terminology](/docs/server/terminology.md): How to configure Pathling Server to use a remote FHIR terminology server, with or without authentication, or a local terminology store built with the Pathling libraries.
 
 ### fhirpath
 

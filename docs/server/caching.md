@@ -46,7 +46,7 @@ When an async operation (such as `$export`) is initiated, Pathling constructs a 
 1. **Request URL** - The complete URL including all query parameters
 2. **Salient headers** - Headers from the `Vary` list, excluding those in `pathling.async.varyHeadersExcludedFromCacheKey` (default: `Accept`, `Accept-Encoding`)
 3. **Database state** - A hash of the current database state
-4. **Operation-specific parameters** - For operations that support POST with a request body, parameters from the body are included
+4. **Operation-specific parameters** - For operations that support POST with a request body, parameters from the body are included. For `$sql-export` this covers the resolved content of every dependency the job's subjects reach - ViewDefinitions, SQLViews and external tables alike - so two kick-offs that inline different definitions at the same canonical URL are not equivalent.
 
 If two requests produce the same cache key, they are considered equivalent and will share the same async job. This allows multiple clients making identical requests to receive results from the same job, improving efficiency.
 
