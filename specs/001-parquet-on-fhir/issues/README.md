@@ -37,7 +37,6 @@ baseline for the reworks that follow.
 - [10](10-benchmark-fix-and-extend.md) Benchmark: fix warm planning, add missing views, re-measure
 - [24](24-benchmark-ndjson-branch.md) Remove or restore the benchmark's unreachable NDJSON source
 - [27](27-usc-bloodpressures-planning-regression.md) Investigate the UsCoreBloodPressures planning regression
-- [31](31-engine-tolerates-invalid-stored-temporal.md) The engine never fails on an invalid stored date or decimal
 
 ## Stage 3: Ingest and egress without HAPI (#2831)
 
@@ -71,11 +70,20 @@ its own toggle, and their use is decided from the schema.
 - [14](14-date-range-annotation.md) Date range annotation
 - [15](15-schema-decided-plan-test-and-docs.md) Test that annotation use is decided from the schema, and document annotations
 
-## Stage 5: Dense mode and release (#2833)
+## Stage 5: Dense mode, engine tolerance and release (#2833)
 
-The dense schema mode matches the fitted one, and the release is checked.
+The dense schema mode matches the fitted one, the engine handles non-conformant
+stored data by a chosen mode rather than by accident, and the release is
+checked.
 
 - [18](18-dense-mode.md) Dense schema mode, with bounds reporting and streaming encode
 - [19](19-dense-parity.md) Dense parity
+- [31](31-engine-value-tolerance-modes.md) The engine handles invalid stored values in one of three modes: strict, tolerant and trust
+- [33](33-engine-layout-tolerance-modes.md) The engine handles non-conformant layout shapes in the same three modes
+
+Ticket 31 follows stage 4, because its annotation path needs the decimal and
+date annotations. Ticket 33 follows 31, which defines the modes, and 17, whose
+stored metadata is what separates Pathling's placeholders from shapes with no
+content.
 - [26](26-raise-github-followups.md) Raise the GitHub follow-up issues
 - [28](28-release-checklist.md) Release checklist
