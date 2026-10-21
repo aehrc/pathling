@@ -9,6 +9,8 @@ The spike's harness, fixtures and prototypes named below are on branch `issue/28
 - **XML in.** One document per string, parsed with `from_xml`. Presence and fit come from Spark's XML inference with `inferSchema=false`. Types, cardinality and field order come from the definitions, and a transform generated from them shapes the result to the layout. This replaces `XmlConversion`, which today parses each document with HAPI and writes it out as JSON.
 - **XML out.** The stored layout is shaped back into an XML struct and written with `to_xml`. This replaces the HAPI writer in `FhirXmlWriter`.
 - **Bundles in.** Each bundle is exploded to the resources of the requested type, and its `urn:` references to other entries are resolved as decision 83 states, with no HAPI parse per bundle. This applies to XML and JSON bundles alike, and replaces `BundleTransformer`.
+- **JSON bundles (owner, 2026-10-21).** Each `entry.resource` is read as raw JSON text, kept if it is of the requested type, and run through the single-resource route. `urn:` references are then resolved on the typed `Reference` columns. This avoids one inference across resource types, which would widen a field that two types declare differently, such as `name`. Resolve through the bundle's entries rather than a `urn → id` map carried on every row, which xml-native.md flags as O(entries²). The route has no prototype: measure it against the HAPI route early.
+- **An XML sink (owner, 2026-10-21).** A line-delimited XML sink writes one document per line, with a line feed remaining in element content written as `&#xa;`, and the XML source reads it back. See the comment below.
 - **HAPI leaves ingest and egress.** `FhirParsers` and its reflection workaround, which finds custom resource types on an executor-side `FhirContext`, are removed. The FR-050 exception that `plan.md` records for XML and bundles is withdrawn.
 
 **Interim behaviour, as decision 134 sets it.** The XML route stores what the JSON route stores, value for value: a decimal passes through a double, empty values are dropped as the JSON route drops them, and validation is by column type, reported once per column. It does not take on decision 133's per-value scope. Primitive ids and extensions are stored as the JSON route stores them until ticket 17.
@@ -24,8 +26,8 @@ The spike's harness, fixtures and prototypes named below are on branch `issue/28
 
 - A document with a prefixed FHIR namespace, which is valid FHIR, is left out silently, because rows are selected by the root's literal name.
 - Text after the root element is ignored, and a second root is dropped, silently. A document with no namespace is accepted. Each of these is malformed and fails the read (FR-063).
-- The narrative is taken from the raw document by regular expression, and xml-native.md lists the cases that defeat it: a contained narrative, a comment before `</text>`, a prefixed XHTML `div`, and CDATA. Use its StAX pass (option 3b), or report the cases it cannot handle. A narrative is never stored wrong silently.
-- The bundle fit infers the whole bundle once per requested type, a constant of about 7.3 to 8.4 s per type at size `l`. That makes small types slower to fit than HAPI. One inference shared by all types removes it, and is a change to how bundles are read per type.
+- The narrative is taken from the raw document by regular expression, and xml-native.md lists the cases that defeat it: a contained narrative, a comment before `</text>`, a prefixed XHTML `div`, and CDATA. Use its StAX pass (option 3b). The target is L2, as xml-native.md defines it: the written document and the source parse to resources equal under HAPI's `equalsDeep` in the tests (owner, 2026-10-21). A narrative the pass cannot handle fails the read, naming the document. A narrative is never stored wrong silently.
+- The bundle fit infers the whole bundle once per requested type, a constant of about 7.3 to 8.4 s per type at size `l`. That makes small types slower to fit than HAPI. One inference shared by all types would remove it, but would change decision 84's per-type `readBundles(type, bundles)`. The owner accepted the constant (2026-10-21): keep the per-type read, and record the small-type fit against SC-011.
 
 **Out of scope:** the per-value checks, findings and policies of decision 133, and keeping the decimal's text. These are ticket 16's, and wait for the choice decision 134 defers.
 
@@ -37,10 +39,11 @@ The spike's harness, fixtures and prototypes named below are on branch `issue/28
 - [ ] XML is written through `to_xml`. Round-trip fidelity on the benchmark corpus is at least HEAD's.
 - [ ] XML and JSON bundles, in the collection and transaction shapes, are exploded without HAPI. References resolve as decision 83 states, keeping the target's version (FR-062). An entry whose `fullUrl` is `urn:uuid:X` and whose resource `id` is `X` keeps its id, and a reference to it becomes `Type/X`; the HAPI route loses both (xml-native.md, "A defect found in the current route").
 - [ ] A prefixed FHIR namespace is read. A missing namespace, text after the root and a second root fail the read, naming the document.
-- [ ] A narrative is stored and written back byte for byte, or the document is reported. There is a test for each case xml-native.md lists.
+- [ ] A narrative round-trips at L2, or the read fails naming the document. There is a test for each of the four cases that defeat the regular expression in xml-native.md, and for its 14 hand-written StAX documents.
 - [ ] A custom resource type, such as `ViewDefinition`, is read and written in XML, single and in a bundle, through the definitions alone.
 - [ ] No ingest or egress route imports HAPI's parser. `FhirParsers` and the reflection workaround are gone, and `CustomResourceTypeTest`'s guard on it is removed or replaced.
-- [ ] Encode and decode of XML lines and bundles are no slower than the bar on the pathling-compare harness at size `l` (SC-011), or the owner accepts the gap.
+- [ ] XML written through the line-delimited sink reads back through the XML source, including a narrative holding a line feed.
+- [ ] Encode and decode of XML lines and bundles are no slower than the bar on the pathling-compare harness at size `l` (SC-011), except the bundle fit's per-type constant, which the owner accepted. If any other phase is slower, the figures are reported to the owner before the ticket closes.
 - [ ] `plan.md`'s FR-050 exception for XML and bundles, and the HAPI routing of decisions 83 and 84, are amended to say they are withdrawn.
 
 ## Comments

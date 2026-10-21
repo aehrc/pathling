@@ -155,7 +155,8 @@ evidence, and lists what was not measured.
 - **What the checks cost.** About a third of B's JSON encode, and most of A+'s.
 - **Code owned.** About 400 lines for A-variant, 960 for A+ and 1,270 for B.
 - **FR-050.** The owner answered that Spark's generic row encoder (`Encoders.row`) is allowed. The fixtures
-  `c6-choice-two-types` and `c7-no-resourcetype` are rejected.
+  `c6-choice-two-types` and `c7-no-resourcetype` remain unsettled, to be decided with ticket 16 (owner,
+  2026-10-21).
 
 The owner did not choose. The requirements behind decision 133's per-value scope are to be settled with
 colleagues first, and that must not hold up the engine or the annotations. Decision 134 defers the choice to

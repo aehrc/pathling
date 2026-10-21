@@ -131,6 +131,9 @@ handled under the policy like any other invalid value. Under `drop` the whole va
 point for EHR extracts, where this is common, and must be documented. A follow-up should handle it, through the
 `keep` policy or a named repair, with its range annotation widened by ±14 hours.
 
+_Reversed (owner, 2026-10-21)_: such a value is accepted, by ingest and the engine alike (decision 133's
+addendum).
+
 ## Delivering findings (owner, 2026-10-19)
 
 Findings are data, not log lines. Each row carries a `_findings` column, an array of `(path, kind, value)` whose

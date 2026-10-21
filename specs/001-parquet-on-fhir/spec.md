@@ -628,7 +628,11 @@ reconciliation, legacy export, layout column.
   finding, which describes a type contradiction rather than an empty value. In
   a batch, `[]` can instead be stored as an empty array and `{}` as a present
   structure holding nothing. `""` is stored. Malformed base64 becomes null
-  without a finding. The per-value scope of decision 133 does not apply.
+  without a finding. On JSON only, a malformed document is accepted silently:
+  text after the object is ignored, a top-level array becomes several
+  resources, and a duplicate key keeps its last value. XML fails the read on
+  its malformed cases, so the two formats differ here until ticket 16. The
+  per-value scope of decision 133 does not apply.
 - **OQ-2: Are column expressions bound to a schema?** Today a column expression
   is built without a dataset and resolves presence against whatever schema it
   meets (FR-054), which lets callers combine FHIRPath and search columns with

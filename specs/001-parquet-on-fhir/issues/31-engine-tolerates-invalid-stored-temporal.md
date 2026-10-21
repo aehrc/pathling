@@ -22,7 +22,7 @@ Recommended fix:
 - text with surrounding whitespace, `" 1.5"` or `"1.5 "`, reads as `1.5`, so a value FHIR rejects reads as valid;
 - a valid decimal of 40 digits reads as empty on the decimal path, yet `valueQuantity > 1 'mg'` is true for it, so the quantity path reads the value differently.
 
-**Open for triage: which grammar.** `FhirPathDateTime` accepts a `dateTime` with a time but no timezone, which decision 133 rules invalid, and the same parser reads the argument of a date search (`DateMatcher`). Parsing stored values with the ingest grammar would make such stored values empty, and parsing search arguments with it could reject searches that work today. Whether the engine takes the ingest grammar for stored values, and what it uses for search arguments, is the owner's call.
+**The grammar (owner, 2026-10-21).** The shared grammar is lenient about the timezone: a `dateTime` or `instant` with a time but no timezone is valid, as `FhirPathDateTime` accepts it today. Ingest, stored values and date search arguments (`DateMatcher`) all use it. This reverses decision 133's rule that such a value is invalid, so nothing stored today becomes empty and no search that works today is rejected.
 
 **Blocked by:** None — can start immediately
 

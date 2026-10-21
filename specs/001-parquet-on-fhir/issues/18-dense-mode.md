@@ -13,6 +13,7 @@
 - **Bounds reporting (T134f).** Build it here rather than raising a follow-up. Reinstate decision 59's separation of a bound from undescribed content.
 - **Streaming encode (T033d).** Restore streaming `encode` and `encodeBundle` in dense mode. Rewrite `PathlingContextTest.testEncodeResourceStream` from asserting the refusal to counting encoded resources, and restore the Kafka example in the streaming docs.
 - **Annotations in dense mode.** Implement the dense-mode annotation width ticket 11 decided.
+- **Decimals in dense mode (owner, 2026-10-21).** The source schema dense mode hands Spark's reader reads a decimal as a double, as the fitted route does, so the two modes keep the same interim loss and stay at parity (ticket 19).
 - **On the interim ingest.** Build on the ingest of decision 134: Spark's reader and the generated transform for JSON, and the `from_xml` route of ticket 32 for XML and bundles. If ticket 16 later replaces the ingest, it carries dense mode over.
 
 **Blocked by:** 32. Ticket 11, which decides the dense-mode annotation width this ticket implements.

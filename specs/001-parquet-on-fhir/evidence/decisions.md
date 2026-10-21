@@ -4128,6 +4128,10 @@ _Consequences_:
 _Addendum (owner, 2026-10-20)_: the per-value scope above is deferred with the ingest mechanism, and the
 interim ingest validates by column type only (decision 134).
 
+_Addendum (owner, 2026-10-21)_: a `dateTime` or `instant` with a time but no timezone is accepted, not invalid.
+The shared grammar of principle 7 is lenient here for ingest and for the engine alike, and date search parses
+its argument with it too (ticket 31).
+
 _Note (review, 2026-10-21)_: with `fail` deferred, the release does not fail by default, so the release note on
 failing and opting into `drop`, in the consequences above, waits for ticket 16.
 
@@ -4183,3 +4187,20 @@ _Corrections (review, 2026-10-21)_, against the spike's recorded outputs:
   type contradiction rather than an empty value. In a batch, `[]` can be stored as an empty array as well as
   `{}` as a present structure holding nothing (`spike-08/fixtures/fixtures_run.txt` on `issue/2831-spike-08`).
 - The per-column report is one finding per column path, all logged in one warning per read.
+
+_Addendum (owner, 2026-10-21)_, settling what the review of this decision left open:
+
+- **Malformed JSON documents are an interim loss.** On the JSON route, text after the object is ignored, a
+  top-level array becomes several resources, and a duplicate key keeps its last value, all silently. XML
+  fails the read on its malformed cases. The difference is stated in OQ-1's interim answer and lifted by
+  ticket 16, rather than closed in ticket 32.
+- **The XML narrative is held to L2** (`xml-native/xml-native.md`): the written document and the source
+  parse to equal resources. A narrative the StAX pass cannot handle fails the read, naming the document.
+- **JSON bundles** are read by taking each `entry.resource` as raw text, keeping the requested type, and
+  running it through the single-resource route. References are resolved afterwards on the typed `Reference`
+  columns. This avoids one inference across resource types.
+- **XML egress gets a line-delimited sink**, one document per line, that the XML source reads back.
+- **The bundle fit's per-type constant is accepted.** `readBundles(type, bundles)` stays per type.
+- **Dense mode reads decimals as doubles**, as the fitted route does, so the two modes keep the same interim
+  loss.
+- Ticket 32 stays one ticket.
