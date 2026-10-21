@@ -43,8 +43,10 @@ import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
 import org.hl7.fhir.r4.model.Parameters;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -210,6 +212,14 @@ public class SqlExportSupport {
             .collect(Collectors.joining(","));
     key.append("subjects=[").append(subjects).append("]");
 
+    // A subject's own description names its dependencies by canonical URL only. Two kick-offs can
+    // repeat a URL while inlining different bodies at it, in which case the URL says nothing
+    // about what will run, so the resolved content of the whole graph is keyed on as well.
+    final String dependencies = describeDependencies(request.subjects());
+    if (!dependencies.isEmpty()) {
+      key.append("|dependencies=[").append(dependencies).append("]");
+    }
+
     if (request.clientTrackingId() != null) {
       key.append("|clientTrackingId=").append(request.clientTrackingId());
     }
@@ -228,9 +238,34 @@ public class SqlExportSupport {
   }
 
   /**
+   * Renders the resolved content of every dependency the request's subjects reached, ordered by
+   * canonical key so that the same graph always renders the same way. A dependency shared by two
+   * subjects is resolved once, and is described once here.
+   */
+  @Nonnull
+  private static String describeDependencies(@Nonnull final List<SubjectInput> subjects) {
+    final Map<String, String> contentByKey = new TreeMap<>();
+    for (final SubjectInput subject : subjects) {
+      final PreparedSqlQuery prepared = subject.preparedQuery();
+      if (prepared != null) {
+        prepared
+            .getDependencyGraph()
+            .getNodesByKey()
+            .forEach(
+                (nodeKey, node) ->
+                    contentByKey.computeIfAbsent(nodeKey, key -> node.describeContent()));
+      }
+    }
+    return contentByKey.entrySet().stream()
+        .map(entry -> entry.getKey() + '=' + entry.getValue())
+        .collect(Collectors.joining(","));
+  }
+
+  /**
    * Renders one subject as a deterministic description for the cache key. A SQL subject is
-   * described by its resolved SQL and bindings, and a view subject by its parsed projection, so two
-   * kick-offs that would produce different data never share a job.
+   * described by its resolved SQL, its bindings and the dependencies its table labels point at, and
+   * a view subject by its parsed projection, so two kick-offs that would produce different data
+   * never share a job.
    */
   @Nonnull
   private static String describe(@Nonnull final SubjectInput subject) {

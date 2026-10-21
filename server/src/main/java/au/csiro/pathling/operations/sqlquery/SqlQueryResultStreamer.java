@@ -35,7 +35,6 @@ import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.util.EnumSet;
 import java.util.Iterator;
-import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -122,18 +121,11 @@ public class SqlQueryResultStreamer {
 
     final OutputStream outputStream = response.getOutputStream();
     final StructType schema = result.schema();
-
-    if (outputFormat == SqlQueryOutputFormat.CSV && includeHeader) {
-      final List<String> columnNames = java.util.Arrays.stream(schema.fieldNames()).toList();
-      streamingHelper.writeCsvHeader(outputStream, columnNames);
-      outputStream.flush();
-    }
-
     final Iterator<Row> iterator = result.toLocalIterator();
     switch (outputFormat) {
       case NDJSON -> streamingHelper.streamNdjson(outputStream, iterator, schema);
       case JSON -> streamingHelper.writeJson(outputStream, iterator, schema);
-      default -> streamingHelper.streamCsv(outputStream, iterator, schema);
+      default -> streamingHelper.streamCsv(outputStream, iterator, schema, includeHeader);
     }
     outputStream.flush();
   }

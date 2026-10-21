@@ -48,6 +48,21 @@ inputs:
 runs:
   using: composite
   steps:
+    # Trivy looks for each dependency POM in the local Maven repository before
+    # falling back to Maven Central, and Central rate-limits the shared GitHub
+    # runner IP ranges with a 30 minute block. Resolving the dependencies with
+    # Maven first puts every POM Trivy needs on disk, so the scan does not need
+    # to reach Central at all. The resolved artefacts persist through the
+    # ~/.m2/repository cache, so this is only expensive on a cold cache.
+    - name: Warm the local Maven repository
+      if: inputs.effective-pom == 'true'
+      shell: bash
+      env:
+        SCAN_REF: ${{ inputs.scan-ref }}
+      run: |
+        set -euo pipefail
+        mvn --batch-mode --quiet -f "${SCAN_REF}/pom.xml" dependency:resolve
+
     - name: Generate effective POM
       id: effective-pom
       if: inputs.effective-pom == 'true'
