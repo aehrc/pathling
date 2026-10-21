@@ -20,6 +20,8 @@
    - Where a promoted number is encoded, `QuantityEncoding.withoutTrailingZeros` strips trailing zeros from the decimal's text with nested `regexp_replace` calls, which duplicates what the `DecimalToLiteral` UDF already does for `ConversionLogic.convertToString`. Reuse the one formatting rule, so that a quantity's value and a decimal's string form cannot drift apart, as the promoted-number path is reworked to fill the annotations.
    - Decide how they leave the engine: whether rendering and the columns returned to callers keep or drop them, and whether the FR-021 annotation switches govern them.
 
+**Where the kind lives (decision 135).** The quantity kind is defined once, in the kinds package beside `fhir-schema`'s annotation API, and `fhir-schema` gains its own UCUM dependency, since `encoders` holds the current one and FR-051 does not let it move. `QuantityEncoding` and `QuantityMatcher` move onto the kind, so the engine's fallback and the stored annotation are one computation. The one UDF returning the canonical value and code together, in item 5, is that kind's computation. The kind is stored by the annotation step of ticket 11, not by the reader.
+
 **Blocked by:** 11
 
 **Status:** ready-for-agent

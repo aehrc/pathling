@@ -4204,3 +4204,105 @@ _Addendum (owner, 2026-10-21)_, settling what the review of this decision left o
 - **Dense mode reads decimals as doubles**, as the fitted route does, so the two modes keep the same interim
   loss.
 - Ticket 32 stays one ticket.
+
+## 135. An annotation is defined once, in `fhir-schema`, for the engine and ingest alike
+
+Owner decision (2026-10-21), for ticket 11 (T063). Evidence for the dense width is in
+`dense-annotation-width.md`.
+
+Decision 84 expected M5's annotation processors to join `au.csiro.pathling.io` as package-private
+classes beside the transform, and the tasks placed them in `io.annotation`. Both treat ingest as the
+one client. It is not. The engine is the primary consumer of an annotation, and it must be able to
+compute the same value on demand wherever the schema lacks it (FR-022), choosing which from the schema
+(FR-023). Ingest is the second client: it stores the value so that the engine can read it instead.
+`fhirpath` depends on `io` only at test scope, so nothing in `io` can serve the engine, and a
+definition there would leave the engine its own copy. That copy exists today, in the engine's
+date-boundary UDFs, `QuantityEncoding`'s canonicalisation through `encoders`' `Ucum`, and the cast of a
+decimal's text. ADR-0003 names "two implementations that must agree" as the cost of annotations; this
+decision removes it rather than testing for it.
+
+_Decision_:
+
+1. **One definition per annotation kind, in `fhir-schema`.** A public, abstract API in
+   `au.csiro.pathling.schema.annotation` defines an annotation kind, as the function from the stored
+   value of the element it annotates to the annotation's value, and registers and applies the kinds.
+   Applying a kind covers both clients: ingest computes it, and the engine reads the stored sibling
+   where the schema carries it and computes it otherwise, decided once per schema. `io` and `fhirpath`
+   both reach `fhir-schema` at runtime, and it already fixes the annotations' names and order in
+   `LayoutFields`. Its prohibition of `spark-sql` leaves `spark-sql-api`, which carries `Column`,
+   `functions` and `UserDefinedFunction`, enough for every kind.
+   - **The concrete kinds live in a separate package beside the API**, so that where an
+     implementation lives can be revisited without touching the API or its clients. Where a kind
+     needs a dependency `fhir-schema` lacks, ticket 12 adds it; the quantity kind needs UCUM, which
+     `encoders` holds and FR-051 does not let move, so `fhir-schema` gains its own. The engine's
+     existing computation moves onto the shared kinds in tickets 12 to 14.
+   - **The set of kinds is closed.** The API is public so that other modules can reach it, not as an
+     extension point. An annotation Pathling does not define is carried, where it is carried at all, as
+     an opaque field (part 3), not as a kind.
+   - **Order has one source.** Annotations are emitted from the canonical structure's annotation
+     entries, which `LayoutFields.annotationNames` places after their element. The registry maps an
+     entry to its kind; it does not declare an order of its own.
+   - **The toggles govern what the annotation step stores, never what the engine can compute.**
+2. **A dense schema annotates every element the definitions describe**, subject to the toggles.
+   Annotating only the populated elements cannot be known without seeing every row, which rules out the
+   streaming encode ticket 18 restores, and it would make the dense schema depend on the data, which is
+   what the dense mode exists to avoid. The width is measured: about 24% more fields on a dense
+   `Observation` without extensions. A user who does not want it narrows it with the toggles, and since
+   the engine computes what is absent, the choice is between width and speed, never correctness.
+3. **Annotating is a step of its own over data in this layout, not part of reading.** Annotations must
+   apply to any input in the layout, including Parquet or Delta written without them, so they cannot
+   belong to the reader of JSON and XML.
+   - **The step is public, in `io`**: it takes a dataset of one resource type in this layout and returns
+     it annotated, rebuilding each structure and array to place an annotation after its element. The
+     kinds stay in `fhir-schema` (part 1); the dataset-level walk is in `io` because it rebuilds rows as
+     the transform does, and `fhirpath` does not need it. `FhirReader.of(spark, definitions)` stays as
+     decision 84 left it, and the reader produces the layout without annotations.
+   - **Its settings are on `SchemaConfiguration`**, recreated in `fhir-schema` beside
+     `EncodingConfiguration` rather than on it (FR-051); ticket 18 adds the schema mode to it.
+     - One switch per kind, all on by default.
+     - **An annotation already present** for a kind that is on is either kept, computing only the
+       missing ones (*fill*, the default), or replaced (*recompute*). An annotation is worth having only
+       once stored, and recomputing what Pathling's own files already carry would throw that away.
+       Recompute is the repair for annotations from a producer that is not trusted. The data cannot
+       choose the default, because the layout column says which version of the layout a file follows,
+       not who wrote it, and ticket 30 offers that column to other producers.
+     - **Any other annotation in the input**, of a kind that is off or a `__<element>_<suffix>` field
+       Pathling does not define, is either left out (the default) or kept. The specification permits
+       non-standard annotations. One is placed after its element, which its name identifies: no FHIR
+       element name begins with `__` or contains an underscore.
+   - **Where it runs.** `encode` runs it, so that ingest emits the annotations by default (FR-021).
+     Writing data that is already stored, to Parquet or Delta, never adds annotations: a user who wants
+     them runs the step first. Reading for a query never runs it, because the engine reads a stored
+     annotation where the schema has one and computes it otherwise.
+   - **Egress never writes an annotation.** Annotations belong to this layout and not to FHIR, so JSON
+     and XML carry none. Egress leaves out every `__` field, one Pathling does not define included,
+     rather than failing on it as `ResourceTransformer.storedEntry` does today. Such a field can never be
+     FHIR content, so this takes nothing from ticket 34, which covers content the definitions do not
+     describe.
+   - **Whether the engine trusts a stored annotation** is not a setting of the step. It belongs to the
+     engine's handling of stored data in strict, tolerant and trust modes (ticket 31).
+
+_Rejected_: package-private processors in `io`, which the engine cannot reach; `io.annotation` with the
+transform's helpers made public, which decision 84 forbids and which has the same reach problem; the
+definition in `fhirpath` with `io` depending on it, which inverts the layering and makes a cycle with
+`fhirpath`'s test dependency on `io`; a new module between `fhir-schema` and its two clients, which
+adds a module to the build order for no gain the separate package does not give; annotating only the
+populated elements of a dense schema; the toggles as a configuration of the reader, by an overload of
+`FhirReader.of` or by an option of each format's reader, which would leave stored data that was not
+ingested by Pathling with no way to be annotated.
+
+_Consequences_:
+
+- The paths of T053 to T055 and T063 to T066 move: the API and the kinds to
+  `fhir-schema/src/main/java/au/csiro/pathling/schema/annotation/`, and the test that disabling one kind
+  leaves the others alone (T055) to `io`, where it asserts the columns the annotation step emits. `tasks.md` is not
+  rewritten; ticket 11 records the move.
+- Ticket 11 registers no real kind, so stored output does not change. Tickets 12 to 14 each add one
+  kind, and move the engine's own computation of it onto the kind.
+- An annotation computed by a UDF at ingest, the quantity's UCUM canonicalisation, is within FR-050: it
+  is a Spark UDF over values, not a FHIR object in a per-row plan.
+- **Amends decision 121.** The toggles are documented in the Java, Python and R API docs with ticket 11.
+  `site/docs/libraries/io/schema.md` keeps its statement that this release writes no annotations until a
+  kind exists to write, so the site documentation of the annotations and their toggles moves to ticket 15.
+- `data-model.md` said that annotations follow "the fixed order the annotation registry declares". It now
+  names `LayoutFields` as the source of that order.

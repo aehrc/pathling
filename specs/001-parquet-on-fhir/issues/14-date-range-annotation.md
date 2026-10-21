@@ -6,6 +6,8 @@
 
 **A time without a timezone (owner, 2026-10-21).** A `dateTime` or `instant` with a time but no timezone is valid (decision 133's addendum). Its range annotation is the range the engine computes for it today, through `FhirPathDateTime`'s boundaries, so the annotation and the computed path agree. Whether that range should widen by ±14 hours is a follow-up in ticket 26.
 
+**Where the kind lives (decision 135).** The range kind is defined once, in the kinds package beside `fhir-schema`'s annotation API. The engine's boundary UDFs (`LowBoundaryForDateTime` and its siblings, registered by `PathlingUdfRegistrar`) move onto it, so `FhirPathDateTime`'s boundaries, or a counterpart `fhir-schema` can reach, are the single computation. It is stored by the annotation step of ticket 11, not by the reader.
+
 **Blocked by:** 11
 
 **Status:** ready-for-agent

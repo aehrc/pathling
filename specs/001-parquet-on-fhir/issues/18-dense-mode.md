@@ -16,6 +16,8 @@
 - **Decimals in dense mode (owner, 2026-10-21).** The source schema dense mode hands Spark's reader reads a decimal as a double, as the fitted route does, so the two modes keep the same interim loss and stay at parity (ticket 19).
 - **On the interim ingest.** Build on the ingest of decision 134: Spark's reader and the generated transform for JSON, and the `from_xml` route of ticket 32 for XML and bundles. If ticket 16 later replaces the ingest, it carries dense mode over.
 
+**Annotation width and the extension bound (decision 135).** A dense schema annotates every element the definitions describe, subject to the switches. `evidence/dense-annotation-width.md` measures about 24% more fields on a dense `Observation` without extensions. The same walk with extensions on does not reach a useful size, about 206 million leaves at nesting 3, because an extension is itself extensible. The dense mode needs an extension bound of its own, whatever the annotations do.
+
 **Blocked by:** 32. Ticket 11, which decides the dense-mode annotation width this ticket implements.
 
 **Status:** ready-for-agent

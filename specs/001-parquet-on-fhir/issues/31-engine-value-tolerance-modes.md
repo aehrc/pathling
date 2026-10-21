@@ -54,6 +54,8 @@ On conformant data the three modes give identical results. Only non-conformant d
 - **The default mode.** Principle 5 points to `strict`, matching ingest's `fail`. It would refuse a query over any existing 9.9.0 table or foreign dataset that holds an invalid value, until that data is cleaned. `tolerant` keeps every query running. The answer goes in the decision below.
 - **Whether `trust` earns its place.** Its only gain is the freedom to skip parsing. Measure it before building it (the benchmark criterion below). If the gain is negligible, drop `trust` and keep two modes.
 
+**Trusting stored annotations (decision 135).** Whether the engine uses an annotation stored by another producer, or recomputes it, belongs to these modes rather than to the annotation step's settings. Ticket 11's *recompute* setting repairs stored data; it does not govern what the engine reads.
+
 **Blocked by:** 13, 14. The annotation path needs the decimal and date annotations to exist.
 
 **Status:** needs-triage

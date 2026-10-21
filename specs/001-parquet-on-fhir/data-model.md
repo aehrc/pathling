@@ -49,7 +49,7 @@ definitions, and is either present in or absent from a given schema.
 - The layout's own fields have positions too, and they must, because they have no
   definition element to take one from. A primitive metadata group and any
   annotations sit **immediately after the element they accompany**, the metadata
-  group first and then the annotations in the fixed order the annotation registry
+  group first and then the annotations in the fixed order `LayoutFields` (decision 135)
   declares them. Without a stated rule two implementations could both order by
   the definitions and still disagree, which is exactly the positional mismatch the
   previous bullet is there to prevent.
