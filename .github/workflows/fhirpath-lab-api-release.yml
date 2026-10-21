@@ -40,7 +40,7 @@ jobs:
         working-directory: fhirpath-lab-api
         run: |
           uv sync --extra dev --locked
-          uv run --locked pytest -v
+          uv run --locked --no-sync pytest -v
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
