@@ -16,9 +16,15 @@
 - [ ] Update licenses if there have been dependency updates (`mvn install -DskipTests -Plicenses`)
 - [ ] Update the version to the release version
 - [ ] Merge to main and make sure the documentation site gets deployed properly
-- [ ] Tag the release (`v[version]`)
-- [ ] Draft a GitHub release for the tag, describe new features, bug fixes and
-      breaking changes (see `./.claude/commands/draft-release.md`)
+- [ ] Tag the merge commit on `main` (`v[version]`) and push the tag. Tag
+      `main`, not the release branch
+- [ ] Draft a GitHub release for the pushed tag, describe new features, bug
+      fixes and breaking changes (see `./.claude/commands/draft-release.md`). If
+      a draft was prepared earlier, edit it to select the pushed tag. A draft
+      whose tag does not exist yet creates the tag from its target branch when
+      it is published, so the tag lands on whatever `main` is at that moment
+- [ ] Check that the draft shows the tag as existing and pointing at the merge
+      commit on `main` before publishing
 - [ ] Publish the release and verify that it succeeds
 - [ ] Submit the built R package to CRAN manually
 
@@ -68,7 +74,7 @@ Versioning. Its Docker image is published to GitHub Container Registry
       [Maven Central](https://central.sonatype.com/artifact/au.csiro.pathling/library-runtime)
       before proceeding with the server release
 - [ ] Check that all changes have been adequately reflected in the documentation
-      (`site/docs/server`)
+      (`site/server-docs`)
 - [ ] Run Trivy against both the server and UI and address any reported
       vulnerabilities (see `./.claude/commands/trivy-scan.md`)
 - [ ] Get all tests and checks passing on CI ("Server pre-release" workflow,
@@ -78,10 +84,16 @@ Versioning. Its Docker image is published to GitHub Container Registry
       [SonarCloud](https://sonarcloud.io/project/branches_list?id=aehrc_pathling_server)
       (`aehrc_pathling_server` project)
 - [ ] Update the server version to the release version (`server/pom.xml`)
-- [ ] Merge to main
-- [ ] Tag the release (`server-v[version]`)
-- [ ] Draft a GitHub release for the tag, describing new features, bug fixes and
-      breaking changes (see `./.claude/commands/draft-release.md`)
+- [ ] Merge the release branch into `main` through its pull request
+- [ ] Tag the merge commit on `main` (`server-v[version]`) and push the tag. Tag
+      `main`, not the release branch
+- [ ] Draft a GitHub release for the pushed tag, describing new features, bug
+      fixes and breaking changes (see `./.claude/commands/draft-release.md`). If
+      a draft was prepared earlier, edit it to select the pushed tag. A draft
+      whose tag does not exist yet creates the tag from its target branch when
+      it is published, so the tag lands on whatever `main` is at that moment
+- [ ] Check that the draft shows the tag as existing and pointing at the merge
+      commit on `main` before publishing
 - [ ] Publish the release and verify that it succeeds. Publishing triggers the
       "Release server" workflow, which runs the server and UI security scans and
       the Sonar analysis, then builds, tests and pushes the multi-architecture
