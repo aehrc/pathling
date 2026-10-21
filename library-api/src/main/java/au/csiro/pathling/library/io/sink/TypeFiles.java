@@ -204,8 +204,8 @@ final class TypeFiles {
    *
    * <p>A table is renamed whole or not at all. Where two of its files would take one name, as two
    * attempts of one Databricks task would, none is renamed. Where a rename fails, the files already
-   * renamed are returned to the table, so that the rows of the write are not read twice, from the
-   * table and from beside it.
+   * renamed are returned to the table, and a copy the failed rename left beside it is removed, so
+   * that the rows of the write are not read twice, from the table and from beside it.
    *
    * @param spark the Spark session
    * @param table the directory the write was made into, {@code <name>.<extension>}
@@ -262,7 +262,6 @@ final class TypeFiles {
             null);
       }
       final Map<Path, Path> targets = targetsOf(tablePath, nameAndExtension, parts);
-      final List<String> renamed = new ArrayList<>();
       final Map<Path, Path> moved = new LinkedHashMap<>();
       for (final Map.Entry<Path, Path> entry : targets.entrySet()) {
         final Path part = entry.getKey();
@@ -270,23 +269,19 @@ final class TypeFiles {
         log.info("Renaming result to: {}", target);
         // A rename that fails must not be followed by the removal of the table, which still holds
         // the file, and the files renamed before it are returned to the table.
-        final boolean isRenamed;
         try {
-          isRenamed = fileSystem.rename(part, target);
+          if (!fileSystem.rename(part, target)) {
+            throw new IOException("The file system did not rename the file");
+          }
         } catch (final IOException e) {
+          final String unsettled = settleFailedRename(fileSystem, part, target, moved);
+          final String unrestored = restore(fileSystem, moved);
           throw new PersistenceError(
-              "Problem renaming the partition file %s to %s; the table %s has been left in place%s"
-                  .formatted(part, target, table, restore(fileSystem, moved)),
+              "Could not rename the partition file %s to %s; the table %s has been left in place%s%s"
+                  .formatted(part, target, table, unsettled, unrestored),
               e);
         }
-        if (!isRenamed) {
-          throw new PersistenceError(
-              "Could not rename the partition file %s to %s; the table %s has been left in place%s"
-                  .formatted(part, target, table, restore(fileSystem, moved)),
-              null);
-        }
         moved.put(part, target);
-        renamed.add(target.toString());
       }
       if (parts.size() == files.size()) {
         log.info("Cleaning up: {}", table);
@@ -294,7 +289,7 @@ final class TypeFiles {
       } else {
         log.warn("Leaving {} in place, as it holds files that Spark did not name", table);
       }
-      return renamed;
+      return moved.values().stream().map(Path::toString).toList();
     } catch (final IOException e) {
       throw new PersistenceError("Problem renaming the partition files of " + table, e);
     }
@@ -331,6 +326,37 @@ final class TypeFiles {
       targets.put(part, target);
     }
     return targets;
+  }
+
+  /**
+   * Accounts for a rename that failed part-way, as one that is not atomic can, such as an object
+   * store's copy followed by a delete. A copy left beside the table while the table still holds the
+   * file is removed, and a file that reached its target and left the table is counted as renamed,
+   * so that it is returned to the table with the others.
+   *
+   * @return a sentence naming a copy that may remain beside the table, or an empty string
+   */
+  @Nonnull
+  private static String settleFailedRename(
+      @Nonnull final FileSystem fileSystem,
+      @Nonnull final Path part,
+      @Nonnull final Path target,
+      @Nonnull final Map<Path, Path> moved) {
+    try {
+      if (!fileSystem.exists(target)) {
+        return "";
+      }
+      if (!fileSystem.exists(part)) {
+        moved.put(part, target);
+        return "";
+      }
+      if (fileSystem.delete(target, false)) {
+        return "";
+      }
+    } catch (final IOException e) {
+      log.error("Could not remove the copy {} of {}", target, part, e);
+    }
+    return ", and a copy of the file may remain at " + target;
   }
 
   /**

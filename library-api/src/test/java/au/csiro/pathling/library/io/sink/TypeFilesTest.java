@@ -31,6 +31,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.FilterFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.junit.jupiter.api.BeforeEach;
@@ -248,6 +249,40 @@ class TypeFilesTest {
     assertFalse(exception.getMessage().contains("could not be returned"), exception::getMessage);
     assertEquals(4, fs.listStatus(table, p -> p.getName().endsWith(".txt")).length);
     assertEquals(0, fs.listStatus(directory, p -> p.getName().startsWith("Patient.0")).length);
+  }
+
+  /**
+   * A rename that is not atomic, as on an object store that copies a file and then deletes it, can
+   * fail after the copy has landed. The copy is removed, so the rows of the file are read from the
+   * table only.
+   */
+  @Test
+  void aRenameFailingAfterItsCopyLandedRemovesTheCopy() throws IOException {
+    final Path table = new Path(directory, "Patient.ndjson");
+    final AtomicInteger renames = new AtomicInteger();
+    final FileSystem failingAfterTheSecondCopy =
+        new FilterFileSystem(fs) {
+          @Override
+          public boolean rename(final Path src, final Path dst) throws IOException {
+            if (src.getParent().getName().equals(table.getName())
+                && renames.incrementAndGet() == 2) {
+              FileUtil.copy(fs, src, fs, dst, false, getConf());
+              throw new IOException("Could not delete the source of the copy");
+            }
+            return super.rename(src, dst);
+          }
+        };
+    final String tableUrl = table.toString();
+
+    final PersistenceError exception =
+        assertThrows(
+            PersistenceError.class,
+            () -> TypeFiles.renameKeepingWriteId(failingAfterTheSecondCopy, tableUrl, "txt"));
+
+    assertEquals(4, fs.listStatus(table, p -> p.getName().endsWith(".txt")).length);
+    assertEquals(0, fs.listStatus(directory, p -> p.getName().startsWith("Patient.0")).length);
+    assertTrue(exception.getMessage().contains("Could not rename the partition file"));
+    assertFalse(exception.getMessage().contains("may remain"), exception::getMessage);
   }
 
   @Test
