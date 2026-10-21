@@ -591,19 +591,26 @@ class SqlConceptMapLocalIT extends AbstractAsyncExportIT {
   // -------------------------------------------------------------------------
 
   @Test
-  void implicitMapOverAnotherReferenceSetIsNotFound() {
+  void implicitMapOverAnotherReferenceSetIsA422GivingTheReason() {
+    // The local store reads only the four association reference sets as concept maps, so a URL
+    // naming any other reference set is rejected with that reason rather than reported as unknown.
     final String url = implicitUrl(Rf2Mini.SNOMED_URI, MOVED_FROM);
 
     final String body =
-        postExpectStatus(parametersJson(sqlQueryLibrary("SELECT 1", Map.of("moved", url))), 404);
+        postExpectStatus(parametersJson(sqlQueryLibrary("SELECT 1", Map.of("moved", url))), 422);
 
-    assertThat(body)
-        .contains(
-            "Failed to resolve the dependency for label 'moved' with reference '"
+    final OperationOutcome outcome = jsonParser.parseResource(OperationOutcome.class, body);
+    assertThat(outcome.getIssue())
+        .extracting(OperationOutcomeIssueComponent::getDiagnostics)
+        .containsExactly(
+            "The mappings of the concept map for label 'moved' (canonical URL '"
                 + url
-                + "': no ViewDefinition, SQLView, external table, concept map or value set matches"
-                + " that canonical URL")
-        .doesNotContain("local terminology mode");
+                + "') could not be determined: reference set "
+                + MOVED_FROM
+                + " is not one of the four association reference sets that can be read as a"
+                + " concept map (POSSIBLY EQUIVALENT TO, REPLACED BY, SAME AS and ALTERNATIVE); a"
+                + " simple map reference set can be used with translate, but not read as a concept"
+                + " map");
   }
 
   // -------------------------------------------------------------------------

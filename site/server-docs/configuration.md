@@ -309,11 +309,12 @@ An edition and version URI
 `http://snomed.info/sct` base selects that release, and the bare base selects
 the store's default. An edition URI without a version is not a SNOMED CT base,
 so a `fhir_cm` URL on one is not an implicit map and, unless a ConceptMap is
-held at that exact URL, is a `404`. A `fhir_cm` URL naming any other reference
-set, or selecting a release the store does not hold, is a `404`. A `|version`
-pin on a `fhir_cm` URL is a `422`, since
-such a URL carries its version in its base; a pin on any other URL, whether or
-not it carries a query, is looked up with its pin.
+held at that exact URL, is a `404`. A `fhir_cm` URL selecting a release the
+store does not hold is a `404`. A `fhir_cm` URL naming any other reference set,
+such as a simple map, is a `422` stating that only the four association
+reference sets can be read as a concept map. A `|version` pin on a `fhir_cm`
+URL is a `422`, since such a URL carries its version in its base; a pin on any
+other URL, whether or not it carries a query, is looked up with its pin.
 
 With `pathling.terminology.enabled` set to `false`, a concept map dependency
 that is not supplied inline as a `context` ConceptMap is a `404`, since the
