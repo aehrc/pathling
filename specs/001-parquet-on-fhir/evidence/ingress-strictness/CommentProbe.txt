@@ -1,0 +1,14 @@
+== comment inside a described primitive
+  lenient  ok  xml=<Patient xmlns="http://hl7.org/fhir"><birthDate value="1980-01-01"/></Patient>
+           json={"resourceType":"Patient","birthDate":"1980-01-01"}
+  strict   ok  xml=<Patient xmlns="http://hl7.org/fhir"><birthDate value="1980-01-01"/></Patient>
+           json={"resourceType":"Patient","birthDate":"1980-01-01"}
+== comment before a described primitive
+  lenient  ok  xml=<Patient xmlns="http://hl7.org/fhir"><!--pof:type=date--><birthDate value="1980-01-01"/></Patient>
+           json={"resourceType":"Patient","birthDate":"1980-01-01"}
+  strict   ok  xml=<Patient xmlns="http://hl7.org/fhir"><!--pof:type=date--><birthDate value="1980-01-01"/></Patient>
+           json={"resourceType":"Patient","birthDate":"1980-01-01"}
+== comment inside an unknown element
+  lenient  ok  xml=<Patient xmlns="http://hl7.org/fhir"/>
+           json={"resourceType":"Patient"}
+  strict   FAIL HAPI-1851: DataFormatException at [[row,col {unknown-source}]: [1,38]]: HAPI-1825: Unknown element 'foo' found during parse

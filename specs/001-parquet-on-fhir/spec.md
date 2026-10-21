@@ -17,9 +17,10 @@ history: how each requirement was reached is in
 durable design decisions are in [`docs/adr/`](../../docs/adr/), vocabulary is in
 [`CONTEXT.md`](../../CONTEXT.md), and the work that remains is tracked as tickets
 in [`issues/`](issues/). [tasks.md](tasks.md) is the record of
-milestones M1 to M4. Everything ships together, in one release, when ticket 28,
-the release checklist, closes. Tickets that the release does not wait for are
-named on that ticket.
+milestones M1 to M4. This work, #2367, is complete when ticket 28, the completion
+checklist, closes. It is not by itself a release: what the release needs beyond
+it is raised as follow-up issues by ticket 26. Tickets that #2367 does not wait
+for are named on ticket 28.
 
 ## Why
 
@@ -388,7 +389,11 @@ Identifiers are stable. FR-015, FR-018 and FR-020 are retired and not reused.
 - **FR-063**: Non-conformant content MUST be reported, never silently dropped or
   coerced. Malformed JSON or XML fails the read. Until OQ-1 is answered, the
   losses its interim answer lists are an exception: they are reported per
-  column at most, or not at all (decision 134).
+  column at most, or not at all (decision 134). Until the follow-up issue on
+  non-conformant data, raised by ticket 26, rewrites this requirement, the
+  engine runs in `trust`: its behaviour on non-conformant stored content is
+  undefined, and may be an error or a silently wrong answer (decision 133's
+  addendum of 2026-10-22).
 
 ### Annotations
 

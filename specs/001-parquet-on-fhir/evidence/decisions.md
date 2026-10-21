@@ -4135,6 +4135,23 @@ its argument with it too (ticket 31).
 _Note (review, 2026-10-21)_: with `fail` deferred, the release does not fail by default, so the release note on
 failing and opting into `drop`, in the consequences above, waits for ticket 16.
 
+_Addendum (owner, 2026-10-22)_: #2367 delivers `trust` only, at ingest and in the engine. Under it, behaviour on
+non-conformant data is undefined: an error or a silently wrong answer. The modes `strict`, `tolerate` and
+`repair`, with findings or silent, and a `validate` operation that collects every violation, are design for a
+follow-up GitHub issue, which ticket 26 raises (`ingress-strictness/README.md`, "Modes").
+
+- Principles 2 and 5 are softened: no silent loss unless it is a documented exception or the user has chosen a
+  mode that accepts it.
+- Principle 7 keeps one grammar, and drops the promise that the engine never fails on a stored value. This
+  supersedes decision 134's consequence that the engine must not fail on invalid stored values.
+- FR-063's "never silently dropped or coerced" is to be rewritten by the follow-up, to match. Until then it
+  carries an interim exception for `trust`, as it does for decision 134's losses.
+- #2367 is not by itself a release. Follow-up issues the release needs, where they arise from this work, are
+  raised by ticket 26.
+- The round-trip invariant, JSON → PoF → JSON and the same through XML, holds for FHIR that conforms to a given
+  definition set, with ingest and egress both using the definitions. Content the definitions do not describe is
+  outside it: ticket 34 and the metadata that would preserve its representation become one follow-up issue.
+
 ## 134. The ingest mechanism is deferred; the interim is A0 for JSON and `from_xml` for XML
 
 Owner decision (2026-10-20). Evidence is in `spike-08/README.md`, whose "Summary of phase 2" sets the
@@ -4172,6 +4189,9 @@ _Consequences_:
 - OQ-1 stays open, with these losses as its interim answer. FR-063 gains an interim exception for them. FR-002,
   FR-016 and FR-019 already defer to OQ-1 and are unchanged.
 - Ticket 31 matters more: the engine must not fail on invalid stored values that ingest now lets through.
+  _Superseded (owner, 2026-10-22)_ by decision 133's addendum of that date: the engine runs in `trust`, under
+  which a query over an invalid stored value has undefined behaviour. That XML read through HAPI in 9.9.0
+  refused such a value, and now stores it, is a release note that ticket 28 hands on.
 - Data ingested before ticket 16 keeps its losses. If ticket 16 later stores decimals or empty values
   differently, the layout column of ticket 29 is what tells the two apart, and its version is bumped then.
 - Ticket 08 closes as a completed spike. Ticket 32 replaces HAPI on the XML and Bundle routes. Ticket 29 adds
@@ -4281,10 +4301,12 @@ _Decision_:
    - **Egress never writes an annotation.** Annotations belong to this layout and not to FHIR, so JSON
      and XML carry none. Egress leaves out every `__` field, one Pathling does not define included,
      rather than failing on it as `ResourceTransformer.storedEntry` does today. Such a field can never be
-     FHIR content, so this takes nothing from ticket 34, which covers content the definitions do not
-     describe.
+     FHIR content, so this takes nothing from the handling of content the definitions do not describe,
+     which is the follow-up issue that ticket 26 raises (formerly ticket 34).
    - **Whether the engine trusts a stored annotation** is not a setting of the step. It belongs to the
-     engine's handling of stored data in strict, tolerant and trust modes (ticket 31).
+     engine's modes for stored data. #2367 delivers only `trust`, which takes a stored annotation as
+     given (ticket 31); recomputing one instead belongs to the other modes, in the follow-up issue that
+     ticket 26 raises.
 
 _Rejected_: package-private processors in `io`, which the engine cannot reach; `io.annotation` with the
 transform's helpers made public, which decision 84 forbids and which has the same reach problem; the

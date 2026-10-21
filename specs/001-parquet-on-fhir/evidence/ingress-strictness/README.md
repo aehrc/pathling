@@ -64,6 +64,10 @@ These govern everything below.
    the resource, the path and the value, not a column. It is **machine-readable**: a pipeline can act on it
    without parsing logs. It is **delivered without being asked for**: at least a summary reaches the caller on the
    driver, and executor logs do not count.
+
+   _Softened (owner, 2026-10-22)_: data is never lost silently, unless the loss is a documented exception
+   ("Exceptions to the levels") or the user has accepted silent loss by choosing a mode that allows it, as
+   Spark's non-ANSI casts do when they turn invalid text into null.
 3. **Loss is distinct from change.** A value whose JSON type differs from the definition, but whose text is valid
    for the target type, is a change of encoding and not a loss. For example, `"family": 123` is stored as `"123"`.
    This holds only if the token's text is kept exactly. A route that passes the number through a double, so that
@@ -77,6 +81,9 @@ These govern everything below.
    turns a failure into a recorded finding, never into nothing. Failing is therefore the default. That reverses
    decisions 44 and 68 ("ignore, never fail"), and the reversal has to be recorded as a new decision and
    announced in the release notes.
+
+   _Softened (owner, 2026-10-22)_, with principle 2: tolerance becomes silence when the user chooses a silent
+   mode, and only then.
 6. **The same input gives the same outcome.** This holds across formats (JSON, XML and bundles, FR-060), across
    whatever other rows share a file or partition, and across runs. Decision 68's decimal path breaks it, because
    whether `100` is stored as `100` or as `100.0` depends on the rest of the file. Column-level inference breaks
@@ -87,8 +94,11 @@ These govern everything below.
    (`fhir-schema`, owner, 2026-10-21). Ingest is where a bad value is detected and reported, because only there can
    it be attributed. A stored value the engine cannot parse evaluates to empty, never to an error. Such values
    can still arrive from PoF data written by other tools, or once the `keep` policy exists. Until ticket 16,
-   they also arrive from the interim ingest, which validates no lexical form (decision 134). Today's engine breaks
-   this principle: see ticket 31.
+   they also arrive from the interim ingest, which validates no lexical form (decision 134).
+
+   _Amended (owner, 2026-10-22)_: the one grammar stands. The engine's promise does not: #2367 delivers the
+   engine in `trust`, under which a stored value that is not conformant gives undefined behaviour, an error or a
+   wrong answer (ticket 31). What the engine does in the other modes is the follow-up's to decide.
 
 
 ## Two dimensions (2026-10-19)
@@ -108,6 +118,9 @@ the first of several values are never offered.
 **Invalid-value policy** decides what happens to whatever repair leaves non-conformant: `fail` (the default,
 principle 5), `drop` (removed, with a finding recording the loss), or `keep` (stored as received, with a finding,
 or dropped as a loss where the layout cannot hold it).
+
+_Superseded (owner, 2026-10-22)_: #2367 delivers `trust` only, at ingest and in the engine. The scope below,
+and everything else that handles non-conformant data, moves to the follow-up issue that ticket 26 raises.
 
 **Scope of this change (owner, 2026-10-19):** repair `none`, and the policies `fail` (the default) and `drop`, both
 applied to invalid values and to extra elements alike. `keep`, `widen` and `narrow` are follow-up features. Each
@@ -133,6 +146,142 @@ point for EHR extracts, where this is common, and must be documented. A follow-u
 
 _Reversed (owner, 2026-10-21)_: such a value is accepted, by ingest and the engine alike (decision 133's
 addendum).
+
+## Conformance levels (discussed with the owner, 2026-10-21)
+
+Non-conformant data is classified by the first of these levels it fails. They are not the repair levels above:
+those say how far a value is converted, and these say which rule it breaks. Each level assumes the ones before it.
+
+| Level | Rule | Needs the definitions | JSON | Parquet |
+|---|---|---|---|---|
+| 1. Container format | The file is valid in its format | No | Well-formed JSON, one object per line (C1) | A readable Parquet or Delta file |
+| 2. FHIR JSON encoding | FHIR's JSON representation rules | No | The rules of [FHIR JSON](https://hl7.org/fhir/R4/json.html) applied directly: no `null` except as positional padding aligned with `_x`, no `{}`, `[]` or `""`, no duplicate keys, `_x` aligned with `x`, `resourceType` present (C2) | The same rules, applied to the row's JSON projection (below) |
+| 3. Structure | The definitions' names, types and cardinality | Yes | Per value: known names, the JSON type the definition gives, array or singular, one choice type (C3, C4, C5) | Per dataset: the schema is the layout the definitions derive. Checked once, at planning |
+| 4. Value | The lexical space of the element's type | Yes | The regex, the calendar, the range, and whitespace where the type forbids it (C6) | The same, on the stored text |
+| 5. Valid FHIR | Minimum cardinality, bindings, invariants, profiles | Yes, and terminology | Out of scope | Out of scope |
+
+Level 2 is defined by reference to FHIR's JSON rules, not restated, so it follows the FHIR version and needs
+nothing from the definitions. That is why it also applies to content the definitions do not describe (ticket
+34): an undescribed element can still be refused for being `{}`. An empty string is level 2, because FHIR forbids
+it for every primitive; the follow-up issue settles its handling.
+
+**The JSON projection.** A PoF row is conformant at level 2 when its mapping to JSON is FHIR JSON that
+conforms at level 2. The mapping needs three rules from the PoF specification:
+
+- a field whose name starts with `__` is layout, not content, and is left out;
+- a null field in a structure is omitted, and a null in an array is written as `null`;
+- `resourceType` is stored at the root, so that the row carries it.
+
+Level 2 itself needs no definitions, so these rules decide it: level 2 for Parquet needs no separate list. The
+JSON type of a value, a decimal stored as text written as a number for example, is level 3 and comes from the
+definitions. The rules are proposals to the PoF specification (ticket 35). Until ticket 17, Pathling's own output
+breaks level 2 by design, through the placeholders of decisions 71 and 72, so until then its behaviour under
+`trust` is undefined like any other non-conformant data's, and no test pins it (owner, 2026-10-22).
+
+**The round-trip invariant (owner, 2026-10-22).** For FHIR that conforms to a given definition set, JSON → PoF →
+JSON, and the same route through XML, is an identity up to JSON equivalence, ignoring key order and formatting,
+with the narrative equal under HAPI's `equalsDeep`. Ingest and egress both use the definitions. The known gaps:
+
+- a decimal's lexical form, until ticket 16 keeps it (an exception, below);
+- `contained` (FR-006) and `base64Binary` whitespace;
+- primitive ids and extensions in the placeholders, until ticket 17.
+
+**Content the definitions do not describe is outside the invariant.** XML gives such content no type and
+JSON only a partial one, and no FHIR mechanism carries a type for it. Preserving its representation, even only in
+datasets Pathling wrote, is a follow-up issue raised by ticket 26, which takes over ticket 34. A JSON-type marker
+in the Parquet metadata, considered for decimals before the invariant was tied to the definitions, belongs to it
+too.
+
+## Typing undescribed content in XML (2026-10-22, for the follow-up)
+
+FHIR R4 XML (§2.6.1) says "the only other namespace that occurs in FHIR resources is the XHTML namespace",
+which describes rather than forbids, and that "exchanged content SHALL NOT … contain the schema instance
+namespace", which rules out `xsi:type`. `fhir-base.xsd` declares no `xs:any` or `xs:anyAttribute` wildcard, read
+through a summarising fetch rather than a validator. Comments "are not part of the contents of a resource".
+
+The probes run on HAPI 8.10.0 (`java -cp <hapi classpath> <Probe>.java`):
+
+| Probe | Finding |
+|---|---|
+| `NsAttrProbe` | An attribute HAPI does not know fails strict parsing (`HAPI-1824`) and is dropped with a warning when lenient, whatever its namespace: `pof:type`, `xsi:type` and a bare `type` alike. An unknown element fails strict (`HAPI-1825`) and is dropped when lenient, with any attribute it carries. |
+| `CommentProbe` | A comment is accepted in strict mode. One before an element is kept on re-encode; one inside a primitive element is dropped. Encoding to JSON drops every comment. |
+| `CommentCarrierProbe` | A comment carrying an undescribed element, `<!--pof:extra <foo value="1.5" pof:type="decimal"/>-->`, keeps the document conformant and is kept by strict and lenient HAPI, in place among its siblings, at the root and nested. It is lost when it is a structure's only content and when it sits inside a primitive. |
+
+So a namespaced attribute costs nothing extra on undescribed content, which already fails strict readers, but
+makes a conformant element non-conformant. A comment carrying the undescribed content keeps the document
+conformant and survives HAPI's XML round trip, but not JSON, which forbids comments. Neither is decided.
+
+| Level | Ingest | Engine | Egress |
+|---|---|---|---|
+| 1 | Spark's reader | — | — |
+| 2 | The follow-up | The follow-up (ticket 33's design) | The projection (ticket 35); today written as stored |
+| 3 | Decision 133's repair levels, the follow-up | The follow-up: a schema that does not conform | — |
+| 4 | The follow-up, with ticket 16's grammar | The follow-up (ticket 31's former design) | Written as stored |
+| 5 | Out of scope; 9.9.0's HAPI checked required bindings and extension rules | Out of scope | Out of scope |
+
+## Modes (owner, 2026-10-21)
+
+Ingest and the engine each take one of four modes. They share the names, and are set separately, because they
+answer different questions: ingest decides what is stored, and the engine decides how stored data is read.
+
+| Mode | Means |
+|---|---|
+| `strict` | Expect conformant input and fail early otherwise. |
+| `tolerate` | Fix what can be fixed without loss of FHIR content, and fail on the rest. |
+| `repair` | Fix what can be fixed, accepting a possible loss, such as a date that cannot be parsed. |
+| `trust` | Assume the input is conformant. Behaviour on input that is not is undefined: an error, or a silently wrong answer (owner, 2026-10-22). |
+
+"Without loss" means the FHIR meaning is unchanged: the data, projected to JSON and read as FHIR, carries the
+same information. `strict`, `tolerate` and `repair` are a ladder, each accepting what the one before it accepts
+and more. `trust` is not on it: it pays nothing to detect, and promises nothing once detection would have
+mattered. It may still check what is free, such as the schema at planning, and the follow-up decides whether
+it does.
+
+**Reporting** is a second dimension (owner, 2026-10-22). `tolerate` and `repair` each come with findings, as
+principles 2 and 5 require, or silently, for a user who accepts silent loss. That gives up to six behaviours,
+and the follow-up decides which are offered. A separate operation, `validate`, collects every violation as
+findings without storing or querying anything; principle 4's validate-only run is that operation at ingest, and
+the same operation over stored data is what a user of `trust` or a silent mode runs to find out what they
+accepted.
+
+By conformance level:
+
+| Level | `strict` | `tolerate` | `repair` | `trust` |
+|---|---|---|---|---|
+| 1. Format | fail | fail | ingest skips the record, with a finding | undefined |
+| 2. JSON encoding | fail | absent: `null`, `{}`, `[]`, a structure with no content and an unaligned positional null | as `tolerate` | undefined |
+| 3. Structure | fail | conversions that succeed (`widen`, and `narrow` where the value converts); otherwise fail | the same conversions; otherwise the element is dropped, with a finding | undefined, unless the schema check is kept |
+| 4. Value | fail | fail, since no fix is lossless | ingest drops the value, with a finding; the engine reads it as absent | undefined |
+
+The exceptions below override this table: `{}` in JSON, for example, is absent at ingest in every mode, `strict`
+included.
+
+**At ingest** the modes are presets over the two dimensions above, which remain how they are specified:
+`strict` is repair `none` with policy `fail`, `tolerate` is `narrow` with `fail`, and `repair` is `narrow` with
+`drop`. `trust` stores what the reader produces and checks nothing per value: it is the interim ingest of
+decision 134, and it is what #2367 delivers.
+
+**In the engine** the mode is the user's statement about the data being queried. No marker records whether data
+passed ingest, because a marker can be lost, or never written by another tool. Pathling's own data, ingested in
+`strict`, `tolerate` or `repair` and written once ticket 17 stores the metadata group, can be queried in
+`trust`; foreign data and 9.9.0 tables need one of the others. Choosing `trust` for data that does not
+deserve it, or `repair`, accepts the consequence: a value `repair` reads as absent is reported only by
+`validate`, never by the query.
+
+**Scope (owner, 2026-10-22).** #2367 delivers `trust`, at ingest and in the engine, and documents it (ticket 31).
+The other modes, the reporting dimension and `validate` are design for the follow-up issue that ticket 26 raises.
+That issue does not block #2367, and #2367 is not by itself a release.
+
+## Exceptions to the levels (owner, 2026-10-21)
+
+Some content is handled the same way in every mode, whatever its level says. The list is open, and is to be
+discussed further.
+
+| Content | In every mode | Reason |
+|---|---|---|
+| `{}` in JSON | Ingest treats it as absent, with no finding | It carries no content, and 9.9.0's HAPI dropped it with no callback. This reverses decision 133's rule that `{}` is invalid under the policy. `null` and `[]` are not yet decided. |
+| A decimal's precision | Accepted: ingest reads a number through a double (FR-002, decision 68), and the engine computes at `DECIMAL(32,6)` (FR-035). No finding, and `strict` does not fail. | For now, until ticket 16 removes OQ-1's losses. A valid decimal that becomes null, rather than less precise, is not covered: ticket 31 decides it. |
+| `contained` | Dropped, with an informational finding | Valid FHIR the layout does not store (FR-006); unchanged from decision 133 |
 
 ## Delivering findings (owner, 2026-10-19)
 
