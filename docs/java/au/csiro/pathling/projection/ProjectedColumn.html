@@ -101,6 +101,10 @@ loadScripts(document, 'script');</script>
 <div class="type-signature"><span class="modifiers">public record </span><span class="element-name type-name-label">ProjectedColumn</span>(@Nonnull <a href="../fhirpath/collection/Collection.html" title="class in au.csiro.pathling.fhirpath.collection">Collection</a>&nbsp;collection, @Nonnull <a href="RequestedColumn.html" title="class in au.csiro.pathling.projection">RequestedColumn</a>&nbsp;requestedColumn)
 <span class="extends-implements">extends <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Record.html" title="class or interface in java.lang" class="external-link">Record</a></span></div>
 <div class="block">The result of evaluating a <a href="RequestedColumn.html" title="class in au.csiro.pathling.projection"><code>RequestedColumn</code></a> as part of a <a href="ProjectionClause.html" title="interface in au.csiro.pathling.projection"><code>ProjectionClause</code></a>.</div>
+<dl class="notes">
+<dt>Author:</dt>
+<dd>John Grimes</dd>
+</dl>
 </section>
 <section class="summary">
 <ul class="summary-list">
@@ -236,7 +240,10 @@ loadScripts(document, 'script');</script>
    <li>The resolved <a href="../fhirpath/FhirPathType.html" title="enum class in au.csiro.pathling.fhirpath"><code>FhirPathType</code></a> on the collection (requires <a href="../fhirpath/Materializable.html" title="interface in au.csiro.pathling.fhirpath"><code>Materializable</code></a>).
  </ol>
 
- <p>When <code>collection()</code> is <code>true</code>, the element type is wrapped in <a href="https://spark.apache.org/docs/latest/api/java/org/apache/spark/sql/types/DataTypes.html#createArrayType(org.apache.spark.sql.types.DataType)" title="class or interface in org.apache.spark.sql.types" class="external-link"><code>DataTypes.createArrayType(org.apache.spark.sql.types.DataType)</code></a>.</div>
+ <p>A FHIR type is mapped to the type of the value that <a href="#getValue()"><code>getValue()</code></a> produces for it,
+ which differs from the internal FHIRPath representation for decimals (rendered as strings to
+ preserve their precision) and base64Binary values (decoded to binary). When <code>
+ collection()</code> is <code>true</code>, the element type is wrapped in <a href="https://spark.apache.org/docs/latest/api/java/org/apache/spark/sql/types/DataTypes.html#createArrayType(org.apache.spark.sql.types.DataType)" title="class or interface in org.apache.spark.sql.types" class="external-link"><code>DataTypes.createArrayType(org.apache.spark.sql.types.DataType)</code></a>.</div>
 <dl class="notes">
 <dt>Returns:</dt>
 <dd>The Spark <a href="https://spark.apache.org/docs/latest/api/java/org/apache/spark/sql/types/DataType.html" title="class or interface in org.apache.spark.sql.types" class="external-link"><code>DataType</code></a> for this column.</dd>

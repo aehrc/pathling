@@ -5,7 +5,7 @@
 <meta name="generator" content="Docusaurus v3.9.2">
 <title data-rh="true">FHIRPath | Pathling</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:image" content="https://pathling.csiro.au/assets/images/social-preview.png"><meta data-rh="true" name="twitter:image" content="https://pathling.csiro.au/assets/images/social-preview.png"><meta data-rh="true" property="og:url" content="https://pathling.csiro.au/docs/fhirpath"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-default-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-default-current"><meta data-rh="true" property="og:title" content="FHIRPath | Pathling"><meta data-rh="true" name="description" content="Pathling implements FHIRPath functionality to aid in querying and constructing views over FHIR data."><meta data-rh="true" property="og:description" content="Pathling implements FHIRPath functionality to aid in querying and constructing views over FHIR data."><link data-rh="true" rel="icon" href="/favicon.ico"><link data-rh="true" rel="canonical" href="https://pathling.csiro.au/docs/fhirpath"><link data-rh="true" rel="alternate" href="https://pathling.csiro.au/docs/fhirpath" hreflang="en"><link data-rh="true" rel="alternate" href="https://pathling.csiro.au/docs/fhirpath" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"FHIRPath","item":"https://pathling.csiro.au/docs/fhirpath/"}]}</script><link rel="alternate" type="application/rss+xml" href="/blog/rss.xml" title="Pathling RSS Feed">
 <link rel="alternate" type="application/atom+xml" href="/blog/atom.xml" title="Pathling Atom Feed"><link rel="stylesheet" href="/assets/css/styles.268c7013.css">
-<script src="/assets/js/runtime~main.22aad28a.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.ba2b0d62.js" defer="defer"></script>
 <script src="/assets/js/main.cc9d9ac2.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -130,6 +130,25 @@ collected up to that point. For other types, depth exhaustion raises an error.</
 <li class="">In the <strong>Pathling libraries</strong>, via the <code>maxUnboundTraversalDepth</code> parameter in
 the query configuration.</li>
 <li class="">In the <strong>Pathling server</strong>, via the <code>pathling.query.maxUnboundTraversalDepth</code>
+configuration property.</li>
+</ul>
+<h4 class="anchor anchorTargetStickyNavbar_Vzrq" id="navigation-beyond-the-encoded-depth">Navigation beyond the encoded depth<a href="#navigation-beyond-the-encoded-depth" class="hash-link" aria-label="Direct link to Navigation beyond the encoded depth" title="Direct link to Navigation beyond the encoded depth" translate="no">​</a></h4>
+<p>Recursive elements, such as <code>item</code> within a Questionnaire, are only encoded to
+the maximum nesting level, which defaults to 3. Navigating deeper than this
+returns an empty collection, as if the data were absent, and functions behave
+accordingly. With the default level, four levels of <code>item</code> are encoded, so
+<code>item.item.item.item.item.exists()</code> is <code>false</code> and
+<code>item.item.item.item.item.count()</code> is <code>0</code>, even if the source data has a fifth
+level of items. <code>repeat</code> and <code>repeatAll</code> stop at the deepest encoded level.</p>
+<p>Selecting a type with <code>ofType()</code> that is not one of the encoded open types, such
+as an extension value type that has been left out of the encoding, still raises
+an error. That indicates a configuration that omits the data, rather than a
+depth limit.</p>
+<p>The maximum nesting level can be configured:</p>
+<ul>
+<li class="">In the <strong>Pathling libraries</strong>, via the <code>max_nesting_level</code> parameter (Python
+and R) or the <code>maxNestingLevel</code> encoding configuration (Java and Scala).</li>
+<li class="">In the <strong>Pathling server</strong>, via the <code>pathling.encoding.maxNestingLevel</code>
 configuration property.</li>
 </ul>
 <h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="additional-functions">Additional functions<a href="#additional-functions" class="hash-link" aria-label="Direct link to Additional functions" title="Direct link to Additional functions" translate="no">​</a></h2>

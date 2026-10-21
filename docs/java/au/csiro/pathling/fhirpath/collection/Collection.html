@@ -541,7 +541,11 @@ implements <a href="../comparison/Equatable.html" title="interface in au.csiro.p
 </span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="Collection.html" title="class in au.csiro.pathling.fhirpath.collection">Collection</a></span>&nbsp;<span class="element-name">traverseElement</span><wbr><span class="parameters">(@Nonnull
  <a href="../definition/ElementDefinition.html" title="interface in au.csiro.pathling.fhirpath.definition">ElementDefinition</a>&nbsp;childDef)</span></div>
 <div class="block">Return the child <a href="Collection.html" title="class in au.csiro.pathling.fhirpath.collection"><code>Collection</code></a> that results from traversing to the given child element
- definition.</div>
+ definition.
+
+ <p>The element must be present in the schema. This is used for the options of choice elements,
+ where a missing option means that its type has not been included in the encoding, which is a
+ configuration error rather than an absence of data.</div>
 <dl class="notes">
 <dt>Parameters:</dt>
 <dd><code>childDef</code> - the child element definition</dd>

@@ -410,10 +410,17 @@ loadScripts(document, 'script');</script>
 <div class="block">Traverses the current <a href="ColumnRepresentation.html" title="class in au.csiro.pathling.fhirpath.column"><code>ColumnRepresentation</code></a> to a selected elements in a choice and
  returns a new <a href="ColumnRepresentation.html" title="class in au.csiro.pathling.fhirpath.column"><code>ColumnRepresentation</code></a> that is the result of the traversal.</div>
 </div>
-<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code>abstract <a href="ColumnRepresentation.html" title="class in au.csiro.pathling.fhirpath.column">ColumnRepresentation</a></code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code><a href="#vectorize(java.util.function.UnaryOperator,java.util.function.UnaryOperator)" class="member-name-link">vectorize</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/function/UnaryOperator.html" title="class or interface in java.util.function" class="external-link">UnaryOperator</a>&lt;<a href="https://spark.apache.org/docs/latest/api/java/org/apache/spark/sql/Column.html" title="class or interface in org.apache.spark.sql" class="external-link">Column</a>&gt;&nbsp;arrayExpression,
+<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="ColumnRepresentation.html" title="class in au.csiro.pathling.fhirpath.column">ColumnRepresentation</a></code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#traverseOrEmpty(java.lang.String,java.util.Optional)" class="member-name-link">traverseOrEmpty</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;fieldName,
+ <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a>&lt;<a href="https://hapifhir.io/hapi-fhir/apidocs/hapi-fhir-structures-r4/org/hl7/fhir/r4/model/Enumerations.FHIRDefinedType.html" title="class or interface in org.hl7.fhir.r4.model" class="external-link">Enumerations.FHIRDefinedType</a>&gt;&nbsp;fhirType)</code></div>
+<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="block">Returns a new <a href="ColumnRepresentation.html" title="class in au.csiro.pathling.fhirpath.column"><code>ColumnRepresentation</code></a> that represents the result of navigating to a child
+ element, which is empty if the element is not in the schema.</div>
+</div>
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code>abstract <a href="ColumnRepresentation.html" title="class in au.csiro.pathling.fhirpath.column">ColumnRepresentation</a></code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code><a href="#vectorize(java.util.function.UnaryOperator,java.util.function.UnaryOperator)" class="member-name-link">vectorize</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/function/UnaryOperator.html" title="class or interface in java.util.function" class="external-link">UnaryOperator</a>&lt;<a href="https://spark.apache.org/docs/latest/api/java/org/apache/spark/sql/Column.html" title="class or interface in org.apache.spark.sql" class="external-link">Column</a>&gt;&nbsp;arrayExpression,
  <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/function/UnaryOperator.html" title="class or interface in java.util.function" class="external-link">UnaryOperator</a>&lt;<a href="https://spark.apache.org/docs/latest/api/java/org/apache/spark/sql/Column.html" title="class or interface in org.apache.spark.sql" class="external-link">Column</a>&gt;&nbsp;singularExpression)</code></div>
-<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3">
+<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3">
 <div class="block">Create a new <a href="ColumnRepresentation.html" title="class in au.csiro.pathling.fhirpath.column"><code>ColumnRepresentation</code></a> by providing two functions: one that takes an array
  and one that takes a singular value.</div>
 </div>
@@ -631,6 +638,29 @@ loadScripts(document, 'script');</script>
 <div class="block">Returns a new <a href="ColumnRepresentation.html" title="class in au.csiro.pathling.fhirpath.column"><code>ColumnRepresentation</code></a> that represents the result of traversing to a nested
  field within the current representation. This method also takes the FHIR type of the field into
  account to return a more specific representation.</div>
+<dl class="notes">
+<dt>Parameters:</dt>
+<dd><code>fieldName</code> - The name of the field to traverse to</dd>
+<dd><code>fhirType</code> - The FHIR type of the field</dd>
+<dt>Returns:</dt>
+<dd>A new <a href="ColumnRepresentation.html" title="class in au.csiro.pathling.fhirpath.column"><code>ColumnRepresentation</code></a> representing the result of the traversal</dd>
+</dl>
+</section>
+</li>
+<li>
+<section class="detail" id="traverseOrEmpty(java.lang.String,java.util.Optional)">
+<h3>traverseOrEmpty</h3>
+<div class="member-signature"><span class="annotations">@Nonnull
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ColumnRepresentation.html" title="class in au.csiro.pathling.fhirpath.column">ColumnRepresentation</a></span>&nbsp;<span class="element-name">traverseOrEmpty</span><wbr><span class="parameters">(@Nonnull
+ <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;fieldName,
+ @Nonnull
+ <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a>&lt;<a href="https://hapifhir.io/hapi-fhir/apidocs/hapi-fhir-structures-r4/org/hl7/fhir/r4/model/Enumerations.FHIRDefinedType.html" title="class or interface in org.hl7.fhir.r4.model" class="external-link">Enumerations.FHIRDefinedType</a>&gt;&nbsp;fhirType)</span></div>
+<div class="block">Returns a new <a href="ColumnRepresentation.html" title="class in au.csiro.pathling.fhirpath.column"><code>ColumnRepresentation</code></a> that represents the result of navigating to a child
+ element, which is empty if the element is not in the schema.
+
+ <p>The encoder leaves some elements out of the schema, such as recursive elements beyond the
+ maximum nesting level. Navigating to such an element yields an empty collection, as it would if
+ the data were absent, rather than failing. The default implementation is the same as <a href="#traverse(java.lang.String,java.util.Optional)"><code>traverse(String, Optional)</code></a>, for representations whose fields are always in the schema.</div>
 <dl class="notes">
 <dt>Parameters:</dt>
 <dd><code>fieldName</code> - The name of the field to traverse to</dd>
