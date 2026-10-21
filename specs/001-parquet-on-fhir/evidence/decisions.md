@@ -4128,6 +4128,9 @@ _Consequences_:
 _Addendum (owner, 2026-10-20)_: the per-value scope above is deferred with the ingest mechanism, and the
 interim ingest validates by column type only (decision 134).
 
+_Note (review, 2026-10-21)_: with `fail` deferred, the release does not fail by default, so the release note on
+failing and opting into `drop`, in the consequences above, waits for ticket 16.
+
 ## 134. The ingest mechanism is deferred; the interim is A0 for JSON and `from_xml` for XML
 
 Owner decision (2026-10-20). Evidence is in `spike-08/README.md`, whose "Summary of phase 2" sets the
@@ -4170,3 +4173,13 @@ _Consequences_:
 - Ticket 08 closes as a completed spike. Ticket 32 replaces HAPI on the XML and Bundle routes. Ticket 29 adds
   the layout column to that interim ingest, since that is the ingest the release ships. Ticket 16 is rewritten as
   the deferred rework, blocked on the owner's consultation.
+
+_Corrections (review, 2026-10-21)_, against the spike's recorded outputs:
+
+- The spike measured against the pathling-compare bar, which stands in for SC-011. The formal JMH check of
+  SC-011 was not run.
+- Storing `{}` differently alone and in a batch does not separate the original spike from A0: A0 does it too.
+- On A0, `{}` is dropped silently, but `null` and `[]` are dropped with a per-column finding, which describes a
+  type contradiction rather than an empty value. In a batch, `[]` can be stored as an empty array as well as
+  `{}` as a present structure holding nothing (`spike-08/fixtures/fixtures_run.txt` on `issue/2831-spike-08`).
+- The per-column report is one finding per column path, all logged in one warning per read.

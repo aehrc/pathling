@@ -1,6 +1,8 @@
 # 32 — XML and bundles without HAPI, on the interim ingest
 
-**Spec:** `specs/001-parquet-on-fhir/spec.md` — FR-045, FR-060, FR-061, FR-062, SC-011. Decision 134; decisions 83 and 84. [ADR-0004](../../../docs/adr/0004-no-per-row-hapi-no-catalyst-in-encoding.md).
+**Spec:** `specs/001-parquet-on-fhir/spec.md` — FR-045, FR-060, FR-061, FR-062, SC-011. Decision 134; decisions 83 and 84.
+
+The spike's harness, fixtures and prototypes named below are on branch `issue/2831-spike-08` (`3e73682d01`). This branch carries only the pointer page `evidence/spike-08/README.md`. The pathling-compare harness is in the main checkout, under the gitignored `.local/work/issue/2367/pathling-compare/`. [ADR-0004](../../../docs/adr/0004-no-per-row-hapi-no-catalyst-in-encoding.md).
 
 **What to build:** FHIR XML is read and written without HAPI, and so are bundles in both formats. This is the interim of decision 134: JSON stays on Spark's reader and the generated transform, which is A0, and the losses OQ-1 lists are accepted. The aim is to remove the dependency on HAPI, not to change what is stored.
 
@@ -16,14 +18,14 @@
 - `evidence/xml-native/xml-native.md` establishes the route: row selection, inference, the transform, the narrative, bundles and writing. Its scripts are in `evidence/xml-native/scripts/`.
 - `evidence/spike-08/harness/fromxml_route.py` is the Python prototype phase 1 measured, for all four benchmark types, lines and both bundle shapes, in and out. `gate_fromxml.py` is its correctness gate against HEAD. Both generate their expressions in Python over py4j, which is throwaway; the production transform is Java in `io`, built only from public Spark SQL API (FR-049).
 - `evidence/spike-08/README.md`, phase 1, has its timings and the fixtures it was run against (`fixtures/fixtures-xml.tsv`). Against HEAD's HAPI route on the large types, it fitted lines at 0.50 to 0.61, encoded at 0.67 to 0.99 and decoded at 0.50 to 0.65.
-- Phase 2's A+ XML route closed the document gaps below with a StAX pass per document (`evidence/spike-08/phase2/proto/src/au/csiro/pathling/io/Spike08XmlDocCheck.java`).
+- Phase 2's A+ XML route closed the namespace, trailing-text and second-root gaps below with a StAX pass per document (`evidence/spike-08/phase2/proto/src/au/csiro/pathling/io/Spike08XmlDocCheck.java`). It still took the narrative by regular expression.
 
 **Gaps phase 1 found in the prototype, to close here.**
 
 - A document with a prefixed FHIR namespace, which is valid FHIR, is left out silently, because rows are selected by the root's literal name.
 - Text after the root element is ignored, and a second root is dropped, silently. A document with no namespace is accepted. Each of these is malformed and fails the read (FR-063).
-- The narrative is taken from the raw document by regular expression, and xml-native.md lists the cases that defeat it: a contained narrative, a comment before `</text>`, and CDATA. Use its StAX pass (option 3b), or report the cases it cannot handle. A narrative is never stored wrong silently.
-- The bundle fit infers the whole bundle once per requested type, a constant of about 7.5 s per type at size `l`. That makes small types slower to fit than HAPI. One inference shared by all types removes it, and is a change to how bundles are read per type.
+- The narrative is taken from the raw document by regular expression, and xml-native.md lists the cases that defeat it: a contained narrative, a comment before `</text>`, a prefixed XHTML `div`, and CDATA. Use its StAX pass (option 3b), or report the cases it cannot handle. A narrative is never stored wrong silently.
+- The bundle fit infers the whole bundle once per requested type, a constant of about 7.3 to 8.4 s per type at size `l`. That makes small types slower to fit than HAPI. One inference shared by all types removes it, and is a change to how bundles are read per type.
 
 **Out of scope:** the per-value checks, findings and policies of decision 133, and keeping the decimal's text. These are ticket 16's, and wait for the choice decision 134 defers.
 
@@ -39,7 +41,7 @@
 - [ ] A custom resource type, such as `ViewDefinition`, is read and written in XML, single and in a bundle, through the definitions alone.
 - [ ] No ingest or egress route imports HAPI's parser. `FhirParsers` and the reflection workaround are gone, and `CustomResourceTypeTest`'s guard on it is removed or replaced.
 - [ ] Encode and decode of XML lines and bundles are no slower than the bar on the pathling-compare harness at size `l` (SC-011), or the owner accepts the gap.
-- [ ] `plan.md`'s FR-050 exception for XML and bundles, and decision 84's HAPI routing, are amended to say they are withdrawn.
+- [ ] `plan.md`'s FR-050 exception for XML and bundles, and the HAPI routing of decisions 83 and 84, are amended to say they are withdrawn.
 
 ## Comments
 

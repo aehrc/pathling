@@ -14,7 +14,7 @@
 - JSON bundles, for any candidate.
 - The formal JMH check of SC-011 (`evidence/t136-benchmark.md`).
 
-**Blocked by:** The owner's choice of mechanism (decision 134). Ticket 32, because the rework replaces what it builds.
+**Blocked by:** The owner's choice of mechanism (decision 134). Ticket 32, because the rework replaces what it builds. Ticket 31, whose grammar it validates with.
 
 **Status:** needs-info
 
@@ -24,11 +24,11 @@ Criteria that hold whichever mechanism is chosen:
 - [ ] No ingest or egress route parses into, or builds, a FHIR object per row, HAPI included (FR-061).
 - [ ] XML and bundles keep, coerce, report and fail on exactly what JSON does (FR-060).
 - [ ] Bundle references resolve to the target entry's relative reference, keeping its version (FR-062, decision 83).
-- [ ] An `_x` array with no `x` beside it is kept on every route.
+- [ ] The rework carries over what was built on the interim ingest: the primitive metadata group of ticket 17, with its `_x` arrays that have no `x` beside them, and the dense mode of ticket 18. Both pass their own tests on the new mechanism.
 - [ ] Encode and decode meet SC-011.
 - [ ] Ingest validates dates and decimals with the grammar ticket 31 moved down, so ingest and engine agree on what is valid (decision 133, principle 7).
 - [ ] If the stored form of any value changes from the interim's, such as a decimal's text, the layout column's version (ticket 29) is bumped, and data written by the interim is read or refused as that rule says.
-- [ ] Any thread that outlives this programme, such as the upstream Spark issue T132 describes, is handed to ticket 26.
+- [ ] Any thread that outlives this programme, such as the upstream Spark issue T132 describes, is raised as a GitHub issue by this ticket. Ticket 26 closes before the release, which does not wait for this one.
 
 ## Comments
 

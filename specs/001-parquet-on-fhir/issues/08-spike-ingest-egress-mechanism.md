@@ -146,9 +146,11 @@ evidence, and lists what was not measured.
 - **Scope.** A+, A-variant and B meet decision 133's per-value scope on the fixtures; A0 meets none of it.
   A+ and B remove every OQ-1 loss except the `_x` metadata (M5); A-variant keeps the decimal's text loss and
   the empty structures on export. B alone stores every fixture the same in a batch as alone (principle 6).
-- **Timing.** On JSON, ingest (fit plus encode) is 0.39 to 0.48 of the bar for B handing its rows over through a
-  Java UDF, about 2.8 for A+ and about 17 for A-variant (Observation). On XML, B ingests at 0.21 to 0.29 of
-  the bar and A+ at 1.4 to 2.7. B through `Encoders.row` is about three times slower on encode under Spark's
+- **Timing.** For Observation, ingest (fit plus encode) on JSON is 0.39 to 0.48 of the bar for B handing its rows
+  over through a Java UDF, about 2.8 for A+ and about 17 for A-variant. On XML, across lines and both bundle
+  shapes, Observation ingests at 0.21 to 0.29 of the bar for B and at 1.4 to 2.7 for A+. Other types differ,
+  for example A+ on Patient XML lines; the per-type figures are in `phase2/results/tables.md` on
+  `issue/2831-spike-08`. B through `Encoders.row` is about three times slower on encode under Spark's
   default `hugeMethodLimit`, because its generated serializer is too large to be compiled; the UDF avoids that.
 - **What the checks cost.** About a third of B's JSON encode, and most of A+'s.
 - **Code owned.** About 400 lines for A-variant, 960 for A+ and 1,270 for B.

@@ -18,3 +18,4 @@
 - [ ] The registry runs enabled processors and skips disabled ones. A test registers a stub processor per kind and shows that disabling one does not affect the others (T055).
 - [ ] The configuration is reachable from Java, Python and R, with documented defaults of all on.
 - [ ] Nothing about stored output changes yet, because no real processors are registered.
+- [ ] If ticket 29 has landed, a dataset ingested with every annotation switch off still carries the layout column.

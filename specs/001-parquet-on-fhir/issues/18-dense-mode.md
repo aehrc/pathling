@@ -15,7 +15,7 @@
 - **Annotations in dense mode.** Implement the dense-mode annotation width ticket 11 decided.
 - **On the interim ingest.** Build on the ingest of decision 134: Spark's reader and the generated transform for JSON, and the `from_xml` route of ticket 32 for XML and bundles. If ticket 16 later replaces the ingest, it carries dense mode over.
 
-**Blocked by:** 32
+**Blocked by:** 32. Ticket 11, which decides the dense-mode annotation width this ticket implements.
 
 **Status:** ready-for-agent
 
@@ -23,4 +23,5 @@
 - [ ] The configuration test shows the mode is readable and defaults to fitted (T033a).
 - [ ] Content dropped by a bound is reported as a finding (FR-017).
 - [ ] A streaming encode of `Patient` and `Condition` in dense mode succeeds and counts correctly. In fitted mode it is still refused with a clear message.
+- [ ] A dataset ingested in dense mode carries the layout column of ticket 29.
 - [ ] The docs are updated as described.

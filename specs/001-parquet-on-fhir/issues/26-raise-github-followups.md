@@ -9,9 +9,9 @@
 - **T134e.** Mis-diagnosed findings. An inline resource declared as abstract `Resource` (`Parameters.parameter.resource`, `Bundle.entry.resource`) is reported as undescribed content. The likely remedy is a fourth `NonConformantContent` kind. An empty array is reported as "a value where a structure is declared".
 - **Dense-shaped output for FHIR-typed results.**
 - **The #2804 renderer note.** Add a comment to #2804 recording what ticket 03 left for System.Coding in the renderer.
-- **Others handed on.** Any follow-up passed on by tickets 08 and 10 (for example the upstream Spark issue from T132, or a precomputed reference key).
+- **Others handed on.** Any follow-up passed on by ticket 10, such as a precomputed reference key. Ticket 08's threads, such as the upstream Spark issue from T132, moved to ticket 16, which raises its own.
 
-**Blocked by:** None — can start immediately. Hand-offs from 08 and 10 are added as they arrive.
+**Blocked by:** None — can start immediately. Hand-offs from 10 are added as they arrive.
 
 **Status:** ready-for-human
 
