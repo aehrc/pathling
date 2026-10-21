@@ -1,0 +1,18 @@
+{
+  "id": "8d0f4c3e-5b1a-4f7e-9c2d-6a3b1e0f7d21",
+  "name": "fhir_valueset_validate-code",
+  "request": {
+    "url": "/fhir/ValueSet/$validate-code?url=urn%3Atest%3Anon-existent-value-set&code=45110008&inferSystem=true",
+    "method": "GET"
+  },
+  "response": {
+    "status": 404,
+    "body": "{\"resourceType\":\"OperationOutcome\",\"issue\":[{\"severity\":\"error\",\"code\":\"not-found\",\"details\":{\"text\":\"A definition for the value Set 'urn:test:non-existent-value-set' could not be found\"}}]}",
+    "headers": {
+      "Cache-Control": "max-age=1",
+      "Content-Type": "application/fhir+json;charset=UTF-8"
+    }
+  },
+  "uuid": "8d0f4c3e-5b1a-4f7e-9c2d-6a3b1e0f7d21",
+  "persistent": true
+}

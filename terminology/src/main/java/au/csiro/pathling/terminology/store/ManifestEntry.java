@@ -23,6 +23,7 @@ import java.io.Serial;
 import java.io.Serializable;
 import java.time.Instant;
 import lombok.Value;
+import lombok.With;
 
 /**
  * One entry of the store manifest, describing an imported code system, value set or concept map and
@@ -33,10 +34,10 @@ import lombok.Value;
 @Value
 public class ManifestEntry implements Serializable {
 
-  @Serial private static final long serialVersionUID = 1L;
+  @Serial private static final long serialVersionUID = 2L;
 
   /** The store format version at the time this entry was written. */
-  int storeFormatVersion;
+  @With int storeFormatVersion;
 
   /** The kind of entry: {@code code_system}, {@code value_set} or {@code concept_map}. */
   @Nonnull String entryType;
@@ -52,4 +53,83 @@ public class ManifestEntry implements Serializable {
 
   /** When the entry was imported, or null if not recorded. */
   @Nullable Instant importedAt;
+
+  /** The SHA-256 of the source file bytes as lowercase hexadecimal, or null if not recorded. */
+  @Nullable String sourceSha256;
+
+  /** The name of the package the entry came from, or null if it did not come from one. */
+  @Nullable String packageName;
+
+  /** The version of the package the entry came from, or null if it did not come from one. */
+  @Nullable String packageVersion;
+
+  /** The registry verification outcome of the package, or null if the source was not a package. */
+  @Nullable PackageVerification packageVerification;
+
+  /** The registry that vouched for the package bytes, set only when the package was verified. */
+  @Nullable String packageRegistry;
+
+  /**
+   * Why a ConceptMap cannot be read as the rows of a concept map relation, or null where it can or
+   * the entry is not a ConceptMap.
+   */
+  @With @Nullable String fault;
+
+  /**
+   * Creates an entry describing a resource written by an import, taking the provenance values from
+   * the import that wrote it.
+   *
+   * @param entryType the kind of entry: {@code code_system}, {@code value_set} or {@code
+   *     concept_map}
+   * @param canonicalUrl the canonical URL of the entry
+   * @param version the version of the entry, or null if unversioned
+   * @param provenance the provenance of the import that wrote the entry
+   * @param importedAt when the entry was imported
+   * @return the manifest entry
+   */
+  @Nonnull
+  public static ManifestEntry forImport(
+      @Nonnull final String entryType,
+      @Nonnull final String canonicalUrl,
+      @Nullable final String version,
+      @Nonnull final ImportProvenance provenance,
+      @Nonnull final Instant importedAt) {
+    return forImport(entryType, canonicalUrl, version, provenance, importedAt, null);
+  }
+
+  /**
+   * Creates an entry describing a resource written by an import, taking the provenance values from
+   * the import that wrote it and recording why its content cannot be read in full.
+   *
+   * @param entryType the kind of entry: {@code code_system}, {@code value_set} or {@code
+   *     concept_map}
+   * @param canonicalUrl the canonical URL of the entry
+   * @param version the version of the entry, or null if unversioned
+   * @param provenance the provenance of the import that wrote the entry
+   * @param importedAt when the entry was imported
+   * @param fault why a ConceptMap cannot be read as a concept map relation, or null
+   * @return the manifest entry
+   */
+  @Nonnull
+  public static ManifestEntry forImport(
+      @Nonnull final String entryType,
+      @Nonnull final String canonicalUrl,
+      @Nullable final String version,
+      @Nonnull final ImportProvenance provenance,
+      @Nonnull final Instant importedAt,
+      @Nullable final String fault) {
+    return new ManifestEntry(
+        TerminologyStoreSchema.STORE_FORMAT_VERSION,
+        entryType,
+        canonicalUrl,
+        version,
+        provenance.getSource(),
+        importedAt,
+        provenance.getSourceSha256(),
+        provenance.getPackageName(),
+        provenance.getPackageVersion(),
+        provenance.getPackageVerification(),
+        provenance.getPackageRegistry(),
+        fault);
+  }
 }

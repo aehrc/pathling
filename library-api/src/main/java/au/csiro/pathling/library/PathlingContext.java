@@ -31,7 +31,10 @@ import au.csiro.pathling.encoders.ResourceTypes;
 import au.csiro.pathling.fhirpath.evaluation.SingleInstanceEvaluationResult;
 import au.csiro.pathling.fhirpath.evaluation.SingleInstanceEvaluator;
 import au.csiro.pathling.library.io.source.DataSourceBuilder;
+import au.csiro.pathling.library.terminology.FhirImportOptions;
 import au.csiro.pathling.library.terminology.TerminologyImportOptions;
+import au.csiro.pathling.library.terminology.TerminologyRelationException;
+import au.csiro.pathling.library.terminology.TerminologyRelations;
 import au.csiro.pathling.search.SearchColumnBuilder;
 import au.csiro.pathling.sql.PathlingUdfConfigurer;
 import au.csiro.pathling.sql.udf.TerminologyUdfRegistrar;
@@ -42,6 +45,7 @@ import au.csiro.pathling.terminology.store.DenseIdOrder;
 import au.csiro.pathling.terminology.store.FhirTerminologyImporter;
 import au.csiro.pathling.terminology.store.SnomedRf2Importer;
 import au.csiro.pathling.terminology.store.TerminologyStoreException;
+import au.csiro.pathling.terminology.store.TerminologyStoreMigrator;
 import au.csiro.pathling.terminology.store.TerminologyStoreReader;
 import au.csiro.pathling.validation.ValidationUtils;
 import au.csiro.pathling.views.ConstantDeclarationTypeAdapterFactory;
@@ -56,7 +60,6 @@ import jakarta.annotation.Nullable;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -679,8 +682,206 @@ public class PathlingContext {
   @Nonnull
   public PathlingContext importFhirTerminology(
       @Nonnull final String source, @Nonnull final String storagePath) {
-    new FhirTerminologyImporter(spark, storagePath).importFrom(source);
+    return importFhirTerminology(source, storagePath, null);
+  }
+
+  /**
+   * Imports FHIR R4 CodeSystem, ValueSet, and ConceptMap resources into a local terminology store,
+   * with control over the package checksum check. The source may be a single JSON file, a directory
+   * of JSON files, or a FHIR NPM package ({@code .tgz}), on any filesystem accessible through the
+   * Hadoop FileSystem API. Bundles are unwrapped.
+   *
+   * <p>When the source is a package, its checksum is compared with the one its registry publishes
+   * before anything is written, and the import fails if the two differ. Turn {@code verifyPackage}
+   * off to import without consulting a registry, which is also how an import runs offline; the
+   * store then records the verification as skipped.
+   *
+   * @param source the path to a JSON file, a directory of JSON files, or a FHIR NPM package
+   * @param storagePath the terminology store location, created if absent
+   * @param options the verification overrides, or null for the defaults
+   * @return this context, for chaining
+   * @throws au.csiro.pathling.terminology.store.TerminologyImportException if the source contains
+   *     no importable resources or an invalid resource, or if a package does not match the checksum
+   *     its registry publishes; the store is left unmodified
+   */
+  @Nonnull
+  public PathlingContext importFhirTerminology(
+      @Nonnull final String source,
+      @Nonnull final String storagePath,
+      @Nullable final FhirImportOptions options) {
+    final boolean verifyPackage = options == null || options.isVerifyPackage();
+    final String packageRegistry = options == null ? null : options.getPackageRegistry();
+    new FhirTerminologyImporter(spark, storagePath)
+        .importFrom(source, verifyPackage, packageRegistry);
     return this;
+  }
+
+  /**
+   * Resolves a value set to its membership and returns it as a relation that Spark SQL can join to,
+   * as described in the SQL on FHIR <a
+   * href="https://build.fhir.org/ig/HL7/sql-on-fhir/en/terminology-in-sql.html">Terminology in
+   * SQL</a> page. The relation has one row per member and the columns {@code system}, {@code
+   * version}, {@code code}, {@code display} and {@code inactive}; {@code system} and {@code code}
+   * are never null.
+   *
+   * <p>The membership is obtained from the configured terminology layer (a terminology server or
+   * the local terminology store) when this method is called, and held in the returned relation, so
+   * every use of the relation sees the same membership. At most {@value
+   * TerminologyRelations#DEFAULT_MAX_MEMBERS} members are accepted.
+   *
+   * <pre>{@code
+   * pc.valueSet("http://example.org/ValueSet/cardiovascular-disease|2026")
+   *     .createOrReplaceTempView("cvd_codes");
+   * spark.sql("SELECT * FROM conditions WHERE EXISTS (SELECT 1 FROM cvd_codes"
+   *     + " WHERE cvd_codes.system = conditions.system AND cvd_codes.code = conditions.code)");
+   * }</pre>
+   *
+   * @param canonical the canonical URL of the value set, optionally with a {@code |version} suffix
+   * @return the value set relation
+   * @throws IllegalArgumentException if the canonical has no URL
+   * @throws TerminologyRelationException if the value set cannot be resolved or its membership
+   *     cannot be determined or exceeds the cap
+   */
+  @Nonnull
+  public Dataset<Row> valueSet(@Nonnull final String canonical) {
+    return valueSet(canonical, TerminologyRelations.DEFAULT_MAX_MEMBERS);
+  }
+
+  /**
+   * Resolves a value set to its membership and returns it as a relation, accepting at most the
+   * given number of members. See {@link #valueSet(String)}.
+   *
+   * @param canonical the canonical URL of the value set, optionally with a {@code |version} suffix
+   * @param maxMembers the largest membership accepted, which must be positive
+   * @return the value set relation
+   * @throws IllegalArgumentException if the canonical has no URL or the cap is not positive
+   * @throws TerminologyRelationException if the value set cannot be resolved or its membership
+   *     cannot be determined or exceeds the cap
+   */
+  @Nonnull
+  public Dataset<Row> valueSet(@Nonnull final String canonical, final int maxMembers) {
+    return terminologyRelations().valueSet(canonical, maxMembers);
+  }
+
+  /**
+   * Returns the membership of a ValueSet supplied as FHIR R4 JSON as a relation with the columns of
+   * {@link #valueSet(String)}. The resource must carry a {@code url}, and content that is not valid
+   * FHIR R4 is rejected. Where the resource carries an {@code expansion}, that expansion is the
+   * membership and the terminology layer is not consulted; an incomplete expansion is rejected.
+   * Where it carries only a {@code compose}, the configured terminology layer expands it. At most
+   * {@value TerminologyRelations#DEFAULT_MAX_MEMBERS} members are accepted.
+   *
+   * @param json the ValueSet resource as FHIR R4 JSON
+   * @return the value set relation
+   * @throws TerminologyRelationException if the JSON is not a ValueSet, or its membership cannot be
+   *     determined or exceeds the cap
+   */
+  @Nonnull
+  public Dataset<Row> valueSetFromJson(@Nonnull final String json) {
+    return valueSetFromJson(json, TerminologyRelations.DEFAULT_MAX_MEMBERS);
+  }
+
+  /**
+   * Returns the membership of a ValueSet supplied as FHIR R4 JSON as a relation, accepting at most
+   * the given number of members. See {@link #valueSetFromJson(String)}.
+   *
+   * @param json the ValueSet resource as FHIR R4 JSON
+   * @param maxMembers the largest membership accepted, which must be positive
+   * @return the value set relation
+   * @throws IllegalArgumentException if the cap is not positive
+   * @throws TerminologyRelationException if the JSON is not a ValueSet, or its membership cannot be
+   *     determined or exceeds the cap
+   */
+  @Nonnull
+  public Dataset<Row> valueSetFromJson(@Nonnull final String json, final int maxMembers) {
+    return terminologyRelations().valueSetFromJson(json, maxMembers);
+  }
+
+  /**
+   * Resolves a concept map to its mappings and returns them as a relation that Spark SQL can join
+   * to, as described in the SQL on FHIR <a
+   * href="https://build.fhir.org/ig/HL7/sql-on-fhir/en/terminology-in-sql.html">Terminology in
+   * SQL</a> page. The relation has one row per mapping, plus one row with a null {@code
+   * target_code} for each source code the map states has no mapping, and the columns {@code
+   * source_system}, {@code source_version}, {@code source_code}, {@code source_display}, {@code
+   * target_system}, {@code target_version}, {@code target_code}, {@code target_display} and {@code
+   * relationship}; {@code source_system} and {@code source_code} are never null. {@code
+   * relationship} is an R5 ConceptMapRelationship code, converted from the R4 equivalence.
+   *
+   * <p>The mappings are read from the configured terminology layer when this method is called and
+   * held in the returned relation. At most {@value TerminologyRelations#DEFAULT_MAX_MAPPINGS}
+   * mappings are accepted.
+   *
+   * <pre>{@code
+   * pc.conceptMap("http://example.org/ConceptMap/sct-to-icd10|2026")
+   *     .createOrReplaceTempView("sct_to_icd10");
+   * }</pre>
+   *
+   * @param canonical the canonical URL of the concept map, optionally with a {@code |version}
+   *     suffix
+   * @return the concept map relation
+   * @throws IllegalArgumentException if the canonical has no URL
+   * @throws TerminologyRelationException if the concept map cannot be resolved, carries content the
+   *     relation cannot represent, or exceeds the cap
+   */
+  @Nonnull
+  public Dataset<Row> conceptMap(@Nonnull final String canonical) {
+    return conceptMap(canonical, TerminologyRelations.DEFAULT_MAX_MAPPINGS);
+  }
+
+  /**
+   * Resolves a concept map to its mappings and returns them as a relation, accepting at most the
+   * given number of mappings. See {@link #conceptMap(String)}.
+   *
+   * @param canonical the canonical URL of the concept map, optionally with a {@code |version}
+   *     suffix
+   * @param maxMappings the largest number of mappings accepted, which must be positive
+   * @return the concept map relation
+   * @throws IllegalArgumentException if the canonical has no URL or the cap is not positive
+   * @throws TerminologyRelationException if the concept map cannot be resolved, carries content the
+   *     relation cannot represent, or exceeds the cap
+   */
+  @Nonnull
+  public Dataset<Row> conceptMap(@Nonnull final String canonical, final int maxMappings) {
+    return terminologyRelations().conceptMap(canonical, maxMappings);
+  }
+
+  /**
+   * Returns the mappings of a ConceptMap supplied as FHIR R4 JSON as a relation with the columns of
+   * {@link #conceptMap(String)}, without consulting the terminology layer. The resource must carry
+   * a {@code url}, and content that is not valid FHIR R4, such as the R5 {@code noMap} and {@code
+   * relationship} elements, is rejected. At most {@value TerminologyRelations#DEFAULT_MAX_MAPPINGS}
+   * mappings are accepted.
+   *
+   * @param json the ConceptMap resource as FHIR R4 JSON
+   * @return the concept map relation
+   * @throws TerminologyRelationException if the JSON is not a ConceptMap, carries content the
+   *     relation cannot represent, or exceeds the cap
+   */
+  @Nonnull
+  public Dataset<Row> conceptMapFromJson(@Nonnull final String json) {
+    return conceptMapFromJson(json, TerminologyRelations.DEFAULT_MAX_MAPPINGS);
+  }
+
+  /**
+   * Returns the mappings of a ConceptMap supplied as FHIR R4 JSON as a relation, accepting at most
+   * the given number of mappings. See {@link #conceptMapFromJson(String)}.
+   *
+   * @param json the ConceptMap resource as FHIR R4 JSON
+   * @param maxMappings the largest number of mappings accepted, which must be positive
+   * @return the concept map relation
+   * @throws IllegalArgumentException if the cap is not positive
+   * @throws TerminologyRelationException if the JSON is not a ConceptMap, carries content the
+   *     relation cannot represent, or exceeds the cap
+   */
+  @Nonnull
+  public Dataset<Row> conceptMapFromJson(@Nonnull final String json, final int maxMappings) {
+    return terminologyRelations().conceptMapFromJson(json, maxMappings);
+  }
+
+  @Nonnull
+  private TerminologyRelations terminologyRelations() {
+    return new TerminologyRelations(spark, getFhirContext(), terminologyServiceFactory);
   }
 
   /**
@@ -902,11 +1103,12 @@ public class PathlingContext {
   }
 
   /**
-   * Builds the local-mode terminology service factory. The store is opened eagerly here on the
-   * driver so that a missing path, an unreadable manifest, or an incompatible store format fails at
-   * context creation rather than at first query. The driver's Hadoop configuration is snapshotted
-   * into a serialisable map so the store is reachable on executors, where a Hadoop configuration is
-   * neither supplied nor serialisable.
+   * Builds the local-mode terminology service factory. The store is migrated to the current format
+   * version if it was written by an earlier version of Pathling, then opened eagerly here on the
+   * driver so that a missing path, an unreadable manifest, an incompatible store format, or a
+   * failed migration fails at context creation rather than at first query. The driver's Hadoop
+   * configuration is snapshotted into a serialisable map so the store is reachable on executors,
+   * where a Hadoop configuration is neither supplied nor serialisable.
    */
   @Nonnull
   private static TerminologyServiceFactory getLocalTerminologyServiceFactory(
@@ -914,12 +1116,16 @@ public class PathlingContext {
     warnAboutIgnoredServerSettings(configuration);
 
     // The local block and storage path are guaranteed present by configuration validation.
-    final String storagePath =
-        Objects.requireNonNull(Objects.requireNonNull(configuration.getLocal()).getStoragePath());
+    final String storagePath = configuration.getLocal().getStoragePath();
     final Map<String, String> hadoopConfiguration =
         snapshotHadoopConfiguration(spark.sessionState().newHadoopConf());
 
-    // Fail fast at context creation if the store cannot be opened.
+    // Fail fast at context creation if the store cannot be migrated or opened.
+    try {
+      TerminologyStoreMigrator.migrate(spark, storagePath, hadoopConfiguration);
+    } catch (final TerminologyStoreException e) {
+      throw new IllegalStateException(e.getMessage(), e);
+    }
     try {
       TerminologyStoreReader.open(storagePath, hadoopConfiguration);
     } catch (final TerminologyStoreException e) {

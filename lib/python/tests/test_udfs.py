@@ -181,6 +181,45 @@ def test_member_of_array(spark: SparkSession):
     assert result_df_coding.collect() == [Result("code-1", True)]
 
 
+def test_member_of_code(spark: SparkSession):
+    # A string column holds codes without a system, which is inferred from the value set.
+    df = spark.createDataFrame(
+        [("code-1", "368529001"), ("code-2", "55915-3"), ("code-3", None)],
+        schema=StructType(
+            [StructField("id", StringType()), StructField("code", StringType())]
+        ),
+    )
+
+    result = df.select(
+        "id",
+        member_of("code", "http://snomed.info/sct?fhir_vs=refset/723264001").alias(
+            "result"
+        ),
+    )
+
+    assert result.collect() == [
+        Result("code-1", True),
+        Result("code-2", False),
+        Result("code-3", None),
+    ]
+
+
+def test_member_of_unresolvable_value_set(spark: SparkSession):
+    # Membership in a value set that cannot be resolved is unknown, so the result is null.
+    df = spark.createDataFrame(
+        [("code-1", snomed_coding_row("368529001"))],
+        schema=StructType(
+            [StructField("id", StringType()), StructField("code", CODING_TYPE)]
+        ),
+    )
+
+    result = df.select(
+        "id", member_of("code", "http://example.org/ValueSet/unknown").alias("result")
+    )
+
+    assert result.collect() == [Result("code-1", None)]
+
+
 @fixture(scope="module")
 def subsumption_df(spark: SparkSession):
     return spark.createDataFrame(

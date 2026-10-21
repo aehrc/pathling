@@ -182,6 +182,25 @@ public abstract class ColumnRepresentation {
       @Nonnull final String fieldName, @Nonnull final Optional<FHIRDefinedType> fhirType);
 
   /**
+   * Returns a new {@link ColumnRepresentation} that represents the result of navigating to a child
+   * element, which is empty if the element is not in the schema.
+   *
+   * <p>The encoder leaves some elements out of the schema, such as recursive elements beyond the
+   * maximum nesting level. Navigating to such an element yields an empty collection, as it would if
+   * the data were absent, rather than failing. The default implementation is the same as {@link
+   * #traverse(String, Optional)}, for representations whose fields are always in the schema.
+   *
+   * @param fieldName The name of the field to traverse to
+   * @param fhirType The FHIR type of the field
+   * @return A new {@link ColumnRepresentation} representing the result of the traversal
+   */
+  @Nonnull
+  public ColumnRepresentation traverseOrEmpty(
+      @Nonnull final String fieldName, @Nonnull final Optional<FHIRDefinedType> fhirType) {
+    return traverse(fieldName, fhirType);
+  }
+
+  /**
    * Returns a new {@link ColumnRepresentation} that represents the result of traversing to a nested
    * field within the current representation. The results can be nested.
    *
@@ -252,6 +271,21 @@ public abstract class ColumnRepresentation {
                 c,
                 x -> when(size(x).gt(1), raise_error(lit(resolvedError))).otherwise(getAt(x, 0))),
         UnaryOperator.identity());
+  }
+
+  /**
+   * Returns the single value from the current {@link ColumnRepresentation}, or null where it holds
+   * more than one value. This suits functions that FHIRPath defines as empty, rather than an error,
+   * for input of more than one item.
+   *
+   * @return A new {@link ColumnRepresentation} that is a singular value
+   */
+  @Nonnull
+  public ColumnRepresentation singularOrNull() {
+    // Both size(x) and getAt(x, 0) reference the operand; let() ensures a nondeterministic
+    // operand fires exactly once per row rather than twice.
+    return vectorize(
+        c -> let(c, x -> when(size(x).equalTo(1), getAt(x, 0))), UnaryOperator.identity());
   }
 
   /**

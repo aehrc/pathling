@@ -22,6 +22,7 @@ import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_REFERENCED_DENSE_ID;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_REFSET_CODE;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_SYSTEM_VERSION_ID;
+import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_TARGET_CODE;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.CONCEPT;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.REFSET_MEMBER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -58,16 +59,17 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
 
 /**
- * Verifies that reverse translation through a SNOMED association reference set is ordered by the
- * reference set's content rather than by the order the store's rows happen to be laid out in.
+ * Verifies that translation through a SNOMED association reference set is ordered by the reference
+ * set's content rather than by the order the store's rows happen to be laid out in.
  *
  * <p>An imported store cannot exhibit the defect on its own. The importer resolves reference set
  * rows against the concept dictionary with a join whose streamed side, at this fixture's size, is
  * the dictionary, so the rows land in concept code order however the release file was written. That
  * is an accident of the chosen join strategy and not a guarantee, so this class takes a copy of the
- * shared fixture store and rewrites its reference set table with the rows in descending code order
- * - a layout another join strategy could legitimately produce. The layout is asserted before the
- * behaviour is, so the test cannot quietly stop testing anything.
+ * shared fixture store and rewrites its reference set table with the rows in descending code order,
+ * and the rows of one referenced concept in descending target order - a layout another join
+ * strategy could legitimately produce. The layout is asserted before the behaviour is, so the test
+ * cannot quietly stop testing anything.
  *
  * @author John Grimes
  */
@@ -84,6 +86,10 @@ class LocalTerminologyServiceRefsetLayoutTest {
           Rf2Mini.ASSOCIATED_FILLER_1,
           Rf2Mini.ASSOCIATED_FILLER_2,
           Rf2Mini.ASSOCIATED_FILLER_3);
+
+  /** The concepts the fixture's POSSIBLY EQUIVALENT TO source is associated with, in code order. */
+  private static final List<String> TARGETS_IN_CODE_ORDER =
+      List.of(Rf2Mini.TYPE1_DIABETES, Rf2Mini.TYPE2_DIABETES);
 
   private static TerminologyStoreReader reader;
   private static LocalTerminologyService service;
@@ -113,7 +119,8 @@ class LocalTerminologyServiceRefsetLayoutTest {
 
   /**
    * Rewrites the store's reference set table with its rows in descending referenced concept order,
-   * which for this fixture is descending concept code order.
+   * which for this fixture is descending concept code order, and the rows that share a referenced
+   * concept in descending target code order.
    */
   private static void reverseRefsetRowOrder(@Nonnull final String store) {
     final SparkSession spark =
@@ -136,6 +143,9 @@ class LocalTerminologyServiceRefsetLayoutTest {
     final List<Row> rows = new ArrayList<>(existing.collectAsList());
     rows.sort(
         Comparator.comparingInt((final Row row) -> row.getAs(COLUMN_REFERENCED_DENSE_ID))
+            .thenComparing(
+                (final Row row) -> row.getAs(COLUMN_TARGET_CODE),
+                Comparator.nullsFirst(Comparator.<String>naturalOrder()))
             .reversed());
     // A single partition keeps the collected order intact through the write, so the table's
     // physical row order is exactly the order of this list.
@@ -160,7 +170,11 @@ class LocalTerminologyServiceRefsetLayoutTest {
     }
   }
 
-  /** The codes of the concepts referenced by the association reference set, in physical order. */
+  /**
+   * The codes of the concepts referenced by the SAME AS reference set, in physical order.
+   *
+   * @return the referenced concept codes
+   */
   @Nonnull
   private static List<String> physicalRowOrder() {
     final Map<Integer, String> codeByDense = new HashMap<>();
@@ -177,11 +191,30 @@ class LocalTerminologyServiceRefsetLayoutTest {
     return codes;
   }
 
+  /**
+   * The target codes of the POSSIBLY EQUIVALENT TO reference set, in physical order.
+   *
+   * @return the target codes
+   */
+  @Nonnull
+  private static List<String> physicalTargetOrder() {
+    final List<String> targets = new ArrayList<>();
+    reader.readTable(
+        REFSET_MEMBER,
+        row -> {
+          if (Rf2Mini.POSSIBLY_EQUIVALENT_TO_REFSET.equals(row.getString(COLUMN_REFSET_CODE))) {
+            targets.add(row.getString(COLUMN_TARGET_CODE));
+          }
+        });
+    return targets;
+  }
+
   @Test
   void laysTheReferenceSetOutInDescendingOrder() {
     // The premise of the test below: if this store ever stops being laid out against the expected
     // order, the ordering assertion is no longer load-bearing and this test says so.
     assertEquals(ASSOCIATED_IN_CODE_ORDER.reversed(), physicalRowOrder());
+    assertEquals(TARGETS_IN_CODE_ORDER.reversed(), physicalTargetOrder());
   }
 
   @Test
@@ -194,6 +227,21 @@ class LocalTerminologyServiceRefsetLayoutTest {
             null);
     assertEquals(
         ASSOCIATED_IN_CODE_ORDER,
+        result.stream().map(translation -> translation.getConcept().getCode()).toList());
+  }
+
+  @Test
+  void forwardTranslationIgnoresThePhysicalRowOrder() {
+    final List<Translation> result =
+        service.translate(
+            new Coding()
+                .setSystem(Rf2Mini.SNOMED_URI)
+                .setCode(Rf2Mini.POSSIBLY_EQUIVALENT_TO_SOURCE),
+            Rf2Mini.SNOMED_URI + "?fhir_cm=" + Rf2Mini.POSSIBLY_EQUIVALENT_TO_REFSET,
+            false,
+            null);
+    assertEquals(
+        TARGETS_IN_CODE_ORDER,
         result.stream().map(translation -> translation.getConcept().getCode()).toList());
   }
 }

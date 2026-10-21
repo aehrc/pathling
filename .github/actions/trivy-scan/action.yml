@@ -97,7 +97,8 @@ runs:
         skip-dirs: ${{ inputs.skip-dirs }}
         exit-code: "1"
         severity: MEDIUM,HIGH,CRITICAL
-        version: "v0.74.0"
+        trivy-config: ${{ github.action_path }}/trivy.yaml
+        version: "v0.75.0"
 
     - name: Run security scan (table output on failure)
       if: steps.sarif-scan.outcome == 'failure'
@@ -116,4 +117,5 @@ runs:
         skip-setup-trivy: true
         exit-code: "1"
         severity: MEDIUM,HIGH,CRITICAL
-        version: "v0.74.0"
+        trivy-config: ${{ github.action_path }}/trivy.yaml
+        version: "v0.75.0"

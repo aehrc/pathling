@@ -21,6 +21,11 @@ import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhirpath.encoding.ImmutableCoding;
+import au.csiro.pathling.terminology.conceptmap.ConceptMapContent;
+import au.csiro.pathling.terminology.conceptmap.ConceptMapReader;
+import au.csiro.pathling.terminology.expand.ExpandExecutor;
+import au.csiro.pathling.terminology.expand.ValueSetExpansion;
+import au.csiro.pathling.terminology.local.VersionResolver;
 import au.csiro.pathling.terminology.lookup.LookupExecutor;
 import au.csiro.pathling.terminology.lookup.LookupParameters;
 import au.csiro.pathling.terminology.subsumes.SubsumesExecutor;
@@ -37,6 +42,7 @@ import java.io.Closeable;
 import java.util.List;
 import java.util.Optional;
 import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.ValueSet;
 import org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome;
 
 /**
@@ -60,11 +66,22 @@ public class DefaultTerminologyService extends BaseTerminologyService {
     super(terminologyClient, resourcesToClose);
   }
 
+  @Nullable
   @Override
-  public boolean validateCode(@Nonnull final String valueSetUrl, @Nonnull final Coding coding) {
+  public Boolean validateCode(@Nonnull final String valueSetUrl, @Nonnull final Coding coding) {
     final ValidateCodeParameters parameters =
         new ValidateCodeParameters(valueSetUrl, ImmutableCoding.of(coding));
     final ValidateCodeExecutor executor = new ValidateCodeExecutor(terminologyClient, parameters);
+    return execute(executor);
+  }
+
+  @Nullable
+  @Override
+  public Boolean validateCodeInferringSystem(
+      @Nonnull final String valueSetUrl, @Nonnull final String code) {
+    final ValidateCodeExecutor executor =
+        new ValidateCodeExecutor(
+            terminologyClient, ValidateCodeParameters.inferringSystem(valueSetUrl, code));
     return execute(executor);
   }
 
@@ -104,6 +121,27 @@ public class DefaultTerminologyService extends BaseTerminologyService {
   }
 
   @Nonnull
+  @Override
+  public Optional<ValueSetExpansion> expand(
+      @Nonnull final String url, @Nullable final String version, final int maxMembers) {
+    return new ExpandExecutor(terminologyClient).expand(url, version, maxMembers);
+  }
+
+  @Nonnull
+  @Override
+  public ValueSetExpansion expand(@Nonnull final ValueSet valueSet, final int maxMembers) {
+    return new ExpandExecutor(terminologyClient).expand(valueSet, maxMembers);
+  }
+
+  @Nonnull
+  @Override
+  public Optional<ConceptMapContent> readConceptMap(
+      @Nonnull final String url, @Nullable final String version, final int maxMappings) {
+    return new ConceptMapReader(terminologyClient, new VersionResolver(null))
+        .read(url, version, maxMappings);
+  }
+
+  @Nullable
   private static <S, R> R execute(@Nonnull final TerminologyOperation<S, R> operation) {
     final Optional<R> invalidResult = operation.validate();
     if (invalidResult.isPresent()) {
@@ -116,7 +154,7 @@ public class DefaultTerminologyService extends BaseTerminologyService {
       return operation.extractResult(response);
 
     } catch (final BaseServerResponseException e) {
-      // If the terminology server rejects the request as invalid, use false as the result.
+      // If the terminology server rejects the request as invalid, use the fallback result.
       final R fallback = operation.invalidRequestFallback();
       return handleError(e, fallback);
     }

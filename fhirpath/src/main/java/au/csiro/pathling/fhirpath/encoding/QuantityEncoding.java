@@ -72,6 +72,12 @@ public class QuantityEncoding {
   /** The name of the column containing the human-readable unit string. */
   public static final String UNIT_COLUMN = "unit";
 
+  /**
+   * The name of the column containing the comparator of the quantity, which is present when the
+   * value is a bound rather than a known value.
+   */
+  public static final String COMPARATOR_COLUMN = "comparator";
+
   /** The name of the column containing the canonicalised value of the quantity. */
   public static final String CANONICALIZED_VALUE_COLUMN =
       QuantitySupport.VALUE_CANONICALIZED_FIELD_NAME();
@@ -111,7 +117,7 @@ public class QuantityEncoding {
         // mode, independent of the session-wide setting.
         value.try_cast(DecimalCustomCoder.decimalType()).as(VALUE_COLUMN),
         value_scale.as("value_scale"),
-        comparator.as("comparator"),
+        comparator.as(COMPARATOR_COLUMN),
         unit.as(UNIT_COLUMN),
         system.as(SYSTEM_COLUMN),
         code.as(CODE_COLUMN),
@@ -164,12 +170,18 @@ public class QuantityEncoding {
   /**
    * Decodes a FhirPathQuantity from a Row.
    *
+   * <p>Returns null if the row cannot be represented as a FHIRPath System.Quantity: it lacks a
+   * value, system or code, its system is neither UCUM nor the FHIRPath calendar duration system, or
+   * it carries a comparator. This mirrors {@link
+   * au.csiro.pathling.fhirpath.column.QuantityValue#isSystemQuantity()}.
+   *
    * @param row the row to decode
-   * @return the resulting FhirPathQuantity
+   * @return the resulting FhirPathQuantity, or null if the row cannot be represented as one
    */
   @Nullable
   public static FhirPathQuantity decode(@Nullable final Row row) {
-    if (row == null) {
+    // A quantity with a comparator records a bound rather than a known value.
+    if (row == null || !row.isNullAt(3)) {
       return null;
     }
     // Extract value with scale handling
@@ -208,7 +220,7 @@ public class QuantityEncoding {
     final StructField valueScale =
         new StructField("value_scale", DataTypes.IntegerType, true, metadata);
     final StructField comparator =
-        new StructField("comparator", DataTypes.StringType, true, metadata);
+        new StructField(COMPARATOR_COLUMN, DataTypes.StringType, true, metadata);
     final StructField unit = new StructField(UNIT_COLUMN, DataTypes.StringType, true, metadata);
     final StructField system = new StructField(SYSTEM_COLUMN, DataTypes.StringType, true, metadata);
     final StructField code = new StructField(CODE_COLUMN, DataTypes.StringType, true, metadata);

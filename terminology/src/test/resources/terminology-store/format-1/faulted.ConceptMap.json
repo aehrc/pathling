@@ -1,0 +1,37 @@
+{
+  "resourceType": "ConceptMap",
+  "url": "http://example.org/ConceptMap/faulted",
+  "status": "active",
+  "group": [
+    {
+      "source": "http://example.org/source",
+      "target": "http://example.org/target",
+      "element": [
+        {
+          "code": "a",
+          "target": [
+            {
+              "code": "x",
+              "equivalence": "equivalent"
+            }
+          ]
+        },
+        {
+          "code": "b",
+          "target": [
+            {
+              "code": "y",
+              "equivalence": "wider",
+              "dependsOn": [
+                {
+                  "property": "http://example.org/property",
+                  "value": "z"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

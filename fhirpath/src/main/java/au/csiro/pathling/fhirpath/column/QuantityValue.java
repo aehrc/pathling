@@ -17,12 +17,14 @@
 
 package au.csiro.pathling.fhirpath.column;
 
+import static au.csiro.pathling.encoders.ValueFunctions.nullSafeField;
 import static au.csiro.pathling.sql.SqlFunctions.let;
 import static java.util.Objects.nonNull;
 import static java.util.Objects.requireNonNull;
 import static org.apache.spark.sql.functions.callUDF;
 import static org.apache.spark.sql.functions.coalesce;
 import static org.apache.spark.sql.functions.lit;
+import static org.apache.spark.sql.functions.not;
 import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
@@ -49,6 +51,7 @@ import org.apache.spark.sql.Column;
  * abstraction through the {@link ValueWithUnit} record.
  *
  * @author Piotr Szul
+ * @author John Grimes
  */
 public class QuantityValue {
 
@@ -107,8 +110,8 @@ public class QuantityValue {
     @Nonnull
     public static ValueWithUnit normalizedValueOf(@Nonnull final Column quantity) {
       return new ValueWithUnit(
-          quantity.getField(QuantityEncoding.CANONICALIZED_VALUE_COLUMN),
-          quantity.getField(QuantityEncoding.CANONICALIZED_CODE_COLUMN),
+          nullSafeField(quantity, QuantityEncoding.CANONICALIZED_VALUE_COLUMN),
+          nullSafeField(quantity, QuantityEncoding.CANONICALIZED_CODE_COLUMN),
           null);
     }
 
@@ -124,9 +127,9 @@ public class QuantityValue {
     @Nonnull
     public static ValueWithUnit originalValueOf(@Nonnull final Column quantity) {
       return new ValueWithUnit(
-          quantity.getField(QuantityEncoding.VALUE_COLUMN),
-          quantity.getField(QuantityEncoding.CODE_COLUMN),
-          quantity.getField(QuantityEncoding.SYSTEM_COLUMN));
+          nullSafeField(quantity, QuantityEncoding.VALUE_COLUMN),
+          nullSafeField(quantity, QuantityEncoding.CODE_COLUMN),
+          nullSafeField(quantity, QuantityEncoding.SYSTEM_COLUMN));
     }
 
     /**
@@ -141,8 +144,8 @@ public class QuantityValue {
     @Nonnull
     public static ValueWithUnit literalValueOf(@Nonnull final Column quantity) {
       return new ValueWithUnit(
-          quantity.getField(QuantityEncoding.VALUE_COLUMN),
-          quantity.getField(QuantityEncoding.UNIT_COLUMN),
+          nullSafeField(quantity, QuantityEncoding.VALUE_COLUMN),
+          nullSafeField(quantity, QuantityEncoding.UNIT_COLUMN),
           lit(null));
     }
 
@@ -209,6 +212,46 @@ public class QuantityValue {
   }
 
   /**
+   * Checks if this quantity carries a comparator ({@code <}, {@code <=}, {@code >=} or {@code >}).
+   *
+   * <p>Such a quantity records a bound rather than a known value (e.g. {@code <5 mg} is some value
+   * below 5 mg), so it cannot be compared as though its value were exact.
+   *
+   * @return Column of BooleanType indicating if this quantity is bounded
+   */
+  @Nonnull
+  public Column isBounded() {
+    return nullSafeField(quantityColumn, QuantityEncoding.COMPARATOR_COLUMN).isNotNull();
+  }
+
+  /**
+   * Checks if this quantity can be represented as a FHIRPath System.Quantity.
+   *
+   * <p>That requires a value and a code, a system that is UCUM or the FHIRPath calendar duration
+   * system, and no comparator. For example, {@code 3 tab} with no system, or {@code <5 mg}, cannot
+   * be represented. This mirrors {@link QuantityEncoding#decode}, which returns null for such a
+   * quantity.
+   *
+   * @return Column of BooleanType that is false rather than null when any field is missing
+   * @see <a href="https://hl7.org/fhir/R4/fhirpath.html#quantity">FHIRPath - Quantity</a>
+   */
+  @Nonnull
+  public Column isSystemQuantity() {
+    final Column hasSupportedSystem =
+        coalesce(
+            nullSafeField(quantityColumn, QuantityEncoding.SYSTEM_COLUMN)
+                .isin(
+                    UcumUnit.UCUM_SYSTEM_URI,
+                    CalendarDurationUnit.FHIRPATH_CALENDAR_DURATION_SYSTEM_URI),
+            lit(false));
+    return nullSafeField(quantityColumn, QuantityEncoding.VALUE_COLUMN)
+        .isNotNull()
+        .and(nullSafeField(quantityColumn, QuantityEncoding.CODE_COLUMN).isNotNull())
+        .and(hasSupportedSystem)
+        .and(not(isBounded()));
+  }
+
+  /**
    * Checks if this quantity uses the UCUM unit system.
    *
    * <p>Returns a boolean column that evaluates to true if the quantity's system field equals {@link
@@ -218,8 +261,7 @@ public class QuantityValue {
    */
   @Nonnull
   public Column isUcum() {
-    return quantityColumn
-        .getField(QuantityEncoding.SYSTEM_COLUMN)
+    return nullSafeField(quantityColumn, QuantityEncoding.SYSTEM_COLUMN)
         .equalTo(lit(UcumUnit.UCUM_SYSTEM_URI));
   }
 
@@ -233,8 +275,7 @@ public class QuantityValue {
    */
   @Nonnull
   public Column isCalendarDuration() {
-    return quantityColumn
-        .getField(QuantityEncoding.SYSTEM_COLUMN)
+    return nullSafeField(quantityColumn, QuantityEncoding.SYSTEM_COLUMN)
         .equalTo(lit(CalendarDurationUnit.FHIRPATH_CALENDAR_DURATION_SYSTEM_URI));
   }
 

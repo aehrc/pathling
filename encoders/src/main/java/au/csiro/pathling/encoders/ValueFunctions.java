@@ -86,7 +86,8 @@ public class ValueFunctions {
 
   /**
    * Applies an expression to array of arrays value, or an else expression if the value is an array.
-   * Throws an exception if the value is not an array.
+   * A null-typed value, which represents an empty collection, is treated as an array. Throws an
+   * exception if the value is neither an array nor null-typed.
    *
    * @param value The value to check
    * @param arrayExpression The expression to apply to the array of arrays value
@@ -162,6 +163,63 @@ public class ValueFunctions {
     final Expression valueExpr = expression(value);
     final Expression emptyOrExpr = new UnresolvedEmptyArrayIfMissingField(valueExpr);
     return column(emptyOrExpr);
+  }
+
+  /**
+   * Extracts a field from a struct, or from each struct in an array of structs, returning null if
+   * the field is not in the schema.
+   *
+   * <p>This is used to navigate to elements that the encoder may have left out of the schema, such
+   * as recursive elements beyond the maximum nesting level. The result for a missing field is
+   * null-typed, and navigating further from a null-typed value also returns null, so a chain of
+   * navigation beyond the schema is empty rather than failing with a FIELD_NOT_FOUND analysis
+   * error.
+   *
+   * <pre>{@code
+   * // Returns null if the encoded item struct has no nested item field.
+   * fieldOrNull(fieldOrNull(col("item"), "item"), "linkId")
+   * }</pre>
+   *
+   * @param value The struct or array of structs to extract the field from
+   * @param fieldName The name of the field to extract
+   * @return A column that resolves to the field, or to null if the field is not in the schema or
+   *     the value is null-typed
+   */
+  @Nonnull
+  public static Column fieldOrNull(@Nonnull final Column value, @Nonnull final String fieldName) {
+    return column(new UnresolvedFieldOrNull(expression(value), fieldName, true));
+  }
+
+  /**
+   * Extracts a field from a struct, or from each struct in an array of structs, returning null if
+   * the value is null-typed.
+   *
+   * <p>Unlike {@link #fieldOrNull}, a field that is not in the schema still causes a
+   * FIELD_NOT_FOUND analysis error. Only a value that is known to be empty, such as the result of
+   * {@link #fieldOrNull} for a missing field, is tolerated.
+   *
+   * @param value The struct or array of structs to extract the field from
+   * @param fieldName The name of the field to extract
+   * @return A column that resolves to the field, or to null if the value is null-typed
+   */
+  @Nonnull
+  public static Column nullSafeField(@Nonnull final Column value, @Nonnull final String fieldName) {
+    return column(new UnresolvedFieldOrNull(expression(value), fieldName, false));
+  }
+
+  /**
+   * Casts a null-typed value to the specified type, leaving values that already have a type
+   * unchanged.
+   *
+   * <p>A null-typed array is cast only if the specified type is an array type.
+   *
+   * @param value The value to type
+   * @param type The type to cast a null-typed value to
+   * @return A column that resolves to the value, cast to the type if it was null-typed
+   */
+  @Nonnull
+  public static Column castIfNullType(@Nonnull final Column value, @Nonnull final DataType type) {
+    return column(new UnresolvedCastIfNullType(expression(value), type));
   }
 
   /**

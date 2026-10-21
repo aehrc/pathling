@@ -1,0 +1,46 @@
+{
+  "resourceType": "ConceptMap",
+  "url": "http://example.org/ConceptMap/sct-to-icd10",
+  "version": "2026",
+  "name": "SnomedCtToIcd10",
+  "status": "active",
+  "group": [
+    {
+      "source": "http://snomed.info/sct",
+      "target": "http://hl7.org/fhir/sid/icd-10|2019",
+      "element": [
+        {
+          "code": "22298006",
+          "display": "Myocardial infarction",
+          "target": [
+            {
+              "code": "I21",
+              "display": "Acute myocardial infarction",
+              "equivalence": "equivalent"
+            }
+          ]
+        },
+        {
+          "code": "73211009",
+          "display": "Diabetes mellitus",
+          "target": [
+            {
+              "code": "E14",
+              "display": "Unspecified diabetes mellitus",
+              "equivalence": "narrower"
+            }
+          ]
+        },
+        {
+          "code": "102499006",
+          "display": "Fit and well",
+          "target": [
+            {
+              "equivalence": "unmatched"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
