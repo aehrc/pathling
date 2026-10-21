@@ -4237,8 +4237,12 @@ _Decision_:
      `encoders` holds and FR-051 does not let move, so `fhir-schema` gains its own. The engine's
      existing computation moves onto the shared kinds in tickets 12 to 14.
    - **The set of kinds is closed.** The API is public so that other modules can reach it, not as an
-     extension point. An annotation Pathling does not define is carried, where it is carried at all, as
-     an opaque field (part 3), not as a kind.
+     extension point. The public entry points, `PathlingContext` and the annotation step's public
+     factory, take a `SchemaConfiguration` alone and always use the built-in kinds. A registry can be
+     built from a list of kinds, so that tests can supply stub kinds, but only through a factory those
+     entry points never expose. Every kind, a stub included, names the switch that governs it. An
+     annotation Pathling does not define is carried, where it is carried at all, as an opaque field
+     (part 3), not as a kind.
    - **Order has one source.** Annotations are emitted from the canonical structure's annotation
      entries, which `LayoutFields.annotationNames` places after their element. The registry maps an
      entry to its kind; it does not declare an order of its own.
