@@ -94,9 +94,9 @@ loadScripts(document, 'script');</script>
 <div class="type-signature"><span class="modifiers">public class </span><span class="element-name type-name-label">ValueSetResolver</span>
 <span class="extends-implements">extends <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a></span></div>
 <div class="block">Resolves a value set URL to the code system version it evaluates over and the <a href="../../vcl/VclExpression.html" title="interface in au.csiro.pathling.vcl"><code>VclExpression</code></a> that defines its members. It handles the SNOMED CT implicit value set forms
- (all-concepts, reference set, is-a, and ECL) on both unversioned and edition/version-qualified
- SNOMED URIs, and VCL implicit value set URLs. Content that is absent from the store resolves to
- <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/Optional.html#empty()" title="class or interface in java.util" class="external-link"><code>Optional.empty()</code></a>, so the caller applies the unknown-content fallback.</div>
+ (all-concepts, reference set, is-a, and ECL) on unversioned, edition-qualified and
+ version-qualified SNOMED URIs, and VCL implicit value set URLs. Content that is absent from the
+ store resolves to <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/Optional.html#empty()" title="class or interface in java.util" class="external-link"><code>Optional.empty()</code></a>, so the caller applies the unknown-content fallback.</div>
 <dl class="notes">
 <dt>Author:</dt>
 <dd>John Grimes</dd>
@@ -114,10 +114,10 @@ loadScripts(document, 'script');</script>
 <div class="table-header col-second">Field</div>
 <div class="table-header col-last">Description</div>
 <div class="col-first even-row-color"><code>static final <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/regex/Pattern.html" title="class or interface in java.util.regex" class="external-link">Pattern</a></code></div>
-<div class="col-second even-row-color"><code><a href="#SNOMED_VERSIONED" class="member-name-link">SNOMED_VERSIONED</a></code></div>
+<div class="col-second even-row-color"><code><a href="#SNOMED_EDITION_OR_VERSION" class="member-name-link">SNOMED_EDITION_OR_VERSION</a></code></div>
 <div class="col-last even-row-color">
-<div class="block">Matches a SNOMED CT edition/version URI, the base of an implicit value set or concept map URL
- that selects a version.</div>
+<div class="block">Matches a SNOMED CT edition URI, optionally qualified by a version: the base of an implicit
+ value set or concept map URL that selects an edition or version.</div>
 </div>
 </div>
 </section>
@@ -197,11 +197,11 @@ loadScripts(document, 'script');</script>
 <h2>Field Details</h2>
 <ul class="member-list">
 <li>
-<section class="detail" id="SNOMED_VERSIONED">
-<h3>SNOMED_VERSIONED</h3>
-<div class="member-signature"><span class="modifiers">public static final</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/regex/Pattern.html" title="class or interface in java.util.regex" class="external-link">Pattern</a></span>&nbsp;<span class="element-name">SNOMED_VERSIONED</span></div>
-<div class="block">Matches a SNOMED CT edition/version URI, the base of an implicit value set or concept map URL
- that selects a version. Shared with <a href="../ImplicitTerminologyUrls.html" title="class in au.csiro.pathling.terminology"><code>ImplicitTerminologyUrls</code></a> so that the grammar and the store agree
+<section class="detail" id="SNOMED_EDITION_OR_VERSION">
+<h3>SNOMED_EDITION_OR_VERSION</h3>
+<div class="member-signature"><span class="modifiers">public static final</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/regex/Pattern.html" title="class or interface in java.util.regex" class="external-link">Pattern</a></span>&nbsp;<span class="element-name">SNOMED_EDITION_OR_VERSION</span></div>
+<div class="block">Matches a SNOMED CT edition URI, optionally qualified by a version: the base of an implicit
+ value set or concept map URL that selects an edition or version. Shared with <a href="../ImplicitTerminologyUrls.html" title="class in au.csiro.pathling.terminology"><code>ImplicitTerminologyUrls</code></a> so that the grammar and the store agree
  on what is implicit.</div>
 </section>
 </li>
@@ -319,8 +319,10 @@ loadScripts(document, 'script');</script>
  <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;requestedVersion)</span></div>
 <div class="block">Resolves a code system URL and optional version to the stable identifier of a stored code
  system version. An explicit version selects exactly that version; an absent version selects the
- default per the version-ordering rules. This backs both value set resolution and the per-coding
- operations (lookup, subsumes, translate).</div>
+ default per the version-ordering rules. A SNOMED CT edition URI that names no version, such as
+ <code>http://snomed.info/sct/32506021000036107</code>, selects the latest stored version of that
+ edition, as THO permits. This backs both value set resolution and the per-coding operations
+ (lookup, subsumes, translate).</div>
 <dl class="notes">
 <dt>Parameters:</dt>
 <dd><code>url</code> - the code system canonical URL</dd>

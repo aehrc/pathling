@@ -5,7 +5,7 @@
 <meta name="generator" content="Docusaurus v3.9.2">
 <title data-rh="true">Local terminology mode | Pathling</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:image" content="https://pathling.csiro.au/assets/images/social-preview.png"><meta data-rh="true" name="twitter:image" content="https://pathling.csiro.au/assets/images/social-preview.png"><meta data-rh="true" property="og:url" content="https://pathling.csiro.au/docs/libraries/terminology/local"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-default-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-default-current"><meta data-rh="true" property="og:title" content="Local terminology mode | Pathling"><meta data-rh="true" name="description" content="Pathling can evaluate the terminology functions against a local terminology store built from SNOMED CT and FHIR terminology content, with no network dependency."><meta data-rh="true" property="og:description" content="Pathling can evaluate the terminology functions against a local terminology store built from SNOMED CT and FHIR terminology content, with no network dependency."><link data-rh="true" rel="icon" href="/favicon.ico"><link data-rh="true" rel="canonical" href="https://pathling.csiro.au/docs/libraries/terminology/local"><link data-rh="true" rel="alternate" href="https://pathling.csiro.au/docs/libraries/terminology/local" hreflang="en"><link data-rh="true" rel="alternate" href="https://pathling.csiro.au/docs/libraries/terminology/local" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Terminology functions","item":"https://pathling.csiro.au/docs/libraries/terminology/"},{"@type":"ListItem","position":2,"name":"Local terminology mode","item":"https://pathling.csiro.au/docs/libraries/terminology/local"}]}</script><link rel="alternate" type="application/rss+xml" href="/blog/rss.xml" title="Pathling RSS Feed">
 <link rel="alternate" type="application/atom+xml" href="/blog/atom.xml" title="Pathling Atom Feed"><link rel="stylesheet" href="/assets/css/styles.268c7013.css">
-<script src="/assets/js/runtime~main.ba2b0d62.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.aba31571.js" defer="defer"></script>
 <script src="/assets/js/main.cc9d9ac2.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -409,11 +409,18 @@ system, such as a string passed to <code>member_of</code> or to the FHIRPath <co
 function, takes the system of that code system.</p>
 <table><thead><tr><th>Reference</th><th>Form</th></tr></thead><tbody><tr><td>An imported FHIR ValueSet</td><td>its canonical URL, optionally with <code>|version</code></td></tr><tr><td>Every SNOMED CT concept</td><td><code>http://snomed.info/sct?fhir_vs</code></td></tr><tr><td>A SNOMED CT reference set</td><td><code>http://snomed.info/sct?fhir_vs=refset/[refsetId]</code></td></tr><tr><td>A SNOMED CT subtype hierarchy</td><td><code>http://snomed.info/sct?fhir_vs=isa/[conceptId]</code></td></tr><tr><td>A SNOMED CT ECL expression</td><td><code>http://snomed.info/sct?fhir_vs=ecl/[expression]</code></td></tr><tr><td>A VCL expression</td><td><code>http://fhir.org/VCL?v1=[expression]</code></td></tr><tr><td>An imported FHIR ConceptMap</td><td>its canonical URL</td></tr><tr><td>A SNOMED CT implicit concept map</td><td><code>http://snomed.info/sct?fhir_cm=[refsetId]</code></td></tr></tbody></table>
 <p>The <code>isa/</code> form is the subtype hierarchy including the named concept itself, so
-it is equivalent to <code>ecl/&lt;&lt;[conceptId]</code>. Every SNOMED form is also accepted on an
-edition and version qualified URI, for example
-<code>http://snomed.info/sct/32506021000036107/version/20250630?fhir_vs=ecl/...</code>,
-which evaluates against that version rather than the store default. Any other
-<code>fhir_vs</code> value is treated as unknown content.</p>
+it is equivalent to <code>ecl/&lt;&lt;[conceptId]</code>. Any other <code>fhir_vs</code> value is treated as
+unknown content.</p>
+<p>Every SNOMED form, including <code>fhir_cm</code>, is also accepted on an edition URI, with
+or without a version, and evaluates against that edition rather than the store
+default:</p>
+<table><thead><tr><th>Base URI</th><th>Evaluates against</th></tr></thead><tbody><tr><td><code>http://snomed.info/sct/32506021000036107/version/20250630</code></td><td>that version</td></tr><tr><td><code>http://snomed.info/sct/32506021000036107</code></td><td>the latest stored version of that edition</td></tr></tbody></table>
+<p>The same applies to a SNOMED CT version given in <code>Coding.version</code> or in a VCL
+system, such as <code>(http://snomed.info/sct|http://snomed.info/sct/32506021000036107)</code>.
+An edition URI in the <code>http://snomed.info/xsct</code> namespace, which the
+<a href="https://docs.snomed.org/snomed-ct-specifications/snomed-ct-uri-standard/2-snomed-ct-uri-space#uris-for-unpublished-content" target="_blank" rel="noopener noreferrer" class="">SNOMED CT URI Standard</a>
+reserves for unpublished content, selects only from versions imported under that
+namespace, and an <code>http://snomed.info/sct</code> edition URI only from the others.</p>
 <p>A SNOMED CT implicit concept map is either one of the four association
 reference sets or a simple map reference set, which are the two kinds
 <a href="https://terminology.hl7.org/en/SNOMEDCT.html#snomed-ct-implicit-concept-maps" target="_blank" rel="noopener noreferrer" class="">THO defines as implicit concept maps</a>.
