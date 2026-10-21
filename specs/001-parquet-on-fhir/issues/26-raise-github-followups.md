@@ -9,6 +9,7 @@
 - **T134e.** Mis-diagnosed findings. An inline resource declared as abstract `Resource` (`Parameters.parameter.resource`, `Bundle.entry.resource`) is reported as undescribed content. The likely remedy is a fourth `NonConformantContent` kind. An empty array is reported as "a value where a structure is declared".
 - **Dense-shaped output for FHIR-typed results.**
 - **The #2804 renderer note.** Add a comment to #2804 recording what ticket 03 left for System.Coding in the renderer.
+- **The range of a time without a timezone.** Such a value is valid (decision 133's addendum), and ticket 14 gives it the range the engine computes today. Whether that range, in the engine and in the annotation, should widen by ±14 hours because the value could be in any zone (`evidence/ingress-strictness/README.md`).
 - **Others handed on.** Any follow-up passed on by ticket 10, such as a precomputed reference key. Ticket 08's threads, such as the upstream Spark issue from T132, moved to ticket 16, which raises its own.
 
 **Blocked by:** None — can start immediately. Hand-offs from 10 are added as they arrive.

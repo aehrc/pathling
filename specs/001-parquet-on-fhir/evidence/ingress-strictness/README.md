@@ -84,7 +84,7 @@ These govern everything below.
 
 7. **One grammar, validated at ingest, and the engine never fails on a stored value (owner, 2026-10-19).**
    Ingest and the engine parse dates, times and decimals with the same code, kept in a module both can use
-   (`fhir-schema` or `utilities`). Ingest is where a bad value is detected and reported, because only there can
+   (`fhir-schema`, owner, 2026-10-21). Ingest is where a bad value is detected and reported, because only there can
    it be attributed. A stored value the engine cannot parse evaluates to empty, never to an error. Such values
    can still arrive from PoF data written by other tools, or once the `keep` policy exists. Until ticket 16,
    they also arrive from the interim ingest, which validates no lexical form (decision 134). Today's engine breaks

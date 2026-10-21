@@ -15,6 +15,10 @@ The spike's harness, fixtures and prototypes named below are on branch `issue/28
 
 **Interim behaviour, as decision 134 sets it.** The XML route stores what the JSON route stores, value for value: a decimal passes through a double, empty values are dropped as the JSON route drops them, and validation is by column type, reported once per column. It does not take on decision 133's per-value scope. Primitive ids and extensions are stored as the JSON route stores them until ticket 17.
 
+This is a behaviour change for XML. HAPI fails the read on an invalid date, such as `1980-13-45`, and the `from_xml` route stores it as text, as interim JSON does. Ticket 31 keeps queries over such a value working, and ticket 28 carries the release note (owner, 2026-10-21).
+
+**Classpath risk.** xml-native.md, "Classpath", found `to_xml` failing with the `library-runtime` jar on the classpath (`Unrecognized property …wstx.outputValidateStructure`). The jar bundles Woodstox without relocating it, and it clashes with Hadoop's shaded copy. Python and R load that jar, so the clash would show there. How it is fixed, by relocating or excluding Woodstox, is the implementer's choice.
+
 **Starting points.**
 
 - `evidence/xml-native/xml-native.md` establishes the route: row selection, inference, the transform, the narrative, bundles and writing. Its scripts are in `evidence/xml-native/scripts/`.
@@ -41,6 +45,7 @@ The spike's harness, fixtures and prototypes named below are on branch `issue/28
 - [ ] A prefixed FHIR namespace is read. A missing namespace, text after the root and a second root fail the read, naming the document.
 - [ ] A narrative round-trips at L2, or the read fails naming the document. There is a test for each of the four cases that defeat the regular expression in xml-native.md, and for its 14 hand-written StAX documents.
 - [ ] A custom resource type, such as `ViewDefinition`, is read and written in XML, single and in a bundle, through the definitions alone.
+- [ ] XML lines and bundles are read and written from Python and R on the shaded `library-runtime` jar, after the Ivy cache is cleared (`cache` and `jars` in every `~/.ivy2*` tree, then recreated).
 - [ ] No ingest or egress route imports HAPI's parser. `FhirParsers` and the reflection workaround are gone, and `CustomResourceTypeTest`'s guard on it is removed or replaced.
 - [ ] XML written through the line-delimited sink reads back through the XML source, including a narrative holding a line feed.
 - [ ] Encode and decode of XML lines and bundles are no slower than the bar on the pathling-compare harness at size `l` (SC-011), except the bundle fit's per-type constant, which the owner accepted. If any other phase is slower, the figures are reported to the owner before the ticket closes.

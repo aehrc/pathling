@@ -15,20 +15,22 @@ The engine therefore needs a defined behaviour regardless. The loss is reported 
 Recommended fix:
 
 - The boundary functions return null for text that does not parse.
-- The date and decimal grammars move to a module that both `io` and `fhirpath` can use (`fhir-schema` or `utilities`), and the engine parses with them from there. Ticket 16 reuses them for ingest validation, so that ingest and engine cannot disagree on what is valid.
+- The date and decimal grammars move to a module that both `io` and `fhirpath` can use, `fhir-schema` (owner, 2026-10-21), and the engine parses with them from there. Ticket 16 reuses them for ingest validation, so that ingest and engine cannot disagree on what is valid.
 
 **Decimals, measured by the ingest spike.** Probe 4 of `evidence/spike-08/README.md` (`probes/engine_decimal_probe.py`, on branch `issue/2831-spike-08`) found that the engine's `DECIMAL(32,6)` cast already reads unparseable text, such as `abc`, `1.2.3`, `""`, `NaN` and `1e400`, as empty, and nothing fails. That behaviour is right but undocumented and untested. The same probe found two cases that disagree with principle 7:
 
 - text with surrounding whitespace, `" 1.5"` or `"1.5 "`, reads as `1.5`, so a value FHIR rejects reads as valid;
 - a valid decimal of 40 digits reads as empty on the decimal path, yet `valueQuantity > 1 'mg'` is true for it, so the quantity path reads the value differently.
 
+How each of these two is resolved is decided when the ticket is picked up (owner, 2026-10-21). Stop and ask the owner before changing the behaviour of either.
+
 **The grammar (owner, 2026-10-21).** The shared grammar is lenient about the timezone: a `dateTime` or `instant` with a time but no timezone is valid, as `FhirPathDateTime` accepts it today. Ingest, stored values and date search arguments (`DateMatcher`) all use it. This reverses decision 133's rule that such a value is invalid, so nothing stored today becomes empty and no search that works today is rejected.
 
 **Blocked by:** None — can start immediately
 
-**Status:** needs-triage
+**Status:** ready-for-agent
 
 - [ ] A comparison over an element holding an invalid stored date, dateTime, instant or time returns the result for an empty value, and does not fail the query. This is pinned by tests on both a singular and a repeating element.
-- [ ] An invalid stored decimal evaluating to empty is pinned by a test. The whitespace and 40-digit cases are resolved, and pinned by tests.
-- [ ] The engine parses dates and decimals with a grammar in a module that `io` can use, ready for ticket 16.
+- [ ] An invalid stored decimal evaluating to empty is pinned by a test. The whitespace and 40-digit cases are resolved as the owner decides at pickup, and pinned by tests.
+- [ ] The engine parses dates and decimals with a grammar in `fhir-schema`, ready for ticket 16 to use at ingest.
 - [ ] The documentation states that an invalid stored value evaluates to empty.

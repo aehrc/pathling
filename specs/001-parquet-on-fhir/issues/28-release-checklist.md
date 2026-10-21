@@ -13,4 +13,5 @@
 - [ ] Every scenario in the spec's `quickstart.md` runs (T139).
 - [ ] This programme's superseded change directories under `openspec/changes/` are removed or archived (T138).
 - [ ] Every spec traceability row points at delivered work, and any gaps found are added to the owning ticket.
+- [ ] The release notes state that XML is read without HAPI and accepts what JSON accepts, so a value HAPI rejected, such as an invalid date, is now stored, and that queries over it still work (tickets 31 and 32).
 - [ ] Release-time gaps go on the owning ticket or here.
