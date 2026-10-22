@@ -43,3 +43,40 @@ file format comment from 2026-10-17.
 
 From ticket 32's review: the `from_xml` route stores a decimal as the text the XML carries and writes it back as
 stored, so XML keeps a decimal's lexical form already. This rework need only bring JSON level with it.
+
+### Line-delimited XML relies on Spark's XML writer to escape line breaks (2026-10-23)
+
+From PR #2868's review: the line-delimited XML sink writes a document with no narrative and no empty element
+exactly as Spark's `to_xml` wrote it. It stays on one line only because that writer, Hadoop's shaded copy of
+Woodstox, writes a line break in an attribute value as `&#xa;` or `&#xd;`. A value such as `Annotation.text` or a
+markdown description carries line breaks often. Any other StAX writer on the classpath fails `to_xml` outright,
+because Spark sets two properties that only the shaded copy recognises
+(`org.apache.hadoop.shaded.com.ctc.wstx.outputValidateStructure` and `outputValidateNames`), so the risk is a loud
+failure, not silently split documents. `encoders/pom.xml` excludes Woodstox from the UCUM dependency for this
+reason. `FhirXmlWriterTest.keepsALineBreakInAnAttributeToOneLineUnfinished` guards the escaping for now, and
+would catch a Hadoop upgrade that changed it.
+
+Whichever mechanism this rework chooses for egress should settle whether line-delimited correctness keeps resting
+on Spark's writer and on keeping Woodstox off the classpath, which the server, Databricks and users' own
+applications do not control, or whether Pathling escapes line breaks in attribute values itself, at the cost of a
+pass over every document that the current fast path skips.
+
+### Bundle splitting and XML preparation run twice per row (2026-10-23)
+
+From PR #2868's review: the UDF that prepares an XML document that is not plain, or splits an XML bundle
+(`FhirXmlReader`), and the one that splits a JSON bundle (`FhirJsonReader`), each run twice per input row. They
+run once in the eager job that infers the schema, and again when the read's plan executes. On a large set of
+bundles this roughly doubles the cost of splitting. Persisting the split dataset needs storage and a point at which
+to unpersist it, which a library that returns a lazy `Dataset` does not have. Inferring the schema from a sample
+drops fields that occur only outside the sample. The mechanism this rework chooses should parse each input once,
+or state the cost of not doing so, and the benchmark should measure bundles so the cost shows.
+
+### Spark's JSON reader refuses a string over 20M characters (2026-10-23)
+
+From PR #2868's review: Spark's JSON reader, which `FhirJsonReader` uses, refuses any string longer than its
+`maxStringLen` reader option, which defaults to Jackson's 20,000,000 characters. A resource with a large
+attachment, such as a Binary or a DocumentReference whose base64 data is larger than about 15 MB, therefore fails
+to read, from NDJSON and from a bundle alike, in Spark's schema inference. The bundle splitter itself no longer
+reads the text of values that resolution does not need, so a large resource of a type not asked for no longer fails
+the bundle. Whichever mechanism this rework chooses should settle the limit: lift it, at the risk of one huge
+string exhausting an executor's memory, make it a reader setting, or keep it as a stated exception.
