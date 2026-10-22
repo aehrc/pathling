@@ -30,6 +30,7 @@ Decision 135 settled the questions this ticket raised: where the definitions liv
 - [ ] With stub kinds, a test shows *fill* keeps a present annotation and *recompute* replaces it, and *drop* and *keep* do what they say for a disabled kind and for an unknown `__` field.
 - [ ] With a stub kind, a test shows that applying it reads a present annotation and computes an absent one, with the step's Java resolver and with the engine's Catalyst one.
 - [ ] The canonical structure places a primitive's annotation entries in its metadata group and a complex element's in its own structure, pinned by a test.
+- [ ] With a stub kind on a repeating primitive, a test shows that the engine pairs each value with its own stored annotation by position, including where a value in the middle has none, rather than reading the annotations through the traversal, whose null removal loses the positions.
 - [ ] `decode` of data carrying an unknown `__` field writes JSON and XML without it, rather than failing.
 - [ ] The configuration and the step are reachable from Java, Python and R, with documented defaults.
 - [ ] Nothing about stored output changes yet, because no real kinds are registered.

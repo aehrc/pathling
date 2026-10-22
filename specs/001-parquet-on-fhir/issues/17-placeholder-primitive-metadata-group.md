@@ -14,6 +14,8 @@ Points carried from the frozen tasks:
 - **Remove the exclusion (T078c).** The primitive-metadata exclusion leaves the round-trip harness and the ingest-format round-trip test, and the carve-out leaves the spec. State what the dense mode does with the group, rather than deleting that sentence.
 - **Navigation.** Navigation to the id and extensions goes through sibling resolution. Both yield empty where the source carried neither (T120–T124).
 
+**The engine pairs `x` with `_x` (decision 135, part 4).** The engine processes a primitive by pairing its values with its metadata group by position, for singular and repeating elements alike, and reads ids, extensions and annotations as fields of each pair. It names only the fields an expression needs, so that the read prunes. Nothing tests whether `_x` exists on its own.
+
 **Annotations share the group (decision 135, part 4).** A primitive's annotations are fields of its metadata group, after `id` and `extension`, and tickets 13 and 14 may store the group for them first. So the group can exist without metadata: placeholder rules, egress and the projection test for `id` and `extension` inside it, not for the group, and the strip of decision 60 already gives way where the group carries an annotation.
 
 **Blocked by:** 32

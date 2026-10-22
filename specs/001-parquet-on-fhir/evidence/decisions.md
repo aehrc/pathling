@@ -4228,7 +4228,7 @@ _Addendum (owner, 2026-10-21)_, settling what the review of this decision left o
 ## 135. An annotation is defined once, in `fhir-schema`, for the engine and ingest alike
 
 Owner decision (2026-10-21; part 4 and the resolver in part 1 2026-10-22), for ticket 11 (T063).
-Evidence for the dense width is in `dense-annotation-width.md`.
+Evidence for the dense width is in `dense-annotation-width.md`, and for part 4 in `annotation-pruning.md`.
 
 Decision 84 expected M5's annotation processors to join `au.csiro.pathling.io` as package-private
 classes beside the transform, and the tasks placed them in `io.annotation`. Both treat ingest as the
@@ -4331,32 +4331,46 @@ _Decision_:
    `_birthDate.__start` and `__end`, `_value.__numeric`. A complex element's annotations are fields of
    its own structure, after its elements: `valueQuantity.__canonical` and then `__canonical_exact`. No
    annotation is a field beside its element any more, so the `__<element>_<annotation>` names go.
-   - **One alignment.** FHIR already requires a repeating primitive's `_x` to be aligned by position with
-     `x`, and the metadata group (ticket 17) stores that alignment anyway. Annotations in it share it, so
-     a repeating date carries its bounds per position with nothing else to keep in step. As siblings,
-     each annotation was a further array to align with `x`, and the specification said nothing about
-     repeating annotated elements at all.
-   - **One resolution for a primitive.** The engine resolves `_x` beside a primitive for its id and
-     extensions (R-014); its annotations are fields of what that resolves to, so they add no sibling
-     resolution of their own.
+   - **It follows FHIR's JSON.** FHIR serialises a primitive as its value `x` and an element `_x`
+     aligned with it by position, holding everything about the value but the value. An annotation is
+     such a thing, so it belongs in `_x`, and a repeating date carries its bounds per position with
+     nothing else to keep in step. As siblings, each annotation was a further array to align with `x`,
+     and the specification said nothing about repeating annotated elements at all.
+   - **It reuses the support for primitive elements entirely.** The engine is expected to process a
+     primitive by pairing `x` with `_x` by position, so that ids, extensions and values are handled
+     alike for singular and repeating elements (ticket 17). Annotations are then fields of what that
+     pairing already yields: one mechanism serves metadata and annotations, with no resolution or
+     alignment of their own. As siblings, the pairing would take one more array per annotation.
    - **A quantity carries its canonical forms.** In its own structure the canonical forms are the
      fields ticket 12 gives the engine's System.Quantity, so a stored quantity decodes by reading its
      structure, and the canonical forms travel with the value through `where()`, unions, arrays and
      lambdas without a handle on the parent. As a sibling, every such operation would have to carry the
      parent to find it again.
-   - **The metadata group gains a second meaning.** It exists wherever an annotation does, not only
-     where the source carried an id or extensions. What tests for metadata tests for `id` and
-     `extension` inside the group, not for the group: the JSON projection omits a group left with only
+   - **The metadata group exists wherever an annotation does,** not only where the source carried an id
+     or extensions. What tests for metadata tests for `id` and `extension` inside the group, not for
+     the group: the JSON projection omits a group left with only
      `__` fields (ticket 35), and ticket 17's placeholder rules look at its content. Until ticket 17
      stores ids and extensions, the group can be stored for annotations alone, and the strip that keeps
      it out of a fitted schema (decision 60) gives way where it carries one.
    - **The specification is amended**, by ticket 35. Its sibling rule, its examples and its Quantity
      section change; the Quantity example, whose `__valueQuantity_canonical` copies the Quantity shape
      and contradicts the section's table of `value` and `code`, is corrected with them. Nothing has been
-     published in the old placement: no release of Pathling writes annotations.
-   - **Reading a nested field must prune.** Spark's nested schema pruning should read `_x.__start` from an
-     array of structures and `valueQuantity.__canonical` from a structure without the rest. The first of
-     tickets 13 and 14 checks it in a plan before relying on it.
+     published in the old placement: no release of Pathling writes annotations. For a while on 2026-10-22 this part was
+     reversed to siblings, on the measured read cost and on keeping `_x` to its FHIR meaning. The owner
+     restored it: the read cost does not differ through today's engine, and since the engine pairs `x`
+     with `_x` rather than testing `_x`, the meaning of `_x` is not at stake.
+   - **What is read was measured** (`annotation-pruning.md`), and does not decide between the placements.
+     A singular path prunes to the annotation in either. Through the engine today, a path into a
+     repeating element reads the whole element, so both read the same below one. Pairing `x` with `_x`
+     can name only the fields it needs, `arrays_zip(given, _given.__start)`, and still prune. If the
+     engine stops removing nulls before each field read (#2864), siblings would read less in one case:
+     a repeating primitive inside a repeating element, as in `name.given`, where `_given` has to be
+     flattened before its field is read, and is then read whole. In a dense schema that includes its
+     wide `extension`. This was weighed and accepted: the case is narrow, waits on #2864, and costs
+     only I/O.
+   - **The metadata group does not need testing on its own.** Because the engine pairs `x` with `_x`
+     and reads the fields it needs, nothing asks whether `_x` exists. The one place an annotation-only
+     group shows is egress, which leaves out the `__` fields and then a group left empty.
 
 _Rejected_: package-private processors in `io`, which the engine cannot reach; `io.annotation` with the
 transform's helpers made public, which decision 84 forbids and which has the same reach problem; the
@@ -4366,7 +4380,8 @@ adds a module to the build order for no gain the separate package does not give;
 populated elements of a dense schema; the toggles as a configuration of the reader, by an overload of
 `FhirReader.of` or by an option of each format's reader, which would leave stored data that was not
 ingested by Pathling with no way to be annotated; annotations as siblings of their element, the
-specification's placement until now, for the alignments and resolutions part 4 removes; a primitive's
+specification's placement until now, for the alignments and resolutions part 4 removes, which reads
+less only in a case that waits on #2864; a primitive's
 annotations in `_x` and a complex element's beside it, which leaves the quantity, the annotation the
 engine most needs to carry, the one it cannot; one group of annotations beside each element, which
 keeps `_x` to its FHIR meaning at the cost of a second alignment and a second resolution.
