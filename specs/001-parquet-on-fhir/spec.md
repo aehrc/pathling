@@ -147,7 +147,7 @@ expression over an absent element yields empty.
    **When** it is evaluated, **Then** it succeeds.
 7. **Given** one column expression, **When** it is applied to a fitted dataset
    and to a dense dataset holding the same resources, **Then** the results are
-   equal. *(Subject to OQ-2.)*
+   equal.
 8. **Given** two collections of the same FHIR type reached by different paths,
    whose fitted schemas differ, **When** they are combined, **Then** the result
    holds every element of both and can be traversed.
@@ -448,7 +448,7 @@ Identifiers are stable. FR-015, FR-018 and FR-020 are retired and not reused.
   element, because that drops rows from files lacking that leaf.
 - **FR-054**: A column expression MUST be valid over every schema conforming to
   the definitions, deciding presence from the resolved input schema rather than
-  when the expression is built. *(Subject to OQ-2.)* Evidence:
+  when the expression is built (decision 136). Evidence:
   [t009a-analyzer-gate.md](evidence/t009a-analyzer-gate.md),
   [join-condition-limit.md](evidence/join-condition-limit.md).
 - **FR-055**: An absent element MUST be a null typed by the definitions where
@@ -587,7 +587,6 @@ reconciliation, legacy export, layout column.
 - **SC-010**: One column expression, built without reference to any dataset,
   applied to a fitted and to a dense dataset holding the same resources, yields
   equal results for every expression in the engine's expression-level test set.
-  *(Subject to OQ-2.)*
 - **SC-011**: Encode and decode are no slower than at the PoF switch, measured on
   the same benchmark, within the measured drift of about 10%
   ([t136-benchmark.md](evidence/t136-benchmark.md)).
@@ -652,3 +651,8 @@ reconciliation, legacy export, layout column.
   and an unbound expression bound to a schema when the dataset is known. The
   answer decides FR-054, SC-010 and the fitted-versus-dense parity tests. Any
   change is weighed against SC-008.
+
+  _Answer (decision 136, owner, 2026-10-23)_: no. A column expression stays
+  unbound, as FR-054 states. The question is revisited with the support of
+  extra fields, whose implementation may need a schema the definitions do not
+  give.

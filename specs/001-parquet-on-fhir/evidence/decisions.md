@@ -4258,3 +4258,36 @@ decimal's text as it is and writes it back as stored, which is lossless; the fir
 XML route stores what the JSON route stores value for value, no longer holds for a decimal's text, which now
 differs ("5" against "5.0", "1.50" against "1.5"), while its value is the same at a double's precision. Ticket
 16's rework need only bring JSON level with XML.
+
+## 136. A column expression stays unbound to a schema; revisited with extra fields
+
+Owner decision (2026-10-23), ticket 09. Resolves OQ-2.
+
+Three options were weighed for how a FHIRPath or search column relates to the schema it runs over: (a) today's
+column, built without a dataset and resolving presence against whatever schema it meets (FR-054, decision 75);
+(b) binding at evaluation time; and (c) an unbound expression object, bound by the caller when the dataset is
+known.
+
+- **Combining with other SQL filters.** Only (a) yields a plain `Column` before a dataset exists, so a caller can
+  combine it freely with other filters, as the server and the library do today. (b) and (c) yield a column only
+  once bound.
+- **Fragility with joins and the analyzer.** The risk (a) carries was measured and contained. The analyzer gate
+  (`t009a-analyzer-gate.md`) found no plan shape that forces the tolerant reference before its child resolves,
+  and the join-condition regression (`join-condition-limit.md`) was fixed in M4 by T100k and is pinned by
+  `ResolveOrNullTest` and `JoinConditionTest`. What remains is the dropped-column limit and a bare view column
+  in a join condition, both recorded there.
+- **The public API (SC-008).** `fhirPathToColumn` and `searchToColumn` return a `Column` in Java, Python and R.
+  (b) and (c) change that contract.
+- **What binding would add.** Validation at bind time, a manifest of the schema an expression requires, and
+  messages that name a missing element. None is required by #2367, and `trust` (ticket 31) leaves the engine's
+  behaviour on non-conformant data undefined.
+
+_Decision_: (a). A column expression is built without reference to any dataset and decides presence from the
+resolved input schema. FR-054 and SC-010 stand as written, and ticket 19's expression parity test applies one
+column, built once, to a fitted and to a dense dataset.
+
+_When to revisit_: with the support of extra fields, which the follow-up issue that ticket 26 raises covers.
+Content the definitions do not describe may need a schema the column cannot derive from the definitions, such as
+user-supplied definitions (D1) or types inferred from the data (D2), and an implementation that needs one may
+require the expression to be bound to the dataset or to that schema.
+

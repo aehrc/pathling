@@ -43,7 +43,7 @@ JSON and XML are read and written without HAPI, and ingest assumes conformant
 input and reports nothing.
 
 - ~~[08](08-spike-ingest-egress-mechanism.md) Spike: the ingest and egress mechanism for JSON and XML~~ (done; choice deferred, decision 134)
-- [09](09-decide-column-binding.md) Decide whether column expressions are bound to a schema
+- ~~[09](09-decide-column-binding.md) Decide whether column expressions are bound to a schema~~ (done; unbound, decision 136)
 - [32](32-xml-and-bundles-without-hapi.md) XML and bundles without HAPI, on the interim ingest
 - [16](16-placeholder-ingest-egress-rework.md) DEFERRED: the ingest mechanism, per-value validation and lossless decimals
 - [35](35-pof-spec-json-projection.md) Propose the JSON projection and its prerequisites as amendments to the Parquet on FHIR specification

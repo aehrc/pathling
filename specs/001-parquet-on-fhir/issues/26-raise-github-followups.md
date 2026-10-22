@@ -24,7 +24,8 @@
   - a JSON-type marker in the Parquet metadata, and Parquet's `JSON` logical type, for a number stored as text, whose support in Spark 4 and survival through Delta and pyarrow are unmeasured;
   - for XML, which carries no types: namespaced attributes, and a comment carrying the undescribed element, under "Typing undescribed content in XML";
   - that JSON and XML give such content different types, against principle 6;
-  - the parked branch `issue/2830-egress-unknown-field` from ticket 20.
+  - the parked branch `issue/2830-egress-unknown-field` from ticket 20;
+  - whether a column expression stays unbound to a schema (decision 136, owner, 2026-10-23). Supporting such content may need a schema the definitions do not give, and an implementation that does may require binding the expression to the dataset or to that schema.
 - **The server without Woodstox (owner, 2026-10-22).** Ticket 32 excluded `woodstox-core` from `encoders`, and so from `library-api` and `library-runtime`, because it made Spark's `to_xml` fail. When the server moves to this runtime, check that its HAPI XML responses work without Woodstox from `library-runtime`, and whether its own dependencies still bring Woodstox in.
 - **What the release needs beyond #2367 (owner, 2026-10-22).** #2367 is not by itself a release. Each follow-up the release needs that arises from this work is raised as an issue, including the release notes that ticket 28 hands on.
 - **Others handed on.** Any follow-up passed on by ticket 10, such as a precomputed reference key. Ticket 08's threads, such as the upstream Spark issue from T132, moved to ticket 16, which raises its own.

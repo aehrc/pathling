@@ -6,7 +6,7 @@
 
 - **Transform parity (T030).** Transform the same data in both modes and compare types, cardinality and field order on the branches both carry, after normalising nullability. A fitted structure's field order is a subsequence of the dense one.
 - **Suite parity (T037b).** Add `-Dpathling.testSchemaMode=dense` to the test dimension, and run the curated FHIRPath subset, both conformance baselines and the SQL-on-FHIR compliance suite in it.
-- **Expression parity (T108b).** Per ticket 09's decision on binding: one column expression applied to a fitted and to a dense dataset holding the same resources gives equal results for every expression in the engine's expression-level test set.
+- **Expression parity (T108b).** Per ticket 09's decision on binding (decision 136, an unbound column): one column expression applied to a fitted and to a dense dataset holding the same resources gives equal results for every expression in the engine's expression-level test set.
 
 **Blocked by:** 18, 09
 
