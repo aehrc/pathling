@@ -45,20 +45,17 @@ input and reports nothing.
 - ~~[08](08-spike-ingest-egress-mechanism.md) Spike: the ingest and egress mechanism for JSON and XML~~ (done; choice deferred, decision 134)
 - ~~[09](09-decide-column-binding.md) Decide whether column expressions are bound to a schema~~ (done; unbound, decision 136)
 - [32](32-xml-and-bundles-without-hapi.md) XML and bundles without HAPI, on the interim ingest
-- [16](16-placeholder-ingest-egress-rework.md) DEFERRED: the ingest mechanism, per-value validation and lossless decimals
-- [35](35-pof-spec-json-projection.md) Propose the JSON projection and its prerequisites as amendments to the Parquet on FHIR specification
 - [37](37-remove-ingest-findings.md) Remove ingest's findings and checks, and list what the layout does not store as exceptions
 
 Decision 134 deferred the choice of ingest mechanism. Until the owner makes it,
 JSON stays on Spark's reader and ticket 32 takes XML and bundles off HAPI; ticket
-16 is the deferred rework. Ticket 35 can start at any time, and #2367 does not
-wait for its amendments to be agreed. Ticket 37 removed ingest's findings and
+16, in stage 5, is the deferred rework. Ticket 37 removed ingest's findings and
 checks once 32 had landed, and ticket 18 then builds the dense mode with no
 bounds reporting.
 
 The stage closes early so that stage 4 picks up its changes (owner, 2026-10-23).
 Ticket 17 moved to stage 4, which prepares the engine's pairing of `x` with `_x`,
-and tickets 29, 30 and 39 moved to stage 5.
+and tickets 16, 29, 30, 35 and 39 moved to stage 5.
 
 ## Stage 4: Schema annotations (#2832)
 
@@ -96,6 +93,8 @@ issues are raised, and #2367 is checked complete.
 - [29](29-layout-version-column.md) Identify the PoF layout by a versioned layout column
 - [30](30-pof-spec-layout-column.md) Propose the layout column as an amendment to the Parquet on FHIR specification
 - [39](39-public-xml-sink-and-source.md) A public XML sink and source, over ticket 32's line-delimited XML
+- [35](35-pof-spec-json-projection.md) Propose the JSON projection and its prerequisites as amendments to the Parquet on FHIR specification
+- [16](16-placeholder-ingest-egress-rework.md) DEFERRED: the ingest mechanism, per-value validation and lossless decimals
 - [28](28-completion-checklist.md) Completion checklist
 
 Ticket 31 can start at any time, except its decimal criterion,
@@ -103,9 +102,12 @@ which waits for ticket 13. Handling non-conformant data beyond `trust`,
 which 31 and 33 held until 2026-10-22, is the follow-up issue that ticket 26
 raises.
 
-Tickets 29, 30 and 39 moved here from stage 3 (owner, 2026-10-23). Ticket 29
+Tickets 16, 29, 30, 35 and 39 moved here from stage 3 (owner, 2026-10-23). Ticket 29
 adds the layout column to the ingest #2367 delivers, so it follows 32. Until it
 lands, the refusal of the legacy layout rests on the root `id_versioned`. Ticket
 30 can start at any time; 29 takes its name from 30 if 30 is agreed first. Ticket
 39, numbered 36 until 2026-10-23, follows 32, whose `io`-level sink and source it
-exposes. Tickets 29 and 39 both work in `io`, so they run in sequence.
+exposes. Tickets 29 and 39 both work in `io`, so they run in sequence. Ticket
+35 can start at any time, and #2367 does not wait for its amendments to be
+agreed. Ticket 16 waits on the owner's choice of ingest mechanism (decision 134)
+and on ticket 31; whether #2367 waits for it is decided with that choice.
