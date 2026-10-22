@@ -4294,13 +4294,22 @@ _Decision_:
        Pathling does not define, is either left out (the default) or kept. The specification permits
        non-standard annotations. One is placed after its element, which its name identifies: no FHIR
        element name begins with `__` or contains an underscore.
+     - **A Parquet dataset may carry any `__` field (owner, 2026-10-22).** A field whose name begins
+       with `__` is layout, not content, so one Pathling does not define does not make a dataset
+       non-conformant: level 3 for Parquet, in "Conformance levels" of `ingress-strictness/README.md`,
+       compares the schema with the layout the definitions derive apart from such fields. This is the
+       rule ticket 35 proposes for the JSON projection, carried from level 2 to level 3. Without it a
+       kept annotation would put Pathling's own output outside what `trust` promises. What other extra
+       fields are, and where they stand in the levels, is ticket 36.
    - **Where it runs.** `encode` runs it, so that ingest emits the annotations by default (FR-021).
      Writing data that is already stored, to Parquet or Delta, never adds annotations: a user who wants
      them runs the step first. Reading for a query never runs it, because the engine reads a stored
      annotation where the schema has one and computes it otherwise.
    - **Egress never writes an annotation.** Annotations belong to this layout and not to FHIR, so JSON
      and XML carry none. Egress leaves out every `__` field, one Pathling does not define included,
-     rather than failing on it as `ResourceTransformer.storedEntry` does today. Such a field can never be
+     rather than failing on it as `ResourceTransformer.storedEntry` does today. This is the JSON
+     projection's rule that a `__` field is layout and left out, which ticket 35 proposes to the
+     specification, applied by Pathling ahead of it. Such a field can never be
      FHIR content, so this takes nothing from the handling of content the definitions do not describe,
      which is the follow-up issue that ticket 26 raises (formerly ticket 34).
    - **Whether the engine trusts a stored annotation** is not a setting of the step. It belongs to the
@@ -4327,6 +4336,9 @@ _Consequences_:
   kind, and move the engine's own computation of it onto the kind.
 - An annotation computed by a UDF at ingest, the quantity's UCUM canonicalisation, is within FR-050: it
   is a Spark UDF over values, not a FHIR object in a per-row plan.
+- Under `trust` (decision 133's addendum of 2026-10-22), what the annotation step stores for an invalid
+  value is undefined, as is everything else about such a value. Because one definition serves both
+  clients, an annotation Pathling stored and the engine's computed fallback still agree on it.
 - **Amends decision 121.** The toggles are documented in the Java, Python and R API docs with ticket 11.
   `site/docs/libraries/io/schema.md` keeps its statement that this release writes no annotations until a
   kind exists to write, so the site documentation of the annotations and their toggles moves to ticket 15.

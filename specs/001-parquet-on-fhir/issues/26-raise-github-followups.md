@@ -20,12 +20,7 @@
   - whether the engine uses an annotation stored by another producer or recomputes it, which decision 135 assigns to the modes rather than to ticket 11's *recompute* setting;
   - the exceptions still open: `null` and `[]` in JSON, the empty string's level, and whether trimming whitespace is lossless;
   - FR-063, rewritten to match the softened principles 2 and 5.
-- **Content the definitions do not describe (owner, 2026-10-22).** Ticket 34, which this issue replaces, and the metadata that would preserve such content's representation through ingest and egress, even only in datasets Pathling wrote. The round-trip invariant excludes such content, so this is the only route by which it can hold for it. From `evidence/ingress-strictness/README.md`:
-  - D1, user-supplied definitions, and D2, types inferred from the data, under "Extra elements", with D2's costs and the proposal to infer FHIRPath System types;
-  - a JSON-type marker in the Parquet metadata, and Parquet's `JSON` logical type, for a number stored as text, whose support in Spark 4 and survival through Delta and pyarrow are unmeasured;
-  - for XML, which carries no types: namespaced attributes, and a comment carrying the undescribed element, under "Typing undescribed content in XML";
-  - that JSON and XML give such content different types, against principle 6;
-  - the parked branch `issue/2830-egress-unknown-field` from ticket 20.
+- **Extra fields (owner, 2026-10-22).** Content and layout that the definitions do not derive: their support through ingest, egress and the engine, and their place in the conformance levels. Ticket 34, which this issue replaces, and the metadata that would preserve such content's representation. The issue's scope is written up in ticket 36.
 - **What the release needs beyond #2367 (owner, 2026-10-22).** #2367 is not by itself a release. Each follow-up the release needs that arises from this work is raised as an issue, including the release notes that ticket 28 hands on.
 - **Others handed on.** Any follow-up passed on by ticket 10, such as a precomputed reference key. Ticket 08's threads, such as the upstream Spark issue from T132, moved to ticket 16, which raises its own.
 

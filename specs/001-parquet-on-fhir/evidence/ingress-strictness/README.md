@@ -156,7 +156,7 @@ those say how far a value is converted, and these say which rule it breaks. Each
 |---|---|---|---|---|
 | 1. Container format | The file is valid in its format | No | Well-formed JSON, one object per line (C1) | A readable Parquet or Delta file |
 | 2. FHIR JSON encoding | FHIR's JSON representation rules | No | The rules of [FHIR JSON](https://hl7.org/fhir/R4/json.html) applied directly: no `null` except as positional padding aligned with `_x`, no `{}`, `[]` or `""`, no duplicate keys, `_x` aligned with `x`, `resourceType` present (C2) | The same rules, applied to the row's JSON projection (below) |
-| 3. Structure | The definitions' names, types and cardinality | Yes | Per value: known names, the JSON type the definition gives, array or singular, one choice type (C3, C4, C5) | Per dataset: the schema is the layout the definitions derive. Checked once, at planning |
+| 3. Structure | The definitions' names, types and cardinality | Yes | Per value: known names, the JSON type the definition gives, array or singular, one choice type (C3, C4, C5) | Per dataset: the schema is the layout the definitions derive, apart from any field whose name starts with `__`, which is layout and may come from any producer (decision 135). Checked once, at planning |
 | 4. Value | The lexical space of the element's type | Yes | The regex, the calendar, the range, and whitespace where the type forbids it (C6) | The same, on the stored text |
 | 5. Valid FHIR | Minimum cardinality, bindings, invariants, profiles | Yes, and terminology | Out of scope | Out of scope |
 

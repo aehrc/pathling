@@ -74,6 +74,9 @@ its own toggle, and their use is decided from the schema.
 
 Content the definitions do not describe, ticket 34 until 2026-10-22, is outside
 the round-trip invariant and moves to a follow-up issue that ticket 26 raises.
+Ticket 36 writes that issue's scope, which now covers extra fields generally,
+including `__` fields from other producers, and their place in the
+conformance levels.
 
 ## Stage 5: Dense mode, measurement, trust and completion (#2833)
 
@@ -87,7 +90,8 @@ issues are raised, and #2367 is checked complete.
 - [27](27-usc-bloodpressures-planning-regression.md) Investigate the UsCoreBloodPressures planning regression
 - [31](31-engine-trust-mode.md) The engine runs in `trust`, and conformant data gives correct answers
 - ~~[33](33-engine-layout-tolerance-modes.md) The engine handles non-conformant layout shapes in the same four modes~~ (moved to the follow-up, ticket 26)
-- [26](26-raise-github-followups.md) Raise the GitHub follow-up issues, including non-conformant data beyond `trust`, content the definitions do not describe, and what the release needs
+- [26](26-raise-github-followups.md) Raise the GitHub follow-up issues, including non-conformant data beyond `trust`, extra fields, and what the release needs
+- [36](36-followup-extra-fields.md) Scope the follow-up issue on extra fields: their support, and their place in the conformance levels
 - [28](28-completion-checklist.md) Completion checklist
 
 Ticket 31 can start at any time, except its decimal criterion,

@@ -12,6 +12,8 @@ What the engine does today on non-conformant data is in the evidence: an invalid
 - **A valid decimal beyond `DECIMAL(32,6)`.** A decimal of 29 or 40 digits is valid FHIR. It reads as empty on the decimal path, yet `valueQuantity > 1 'mg'` is true for it, so the two paths disagree on conformant data. Loss of precision is an accepted exception ("Exceptions to the levels"); a value that becomes empty is not. How it is resolved is decided when the ticket is picked up (owner, 2026-10-21). Stop and ask the owner before changing the behaviour.
 - **A `dateTime` or `instant` with a time but no timezone** is valid (decision 133's addendum of 2026-10-21), and is compared as today.
 
+**The date grammar is shared with ticket 14 (decision 135).** The range annotation kind, in `fhir-schema`, parses dates with the same grammar this ticket puts there. Whichever ticket lands first puts it in place, and the other uses it.
+
 **Blocked by:** 13, for the decimal criterion only, since its annotation changes how the decimal path reads a value. The rest can start at any time.
 
 **Status:** needs-triage

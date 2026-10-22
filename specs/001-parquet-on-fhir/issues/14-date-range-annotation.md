@@ -8,6 +8,8 @@
 
 **Where the kind lives (decision 135).** The range kind is defined once, in the kinds package beside `fhir-schema`'s annotation API. The engine's boundary UDFs (`LowBoundaryForDateTime` and its siblings, registered by `PathlingUdfRegistrar`) move onto it, so `FhirPathDateTime`'s boundaries, or a counterpart `fhir-schema` can reach, are the single computation. It is stored by the annotation step of ticket 11, not by the reader.
 
+**The date grammar (decision 135, ticket 31).** Ticket 31 puts FHIR's date grammar in `fhir-schema` for `toDate()` and `toDateTime()`. The range kind, also in `fhir-schema`, parses dates with that grammar rather than a second one. Whichever ticket lands first puts it in place, and the other uses it.
+
 **Blocked by:** 11
 
 **Status:** ready-for-agent
