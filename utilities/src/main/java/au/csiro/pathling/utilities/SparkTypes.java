@@ -18,8 +18,12 @@
 package au.csiro.pathling.utilities;
 
 import jakarta.annotation.Nonnull;
+import java.util.Optional;
+import java.util.stream.Stream;
 import org.apache.spark.sql.types.ArrayType;
 import org.apache.spark.sql.types.DataType;
+import org.apache.spark.sql.types.StructField;
+import org.apache.spark.sql.types.StructType;
 
 /** Helpers for Spark SQL data types. */
 public final class SparkTypes {
@@ -36,5 +40,18 @@ public final class SparkTypes {
   @Nonnull
   public static DataType elementTypeOf(@Nonnull final DataType type) {
     return type instanceof final ArrayType array ? array.elementType() : type;
+  }
+
+  /**
+   * Returns the field of a structure that has a name.
+   *
+   * @param structure the structure
+   * @param name the name of the field
+   * @return the field, or empty where the structure has none of that name
+   */
+  @Nonnull
+  public static Optional<StructField> fieldOf(
+      @Nonnull final StructType structure, @Nonnull final String name) {
+    return Stream.of(structure.fields()).filter(field -> field.name().equals(name)).findFirst();
   }
 }

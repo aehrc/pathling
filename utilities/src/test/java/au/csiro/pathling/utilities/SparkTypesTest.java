@@ -19,8 +19,10 @@ package au.csiro.pathling.utilities;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.util.Optional;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
+import org.apache.spark.sql.types.StructType;
 import org.junit.jupiter.api.Test;
 
 class SparkTypesTest {
@@ -41,5 +43,19 @@ class SparkTypesTest {
   void unwrapsOnlyOneLevelOfArray() {
     final DataType inner = DataTypes.createArrayType(DataTypes.StringType);
     assertEquals(inner, SparkTypes.elementTypeOf(DataTypes.createArrayType(inner)));
+  }
+
+  @Test
+  void returnsTheFieldOfAName() {
+    final StructType structure =
+        new StructType().add("id", DataTypes.StringType).add("count", DataTypes.IntegerType);
+    assertEquals(Optional.of(structure.fields()[1]), SparkTypes.fieldOf(structure, "count"));
+  }
+
+  @Test
+  void returnsNothingForANameTheStructureLacks() {
+    assertEquals(
+        Optional.empty(),
+        SparkTypes.fieldOf(new StructType().add("id", DataTypes.StringType), "count"));
   }
 }

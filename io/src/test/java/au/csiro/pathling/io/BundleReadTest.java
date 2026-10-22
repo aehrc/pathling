@@ -206,6 +206,24 @@ class BundleReadTest {
         XmlNarrativeTest.messages(failure));
   }
 
+  /**
+   * A string in a JSON bundle longer than the JSON parser allows by default, such as a large
+   * attachment's data, does not fail the bundle when it is not text that resolution needs.
+   */
+  @Test
+  void readsAJsonBundleCarryingAStringLongerThanTheParserAllows() {
+    final String bundle =
+        "{\"resourceType\":\"Bundle\",\"type\":\"collection\",\"entry\":["
+            + "{\"resource\":{\"resourceType\":\"Binary\",\"id\":\"large\","
+            + "\"contentType\":\"application/octet-stream\",\"data\":\""
+            + "A".repeat(20_000_004)
+            + "\"}},"
+            + "{\"resource\":{\"resourceType\":\"Patient\",\"id\":\"kept\"}}]}";
+
+    assertEquals(
+        List.of("kept"), ids(reader(FhirMediaType.JSON).readBundles("Patient", dataset(bundle))));
+  }
+
   @ParameterizedTest
   @MethodSource("formats")
   void keepsTheIdentifierEachResourceCarries(@Nonnull final String format) {

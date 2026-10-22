@@ -18,6 +18,7 @@
 package au.csiro.pathling.io;
 
 import static au.csiro.pathling.utilities.SparkTypes.elementTypeOf;
+import static au.csiro.pathling.utilities.SparkTypes.fieldOf;
 
 import au.csiro.pathling.definition.ElementDefinition;
 import au.csiro.pathling.schema.DefinitionCanonicalStructure;
@@ -203,12 +204,12 @@ final class XmlIngestShape {
       }
       final String name = entry.getName();
       if (isAttribute(nodeType, isResource, name)) {
-        if (field(parsed, ATTRIBUTE + name).isPresent()) {
+        if (fieldOf(parsed, ATTRIBUTE + name).isPresent()) {
           columns.add(source.apply(ATTRIBUTE + name).alias(name));
         }
         continue;
       }
-      final Optional<StructField> field = field(parsed, name);
+      final Optional<StructField> field = fieldOf(parsed, name);
       if (field.isEmpty()) {
         continue;
       }
@@ -249,14 +250,14 @@ final class XmlIngestShape {
     final StructType parsed = (StructType) elementTypeOf(parsedType);
     final List<Column> columns = new ArrayList<>();
     final boolean repeating = entry.isRepeating();
-    if (field(parsed, VALUE).isPresent()) {
+    if (fieldOf(parsed, VALUE).isPresent()) {
       final FHIRDefinedType type = entry.primitiveType().orElseThrow();
       columns.add(
           wrap(parsedType, repeating, column, value -> typed(type, value.getField(VALUE)))
               .alias(entry.getName()));
     }
     final List<String> metadata =
-        Stream.of(ID, EXTENSION).filter(name -> field(parsed, name).isPresent()).toList();
+        Stream.of(ID, EXTENSION).filter(name -> fieldOf(parsed, name).isPresent()).toList();
     if (!metadata.isEmpty()) {
       final UnaryOperator<Column> group =
           value -> {
@@ -359,11 +360,5 @@ final class XmlIngestShape {
   @Nonnull
   private static DataType rewrap(@Nonnull final DataType observed, @Nonnull final DataType inner) {
     return observed instanceof ArrayType ? DataTypes.createArrayType(inner, true) : inner;
-  }
-
-  @Nonnull
-  private static Optional<StructField> field(
-      @Nonnull final StructType structure, @Nonnull final String name) {
-    return Stream.of(structure.fields()).filter(field -> field.name().equals(name)).findFirst();
   }
 }

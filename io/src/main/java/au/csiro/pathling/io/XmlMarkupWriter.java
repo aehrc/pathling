@@ -23,6 +23,7 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import javax.xml.XMLConstants;
 import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
@@ -315,6 +316,10 @@ final class XmlMarkupWriter {
       if (scope.containsKey(prefix)) {
         return scope.get(prefix);
       }
+    }
+    // The xml prefix is bound in every document without being declared.
+    if (XMLConstants.XML_NS_PREFIX.equals(prefix)) {
+      return XMLConstants.XML_NS_URI;
     }
     // An unprefixed name is in no namespace until a default is declared.
     return prefix.isEmpty() ? "" : null;

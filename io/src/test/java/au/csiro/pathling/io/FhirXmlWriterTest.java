@@ -236,6 +236,40 @@ class FhirXmlWriterTest {
   }
 
   /**
+   * A document with no narrative and no empty element is written as Spark's XML writer wrote it, so
+   * the sink keeps it to one line only because that writer writes a line break in an attribute as a
+   * reference. This holds only for the writer Spark finds on the classpath, Hadoop's shaded copy of
+   * Woodstox, so a change to which writer that is fails here.
+   */
+  @Test
+  void keepsALineBreakInAnAttributeToOneLineUnfinished(@TempDir @Nonnull final Path directory) {
+    final Dataset<Row> stored =
+        TransformFixtures.reader()
+            .read(
+                "Patient",
+                documents(
+                    "{\"resourceType\":\"Patient\",\"id\":\"1\","
+                        + "\"name\":[{\"text\":\"line one\\nline two\\r\\nline three\"}]}"));
+    final String unfinished = TransformFixtures.fhirWriter().xml().write("Patient", stored).first();
+    assertTrue(
+        !XmlDocuments.EMPTY_ELEMENT.matcher(unfinished).find() && !unfinished.contains("<div>"),
+        "the document is finished, not written as Spark's XML writer wrote it: " + unfinished);
+    final String path = directory.resolve("Patient").toString();
+
+    TransformFixtures.fhirWriter().xml().write("Patient", stored, path, SaveMode.ErrorIfExists);
+
+    final List<String> lines =
+        TransformFixtures.spark().read().textFile(path).collectAsList().stream()
+            .filter(line -> !line.isEmpty())
+            .toList();
+    assertEquals(1, lines.size(), "a document spans more than one line");
+    assertTrue(lines.get(0).contains("line one&#xa;line two&#xd;&#xa;line three"), lines.get(0));
+    assertEquals(
+        stored.collectAsList(),
+        TransformFixtures.fhirReader().xml().read("Patient", path).collectAsList());
+  }
+
+  /**
    * A line break inside a narrative's comment cannot be written as a reference, so the sink fails
    * naming the resource rather than writing a document over two lines.
    */

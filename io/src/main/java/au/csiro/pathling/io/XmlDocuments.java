@@ -19,15 +19,11 @@ package au.csiro.pathling.io;
 
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.io.IOException;
 import java.io.StringReader;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
 import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamException;
@@ -50,9 +46,10 @@ import javax.xml.stream.XMLStreamReader;
  * <p>Ingest is in {@code trust} (owner, 2026-10-22), so a document fails, naming it, only where
  * carrying on would be unsafe or would leave what the data is ambiguous: text that is not
  * well-formed, a second root or text after the root, a document type declaration, and a root
- * outside the FHIR namespace. Everything else FHIR does not read is left out without a finding. A
- * document is named by its type and id where they could be read, and by its first characters
- * otherwise.
+ * outside the FHIR namespace. A document in the plain form is not parsed, so text that is not
+ * well-formed in a way that form does not look for is not caught there ({@link PlainFhirXml}).
+ * Everything else FHIR does not read is left out without a finding. A document is named by its type
+ * and id where they could be read, and by its first characters otherwise.
  *
  * <p>Nothing here builds a FHIR object, and the parser is the JDK's own, so the routes do not
  * depend on which StAX implementation is on the classpath.
@@ -90,9 +87,6 @@ final class XmlDocuments {
   @Nonnull private static final String NARRATIVE_START = "<div>";
 
   @Nonnull private static final String NARRATIVE_END = "</div>";
-
-  /** How many characters of a document name it, where its type and id are not known. */
-  private static final int EXCERPT_LENGTH = 80;
 
   /** The StAX property that reports a CDATA section as one rather than as text. */
   @Nonnull
@@ -201,7 +195,7 @@ final class XmlDocuments {
       return null;
     }
     try {
-      final XMLStreamReader reader = FACTORY.get().createXMLStreamReader(new StringReader(div));
+      final XMLStreamReader reader = reader(div);
       reader.nextTag();
       if (!DIV.equals(reader.getLocalName())
           || !(namespace(reader).isEmpty() || XHTML_NAMESPACE.equals(namespace(reader)))) {
@@ -248,8 +242,7 @@ final class XmlDocuments {
     }
     final XmlElement root;
     try {
-      final XMLStreamReader reader =
-          FACTORY.get().createXMLStreamReader(new StringReader(document));
+      final XMLStreamReader reader = reader(document);
       reader.nextTag();
       root = XmlElement.read(reader).withoutEmptyChildren();
     } catch (final XMLStreamException e) {
@@ -271,8 +264,7 @@ final class XmlDocuments {
   @Nullable
   static String[] narrativeAt(@Nonnull final String document, final int start) {
     try {
-      final XMLStreamReader reader =
-          FACTORY.get().createXMLStreamReader(new StringReader(document.substring(start)));
+      final XMLStreamReader reader = reader(document, start);
       reader.nextTag();
       if (!DIV.equals(reader.getLocalName())
           || !XHTML_NAMESPACE.equals(namespace(reader))
@@ -415,7 +407,7 @@ final class XmlDocuments {
    */
   @Nonnull
   private static XMLStreamReader root(@Nonnull final String document) throws XMLStreamException {
-    final XMLStreamReader reader = FACTORY.get().createXMLStreamReader(new StringReader(document));
+    final XMLStreamReader reader = reader(document);
     while (reader.hasNext()) {
       final int event = reader.next();
       if (event == XMLStreamConstants.START_ELEMENT) {
@@ -456,6 +448,22 @@ final class XmlDocuments {
   @Nonnull
   static XMLStreamReader reader(@Nonnull final String document) throws XMLStreamException {
     return FACTORY.get().createXMLStreamReader(new StringReader(document));
+  }
+
+  /**
+   * Opens a reader over the part of a document from an index, without copying it, so that the
+   * reader's character offsets count from that index.
+   */
+  @Nonnull
+  private static XMLStreamReader reader(@Nonnull final String document, final int start)
+      throws XMLStreamException {
+    final StringReader text = new StringReader(document);
+    try {
+      text.skip(start);
+    } catch (final IOException e) {
+      throw new XMLStreamException(e);
+    }
+    return FACTORY.get().createXMLStreamReader(text);
   }
 
   /** Moves to the next start or end tag, skipping comments, whitespace and instructions. */
@@ -538,23 +546,6 @@ final class XmlDocuments {
     return reader.getAttributeValue(null, VALUE);
   }
 
-  /** Returns the URN references of the resources wanted, as a set in the order they occur. */
-  @Nonnull
-  static Set<String> orderedSet() {
-    return new LinkedHashSet<>();
-  }
-
-  /** Returns the resolutions of the URNs a resource mentions, among those the bundle resolves. */
-  @Nonnull
-  static Map<String, String> resolutions(
-      @Nonnull final Set<String> mentioned, @Nonnull final Map<String, String> targets) {
-    return mentioned.stream()
-        .filter(targets::containsKey)
-        .collect(
-            Collectors.toMap(
-                urn -> urn, targets::get, (first, second) -> first, LinkedHashMap::new));
-  }
-
   @Nonnull
   private static IllegalArgumentException malformed(
       @Nonnull final String document, @Nonnull final Exception cause) {
@@ -569,10 +560,7 @@ final class XmlDocuments {
     if (identified != null) {
       return identified;
     }
-    final String start = document.strip();
-    return "document starting \""
-        + (start.length() > EXCERPT_LENGTH ? start.substring(0, EXCERPT_LENGTH) + "…" : start)
-        + "\"";
+    return "document " + DocumentExcerpt.startOf(document);
   }
 
   /**
@@ -583,18 +571,14 @@ final class XmlDocuments {
   @Nullable
   private static String identify(@Nonnull final String document) {
     try {
-      final XMLStreamReader reader =
-          FACTORY.get().createXMLStreamReader(new StringReader(document));
+      final XMLStreamReader reader = reader(document);
       reader.nextTag();
       final String type = reader.getLocalName();
       while (nextTag(reader) == XMLStreamConstants.START_ELEMENT) {
         if ("id".equals(reader.getLocalName()) && value(reader) != null) {
           return type + " with id \"" + value(reader) + "\"";
         }
-        int depth = 1;
-        while (depth > 0) {
-          depth += nextTag(reader) == XMLStreamConstants.START_ELEMENT ? 1 : -1;
-        }
+        skip(reader);
       }
       return null;
     } catch (final XMLStreamException | RuntimeException e) {

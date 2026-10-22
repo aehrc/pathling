@@ -24,6 +24,7 @@ import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -49,9 +50,6 @@ final class JsonBundles {
   @Nonnull private static final JsonFactory FACTORY = new JsonFactory();
 
   @Nonnull private static final String RESOURCE_TYPE = "resourceType";
-
-  /** How many characters of a document name it, where its id is not known. */
-  private static final int EXCERPT_LENGTH = 80;
 
   private JsonBundles() {}
 
@@ -90,14 +88,17 @@ final class JsonBundles {
       }
     } catch (final IOException | IllegalArgumentException e) {
       throw new IllegalArgumentException(
-          "Cannot read the FHIR JSON bundle " + name(bundle) + ": " + e.getMessage());
+          "Cannot read the FHIR JSON bundle "
+              + DocumentExcerpt.startOf(bundle)
+              + ": "
+              + e.getMessage());
     }
     if (!StorableResourceType.BUNDLE.equals(type)) {
       throw new IllegalArgumentException(
           "Expected a bundle and found "
               + (type == null ? "a document with no resource type" : "a resource of type " + type)
               + ": "
-              + name(bundle));
+              + DocumentExcerpt.startOf(bundle));
     }
     return BundleEntryScan.resolve(entries);
   }
@@ -139,7 +140,7 @@ final class JsonBundles {
       @Nonnull final BundleEntryScan entry)
       throws IOException {
     final int start = (int) parser.currentTokenLocation().getCharOffset();
-    final Set<String> urns = XmlDocuments.orderedSet();
+    final Set<String> urns = new LinkedHashSet<>();
     String type = null;
     String id = null;
     String versionId = null;
@@ -162,17 +163,20 @@ final class JsonBundles {
           }
         }
         case FIELD_NAME -> field = parser.currentName();
+        // Only the text resolution needs is read, so a value of any other field, however long, is
+        // skipped without being held.
         case VALUE_STRING -> {
-          final String text = parser.getText();
           if (depth == 1 && RESOURCE_TYPE.equals(field)) {
-            type = text;
+            type = parser.getText();
           } else if (depth == 1 && "id".equals(field)) {
-            id = text;
+            id = parser.getText();
           } else if (depth == 2 && inMeta && "versionId".equals(field)) {
-            versionId = text;
-          }
-          if ("reference".equals(field) && text.startsWith(XmlDocuments.URN)) {
-            urns.add(text);
+            versionId = parser.getText();
+          } else if ("reference".equals(field)) {
+            final String reference = parser.getText();
+            if (reference.startsWith(XmlDocuments.URN)) {
+              urns.add(reference);
+            }
           }
         }
         default -> {
@@ -193,14 +197,5 @@ final class JsonBundles {
           resourceType.equals(type) ? bundle.substring(start, end) : null,
           urns);
     }
-  }
-
-  /** Names a bundle by its first characters. */
-  @Nonnull
-  private static String name(@Nonnull final String bundle) {
-    final String start = bundle.strip();
-    return "starting \""
-        + (start.length() > EXCERPT_LENGTH ? start.substring(0, EXCERPT_LENGTH) + "…" : start)
-        + "\"";
   }
 }

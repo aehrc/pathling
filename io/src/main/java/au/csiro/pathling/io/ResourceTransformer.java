@@ -18,6 +18,7 @@
 package au.csiro.pathling.io;
 
 import static au.csiro.pathling.utilities.SparkTypes.elementTypeOf;
+import static au.csiro.pathling.utilities.SparkTypes.fieldOf;
 
 import au.csiro.pathling.definition.DefinitionContext;
 import au.csiro.pathling.definition.ElementDefinition;
@@ -277,7 +278,7 @@ final class ResourceTransformer {
       @Nonnull final UnaryOperator<Column> references) {
     if (entry.isResourceType()) {
       final Column column =
-          observedField(observed, entry.getName())
+          fieldOf(observed, entry.getName())
               .map(unused -> fields.apply(entry.getName()).cast(DataTypes.StringType))
               .orElseGet(() -> functions.lit(resourceType));
       return Optional.of(column.alias(entry.getName()));
@@ -314,7 +315,7 @@ final class ResourceTransformer {
     // The reference of a Reference is the one field a bundle's resolution applies to.
     final UnaryOperator<Column> resolution =
         inReference && REFERENCE.equals(name) ? references : UnaryOperator.identity();
-    return observedField(observed, name)
+    return fieldOf(observed, name)
         .flatMap(
             from ->
                 value(node, entry, from.dataType(), references)
@@ -342,9 +343,7 @@ final class ResourceTransformer {
     return entry
         .primitiveType()
         .filter(
-            type ->
-                observedField(observed, LayoutFields.metadataGroupName(entry.getName()))
-                    .isPresent())
+            type -> fieldOf(observed, LayoutFields.metadataGroupName(entry.getName())).isPresent())
         .map(type -> absent(entry, type))
         .map(column -> fields -> column);
   }
@@ -429,12 +428,6 @@ final class ResourceTransformer {
   private static PrimitiveConverter converter(@Nonnull final FHIRDefinedType type) {
     return PrimitiveConverters.forType(type)
         .orElseThrow(() -> new IllegalStateException("No converter for primitive type: " + type));
-  }
-
-  @Nonnull
-  private static Optional<StructField> observedField(
-      @Nonnull final StructType observed, @Nonnull final String name) {
-    return Stream.of(observed.fields()).filter(field -> field.name().equals(name)).findFirst();
   }
 
   /**

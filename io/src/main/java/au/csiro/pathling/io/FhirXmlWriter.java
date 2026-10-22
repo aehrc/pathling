@@ -17,11 +17,12 @@
 
 package au.csiro.pathling.io;
 
+import static au.csiro.pathling.utilities.SparkTypes.fieldOf;
+
 import au.csiro.pathling.definition.DefinitionContext;
 import au.csiro.pathling.schema.DefinitionCanonicalStructure;
 import jakarta.annotation.Nonnull;
 import java.util.Map;
-import java.util.stream.Stream;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
@@ -31,7 +32,6 @@ import org.apache.spark.sql.api.java.UDF3;
 import org.apache.spark.sql.expressions.UserDefinedFunction;
 import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.DataTypes;
-import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 
 /**
@@ -121,7 +121,7 @@ public final class FhirXmlWriter implements FhirFormatWriter {
                 Map.of("rowTag", resourceType, "indent", "")),
             "\n");
     final Column name =
-        field(schema, "id").isPresent()
+        fieldOf(schema, "id").isPresent()
             ? functions.concat(
                 functions.lit(resourceType + " with id \""),
                 functions.col("id"),
@@ -138,11 +138,5 @@ public final class FhirXmlWriter implements FhirFormatWriter {
                 FINISH.apply(document, functions.col(NAME), functions.lit(lineDelimited)))
             .otherwise(document);
     return written.select(result.alias(DOCUMENT)).as(Encoders.STRING());
-  }
-
-  @Nonnull
-  private static java.util.Optional<StructField> field(
-      @Nonnull final StructType structure, @Nonnull final String name) {
-    return Stream.of(structure.fields()).filter(field -> field.name().equals(name)).findFirst();
   }
 }

@@ -22,6 +22,7 @@ import jakarta.annotation.Nullable;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -49,7 +50,7 @@ final class ResourceScan {
 
   @Nullable private final XmlMarkupWriter writer;
 
-  @Nonnull private final Set<String> urns = XmlDocuments.orderedSet();
+  @Nonnull private final Set<String> urns = new LinkedHashSet<>();
 
   @Nullable private String id;
 

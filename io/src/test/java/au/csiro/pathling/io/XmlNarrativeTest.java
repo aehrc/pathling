@@ -173,6 +173,22 @@ class XmlNarrativeTest {
     }
   }
 
+  /**
+   * The {@code xml} prefix is bound in every document, so an attribute such as {@code xml:lang} is
+   * stored and written back with no declaration of it, as JSON stores the same narrative.
+   */
+  @Test
+  void declaresNothingForTheXmlPrefix() {
+    final String div = "<div " + XHTML + " xml:lang=\"en\" lang=\"en\"><p>a</p></div>";
+    final Dataset<Row> stored =
+        TransformFixtures.fhirReader().xml().read("Patient", documents(OPEN + div + CLOSE));
+
+    final String written = TransformFixtures.fhirWriter().xml().write("Patient", stored).first();
+
+    assertEquals(div, stored.first().<Row>getAs("text").getAs("div"));
+    assertTrue(written.contains(div), written);
+  }
+
   @Nonnull
   private static List<String> roundTrip(
       @Nonnull final String type, @Nonnull final Dataset<String> documents) {

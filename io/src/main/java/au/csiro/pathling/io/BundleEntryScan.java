@@ -20,10 +20,12 @@ package au.csiro.pathling.io;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * What a bundle route needs to know of one entry of a bundle: its full URL, the type, id and
@@ -111,10 +113,19 @@ final class BundleEntryScan {
         entry -> entry.target().ifPresent(target -> targets.putIfAbsent(entry.fullUrl, target)));
     return entries.stream()
         .filter(entry -> entry.document != null)
-        .map(
-            entry ->
-                new BundleResource(entry.document, XmlDocuments.resolutions(entry.urns, targets)))
+        .map(entry -> new BundleResource(entry.document, resolutions(entry.urns, targets)))
         .toList();
+  }
+
+  /** Returns the resolutions of the URNs a resource mentions, among those the bundle resolves. */
+  @Nonnull
+  private static Map<String, String> resolutions(
+      @Nonnull final Set<String> mentioned, @Nonnull final Map<String, String> targets) {
+    return mentioned.stream()
+        .filter(targets::containsKey)
+        .collect(
+            Collectors.toMap(
+                urn -> urn, targets::get, (first, second) -> first, LinkedHashMap::new));
   }
 
   /** Returns the relative reference a URN naming this entry resolves to, where it can be named. */

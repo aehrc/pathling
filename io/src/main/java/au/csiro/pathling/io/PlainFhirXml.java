@@ -34,7 +34,10 @@ import java.util.Deque;
  * defines. A narrative, the {@code div} of a {@code text}, is allowed where it is unprefixed and
  * declares the XHTML namespace itself: it alone is read with a full parse, and written as the
  * {@code value} attribute of its {@code div}, as {@link ResourceScan} writes it. A document in this
- * form is well-formed FHIR XML that needs no other rewriting.
+ * form needs no other rewriting. It is assumed to be well-formed rather than checked to be: an
+ * attribute given twice, or a reference to a character XML does not allow, is passed on as it is.
+ * Ingest trusts its input (decision 133's addendum of 2026-10-22), and Spark's XML reader may then
+ * fail on such a document without naming it.
  *
  * <p>Anything else is not judged here: the caller reads it with a full parse, which accepts what is
  * valid in another form and names the document where it is not. So this recognises a subset of
