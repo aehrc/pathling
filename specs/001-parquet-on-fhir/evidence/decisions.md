@@ -4280,8 +4280,9 @@ _Decision_:
 2. **A dense schema annotates every element the definitions describe**, subject to the toggles.
    Annotating only the populated elements cannot be known without seeing every row, which rules out the
    streaming encode ticket 18 restores, and it would make the dense schema depend on the data, which is
-   what the dense mode exists to avoid. The width is measured: about 24% more fields on a dense
-   `Observation` without extensions. A user who does not want it narrows it with the toggles, and since
+   what the dense mode exists to avoid. The width is provisionally about 24% more fields on a dense
+   `Observation` without extensions; the measurement is flawed and is redone on ticket 18's cursor
+   (`dense-annotation-width.md`). A user who does not want it narrows it with the toggles, and since
    the engine computes what is absent, the choice is between width and speed, never correctness.
 3. **Annotating is a step of its own over data in this layout, not part of reading.** Annotations must
    apply to any input in the layout, including Parquet or Delta written without them, so they cannot
@@ -4303,7 +4304,8 @@ _Decision_:
      - **Any other annotation in the input**, of a kind that is off or a `__` field Pathling does not
        define, is either left out (the default) or kept. The specification permits non-standard
        annotations. One that is kept stays in the structure it was found in, after the fields Pathling
-       derives there.
+       derives there. A kept field makes a structure differ between datasets as a fitted schema already
+       does, and converting to a shape the engine builds, such as System.Quantity, leaves it out.
      - **A Parquet dataset may carry any `__` field (owner, 2026-10-22).** A field whose name begins
        with `__` is layout, not content, so one Pathling does not define does not make a dataset
        non-conformant: level 3 for Parquet, in "Conformance levels" of `ingress-strictness/README.md`,
@@ -4338,8 +4340,9 @@ _Decision_:
      and the specification said nothing about repeating annotated elements at all.
    - **It reuses the support for primitive elements entirely.** The engine is expected to process a
      primitive by pairing `x` with `_x` by position, so that ids, extensions and values are handled
-     alike for singular and repeating elements (ticket 17). Annotations are then fields of what that
-     pairing already yields: one mechanism serves metadata and annotations, with no resolution or
+     alike for singular and repeating elements. Ticket 11 builds the pairing for annotation fields, and
+     ticket 17 extends it to ids and extensions. Annotations are then fields of what that pairing
+     already yields: one mechanism serves metadata and annotations, with no resolution or
      alignment of their own. As siblings, the pairing would take one more array per annotation.
    - **A quantity carries its canonical forms.** In its own structure the canonical forms are the
      fields ticket 12 gives the engine's System.Quantity, so a stored quantity decodes by reading its
@@ -4350,8 +4353,9 @@ _Decision_:
      or extensions. What tests for metadata tests for `id` and `extension` inside the group, not for
      the group: the JSON projection omits a group left with only
      `__` fields (ticket 35), and ticket 17's placeholder rules look at its content. Until ticket 17
-     stores ids and extensions, the group can be stored for annotations alone, and the strip that keeps
-     it out of a fitted schema (decision 60) gives way where it carries one.
+     stores ids and extensions, the group can be stored for annotations alone. The reader still does not
+     emit a group nothing populates (decision 60's addendum); the annotation step adds the group where
+     the reader did not emit one, as it must for stored data written without it.
    - **The specification is amended**, by ticket 35. Its sibling rule, its examples and its Quantity
      section change; the Quantity example, whose `__valueQuantity_canonical` copies the Quantity shape
      and contradicts the section's table of `value` and `code`, is corrected with them. Nothing has been
@@ -4408,6 +4412,6 @@ _Consequences_:
   them, to part 4's placement. No kind is registered yet, so no stored output changes.
 - R-014's single sibling-resolution mechanism now resolves the metadata group alone. Annotations are
   reached through it for primitives, and through the element's own structure for complex types.
-- `data-model.md`, `contracts/storage-layout.md`, the spec's example of a key named like an annotation,
-  and tickets 12 to 14 and 17 are reworded to the placement of part 4. ADR-0003 is reworded where it
-  says an annotation is stored beside its element.
+- `data-model.md`, `contracts/storage-layout.md`, `contracts/engine-semantics.md`, the spec's example
+  of a key named like an annotation, and tickets 12 to 14 and 17 are reworded to the placement of
+  part 4. ADR-0003 is reworded where it says an annotation is stored beside its element.

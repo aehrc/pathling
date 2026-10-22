@@ -51,8 +51,8 @@ placement, so it is read whenever anything below the element is.
 ## No setting changes it
 
 `scripts/pruning_confs.py` (PySpark 4.0.1) reads `name.family` from an array of
-structures in several shapes, under the default settings and with each setting
-that bears on nested pruning switched off. A shape that prunes with the defaults
+structures in several shapes, under the default settings and with each of the
+three settings below switched off. A shape that prunes with the defaults
 reads only `name[].family`; one that does not reads all of `name`.
 
 | Shape | Defaults |

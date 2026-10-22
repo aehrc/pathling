@@ -9,6 +9,14 @@ described element adds about 305 fields to about 1,275 element leaves, roughly
 24%.** The ratio barely moves with the nesting bound, because annotated types
 are mostly leaves of composite types that recur at every depth.
 
+**These figures are provisional.** The script bounds nesting by counting repeats
+of a type code, and every backbone element has the same one, so a backbone
+inside a backbone, such as `Observation.component.referenceRange`, is skipped as
+recursion. Its open-type filter inside an Extension applies only to `value`
+entries, so the annotations and metadata groups of filtered choice types are
+still counted. It also measures annotations as siblings, the placement decision
+135 part 4 replaced. Ticket 18 redoes the measurement on its own cursor.
+
 ## Method
 
 `scripts/DenseAnnotationWidth.java` walks `DefinitionCanonicalStructure` for a

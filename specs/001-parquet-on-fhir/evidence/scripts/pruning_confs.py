@@ -1,5 +1,5 @@
 """Does any Spark setting let nested schema pruning through a lambda over an array of structures?"""
-import re, tempfile, os
+import re, tempfile
 from pyspark.sql import SparkSession
 spark = SparkSession.builder.master("local[1]").config("spark.sql.maxMetadataStringLength","100000").config("spark.sql.adaptive.enabled","false").getOrCreate()
 spark.sparkContext.setLogLevel("ERROR")
@@ -24,8 +24,7 @@ Q = {
 confs = [None,
  ("spark.sql.optimizer.nestedSchemaPruning.enabled","false"),
  ("spark.sql.optimizer.expression.nestedPruning.enabled","false"),
- ("spark.sql.parquet.enableNestedColumnVectorizedReader","false"),
- ("spark.sql.optimizer.excludedRules","")]
+ ("spark.sql.parquet.enableNestedColumnVectorizedReader","false")]
 for c in confs:
     if c: spark.conf.set(*c)
     print("\n== conf:", c or "defaults")

@@ -16,6 +16,8 @@ Decision 135 settled the questions this ticket raised: where the definitions liv
   Ticket 18 adds the schema mode. A kind carried in more than one field is governed by one switch.
 - **The annotation step, public in `io`**: it takes a dataset of one resource type in this layout and returns it annotated, as the configuration says. `FhirReader.of(spark, definitions)` is unchanged.
 - **`encode` runs the step**, and nothing else does. Writing stored data does not add annotations, and neither does reading for a query.
+- **The engine pairs `x` with `_x` (decision 135, part 4)** by position, for the annotation fields only. Ticket 17 extends the pairing to ids and extensions.
+- **The step adds a metadata group the reader did not emit**, where a primitive's annotation needs one, as it must for stored data written without it.
 - **Egress leaves out every `__` field**, one Pathling does not define included, rather than throwing.
 - **Thread the configuration through `PathlingContext`** in Java, Python and R, and expose the step there.
 - **Paths (decision 135).** T053–T055 and T063–T066 name `io/annotation`. The API and the kinds go under `fhir-schema/src/main/java/au/csiro/pathling/schema/annotation/`. T055's test goes in `io`, where it asserts the columns the step emits.
@@ -29,6 +31,7 @@ Decision 135 settled the questions this ticket raised: where the definitions liv
 - [ ] The step runs enabled kinds and skips disabled ones. A test registers a stub kind per switch and shows that disabling one does not affect the others (T055).
 - [ ] With stub kinds, a test shows *fill* keeps a present annotation and *recompute* replaces it, and *drop* and *keep* do what they say for a disabled kind and for an unknown `__` field.
 - [ ] With a stub kind, a test shows that applying it reads a present annotation and computes an absent one, with the step's Java resolver and with the engine's Catalyst one.
+- [ ] With a stub kind on `birthDate`, a test shows the step stores `_birthDate` with the annotation for a source with no `_birthDate`, and for stored Parquet without one.
 - [ ] The canonical structure places a primitive's annotation entries in its metadata group and a complex element's in its own structure, pinned by a test.
 - [ ] With a stub kind on a repeating primitive, a test shows that the engine pairs each value with its own stored annotation by position, including where a value in the middle has none, rather than reading the annotations through the traversal, whose null removal loses the positions.
 - [ ] `decode` of data carrying an unknown `__` field writes JSON and XML without it, rather than failing.

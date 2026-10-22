@@ -19,7 +19,11 @@ public class EnginePruningProbe {
   static String readSchema(final Dataset<Row> df) {
     final String plan = df.queryExecution().executedPlan().toString();
     final Matcher m = Pattern.compile("ReadSchema: (struct<.*?>)\\s*$", Pattern.MULTILINE).matcher(plan);
-    return m.find() ? m.group(1) : "<not found>";
+    String last = "<not found>";
+    while (m.find()) {
+      last = m.group(1);
+    }
+    return last;
   }
 
   static String view(final String resource, final String forEach, final String path) {

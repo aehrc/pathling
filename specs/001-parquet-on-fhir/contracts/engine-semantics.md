@@ -135,12 +135,12 @@ previous-layout one. The decimal value and the canonical form are computed from
 the value and the code where a quantity is compared or converted, as they are
 for a stored quantity.
 
-Comparison across units uses the `_canonical_exact` annotation when present and
+Comparison across units uses the `__canonical_exact` annotation when present and
 computes the canonicalisation when not. That annotation's precision preserves
 magnitude, so quantities differing by orders of magnitude do not compare equal.
-The specification's `_canonical` annotation sits beside it and is written for
-interchange; the engine does not read it, because its fixed scale loses the
-magnitude the comparison depends on.
+The specification's `__canonical` annotation, before it in the quantity's
+structure, is written for interchange; the engine does not read it, because its
+fixed scale loses the magnitude the comparison depends on.
 
 ## Coding and terminology
 

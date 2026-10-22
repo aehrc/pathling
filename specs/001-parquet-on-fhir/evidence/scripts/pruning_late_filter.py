@@ -9,4 +9,5 @@ df = s.read.parquet(d + '/t')
 for q in ['flatten(name.given)', 'flatten(filter(name.given, x -> x is not null))', 'filter(name.family, x -> x is not null)', 'size(name.family)', 'size(filter(name.family, x -> x is not null))']:
     r = df.selectExpr(q + ' as v')
     plan = r._jdf.queryExecution().executedPlan().toString()
-    print(q, '|', re.findall(r'ReadSchema: (struct<.*?>)\s*$', plan, re.M)[-1], '|', r.first()[0])
+    m = re.findall(r'ReadSchema: (struct<.*?>)\s*$', plan, re.M)
+    print(q, '|', m[-1] if m else '?', '|', r.first()[0])
