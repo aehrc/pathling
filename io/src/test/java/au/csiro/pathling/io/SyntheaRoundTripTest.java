@@ -18,12 +18,10 @@
 package au.csiro.pathling.io;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import jakarta.annotation.Nonnull;
 import java.net.URISyntaxException;
 import java.nio.file.Path;
-import java.util.List;
 import java.util.Objects;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -49,10 +47,6 @@ class SyntheaRoundTripTest {
   void roundTripsTheCorpus(@Nonnull final String resourceType) {
     final Path corpus = corpus(resourceType);
     final RoundTripHarness harness = RoundTripHarness.excludingPrimitiveMetadata();
-
-    final List<NonConformantContent> findings = harness.findings(resourceType, corpus);
-    assertTrue(
-        findings.isEmpty(), "the corpus carries content this layout does not store: " + findings);
 
     assertEquals(
         0,

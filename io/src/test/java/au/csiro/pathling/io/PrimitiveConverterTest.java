@@ -20,8 +20,6 @@ package au.csiro.pathling.io;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.schema.PrimitiveTypes;
 import jakarta.annotation.Nonnull;
@@ -34,7 +32,6 @@ import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.functions;
-import org.apache.spark.sql.types.ArrayType;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
@@ -46,8 +43,8 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 /**
- * Tests the converter table: what each FHIR primitive type accepts from JSON inference, what it
- * stores, and what it returns to JSON (decision 68).
+ * Tests the converter table: what each FHIR primitive type stores from JSON inference, and what it
+ * returns to JSON (decision 68).
  *
  * <p>Each type is converted in both cardinalities, because the converter is applied through an
  * array for a repeating element and the split between a scalar and an array column is where this
@@ -161,46 +158,8 @@ class PrimitiveConverterTest {
                     type.toCode()));
   }
 
-  // The acceptance rule.
-
-  /**
-   * The column types each numeric primitive accepts beyond what inference gives, and the ones it
-   * refuses (decision 70). Every integral type widens losslessly to an integer and to a decimal; a
-   * float has already rounded, and a Spark date or timestamp cannot hold every FHIR one.
-   */
-  @Nonnull
-  static Stream<Arguments> widenings() {
-    final List<DataType> integral =
-        List.of(DataTypes.ByteType, DataTypes.ShortType, DataTypes.IntegerType, DataTypes.LongType);
-    final Stream<Arguments> accepted =
-        Stream.of("integer", "unsignedInt", "positiveInt", "integer64", "decimal")
-            .flatMap(code -> integral.stream().map(type -> Arguments.of(code, type, true)));
-    final Stream<Arguments> other =
-        Stream.of(
-            Arguments.of("decimal", DataTypes.DoubleType, true),
-            Arguments.of("decimal", DataTypes.createDecimalType(38, 0), true),
-            Arguments.of("decimal", DataTypes.createDecimalType(10, 2), true),
-            Arguments.of("decimal", DataTypes.FloatType, false),
-            Arguments.of("integer", DataTypes.DoubleType, false),
-            Arguments.of("integer64", DataTypes.FloatType, false),
-            Arguments.of("date", DataTypes.DateType, false),
-            Arguments.of("dateTime", DataTypes.TimestampType, false),
-            Arguments.of("boolean", DataTypes.IntegerType, false));
-    return Stream.concat(accepted, other);
-  }
-
-  @ParameterizedTest
-  @MethodSource("widenings")
-  void acceptsTheLosslessWideningsOfAJsonType(
-      @Nonnull final String code, @Nonnull final DataType type, final boolean accepted) {
-    assertEquals(
-        accepted,
-        PrimitiveConverters.forCode(code).orElseThrow().accepts(type),
-        code + " accepting " + type);
-  }
-
   @Test
-  void acceptsADecimalInferredAsALong(@TempDir @Nonnull final Path directory) {
+  void storesADecimalInferredAsALong(@TempDir @Nonnull final Path directory) {
     // A file whose decimals are all integral infers a long, and "value": 100 is conformant FHIR.
     final Dataset<Row> converted =
         convert(directory, "decimal", "{\"value\":100}", functions.col("value"), false);
@@ -209,7 +168,7 @@ class PrimitiveConverterTest {
   }
 
   @Test
-  void acceptsADecimalInferredAsADecimal(@TempDir @Nonnull final Path directory) {
+  void storesADecimalInferredAsADecimal(@TempDir @Nonnull final Path directory) {
     // An integral value beyond the range of a long, in a file whose decimals are otherwise all
     // integral, infers a decimal of scale zero rather than a long or a double.
     final Dataset<Row> converted =
@@ -221,66 +180,6 @@ class PrimitiveConverterTest {
             false);
 
     assertEquals("12345678901234567890", converted.first().getString(0));
-  }
-
-  @Test
-  void nullsAnIntegerBeyondTheRangeOfAnInteger(@TempDir @Nonnull final Path directory) {
-    final Dataset<Row> converted =
-        convert(directory, "integer", "{\"value\":3000000000}", functions.col("value"), false);
-
-    assertNull(converted.first().get(0), "the value is not wrapped or truncated");
-  }
-
-  @Test
-  void nullsAnIntegerColumnRetypedByAFraction(@TempDir @Nonnull final Path directory) {
-    final Dataset<Row> transformed =
-        transform(
-            directory,
-            "{\"resourceType\":\"Patient\",\"id\":\"1\",\"multipleBirthInteger\":2}",
-            "{\"resourceType\":\"Patient\",\"id\":\"2\",\"multipleBirthInteger\":1.5}");
-
-    assertEquals(
-        DataTypes.IntegerType, transformed.schema().apply("multipleBirthInteger").dataType());
-    assertTrue(
-        transformed.select("multipleBirthInteger").collectAsList().stream()
-            .allMatch(row -> row.isNullAt(0)),
-        "one fraction voids the element for the whole file, rather than 1.5 becoming 1");
-    assertEquals(
-        List.of("Patient.multipleBirthInteger"),
-        encodingMismatches(
-            directory,
-            "{\"resourceType\":\"Patient\",\"id\":\"1\",\"multipleBirthInteger\":2}",
-            "{\"resourceType\":\"Patient\",\"id\":\"2\",\"multipleBirthInteger\":1.5}"));
-  }
-
-  @Test
-  void nullsTextSuppliedForABoolean(@TempDir @Nonnull final Path directory) {
-    final String document = "{\"resourceType\":\"Patient\",\"id\":\"1\",\"active\":\"yes\"}";
-    final Dataset<Row> transformed = transform(directory, document);
-
-    assertEquals(DataTypes.BooleanType, transformed.schema().apply("active").dataType());
-    assertNull(transformed.first().getAs("active"), "\"yes\" is not cast to true");
-    assertEquals(List.of("Patient.active"), encodingMismatches(directory, document));
-  }
-
-  @Test
-  void nullsANumberSuppliedForText(@TempDir @Nonnull final Path directory) {
-    final String document = "{\"resourceType\":\"Patient\",\"id\":\"1\",\"gender\":1}";
-    final Dataset<Row> transformed = transform(directory, document);
-
-    assertNull(transformed.first().getAs("gender"), "a number is not rendered as its text");
-    assertEquals(List.of("Patient.gender"), encodingMismatches(directory, document));
-  }
-
-  @Test
-  void reportsNothingForConformantEncodings(@TempDir @Nonnull final Path directory) {
-    assertEquals(
-        List.of(),
-        encodingMismatches(
-            directory,
-            "{\"resourceType\":\"Patient\",\"id\":\"1\",\"active\":true,"
-                + "\"multipleBirthInteger\":2,\"birthDate\":\"1980-01-01\","
-                + "\"photo\":[{\"data\":\"aGVsbG8=\"}]}"));
   }
 
   // Decimals (T050).
@@ -346,19 +245,6 @@ class PrimitiveConverterTest {
         "hello world".getBytes(StandardCharsets.US_ASCII), converted.first().<byte[]>getAs(0));
   }
 
-  @Test
-  void nullsTextThatIsNotBase64(@TempDir @Nonnull final Path directory) {
-    final Dataset<Row> converted =
-        convert(
-            directory,
-            "base64Binary",
-            "{\"value\":\"not base64!\"}",
-            functions.col("value"),
-            false);
-
-    assertNull(converted.first().get(0), "malformed content becomes null rather than raising");
-  }
-
   @Nonnull
   private static Dataset<Row> convert(
       @Nonnull final Path directory,
@@ -369,34 +255,9 @@ class PrimitiveConverterTest {
     final PrimitiveConverter converter = PrimitiveConverters.forCode(code).orElseThrow();
     final Dataset<Row> read =
         TransformFixtures.spark().read().json(TransformFixtures.corpus(directory, document));
-    final DataType inferred = read.schema().apply("value").dataType();
-    final DataType value =
-        inferred instanceof final ArrayType array ? array.elementType() : inferred;
-    assertTrue(converter.accepts(value), code + " should accept " + value);
     final Column stored =
         repeating ? functions.transform(source, converter::ingest) : converter.ingest(source);
     return read.select(stored.alias("value"));
-  }
-
-  @Nonnull
-  private static Dataset<Row> transform(
-      @Nonnull final Path directory, @Nonnull final String... documents) {
-    return TransformFixtures.reader()
-        .read("Patient", TransformFixtures.corpus(directory, documents));
-  }
-
-  @Nonnull
-  private static List<String> encodingMismatches(
-      @Nonnull final Path directory, @Nonnull final String... documents) {
-    final ResourceTransformer transformer = TransformFixtures.transformer();
-    return transformer
-        .findings(
-            "Patient",
-            TransformFixtures.inferred(TransformFixtures.corpus(directory, documents)).schema())
-        .stream()
-        .filter(NonConformantContent::isEncodingMismatch)
-        .map(NonConformantContent::getPath)
-        .toList();
   }
 
   private static void assertValue(@Nonnull final Object expected, @Nonnull final Object actual) {

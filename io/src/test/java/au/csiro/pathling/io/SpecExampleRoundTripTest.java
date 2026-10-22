@@ -51,38 +51,27 @@ import org.junit.jupiter.params.provider.MethodSource;
  * non-{@code Bundle} resource type once and then every structural corner the selection names;
  * {@code MANIFEST.tsv} beside the data records what each file is there to prove.
  *
- * <p>The detection runs over every type the corpus carries, and the round trip over a structural
- * subset of them: the fewest types that between them cover every corner {@code MANIFEST.tsv} names.
- * The corpus is kept whole on disk so that restoring full coverage is a change to the selection
- * rather than a re-vendoring (decision 68).
- *
- * <p>The exclusions below apply, and each is asserted rather than left to be incidental. An
- * exclusion that never fires is indistinguishable from one that was never needed, and the
- * difference matters when a carve-out is removed. Beside them, the two exceptions every round trip
- * carries are asserted too: a type whose examples write a decimal with a trailing zero or an
+ * <p>The round trip runs over every type the corpus carries, with FR-016's exceptions stripped from
+ * the expected side and nothing else. Each exception is asserted rather than left to be incidental,
+ * because an exclusion that never fires is indistinguishable from one that was never needed, and
+ * the difference matters when an exception is removed. Beside them, the two exceptions every round
+ * trip carries are asserted too: a type whose examples write a decimal with a trailing zero or an
  * exponent must have a number that matched only numerically, and the base64Binary values carrying
  * whitespace are recorded by type.
  *
  * <ul>
  *   <li>{@code Bundle} is excluded permanently, per FR-007. A bundle is never stored as a resource
  *       type, so it can never round-trip as one; its contents round-trip as the resources it is
- *       exploded into, which is T058, T068 and T069a's concern in M3. The corpus carries bundles
+ *       exploded into, which {@code IngestFormatRoundTripTest} covers. The corpus carries bundles
  *       anyway, so the exclusion has something to act on.
- *   <li>{@code contained} resources are excluded permanently, per FR-006, which requires that they
- *       are not represented and that their presence is detected. Unlike the other two this is not a
- *       carve-out that M5 removes — it is the layout's stated behaviour, and what is asserted here
- *       is that the detection fires exactly where the corpus carries one.
- *   <li>Primitive id and extension content is excluded until M5, under FR-017's carve-out. Unlike
- *       the Synthea corpus these examples do carry it, so the exclusion count is positive for the
- *       types that carry it and zero for the rest. T078c removes this exclusion.
+ *   <li>{@code contained} resources are excluded permanently, per FR-006. This is the layout's
+ *       stated behaviour rather than a carve-out a later ticket removes.
+ *   <li>An inline resource held by an element declared as the abstract {@code Resource}, which is
+ *       {@code Parameters.parameter.resource} in this corpus, is excluded permanently.
+ *   <li>Primitive id and extension content is excluded until ticket 17. Unlike the Synthea corpus
+ *       these examples do carry it, so the exclusion count is positive for the types that carry it
+ *       and zero for the rest.
  * </ul>
- *
- * <p>{@code Parameters} is excluded from the round trip alone, its detection still asserted, until
- * decision 64 is settled.
- *
- * <p>The findings are asserted as an exact set rather than as merely permissible content. A
- * permissive assertion would pass if the corpus stopped carrying contained resources altogether,
- * which is the vacuity these assertions exist to prevent.
  */
 class SpecExampleRoundTripTest {
 
@@ -92,50 +81,19 @@ class SpecExampleRoundTripTest {
   /** The resource type a bundle is never stored as, per FR-007. */
   @Nonnull private static final String EXCLUDED_TYPE = "Bundle";
 
-  /**
-   * The type whose examples cannot yet round-trip, because an element holding an inline resource is
-   * dropped for want of a type rather than named as one. Decision 64 and T134e.
-   */
-  @Nonnull private static final String UNREPRESENTABLE_TYPE = "Parameters";
+  /** The types whose examples carry primitive id or extension content. */
+  @Nonnull
+  private static final Set<String> CARRYING_PRIMITIVE_METADATA =
+      Set.of("ActivityDefinition", "Patient", "StructureDefinition");
+
+  /** The types whose examples carry an inline resource beneath an abstract {@code Resource}. */
+  @Nonnull private static final Set<String> CARRYING_INLINE_RESOURCES = Set.of("Parameters");
 
   /**
-   * Every piece of content in the corpus that this layout does not store, by the type carrying it.
-   * A type absent from this map must produce no findings at all.
-   *
-   * <p>Three kinds appear. {@code contained} is FR-006 working as specified. The {@code _}-prefixed
-   * paths are FR-017's carve-out, which T078c removes. {@code Parameters.parameter.resource} is
-   * neither: the element is declared by the definitions but typed as the abstract {@code Resource},
-   * which the definition abstraction drops for want of a type and the check then reports as
-   * undescribed. Decision 64 records that mis-diagnosis and T134e raises it.
+   * The types whose examples write a decimal with a trailing zero only where a double writes the
+   * same text, as {@code TestReport.score} does with {@code 100.0}.
    */
-  @Nonnull
-  private static final Map<String, Set<String>> EXPECTED_FINDINGS =
-      Map.ofEntries(
-          Map.entry("ActivityDefinition", Set.of("ActivityDefinition.timingTiming._event")),
-          Map.entry("CareTeam", Set.of("CareTeam.contained")),
-          Map.entry("CoverageEligibilityResponse", Set.of("CoverageEligibilityResponse.contained")),
-          Map.entry("DocumentManifest", Set.of("DocumentManifest.contained")),
-          Map.entry("DocumentReference", Set.of("DocumentReference.contained")),
-          Map.entry("GuidanceResponse", Set.of("GuidanceResponse.contained")),
-          Map.entry("HealthcareService", Set.of("HealthcareService.contained")),
-          Map.entry("MedicationAdministration", Set.of("MedicationAdministration.contained")),
-          Map.entry("MedicationDispense", Set.of("MedicationDispense.contained")),
-          Map.entry("MedicationKnowledge", Set.of("MedicationKnowledge.contained")),
-          Map.entry("Parameters", Set.of("Parameters.parameter.resource")),
-          Map.entry(
-              "Patient",
-              Set.of(
-                  "Patient.contained",
-                  "Patient._active",
-                  "Patient.contact.name._family",
-                  "Patient.contact.name._given")),
-          Map.entry("PlanDefinition", Set.of("PlanDefinition.contained")),
-          Map.entry("QuestionnaireResponse", Set.of("QuestionnaireResponse.contained")),
-          Map.entry("RequestGroup", Set.of("RequestGroup.contained")),
-          Map.entry("RiskAssessment", Set.of("RiskAssessment.contained")),
-          Map.entry(
-              "StructureDefinition",
-              Set.of("StructureDefinition.differential.element.type._profile")));
+  @Nonnull private static final Set<String> REPRODUCED_BY_A_DOUBLE = Set.of("TestReport");
 
   /**
    * The base64Binary values carrying whitespace, by the type carrying them. A type absent from this
@@ -145,30 +103,12 @@ class SpecExampleRoundTripTest {
 
   @ParameterizedTest
   @MethodSource("resourceTypes")
-  void detectsExactlyTheContentThisLayoutDoesNotStore(@Nonnull final String resourceType) {
-    final List<NonConformantContent> findings =
-        RoundTripHarness.excludingPrimitiveMetadata().findings(resourceType, corpus(resourceType));
-
-    assertEquals(
-        EXPECTED_FINDINGS.getOrDefault(resourceType, Set.of()),
-        findings.stream().map(NonConformantContent::getPath).collect(Collectors.toSet()),
-        "the content this layout does not store is not what was recorded for this type");
-    assertTrue(
-        findings.stream()
-            .allMatch(
-                finding ->
-                    finding.isContainedResource()
-                        || finding.isPrimitiveMetadata()
-                        || finding.isUndescribedContent()),
-        "a finding of an unrecorded kind: " + findings);
-  }
-
-  @ParameterizedTest
-  @MethodSource("selection")
-  void roundTripsTheStructuralSubset(@Nonnull final String resourceType) {
+  void roundTripsEveryResourceType(@Nonnull final String resourceType) {
     final Path corpus = corpus(resourceType);
     final RoundTripHarness harness =
-        RoundTripHarness.excludingPrimitiveMetadata().excludingContainedResources();
+        RoundTripHarness.excludingPrimitiveMetadata()
+            .excludingContainedResources()
+            .excludingInlineResources();
 
     final RoundTripOutcome outcome = harness.assertRoundTrip(resourceType, corpus);
     assertEquals(
@@ -181,16 +121,14 @@ class SpecExampleRoundTripTest {
           "the examples of this type write a decimal in a form a double does not reproduce, so"
               + " some number must have matched numerically and not textually");
     }
-    final int excluded = outcome.getPrimitiveMetadata();
-    if (carriesPrimitiveMetadata(resourceType)) {
-      assertTrue(
-          excluded > 0,
-          "the examples of this type carry primitive id or extension content, so the carve-out"
-              + " must have applied");
-    } else {
-      assertEquals(
-          0, excluded, "the examples of this type carry no primitive id or extension content");
-    }
+    assertEquals(
+        CARRYING_PRIMITIVE_METADATA.contains(resourceType),
+        outcome.getPrimitiveMetadata() > 0,
+        "the primitive id and extension content excluded is not what was recorded for this type");
+    assertEquals(
+        CARRYING_INLINE_RESOURCES.contains(resourceType),
+        outcome.getInlineResources() > 0,
+        "the inline resources excluded are not what was recorded for this type");
   }
 
   /**
@@ -207,28 +145,10 @@ class SpecExampleRoundTripTest {
         "a bundle is never stored as a resource type, so it cannot be round-tripped as one");
   }
 
-  /**
-   * Asserts the inline-resource exclusion is real: the corpus carries the type, the element is
-   * detected as content this layout does not store, and the type is deliberately not round-tripped.
-   */
-  @Test
-  void excludesTheTypeHoldingAnInlineResource() {
-    assertFalse(
-        lines(corpus(UNREPRESENTABLE_TYPE)).isEmpty(),
-        "the corpus must carry this type, or the exclusion has nothing to act on");
-    assertEquals(
-        Set.of("Parameters.parameter.resource"),
-        EXPECTED_FINDINGS.get(UNREPRESENTABLE_TYPE),
-        "the exclusion covers the comparison, so the detection must still be asserted");
-    assertFalse(
-        roundTrippableTypes().anyMatch(UNREPRESENTABLE_TYPE::equals),
-        "an element dropped for want of a type cannot round-trip until decision 64 is settled");
-  }
-
   @Test
   void selectsEveryStructuralCornerTheCorpusCovers() {
     final Set<String> all =
-        roundTrippableTypes()
+        resourceTypes()
             .flatMap(type -> corners().getOrDefault(type, Set.of()).stream())
             .collect(Collectors.toSet());
     final Set<String> selected =
@@ -237,29 +157,20 @@ class SpecExampleRoundTripTest {
             .collect(Collectors.toSet());
 
     assertEquals(all, selected, "the subset must cover every corner the full corpus covers");
-    assertTrue(selection().count() < roundTrippableTypes().count(), "the subset is a subset");
-  }
-
-  /** The types the round trip could run over, which is every type the corpus carries less two. */
-  @Nonnull
-  private static Stream<String> roundTrippableTypes() {
-    return resourceTypes().filter(type -> !UNREPRESENTABLE_TYPE.equals(type));
+    assertTrue(selection().count() < resourceTypes().count(), "the subset is a subset");
   }
 
   /**
-   * The types the round trip runs over: a greedy cover of every structural corner {@code
-   * MANIFEST.tsv} names, taken over the round-trippable types (decision 68, T076).
+   * The types the round trip through XML runs over: a greedy cover of every structural corner
+   * {@code MANIFEST.tsv} names, taken over every type the corpus carries (decision 68, T076).
    *
-   * <p>The corpus is kept whole on disk and the subset chosen here, so restoring full coverage is a
-   * matter of returning {@link #roundTrippableTypes()} instead. Each step takes the type covering
-   * the most corners not yet covered, breaking ties by name, so the selection is deterministic.
-   *
-   * <p>{@code IngestFormatRoundTripTest} runs the same selection through XML.
+   * <p>Each step takes the type covering the most corners not yet covered, breaking ties by name,
+   * so the selection is deterministic. {@code IngestFormatRoundTripTest} runs it through XML.
    */
   @Nonnull
   static Stream<String> selection() {
     final Map<String, Set<String>> corners = corners();
-    final List<String> candidates = roundTrippableTypes().toList();
+    final List<String> candidates = resourceTypes().toList();
     final Set<String> uncovered =
         candidates.stream()
             .flatMap(type -> corners.getOrDefault(type, Set.of()).stream())
@@ -299,16 +210,13 @@ class SpecExampleRoundTripTest {
 
   /**
    * Whether the examples of a type write a decimal with a trailing zero or in exponent notation,
-   * neither of which a double reproduces.
+   * neither of which a double reproduces in general. A type whose only such decimal is one a double
+   * does reproduce is left out.
    */
   private static boolean carriesDecimalLexicalForm(@Nonnull final String resourceType) {
     final Set<String> covered = corners().getOrDefault(resourceType, Set.of());
-    return covered.contains("decimal.trailing-zero") || covered.contains("decimal.exponent");
-  }
-
-  private static boolean carriesPrimitiveMetadata(@Nonnull final String resourceType) {
-    return EXPECTED_FINDINGS.getOrDefault(resourceType, Set.of()).stream()
-        .anyMatch(path -> path.contains("._"));
+    return !REPRODUCED_BY_A_DOUBLE.contains(resourceType)
+        && (covered.contains("decimal.trailing-zero") || covered.contains("decimal.exponent"));
   }
 
   /** Every resource type the corpus carries, less the one that is permanently excluded. */

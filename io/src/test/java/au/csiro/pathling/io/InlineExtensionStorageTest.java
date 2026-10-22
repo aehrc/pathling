@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.io;
 
+import static au.csiro.pathling.utilities.SparkTypes.elementTypeOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -131,8 +132,7 @@ class InlineExtensionStorageTest {
   @Nonnull
   private static DataType elementType(
       @Nonnull final StructType structure, @Nonnull final String name) {
-    final DataType type = structure.apply(name).dataType();
-    return type instanceof final ArrayType array ? array.elementType() : type;
+    return elementTypeOf(structure.apply(name).dataType());
   }
 
   /** Returns every field name in a schema, at every depth. */

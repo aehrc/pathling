@@ -86,7 +86,7 @@ The dense schema mode matches the fitted one, the benchmark is re-measured
 against the finished layout, the engine's `trust` is documented, the follow-up
 issues are raised, and #2367 is checked complete.
 
-- [18](18-dense-mode.md) Dense schema mode, with bounds reporting and streaming encode
+- [18](18-dense-mode.md) Dense schema mode and streaming encode
 - [19](19-dense-parity.md) Dense parity
 - [10](10-benchmark-fix-and-extend.md) Benchmark: fix warm planning, add missing views, re-measure
 - [27](27-usc-bloodpressures-planning-regression.md) Investigate the UsCoreBloodPressures planning regression

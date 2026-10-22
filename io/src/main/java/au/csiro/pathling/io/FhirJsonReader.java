@@ -39,24 +39,23 @@ import org.apache.spark.sql.types.StructType;
  *
  * <p>Types, cardinality and field order come from the definitions, and what the text carries
  * decides only which elements are present (FR-008, FR-012). Text that is not JSON at all fails the
- * read.
+ * read. The input is assumed to conform to the definitions and nothing else is checked: where it
+ * does not, the outcome is undefined, and the read may fail, a value may become null or wrong, or
+ * an element may be stored in a shape the definitions do not declare (ingest in {@code trust},
+ * FR-063).
  *
  * <p>Every resource read in one call is of that one type. This is not checked: a document of
- * another type is stored as though it were of the named type, and the fields the named type lacks
- * are reported as content this layout does not store. A caller holding documents of several types
- * selects those of one type first. Bundles are the exception, because the resources of the type
- * asked for are selected from them before anything is inferred.
+ * another type is read as though it were of the named type, which is non-conformant input with the
+ * outcomes above. A caller holding documents of several types selects those of one type first.
+ * Bundles are the exception, because the resources of the type asked for are selected from them
+ * before anything is inferred.
  *
  * <p>Nothing read here is pruned (decision 71). A structure whose only content was a primitive's id
  * and extensions is conformant and kept on purpose until M5: the primitive is stored as a null of
  * its declared type, so the structure is stored and later written as an empty object whatever other
- * conformant documents are read with it (decision 72). A metadata group in another shape, including
- * one that another document re-typed, keeps nothing. A structure emptied by content the definitions
- * do not describe or contradict is written as an empty object where anything else read with it
- * keeps its column, and left out where nothing does; a value in another document that re-types a
- * column they share empties it the same way. A repeating primitive keeps its positional nulls, and
- * until M5 they are written without the metadata they align with. Each loss is reported. Detecting
- * what is emptied is deferred to the JSON serde that the lexical form of a decimal also waits on.
+ * conformant documents are read with it (decision 72). A repeating primitive keeps its positional
+ * nulls, and until M5 they are written without the metadata they align with. The metadata itself is
+ * not stored, and nothing reports that it is not.
  */
 public final class FhirJsonReader implements FhirFormatReader {
 

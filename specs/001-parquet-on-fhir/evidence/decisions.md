@@ -4168,6 +4168,10 @@ follow-up GitHub issue, which ticket 26 raises (`ingress-strictness/README.md`, 
   supersedes decision 134's consequence that the engine must not fail on invalid stored values.
 - FR-063's "never silently dropped or coerced" is to be rewritten by the follow-up, to match. Until then it
   carries an interim exception for `trust`, as it does for decision 134's losses.
+  _Note (owner, 2026-10-22)_: ticket 37 rewrites FR-063 for ingest now, rather than leaving it to the follow-up.
+  Ingest assumes its input is conformant and checks nothing, and reports nothing: where the input is not
+  conformant, Spark fails the read or produces a null. Content that is valid FHIR but that the layout does not
+  store is a listed exception to FR-016, dropped silently.
 - #2367 is not by itself a release. Follow-up issues the release needs, where they arise from this work, are
   raised by ticket 26.
 - The round-trip invariant, JSON → PoF → JSON and the same through XML, holds for FHIR that conforms to a given
@@ -4199,7 +4203,8 @@ make three simplifying assumptions.
   - empty values are handled as Spark's reader handles them: `null`, `{}` and `[]` are dropped silently, `""`
     is stored, and an empty structure in a batch can be stored as a present structure holding nothing;
   - validation is by column type, not per value. A contradicting value costs its element for every resource
-    read with it, and is reported once per column, as a log line;
+    read with it. _Amended (owner, 2026-10-22)_ by ticket 37: it is not reported, where this said it was
+    reported once per column, as a log line, and ingest no longer checks column types either;
   - an integer out of range and malformed base64 become null without a finding.
 
 _Consequences_:

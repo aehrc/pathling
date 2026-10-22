@@ -1,6 +1,6 @@
-# 18 — Dense schema mode, with bounds reporting and streaming encode
+# 18 — Dense schema mode and streaming encode
 
-**Spec:** `specs/001-parquet-on-fhir/spec.md` — FR-009, FR-010, FR-017, FR-043, FR-044. Old tasks: T031a, T031e, T031d, T033, T033a, T033d, T134f; decisions 59, 68, 69, 87, 94, 121.
+**Spec:** `specs/001-parquet-on-fhir/spec.md` — FR-009, FR-010, FR-017, FR-043, FR-044. Old tasks: T031a, T031e, T031d, T033, T033a, T033d, T134f (removed by ticket 37); decisions 59, 68, 69, 87, 94, 121.
 
 **What to build:** A user can choose the dense schema, which is derived from the definitions and bounded by the nesting, extension and open-type options, and can then encode a stream.
 
@@ -10,7 +10,6 @@
   - The cursor is not memoised. Its state stays out of the shared canonical-structure memo.
 - **Typed nulls for missing children (T031e).** Where the observed schema lacks a child, emit a typed null built structurally. Never materialise a `StructType` for this (decision 68). Assert that FR-011's post-order prune still holds.
 - **The schema mode on `SchemaConfiguration` (T033, T033a).** Add the mode, default fitted, and thread it onto `PathlingContext`. Rewrite the docs for `max_nesting_level`, `enable_extensions` and `enabled_open_types` in Python, R and Javadoc to say they bound only the dense mode. Document the mode on the schema docs page, revising "The schema is fitted to the data".
-- **Bounds reporting (T134f).** Build it here rather than raising a follow-up. Reinstate decision 59's separation of a bound from undescribed content.
 - **Streaming encode (T033d).** Restore streaming `encode` and `encodeBundle` in dense mode. Rewrite `PathlingContextTest.testEncodeResourceStream` from asserting the refusal to counting encoded resources, and restore the Kafka example in the streaming docs.
 - **Annotations in dense mode.** Implement the dense-mode annotation width ticket 11 decided.
 - **Decimals in dense mode (owner, 2026-10-21).** The source schema dense mode hands Spark's reader reads a decimal as a double, as the fitted route does, so the two modes keep the same interim loss and stay at parity (ticket 19).
@@ -22,7 +21,6 @@
 
 - [ ] The cursor terminates on a self-recursive type at its bound, and a reference within a reference is not expanded (T031d).
 - [ ] The configuration test shows the mode is readable and defaults to fitted (T033a).
-- [ ] Content dropped by a bound is reported as a finding (FR-017).
 - [ ] A streaming encode of `Patient` and `Condition` in dense mode succeeds and counts correctly. In fitted mode it is still refused with a clear message.
 - [ ] A dataset ingested in dense mode carries the layout column of ticket 29.
 - [ ] The docs are updated as described.

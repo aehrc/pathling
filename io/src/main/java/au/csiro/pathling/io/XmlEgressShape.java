@@ -17,6 +17,8 @@
 
 package au.csiro.pathling.io;
 
+import static au.csiro.pathling.utilities.SparkTypes.elementTypeOf;
+
 import au.csiro.pathling.definition.ElementDefinition;
 import au.csiro.pathling.schema.DefinitionCanonicalStructure;
 import au.csiro.pathling.schema.LayoutEntry;
@@ -114,7 +116,7 @@ final class XmlEgressShape {
                 .alias(name));
       } else {
         final DefinitionCanonicalStructure child = node.elementStructure(entry).orElseThrow();
-        final StructType inner = (StructType) StrictnessCheck.elementTypeOf(field.dataType());
+        final StructType inner = (StructType) elementTypeOf(field.dataType());
         final FHIRDefinedType childType =
             entry.getElement().flatMap(ElementDefinition::getFhirType).orElse(null);
         if (hasElements(child, inner)) {

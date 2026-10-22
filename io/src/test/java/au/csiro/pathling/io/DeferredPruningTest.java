@@ -39,8 +39,7 @@ import org.junit.jupiter.api.io.TempDir;
  * with it, because the primitive is stored as a null of the type the definitions give it (decision
  * 72); where that primitive repeats, the released encoder drops it and the layout does not. A
  * repeating primitive's null is positional, and FHIR aligns it with the metadata array. Neither is
- * written as conformant FHIR until that metadata is written beside it. The last case is residue
- * rather than intent: a conformant document emptied by another document in the same file.
+ * written as conformant FHIR until that metadata is written beside it.
  *
  * <p>No conformance suite carries most of these shapes, so a later change that pruned them would
  * pass everything else. These tests are what fails.
@@ -74,7 +73,6 @@ class DeferredPruningTest {
     assertTrue(
         document(stored).contains("\"name\":[{\"family\":\"x\"},{},{\"family\":\"y\"}]"),
         document(stored));
-    assertEquals(List.of("Patient.name._family"), findingPaths(path));
   }
 
   @Test
@@ -98,7 +96,6 @@ class DeferredPruningTest {
     assertTrue(slots.getBoolean(1), "the lone metadata-only name is present, not null");
     assertTrue(slots.getBoolean(2), "nothing of the lone metadata-only name is stored");
     assertEquals("{\"resourceType\":\"Patient\",\"id\":\"1\",\"name\":[{}]}", document(stored));
-    assertEquals(List.of("Patient.name._family"), findingPaths(path));
   }
 
   @Test
@@ -124,7 +121,6 @@ class DeferredPruningTest {
     assertTrue(slots.getBoolean(1), "the name holding only _given is present, not null");
     assertTrue(slots.getBoolean(2), "the given it held is stored as a null array");
     assertEquals("{\"resourceType\":\"Patient\",\"id\":\"1\",\"name\":[{}]}", document(stored));
-    assertEquals(List.of("Patient.name._given"), findingPaths(path));
   }
 
   @Test
@@ -149,8 +145,6 @@ class DeferredPruningTest {
     assertEquals(
         "{\"resourceType\":\"Patient\",\"id\":\"1\",\"contact\":[{\"name\":{}}]}",
         document(stored));
-    assertEquals(
-        List.of("Patient.contact.name._family", "Patient.contact.name._given"), findingPaths(path));
   }
 
   @Test
@@ -173,13 +167,6 @@ class DeferredPruningTest {
     assertEquals(
         "{\"resourceType\":\"Encounter\",\"id\":\"1\",\"status\":\"finished\",\"period\":{}}",
         TransformFixtures.writer().write("Encounter", stored).collectAsList().get(0));
-    assertEquals(
-        List.of("Encounter.period._start"),
-        TransformFixtures.transformer()
-            .findings("Encounter", TransformFixtures.inferred(path).schema())
-            .stream()
-            .map(NonConformantContent::getPath)
-            .toList());
   }
 
   @Test
@@ -209,44 +196,11 @@ class DeferredPruningTest {
     assertTrue(documents.contains("\"given\":[\"Ann\",null,\"Bee\"]"), documents);
     assertTrue(documents.contains("\"given\":[null]"), documents);
     assertFalse(documents.contains("_given"), "the metadata they align with is not written yet");
-    assertEquals(List.of("Patient.name._given"), findingPaths(path));
-  }
-
-  @Test
-  void writesAnEmptyObjectWhereANeighbourRetypedAConformantElementsOnlyContent(
-      @TempDir @Nonnull final Path directory) {
-    // The first document is conformant on its own. The second carries a size that is not an
-    // unsignedInt, which types the column for the whole file, so the first photo's only content
-    // is lost with it (FR-016 item 6).
-    final String path =
-        TransformFixtures.corpus(
-            directory,
-            "{\"resourceType\":\"Patient\",\"id\":\"1\","
-                + "\"photo\":[{\"contentType\":\"image/png\"},{\"size\":10}]}",
-            "{\"resourceType\":\"Patient\",\"id\":\"2\",\"photo\":[{\"size\":1.5}]}");
-
-    final Dataset<Row> stored = TransformFixtures.reader().read("Patient", path);
-    final String documents =
-        String.join("\n", TransformFixtures.writer().write("Patient", stored).collectAsList());
-
-    assertTrue(
-        documents.contains("\"id\":\"1\",\"photo\":[{\"contentType\":\"image/png\"},{}]"),
-        documents);
-    assertEquals(List.of("Patient.photo.size"), findingPaths(path));
   }
 
   /** Returns the one document written from a dataset holding one resource. */
   @Nonnull
   private static String document(@Nonnull final Dataset<Row> stored) {
     return TransformFixtures.writer().write("Patient", stored).collectAsList().get(0);
-  }
-
-  /** Returns the paths of what the transform reports it does not store. */
-  @Nonnull
-  private static List<String> findingPaths(@Nonnull final String path) {
-    final List<NonConformantContent> findings =
-        TransformFixtures.transformer()
-            .findings("Patient", TransformFixtures.inferred(path).schema());
-    return findings.stream().map(NonConformantContent::getPath).toList();
   }
 }

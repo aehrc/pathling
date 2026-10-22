@@ -17,6 +17,8 @@
 
 package au.csiro.pathling.io;
 
+import static au.csiro.pathling.utilities.SparkTypes.elementTypeOf;
+
 import au.csiro.pathling.definition.ElementDefinition;
 import au.csiro.pathling.schema.DefinitionCanonicalStructure;
 import au.csiro.pathling.schema.LayoutEntry;
@@ -56,9 +58,8 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  *
  * <p>What the definitions do not describe is left out without a finding, as ingest in {@code trust}
  * may (owner, 2026-10-22): an element, an attribute, text inside an element, and an attribute in a
- * namespace such as {@code xsi:schemaLocation}. {@code contained} is the exception. It is valid
- * FHIR that the layout does not store, and is passed on so that the transform reports it as FR-006
- * requires.
+ * namespace such as {@code xsi:schemaLocation}. So is {@code contained}, which is valid FHIR that
+ * the layout does not store (FR-006).
  */
 final class XmlIngestShape {
 
@@ -72,8 +73,6 @@ final class XmlIngestShape {
   @Nonnull private static final String ID = "_id";
 
   @Nonnull private static final String EXTENSION = "extension";
-
-  @Nonnull private static final String CONTAINED = "contained";
 
   @Nonnull private final DefinitionCanonicalStructure resource;
 
@@ -110,7 +109,7 @@ final class XmlIngestShape {
 
   /**
    * Returns the schema the documents are parsed with: what the definitions describe, every value as
-   * text, and {@code contained} as text so that it can be reported.
+   * text.
    *
    * @return the schema
    */
@@ -135,9 +134,6 @@ final class XmlIngestShape {
         functions.when(document.isNotNull(), functions.lit(resourceType)).alias("resourceType"));
     if (parsed != null) {
       columns.addAll(fields(resource, null, true, parseSchema, parsed::getField));
-      if (field(parseSchema, CONTAINED).isPresent()) {
-        columns.add(parsed.getField(CONTAINED).alias(CONTAINED));
-      }
     }
     return functions.struct(columns.toArray(Column[]::new));
   }
@@ -156,8 +152,6 @@ final class XmlIngestShape {
         if (isAttribute(nodeType, isResource, name.substring(ATTRIBUTE.length()))) {
           kept.add(text(name));
         }
-      } else if (isResource && CONTAINED.equals(name)) {
-        kept.add(text(name));
       } else {
         element(node, nodeType, isResource, name)
             .flatMap(entry -> parseElement(node, entry, field.dataType()))
@@ -176,7 +170,7 @@ final class XmlIngestShape {
       @Nonnull final DefinitionCanonicalStructure node,
       @Nonnull final LayoutEntry entry,
       @Nonnull final DataType observed) {
-    if (!(StrictnessCheck.elementTypeOf(observed) instanceof final StructType structure)) {
+    if (!(elementTypeOf(observed) instanceof final StructType structure)) {
       return Optional.empty();
     }
     final StructType parsed =
@@ -224,7 +218,7 @@ final class XmlIngestShape {
         columns.addAll(primitive(entry, parsedType, column));
       } else {
         final DefinitionCanonicalStructure child = node.elementStructure(entry).orElseThrow();
-        final StructType inner = (StructType) StrictnessCheck.elementTypeOf(parsedType);
+        final StructType inner = (StructType) elementTypeOf(parsedType);
         final FHIRDefinedType childType = fhirType(entry);
         columns.add(
             wrap(
@@ -252,7 +246,7 @@ final class XmlIngestShape {
       @Nonnull final LayoutEntry entry,
       @Nonnull final DataType parsedType,
       @Nonnull final Column column) {
-    final StructType parsed = (StructType) StrictnessCheck.elementTypeOf(parsedType);
+    final StructType parsed = (StructType) elementTypeOf(parsedType);
     final List<Column> columns = new ArrayList<>();
     final boolean repeating = entry.isRepeating();
     if (field(parsed, VALUE).isPresent()) {

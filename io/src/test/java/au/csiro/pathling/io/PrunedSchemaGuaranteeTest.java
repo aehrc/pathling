@@ -19,15 +19,12 @@ package au.csiro.pathling.io;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import jakarta.annotation.Nonnull;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.opentest4j.AssertionFailedError;
@@ -37,12 +34,11 @@ import org.opentest4j.AssertionFailedError;
  *
  * <p>The round trip holds subject to FR-016's exception list, and the dense bounds do not apply,
  * because the schema is fitted to the data (FR-044). The one exception the source here exercises is
- * primitive element ids and extensions, which are not written until M5. That carve-out is exercised
- * rather than assumed: the source carries such content, the round trip does not return it, and the
- * loss is reported as a finding.
+ * primitive element ids and extensions, which are not written until ticket 17. That exception is
+ * exercised rather than assumed: the source carries such content, and the round trip admits its
+ * loss only where the harness strips it.
  *
- * <p>The dense half of FR-017 was withdrawn with the reporting of what the dense bounds drop
- * (decision 68), and the dense mode itself arrives in M6 (decision 69).
+ * <p>The dense mode itself arrives with ticket 18.
  */
 class PrunedSchemaGuaranteeTest {
 
@@ -69,98 +65,34 @@ class PrunedSchemaGuaranteeTest {
 
     final int excluded = harness.assertRoundTrip("Patient", corpus).getPrimitiveMetadata();
 
-    assertEquals(1, excluded, "the carve-out is exercised rather than incidental");
-    final List<NonConformantContent> findings = harness.findings("Patient", corpus);
-    assertTrue(
-        findings.stream().allMatch(NonConformantContent::isPrimitiveMetadata),
-        "nothing but the carve-out is lost on a pruned schema: " + findings);
-    assertEquals(
-        List.of("Patient._birthDate"),
-        findings.stream().map(NonConformantContent::getPath).toList());
+    assertEquals(1, excluded, "the exception is exercised rather than incidental");
   }
 
   @Test
-  void reportsNothingOfTheBoundsOnAPrunedSchema(@TempDir @Nonnull final Path directory)
-      throws IOException {
+  void appliesNoBoundsOnAPrunedSchema(@TempDir @Nonnull final Path directory) throws IOException {
+    // The bounds do not apply to a schema fitted to the data (FR-044), so an extension the dense
+    // bounds would drop comes back with nothing excluded.
     final Path corpus = corpus(directory, PATIENT_WITH_EXTENSION);
 
-    final List<NonConformantContent> findings =
-        RoundTripHarness.unconditional().findings("Patient", corpus);
-
-    assertTrue(
-        findings.isEmpty(),
-        "the bounds do not apply to a schema fitted to the data (FR-044): " + findings);
+    RoundTripHarness.unconditional().assertRoundTrip("Patient", corpus);
   }
 
-  // The exceptions for ignored content, each asserted by the count the harness returns.
-
   @Test
-  void excludesContentTheDefinitionsDoNotDescribe(@TempDir @Nonnull final Path directory)
+  void failsWhereAnExceptionIsNotExcluded(@TempDir @Nonnull final Path directory)
       throws IOException {
-    // Undescribed content at the root and inside an array item, neither of which leaves its element
-    // with nothing in it. An item that ignoring leaves empty is the case decision 71 puts outside
-    // the layout's input, and it is asserted on the output below rather than through the harness.
+    // A contained resource is a listed exception, so the same conformant source fails the round
+    // trip without the option and passes with it, which shows that the stripping is what admits
+    // the loss.
     final Path corpus =
         corpus(
             directory,
-            "{\"resourceType\":\"Patient\",\"id\":\"1\",\"bogusField\":\"x\","
-                + "\"name\":[{\"bogusChild\":\"y\",\"family\":\"Jones\"},{\"family\":\"Smith\"}]}");
-
-    final RoundTripOutcome outcome =
-        RoundTripHarness.unconditional()
-            .excludingIgnoredContent()
-            .assertRoundTrip("Patient", corpus);
-
-    assertEquals(2, outcome.getIgnoredContent());
-  }
-
-  @Test
-  void writesAnEmptyObjectWhereIgnoringContentEmptiesAnArrayItem(
-      @TempDir @Nonnull final Path directory) {
-    // What deferring the pruning costs (decision 71). The first name holds only undescribed
-    // content, so nothing of it is stored, and the item is written as an empty object rather than
-    // dropped as decision 66 had it. The document that comes back is not conformant FHIR, and the
-    // input that produced it is outside what the layout carries.
-    final String path =
-        TransformFixtures.corpus(
-            directory,
-            "{\"resourceType\":\"Patient\",\"id\":\"1\","
-                + "\"name\":[{\"bogusChild\":\"y\"},{\"family\":\"Smith\"}]}");
-    final Dataset<Row> stored = TransformFixtures.reader().read("Patient", path);
-
-    final String document =
-        TransformFixtures.writer().write("Patient", stored).collectAsList().get(0);
-
-    assertTrue(document.contains("\"name\":[{},{\"family\":\"Smith\"}]"), document);
-  }
-
-  @Test
-  void failsWhereIgnoredContentIsNotExcluded(@TempDir @Nonnull final Path directory)
-      throws IOException {
-    // Without the option the same loss is a difference, so the exclusion is what admits it.
-    final Path corpus =
-        corpus(directory, "{\"resourceType\":\"Patient\",\"id\":\"1\",\"bogusField\":\"x\"}");
+            "{\"resourceType\":\"Patient\",\"id\":\"1\",\"contained\":"
+                + "[{\"resourceType\":\"Observation\",\"id\":\"o\",\"status\":\"final\","
+                + "\"code\":{\"text\":\"weight\"}}],\"gender\":\"male\"}");
 
     final RoundTripHarness harness = RoundTripHarness.unconditional();
     assertThrows(AssertionFailedError.class, () -> harness.assertRoundTrip("Patient", corpus));
-  }
-
-  @Test
-  void excludesEveryValueOfAColumnRetypedByOneOfThem(@TempDir @Nonnull final Path directory)
-      throws IOException {
-    // A conformant 2 is lost because a sibling 1.5 re-typed the column it shares.
-    final Path corpus =
-        corpus(
-            directory,
-            "{\"resourceType\":\"Patient\",\"id\":\"1\",\"multipleBirthInteger\":2}",
-            "{\"resourceType\":\"Patient\",\"id\":\"2\",\"multipleBirthInteger\":1.5}");
-
-    final RoundTripOutcome outcome =
-        RoundTripHarness.unconditional()
-            .excludingIgnoredContent()
-            .assertRoundTrip("Patient", corpus);
-
-    assertEquals(2, outcome.getIgnoredContent());
+    harness.excludingContainedResources().assertRoundTrip("Patient", corpus);
   }
 
   @Test

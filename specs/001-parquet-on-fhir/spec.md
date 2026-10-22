@@ -63,12 +63,11 @@ the specification, without FHIRPath evaluation.
 4. **Given** a quantity, **When** it is stored, **Then** the specification's
    canonical annotation accompanies it, followed by the exact canonical
    annotation.
-5. **Given** content the definition set does not describe, **When** it is
-   loaded, **Then** the load succeeds, the content is not stored, and a finding
-   names it.
+5. **Given** a resource carrying content the layout does not store, such as a
+   contained resource, **When** it is loaded, **Then** the load succeeds and the
+   content is dropped silently.
 6. **Given** the same resources as JSON, as XML and inside bundles of either
-   format, **When** each is loaded, **Then** the stored data and the findings are
-   the same.
+   format, **When** each is loaded, **Then** the stored data are the same.
 
 ---
 
@@ -315,8 +314,8 @@ Identifiers are stable. FR-015, FR-018 and FR-020 are retired and not reused.
   specification's own, at its fixed-point type, and immediately after it an
   exact one carrying the canonicalised unit
   ([ADR-0003](../../docs/adr/0003-annotations-are-optional.md)).
-- **FR-006**: `contained` resources MUST NOT be represented. Their presence is
-  reported as a finding.
+- **FR-006**: `contained` resources MUST NOT be represented. They are dropped
+  silently.
 - **FR-007**: `Bundle` MUST NOT be stored as a resource type.
 
 ### Schema derivation
@@ -352,9 +351,9 @@ Identifiers are stable. FR-015, FR-018 and FR-020 are retired and not reused.
 
 - **FR-045**: JSON and XML MUST be accepted and produced, as single resources
   and, on ingest, as bundles.
-- **FR-060**: Every ingest format MUST store the same data and report the same
-  findings for the same resources. XML and bundles MUST NOT behave differently
-  from JSON in what they keep, coerce, report or fail on.
+- **FR-060**: Every ingest format MUST store the same data for the same
+  conformant resources. XML and bundles MUST NOT behave differently from JSON in
+  what they keep, coerce or fail on.
   _Note (owner, 2026-10-22)_: during the interim (decision 134), XML keeps a
   decimal's lexical form while JSON still passes it through a double, so the
   two store a decimal's text differently and its value alike.
@@ -373,30 +372,36 @@ Identifiers are stable. FR-015, FR-018 and FR-020 are retired and not reused.
 - **FR-016**: For input conforming to the definition set, a
   `JSON → storage → JSON` round trip MUST produce a semantically equal resource,
   with object key order ignored, array order significant and numbers compared
-  numerically, subject to these exceptions:
+  numerically, subject to these exceptions, each dropped silently:
   1. `contained` resources (FR-006) and `Bundle` (FR-007);
-  2. `base64Binary` whitespace, which decoding and re-encoding canonicalises;
-  3. content the definition set does not describe, or whose JSON type
-     contradicts it, which is not stored and is reported;
-  4. on a dense schema, content beyond the configured bounds (FR-017).
+  2. an inline resource held by an element declared as the abstract
+     `Resource`, such as `Parameters.parameter.resource`;
+  3. primitive ids and extensions, until ticket 17 stores the metadata group;
+  4. on a dense schema, content beyond the configured nesting, extension and
+     open-type bounds (FR-017);
+  5. `base64Binary` whitespace, which decoding and re-encoding canonicalises.
 
   OQ-1 lists further exceptions that hold until ticket 16 decides
-  otherwise. The round trip through XML is held to the same guarantee.
+  otherwise. Content the definition set does not describe, or whose JSON type
+  contradicts it, is not conformant input, so it is outside the guarantee
+  rather than an exception to it (FR-063). The round trip through XML is held
+  to the same guarantee.
   Evidence: [null-and-empty-handling.md](evidence/null-and-empty-handling.md).
 - **FR-017**: On a dense schema the guarantee in FR-016 MUST hold within the
-  configured nesting, extension and open-type bounds, and content those bounds
-  drop MUST be reported.
+  configured nesting, extension and open-type bounds. What those bounds drop is
+  an exception to the guarantee (FR-016), and is not reported.
 - **FR-019**: Export MUST omit an absent element, a structure whose every field
   is null, and an array holding only nulls, except a repeating primitive's
   positional nulls, which align with its metadata group. *(Subject to OQ-1.)*
-- **FR-063**: Non-conformant content MUST be reported, never silently dropped or
-  coerced. Malformed JSON or XML fails the read. Until OQ-1 is answered, the
-  losses its interim answer lists are an exception: they are reported per
-  column at most, or not at all (decision 134). Until the follow-up issue on
-  non-conformant data, raised by ticket 26, rewrites this requirement, the
-  engine runs in `trust`: its behaviour on non-conformant stored content is
-  undefined, and may be an error or a silently wrong answer (decision 133's
-  addendum of 2026-10-22).
+- **FR-063**: Ingest and the engine run in `trust` (decision 133's addendum of
+  2026-10-22). Ingest assumes its input is conformant and checks nothing: its
+  behaviour on non-conformant content is undefined, and it may fail the read,
+  produce a null or store a wrong value. Malformed JSON or XML fails the read. The engine's behaviour
+  on non-conformant stored content is undefined too, and may be an error or a
+  silently wrong answer. Until OQ-1 is answered, the losses its interim answer
+  lists are an exception (decision 134). The modes beyond `trust`, and what
+  they report, are for the follow-up issue on non-conformant data, raised by
+  ticket 26.
 
 ### Annotations
 
@@ -618,25 +623,23 @@ reconciliation, legacy export, layout column.
   - the decimal's lexical form (FR-002). Today a number passes through a double,
     so trailing zeros, exponent notation and precision beyond a double are not
     preserved;
-  - the granularity of a contradicting value (FR-016 item 3). Today one value
+  - the granularity of a contradicting value (FR-063). Today one value
     whose JSON type contradicts the definitions, or that re-types its column
     beside conformant values, costs that element for every resource read with
     it, and a number inferred as text beside strings is kept as text without a
     finding;
   - empty structures and null-only arrays on export (FR-019). Today a structure
     emptied by non-conformant content is written as `{}`;
-  - per-value rather than per-column findings, and reporting of values a
-    converter cannot store, such as an integer beyond the range of an int.
+  - a value a converter cannot store, such as an integer beyond the range of an
+    int, which today becomes null.
 
   _Interim answer (decision 134)_: the spike measured four candidates and
   reported without a choice, which is deferred to ticket 16. Until then every
   loss above is kept, as today's behaviour, on JSON and on XML alike. In
   addition, empty values are handled as Spark's reader handles them. `{}` is
-  dropped silently. `null` and `[]` are dropped with no more than a per-column
-  finding, which describes a type contradiction rather than an empty value. In
+  dropped silently, and so are `null` and `[]`. In
   a batch, `[]` can instead be stored as an empty array and `{}` as a present
-  structure holding nothing. `""` is stored. Malformed base64 becomes null
-  without a finding. On JSON only, a malformed document is accepted silently:
+  structure holding nothing. `""` is stored. Malformed base64 becomes null. On JSON only, a malformed document is accepted silently:
   text after the object is ignored, a top-level array becomes several
   resources, and a duplicate key keeps its last value. XML fails the read on
   its malformed cases, so the two formats differ here until ticket 16. The

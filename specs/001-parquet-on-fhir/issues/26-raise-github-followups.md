@@ -1,12 +1,11 @@
 # 26 — Raise the GitHub follow-up issues
 
-**Spec:** `specs/001-parquet-on-fhir/spec.md`. Old tasks: T134c, T134d, T134e.
+**Spec:** `specs/001-parquet-on-fhir/spec.md`. Old tasks: T134c, T134d, T134e (removed by ticket 37).
 
 **What to build:** Follow-ups that outlive this programme are recorded as GitHub issues, each with the context from its frozen task or decision.
 
 - **T134c.** The object-storage half of the T119 merge gate. The merge cost on S3 for raw files is unmeasured, so R-015's fallback stays open.
 - **T134d.** Whether the round-trip harness takes the `test-data` bulk corpus: a 124 MB test-scope download into the core chain, and how much to read per type. It widens the resource-type spread, not a substitute for the specification examples.
-- **T134e.** Mis-diagnosed findings. An inline resource declared as abstract `Resource` (`Parameters.parameter.resource`, `Bundle.entry.resource`) is reported as undescribed content. The likely remedy is a fourth `NonConformantContent` kind. An empty array is reported as "a value where a structure is declared".
 - **Dense-shaped output for FHIR-typed results.**
 - **The #2804 renderer note.** Add a comment to #2804 recording what ticket 03 left for System.Coding in the renderer.
 - **The range of a time without a timezone.** Such a value is valid (decision 133's addendum), and ticket 14 gives it the range the engine computes today. Whether that range, in the engine and in the annotation, should widen by ±14 hours because the value could be in any zone (`evidence/ingress-strictness/README.md`).
@@ -20,7 +19,6 @@
   - whether the engine uses an annotation stored by another producer or recomputes it, which decision 135 assigns to the modes rather than to ticket 11's *recompute* setting;
   - the exceptions still open: `null` and `[]` in JSON, the empty string's level, and whether trimming whitespace is lossless;
   - FR-063, rewritten to match the softened principles 2 and 5.
-  - an invalid integer or boolean in XML is stored as a null for that value, without a finding, where JSON nulls the whole column and logs one finding (owner, 2026-10-22, from ticket 32): the two formats differ on the same kind of non-conformance.
 - **Content the definitions do not describe (owner, 2026-10-22).** Ticket 34, which this issue replaces, and the metadata that would preserve such content's representation through ingest and egress, even only in datasets Pathling wrote. The round-trip invariant excludes such content, so this is the only route by which it can hold for it. From `evidence/ingress-strictness/README.md`:
   - D1, user-supplied definitions, and D2, types inferred from the data, under "Extra elements", with D2's costs and the proposal to infer FHIRPath System types;
   - a JSON-type marker in the Parquet metadata, and Parquet's `JSON` logical type, for a number stored as text, whose support in Spark 4 and survival through Delta and pyarrow are unmeasured;

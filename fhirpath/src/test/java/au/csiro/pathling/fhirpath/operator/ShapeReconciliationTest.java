@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.fhirpath.operator;
 
+import static au.csiro.pathling.utilities.SparkTypes.elementTypeOf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
@@ -387,7 +388,6 @@ class ShapeReconciliationTest {
   /** Returns the field names of a structure, or of the elements of an array of structures. */
   @Nonnull
   private static List<String> elementFields(@Nonnull final DataType type) {
-    final DataType element = type instanceof final ArrayType array ? array.elementType() : type;
-    return List.of(((StructType) element).fieldNames());
+    return List.of(((StructType) elementTypeOf(type)).fieldNames());
   }
 }

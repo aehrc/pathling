@@ -27,8 +27,6 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 
 /**
@@ -94,15 +92,6 @@ final class TransformFixtures {
   @Nonnull
   public static FhirJsonWriter writer() {
     return fhirWriter().json();
-  }
-
-  /**
-   * Reads newline-delimited JSON with an inferred schema and nothing imposed on it, failing on text
-   * that is not JSON as the reader does. It is what the transform's findings are asked about.
-   */
-  @Nonnull
-  public static Dataset<Row> inferred(@Nonnull final String path) {
-    return spark().read().option("mode", "FAILFAST").json(path);
   }
 
   /**

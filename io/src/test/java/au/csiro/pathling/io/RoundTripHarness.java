@@ -60,16 +60,16 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * <p>Resources are paired by their identifier rather than by position, so that nothing here depends
  * on Spark returning rows in the order the file wrote them.
  *
- * <p>The harness carries FR-016's exception list, and each exception is asserted rather than
- * assumed: {@link #assertRoundTrip} returns how often each applied, so a test says what it expects
- * each count to be. Two apply to every round trip, because nothing a caller chooses avoids them —
- * decimals compared numerically, and base64Binary whitespace. The rest are opted into: primitive
- * element ids and extensions under FR-017's carve-out until M5, {@code contained} resources under
- * FR-006, and the content the layout ignores rather than stores. Without the corresponding option,
- * a corpus carrying any of these fails here, which is the point. An exclusion of primitive metadata
- * does not cascade into the containers it empties, because the layout keeps them and writes them as
- * empty objects (decisions 71 and 72). The exclusion of ignored content does, because an element
- * with nothing left to store has no column in the layout and is absent from the output.
+ * <p>The harness carries FR-016's exception list, and strips each exception from the expected side
+ * by a rule of its own, taken from the source JSON alone, rather than asking the code under test
+ * what it did not store. {@link #assertRoundTrip} returns how often the counted exceptions applied,
+ * so a test says what it expects each count to be. Two apply to every round trip, because nothing a
+ * caller chooses avoids them — decimals compared numerically, and base64Binary whitespace. The rest
+ * are opted into: primitive element ids and extensions until ticket 17, {@code contained} resources
+ * under FR-006, and an inline resource held by an element declared as the abstract {@code
+ * Resource}. Without the corresponding option, a corpus carrying any of these fails here, which is
+ * the point. An exclusion of primitive metadata does not cascade into the containers it empties,
+ * because the layout keeps them and writes them as empty objects (decisions 71 and 72).
  *
  * <p>{@code Bundle} is not the harness's concern, because it is never a resource type a corpus is
  * round-tripped as (FR-007).
@@ -86,7 +86,7 @@ public final class RoundTripHarness {
 
   private final boolean excludeContainedResources;
 
-  private final boolean excludeIgnoredContent;
+  private final boolean excludeInlineResources;
 
   private final boolean collapseNarrativeWhitespace;
 
@@ -96,12 +96,12 @@ public final class RoundTripHarness {
   private RoundTripHarness(
       final boolean excludePrimitiveMetadata,
       final boolean excludeContainedResources,
-      final boolean excludeIgnoredContent,
+      final boolean excludeInlineResources,
       final boolean collapseNarrativeWhitespace,
       @Nullable final Path persistence) {
     this.excludePrimitiveMetadata = excludePrimitiveMetadata;
     this.excludeContainedResources = excludeContainedResources;
-    this.excludeIgnoredContent = excludeIgnoredContent;
+    this.excludeInlineResources = excludeInlineResources;
     this.collapseNarrativeWhitespace = collapseNarrativeWhitespace;
     this.persistence = persistence;
   }
@@ -119,7 +119,7 @@ public final class RoundTripHarness {
 
   /**
    * Returns a harness excluding the primitive id and extension content that is not written until
-   * M5, under FR-017's carve-out.
+   * ticket 17 stores the metadata group, one of FR-016's exceptions.
    *
    * @return the harness
    */
@@ -130,14 +130,11 @@ public final class RoundTripHarness {
 
   /**
    * Returns a harness excluding {@code contained} resources, which FR-006 says are never
-   * represented and whose presence is instead reported as a finding.
+   * represented, and are dropped silently.
    *
    * <p>This is not a carve-out that a later milestone removes. A contained resource is never
    * stored, so a resource carrying one can never round-trip whole, and a corpus carrying one has to
-   * say so to assert anything about the rest of it. What makes the exclusion honest is that the
-   * same content is reported by {@link #findings}, which a caller asserts as an exact set — so a
-   * corpus that stopped carrying contained resources would change that assertion rather than
-   * quietly passing here.
+   * say so to assert anything about the rest of it.
    *
    * @return the harness
    */
@@ -146,28 +143,24 @@ public final class RoundTripHarness {
     return new RoundTripHarness(
         excludePrimitiveMetadata,
         true,
-        excludeIgnoredContent,
+        excludeInlineResources,
         collapseNarrativeWhitespace,
         persistence);
   }
 
   /**
-   * Returns a harness excluding the content the layout ignores rather than stores: content the
-   * definitions do not describe, and elements whose shape or JSON encoding contradicts them.
+   * Returns a harness excluding an inline resource held by an element the definitions declare as
+   * the abstract {@code Resource}, such as {@code Parameters.parameter.resource}, which the layout
+   * does not store (FR-016).
    *
-   * <p>What is excluded is exactly what the strictness check reports, removed from the source at
-   * the paths it names, so the exclusion cannot widen beyond what is detected. Every value of a
-   * reported element is removed, not only the offending one, because inference types a column from
-   * every value in a file and the layout drops the element for all of them. A structure or an array
-   * item emptied by the removal is removed too, which holds where the removal takes the element's
-   * only content in the file and the layout therefore has no column for it. Where a sibling row
-   * keeps the column, the emptied occurrence comes back as an empty object instead, which is the
-   * input decision 71 puts outside the layout and `PrunedSchemaGuaranteeTest` asserts directly.
+   * <p>Such an element is recognised from the source alone: it is an object, other than the
+   * resource itself and a {@code contained} resource, that carries a {@code resourceType}. Each one
+   * removed is counted.
    *
    * @return the harness
    */
   @Nonnull
-  public RoundTripHarness excludingIgnoredContent() {
+  public RoundTripHarness excludingInlineResources() {
     return new RoundTripHarness(
         excludePrimitiveMetadata,
         excludeContainedResources,
@@ -195,7 +188,7 @@ public final class RoundTripHarness {
     return new RoundTripHarness(
         excludePrimitiveMetadata,
         excludeContainedResources,
-        excludeIgnoredContent,
+        excludeInlineResources,
         true,
         persistence);
   }
@@ -217,7 +210,7 @@ public final class RoundTripHarness {
     return new RoundTripHarness(
         excludePrimitiveMetadata,
         excludeContainedResources,
-        excludeIgnoredContent,
+        excludeInlineResources,
         collapseNarrativeWhitespace,
         directory);
   }
@@ -275,7 +268,10 @@ public final class RoundTripHarness {
     if (excludeContainedResources) {
       expected.values().forEach(RoundTripHarness::removeContainedResources);
     }
-    final int ignored = excludeIgnoredContent ? excludeIgnored(resourceType, corpus, expected) : 0;
+    final int inline =
+        excludeInlineResources
+            ? expected.values().stream().mapToInt(RoundTripHarness::removeInlineResources).sum()
+            : 0;
     final int excluded = expected.values().stream().mapToInt(RoundTripHarness::exclude).sum();
     if (excludePrimitiveMetadata) {
       assertNoMetadataGroups(actual);
@@ -307,22 +303,7 @@ public final class RoundTripHarness {
           .ifPresent(difference -> fail("The round trip was not lossless at " + difference));
       numericOnly += SemanticJson.numericOnlyMatches(entry.getValue(), output);
     }
-    return new RoundTripOutcome(excluded, ignored, whitespace, numericOnly, narrative);
-  }
-
-  /**
-   * Returns the content of a corpus that this layout does not store, as values.
-   *
-   * @param resourceType the type of the resources the file carries
-   * @param corpus the file
-   * @return the findings
-   */
-  @Nonnull
-  public List<NonConformantContent> findings(
-      @Nonnull final String resourceType, @Nonnull final Path corpus) {
-    final ResourceTransformer transformer = TransformFixtures.transformer();
-    return transformer.findings(
-        resourceType, TransformFixtures.inferred(corpus.toString()).schema());
+    return new RoundTripOutcome(excluded, inline, whitespace, numericOnly, narrative);
   }
 
   /** Runs stored resources out of the layout, returning the documents that came out. */
@@ -412,67 +393,6 @@ public final class RoundTripHarness {
   }
 
   /**
-   * Removes from the source the content the strictness check reports as ignored, returning the
-   * number of values removed.
-   */
-  private int excludeIgnored(
-      @Nonnull final String resourceType,
-      @Nonnull final Path corpus,
-      @Nonnull final Map<String, JsonNode> expected) {
-    final List<List<String>> paths =
-        findings(resourceType, corpus).stream()
-            .filter(
-                finding ->
-                    finding.isUndescribedContent()
-                        || finding.isShapeMismatch()
-                        || finding.isEncodingMismatch())
-            .map(finding -> List.of(finding.getPath().split("\\.")))
-            // The first segment names the resource type rather than a key of the document.
-            .map(path -> path.subList(1, path.size()))
-            .toList();
-    int removed = 0;
-    for (final JsonNode resource : expected.values()) {
-      for (final List<String> path : paths) {
-        removed += removePath(resource, path);
-      }
-    }
-    return removed;
-  }
-
-  /**
-   * Removes the values at a dotted path from a tree, descending into every item of an array on the
-   * way, and removes the containers the removal empties. Returns the number of values removed.
-   */
-  private static int removePath(@Nonnull final JsonNode node, @Nonnull final List<String> path) {
-    if (node.isArray()) {
-      int removed = 0;
-      final ArrayNode array = (ArrayNode) node;
-      for (int i = array.size() - 1; i >= 0; i--) {
-        final int fromItem = removePath(array.get(i), path);
-        removed += fromItem;
-        if (fromItem > 0 && isEmptyContainer(array.get(i))) {
-          array.remove(i);
-        }
-      }
-      return removed;
-    }
-    if (!node.isObject() || !node.has(path.get(0))) {
-      return 0;
-    }
-    final ObjectNode object = (ObjectNode) node;
-    final String name = path.get(0);
-    if (path.size() == 1) {
-      final JsonNode value = object.remove(name);
-      return value.isArray() ? Math.max(1, value.size()) : 1;
-    }
-    final int removed = removePath(object.get(name), path.subList(1, path.size()));
-    if (removed > 0 && isEmptyContainer(object.get(name))) {
-      object.remove(name);
-    }
-    return removed;
-  }
-
-  /**
    * Removes the whitespace from every base64Binary value in a tree, returning the number of values
    * changed. The definitions say which values are base64Binary, because nothing in the document
    * does.
@@ -555,6 +475,50 @@ public final class RoundTripHarness {
   }
 
   /**
+   * Removes every inline resource beneath a resource, other than a contained one, returning how
+   * many were removed. The resource itself carries a {@code resourceType} too, so only what is
+   * beneath it is examined.
+   *
+   * <p>The removal does not cascade into the element that held the resource. In a corpus that is
+   * not a {@code Bundle}, that element is a {@code Parameters} parameter or part, whose {@code
+   * name} is required, so it is never left empty.
+   */
+  private static int removeInlineResources(@Nonnull final JsonNode resource) {
+    int removed = 0;
+    for (final String name : names((ObjectNode) resource)) {
+      if (!CONTAINED.equals(name)) {
+        removed += removeInlineResourcesBeneath(resource.get(name));
+      }
+    }
+    return removed;
+  }
+
+  private static int removeInlineResourcesBeneath(@Nonnull final JsonNode node) {
+    int removed = 0;
+    if (node.isObject()) {
+      final ObjectNode object = (ObjectNode) node;
+      for (final String name : names(object)) {
+        final JsonNode child = object.get(name);
+        if (isResource(child)) {
+          object.remove(name);
+          removed++;
+        } else {
+          removed += removeInlineResourcesBeneath(child);
+        }
+      }
+    } else if (node.isArray()) {
+      for (final JsonNode item : node) {
+        removed += removeInlineResourcesBeneath(item);
+      }
+    }
+    return removed;
+  }
+
+  private static boolean isResource(@Nonnull final JsonNode node) {
+    return node.isObject() && node.has("resourceType");
+  }
+
+  /**
    * Takes the output's narrative as the expected one where the two differ only in the runs of
    * whitespace beside a tag, returning 1 where it did and 0 otherwise. A narrative that differs in
    * any other way is left for the comparison to report.
@@ -595,11 +559,6 @@ public final class RoundTripHarness {
       start = end;
     }
     return collapsed.toString();
-  }
-
-  /** Whether a node is a structure or an array that now holds nothing. */
-  private static boolean isEmptyContainer(@Nonnull final JsonNode node) {
-    return (node.isObject() || node.isArray()) && node.isEmpty();
   }
 
   @Nonnull
