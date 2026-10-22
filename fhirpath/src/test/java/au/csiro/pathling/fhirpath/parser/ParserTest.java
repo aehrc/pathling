@@ -45,6 +45,13 @@ class ParserTest {
         Arguments.of("Patient.name.given", "Chained resource navigation"),
         Arguments.of("Patient.name.where(use = 'official')", "Where function with equality check"),
         Arguments.of("Patient.name.first()", "First function"),
+        Arguments.of("gender.join('|')", "Pipe string literal in a join separator"),
+        Arguments.of(
+            "name.where($this != 'x').join('|')",
+            "Pipe string literal after an earlier string literal"),
+        Arguments.of(
+            "gender.join('|') + name.family.first().join('|')",
+            "Pipe string literal after an earlier string literal in a later invocation"),
         Arguments.of("name.empty()", "Empty function"),
         Arguments.of("name.count()", "Count function"),
         Arguments.of("birthDate > @2000", "Comparison with date literal"),

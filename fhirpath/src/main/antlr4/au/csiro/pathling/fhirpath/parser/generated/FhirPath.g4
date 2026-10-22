@@ -170,6 +170,8 @@ STRING
         
 CODING
         : CODING_COMPONENT '|' CODING_COMPONENT ( '|' CODING_COMPONENT )? ( '|' CODING_COMPONENT )? ( '|' CODING_COMPONENT )?
+          // Don't consume a pipe found inside a later string literal as a coding separator.
+          {_input.LA(1) != '\''}?
         ;
 
 fragment CODING_COMPONENT
