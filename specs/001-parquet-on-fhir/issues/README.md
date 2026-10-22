@@ -51,6 +51,7 @@ extensions are stored.
 - [30](30-pof-spec-layout-column.md) Propose the layout column as an amendment to the Parquet on FHIR specification
 - [35](35-pof-spec-json-projection.md) Propose the JSON projection and its prerequisites as amendments to the Parquet on FHIR specification
 - [36](36-public-xml-sink-and-source.md) A public XML sink and source, over ticket 32's line-delimited XML
+- [37](37-remove-ingest-findings.md) Remove ingest's findings, and list what the layout does not store as exceptions
 
 Decision 134 deferred the choice of ingest mechanism. Until the owner makes it,
 JSON stays on Spark's reader and ticket 32 takes XML and bundles off HAPI; ticket
@@ -60,6 +61,8 @@ delivers, so it follows 32. Until it
 lands, the refusal of the legacy layout rests on the root `id_versioned`. Ticket 30
 can start at any time; 29 takes its name from 30 if 30 is agreed first. Ticket 35 can
 also start at any time, and #2367 does not wait for its amendments to be agreed.
+Ticket 37 removes ingest's findings once 32 has landed, and ticket 18 then builds
+the dense mode with no bounds reporting.
 Ticket 36 follows 32, whose `io`-level sink and source it exposes.
 
 ## Stage 4: Schema annotations (#2832)
