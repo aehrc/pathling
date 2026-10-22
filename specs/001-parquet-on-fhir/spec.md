@@ -355,6 +355,9 @@ Identifiers are stable. FR-015, FR-018 and FR-020 are retired and not reused.
 - **FR-060**: Every ingest format MUST store the same data and report the same
   findings for the same resources. XML and bundles MUST NOT behave differently
   from JSON in what they keep, coerce, report or fail on.
+  _Note (owner, 2026-10-22)_: during the interim (decision 134), XML keeps a
+  decimal's lexical form while JSON still passes it through a double, so the
+  two store a decimal's text differently and its value alike.
 - **FR-061**: No ingest or egress route MAY parse into or build a FHIR object per
   row, HAPI included. The mechanism is chosen by a spike against SC-011
   ([ADR-0004](../../docs/adr/0004-no-per-row-hapi-no-catalyst-in-encoding.md)).

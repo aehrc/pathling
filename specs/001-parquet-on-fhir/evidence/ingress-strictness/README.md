@@ -152,13 +152,13 @@ addendum).
 Non-conformant data is classified by the first of these levels it fails. They are not the repair levels above:
 those say how far a value is converted, and these say which rule it breaks. Each level assumes the ones before it.
 
-| Level | Rule | Needs the definitions | JSON | Parquet |
-|---|---|---|---|---|
-| 1. Container format | The file is valid in its format | No | Well-formed JSON, one object per line (C1) | A readable Parquet or Delta file |
-| 2. FHIR JSON encoding | FHIR's JSON representation rules | No | The rules of [FHIR JSON](https://hl7.org/fhir/R4/json.html) applied directly: no `null` except as positional padding aligned with `_x`, no `{}`, `[]` or `""`, no duplicate keys, `_x` aligned with `x`, `resourceType` present (C2) | The same rules, applied to the row's JSON projection (below) |
-| 3. Structure | The definitions' names, types and cardinality | Yes | Per value: known names, the JSON type the definition gives, array or singular, one choice type (C3, C4, C5) | Per dataset: the schema is the layout the definitions derive. Checked once, at planning |
-| 4. Value | The lexical space of the element's type | Yes | The regex, the calendar, the range, and whitespace where the type forbids it (C6) | The same, on the stored text |
-| 5. Valid FHIR | Minimum cardinality, bindings, invariants, profiles | Yes, and terminology | Out of scope | Out of scope |
+| Level | Rule | Needs the definitions | JSON | XML (owner, 2026-10-22) | Parquet |
+|---|---|---|---|---|---|
+| 1. Container format | The file is valid in its format | No | Well-formed JSON, one object per line (C1) | Well-formed XML, one root element, UTF-8 | A readable Parquet or Delta file |
+| 2. FHIR JSON encoding | FHIR's JSON representation rules | No | The rules of [FHIR JSON](https://hl7.org/fhir/R4/json.html) applied directly: no `null` except as positional padding aligned with `_x`, no `{}`, `[]` or `""`, no duplicate keys, `_x` aligned with `x`, `resourceType` present (C2) | The rules of [FHIR XML](https://hl7.org/fhir/R4/xml.html) applied directly: "FHIR elements are always in the namespace http://hl7.org/fhir"; "the only other namespace that occurs in FHIR resources is the XHTML namespace"; "exchanged content SHALL NOT specify the schema or even contain the schema instance namespace"; "there SHALL be no DTD references in FHIR resources"; "XML resources SHALL be exchanged using UTF-8 encoding"; values only in `value` attributes, and an element has "either a value attribute, child elements as defined for its type, or 1 or more extensions"; "attributes cannot be empty"; comments and processing instructions "are not part of the contents of a resource", and other processing instructions "SHOULD not be included" | The same rules, applied to the row's JSON projection (below) |
+| 3. Structure | The definitions' names, types and cardinality | Yes | Per value: known names, the JSON type the definition gives, array or singular, one choice type (C3, C4, C5) | As JSON | Per dataset: the schema is the layout the definitions derive. Checked once, at planning |
+| 4. Value | The lexical space of the element's type | Yes | The regex, the calendar, the range, and whitespace where the type forbids it (C6) | As JSON | The same, on the stored text |
+| 5. Valid FHIR | Minimum cardinality, bindings, invariants, profiles | Yes, and terminology | Out of scope | Out of scope | Out of scope |
 
 Level 2 is defined by reference to FHIR's JSON rules, not restated, so it follows the FHIR version and needs
 nothing from the definitions. That is why it also applies to content the definitions do not describe (ticket
@@ -218,6 +218,14 @@ conformant and survives HAPI's XML round trip, but not JSON, which forbids comme
 | 3 | Decision 133's repair levels, the follow-up | The follow-up: a schema that does not conform | — |
 | 4 | The follow-up, with ticket 16's grammar | The follow-up (ticket 31's former design) | Written as stored |
 | 5 | Out of scope; 9.9.0's HAPI checked required bindings and extension rules | Out of scope | Out of scope |
+| 1, XML (owner, 2026-10-22) | Fail, naming the document: text that is not well-formed, text after the root, a second root | — | — |
+| 2, XML (owner, 2026-10-22) | Fail, naming the document, on a DTD (kept as XXE protection) and on a root outside the FHIR namespace. Silently ignore the rest: an element in another namespace outside a narrative is dropped before the transform, and never read as the FHIR element its local name matches; a `div` that is not XHTML is dropped; attributes in a namespace, `xsi:` included, are ignored; text inside a FHIR element is ignored; comments and processing instructions are dropped | — | Written as stored |
+| 3, XML (owner, 2026-10-22) | Content the definitions do not describe is left out without a finding, where JSON logs one per column; `contained` is reported (FR-006). Types and cardinality come from the definitions | — | — |
+| 4, XML (owner, 2026-10-22) | Not checked. A decimal is stored as its text; an integer or boolean that does not parse is a null for that value, where JSON nulls its column (ticket 26's follow-up) | — | Written as stored |
+
+A `pof:` carrier for undescribed content, an element or an attribute in a namespace of Pathling's own, would be a
+level 2 violation, so the follow-up of ticket 26 would need an exception for Pathling-written XML. A comment
+carrier conforms, but the XML route drops comments today (owner, 2026-10-22).
 
 ## Modes (owner, 2026-10-21)
 

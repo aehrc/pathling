@@ -38,3 +38,8 @@ Criteria that hold whichever mechanism is chosen:
 Ticket 08 reported without a choice. This placeholder is now the deferred rework, and the work it held that does
 not wait on the choice moved to ticket 32: XML and bundles without HAPI, the reflection workaround, and the XML
 file format comment from 2026-10-17.
+
+### XML already keeps a decimal's text (owner, 2026-10-22)
+
+From ticket 32's review: the `from_xml` route stores a decimal as the text the XML carries and writes it back as
+stored, so XML keeps a decimal's lexical form already. This rework need only bring JSON level with it.

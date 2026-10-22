@@ -3092,6 +3092,19 @@ package-private `XmlConversion`, and the hand-off this decision left to the call
 made by `FhirReader`'s format readers. The refusal of `Bundle` moved from
 `BundleTransformer` to every read and to `toLayout`.
 
+_Addendum (ticket 32, 2026-10-21)_: the HAPI routing this decision records is withdrawn. Bundles and
+XML no longer reach the layout as JSON text through HAPI. XML is parsed with Spark's `from_xml` and shaped
+into the JSON data model by a plan generated from the definitions, then meets `toLayout` as JSON does; each
+bundle, in either format, is split by a streaming pass into the resources of the type asked for, which are
+then read as documents of their own. `BundleTransformer`, `XmlConversion` and `FhirParsers`, with its
+reflection into HAPI, are removed. The reference resolution stands as stated here, now applied to the
+columns the definitions type as `Reference` rather than through HAPI's links. It differs from the HAPI
+route in one case, which xml-native.md calls a defect: an entry whose `fullUrl` is `urn:uuid:X` and whose
+resource's id is `X` keeps its id, and a reference to it becomes `Type/X`. What this decision measured of
+HAPI's behaviour is history: XML and bundles now store what JSON stores (FR-060, decision 134), so content
+the definitions do not describe is reported, readable non-conformant content is not coerced, and an invalid
+primitive is stored as text rather than failing the job.
+
 ## 84. `io` has one public surface for reading and writing, by format, and the mechanism behind it is hidden
 
 Made after the review of M3 (PR #2817), with the owner, before M4 calls any of it.
@@ -3208,6 +3221,15 @@ replaced their public classes, and T070, T081 and T082 are reworded to call the
 facade. plan.md's module layout shows the one package and its FR-050 row covers XML
 output. The open tasks that name files in `io/json` or `io/transform` name them in
 `io`.
+
+_Addendum (ticket 32, 2026-10-21)_: the public surface stands, and the mechanism behind it changed as
+this decision allowed. The HAPI routing is withdrawn: XML is read with `from_xml` and written with
+`to_xml`, bundles are split without HAPI, and plan.md's FR-050 row for XML and bundles carries a dated
+withdrawal. Two methods are added on the XML types, mirroring JSON's: `FhirXmlWriter.write(type, stored,
+path, mode)`, a line-delimited sink writing one document per line with a remaining line feed as `&#xa;`,
+and `FhirXmlReader.read(type, path)`, which reads it back. What "What stays as decision 83 left it" lists
+no longer holds; the Javadoc of `FhirFormatReader.readBundles` and `FhirXmlReader` says what does. Of
+"XML output", the narrative's whitespace is now kept as stored rather than collapsed; the rest stands.
 
 ## 85. Canonical order binds the struct types Pathling builds, not the schemas it reads
 
@@ -4224,3 +4246,10 @@ _Addendum (owner, 2026-10-21)_, settling what the review of this decision left o
 - **Dense mode reads decimals as doubles**, as the fitted route does, so the two modes keep the same interim
   loss.
 - Ticket 32 stays one ticket.
+
+_Note (owner, 2026-10-22)_, from ticket 32's review: during the interim, XML keeps a decimal's lexical form,
+while JSON still passes it through a double. XML carries every value as text, so the `from_xml` route stores a
+decimal's text as it is and writes it back as stored, which is lossless; the first statement above, that the
+XML route stores what the JSON route stores value for value, no longer holds for a decimal's text, which now
+differs ("5" against "5.0", "1.50" against "1.5"), while its value is the same at a double's precision. Ticket
+16's rework need only bring JSON level with XML.

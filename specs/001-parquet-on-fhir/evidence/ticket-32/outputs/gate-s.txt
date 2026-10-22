@@ -1,0 +1,25 @@
+Patient rows 125
+Patient xml-lines/json-lines, decimals by value schema equal extra 0 missing 0 OK
+Patient xml-bundles/xml-lines schema equal extra 0 missing 0 OK
+Patient xml-bundles-txn/xml-lines schema equal extra 0 missing 0 OK
+Patient json-bundles/json-lines schema equal extra 0 missing 0 OK
+Patient json-bundles-txn/json-lines schema equal extra 0 missing 0 OK
+Condition rows 6406
+Condition xml-lines/json-lines, decimals by value schema equal extra 0 missing 0 OK
+Condition xml-bundles/xml-lines schema equal extra 0 missing 0 OK
+Condition xml-bundles-txn/xml-lines schema equal extra 0 missing 0 OK
+Condition json-bundles/json-lines schema equal extra 0 missing 0 OK
+Condition json-bundles-txn/json-lines schema equal extra 0 missing 0 OK
+Encounter rows 7808
+Encounter xml-lines/json-lines, decimals by value schema equal extra 0 missing 0 OK
+Encounter xml-bundles/xml-lines schema equal extra 0 missing 0 OK
+Encounter xml-bundles-txn/xml-lines schema equal extra 0 missing 0 OK
+Encounter json-bundles/json-lines schema equal extra 0 missing 0 OK
+Encounter json-bundles-txn/json-lines schema equal extra 0 missing 0 OK
+Observation rows 10085
+Observation xml-lines/json-lines, decimals by value schema equal extra 0 missing 0 OK
+Observation xml-bundles/xml-lines schema equal extra 0 missing 0 OK
+Observation xml-bundles-txn/xml-lines schema equal extra 0 missing 0 OK
+Observation json-bundles/json-lines schema equal extra 0 missing 0 OK
+Observation json-bundles-txn/json-lines schema equal extra 0 missing 0 OK
+ALL EQUAL

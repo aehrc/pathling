@@ -18,6 +18,7 @@
 package au.csiro.pathling.io;
 
 import au.csiro.pathling.definition.DefinitionContext;
+import au.csiro.pathling.definition.ElementDefinition;
 import au.csiro.pathling.definition.NodeDefinition;
 import au.csiro.pathling.schema.DefinitionCanonicalStructure;
 import au.csiro.pathling.schema.LayoutEntry;
@@ -26,6 +27,7 @@ import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
@@ -86,6 +88,9 @@ final class ResourceTransformer {
   @Nonnull
   private static final String MARKED_DECIMAL = "\\{\"\\$decimal\\$\":\"(-?[0-9][0-9.eE+-]*)\"\\}";
 
+  /** The element of a Reference that holds the reference itself. */
+  @Nonnull private static final String REFERENCE = "reference";
+
   @Nonnull private final DefinitionContext definitions;
 
   private ResourceTransformer(@Nonnull final DefinitionContext definitions) {
@@ -121,17 +126,57 @@ final class ResourceTransformer {
   @Nonnull
   public Dataset<Row> toLayout(
       @Nonnull final String resourceType, @Nonnull final Dataset<Row> source) {
+    return source.select(
+        layoutFields(resourceType, source.schema(), functions::col, UnaryOperator.identity()));
+  }
+
+  /**
+   * Transforms resources held as a structure in the JSON data model into this layout, as {@link
+   * #toLayout(String, Dataset)} does for a dataset of them, returning the columns that method would
+   * select. It serves the routes that build the JSON data model themselves, from another format or
+   * from the resources of a bundle (ticket 32). The structure is best a column of its own, computed
+   * in a projection before these columns are selected, so that it is planned once rather than
+   * within every column.
+   *
+   * <p>Every stored {@code Reference.reference} is passed through a function, which is how a bundle
+   * route resolves the references between the bundle's entries on the columns the definitions type
+   * as references, and nowhere else (decision 83, FR-062). An element of another type that happens
+   * to be named {@code reference} is not passed through it.
+   *
+   * @param resourceType the type of the resources
+   * @param observed the type of the structure, which decides presence alone
+   * @param source the structure
+   * @param references the function every stored reference is passed through
+   * @return the columns of the resources, in this layout
+   * @throws IllegalArgumentException if the type is {@code Bundle} or is not a resource type
+   */
+  @Nonnull
+  Column[] toLayout(
+      @Nonnull final String resourceType,
+      @Nonnull final StructType observed,
+      @Nonnull final Column source,
+      @Nonnull final UnaryOperator<Column> references) {
+    return layoutFields(resourceType, observed, source::getField, references);
+  }
+
+  /**
+   * Returns the stored columns of a resource whose fields are reached through a function, reporting
+   * what is not stored.
+   */
+  @Nonnull
+  private Column[] layoutFields(
+      @Nonnull final String resourceType,
+      @Nonnull final StructType observed,
+      @Nonnull final Function<String, Column> fields,
+      @Nonnull final UnaryOperator<Column> references) {
     requireStorable(resourceType);
-    final StructType observed = source.schema();
     final DefinitionCanonicalStructure canonical =
         DefinitionCanonicalStructure.forResource(definitions, resourceType);
     report(StrictnessCheck.of(canonical, resourceType).check(observed));
-    final Column[] columns =
-        canonical.entries().stream()
-            .map(entry -> resourceField(canonical, entry, observed, resourceType))
-            .flatMap(Optional::stream)
-            .toArray(Column[]::new);
-    return source.select(columns);
+    return canonical.entries().stream()
+        .map(entry -> resourceField(canonical, entry, observed, resourceType, fields, references))
+        .flatMap(Optional::stream)
+        .toArray(Column[]::new);
   }
 
   /**
@@ -233,15 +278,17 @@ final class ResourceTransformer {
       @Nonnull final DefinitionCanonicalStructure canonical,
       @Nonnull final LayoutEntry entry,
       @Nonnull final StructType observed,
-      @Nonnull final String resourceType) {
+      @Nonnull final String resourceType,
+      @Nonnull final Function<String, Column> fields,
+      @Nonnull final UnaryOperator<Column> references) {
     if (entry.isResourceType()) {
       final Column column =
           observedField(observed, entry.getName())
-              .map(unused -> functions.col(entry.getName()).cast(DataTypes.StringType))
+              .map(unused -> fields.apply(entry.getName()).cast(DataTypes.StringType))
               .orElseGet(() -> functions.lit(resourceType));
       return Optional.of(column.alias(entry.getName()));
     }
-    return field(canonical, entry, observed).map(stored -> stored.apply(functions::col));
+    return field(canonical, entry, observed, references, false).map(stored -> stored.apply(fields));
   }
 
   /**
@@ -268,18 +315,23 @@ final class ResourceTransformer {
   private Optional<Function<Function<String, Column>, Column>> field(
       @Nonnull final DefinitionCanonicalStructure node,
       @Nonnull final LayoutEntry entry,
-      @Nonnull final StructType observed) {
+      @Nonnull final StructType observed,
+      @Nonnull final UnaryOperator<Column> references,
+      final boolean inReference) {
     if (!entry.isElement()) {
       return Optional.empty();
     }
     final String name = entry.getName();
+    // The reference of a Reference is the one field a bundle's resolution applies to.
+    final UnaryOperator<Column> resolution =
+        inReference && REFERENCE.equals(name) ? references : UnaryOperator.identity();
     return observedField(observed, name)
         .flatMap(
             from ->
                 StrictnessCheck.shapeMismatch(node, entry, from.dataType()).isEmpty()
-                    ? value(node, entry, from.dataType())
+                    ? value(node, entry, from.dataType(), references)
                         .<Function<Function<String, Column>, Column>>map(
-                            stored -> fields -> stored.apply(fields.apply(name)))
+                            stored -> fields -> resolution.apply(stored.apply(fields.apply(name))))
                     : absent(node, entry, from.dataType()).map(column -> fields -> column))
         .or(() -> metadataOnly(node, entry, observed))
         .map(stored -> fields -> stored.apply(fields).alias(name));
@@ -328,8 +380,15 @@ final class ResourceTransformer {
   private Optional<Function<Column, Column>> value(
       @Nonnull final DefinitionCanonicalStructure node,
       @Nonnull final LayoutEntry entry,
-      @Nonnull final DataType observed) {
+      @Nonnull final DataType observed,
+      @Nonnull final UnaryOperator<Column> references) {
     final DataType observedValue = StrictnessCheck.elementTypeOf(observed);
+    final boolean reference =
+        entry
+            .getElement()
+            .flatMap(ElementDefinition::getFhirType)
+            .filter(FHIRDefinedType.REFERENCE::equals)
+            .isPresent();
     final Optional<Function<Column, Column>> single =
         entry
             .primitiveType()
@@ -337,7 +396,10 @@ final class ResourceTransformer {
             .or(
                 () ->
                     structure(
-                        node.elementStructure(entry).orElseThrow(), (StructType) observedValue));
+                        node.elementStructure(entry).orElseThrow(),
+                        (StructType) observedValue,
+                        references,
+                        reference));
     return entry.isRepeating()
         ? single.map(stored -> source -> functions.transform(source, stored::apply))
         : single;
@@ -352,10 +414,13 @@ final class ResourceTransformer {
    */
   @Nonnull
   private Optional<Function<Column, Column>> structure(
-      @Nonnull final DefinitionCanonicalStructure node, @Nonnull final StructType observed) {
+      @Nonnull final DefinitionCanonicalStructure node,
+      @Nonnull final StructType observed,
+      @Nonnull final UnaryOperator<Column> references,
+      final boolean inReference) {
     final List<Function<Function<String, Column>, Column>> fields =
         node.entries().stream()
-            .map(entry -> field(node, entry, observed))
+            .map(entry -> field(node, entry, observed, references, inReference))
             .flatMap(Optional::stream)
             .toList();
     if (fields.isEmpty()) {

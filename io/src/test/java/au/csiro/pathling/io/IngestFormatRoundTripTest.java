@@ -23,6 +23,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
@@ -37,9 +40,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 import org.apache.spark.sql.Dataset;
@@ -49,6 +50,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.slf4j.LoggerFactory;
 
 /**
  * Runs the M1 round trip harness over what the remaining ingest formats store: the resources a
@@ -73,8 +75,7 @@ import org.junit.jupiter.params.provider.MethodSource;
  * contained} resources permanently, since the Synthea bundle's claims carry them. What makes the
  * second honest is that the finding FR-006 requires is asserted to survive the route. The XML
  * routes also admit, and count, the whitespace HAPI's XML writer collapses in a narrative while the
- * test writes its XML input; HAPI's XML parser, which is what XML ingest uses, keeps it (decision
- * 83).
+ * test writes its XML input; XML ingest keeps a narrative as the XML wrote it (decision 83).
  */
 class IngestFormatRoundTripTest {
 
@@ -135,26 +136,51 @@ class IngestFormatRoundTripTest {
   }
 
   /**
-   * Asserts that a contained resource carried by an exploded resource still reaches the transform,
-   * so that its presence is reported as FR-006 requires rather than lost to the parser. This is
-   * what the round trips' exclusion of contained resources rests on.
+   * Asserts that a contained resource carried by an exploded resource, or by a resource read from
+   * XML, is still seen by the transform, so that its presence is reported as FR-006 requires rather
+   * than lost on the way. This is what the round trips' exclusion of contained resources rests on.
    */
   @Test
-  void detectsTheContainedResourcesABundleCarries() {
+  void detectsTheContainedResourcesEveryRouteCarries() {
     final String type = "ExplanationOfBenefit";
-    for (final Dataset<String> resources :
+    final FhirReader reader = TransformFixtures.fhirReader();
+    final List<String> resources = expectedResources(text(SYNTHEA_JSON), type);
+    final List<Runnable> reads =
         List.of(
-            BundleTransformer.json().resources(type, dataset(List.of(text(SYNTHEA_JSON)))),
-            BundleTransformer.xml().resources(type, dataset(List.of(xml(text(SYNTHEA_JSON))))))) {
-      final List<NonConformantContent> findings =
-          TransformFixtures.transformer()
-              .findings(type, TransformFixtures.spark().read().json(resources).schema());
+            () -> reader.json().readBundles(type, dataset(List.of(text(SYNTHEA_JSON)))),
+            () -> reader.xml().readBundles(type, dataset(List.of(xml(text(SYNTHEA_JSON))))),
+            () ->
+                reader
+                    .xml()
+                    .read(
+                        type,
+                        dataset(resources.stream().map(IngestFormatRoundTripTest::xml).toList())));
+    for (final Runnable read : reads) {
+      final List<String> warnings = warnings(read);
 
-      assertEquals(
-          Set.of(type + ".contained"),
-          findings.stream().map(NonConformantContent::getPath).collect(Collectors.toSet()));
-      assertTrue(findings.stream().allMatch(NonConformantContent::isContainedResource));
+      assertTrue(
+          warnings.stream()
+              .anyMatch(
+                  warning ->
+                      warning.contains(
+                          NonConformantContent.containedResource(type + ".contained").toString())),
+          "the contained resources were not reported: " + warnings);
     }
+  }
+
+  /** Returns what the transform logs while a read is planned. */
+  @Nonnull
+  private static List<String> warnings(@Nonnull final Runnable read) {
+    final Logger logger = (Logger) LoggerFactory.getLogger(ResourceTransformer.class);
+    final ListAppender<ILoggingEvent> appender = new ListAppender<>();
+    appender.start();
+    logger.addAppender(appender);
+    try {
+      read.run();
+    } finally {
+      logger.detachAppender(appender);
+    }
+    return appender.list.stream().map(ILoggingEvent::getFormattedMessage).toList();
   }
 
   /**

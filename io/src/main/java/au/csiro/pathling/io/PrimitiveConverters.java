@@ -56,12 +56,18 @@ final class PrimitiveConverters {
    * transform sees them. It is stored as the text of that number, so it is numerically equal to the
    * source but not necessarily textually identical to it, and returned as a double so that the JSON
    * writer emits a bare number.
+   *
+   * <p>Text is accepted as well and stored unchanged. That is how XML carries a decimal, so XML
+   * keeps a decimal's lexical form while JSON passes it through a double (owner, 2026-10-22). JSON
+   * carries a decimal as text only where it does not conform, which ingest in {@code trust} leaves
+   * undefined.
    */
   @Nonnull
   private static final PrimitiveConverter DECIMAL =
       PrimitiveConverter.of(
           type ->
               DataTypes.DoubleType.equals(type)
+                  || DataTypes.StringType.equals(type)
                   || type instanceof DecimalType
                   || Set.of(INTEGRAL).contains(type),
           DataTypes.StringType,

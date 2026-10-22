@@ -313,7 +313,7 @@ class SpecExampleRoundTripTest {
 
   /** Every resource type the corpus carries, less the one that is permanently excluded. */
   @Nonnull
-  private static Stream<String> resourceTypes() {
+  static Stream<String> resourceTypes() {
     try (var entries = Files.list(directory())) {
       return entries
           .map(entry -> entry.getFileName().toString())

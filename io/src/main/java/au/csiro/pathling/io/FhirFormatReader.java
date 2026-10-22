@@ -54,14 +54,16 @@ public sealed interface FhirFormatReader permits FhirJsonReader, FhirXmlReader {
    * into this layout.
    *
    * <p>A reference that is a URN naming the full URL of another entry in the same bundle is
-   * resolved to that entry's identifier, as the previous encoder resolved it, and every other
-   * reference is kept as written (decision 83). An entry without a resource contributes nothing,
-   * and a bundle carried as the resource of an entry is neither returned nor read in turn.
+   * resolved to that entry's relative reference, {@code Type/id}, with {@code /_history/version}
+   * where the entry's metadata names a version, and every other reference is kept as written
+   * (decision 83, FR-062). Only an element the definitions type as a {@code Reference} is resolved.
+   * An entry without a resource contributes nothing, and a bundle carried as the resource of an
+   * entry is neither returned nor read in turn.
    *
-   * <p>Each bundle is parsed with the FHIR parser rather than read by Spark. Content the
-   * definitions do not describe is dropped without being reported, and content the parser cannot
-   * read, such as a document that is not a bundle or an entry of an unknown resource type, fails
-   * the job that evaluates the result. Both match the previous encoder (decision 83).
+   * <p>The resources of the type asked for are taken out of each bundle and read as the documents
+   * of that type are read, so what is stored is what {@link #read} stores for the same resources,
+   * and the bundle's resources of other types do not affect it. A document that is not a bundle, or
+   * not well-formed in the format, fails the job that evaluates the result, naming it.
    *
    * @param resourceType the type of the resources to read
    * @param bundles the bundles

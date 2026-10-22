@@ -18,10 +18,19 @@
 package au.csiro.pathling.io;
 
 import jakarta.annotation.Nonnull;
+import java.util.List;
+import java.util.Map;
+import org.apache.spark.sql.Column;
 import org.apache.spark.sql.DataFrameReader;
 import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.api.java.UDF2;
+import org.apache.spark.sql.expressions.UserDefinedFunction;
+import org.apache.spark.sql.functions;
+import org.apache.spark.sql.types.DataTypes;
+import org.apache.spark.sql.types.StructType;
 
 /**
  * Reads FHIR JSON into this layout, from files of newline-delimited JSON, from a dataset of
@@ -61,19 +70,25 @@ public final class FhirJsonReader implements FhirFormatReader {
    */
   @Nonnull private static final String FAIL_FAST = "FAILFAST";
 
+  /** Splits a bundle into the resources of one type it carries. */
+  @Nonnull
+  private static final UserDefinedFunction SPLIT =
+      functions.udf(
+          (UDF2<String, String, List<Row>>)
+              (bundle, resourceType) ->
+                  JsonBundles.split(bundle, resourceType).stream()
+                      .map(BundleResource::toRow)
+                      .toList(),
+          DataTypes.createArrayType(BundleResource.TYPE, false));
+
   @Nonnull private final SparkSession spark;
 
   @Nonnull private final ResourceTransformer transformer;
 
-  @Nonnull private final FhirParsers parsers;
-
   FhirJsonReader(
-      @Nonnull final SparkSession spark,
-      @Nonnull final ResourceTransformer transformer,
-      @Nonnull final FhirParsers parsers) {
+      @Nonnull final SparkSession spark, @Nonnull final ResourceTransformer transformer) {
     this.spark = spark;
     this.transformer = transformer;
-    this.parsers = parsers;
   }
 
   /**
@@ -103,11 +118,42 @@ public final class FhirJsonReader implements FhirFormatReader {
     return transformer.toLayout(resourceType, json(documents.sparkSession()).json(documents));
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Each bundle is read with a streaming parse, which takes out the text of each entry's
+   * resource of the type asked for. Those are then read as any other documents of the type, so they
+   * are inferred apart from the bundle's resources of other types, and what is stored is what the
+   * same resources store when read one per row (ticket 32). Text that is not JSON fails the read,
+   * as does a document that is not a bundle.
+   */
   @Override
   @Nonnull
   public Dataset<Row> readBundles(
       @Nonnull final String resourceType, @Nonnull final Dataset<String> bundles) {
-    return read(resourceType, BundleTransformer.json(parsers).resources(resourceType, bundles));
+    transformer.requireStorable(resourceType);
+    final Dataset<Row> resources = BundleResource.resources(bundles, SPLIT, resourceType);
+    final StructType observed =
+        json(bundles.sparkSession())
+            .json(resources.select(BundleResource.DOCUMENT).as(Encoders.STRING()))
+            .schema();
+    // Each resource is parsed once, in a projection of its own, and stored from what it holds.
+    final Dataset<Row> parsed =
+        resources.withColumn(
+            BundleResource.PARSED,
+            observed.fields().length == 0
+                ? functions.struct()
+                : functions.from_json(
+                    functions.col(BundleResource.DOCUMENT),
+                    observed,
+                    Map.of(READ_MODE, FAIL_FAST)));
+    final Column references = functions.col(BundleResource.REFERENCES);
+    return parsed.select(
+        transformer.toLayout(
+            resourceType,
+            observed,
+            functions.col(BundleResource.PARSED),
+            reference -> BundleResource.resolve(reference, references)));
   }
 
   @Nonnull

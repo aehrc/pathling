@@ -19,3 +19,4 @@ Points carried from the frozen tasks:
 **Status:** needs-triage
 
 - [ ] To be written once ticket 32 lands.
+- [ ] Once primitive metadata is stored, a `urn:` reference inside a primitive's extension resolves as decision 83 states, in XML and JSON bundles alike (owner, 2026-10-22; ticket 32 accepted it as a gap until then).

@@ -29,8 +29,9 @@ import org.apache.spark.sql.Row;
 import org.junit.jupiter.api.Test;
 
 /**
- * Tests that the routes that parse with HAPI read and write a resource type that is not part of
- * FHIR, where the definitions describe one, as they do a standard type.
+ * Tests that the XML and bundle routes read and write a resource type that is not part of FHIR,
+ * where the definitions describe one, as they do a standard type, through the definitions alone
+ * (ticket 32). No FHIR parser is configured with the type: the routes do not parse with one.
  */
 class CustomResourceTypeTest {
 

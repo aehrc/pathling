@@ -180,11 +180,11 @@ public final class RoundTripHarness {
    * Returns a harness that compares a resource's narrative with the runs of whitespace in it
    * collapsed, which is what HAPI's XML writer does to a narrative (decision 83).
    *
-   * <p>This is an artefact of how a test writes its XML input, not of XML ingest: HAPI's XML parser
-   * keeps a narrative's whitespace as the XML wrote it, but its XML writer replaces the whitespace
-   * between the narrative's elements with a single space. A test that writes XML from JSON with
-   * HAPI therefore feeds XML ingest a narrative that differs from the JSON as written, though not
-   * as rendered. The exception applies only where the two narratives differ and are equal once
+   * <p>This is an artefact of how a test writes its XML input, not of XML ingest, which keeps a
+   * narrative's whitespace as the XML wrote it: HAPI's XML writer replaces the whitespace between
+   * the narrative's elements with a single space. A test that writes XML from JSON with HAPI
+   * therefore feeds XML ingest a narrative that differs from the JSON as written, though not as
+   * rendered. The exception applies only where the two narratives differ and are equal once
    * collapsed, and each such narrative is counted, so a narrative that differs in any other way
    * still fails the round trip.
    *

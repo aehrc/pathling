@@ -144,6 +144,53 @@ test_that("encode keeps only the requested type", {
   }
 })
 
+# XML is read and written without HAPI on the runtime jar (ticket 32): through Spark's XML reader and
+# writer, with a narrative held to L2 and the references between a bundle's entries resolved.
+narrative_xml <- paste0(
+  '<Patient xmlns="http://hl7.org/fhir"><id value="p1"/><text><status value="generated"/>',
+  '<div xmlns="http://www.w3.org/1999/xhtml"><p>Line one&#xa;line two &amp; more</p></div>',
+  '</text><gender value="male"/></Patient>'
+)
+
+transaction_xml <- paste0(
+  '<Bundle xmlns="http://hl7.org/fhir"><type value="transaction"/>',
+  '<entry><fullUrl value="urn:uuid:p1"/><resource><Patient><id value="p1"/></Patient>',
+  "</resource></entry>",
+  '<entry><fullUrl value="urn:uuid:o1"/><resource><Observation><id value="o1"/>',
+  '<status value="final"/><code><text value="x"/></code>',
+  '<subject><reference value="urn:uuid:p1"/></subject></Observation></resource></entry>',
+  "</Bundle>"
+)
+
+test_that("XML is read and written without HAPI", {
+  spark <- spark_session()
+  pc <- pathling_connect(spark)
+  documents <- sparklyr::copy_to(
+    spark, data.frame(value = narrative_xml),
+    name = paste0("narrative_", sample.int(1e6, 1)), overwrite = TRUE
+  )
+  encoded <- pathling_encode(pc, documents, "Patient", input_type = MimeType$FHIR_XML)
+  decoded <- sparklyr::invoke(
+    pc, "decode", sparklyr::spark_dataframe(encoded), "Patient", MimeType$FHIR_XML
+  ) %>%
+    sparklyr::invoke("toDF") %>%
+    sparklyr::sdf_register() %>%
+    collect()
+  decoded <- decoded[[1]]
+  # The line feed in the narrative is kept, and so the document is written as it was read.
+  expect_equal(decoded, gsub("&#xa;", "\n", narrative_xml, fixed = TRUE))
+
+  bundles <- sparklyr::copy_to(
+    spark, data.frame(value = transaction_xml),
+    name = paste0("transaction_", sample.int(1e6, 1)), overwrite = TRUE
+  )
+  view <- paste0("observations_", sample.int(1e6, 1))
+  pathling_encode_bundle(pc, bundles, "Observation", input_type = MimeType$FHIR_XML) %>%
+    sparklyr::sdf_register(view)
+  subjects <- DBI::dbGetQuery(spark, paste0("SELECT subject.reference AS reference FROM ", view))
+  expect_equal(subjects$reference, "Patient/p1")
+})
+
 # The nesting and extension options bound the schema of the dense mode only, which does not exist
 # yet, so they bound nothing in the fitted schema that encoding stores: depth comes from the data,
 # and extensions are stored inline because they are present (contracts/library-api.md, decision
