@@ -217,7 +217,7 @@ leave what the data is ambiguous.
    29.
 2. **An invalid integer or boolean is null per value, with no finding.** This is accepted. The difference from
    JSON is listed in ticket 26's follow-up on non-conformant data. No test pinned it.
-3. **The public sink and source** are ticket 36, in stage 3. The `io`-level sink and source stay here.
+3. **The public sink and source** are ticket 39, in stage 5. The `io`-level sink and source stay here.
 4. **Woodstox stays excluded.** Ticket 26 lists the check for the server.
 5. **A `urn:` reference inside a primitive's extension** is a criterion of ticket 17.
 6. **The narrative** is accepted as built.

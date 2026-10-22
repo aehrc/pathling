@@ -38,7 +38,7 @@
 
 **Blocked by:** 32
 
-Ticket 36 also works in `io`, and moving `elementTypeOf` touches `XmlIngestShape` and `XmlEgressShape`; running the two in sequence avoids a conflict.
+Ticket 39 (numbered 36 until 2026-10-23) also works in `io`, and moving `elementTypeOf` touches `XmlIngestShape` and `XmlEgressShape`; running the two in sequence avoids a conflict.
 
 **Status:** done
 

@@ -1,4 +1,4 @@
-# 36 — A public XML sink and source
+# 39 — A public XML sink and source
 
 **Spec:** `specs/001-parquet-on-fhir/spec.md` — FR-045. Decision 84. Ticket 32 built the `io`-level sink and source this exposes.
 

@@ -14,7 +14,7 @@ Points carried from the frozen tasks:
 - **Remove the exclusion (T078c).** The primitive-metadata exclusion leaves the round-trip harness and the ingest-format round-trip test, and the carve-out leaves the spec. State what the dense mode does with the group, rather than deleting that sentence.
 - **Navigation.** Navigation to the id and extensions goes through sibling resolution. Both yield empty where the source carried neither (T120–T124).
 
-**Blocked by:** 32
+**Blocked by:** 32, and 11 for the engine's pairing of `x` with `_x`
 
 **Status:** needs-triage
 
