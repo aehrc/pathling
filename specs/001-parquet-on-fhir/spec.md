@@ -278,8 +278,8 @@ the legacy encoder, re-import the result, and compare it with the source data.
   null, in a given row: not written as `{}` or `[null]` (FR-019).
 - An array of arrays where a repeating element is declared, such as
   `"given":[["a","b"]]`: a shape mismatch, reported, and stored as absent.
-- A source key named like one of the layout's annotations, such as
-  `__birthDate_start`, or like the layout column, `__layout_v1`: neither is
+- A source key named like one of the layout's annotations, such as `__start`
+  in `_birthDate`, or like the layout column, `__layout_v1`: neither is
   read from the source, so the key is reported as undescribed content.
 - A Bundle: accepted as a transport carrier and exploded to one table per
   resource type, never stored as a resource type. References between its

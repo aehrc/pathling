@@ -10,6 +10,8 @@
 
 **The date grammar (decision 135, ticket 31).** Ticket 31 puts FHIR's date grammar in `fhir-schema` for `toDate()` and `toDateTime()`. The range kind, also in `fhir-schema`, parses dates with that grammar rather than a second one. Whichever ticket lands first puts it in place, and the other uses it.
 
+**Placement (decision 135, part 4).** The range annotations are `_<element>.__start` and `__end`, fields of the date's metadata group, so a repeating date's bounds share the group's alignment with it. The group is stored for them before ticket 17 stores ids and extensions. If this is the first annotation ticket to land, check in a plan that reading `_x.__start` prunes to that field, for a singular and a repeating date.
+
 **Blocked by:** 11
 
 **Status:** ready-for-agent

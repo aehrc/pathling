@@ -4227,8 +4227,8 @@ _Addendum (owner, 2026-10-21)_, settling what the review of this decision left o
 
 ## 135. An annotation is defined once, in `fhir-schema`, for the engine and ingest alike
 
-Owner decision (2026-10-21), for ticket 11 (T063). Evidence for the dense width is in
-`dense-annotation-width.md`.
+Owner decision (2026-10-21; part 4 and the resolver in part 1 2026-10-22), for ticket 11 (T063).
+Evidence for the dense width is in `dense-annotation-width.md`.
 
 Decision 84 expected M5's annotation processors to join `au.csiro.pathling.io` as package-private
 classes beside the transform, and the tasks placed them in `io.annotation`. Both treat ingest as the
@@ -4246,7 +4246,7 @@ _Decision_:
 1. **One definition per annotation kind, in `fhir-schema`.** A public, abstract API in
    `au.csiro.pathling.schema.annotation` defines an annotation kind, as the function from the stored
    value of the element it annotates to the annotation's value, and registers and applies the kinds.
-   Applying a kind covers both clients: ingest computes it, and the engine reads the stored sibling
+   Applying a kind covers both clients: ingest computes it, and the engine reads the stored annotation
    where the schema carries it and computes it otherwise, decided once per schema. `io` and `fhirpath`
    both reach `fhir-schema` at runtime, and it already fixes the annotations' names and order in
    `LayoutFields`. Its prohibition of `spark-sql` leaves `spark-sql-api`, which carries `Column`,
@@ -4264,8 +4264,18 @@ _Decision_:
      annotation Pathling does not define is carried, where it is carried at all, as an opaque field
      (part 3), not as a kind.
    - **Order has one source.** Annotations are emitted from the canonical structure's annotation
-     entries, which `LayoutFields.annotationNames` places after their element. The registry maps an
-     entry to its kind; it does not declare an order of its own.
+     entries, whose names and positions `LayoutFields` fixes (part 4). The registry maps an entry to its
+     kind; it does not declare an order of its own.
+   - **The choice between stored and computed takes a resolver.** Applying a kind takes, as a
+     parameter, the means of resolving a field of a structure to the stored field where the schema
+     carries it and to a fallback where it does not. The clients learn the schema at different times,
+     so each supplies its own. The annotation step knows the schema of the dataset it rebuilds, and
+     resolves in Java. The engine builds its columns without a schema and learns presence only when
+     Spark analyses the plan, as `ResolveOrNull` does for an element (FR-054), so it resolves with a
+     Catalyst expression beside `ResolveOrNull`, under FR-052's carve-out for query-time code, which
+     `fhir-schema` may not use (FR-048). The kind, its fields and its switch are one definition either
+     way; only the resolution of presence has two implementations. If ticket 9 binds columns to a
+     schema, the engine's resolver can become a Java one too.
    - **The toggles govern what the annotation step stores, never what the engine can compute.**
 2. **A dense schema annotates every element the definitions describe**, subject to the toggles.
    Annotating only the populated elements cannot be known without seeing every row, which rules out the
@@ -4277,7 +4287,7 @@ _Decision_:
    apply to any input in the layout, including Parquet or Delta written without them, so they cannot
    belong to the reader of JSON and XML.
    - **The step is public, in `io`**: it takes a dataset of one resource type in this layout and returns
-     it annotated, rebuilding each structure and array to place an annotation after its element. The
+     it annotated, rebuilding each structure and array to place each annotation where part 4 puts it. The
      kinds stay in `fhir-schema` (part 1); the dataset-level walk is in `io` because it rebuilds rows as
      the transform does, and `fhirpath` does not need it. `FhirReader.of(spark, definitions)` stays as
      decision 84 left it, and the reader produces the layout without annotations.
@@ -4290,10 +4300,10 @@ _Decision_:
        Recompute is the repair for annotations from a producer that is not trusted. The data cannot
        choose the default, because the layout column says which version of the layout a file follows,
        not who wrote it, and ticket 30 offers that column to other producers.
-     - **Any other annotation in the input**, of a kind that is off or a `__<element>_<suffix>` field
-       Pathling does not define, is either left out (the default) or kept. The specification permits
-       non-standard annotations. One is placed after its element, which its name identifies: no FHIR
-       element name begins with `__` or contains an underscore.
+     - **Any other annotation in the input**, of a kind that is off or a `__` field Pathling does not
+       define, is either left out (the default) or kept. The specification permits non-standard
+       annotations. One that is kept stays in the structure it was found in, after the fields Pathling
+       derives there.
      - **A Parquet dataset may carry any `__` field (owner, 2026-10-22).** A field whose name begins
        with `__` is layout, not content, so one Pathling does not define does not make a dataset
        non-conformant: level 3 for Parquet, in "Conformance levels" of `ingress-strictness/README.md`,
@@ -4316,6 +4326,37 @@ _Decision_:
      engine's modes for stored data. #2367 delivers only `trust`, which takes a stored annotation as
      given (ticket 31); recomputing one instead belongs to the other modes, in the follow-up issue that
      ticket 26 raises.
+4. **An annotation lives in the container its element already owns (owner, 2026-10-22).** A
+   primitive's annotations are fields of its metadata group `_<element>`, after `id` and `extension`:
+   `_birthDate.__start` and `__end`, `_value.__numeric`. A complex element's annotations are fields of
+   its own structure, after its elements: `valueQuantity.__canonical` and then `__canonical_exact`. No
+   annotation is a field beside its element any more, so the `__<element>_<annotation>` names go.
+   - **One alignment.** FHIR already requires a repeating primitive's `_x` to be aligned by position with
+     `x`, and the metadata group (ticket 17) stores that alignment anyway. Annotations in it share it, so
+     a repeating date carries its bounds per position with nothing else to keep in step. As siblings,
+     each annotation was a further array to align with `x`, and the specification said nothing about
+     repeating annotated elements at all.
+   - **One resolution for a primitive.** The engine resolves `_x` beside a primitive for its id and
+     extensions (R-014); its annotations are fields of what that resolves to, so they add no sibling
+     resolution of their own.
+   - **A quantity carries its canonical forms.** In its own structure the canonical forms are the
+     fields ticket 12 gives the engine's System.Quantity, so a stored quantity decodes by reading its
+     structure, and the canonical forms travel with the value through `where()`, unions, arrays and
+     lambdas without a handle on the parent. As a sibling, every such operation would have to carry the
+     parent to find it again.
+   - **The metadata group gains a second meaning.** It exists wherever an annotation does, not only
+     where the source carried an id or extensions. What tests for metadata tests for `id` and
+     `extension` inside the group, not for the group: the JSON projection omits a group left with only
+     `__` fields (ticket 35), and ticket 17's placeholder rules look at its content. Until ticket 17
+     stores ids and extensions, the group can be stored for annotations alone, and the strip that keeps
+     it out of a fitted schema (decision 60) gives way where it carries one.
+   - **The specification is amended**, by ticket 35. Its sibling rule, its examples and its Quantity
+     section change; the Quantity example, whose `__valueQuantity_canonical` copies the Quantity shape
+     and contradicts the section's table of `value` and `code`, is corrected with them. Nothing has been
+     published in the old placement: no release of Pathling writes annotations.
+   - **Reading a nested field must prune.** Spark's nested schema pruning should read `_x.__start` from an
+     array of structures and `valueQuantity.__canonical` from a structure without the rest. The first of
+     tickets 13 and 14 checks it in a plan before relying on it.
 
 _Rejected_: package-private processors in `io`, which the engine cannot reach; `io.annotation` with the
 transform's helpers made public, which decision 84 forbids and which has the same reach problem; the
@@ -4324,7 +4365,11 @@ definition in `fhirpath` with `io` depending on it, which inverts the layering a
 adds a module to the build order for no gain the separate package does not give; annotating only the
 populated elements of a dense schema; the toggles as a configuration of the reader, by an overload of
 `FhirReader.of` or by an option of each format's reader, which would leave stored data that was not
-ingested by Pathling with no way to be annotated.
+ingested by Pathling with no way to be annotated; annotations as siblings of their element, the
+specification's placement until now, for the alignments and resolutions part 4 removes; a primitive's
+annotations in `_x` and a complex element's beside it, which leaves the quantity, the annotation the
+engine most needs to carry, the one it cannot; one group of annotations beside each element, which
+keeps `_x` to its FHIR meaning at the cost of a second alignment and a second resolution.
 
 _Consequences_:
 
@@ -4344,3 +4389,10 @@ _Consequences_:
   kind exists to write, so the site documentation of the annotations and their toggles moves to ticket 15.
 - `data-model.md` said that annotations follow "the fixed order the annotation registry declares". It now
   names `LayoutFields` as the source of that order.
+- Ticket 11 moves the annotation entries of the canonical structure, and the names `LayoutFields` gives
+  them, to part 4's placement. No kind is registered yet, so no stored output changes.
+- R-014's single sibling-resolution mechanism now resolves the metadata group alone. Annotations are
+  reached through it for primitives, and through the element's own structure for complex types.
+- `data-model.md`, `contracts/storage-layout.md`, the spec's example of a key named like an annotation,
+  and tickets 12 to 14 and 17 are reworded to the placement of part 4. ADR-0003 is reworded where it
+  says an annotation is stored beside its element.

@@ -5,8 +5,8 @@
 **What to build:** A stored quantity carries both canonical annotations, and the engine uses them as a fast path.
 
 1. **Emit two annotations, in this order (T054, T066).**
-   - `__<field>_canonical`: the specification's own, at `DECIMAL(38,6)`.
-   - `__<field>_canonical_exact`, immediately after it: the exact value plus the canonicalised unit code. Without the unit, one metre and one second compare equal.
+   - `__canonical`, inside the quantity's structure (decision 135, part 4): the specification's own, at `DECIMAL(38,6)`.
+   - `__canonical_exact`, immediately after it: the exact value plus the canonicalised unit code. Without the unit, one metre and one second compare equal.
    - `fhir-schema` fixes the names and positions. The Spark types are settled here.
 2. **Use them in the engine (T096a, T087a).** Quantity handling prefers `_canonical_exact`, falls back to `_canonical`, and computes canonicalisation only where neither exists. This includes `QuantityEncoding.decodeStored`, so the UDF calls leave the decode where the annotation is present. Repeat T100o's measurement afterwards.
 3. **Canonicalise only UCUM quantities in comparison (T096b).** Apply UCUM canonicalisation only where the system is UCUM, as quantity search already does. Any existing test whose expected value changes is listed for the owner's approval before it is updated.

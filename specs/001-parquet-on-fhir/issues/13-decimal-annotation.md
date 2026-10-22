@@ -6,6 +6,8 @@
 
 **Where the kind lives (decision 135).** The numeric kind is defined once, in the kinds package beside `fhir-schema`'s annotation API, and the engine's own computation of a decimal's value moves onto it. It is stored by the annotation step of ticket 11, not by the reader.
 
+**Placement (decision 135, part 4).** The numeric annotation is `_<element>.__numeric`, a field of the decimal's metadata group, so the group is stored for it before ticket 17 stores ids and extensions. If this is the first annotation ticket to land, check in a plan that reading `_x.__numeric` prunes to that field, for a singular and a repeating decimal.
+
 **Blocked by:** 11
 
 **Status:** ready-for-agent

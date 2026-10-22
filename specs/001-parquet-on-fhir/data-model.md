@@ -47,12 +47,13 @@ definitions, and is either present in or absent from a given schema.
   structure equality compares positionally while ignoring names, so a divergent
   order is a silent wrong answer rather than a failure.
 - The layout's own fields have positions too, and they must, because they have no
-  definition element to take one from. A primitive metadata group and any
-  annotations sit **immediately after the element they accompany**, the metadata
-  group first and then the annotations in the fixed order `LayoutFields` (decision 135)
-  declares them. Without a stated rule two implementations could both order by
-  the definitions and still disagree, which is exactly the positional mismatch the
-  previous bullet is there to prevent.
+  definition element to take one from. A primitive's metadata group sits
+  **immediately after the element it accompanies**, and holds `id`, `extension`
+  and then the primitive's annotations. A complex element's annotations are the
+  last fields of its own structure, after its elements. Annotations take the
+  fixed order `LayoutFields` declares (decision 135). Without a stated rule two
+  implementations could both order by the definitions and still disagree, which
+  is exactly the positional mismatch the previous bullet is there to prevent.
 
 ### Primitive metadata group
 
@@ -62,8 +63,11 @@ element with a leading underscore, beside the element itself.
 | | |
 | --- | --- |
 | Named | `_<element>` |
-| Contains | `id`, `extension` |
-| Present when | The source carried an id or an extension for that element |
+| Contains | `id`, `extension`, then the element's annotations |
+| Present when | The source carried an id or an extension for that element, or an annotation is stored for it |
+
+What tests for metadata tests for `id` and `extension` inside the group, not for
+the group itself, since the group can hold annotations alone (decision 135).
 
 This is new capability: the previous layout could not represent it at all,
 because its field identifier was per composite and a scalar column had nowhere to
@@ -71,7 +75,7 @@ carry one.
 
 ### Annotation
 
-A derived value stored beside the element it annotates, accelerating a
+A derived value stored with the element it annotates, accelerating a
 computation the engine can also perform from the element itself.
 
 | Annotation | Annotates | Carries |
@@ -85,9 +89,13 @@ Properties that hold for every annotation:
 
 - **Optional by definition.** A conformant file may carry none, so the engine
   computes from the annotated element when an annotation is absent.
-- **A sibling** of the element it annotates, named after it and positioned
-  immediately after it, following the metadata group where one is present, so one
-  sibling-resolution mechanism serves annotations and primitive metadata alike.
+- **In the container its element already owns** (decision 135). A primitive's
+  annotations are fields of its metadata group, after `id` and `extension`:
+  `_birthDate.__start`, `_value.__numeric`. A complex element's are fields of its
+  own structure, after its elements: `valueQuantity.__canonical`. So a repeating
+  primitive's annotations share the alignment its metadata group already has
+  with it, and the one sibling resolution that reaches the metadata group reaches
+  its annotations too.
 - **Presence is a schema property**, so whether the fast path or the computation
   is used is decided at planning time rather than per row.
 - **Individually disableable by kind**, and disabling one costs performance,
