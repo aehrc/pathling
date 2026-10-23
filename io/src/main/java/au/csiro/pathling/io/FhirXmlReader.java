@@ -58,6 +58,9 @@ import org.apache.spark.sql.types.StructType;
  */
 public final class FhirXmlReader implements FhirFormatReader {
 
+  /** The value that turns an option off. */
+  @Nonnull private static final String OFF = "false";
+
   /**
    * The options of the scan that learns which elements are present. Every value is read as text,
    * since its type comes from the definitions. Surrounding whitespace in a value is kept, as JSON
@@ -65,12 +68,12 @@ public final class FhirXmlReader implements FhirFormatReader {
    */
   @Nonnull
   private static final Map<String, String> INFER =
-      Map.of("inferSchema", "false", "ignoreSurroundingSpaces", "false", "mode", "FAILFAST");
+      Map.of("inferSchema", OFF, "ignoreSurroundingSpaces", OFF, "mode", "FAILFAST");
 
   /** The options of the parse of each document. */
   @Nonnull
   private static final Map<String, String> PARSE =
-      Map.of("ignoreSurroundingSpaces", "false", "mode", "FAILFAST");
+      Map.of("ignoreSurroundingSpaces", OFF, "mode", "FAILFAST");
 
   /** The option naming the root element of each document. */
   @Nonnull private static final String ROW_TAG = "rowTag";
@@ -145,7 +148,7 @@ public final class FhirXmlReader implements FhirFormatReader {
                 .explode(
                     PREPARE.apply(
                         functions.col(documents.columns()[0]), functions.lit(resourceType)))
-                .alias(BundleResource.DOCUMENT));
+                .alias(BundleResource.DOCUMENT_COLUMN));
     return toLayout(resourceType, prepared, null);
   }
 
@@ -164,7 +167,7 @@ public final class FhirXmlReader implements FhirFormatReader {
     return toLayout(
         resourceType,
         BundleResource.resources(bundles, SPLIT, resourceType),
-        functions.col(BundleResource.REFERENCES));
+        functions.col(BundleResource.REFERENCES_COLUMN));
   }
 
   /**
@@ -182,14 +185,14 @@ public final class FhirXmlReader implements FhirFormatReader {
             .read()
             .options(INFER)
             .option(ROW_TAG, resourceType)
-            .xml(documents.select(BundleResource.DOCUMENT).as(Encoders.STRING()))
+            .xml(documents.select(BundleResource.DOCUMENT_COLUMN).as(Encoders.STRING()))
             .schema();
     final XmlIngestShape shape =
         XmlIngestShape.of(
             DefinitionCanonicalStructure.forResource(definitions, resourceType),
             resourceType,
             inferred);
-    final Column document = functions.col(BundleResource.DOCUMENT);
+    final Column document = functions.col(BundleResource.DOCUMENT_COLUMN);
     final boolean parsing = shape.parseSchema().fields().length > 0;
     // Each document is parsed once, in a projection of its own, and shaped from what it holds.
     final Dataset<Row> parsed =

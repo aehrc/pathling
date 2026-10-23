@@ -68,24 +68,9 @@ final class JsonBundles {
       return List.of();
     }
     final List<BundleEntryScan> entries = new ArrayList<>();
-    String type = null;
+    final String type;
     try (final JsonParser parser = FACTORY.createParser(bundle)) {
-      if (parser.nextToken() != JsonToken.START_OBJECT) {
-        throw new IllegalArgumentException("A bundle is not a JSON object");
-      }
-      while (parser.nextToken() == JsonToken.FIELD_NAME) {
-        final String field = parser.currentName();
-        final JsonToken value = parser.nextToken();
-        if (RESOURCE_TYPE.equals(field) && value == JsonToken.VALUE_STRING) {
-          type = parser.getText();
-        } else if ("entry".equals(field) && value == JsonToken.START_ARRAY) {
-          while (parser.nextToken() != JsonToken.END_ARRAY) {
-            entries.add(entry(parser, bundle, resourceType));
-          }
-        } else {
-          parser.skipChildren();
-        }
-      }
+      type = scan(parser, bundle, resourceType, entries);
     } catch (final IOException | IllegalArgumentException e) {
       throw new IllegalArgumentException(
           "Cannot read the FHIR JSON bundle "
@@ -101,6 +86,37 @@ final class JsonBundles {
               + DocumentExcerpt.startOf(bundle));
     }
     return BundleEntryScan.resolve(entries);
+  }
+
+  /**
+   * Reads a bundle, which the parser is before, adding each of its entries to those given, and
+   * returns its resource type, or null where it has none.
+   */
+  @Nullable
+  private static String scan(
+      @Nonnull final JsonParser parser,
+      @Nonnull final String bundle,
+      @Nonnull final String resourceType,
+      @Nonnull final List<BundleEntryScan> entries)
+      throws IOException {
+    if (parser.nextToken() != JsonToken.START_OBJECT) {
+      throw new IllegalArgumentException("A bundle is not a JSON object");
+    }
+    String type = null;
+    while (parser.nextToken() == JsonToken.FIELD_NAME) {
+      final String field = parser.currentName();
+      final JsonToken value = parser.nextToken();
+      if (RESOURCE_TYPE.equals(field) && value == JsonToken.VALUE_STRING) {
+        type = parser.getText();
+      } else if ("entry".equals(field) && value == JsonToken.START_ARRAY) {
+        while (parser.nextToken() != JsonToken.END_ARRAY) {
+          entries.add(entry(parser, bundle, resourceType));
+        }
+      } else {
+        parser.skipChildren();
+      }
+    }
+    return type;
   }
 
   /** Reads one entry, which the parser is on the start of, leaving it on the entry's end. */
@@ -144,35 +160,74 @@ final class JsonBundles {
     String type = null;
     String id = null;
     String versionId = null;
-    String field = null;
+    while (parser.nextToken() == JsonToken.FIELD_NAME) {
+      final String field = parser.currentName();
+      final JsonToken value = parser.nextToken();
+      if (value == JsonToken.VALUE_STRING && RESOURCE_TYPE.equals(field)) {
+        type = parser.getText();
+      } else if (value == JsonToken.VALUE_STRING && "id".equals(field)) {
+        id = parser.getText();
+      } else if (value == JsonToken.START_OBJECT && "meta".equals(field)) {
+        versionId = meta(parser, urns, versionId);
+      } else {
+        mentions(parser, field, urns);
+      }
+    }
+    final int end = (int) parser.currentTokenLocation().getCharOffset() + 1;
+    if (type != null) {
+      entry.setResource(
+          type,
+          id,
+          versionId,
+          resourceType.equals(type) ? bundle.substring(start, end) : null,
+          urns);
+    }
+  }
+
+  /**
+   * Reads a resource's meta, which the parser is on the start of, leaving it on the meta's end, and
+   * returns the version it names, or the version given where it names none.
+   */
+  @Nullable
+  private static String meta(
+      @Nonnull final JsonParser parser,
+      @Nonnull final Set<String> urns,
+      @Nullable final String versionId)
+      throws IOException {
+    String version = versionId;
+    while (parser.nextToken() == JsonToken.FIELD_NAME) {
+      final String field = parser.currentName();
+      if (parser.nextToken() == JsonToken.VALUE_STRING && "versionId".equals(field)) {
+        version = parser.getText();
+      } else {
+        mentions(parser, field, urns);
+      }
+    }
+    return version;
+  }
+
+  /**
+   * Reads the value of a field, which the parser is on, leaving it on the value's end, and adds to
+   * the URNs mentioned each string within it that a field named {@code reference} holds and that
+   * begins with a URN prefix. A string in an array is taken to be held by the field named last.
+   */
+  private static void mentions(
+      @Nonnull final JsonParser parser,
+      @Nonnull final String field,
+      @Nonnull final Set<String> urns)
+      throws IOException {
+    String name = field;
     int depth = 0;
-    boolean inMeta = false;
     JsonToken token = parser.currentToken();
     while (true) {
       switch (token) {
-        case START_OBJECT, START_ARRAY -> {
-          depth++;
-          if (depth == 2) {
-            inMeta = "meta".equals(field) && token == JsonToken.START_OBJECT;
-          }
-        }
-        case END_OBJECT, END_ARRAY -> {
-          depth--;
-          if (depth == 1) {
-            inMeta = false;
-          }
-        }
-        case FIELD_NAME -> field = parser.currentName();
+        case START_OBJECT, START_ARRAY -> depth++;
+        case END_OBJECT, END_ARRAY -> depth--;
+        case FIELD_NAME -> name = parser.currentName();
         // Only the text resolution needs is read, so a value of any other field, however long, is
         // skipped without being held.
         case VALUE_STRING -> {
-          if (depth == 1 && RESOURCE_TYPE.equals(field)) {
-            type = parser.getText();
-          } else if (depth == 1 && "id".equals(field)) {
-            id = parser.getText();
-          } else if (depth == 2 && inMeta && "versionId".equals(field)) {
-            versionId = parser.getText();
-          } else if ("reference".equals(field)) {
+          if ("reference".equals(name)) {
             final String reference = parser.getText();
             if (reference.startsWith(BundleResource.URN)) {
               urns.add(reference);
@@ -184,18 +239,9 @@ final class JsonBundles {
         }
       }
       if (depth == 0) {
-        break;
+        return;
       }
       token = parser.nextToken();
-    }
-    final int end = (int) parser.currentTokenLocation().getCharOffset() + 1;
-    if (type != null) {
-      entry.setResource(
-          type,
-          id,
-          versionId,
-          resourceType.equals(type) ? bundle.substring(start, end) : null,
-          urns);
     }
   }
 }

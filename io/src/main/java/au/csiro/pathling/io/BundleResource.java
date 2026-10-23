@@ -46,18 +46,18 @@ record BundleResource(@Nonnull String document, @Nonnull Map<String, String> ref
   @Nonnull static final String URN = "urn:";
 
   /** The name of the column holding the document. */
-  @Nonnull static final String DOCUMENT = "document";
+  @Nonnull static final String DOCUMENT_COLUMN = "document";
 
   /** The name of the column holding the resolutions of the URNs the document mentions. */
-  @Nonnull static final String REFERENCES = "references";
+  @Nonnull static final String REFERENCES_COLUMN = "references";
 
   /** The type of a resource as a value of a Spark column. */
   @Nonnull
   static final StructType TYPE =
       new StructType()
-          .add(DOCUMENT, DataTypes.StringType, false)
+          .add(DOCUMENT_COLUMN, DataTypes.StringType, false)
           .add(
-              REFERENCES,
+              REFERENCES_COLUMN,
               DataTypes.createMapType(DataTypes.StringType, DataTypes.StringType, false),
               false);
 
@@ -83,7 +83,7 @@ record BundleResource(@Nonnull String document, @Nonnull Map<String, String> ref
 
   /**
    * Returns the resources of one type that a dataset of bundles carries, one per row, as columns
-   * named {@link #DOCUMENT} and {@link #REFERENCES}.
+   * named {@link #DOCUMENT_COLUMN} and {@link #REFERENCES_COLUMN}.
    *
    * @param bundles the bundles, one per row, where a null row carries nothing
    * @param split the function that splits one bundle into an array of {@link #TYPE}
@@ -101,7 +101,7 @@ record BundleResource(@Nonnull String document, @Nonnull Map<String, String> ref
                 .explode(
                     split.apply(functions.col(bundles.columns()[0]), functions.lit(resourceType)))
                 .alias("resource"))
-        .select("resource." + DOCUMENT, "resource." + REFERENCES);
+        .select("resource." + DOCUMENT_COLUMN, "resource." + REFERENCES_COLUMN);
   }
 
   /**

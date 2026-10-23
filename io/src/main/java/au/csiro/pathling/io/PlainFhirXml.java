@@ -53,7 +53,7 @@ final class PlainFhirXml {
   /** The name of a character reference, after its ampersand. */
   @Nonnull
   private static final Pattern CHARACTER_REFERENCE =
-      Pattern.compile("#[0-9]{1,7}|#x[0-9A-Fa-f]{1,6}");
+      Pattern.compile("#\\d{1,7}|#x[\\dA-Fa-f]{1,6}");
 
   private PlainFhirXml() {}
 
@@ -89,49 +89,68 @@ final class PlainFhirXml {
       @Nonnull final String document,
       @Nonnull final StringBuilder prepared,
       @Nonnull final int[] copied) {
-    int i = skipWhitespace(document, 0);
-    if (document.startsWith(DECLARATION, i)) {
-      final int end = document.indexOf("?>", i);
-      if (end < 0) {
-        return null;
-      }
-      i = skipWhitespace(document, end + 2);
-    }
-    if (i >= document.length() || document.charAt(i) != '<') {
+    final int start = rootStart(document);
+    if (start < 0) {
       return null;
     }
-    final int nameEnd = nameEnd(document, i + 1);
-    if (nameEnd == i + 1 || !document.startsWith(NAMESPACE, nameEnd)) {
+    final int nameEnd = nameEnd(document, start + 1);
+    if (nameEnd == start + 1 || !document.startsWith(NAMESPACE, nameEnd)) {
       return null;
     }
-    final String root = document.substring(i + 1, nameEnd);
-    i = nameEnd + NAMESPACE.length();
-    final Deque<String> open = new ArrayDeque<>();
+    final String root = document.substring(start + 1, nameEnd);
     // The rest of the root's start tag, which may hold nothing more.
-    i = skipWhitespace(document, i);
+    final int i = skipWhitespace(document, nameEnd + NAMESPACE.length());
     if (document.startsWith("/>", i)) {
       return skipWhitespace(document, i + 2) == document.length() ? root : null;
     }
     if (i >= document.length() || document.charAt(i) != '>') {
       return null;
     }
+    final int end = content(document, i + 1, root, prepared, copied);
+    return end >= 0 && skipWhitespace(document, end) == document.length() ? root : null;
+  }
+
+  /** Returns the index of the root's {@code <}, after any XML declaration, or -1. */
+  private static int rootStart(@Nonnull final String document) {
+    int i = skipWhitespace(document, 0);
+    if (document.startsWith(DECLARATION, i)) {
+      final int end = document.indexOf("?>", i);
+      if (end < 0) {
+        return -1;
+      }
+      i = skipWhitespace(document, end + 2);
+    }
+    return i < document.length() && document.charAt(i) == '<' ? i : -1;
+  }
+
+  /**
+   * Reads the content of the root after its start tag, and its end tag, returning the index after
+   * it, or -1.
+   */
+  private static int content(
+      @Nonnull final String document,
+      final int start,
+      @Nonnull final String root,
+      @Nonnull final StringBuilder prepared,
+      @Nonnull final int[] copied) {
+    final Deque<String> open = new ArrayDeque<>();
     open.push(root);
-    i++;
+    int i = start;
     while (!open.isEmpty()) {
       i = skipWhitespace(document, i);
       if (i >= document.length() || document.charAt(i) != '<') {
         // Text, or the end of the document before the root is closed.
-        return null;
+        return -1;
       }
       i =
           i + 1 < document.length() && document.charAt(i + 1) == '/'
               ? endTag(document, i + 2, open)
               : startTag(document, i + 1, open, prepared, copied);
       if (i < 0) {
-        return null;
+        return -1;
       }
     }
-    return skipWhitespace(document, i) == document.length() ? root : null;
+    return i;
   }
 
   /** Reads an end tag after its {@code </}, returning the index after it, or -1. */
@@ -165,19 +184,31 @@ final class PlainFhirXml {
     if (document.startsWith("div", start) && nameEnd == start + 3) {
       return "text".equals(open.peek()) ? narrative(document, start - 1, prepared, copied) : -1;
     }
-    int i = nameEnd;
+    final int close = tagClose(document, nameEnd);
+    if (close < 0) {
+      return -1;
+    }
+    if (document.charAt(close) == '>') {
+      open.push(document.substring(start, nameEnd));
+      return close + 1;
+    }
+    return document.startsWith("/>", close) ? close + 2 : -1;
+  }
+
+  /**
+   * Reads the attributes of a start tag after its name, returning the index of the {@code >} or
+   * {@code /} that follows them, or -1.
+   */
+  private static int tagClose(@Nonnull final String document, final int start) {
+    int i = start;
     while (true) {
       final int next = skipWhitespace(document, i);
       if (next >= document.length()) {
         return -1;
       }
       final char c = document.charAt(next);
-      if (c == '>') {
-        open.push(document.substring(start, nameEnd));
-        return next + 1;
-      }
-      if (c == '/') {
-        return document.startsWith("/>", next) ? next + 2 : -1;
+      if (c == '>' || c == '/') {
+        return next;
       }
       // An attribute needs whitespace before it.
       if (next == i) {
@@ -224,7 +255,13 @@ final class PlainFhirXml {
     if (quote >= document.length() || document.charAt(quote) != '"') {
       return -1;
     }
-    for (int i = quote + 1; i < document.length(); i++) {
+    return valueEnd(document, quote + 1);
+  }
+
+  /** Reads an attribute's value after its opening quote, returning the index after it, or -1. */
+  private static int valueEnd(@Nonnull final String document, final int start) {
+    int i = start;
+    while (i < document.length()) {
       final char c = document.charAt(i);
       if (c == '"') {
         return i + 1;
@@ -238,6 +275,7 @@ final class PlainFhirXml {
           return -1;
         }
       }
+      i++;
     }
     return -1;
   }

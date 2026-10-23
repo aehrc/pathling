@@ -201,43 +201,55 @@ final class XmlIngestShape {
       @Nonnull final Function<String, Column> source) {
     final List<Column> columns = new ArrayList<>();
     for (final LayoutEntry entry : node.entries()) {
-      if (!entry.isElement()) {
-        continue;
-      }
-      final String name = entry.getName();
-      if (isAttribute(nodeType, isResource, name)) {
-        if (fieldOf(parsed, ATTRIBUTE + name).isPresent()) {
-          columns.add(source.apply(ATTRIBUTE + name).alias(name));
-        }
-        continue;
-      }
-      final Optional<StructField> field = fieldOf(parsed, name);
-      if (field.isEmpty()) {
-        continue;
-      }
-      final DataType parsedType = field.get().dataType();
-      final Column column = source.apply(name);
-      if (entry.primitiveType().isPresent()) {
-        columns.addAll(primitive(entry, parsedType, column));
-      } else {
-        final DefinitionCanonicalStructure child = node.elementStructure(entry).orElseThrow();
-        final StructType inner = (StructType) elementTypeOf(parsedType);
-        final FHIRDefinedType childType = fhirType(entry);
-        columns.add(
-            wrap(
-                    parsedType,
-                    entry.isRepeating(),
-                    column,
-                    value ->
-                        functions.when(
-                            value.isNotNull(),
-                            functions.struct(
-                                fields(child, childType, false, inner, value::getField)
-                                    .toArray(Column[]::new))))
-                .alias(name));
+      if (entry.isElement()) {
+        columns.addAll(elementColumns(node, nodeType, isResource, parsed, source, entry));
       }
     }
     return columns;
+  }
+
+  /**
+   * Returns the columns one element of a structure is stored as in the JSON data model, or none
+   * where the document does not hold it.
+   */
+  @Nonnull
+  private List<Column> elementColumns(
+      @Nonnull final DefinitionCanonicalStructure node,
+      @Nullable final FHIRDefinedType nodeType,
+      final boolean isResource,
+      @Nonnull final StructType parsed,
+      @Nonnull final Function<String, Column> source,
+      @Nonnull final LayoutEntry entry) {
+    final String name = entry.getName();
+    if (isAttribute(nodeType, isResource, name)) {
+      return fieldOf(parsed, ATTRIBUTE + name).isPresent()
+          ? List.of(source.apply(ATTRIBUTE + name).alias(name))
+          : List.of();
+    }
+    final Optional<StructField> field = fieldOf(parsed, name);
+    if (field.isEmpty()) {
+      return List.of();
+    }
+    final DataType parsedType = field.get().dataType();
+    final Column column = source.apply(name);
+    if (entry.primitiveType().isPresent()) {
+      return primitive(entry, parsedType, column);
+    }
+    final DefinitionCanonicalStructure child = node.elementStructure(entry).orElseThrow();
+    final StructType inner = (StructType) elementTypeOf(parsedType);
+    final FHIRDefinedType childType = fhirType(entry);
+    return List.of(
+        wrap(
+                parsedType,
+                entry.isRepeating(),
+                column,
+                value ->
+                    functions.when(
+                        value.isNotNull(),
+                        functions.struct(
+                            fields(child, childType, false, inner, value::getField)
+                                .toArray(Column[]::new))))
+            .alias(name));
   }
 
   /**

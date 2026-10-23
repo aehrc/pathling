@@ -124,7 +124,7 @@ public final class FhirJsonReader implements FhirFormatReader {
     final Dataset<Row> resources = BundleResource.resources(bundles, SPLIT, resourceType);
     final StructType observed =
         json(bundles.sparkSession())
-            .json(resources.select(BundleResource.DOCUMENT).as(Encoders.STRING()))
+            .json(resources.select(BundleResource.DOCUMENT_COLUMN).as(Encoders.STRING()))
             .schema();
     // Each resource is parsed once, in a projection of its own, and stored from what it holds.
     final Dataset<Row> parsed =
@@ -133,10 +133,10 @@ public final class FhirJsonReader implements FhirFormatReader {
             observed.fields().length == 0
                 ? functions.struct()
                 : functions.from_json(
-                    functions.col(BundleResource.DOCUMENT),
+                    functions.col(BundleResource.DOCUMENT_COLUMN),
                     observed,
                     Map.of(READ_MODE, FAIL_FAST)));
-    final Column references = functions.col(BundleResource.REFERENCES);
+    final Column references = functions.col(BundleResource.REFERENCES_COLUMN);
     return parsed.select(
         transformer.toLayout(
             resourceType,
