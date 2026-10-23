@@ -26,6 +26,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Nonnull;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
@@ -35,6 +38,7 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.types.ArrayType;
 import org.apache.spark.sql.types.StructType;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 /**
  * Tests that XML ingest reaches the same stored result as the equivalent JSON (T058a, T069),
@@ -93,23 +97,54 @@ class FhirXmlReaderTest {
           + "<valueQuantity><value value=\"1.50\"/><unit value=\"m\"/></valueQuantity>"
           + "</Observation>";
 
-  /** The same observation, written as JSON. */
-  @Nonnull
-  private static final String OBSERVATION_JSON =
-      "{\"resourceType\":\"Observation\",\"id\":\"o1\",\"status\":\"final\","
-          + "\"code\":{\"coding\":[{\"system\":\"http://loinc.org\",\"code\":\"8302-2\"}]},"
-          + "\"valueQuantity\":{\"value\":1.50,\"unit\":\"m\"}}";
-
-  @Test
-  void convertsToTheEquivalentJson() {
-    assertEquals(parse(PATIENT_JSON), parse(converted("Patient", PATIENT_XML)));
-    assertEquals(parse(OBSERVATION_JSON), parse(converted("Observation", OBSERVATION_XML)));
-  }
-
   @Test
   void storesWhatTheEquivalentJsonStores() {
     assertSameStoredResult("Patient", PATIENT_XML, PATIENT_JSON);
-    assertSameStoredResult("Observation", OBSERVATION_XML, OBSERVATION_JSON);
+  }
+
+  /**
+   * A decimal is stored as the text the XML carries, so XML keeps its lexical form where JSON
+   * passes it through a double (owner, 2026-10-22). That holds for a value no double or long holds.
+   */
+  @Test
+  void storesADecimalAsItsText() {
+    final List<String> values =
+        List.of("1.50", "5", "0.0008823084504462283", "9999999999999999999", "1.2E3");
+    final String[] documents =
+        values.stream()
+            .map(value -> OBSERVATION_XML.replace("o1", "o" + value).replace("1.50", value))
+            .toArray(String[]::new);
+
+    final List<String> stored =
+        TransformFixtures.fhirReader()
+            .xml()
+            .read("Observation", documents(documents))
+            .collectAsList()
+            .stream()
+            .map(row -> row.<Row>getAs("valueQuantity").<String>getAs("value"))
+            .toList();
+
+    assertEquals(new java.util.HashSet<>(values), new java.util.HashSet<>(stored));
+  }
+
+  /**
+   * An element in another namespace is not FHIR, and is left out rather than read as the FHIR
+   * element its local name matches.
+   */
+  @Test
+  void leavesOutAnElementInAnotherNamespace() {
+    final Row stored =
+        TransformFixtures.fhirReader()
+            .xml()
+            .read(
+                "Observation",
+                documents(
+                    "<Observation xmlns=\"http://hl7.org/fhir\" xmlns:v=\"http://example.org\"><id"
+                        + " value=\"o1\"/><v:status value=\"preliminary\"/><status"
+                        + " value=\"final\"/><code><text value=\"x\"/></code></Observation>"))
+            .first();
+
+    assertEquals("final", stored.<String>getAs("status"));
   }
 
   /**
@@ -151,20 +186,111 @@ class FhirXmlReaderTest {
   }
 
   @Test
-  void convertsNothingForANullDocument() {
+  void storesNothingForANullDocument() {
     final Dataset<String> documents =
-        TransformFixtures.spark().createDataset(Arrays.asList((String) null), Encoders.STRING());
+        TransformFixtures.spark()
+            .createDataset(Arrays.asList(null, PATIENT_XML), Encoders.STRING());
 
-    assertTrue(XmlConversion.toJson("Patient", documents).collectAsList().isEmpty());
+    assertEquals(
+        List.of("1"),
+        TransformFixtures.fhirReader().xml().read("Patient", documents).collectAsList().stream()
+            .map(row -> row.<String>getAs("id"))
+            .toList());
+  }
+
+  /**
+   * A blank line in a file of line-delimited XML holds no document, and is skipped as the NDJSON
+   * reader skips one, rather than failing the read.
+   */
+  @Test
+  void skipsABlankLine(@TempDir @Nonnull final Path directory) throws IOException {
+    Files.writeString(
+        directory.resolve("patients.xml"),
+        PATIENT_XML + "\n\n" + PATIENT_XML.replace("\"1\"", "\"2\"") + "\n \t\n");
+
+    assertEquals(
+        List.of("1", "2"),
+        TransformFixtures.fhirReader()
+            .xml()
+            .read("Patient", directory.toString())
+            .collectAsList()
+            .stream()
+            .map(row -> row.<String>getAs("id"))
+            .sorted()
+            .toList());
+  }
+
+  /** A document in the FHIR namespace under a prefix is valid FHIR, and is read. */
+  @Test
+  void readsADocumentWithAPrefixedFhirNamespace() {
+    final String prefixed =
+        "<f:Patient xmlns:f=\"http://hl7.org/fhir\"><f:id value=\"1\"/>"
+            + "<f:identifier><f:system value=\"http://example.org/mrn\"/><f:value value=\"123\"/>"
+            + "</f:identifier>"
+            + "<f:active><f:extension url=\"http://example.org/reason\">"
+            + "<f:valueString value=\"unknown\"/></f:extension></f:active>"
+            + "<f:name><f:family value=\"Smith\"/><f:given value=\"Jane\"/></f:name>"
+            + "<f:gender value=\"female\"/>"
+            + "<f:birthDate value=\"1980-01-01\">"
+            + "<f:extension url=\"http://hl7.org/fhir/StructureDefinition/patient-birthTime\">"
+            + "<f:valueDateTime value=\"1980-01-01T10:30:00+10:00\"/></f:extension>"
+            + "</f:birthDate>"
+            + "</f:Patient>";
+
+    assertSameStoredResult("Patient", prefixed, PATIENT_JSON);
   }
 
   @Test
-  void failsOnADocumentThatIsNotXml() {
-    final Dataset<String> documents = documents("{\"resourceType\":\"Patient\"}");
+  void failsOnADocumentInNoNamespace() {
+    assertFailsNaming(
+        "<Patient><id value=\"n1\"/></Patient>", "Patient with id \"n1\"", "no namespace");
+  }
 
-    assertThrows(
-        Exception.class,
-        () -> TransformFixtures.fhirReader().xml().read("Patient", documents).collectAsList());
+  @Test
+  void failsOnTextAfterTheRoot() {
+    assertFailsNaming(
+        "<Patient xmlns=\"http://hl7.org/fhir\"><id value=\"t1\"/></Patient>trailing",
+        "Patient with id \"t1\"",
+        "");
+  }
+
+  @Test
+  void failsOnASecondRoot() {
+    assertFailsNaming(
+        "<Patient xmlns=\"http://hl7.org/fhir\"><id value=\"r1\"/></Patient>"
+            + "<Patient xmlns=\"http://hl7.org/fhir\"><id value=\"r2\"/></Patient>",
+        "Patient with id \"r1\"",
+        "");
+  }
+
+  @Test
+  void failsOnADocumentTypeDeclaration() {
+    assertFailsNaming(
+        "<!DOCTYPE Patient [<!ENTITY e \"x\">]>"
+            + "<Patient xmlns=\"http://hl7.org/fhir\"><id value=\"d1\"/></Patient>",
+        "document starting",
+        "document type declaration");
+  }
+
+  /** Text that is not XML is named by its start, since no type or id can be read from it. */
+  @Test
+  void namesADocumentThatIsNotXmlByItsStart() {
+    assertFailsNaming("{\"resourceType\":\"Patient\"}", "document starting \"{", "");
+  }
+
+  private static void assertFailsNaming(
+      @Nonnull final String document, @Nonnull final String name, @Nonnull final String reason) {
+    final Exception failure =
+        assertThrows(
+            Exception.class,
+            () ->
+                TransformFixtures.fhirReader()
+                    .xml()
+                    .read("Patient", documents(document))
+                    .collectAsList());
+    final String messages = XmlNarrativeTest.messages(failure);
+    assertTrue(messages.contains(name), "the failure does not name the document: " + messages);
+    assertTrue(messages.contains(reason), "the failure does not give the reason: " + messages);
   }
 
   private static void assertSameStoredResult(
@@ -175,11 +301,6 @@ class FhirXmlReaderTest {
 
     assertEquals(fromJson.schema(), fromXml.schema(), "the stored schemas differ");
     assertEquals(sorted(fromJson), sorted(fromXml), "the stored rows differ");
-  }
-
-  @Nonnull
-  private static String converted(@Nonnull final String resourceType, @Nonnull final String xml) {
-    return XmlConversion.toJson(resourceType, documents(xml)).collectAsList().get(0);
   }
 
   @Nonnull

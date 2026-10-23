@@ -17,6 +17,8 @@
 
 package au.csiro.pathling.schema;
 
+import static au.csiro.pathling.utilities.SparkTypes.elementTypeOf;
+
 import au.csiro.pathling.definition.DefinitionContext;
 import au.csiro.pathling.definition.fhir.FhirDefinitionContext;
 import ca.uhn.fhir.context.FhirContext;
@@ -90,11 +92,5 @@ final class SchemaFixtures {
   @Nonnull
   static StructType structAt(@Nonnull final StructType structure, @Nonnull final String... path) {
     return (StructType) elementTypeOf(at(structure, path));
-  }
-
-  /** Returns the element type of an array, or the type itself where it is not an array. */
-  @Nonnull
-  static DataType elementTypeOf(@Nonnull final DataType type) {
-    return type instanceof final ArrayType array ? array.elementType() : type;
   }
 }

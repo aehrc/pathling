@@ -30,6 +30,7 @@ import au.csiro.pathling.test.SharedMocks;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.helpers.TerminologyServiceHelpers;
 import au.csiro.pathling.test.layout.PofDatasets;
+import au.csiro.pathling.utilities.SparkTypes;
 import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
 import java.util.Arrays;
@@ -38,7 +39,6 @@ import java.util.stream.Stream;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
-import org.apache.spark.sql.types.ArrayType;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructField;
@@ -170,13 +170,12 @@ class SystemCodingShapeTest {
 
   @Nonnull
   private DataType elementTypeOf(@Nonnull final String expression) {
-    final DataType type =
+    return SparkTypes.elementTypeOf(
         dataset
             .select(evaluator().evaluateToCollection(PARSER.parse(expression)).getColumnValue())
             .schema()
             .fields()[0]
-            .dataType();
-    return type instanceof final ArrayType array ? array.elementType() : type;
+            .dataType());
   }
 
   @Nonnull

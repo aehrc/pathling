@@ -43,9 +43,9 @@ public final class FhirReader {
 
   @Nonnull private final FhirXmlReader xml;
 
-  private FhirReader(@Nonnull final FhirJsonReader json, @Nonnull final FhirParsers parsers) {
+  private FhirReader(@Nonnull final FhirJsonReader json, @Nonnull final FhirXmlReader xml) {
     this.json = json;
-    this.xml = new FhirXmlReader(json, parsers);
+    this.xml = xml;
   }
 
   /**
@@ -58,9 +58,9 @@ public final class FhirReader {
   @Nonnull
   public static FhirReader of(
       @Nonnull final SparkSession spark, @Nonnull final DefinitionContext definitions) {
-    final FhirParsers parsers = FhirParsers.of(definitions);
+    final ResourceTransformer transformer = ResourceTransformer.of(definitions);
     return new FhirReader(
-        new FhirJsonReader(spark, ResourceTransformer.of(definitions), parsers), parsers);
+        new FhirJsonReader(spark, transformer), new FhirXmlReader(spark, transformer, definitions));
   }
 
   /**

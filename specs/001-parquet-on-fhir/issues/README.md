@@ -39,37 +39,36 @@ measures the finished layout, annotations included.
 
 ## Stage 3: Ingest and egress without HAPI (#2831)
 
-JSON and XML are read and written without HAPI, and primitive ids and
-extensions are stored.
+JSON and XML are read and written without HAPI, and ingest assumes conformant
+input and reports nothing.
 
 - ~~[08](08-spike-ingest-egress-mechanism.md) Spike: the ingest and egress mechanism for JSON and XML~~ (done; choice deferred, decision 134)
-- [09](09-decide-column-binding.md) Decide whether column expressions are bound to a schema
+- ~~[09](09-decide-column-binding.md) Decide whether column expressions are bound to a schema~~ (done; unbound, decision 136)
 - [32](32-xml-and-bundles-without-hapi.md) XML and bundles without HAPI, on the interim ingest
-- [16](16-placeholder-ingest-egress-rework.md) DEFERRED: the ingest mechanism, per-value validation and lossless decimals
-- [17](17-placeholder-primitive-metadata-group.md) PLACEHOLDER: the primitive metadata group (US6, #437)
-- [29](29-layout-version-column.md) Identify the PoF layout by a versioned layout column
-- [30](30-pof-spec-layout-column.md) Propose the layout column as an amendment to the Parquet on FHIR specification
-- [35](35-pof-spec-json-projection.md) Propose the JSON projection and its prerequisites as amendments to the Parquet on FHIR specification
+- [37](37-remove-ingest-findings.md) Remove ingest's findings and checks, and list what the layout does not store as exceptions
 
 Decision 134 deferred the choice of ingest mechanism. Until the owner makes it,
 JSON stays on Spark's reader and ticket 32 takes XML and bundles off HAPI; ticket
-16 is the deferred rework. Tickets 17 and 18 build on the interim ingest, so they
-follow 32. Ticket 29 adds the layout column to the ingest #2367
-delivers, so it follows 32. Until it
-lands, the refusal of the legacy layout rests on the root `id_versioned`. Ticket 30
-can start at any time; 29 takes its name from 30 if 30 is agreed first. Ticket 35 can
-also start at any time, and #2367 does not wait for its amendments to be agreed.
+16, in stage 5, is the deferred rework. Ticket 37 removed ingest's findings and
+checks once 32 had landed, and ticket 18 then builds the dense mode with no
+bounds reporting.
+
+The stage closes early so that stage 4 picks up its changes (owner, 2026-10-23).
+Ticket 17 moved to stage 4, which prepares the engine's pairing of `x` with `_x`,
+and tickets 16, 29, 30, 35 and 39 moved to stage 5.
 
 ## Stage 4: Schema annotations (#2832)
 
 Quantity, decimal and date range annotations are emitted and read, each behind
-its own toggle, and their use is decided from the schema.
+its own toggle, and their use is decided from the schema. Primitive ids and
+extensions are stored and navigable.
 
 - ~~[11](11-annotation-registry-and-toggles.md) Annotation registry, per-annotation toggles and SchemaConfiguration~~ (done)
 - [12](12-quantity-annotations.md) Quantity annotations, UCUM-only canonicalisation, codegen-fallback measurement
 - [13](13-decimal-annotation.md) Decimal numeric annotation
 - [14](14-date-range-annotation.md) Date range annotation
 - [15](15-schema-decided-plan-test-and-docs.md) Test that annotation use is decided from the schema, and document annotations
+- [17](17-placeholder-primitive-metadata-group.md) PLACEHOLDER: the primitive metadata group (US6, #437)
 - ~~[34](34-placeholder-content-outside-definitions.md) PLACEHOLDER: Carry content the definitions do not describe through ingest, egress and the engine~~ (moved to a follow-up issue, ticket 26)
 
 Content the definitions do not describe, ticket 34 until 2026-10-22, is outside
@@ -78,13 +77,17 @@ Ticket 36 writes that issue's scope, which now covers extra fields generally,
 including `__` fields from other producers, and their place in the
 conformance levels.
 
+Ticket 17 moved here from stage 3 (owner, 2026-10-23): it extends ticket 11's
+pairing of `x` with `_x` to ids and extensions, and builds on the interim ingest
+of ticket 32.
+
 ## Stage 5: Dense mode, measurement, trust and completion (#2833)
 
 The dense schema mode matches the fitted one, the benchmark is re-measured
 against the finished layout, the engine's `trust` is documented, the follow-up
 issues are raised, and #2367 is checked complete.
 
-- [18](18-dense-mode.md) Dense schema mode, with bounds reporting and streaming encode
+- [18](18-dense-mode.md) Dense schema mode and streaming encode
 - [19](19-dense-parity.md) Dense parity
 - [10](10-benchmark-fix-and-extend.md) Benchmark: fix warm planning, add missing views, re-measure
 - [27](27-usc-bloodpressures-planning-regression.md) Investigate the UsCoreBloodPressures planning regression
@@ -93,9 +96,24 @@ issues are raised, and #2367 is checked complete.
 - [26](26-raise-github-followups.md) Raise the GitHub follow-up issues, including non-conformant data beyond `trust`, extra fields, and what the release needs
 - [36](36-followup-extra-fields.md) Scope the follow-up issue on extra fields: their support, and their place in the conformance levels
 - [38](38-annotation-fill-per-row.md) Consider deciding the annotation step's *fill* per row
+- [29](29-layout-version-column.md) Identify the PoF layout by a versioned layout column
+- [30](30-pof-spec-layout-column.md) Propose the layout column as an amendment to the Parquet on FHIR specification
+- [39](39-public-xml-sink-and-source.md) A public XML sink and source, over ticket 32's line-delimited XML
+- [35](35-pof-spec-json-projection.md) Propose the JSON projection and its prerequisites as amendments to the Parquet on FHIR specification
+- [16](16-placeholder-ingest-egress-rework.md) DEFERRED: the ingest mechanism, per-value validation and lossless decimals
 - [28](28-completion-checklist.md) Completion checklist
 
 Ticket 31 can start at any time, except its decimal criterion,
 which waits for ticket 13. Handling non-conformant data beyond `trust`,
 which 31 and 33 held until 2026-10-22, is the follow-up issue that ticket 26
 raises.
+
+Tickets 16, 29, 30, 35 and 39 moved here from stage 3 (owner, 2026-10-23). Ticket 29
+adds the layout column to the ingest #2367 delivers, so it follows 32. Until it
+lands, the refusal of the legacy layout rests on the root `id_versioned`. Ticket
+30 can start at any time; 29 takes its name from 30 if 30 is agreed first. Ticket
+39, numbered 36 until 2026-10-23, follows 32, whose `io`-level sink and source it
+exposes. Tickets 29 and 39 both work in `io`, so they run in sequence. Ticket
+35 can start at any time, and #2367 does not wait for its amendments to be
+agreed. Ticket 16 waits on the owner's choice of ingest mechanism (decision 134)
+and on ticket 31; whether #2367 waits for it is decided with that choice.

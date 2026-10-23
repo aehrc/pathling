@@ -36,3 +36,11 @@ If a probe contradicts the design, stop and report to the owner.
 - [ ] A source key named like the layout column is reported as undescribed content.
 - [ ] The storage-layout contract, the library API contract and the site page describe the column.
 - [ ] The core build passes. The Python and R suites pass after the Ivy cache is cleared.
+
+## Comments
+
+### XML data before the bump is already lossless (owner, 2026-10-22)
+
+From ticket 32's review: XML ingest stores a decimal's text unchanged, so XML data written before the layout
+version is bumped for ticket 16's decimals is already in the lossless form. Only JSON data of that time passed its
+decimals through a double.

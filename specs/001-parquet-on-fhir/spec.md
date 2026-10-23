@@ -63,12 +63,11 @@ the specification, without FHIRPath evaluation.
 4. **Given** a quantity, **When** it is stored, **Then** the specification's
    canonical annotation accompanies it, followed by the exact canonical
    annotation.
-5. **Given** content the definition set does not describe, **When** it is
-   loaded, **Then** the load succeeds, the content is not stored, and a finding
-   names it.
+5. **Given** a resource carrying content the layout does not store, such as a
+   contained resource, **When** it is loaded, **Then** the load succeeds and the
+   content is dropped silently.
 6. **Given** the same resources as JSON, as XML and inside bundles of either
-   format, **When** each is loaded, **Then** the stored data and the findings are
-   the same.
+   format, **When** each is loaded, **Then** the stored data are the same.
 
 ---
 
@@ -148,7 +147,7 @@ expression over an absent element yields empty.
    **When** it is evaluated, **Then** it succeeds.
 7. **Given** one column expression, **When** it is applied to a fitted dataset
    and to a dense dataset holding the same resources, **Then** the results are
-   equal. *(Subject to OQ-2.)*
+   equal.
 8. **Given** two collections of the same FHIR type reached by different paths,
    whose fitted schemas differ, **When** they are combined, **Then** the result
    holds every element of both and can be traversed.
@@ -269,18 +268,19 @@ the legacy encoder, re-import the result, and compare it with the source data.
 
 - A decimal exceeding a double's precision: computed at the documented cap
   (FR-035). How it is stored is OQ-1.
-- A FHIR element whose JSON type contradicts the definitions: not stored, and
-  reported. Whether the loss is that value alone or every value of the element
-  read with it is OQ-1.
-- A resource carrying `contained` resources: dropped and reported, never
-  represented.
+- A FHIR element whose JSON type contradicts the definitions: not conformant
+  input, so what is stored is undefined and nothing is reported (FR-063).
+- A resource carrying `contained` resources: dropped silently, never
+  represented (FR-006).
 - A structure whose every field is null, or an array whose every element is
   null, in a given row: not written as `{}` or `[null]` (FR-019).
 - An array of arrays where a repeating element is declared, such as
-  `"given":[["a","b"]]`: a shape mismatch, reported, and stored as absent.
+  `"given":[["a","b"]]`: not conformant input, so the outcome is undefined and
+  nothing is reported (FR-063).
 - A source key named like one of the layout's annotations, such as `__start`
   in `_birthDate`, or like the layout column, `__layout_v1`: neither is
-  read from the source, so the key is reported as undescribed content.
+  read from the source, so the key is undescribed content, and is not reported
+  (FR-063).
 - A Bundle: accepted as a transport carrier and exploded to one table per
   resource type, never stored as a resource type. References between its
   entries are resolved to relative references.
@@ -315,8 +315,8 @@ Identifiers are stable. FR-015, FR-018 and FR-020 are retired and not reused.
   specification's own, at its fixed-point type, and immediately after it an
   exact one carrying the canonicalised unit
   ([ADR-0003](../../docs/adr/0003-annotations-are-optional.md)).
-- **FR-006**: `contained` resources MUST NOT be represented. Their presence is
-  reported as a finding.
+- **FR-006**: `contained` resources MUST NOT be represented. They are dropped
+  silently.
 - **FR-007**: `Bundle` MUST NOT be stored as a resource type.
 
 ### Schema derivation
@@ -352,9 +352,12 @@ Identifiers are stable. FR-015, FR-018 and FR-020 are retired and not reused.
 
 - **FR-045**: JSON and XML MUST be accepted and produced, as single resources
   and, on ingest, as bundles.
-- **FR-060**: Every ingest format MUST store the same data and report the same
-  findings for the same resources. XML and bundles MUST NOT behave differently
-  from JSON in what they keep, coerce, report or fail on.
+- **FR-060**: Every ingest format MUST store the same data for the same
+  conformant resources. XML and bundles MUST NOT behave differently from JSON in
+  what they keep, coerce or fail on.
+  _Note (owner, 2026-10-22)_: during the interim (decision 134), XML keeps a
+  decimal's lexical form while JSON still passes it through a double, so the
+  two store a decimal's text differently and its value alike.
 - **FR-061**: No ingest or egress route MAY parse into or build a FHIR object per
   row, HAPI included. The mechanism is chosen by a spike against SC-011
   ([ADR-0004](../../docs/adr/0004-no-per-row-hapi-no-catalyst-in-encoding.md)).
@@ -370,30 +373,36 @@ Identifiers are stable. FR-015, FR-018 and FR-020 are retired and not reused.
 - **FR-016**: For input conforming to the definition set, a
   `JSON → storage → JSON` round trip MUST produce a semantically equal resource,
   with object key order ignored, array order significant and numbers compared
-  numerically, subject to these exceptions:
+  numerically, subject to these exceptions, each dropped silently:
   1. `contained` resources (FR-006) and `Bundle` (FR-007);
-  2. `base64Binary` whitespace, which decoding and re-encoding canonicalises;
-  3. content the definition set does not describe, or whose JSON type
-     contradicts it, which is not stored and is reported;
-  4. on a dense schema, content beyond the configured bounds (FR-017).
+  2. an inline resource held by an element declared as the abstract
+     `Resource`, such as `Parameters.parameter.resource`;
+  3. primitive ids and extensions, until ticket 17 stores the metadata group;
+  4. on a dense schema, content beyond the configured nesting, extension and
+     open-type bounds (FR-017);
+  5. `base64Binary` whitespace, which decoding and re-encoding canonicalises.
 
   OQ-1 lists further exceptions that hold until ticket 16 decides
-  otherwise. The round trip through XML is held to the same guarantee.
+  otherwise. Content the definition set does not describe, or whose JSON type
+  contradicts it, is not conformant input, so it is outside the guarantee
+  rather than an exception to it (FR-063). The round trip through XML is held
+  to the same guarantee.
   Evidence: [null-and-empty-handling.md](evidence/null-and-empty-handling.md).
 - **FR-017**: On a dense schema the guarantee in FR-016 MUST hold within the
-  configured nesting, extension and open-type bounds, and content those bounds
-  drop MUST be reported.
+  configured nesting, extension and open-type bounds. What those bounds drop is
+  an exception to the guarantee (FR-016), and is not reported.
 - **FR-019**: Export MUST omit an absent element, a structure whose every field
   is null, and an array holding only nulls, except a repeating primitive's
   positional nulls, which align with its metadata group. *(Subject to OQ-1.)*
-- **FR-063**: Non-conformant content MUST be reported, never silently dropped or
-  coerced. Malformed JSON or XML fails the read. Until OQ-1 is answered, the
-  losses its interim answer lists are an exception: they are reported per
-  column at most, or not at all (decision 134). Until the follow-up issue on
-  non-conformant data, raised by ticket 26, rewrites this requirement, the
-  engine runs in `trust`: its behaviour on non-conformant stored content is
-  undefined, and may be an error or a silently wrong answer (decision 133's
-  addendum of 2026-10-22).
+- **FR-063**: Ingest and the engine run in `trust` (decision 133's addendum of
+  2026-10-22). Ingest assumes its input is conformant and checks nothing: its
+  behaviour on non-conformant content is undefined, and it may fail the read,
+  produce a null or store a wrong value. Malformed JSON or XML fails the read. The engine's behaviour
+  on non-conformant stored content is undefined too, and may be an error or a
+  silently wrong answer. Until OQ-1 is answered, the losses its interim answer
+  lists are an exception (decision 134). The modes beyond `trust`, and what
+  they report, are for the follow-up issue on non-conformant data, raised by
+  ticket 26.
 
 ### Annotations
 
@@ -440,7 +449,7 @@ Identifiers are stable. FR-015, FR-018 and FR-020 are retired and not reused.
   element, because that drops rows from files lacking that leaf.
 - **FR-054**: A column expression MUST be valid over every schema conforming to
   the definitions, deciding presence from the resolved input schema rather than
-  when the expression is built. *(Subject to OQ-2.)* Evidence:
+  when the expression is built (decision 136). Evidence:
   [t009a-analyzer-gate.md](evidence/t009a-analyzer-gate.md),
   [join-condition-limit.md](evidence/join-condition-limit.md).
 - **FR-055**: An absent element MUST be a null typed by the definitions where
@@ -579,7 +588,6 @@ reconciliation, legacy export, layout column.
 - **SC-010**: One column expression, built without reference to any dataset,
   applied to a fitted and to a dense dataset holding the same resources, yields
   equal results for every expression in the engine's expression-level test set.
-  *(Subject to OQ-2.)*
 - **SC-011**: Encode and decode are no slower than at the PoF switch, measured on
   the same benchmark, within the measured drift of about 10%
   ([t136-benchmark.md](evidence/t136-benchmark.md)).
@@ -615,25 +623,24 @@ reconciliation, legacy export, layout column.
   - the decimal's lexical form (FR-002). Today a number passes through a double,
     so trailing zeros, exponent notation and precision beyond a double are not
     preserved;
-  - the granularity of a contradicting value (FR-016 item 3). Today one value
-    whose JSON type contradicts the definitions, or that re-types its column
-    beside conformant values, costs that element for every resource read with
-    it, and a number inferred as text beside strings is kept as text without a
-    finding;
-  - empty structures and null-only arrays on export (FR-019). Today a structure
-    emptied by non-conformant content is written as `{}`;
-  - per-value rather than per-column findings, and reporting of values a
-    converter cannot store, such as an integer beyond the range of an int.
+  - the granularity of a contradicting value (FR-063). Today a primitive
+    column that Spark widens for a contradicting value is cast to the declared
+    type one value at a time, so the conformant values in it survive, and the
+    contradicting value may become null, fail the read or be stored wrong;
+  - empty structures and null-only arrays on export (FR-019). Today what is
+    stored for a structure emptied by non-conformant content is undefined
+    (FR-063), and it may be written as `{}`;
+  - a value a converter cannot store, such as an integer beyond the range of an
+    int, which today becomes null.
 
   _Interim answer (decision 134)_: the spike measured four candidates and
   reported without a choice, which is deferred to ticket 16. Until then every
-  loss above is kept, as today's behaviour, on JSON and on XML alike. In
+  loss above is kept, as today's behaviour, on JSON and on XML alike, except
+  that XML keeps a decimal's lexical form (decision 134's note of 2026-10-22). In
   addition, empty values are handled as Spark's reader handles them. `{}` is
-  dropped silently. `null` and `[]` are dropped with no more than a per-column
-  finding, which describes a type contradiction rather than an empty value. In
+  dropped silently, and so are `null` and `[]`. In
   a batch, `[]` can instead be stored as an empty array and `{}` as a present
-  structure holding nothing. `""` is stored. Malformed base64 becomes null
-  without a finding. On JSON only, a malformed document is accepted silently:
+  structure holding nothing. `""` is stored. Malformed base64 becomes null. On JSON only, a malformed document is accepted silently:
   text after the object is ignored, a top-level array becomes several
   resources, and a duplicate key keeps its last value. XML fails the read on
   its malformed cases, so the two formats differ here until ticket 16. The
@@ -646,3 +653,8 @@ reconciliation, legacy export, layout column.
   and an unbound expression bound to a schema when the dataset is known. The
   answer decides FR-054, SC-010 and the fitted-versus-dense parity tests. Any
   change is weighed against SC-008.
+
+  _Answer (decision 136, owner, 2026-10-23)_: no. A column expression stays
+  unbound, as FR-054 states. The question is revisited with the support of
+  extra fields, whose implementation may need a schema the definitions do not
+  give.

@@ -18,27 +18,27 @@
 package au.csiro.pathling.io;
 
 import jakarta.annotation.Nonnull;
-import java.util.Optional;
-import java.util.stream.Stream;
-import org.apache.spark.sql.types.StructField;
-import org.apache.spark.sql.types.StructType;
 
-/** Finds the fields of a structure the input carries, by name. */
-final class ObservedFields {
+/** Names a document in a failure by its first characters, where nothing better names it. */
+final class DocumentExcerpt {
 
-  private ObservedFields() {}
+  /** How many characters of a document name it. */
+  private static final int LENGTH = 80;
+
+  private DocumentExcerpt() {}
 
   /**
-   * Returns the field of a structure with a name, matched exactly, because FHIR names are
-   * case-sensitive.
+   * Returns the phrase that names a document by its first characters, quoted, and shortened with an
+   * ellipsis where the document is longer.
    *
-   * @param observed the structure the input carries
-   * @param name the name of the field
-   * @return the field, or empty where the structure does not carry it
+   * @param document the document
+   * @return the phrase
    */
   @Nonnull
-  static Optional<StructField> find(
-      @Nonnull final StructType observed, @Nonnull final String name) {
-    return Stream.of(observed.fields()).filter(field -> field.name().equals(name)).findFirst();
+  static String startOf(@Nonnull final String document) {
+    final String start = document.strip();
+    return "starting \""
+        + (start.length() > LENGTH ? start.substring(0, LENGTH) + "…" : start)
+        + "\"";
   }
 }

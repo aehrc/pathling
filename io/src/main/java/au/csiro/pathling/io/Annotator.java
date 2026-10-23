@@ -17,6 +17,9 @@
 
 package au.csiro.pathling.io;
 
+import static au.csiro.pathling.utilities.SparkTypes.elementTypeOf;
+import static au.csiro.pathling.utilities.SparkTypes.fieldOf;
+
 import au.csiro.pathling.definition.DefinitionContext;
 import au.csiro.pathling.schema.DefinitionCanonicalStructure;
 import au.csiro.pathling.schema.LayoutEntry;
@@ -187,7 +190,7 @@ public final class Annotator {
           node.metadataGroup(name).orElseThrow(),
           name,
           node.entry(primitive).orElseThrow(),
-          ObservedFields.find(observed, primitive).map(unused -> field.apply(primitive)),
+          fieldOf(observed, primitive).map(unused -> field.apply(primitive)),
           Optional.of(stored),
           field);
     }
@@ -196,7 +199,7 @@ public final class Annotator {
     }
     if (entry.primitiveType().isPresent()) {
       final String groupName = LayoutFields.metadataGroupName(name);
-      if (ObservedFields.find(observed, groupName).isPresent()) {
+      if (fieldOf(observed, groupName).isPresent()) {
         // A group the input carries is rebuilt where it is met.
         return Optional.empty();
       }
@@ -281,8 +284,8 @@ public final class Annotator {
     final Optional<StructType> observed =
         stored
             .map(StructField::dataType)
-            .filter(type -> StrictnessCheck.isConformingMetadataGroup(repeating, type))
-            .map(type -> (StructType) StrictnessCheck.elementTypeOf(type));
+            .filter(type -> isMetadataGroupShape(repeating, type))
+            .map(type -> (StructType) elementTypeOf(type));
     if (stored.isPresent() && observed.isEmpty()) {
       // A group of the wrong shape is not this layout's, and is passed through as it is.
       return Optional.empty();
@@ -293,7 +296,7 @@ public final class Annotator {
     final List<String> kept = kept(node.annotationEntries(), observed, derived);
     final boolean extensionsChange =
         observed
-            .flatMap(s -> ObservedFields.find(s, LayoutFields.METADATA_GROUP_EXTENSION))
+            .flatMap(s -> fieldOf(s, LayoutFields.METADATA_GROUP_EXTENSION))
             .flatMap(
                 extension ->
                     node.extensionStructure(extension.name())
@@ -498,7 +501,18 @@ public final class Annotator {
   /** Returns whether the container the input carries has a field. */
   private static boolean isStored(
       @Nonnull final Optional<StructType> observed, @Nonnull final String name) {
-    return observed.flatMap(structure -> ObservedFields.find(structure, name)).isPresent();
+    return observed.flatMap(structure -> fieldOf(structure, name)).isPresent();
+  }
+
+  /**
+   * Returns whether a stored metadata group has the outer shape FHIR gives it: an object beside a
+   * singular primitive, and an array of objects beside a repeating one.
+   */
+  private static boolean isMetadataGroupShape(
+      final boolean repeating, @Nonnull final DataType observed) {
+    return repeating
+        ? observed instanceof final ArrayType array && array.elementType() instanceof StructType
+        : observed instanceof StructType;
   }
 
   /** Returns the names of the fields of the container the input carries, in their order. */

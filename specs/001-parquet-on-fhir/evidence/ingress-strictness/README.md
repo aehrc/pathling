@@ -152,13 +152,13 @@ addendum).
 Non-conformant data is classified by the first of these levels it fails. They are not the repair levels above:
 those say how far a value is converted, and these say which rule it breaks. Each level assumes the ones before it.
 
-| Level | Rule | Needs the definitions | JSON | Parquet |
-|---|---|---|---|---|
-| 1. Container format | The file is valid in its format | No | Well-formed JSON, one object per line (C1) | A readable Parquet or Delta file |
-| 2. FHIR JSON encoding | FHIR's JSON representation rules | No | The rules of [FHIR JSON](https://hl7.org/fhir/R4/json.html) applied directly: no `null` except as positional padding aligned with `_x`, no `{}`, `[]` or `""`, no duplicate keys, `_x` aligned with `x`, `resourceType` present (C2) | The same rules, applied to the row's JSON projection (below) |
-| 3. Structure | The definitions' names, types and cardinality | Yes | Per value: known names, the JSON type the definition gives, array or singular, one choice type (C3, C4, C5) | Per dataset: the schema is the layout the definitions derive, apart from any field whose name starts with `__`, which is layout and may come from any producer (decision 135). Checked once, at planning |
-| 4. Value | The lexical space of the element's type | Yes | The regex, the calendar, the range, and whitespace where the type forbids it (C6) | The same, on the stored text |
-| 5. Valid FHIR | Minimum cardinality, bindings, invariants, profiles | Yes, and terminology | Out of scope | Out of scope |
+| Level | Rule | Needs the definitions | JSON | XML (owner, 2026-10-22) | Parquet |
+|---|---|---|---|---|---|
+| 1. Container format | The file is valid in its format | No | Well-formed JSON, one object per line (C1) | Well-formed XML, one root element, UTF-8 | A readable Parquet or Delta file |
+| 2. FHIR JSON encoding | FHIR's JSON representation rules | No | The rules of [FHIR JSON](https://hl7.org/fhir/R4/json.html) applied directly: no `null` except as positional padding aligned with `_x`, no `{}`, `[]` or `""`, no duplicate keys, `_x` aligned with `x`, `resourceType` present (C2) | The rules of [FHIR XML](https://hl7.org/fhir/R4/xml.html) applied directly: "FHIR elements are always in the namespace http://hl7.org/fhir"; "the only other namespace that occurs in FHIR resources is the XHTML namespace"; "exchanged content SHALL NOT specify the schema or even contain the schema instance namespace"; "there SHALL be no DTD references in FHIR resources"; "XML resources SHALL be exchanged using UTF-8 encoding"; values only in `value` attributes, and an element has "either a value attribute, child elements as defined for its type, or 1 or more extensions"; "attributes cannot be empty"; comments and processing instructions "are not part of the contents of a resource", and other processing instructions "SHOULD not be included" | The same rules, applied to the row's JSON projection (below) |
+| 3. Structure | The definitions' names, types and cardinality | Yes | Per value: known names, the JSON type the definition gives, array or singular, one choice type (C3, C4, C5) | As JSON | Per dataset: the schema is the layout the definitions derive, apart from any field whose name starts with `__`, which is layout and may come from any producer (decision 135). Checked once, at planning |
+| 4. Value | The lexical space of the element's type | Yes | The regex, the calendar, the range, and whitespace where the type forbids it (C6) | As JSON | The same, on the stored text |
+| 5. Valid FHIR | Minimum cardinality, bindings, invariants, profiles | Yes, and terminology | Out of scope | Out of scope | Out of scope |
 
 Level 2 is defined by reference to FHIR's JSON rules, not restated, so it follows the FHIR version and needs
 nothing from the definitions. That is why it also applies to content the definitions do not describe (ticket
@@ -218,6 +218,14 @@ conformant and survives HAPI's XML round trip, but not JSON, which forbids comme
 | 3 | Decision 133's repair levels, the follow-up | The follow-up: a schema that does not conform | — |
 | 4 | The follow-up, with ticket 16's grammar | The follow-up (ticket 31's former design) | Written as stored |
 | 5 | Out of scope; 9.9.0's HAPI checked required bindings and extension rules | Out of scope | Out of scope |
+| 1, XML (owner, 2026-10-22) | Fail, naming the document: text that is not well-formed, text after the root, a second root | — | — |
+| 2, XML (owner, 2026-10-22) | Fail, naming the document, on a DTD (kept as XXE protection) and on a root outside the FHIR namespace. Silently ignore the rest: an element in another namespace outside a narrative is dropped before the transform, and never read as the FHIR element its local name matches; a `div` that is not XHTML is dropped; attributes in a namespace, `xsi:` included, are ignored; text inside a FHIR element is ignored; comments and processing instructions are dropped | — | Written as stored |
+| 3, XML (owner, 2026-10-22) | Content the definitions do not describe is left out without a finding, as on JSON; `contained` is dropped silently (FR-006). Types and cardinality come from the definitions (ticket 37) | — | — |
+| 4, XML (owner, 2026-10-22) | Not checked. A decimal is stored as its text; an integer or boolean that does not parse is a null for that value (ticket 26's follow-up) | — | Written as stored |
+
+A `pof:` carrier for undescribed content, an element or an attribute in a namespace of Pathling's own, would be a
+level 2 violation, so the follow-up of ticket 26 would need an exception for Pathling-written XML. A comment
+carrier conforms, but the XML route drops comments today (owner, 2026-10-22).
 
 ## Modes (owner, 2026-10-21)
 
@@ -234,8 +242,8 @@ answer different questions: ingest decides what is stored, and the engine decide
 "Without loss" means the FHIR meaning is unchanged: the data, projected to JSON and read as FHIR, carries the
 same information. `strict`, `tolerate` and `repair` are a ladder, each accepting what the one before it accepts
 and more. `trust` is not on it: it pays nothing to detect, and promises nothing once detection would have
-mattered. It may still check what is free, such as the schema at planning, and the follow-up decides whether
-it does.
+mattered. It could still check what is free, such as the schema at planning, and the follow-up decides whether
+it does. #2367 does not: its ingest checks nothing (ticket 37, owner, 2026-10-22).
 
 **Reporting** is a second dimension (owner, 2026-10-22). `tolerate` and `repair` each come with findings, as
 principles 2 and 5 require, or silently, for a user who accepts silent loss. That gives up to six behaviours,
@@ -250,7 +258,7 @@ By conformance level:
 |---|---|---|---|---|
 | 1. Format | fail | fail | ingest skips the record, with a finding | undefined |
 | 2. JSON encoding | fail | absent: `null`, `{}`, `[]`, a structure with no content and an unaligned positional null | as `tolerate` | undefined |
-| 3. Structure | fail | conversions that succeed (`widen`, and `narrow` where the value converts); otherwise fail | the same conversions; otherwise the element is dropped, with a finding | undefined, unless the schema check is kept |
+| 3. Structure | fail | conversions that succeed (`widen`, and `narrow` where the value converts); otherwise fail | the same conversions; otherwise the element is dropped, with a finding | undefined |
 | 4. Value | fail | fail, since no fix is lossless | ingest drops the value, with a finding; the engine reads it as absent | undefined |
 
 The exceptions below override this table: `{}` in JSON, for example, is absent at ingest in every mode, `strict`
@@ -281,7 +289,7 @@ discussed further.
 |---|---|---|
 | `{}` in JSON | Ingest treats it as absent, with no finding | It carries no content, and 9.9.0's HAPI dropped it with no callback. This reverses decision 133's rule that `{}` is invalid under the policy. `null` and `[]` are not yet decided. |
 | A decimal's precision | Accepted: ingest reads a number through a double (FR-002, decision 68), and the engine computes at `DECIMAL(32,6)` (FR-035). No finding, and `strict` does not fail. | For now, until ticket 16 removes OQ-1's losses. A valid decimal that becomes null, rather than less precise, is not covered: ticket 31 decides it. |
-| `contained` | Dropped, with an informational finding | Valid FHIR the layout does not store (FR-006); unchanged from decision 133 |
+| `contained` | Dropped, with no finding | Valid FHIR the layout does not store (FR-006). Decision 133 gave it an informational finding, which ticket 37 removes (owner, 2026-10-22) |
 
 ## Delivering findings (owner, 2026-10-19)
 
@@ -508,17 +516,22 @@ route are unmeasured.
 A-variant therefore covers JSON only. XML needs another route, either the `from_xml` struct route from
 `xml-native.md` or B's parser.
 
-## Current branch (from the spec and `StrictnessCheck`, not run)
+## Current branch (from the spec and the code, not run)
 
-`PrimitiveConverters` validates no lexical form. Every string-family type, the date family included, is stored as
-the text it arrived as. Two cases lose the value invisibly, becoming null with no finding:
+Ingest is in `trust`, checks nothing and reports nothing (ticket 37). `PrimitiveConverters` validates no lexical
+form. Every string-family type, the date family included, is stored as the text it arrived as. Each declared element
+is cast from what Spark inferred as though it conformed, one value at a time:
 
-- an integer beyond the range of an int (`try_cast`);
-- invalid base64 (`try_to_binary`).
+- a value the cast cannot convert becomes null, such as text in a boolean column (`try_cast`), and invalid base64
+  (`try_to_binary`);
+- a value the cast converts wrongly is stored wrongly, such as `1.5` truncated to `1` where one value re-typed an
+  integer column to double, or a singular element supplied as an array stored as the array's text;
+- a shape no cast reaches either fails the read, with Spark's own error or with an exception while the read is
+  planned, or is stored in a shape the definitions do not declare. A primitive where a structure is declared, as a
+  file mixing resource types can give, fails while the read is planned; a repeating element supplied as a single
+  value fails Spark's analysis; a singular structure supplied as an array is stored as a structure of arrays.
 
-It never fails on content (decision 68). Unknown content, contained, shape mismatches: ignored, one finding per
-**column path** found in the inferred schema, all logged in one warning per read, no row ids. Type contradiction: per OQ-1, the whole element is lost for
-every row read with it. Invalid values: not checked beyond what Spark's cast does (null).
+Content the definitions do not describe, `contained` and the other exceptions to FR-016 are dropped silently.
 
 ## Superseded: the first draft of levels
 

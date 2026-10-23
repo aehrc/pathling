@@ -17,8 +17,12 @@
 
 **Blocked by:** None — can start immediately
 
-**Status:** ready-for-human
+**Status:** done
 
-- [ ] Each option is assessed against the criteria, with evidence where a claim rests on Spark behaviour.
-- [ ] The owner decides, and the decision is recorded (as an ADR if it changes the engine's contract).
-- [ ] OQ-2 is resolved in the spec. FR-054 and SC-010 are reworded if needed, and ticket 19's parity test is restated to match.
+- [x] Each option is assessed against the criteria, with evidence where a claim rests on Spark behaviour.
+- [x] The owner decides, and the decision is recorded (as an ADR if it changes the engine's contract).
+- [x] OQ-2 is resolved in the spec. FR-054 and SC-010 are reworded if needed, and ticket 19's parity test is restated to match.
+
+## Comments
+
+**Owner (2026-10-23):** option (a), the current schema-agnostic column, recorded as decision 136. It is to be revisited when extra fields are supported, since an implementation of them may need a schema for fields the definitions do not describe; that is part of the extra-fields follow-up issue that ticket 26 raises. FR-054 and SC-010 stand unchanged, the OQ-2 markers are removed, and ticket 19's expression parity test already takes the form this decision settles.

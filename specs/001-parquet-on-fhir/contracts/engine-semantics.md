@@ -196,8 +196,8 @@ carried neither.
 **Delivered in M5, not at the flip.** Neither the writing nor the reading lands
 with the layout switch: the previous layout cannot represent this content and the
 engine cannot navigate it today, so deferring both regresses nothing. Until then
-the metadata group is not written, FR-017 carries a carve-out for the content it
-drops, and that loss is reported as a warning rather than occurring silently.
+the metadata group is not written, and the content it would carry is an
+exception to the round-trip guarantee (FR-016), dropped silently.
 
 ## Combining collections whose shapes differ
 

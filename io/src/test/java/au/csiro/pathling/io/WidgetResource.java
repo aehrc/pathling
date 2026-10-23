@@ -27,7 +27,8 @@ import org.hl7.fhir.r4.model.StringType;
 
 /**
  * A resource type that is not part of FHIR, which stands for the custom types that definitions may
- * describe, such as {@code ViewDefinition}, in tests of the routes that parse with HAPI.
+ * describe, such as {@code ViewDefinition}. HAPI registers it so that the definitions describe it;
+ * the routes under test know of it only through them.
  */
 @ResourceDef(name = "Widget")
 public class WidgetResource extends DomainResource {

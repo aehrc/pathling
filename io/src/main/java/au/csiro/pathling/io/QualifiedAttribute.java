@@ -18,27 +18,25 @@
 package au.csiro.pathling.io;
 
 import jakarta.annotation.Nonnull;
-import java.util.Iterator;
-import java.util.Spliterator;
-import java.util.Spliterators;
-import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
-/** Helpers for the functions that Spark runs over a whole partition of rows. */
-final class Partitions {
-
-  private Partitions() {}
+/**
+ * The name of an XML attribute: its prefix, its local name and its namespace, each the empty string
+ * where it has none.
+ *
+ * @param prefix the prefix
+ * @param localName the local name
+ * @param namespace the namespace
+ */
+record QualifiedAttribute(
+    @Nonnull String prefix, @Nonnull String localName, @Nonnull String namespace) {
 
   /**
-   * Returns the rows of a partition as a stream, in order, which is read lazily as the iterator is.
+   * Returns the name as it is written in a start tag.
    *
-   * @param rows the rows of the partition
-   * @param <T> the type of the rows
-   * @return the stream
+   * @return the qualified name
    */
   @Nonnull
-  static <T> Stream<T> stream(@Nonnull final Iterator<T> rows) {
-    return StreamSupport.stream(
-        Spliterators.spliteratorUnknownSize(rows, Spliterator.ORDERED), false);
+  String qualifiedName() {
+    return prefix.isEmpty() ? localName : prefix + ":" + localName;
   }
 }

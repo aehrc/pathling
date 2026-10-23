@@ -18,8 +18,9 @@ Points carried from the frozen tasks:
 
 **Annotations share the group (decision 135, part 4).** A primitive's annotations are fields of its metadata group, after `id` and `extension`, and tickets 13 and 14 may store the group for them first. So the group can exist without metadata: placeholder rules, egress and the projection test for `id` and `extension` inside it, not for the group. Ticket 11's annotation step adds the group where the reader did not emit one; the reader itself still emits a group only once this ticket populates it (decision 60's addendum).
 
-**Blocked by:** 32
+**Blocked by:** 32, and 11 for the engine's pairing of `x` with `_x`
 
 **Status:** needs-triage
 
 - [ ] To be written once ticket 32 lands.
+- [ ] Once primitive metadata is stored, a `urn:` reference inside a primitive's extension resolves as decision 83 states, in XML and JSON bundles alike (owner, 2026-10-22; ticket 32 accepted it as a gap until then).

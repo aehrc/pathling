@@ -89,6 +89,13 @@ repository `CLAUDE.md` chain (`CONTRIBUTING.md`, `server/CONTRIBUTING.md`,
 | The query engine reads both layouts from M2 until T100e removes the previous reader in M6 | It is what lets the engine be rewritten behind a green build and makes the switch a writer flip rather than a migration; it also keeps the switch reversible until M6 | Converting the engine by replacement was the previous plan and produced a span with no green build at all (decision 40, reversed). The cost is recorded as decision 51 and retired by a named task rather than left open |
 | FHIR objects still appear inside a UDF for XML and Bundle ingest, and for XML output | Neither has a Spark-native path that preserves FHIR semantics; XML output keeps what `decode` offers (decision 84) | A second parser for each would split the codebase permanently; UDFs are public, stable Spark API, so the constraint is met |
 
+_Withdrawn (ticket 32, 2026-10-21)_: the last row's exception no longer holds. XML is read with Spark's
+`from_xml` and written with `to_xml`, through plans generated from the definitions, and bundles in both
+formats are split by a streaming pass of `io`'s own; no route parses with HAPI or builds a FHIR object per
+row (FR-050, FR-061). The import check `config/checkstyle/io-hapi-imports.xml` keeps HAPI's parser out of
+`io`'s main sources. Decision 134 sets the route; decisions 83 and 84 carry addenda saying what of them is
+withdrawn.
+
 ## Project Structure
 
 ### Documentation (this feature)

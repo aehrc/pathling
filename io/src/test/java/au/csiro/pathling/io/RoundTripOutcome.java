@@ -28,7 +28,7 @@ public final class RoundTripOutcome {
 
   private final int primitiveMetadata;
 
-  private final int ignoredContent;
+  private final int inlineResources;
 
   private final int base64Whitespace;
 
@@ -38,12 +38,12 @@ public final class RoundTripOutcome {
 
   RoundTripOutcome(
       final int primitiveMetadata,
-      final int ignoredContent,
+      final int inlineResources,
       final int base64Whitespace,
       final int numericOnly,
       final int narrativeWhitespace) {
     this.primitiveMetadata = primitiveMetadata;
-    this.ignoredContent = ignoredContent;
+    this.inlineResources = inlineResources;
     this.base64Whitespace = base64Whitespace;
     this.numericOnly = numericOnly;
     this.narrativeWhitespace = narrativeWhitespace;
@@ -61,7 +61,7 @@ public final class RoundTripOutcome {
   }
 
   /**
-   * Returns the number of primitive id and extension keys excluded under FR-017's carve-out.
+   * Returns the number of primitive id and extension keys excluded until ticket 17.
    *
    * @return the count
    */
@@ -70,14 +70,13 @@ public final class RoundTripOutcome {
   }
 
   /**
-   * Returns the number of values excluded because the layout ignores them: content the definitions
-   * do not describe, and elements whose shape or JSON encoding contradicts the definitions, which
-   * is every value of such an element in a file rather than only the offending one.
+   * Returns the number of inline resources excluded because the element holding them is declared as
+   * the abstract {@code Resource}, which the layout does not store.
    *
    * @return the count
    */
-  public int getIgnoredContent() {
-    return ignoredContent;
+  public int getInlineResources() {
+    return inlineResources;
   }
 
   /**
