@@ -65,7 +65,7 @@ also start at any time, and #2367 does not wait for its amendments to be agreed.
 Quantity, decimal and date range annotations are emitted and read, each behind
 its own toggle, and their use is decided from the schema.
 
-- [11](11-annotation-registry-and-toggles.md) Annotation registry, per-annotation toggles and SchemaConfiguration
+- ~~[11](11-annotation-registry-and-toggles.md) Annotation registry, per-annotation toggles and SchemaConfiguration~~ (done)
 - [12](12-quantity-annotations.md) Quantity annotations, UCUM-only canonicalisation, codegen-fallback measurement
 - [13](13-decimal-annotation.md) Decimal numeric annotation
 - [14](14-date-range-annotation.md) Date range annotation

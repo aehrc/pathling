@@ -26,7 +26,7 @@ Decision 135 settled the questions this ticket raised: where the definitions liv
 
 **Blocked by:** None — can start immediately
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [x] The decisions are recorded, and the owner approved them before any kind was written (decision 135).
 - [x] The step runs enabled kinds and skips disabled ones. A test registers a stub kind per switch and shows that disabling one does not affect the others (T055).
@@ -39,7 +39,7 @@ Decision 135 settled the questions this ticket raised: where the definitions liv
 - [x] `decode` of data carrying an unknown `__` field writes JSON and XML without it, rather than failing.
 - [x] The configuration and the step are reachable from Java, Python and R, with documented defaults.
 - [x] Nothing about stored output changes yet, because no real kinds are registered.
-- [ ] If ticket 29 has landed, a dataset ingested with every annotation switch off still carries the layout column.
+- [x] ~~If ticket 29 has landed, a dataset ingested with every annotation switch off still carries the layout column.~~ Not applicable: 29 moved to stage 5 and lands after this ticket, so its own criterion covers every annotation switch that exists by then.
 
 ## Comments
 
