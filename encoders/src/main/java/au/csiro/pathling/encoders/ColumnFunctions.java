@@ -24,6 +24,7 @@ package au.csiro.pathling.encoders;
 
 import au.csiro.pathling.sql.ExtensionTraversal;
 import au.csiro.pathling.sql.MergeCast;
+import au.csiro.pathling.sql.ResolveOrElse;
 import au.csiro.pathling.sql.ResolveOrNull;
 import au.csiro.pathling.sql.UnresolvedMergeCombination;
 import au.csiro.pathling.sql.UnresolvedTraverseExtension;
@@ -115,6 +116,26 @@ public class ColumnFunctions {
       @Nonnull final DataType fallback) {
     return ExpressionUtils.column(
         new ResolveOrNull(ExpressionUtils.expression(child), fieldName, fallback));
+  }
+
+  /**
+   * Creates a reference to a field of a structure, or of every element of an array of structures,
+   * that resolves to a fallback value where the resolved input does not carry the field. Presence
+   * is decided once for the schema, never per row (FR-023).
+   *
+   * @param child the structure, or array of structures, to take the field from
+   * @param fieldName the name of the field
+   * @param fallback the value taken when the field is absent
+   * @return the field, or the fallback
+   */
+  @Nonnull
+  public static Column resolveOrElse(
+      @Nonnull final Column child,
+      @Nonnull final String fieldName,
+      @Nonnull final Column fallback) {
+    return ExpressionUtils.column(
+        new ResolveOrElse(
+            ExpressionUtils.expression(child), fieldName, ExpressionUtils.expression(fallback)));
   }
 
   /**

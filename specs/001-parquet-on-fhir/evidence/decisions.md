@@ -4415,3 +4415,38 @@ _Consequences_:
 - `data-model.md`, `contracts/storage-layout.md`, `contracts/engine-semantics.md`, the spec's example
   of a key named like an annotation, and tickets 12 to 14 and 17 are reworded to the placement of
   part 4. ADR-0003 is reworded where it says an annotation is stored beside its element.
+
+_Addendum (owner, 2026-10-23)_, from the review of ticket 11. It reverses part 3's rule that any other
+annotation in the input is "either left out (the default) or kept", and settles ticket 11's second
+review item.
+
+- **Three classes of annotation**, by what can compute or use them:
+  1. the kinds the annotation step knows, which it can compute;
+  2. the kinds the engine uses, a subset of the first. The engine reads any stored annotation of a kind
+     it knows, whatever the switches say;
+  3. a `__` field no kind computes where it is found. It cannot be restored once dropped, so it is
+     protected.
+- **Three switches on `SchemaConfiguration`, all off by default**, through `PathlingContext`, Python and
+  R:
+  - `recomputeAnnotations`: every annotation of a kind that is on is computed again, rather than only the
+    missing ones. *Fill* stays per schema (ticket 38).
+  - `keepUnrequestedAnnotations`: an annotation of a kind that is off is kept, trusting its producer,
+    rather than left out.
+  - `dropUnknownAnnotations`: an annotation of the third class is left out. It is kept by default. This
+    replaces `keepOtherAnnotations`, which dropped both kinds of other annotation by default; it was not
+    released, so the rename is free.
+- **A missing `x`.** Where the schema carries `_x` but not `x`, `x` is null in every row. An annotation of
+  a kind that is on is computed as for a null value, but only where `_x` already carries it: *recompute*
+  replaces it with the computed value, and *fill* keeps it. Neither adds one, so a pruned schema never
+  gains a column that can only be null. No conformance rule is added: the specification allows `_x`
+  without `x`, and the engine never reads such an annotation, because it pairs an annotation only with a
+  value that is not null.
+- **`AnnotationKind.compute(value)` stays a function of the value alone.** A kind derived from extensions
+  would also take the metadata group, and for a repeating `x` take positions from it.
+- **What each setting guarantees.** *Recompute* makes every annotation of a kind that is on consistent
+  with its value, unconditionally, including one stored with the wrong value or the wrong type. *Fill*
+  does so only where the input's own annotations were consistent and not null. An unknown annotation that
+  is kept passes with its value unchanged, though it may move after the derived fields.
+- **The set of kinds stays closed in ticket 11.** An extensible registry, the engine reporting the kinds
+  it uses so that the step can be configured from it, and the identity of a kind are a follow-up issue,
+  raised by ticket 26.

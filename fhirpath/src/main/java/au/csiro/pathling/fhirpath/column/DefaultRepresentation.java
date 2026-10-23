@@ -22,6 +22,8 @@ import static org.apache.spark.sql.functions.lit;
 import au.csiro.pathling.encoders.ColumnFunctions;
 import au.csiro.pathling.encoders.ValueFunctions;
 import au.csiro.pathling.fhirpath.collection.DecimalCollection;
+import au.csiro.pathling.schema.LayoutFields;
+import au.csiro.pathling.schema.annotation.AnnotationKind;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.Optional;
@@ -49,6 +51,9 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 @EqualsAndHashCode(callSuper = true)
 @AllArgsConstructor
 public class DefaultRepresentation extends ColumnRepresentation {
+
+  /** The name of the value in each item {@link #traverseAnnotated} returns. */
+  @Nonnull public static final String ANNOTATED_VALUE = "value";
 
   private static final DefaultRepresentation EMPTY_REPRESENTATION =
       new DefaultRepresentation(functions.lit(null));
@@ -146,6 +151,101 @@ public class DefaultRepresentation extends ColumnRepresentation {
                     array, fieldName, DataTypes.createArrayType(fallback)),
             singular -> ColumnFunctions.resolveOrNull(singular, fieldName, fallback));
     return decodeField(copyOf(field).removeNulls().flatten(), fhirType);
+  }
+
+  /**
+   * Traverses to a primitive field, as {@link #traverse} does, pairing each value with one field of
+   * an annotation of it (decision 135, part 4).
+   *
+   * <p>A primitive's annotations are fields of its metadata group {@code _x}, aligned with the
+   * values of {@code x} by position. They are paired here before any null is removed, because the
+   * traversal's removal of nulls would lose the positions: a value whose group is absent would hand
+   * its place to the next value's annotation. The annotation is read for every value as one field
+   * of the groups, so that the read prunes to it, and is the stored one where the schema carries it
+   * and the one the kind computes otherwise, decided once for the schema by the Catalyst resolver.
+   *
+   * <p>Each item of the result is a structure of the value, named {@link #ANNOTATED_VALUE}, and the
+   * annotation, named for the annotation's field. An item is present wherever its value is.
+   *
+   * @param fieldName the name of the primitive field
+   * @param fhirType the FHIR type of the field, by which each value is decoded
+   * @param fallback the type of a value of the field, taken where the input does not carry it
+   * @param repeating whether the field repeats
+   * @param kind the kind of the annotation
+   * @param annotationField the field of the kind to pair each value with
+   * @return the values, each paired with its annotation
+   */
+  @Nonnull
+  public ColumnRepresentation traverseAnnotated(
+      @Nonnull final String fieldName,
+      @Nonnull final Optional<FHIRDefinedType> fhirType,
+      @Nonnull final DataType fallback,
+      final boolean repeating,
+      @Nonnull final AnnotationKind kind,
+      @Nonnull final String annotationField) {
+    final UnaryOperator<Column> annotated =
+        parent ->
+            annotatedValues(
+                parent, fieldName, fhirType, fallback, repeating, kind, annotationField);
+    return vectorize(array -> functions.transform(array, annotated::apply), annotated)
+        .removeNulls()
+        .flatten()
+        .removeNulls();
+  }
+
+  @Nonnull
+  private static Column annotatedValues(
+      @Nonnull final Column parent,
+      @Nonnull final String fieldName,
+      @Nonnull final Optional<FHIRDefinedType> fhirType,
+      @Nonnull final DataType fallback,
+      final boolean repeating,
+      @Nonnull final AnnotationKind kind,
+      @Nonnull final String annotationField) {
+    final Column values =
+        ColumnFunctions.resolveOrNull(
+            parent, fieldName, repeating ? DataTypes.createArrayType(fallback) : fallback);
+    final Column groups =
+        ColumnFunctions.resolveOrNull(
+            parent, LayoutFields.metadataGroupName(fieldName), DataTypes.NullType);
+    if (!repeating) {
+      return annotatedValue(
+          values,
+          kind.apply(annotationField, values, groups, ColumnFunctions::resolveOrElse),
+          fhirType,
+          annotationField);
+    }
+    // The annotations are read as one field of all the groups, so that the read prunes to it, and
+    // zipped with the values, so that each array is evaluated once rather than at every position.
+    final Column annotations =
+        ColumnFunctions.resolveOrElse(
+            groups,
+            annotationField,
+            functions.transform(values, each -> kind.compute(each).getField(annotationField)));
+    return functions.transform(
+        functions.arrays_zip(values.alias(ANNOTATED_VALUE), annotations.alias(annotationField)),
+        pair ->
+            annotatedValue(
+                pair.getField(ANNOTATED_VALUE),
+                pair.getField(annotationField),
+                fhirType,
+                annotationField));
+  }
+
+  /**
+   * Pairs one value with its annotation, which is computed from the value as it is stored, and then
+   * decodes the value.
+   */
+  @Nonnull
+  private static Column annotatedValue(
+      @Nonnull final Column value,
+      @Nonnull final Column annotation,
+      @Nonnull final Optional<FHIRDefinedType> fhirType,
+      @Nonnull final String annotationField) {
+    final Column decoded = decodeField(new DefaultRepresentation(value), fhirType).getValue();
+    return functions.when(
+        value.isNotNull(),
+        functions.struct(decoded.alias(ANNOTATED_VALUE), annotation.alias(annotationField)));
   }
 
   /**

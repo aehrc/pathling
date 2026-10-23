@@ -174,6 +174,12 @@ class PathlingContext:
         enable_remote_debugging: Optional[bool] = False,
         debug_port: Optional[int] = 5005,
         debug_suspend: Optional[bool] = True,
+        enable_numeric_annotation: Optional[bool] = True,
+        enable_range_annotation: Optional[bool] = True,
+        enable_canonical_annotation: Optional[bool] = True,
+        recompute_annotations: Optional[bool] = False,
+        keep_unrequested_annotations: Optional[bool] = False,
+        drop_unknown_annotations: Optional[bool] = False,
     ) -> "PathlingContext":
         """
         Creates a :class:`PathlingContext` with the given configuration options. This should only
@@ -269,6 +275,28 @@ class PathlingContext:
         :param enable_remote_debugging: enables remote debugging for the JVM process.
         :param debug_port: the port for the debugger to listen on (default: 5005)
         :param debug_suspend: if true, the JVM will suspend until a debugger is attached
+        :param enable_numeric_annotation: whether encoding stores the numeric annotation of a
+               decimal, which it does by default. An annotation is a value derived from an
+               element and stored with it, which a query reads rather than computing again.
+               Turning one off makes the stored data narrower and never changes the answer to a
+               query, which computes an annotation the data does not carry. No kind of
+               annotation is stored in this release.
+        :param enable_range_annotation: whether encoding stores the range annotations of a date,
+               dateTime or instant, the bounds implied by its stated precision, which it does by
+               default
+        :param enable_canonical_annotation: whether encoding stores the canonical annotations of a
+               quantity, which it does by default
+        :param recompute_annotations: whether every annotation of a kind that is turned on is
+               computed again, rather than computed only where the input lacks it, which is the
+               default. Recomputing makes every such annotation consistent with its value, whatever
+               the input carried, including one of the wrong value or type. The default makes them
+               consistent only where the input's own annotations were consistent and not null.
+        :param keep_unrequested_annotations: whether an annotation in the input of a kind that is
+               turned off is kept as it stands, trusting its producer, rather than left out, which
+               is the default
+        :param drop_unknown_annotations: whether a field in the input named as an annotation, but
+               which is not one Pathling computes there, is left out rather than kept. Keeping it
+               is the default, with its value unchanged, after the annotations Pathling stores.
         :return: a :class:`PathlingContext` instance initialized with the specified configuration
         """
         # Validate the terminology mode up front, before paying the Spark cold start.
@@ -393,11 +421,24 @@ class PathlingContext:
             .build()
         )
 
+        # Build a schema configuration object from the provided parameters.
+        schema_config = (
+            jvm.au.csiro.pathling.schema.SchemaConfiguration.builder()
+            .enableNumericAnnotation(enable_numeric_annotation)
+            .enableRangeAnnotation(enable_range_annotation)
+            .enableCanonicalAnnotation(enable_canonical_annotation)
+            .recomputeAnnotations(recompute_annotations)
+            .keepUnrequestedAnnotations(keep_unrequested_annotations)
+            .dropUnknownAnnotations(drop_unknown_annotations)
+            .build()
+        )
+
         jpc: JavaObject = (
             jvm.au.csiro.pathling.library.PathlingContext.builder(spark._jsparkSession)
             .encodingConfiguration(encoders_config)
             .terminologyConfiguration(terminology_config)
             .queryConfiguration(query_config)
+            .schemaConfiguration(schema_config)
             .build()
         )
         return PathlingContext(spark, jpc)
@@ -540,6 +581,24 @@ class PathlingContext:
                 df._jdf, resource_name, input_type or MimeType.FHIR_JSON, column
             )
         )
+
+    def annotate(self, df: DataFrame, resource_name: str) -> DataFrame:
+        """
+        Annotates resources stored in the Parquet on FHIR layout, as the annotation options of
+        :meth:`create` say.
+
+        Encoding annotates what it encodes, so this is for resources stored without annotations,
+        such as Parquet or Delta written by another producer or with different options. Writing
+        resources does not add annotations, and neither does reading them for a query. No kind of
+        annotation is defined in this release, so with the default options the resources are
+        returned unchanged, and with ``drop_unknown_annotations`` the only effect is that fields
+        whose names begin with ``__`` are left out.
+
+        :param df: a :class:`DataFrame` of resources of one type, in the Parquet on FHIR layout
+        :param resource_name: the name of the type of the resources
+        :return: a :class:`DataFrame` containing the resources, annotated
+        """
+        return self._wrap_df(self._jpc.annotate(df._jdf, resource_name))
 
     @property
     def read(self) -> "DataSources":

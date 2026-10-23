@@ -97,6 +97,26 @@ StorageType <- list(
 #' @param max_unbound_traversal_depth Maximum depth for self-referencing structure traversals
 #'   in repeat operations. Controls how deeply nested hierarchical data can be flattened
 #'   during projection.
+#' @param enable_numeric_annotation Whether encoding stores the numeric annotation of a decimal,
+#'   which it does by default. An
+#'   annotation is a value derived from an element and stored with it, which a query reads rather
+#'   than computing again. Turning one off makes the stored data narrower and never changes the
+#'   answer to a query, which computes an annotation the data does not carry. No kind of
+#'   annotation is stored in this release.
+#' @param enable_range_annotation Whether encoding stores the range annotations of a date,
+#'   dateTime or instant, the bounds implied by its stated precision, which it does by default
+#' @param enable_canonical_annotation Whether encoding stores the canonical annotations of a
+#'   quantity, which it does by default
+#' @param recompute_annotations Whether every annotation of a kind that is turned on is computed
+#'   again, rather than computed only where the input lacks it, which is the default. Recomputing
+#'   makes every such annotation consistent with its value, whatever the input carried, including
+#'   one of the wrong value or type. The default makes them consistent only where the input's own
+#'   annotations were consistent and not null.
+#' @param keep_unrequested_annotations Whether an annotation in the input of a kind that is turned
+#'   off is kept as it stands, trusting its producer, rather than left out, which is the default
+#' @param drop_unknown_annotations Whether a field in the input named as an annotation, but which is
+#'   not one Pathling computes there, is left out rather than kept. Keeping it is the default, with
+#'   its value unchanged, after the annotations Pathling stores.
 #'
 #' @return A Pathling context instance initialized with the specified configuration
 #'
@@ -149,7 +169,13 @@ pathling_connect <- function(
   expansion_cache_size = 100,
   dialect_aliases = NULL,
   explain_queries = FALSE,
-  max_unbound_traversal_depth = 10
+  max_unbound_traversal_depth = 10,
+  enable_numeric_annotation = TRUE,
+  enable_range_annotation = TRUE,
+  enable_canonical_annotation = TRUE,
+  recompute_annotations = FALSE,
+  keep_unrequested_annotations = FALSE,
+  drop_unknown_annotations = FALSE
 ) {
   if (!terminology_mode %in% c("server", "local")) {
     stop("terminology_mode must be 'server' or 'local'")
@@ -265,6 +291,17 @@ pathling_connect <- function(
     j_invoke("maxUnboundTraversalDepth", as.integer(max_unbound_traversal_depth)) %>%
     j_invoke("build")
 
+  schema_config <- j_invoke_static(
+    spark, "au.csiro.pathling.schema.SchemaConfiguration", "builder"
+  ) %>%
+    j_invoke("enableNumericAnnotation", as.logical(enable_numeric_annotation)) %>%
+    j_invoke("enableRangeAnnotation", as.logical(enable_range_annotation)) %>%
+    j_invoke("enableCanonicalAnnotation", as.logical(enable_canonical_annotation)) %>%
+    j_invoke("recomputeAnnotations", as.logical(recompute_annotations)) %>%
+    j_invoke("keepUnrequestedAnnotations", as.logical(keep_unrequested_annotations)) %>%
+    j_invoke("dropUnknownAnnotations", as.logical(drop_unknown_annotations)) %>%
+    j_invoke("build")
+
   j_invoke_static(
     spark, "au.csiro.pathling.library.PathlingContext", "builder",
     sparklyr::spark_session(spark)
@@ -272,6 +309,7 @@ pathling_connect <- function(
     j_invoke("encodingConfiguration", encoders_config) %>%
     j_invoke("terminologyConfiguration", terminology_config) %>%
     j_invoke("queryConfiguration", query_config) %>%
+    j_invoke("schemaConfiguration", schema_config) %>%
     j_invoke("build")
 }
 

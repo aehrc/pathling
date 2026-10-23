@@ -84,3 +84,37 @@ pathling_encode_bundle <- function(pc, df, resource_name, input_type = NULL, col
     input_type %||% MimeType$FHIR_JSON, column
   ))
 }
+
+#' Annotate resources stored in the Parquet on FHIR layout
+#'
+#' Annotates resources stored in the Parquet on FHIR layout, as the annotation options of
+#' \code{\link{pathling_connect}} say. Encoding annotates what it encodes, so this is for resources
+#' stored without annotations, such as Parquet or Delta written by another producer or with
+#' different options. Writing resources does not add annotations, and neither does reading them
+#' for a query. No kind of annotation is defined in this release, so with the default options the
+#' resources are returned unchanged, and with \code{drop_unknown_annotations} the only effect is that
+#' fields whose names begin with "__" are left out.
+#'
+#' @param pc The Pathling context object.
+#' @param df A Spark DataFrame of resources of one type, in the Parquet on FHIR layout.
+#' @param resource_name The name of the type of the resources.
+#'
+#' @return A Spark DataFrame containing the resources, annotated.
+#'
+#' @family encoding functions
+#'
+#' @importFrom sparklyr sdf_register spark_dataframe j_invoke
+#'
+#' @export
+#' @examplesIf pathling_is_spark_installed()
+#' pc <- pathling_connect()
+#' json_resources_df <- pathling_spark(pc) %>%
+#'   sparklyr::spark_read_text(path = system.file("extdata", "ndjson", "Condition.ndjson",
+#'     package = "pathling"
+#'   ))
+#' conditions <- pc %>% pathling_encode(json_resources_df, "Condition")
+#' pc %>% pathling_annotate(conditions, "Condition")
+#' pathling_disconnect(pc)
+pathling_annotate <- function(pc, df, resource_name) {
+  sdf_register(j_invoke(pc, "annotate", spark_dataframe(df), resource_name))
+}

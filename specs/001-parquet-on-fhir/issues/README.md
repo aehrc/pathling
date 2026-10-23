@@ -92,6 +92,7 @@ issues are raised, and #2367 is checked complete.
 - ~~[33](33-engine-layout-tolerance-modes.md) The engine handles non-conformant layout shapes in the same four modes~~ (moved to the follow-up, ticket 26)
 - [26](26-raise-github-followups.md) Raise the GitHub follow-up issues, including non-conformant data beyond `trust`, extra fields, and what the release needs
 - [36](36-followup-extra-fields.md) Scope the follow-up issue on extra fields: their support, and their place in the conformance levels
+- [38](38-annotation-fill-per-row.md) Consider deciding the annotation step's *fill* per row
 - [28](28-completion-checklist.md) Completion checklist
 
 Ticket 31 can start at any time, except its decimal criterion,

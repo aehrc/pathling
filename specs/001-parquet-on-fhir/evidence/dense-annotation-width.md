@@ -29,8 +29,10 @@ resource from the FHIR R4 definitions and counts the entries it reaches:
 A composite type is descended into while it appears on the path no more than
 `maxNesting` times, which approximates the nesting bound of `EncodingConfiguration`.
 Where extensions are enabled, an `Extension`'s `value[x]` is restricted to the
-standard open types. Run it with the `fhir-schema` classes and their dependencies
-on the classpath:
+standard open types. The script runs against `782941609a`, where `LayoutFields`
+still names annotations by the sibling suffixes it counts, and does not compile
+after it; ticket 18 replaces it rather than porting it. Run it with the
+`fhir-schema` classes and their dependencies at that commit on the classpath:
 
 ```
 java DenseAnnotationWidth Observation <maxNesting> <extensions>

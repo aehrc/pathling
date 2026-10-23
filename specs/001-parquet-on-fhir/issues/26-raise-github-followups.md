@@ -22,6 +22,7 @@
   - FR-063, rewritten to match the softened principles 2 and 5.
 - **Extra fields (owner, 2026-10-22).** Content and layout that the definitions do not derive: their support through ingest, egress and the engine, and their place in the conformance levels. Ticket 34, which this issue replaces, and the metadata that would preserve such content's representation. The issue's scope is written up in ticket 36.
 - **What the release needs beyond #2367 (owner, 2026-10-22).** #2367 is not by itself a release. Each follow-up the release needs that arises from this work is raised as an issue, including the release notes that ticket 28 hands on.
+- **Annotation kinds as plugins (owner, 2026-10-23).** Decision 135's addendum of 2026-10-23 keeps the set of kinds closed. The issue covers an extensible kind registry; the engine reporting the kinds it uses, so that the annotation step can be configured from it; and the identity of a kind: name collisions between kinds, versioned computations, such as `__canonical`'s dependence on the UCUM table, and data that outlives the engine that wrote it.
 - **Others handed on.** Any follow-up passed on by ticket 10, such as a precomputed reference key. Ticket 08's threads, such as the upstream Spark issue from T132, moved to ticket 16, which raises its own.
 
 **Blocked by:** None — can start immediately. Hand-offs from 10 are added as they arrive.

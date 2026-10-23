@@ -42,6 +42,15 @@ test_that("default configurations are correct", {
   expect_equal(query_config %>% invoke("isExplainQueries"), FALSE)
   expect_equal(query_config %>% invoke("getMaxUnboundTraversalDepth"), 10L)
 
+  # Verify default schema configuration values
+  schema_config <- pc %>% j_invoke("getSchemaConfiguration")
+  expect_equal(schema_config %>% invoke("isEnableNumericAnnotation"), TRUE)
+  expect_equal(schema_config %>% invoke("isEnableRangeAnnotation"), TRUE)
+  expect_equal(schema_config %>% invoke("isEnableCanonicalAnnotation"), TRUE)
+  expect_equal(schema_config %>% invoke("isRecomputeAnnotations"), FALSE)
+  expect_equal(schema_config %>% invoke("isKeepUnrequestedAnnotations"), FALSE)
+  expect_equal(schema_config %>% invoke("isDropUnknownAnnotations"), FALSE)
+
   # Clean up
   pathling_disconnect(pc)
 })
@@ -54,7 +63,13 @@ test_that("custom configurations round trip correctly", {
     enable_extensions = TRUE,
     enabled_open_types = c("string", "boolean"),
     explain_queries = TRUE,
-    max_unbound_traversal_depth = 20
+    max_unbound_traversal_depth = 20,
+    enable_numeric_annotation = FALSE,
+    enable_range_annotation = FALSE,
+    enable_canonical_annotation = FALSE,
+    recompute_annotations = TRUE,
+    keep_unrequested_annotations = TRUE,
+    drop_unknown_annotations = TRUE
   )
   spark <- pathling_spark(pc)
 
@@ -76,6 +91,15 @@ test_that("custom configurations round trip correctly", {
   # Verify custom query configuration values
   expect_equal(query_config %>% invoke("isExplainQueries"), TRUE)
   expect_equal(query_config %>% invoke("getMaxUnboundTraversalDepth"), 20L)
+
+  # Verify custom schema configuration values
+  schema_config <- pc %>% j_invoke("getSchemaConfiguration")
+  expect_equal(schema_config %>% invoke("isEnableNumericAnnotation"), FALSE)
+  expect_equal(schema_config %>% invoke("isEnableRangeAnnotation"), FALSE)
+  expect_equal(schema_config %>% invoke("isEnableCanonicalAnnotation"), FALSE)
+  expect_equal(schema_config %>% invoke("isRecomputeAnnotations"), TRUE)
+  expect_equal(schema_config %>% invoke("isKeepUnrequestedAnnotations"), TRUE)
+  expect_equal(schema_config %>% invoke("isDropUnknownAnnotations"), TRUE)
 
   # Clean up
   pathling_disconnect(pc)

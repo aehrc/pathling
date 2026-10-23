@@ -69,6 +69,9 @@ case class PruneSyntheticFields(child: Expression)
 
   override def prettyName: String = "pruneSyntheticFields"
 
+  // This is the previous encoder's rule for its synthetic fields, not the storage layout's rule for
+  // an annotation, which is LayoutFields.isAnnotation. This module cannot reach that one, because it
+  // depends only on utilities, and the previous encoder must be left as it is (FR-051).
   def isAnnotation(name: String): Boolean = {
     SyntheticFieldUtils.isSyntheticField(name)
   }

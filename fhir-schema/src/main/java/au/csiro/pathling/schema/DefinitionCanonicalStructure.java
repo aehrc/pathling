@@ -37,7 +37,8 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  *
  * <p>The order at a node is the order the definitions declare, with a choice expanded in place into
  * one field per type it can take, {@code contained} omitted because it is not represented, and the
- * layout's own fields at the positions {@link LayoutFields} declares.
+ * layout's own fields at the positions {@link LayoutFields} declares. A complex element's
+ * annotations close its structure, and a primitive's are in its metadata group.
  *
  * <p>The same enumeration serves the transform that writes the layout, so that the order a stored
  * structure is built in and the order a merge imposes cannot drift apart. They are the same list
@@ -211,7 +212,8 @@ public final class DefinitionCanonicalStructure implements CanonicalStructure {
   public Optional<MetadataGroupStructure> metadataGroup(@Nonnull final String name) {
     return entry(name)
         .filter(LayoutEntry::isMetadataGroup)
-        .map(unused -> new MetadataGroupStructure(extensionElement(), memo));
+        .flatMap(LayoutEntry::getElement)
+        .map(element -> new MetadataGroupStructure(element, extensionElement(), memo));
   }
 
   /**
@@ -244,6 +246,10 @@ public final class DefinitionCanonicalStructure implements CanonicalStructure {
         addElement(result, element);
       }
     }
+    // A complex element's annotations are the last fields of its own structure.
+    if (node instanceof final ElementDefinition element) {
+      result.addAll(annotationEntries(element));
+    }
     return List.copyOf(result);
   }
 
@@ -263,7 +269,19 @@ public final class DefinitionCanonicalStructure implements CanonicalStructure {
     if (PrimitiveTypes.isPrimitive(type.orElseThrow())) {
       result.add(LayoutEntry.metadataGroup(LayoutFields.metadataGroupName(name), element));
     }
-    LayoutFields.annotationNames(name, type.orElseThrow())
-        .forEach(annotation -> result.add(LayoutEntry.annotation(annotation, element)));
+  }
+
+  /**
+   * Returns the entries of the annotations an element carries, in the order {@link LayoutFields}
+   * declares, for the container the element owns to place at its end.
+   *
+   * @param element the element the annotations accompany
+   * @return the annotation entries, empty where the element's type carries none
+   */
+  @Nonnull
+  static List<LayoutEntry> annotationEntries(@Nonnull final ElementDefinition element) {
+    return element.getFhirType().map(LayoutFields::annotationNames).orElse(List.of()).stream()
+        .map(name -> LayoutEntry.annotation(name, element))
+        .toList();
   }
 }

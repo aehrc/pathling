@@ -32,10 +32,12 @@ import au.csiro.pathling.encoders.ResourceTypes;
 import au.csiro.pathling.encoders.UnsupportedResourceError;
 import au.csiro.pathling.fhirpath.evaluation.SingleInstanceEvaluationResult;
 import au.csiro.pathling.fhirpath.evaluation.SingleInstanceEvaluator;
+import au.csiro.pathling.io.Annotator;
 import au.csiro.pathling.io.FhirReader;
 import au.csiro.pathling.io.FhirWriter;
 import au.csiro.pathling.library.io.source.DataSourceBuilder;
 import au.csiro.pathling.library.terminology.TerminologyImportOptions;
+import au.csiro.pathling.schema.SchemaConfiguration;
 import au.csiro.pathling.search.SearchColumnBuilder;
 import au.csiro.pathling.sql.PathlingUdfConfigurer;
 import au.csiro.pathling.sql.udf.TerminologyUdfRegistrar;
@@ -108,6 +110,9 @@ public class PathlingContext {
 
   @Nonnull @Getter private final QueryConfiguration queryConfiguration;
 
+  /** Which annotations encoding stores, and what it does with those already present. */
+  @Nonnull @Getter private final SchemaConfiguration schemaConfiguration;
+
   @Nonnull @Getter private final Gson gson;
 
   /** Reads resources given as text into the Parquet on FHIR layout. */
@@ -116,6 +121,9 @@ public class PathlingContext {
   /** Writes resources stored in the Parquet on FHIR layout as text. */
   @Nonnull private final FhirWriter fhirWriter;
 
+  /** Stores the annotations of resources in the Parquet on FHIR layout. */
+  @Nonnull private final Annotator annotator;
+
   /**
    * Creates a new PathlingContext with the specified configuration.
    *
@@ -123,23 +131,27 @@ public class PathlingContext {
    * @param fhirEncoders the FHIR encoders to use
    * @param terminologyServiceFactory the terminology service factory to use
    * @param queryConfiguration the query configuration to use
+   * @param schemaConfiguration the schema configuration to use
    */
   private PathlingContext(
       @Nonnull final SparkSession spark,
       @Nonnull final FhirEncoders fhirEncoders,
       @Nonnull final TerminologyServiceFactory terminologyServiceFactory,
-      @Nonnull final QueryConfiguration queryConfiguration) {
+      @Nonnull final QueryConfiguration queryConfiguration,
+      @Nonnull final SchemaConfiguration schemaConfiguration) {
     requireLegacySizeOfNullDisabled(spark);
     this.spark = spark;
     this.fhirEncoders = fhirEncoders;
     this.terminologyServiceFactory = terminologyServiceFactory;
     this.queryConfiguration = queryConfiguration;
+    this.schemaConfiguration = schemaConfiguration;
     TerminologyUdfRegistrar.registerUdfs(spark, terminologyServiceFactory);
     PathlingUdfConfigurer.registerUdfs(spark);
     gson = buildGson();
     final FhirDefinitionContext definitions = FhirDefinitionContext.of(fhirEncoders.getContext());
     fhirReader = FhirReader.of(spark, definitions);
     fhirWriter = FhirWriter.of(definitions);
+    annotator = Annotator.of(definitions, schemaConfiguration);
   }
 
   /**
@@ -182,7 +194,7 @@ public class PathlingContext {
    * @param spark the Spark session to use
    * @param fhirEncoders the FHIR encoders to use
    * @param terminologyServiceFactory the terminology service factory to use
-   * @return a new {@link PathlingContext} instance with default query configuration
+   * @return a new {@link PathlingContext} instance with default query and schema configuration
    */
   @Nonnull
   public static PathlingContext createInternal(
@@ -190,7 +202,11 @@ public class PathlingContext {
       @Nonnull final FhirEncoders fhirEncoders,
       @Nonnull final TerminologyServiceFactory terminologyServiceFactory) {
     return new PathlingContext(
-        spark, fhirEncoders, terminologyServiceFactory, QueryConfiguration.builder().build());
+        spark,
+        fhirEncoders,
+        terminologyServiceFactory,
+        QueryConfiguration.builder().build(),
+        SchemaConfiguration.builder().build());
   }
 
   /** Builder for creating {@link PathlingContext} instances with configurable options. */
@@ -200,6 +216,7 @@ public class PathlingContext {
     @Nullable private EncodingConfiguration encodingConfiguration;
     @Nullable private TerminologyConfiguration terminologyConfiguration;
     @Nullable private QueryConfiguration queryConfiguration;
+    @Nullable private SchemaConfiguration schemaConfiguration;
 
     Builder() {}
 
@@ -258,6 +275,19 @@ public class PathlingContext {
     }
 
     /**
+     * Sets the schema configuration for the context: which annotations encoding stores, and what it
+     * does with those already present.
+     *
+     * @param schemaConfiguration the schema configuration to use
+     * @return this builder
+     */
+    @Nonnull
+    public Builder schemaConfiguration(@Nonnull final SchemaConfiguration schemaConfiguration) {
+      this.schemaConfiguration = schemaConfiguration;
+      return this;
+    }
+
+    /**
      * Builds a new {@link PathlingContext} instance with the configured options.
      *
      * @return a new {@link PathlingContext} instance
@@ -271,11 +301,17 @@ public class PathlingContext {
           getOrDefault(terminologyConfiguration, TerminologyConfiguration.builder()::build);
       final QueryConfiguration finalQueryConfig =
           getOrDefault(queryConfiguration, QueryConfiguration.builder()::build);
+      final SchemaConfiguration finalSchemaConfig =
+          getOrDefault(schemaConfiguration, SchemaConfiguration.builder()::build);
 
       validateConfigurations(finalEncodingConfig, finalTerminologyConfig, finalQueryConfig);
 
       return createContext(
-          finalSpark, finalEncodingConfig, finalTerminologyConfig, finalQueryConfig);
+          finalSpark,
+          finalEncodingConfig,
+          finalTerminologyConfig,
+          finalQueryConfig,
+          finalSchemaConfig);
     }
 
     @Nonnull
@@ -298,13 +334,18 @@ public class PathlingContext {
         @Nonnull final SparkSession spark,
         @Nonnull final EncodingConfiguration encodingConfig,
         @Nonnull final TerminologyConfiguration terminologyConfig,
-        @Nonnull final QueryConfiguration queryConfig) {
+        @Nonnull final QueryConfiguration queryConfig,
+        @Nonnull final SchemaConfiguration schemaConfig) {
       final FhirEncoderBuilder encoderBuilder = getEncoderBuilder(encodingConfig);
       final TerminologyServiceFactory terminologyServiceFactory =
           getTerminologyServiceFactory(spark, terminologyConfig);
 
       return new PathlingContext(
-          spark, encoderBuilder.getOrCreate(), terminologyServiceFactory, queryConfig);
+          spark,
+          encoderBuilder.getOrCreate(),
+          terminologyServiceFactory,
+          queryConfig,
+          schemaConfig);
     }
   }
 
@@ -431,7 +472,8 @@ public class PathlingContext {
    * the given type as a Spark dataframe, in the Parquet on FHIR layout.
    *
    * <p>Documents of other resource types are left out. A streaming dataframe cannot be encoded,
-   * because the Parquet on FHIR layout fits its schema to the data.
+   * because the Parquet on FHIR layout fits its schema to the data. The resources are annotated as
+   * the schema configuration says (see {@link #annotate}).
    *
    * @param stringResourcesDf the dataframe with the string representation of the resources.
    * @param resourceName the name of the resources to encode.
@@ -449,9 +491,11 @@ public class PathlingContext {
 
     final Dataset<String> stringResources = documents(stringResourcesDf, maybeColumnName);
     requireEncodable(stringResources, resourceName);
-    return fhirReader
-        .format(inputMimeType)
-        .read(resourceName, selectForJson(stringResources, resourceName, inputMimeType));
+    return annotator.annotate(
+        resourceName,
+        fhirReader
+            .format(inputMimeType)
+            .read(resourceName, selectForJson(stringResources, resourceName, inputMimeType)));
   }
 
   /**
@@ -510,11 +554,37 @@ public class PathlingContext {
   }
 
   /**
+   * Annotates resources stored in the Parquet on FHIR layout, as the schema configuration says.
+   *
+   * <p>An annotation is a value derived from an element and stored with it, which a query reads
+   * rather than computing again. Encoding annotates what it encodes, so this is for resources
+   * stored without annotations, such as Parquet or Delta written by another producer or with a
+   * different configuration. Writing resources does not add annotations, and neither does reading
+   * them for a query, which computes whatever annotation the data does not carry.
+   *
+   * <p>With the default configuration, every kind of annotation is stored, an annotation already
+   * present is kept, one of a kind that is off is left out, and one Pathling does not compute is
+   * kept. No kind of annotation is defined in this release, so with the default configuration the
+   * resources are returned unchanged, and with unknown annotations dropped the only effect is that
+   * fields marked as annotations, whose names begin with {@code __}, are left out.
+   *
+   * @param resources the dataframe of resources, in the Parquet on FHIR layout
+   * @param resourceName the name of the type of the resources
+   * @return the resources, annotated
+   */
+  @Nonnull
+  public Dataset<Row> annotate(
+      @Nonnull final Dataset<Row> resources, @Nonnull final String resourceName) {
+    return annotator.annotate(resourceName, resources);
+  }
+
+  /**
    * Takes a dataframe with string representations of FHIR bundles and encodes the resources of the
    * given type as a Spark dataframe, in the Parquet on FHIR layout.
    *
    * <p>A streaming dataframe cannot be encoded, because the Parquet on FHIR layout fits its schema
-   * to the data.
+   * to the data. The resources are annotated as the schema configuration says (see {@link
+   * #annotate}).
    *
    * @param stringBundlesDf the dataframe with the string representation of the resources
    * @param resourceName the name of the resources to encode
@@ -532,7 +602,8 @@ public class PathlingContext {
 
     final Dataset<String> stringBundles = documents(stringBundlesDf, maybeColumnName);
     requireEncodable(stringBundles, resourceName);
-    return fhirReader.format(inputMimeType).readBundles(resourceName, stringBundles);
+    return annotator.annotate(
+        resourceName, fhirReader.format(inputMimeType).readBundles(resourceName, stringBundles));
   }
 
   /**
