@@ -3105,6 +3105,11 @@ HAPI's behaviour is history: XML and bundles now store what JSON stores (FR-060,
 the definitions do not describe is reported, readable non-conformant content is not coerced, and an invalid
 primitive is stored as text rather than failing the job.
 
+_Note (owner, 2026-10-22)_, by ticket 37: the last sentence of the addendum above no longer holds. Ingest
+assumes its input is conformant, checks nothing and reports nothing, so content the definitions do not describe
+is not reported, and what is stored for readable non-conformant content or an invalid primitive is undefined
+(FR-063). XML and bundles still store what JSON stores for conformant content (FR-060).
+
 ## 84. `io` has one public surface for reading and writing, by format, and the mechanism behind it is hidden
 
 Made after the review of M3 (PR #2817), with the owner, before M4 calls any of it.

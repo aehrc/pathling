@@ -58,8 +58,8 @@ representation of the resource:
 ### Decimals
 
 A decimal is stored as text, as the specification requires, but the text is
-not necessarily the text the source used. Pathling reads a decimal as a number
-and stores the text of that number, so the stored value is numerically equal to
+not necessarily the text the source used. Pathling reads a decimal from JSON as
+a number and stores the text of that number, so the stored value is numerically equal to
 the source but not lexically identical to it:
 
 - trailing zeros are dropped (`1.50` is stored as `1.5`);
@@ -70,25 +70,27 @@ the source but not lexically identical to it:
 - the same value may be stored as `100` or as `100.0`, depending on the other
   decimal values read alongside it.
 
+A decimal read from XML is stored as the text the source used.
+
 If you query decimals directly, parse them as numbers rather than comparing
 their text. Pathling's own queries decode the text to a decimal with a
 precision of 32 and a scale of 6.
 
 ### What is not stored
 
-The following content is not stored. When it is encountered, it is dropped, and
-a warning naming what was dropped is logged. There is no option that makes it
-fail instead.
+The following content is not stored. When it is encountered, it is dropped
+silently.
 
 - `contained` resources.
-- Elements that the FHIR definitions do not describe.
-- Values whose JSON type contradicts the type the definitions give the element,
-  such as a string where the definitions call for a boolean. See
-  [Encoding behaviour](./encoders.md#encoding-behaviour) for how far this
-  reaches.
+- A resource held inline by an element whose type is `Resource`, such as
+  `Parameters.parameter.resource`.
 - The `id` and `extension` of primitive elements, which FHIR JSON carries in a
   `_`-prefixed property beside the element (for example `_birthDate`). The
   element's value is kept.
+
+Content that does not conform to the FHIR definitions, such as an element they
+do not describe, is not checked, and what is stored for it is undefined. See
+[Content that is not stored](./encoders.md#content-that-is-not-stored).
 
 This release does not write the optional annotation fields that the
 specification defines (fields prefixed with `__`, such as the numeric value of
@@ -167,9 +169,7 @@ order is significant and numbers are compared by value. The exceptions are:
 - the content listed under [What is not stored](#what-is-not-stored);
 - the lexical form of decimals, as described under [Decimals](#decimals);
 - whitespace within `base64Binary` values, which FHIR permits and which is lost
-  when the value is decoded and encoded again;
-- a value dropped because another value of the same element, read alongside it,
-  contradicted the element's type.
+  when the value is decoded and encoded again.
 
 Where dropped content was the only content of a structure, the structure may be
 written as an empty object, so the output is not always conformant FHIR.

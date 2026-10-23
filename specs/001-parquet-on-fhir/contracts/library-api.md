@@ -135,7 +135,8 @@ documented as a cap permitted by the FHIR specification's deference to XML
 Schema.
 
 **Behaviour change.** The lexical form of a decimal is not preserved, on any
-path (decision 68). Trailing zeros are dropped, exponent notation is
+JSON path (decision 68); XML ingest keeps it during the interim (decision 134's
+note of 2026-10-22). Trailing zeros are dropped, exponent notation is
 normalised, and a value beyond the precision of a double loses significant
 digits, because ingest reads a number through a double and stores its text. A
 stored decimal is numerically equal to the source, not textually identical to
@@ -144,13 +145,11 @@ of strings alone; it now applies to the file path too, so the two agree and
 there is no per-path caveat.
 
 **Behaviour change.** Content outside the definition set cannot be made to
-fail. It is ignored, and a warning names what was dropped; the strictness
-option is withdrawn (decision 68). The same applies to `contained` resources, to
-an element whose JSON encoding type contradicts the definitions, and — because
-inference types a column from every value read together — to every value of such
-an element in the same read, across all of its files, not only the offending
-one. Malformed JSON still fails
-the read.
+fail, and the strictness option is withdrawn (decision 68). Ingest checks and
+reports nothing: what it stores for content outside the definition set, or for
+an element whose JSON encoding type contradicts the definitions, is undefined
+(FR-063). `contained` resources are dropped silently (FR-006). Malformed JSON
+or XML still fails the read.
 
 ### A quantity the engine builds has a fixed shape
 

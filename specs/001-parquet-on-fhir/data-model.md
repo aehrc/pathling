@@ -139,12 +139,11 @@ mode is not a setting because there is nothing to set it to.
 
 ### Strictness switch
 
-*Withdrawn by decision 68.* Content outside the definition set is ignored: the
-field is nulled and one warning names what was dropped. There is no setting and
-no failing mode, so truncation is reported rather than prevented. The presence
-of `contained` resources is reported the same way. Restoring a failing mode, and
-validation of values against their declared types, is a named follow-up
-(T134g).
+*Withdrawn by decision 68.* There is no setting and no failing mode. Ingest
+runs in `trust` and checks and reports nothing: what it stores for content
+outside the definition set is undefined, and `contained` resources are dropped
+silently (FR-006, FR-063, ticket 37). Restoring a failing mode, and validation
+of values against their declared types, is a named follow-up (T134g).
 
 ## Type mapping
 
@@ -241,14 +240,11 @@ can a value in another document that re-types a shared column.
 | Pruned | For conformant input, subject to the exceptions below. |
 | Dense | The same, and additionally within the configured nesting, extension and open-type bounds. Not available before M6 (decision 69). |
 
-Excluded in both modes. The first three are reported; the rest are not
-(decision 68):
+Excluded in both modes, and none of it reported (FR-016, ticket 37):
 
 - `contained` resources.
-- Content the definition set does not describe, or whose JSON encoding type
-  contradicts it. Where that was an element's only content, the element is
-  written as an empty object if anything else read with it keeps its column,
-  and omitted if nothing does, so the document is not conformant FHIR (decision 71).
+- An inline resource held by an element declared as the abstract `Resource`,
+  such as `Parameters.parameter.resource`.
 - Primitive element ids and extensions, until M5. Where they were a structure's
   only content, the structure keeps its place and is written as an empty object,
   because the primitive is stored as a null of its declared type, where the
@@ -259,15 +255,14 @@ Excluded in both modes. The first three are reported; the rest are not
   they align with (decision 71's addendum).
 - Decimal lexical form — trailing zeros, exponent notation as written, and
   precision beyond a double. This is no longer a per-path limitation: both
-  ingest paths route a number through a double and therefore agree.
+  JSON ingest paths route a number through a double and therefore agree. XML
+  ingest keeps the lexical form during the interim (decision 134's note of
+  2026-10-22).
 - `base64Binary` whitespace, which FHIR permits and which decoding and
   re-encoding canonicalises away.
-- A conformant value dropped because a sibling value re-typed its column: one
-  `1.5` among integers costs that element for every resource in the file. Where
-  it was an element's only content, that element is written as an empty object,
-  even in a document that is conformant on its own. Where the re-typed column is
-  a primitive's metadata group, the structure it alone kept is written as an
-  empty object if anything else read with it keeps its column, and omitted if
-  nothing does (decision 72).
-- Content the dense bounds drop, which was detectable until `BoundsCheck` was
-  removed from M1 (T134f carries the follow-up).
+- Content the dense bounds drop.
+
+Content the definition set does not describe, or whose JSON encoding type
+contradicts it, is not conformant input, so it is outside the guarantee rather
+than excluded from it, and what ingest stores for it is undefined (FR-063). So
+is every document read in a batch with it.

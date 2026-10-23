@@ -268,18 +268,21 @@ the legacy encoder, re-import the result, and compare it with the source data.
 
 - A decimal exceeding a double's precision: computed at the documented cap
   (FR-035). How it is stored is OQ-1.
-- A FHIR element whose JSON type contradicts the definitions: not stored, and
-  reported. Whether the loss is that value alone or every value of the element
-  read with it is OQ-1.
-- A resource carrying `contained` resources: dropped and reported, never
-  represented.
+- A FHIR element whose JSON type contradicts the definitions: not conformant
+  input, so what is stored is undefined and nothing is reported (FR-063).
+  Whether the loss is that value alone or every value of the element read with
+  it is OQ-1.
+- A resource carrying `contained` resources: dropped silently, never
+  represented (FR-006).
 - A structure whose every field is null, or an array whose every element is
   null, in a given row: not written as `{}` or `[null]` (FR-019).
 - An array of arrays where a repeating element is declared, such as
-  `"given":[["a","b"]]`: a shape mismatch, reported, and stored as absent.
+  `"given":[["a","b"]]`: not conformant input, so the outcome is undefined and
+  nothing is reported (FR-063).
 - A source key named like one of the layout's annotations, such as
   `__birthDate_start`, or like the layout column, `__layout_v1`: neither is
-  read from the source, so the key is reported as undescribed content.
+  read from the source, so the key is undescribed content, and is not reported
+  (FR-063).
 - A Bundle: accepted as a transport carrier and exploded to one table per
   resource type, never stored as a resource type. References between its
   entries are resolved to relative references.
