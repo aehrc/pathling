@@ -34,9 +34,13 @@ class PlainFhirXmlTest {
   @ValueSource(
       strings = {
         "<Patient xmlns=\"http://hl7.org/fhir\"><id value=\"1\"/></Patient>",
-        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<Patient xmlns=\"http://hl7.org/fhir\">\n"
-            + "  <id value=\"1\"/>\n  <name><given value=\"a &amp; b&#xa;&#10;\"/></name>\n"
-            + "</Patient>\n",
+        """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <Patient xmlns="http://hl7.org/fhir">
+          <id value="1"/>
+          <name><given value="a &amp; b&#xa;&#10;"/></name>
+        </Patient>
+        """,
         "<Patient xmlns=\"http://hl7.org/fhir\"/>",
         "<Patient xmlns=\"http://hl7.org/fhir\"><extension url=\"http://x\"><valueString"
             + " value=\"y\"/></extension><active id=\"a1\" value=\"true\" /></Patient>"

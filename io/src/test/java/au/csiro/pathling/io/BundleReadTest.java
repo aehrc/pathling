@@ -91,11 +91,10 @@ class BundleReadTest {
   @MethodSource("formats")
   void refusesToReturnBundlesAsAResourceType(@Nonnull final String format) {
     final Dataset<String> bundles = bundles(format, references());
+    final FhirFormatReader reader = reader(format);
 
-    assertThrows(
-        IllegalArgumentException.class, () -> reader(format).readBundles("Bundle", bundles));
-    assertThrows(
-        IllegalArgumentException.class, () -> reader(format).readBundles("NotAResource", bundles));
+    assertThrows(IllegalArgumentException.class, () -> reader.readBundles("Bundle", bundles));
+    assertThrows(IllegalArgumentException.class, () -> reader.readBundles("NotAResource", bundles));
   }
 
   @ParameterizedTest
@@ -177,9 +176,10 @@ class BundleReadTest {
   void failsOnADocumentThatIsNotABundle(@Nonnull final String format) {
     final String patient = "{\"resourceType\":\"Patient\",\"id\":\"not-a-bundle\"}";
     final Dataset<String> documents =
-        format.equals(FhirMediaType.XML)
-            ? dataset(xmlParser().encodeResourceToString(jsonParser().parseResource(patient)))
-            : dataset(patient);
+        dataset(
+            format.equals(FhirMediaType.XML)
+                ? xmlParser().encodeResourceToString(jsonParser().parseResource(patient))
+                : patient);
 
     final Exception failure =
         assertThrows(
@@ -350,16 +350,16 @@ class BundleReadTest {
     // HAPI's XML writer would write this bundle correctly, but HAPI's parser is what loses the id,
     // so the XML is written by hand rather than through a parse.
     final Dataset<String> bundles =
-        format.equals(FhirMediaType.XML)
-            ? dataset(
-                "<Bundle xmlns=\"http://hl7.org/fhir\"><type value=\"transaction\"/>"
+        dataset(
+            format.equals(FhirMediaType.XML)
+                ? "<Bundle xmlns=\"http://hl7.org/fhir\"><type value=\"transaction\"/>"
                     + "<entry><fullUrl value=\"urn:uuid:abc\"/><resource><Patient>"
                     + "<id value=\"abc\"/></Patient></resource></entry>"
                     + "<entry><fullUrl value=\"urn:uuid:def\"/><resource><Observation>"
                     + "<id value=\"def\"/><status value=\"final\"/><code><text value=\"x\"/></code>"
                     + "<subject><reference value=\"urn:uuid:abc\"/></subject>"
-                    + "</Observation></resource></entry></Bundle>")
-            : dataset(bundle);
+                    + "</Observation></resource></entry></Bundle>"
+                : bundle);
 
     assertEquals(List.of("abc"), ids(reader(format).readBundles("Patient", bundles)));
     final Row observation = reader(format).readBundles("Observation", bundles).first();
@@ -540,16 +540,16 @@ class BundleReadTest {
   @Nonnull
   private static Dataset<String> bundles(
       @Nonnull final String format, @Nonnull final String... bundles) {
-    return format.equals(FhirMediaType.XML)
-        ? dataset(
-            Stream.of(bundles)
+    return dataset(
+        format.equals(FhirMediaType.XML)
+            ? Stream.of(bundles)
                 .map(
                     bundle ->
                         xmlParser()
                             .encodeResourceToString(
                                 jsonParser().parseResource(Bundle.class, bundle)))
-                .toArray(String[]::new))
-        : dataset(bundles);
+                .toArray(String[]::new)
+            : bundles);
   }
 
   @Nonnull
