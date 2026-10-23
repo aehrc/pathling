@@ -18,6 +18,7 @@
 package au.csiro.pathling.projection;
 
 import au.csiro.pathling.encoders.ValueFunctions;
+import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.collection.Collection;
@@ -57,13 +58,15 @@ public record ProjectedColumn(
                     .ifPresent(
                         actualType -> {
                           if (!requestedType.equals(actualType)) {
-                            throw new IllegalArgumentException(
-                                "Collection "
-                                    + collection
-                                    + " has type "
-                                    + actualType
-                                    + ", expected "
-                                    + requestedType);
+                            throw new InvalidUserInputError(
+                                "Column '"
+                                    + requestedColumn.name()
+                                    + "' with path '"
+                                    + requestedColumn.path().toExpression()
+                                    + "' has type "
+                                    + actualType.toCode()
+                                    + ", but the column declares type "
+                                    + requestedType.toCode());
                           }
                         }));
     final Column rawResult;
