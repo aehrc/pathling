@@ -140,8 +140,7 @@ final class XmlMarkupWriter {
         case '<' -> output.append("&lt;");
         case '>' -> output.append("&gt;");
         // HAPI's writer escapes a quotation mark in text, and so does this, so that a narrative
-        // HAPI
-        // wrote is written back as it was.
+        // HAPI wrote is written back as it was.
         case '"' -> output.append("&quot;");
         // A parser turns a literal carriage return into a line feed, so one that reached the text
         // was written as a reference, and is written back as one.

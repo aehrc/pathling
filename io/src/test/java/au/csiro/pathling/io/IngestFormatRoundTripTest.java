@@ -57,9 +57,9 @@ import org.junit.jupiter.params.provider.MethodSource;
  * entry's resource exactly as the bundle's text carries it, with each reference to another entry
  * rewritten to the relative reference that entry's type and identifier make, which is the
  * resolution decision 83 records. The corpora carry no versioned entry, so the version that
- * decision adds does not arise here; {@code BundleTransformTest} covers it. For XML it is the JSON
- * the XML was generated from, so the comparison is between what JSON ingest would have stored and
- * what XML ingest did.
+ * decision adds does not arise here; {@code BundleReadTest} covers it. For XML it is the JSON the
+ * XML was generated from, so the comparison is between what JSON ingest would have stored and what
+ * XML ingest did.
  *
  * <p>XML input is written by HAPI from the JSON rather than vendored. A file of XML written
  * independently of its JSON twin does not carry the same narrative, because whitespace inside XHTML
@@ -307,7 +307,7 @@ class IngestFormatRoundTripTest {
    * has one, as production does. A Reference is recognised as an object that carries a {@code
    * reference} and is not a resource, which leaves alone a URI element named {@code reference} on a
    * resource, such as {@code DetectedIssue.reference}. That is as far as the oracle can go without
-   * the definitions, and {@code BundleTransformTest} pins the behaviour itself.
+   * the definitions, and {@code BundleReadTest} pins the behaviour itself.
    */
   private static void rewriteReferences(
       @Nonnull final JsonNode node, @Nonnull final Map<String, String> targets) {
