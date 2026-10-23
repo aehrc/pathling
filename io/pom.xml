@@ -43,14 +43,10 @@
     </dependency>
 
     <!--
-         HAPI FHIR parses XML and bundles for the two ingest formats that have no Spark-native path
-         that preserves FHIR semantics (plan.md, complexity tracking). Both already reach this module
-         through fhir-schema; they are declared because this module now uses them directly.
+         The R4 enumeration of FHIR types names the type of each element, which fhir-schema reports
+         it as. No route parses or writes with HAPI (ticket 32): the parser is banned by an import
+         check below, and HAPI is used as an oracle by the tests alone.
      -->
-    <dependency>
-      <groupId>ca.uhn.hapi.fhir</groupId>
-      <artifactId>hapi-fhir-base</artifactId>
-    </dependency>
     <dependency>
       <groupId>ca.uhn.hapi.fhir</groupId>
       <artifactId>hapi-fhir-structures-r4</artifactId>
@@ -125,6 +121,21 @@
             <configuration>
               <configLocation>config/checkstyle/io-catalyst-imports.xml</configLocation>
               <includeTestSourceDirectory>true</includeTestSourceDirectory>
+            </configuration>
+          </execution>
+          <!--
+               No route in this module parses with HAPI or builds a FHIR object (FR-061, ticket 32).
+               The tests use HAPI as an oracle, so this applies to the main sources alone.
+           -->
+          <execution>
+            <id>ban-hapi-parser-imports</id>
+            <phase>compile</phase>
+            <goals>
+              <goal>check</goal>
+            </goals>
+            <configuration>
+              <configLocation>config/checkstyle/io-hapi-imports.xml</configLocation>
+              <includeTestSourceDirectory>false</includeTestSourceDirectory>
             </configuration>
           </execution>
         </executions>

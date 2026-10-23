@@ -18,10 +18,16 @@
 package au.csiro.pathling.io;
 
 import jakarta.annotation.Nonnull;
+import java.util.Map;
+import org.apache.spark.sql.Column;
 import org.apache.spark.sql.DataFrameReader;
 import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.expressions.UserDefinedFunction;
+import org.apache.spark.sql.functions;
+import org.apache.spark.sql.types.StructType;
 
 /**
  * Reads FHIR JSON into this layout, from files of newline-delimited JSON, from a dataset of
@@ -30,24 +36,23 @@ import org.apache.spark.sql.SparkSession;
  *
  * <p>Types, cardinality and field order come from the definitions, and what the text carries
  * decides only which elements are present (FR-008, FR-012). Text that is not JSON at all fails the
- * read.
+ * read. The input is assumed to conform to the definitions and nothing else is checked: where it
+ * does not, the outcome is undefined, and the read may fail, a value may become null or wrong, or
+ * an element may be stored in a shape the definitions do not declare (ingest in {@code trust},
+ * FR-063).
  *
  * <p>Every resource read in one call is of that one type. This is not checked: a document of
- * another type is stored as though it were of the named type, and the fields the named type lacks
- * are reported as content this layout does not store. A caller holding documents of several types
- * selects those of one type first. Bundles are the exception, because the resources of the type
- * asked for are selected from them before anything is inferred.
+ * another type is read as though it were of the named type, which is non-conformant input with the
+ * outcomes above. A caller holding documents of several types selects those of one type first.
+ * Bundles are the exception, because the resources of the type asked for are selected from them
+ * before anything is inferred.
  *
  * <p>Nothing read here is pruned (decision 71). A structure whose only content was a primitive's id
  * and extensions is conformant and kept on purpose until M5: the primitive is stored as a null of
  * its declared type, so the structure is stored and later written as an empty object whatever other
- * conformant documents are read with it (decision 72). A metadata group in another shape, including
- * one that another document re-typed, keeps nothing. A structure emptied by content the definitions
- * do not describe or contradict is written as an empty object where anything else read with it
- * keeps its column, and left out where nothing does; a value in another document that re-types a
- * column they share empties it the same way. A repeating primitive keeps its positional nulls, and
- * until M5 they are written without the metadata they align with. Each loss is reported. Detecting
- * what is emptied is deferred to the JSON serde that the lexical form of a decimal also waits on.
+ * conformant documents are read with it (decision 72). A repeating primitive keeps its positional
+ * nulls, and until M5 they are written without the metadata they align with. The metadata itself is
+ * not stored, and nothing reports that it is not.
  */
 public final class FhirJsonReader implements FhirFormatReader {
 
@@ -61,19 +66,18 @@ public final class FhirJsonReader implements FhirFormatReader {
    */
   @Nonnull private static final String FAIL_FAST = "FAILFAST";
 
+  /** Splits a bundle into the resources of one type it carries. */
+  @Nonnull
+  private static final UserDefinedFunction SPLIT = BundleResource.splitter(JsonBundles::split);
+
   @Nonnull private final SparkSession spark;
 
   @Nonnull private final ResourceTransformer transformer;
 
-  @Nonnull private final FhirParsers parsers;
-
   FhirJsonReader(
-      @Nonnull final SparkSession spark,
-      @Nonnull final ResourceTransformer transformer,
-      @Nonnull final FhirParsers parsers) {
+      @Nonnull final SparkSession spark, @Nonnull final ResourceTransformer transformer) {
     this.spark = spark;
     this.transformer = transformer;
-    this.parsers = parsers;
   }
 
   /**
@@ -103,11 +107,42 @@ public final class FhirJsonReader implements FhirFormatReader {
     return transformer.toLayout(resourceType, json(documents.sparkSession()).json(documents));
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Each bundle is read with a streaming parse, which takes out the text of each entry's
+   * resource of the type asked for. Those are then read as any other documents of the type, so they
+   * are inferred apart from the bundle's resources of other types, and what is stored is what the
+   * same resources store when read one per row (ticket 32). Text that is not JSON fails the read,
+   * as does a document that is not a bundle.
+   */
   @Override
   @Nonnull
   public Dataset<Row> readBundles(
       @Nonnull final String resourceType, @Nonnull final Dataset<String> bundles) {
-    return read(resourceType, BundleTransformer.json(parsers).resources(resourceType, bundles));
+    transformer.requireStorable(resourceType);
+    final Dataset<Row> resources = BundleResource.resources(bundles, SPLIT, resourceType);
+    final StructType observed =
+        json(bundles.sparkSession())
+            .json(resources.select(BundleResource.DOCUMENT_COLUMN).as(Encoders.STRING()))
+            .schema();
+    // Each resource is parsed once, in a projection of its own, and stored from what it holds.
+    final Dataset<Row> parsed =
+        resources.withColumn(
+            BundleResource.PARSED,
+            observed.fields().length == 0
+                ? functions.struct()
+                : functions.from_json(
+                    functions.col(BundleResource.DOCUMENT_COLUMN),
+                    observed,
+                    Map.of(READ_MODE, FAIL_FAST)));
+    final Column references = functions.col(BundleResource.REFERENCES_COLUMN);
+    return parsed.select(
+        transformer.toLayout(
+            resourceType,
+            observed,
+            functions.col(BundleResource.PARSED),
+            reference -> BundleResource.resolve(reference, references)));
   }
 
   @Nonnull

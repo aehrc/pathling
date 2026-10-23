@@ -3092,6 +3092,25 @@ package-private `XmlConversion`, and the hand-off this decision left to the call
 made by `FhirReader`'s format readers. The refusal of `Bundle` moved from
 `BundleTransformer` to every read and to `toLayout`.
 
+_Addendum (ticket 32, 2026-10-21)_: the HAPI routing this decision records is withdrawn. Bundles and
+XML no longer reach the layout as JSON text through HAPI. XML is parsed with Spark's `from_xml` and shaped
+into the JSON data model by a plan generated from the definitions, then meets `toLayout` as JSON does; each
+bundle, in either format, is split by a streaming pass into the resources of the type asked for, which are
+then read as documents of their own. `BundleTransformer`, `XmlConversion` and `FhirParsers`, with its
+reflection into HAPI, are removed. The reference resolution stands as stated here, now applied to the
+columns the definitions type as `Reference` rather than through HAPI's links. It differs from the HAPI
+route in one case, which xml-native.md calls a defect: an entry whose `fullUrl` is `urn:uuid:X` and whose
+resource's id is `X` keeps its id, and a reference to it becomes `Type/X`. What this decision measured of
+HAPI's behaviour is history: XML and bundles now store what JSON stores (FR-060, decision 134), so content
+the definitions do not describe is reported, readable non-conformant content is not coerced, and an invalid
+primitive is stored as text rather than failing the job.
+
+_Note (owner, 2026-10-22)_, by ticket 37: the last sentence of the addendum above no longer holds. Ingest
+assumes its input is conformant, checks nothing and reports nothing, so content the definitions do not describe
+is not reported, and what is stored for readable non-conformant content or an invalid primitive is undefined
+(FR-063). XML still stores what JSON stores for conformant content (FR-060), except a decimal's text
+(decision 134's note of 2026-10-22).
+
 ## 84. `io` has one public surface for reading and writing, by format, and the mechanism behind it is hidden
 
 Made after the review of M3 (PR #2817), with the owner, before M4 calls any of it.
@@ -3208,6 +3227,15 @@ replaced their public classes, and T070, T081 and T082 are reworded to call the
 facade. plan.md's module layout shows the one package and its FR-050 row covers XML
 output. The open tasks that name files in `io/json` or `io/transform` name them in
 `io`.
+
+_Addendum (ticket 32, 2026-10-21)_: the public surface stands, and the mechanism behind it changed as
+this decision allowed. The HAPI routing is withdrawn: XML is read with `from_xml` and written with
+`to_xml`, bundles are split without HAPI, and plan.md's FR-050 row for XML and bundles carries a dated
+withdrawal. Two methods are added on the XML types, mirroring JSON's: `FhirXmlWriter.write(type, stored,
+path, mode)`, a line-delimited sink writing one document per line with a remaining line feed as `&#xa;`,
+and `FhirXmlReader.read(type, path)`, which reads it back. What "What stays as decision 83 left it" lists
+no longer holds; the Javadoc of `FhirFormatReader.readBundles` and `FhirXmlReader` says what does. Of
+"XML output", the narrative's whitespace is now kept as stored rather than collapsed; the rest stands.
 
 ## 85. Canonical order binds the struct types Pathling builds, not the schemas it reads
 
@@ -4146,6 +4174,10 @@ follow-up GitHub issue, which ticket 26 raises (`ingress-strictness/README.md`, 
   supersedes decision 134's consequence that the engine must not fail on invalid stored values.
 - FR-063's "never silently dropped or coerced" is to be rewritten by the follow-up, to match. Until then it
   carries an interim exception for `trust`, as it does for decision 134's losses.
+  _Note (owner, 2026-10-22)_: ticket 37 rewrites FR-063 for ingest now, rather than leaving it to the follow-up.
+  Ingest assumes its input is conformant and checks nothing, and reports nothing: where the input is not
+  conformant, Spark fails the read or produces a null. Content that is valid FHIR but that the layout does not
+  store is a listed exception to FR-016, dropped silently.
 - #2367 is not by itself a release. Follow-up issues the release needs, where they arise from this work, are
   raised by ticket 26.
 - The round-trip invariant, JSON → PoF → JSON and the same through XML, holds for FHIR that conforms to a given
@@ -4177,7 +4209,8 @@ make three simplifying assumptions.
   - empty values are handled as Spark's reader handles them: `null`, `{}` and `[]` are dropped silently, `""`
     is stored, and an empty structure in a batch can be stored as a present structure holding nothing;
   - validation is by column type, not per value. A contradicting value costs its element for every resource
-    read with it, and is reported once per column, as a log line;
+    read with it. _Amended (owner, 2026-10-22)_ by ticket 37: it is not reported, where this said it was
+    reported once per column, as a log line, and ingest no longer checks column types either;
   - an integer out of range and malformed base64 become null without a finding.
 
 _Consequences_:
@@ -4224,3 +4257,43 @@ _Addendum (owner, 2026-10-21)_, settling what the review of this decision left o
 - **Dense mode reads decimals as doubles**, as the fitted route does, so the two modes keep the same interim
   loss.
 - Ticket 32 stays one ticket.
+
+_Note (owner, 2026-10-22)_, from ticket 32's review: during the interim, XML keeps a decimal's lexical form,
+while JSON still passes it through a double. XML carries every value as text, so the `from_xml` route stores a
+decimal's text as it is and writes it back as stored, which is lossless; the first statement above, that the
+XML route stores what the JSON route stores value for value, no longer holds for a decimal's text, which now
+differs ("5" against "5.0", "1.50" against "1.5"), while its value is the same at a double's precision. Ticket
+16's rework need only bring JSON level with XML.
+
+## 136. A column expression stays unbound to a schema; revisited with extra fields
+
+Owner decision (2026-10-23), ticket 09. Resolves OQ-2.
+
+Three options were weighed for how a FHIRPath or search column relates to the schema it runs over: (a) today's
+column, built without a dataset and resolving presence against whatever schema it meets (FR-054, decision 75);
+(b) binding at evaluation time; and (c) an unbound expression object, bound by the caller when the dataset is
+known.
+
+- **Combining with other SQL filters.** Only (a) yields a plain `Column` before a dataset exists, so a caller can
+  combine it freely with other filters, as the server and the library do today. (b) and (c) yield a column only
+  once bound.
+- **Fragility with joins and the analyzer.** The risk (a) carries was measured and contained. The analyzer gate
+  (`t009a-analyzer-gate.md`) found no plan shape that forces the tolerant reference before its child resolves,
+  and the join-condition regression (`join-condition-limit.md`) was fixed in M4 by T100k and is pinned by
+  `ResolveOrNullTest` and `JoinConditionTest`. What remains is the dropped-column limit and a bare view column
+  in a join condition, both recorded there.
+- **The public API (SC-008).** `fhirPathToColumn` and `searchToColumn` return a `Column` in Java, Python and R.
+  (b) and (c) change that contract.
+- **What binding would add.** Validation at bind time, a manifest of the schema an expression requires, and
+  messages that name a missing element. None is required by #2367, and `trust` (ticket 31) leaves the engine's
+  behaviour on non-conformant data undefined.
+
+_Decision_: (a). A column expression is built without reference to any dataset and decides presence from the
+resolved input schema. FR-054 and SC-010 stand as written, and ticket 19's expression parity test applies one
+column, built once, to a fitted and to a dense dataset.
+
+_When to revisit_: with the support of extra fields, which the follow-up issue that ticket 26 raises covers.
+Content the definitions do not describe may need a schema the column cannot derive from the definitions, such as
+user-supplied definitions (D1) or types inferred from the data (D2), and an implementation that needs one may
+require the expression to be bound to the dataset or to that schema.
+

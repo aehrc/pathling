@@ -19,7 +19,7 @@ import logging
 import os
 from tempfile import mkdtemp
 
-from pyspark.sql import SparkSession
+from pyspark.sql import DataFrame, SparkSession
 from pytest import fixture
 
 from pathling import PathlingContext
@@ -252,3 +252,43 @@ def test_open_types(spark_session, json_resources_df):
     for pathling in (pathling_none, pathling_some):
         patient = pathling.encode(json_resources_df, "Patient").head()
         assert value_keys == _get_extension_value_keys(patient)
+
+
+# XML is read and written without HAPI on the runtime jar (ticket 32): through Spark's XML reader
+# and writer, with a narrative held to L2 and the references between a bundle's entries resolved.
+NARRATIVE_XML = (
+    '<Patient xmlns="http://hl7.org/fhir"><id value="p1"/><text><status value="generated"/>'
+    '<div xmlns="http://www.w3.org/1999/xhtml"><p>Line one&#xa;line two &amp; more</p></div>'
+    '</text><gender value="male"/></Patient>'
+)
+
+TRANSACTION_XML = (
+    '<Bundle xmlns="http://hl7.org/fhir"><type value="transaction"/>'
+    '<entry><fullUrl value="urn:uuid:p1"/><resource><Patient><id value="p1"/></Patient>'
+    "</resource></entry>"
+    '<entry><fullUrl value="urn:uuid:o1"/><resource><Observation><id value="o1"/>'
+    '<status value="final"/><code><text value="x"/></code>'
+    '<subject><reference value="urn:uuid:p1"/></subject></Observation></resource></entry>'
+    "</Bundle>"
+)
+
+
+def test_reads_and_writes_xml_without_hapi(spark_session, def_pathling):
+    encoded = def_pathling.encode(
+        _documents(spark_session, [NARRATIVE_XML]), "Patient", MimeType.FHIR_XML
+    )
+    decoded = DataFrame(
+        def_pathling._jpc.decode(encoded._jdf, "Patient", MimeType.FHIR_XML),
+        spark_session,
+    ).collect()
+    # The line feed in the narrative is kept, and so the document is written as it was read.
+    assert [row[0] for row in decoded] == [NARRATIVE_XML.replace("&#xa;", "\n")]
+
+
+def test_resolves_references_in_an_xml_bundle(spark_session, def_pathling):
+    observations = def_pathling.encode_bundle(
+        _documents(spark_session, [TRANSACTION_XML]), "Observation", MimeType.FHIR_XML
+    )
+    assert [row["subject"]["reference"] for row in observations.collect()] == [
+        "Patient/p1"
+    ]

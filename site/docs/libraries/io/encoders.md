@@ -241,13 +241,15 @@ each micro-batch of the stream instead, as shown in
 
 ### Decimals
 
-A decimal is stored and returned by its numeric value, not in the lexical form
+A decimal encoded from JSON is stored and returned by its numeric value, not in the lexical form
 the source used. The stored value is numerically equal to the source, but
 trailing zeros are dropped (`1.50` becomes `1.5`), exponent notation is
 normalised, and a value with more significant digits than a double-precision
 number holds loses the extra digits. When the resources are written back out as FHIR JSON, each decimal
 is written as a number in that normalised form. This applies to every way of
-encoding, including encoding a dataset of strings.
+encoding JSON, including encoding a dataset of strings. Encoding XML keeps a
+decimal's text as the source wrote it, so the same decimal can be stored as
+`1.50` from XML and as `1.5` from JSON, with the same value.
 
 An encoded decimal column holds text, as the specification requires, so cast it
 to a numeric type if you compute with it directly. FHIRPath expressions and SQL
@@ -255,24 +257,20 @@ on FHIR views decode it for you.
 
 ### Content that is not stored
 
-Some content is dropped rather than stored:
+Some content that FHIR allows is not stored, and is dropped silently:
 
 - `contained` resources;
-- elements that the FHIR definitions do not describe;
-- values whose JSON type contradicts the type that the definitions give the
-  element, such as a string where the definitions call for a boolean;
-- the `id` and `extension` of primitive elements.
+- a resource held inline by an element whose type is `Resource`, such as
+  `Parameters.parameter.resource`;
+- the `id` and `extension` of primitive elements;
+- whitespace within `base64Binary` values.
 
-Dropping content is not silent: a warning naming what was dropped is logged by
-`au.csiro.pathling.io.ResourceTransformer`. There is no option that makes
-encoding fail instead. Input that is not valid JSON at all does fail.
-
-The type of each element is inferred from all the values encoded together, so a
-single value that contradicts the definitions affects every value of that
-element encoded alongside it, not only the offending one. For example, if one
-resource carries `"active": "yes"`, the `active` element is dropped from every
-resource in the same encoding operation. For the NDJSON data source, that is
-all the files of a resource type.
+Encoding assumes that its input conforms to the FHIR definitions, and does not
+check it. The outcome for content that does not conform, such as an element the
+definitions do not describe or a value whose JSON type contradicts the type
+that the definitions give the element, is undefined: it may be left out, stored
+as a null or a wrong value, or fail the encoding. Input that is not valid JSON
+or XML at all fails.
 
 ### Java and Scala: typed datasets
 

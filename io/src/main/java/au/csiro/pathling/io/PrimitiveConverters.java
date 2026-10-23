@@ -20,11 +20,8 @@ package au.csiro.pathling.io;
 import jakarta.annotation.Nonnull;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import org.apache.spark.sql.functions;
-import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
-import org.apache.spark.sql.types.DecimalType;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
@@ -38,32 +35,20 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 final class PrimitiveConverters {
 
   /**
-   * The integral types a JSON integer may arrive as. Inference gives a long, and the narrower types
-   * are what a dataset built with an explicit schema reasonably carries; every one of them widens
-   * to the stored type without loss (decision 70).
-   */
-  @Nonnull
-  private static final DataType[] INTEGRAL = {
-    DataTypes.ByteType, DataTypes.ShortType, DataTypes.IntegerType, DataTypes.LongType
-  };
-
-  /**
    * A decimal is inferred as a double, or as a long where every value in a file is integral, which
    * is conformant FHIR and is not leniency. Where every value is integral and one is beyond the
-   * range of a long, inference gives a decimal of scale zero instead, which is accepted at any
-   * precision. The narrower integral types are accepted too, because an integer is an exact decimal
-   * (decision 70). A float is not, because it has already rounded most decimal fractions before the
-   * transform sees them. It is stored as the text of that number, so it is numerically equal to the
+   * range of a long, inference gives a decimal of scale zero instead. A dataset built with an
+   * explicit schema may carry a narrower integral type too, because an integer is an exact decimal
+   * (decision 70). It is stored as the text of that number, so it is numerically equal to the
    * source but not necessarily textually identical to it, and returned as a double so that the JSON
    * writer emits a bare number.
+   *
+   * <p>Text is stored unchanged. That is how XML carries a decimal, so XML keeps a decimal's
+   * lexical form while JSON passes it through a double (owner, 2026-10-22).
    */
   @Nonnull
   private static final PrimitiveConverter DECIMAL =
       PrimitiveConverter.of(
-          type ->
-              DataTypes.DoubleType.equals(type)
-                  || type instanceof DecimalType
-                  || Set.of(INTEGRAL).contains(type),
           DataTypes.StringType,
           value -> value.try_cast(DataTypes.StringType),
           value -> value.cast(DataTypes.DoubleType));
@@ -76,36 +61,38 @@ final class PrimitiveConverters {
   @Nonnull
   private static final PrimitiveConverter BASE64_BINARY =
       PrimitiveConverter.of(
-          DataTypes.StringType::equals,
           DataTypes.BinaryType,
           value -> functions.try_to_binary(value, functions.lit("base64")),
           value -> functions.regexp_replace(functions.base64(value), "[\\r\\n]", ""));
 
+  /** The converter of a type whose values are text in JSON and in storage alike. */
+  @Nonnull
+  private static final PrimitiveConverter TEXT = PrimitiveConverter.casting(DataTypes.StringType);
+
   @Nonnull
   private static final Map<String, PrimitiveConverter> CONVERTERS =
       Map.ofEntries(
-          Map.entry(
-              "boolean", PrimitiveConverter.casting(DataTypes.BooleanType, DataTypes.BooleanType)),
-          Map.entry("integer", PrimitiveConverter.casting(DataTypes.IntegerType, INTEGRAL)),
-          Map.entry("unsignedInt", PrimitiveConverter.casting(DataTypes.IntegerType, INTEGRAL)),
-          Map.entry("positiveInt", PrimitiveConverter.casting(DataTypes.IntegerType, INTEGRAL)),
-          Map.entry("integer64", PrimitiveConverter.casting(DataTypes.LongType, INTEGRAL)),
+          Map.entry("boolean", PrimitiveConverter.casting(DataTypes.BooleanType)),
+          Map.entry("integer", PrimitiveConverter.casting(DataTypes.IntegerType)),
+          Map.entry("unsignedInt", PrimitiveConverter.casting(DataTypes.IntegerType)),
+          Map.entry("positiveInt", PrimitiveConverter.casting(DataTypes.IntegerType)),
+          Map.entry("integer64", PrimitiveConverter.casting(DataTypes.LongType)),
           Map.entry("decimal", DECIMAL),
-          Map.entry("date", text()),
-          Map.entry("dateTime", text()),
-          Map.entry("instant", text()),
-          Map.entry("time", text()),
-          Map.entry("string", text()),
-          Map.entry("code", text()),
-          Map.entry("uri", text()),
-          Map.entry("url", text()),
-          Map.entry("canonical", text()),
-          Map.entry("oid", text()),
-          Map.entry("uuid", text()),
-          Map.entry("id", text()),
-          Map.entry("markdown", text()),
+          Map.entry("date", TEXT),
+          Map.entry("dateTime", TEXT),
+          Map.entry("instant", TEXT),
+          Map.entry("time", TEXT),
+          Map.entry("string", TEXT),
+          Map.entry("code", TEXT),
+          Map.entry("uri", TEXT),
+          Map.entry("url", TEXT),
+          Map.entry("canonical", TEXT),
+          Map.entry("oid", TEXT),
+          Map.entry("uuid", TEXT),
+          Map.entry("id", TEXT),
+          Map.entry("markdown", TEXT),
           Map.entry("base64Binary", BASE64_BINARY),
-          Map.entry("xhtml", text()));
+          Map.entry("xhtml", TEXT));
 
   private PrimitiveConverters() {}
 
@@ -129,11 +116,5 @@ final class PrimitiveConverters {
   @Nonnull
   public static Optional<PrimitiveConverter> forCode(@Nonnull final String code) {
     return Optional.ofNullable(CONVERTERS.get(code));
-  }
-
-  /** Returns a converter for a type whose values are text in JSON and in storage alike. */
-  @Nonnull
-  private static PrimitiveConverter text() {
-    return PrimitiveConverter.casting(DataTypes.StringType, DataTypes.StringType);
   }
 }

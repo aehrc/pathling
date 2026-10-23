@@ -18,15 +18,11 @@
 package au.csiro.pathling.io;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
 
 import jakarta.annotation.Nonnull;
 import java.nio.charset.StandardCharsets;
-import java.sql.Date;
 import java.util.Base64;
 import java.util.List;
-import java.util.Map;
-import java.util.function.Predicate;
 import java.util.stream.Stream;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -47,9 +43,9 @@ import org.junit.jupiter.params.provider.MethodSource;
  * (decision 70).
  *
  * <p>The transform is structured in and structured out, so its contract is stated over schemas, and
- * some of the schemas it has to answer for are ones JSON inference never produces: a narrower
- * integral type, a float, a Spark date, a map. Building the input directly is the only way to reach
- * them, and it keeps the text reader out of what is being tested.
+ * some of the schemas it has to answer for are ones JSON inference never produces, such as a
+ * narrower integral type. Building the input directly is the only way to reach them, and it keeps
+ * the text reader out of what is being tested.
  */
 class StructFixtureTransformTest {
 
@@ -79,7 +75,6 @@ class StructFixtureTransformTest {
 
     assertEquals(DataTypes.IntegerType, stored.schema().apply("multipleBirthInteger").dataType());
     assertEquals(2, stored.first().<Integer>getAs("multipleBirthInteger"));
-    assertEquals(List.of(), findings("Patient", source));
   }
 
   @ParameterizedTest
@@ -91,61 +86,6 @@ class StructFixtureTransformTest {
     final Dataset<Row> stored = toLayout("Observation", source);
 
     assertEquals("2", stored.select("valueQuantity.value").first().getString(0));
-    assertEquals(List.of(), findings("Observation", source));
-  }
-
-  // Types outside the contract are reported and stored as typed nulls, never converted.
-
-  @Test
-  void reportsAndNullsAFloatColumnForADecimal() {
-    final Dataset<Row> source = observation(DataTypes.FloatType, 1.5f);
-
-    final Dataset<Row> stored = toLayout("Observation", source);
-
-    assertEquals(DataTypes.StringType, valueQuantity(stored.schema()).apply("value").dataType());
-    assertNull(stored.select("valueQuantity.value").first().get(0));
-    assertEquals(
-        List.of("Observation.valueQuantity.value"),
-        paths(findings("Observation", source), NonConformantContent::isEncodingMismatch));
-  }
-
-  @Test
-  void reportsAndNullsADateColumnForADate() {
-    final Dataset<Row> source =
-        dataset(
-            schema(
-                field("resourceType", DataTypes.StringType),
-                field("id", DataTypes.StringType),
-                field("birthDate", DataTypes.DateType)),
-            RowFactory.create("Patient", "1", Date.valueOf("1980-01-01")));
-
-    final Dataset<Row> stored = toLayout("Patient", source);
-
-    assertEquals(DataTypes.StringType, stored.schema().apply("birthDate").dataType());
-    assertNull(stored.first().getAs("birthDate"));
-    assertEquals(
-        List.of("Patient.birthDate"),
-        paths(findings("Patient", source), NonConformantContent::isEncodingMismatch));
-  }
-
-  @Test
-  void dropsAndReportsAMapWhereAStructureIsDeclared() {
-    final Dataset<Row> source =
-        dataset(
-            schema(
-                field("resourceType", DataTypes.StringType),
-                field("id", DataTypes.StringType),
-                field(
-                    "maritalStatus",
-                    DataTypes.createMapType(DataTypes.StringType, DataTypes.StringType))),
-            RowFactory.create("Patient", "1", Map.of("text", "M")));
-
-    final Dataset<Row> stored = toLayout("Patient", source);
-
-    assertEquals(List.of("resourceType", "id"), List.of(stored.schema().fieldNames()));
-    assertEquals(
-        List.of("Patient.maritalStatus"),
-        paths(findings("Patient", source), NonConformantContent::isShapeMismatch));
   }
 
   // Structure: what the definitions decide, whatever the input's schema says.
@@ -164,11 +104,10 @@ class StructFixtureTransformTest {
   }
 
   @Test
-  void ordersARepeatingStructureAsTheDefinitionsDeclareAndReportsWhatTheyDoNotDescribe() {
+  void ordersARepeatingStructureAsTheDefinitionsDeclare() {
     final StructType name =
         schema(
             field("given", DataTypes.createArrayType(DataTypes.StringType)),
-            field("bogus", DataTypes.StringType),
             field("family", DataTypes.StringType));
     final Dataset<Row> source =
         dataset(
@@ -180,8 +119,8 @@ class StructFixtureTransformTest {
                 "Patient",
                 "1",
                 List.of(
-                    RowFactory.create(List.of("Jane"), "x", "Smith"),
-                    RowFactory.create(null, "y", "Jones"))));
+                    RowFactory.create(List.of("Jane"), "Smith"),
+                    RowFactory.create(null, "Jones"))));
 
     final Dataset<Row> stored = toLayout("Patient", source);
 
@@ -191,9 +130,6 @@ class StructFixtureTransformTest {
     final List<Row> names = stored.first().getList(stored.schema().fieldIndex("name"));
     assertEquals(List.of("Smith", "Jones"), names.stream().map(row -> row.getString(0)).toList());
     assertEquals(List.of("Jane"), names.get(0).getList(1));
-    assertEquals(
-        List.of("Patient.name.bogus"),
-        paths(findings("Patient", source), NonConformantContent::isUndescribedContent));
   }
 
   // The two directions are inverses over input in the JSON data model.
@@ -269,19 +205,6 @@ class StructFixtureTransformTest {
   private static Dataset<Row> toLayout(
       @Nonnull final String resourceType, @Nonnull final Dataset<Row> source) {
     return TransformFixtures.transformer().toLayout(resourceType, source);
-  }
-
-  @Nonnull
-  private static List<NonConformantContent> findings(
-      @Nonnull final String resourceType, @Nonnull final Dataset<Row> source) {
-    return TransformFixtures.transformer().findings(resourceType, source.schema());
-  }
-
-  @Nonnull
-  private static List<String> paths(
-      @Nonnull final List<NonConformantContent> findings,
-      @Nonnull final Predicate<NonConformantContent> kind) {
-    return findings.stream().filter(kind).map(NonConformantContent::getPath).toList();
   }
 
   @Nonnull

@@ -14,6 +14,21 @@ excludeSet:
           changes how the schema is resolved for extension fields.
         any:
           - "trace('coll')[0].id"
+      - title: "Non-conformant input fixture: answer is not an array"
+        type: feature
+        comment: |
+          In quantity-example.json, QuestionnaireResponse.item.answer is an object
+          where FHIR JSON requires an array. Ingest under trust (FR-063) does not
+          read such input and fails with Spark's own error. Re-enable these cases
+          when ingest gains the tolerate mode, raised as a follow-up by ticket 26
+          of specs/001-parquet-on-fhir. The other cases over this fixture are
+          excluded under #2163.
+        any:
+          - "QuestionnaireResponse.item[0].answer.value ~ 2 'a'"
+          - "QuestionnaireResponse.item[2].answer.value.toQuantity()"
+          - "QuestionnaireResponse.item[3].answer.value.toQuantity()"
+          - "QuestionnaireResponse.item.select(answer.value as FHIR.Quantity).count()"
+          - "QuestionnaireResponse.item.select(answer.value.as(FHIR.Quantity)).count()"
       - title: Parse error
         type: wontfix
         comment: |

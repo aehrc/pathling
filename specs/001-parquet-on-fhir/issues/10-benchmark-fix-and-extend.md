@@ -11,6 +11,7 @@
   - views that join on references and call `resolve()`, measured on the computed key.
 - **Re-measure.** Record encode, decode, planning and execution separately, and save every view's optimised plan beside its timings, for ticket 27.
 - **Check SC-011 (owner, 2026-10-21).** Run encode and decode for JSON and XML, lines and bundles, against SC-011's bar, and record the result. This is #2367's SC-011 check. The formal JMH check stays with ticket 16.
+- **XML lines against JSON (owner, 2026-10-22).** Ticket 32's SC-011 run found XML lines for Patient at 1.09–1.11 of the bar, about +30 ms on a single partition, against a bar from an earlier session. The owner accepted it as drift. Measure XML lines against JSON for every type, Patient especially, in one session, and profile XML lines where they are still above the bar. A single run after ticket 32's rework put XML lines' encode 13–21% above the first run on every type, and Patient's at 437 ms against the bar's 322 ms (ticket 32, owner's confirmation of 2026-10-22). Measure encode especially, since the rework changed the decimal path.
 - **Measure the annotations.** Run every view with each annotation kind on and off, using ticket 11's toggles, so that the computed path and the fast path of tickets 12, 13 and 14 are compared at the same revision.
 
 **Blocked by:** 12, 13, 14
@@ -20,6 +21,7 @@
 - [ ] Planning is measured cold. The change in the planning numbers is explained in the evidence.
 - [ ] The new views are part of the benchmark and run in later re-runs.
 - [ ] SC-011 is checked for JSON and XML, lines and bundles, and the result is recorded. A miss is reported to the owner.
+- [ ] XML lines are measured against JSON for every type in one session, Patient especially, and profiled where still above the bar; the result is recorded.
 - [ ] Each annotation kind's effect is recorded, from runs with it on and off.
 - [ ] FR-033 is answered. Either the computed key suffices, or a precomputed key is worth having, in which case a follow-up issue is handed to ticket 26 as an annotation the engine works without.
 - [ ] Results, plans and reproduction steps are saved under the spec's `evidence/`.

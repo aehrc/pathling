@@ -47,8 +47,10 @@ map, no versioned identifier column, no decimal scale column.
 **Expect at M1 through M4**: the same, except that neither the annotation fields
 nor the `_field` groups appear at all. Decision 68 deleted the derived schema
 that carried them unpopulated, and on a schema fitted to the data an element
-nothing writes has no column, which is what FR-017's carve-out says and
-`StrictnessTest.dropsPrimitiveMetadataFromTheFittedSchema` asserts. The layout
+nothing writes has no column, which is what FR-016's exception for primitive
+metadata says and
+`ResourceTransformerTest.keepsAStructureWhoseOnlyContentIsPrimitiveMetadata`
+asserts. The layout
 ships annotation-free at the flip (decision 50) and the metadata group is
 written in M5 (decision 49), so this scenario is run in two parts rather than
 deferred whole.

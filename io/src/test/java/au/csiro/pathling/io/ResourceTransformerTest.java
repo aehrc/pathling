@@ -17,8 +17,8 @@
 
 package au.csiro.pathling.io;
 
+import static au.csiro.pathling.utilities.SparkTypes.elementTypeOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import jakarta.annotation.Nonnull;
@@ -32,8 +32,6 @@ import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructType;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 
 /**
  * Tests that the transform writes the types, cardinality and field order the definitions give, and
@@ -117,19 +115,6 @@ class ResourceTransformerTest {
   // A structure survives only where some element beneath it is stored (T029).
 
   @Test
-  void omitsAStructureWhoseOnlyContentIsUndescribed(@TempDir @Nonnull final Path directory) {
-    final StructType schema =
-        transform(
-                directory,
-                "Patient",
-                "{\"resourceType\":\"Patient\",\"id\":\"1\",\"name\":[{\"bogusChild\":\"y\"}]}")
-            .schema();
-
-    assertFalse(
-        List.of(schema.fieldNames()).contains("name"), List.of(schema.fieldNames()).toString());
-  }
-
-  @Test
   void keepsAStructureWhoseOnlyContentIsPrimitiveMetadata(@TempDir @Nonnull final Path directory) {
     // The metadata group is not written before M5, but the primitive it belongs to is stored as a
     // null of its declared type, so the structure holding it is not empty (decision 72).
@@ -145,61 +130,6 @@ class ResourceTransformerTest {
         "array<struct<family:string>>",
         schema.apply("name").dataType().simpleString(),
         schema.treeString());
-  }
-
-  @ParameterizedTest
-  @ValueSource(
-      strings = {
-        "{\"_family\":\"oops\"}",
-        "{\"_family\":[{\"id\":\"f\"}]}",
-        "{\"_family\":null}",
-        "{\"_given\":{\"id\":\"f\"}}",
-        "{\"_given\":\"oops\"}",
-        "{\"_given\":[[{\"id\":\"f\"}]]}",
-        "{\"_given\":[null]}"
-      })
-  void omitsAStructureWhoseOnlyContentIsAMalformedMetadataGroup(
-      @Nonnull final String name, @TempDir @Nonnull final Path directory) {
-    // A metadata group in a shape FHIR does not give it is non-conformant content, and does not
-    // keep the structure the way a well-formed one does (decision 72). The shape depends on whether
-    // the primitive repeats, so both a singular and a repeating primitive are covered.
-    final StructType schema =
-        transform(
-                directory,
-                "Patient",
-                "{\"resourceType\":\"Patient\",\"id\":\"1\",\"name\":[" + name + "]}")
-            .schema();
-
-    assertFalse(
-        List.of(schema.fieldNames()).contains("name"), List.of(schema.fieldNames()).toString());
-  }
-
-  @Test
-  void omitsEveryAncestorLeftEmptyBeneathIt(@TempDir @Nonnull final Path directory) {
-    // The rule applies after the children are settled, so emptiness propagates upward.
-    final StructType schema =
-        transform(
-                directory,
-                "Patient",
-                "{\"resourceType\":\"Patient\",\"id\":\"1\","
-                    + "\"contact\":[{\"name\":{\"bogusChild\":\"y\"}}]}")
-            .schema();
-
-    assertFalse(
-        List.of(schema.fieldNames()).contains("contact"), List.of(schema.fieldNames()).toString());
-  }
-
-  @Test
-  void keepsAStructureWhereOneElementBeneathItIsStored(@TempDir @Nonnull final Path directory) {
-    final StructType schema =
-        transform(
-                directory,
-                "Patient",
-                "{\"resourceType\":\"Patient\",\"id\":\"1\","
-                    + "\"contact\":[{\"name\":{\"bogusChild\":\"y\",\"family\":\"S\"}}]}")
-            .schema();
-
-    assertEquals(List.of("family"), List.of(structAt(schema, "contact", "name").fieldNames()));
   }
 
   // Every structure orders its fields as the definitions declare them (T030a).
@@ -306,11 +236,6 @@ class ResourceTransformerTest {
       current = ((StructType) elementTypeOf(current)).apply(name).dataType();
     }
     return (StructType) elementTypeOf(current);
-  }
-
-  @Nonnull
-  private static DataType elementTypeOf(@Nonnull final DataType type) {
-    return type instanceof final ArrayType array ? array.elementType() : type;
   }
 
   @Nonnull

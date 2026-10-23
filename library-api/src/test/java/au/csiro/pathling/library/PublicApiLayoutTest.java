@@ -264,6 +264,46 @@ class PublicApiLayoutTest {
         json().encodeResourceToString(json().parseResource(decoded)));
   }
 
+  // A custom resource type in XML.
+
+  /**
+   * A custom resource type is read and written as XML, alone and in a bundle, through the
+   * definitions alone: no FHIR parser is involved (ticket 32).
+   */
+  @Test
+  void encodesAndDecodesACustomResourceTypeAsXml() {
+    // A ViewDefinition, a resource type the definitions describe and FHIR R4 does not.
+    final String viewDefinition =
+        "<ViewDefinition xmlns=\"http://hl7.org/fhir\"><id value=\"v1\"/>"
+            + "<name value=\"patient_names\"/><resource value=\"Patient\"/>"
+            + "<status value=\"active\"/><select><column><name value=\"id\"/>"
+            + "<path value=\"getResourceKey()\"/></column></select></ViewDefinition>";
+    final String bundle =
+        "<Bundle xmlns=\"http://hl7.org/fhir\"><type value=\"collection\"/><entry><resource>"
+            + viewDefinition.replace(" xmlns=\"http://hl7.org/fhir\"", "")
+            + "</resource></entry></Bundle>";
+
+    final Dataset<Row> single =
+        pathling.encode(
+            spark.createDataset(List.of(viewDefinition), Encoders.STRING()).toDF(),
+            "ViewDefinition",
+            PathlingContext.FHIR_XML);
+    final Dataset<Row> fromBundle =
+        pathling.encodeBundle(
+            spark.createDataset(List.of(bundle), Encoders.STRING()).toDF(),
+            "ViewDefinition",
+            PathlingContext.FHIR_XML);
+
+    assertEquals(List.of("v1"), ids(single));
+    assertEquals(List.of("v1"), ids(fromBundle));
+    assertEquals(
+        List.of(viewDefinition),
+        pathling.decode(single, "ViewDefinition", PathlingContext.FHIR_XML).collectAsList());
+    assertEquals(
+        List.of(viewDefinition),
+        pathling.decode(fromBundle, "ViewDefinition", PathlingContext.FHIR_XML).collectAsList());
+  }
+
   // Writing NDJSON.
 
   @Test

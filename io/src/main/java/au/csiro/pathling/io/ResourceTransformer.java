@@ -17,7 +17,11 @@
 
 package au.csiro.pathling.io;
 
+import static au.csiro.pathling.utilities.SparkTypes.elementTypeOf;
+import static au.csiro.pathling.utilities.SparkTypes.fieldOf;
+
 import au.csiro.pathling.definition.DefinitionContext;
+import au.csiro.pathling.definition.ElementDefinition;
 import au.csiro.pathling.definition.NodeDefinition;
 import au.csiro.pathling.schema.DefinitionCanonicalStructure;
 import au.csiro.pathling.schema.LayoutEntry;
@@ -26,9 +30,8 @@ import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
-import java.util.stream.Collectors;
+import java.util.function.UnaryOperator;
 import java.util.stream.Stream;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -54,29 +57,28 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * <p>The input to {@link #toLayout} is in the JSON data model: every element under its FHIR JSON
  * name, a structure as a structure, a repeating element as an array, and each primitive in the type
  * Spark's JSON reader infers for it or a lossless widening of that type (see {@link
- * PrimitiveConverters}). A column of any other type contradicts the definitions and is reported
- * rather than converted.
- *
- * <p>The input carries resources of the one type it is named for. This is not checked. Where it is
- * broken, the fields of the other types are reported as undescribed content, and each row of
- * another type is stored as a resource of the named type with whatever fields the two share.
+ * PrimitiveConverters}). The input is assumed to conform to the definitions, and nothing here
+ * checks that it does, which is ingest in {@code trust} (decision 133's addendum of 2026-10-22).
+ * Each declared element is cast or extracted from what the source carries as though it conformed.
+ * Where it does not, the outcome is undefined (FR-063): the read may fail, with Spark's error or
+ * with an exception while it is planned, a value may become null or be stored wrong, and an element
+ * may be stored in a shape other than the one the definitions declare. Nothing is added to handle
+ * any of these. Content the definitions do not describe has no column in the layout, and is left
+ * out.
  *
  * <p>Neither direction removes what is empty, and neither checks for it (decision 71). Conformant
  * input still leaves two kinds of emptiness, both kept on purpose until M5 stores primitive
  * metadata: a structure whose only content was a primitive's id and extensions, which is an element
  * that exists and is written as an empty object whatever other conformant documents the input holds
  * (decision 72), and a repeating primitive's positional null, which is written without the metadata
- * it aligns with (decision 71's addendum). Anything else that holds nothing is assumed absent: an
- * element emptied by content the definitions do not describe or contradict, including a column
- * another row re-typed, and a structure whose every field is null in layout data from another
- * producer. Where that is broken the document written from the result is not conformant FHIR,
- * because such an element is written as an empty object rather than left out. Detecting it is
- * deferred to the JSON serde that the lexical form of a decimal also waits on.
+ * it aligns with (decision 71's addendum). Anything else that holds nothing is assumed absent, such
+ * as a structure whose every field is null in layout data from another producer. Where that is
+ * broken the document written from the result is not conformant FHIR, because such an element is
+ * written as an empty object rather than left out.
  *
  * <p>The whole transform is dataset operations over public Spark API. No FHIR object appears in a
  * per-row plan and no expression tree is authored by hand (FR-050, FR-051).
  */
-@Slf4j
 final class ResourceTransformer {
 
   /** The name of the field a decimal of an element is marked with, which no FHIR name can be. */
@@ -85,6 +87,9 @@ final class ResourceTransformer {
   /** A marked decimal as the JSON writer writes it, capturing the decimal's text. */
   @Nonnull
   private static final String MARKED_DECIMAL = "\\{\"\\$decimal\\$\":\"(-?[0-9][0-9.eE+-]*)\"\\}";
+
+  /** The element of a Reference that holds the reference itself. */
+  @Nonnull private static final String REFERENCE = "reference";
 
   @Nonnull private final DefinitionContext definitions;
 
@@ -110,8 +115,7 @@ final class ResourceTransformer {
    * columns produce: it is never constructed, so it cannot disagree with what is written (decision
    * 68). The schema of the source is threaded through the walk and decides presence alone. An
    * element appears where the source carried it, and a structure appears only where some element
-   * beneath it does (FR-011). What the source carries and this layout does not store is logged as a
-   * warning, and {@link #findings} returns it as values.
+   * beneath it does (FR-011). What the source carries and this layout does not store is left out.
    *
    * @param resourceType the type of the resources the source carries
    * @param source the resources, in the JSON data model
@@ -121,17 +125,53 @@ final class ResourceTransformer {
   @Nonnull
   public Dataset<Row> toLayout(
       @Nonnull final String resourceType, @Nonnull final Dataset<Row> source) {
+    return source.select(
+        layoutFields(resourceType, source.schema(), functions::col, UnaryOperator.identity()));
+  }
+
+  /**
+   * Transforms resources held as a structure in the JSON data model into this layout, as {@link
+   * #toLayout(String, Dataset)} does for a dataset of them, returning the columns that method would
+   * select. It serves the routes that build the JSON data model themselves, from another format or
+   * from the resources of a bundle (ticket 32). The structure is best a column of its own, computed
+   * in a projection before these columns are selected, so that it is planned once rather than
+   * within every column.
+   *
+   * <p>Every stored {@code Reference.reference} is passed through a function, which is how a bundle
+   * route resolves the references between the bundle's entries on the columns the definitions type
+   * as references, and nowhere else (decision 83, FR-062). An element of another type that happens
+   * to be named {@code reference} is not passed through it.
+   *
+   * @param resourceType the type of the resources
+   * @param observed the type of the structure, which decides presence alone
+   * @param source the structure
+   * @param references the function every stored reference is passed through
+   * @return the columns of the resources, in this layout
+   * @throws IllegalArgumentException if the type is {@code Bundle} or is not a resource type
+   */
+  @Nonnull
+  Column[] toLayout(
+      @Nonnull final String resourceType,
+      @Nonnull final StructType observed,
+      @Nonnull final Column source,
+      @Nonnull final UnaryOperator<Column> references) {
+    return layoutFields(resourceType, observed, source::getField, references);
+  }
+
+  /** Returns the stored columns of a resource whose fields are reached through a function. */
+  @Nonnull
+  private Column[] layoutFields(
+      @Nonnull final String resourceType,
+      @Nonnull final StructType observed,
+      @Nonnull final Function<String, Column> fields,
+      @Nonnull final UnaryOperator<Column> references) {
     requireStorable(resourceType);
-    final StructType observed = source.schema();
     final DefinitionCanonicalStructure canonical =
         DefinitionCanonicalStructure.forResource(definitions, resourceType);
-    report(StrictnessCheck.of(canonical, resourceType).check(observed));
-    final Column[] columns =
-        canonical.entries().stream()
-            .map(entry -> resourceField(canonical, entry, observed, resourceType))
-            .flatMap(Optional::stream)
-            .toArray(Column[]::new);
-    return source.select(columns);
+    return canonical.entries().stream()
+        .map(entry -> resourceField(canonical, entry, observed, resourceType, fields, references))
+        .flatMap(Optional::stream)
+        .toArray(Column[]::new);
   }
 
   /**
@@ -233,15 +273,17 @@ final class ResourceTransformer {
       @Nonnull final DefinitionCanonicalStructure canonical,
       @Nonnull final LayoutEntry entry,
       @Nonnull final StructType observed,
-      @Nonnull final String resourceType) {
+      @Nonnull final String resourceType,
+      @Nonnull final Function<String, Column> fields,
+      @Nonnull final UnaryOperator<Column> references) {
     if (entry.isResourceType()) {
       final Column column =
-          observedField(observed, entry.getName())
-              .map(unused -> functions.col(entry.getName()).cast(DataTypes.StringType))
+          fieldOf(observed, entry.getName())
+              .map(unused -> fields.apply(entry.getName()).cast(DataTypes.StringType))
               .orElseGet(() -> functions.lit(resourceType));
       return Optional.of(column.alias(entry.getName()));
     }
-    return field(canonical, entry, observed).map(stored -> stored.apply(functions::col));
+    return field(canonical, entry, observed, references, false).map(stored -> stored.apply(fields));
   }
 
   /**
@@ -252,13 +294,8 @@ final class ResourceTransformer {
    *
    * <p>The plan depends on the schema alone, so it is made once for every row. Annotations and
    * metadata groups are not written before M5, so neither is ever stored here. An element the
-   * source did not carry does not appear. An element the source carried in a shape the definitions
-   * contradict is stored as a null of the shape they declare, and never coerced: a repeating
-   * element supplied as a single object would otherwise be cast to an array, and a singular element
-   * supplied as an array casts to the text of that array, which is a silently wrong value rather
-   * than an absence. A primitive the source carried only as its metadata group, in the shape FHIR
-   * gives the group, is stored as a null of its declared type, so that the element holding it stays
-   * present.
+   * source did not carry does not appear. A primitive the source carried only as its metadata group
+   * is stored as a null of its declared type, so that the element holding it stays present.
    *
    * @param node the canonical structure of the node carrying the field
    * @param entry the field
@@ -268,55 +305,46 @@ final class ResourceTransformer {
   private Optional<Function<Function<String, Column>, Column>> field(
       @Nonnull final DefinitionCanonicalStructure node,
       @Nonnull final LayoutEntry entry,
-      @Nonnull final StructType observed) {
+      @Nonnull final StructType observed,
+      @Nonnull final UnaryOperator<Column> references,
+      final boolean inReference) {
     if (!entry.isElement()) {
       return Optional.empty();
     }
     final String name = entry.getName();
-    return observedField(observed, name)
+    // The reference of a Reference is the one field a bundle's resolution applies to.
+    final UnaryOperator<Column> resolution =
+        inReference && REFERENCE.equals(name) ? references : UnaryOperator.identity();
+    return fieldOf(observed, name)
         .flatMap(
             from ->
-                StrictnessCheck.shapeMismatch(node, entry, from.dataType()).isEmpty()
-                    ? value(node, entry, from.dataType())
-                        .<Function<Function<String, Column>, Column>>map(
-                            stored -> fields -> stored.apply(fields.apply(name)))
-                    : absent(node, entry, from.dataType()).map(column -> fields -> column))
-        .or(() -> metadataOnly(node, entry, observed))
+                value(node, entry, from.dataType(), references)
+                    .<Function<Function<String, Column>, Column>>map(
+                        stored -> fields -> resolution.apply(stored.apply(fields.apply(name)))))
+        .or(() -> metadataOnly(entry, observed))
         .map(stored -> fields -> stored.apply(fields).alias(name));
   }
 
   /**
    * Plans a null of the type the definitions give a primitive the source carried only as its id and
-   * extensions, or returns empty where the source carried no metadata group for it, or one in a
-   * shape FHIR does not give it.
+   * extensions, or returns empty where the source carried no metadata group for it.
    *
    * <p>The metadata group is not stored before M5, but the element it belongs to exists, and a
    * structure holding nothing else is an element that exists too. Storing the primitive as a null
    * keeps that structure present whatever other conformant documents the input holds (decision 72).
    * For a singular primitive this is what the released encoder stores. For a repeating one it is
    * not, because the parser the released encoder reads through discards an {@code _x} array with no
-   * {@code x} array beside it; the layout keeps the element, as FHIR does. The loss of the metadata
-   * itself is reported as before.
-   *
-   * <p>A group is in the outer shape FHIR gives it where it is an object beside a singular
-   * primitive and an array of objects beside a repeating one. Any other group is non-conformant,
-   * and leaves the element as absent as the rest of such content leaves it.
+   * {@code x} array beside it; the layout keeps the element, as FHIR does. The metadata itself is
+   * not stored.
    */
   @Nonnull
-  private Optional<Function<Function<String, Column>, Column>> metadataOnly(
-      @Nonnull final DefinitionCanonicalStructure node,
-      @Nonnull final LayoutEntry entry,
-      @Nonnull final StructType observed) {
-    if (entry.primitiveType().isEmpty()) {
-      return Optional.empty();
-    }
-    final boolean repeating = entry.isRepeating();
-    return observedField(observed, LayoutFields.metadataGroupName(entry.getName()))
-        .map(StructField::dataType)
-        .filter(group -> StrictnessCheck.isConformingMetadataGroup(repeating, group))
-        // A primitive's absent value takes its type from the definitions alone, so the group's
-        // type serves as the observed one without being read.
-        .flatMap(group -> absent(node, entry, group))
+  private static Optional<Function<Function<String, Column>, Column>> metadataOnly(
+      @Nonnull final LayoutEntry entry, @Nonnull final StructType observed) {
+    return entry
+        .primitiveType()
+        .filter(
+            type -> fieldOf(observed, LayoutFields.metadataGroupName(entry.getName())).isPresent())
+        .map(type -> absent(entry, type))
         .map(column -> fields -> column);
   }
 
@@ -328,16 +356,26 @@ final class ResourceTransformer {
   private Optional<Function<Column, Column>> value(
       @Nonnull final DefinitionCanonicalStructure node,
       @Nonnull final LayoutEntry entry,
-      @Nonnull final DataType observed) {
-    final DataType observedValue = StrictnessCheck.elementTypeOf(observed);
+      @Nonnull final DataType observed,
+      @Nonnull final UnaryOperator<Column> references) {
+    final DataType observedValue = elementTypeOf(observed);
+    final boolean reference =
+        entry
+            .getElement()
+            .flatMap(ElementDefinition::getFhirType)
+            .filter(FHIRDefinedType.REFERENCE::equals)
+            .isPresent();
     final Optional<Function<Column, Column>> single =
         entry
             .primitiveType()
-            .<Function<Column, Column>>map(type -> value -> storedValue(value, type, observedValue))
+            .<Function<Column, Column>>map(type -> value -> converter(type).ingest(value))
             .or(
                 () ->
                     structure(
-                        node.elementStructure(entry).orElseThrow(), (StructType) observedValue));
+                        node.elementStructure(entry).orElseThrow(),
+                        (StructType) observedValue,
+                        references,
+                        reference));
     return entry.isRepeating()
         ? single.map(stored -> source -> functions.transform(source, stored::apply))
         : single;
@@ -352,10 +390,13 @@ final class ResourceTransformer {
    */
   @Nonnull
   private Optional<Function<Column, Column>> structure(
-      @Nonnull final DefinitionCanonicalStructure node, @Nonnull final StructType observed) {
+      @Nonnull final DefinitionCanonicalStructure node,
+      @Nonnull final StructType observed,
+      @Nonnull final UnaryOperator<Column> references,
+      final boolean inReference) {
     final List<Function<Function<String, Column>, Column>> fields =
         node.entries().stream()
-            .map(entry -> field(node, entry, observed))
+            .map(entry -> field(node, entry, observed, references, inReference))
             .flatMap(Optional::stream)
             .toList();
     if (fields.isEmpty()) {
@@ -372,112 +413,21 @@ final class ResourceTransformer {
   }
 
   /**
-   * Returns a null of the type the definitions give an element whose observed shape contradicts
-   * them, or empty where no such type can be built.
-   *
-   * <p>The type is built from columns rather than declared, so there is no second description of
-   * the schema to keep in step with the walk. Where the definitions declare a structure it takes
-   * the elements the source carried beneath it, typed by the definitions, and where the source
-   * carried a plain value in place of a structure there is nothing to take and the element does not
-   * appear. Both cases are reported as findings.
+   * Returns a null of the type the definitions give a primitive, as an array of it where the
+   * primitive repeats.
    */
   @Nonnull
-  private Optional<Column> absent(
-      @Nonnull final DefinitionCanonicalStructure node,
-      @Nonnull final LayoutEntry entry,
-      @Nonnull final DataType observed) {
-    final DataType observedValue = StrictnessCheck.elementTypeOf(observed);
-    final Optional<Column> single =
-        entry
-            .primitiveType()
-            .map(ResourceTransformer::converter)
-            .map(converter -> functions.lit(null).cast(converter.getStored()))
-            .or(
-                () ->
-                    observedValue instanceof final StructType structure
-                        ? absentStructure(node.elementStructure(entry).orElseThrow(), structure)
-                        : Optional.empty());
-    return single.map(
-        value ->
-            functions.when(
-                functions.lit(false), entry.isRepeating() ? functions.array(value) : value));
-  }
-
-  /**
-   * Returns a structure holding the elements the source carried beneath it, typed, for {@link
-   * #absent} to make null.
-   */
-  @Nonnull
-  private Optional<Column> absentStructure(
-      @Nonnull final DefinitionCanonicalStructure node, @Nonnull final StructType observed) {
-    final Column[] fields =
-        node.entries().stream()
-            .filter(LayoutEntry::isElement)
-            .map(
-                entry ->
-                    observedField(observed, entry.getName())
-                        .flatMap(from -> absent(node, entry, from.dataType()))
-                        .map(column -> column.alias(entry.getName())))
-            .flatMap(Optional::stream)
-            .toArray(Column[]::new);
-    return fields.length == 0 ? Optional.empty() : Optional.of(functions.struct(fields));
-  }
-
-  /**
-   * Returns the stored value of one primitive, or a null of the stored type throughout where the
-   * column's inferred type contradicts the definitions. That is decided for the column rather than
-   * for the value, and the strictness check reports it.
-   */
-  @Nonnull
-  private static Column storedValue(
-      @Nonnull final Column source,
-      @Nonnull final FHIRDefinedType type,
-      @Nonnull final DataType observed) {
-    final PrimitiveConverter converter = converter(type);
-    return converter.accepts(observed)
-        ? converter.ingest(source)
-        : functions.lit(null).cast(converter.getStored());
+  private static Column absent(
+      @Nonnull final LayoutEntry entry, @Nonnull final FHIRDefinedType type) {
+    final Column value = functions.lit(null).cast(converter(type).getStored());
+    return functions.when(
+        functions.lit(false), entry.isRepeating() ? functions.array(value) : value);
   }
 
   @Nonnull
   private static PrimitiveConverter converter(@Nonnull final FHIRDefinedType type) {
     return PrimitiveConverters.forType(type)
         .orElseThrow(() -> new IllegalStateException("No converter for primitive type: " + type));
-  }
-
-  /**
-   * Returns the content a source carries that this layout does not store, as values.
-   *
-   * <p>The content is ignored rather than failing the read, and returning it rather than only
-   * logging it is what makes the loss detectable (decision 68).
-   *
-   * @param resourceType the type of the resources the source carries
-   * @param observed the schema the source was read with
-   * @return the findings, in the order they were reached
-   */
-  @Nonnull
-  public List<NonConformantContent> findings(
-      @Nonnull final String resourceType, @Nonnull final StructType observed) {
-    return StrictnessCheck.of(
-            DefinitionCanonicalStructure.forResource(definitions, resourceType), resourceType)
-        .check(observed);
-  }
-
-  /** Logs the content this layout does not store, which is ignored rather than failing the read. */
-  private static void report(@Nonnull final List<NonConformantContent> findings) {
-    if (findings.isEmpty()) {
-      return;
-    }
-    final String detail =
-        findings.stream().map(NonConformantContent::toString).collect(Collectors.joining("; "));
-    // Ignoring is the only mode, and ignoring is not silence.
-    log.warn("Ignoring content that this layout does not store: {}", detail);
-  }
-
-  @Nonnull
-  private static Optional<StructField> observedField(
-      @Nonnull final StructType observed, @Nonnull final String name) {
-    return Stream.of(observed.fields()).filter(field -> field.name().equals(name)).findFirst();
   }
 
   /**

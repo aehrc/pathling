@@ -23,7 +23,7 @@ Deviations, all permitted by the specification:
 annotation-free at the flip and each annotation kind lands afterwards (FR-021,
 decision 50). The names, types and positions below are fixed from Phase 3 and do
 not change when the values arrive. The second exists because the specification's fixed-point type makes quantities differing by orders of magnitude compare equal, which the engine cannot compare on; the first is what an interchange consumer reads. Non-standard annotations are permitted. Raised upstream; `_canonical_exact` is withdrawn if the specification adopts a magnitude-preserving representation. |
-| `contained` | Not represented. Reported as a warning, never silently dropped. |
+| `contained` | Not represented. Dropped silently (FR-006). |
 | `Bundle` | Never stored as a resource type. Accepted as a transport carrier and exploded to per-type tables. |
 
 ### The two quantity annotations
@@ -97,20 +97,22 @@ reduces a read to a single leaf.
 For conformant input, `JSON -> storage -> JSON` returns a semantically equal
 resource: object key order ignored, array order significant, numbers compared
 **numerically**. Decimals are stored as text because the specification stores
-them that way, not to preserve the source's lexical form, which is not
-preserved on any path (decision 68).
+them that way, not to preserve the source's lexical form, which JSON ingest
+does not preserve (decision 68). During the interim XML ingest keeps it
+(decision 134's note of 2026-10-22).
 
 It holds on a fitted schema subject to the exceptions below, and on a dense
 schema additionally within the configured nesting, extension and open-type
 settings.
 
-Not covered. The first three are reported; the rest are not: `contained`
-resources; content the definition set does not describe or contradicts;
+Not covered, and none of it reported (FR-016): `contained` resources; an
+inline resource held by an element declared as the abstract `Resource`;
 primitive element ids and extensions, until M5; decimal lexical form — trailing zeros,
 exponent notation as written, and precision beyond a double; `base64Binary`
 whitespace, which FHIR permits and which decoding and re-encoding canonicalises
-away; a conformant value dropped because a sibling value re-typed its column;
-and content the dense bounds drop.
+away; and content the dense bounds drop. Content the definition set does not
+describe or contradicts is not conformant input, so it is outside the guarantee,
+and what ingest stores for it is undefined (FR-063).
 
 Where excluded content was an element's only content, the element is written as
 an empty object rather than dropped from its array if anything else read with it
@@ -119,10 +121,9 @@ conformant FHIR. Primitive ids and extensions are the exception to that
 condition: a primitive the source carried only as its metadata group, in the
 outer shape FHIR gives the group, is stored as a null of its declared type, so
 the structure holding it is kept and written as an empty object whatever other
-conformant documents are read with it (decision 72). A group in another shape
-keeps nothing, and that includes a conformant group that another document read
-with it re-typed, so the structure it alone kept then falls back to the
-condition above. The released encoder also keeps a metadata-only structure where
+conformant documents are read with it (decision 72). A group in another shape,
+or a batch holding one, is not conformant input, and the outcome is undefined
+(FR-063). The released encoder also keeps a metadata-only structure where
 the primitive is singular, and drops it where the primitive repeats, because the
 parser it reads through discards an `_x` array with no `x` array beside it. For
 conformant input that is the only source of an empty object, and a repeating
