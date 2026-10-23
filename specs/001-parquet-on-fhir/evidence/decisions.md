@@ -3108,7 +3108,8 @@ primitive is stored as text rather than failing the job.
 _Note (owner, 2026-10-22)_, by ticket 37: the last sentence of the addendum above no longer holds. Ingest
 assumes its input is conformant, checks nothing and reports nothing, so content the definitions do not describe
 is not reported, and what is stored for readable non-conformant content or an invalid primitive is undefined
-(FR-063). XML and bundles still store what JSON stores for conformant content (FR-060).
+(FR-063). XML and bundles still store what JSON stores for conformant content (FR-060), except a decimal's text
+(decision 134's note of 2026-10-22).
 
 ## 84. `io` has one public surface for reading and writing, by format, and the mechanism behind it is hidden
 

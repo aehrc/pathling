@@ -264,5 +264,5 @@ Excluded in both modes, and none of it reported (FR-016, ticket 37):
 
 Content the definition set does not describe, or whose JSON encoding type
 contradicts it, is not conformant input, so it is outside the guarantee rather
-than excluded from it, and what ingest stores for it is undefined (FR-063). So
-is every document read in a batch with it.
+than excluded from it, and what ingest stores for it, and for the other
+documents read in the same batch, is undefined (FR-063).
