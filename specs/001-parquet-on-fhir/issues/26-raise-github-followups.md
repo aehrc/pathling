@@ -18,7 +18,8 @@
   - a schema that does not conform, level 3 in the engine, and whether `trust` checks it;
   - whether the engine uses an annotation stored by another producer or recomputes it, which decision 135 assigns to the modes rather than to ticket 11's *recompute* setting;
   - the exceptions still open: `null` and `[]` in JSON, the empty string's level, and whether trimming whitespace is lossless;
-  - FR-063, rewritten to match the softened principles 2 and 5.
+  - FR-063, rewritten to match the softened principles 2 and 5;
+  - re-enabling the tests excluded for the non-conformant fixture `fhirpath-js/resources/quantity-example.json`, whose `QuestionnaireResponse.item.answer` is an object where FHIR JSON requires an array. Under `trust` ingest fails on it with Spark's own error (ticket 37), so stage 3 excludes it, and the tests read it again once ingest tolerates such input (owner, 2026-10-23). The exclusions are the rule "Non-conformant input fixture: answer is not an array" in `fhirpath/src/test/resources/fhirpath-js/config.yaml`, `NON_CONFORMANT_FIXTURES` in `AnnotationFreeSuiteTest`, and the fixture's omission from `RESOURCE_FILES` in `FhirPathToColumnTest`.
 - **Content the definitions do not describe (owner, 2026-10-22).** Ticket 34, which this issue replaces, and the metadata that would preserve such content's representation through ingest and egress, even only in datasets Pathling wrote. The round-trip invariant excludes such content, so this is the only route by which it can hold for it. From `evidence/ingress-strictness/README.md`:
   - D1, user-supplied definitions, and D2, types inferred from the data, under "Extra elements", with D2's costs and the proposal to infer FHIRPath System types;
   - a JSON-type marker in the Parquet metadata, and Parquet's `JSON` logical type, for a number stored as text, whose support in Spark 4 and survival through Delta and pyarrow are unmeasured;
