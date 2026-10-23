@@ -87,7 +87,12 @@ final class XmlDocuments {
   private static final String REPORT_CDATA =
       "http://java.sun.com/xml/stream/properties/report-cdata-event";
 
-  /** A factory per thread, because a factory is not guaranteed to be safe to share. */
+  /**
+   * A factory per thread, because a factory is not guaranteed to be safe to share. It is never
+   * removed: each executor thread keeps one factory for every document it reads, so they are
+   * bounded by the thread count, and removing it after a read would build a factory per document.
+   */
+  @SuppressWarnings("java:S5164") // ThreadLocal.remove() not needed - see the Javadoc.
   @Nonnull
   private static final ThreadLocal<XMLInputFactory> FACTORY =
       ThreadLocal.withInitial(XmlDocuments::factory);
