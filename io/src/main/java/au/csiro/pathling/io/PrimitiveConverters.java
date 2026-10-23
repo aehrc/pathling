@@ -65,6 +65,10 @@ final class PrimitiveConverters {
           value -> functions.try_to_binary(value, functions.lit("base64")),
           value -> functions.regexp_replace(functions.base64(value), "[\\r\\n]", ""));
 
+  /** The converter of a type whose values are text in JSON and in storage alike. */
+  @Nonnull
+  private static final PrimitiveConverter TEXT = PrimitiveConverter.casting(DataTypes.StringType);
+
   @Nonnull
   private static final Map<String, PrimitiveConverter> CONVERTERS =
       Map.ofEntries(
@@ -74,21 +78,21 @@ final class PrimitiveConverters {
           Map.entry("positiveInt", PrimitiveConverter.casting(DataTypes.IntegerType)),
           Map.entry("integer64", PrimitiveConverter.casting(DataTypes.LongType)),
           Map.entry("decimal", DECIMAL),
-          Map.entry("date", text()),
-          Map.entry("dateTime", text()),
-          Map.entry("instant", text()),
-          Map.entry("time", text()),
-          Map.entry("string", text()),
-          Map.entry("code", text()),
-          Map.entry("uri", text()),
-          Map.entry("url", text()),
-          Map.entry("canonical", text()),
-          Map.entry("oid", text()),
-          Map.entry("uuid", text()),
-          Map.entry("id", text()),
-          Map.entry("markdown", text()),
+          Map.entry("date", TEXT),
+          Map.entry("dateTime", TEXT),
+          Map.entry("instant", TEXT),
+          Map.entry("time", TEXT),
+          Map.entry("string", TEXT),
+          Map.entry("code", TEXT),
+          Map.entry("uri", TEXT),
+          Map.entry("url", TEXT),
+          Map.entry("canonical", TEXT),
+          Map.entry("oid", TEXT),
+          Map.entry("uuid", TEXT),
+          Map.entry("id", TEXT),
+          Map.entry("markdown", TEXT),
           Map.entry("base64Binary", BASE64_BINARY),
-          Map.entry("xhtml", text()));
+          Map.entry("xhtml", TEXT));
 
   private PrimitiveConverters() {}
 
@@ -112,11 +116,5 @@ final class PrimitiveConverters {
   @Nonnull
   public static Optional<PrimitiveConverter> forCode(@Nonnull final String code) {
     return Optional.ofNullable(CONVERTERS.get(code));
-  }
-
-  /** Returns a converter for a type whose values are text in JSON and in storage alike. */
-  @Nonnull
-  private static PrimitiveConverter text() {
-    return PrimitiveConverter.casting(DataTypes.StringType);
   }
 }

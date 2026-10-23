@@ -18,27 +18,12 @@
 package au.csiro.pathling.io;
 
 import jakarta.annotation.Nonnull;
-import java.util.Iterator;
-import java.util.Spliterator;
-import java.util.Spliterators;
-import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
-/** Helpers for the functions that Spark runs over a whole partition of rows. */
-final class Partitions {
-
-  private Partitions() {}
-
-  /**
-   * Returns the rows of a partition as a stream, in order, which is read lazily as the iterator is.
-   *
-   * @param rows the rows of the partition
-   * @param <T> the type of the rows
-   * @return the stream
-   */
-  @Nonnull
-  static <T> Stream<T> stream(@Nonnull final Iterator<T> rows) {
-    return StreamSupport.stream(
-        Spliterators.spliteratorUnknownSize(rows, Spliterator.ORDERED), false);
-  }
-}
+/**
+ * A narrative read from a document by {@link XmlDocuments#narrativeAt}: its markup, and where in
+ * the document it ends.
+ *
+ * @param markup the narrative's markup
+ * @param end the index of the document just after the narrative
+ */
+record NarrativeMarkup(@Nonnull String markup, int end) {}

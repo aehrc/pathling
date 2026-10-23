@@ -64,8 +64,8 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  */
 final class XmlIngestShape {
 
-  /** The prefix Spark's XML reader gives a field read from an attribute. */
-  @Nonnull private static final String ATTRIBUTE = "_";
+  /** The prefix that marks a field as an attribute, to Spark's XML reader and writer alike. */
+  @Nonnull static final String ATTRIBUTE = "_";
 
   /** The field a primitive's value is read into, from its {@code value} attribute. */
   @Nonnull private static final String VALUE = "_value";
@@ -132,7 +132,9 @@ final class XmlIngestShape {
     final List<Column> columns = new ArrayList<>();
     // Nullable, as the JSON reader's column is, so that the stored schemas are equal.
     columns.add(
-        functions.when(document.isNotNull(), functions.lit(resourceType)).alias("resourceType"));
+        functions
+            .when(document.isNotNull(), functions.lit(resourceType))
+            .alias(LayoutFields.RESOURCE_TYPE));
     if (parsed != null) {
       columns.addAll(fields(resource, null, true, parseSchema, parsed::getField));
     }
@@ -347,8 +349,9 @@ final class XmlIngestShape {
         || ("url".equals(name) && FHIRDefinedType.EXTENSION.equals(nodeType));
   }
 
+  /** Returns the FHIR type the definitions give an entry, or null where they give none. */
   @Nullable
-  private static FHIRDefinedType fhirType(@Nonnull final LayoutEntry entry) {
+  static FHIRDefinedType fhirType(@Nonnull final LayoutEntry entry) {
     return entry.getElement().flatMap(ElementDefinition::getFhirType).orElse(null);
   }
 

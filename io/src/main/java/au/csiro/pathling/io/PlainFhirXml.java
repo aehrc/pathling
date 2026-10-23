@@ -21,6 +21,7 @@ import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.regex.Pattern;
 
 /**
  * Recognises, in one pass over its characters, a FHIR XML document in the plain form most writers
@@ -48,6 +49,11 @@ final class PlainFhirXml {
   @Nonnull private static final String DECLARATION = "<?xml";
 
   @Nonnull private static final String NAMESPACE = " xmlns=\"" + XmlDocuments.FHIR_NAMESPACE + "\"";
+
+  /** The name of a character reference, after its ampersand. */
+  @Nonnull
+  private static final Pattern CHARACTER_REFERENCE =
+      Pattern.compile("#[0-9]{1,7}|#x[0-9A-Fa-f]{1,6}");
 
   private PlainFhirXml() {}
 
@@ -193,16 +199,15 @@ final class PlainFhirXml {
       final int start,
       @Nonnull final StringBuilder prepared,
       @Nonnull final int[] copied) {
-    final String[] narrative = XmlDocuments.narrativeAt(document, start);
+    final NarrativeMarkup narrative = XmlDocuments.narrativeAt(document, start);
     if (narrative == null) {
       return -1;
     }
-    final int end = Integer.parseInt(narrative[1]);
     prepared.append(document, copied[0], start).append("<div value=\"");
-    XmlMarkupWriter.escapeAttribute(prepared, narrative[0]);
+    XmlMarkupWriter.escapeAttribute(prepared, narrative.markup());
     prepared.append("\"/>");
-    copied[0] = end;
-    return end;
+    copied[0] = narrative.end();
+    return narrative.end();
   }
 
   /** Reads an unprefixed, double-quoted attribute, returning the index after it, or -1. */
@@ -250,7 +255,7 @@ final class PlainFhirXml {
     final boolean defined =
         switch (name) {
           case "amp", "lt", "gt", "quot", "apos" -> true;
-          default -> name.matches("#[0-9]{1,7}|#x[0-9A-Fa-f]{1,6}");
+          default -> CHARACTER_REFERENCE.matcher(name).matches();
         };
     return defined ? end : -1;
   }

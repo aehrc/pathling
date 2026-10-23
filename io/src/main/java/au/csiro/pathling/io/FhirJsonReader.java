@@ -18,7 +18,6 @@
 package au.csiro.pathling.io;
 
 import jakarta.annotation.Nonnull;
-import java.util.List;
 import java.util.Map;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.DataFrameReader;
@@ -26,10 +25,8 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
-import org.apache.spark.sql.api.java.UDF2;
 import org.apache.spark.sql.expressions.UserDefinedFunction;
 import org.apache.spark.sql.functions;
-import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructType;
 
 /**
@@ -71,14 +68,7 @@ public final class FhirJsonReader implements FhirFormatReader {
 
   /** Splits a bundle into the resources of one type it carries. */
   @Nonnull
-  private static final UserDefinedFunction SPLIT =
-      functions.udf(
-          (UDF2<String, String, List<Row>>)
-              (bundle, resourceType) ->
-                  JsonBundles.split(bundle, resourceType).stream()
-                      .map(BundleResource::toRow)
-                      .toList(),
-          DataTypes.createArrayType(BundleResource.TYPE, false));
+  private static final UserDefinedFunction SPLIT = BundleResource.splitter(JsonBundles::split);
 
   @Nonnull private final SparkSession spark;
 

@@ -114,7 +114,8 @@ final class ResourceScan {
     } else if (names.size() == 2 && "meta".equals(parent) && "versionId".equals(name)) {
       versionId = XmlDocuments.value(reader);
     }
-    if (XmlDocuments.isUrnReference(reader)) {
+    // The URNs are needed only of a resource that is written out, which is one of the type wanted.
+    if (writer != null && XmlDocuments.isUrnReference(reader)) {
       urns.add(XmlDocuments.value(reader));
     }
     startFhirElement(reader);
@@ -151,9 +152,12 @@ final class ResourceScan {
     }
     final XmlMarkupWriter markup = new XmlMarkupWriter(false);
     markup.copyElement(reader, "");
-    final Map<QualifiedAttribute, String> attributes = new LinkedHashMap<>();
-    attributes.put(new QualifiedAttribute("", "value", ""), markup.markup());
-    writer.start("", "div", XmlDocuments.FHIR_NAMESPACE, Map.of(), attributes);
+    writer.start(
+        "",
+        "div",
+        XmlDocuments.FHIR_NAMESPACE,
+        Map.of(),
+        Map.of(new QualifiedAttribute("", "value", ""), markup.markup()));
     writer.end();
   }
 
@@ -167,17 +171,13 @@ final class ResourceScan {
   }
 
   /**
-   * Returns the resource as it was written.
+   * Returns the resource as it was written, where the scan was writing it.
    *
-   * @return the rewritten document
-   * @throws IllegalStateException if the scan was not writing
+   * @return the rewritten document, or empty where the scan was not writing
    */
   @Nonnull
-  String document() {
-    if (writer == null) {
-      throw new IllegalStateException("The scan did not write the resource");
-    }
-    return writer.markup();
+  Optional<String> written() {
+    return Optional.ofNullable(writer).map(XmlMarkupWriter::markup);
   }
 
   /**
@@ -201,7 +201,8 @@ final class ResourceScan {
   }
 
   /**
-   * Returns the URNs the resource's elements named {@code reference} hold, in the order they occur.
+   * Returns the URNs the resource's elements named {@code reference} hold, in the order they occur,
+   * where the scan was writing the resource, and none otherwise.
    *
    * @return the URNs
    */

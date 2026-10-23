@@ -18,11 +18,13 @@
 package au.csiro.pathling.io;
 
 import jakarta.annotation.Nonnull;
+import java.util.List;
 import java.util.Map;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
+import org.apache.spark.sql.api.java.UDF2;
 import org.apache.spark.sql.expressions.UserDefinedFunction;
 import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.DataTypes;
@@ -39,6 +41,9 @@ import org.apache.spark.sql.types.StructType;
  *     bundle has an entry for it
  */
 record BundleResource(@Nonnull String document, @Nonnull Map<String, String> references) {
+
+  /** The prefix of a reference that may name another entry of the same bundle. */
+  @Nonnull static final String URN = "urn:";
 
   /** The name of the column holding the document. */
   @Nonnull static final String DOCUMENT = "document";
@@ -58,6 +63,23 @@ record BundleResource(@Nonnull String document, @Nonnull Map<String, String> ref
 
   /** The name of the column holding a resource as Spark parsed it, before it is shaped. */
   @Nonnull static final String PARSED = "parsed";
+
+  /**
+   * Returns a function that splits a bundle into the resources of one type it carries, as an array
+   * of {@link #TYPE}, for {@link #resources}.
+   *
+   * @param split the split of one bundle, given the bundle and the type of the resources wanted
+   * @return the function
+   */
+  @Nonnull
+  static UserDefinedFunction splitter(
+      @Nonnull final UDF2<String, String, List<BundleResource>> split) {
+    return functions.udf(
+        (UDF2<String, String, List<Row>>)
+            (bundle, resourceType) ->
+                split.call(bundle, resourceType).stream().map(BundleResource::toRow).toList(),
+        DataTypes.createArrayType(TYPE, false));
+  }
 
   /**
    * Returns the resources of one type that a dataset of bundles carries, one per row, as columns
@@ -94,7 +116,7 @@ record BundleResource(@Nonnull String document, @Nonnull Map<String, String> ref
   static Column resolve(@Nonnull final Column reference, @Nonnull final Column references) {
     return functions
         .when(
-            reference.startsWith(XmlDocuments.URN),
+            reference.startsWith(URN),
             functions.coalesce(functions.try_element_at(references, reference), reference))
         .otherwise(reference);
   }

@@ -67,7 +67,7 @@ class PlainFhirXmlTest {
 
     assertEquals("Patient", read[0]);
     assertEquals(
-        scan.document(),
+        scan.written().orElseThrow(),
         read[1].replace("</div>\n</text>", "</div></text>").replace("/>\n</text>", "/></text>"));
   }
 
@@ -90,7 +90,7 @@ class PlainFhirXmlTest {
     reader.nextTag();
     scan.read(reader);
 
-    assertEquals(scan.document(), XmlDocuments.prepare(document, "Patient"));
+    assertEquals(scan.written().orElseThrow(), XmlDocuments.prepare(document, "Patient"));
   }
 
   @ParameterizedTest

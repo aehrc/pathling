@@ -24,6 +24,7 @@ import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.regex.Pattern;
 import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamException;
@@ -65,11 +66,6 @@ final class XmlDocuments {
   /** The namespace of a narrative's XHTML. */
   @Nonnull static final String XHTML_NAMESPACE = "http://www.w3.org/1999/xhtml";
 
-  /** The prefix of a reference that may name another entry of the same bundle. */
-  @Nonnull static final String URN = "urn:";
-
-  @Nonnull private static final String BUNDLE = "Bundle";
-
   @Nonnull private static final String VALUE = "value";
 
   @Nonnull private static final String TEXT = "text";
@@ -79,12 +75,10 @@ final class XmlDocuments {
   @Nonnull private static final String REFERENCE = "reference";
 
   /** An element written with no attributes and no content, which FHIR does not allow. */
-  @Nonnull
-  static final java.util.regex.Pattern EMPTY_ELEMENT =
-      java.util.regex.Pattern.compile("<[A-Za-z][A-Za-z0-9]*/>");
+  @Nonnull static final Pattern EMPTY_ELEMENT = Pattern.compile("<[A-Za-z][A-Za-z0-9]*/>");
 
   /** The start and end of a narrative as the XML writer writes it, as the text of a div. */
-  @Nonnull private static final String NARRATIVE_START = "<div>";
+  @Nonnull static final String NARRATIVE_START = "<div>";
 
   @Nonnull private static final String NARRATIVE_END = "</div>";
 
@@ -127,14 +121,10 @@ final class XmlDocuments {
     // another type is only checked.
     try {
       final XMLStreamReader reader = root(document);
-      final boolean wanted = resourceType.equals(reader.getLocalName());
-      final ResourceScan scan = new ResourceScan(wanted);
+      final ResourceScan scan = new ResourceScan(resourceType.equals(reader.getLocalName()));
       scan.read(reader);
       requireEnd(reader);
-      if (!wanted) {
-        return null;
-      }
-      return scan.needsRewrite() ? scan.document() : document;
+      return scan.written().map(written -> scan.needsRewrite() ? written : document).orElse(null);
     } catch (final XMLStreamException | IllegalArgumentException e) {
       throw malformed(document, e);
     }
@@ -165,7 +155,7 @@ final class XmlDocuments {
     }
     try {
       final XMLStreamReader reader = root(bundle);
-      if (!BUNDLE.equals(reader.getLocalName())) {
+      if (!StorableResourceType.BUNDLE.equals(reader.getLocalName())) {
         throw new IllegalArgumentException(
             "Expected a bundle and found a resource of type " + reader.getLocalName());
       }
@@ -197,8 +187,9 @@ final class XmlDocuments {
     try {
       final XMLStreamReader reader = reader(div);
       reader.nextTag();
+      final String namespace = namespace(reader);
       if (!DIV.equals(reader.getLocalName())
-          || !(namespace(reader).isEmpty() || XHTML_NAMESPACE.equals(namespace(reader)))) {
+          || !(namespace.isEmpty() || XHTML_NAMESPACE.equals(namespace))) {
         throw new IllegalArgumentException("The narrative is not an XHTML div");
       }
       final XmlMarkupWriter writer = new XmlMarkupWriter(lineDelimited);
@@ -262,7 +253,7 @@ final class XmlDocuments {
    * @return the markup and the index after the narrative, or null
    */
   @Nullable
-  static String[] narrativeAt(@Nonnull final String document, final int start) {
+  static NarrativeMarkup narrativeAt(@Nonnull final String document, final int start) {
     try {
       final XMLStreamReader reader = reader(document, start);
       reader.nextTag();
@@ -271,14 +262,7 @@ final class XmlDocuments {
           || !prefix(reader).isEmpty()) {
         return null;
       }
-      int depth = 1;
-      while (depth > 0) {
-        final int event = reader.next();
-        depth +=
-            event == XMLStreamConstants.START_ELEMENT
-                ? 1
-                : event == XMLStreamConstants.END_ELEMENT ? -1 : 0;
-      }
+      skip(reader);
       // The parser's offset is a hint, not a guarantee: it can stand where the parser stopped
       // reading ahead rather than at the end tag. So the span it gives is parsed again on its own,
       // and taken only where it is exactly one element.
@@ -291,7 +275,7 @@ final class XmlDocuments {
       final XmlMarkupWriter writer = new XmlMarkupWriter(false);
       writer.copyElement(span, "");
       requireEnd(span);
-      return new String[] {writer.markup(), Integer.toString(end)};
+      return new NarrativeMarkup(writer.markup(), end);
     } catch (final XMLStreamException | IllegalArgumentException e) {
       return null;
     }
@@ -387,10 +371,14 @@ final class XmlDocuments {
             continue;
           }
           final String type = reader.getLocalName();
-          final boolean wanted = resourceType.equals(type);
-          final ResourceScan scan = new ResourceScan(wanted);
+          final ResourceScan scan = new ResourceScan(resourceType.equals(type));
           scan.read(reader);
-          entry.setResource(type, scan, wanted);
+          entry.setResource(
+              type,
+              scan.getId().orElse(null),
+              scan.getVersionId().orElse(null),
+              scan.written().orElse(null),
+              scan.getUrns());
           // The end tag of the resource element.
           nextTag(reader);
         }
@@ -536,8 +524,11 @@ final class XmlDocuments {
 
   /** Returns whether an element is a reference that may name another entry of the bundle. */
   static boolean isUrnReference(@Nonnull final XMLStreamReader reader) {
-    final String value = reader.getAttributeValue(null, VALUE);
-    return REFERENCE.equals(reader.getLocalName()) && value != null && value.startsWith(URN);
+    if (!REFERENCE.equals(reader.getLocalName())) {
+      return false;
+    }
+    final String value = value(reader);
+    return value != null && value.startsWith(BundleResource.URN);
   }
 
   /** Returns the value attribute of the element a reader is on, or null where it has none. */
@@ -575,8 +566,9 @@ final class XmlDocuments {
       reader.nextTag();
       final String type = reader.getLocalName();
       while (nextTag(reader) == XMLStreamConstants.START_ELEMENT) {
-        if ("id".equals(reader.getLocalName()) && value(reader) != null) {
-          return type + " with id \"" + value(reader) + "\"";
+        final String id = "id".equals(reader.getLocalName()) ? value(reader) : null;
+        if (id != null) {
+          return type + " with id \"" + id + "\"";
         }
         skip(reader);
       }

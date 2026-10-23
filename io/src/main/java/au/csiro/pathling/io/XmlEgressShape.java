@@ -19,7 +19,6 @@ package au.csiro.pathling.io;
 
 import static au.csiro.pathling.utilities.SparkTypes.elementTypeOf;
 
-import au.csiro.pathling.definition.ElementDefinition;
 import au.csiro.pathling.schema.DefinitionCanonicalStructure;
 import au.csiro.pathling.schema.LayoutEntry;
 import jakarta.annotation.Nonnull;
@@ -59,9 +58,6 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  */
 final class XmlEgressShape {
 
-  /** The prefix Spark's XML writer writes a field as an attribute for. */
-  @Nonnull private static final String ATTRIBUTE = "_";
-
   private XmlEgressShape() {}
 
   /**
@@ -75,7 +71,8 @@ final class XmlEgressShape {
   static Column shape(
       @Nonnull final DefinitionCanonicalStructure resource, @Nonnull final StructType stored) {
     final List<Column> fields = new ArrayList<>();
-    fields.add(functions.lit(XmlDocuments.FHIR_NAMESPACE).alias(ATTRIBUTE + "xmlns"));
+    fields.add(
+        functions.lit(XmlDocuments.FHIR_NAMESPACE).alias(XmlIngestShape.ATTRIBUTE + "xmlns"));
     fields.addAll(fields(resource, null, true, stored, functions::col));
     return functions.struct(fields.toArray(Column[]::new));
   }
@@ -98,7 +95,7 @@ final class XmlEgressShape {
       final Column column = source.apply(name);
       final Optional<FHIRDefinedType> primitive = entry.primitiveType();
       if (XmlIngestShape.isAttribute(nodeType, isResource, name)) {
-        columns.add(column.cast(DataTypes.StringType).alias(ATTRIBUTE + name));
+        columns.add(column.cast(DataTypes.StringType).alias(XmlIngestShape.ATTRIBUTE + name));
       } else if (primitive.filter(FHIRDefinedType.XHTML::equals).isPresent()) {
         // The narrative is written as the text of its div, which XmlDocuments.finish replaces with
         // the markup it holds.
@@ -112,13 +109,13 @@ final class XmlEgressShape {
                     value ->
                         functions.when(
                             value.isNotNull(),
-                            functions.struct(text(type, value).alias(ATTRIBUTE + "value"))))
+                            functions.struct(
+                                text(type, value).alias(XmlIngestShape.ATTRIBUTE + "value"))))
                 .alias(name));
       } else {
         final DefinitionCanonicalStructure child = node.elementStructure(entry).orElseThrow();
         final StructType inner = (StructType) elementTypeOf(field.dataType());
-        final FHIRDefinedType childType =
-            entry.getElement().flatMap(ElementDefinition::getFhirType).orElse(null);
+        final FHIRDefinedType childType = XmlIngestShape.fhirType(entry);
         if (hasElements(child, inner)) {
           columns.add(
               each(
@@ -159,11 +156,9 @@ final class XmlEgressShape {
   /** Returns a primitive's value as the text of its {@code value} attribute. */
   @Nonnull
   private static Column text(@Nonnull final FHIRDefinedType type, @Nonnull final Column value) {
-    return switch (type) {
-      case BOOLEAN ->
-          functions.when(value, functions.lit("true")).otherwise(functions.lit("false"));
-      case BASE64BINARY -> functions.regexp_replace(functions.base64(value), "[\\r\\n]", "");
-      default -> value.cast(DataTypes.StringType);
-    };
+    // A base64Binary value is written as JSON writes it, and a boolean casts to its FHIR text.
+    return type == FHIRDefinedType.BASE64BINARY
+        ? PrimitiveConverters.forType(type).orElseThrow().egress(value)
+        : value.cast(DataTypes.StringType);
   }
 }

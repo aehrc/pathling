@@ -174,7 +174,7 @@ final class JsonBundles {
             versionId = parser.getText();
           } else if ("reference".equals(field)) {
             final String reference = parser.getText();
-            if (reference.startsWith(XmlDocuments.URN)) {
+            if (reference.startsWith(BundleResource.URN)) {
               urns.add(reference);
             }
           }

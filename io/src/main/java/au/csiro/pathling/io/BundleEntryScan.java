@@ -56,23 +56,6 @@ final class BundleEntryScan {
   }
 
   /**
-   * Records the entry's resource of an XML bundle.
-   *
-   * @param resourceType the type of the resource
-   * @param scan the scan the resource was read with
-   * @param wanted whether the resource is of the type wanted, so that the scan wrote it out
-   */
-  void setResource(
-      @Nonnull final String resourceType, @Nonnull final ResourceScan scan, final boolean wanted) {
-    setResource(
-        resourceType,
-        scan.getId().orElse(null),
-        scan.getVersionId().orElse(null),
-        wanted ? scan.document() : null,
-        scan.getUrns());
-  }
-
-  /**
    * Records the entry's resource.
    *
    * @param resourceType the type of the resource
@@ -131,7 +114,7 @@ final class BundleEntryScan {
   /** Returns the relative reference a URN naming this entry resolves to, where it can be named. */
   @Nonnull
   private Optional<String> target() {
-    if (fullUrl == null || !fullUrl.startsWith(XmlDocuments.URN) || type == null || id == null) {
+    if (fullUrl == null || !fullUrl.startsWith(BundleResource.URN) || type == null || id == null) {
       return Optional.empty();
     }
     return Optional.of(type + "/" + id + (versionId == null ? "" : "/_history/" + versionId));

@@ -92,14 +92,7 @@ public final class FhirXmlReader implements FhirFormatReader {
 
   /** Splits a bundle into the resources of one type it carries. */
   @Nonnull
-  private static final UserDefinedFunction SPLIT =
-      functions.udf(
-          (UDF2<String, String, List<Row>>)
-              (bundle, resourceType) ->
-                  XmlDocuments.split(bundle, resourceType).stream()
-                      .map(BundleResource::toRow)
-                      .toList(),
-          DataTypes.createArrayType(BundleResource.TYPE, false));
+  private static final UserDefinedFunction SPLIT = BundleResource.splitter(XmlDocuments::split);
 
   @Nonnull private final SparkSession spark;
 

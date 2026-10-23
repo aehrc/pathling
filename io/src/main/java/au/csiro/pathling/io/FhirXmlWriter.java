@@ -54,9 +54,6 @@ public final class FhirXmlWriter implements FhirFormatWriter {
 
   @Nonnull private static final String DOCUMENT = "document";
 
-  /** The start of a narrative as the XML writer writes it, as the text of its div. */
-  @Nonnull private static final String NARRATIVE = "<div>";
-
   @Nonnull private static final String NAME = "name";
 
   /** Removes the elements the XML writer wrote empty, and writes each narrative as XHTML. */
@@ -134,7 +131,7 @@ public final class FhirXmlWriter implements FhirFormatWriter {
     final Column result =
         functions
             .when(
-                document.rlike(EMPTY_ELEMENT).or(document.contains(NARRATIVE)),
+                document.rlike(EMPTY_ELEMENT).or(document.contains(XmlDocuments.NARRATIVE_START)),
                 FINISH.apply(document, functions.col(NAME), functions.lit(lineDelimited)))
             .otherwise(document);
     return written.select(result.alias(DOCUMENT)).as(Encoders.STRING());

@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
@@ -100,7 +101,7 @@ final class XmlElement {
                 item ->
                     item instanceof final XmlElement child
                         ? child.withoutEmptyElements().stream().map(Object.class::cast)
-                        : java.util.stream.Stream.of(item))
+                        : Stream.of(item))
             .toList();
     return new XmlElement(localName, namespace, attributes, kept);
   }
