@@ -627,8 +627,9 @@ reconciliation, legacy export, layout column.
     column that Spark widens for a contradicting value is cast to the declared
     type one value at a time, so the conformant values in it survive, and the
     contradicting value may become null, fail the read or be stored wrong;
-  - empty structures and null-only arrays on export (FR-019). Today a structure
-    emptied by non-conformant content is written as `{}`;
+  - empty structures and null-only arrays on export (FR-019). Today what is
+    stored for a structure emptied by non-conformant content is undefined
+    (FR-063), and it may be written as `{}`;
   - a value a converter cannot store, such as an integer beyond the range of an
     int, which today becomes null.
 
