@@ -221,7 +221,7 @@ conformant and survives HAPI's XML round trip, but not JSON, which forbids comme
 | 1, XML (owner, 2026-10-22) | Fail, naming the document: text that is not well-formed, text after the root, a second root | — | — |
 | 2, XML (owner, 2026-10-22) | Fail, naming the document, on a DTD (kept as XXE protection) and on a root outside the FHIR namespace. Silently ignore the rest: an element in another namespace outside a narrative is dropped before the transform, and never read as the FHIR element its local name matches; a `div` that is not XHTML is dropped; attributes in a namespace, `xsi:` included, are ignored; text inside a FHIR element is ignored; comments and processing instructions are dropped | — | Written as stored |
 | 3, XML (owner, 2026-10-22) | Content the definitions do not describe is left out without a finding, as on JSON; `contained` is dropped silently (FR-006). Types and cardinality come from the definitions (ticket 37) | — | — |
-| 4, XML (owner, 2026-10-22) | Not checked. A decimal is stored as its text; an integer or boolean that does not parse is a null for that value, where JSON nulls its column (ticket 26's follow-up) | — | Written as stored |
+| 4, XML (owner, 2026-10-22) | Not checked. A decimal is stored as its text; an integer or boolean that does not parse is a null for that value (ticket 26's follow-up) | — | Written as stored |
 
 A `pof:` carrier for undescribed content, an element or an attribute in a namespace of Pathling's own, would be a
 level 2 violation, so the follow-up of ticket 26 would need an exception for Pathling-written XML. A comment

@@ -270,8 +270,6 @@ the legacy encoder, re-import the result, and compare it with the source data.
   (FR-035). How it is stored is OQ-1.
 - A FHIR element whose JSON type contradicts the definitions: not conformant
   input, so what is stored is undefined and nothing is reported (FR-063).
-  Whether the loss is that value alone or every value of the element read with
-  it is OQ-1.
 - A resource carrying `contained` resources: dropped silently, never
   represented (FR-006).
 - A structure whose every field is null, or an array whose every element is
@@ -625,11 +623,10 @@ reconciliation, legacy export, layout column.
   - the decimal's lexical form (FR-002). Today a number passes through a double,
     so trailing zeros, exponent notation and precision beyond a double are not
     preserved;
-  - the granularity of a contradicting value (FR-063). Today one value
-    whose JSON type contradicts the definitions, or that re-types its column
-    beside conformant values, costs that element for every resource read with
-    it, and a number inferred as text beside strings is kept as text without a
-    finding;
+  - the granularity of a contradicting value (FR-063). Today a primitive
+    column that Spark widens for a contradicting value is cast to the declared
+    type one value at a time, so the conformant values in it survive, and the
+    contradicting value may become null, fail the read or be stored wrong;
   - empty structures and null-only arrays on export (FR-019). Today a structure
     emptied by non-conformant content is written as `{}`;
   - a value a converter cannot store, such as an integer beyond the range of an
@@ -637,7 +634,8 @@ reconciliation, legacy export, layout column.
 
   _Interim answer (decision 134)_: the spike measured four candidates and
   reported without a choice, which is deferred to ticket 16. Until then every
-  loss above is kept, as today's behaviour, on JSON and on XML alike. In
+  loss above is kept, as today's behaviour, on JSON and on XML alike, except
+  that XML keeps a decimal's lexical form (decision 134's note of 2026-10-22). In
   addition, empty values are handled as Spark's reader handles them. `{}` is
   dropped silently, and so are `null` and `[]`. In
   a batch, `[]` can instead be stored as an empty array and `{}` as a present

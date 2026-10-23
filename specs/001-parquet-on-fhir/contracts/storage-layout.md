@@ -121,10 +121,9 @@ conformant FHIR. Primitive ids and extensions are the exception to that
 condition: a primitive the source carried only as its metadata group, in the
 outer shape FHIR gives the group, is stored as a null of its declared type, so
 the structure holding it is kept and written as an empty object whatever other
-conformant documents are read with it (decision 72). A group in another shape
-keeps nothing, and that includes a conformant group that another document read
-with it re-typed, so the structure it alone kept then falls back to the
-condition above. The released encoder also keeps a metadata-only structure where
+conformant documents are read with it (decision 72). A group in another shape,
+or a batch holding one, is not conformant input, and the outcome is undefined
+(FR-063). The released encoder also keeps a metadata-only structure where
 the primitive is singular, and drops it where the primitive repeats, because the
 parser it reads through discards an `_x` array with no `x` array beside it. For
 conformant input that is the only source of an empty object, and a repeating

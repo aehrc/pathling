@@ -248,16 +248,16 @@ Excluded in both modes, and none of it reported (FR-016, ticket 37):
 - Primitive element ids and extensions, until M5. Where they were a structure's
   only content, the structure keeps its place and is written as an empty object,
   because the primitive is stored as a null of its declared type, where the
-  metadata group has the outer shape FHIR gives it. A group in another shape,
-  including one that another document read with it re-typed, keeps nothing
-  (decision 72).
+  metadata group has the outer shape FHIR gives it (decision 72). A group in
+  another shape, or a batch holding one, is not conformant input, and the
+  outcome is undefined (FR-063).
   A repeating primitive's positional nulls are written without the `_x` array
   they align with (decision 71's addendum).
 - Decimal lexical form — trailing zeros, exponent notation as written, and
-  precision beyond a double. This is no longer a per-path limitation: both
-  JSON ingest paths route a number through a double and therefore agree. XML
-  ingest keeps the lexical form during the interim (decision 134's note of
-  2026-10-22).
+  precision beyond a double. Between the two JSON ingest paths this is no
+  longer a per-path limitation: both route a number through a double and
+  therefore agree. XML ingest keeps the lexical form during the interim
+  (decision 134's note of 2026-10-22).
 - `base64Binary` whitespace, which FHIR permits and which decoding and
   re-encoding canonicalises away.
 - Content the dense bounds drop.

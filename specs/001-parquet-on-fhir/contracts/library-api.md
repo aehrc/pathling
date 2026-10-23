@@ -141,8 +141,8 @@ normalised, and a value beyond the precision of a double loses significant
 digits, because ingest reads a number through a double and stores its text. A
 stored decimal is numerically equal to the source, not textually identical to
 it. This was previously a limitation of the path taking resources as a dataset
-of strings alone; it now applies to the file path too, so the two agree and
-there is no per-path caveat.
+of strings alone; it now applies to the file path too, so the two JSON paths
+agree and there is no per-path caveat between them.
 
 **Behaviour change.** Content outside the definition set cannot be made to
 fail, and the strictness option is withdrawn (decision 68). Ingest checks and
