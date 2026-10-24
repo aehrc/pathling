@@ -50,6 +50,12 @@ class ParserTest {
             "name.where($this != 'x').join('|')",
             "Pipe string literal after an earlier string literal"),
         Arguments.of(
+            "name.where($this != 'x').join('|a')",
+            "Pipe string literal with a character after the pipe"),
+        Arguments.of(
+            "http://loinc.org|8867-4 = 'test|value'",
+            "Coding literal next to a pipe-containing string literal"),
+        Arguments.of(
             "gender.join('|') + name.family.first().join('|')",
             "Pipe string literal after an earlier string literal in a later invocation"),
         Arguments.of("name.empty()", "Empty function"),
