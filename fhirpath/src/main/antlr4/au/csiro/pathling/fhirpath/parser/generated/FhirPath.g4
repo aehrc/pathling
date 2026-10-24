@@ -169,11 +169,20 @@ STRING
         ;
         
 CODING
-        : CODING_COMPONENT '|' CODING_COMPONENT ( '|' CODING_COMPONENT )? ( '|' CODING_COMPONENT )? ( '|' CODING_COMPONENT )?
+        : CODING_COMPONENT '|' CODING_COMPONENT_AFTER_PIPE
+          ( '|' CODING_COMPONENT )? ( '|' CODING_COMPONENT )?
+          ( '|' CODING_COMPONENT )?
+          // Don't consume a pipe found inside a later string literal as a coding separator.
+          {_input.LA(1) != '\''}?
         ;
 
 fragment CODING_COMPONENT
         : RAW_CODING_COMPONENT
+        | QUOTED_CODING_COMPONENT
+        ;
+
+fragment CODING_COMPONENT_AFTER_PIPE
+        : ~[ '|\r\n\t(),]+
         | QUOTED_CODING_COMPONENT
         ;
 
