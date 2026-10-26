@@ -13,6 +13,8 @@
 - **Output.** A decimal column in a view's output, in Java, Python and R, becomes `DECIMAL(38,6)`. That is a change users see, so it goes in the release notes, and ticket 40 records it in the shape of SQL output.
 - **Comments and docs** that name `DECIMAL(32,6)` as the engine's type.
 
+**A quantity's value takes the fast path too (owner, 2026-10-26).** Ticket 13 stores `_value.__numeric` on a quantity, but the engine's fixed System.Quantity shape (FR-059) has no `_value`, so `QuantityValue` and `QuantityMatcher` decode the stored text. Carry the numeric annotation into that shape, amending FR-059, so that reading a quantity's `value` and arithmetic on it take the annotation where the schema carries it, and decode the text otherwise. Comparison already takes `__canonical_exact` (ticket 12).
+
 **An owner-approval gate.** Each existing test whose expected value changes is listed with its old and new values before it is changed. Known cases: `AnsiModeIndependenceTest` (`1e28`), `ColumnRepresentationSafeCastTest` (`1e30`) and `ProjectedColumnTypeTest` (the output type).
 
 **A recorded deviation (owner, 2026-10-26).** FHIRPath requires a Decimal to provide at least the range (-10^28+1)/10^8 to (10^28-1)/10^8 with a step of 10^-8, so 8 fractional digits (`DECIMAL(28,8)`). `DECIMAL(38,6)` covers the range but keeps 6 fractional digits, as `DECIMAL(32,6)` does today. Record this as a known deviation in the specification. Whether to move to `DECIMAL(38,8)`, with an upstream proposal for the annotation's type, is a follow-up issue that ticket 26 raises.
@@ -23,5 +25,6 @@
 
 - [ ] System.Decimal is `DECIMAL(38,6)`, defined once, and `DecimalCustomCoder` stays `DECIMAL(32,6)`.
 - [ ] Every engine use of a decimal type takes System.Decimal's, and `__numeric` is stored at `DECIMAL(38,6)`.
+- [ ] A quantity's value is read from its numeric annotation where the schema carries it, with FR-059 amended, and gives the same results as decoding the text.
 - [ ] Each changed test expectation is approved by the owner before it is changed.
 - [ ] The output type change is documented, and the 8-digit deviation is recorded in the specification.

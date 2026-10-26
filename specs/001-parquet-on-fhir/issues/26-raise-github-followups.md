@@ -28,6 +28,7 @@
   - the quantity `=` and `!=`, which fall back through `ArrayFilter`, `ArrayExists` and `ArrayForAll` (decision 103, and ticket 12's T096c measurement in `evidence/ticket-12-quantity-annotations.md`);
   - every view's `Generate`, and `UsCoreBloodPressures`'s Coding `Filter` with its 336 higher-order lambdas (decision 126);
   - the size of the generated methods, measured by T100o (decision 102);
+  - a decimal that itself repeats, whose plan pairs `x` with `_x` even where the schema carries no numeric annotation, and so is larger than the plan before ticket 13. No R4 element is such a decimal (owner, 2026-10-26);
   - the canonical annotation's computation. Ingest passes the whole stored quantity, extensions included, to the function that reads three of its fields. The engine computes the canonical form whenever it converts a stored quantity to engine form, even where nothing reads it, including on both sides of every pair that a pairwise comparison makes (owner, 2026-10-26).
 
   Ticket 12 rewrote nothing, because no measured cost showed. The issue asks the engine-wide question that decision 126 left open.
