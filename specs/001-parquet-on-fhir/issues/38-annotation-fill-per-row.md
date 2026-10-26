@@ -14,6 +14,8 @@ The engine stays per schema either way (FR-023): computing per row in a query pa
 
 Decide it once real kinds exist (tickets 12–14), so that the merged-dataset case can be shown with one of them.
 
+**Shown with the numeric annotation (ticket 13's review, owner, 2026-10-26).** Ticket 13 gives the case a real kind. On a dataset merged from annotated and unannotated sources, a singular decimal whose stored `__numeric` is null beside present text is read as absent, `annotate` keeps that null, and a repeating decimal whose `_x` is null or shorter than its values loses them. The owner kept the engine per schema in ticket 13, and these are this ticket's to decide. Consider them together with the conformance and validation rules: whether a null annotation beside a present value is non-conformant, and what validation or `trust` say about it (ticket 31 and the follow-up on non-conformant data beyond `trust` that ticket 26 raises).
+
 **Blocked by:** 11, and at least one of 12–14
 
 **Status:** ready-for-human
