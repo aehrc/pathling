@@ -4,7 +4,7 @@
 
 **What to build:** The checks that close #2367. It is not by itself a release (owner, 2026-10-22): what the release needs beyond it is raised as follow-up issues by ticket 26.
 
-**Blocked by:** 01–15, 17–19, 21–27, 29–32. Not 16, which decision 134 deferred: #2367 delivers the interim ingest. Nor 33, moved to the follow-up. Nor 34, moved to a follow-up issue, nor 35: #2367 does not wait for its amendments to be agreed upstream.
+**Blocked by:** 01–15, 17–19, 21–27, 29–32, 41. Not 16, which decision 134 deferred: #2367 delivers the interim ingest. Nor 33, moved to the follow-up. Nor 34, moved to a follow-up issue, nor 35: #2367 does not wait for its amendments to be agreed upstream.
 
 **Status:** ready-for-human
 

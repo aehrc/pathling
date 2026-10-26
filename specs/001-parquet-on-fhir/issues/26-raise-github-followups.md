@@ -31,6 +31,7 @@
   - the canonical annotation's computation. Ingest passes the whole stored quantity, extensions included, to the function that reads three of its fields. The engine computes the canonical form whenever it converts a stored quantity to engine form, even where nothing reads it, including on both sides of every pair that a pairwise comparison makes (owner, 2026-10-26).
 
   Ticket 12 rewrote nothing, because no measured cost showed. The issue asks the engine-wide question that decision 126 left open.
+- **FHIRPath's 8 fractional digits for Decimal (owner, 2026-10-26).** FHIRPath requires a Decimal to provide at least a step of 10^-8, and ticket 41 leaves System.Decimal at 6 fractional digits, `DECIMAL(38,6)`, to match the Parquet on FHIR specification's `numeric` annotation. The issue considers `DECIMAL(38,8)`, with a proposal upstream for the annotation's type, so that the stored annotation and the engine type still agree.
 - **Others handed on.** Any follow-up passed on by ticket 10, such as a precomputed reference key. Ticket 08's threads, such as the upstream Spark issue from T132, moved to ticket 16, which raises its own.
 
 **Blocked by:** None — can start immediately. Hand-offs from 10 are added as they arrive.
