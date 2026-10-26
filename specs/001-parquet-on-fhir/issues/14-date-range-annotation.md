@@ -12,6 +12,8 @@
 
 **Placement (decision 135, part 4).** The range annotations are `_<element>.__start` and `__end`, fields of the date's metadata group, so a repeating date's bounds share the group's alignment with it. The group is stored for them before ticket 17 stores ids and extensions. The engine reads it by pairing the element with `_x`, naming only the annotation fields it needs, so that the read prunes (`evidence/annotation-pruning.md`).
 
+**One computation for both bounds (owner, 2026-10-26).** `__start` and `__end` come from one parse of the date. Ticket 11's annotation step fills each annotation field separately, so as built it would parse every date twice. Change the step so that a kind is computed once per container, and its fields are filled from that one result. Ticket 12 raised this, where its quantity kind had two fields until the owner dropped `__canonical` (decision 137). The engine's fallback, where the schema carries no range, computes both bounds from one parse too.
+
 **Blocked by:** 11
 
 **Status:** ready-for-agent
@@ -19,3 +21,4 @@
 - [ ] Tests show the range annotations for each precision, from year to full date-time, with and without a time zone (T053).
 - [ ] A time without a timezone carries the range the engine computes for it today, shown by a test.
 - [ ] Date comparison with the annotations gives the same results as without them. With the annotation disabled, the suite passes.
+- [ ] The annotation step computes a kind once per container. A plan test shows one parse of a date for both its bounds, at ingest and in the engine's fallback.
