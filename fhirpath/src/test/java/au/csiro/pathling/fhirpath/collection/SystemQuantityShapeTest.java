@@ -24,6 +24,7 @@ import static org.junit.jupiter.params.provider.Arguments.arguments;
 import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluator;
 import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluatorBuilder;
 import au.csiro.pathling.fhirpath.parser.Parser;
+import au.csiro.pathling.schema.annotation.kinds.QuantityCanonicalKind;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.layout.PofDatasets;
 import au.csiro.pathling.utilities.SparkTypes;
@@ -32,6 +33,8 @@ import jakarta.annotation.Nonnull;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -55,10 +58,10 @@ import org.springframework.beans.factory.annotation.Autowired;
  *
  * <p>Whatever produces it, such a quantity has one fixed, complete shape: the elements of a FHIR
  * Quantity other than {@code extension}, in definition order, with its value as the text of a
- * decimal, as the Parquet on FHIR layout stores one. It carries none of the previous layout's
- * companions: no {@code DECIMAL} value with a {@code value_scale} beside it, no canonical form in
- * {@code _value_canonicalized} and {@code _code_canonicalized}, and no {@code _fid}. The canonical
- * form is computed where a quantity is compared, from its value and code.
+ * decimal, as the Parquet on FHIR layout stores one, followed by the layout's exact canonical
+ * annotation (ticket 12). It carries none of the previous layout's companions: no {@code DECIMAL}
+ * value with a {@code value_scale} beside it, no canonical form in {@code _value_canonicalized} and
+ * {@code _code_canonicalized}, and no {@code _fid}.
  *
  * @author Piotr Szul
  */
@@ -77,8 +80,13 @@ class SystemQuantityShapeTest {
             DataTypes.createStructField("comparator", DataTypes.StringType, true),
             DataTypes.createStructField("unit", DataTypes.StringType, true),
             DataTypes.createStructField("system", DataTypes.StringType, true),
-            DataTypes.createStructField("code", DataTypes.StringType, true)
+            DataTypes.createStructField("code", DataTypes.StringType, true),
+            DataTypes.createStructField(
+                "__canonical_exact", QuantityCanonicalKind.CANONICAL_EXACT_TYPE, true)
           });
+
+  /** The number of fields of the shape that are elements of a FHIR Quantity. */
+  private static final int ELEMENTS = 6;
 
   /** The field names by which a structure is recognised as a previous-layout quantity. */
   private static final List<String> LEGACY_FIELDS =
@@ -141,8 +149,8 @@ class SystemQuantityShapeTest {
       @Nonnull final String producer, @Nonnull final String expression) {
     final StructType type = (StructType) elementTypeOf(expression);
     assertThat(type.fieldNames()).doesNotContainAnyElementsOf(LEGACY_FIELDS);
-    assertThat(Arrays.stream(type.fields()).map(StructField::dataType))
-        .isNotEmpty()
+    assertThat(Arrays.stream(type.fields()).limit(ELEMENTS).map(StructField::dataType))
+        .hasSize(ELEMENTS)
         .allMatch(DataTypes.StringType::equals);
   }
 
@@ -172,7 +180,7 @@ class SystemQuantityShapeTest {
   @MethodSource("values")
   void engineBuiltQuantityHoldsItsElements(
       @Nonnull final String expression, @Nonnull final String expected) {
-    assertThat(evaluate(expression)).isEqualTo(expected);
+    assertThat(evaluateElements(expression)).isEqualTo(expected);
   }
 
   @Nonnull
@@ -234,6 +242,21 @@ class SystemQuantityShapeTest {
             .select(evaluator().evaluateToCollection(PARSER.parse(expression)).getColumnValue())
             .first();
     return Objects.toString(row.get(0));
+  }
+
+  /** Evaluates an expression, keeping only the elements of a quantity it gives. */
+  @Nonnull
+  private String evaluateElements(@Nonnull final String expression) {
+    final Object value =
+        dataset
+            .select(evaluator().evaluateToCollection(PARSER.parse(expression)).getColumnValue())
+            .first()
+            .get(0);
+    return value instanceof final Row quantity
+        ? IntStream.range(0, ELEMENTS)
+            .mapToObj(i -> Objects.toString(quantity.get(i)))
+            .collect(Collectors.joining(",", "[", "]"))
+        : Objects.toString(value);
   }
 
   @Nonnull

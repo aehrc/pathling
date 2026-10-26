@@ -11,7 +11,11 @@ Quantities carry two canonical annotations: the Parquet on FHIR specification's
 own, at its fixed-point `DECIMAL(38,6)`, so that other consumers find it under
 the specification's name; and immediately after it an exact one with the
 canonicalised unit, because the fixed-point type makes quantities that differ by
-orders of magnitude compare equal, which no engine can compare on.
+orders of magnitude compare equal, which no engine can compare on. _Amended by
+decision 137 (2026-10-26)_: quantities carry only the exact canonical
+annotation, `__canonical_exact`. Nothing reads the specification's fixed-point
+form, and because annotations are optional, leaving it out stays conformant.
+Other consumers no longer find a canonical form under the specification's name.
 
 ## Consequences
 

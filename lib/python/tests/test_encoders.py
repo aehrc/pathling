@@ -169,8 +169,8 @@ def test_encode_keeps_only_the_requested_type_from_json(spark_session, def_pathl
 def test_annotate_keeps_an_annotation_pathling_does_not_define(
     spark_session, def_pathling
 ):
-    # No kind of annotation is defined yet, so annotating stored resources changes nothing, and a
-    # field marked as an annotation is kept, as the default options say.
+    # A patient carries no quantity, so the built-in kind changes nothing, and a field marked as
+    # an annotation is kept, as the default options say.
     documents = _documents(spark_session, MIXED_JSON)
     patients = def_pathling.encode(documents, "Patient").withColumn(
         "__unknown", lit("u")

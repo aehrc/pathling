@@ -25,7 +25,6 @@ package au.csiro.pathling.encoders;
 import static org.apache.spark.sql.classic.ExpressionUtils.column;
 import static org.apache.spark.sql.classic.ExpressionUtils.expression;
 
-import au.csiro.pathling.sql.PruneSyntheticFields;
 import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.function.UnaryOperator;
@@ -417,21 +416,6 @@ public class ValueFunctions {
   public static Column variantUnwrap(
       @Nonnull final Column variantArray, @Nonnull final Column schemaRef) {
     return variantUnwrap(variantArray, schemaRef, true);
-  }
-
-  /**
-   * Removes all fields starting with '_' (underscore) from struct values.
-   *
-   * <p>This function is used to clean up internal/synthetic fields from FHIR resources before
-   * presenting them to users. Fields that don't start with underscore are preserved. Non-struct
-   * values are not affected by this function.
-   *
-   * @param col The column containing struct values to prune
-   * @return A new column with underscore-prefixed fields removed from structs
-   */
-  @Nonnull
-  public static Column pruneAnnotations(@Nonnull final Column col) {
-    return column(new PruneSyntheticFields(expression(col)));
   }
 
   /**

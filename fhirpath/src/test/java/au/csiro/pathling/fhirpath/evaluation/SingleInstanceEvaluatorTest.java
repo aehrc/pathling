@@ -148,15 +148,15 @@ class SingleInstanceEvaluatorTest {
   class SanitiseRowTests {
 
     @Test
-    void stripsSyntheticFieldsFromRow() {
-      // A row with synthetic fields (_fid, value_scale) should have them removed.
+    void stripsAnnotationsFromRow() {
+      // A row with annotations (__canonical, __canonical_exact) should have them removed.
       final StructType schema =
           new StructType(
               new StructField[] {
                 DataTypes.createStructField("value", DataTypes.StringType, true),
-                DataTypes.createStructField("_fid", DataTypes.IntegerType, true),
+                DataTypes.createStructField("__canonical", DataTypes.IntegerType, true),
                 DataTypes.createStructField("code", DataTypes.StringType, true),
-                DataTypes.createStructField("value_scale", DataTypes.IntegerType, true),
+                DataTypes.createStructField("__canonical_exact", DataTypes.IntegerType, true),
               });
 
       final Row row = new GenericRowWithSchema(new Object[] {"100", 1, "mg", 3}, schema);
@@ -171,29 +171,68 @@ class SingleInstanceEvaluatorTest {
     }
 
     @Test
-    void stripsCanonicalizedFields() {
-      // Fields like _value_canonicalized and _code_canonicalized should be stripped.
+    void keepsTheMetadataGroupOfAPrimitive() {
+      // A primitive's metadata group, _x, is FHIR JSON rather than an annotation, so it is kept.
       final StructType schema =
           new StructType(
               new StructField[] {
                 DataTypes.createStructField("value", DataTypes.StringType, true),
-                DataTypes.createStructField("_value_canonicalized", DataTypes.StringType, true),
-                DataTypes.createStructField("code", DataTypes.StringType, true),
-                DataTypes.createStructField("_code_canonicalized", DataTypes.StringType, true),
+                DataTypes.createStructField("_value", DataTypes.StringType, true),
               });
 
-      final Row row = new GenericRowWithSchema(new Object[] {"100", "100.0", "mg", "mg"}, schema);
+      final Row row = new GenericRowWithSchema(new Object[] {"100", "metadata"}, schema);
 
       final Row sanitised = SingleInstanceEvaluator.sanitiseRow(row);
 
       assertEquals(2, sanitised.schema().fields().length);
-      assertEquals("value", sanitised.schema().fields()[0].name());
-      assertEquals("code", sanitised.schema().fields()[1].name());
+      assertEquals("_value", sanitised.schema().fields()[1].name());
+      assertEquals("metadata", sanitised.get(1));
     }
 
     @Test
-    void preservesNonSyntheticFields() {
-      // A row with no synthetic fields should remain unchanged.
+    void leavesOutAMetadataGroupThatHeldOnlyAnnotations() {
+      final Row row =
+          new GenericRowWithSchema(
+              new Object[] {"1.5", metadataGroup(null, "1.5")}, primitiveSchema(false));
+
+      final Row sanitised = SingleInstanceEvaluator.sanitiseRow(row);
+
+      assertEquals(1, sanitised.schema().fields().length);
+      assertEquals("value", sanitised.schema().fields()[0].name());
+      assertEquals("{\"value\":\"1.5\"}", SingleInstanceEvaluator.rowToJson(row));
+    }
+
+    @Test
+    void nullsARepeatingMetadataGroupThatHeldOnlyAnnotationsInPlace() {
+      final Row row =
+          new GenericRowWithSchema(
+              new Object[] {
+                SqlHelpers.sql_array("1.5", "2"),
+                SqlHelpers.sql_array(metadataGroup(null, "1.5"), metadataGroup("b", "2"))
+              },
+              primitiveSchema(true));
+
+      assertEquals(
+          "{\"value\":[\"1.5\",\"2\"],\"_value\":[null,{\"id\":\"b\"}]}",
+          SingleInstanceEvaluator.rowToJson(row));
+    }
+
+    @Test
+    void leavesOutARepeatingMetadataGroupWhoseGroupsHeldOnlyAnnotations() {
+      final Row row =
+          new GenericRowWithSchema(
+              new Object[] {
+                SqlHelpers.sql_array("1.5", "2"),
+                SqlHelpers.sql_array(metadataGroup(null, "1.5"), metadataGroup(null, "2"))
+              },
+              primitiveSchema(true));
+
+      assertEquals("{\"value\":[\"1.5\",\"2\"]}", SingleInstanceEvaluator.rowToJson(row));
+    }
+
+    @Test
+    void preservesFieldsThatAreNotAnnotations() {
+      // A row with no annotations should remain unchanged.
       final StructType schema =
           new StructType(
               new StructField[] {
@@ -216,12 +255,12 @@ class SingleInstanceEvaluatorTest {
 
     @Test
     void sanitisesNestedStructs() {
-      // Synthetic fields in nested struct types should also be stripped.
+      // Annotations in nested struct types should also be stripped.
       final StructType nestedSchema =
           new StructType(
               new StructField[] {
                 DataTypes.createStructField("value", DataTypes.StringType, true),
-                DataTypes.createStructField("_fid", DataTypes.IntegerType, true),
+                DataTypes.createStructField("__canonical", DataTypes.IntegerType, true),
               });
 
       final StructType outerSchema =
@@ -229,7 +268,7 @@ class SingleInstanceEvaluatorTest {
               new StructField[] {
                 DataTypes.createStructField("display", DataTypes.StringType, true),
                 DataTypes.createStructField("nested", nestedSchema, true),
-                DataTypes.createStructField("_fid", DataTypes.IntegerType, true),
+                DataTypes.createStructField("__canonical", DataTypes.IntegerType, true),
               });
 
       final Row nestedRow = new GenericRowWithSchema(new Object[] {"inner_val", 99}, nestedSchema);
@@ -238,12 +277,12 @@ class SingleInstanceEvaluatorTest {
 
       final Row sanitised = SingleInstanceEvaluator.sanitiseRow(outerRow);
 
-      // The outer _fid should be removed.
+      // The outer annotation should be removed.
       assertEquals(2, sanitised.schema().fields().length);
       assertEquals("display", sanitised.schema().fields()[0].name());
       assertEquals("nested", sanitised.schema().fields()[1].name());
 
-      // The nested _fid should also be removed.
+      // The nested annotation should also be removed.
       final Row sanitisedNested = sanitised.getAs("nested");
       assertNotNull(sanitisedNested);
       assertEquals(1, sanitisedNested.schema().fields().length);
@@ -258,7 +297,7 @@ class SingleInstanceEvaluatorTest {
           new StructType(
               new StructField[] {
                 DataTypes.createStructField("value", DataTypes.StringType, true),
-                DataTypes.createStructField("_fid", DataTypes.IntegerType, true),
+                DataTypes.createStructField("__canonical", DataTypes.IntegerType, true),
               });
 
       final StructType outerSchema =
@@ -399,7 +438,7 @@ class SingleInstanceEvaluatorTest {
 
     @Test
     void sanitisesElementsInArrayOfStructs() {
-      // Synthetic and null-valued fields in array-of-struct elements should also be stripped.
+      // Annotations and null-valued fields in array-of-struct elements should also be stripped.
       final Row sanitised = SingleInstanceEvaluator.sanitiseRow(buildCodingOuterRow());
 
       assertEquals(1, sanitised.schema().fields().length);
@@ -461,23 +500,23 @@ class SingleInstanceEvaluatorTest {
   class RowToJsonTests {
 
     @Test
-    void jsonExcludesSyntheticFields() {
-      // The JSON output should not contain any synthetic fields.
+    void jsonExcludesAnnotations() {
+      // The JSON output should not contain any annotations.
       final StructType schema =
           new StructType(
               new StructField[] {
                 DataTypes.createStructField("value", DataTypes.StringType, true),
-                DataTypes.createStructField("_fid", DataTypes.IntegerType, true),
+                DataTypes.createStructField("__canonical", DataTypes.IntegerType, true),
                 DataTypes.createStructField("code", DataTypes.StringType, true),
-                DataTypes.createStructField("value_scale", DataTypes.IntegerType, true),
+                DataTypes.createStructField("__canonical_exact", DataTypes.IntegerType, true),
               });
 
       final Row row = new GenericRowWithSchema(new Object[] {"100", 1, "mg", 3}, schema);
 
       final String json = SingleInstanceEvaluator.rowToJson(row);
 
-      assertFalse(json.contains("_fid"));
-      assertFalse(json.contains("value_scale"));
+      assertFalse(json.contains("__canonical"));
+      assertFalse(json.contains("__canonical_exact"));
       assertTrue(json.contains("\"value\":\"100\""));
       assertTrue(json.contains("\"code\":\"mg\""));
     }
@@ -588,10 +627,11 @@ class SingleInstanceEvaluatorTest {
 
     @Test
     void jsonCorrectlyRendersArrayOfStructsAfterSanitisation() {
-      // JSON output for array-of-struct fields should not include synthetic or null-valued fields.
+      // JSON output for array-of-struct fields should not include annotations or null-valued
+      // fields.
       final String json = SingleInstanceEvaluator.rowToJson(buildCodingOuterRow());
 
-      assertFalse(json.contains("\"_fid\""));
+      assertFalse(json.contains("\"__canonical\""));
       assertFalse(json.contains("\"id\""));
       assertFalse(json.contains("\"version\""));
       assertFalse(json.contains("\"userSelected\""));
@@ -711,14 +751,14 @@ class SingleInstanceEvaluatorTest {
     }
 
     @Test
-    void rowValueWithSyntheticFieldsStripped() {
-      // Synthetic fields in Row values should be stripped in the JSON output.
+    void rowValueWithAnnotationsStripped() {
+      // Annotations in Row values should be stripped in the JSON output.
       final StructType schema =
           new StructType(
               new StructField[] {
                 DataTypes.createStructField("value", DataTypes.StringType, true),
-                DataTypes.createStructField("_fid", DataTypes.IntegerType, true),
-                DataTypes.createStructField("value_scale", DataTypes.IntegerType, true),
+                DataTypes.createStructField("__canonical", DataTypes.IntegerType, true),
+                DataTypes.createStructField("__canonical_exact", DataTypes.IntegerType, true),
               });
       final Row row = new GenericRowWithSchema(new Object[] {"100", 1, 3}, schema);
 
@@ -728,8 +768,8 @@ class SingleInstanceEvaluatorTest {
       final List<TraceResult> results = SingleInstanceEvaluator.buildTraceResults(collector);
 
       final String json = (String) results.get(0).getValues().get(0).getValue();
-      assertFalse(json.contains("_fid"));
-      assertFalse(json.contains("value_scale"));
+      assertFalse(json.contains("__canonical"));
+      assertFalse(json.contains("__canonical_exact"));
       assertTrue(json.contains("\"value\":\"100\""));
     }
 
@@ -800,7 +840,7 @@ class SingleInstanceEvaluatorTest {
               DataTypes.createStructField("code", DataTypes.StringType, true),
               DataTypes.createStructField("display", DataTypes.StringType, true),
               DataTypes.createStructField("userSelected", DataTypes.BooleanType, true),
-              DataTypes.createStructField("_fid", DataTypes.IntegerType, true),
+              DataTypes.createStructField("__canonical", DataTypes.IntegerType, true),
             });
     final StructType outerSchema =
         new StructType(
@@ -821,5 +861,34 @@ class SingleInstanceEvaluatorTest {
             },
             codingSchema);
     return new GenericRowWithSchema(new Object[] {SqlHelpers.sql_array(codingRow)}, outerSchema);
+  }
+
+  private static final StructType METADATA_GROUP_SCHEMA =
+      new StructType(
+          new StructField[] {
+            DataTypes.createStructField("id", DataTypes.StringType, true),
+            DataTypes.createStructField("__numeric", DataTypes.StringType, true),
+          });
+
+  private static Row metadataGroup(final String id, final String numeric) {
+    return new GenericRowWithSchema(new Object[] {id, numeric}, METADATA_GROUP_SCHEMA);
+  }
+
+  private static StructType primitiveSchema(final boolean repeating) {
+    return new StructType(
+        new StructField[] {
+          DataTypes.createStructField(
+              "value",
+              repeating
+                  ? DataTypes.createArrayType(DataTypes.StringType, true)
+                  : DataTypes.StringType,
+              true),
+          DataTypes.createStructField(
+              "_value",
+              repeating
+                  ? DataTypes.createArrayType(METADATA_GROUP_SCHEMA, true)
+                  : METADATA_GROUP_SCHEMA,
+              true),
+        });
   }
 }

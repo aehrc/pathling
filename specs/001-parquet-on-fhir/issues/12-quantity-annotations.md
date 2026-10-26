@@ -8,6 +8,7 @@
    - `__canonical`, inside the quantity's structure (decision 135, part 4): the specification's own, at `DECIMAL(38,6)`.
    - `__canonical_exact`, immediately after it: the exact value plus the canonicalised unit code. Without the unit, one metre and one second compare equal.
    - `fhir-schema` fixes the names and positions. The Spark types are settled here.
+   - _Amended by decision 137 (owner, 2026-10-26):_ only `__canonical_exact` is emitted, and the engine's System.Quantity carries only it.
 2. **Use them in the engine (T096a, T087a).** Quantity handling reads `__canonical_exact` where the schema carries it and computes canonicalisation otherwise. It never reads `__canonical`, whose fixed scale loses the magnitude comparison depends on (`contracts/engine-semantics.md`). This includes `QuantityEncoding.decodeStored`, so the UDF calls leave the decode where the annotation is present. Repeat T100o's measurement afterwards.
 3. **Canonicalise only UCUM quantities in comparison (T096b).** Apply UCUM canonicalisation only where the system is UCUM, as quantity search already does. Any existing test whose expected value changes is listed for the owner's approval before it is updated.
 4. **Measure the codegen fallback (T096c).** Measure what the quantity `!=` costs by falling out of whole-stage code generation, and check `=`. Measure against plans that already fall back for Coding filtering (decision 126), with enough rows for the per-row cost to show. Report to the owner before rewriting anything. If the fallback matters engine-wide, raise that in the report.
@@ -24,12 +25,79 @@
 
 **Blocked by:** 11
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Tests pin both annotations: their presence, types and order, and that quantities orders of magnitude apart do not compare equal on `_exact`.
-- [ ] Comparison with annotations gives the same results as the computed path T087 pins.
-- [ ] Each annotation can be disabled, and the engine stays correct without it.
-- [ ] T100o's measurement is repeated and recorded in the evidence.
-- [ ] The UCUM-only change is in place, and changed expectations were approved by the owner.
-- [ ] The T096c measurement is recorded and reported to the owner. Any rewrite happens only on the owner's go-ahead.
-- [ ] An engine-built System.Quantity carries the canonical annotations, FR-059 is amended to say so, and a plan test shows no canonicalisation call on the literal side of a comparison.
+- [x] Tests pin both annotations: their presence, types and order, and that quantities orders of magnitude apart do not compare equal on `_exact`.
+- [x] Comparison with annotations gives the same results as the computed path T087 pins.
+- [x] Each annotation can be disabled, and the engine stays correct without it.
+- [x] T100o's measurement is repeated and recorded in the evidence.
+- [x] The UCUM-only change is in place, and changed expectations were approved by the owner.
+- [x] The T096c measurement is recorded and reported to the owner. Any rewrite happens only on the owner's go-ahead.
+- [x] An engine-built System.Quantity carries the canonical annotations, FR-059 is amended to say so, and a plan test shows no canonicalisation call on the literal side of a comparison.
+
+## Comments
+
+### Implementation (branch issue/2832_12_quantity-annotations)
+
+**What was built, and where.**
+
+- **The kind (items 1 and 5, decision 135).** `fhir-schema/.../schema/annotation/kinds/QuantityCanonicalKind` defines both annotations and is the one built-in kind (`AnnotationRegistry.builtIn()`). `CanonicalQuantity` holds a canonical value and code. The kind's single UDF, `quantity_canonical`, takes the quantity as a structure, reads `value`, `system` and `code` by name (so a fitted quantity without `system` or `code` is annotated with nulls rather than failing analysis), maps a definite calendar duration to its UCUM equivalent in Java, and returns both annotations. `canonicalOf`, `toRow` and `toLiteral` give the same computation in Java for literals, conversions and search values. `fhir-schema` gains `ucumate-core`; its version and exclusions (Woodstox included) move to the root POM's dependency management, so `encoders` keeps exactly the same dependency (FR-051).
+- **The types, settled here.** `__canonical` is `struct<value decimal(38,6), code string>`, the specification's table; its value is rounded half up in Java, and null where it has more than 32 integer digits. `__canonical_exact` is `struct<value struct<value decimal(38,0), scale int>, code string>`: the value is a `FlexiDecimal`, normalised to at most 38 digits, so the engine compares it without conversion. `QuantityEncodingTest` pins the value type to `FlexiDecimal.DATA_TYPE` and the kind's systems and calendar durations to the engine's, because `fhir-schema` cannot see either.
+- **Ingest.** `encode` now stores both annotations at the end of every quantity of the quantity family, through ticket 11's step, unchanged. Tested in `io`'s `QuantityCanonicalAnnotationTest` (T054): presence, types and order at the root and under `component[]`, a nanogram and 100 ng equal on `__canonical` and not on `__canonical_exact`, a quantity without a code, and the one switch leaving out both.
+- **The engine (items 2 and 5).** `QuantityEncoding`'s System quantity has the two annotations after its six elements (FR-059 amended in `spec.md`, and `contracts/engine-semantics.md`). `encodeLiteral` fills them as constants; `fromStored` copies them with `ColumnFunctions.resolveOrElse` where the schema carries them and computes them otherwise, through `AnnotationKind.apply`; `encode(FhirPathQuantity)` (conversions, `toQuantity()` from a string) fills them in Java; `encodeNumeric` formats the value with `DecimalToLiteral`, replacing `withoutTrailingZeros`, and builds the canonical form from the digits of that text without calling UCUM, since UCUM canonicalises the unit `1` to itself (code review, 2026-10-26). Comparison and the set operations read `__canonical_exact` through `QuantityEncoding.canonical`. `CanonicalQuantityValue`, `CanonicalQuantityCode`, `canonicalValue`, `canonicalCode`, `ucumCodeOf` and `ucumEquivalentOf` are gone. `QuantityMatcher` uses `QuantityEncoding.storedCanonical`, `decodeValue` and the kind's `canonicalOf`, and its `value()` helper is gone.
+- **Computed once (item 5).** One UDF gives both annotations, but a comparison read the computed form twice, its code unconditionally and its value only where the codes agreed, so Spark evaluated the UDF twice per row and shared neither. `QuantityEncoding.compareCanonical` now compares two exact forms as one function of both, so the generated code holds one call site per comparison and one for two comparisons of the same quantity (evidence below). `QuantityComparator` and `QuantityMatcher` both use it, and `FlexiDecimal`'s comparators and `QuantityValue.normalizedValue` are no longer used here.
+- **UCUM only (item 3, T096b).** In its own commit, `b54ccacafd`: the kind canonicalises only a quantity whose system is UCUM, or a definite calendar duration, as FHIR's mapping to System.Quantity (FHIRPath binding, 2.9.1.3) and quantity search say. No existing test's expected value changed in any module. A new fixture `o7` in `QuantityCollectionTest`, 2 kg under `http://example.org/units`, pins the rule; it fails 14 cases without it (`= 1500 'mg'`, `> 1 'g'`, `< 1 'kg'`, `1 'kg' >= q` and the two precision cases, each over the three datasets).
+- **Tests of the fast path (T087a).** `QuantityCollectionTest` runs T087's cases over the fixtures as read, annotated by `Annotator` and written to Parquet, and annotated with either annotation removed from the schema, with the same expectations. A plan test shows that over annotated data a comparison with a literal calls no canonicalisation on either side and reads `__canonical_exact`, and that over unannotated data the stored side calls it.
+
+**Deviations, and why.**
+
+- `QuantityEncoding.decodeStored`, named in item 2, does not exist; the decode is `fromStored`, which is what now copies the annotations.
+- The comparison change (`a32bf0944d`) is beyond the letter of the ticket. It is how "compute it once" is met for comparisons without binding through Catalyst's `With` or a higher-order function, the second of which would take the projection out of code generation.
+- `DefaultYamlTestExecutor` compares only a quantity's six elements, and `SystemQuantityShapeTest` pins the new shape and compares elements only; the canonical forms are pinned where quantities are compared. `QuantityTypesTest` and `ChoiceTypeInfoTest` follow the new UDF name. These are shape changes item 5 asks for, not changed expectations of item 3.
+- The Java, Python and R docs that said no kind is defined now say only the quantity's is. The Python and R test comments changed with them; their suites were not run, since no code changed there.
+
+**Test runs.**
+
+- `mvn -o verify -pl library-api -am` at `9a58df91b2`, all green: utilities 40, fhir-schema 43, encoders 601, io 764 (1 skipped, as before), terminology 538, fhirpath 7433 (924 skipped, the exclusion baseline), library-api 329, with 0 failures and 0 errors. No exclusion became obsolete.
+- The same run without `b54ccacafd`'s test, with the UCUM-only rule, was also all green before `o7` was added, which is how no existing expectation is known to have changed.
+- Python and R were not run: their code did not change, only comments and docstrings.
+
+**Measurements** (`evidence/ticket-12-quantity-annotations.md`, scripts in `evidence/scripts/ticket-12`).
+
+- **T100o repeated.** Annotated, no expression calls the canonicalisation, and `q > 100 'mg/dL'` takes 51 ms against 61 ms computed over 10,000 Observations. Computed, a compared decode holds one call; a decode returned whole holds two, one per annotation.
+- **T096c.** `=` falls back from whole-stage code generation as `!=` does (`ArrayFilter` and `ArrayForAll`). Over 1,000,000 rows, neither costs more than the ordering `>`, which generates code: 80 to 87 ms against 84 annotated, 584 to 592 against 589 computed. Beside a Coding filter that already falls back, each adds 9 to 22 ms. The negated equality is slower than the inequality. Nothing was rewritten.
+
+**For the owner's review.**
+
+1. **How the annotations leave the engine (item 5, last bullet).** **Owner (2026-10-26):** keep them for now; `fhirPathToColumn` returns them as built, the FR-021 switches govern only what ingest stores, and the shape of SQL output is ticket 40. Proposed: keep them in a System quantity returned to a caller, as a stored quantity returned in its fitted shape keeps its stored annotations; JSON and XML rendering already leave out every `__` field, single-resource evaluation included; and the FR-021 switches govern only what ingest stores (decision 135, part 1). This is the minimal option, needing no code, and is what is built, but it changes the shape of every quantity `fhirPathToColumn` returns. `engine-semantics.md` records it as proposed.
+2. **UCUM only (item 3).** **Owner (2026-10-26):** confirmed. No existing or reference expectation changed: the only non-UCUM quantity in the reference data, `quantity-example.json` item[2], is in a fixture excluded as non-conformant. No existing expectation changed, so nothing awaits approval, but the rule changes answers for stored quantities whose system is not UCUM or is absent: they now compare only with quantities of the same system and code. The new `o7` case shows it. The criterion is left unticked for your confirmation.
+3. **T096c.** **Owner (2026-10-26):** no rewrite. A follow-up issue, added to ticket 26 on `issue/2832`, profiles and optimises every candidate together: the loss of whole-stage code generation, and how it interacts with the JIT not compiling large generated methods. On these figures the fallback does not matter, so no rewrite and no engine-wide issue is proposed. That `=` falls back too is new.
+4. **Computing twice where a decode is returned whole.** **Owner (2026-10-26):** drop `__canonical` from the engine's System.Quantity (decision 137); see below. A stored quantity without annotations returned whole (`q`, `toString()`, a union) computes the canonicalisation once per annotation, twice per row, because the two fields are resolved separately and Spark does not share a call inside a conditional. A comparison computes it once. Binding it once would need Catalyst's `With`; left for you.
+5. **Ingest calls the UDF twice per quantity.** **Owner (2026-10-26):** drop `__canonical` at ingest as well (decision 137); see below. The step applies the kind once per annotation field, and the encode plan holds two calls per quantity. Avoiding it would mean applying a kind once per container in ticket 11's API. Left for you.
+6. `FhirPathQuantity.asCanonical` still canonicalises through `encoders`' `Ucum`, but nothing in the engine calls it any more; only its tests do.
+
+### Owner refactor (2026-10-26)
+
+The rule for the fields left out of `evaluateFhirPath`'s rendering of a value without a definition was the previous encoder's (`_` prefix or `_scale` suffix). It is now the layout's annotation rule: `SingleInstanceEvaluator.sanitiseRow` calls `LayoutFields.isAnnotation`, so a field beginning with `__` is left out and a primitive's `_x` metadata group, which is FHIR JSON, is kept. Nothing the engine builds carries `_fid` or a `*_scale` field any more (FR-059; only `LayoutDetector` names `_fid`, to detect the previous layout), so none can reach the output.
+
+- **Removed, all public in `encoders`:** `au.csiro.pathling.sql.SyntheticFieldUtils` (and its test), the Catalyst expression `au.csiro.pathling.sql.PruneSyntheticFields`, and `ValueFunctions.pruneAnnotations`. Nothing outside tests used the last two, and the first only through them and the evaluator. The two `pruneAnnotations` tests in `ExpressionsCodegenTest` and the two in `fhirpath`'s `SqlFunctionsTest` went with them.
+- **Removed from `fhirpath`:** `FhirPathQuantity.asCanonical`, which only its tests called, with its helper. Its three test cases now pin `QuantityCanonicalKind.canonicalOf` instead, the computation that replaced it, so the UCUM, offset and calendar-duration cases stay covered.
+- **Tests:** `SingleInstanceEvaluatorTest`'s cases use `__canonical` and `__canonical_exact`, and the case for the previous layout's canonical companions now shows that `_value` is kept. `EvaluateFhirPathTest.quantityResultCarriesNoCanonicalAnnotation` shows that a stored quantity, a literal, a conversion and a union rendered by `evaluateFhirPath` carry neither annotation.
+- `contracts/engine-semantics.md` records the owner's decision on question 1.
+- `mvn -o verify -pl library-api -am`, all green: utilities 40, fhir-schema 43, encoders 595, io 764 (1 skipped), terminology 538, fhirpath 7431 (924 skipped), library-api 333.
+
+### Owner decisions 2–5 (2026-10-26): one canonical annotation (decision 137)
+
+Questions 1 to 5 are answered: 1 above and in the refactor section, 2 and 3 in the review list, and 4 and 5 by decision 137, added to `evidence/decisions.md`.
+
+- **Deviation from items 1 and 5, by owner decision.** A quantity carries one canonical annotation, `__canonical_exact`, where items 1 and 5 asked for "two annotations" and "the two Parquet on FHIR canonical annotations". The specification's `__canonical` is not stored at ingest and not carried in the engine's System.Quantity: nothing read it, and annotations are optional (ADR-0003). FR-005 and FR-059 are amended in `spec.md`, and `contracts/storage-layout.md`, `contracts/engine-semantics.md`, `data-model.md` and `annotation-pruning.md` (a note; its probes measured placement, not the name) follow.
+- **Code.** `QuantityCanonicalKind` has one field and one computation: its UDF returns a structure of `__canonical_exact`, so ingest computes once per quantity. `LayoutFields.CANONICAL_ANNOTATION`, `QuantityCanonicalKind.CANONICAL_TYPE`, the `DECIMAL(38,6)` computation and the kind's public `toRow` and `toLiteral` are removed. `toExactRow` and `toExactLiteral` give the engine the one annotation. `QuantityEncoding`'s shape is the six elements and `__canonical_exact`.
+- **Tests.** `QuantityCanonicalAnnotationTest` pins the one annotation: last in the quantity, at its type, no `__canonical`, orders of magnitude apart unequal, null without a code, and left out by the switch. `AnnotatorTest`'s canonical stub, `DefinitionCanonicalStructureTest` and `AnnotationFreeSuiteTest` follow the one name. `QuantityCollectionTest`'s case over one of two annotations is removed, since there is only one. `SystemQuantityShapeTest` pins the seven-field shape. `EvaluateFhirPathTest` still asserts neither name appears.
+- **Measured** (`evidence/ticket-12-quantity-annotations.md`). An unannotated quantity returned whole, stringified or in a union now holds one canonicalisation per decode, against two. Encoding holds one per stored quantity, against two. Comparisons are unchanged.
+- **Test runs.** `mvn -o verify -pl library-api -am`, all green: utilities 40, fhir-schema 43, encoders 595, io 764 (1 skipped), terminology 538, fhirpath 7416 (924 skipped, the exclusion baseline), library-api 333, with 0 failures and 0 errors. Python and R were not run; only their docstrings changed.
+
+### Code review fixes and verification (2026-10-26)
+
+A code review of the branch returned ten findings, which the owner decided one by one. Findings 1, 2, 6, 7, 8 and 9 are fixed on the branch: a rounding carry that overflowed `DECIMAL(38,0)`, also in `FlexiDecimal`; a wrong-typed quantity field reported by name (`RowFields.requireString`); one UCUM service, `UcumUnits` in `fhir-schema`; the engine's quantity rules taken from the canonical kind; the canonical form of a number promoted to unit "1" built without UCUM; and a metadata group left with only annotations omitted when tracing. Findings 3, 4 and 5 are handed on to ticket 26. Finding 10 is declined, since it is not a regression. An existing `trace()` bug with nested structure arrays is raised as #2874.
+
+Verified on the final branch: `mvn clean install -pl library-runtime -am`, all green (utilities 45, fhir-schema 49, encoders 595, io 764 with 1 skipped, terminology 538, fhirpath 7424 with 924 skipped, library-api 333); then `mvn clean install -pl lib/python,lib/R` with an empty Ivy home of its own, Python 573 passed and R 224 passed, with the retrieved `library-runtime` jar matching `library-runtime/target` by SHA-1.

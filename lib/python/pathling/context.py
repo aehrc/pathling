@@ -279,12 +279,12 @@ class PathlingContext:
                decimal, which it does by default. An annotation is a value derived from an
                element and stored with it, which a query reads rather than computing again.
                Turning one off makes the stored data narrower and never changes the answer to a
-               query, which computes an annotation the data does not carry. No kind of
-               annotation is stored in this release.
+               query, which computes an annotation the data does not carry. Of the three
+               kinds, only the canonical annotation of a quantity is stored in this release.
         :param enable_range_annotation: whether encoding stores the range annotations of a date,
                dateTime or instant, the bounds implied by its stated precision, which it does by
                default
-        :param enable_canonical_annotation: whether encoding stores the canonical annotations of a
+        :param enable_canonical_annotation: whether encoding stores the canonical annotation of a
                quantity, which it does by default
         :param recompute_annotations: whether every annotation of a kind that is turned on is
                computed again, rather than computed only where the input lacks it, which is the
@@ -589,10 +589,11 @@ class PathlingContext:
 
         Encoding annotates what it encodes, so this is for resources stored without annotations,
         such as Parquet or Delta written by another producer or with different options. Writing
-        resources does not add annotations, and neither does reading them for a query. No kind of
-        annotation is defined in this release, so with the default options the resources are
-        returned unchanged, and with ``drop_unknown_annotations`` the only effect is that fields
-        whose names begin with ``__`` are left out.
+        resources does not add annotations, and neither does reading them for a query. Only the
+        canonical annotation of a quantity is defined in this release, so with the default
+        options resources without a quantity are returned unchanged, and with
+        ``drop_unknown_annotations`` the only other effect is that fields whose names begin with
+        ``__`` are left out.
 
         :param df: a :class:`DataFrame` of resources of one type, in the Parquet on FHIR layout
         :param resource_name: the name of the type of the resources

@@ -189,10 +189,8 @@ class AnnotationFreeSuiteTest {
       List.of(
           "_effectiveDateTime.__start",
           "_issued.__start",
-          "valueQuantity.__canonical",
           "valueQuantity.__canonical_exact",
           "valueQuantity._value.__numeric",
-          "component[].valueQuantity.__canonical",
           "component[].valueQuantity.__canonical_exact",
           "component[].valueQuantity._value.__numeric");
 
@@ -223,7 +221,9 @@ class AnnotationFreeSuiteTest {
         arguments("Patient", PATIENTS, PATIENT_SLOTS),
         arguments("Observation", OBSERVATIONS, OBSERVATION_SLOTS),
         arguments(
-            "Condition", CONDITIONS, List.of("onsetAge.__canonical", "onsetAge._value.__numeric")),
+            "Condition",
+            CONDITIONS,
+            List.of("onsetAge.__canonical_exact", "onsetAge._value.__numeric")),
         arguments("ChargeItem", CHARGE_ITEMS, List.of("_factorOverride.__numeric")),
         arguments(
             "RiskAssessment",
@@ -306,7 +306,7 @@ class AnnotationFreeSuiteTest {
     assertThat(slots)
         .anyMatch(slot -> slot.endsWith(LayoutFields.NUMERIC_ANNOTATION))
         .anyMatch(slot -> slot.endsWith(LayoutFields.START_ANNOTATION))
-        .anyMatch(slot -> slot.endsWith(LayoutFields.CANONICAL_ANNOTATION));
+        .anyMatch(slot -> slot.endsWith(LayoutFields.CANONICAL_EXACT_ANNOTATION));
     assertThat(annotations).isEmpty();
   }
 
@@ -329,12 +329,14 @@ class AnnotationFreeSuiteTest {
                             component
                                 .getField("valueQuantity")
                                 .withField(
-                                    LayoutFields.CANONICAL_ANNOTATION, functions.lit("0.0005")))));
+                                    LayoutFields.CANONICAL_EXACT_ANNOTATION,
+                                    functions.lit("0.0005")))));
     final List<String> annotations = new ArrayList<>();
     scan("Patient", patients.schema(), new ArrayList<>(), annotations);
     scan("Observation", observations.schema(), new ArrayList<>(), annotations);
     assertThat(annotations)
-        .containsExactlyInAnyOrder("_birthDate.__start", "component[].valueQuantity.__canonical");
+        .containsExactlyInAnyOrder(
+            "_birthDate.__start", "component[].valueQuantity.__canonical_exact");
   }
 
   @Test

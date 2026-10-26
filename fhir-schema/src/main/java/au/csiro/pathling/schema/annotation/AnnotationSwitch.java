@@ -25,7 +25,7 @@ import java.util.function.Predicate;
  * The switch of {@link SchemaConfiguration} that governs whether an annotation kind is stored.
  *
  * <p>The set of switches is closed, as the set of kinds is: one for the numeric annotation of a
- * decimal, one for the range annotations of a date, and one for the canonical annotations of a
+ * decimal, one for the range annotations of a date, and one for the canonical annotation of a
  * quantity. A kind carried in more than one field is governed by one switch.
  */
 public final class AnnotationSwitch {
@@ -40,7 +40,7 @@ public final class AnnotationSwitch {
   public static final AnnotationSwitch RANGE =
       new AnnotationSwitch("range", SchemaConfiguration::isEnableRangeAnnotation);
 
-  /** The switch governing the canonical annotations of a quantity. */
+  /** The switch governing the canonical annotation of a quantity. */
   @Nonnull
   public static final AnnotationSwitch CANONICAL =
       new AnnotationSwitch("canonical", SchemaConfiguration::isEnableCanonicalAnnotation);

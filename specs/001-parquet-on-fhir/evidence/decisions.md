@@ -4523,3 +4523,42 @@ Content the definitions do not describe may need a schema the column cannot deri
 user-supplied definitions (D1) or types inferred from the data (D2), and an implementation that needs one may
 require the expression to be bound to the dataset or to that schema.
 
+
+## 137. The quantity carries only the exact canonical annotation
+
+Owner decision (2026-10-26), from the review of ticket 12. Amends decision 46, part 4 of decision 135 as
+it applies to the quantity, FR-005 and FR-059.
+
+Decision 46 had a quantity carry two canonical annotations: the specification's `__canonical`, at its
+fixed-point `DECIMAL(38,6)`, so that a consumer reading the specification's layout would find it, and
+Pathling's `__canonical_exact` after it, because the fixed scale makes quantities differing by orders of
+magnitude compare equal and the engine cannot compare on it. Ticket 12 built both, at ingest and in the
+engine's System.Quantity. Its review found that nothing reads `__canonical`: the engine reads only
+`__canonical_exact`, and no consumer of the specification's form is known. Carrying it cost a field in
+every stored quantity, a second canonicalisation per row where an unannotated quantity is returned whole,
+and a second UDF call per quantity at ingest, where the step applies a kind once per field.
+
+_Decision_:
+
+- **Ingest stores only `__canonical_exact`.** The quantity kind, `QuantityCanonicalKind`, has one field and
+  one computation, so ingest computes it once per quantity. `LayoutFields.CANONICAL_ANNOTATION`, the kind's
+  `__canonical` type and its `DECIMAL(38,6)` computation are removed. The FR-021 canonical switch still
+  governs the kind.
+- **The engine's System.Quantity carries only `__canonical_exact`.** A literal, a conversion, a promoted
+  number and a stored quantity taken as a System one fill it as before; nothing fills `__canonical`.
+- **The specification's form is no longer offered.** This is acceptable because the Parquet on FHIR
+  specification does not require its annotations (ADR-0003): annotations are optional, and the
+  specification describes them for interoperability. A consumer that wants the specification's form
+  computes it from the value and code, as it must for any data written without annotations.
+- **FR-005** now requires one canonical annotation, the exact one with the canonicalised unit, and
+  **FR-059** requires the System.Quantity shape to carry it after its elements.
+
+_Consequences_:
+
+- `contracts/storage-layout.md` records a substitution rather than an addition: `__canonical_exact` is
+  emitted in place of the specification's annotation, and is replaced by it if the specification adopts a
+  magnitude-preserving representation.
+- `contracts/engine-semantics.md` and `data-model.md` describe one annotation. The measurements in
+  `annotation-pruning.md` named the quantity's annotation `__canonical`; they depend on its placement, not
+  its name, and stand.
+- Decisions 46 and 135 are not rewritten. Tickets 14, 26 and 35 are updated on `issue/2832`.

@@ -19,29 +19,26 @@ Deviations, all permitted by the specification:
 | Primitive ids and extensions | The specification's `_field` groups. |
 | Extensions on complex elements | Inline `extension` groups. |
 | Date ranges | The specification's start and end annotations. |
-| Quantity canonicalisation | **Addition.** The specification's `__canonical` is emitted inside the quantity's structure at the type the specification gives it, followed immediately by `__canonical_exact`, which carries the same canonicalisation at a precision that preserves magnitude. Both are present, in that order, **from M5** — the layout ships
+| Quantity canonicalisation | **Substitution.** The specification's `__canonical` is not emitted. `__canonical_exact` is emitted in its place, inside the quantity's structure, carrying the same canonicalisation at a precision that preserves magnitude, with the canonicalised unit (decision 137). It is present **from M5** — the layout ships
 annotation-free at the flip and each annotation kind lands afterwards (FR-021,
 decision 50). The names, types and positions below are fixed from Phase 3 and do
-not change when the values arrive. The second exists because the specification's fixed-point type makes quantities differing by orders of magnitude compare equal, which the engine cannot compare on; the first is what an interchange consumer reads. Non-standard annotations are permitted. Raised upstream; `_canonical_exact` is withdrawn if the specification adopts a magnitude-preserving representation. |
+not change when the values arrive. It replaces the specification's because the specification's fixed-point type makes quantities differing by orders of magnitude compare equal, which the engine cannot compare on, and nothing reads the specification's form. Annotations are optional and non-standard ones are permitted, so a consumer of the specification computes what it needs. Raised upstream; `__canonical_exact` is replaced by the specification's annotation if the specification adopts a magnitude-preserving representation. |
 | `contained` | Not represented. Dropped silently (FR-006). |
 | `Bundle` | Never stored as a resource type. Accepted as a transport carrier and exploded to per-type tables. |
 
-### The two quantity annotations
+### The quantity annotation
 
-A quantity carries `__canonical` and then `__canonical_exact` as the last fields
-of its own structure, in that order, once annotations are emitted in M5. Every
-annotation lives in the container its element owns: a primitive's in its `_x`
-group, after `id` and `extension`, and a complex element's in its structure
-(decision 135, amending the specification's sibling placement by ticket 35). The order is fixed rather than incidental: field order is part of
-the type, so a consumer comparing structures positionally depends on it, and an
-interchange consumer reading the specification's layout finds the
-specification's annotation first.
+A quantity carries `__canonical_exact` as the last field of its own structure,
+once annotations are emitted in M5. Every annotation lives in the container its
+element owns: a primitive's in its `_x` group, after `id` and `extension`, and a
+complex element's in its structure (decision 135, amending the specification's
+sibling placement by ticket 35).
 
-`__canonical` is the specification's annotation and carries what the
-specification says it carries. `__canonical_exact` is Pathling's, and
-carries the same canonicalisation without the fixed scale. Its stored shape is
-settled with the encoder rather than here, under one constraint: it carries the
-**canonicalised unit code alongside the value**. Canonicalisation maps to a base
+The specification's `__canonical` is not emitted (decision 137).
+`__canonical_exact` is Pathling's, and carries the canonicalisation without the
+specification's fixed scale, as `struct<value struct<value decimal(38,0), scale
+int>, code string>` (ticket 12). It carries the **canonicalised unit code
+alongside the value**. Canonicalisation maps to a base
 unit, and a value without that unit makes one metre and one second compare
 equal, so a single value is not sufficient. The previous Pathling layout used
 two fields for exactly this reason.

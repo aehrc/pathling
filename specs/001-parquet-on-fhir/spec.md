@@ -43,7 +43,7 @@ for are named on ticket 28.
 A user loads FHIR JSON or XML, as resources or bundles, and the data is written in
 the PoF layout: decimals as text with a numeric annotation, primitive ids and
 extensions in metadata groups, extensions inline, dates with range annotations,
-and quantities with both canonical annotations.
+and quantities with the exact canonical annotation.
 
 **Independent Test**: Load a corpus; inspect the stored schema and values against
 the specification, without FHIRPath evaluation.
@@ -311,10 +311,11 @@ Identifiers are stable. FR-015, FR-018 and FR-020 are retired and not reused.
   MUST be stored inline. No root-level extension map and no per-composite field
   id is emitted.
 - **FR-004**: Dates MUST carry the specification's range annotations.
-- **FR-005**: Quantities MUST carry two canonical annotations: the
-  specification's own, at its fixed-point type, and immediately after it an
-  exact one carrying the canonicalised unit
-  ([ADR-0003](../../docs/adr/0003-annotations-are-optional.md)).
+- **FR-005**: Quantities MUST carry one canonical annotation,
+  `__canonical_exact`: the canonicalised value at a precision that preserves
+  magnitude, with the canonicalised unit. The specification's fixed-point
+  `__canonical` is not emitted, since annotations are optional
+  ([ADR-0003](../../docs/adr/0003-annotations-are-optional.md), decision 137).
 - **FR-006**: `contained` resources MUST NOT be represented. They are dropped
   silently.
 - **FR-007**: `Bundle` MUST NOT be stored as a resource type.
@@ -470,7 +471,10 @@ Identifiers are stable. FR-015, FR-018 and FR-020 are retired and not reused.
   shape of the data it came from, and this MUST be documented. A complex value
   of a System type MUST have one fixed, complete shape, whatever produced it.
   The engine-built `System.Quantity` and `System.Coding` MUST NOT carry the
-  legacy layout's shape, including its `_fid` field. Distinguishing
+  legacy layout's shape, including its `_fid` field. The `System.Quantity`
+  shape MUST include the layout's exact canonical annotation,
+  `__canonical_exact`, after its elements, filled whatever produced it
+  (ticket 12, decision 137). Distinguishing
   `System.Coding` from `FHIR.Coding` in the type system is
   [#2804](https://github.com/aehrc/pathling/issues/2804).
 

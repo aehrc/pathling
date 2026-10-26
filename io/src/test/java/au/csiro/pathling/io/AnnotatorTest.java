@@ -46,16 +46,15 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 /**
- * Tests the annotation step with stub kinds, one for each switch, since no kind is built in yet
- * (T055, decision 135). Each stub marks the value it is computed from, so that a computed
- * annotation is told from a stored one.
+ * Tests the annotation step with stub kinds, one for each switch, so that every switch is tested
+ * whichever kinds are built in (T055, decision 135). Each stub marks the value it is computed from,
+ * so that a computed annotation is told from a stored one.
  */
 class AnnotatorTest {
 
   private static final String NUMERIC = LayoutFields.NUMERIC_ANNOTATION;
   private static final String START = LayoutFields.START_ANNOTATION;
   private static final String END = LayoutFields.END_ANNOTATION;
-  private static final String CANONICAL = LayoutFields.CANONICAL_ANNOTATION;
   private static final String CANONICAL_EXACT = LayoutFields.CANONICAL_EXACT_ANNOTATION;
 
   private static final List<AnnotationKind> STUBS =
@@ -71,11 +70,9 @@ class AnnotatorTest {
                   functions.struct(mark(value, "<").alias(START), mark(value, ">").alias(END))),
           stub(
               AnnotationSwitch.CANONICAL,
-              List.of(CANONICAL, CANONICAL_EXACT),
+              List.of(CANONICAL_EXACT),
               quantity ->
-                  functions.struct(
-                      mark(quantity.getField("unit"), "=").alias(CANONICAL),
-                      mark(quantity.getField("unit"), "==").alias(CANONICAL_EXACT))));
+                  functions.struct(mark(quantity.getField("unit"), "=").alias(CANONICAL_EXACT))));
 
   private static final String OBSERVATION =
       "{\"resourceType\":\"Observation\",\"id\":\"o1\",\"status\":\"final\","
@@ -177,14 +174,11 @@ class AnnotatorTest {
       assertEquals("2020-01<", value(annotated, "_effectiveDateTime." + START));
       assertEquals("2020-01>", value(annotated, "_effectiveDateTime." + END));
     }
-    assertEquals(canonical, fields(annotated, "valueQuantity").contains(CANONICAL));
+    assertEquals(canonical, fields(annotated, "valueQuantity").contains(CANONICAL_EXACT));
     if (canonical) {
       final List<String> quantity = fields(annotated, "valueQuantity");
-      assertEquals(
-          List.of(CANONICAL, CANONICAL_EXACT),
-          quantity.subList(quantity.size() - 2, quantity.size()));
-      assertEquals("kg=", value(annotated, "valueQuantity." + CANONICAL));
-      assertEquals("kg==", value(annotated, "valueQuantity." + CANONICAL_EXACT));
+      assertEquals(CANONICAL_EXACT, quantity.get(quantity.size() - 1));
+      assertEquals("kg=", value(annotated, "valueQuantity." + CANONICAL_EXACT));
     }
   }
 
@@ -251,8 +245,8 @@ class AnnotatorTest {
     assertEquals("__unknown", columns.get(columns.size() - 1));
     final List<String> quantity = fields(annotated, "valueQuantity");
     assertEquals(
-        List.of(CANONICAL, CANONICAL_EXACT, "__unknown"),
-        quantity.subList(quantity.size() - 3, quantity.size()));
+        List.of(CANONICAL_EXACT, "__unknown"),
+        quantity.subList(quantity.size() - 2, quantity.size()));
     assertEquals("u", value(annotated, "valueQuantity.__unknown"));
   }
 
@@ -363,13 +357,16 @@ class AnnotatorTest {
   }
 
   @Test
-  void leavesResourcesAsTheyAreWithTheBuiltInKinds() {
-    final Dataset<Row> resources = read("Observation", OBSERVATION);
+  void leavesResourcesTheBuiltInKindsDoNotAnnotateAsTheyAre() {
+    // The built-in kind annotates quantities, and this patient has none.
+    final Dataset<Row> resources =
+        read(
+            "Patient", "{\"resourceType\":\"Patient\",\"id\":\"p1\",\"birthDate\":\"1974-12-25\"}");
 
     assertSame(
         resources,
         Annotator.of(DEFINITIONS, SchemaConfiguration.builder().build())
-            .annotate("Observation", resources));
+            .annotate("Patient", resources));
   }
 
   /** Adds a stored range start beside the effective date, as an earlier annotation would have. */

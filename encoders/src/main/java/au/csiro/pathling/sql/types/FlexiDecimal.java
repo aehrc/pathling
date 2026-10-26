@@ -26,6 +26,7 @@ import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.math.BigDecimal;
+import java.math.MathContext;
 import java.math.RoundingMode;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Row;
@@ -164,14 +165,11 @@ public final class FlexiDecimal {
           decimal.scale() < 0 ? decimal.setScale(0, RoundingMode.UNNECESSARY) : decimal;
       // This may be may have too many digits
       if (adjustedValue.precision() > MAX_PRECISION) {
-        // we need to adjust the scale to fit into the desired precision
-        final int desiredScale =
-            adjustedValue.scale() - (adjustedValue.precision() - MAX_PRECISION);
-        if (desiredScale >= 0) {
-          return adjustedValue.setScale(desiredScale, RoundingMode.HALF_UP);
-        } else {
-          return null;
-        }
+        // Rounding to a precision rather than to a scale accounts for a carry, which adds a
+        // digit, as 0.99…9 does in rounding to 1.00…0.
+        final BigDecimal rounded =
+            adjustedValue.round(new MathContext(MAX_PRECISION, RoundingMode.HALF_UP));
+        return rounded.scale() >= 0 ? rounded : null;
       } else {
         return adjustedValue;
       }

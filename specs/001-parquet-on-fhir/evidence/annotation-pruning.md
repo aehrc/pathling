@@ -1,5 +1,9 @@
 # Whether Parquet reads only an annotation, in each placement
 
+_Note (2026-10-26)._ The probes name the quantity's annotation `__canonical`, as the layout did
+when they were run. Since decision 137 a quantity carries `__canonical_exact` only. What is read
+depends on where an annotation is placed, not on its name, so the results stand for it.
+
 Measured for decision 135, part 4, which keeps a primitive's annotations in its
 `_x` group and a complex element's in its own structure, against the sibling
 placement of the specification, which keeps them as `__<element>_<annotation>`

@@ -91,9 +91,10 @@ pathling_encode_bundle <- function(pc, df, resource_name, input_type = NULL, col
 #' \code{\link{pathling_connect}} say. Encoding annotates what it encodes, so this is for resources
 #' stored without annotations, such as Parquet or Delta written by another producer or with
 #' different options. Writing resources does not add annotations, and neither does reading them
-#' for a query. No kind of annotation is defined in this release, so with the default options the
-#' resources are returned unchanged, and with \code{drop_unknown_annotations} the only effect is that
-#' fields whose names begin with "__" are left out.
+#' for a query. Only the canonical annotation of a quantity is defined in this release, so with
+#' the default options resources without a quantity are returned unchanged, and with
+#' \code{drop_unknown_annotations} the only other effect is that fields whose names begin with "__"
+#' are left out.
 #'
 #' @param pc The Pathling context object.
 #' @param df A Spark DataFrame of resources of one type, in the Parquet on FHIR layout.

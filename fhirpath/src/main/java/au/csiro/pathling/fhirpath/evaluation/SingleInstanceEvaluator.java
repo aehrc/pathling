@@ -32,7 +32,7 @@ import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.evaluation.SingleInstanceEvaluationResult.TraceResult;
 import au.csiro.pathling.fhirpath.evaluation.SingleInstanceEvaluationResult.TypedValue;
 import au.csiro.pathling.fhirpath.parser.Parser;
-import au.csiro.pathling.sql.SyntheticFieldUtils;
+import au.csiro.pathling.schema.LayoutFields;
 import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -42,6 +42,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import lombok.experimental.UtilityClass;
 import org.apache.spark.sql.Column;
@@ -405,12 +406,12 @@ public class SingleInstanceEvaluator {
   }
 
   /**
-   * Converts a Spark Row to a JSON string representation, stripping synthetic fields first. A
-   * result carrying its definition is rendered by the layout-to-JSON transform instead, so this is
-   * reached by a value that carries none, which is a value collected by {@code trace()}.
+   * Converts a Spark Row to a JSON string representation, stripping annotations first. A result
+   * carrying its definition is rendered by the layout-to-JSON transform instead, so this is reached
+   * by a value that carries none, which is a value collected by {@code trace()}.
    *
    * @param row the row to convert
-   * @return a JSON string with synthetic fields removed
+   * @return a JSON string with annotations removed
    */
   @Nonnull
   static String rowToJson(@Nonnull final Row row) {
@@ -419,11 +420,11 @@ public class SingleInstanceEvaluator {
   }
 
   /**
-   * Strips synthetic fields and null-valued fields from a Spark Row, recursively handling nested
-   * struct types.
+   * Strips annotations, the fields whose names begin with {@code __}, and null-valued fields from a
+   * Spark Row, recursively handling nested struct types.
    *
    * @param row the row to sanitise
-   * @return a new Row with synthetic and null-valued fields removed
+   * @return a new Row with annotations and null-valued fields removed
    */
   @Nonnull
   static Row sanitiseRow(@Nonnull final Row row) {
@@ -436,7 +437,7 @@ public class SingleInstanceEvaluator {
     final List<Object> filteredValues = new ArrayList<>();
 
     for (final StructField field : schema.fields()) {
-      if (!SyntheticFieldUtils.isSyntheticField(field.name())) {
+      if (!LayoutFields.isAnnotation(field.name())) {
         final Object value = row.get(row.fieldIndex(field.name()));
         // Skip fields with null values.
         if (value != null) {
@@ -451,7 +452,7 @@ public class SingleInstanceEvaluator {
 
   /**
    * Sanitises a single field value, appending the resulting field and value to the supplied lists.
-   * Nested rows and array-of-struct elements are recursively sanitised so that synthetic and null
+   * Nested rows and array-of-struct elements are recursively sanitised so that annotations and null
    * fields are stripped at every depth.
    *
    * @param field the original struct field
@@ -470,6 +471,11 @@ public class SingleInstanceEvaluator {
       // the nested row's own schema) to map field names positionally.
       case final Row nestedRow -> {
         final Row sanitisedNested = sanitiseRow(nestedRow);
+        // A structure left with no fields, such as a metadata group that held only annotations, is
+        // left out like a null one.
+        if (sanitisedNested.size() == 0) {
+          return;
+        }
         filteredFields.add(
             new StructField(
                 field.name(), sanitisedNested.schema(), field.nullable(), field.metadata()));
@@ -501,17 +507,29 @@ public class SingleInstanceEvaluator {
       @Nonnull final List<Object> filteredValues) {
     final List<Object> sanitisedElements = new ArrayList<>(seq.length());
     StructType sanitisedElementSchema = null;
+    boolean emptied = false;
     for (int i = 0; i < seq.length(); i++) {
       final Object element = seq.apply(i);
       if (element instanceof final Row elementRow) {
         final Row sanitisedElement = sanitiseRow(elementRow);
-        sanitisedElements.add(sanitisedElement);
-        if (sanitisedElementSchema == null) {
-          sanitisedElementSchema = sanitisedElement.schema();
+        // An element left with no fields becomes null rather than being removed, so that the
+        // positions of the elements after it, which align with another array, do not move.
+        if (sanitisedElement.size() == 0) {
+          sanitisedElements.add(null);
+          emptied = true;
+        } else {
+          sanitisedElements.add(sanitisedElement);
+          if (sanitisedElementSchema == null) {
+            sanitisedElementSchema = sanitisedElement.schema();
+          }
         }
       } else {
         sanitisedElements.add(element);
       }
+    }
+    // An array whose structures were all left with no fields is left out like a null one.
+    if (emptied && sanitisedElements.stream().allMatch(Objects::isNull)) {
+      return;
     }
     if (sanitisedElementSchema != null && field.dataType() instanceof final ArrayType arrayType) {
       filteredFields.add(

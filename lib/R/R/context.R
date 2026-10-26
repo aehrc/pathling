@@ -101,11 +101,11 @@ StorageType <- list(
 #'   which it does by default. An
 #'   annotation is a value derived from an element and stored with it, which a query reads rather
 #'   than computing again. Turning one off makes the stored data narrower and never changes the
-#'   answer to a query, which computes an annotation the data does not carry. No kind of
-#'   annotation is stored in this release.
+#'   answer to a query, which computes an annotation the data does not carry. Of the three
+#'   kinds, only the canonical annotation of a quantity is stored in this release.
 #' @param enable_range_annotation Whether encoding stores the range annotations of a date,
 #'   dateTime or instant, the bounds implied by its stated precision, which it does by default
-#' @param enable_canonical_annotation Whether encoding stores the canonical annotations of a
+#' @param enable_canonical_annotation Whether encoding stores the canonical annotation of a
 #'   quantity, which it does by default
 #' @param recompute_annotations Whether every annotation of a kind that is turned on is computed
 #'   again, rather than computed only where the input lacks it, which is the default. Recomputing

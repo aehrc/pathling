@@ -581,8 +581,9 @@ public class PathlingContextTest {
 
     final Dataset<Row> annotated = pathlingContext.annotate(stored, "Patient");
 
-    // No kind is built in yet, so the step leaves out the annotation Pathling does not define, as
-    // the configuration says, and changes nothing else.
+    // A patient carries no quantity, so the built-in kind has nothing to annotate. The step leaves
+    // out the annotation Pathling does not define, as the configuration says, and changes nothing
+    // else.
     assertEquals(stored.drop("__unknown").schema(), annotated.schema());
   }
 

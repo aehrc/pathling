@@ -126,21 +126,36 @@ whatever produced it (FR-059):
 | `unit` | string | The human-readable unit. |
 | `system` | string | The system of the unit's code. |
 | `code` | string | The unit's code. |
+| `__canonical_exact` | struct of `value` (struct of the unscaled `value` decimal(38,0) and its `scale` int) and `code` string | The exact canonical annotation, null where the quantity has no canonical form. |
 
 These are the elements of a FHIR Quantity other than `extension`, in definition
-order, and every one is present. A System quantity has no extensions. Nothing
-derived is carried: no decimal value with a scale companion, no canonical form
-and no field identifier, so an engine-built quantity never looks like a
-previous-layout one. The decimal value and the canonical form are computed from
-the value and the code where a quantity is compared or converted, as they are
-for a stored quantity.
+order, and every one is present, followed by the layout's exact canonical
+annotation (ticket 12, amending FR-059). A System quantity has no extensions. It carries no decimal value with a
+scale companion and no field identifier, so an engine-built quantity never looks
+like a previous-layout one. The decimal value is decoded from the value's text
+where a quantity is computed with.
+
+The canonical form is carried so that it is computed once for a quantity and
+travels with it through unions, arrays and lambdas. A literal has it as a
+constant, filled when the plan is built. A stored quantity taken as a System one
+copies its stored `__canonical_exact` where the schema carries it and computes it
+otherwise. A conversion or a number promoted to a quantity computes it.
+Comparison and the set operations read the carried form rather than
+canonicalising again. Where it is computed, it is computed by the quantity kind
+that ingest stores it with (decision 135).
+
+The exact canonical annotation leaves the engine with the System quantity (owner,
+2026-10-26): a column returned to a caller keeps it, as a stored quantity returned in its fitted
+shape keeps the annotations it is stored with. JSON and XML egress leave out
+every `__` field, and so does the rendering of a single-resource evaluation. The
+annotation switches govern only what ingest stores (decision 135, part 1), so
+they do not change this shape. The shape of SQL output is specified by ticket 40.
 
 Comparison across units uses the `__canonical_exact` annotation when present and
 computes the canonicalisation when not. That annotation's precision preserves
 magnitude, so quantities differing by orders of magnitude do not compare equal.
-The specification's `__canonical` annotation, before it in the quantity's
-structure, is written for interchange; the engine does not read it, because its
-fixed scale loses the magnitude the comparison depends on.
+The specification's `__canonical` annotation, whose fixed scale loses that
+magnitude, is neither stored nor carried (decision 137).
 
 ## Coding and terminology
 

@@ -50,10 +50,8 @@ public class SchemaConfiguration {
   @Builder.Default private boolean enableRangeAnnotation = true;
 
   /**
-   * Whether the canonical annotations of a quantity are stored, named by {@link
-   * LayoutFields#CANONICAL_ANNOTATION} and {@link LayoutFields#CANONICAL_EXACT_ANNOTATION}. They
-   * are one annotation in two representations, the specification's fixed-point form and a
-   * magnitude-preserving one, so one switch governs the pair.
+   * Whether the canonical annotation of a quantity is stored, named by {@link
+   * LayoutFields#CANONICAL_EXACT_ANNOTATION}.
    */
   @Builder.Default private boolean enableCanonicalAnnotation = true;
 

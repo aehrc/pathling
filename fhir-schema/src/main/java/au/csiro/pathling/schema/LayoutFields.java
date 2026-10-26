@@ -36,10 +36,8 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  *   <li>An annotation lives in the container its element already owns (decision 135, part 4). A
  *       primitive's annotations are the last fields of its metadata group, after {@code id} and
  *       {@code extension}, and a complex element's are the last fields of its own structure, after
- *       its elements. Where a type carries more than one — the two bounds of a date range, or the
- *       two canonical forms of a quantity — their order is fixed here too: the specification's
- *       canonical annotation precedes the magnitude-preserving one, so a consumer reading the
- *       specification's layout meets the specification's annotation first.
+ *       its elements. Where a type carries more than one, the two bounds of a date range, their
+ *       order is fixed here too.
  * </ul>
  *
  * <p>Whether an annotation is actually written is decided elsewhere: annotations are optional by
@@ -81,22 +79,13 @@ public final class LayoutFields {
   @Nonnull public static final String END_ANNOTATION = ANNOTATION_PREFIX + "end";
 
   /**
-   * The annotation the Parquet on FHIR specification gives the canonical form of a quantity. It is
-   * emitted under the specification's own name, because a consumer reading the specification's
-   * layout must find the specification's annotation where the specification says it is.
-   */
-  @Nonnull public static final String CANONICAL_ANNOTATION = ANNOTATION_PREFIX + "canonical";
-
-  /**
    * The annotation carrying the canonical form of a quantity at a precision that preserves
    * magnitude.
    *
-   * <p>It accompanies the specification's annotation rather than replacing it. The specification
-   * types its value as a fixed-point decimal whose absolute precision is constant regardless of
-   * magnitude, so quantities differing by orders of magnitude compare equal and no engine can
-   * compare on it. That argues for a second annotation, not against the first: dropping the
-   * specification's form would make the files unreadable to every other implementation of the
-   * layout, for a saving of one field in a quantity.
+   * <p>It is the only canonical annotation a quantity carries. The specification's {@code
+   * __canonical} types its value as a fixed-point decimal whose absolute precision is constant
+   * regardless of magnitude, so quantities differing by orders of magnitude compare equal and no
+   * engine can compare on it. Annotations are optional, so it is not offered (decision 137).
    */
   @Nonnull
   public static final String CANONICAL_EXACT_ANNOTATION = ANNOTATION_PREFIX + "canonical_exact";
@@ -154,7 +143,7 @@ public final class LayoutFields {
       return List.of(START_ANNOTATION, END_ANNOTATION);
     }
     if (CANONICAL_ANNOTATED.contains(code)) {
-      return List.of(CANONICAL_ANNOTATION, CANONICAL_EXACT_ANNOTATION);
+      return List.of(CANONICAL_EXACT_ANNOTATION);
     }
     return List.of();
   }

@@ -15,7 +15,7 @@
   - ingest's presets over decision 133's repair levels and policies, and ticket 16's per-value validation;
   - the decimal grammar in `fhir-schema`, beside ticket 31's date grammar, and its use in decimal decoding and at ingest;
   - the engine's handling of invalid values and layout shapes, from ticket 31's former design (`issues/31-engine-value-tolerance-modes.md` at `cbce542dd5`, and "Modes" in `evidence/ingress-strictness/README.md`) and ticket 33;
-  - a schema that does not conform, level 3 in the engine, and whether `trust` checks it;
+  - a schema that does not conform, level 3 in the engine, and whether `trust` checks it. This includes an annotation stored with the wrong type, such as a `__canonical_exact` that is not the kind's structure, and an element stored with the wrong type, such as a `Quantity.value` that is not text. Under `trust` today the first fails the query with Spark's own error, and the second fails the canonical computation with an `IllegalArgumentException` naming the field (owner, 2026-10-26);
   - whether the engine uses an annotation stored by another producer or recomputes it, which decision 135 assigns to the modes rather than to ticket 11's *recompute* setting;
   - the exceptions still open: `null` and `[]` in JSON, the empty string's level, and whether trimming whitespace is lossless;
   - FR-063, rewritten to match the softened principles 2 and 5;
@@ -27,7 +27,8 @@
 - **Profiling and optimising query performance (owner, 2026-10-26).** What the engine loses when a plan falls out of whole-stage code generation, and how that interacts with the JIT compiler declining to compile large generated methods (`-XX:-DontCompileHugeMethods`, 8,000 bytecodes). The issue profiles and optimises every candidate, not one operator at a time. Candidates known so far:
   - the quantity `=` and `!=`, which fall back through `ArrayFilter`, `ArrayExists` and `ArrayForAll` (decision 103, and ticket 12's T096c measurement in `evidence/ticket-12-quantity-annotations.md`);
   - every view's `Generate`, and `UsCoreBloodPressures`'s Coding `Filter` with its 336 higher-order lambdas (decision 126);
-  - the size of the generated methods, measured by T100o (decision 102).
+  - the size of the generated methods, measured by T100o (decision 102);
+  - the canonical annotation's computation. Ingest passes the whole stored quantity, extensions included, to the function that reads three of its fields. The engine computes the canonical form whenever it converts a stored quantity to engine form, even where nothing reads it, including on both sides of every pair that a pairwise comparison makes (owner, 2026-10-26).
 
   Ticket 12 rewrote nothing, because no measured cost showed. The issue asks the engine-wide question that decision 126 left open.
 - **Others handed on.** Any follow-up passed on by ticket 10, such as a precomputed reference key. Ticket 08's threads, such as the upstream Spark issue from T132, moved to ticket 16, which raises its own.
