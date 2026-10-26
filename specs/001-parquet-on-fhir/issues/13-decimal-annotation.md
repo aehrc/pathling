@@ -8,6 +8,8 @@
 
 **Placement (decision 135, part 4).** The numeric annotation is `_<element>.__numeric`, a field of the decimal's metadata group, so the group is stored for it before ticket 17 stores ids and extensions. The engine reads it by pairing the element with `_x`, naming only the annotation fields it needs, so that the read prunes (`evidence/annotation-pruning.md`).
 
+**The annotation's type (owner, 2026-10-26).** `__numeric` takes the engine's System.Decimal type, `DecimalCollection.DECIMAL_TYPE` (today `DECIMAL(32,6)`), named once rather than restated, so that reading the annotation gives exactly what decoding the text gives and the results T086 pins do not change. Until FHIR and System primitives are separate types, every decimal result in the engine is a System.Decimal, so the engine reads the value from `__numeric` where the schema carries it and decodes the text otherwise. The text stays the stored value: egress writes it, and the annotation is only the engine's fast path to the number. Once FHIR and System types are separated, a FHIR.decimal may be returned from the stored text, and `__numeric` stays the fast path for its conversion to System.Decimal. That pays off fully only once the text preserves the source's lexical form (OQ-1, ticket 16).
+
 **Blocked by:** 11
 
 **Status:** ready-for-agent
