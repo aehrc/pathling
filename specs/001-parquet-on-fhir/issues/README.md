@@ -96,6 +96,7 @@ issues are raised, and #2367 is checked complete.
 - [26](26-raise-github-followups.md) Raise the GitHub follow-up issues, including non-conformant data beyond `trust`, extra fields, and what the release needs
 - [36](36-followup-extra-fields.md) Scope the follow-up issue on extra fields: their support, and their place in the conformance levels
 - [38](38-annotation-fill-per-row.md) Consider deciding the annotation step's *fill* per row
+- [40](40-sql-output-shape.md) Specify the shape of SQL output: annotations, primitive types and complete schemas for complex types
 - [29](29-layout-version-column.md) Identify the PoF layout by a versioned layout column
 - [30](30-pof-spec-layout-column.md) Propose the layout column as an amendment to the Parquet on FHIR specification
 - [39](39-public-xml-sink-and-source.md) A public XML sink and source, over ticket 32's line-delimited XML
