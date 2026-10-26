@@ -18,6 +18,7 @@
 package au.csiro.pathling.schema.annotation;
 
 import au.csiro.pathling.schema.LayoutEntry;
+import au.csiro.pathling.schema.annotation.kinds.DecimalNumericKind;
 import au.csiro.pathling.schema.annotation.kinds.QuantityCanonicalKind;
 import jakarta.annotation.Nonnull;
 import java.util.List;
@@ -43,13 +44,13 @@ public final class AnnotationRegistry {
 
   /**
    * Returns the registry of the kinds Pathling defines, which is what every public entry point
-   * uses: the canonical annotation of a quantity.
+   * uses: the numeric annotation of a decimal and the canonical annotation of a quantity.
    *
    * @return the registry of the built-in kinds
    */
   @Nonnull
   public static AnnotationRegistry builtIn() {
-    return of(List.of(QuantityCanonicalKind.INSTANCE));
+    return of(List.of(DecimalNumericKind.INSTANCE, QuantityCanonicalKind.INSTANCE));
   }
 
   /**

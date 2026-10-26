@@ -113,6 +113,27 @@ public abstract class AnnotationKind {
     return resolver.resolve(container, field, compute(value).getField(field));
   }
 
+  /**
+   * Takes an annotation, as applying the kind resolved it, as the engine reads it.
+   *
+   * <p>A stored annotation is taken at whatever type it was written at, so a kind whose readers
+   * expect one type converts it here. The engine applies this wherever it resolves the annotation,
+   * for one value and for all the values of a repeating element alike, so every reader of the kind
+   * sees the same type. The computed annotation already has that type, and converting it to its own
+   * type is left out of the plan. The annotation step does not apply it, so that what it keeps is
+   * stored as it was found.
+   *
+   * <p>By default the annotation is taken as it was resolved.
+   *
+   * @param resolved one resolved annotation of this kind, a field of it named by {@link
+   *     #getFields()}
+   * @return the annotation, as the engine reads it
+   */
+  @Nonnull
+  public Column read(@Nonnull final Column resolved) {
+    return resolved;
+  }
+
   @Override
   @Nonnull
   public String toString() {

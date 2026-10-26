@@ -564,10 +564,10 @@ public class PathlingContext {
    *
    * <p>With the default configuration, every kind of annotation is stored, an annotation already
    * present is kept, one of a kind that is off is left out, and one Pathling does not compute is
-   * kept. Only the canonical annotation of a quantity is defined in this release, so with the
-   * default configuration resources without a quantity are returned unchanged, and with unknown
-   * annotations dropped the only other effect is that fields marked as annotations, whose names
-   * begin with {@code __}, are left out.
+   * kept. Only the numeric annotation of a decimal and the canonical annotation of a quantity are
+   * defined in this release, so with the default configuration resources without a decimal or a
+   * quantity are returned unchanged, and with unknown annotations dropped the only other effect is
+   * that fields marked as annotations, whose names begin with {@code __}, are left out.
    *
    * @param resources the dataframe of resources, in the Parquet on FHIR layout
    * @param resourceName the name of the type of the resources

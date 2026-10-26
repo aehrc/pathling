@@ -199,7 +199,7 @@ public class YamlSupport {
           Map.entry(FHIRDefinedType.CODE, DataTypes.StringType),
           Map.entry(FHIRDefinedType.INTEGER, DataTypes.IntegerType),
           Map.entry(FHIRDefinedType.BOOLEAN, DataTypes.BooleanType),
-          Map.entry(FHIRDefinedType.DECIMAL, DecimalCollection.DECIMAL_TYPE),
+          Map.entry(FHIRDefinedType.DECIMAL, DecimalCollection.getDecimalType()),
           Map.entry(FHIRDefinedType.CODING, CodingSchema.codingStructType()),
           Map.entry(FHIRDefinedType.QUANTITY, QuantityEncoding.dataType()),
           Map.entry(FHIRDefinedType.TIME, DataTypes.StringType),

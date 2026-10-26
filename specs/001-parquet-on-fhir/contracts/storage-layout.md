@@ -15,7 +15,7 @@ Deviations, all permitted by the specification:
 
 | Area | What Pathling does |
 | --- | --- |
-| Decimals | Text plus the specification's numeric annotation. The text is numerically equal to the source, not in the source's lexical form (decision 68). |
+| Decimals | Text plus a numeric annotation, `_x.__numeric`, at `DECIMAL(32,6)` rather than the specification's `DECIMAL(38,6)`. The text is numerically equal to the source, not in the source's lexical form (decision 68). The text is the stored value, which egress writes. The annotation is the engine's own decoding of the text, at the type the engine computes with (ticket 13), so a value with more than 26 integer digits has a null annotation where the specification's type would hold it. |
 | Primitive ids and extensions | The specification's `_field` groups. |
 | Extensions on complex elements | Inline `extension` groups. |
 | Date ranges | The specification's start and end annotations. |
@@ -25,6 +25,21 @@ decision 50). The names, types and positions below are fixed from Phase 3 and do
 not change when the values arrive. It replaces the specification's because the specification's fixed-point type makes quantities differing by orders of magnitude compare equal, which the engine cannot compare on, and nothing reads the specification's form. Annotations are optional and non-standard ones are permitted, so a consumer of the specification computes what it needs. Raised upstream; `__canonical_exact` is replaced by the specification's annotation if the specification adopts a magnitude-preserving representation. |
 | `contained` | Not represented. Dropped silently (FR-006). |
 | `Bundle` | Never stored as a resource type. Accepted as a transport carrier and exploded to per-type tables. |
+
+### The decimal annotation
+
+A decimal carries `__numeric` as the last field of its metadata group `_x`,
+after `id` and `extension`: `_factorOverride.__numeric`,
+`position._latitude.__numeric`, `valueQuantity._value.__numeric`. The group is
+stored for the annotation even where the decimal has no id or extension. The
+annotation is `decimal(32,6)`, the type of the engine's System.Decimal, and
+holds what the engine's decoding of the text gives: the text rounded to six
+fractional digits, or null where the value has more than 26 integer digits or
+the text is not a decimal (owner, 2026-10-26). The specification places it as
+a sibling, `__x_numeric`, at `decimal(38,6)`. The placement is amended by
+ticket 35. The type is Pathling's, so that the annotation and the decoding of
+the text cannot disagree. Ticket 41 moves the engine's System.Decimal, and with it the
+annotation, to the specification's `decimal(38,6)` (owner, 2026-10-26).
 
 ### The quantity annotation
 

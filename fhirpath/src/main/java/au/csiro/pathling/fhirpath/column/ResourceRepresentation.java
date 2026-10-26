@@ -18,6 +18,8 @@
 package au.csiro.pathling.fhirpath.column;
 
 import au.csiro.pathling.encoders.ColumnFunctions;
+import au.csiro.pathling.schema.LayoutFields;
+import au.csiro.pathling.schema.annotation.kinds.DecimalNumericKind;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import java.util.function.UnaryOperator;
@@ -25,7 +27,9 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
+import org.apache.spark.sql.types.ArrayType;
 import org.apache.spark.sql.types.DataType;
+import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
@@ -202,6 +206,9 @@ public final class ResourceRepresentation extends ColumnRepresentation {
    * <p>removeNulls() filters out NULL values from arrays to match the behavior of {@link
    * DefaultRepresentation#traverse(String)}, but the result is not flattened.
    *
+   * <p>A decimal is decoded from its numeric annotation where the schema carries it, and from its
+   * stored text otherwise, as {@link DefaultRepresentation#traverse(String)} decodes one.
+   *
    * @param fieldName the name of the field to traverse to
    * @param fhirType the FHIR type of the field
    * @param fallback the type of the null that stands for the column where it is absent
@@ -213,6 +220,26 @@ public final class ResourceRepresentation extends ColumnRepresentation {
       @Nonnull final String fieldName,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final DataType fallback) {
+    if (DefaultRepresentation.isDecimal(fhirType)) {
+      // A decimal is decoded from the numeric annotation in its metadata group, a column beside it.
+      final Column values = ColumnFunctions.columnOrNull(fieldName, fallback);
+      final Column groups =
+          ColumnFunctions.columnOrNull(
+              LayoutFields.metadataGroupName(fieldName), DataTypes.NullType);
+      if (fallback instanceof ArrayType) {
+        return DefaultRepresentation.numericValues(
+            existing(
+                    DefaultRepresentation.pairWithAnnotation(
+                        values,
+                        groups,
+                        Optional.empty(),
+                        true,
+                        DecimalNumericKind.INSTANCE,
+                        LayoutFields.NUMERIC_ANNOTATION))
+                .removeNulls());
+      }
+      return existing(DefaultRepresentation.numericValue(values, groups));
+    }
     return DefaultRepresentation.decodeField(getField(fieldName, fallback).removeNulls(), fhirType);
   }
 

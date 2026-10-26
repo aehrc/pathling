@@ -65,7 +65,7 @@ extensions are stored and navigable.
 
 - ~~[11](11-annotation-registry-and-toggles.md) Annotation registry, per-annotation toggles and SchemaConfiguration~~ (done)
 - ~~[12](12-quantity-annotations.md) Quantity annotations, UCUM-only canonicalisation, codegen-fallback measurement~~ (done)
-- [13](13-decimal-annotation.md) Decimal numeric annotation
+- ~~[13](13-decimal-annotation.md) Decimal numeric annotation~~ (done)
 - [41](41-system-decimal-38-6.md) Switch System.Decimal to DECIMAL(38,6)
 - [14](14-date-range-annotation.md) Date range annotation
 - [15](15-schema-decided-plan-test-and-docs.md) Test that annotation use is decided from the schema, and document annotations

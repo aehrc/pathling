@@ -21,9 +21,11 @@ import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.encoders.ColumnFunctions;
 import au.csiro.pathling.encoders.ValueFunctions;
-import au.csiro.pathling.fhirpath.collection.DecimalCollection;
 import au.csiro.pathling.schema.LayoutFields;
 import au.csiro.pathling.schema.annotation.AnnotationKind;
+import au.csiro.pathling.schema.annotation.kinds.DecimalNumericKind;
+import au.csiro.pathling.utilities.SparkTypes;
+import au.csiro.pathling.utilities.SystemDecimal;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.Optional;
@@ -36,6 +38,7 @@ import lombok.Setter;
 import lombok.ToString;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
+import org.apache.spark.sql.types.ArrayType;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
@@ -132,6 +135,9 @@ public class DefaultRepresentation extends ColumnRepresentation {
    * array shape too. Whether the field is present or absent, and whether a repeating parent is
    * present or absent, the traversal then yields one type (decision 88).
    *
+   * <p>A decimal is decoded from its numeric annotation where the schema carries it, and from its
+   * stored text otherwise (T095a).
+   *
    * @param fieldName the name of the field to traverse to
    * @param fhirType the FHIR type of the field
    * @param fallback the type of the null that stands for the field where it is absent
@@ -143,6 +149,9 @@ public class DefaultRepresentation extends ColumnRepresentation {
       @Nonnull final String fieldName,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final DataType fallback) {
+    if (isDecimal(fhirType)) {
+      return traverseDecimal(fieldName, fallback);
+    }
     final Column field =
         ValueFunctions.ifArray(
             value,
@@ -151,6 +160,81 @@ public class DefaultRepresentation extends ColumnRepresentation {
                     array, fieldName, DataTypes.createArrayType(fallback)),
             singular -> ColumnFunctions.resolveOrNull(singular, fieldName, fallback));
     return decodeField(copyOf(field).removeNulls().flatten(), fhirType);
+  }
+
+  /**
+   * Traverses to a decimal, decoded from its numeric annotation where the schema carries it and
+   * from its stored text otherwise (T095a, FR-023).
+   *
+   * <p>A singular decimal is read as the annotation alone, which is null wherever the text is, so
+   * where the schema does not carry the annotation the plan decodes the text as it did before the
+   * annotation existed. Under a repeating parent the parents without a value are left out first, so
+   * that a text that does not decode still gives a null, as decoding the text alone gives. A
+   * repeating decimal is paired with its annotations by position, as {@link #traverseAnnotated}
+   * pairs them.
+   */
+  @Nonnull
+  private ColumnRepresentation traverseDecimal(
+      @Nonnull final String fieldName, @Nonnull final DataType fallback) {
+    if (fallback instanceof ArrayType) {
+      return numericValues(
+          traverseAnnotated(
+              fieldName,
+              Optional.empty(),
+              SparkTypes.elementTypeOf(fallback),
+              true,
+              DecimalNumericKind.INSTANCE,
+              LayoutFields.NUMERIC_ANNOTATION));
+    }
+    final UnaryOperator<Column> numeric =
+        parent ->
+            numericValue(
+                ColumnFunctions.resolveOrNull(parent, fieldName, fallback),
+                ColumnFunctions.resolveOrNull(
+                    parent, LayoutFields.metadataGroupName(fieldName), DataTypes.NullType));
+    return vectorize(
+            parents ->
+                functions.transform(
+                    functions.filter(
+                        parents,
+                        parent ->
+                            ColumnFunctions.resolveOrNull(parent, fieldName, fallback).isNotNull()),
+                    numeric::apply),
+            numeric)
+        .flatten();
+  }
+
+  /**
+   * Returns the numeric annotation of one singular decimal: the stored one where the schema carries
+   * it, and the decoding of its text otherwise.
+   *
+   * <p>The value is not tested for presence. A stored annotation is taken as given (ticket 31), and
+   * the annotation step computes it as null wherever the text is null, so it is null wherever the
+   * value is absent. The annotation is read as the kind reads it, at the engine's System.Decimal
+   * type, whatever type it was stored at.
+   *
+   * @param value the stored text of the decimal
+   * @param group the metadata group beside it
+   * @return the decimal, typed as {@link SystemDecimal#TYPE}
+   */
+  @Nonnull
+  static Column numericValue(@Nonnull final Column value, @Nonnull final Column group) {
+    return resolveAnnotation(
+        DecimalNumericKind.INSTANCE, LayoutFields.NUMERIC_ANNOTATION, value, group);
+  }
+
+  /**
+   * Resolves one field of an annotation of one value: the stored one where the schema carries it,
+   * and the computed one otherwise, decided once for the schema by the Catalyst resolver, and read
+   * as the kind reads it.
+   */
+  @Nonnull
+  private static Column resolveAnnotation(
+      @Nonnull final AnnotationKind kind,
+      @Nonnull final String annotationField,
+      @Nonnull final Column value,
+      @Nonnull final Column container) {
+    return kind.read(kind.apply(annotationField, value, container, ColumnFunctions::resolveOrElse));
   }
 
   /**
@@ -165,15 +249,21 @@ public class DefaultRepresentation extends ColumnRepresentation {
    * and the one the kind computes otherwise, decided once for the schema by the Catalyst resolver.
    *
    * <p>Each item of the result is a structure of the value, named {@link #ANNOTATED_VALUE}, and the
-   * annotation, named for the annotation's field. An item is present wherever its value is.
+   * annotation, named for the annotation's field, read as the kind reads it. An item is present
+   * wherever its value is.
+   *
+   * <p>A decimal is not paired here: its value is its numeric annotation, which {@link #traverse}
+   * reads.
    *
    * @param fieldName the name of the primitive field
-   * @param fhirType the FHIR type of the field, by which each value is decoded
+   * @param fhirType the FHIR type of the field, by which each value is decoded, which is not a
+   *     decimal
    * @param fallback the type of a value of the field, taken where the input does not carry it
    * @param repeating whether the field repeats
    * @param kind the kind of the annotation
    * @param annotationField the field of the kind to pair each value with
    * @return the values, each paired with its annotation
+   * @throws IllegalArgumentException if the field is a decimal
    */
   @Nonnull
   public ColumnRepresentation traverseAnnotated(
@@ -183,6 +273,12 @@ public class DefaultRepresentation extends ColumnRepresentation {
       final boolean repeating,
       @Nonnull final AnnotationKind kind,
       @Nonnull final String annotationField) {
+    if (isDecimal(fhirType)) {
+      throw new IllegalArgumentException(
+          "A decimal is not paired with an annotation: its value is its numeric annotation, which"
+              + " traverse reads: "
+              + fieldName);
+    }
     final UnaryOperator<Column> annotated =
         parent ->
             annotatedValues(
@@ -202,16 +298,41 @@ public class DefaultRepresentation extends ColumnRepresentation {
       final boolean repeating,
       @Nonnull final AnnotationKind kind,
       @Nonnull final String annotationField) {
-    final Column values =
+    return pairWithAnnotation(
         ColumnFunctions.resolveOrNull(
-            parent, fieldName, repeating ? DataTypes.createArrayType(fallback) : fallback);
-    final Column groups =
+            parent, fieldName, repeating ? DataTypes.createArrayType(fallback) : fallback),
         ColumnFunctions.resolveOrNull(
-            parent, LayoutFields.metadataGroupName(fieldName), DataTypes.NullType);
+            parent, LayoutFields.metadataGroupName(fieldName), DataTypes.NullType),
+        fhirType,
+        repeating,
+        kind,
+        annotationField);
+  }
+
+  /**
+   * Pairs the values of a primitive with one field of an annotation of them, as {@link
+   * #traverseAnnotated} does for the values and metadata groups of one parent.
+   *
+   * @param values the values of the primitive, an array of them where it repeats
+   * @param groups the metadata groups beside the values, aligned with them by position
+   * @param fhirType the FHIR type of the primitive, by which each value is decoded
+   * @param repeating whether the primitive repeats
+   * @param kind the kind of the annotation
+   * @param annotationField the field of the kind to pair each value with
+   * @return the paired value, null where the value is, or an array of them where it repeats
+   */
+  @Nonnull
+  static Column pairWithAnnotation(
+      @Nonnull final Column values,
+      @Nonnull final Column groups,
+      @Nonnull final Optional<FHIRDefinedType> fhirType,
+      final boolean repeating,
+      @Nonnull final AnnotationKind kind,
+      @Nonnull final String annotationField) {
     if (!repeating) {
       return annotatedValue(
           values,
-          kind.apply(annotationField, values, groups, ColumnFunctions::resolveOrElse),
+          resolveAnnotation(kind, annotationField, values, groups),
           fhirType,
           annotationField);
     }
@@ -227,7 +348,7 @@ public class DefaultRepresentation extends ColumnRepresentation {
         pair ->
             annotatedValue(
                 pair.getField(ANNOTATED_VALUE),
-                pair.getField(annotationField),
+                kind.read(pair.getField(annotationField)),
                 fhirType,
                 annotationField));
   }
@@ -249,8 +370,40 @@ public class DefaultRepresentation extends ColumnRepresentation {
   }
 
   /**
+   * Takes repeating decimals paired with their numeric annotations as the decoded decimals (FR-022,
+   * FR-023).
+   *
+   * <p>The annotation is the stored one where the schema carries it, and the decoding of the text
+   * otherwise, decided once for the schema by the resolver that paired them. The stored annotation
+   * is computed as the text is decoded, so either gives the same value. Each value present gives
+   * one decimal, which is null where the text does not decode, as decoding the text alone gives.
+   * The pairing reads each annotation as the kind reads it, at the engine's System.Decimal type.
+   *
+   * @param pairs decimals paired with their numeric annotations, as {@link #pairWithAnnotation}
+   *     pairs them
+   * @return the decimals, typed as {@link SystemDecimal#TYPE}
+   */
+  @Nonnull
+  static ColumnRepresentation numericValues(@Nonnull final ColumnRepresentation pairs) {
+    return pairs.transform(pair -> pair.getField(LayoutFields.NUMERIC_ANNOTATION));
+  }
+
+  /**
+   * Returns whether a field is a decimal, which is decoded from its numeric annotation.
+   *
+   * @param fhirType the FHIR type of the field
+   * @return true where the field is a decimal
+   */
+  static boolean isDecimal(@Nonnull final Optional<FHIRDefinedType> fhirType) {
+    return fhirType.filter(FHIRDefinedType.DECIMAL::equals).isPresent();
+  }
+
+  /**
    * Decodes a traversed field for computation, by its FHIR type. The field has been read in the
    * shape it is stored in.
+   *
+   * <p>A decimal is not decoded here. Its traversal decodes it from its numeric annotation, or from
+   * its text where the schema does not carry the annotation.
    *
    * <p>A quantity is not decoded here. It stays in the stored shape, so that it keeps its
    * extensions, and the quantity collection decodes it where it is computed with.
@@ -267,9 +420,6 @@ public class DefaultRepresentation extends ColumnRepresentation {
     if (FHIRDefinedType.BASE64BINARY.equals(resolvedFhirType)) {
       // If the field is a base64Binary, represent it using a BinaryRepresentation.
       return DefaultRepresentation.fromBinaryColumn(field.getValue());
-    } else if (FHIRDefinedType.DECIMAL.equals(resolvedFhirType)) {
-      // A decimal is read as text, and decoded for computation.
-      return DecimalCollection.decode(field);
     } else {
       // Otherwise, use the field as it was traversed.
       return field;

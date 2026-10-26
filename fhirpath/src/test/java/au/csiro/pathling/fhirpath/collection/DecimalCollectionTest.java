@@ -20,26 +20,34 @@ package au.csiro.pathling.fhirpath.collection;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
+import au.csiro.pathling.definition.fhir.FhirDefinitionContext;
 import au.csiro.pathling.encoders.ColumnFunctions;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluator;
 import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluatorBuilder;
 import au.csiro.pathling.fhirpath.parser.Parser;
+import au.csiro.pathling.io.Annotator;
+import au.csiro.pathling.schema.SchemaConfiguration;
+import au.csiro.pathling.search.SearchColumnBuilder;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.datasource.PrunedSchemaReader;
 import au.csiro.pathling.test.layout.PofDatasets;
+import au.csiro.pathling.utilities.SystemDecimal;
 import jakarta.annotation.Nonnull;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Stream;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.execution.FileSourceScanExec;
 import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.DataTypes;
+import org.apache.spark.sql.types.DecimalType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.TestInstance;
@@ -49,11 +57,13 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
+import scala.jdk.javaapi.CollectionConverters;
 
 /**
  * Tests decimal comparison, arithmetic and ordering over decimals stored as text in the Parquet on
  * FHIR layout, which give the results the previous layout's {@code DECIMAL(32,6)} columns gave
- * (T086, FR-035).
+ * (T086, FR-035), and give the same results where the numeric annotation is stored beside the text
+ * and taken as a fast path (T086a, T095a), and where it is disabled and the text is decoded.
  *
  * <p>Each fixture is given as FHIR JSON. The fixtures are aimed at what is particular to text:
  * decimals whose stored text is set by a double round trip rather than by the source, such as
@@ -76,6 +86,9 @@ class DecimalCollectionTest {
 
   private static final Parser PARSER = new Parser();
 
+  /** A type other than System.Decimal's, at which a numeric annotation may have been stored. */
+  private static final DecimalType WIDER = DataTypes.createDecimalType(38, 8);
+
   private static final List<String> LOCATIONS =
       List.of(
           "{\"resourceType\":\"Location\",\"id\":\"l1\","
@@ -94,6 +107,16 @@ class DecimalCollectionTest {
               + "\"subject\":{\"reference\":\"Patient/p\"},"
               + "\"prediction\":[{\"probabilityDecimal\":0.5}]}");
 
+  /**
+   * A decimal beyond the range of {@code DECIMAL(32,6)} under a repeating parent, kept apart from
+   * the fixtures above so that their expected values stay as T086 pins them.
+   */
+  private static final List<String> OUT_OF_RANGE =
+      List.of(
+          "{\"resourceType\":\"RiskAssessment\",\"id\":\"r1\",\"status\":\"final\","
+              + "\"subject\":{\"reference\":\"Patient/p\"},"
+              + "\"prediction\":[{\"probabilityDecimal\":0.5},{\"probabilityDecimal\":1e27}]}");
+
   private static final List<String> CHARGE_ITEMS =
       List.of(
           "{\"resourceType\":\"ChargeItem\",\"id\":\"c1\",\"status\":\"billable\","
@@ -111,9 +134,18 @@ class DecimalCollectionTest {
 
   private Map<String, Dataset<Row>> datasets;
 
+  private Map<String, Dataset<Row>> annotated;
+
+  private Map<String, Dataset<Row>> disabled;
+
   @BeforeAll
   void setUp() {
-    datasets = datasets();
+    datasets = datasets("read", Optional.empty());
+    annotated = datasets("annotated", Optional.of(SchemaConfiguration.builder().build()));
+    disabled =
+        datasets(
+            "disabled",
+            Optional.of(SchemaConfiguration.builder().enableNumericAnnotation(false).build()));
   }
 
   @Nonnull
@@ -209,6 +241,173 @@ class DecimalCollectionTest {
         .containsExactlyInAnyOrderElementsOf(expected);
   }
 
+  @ParameterizedTest(name = "{1}")
+  @MethodSource("cases")
+  void decimalOperationsOverAnnotatedDecimals(
+      @Nonnull final String resourceType,
+      @Nonnull final String expression,
+      @Nonnull final List<String> expected) {
+    assertThat(evaluate(annotated.get(resourceType), resourceType, expression))
+        .containsExactlyInAnyOrderElementsOf(expected);
+  }
+
+  @Nonnull
+  Stream<Arguments> widerAnnotationCases() {
+    return Stream.of(
+        arguments(
+            "Location", "position.latitude", List.of("l1=1.500000", "l2=9.500000", "l3=0.123457")),
+        arguments(
+            "RiskAssessment",
+            "prediction.probability.ofType(decimal).first()",
+            List.of("r1=0.250000", "r2=0.500000")),
+        arguments(
+            "ChargeItem",
+            "factorOverride",
+            List.of("c1=12345678901234567890.000000", "c2=3.000000")));
+  }
+
+  /**
+   * A numeric annotation stored at a type other than the engine's System.Decimal is decoded to it,
+   * so the decimal has the type and value it would have had from the text.
+   */
+  @ParameterizedTest(name = "{1}")
+  @MethodSource("widerAnnotationCases")
+  void anAnnotationStoredAtAnotherTypeIsDecodedToSystemDecimal(
+      @Nonnull final String resourceType,
+      @Nonnull final String expression,
+      @Nonnull final List<String> expected) {
+    final Dataset<Row> wider = withWiderAnnotation(resourceType, annotated.get(resourceType));
+    assertThat(wider.schema().simpleString()).contains("__numeric:" + WIDER.simpleString());
+
+    assertThat(select(wider, resourceType, expression).schema().apply("x").dataType())
+        .isIn(SystemDecimal.TYPE, DataTypes.createArrayType(SystemDecimal.TYPE));
+    assertThat(evaluate(wider, resourceType, expression))
+        .containsExactlyInAnyOrderElementsOf(expected);
+  }
+
+  /** Stores each numeric annotation of a fixture at {@link #WIDER} rather than as encoded. */
+  @Nonnull
+  private Dataset<Row> withWiderAnnotation(
+      @Nonnull final String resourceType, @Nonnull final Dataset<Row> resources) {
+    final Dataset<Row> wider =
+        switch (resourceType) {
+          case "Location" ->
+              resources.withColumn(
+                  "position",
+                  functions
+                      .col("position")
+                      .withField(
+                          "_latitude.__numeric",
+                          functions.col("position._latitude.__numeric").cast(WIDER)));
+          case "RiskAssessment" ->
+              resources.withColumn(
+                  "prediction",
+                  functions.transform(
+                      functions.col("prediction"),
+                      p ->
+                          p.withField(
+                              "_probabilityDecimal.__numeric",
+                              p.getField("_probabilityDecimal")
+                                  .getField("__numeric")
+                                  .cast(WIDER))));
+          default ->
+              resources.withColumn(
+                  "_factorOverride",
+                  functions
+                      .col("_factorOverride")
+                      .withField(
+                          "__numeric", functions.col("_factorOverride.__numeric").cast(WIDER)));
+        };
+    final String directory = tempDir.resolve("wider-" + resourceType).toString();
+    wider.write().parquet(directory);
+    return spark.read().parquet(directory);
+  }
+
+  /**
+   * A text that does not decode gives a null item, whether the annotation is stored or the text is
+   * decoded, as decoding the text alone gave before the annotation existed.
+   */
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("outOfRangeCases")
+  void aDecimalBeyondTheRangeGivesTheSameItemsOnEveryPath(
+      @Nonnull final String expression, @Nonnull final List<String> expected) {
+    final Map<String, Optional<SchemaConfiguration>> paths =
+        Map.of(
+            "read",
+            Optional.empty(),
+            "annotated",
+            Optional.of(SchemaConfiguration.builder().build()),
+            "disabled",
+            Optional.of(SchemaConfiguration.builder().enableNumericAnnotation(false).build()));
+    paths.forEach(
+        (name, annotation) ->
+            assertThat(
+                    evaluate(
+                        stored("out-of-range-" + name, "RiskAssessment", OUT_OF_RANGE, annotation),
+                        "RiskAssessment",
+                        expression))
+                .as(name)
+                .containsExactlyInAnyOrderElementsOf(expected));
+  }
+
+  @Nonnull
+  Stream<Arguments> outOfRangeCases() {
+    return Stream.of(
+        arguments("prediction.probability.ofType(decimal).count()", List.of("r1=2")),
+        arguments("prediction.probability.ofType(decimal)[1]", List.of("r1=null")),
+        arguments("prediction.probability.ofType(decimal).first()", List.of("r1=0.500000")));
+  }
+
+  @ParameterizedTest(name = "{1}")
+  @MethodSource("cases")
+  void decimalOperationsWithTheAnnotationDisabled(
+      @Nonnull final String resourceType,
+      @Nonnull final String expression,
+      @Nonnull final List<String> expected) {
+    assertThat(evaluate(disabled.get(resourceType), resourceType, expression))
+        .containsExactlyInAnyOrderElementsOf(expected);
+  }
+
+  @Nonnull
+  Stream<Arguments> decodingCases() {
+    return Stream.of(
+        arguments("Location", "position.latitude", "latitude"),
+        arguments("RiskAssessment", "prediction.probability.ofType(decimal)", "probabilityDecimal"),
+        arguments("ChargeItem", "factorOverride", "factorOverride"));
+  }
+
+  /**
+   * Decoding takes the stored annotation where the schema carries it, and reads only the annotation
+   * from the metadata group. Where the schema does not carry it, because the data was not annotated
+   * or was annotated with the numeric annotation disabled, the text is decoded. Which of the two is
+   * decided once, from the schema (FR-023).
+   */
+  @ParameterizedTest(name = "{1}")
+  @MethodSource("decodingCases")
+  void decodingTakesTheAnnotationWhereTheSchemaCarriesIt(
+      @Nonnull final String resourceType,
+      @Nonnull final String expression,
+      @Nonnull final String element) {
+    // The text is decoded by a cast, which names the element, followed by the id Spark gives it.
+    final String decodeText = element + "(#\\d+)? as decimal\\(32,6\\)";
+
+    final Dataset<Row> fast = select(annotated.get(resourceType), resourceType, expression);
+    assertThat(fast.queryExecution().optimizedPlan().expressions().mkString(","))
+        .contains("__numeric")
+        .doesNotContainPattern(decodeText);
+    assertThat(readSchema(fast)).contains("_" + element + ":struct<__numeric:decimal(32,6)>");
+
+    for (final Map<String, Dataset<Row>> unannotated : List.of(datasets, disabled)) {
+      final Dataset<Row> lexical = select(unannotated.get(resourceType), resourceType, expression);
+      // The text is decoded once: reading the computed annotation as System.Decimal, its own type,
+      // leaves it as it is.
+      assertThat(lexical.queryExecution().optimizedPlan().expressions().mkString(","))
+          .containsPattern(decodeText)
+          .doesNotContain("try_cast(try_cast(");
+      assertThat(readSchema(lexical)).doesNotContain("_" + element);
+    }
+  }
+
   @Nonnull
   Stream<Arguments> storedText() {
     final Column latitude =
@@ -242,27 +441,62 @@ class DecimalCollectionTest {
         .containsExactlyInAnyOrderElementsOf(expected);
   }
 
+  /** Returns the schema the scan of a query reads, which shows what the read prunes to. */
+  @Nonnull
+  private static String readSchema(@Nonnull final Dataset<Row> query) {
+    return CollectionConverters.asJava(query.queryExecution().executedPlan().collectLeaves())
+        .stream()
+        .filter(FileSourceScanExec.class::isInstance)
+        .map(scan -> ((FileSourceScanExec) scan).requiredSchema().simpleString())
+        .findFirst()
+        .orElseThrow();
+  }
+
   /**
-   * Builds each fixture, and writes it to Parquet and reads it back, so that the engine reads
-   * stored files.
+   * Builds each fixture, as read or annotated as encoding stores it under a configuration, and
+   * writes it to Parquet and reads it back, so that the engine reads stored files.
    */
   @Nonnull
-  private Map<String, Dataset<Row>> datasets() {
+  private Map<String, Dataset<Row>> datasets(
+      @Nonnull final String name, @Nonnull final Optional<SchemaConfiguration> annotation) {
     return Map.of(
         "Location",
-        stored("Location", LOCATIONS),
+        stored(name, "Location", LOCATIONS, annotation),
         "RiskAssessment",
-        stored("RiskAssessment", RISK_ASSESSMENTS),
+        stored(name, "RiskAssessment", RISK_ASSESSMENTS, annotation),
         "ChargeItem",
-        stored("ChargeItem", CHARGE_ITEMS));
+        stored(name, "ChargeItem", CHARGE_ITEMS, annotation));
   }
 
   @Nonnull
   private Dataset<Row> stored(
-      @Nonnull final String resourceType, @Nonnull final List<String> json) {
-    final Dataset<Row> dataset =
+      @Nonnull final String name,
+      @Nonnull final String resourceType,
+      @Nonnull final List<String> json,
+      @Nonnull final Optional<SchemaConfiguration> annotation) {
+    final Dataset<Row> read =
         PofDatasets.fromJson(spark, fhirEncoders.getContext(), resourceType, json);
-    return PrunedSchemaReader.write(dataset, tempDir.resolve(resourceType).toString()).read();
+    final Dataset<Row> dataset =
+        annotation
+            .map(
+                configuration ->
+                    Annotator.of(FhirDefinitionContext.of(fhirEncoders.getContext()), configuration)
+                        .annotate(resourceType, read))
+            .orElse(read);
+    return PrunedSchemaReader.write(dataset, tempDir.resolve(name + "-" + resourceType).toString())
+        .read();
+  }
+
+  /** Selects the column an expression builds over each resource in the dataset. */
+  @Nonnull
+  private Dataset<Row> select(
+      @Nonnull final Dataset<Row> dataset,
+      @Nonnull final String resourceType,
+      @Nonnull final String expression) {
+    return dataset.select(
+        SearchColumnBuilder.withDefaultRegistry(fhirEncoders.getContext())
+            .fromExpression(ResourceType.fromCode(resourceType), expression)
+            .alias("x"));
   }
 
   /**

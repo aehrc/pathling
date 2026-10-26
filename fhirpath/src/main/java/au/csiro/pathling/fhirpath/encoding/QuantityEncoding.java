@@ -24,14 +24,15 @@ import static org.apache.spark.sql.functions.struct;
 import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.encoders.ColumnFunctions;
-import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
 import au.csiro.pathling.fhirpath.FhirPathQuantity;
 import au.csiro.pathling.fhirpath.unit.UcumUnit;
 import au.csiro.pathling.schema.LayoutFields;
 import au.csiro.pathling.schema.annotation.kinds.CanonicalQuantity;
+import au.csiro.pathling.schema.annotation.kinds.DecimalNumericKind;
 import au.csiro.pathling.schema.annotation.kinds.QuantityCanonicalKind;
 import au.csiro.pathling.sql.misc.DecimalToLiteral;
 import au.csiro.pathling.sql.types.FlexiDecimal;
+import au.csiro.pathling.utilities.SystemDecimal;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.math.BigDecimal;
@@ -271,23 +272,24 @@ public final class QuantityEncoding {
   }
 
   /**
-   * Decodes the text of a quantity's value to {@code DECIMAL(32,6)}, as {@link
-   * au.csiro.pathling.fhirpath.collection.DecimalCollection} decodes any decimal. The cast is safe,
-   * so a value that is not a decimal, or does not fit, is null rather than raising under ANSI mode.
+   * Decodes the text of a quantity's value to the engine's System.Decimal, {@link
+   * SystemDecimal#TYPE}, by {@link DecimalNumericKind#decode}, as any stored decimal is decoded.
+   * The cast is safe, so a value that is not a decimal, or does not fit, is null rather than
+   * raising under ANSI mode.
    *
    * @param value the text of the value
-   * @return the value, as a decimal
+   * @return the value, typed as {@link SystemDecimal#TYPE}
    */
   @Nonnull
   public static Column decodeValue(@Nonnull final Column value) {
-    return value.try_cast(DecimalCustomCoder.decimalType());
+    return DecimalNumericKind.decode(value);
   }
 
   /**
    * Decodes the text of a quantity's value to a decimal with every digit it has. The value is kept
-   * as text, not as {@code DECIMAL(32,6)}, so nothing is rounded here: conversion, the string form
-   * and the canonical form all work from the same digits. Only {@link #decodeValue(Column)}, which
-   * produces a Spark decimal, is bound to the scale of that type.
+   * as text, not as {@link SystemDecimal#TYPE}, so nothing is rounded here: conversion, the string
+   * form and the canonical form all work from the same digits. Only {@link #decodeValue(Column)},
+   * which produces a Spark decimal, is bound to the scale of that type.
    *
    * @param text the text of the value
    * @return the value, or null where there is no text or it is not a decimal
@@ -365,11 +367,11 @@ public final class QuantityEncoding {
    * Encodes a numeric column as a quantity with unit "1" in the UCUM system. Returns null when the
    * input is null to ensure FHIRPath empty collection semantics.
    *
-   * <p>The value is the text of the number decoded to {@code DECIMAL(32,6)}, as {@code toString()}
-   * renders a decimal, without trailing fractional zeros: {@code 5} reads as {@code 5}, {@code 1.5
-   * * 2} as {@code 3} and {@code 1.25} as {@code 1.25}. The scale of the result of an arithmetic
-   * operation is not known, so the value is given the shortest text that represents it, rather than
-   * the scale of the decimal type. Its canonical form is computed from that text.
+   * <p>The value is the text of the number decoded to {@link SystemDecimal#TYPE}, as {@code
+   * toString()} renders a decimal, without trailing fractional zeros: {@code 5} reads as {@code 5},
+   * {@code 1.5 * 2} as {@code 3} and {@code 1.25} as {@code 1.25}. The scale of the result of an
+   * arithmetic operation is not known, so the value is given the shortest text that represents it,
+   * rather than the scale of the decimal type. Its canonical form is computed from that text.
    *
    * @param numericColumn the numeric column to encode
    * @return the column with the representation of the quantity, or null if the input is null
@@ -382,10 +384,7 @@ public final class QuantityEncoding {
             // Safe cast to the decimal type so an out-of-range value yields NULL rather than
             // raising under ANSI mode.
             let(
-                callUDF(
-                    DecimalToLiteral.FUNCTION_NAME,
-                    nc.try_cast(DecimalCustomCoder.decimalType()),
-                    lit(null)),
+                callUDF(DecimalToLiteral.FUNCTION_NAME, DecimalNumericKind.decode(nc), lit(null)),
                 value -> {
                   final Column code = lit(UcumUnit.ONE.code());
                   return when(

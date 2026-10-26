@@ -18,6 +18,7 @@
 package au.csiro.pathling.fhirpath.column;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import au.csiro.pathling.schema.LayoutFields;
 import au.csiro.pathling.schema.annotation.AnnotationKind;
@@ -135,14 +136,43 @@ class AnnotatedTraversalTest {
   }
 
   @Test
-  void decodesEachValueAndComputesItsAnnotationFromTheStoredText() {
-    assertThat(
-            annotated(
-                "named_struct('value', '1.50')",
-                "value",
-                false,
-                Optional.of(FHIRDefinedType.DECIMAL)))
-        .containsExactly("1.500000=1.50~");
+  void decodesEachValueByItsTypeAndComputesItsAnnotationFromTheStoredValue() {
+    // A base64Binary is stored as binary, and decoded to its base64 text. The bytes of "ABC" have
+    // a base64 form without padding.
+    final Row pair =
+        spark
+            .range(1)
+            .select(
+                new DefaultRepresentation(functions.expr("named_struct('value', X'414243')"))
+                    .traverseAnnotated(
+                        "value",
+                        Optional.of(FHIRDefinedType.BASE64BINARY),
+                        DataTypes.BinaryType,
+                        false,
+                        STUB,
+                        START)
+                    .getValue())
+            .first()
+            .getStruct(0);
+    assertThat(pair.getString(0)).isEqualTo("QUJD");
+    assertThat(pair.getString(1)).isEqualTo("ABC~");
+  }
+
+  @Test
+  void refusesToPairADecimal() {
+    final DefaultRepresentation parent =
+        new DefaultRepresentation(functions.expr("named_struct('value', '1.5')"));
+    assertThatThrownBy(
+            () ->
+                parent.traverseAnnotated(
+                    "value",
+                    Optional.of(FHIRDefinedType.DECIMAL),
+                    DataTypes.StringType,
+                    false,
+                    STUB,
+                    START))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("its value is its numeric annotation, which traverse reads");
   }
 
   @Test
