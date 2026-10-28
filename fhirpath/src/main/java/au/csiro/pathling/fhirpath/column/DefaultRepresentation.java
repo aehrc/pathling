@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.fhirpath.column;
 
+import static au.csiro.pathling.sql.SqlFunctions.let;
 import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.encoders.ColumnFunctions;
@@ -152,6 +153,9 @@ public class DefaultRepresentation extends ColumnRepresentation {
     if (isDecimal(fhirType)) {
       return traverseDecimal(fieldName, fallback);
     }
+    if (isDate(fhirType)) {
+      return traverseDate(fieldName, fallback);
+    }
     final Column field =
         ValueFunctions.ifArray(
             value,
@@ -160,6 +164,35 @@ public class DefaultRepresentation extends ColumnRepresentation {
                     array, fieldName, DataTypes.createArrayType(fallback)),
             singular -> ColumnFunctions.resolveOrNull(singular, fieldName, fallback));
     return decodeField(copyOf(field).removeNulls().flatten(), fhirType);
+  }
+
+  /**
+   * Traverses to a date, converted to a System date with its range: the stored range annotations
+   * where the schema carries them, and the range computed from the text otherwise (FR-004, FR-023).
+   *
+   * <p>Each parent's dates are read from the date and its metadata group, so that the read names
+   * only the two annotations, a repeating date's ranges paired with its texts by position. A parent
+   * is evaluated once for both, so that a parent with side effects, such as a trace, fires once.
+   */
+  @Nonnull
+  private ColumnRepresentation traverseDate(
+      @Nonnull final String fieldName, @Nonnull final DataType fallback) {
+    final UnaryOperator<Column> dates =
+        parent ->
+            let(
+                parent,
+                p -> {
+                  final Column texts = ColumnFunctions.resolveOrNull(p, fieldName, fallback);
+                  final Column groups =
+                      ColumnFunctions.resolveOrNull(
+                          p, LayoutFields.metadataGroupName(fieldName), DataTypes.NullType);
+                  return fallback instanceof ArrayType
+                      ? SystemDateTime.fromStoredArray(texts, groups)
+                      : SystemDateTime.fromStored(texts, groups);
+                });
+    return vectorize(array -> functions.transform(array, dates::apply), dates)
+        .removeNulls()
+        .flatten();
   }
 
   /**
@@ -396,6 +429,22 @@ public class DefaultRepresentation extends ColumnRepresentation {
    */
   static boolean isDecimal(@Nonnull final Optional<FHIRDefinedType> fhirType) {
     return fhirType.filter(FHIRDefinedType.DECIMAL::equals).isPresent();
+  }
+
+  /**
+   * Returns whether a field is a date, a dateTime or an instant, which is read with its range.
+   *
+   * @param fhirType the FHIR type of the field
+   * @return true where the field is a date, a dateTime or an instant
+   */
+  static boolean isDate(@Nonnull final Optional<FHIRDefinedType> fhirType) {
+    return fhirType
+        .filter(
+            type ->
+                type == FHIRDefinedType.DATE
+                    || type == FHIRDefinedType.DATETIME
+                    || type == FHIRDefinedType.INSTANT)
+        .isPresent();
   }
 
   /**

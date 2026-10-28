@@ -107,6 +107,8 @@ class CatalogSink implements DataSink {
    *
    * @param source the data to write
    * @return the tables written
+   * @throws IllegalStateException if the data carries the range annotations of dates and the
+   *     session does not write timestamps to Parquet as INT64 microseconds (decision 138)
    * @throws au.csiro.pathling.library.io.source.UnsupportedLayoutException if a table the write
    *     would append to or merge into is in a layout this release does not read, or the source
    *     refuses its own data
@@ -116,6 +118,7 @@ class CatalogSink implements DataSink {
   public WriteDetails write(@Nonnull final DataSource source) {
     final Map<String, Dataset<Row>> datasets = new LinkedHashMap<>();
     source.getResourceTypes().forEach(type -> datasets.put(type, source.read(type)));
+    StoredTimestamps.requireMicros(context.getSpark(), datasets);
     if (saveMode == SaveMode.APPEND || saveMode == SaveMode.MERGE) {
       datasets.keySet().forEach(this::checkTargetLayout);
     }

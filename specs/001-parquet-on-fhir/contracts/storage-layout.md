@@ -18,7 +18,7 @@ Deviations, all permitted by the specification:
 | Decimals | Text plus a numeric annotation, `_x.__numeric`, at `DECIMAL(32,6)` rather than the specification's `DECIMAL(38,6)`. The text is numerically equal to the source, not in the source's lexical form (decision 68). The text is the stored value, which egress writes. The annotation is the engine's own decoding of the text, at the type the engine computes with (ticket 13), so a value with more than 26 integer digits has a null annotation where the specification's type would hold it. |
 | Primitive ids and extensions | The specification's `_field` groups. |
 | Extensions on complex elements | Inline `extension` groups. |
-| Date ranges | The specification's start and end annotations. |
+| Date ranges | The specification's start and end annotations, `_x.__start` and `_x.__end`, in the date's metadata group, on `date`, `dateTime` and `instant`. **Deviation (decision 138).** Written by Pathling as `int64` with `TIMESTAMP(isAdjustedToUTC=true, MICROS)`, proleptic Gregorian, rather than the specification's `int96` with `TIMESTAMP(isAdjustedToUTC=true, unit=MILLIS)`, a combination Parquet cannot write; the upper bound is to the microsecond. An `instant` carries them too, which the specification does not name. Lasts until the specification is amended, which ticket 14 drafts. |
 | Quantity canonicalisation | **Substitution.** The specification's `__canonical` is not emitted. `__canonical_exact` is emitted in its place, inside the quantity's structure, carrying the same canonicalisation at a precision that preserves magnitude, with the canonicalised unit (decision 137). It is present **from M5** — the layout ships
 annotation-free at the flip and each annotation kind lands afterwards (FR-021,
 decision 50). The names, types and positions below are fixed from Phase 3 and do
@@ -40,6 +40,39 @@ a sibling, `__x_numeric`, at `decimal(38,6)`. The placement is amended by
 ticket 35. The type is Pathling's, so that the annotation and the decoding of
 the text cannot disagree. Ticket 41 moves the engine's System.Decimal, and with it the
 annotation, to the specification's `decimal(38,6)` (owner, 2026-10-26).
+
+### The date range annotations
+
+A `date`, `dateTime` or `instant` carries `__start` and `__end` as the last
+fields of its metadata group `_x`, after `id` and `extension`, in that order:
+`_birthDate.__start`, `meta._lastUpdated.__end`, and for a repeating date one
+group per position, `timing._event[].__start`. The group is stored for them even where the date has no id or
+extension. They are the earliest and the latest instant the precision the value
+states allows, computed from one parse of it by the engine's own date grammar,
+so `1980` gives `1980-01-01T00:00:00Z` and `1980-12-31T23:59:59.999999Z`, and a
+value stated to the second or beyond gives one instant for both. A time without
+a timezone is taken as UTC, as the engine takes it (ticket 14; widening its
+range is ticket 26's). Both are Spark's `TimestampType`, so the upper bound is
+the latest microsecond.
+
+The specification gives `start` and `end` the physical type `int96` with the
+logical type `TIMESTAMP(isAdjustedToUTC=true, unit=MILLIS)`, as siblings, on
+`date` and `dateTime`. Parquet allows no logical type on `int96`, so that
+combination cannot be written. Spark writes a timestamp as its session's
+`spark.sql.parquet.outputTimestampType` says, and offers no writer option for it.
+The sessions Pathling builds (Java's default session, Python's managed
+defaults and R's `pathling_connect`) set it to `TIMESTAMP_MICROS`, once, as they
+are created, so they store the bounds as `int64` with
+`TIMESTAMP(isAdjustedToUTC=true, MICROS)`, the true instant on the proleptic
+Gregorian calendar, before the Gregorian cutover as after it. A session the user
+supplies, or one already active or default where Pathling would otherwise build
+one, keeps its own setting, `int96` by default. Where it is not `TIMESTAMP_MICROS`, a
+warning is logged when the context is created, and Pathling's Parquet, Delta and
+catalog sinks refuse to write data that carries the bounds. At milliseconds the
+stored upper bound would disagree with the one the engine computes, and change
+the results of comparisons. An `instant` carries them too. These are deviations
+until the specification is amended (decision 138); the placement is amended by
+ticket 35.
 
 ### The quantity annotation
 

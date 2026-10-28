@@ -198,7 +198,12 @@ class PathlingContext:
         using the `pathling.etc.find_jar` method.
 
         :param spark: a pre-configured :class:`SparkSession` instance, use this if you need to
-               control the way that the session is set up
+               control the way that the session is set up. Its settings are used as they are:
+               where it does not set ``spark.sql.parquet.outputTimestampType`` to
+               ``TIMESTAMP_MICROS``, as the session Pathling builds does, a warning is logged, and
+               writing data that carries the range annotations of dates to Parquet, Delta or a
+               catalog table fails, because Pathling stores them as INT64 microseconds adjusted to
+               UTC.
         :param max_nesting_level: controls the maximum depth of nested element data that is encoded
                upon import. This affects certain elements within FHIR resources that contain
                recursive references, e.g. `QuestionnaireResponse.item
@@ -279,9 +284,8 @@ class PathlingContext:
                decimal, which it does by default. An annotation is a value derived from an
                element and stored with it, which a query reads rather than computing again.
                Turning one off makes the stored data narrower and never changes the answer to a
-               query, which computes an annotation the data does not carry. Of the three
-               kinds, the numeric annotation of a decimal and the canonical annotation of a
-               quantity are stored in this release.
+               query, which computes an annotation the data does not carry. All three kinds
+               are stored in this release.
         :param enable_range_annotation: whether encoding stores the range annotations of a date,
                dateTime or instant, the bounds implied by its stated precision, which it does by
                default
@@ -590,11 +594,12 @@ class PathlingContext:
 
         Encoding annotates what it encodes, so this is for resources stored without annotations,
         such as Parquet or Delta written by another producer or with different options. Writing
-        resources does not add annotations, and neither does reading them for a query. Only the
-        numeric annotation of a decimal and the canonical annotation of a quantity are defined in
-        this release, so with the default options resources without a decimal or a quantity are
-        returned unchanged, and with ``drop_unknown_annotations`` the only other effect is that
-        fields whose names begin with ``__`` are left out.
+        resources does not add annotations, and neither does reading them for a query. The
+        numeric annotation of a decimal, the range annotations of a date, dateTime or instant,
+        and the canonical annotation of a quantity are defined in this release, so with the
+        default options resources without any of those are returned unchanged, and with
+        ``drop_unknown_annotations`` the only other effect is that fields whose names begin with
+        ``__`` are left out.
 
         :param df: a :class:`DataFrame` of resources of one type, in the Parquet on FHIR layout
         :param resource_name: the name of the type of the resources

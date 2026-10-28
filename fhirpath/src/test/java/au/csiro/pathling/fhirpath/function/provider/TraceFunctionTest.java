@@ -55,6 +55,7 @@ import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.DateType;
 import org.hl7.fhir.r4.model.Enumerations.AdministrativeGender;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.HumanName;
@@ -401,6 +402,34 @@ class TraceFunctionTest {
     }
 
     @Test
+    void collector_date_capturesItsText() {
+      materialize("Patient.birthDate.trace('dob')");
+
+      assertEquals(
+          List.of("1980-05-17"), collector.getEntries().stream().map(TraceEntry::value).toList());
+    }
+
+    @Test
+    void collector_withProjectionToDate_capturesItsText() {
+      materialize("Patient.trace('dob', birthDate)");
+
+      assertEquals(
+          List.of("1980-05-17"), collector.getEntries().stream().map(TraceEntry::value).toList());
+    }
+
+    @Test
+    void collector_chainedDateTrace_innerNotDoubleEvaluated() {
+      materialize("Patient.birthDate.trace('inner').trace('outer')");
+
+      final long innerCount =
+          collector.getEntries().stream().filter(e -> "inner".equals(e.label())).count();
+      final long outerCount =
+          collector.getEntries().stream().filter(e -> "outer".equals(e.label())).count();
+      assertEquals(1, innerCount);
+      assertEquals(1, outerCount);
+    }
+
+    @Test
     void collector_chainedTrace_innerNotDoubleEvaluated() {
       // When trace('inner').trace('outer') is evaluated without a projection, the outer
       // TraceExpression has the same expression for both left and right children. This test
@@ -711,6 +740,7 @@ class TraceFunctionTest {
     final Patient p = new Patient();
     p.setId("Patient/1");
     p.setGender(AdministrativeGender.FEMALE);
+    p.setBirthDateElement(new DateType("1980-05-17"));
     p.setActive(true);
     p.addName().setUse(HumanName.NameUse.OFFICIAL).setFamily("Smith").addGiven("Jane");
     return p;

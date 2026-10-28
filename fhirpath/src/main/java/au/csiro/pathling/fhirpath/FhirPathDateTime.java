@@ -17,14 +17,12 @@
 
 package au.csiro.pathling.fhirpath;
 
-import static au.csiro.pathling.fhirpath.FhirPathTime.TIME_FORMAT;
-
+import au.csiro.pathling.schema.date.FhirDateTime;
 import jakarta.annotation.Nonnull;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeParseException;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.stream.Stream;
 import lombok.AllArgsConstructor;
 import lombok.Value;
 
@@ -32,21 +30,12 @@ import lombok.Value;
  * Utility class for handling FHIRPath date/dateTime values with partial precision.
  *
  * <p>This class can parse FHIRPath date/dateTime strings, determine their precision, and compute
- * lower and upper boundary Instants based on that precision.
+ * lower and upper boundary Instants based on that precision. The grammar and the boundaries are
+ * {@link FhirDateTime}'s, which ingest shares (decision 135).
  */
 @Value
 @AllArgsConstructor(access = lombok.AccessLevel.PRIVATE)
 public class FhirPathDateTime {
-
-  // Define regex patterns for date/time components
-  private static final String OFFSET_FORMAT = "(?<offset>Z|([+\\-])(\\d\\d):(\\d\\d))";
-  private static final String DATETIME_FORMAT =
-      "(?<year>\\d{4})(-(?<month>\\d\\d)(-(?<day>\\d\\d)(T(?<time>"
-          + TIME_FORMAT
-          + "))?)?)?"
-          + OFFSET_FORMAT
-          + "?";
-  private static final Pattern DATETIME_REGEX = Pattern.compile("^" + DATETIME_FORMAT + "$");
 
   @Nonnull OffsetDateTime value;
   @Nonnull TemporalPrecision precision;
@@ -60,57 +49,13 @@ public class FhirPathDateTime {
    */
   @Nonnull
   public static FhirPathDateTime parse(@Nonnull final String dateTimeString) {
-    final Matcher matcher = DATETIME_REGEX.matcher(dateTimeString);
-    if (!matcher.matches()) {
-      throw new DateTimeParseException("Invalid FHIR date/dateTime format", dateTimeString, 0);
-    }
-
-    final String yearGroup = matcher.group("year");
-    final String monthGroup = matcher.group("month");
-    final String dayGroup = matcher.group("day");
-    final String hoursGroup = matcher.group("hours");
-    final String minutesGroup = matcher.group("minutes");
-    final String secondsGroup = matcher.group("seconds");
-    final String fracGroup = matcher.group("frac");
-    final String offsetGroup = matcher.group("offset");
-
-    // special case for the value of hours being 24 which is valid in java
-    // (represents midnight of the following day) but not in FHIR where hours must be in range [0,
-    // 23]
-    if (hoursGroup != null && (Integer.parseInt(hoursGroup) > 23)) {
-      throw new DateTimeParseException("Hours must be in range [0, 23]", dateTimeString, 0);
-    }
-
-    // Determine precision based on which groups are present
-    final TemporalPrecision precision;
-    if (fracGroup != null) {
-      precision = TemporalPrecision.FRACS;
-    } else if (secondsGroup != null) {
-      precision = TemporalPrecision.SECOND;
-    } else if (minutesGroup != null) {
-      precision = TemporalPrecision.MINUTE;
-    } else if (hoursGroup != null) {
-      precision = TemporalPrecision.HOUR;
-    } else if (dayGroup != null) {
-      precision = TemporalPrecision.DAY;
-    } else if (monthGroup != null) {
-      precision = TemporalPrecision.MONTH;
-    } else {
-      precision = TemporalPrecision.YEAR;
-    }
-
-    // Build a parseable datetime string with defaults for missing components
-    final String parseableDateTime =
-        yearGroup
-            + (monthGroup != null ? "-" + monthGroup : "-01")
-            + (dayGroup != null ? "-" + dayGroup : "-01")
-            + (hoursGroup != null ? "T" + hoursGroup : "T00")
-            + (minutesGroup != null ? ":" + minutesGroup : ":00")
-            + (secondsGroup != null ? ":" + secondsGroup : ":00")
-            + (fracGroup != null ? "." + fracGroup : "")
-            + (offsetGroup != null ? offsetGroup : "Z");
-    final OffsetDateTime dateTime = OffsetDateTime.parse(parseableDateTime);
-    return new FhirPathDateTime(dateTime, precision);
+    final FhirDateTime parsed = FhirDateTime.parse(dateTimeString);
+    final TemporalPrecision precision =
+        Stream.of(TemporalPrecision.values())
+            .filter(candidate -> candidate.getChronoUnit() == parsed.getPrecision())
+            .findFirst()
+            .orElseThrow();
+    return new FhirPathDateTime(parsed.getValue(), precision);
   }
 
   /**
@@ -150,20 +95,7 @@ public class FhirPathDateTime {
    */
   @Nonnull
   public Instant getUpperBoundary() {
-
-    return switch (precision) {
-      // seconds and fracs are already represented with the same precisions
-      // (i.e: 12:30:45 corresponds to 12:30:45.000000000)
-      // so the upper boundary is the same as the lower boundary
-      case SECOND, FRACS -> value.toInstant();
-      // for everything else we compute the next dateTime at given precision
-      // (e.g. for 2010-10-10T10 + 1 hour  = 2010-10-10T11)
-      // and then decrease it by 1 nanosecond to get the upper bound of the previous period
-      // (e.g. 2010-10-10T11 - 1 ns = 2010-10-10T10:59:59.999999999)
-      // This works because OffsetDateTime does not have the notion of daylight saving time
-      // and thus there are no anomalies when adding or subtracting time periods.
-      default -> value.plus(1, precision.getChronoUnit()).minusNanos(1).toInstant();
-    };
+    return FhirDateTime.upperBoundary(value, precision.getChronoUnit());
   }
 
   /**

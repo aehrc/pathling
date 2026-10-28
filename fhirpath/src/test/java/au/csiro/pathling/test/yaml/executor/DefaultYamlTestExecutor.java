@@ -211,7 +211,7 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
 
       // Extract the actual result for error reporting.
       final ColumnRepresentation actualRepresentation =
-          evalResult.toEngineForm().getColumn().asCanonical();
+          evalResult.toEngineForm().getOutputColumn().asCanonical();
       final Row resultRow =
           evaluator.getDataset().select(actualRepresentation.getValue().alias("actual")).first();
       final Object actual = getResult(resultRow, 0);
@@ -301,7 +301,7 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
     // Get column representations for both actual and expected results.
     final ColumnRepresentation expectedRepresentation = getResultRepresentation();
     final ColumnRepresentation actualRepresentation =
-        evalResult.toEngineForm().getColumn().asCanonical();
+        evalResult.toEngineForm().getOutputColumn().asCanonical();
 
     // Create a single row with both actual and expected values for comparison.
     final Row resultRow =

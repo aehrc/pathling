@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.fhirpath;
 
+import au.csiro.pathling.schema.date.FhirDateTime;
 import jakarta.annotation.Nonnull;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -40,8 +41,7 @@ import lombok.Value;
 public class FhirPathTime {
 
   /** Regular expression for a FHIR time string. */
-  public static final String TIME_FORMAT =
-      "(?<hours>\\d\\d)(:(?<minutes>\\d\\d)(:(?<seconds>\\d\\d)(\\.(?<frac>\\d+))?)?)?";
+  public static final String TIME_FORMAT = FhirDateTime.TIME_FORMAT;
 
   private static final Pattern TIME_REGEX = Pattern.compile("^" + TIME_FORMAT + "$");
 

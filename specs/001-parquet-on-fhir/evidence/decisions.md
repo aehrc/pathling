@@ -4562,3 +4562,98 @@ _Consequences_:
   `annotation-pruning.md` named the quantity's annotation `__canonical`; they depend on its placement, not
   its name, and stand.
 - Decisions 46 and 135 are not rewritten. Tickets 14, 26 and 35 are updated on `issue/2832`.
+
+## 138. A date's range is stored as INT64 microseconds, and an instant carries it
+
+Owner decision (2026-10-27), from ticket 14's report on the stored type. Amends FR-004 as it applies to the
+type and to the types annotated. Evidence: `scripts/ticket-14/` (the footer probe and its output).
+
+The Parquet on FHIR specification gives the range annotations `start` and `end` the `int96` physical type
+with the `TIMESTAMP(isAdjustedToUTC=true, unit=MILLIS)` logical type, on `date` and `dateTime`. Ticket 14
+found that the combination cannot be written: Parquet allows no logical type on `int96`. Spark, which stores
+the annotations as `TimestampType`, writes plain `int96` by default, or `int64` with `TIMESTAMP(MILLIS,true)`
+or `TIMESTAMP(MICROS,true)` when `spark.sql.parquet.outputTimestampType` asks for it, and Delta writes the
+same. Written at milliseconds, an upper bound such as `1980-12-31T23:59:59.999Z` disagrees with the bound the
+engine computes for a literal at microseconds, and `birthDate >= @1980` for a stored `1980` goes from true to
+empty, so the stored and the computed range would no longer give the same answers (FR-022).
+
+_Decision_:
+
+- **Pathling's own sessions write `__start` and `__end` as `int64` with
+  `TIMESTAMP(isAdjustedToUTC=true, MICROS)`,** on the proleptic Gregorian calendar, Spark 4's default. Spark
+  takes the type from the session alone, so the sessions Pathling builds set
+  `spark.sql.parquet.outputTimestampType=TIMESTAMP_MICROS` beside the Delta settings, once, as they are created:
+  Java's default session, Python's managed defaults and R's `pathling_connect`. Java's and Python's
+  contexts build a session only where there is none, and take an active (in Java, also a default) session as
+  the user's, with its settings as they are: Spark applies a runtime SQL setting given to a builder to a
+  session that already exists too, so Java does not use the builder where one does (amended, owner,
+  2026-10-28; Java gave an active session the setting before). Pathling never changes a session's settings at
+  run time (owner, 2026-10-27).
+- **The bounds are the true instants** (owner, 2026-10-28). Pathling gives Spark the bounds, of the annotation
+  and of a literal or a search value alike, as `java.time.Instant`, which Spark takes as they are. A
+  `java.sql.Timestamp`, as ticket 14 first gave them, is rebased from the Julian calendar in the JVM's time
+  zone, so a date before the Gregorian cutover was stored about ten days off the true instant and depended on
+  the zone of the JVM that wrote it (`SystemDateTimeCutoverTest`).
+- **A session the user supplies keeps its setting, and a write refuses anything but microseconds**
+  (amended, owner, 2026-10-28). Where the session is not `TIMESTAMP_MICROS`, a warning is logged once, at
+  context creation, and the context still queries: a session that only reads is not refused. The Parquet,
+  Delta and catalog sinks throw before writing anything where a dataset to be written holds a timestamp,
+  which in the layout is a date's range annotation, naming the setting and how to set it. This holds for
+  `INT96`, which would store a type other than the layout's, as for `TIMESTAMP_MILLIS`, whose truncated upper
+  bound would change comparisons. It superseded a warning alone, with the annotations stored as the session
+  said.
+- **An `instant` carries the range annotations,** as `date` and `dateTime` do. It compares as a dateTime.
+- **This is a deviation from the specification,** recorded in `contracts/storage-layout.md`, lasting until the
+  specification is amended. An amendment proposing `int64` `TIMESTAMP(isAdjustedToUTC=true, MICROS)`, the
+  proleptic Gregorian calendar and `instant` is drafted with ticket 14 and raised after the owner's review.
+
+_Rejected_:
+
+- **A writer option.** Spark ignores `spark.sql.parquet.outputTimestampType`, `outputTimestampType` and
+  `parquet.outputTimestampType` as options of a Parquet or a Delta write, which still write `int96`
+  (`scripts/ticket-14/OptionProbeTest.java`).
+- **Setting it around each write**, as ticket 14 first built it. It changes the user's session at run time,
+  and races: a query on another thread of the session takes the setting while a write runs, and two writes at
+  once can restore it under each other.
+- **`TIMESTAMP_NTZ`.** It writes `isAdjustedToUTC=false`, and forces every Delta table to reader version 3
+  and writer version 7 with the `timestampNtz` feature (probed by the coordinator with Delta 4.0.0). Comparing
+  it with a `TIMESTAMP` shifts it by the session's time zone.
+- **`INT96`**, Spark's default. It never gets statistics or predicate pushdown.
+
+_Consequences_:
+
+- Annotations are optional (ADR-0003), so a reader of the specification's type that finds another computes the
+  range from the element.
+- **The server** builds its own session (`Spark.java`) and writes Delta itself (`UpdateExecutor`,
+  `DeleteExecutor`, `SchemaMigrator`). When it moves to this runtime, `Spark.java` should add
+  `spark.sql.parquet.outputTimestampType=TIMESTAMP_MICROS`, which covers those writes too. `server/` is not
+  changed with ticket 14; the change is noted on the server's migration issue, #2837 ([comment](https://github.com/aehrc/pathling/issues/2837#issuecomment-6459415645), owner,
+  2026-10-28).
+
+## 139. A difference in how a type's values are represented is not a column representation
+
+Owner decision (2026-10-27), from ticket 14's review, which replaced `DateRangeRepresentation`. Ticket 14
+implements it for dates; ticket 17 is bound by it.
+
+A subclass of `ColumnRepresentation` that marks values of one type as represented differently, as
+`DecimalRepresentation` did until `8cf5363773` and `DateRangeRepresentation` did in ticket 14's first
+implementation, does not survive every operation: an operation that builds a new representation from a
+column, such as a `map` or a `transform`, builds the default one, and the difference is silently lost.
+`DefaultRepresentation`'s purpose is to unify singular and repeating columns, not to carry a type's form.
+
+_Decision_:
+
+- **The type-specific logic lives in the collection classes,** and the values a collection holds have one
+  form whatever operation produced them.
+- **A FHIR primitive is converted to its System form at traversal,** as a FHIR decimal is converted to a
+  System decimal, until the engine reads primitive metadata (ticket 17). A date and a dateTime are traversed
+  as a System date: a structure of its text and its range, the stored range annotations where the schema
+  carries them and computed otherwise.
+- **A collection whose engine form differs from the form a caller is given** overrides
+  `Collection.getOutputColumn()`, which the readers of results use: a date is given as its text.
+
+_Not taken now_:
+
+- **A representation carrying a value column beside a metadata column** for every primitive. It would widen
+  `DefaultRepresentation`'s purpose. Ticket 17, which needs `x` paired with `_x` to filter on a primitive's
+  extensions, decides that pairing under this decision.

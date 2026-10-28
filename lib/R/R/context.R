@@ -44,7 +44,11 @@ StorageType <- list(
 #' your own cluster, make sure it is on the list of packages.
 #'
 #' @param spark A pre-configured SparkSession instance, use this if you need to control the way
-#'   that the session is set up
+#'   that the session is set up. Its settings are used as they are: where it does not set
+#'   \code{spark.sql.parquet.outputTimestampType} to \code{TIMESTAMP_MICROS}, as the session
+#'   Pathling creates does, a warning is logged, and writing data that carries the range
+#'   annotations of dates to Parquet, Delta or a catalog table fails, because Pathling stores them
+#'   as INT64 microseconds adjusted to UTC.
 #' @param max_nesting_level Controls the maximum depth of nested element data that is encoded
 #'   upon import. This affects certain elements within FHIR resources that contain recursive
 #'   references, e.g., QuestionnaireResponse.item.
@@ -101,8 +105,7 @@ StorageType <- list(
 #'   which it does by default. An
 #'   annotation is a value derived from an element and stored with it, which a query reads rather
 #'   than computing again. Turning one off makes the stored data narrower and never changes the
-#'   answer to a query, which computes an annotation the data does not carry. Of the three
-#'   kinds, the numeric annotation of a decimal and the canonical annotation of a quantity are
+#'   answer to a query, which computes an annotation the data does not carry. All three kinds are
 #'   stored in this release.
 #' @param enable_range_annotation Whether encoding stores the range annotations of a date,
 #'   dateTime or instant, the bounds implied by its stated precision, which it does by default
@@ -190,6 +193,7 @@ pathling_connect <- function(
   new_spark_connection <- function() {
     sparklyr::spark_connect(master = "local[*]", config = list("sparklyr.shell.conf" = c(
       "spark.sql.mapKeyDedupPolicy=LAST_WIN",
+      "spark.sql.parquet.outputTimestampType=TIMESTAMP_MICROS",
       "spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension",
       "spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog"
     )), version = spark_info$spark_version)

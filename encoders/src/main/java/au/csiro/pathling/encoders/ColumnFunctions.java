@@ -24,6 +24,7 @@ package au.csiro.pathling.encoders;
 
 import au.csiro.pathling.sql.ExtensionTraversal;
 import au.csiro.pathling.sql.MergeCast;
+import au.csiro.pathling.sql.ResolveFieldsOrElse;
 import au.csiro.pathling.sql.ResolveOrElse;
 import au.csiro.pathling.sql.ResolveOrNull;
 import au.csiro.pathling.sql.UnresolvedMergeCombination;
@@ -41,6 +42,7 @@ import org.apache.spark.sql.classic.ExpressionUtils;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
 import scala.collection.immutable.Seq;
+import scala.jdk.javaapi.CollectionConverters;
 
 /**
  * Java-based utility class for creating Column expressions from Catalyst expressions. This class
@@ -136,6 +138,28 @@ public class ColumnFunctions {
     return ExpressionUtils.column(
         new ResolveOrElse(
             ExpressionUtils.expression(child), fieldName, ExpressionUtils.expression(fallback)));
+  }
+
+  /**
+   * Creates a structure of several fields of a structure that resolves to a fallback structure
+   * where the resolved input does not carry all of them, so that a fallback computing them all at
+   * once is evaluated once. Presence is decided once for the schema, never per row (FR-023).
+   *
+   * @param child the structure that may carry the fields
+   * @param fieldNames the names of the fields
+   * @param fallback the structure of the same fields to take where any of them is absent
+   * @return a structure of the fields, or the fallback
+   */
+  @Nonnull
+  public static Column resolveFieldsOrElse(
+      @Nonnull final Column child,
+      @Nonnull final List<String> fieldNames,
+      @Nonnull final Column fallback) {
+    return ExpressionUtils.column(
+        new ResolveFieldsOrElse(
+            ExpressionUtils.expression(child),
+            CollectionConverters.asScala(fieldNames).toSeq(),
+            ExpressionUtils.expression(fallback)));
   }
 
   /**

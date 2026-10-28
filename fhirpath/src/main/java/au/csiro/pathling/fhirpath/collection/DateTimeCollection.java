@@ -25,15 +25,18 @@ import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
+import au.csiro.pathling.fhirpath.column.SystemDateTime;
 import jakarta.annotation.Nonnull;
 import java.text.ParseException;
 import java.util.Optional;
+import org.apache.spark.sql.Column;
 import org.hl7.fhir.r4.model.DateTimeType;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.InstantType;
 
 /**
- * Represents a collection of DateTime-typed elements.
+ * Represents a collection of DateTime-typed elements, each held as a System dateTime with its range
+ * (see {@link SystemDateTime}).
  *
  * @author John Grimes
  */
@@ -94,12 +97,13 @@ public class DateTimeCollection extends Collection
   @UsedByReflection
   @Nonnull
   public static DateTimeCollection fromValue(@Nonnull final DateTimeType value) {
-    return DateTimeCollection.build(DefaultRepresentation.literal(value.getValueAsString()));
+    return DateTimeCollection.build(
+        new DefaultRepresentation(SystemDateTime.fromLiteral(value.getValueAsString())));
   }
 
   /**
    * Returns a new instance based upon a {@link InstantType}. The instant is held as its text, as a
-   * traversed instant is (decision 81).
+   * traversed instant is (decision 81), with its range.
    *
    * @param value The value to use
    * @return A new instance of {@link DateTimeCollection}
@@ -107,7 +111,8 @@ public class DateTimeCollection extends Collection
   @UsedByReflection
   @Nonnull
   public static DateTimeCollection fromValue(@Nonnull final InstantType value) {
-    final ColumnRepresentation column = DefaultRepresentation.literal(value.getValueAsString());
+    final ColumnRepresentation column =
+        new DefaultRepresentation(SystemDateTime.fromLiteral(value.getValueAsString()));
     return new DateTimeCollection(
         column,
         Optional.of(FhirPathType.DATETIME),
@@ -129,18 +134,36 @@ public class DateTimeCollection extends Collection
     if (!FhirPathDateTime.isDateTimeValue(dateTimeString)) {
       throw new ParseException("Invalid dateTime literal: " + dateTimeLiteral, 0);
     }
-    return DateTimeCollection.build(DefaultRepresentation.literal(dateTimeString));
+    return DateTimeCollection.build(
+        new DefaultRepresentation(SystemDateTime.fromLiteral(dateTimeString)));
   }
 
   /**
-   * Returns the value as a string. An instant needs no formatting, because it is held as its text
-   * (decision 81), like every other date and time.
+   * Returns the value as a string, its text. An instant needs no formatting, because it is held as
+   * its text (decision 81), like every other date and time.
    *
    * @return the value as a string
    */
   @Nonnull
   @Override
   public StringCollection asStringPath() {
-    return StringCollection.build(getColumn());
+    return StringCollection.build(getOutputColumn());
+  }
+
+  /**
+   * Returns the text of each value, which is what a System date is given to a caller as.
+   *
+   * @return the text of each value
+   */
+  @Nonnull
+  @Override
+  public ColumnRepresentation getOutputColumn() {
+    return getColumn().transform(SystemDateTime::text);
+  }
+
+  @Nonnull
+  @Override
+  public Column toExternalValue() {
+    return getOutputColumn().getValue();
   }
 }

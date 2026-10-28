@@ -360,6 +360,8 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
         .testEquals("2023-01-15", "'2023-01-15'.toDate()", "toDate() converts valid date string")
         .testEquals("2023-12-25", "@2023-12-25.toDate()", "toDate() returns date as-is")
         .testEmpty("'notADate'.toDate()", "toDate() returns empty for invalid date string")
+        .testEmpty("'2023-02-30'.toDate()", "toDate() returns empty for a day that does not exist")
+        .testEmpty("'2023-13'.toDate()", "toDate() returns empty for a month that does not exist")
         .group("toDate() with invalid types")
         .testEmpty("42.toDate()", "toDate() returns empty for non-string")
         .group("toDate() with empty values")
@@ -392,6 +394,9 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
         .group("convertsToDate() with non-convertible types")
         .testFalse(
             "'notADate'.convertsToDate()", "convertsToDate() returns false for invalid date string")
+        .testFalse(
+            "'2023-02-30'.convertsToDate()",
+            "convertsToDate() returns false for a day that does not exist")
         .testFalse("42.convertsToDate()", "convertsToDate() returns false for integer")
         .group("convertsToDate() with empty values")
         .testEmpty("emptyDate.convertsToDate()", "convertsToDate() returns empty for empty Date")
@@ -433,6 +438,16 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
         .testEmpty(
             "'not-a-datetime'.toDateTime()",
             "toDateTime() returns empty for invalid datetime string")
+        .testEmpty(
+            "'2023-06-15T25'.toDateTime()",
+            "toDateTime() returns empty for an hour that does not exist")
+        .testEquals(
+            "2016-12-31T23:59:60Z",
+            "'2016-12-31T23:59:60Z'.toDateTime()",
+            "toDateTime() converts a leap second")
+        .testTrue(
+            "'2016-12-31T23:59:60Z'.toDateTime() > @2016-12-31T23:59:58Z",
+            "a leap second compares as the second before it")
         .group("toDateTime() with invalid types")
         .testEmpty("42.toDateTime()", "toDateTime() returns empty for non-string")
         .group("toDateTime() with empty values")
@@ -473,6 +488,9 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
         .testFalse(
             "'not-a-datetime'.convertsToDateTime()",
             "convertsToDateTime() returns false for invalid datetime string")
+        .testFalse(
+            "'2023-06-15T25'.convertsToDateTime()",
+            "convertsToDateTime() returns false for an hour that does not exist")
         .testFalse("42.convertsToDateTime()", "convertsToDateTime() returns false for integer")
         .group("convertsToDateTime() with empty values")
         .testEmpty(

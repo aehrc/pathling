@@ -298,7 +298,8 @@ public class SingleInstanceEvaluator {
    * quantity keeps its extensions and a decimal its text, as a number. A structure the engine
    * builds is rendered by the definition it carries, and the fields it has beside the elements of
    * its type are left out. A System quantity has a fixed shape whose value is its text (FR-059), so
-   * it is rendered as it is, as a stored quantity is. Every other value is collected as it is.
+   * it is rendered as it is, as a stored quantity is. A date is collected as its text. Every other
+   * value is collected as it is.
    *
    * @param resourceDf the single-row encoded resource Dataset
    * @param result the result collection
@@ -314,7 +315,7 @@ public class SingleInstanceEvaluator {
       @Nonnull final ElementRenderer renderer) {
 
     final Dataset<Row> valueDf =
-        resourceDf.select(result.getColumn().getValue().alias(RESULT_COLUMN));
+        resourceDf.select(result.getOutputColumn().getValue().alias(RESULT_COLUMN));
     final DataType valueType = valueDf.schema().fields()[0].dataType();
     final Dataset<Row> resultDf =
         asElementDefinition(result)

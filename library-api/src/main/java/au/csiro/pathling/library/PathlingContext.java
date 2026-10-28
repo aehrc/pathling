@@ -74,6 +74,7 @@ import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.functions;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import scala.jdk.javaapi.OptionConverters;
 
 /**
  * A class designed to provide access to selected Pathling functionality from a language library
@@ -84,6 +85,16 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  */
 @Slf4j
 public class PathlingContext {
+
+  /** The Spark setting that says how timestamps are written to Parquet. */
+  @Nonnull
+  private static final String OUTPUT_TIMESTAMP_TYPE = "spark.sql.parquet.outputTimestampType";
+
+  /**
+   * The value of {@link #OUTPUT_TIMESTAMP_TYPE} that writes timestamps as {@code INT64}
+   * microseconds adjusted to UTC, as the range annotations of a date are stored (decision 138).
+   */
+  @Nonnull private static final String TIMESTAMP_MICROS = "TIMESTAMP_MICROS";
 
   /**
    * The MIME type for FHIR JSON resources.
@@ -140,6 +151,7 @@ public class PathlingContext {
       @Nonnull final QueryConfiguration queryConfiguration,
       @Nonnull final SchemaConfiguration schemaConfiguration) {
     requireLegacySizeOfNullDisabled(spark);
+    warnUnlessTimestampsInMicros(spark);
     this.spark = spark;
     this.fhirEncoders = fhirEncoders;
     this.terminologyServiceFactory = terminologyServiceFactory;
@@ -176,6 +188,31 @@ public class PathlingContext {
               + "`spark.conf.set(\"spark.sql.legacy.sizeOfNull\", \"false\")` before constructing "
               + "the PathlingContext.");
     }
+  }
+
+  /**
+   * Warns where a session writes timestamps to Parquet other than as {@code INT64} microseconds
+   * adjusted to UTC, which is how Pathling stores the range annotations of a date (decision 138).
+   * Pathling sets this on the sessions it builds, and never changes the setting of a session it is
+   * given. A session that is not set so can query, but Pathling's Parquet, Delta and catalog sinks
+   * refuse to write data that carries the range annotations from it.
+   *
+   * @param spark the Spark session to check
+   */
+  private static void warnUnlessTimestampsInMicros(@Nonnull final SparkSession spark) {
+    final String value = spark.conf().get(OUTPUT_TIMESTAMP_TYPE);
+    if (TIMESTAMP_MICROS.equalsIgnoreCase(value)) {
+      return;
+    }
+    log.warn(
+        "The Spark session writes timestamps to Parquet as {} (`{}`), rather than as INT64"
+            + " TIMESTAMP(MICROS), as Pathling stores the range annotations of dates. Writing data"
+            + " that carries them to Parquet, Delta or a catalog table will fail. To write it, set"
+            + " `{}={}` on the session.",
+        value,
+        OUTPUT_TIMESTAMP_TYPE,
+        OUTPUT_TIMESTAMP_TYPE,
+        TIMESTAMP_MICROS);
   }
 
   @Nonnull
@@ -294,7 +331,7 @@ public class PathlingContext {
      */
     @Nonnull
     public PathlingContext build() {
-      final SparkSession finalSpark = getOrDefault(spark, PathlingContext::buildDefaultSpark);
+      final SparkSession finalSpark = getOrDefault(spark, PathlingContext::defaultSpark);
       final EncodingConfiguration finalEncodingConfig =
           getOrDefault(encodingConfiguration, EncodingConfiguration.builder()::build);
       final TerminologyConfiguration finalTerminologyConfig =
@@ -413,6 +450,11 @@ public class PathlingContext {
    * Creates a new {@link PathlingContext} with a default setup for Spark, FHIR encoders, and
    * terminology services.
    *
+   * <p>The Spark session is the active one, or the default one, used as it is, as {@link
+   * #create(SparkSession)} uses a session it is given. Where there is neither, a new local session
+   * is built with {@code spark.sql.parquet.outputTimestampType}={@code TIMESTAMP_MICROS}, so that
+   * the range annotations of a date are written as {@code INT64} microseconds adjusted to UTC.
+   *
    * @return a new {@link PathlingContext} instance
    */
   @Nonnull
@@ -422,6 +464,12 @@ public class PathlingContext {
 
   /**
    * Creates a new {@link PathlingContext} using a pre-configured {@link SparkSession}.
+   *
+   * <p>The session's settings are used as they are. Where it does not set {@code
+   * spark.sql.parquet.outputTimestampType} to {@code TIMESTAMP_MICROS}, as the session Pathling
+   * builds does, a warning is logged, and writing data that carries the range annotations of dates
+   * to Parquet, Delta or a catalog table fails, because Pathling stores them as {@code INT64}
+   * microseconds adjusted to UTC.
    *
    * @param sparkSession the Spark session to use
    * @return a new {@link PathlingContext} instance
@@ -564,10 +612,11 @@ public class PathlingContext {
    *
    * <p>With the default configuration, every kind of annotation is stored, an annotation already
    * present is kept, one of a kind that is off is left out, and one Pathling does not compute is
-   * kept. Only the numeric annotation of a decimal and the canonical annotation of a quantity are
-   * defined in this release, so with the default configuration resources without a decimal or a
-   * quantity are returned unchanged, and with unknown annotations dropped the only other effect is
-   * that fields marked as annotations, whose names begin with {@code __}, are left out.
+   * kept. The numeric annotation of a decimal, the range annotations of a date, dateTime or
+   * instant, and the canonical annotation of a quantity are defined in this release, so with the
+   * default configuration resources without any of those are returned unchanged, and with unknown
+   * annotations dropped the only other effect is that fields marked as annotations, whose names
+   * begin with {@code __}, are left out.
    *
    * @param resources the dataframe of resources, in the Parquet on FHIR layout
    * @param resourceName the name of the type of the resources
@@ -959,9 +1008,25 @@ public class PathlingContext {
     return encode(jsonDf, resourceType, FHIR_JSON);
   }
 
+  /**
+   * Returns the session a context uses where it is given none: the active session, or else the
+   * default one, as Spark's builder would find it, used as it is, as Python's and R's contexts use
+   * one. Only where there is neither is a session built, and it writes timestamps to Parquet as
+   * {@code INT64} microseconds adjusted to UTC, as the range annotations of a date are stored
+   * (decision 138). Spark would apply a runtime SQL setting given to the builder to a session that
+   * already exists too, so the builder is not used where one does.
+   */
   @Nonnull
-  private static SparkSession buildDefaultSpark() {
-    return SparkSession.builder().appName("Pathling").master("local[*]").getOrCreate();
+  private static SparkSession defaultSpark() {
+    return OptionConverters.toJava(SparkSession.getActiveSession())
+        .or(() -> OptionConverters.toJava(SparkSession.getDefaultSession()))
+        .orElseGet(
+            () ->
+                SparkSession.builder()
+                    .appName("Pathling")
+                    .master("local[*]")
+                    .config(OUTPUT_TIMESTAMP_TYPE, TIMESTAMP_MICROS)
+                    .getOrCreate());
   }
 
   @Nonnull

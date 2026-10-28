@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.io;
 
+import static au.csiro.pathling.schema.ColumnBinding.bindOnce;
 import static au.csiro.pathling.utilities.SparkTypes.elementTypeOf;
 import static au.csiro.pathling.utilities.SparkTypes.fieldOf;
 
@@ -29,7 +30,6 @@ import au.csiro.pathling.schema.PrimitiveTypes;
 import au.csiro.pathling.schema.SchemaConfiguration;
 import au.csiro.pathling.schema.annotation.AnnotationKind;
 import au.csiro.pathling.schema.annotation.AnnotationRegistry;
-import au.csiro.pathling.schema.annotation.AnnotationResolver;
 import jakarta.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -124,7 +124,7 @@ public final class Annotator {
       @Nonnull final String resourceType, @Nonnull final Dataset<Row> resources) {
     final DefinitionCanonicalStructure canonical =
         DefinitionCanonicalStructure.forResource(definitions, resourceType);
-    return fields(canonical, resources.schema(), functions::col, Optional.empty())
+    return fields(canonical, resources.schema(), functions::col, Map.of(), Map.of())
         .map(columns -> resources.select(columns.toArray(Column[]::new)))
         .orElse(resources);
   }
@@ -135,15 +135,17 @@ public final class Annotator {
    * @param node the canonical structure of the node
    * @param observed the structure the input carries at this node
    * @param field how a field of the structure is reached
-   * @param self the structure itself, from which a complex element's annotations are computed, or
-   *     empty for a resource
+   * @param derived the kinds applied in the structure, by the annotation each stores there, which
+   *     are none for a resource
+   * @param annotations the value of each annotation the kinds store
    */
   @Nonnull
   private Optional<List<Column>> fields(
       @Nonnull final DefinitionCanonicalStructure node,
       @Nonnull final StructType observed,
       @Nonnull final Function<String, Column> field,
-      @Nonnull final Optional<Column> self) {
+      @Nonnull final Map<String, AnnotationKind> derived,
+      @Nonnull final Map<String, Column> annotations) {
     final List<Column> result = new ArrayList<>();
     boolean changed = false;
     for (final StructField stored : observed.fields()) {
@@ -158,14 +160,8 @@ public final class Annotator {
       result.addAll(replaced.orElseGet(() -> List.of(field.apply(name).alias(name))));
     }
     final Optional<StructType> structure = Optional.of(observed);
-    final Map<String, AnnotationKind> derived =
-        self.isPresent() ? requested(node.entries(), structure, true) : Map.of();
     final List<String> kept = kept(node.entries(), structure, derived);
-    self.ifPresent(
-        value ->
-            derived.forEach(
-                (name, kind) ->
-                    result.add(kind.apply(name, value, value, resolver(structure)).alias(name))));
+    annotations.forEach((name, annotation) -> result.add(annotation.alias(name)));
     kept.forEach(name -> result.add(field.apply(name).alias(name)));
     changed |= annotationsChange(structure, derived, kept);
     return changed ? Optional.of(result) : Optional.empty();
@@ -243,11 +239,28 @@ public final class Annotator {
       return changed.isEmpty() ? Optional.empty() : Optional.of(transformed);
     }
     if (type instanceof final StructType structure) {
-      return fields(node, structure, stored::getField, Optional.of(stored))
-          .map(
-              columns ->
-                  functions.when(
-                      stored.isNotNull(), functions.struct(columns.toArray(Column[]::new))));
+      final Optional<StructType> observed = Optional.of(structure);
+      final Map<String, AnnotationKind> derived = requested(node.entries(), observed, true);
+      final List<List<Column>> changed = new ArrayList<>(1);
+      // The function is applied as the expression is built, so whether the structure changes is
+      // known when it returns.
+      final Column rebuilt =
+          computingOnce(
+              derived,
+              observed,
+              stored,
+              stored,
+              annotations -> {
+                final Optional<List<Column>> columns =
+                    fields(node, structure, stored::getField, derived, annotations);
+                columns.ifPresent(changed::add);
+                return columns
+                    .map(fields -> functions.struct(fields.toArray(Column[]::new)))
+                    .orElse(stored);
+              });
+      return changed.isEmpty()
+          ? Optional.empty()
+          : Optional.of(functions.when(stored.isNotNull(), rebuilt));
     }
     return Optional.empty();
   }
@@ -371,10 +384,19 @@ public final class Annotator {
       @Nonnull final List<String> kept) {
     final Column present =
         group.map(stored -> value.isNotNull().or(stored.isNotNull())).orElseGet(value::isNotNull);
+    // The container is read only for an annotation it carries, so a group the input lacks is never
+    // read.
+    final Column container = group.orElseGet(() -> functions.lit(null));
     return functions.when(
         present,
-        functions.struct(
-            groupFields(node, observed, value, group, derived, kept).toArray(Column[]::new)));
+        computingOnce(
+            derived,
+            observed,
+            value,
+            container,
+            annotations ->
+                functions.struct(
+                    groupFields(node, observed, group, annotations, kept).toArray(Column[]::new))));
   }
 
   /**
@@ -386,9 +408,8 @@ public final class Annotator {
   private List<Column> groupFields(
       @Nonnull final MetadataGroupStructure node,
       @Nonnull final Optional<StructType> observed,
-      @Nonnull final Column value,
       @Nonnull final Optional<Column> group,
-      @Nonnull final Map<String, AnnotationKind> derived,
+      @Nonnull final Map<String, Column> annotations,
       @Nonnull final List<String> kept) {
     final List<Column> result = new ArrayList<>();
     observed.ifPresent(
@@ -406,14 +427,92 @@ public final class Annotator {
             }
           }
         });
-    // The container is read only for an annotation it carries, so a group the input lacks is never
-    // read.
-    final Column container = group.orElseGet(() -> functions.lit(null));
-    derived.forEach(
-        (name, kind) ->
-            result.add(kind.apply(name, value, container, resolver(observed)).alias(name)));
-    kept.forEach(name -> result.add(container.getField(name).alias(name)));
+    annotations.forEach((name, annotation) -> result.add(annotation.alias(name)));
+    kept.forEach(name -> result.add(group.orElseThrow().getField(name).alias(name)));
     return result;
+  }
+
+  /**
+   * Builds a container from the value of each annotation the kinds applied in it store: the stored
+   * annotation where the container carries it and annotations are not recomputed, and the computed
+   * one otherwise.
+   *
+   * <p>A kind is computed once from the value, however many of its fields are computed, so that the
+   * two bounds of a date come from one parse of it (owner, 2026-10-26). Where more than one of its
+   * annotations is computed, the computation is bound to the argument of a lambda, which is
+   * evaluated once, because a structure referenced once for each field would be computed once for
+   * each. A kind of which one annotation is computed is computed in place, and a kind none of whose
+   * annotations is computed is not computed at all.
+   *
+   * @param derived the kinds applied in the container, by the annotation each stores there
+   * @param observed the container the input carries, where it carries one
+   * @param value the value the annotations are computed from
+   * @param container the container the input carries, from which a stored annotation is taken
+   * @param build builds the container from the value of each annotation, in the order of {@code
+   *     derived}
+   */
+  @Nonnull
+  private Column computingOnce(
+      @Nonnull final Map<String, AnnotationKind> derived,
+      @Nonnull final Optional<StructType> observed,
+      @Nonnull final Column value,
+      @Nonnull final Column container,
+      @Nonnull final Function<Map<String, Column>, Column> build) {
+    final Map<AnnotationKind, Long> computed =
+        derived.entrySet().stream()
+            .filter(entry -> computes(observed, entry.getKey()))
+            .collect(
+                Collectors.groupingBy(
+                    Map.Entry::getValue, LinkedHashMap::new, Collectors.counting()));
+    // A kind of which one annotation is computed reads its computation once, so it needs no
+    // binding.
+    final Map<AnnotationKind, Column> inline = new LinkedHashMap<>();
+    computed.forEach(
+        (kind, fields) -> {
+          if (fields == 1) {
+            inline.put(kind, kind.compute(value));
+          }
+        });
+    final List<AnnotationKind> shared =
+        computed.keySet().stream().filter(kind -> !inline.containsKey(kind)).toList();
+    return bind(
+        shared,
+        value,
+        inline,
+        bound -> {
+          final Map<String, Column> annotations = new LinkedHashMap<>();
+          derived.forEach(
+              (name, kind) ->
+                  annotations.put(
+                      name,
+                      computes(observed, name)
+                          ? bound.get(kind).getField(name)
+                          : container.getField(name)));
+          return build.apply(annotations);
+        });
+  }
+
+  /**
+   * Computes each of the kinds once from the value, binding each to the argument of a lambda, and
+   * passes the computed structures, by kind, to the body, together with those already bound.
+   */
+  @Nonnull
+  private static Column bind(
+      @Nonnull final List<AnnotationKind> kinds,
+      @Nonnull final Column value,
+      @Nonnull final Map<AnnotationKind, Column> bound,
+      @Nonnull final Function<Map<AnnotationKind, Column>, Column> body) {
+    if (kinds.isEmpty()) {
+      return body.apply(bound);
+    }
+    final AnnotationKind kind = kinds.get(0);
+    return bindOnce(
+        kind.compute(value),
+        computed -> {
+          final Map<AnnotationKind, Column> withKind = new LinkedHashMap<>(bound);
+          withKind.put(kind, computed);
+          return bind(kinds.subList(1, kinds.size()), value, withKind, body);
+        });
   }
 
   /**
@@ -472,9 +571,7 @@ public final class Annotator {
       @Nonnull final Optional<StructType> observed,
       @Nonnull final Map<String, AnnotationKind> derived,
       @Nonnull final List<String> kept) {
-    final boolean computes =
-        derived.keySet().stream()
-            .anyMatch(name -> configuration.isRecomputeAnnotations() || !isStored(observed, name));
+    final boolean computes = derived.keySet().stream().anyMatch(name -> computes(observed, name));
     final List<String> stored = fieldNames(observed).toList();
     final List<String> rebuilt =
         Stream.of(
@@ -487,15 +584,14 @@ public final class Annotator {
   }
 
   /**
-   * Returns the resolver this step applies a kind with: the stored annotation where the container
-   * the input carries has it, unless annotations are recomputed, and the computed one otherwise.
+   * Returns whether this step computes an annotation, rather than keeping the one the container the
+   * input carries: where the container does not carry it, or annotations are recomputed. This is
+   * how the step resolves an annotation, knowing the schema of the dataset it rebuilds (decision
+   * 135).
    */
-  @Nonnull
-  private AnnotationResolver resolver(@Nonnull final Optional<StructType> observed) {
-    return (container, name, fallback) ->
-        !configuration.isRecomputeAnnotations() && isStored(observed, name)
-            ? container.getField(name)
-            : fallback;
+  private boolean computes(
+      @Nonnull final Optional<StructType> observed, @Nonnull final String name) {
+    return configuration.isRecomputeAnnotations() || !isStored(observed, name);
   }
 
   /** Returns whether the container the input carries has a field. */

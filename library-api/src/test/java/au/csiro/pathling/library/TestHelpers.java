@@ -40,6 +40,7 @@ public class TestHelpers {
         .config("spark.ui.enabled", "false")
         .config("spark.driver.bindAddress", "localhost")
         .config("spark.driver.host", "localhost")
+        .config("spark.sql.parquet.outputTimestampType", "TIMESTAMP_MICROS")
         .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
         .config(
             "spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog");

@@ -125,6 +125,19 @@ class QuantityCanonicalAnnotationTest {
   }
 
   @Test
+  void anAnnotationComputedAloneIsNotBound() {
+    // The canonical form and the value's numeric annotation are each one field of their kind, so
+    // each reads its computation once, and neither is bound to a lambda's argument.
+    final String plan =
+        annotate(SchemaConfiguration.builder().build(), observation("o1", ucum("1.5", "kg"), ""))
+            .select("valueQuantity")
+            .queryExecution()
+            .optimizedPlan()
+            .toString();
+    assertFalse(plan.contains("element_at"), plan);
+  }
+
+  @Test
   void quantitiesOrdersOfMagnitudeApartDoNotCompareEqual() {
     // A nanogram and a hundred of them would both be zero grams at six fractional digits.
     final List<Row> rows =

@@ -240,6 +240,19 @@ public final class ResourceRepresentation extends ColumnRepresentation {
       }
       return existing(DefaultRepresentation.numericValue(values, groups));
     }
+    if (DefaultRepresentation.isDate(fhirType)) {
+      // A date is read as a System date, with the range annotations in its metadata group, a
+      // column beside it, where the schema carries them.
+      final Column values = ColumnFunctions.columnOrNull(fieldName, fallback);
+      final Column groups =
+          ColumnFunctions.columnOrNull(
+              LayoutFields.metadataGroupName(fieldName), DataTypes.NullType);
+      return existing(
+              fallback instanceof ArrayType
+                  ? SystemDateTime.fromStoredArray(values, groups)
+                  : SystemDateTime.fromStored(values, groups))
+          .removeNulls();
+    }
     return DefaultRepresentation.decodeField(getField(fieldName, fallback).removeNulls(), fhirType);
   }
 

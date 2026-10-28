@@ -35,6 +35,7 @@ import au.csiro.pathling.fhirpath.collection.QuantityCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.collection.TimeCollection;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
+import au.csiro.pathling.fhirpath.column.SystemDateTime;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import au.csiro.pathling.sql.misc.DecimalToLiteral;
 import au.csiro.pathling.sql.misc.QuantityToLiteral;
@@ -305,7 +306,8 @@ class ConversionLogic {
    * Converts a value to String based on source type.
    *
    * <ul>
-   *   <li>BOOLEAN, INTEGER, DATE, DATETIME, TIME: Direct cast to String
+   *   <li>BOOLEAN, INTEGER, TIME: Direct cast to String
+   *   <li>DATE, DATETIME: The text of the System date
    *   <li>DECIMAL: Use DecimalToLiteral UDF to format with trailing zeros removed
    *   <li>QUANTITY: Use QuantityToLiteral UDF to format as FHIRPath quantity literal
    * </ul>
@@ -317,9 +319,12 @@ class ConversionLogic {
   @Nonnull
   Column convertToString(@Nonnull final FhirPathType sourceType, @Nonnull final Column value) {
     return switch (sourceType) {
-      case BOOLEAN, INTEGER, DATE, DATETIME, TIME ->
+      case BOOLEAN, INTEGER, TIME ->
           // Primitive types can be cast to string directly.
           value.try_cast(DataTypes.StringType);
+      case DATE, DATETIME ->
+          // A date is held as a System date, and converts to its text.
+          SystemDateTime.text(value);
       case DECIMAL ->
           // Decimal: Use DecimalToLiteral UDF to strip trailing zeros.
           // E.g., 101.990000 -> 101.99, 1.0 -> 1
@@ -336,7 +341,8 @@ class ConversionLogic {
    * Converts a value to Date based on source type.
    *
    * <ul>
-   *   <li>STRING: Validates format (YYYY or YYYY-MM or YYYY-MM-DD) and returns the string value
+   *   <li>STRING: Validates format (YYYY or YYYY-MM or YYYY-MM-DD) and returns the System date of
+   *       the string value
    * </ul>
    *
    * @param sourceType The source FHIRPath type
@@ -348,16 +354,17 @@ class ConversionLogic {
     if (sourceType == FhirPathType.STRING) {
       // Date values are stored as strings in FHIR. Validate format before accepting.
       // Date format: YYYY or YYYY-MM or YYYY-MM-DD
-      return let(value, v -> when(v.rlike(DATE_REGEX), v));
+      return let(value, v -> SystemDateTime.tryFromText(when(v.rlike(DATE_REGEX), v)));
     }
-    return lit(null);
+    return SystemDateTime.empty();
   }
 
   /**
    * Converts a value to DateTime based on source type.
    *
    * <ul>
-   *   <li>STRING: Validates format (supports partial precision) and returns the string value
+   *   <li>STRING: Validates format (supports partial precision) and returns the System dateTime of
+   *       the string value
    * </ul>
    *
    * @param sourceType The source FHIRPath type
@@ -369,9 +376,9 @@ class ConversionLogic {
     if (sourceType == FhirPathType.STRING) {
       // DateTime values are stored as strings in FHIR. Validate using simplified pattern.
       // Supports partial precision: YYYY, YYYY-MM, YYYY-MM-DD, YYYY-MM-DDThh, etc.
-      return let(value, v -> when(v.rlike(DATETIME_REGEX), v));
+      return let(value, v -> SystemDateTime.tryFromText(when(v.rlike(DATETIME_REGEX), v)));
     }
-    return lit(null);
+    return SystemDateTime.empty();
   }
 
   /**

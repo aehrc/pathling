@@ -357,11 +357,10 @@ class AnnotatorTest {
   }
 
   @Test
-  void leavesResourcesTheBuiltInKindsDoNotAnnotateAsTheyAre() {
-    // The built-in kind annotates quantities, and this patient has none.
+  void leavesResourcesWithNothingTheBuiltInKindsAnnotateAsTheyAre() {
+    // The built-in kinds annotate decimals, dates and quantities, and this patient has none.
     final Dataset<Row> resources =
-        read(
-            "Patient", "{\"resourceType\":\"Patient\",\"id\":\"p1\",\"birthDate\":\"1974-12-25\"}");
+        read("Patient", "{\"resourceType\":\"Patient\",\"id\":\"p1\",\"gender\":\"male\"}");
 
     assertSame(
         resources,

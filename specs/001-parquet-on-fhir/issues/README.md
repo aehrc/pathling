@@ -67,7 +67,7 @@ extensions are stored and navigable.
 - ~~[12](12-quantity-annotations.md) Quantity annotations, UCUM-only canonicalisation, codegen-fallback measurement~~ (done)
 - ~~[13](13-decimal-annotation.md) Decimal numeric annotation~~ (done)
 - [41](41-system-decimal-38-6.md) Switch System.Decimal to DECIMAL(38,6)
-- [14](14-date-range-annotation.md) Date range annotation
+- ~~[14](14-date-range-annotation.md) Date range annotation~~ (done)
 - [15](15-schema-decided-plan-test-and-docs.md) Test that annotation use is decided from the schema, and document annotations
 - [17](17-placeholder-primitive-metadata-group.md) PLACEHOLDER: the primitive metadata group (US6, #437)
 - ~~[34](34-placeholder-content-outside-definitions.md) PLACEHOLDER: Carry content the definitions do not describe through ingest, egress and the engine~~ (moved to a follow-up issue, ticket 26)
@@ -97,6 +97,7 @@ issues are raised, and #2367 is checked complete.
 - [26](26-raise-github-followups.md) Raise the GitHub follow-up issues, including non-conformant data beyond `trust`, extra fields, and what the release needs
 - [36](36-followup-extra-fields.md) Scope the follow-up issue on extra fields: their support, and their place in the conformance levels
 - [38](38-annotation-fill-per-row.md) Consider deciding the annotation step's *fill* per row
+- [42](42-shared-annotation-computation.md) Reconsider how an annotation kind's shared computation is processed
 - [40](40-sql-output-shape.md) Specify the shape of SQL output: annotations, primitive types and complete schemas for complex types
 - [29](29-layout-version-column.md) Identify the PoF layout by a versioned layout column
 - [30](30-pof-spec-layout-column.md) Propose the layout column as an amendment to the Parquet on FHIR specification
