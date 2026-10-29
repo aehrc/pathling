@@ -24,6 +24,7 @@ import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.utilities.SystemDecimal;
 import jakarta.annotation.Nonnull;
 import java.math.BigDecimal;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -33,6 +34,8 @@ import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -138,6 +141,30 @@ class StoredNumericAnnotationTest {
                 Optional.of(FHIRDefinedType.DECIMAL),
                 DataTypes.createArrayType(DataTypes.StringType));
     assertDecimals(data, decimals, true, expected, type);
+  }
+
+  @Test
+  void aRepeatingDecimalReadsOnlyTheNumericAnnotationOfItsGroups(@TempDir final Path dir) {
+    final String path = dir.resolve("s").toString();
+    spark
+        .sql(
+            "SELECT named_struct('x', array('2.5'), '_x', array(named_struct('id', 'i',"
+                + " 'extension', array(named_struct('url', 'u')), '__numeric',"
+                + " cast(2.5 as decimal(38,6))))) AS s")
+        .write()
+        .parquet(path);
+    final Dataset<Row> data = spark.read().parquet(path);
+    final ColumnRepresentation decimals =
+        new DefaultRepresentation(data.col("s"))
+            .traverse(
+                "x",
+                Optional.of(FHIRDefinedType.DECIMAL),
+                DataTypes.createArrayType(DataTypes.StringType));
+
+    assertThat(data.select(decimals.getValue()).queryExecution().executedPlan().toString())
+        .contains(
+            "ReadSchema:"
+                + " struct<s:struct<x:array<string>,_x:array<struct<__numeric:decimal(38,6)>>>>");
   }
 
   /** Returns the SQL of a value stored as an annotation at a type. */

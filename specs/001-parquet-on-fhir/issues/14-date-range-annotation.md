@@ -199,3 +199,7 @@ A medium-effort code review of the branch against `issue/2832` reported ten find
 ### Raised (2026-10-28)
 
 The upstream amendment, reviewed by the owner, is [aehrc/parquet-on-fhir#3](https://github.com/aehrc/parquet-on-fhir/issues/3): `start` and `end` as `int64` `TIMESTAMP(isAdjustedToUTC=true, MICROS)` on the proleptic Gregorian calendar, and `instant` carrying them.
+
+### Owner's decision on the stage 4 review (2026-10-29)
+
+- **A null placeholder in a repeating date under a repeating parent is dropped.** Where a value exists only in `_x`, the review fixes of PR #2877 (`3f98e232d8`) no longer keep a null item for it, as a singular parent already did not. The owner accepted this as it stands, without a test pinning it.
