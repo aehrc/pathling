@@ -19,7 +19,6 @@ package au.csiro.pathling.fhirpath.column;
 
 import au.csiro.pathling.encoders.ColumnFunctions;
 import au.csiro.pathling.schema.LayoutFields;
-import au.csiro.pathling.schema.annotation.kinds.DecimalNumericKind;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import java.util.function.UnaryOperator;
@@ -206,8 +205,9 @@ public final class ResourceRepresentation extends ColumnRepresentation {
    * <p>removeNulls() filters out NULL values from arrays to match the behavior of {@link
    * DefaultRepresentation#traverse(String)}, but the result is not flattened.
    *
-   * <p>A decimal is decoded from its numeric annotation where the schema carries it, and from its
-   * stored text otherwise, as {@link DefaultRepresentation#traverse(String)} decodes one.
+   * <p>A decimal or a date is read with the annotations in its metadata group, the stored ones
+   * where the schema carries them and the computed ones otherwise, as {@link
+   * DefaultRepresentation#traverse(String)} reads one.
    *
    * @param fieldName the name of the field to traverse to
    * @param fhirType the FHIR type of the field
@@ -220,38 +220,15 @@ public final class ResourceRepresentation extends ColumnRepresentation {
       @Nonnull final String fieldName,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final DataType fallback) {
-    if (DefaultRepresentation.isDecimal(fhirType)) {
-      // A decimal is decoded from the numeric annotation in its metadata group, a column beside it.
-      final Column values = ColumnFunctions.columnOrNull(fieldName, fallback);
-      final Column groups =
-          ColumnFunctions.columnOrNull(
-              LayoutFields.metadataGroupName(fieldName), DataTypes.NullType);
-      if (fallback instanceof ArrayType) {
-        return DefaultRepresentation.numericValues(
-            existing(
-                    DefaultRepresentation.pairWithAnnotation(
-                        values,
-                        groups,
-                        Optional.empty(),
-                        true,
-                        DecimalNumericKind.INSTANCE,
-                        LayoutFields.NUMERIC_ANNOTATION))
-                .removeNulls());
-      }
-      return existing(DefaultRepresentation.numericValue(values, groups));
-    }
-    if (DefaultRepresentation.isDate(fhirType)) {
-      // A date is read as a System date, with the range annotations in its metadata group, a
-      // column beside it, where the schema carries them.
-      final Column values = ColumnFunctions.columnOrNull(fieldName, fallback);
-      final Column groups =
-          ColumnFunctions.columnOrNull(
-              LayoutFields.metadataGroupName(fieldName), DataTypes.NullType);
+    if (DefaultRepresentation.isDecimal(fhirType) || DefaultRepresentation.isDate(fhirType)) {
+      // A decimal or a date is read with the annotations in its metadata group, a column beside it.
       return existing(
-              fallback instanceof ArrayType
-                  ? SystemDateTime.fromStoredArray(values, groups)
-                  : SystemDateTime.fromStored(values, groups))
-          .removeNulls();
+          DefaultRepresentation.storedValues(
+              ColumnFunctions.columnOrNull(fieldName, fallback),
+              ColumnFunctions.columnOrNull(
+                  LayoutFields.metadataGroupName(fieldName), DataTypes.NullType),
+              fhirType,
+              fallback instanceof ArrayType));
     }
     return DefaultRepresentation.decodeField(getField(fieldName, fallback).removeNulls(), fhirType);
   }

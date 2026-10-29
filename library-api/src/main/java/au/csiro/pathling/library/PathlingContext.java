@@ -17,6 +17,8 @@
 
 package au.csiro.pathling.library;
 
+import static au.csiro.pathling.io.TimestampStorage.OUTPUT_TIMESTAMP_TYPE;
+import static au.csiro.pathling.io.TimestampStorage.TIMESTAMP_MICROS;
 import static java.util.Objects.nonNull;
 
 import au.csiro.pathling.PathlingVersion;
@@ -35,6 +37,7 @@ import au.csiro.pathling.fhirpath.evaluation.SingleInstanceEvaluator;
 import au.csiro.pathling.io.Annotator;
 import au.csiro.pathling.io.FhirReader;
 import au.csiro.pathling.io.FhirWriter;
+import au.csiro.pathling.io.TimestampStorage;
 import au.csiro.pathling.library.io.source.DataSourceBuilder;
 import au.csiro.pathling.library.terminology.TerminologyImportOptions;
 import au.csiro.pathling.schema.SchemaConfiguration;
@@ -85,16 +88,6 @@ import scala.jdk.javaapi.OptionConverters;
  */
 @Slf4j
 public class PathlingContext {
-
-  /** The Spark setting that says how timestamps are written to Parquet. */
-  @Nonnull
-  private static final String OUTPUT_TIMESTAMP_TYPE = "spark.sql.parquet.outputTimestampType";
-
-  /**
-   * The value of {@link #OUTPUT_TIMESTAMP_TYPE} that writes timestamps as {@code INT64}
-   * microseconds adjusted to UTC, as the range annotations of a date are stored (decision 138).
-   */
-  @Nonnull private static final String TIMESTAMP_MICROS = "TIMESTAMP_MICROS";
 
   /**
    * The MIME type for FHIR JSON resources.
@@ -200,8 +193,7 @@ public class PathlingContext {
    * @param spark the Spark session to check
    */
   private static void warnUnlessTimestampsInMicros(@Nonnull final SparkSession spark) {
-    final String value = spark.conf().get(OUTPUT_TIMESTAMP_TYPE);
-    if (TIMESTAMP_MICROS.equalsIgnoreCase(value)) {
+    if (TimestampStorage.writesMicros(spark)) {
       return;
     }
     log.warn(
@@ -209,7 +201,7 @@ public class PathlingContext {
             + " TIMESTAMP(MICROS), as Pathling stores the range annotations of dates. Writing data"
             + " that carries them to Parquet, Delta or a catalog table will fail. To write it, set"
             + " `{}={}` on the session.",
-        value,
+        spark.conf().get(OUTPUT_TIMESTAMP_TYPE),
         OUTPUT_TIMESTAMP_TYPE,
         OUTPUT_TIMESTAMP_TYPE,
         TIMESTAMP_MICROS);

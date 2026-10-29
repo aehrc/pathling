@@ -17,7 +17,12 @@
 
 package au.csiro.pathling.library.io.sink;
 
+import static au.csiro.pathling.io.TimestampStorage.OUTPUT_TIMESTAMP_TYPE;
+import static au.csiro.pathling.io.TimestampStorage.TIMESTAMP_MICROS;
+import static au.csiro.pathling.io.TimestampStorage.writesMicros;
+
 import jakarta.annotation.Nonnull;
+import java.util.Arrays;
 import java.util.Map;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -25,6 +30,7 @@ import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.ArrayType;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.MapType;
+import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import org.apache.spark.sql.types.TimestampType;
 
@@ -34,12 +40,6 @@ import org.apache.spark.sql.types.TimestampType;
  * no timestamps but the range annotations, so a dataset that holds a timestamp carries them.
  */
 final class StoredTimestamps {
-
-  /** The Spark setting that says how timestamps are written to Parquet. */
-  @Nonnull static final String OUTPUT_TIMESTAMP_TYPE = "spark.sql.parquet.outputTimestampType";
-
-  /** The value of {@link #OUTPUT_TIMESTAMP_TYPE} that writes them as Pathling stores them. */
-  @Nonnull static final String TIMESTAMP_MICROS = "TIMESTAMP_MICROS";
 
   private StoredTimestamps() {}
 
@@ -53,10 +53,10 @@ final class StoredTimestamps {
    */
   static void requireMicros(
       @Nonnull final SparkSession spark, @Nonnull final Map<String, Dataset<Row>> datasets) {
-    final String value = spark.conf().get(OUTPUT_TIMESTAMP_TYPE);
-    if (TIMESTAMP_MICROS.equalsIgnoreCase(value)) {
+    if (writesMicros(spark)) {
       return;
     }
+    final String value = spark.conf().get(OUTPUT_TIMESTAMP_TYPE);
     datasets.forEach(
         (resourceType, dataset) -> {
           if (holdsTimestamp(dataset.schema())) {
@@ -84,12 +84,9 @@ final class StoredTimestamps {
       return true;
     }
     if (type instanceof final StructType struct) {
-      for (final var field : struct.fields()) {
-        if (holdsTimestamp(field.dataType())) {
-          return true;
-        }
-      }
-      return false;
+      return Arrays.stream(struct.fields())
+          .map(StructField::dataType)
+          .anyMatch(StoredTimestamps::holdsTimestamp);
     }
     if (type instanceof final ArrayType array) {
       return holdsTimestamp(array.elementType());

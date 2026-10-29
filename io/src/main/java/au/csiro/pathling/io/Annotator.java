@@ -37,7 +37,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.spark.sql.Column;
@@ -124,61 +126,76 @@ public final class Annotator {
       @Nonnull final String resourceType, @Nonnull final Dataset<Row> resources) {
     final DefinitionCanonicalStructure canonical =
         DefinitionCanonicalStructure.forResource(definitions, resourceType);
-    return fields(canonical, resources.schema(), functions::col, Map.of(), Map.of())
-        .map(columns -> resources.select(columns.toArray(Column[]::new)))
+    return fields(canonical, resources.schema(), Map.of())
+        .map(
+            build -> resources.select(build.apply(functions::col, Map.of()).toArray(Column[]::new)))
         .orElse(resources);
   }
 
   /**
-   * Returns the fields of a structure, annotated, or empty where nothing in it changes.
+   * Returns how the fields of a structure are built, annotated, from how a field is reached and the
+   * value of each annotation the kinds store, or empty where nothing in it changes.
+   *
+   * <p>The schema is visited once, depth first, and every decision is made from it as it is
+   * visited: whether a field changes is known before any column is built, and the columns are built
+   * only where something does.
    *
    * @param node the canonical structure of the node
    * @param observed the structure the input carries at this node
-   * @param field how a field of the structure is reached
    * @param derived the kinds applied in the structure, by the annotation each stores there, which
    *     are none for a resource
-   * @param annotations the value of each annotation the kinds store
    */
   @Nonnull
-  private Optional<List<Column>> fields(
+  private Optional<BiFunction<Function<String, Column>, Map<String, Column>, List<Column>>> fields(
       @Nonnull final DefinitionCanonicalStructure node,
       @Nonnull final StructType observed,
-      @Nonnull final Function<String, Column> field,
-      @Nonnull final Map<String, AnnotationKind> derived,
-      @Nonnull final Map<String, Column> annotations) {
-    final List<Column> result = new ArrayList<>();
-    boolean changed = false;
+      @Nonnull final Map<String, AnnotationKind> derived) {
+    final Map<String, Function<Function<String, Column>, List<Column>>> replacements =
+        new LinkedHashMap<>();
     for (final StructField stored : observed.fields()) {
       final String name = stored.name();
-      if (LayoutFields.isAnnotation(name)) {
-        // The annotations of a structure are placed at its end.
-        continue;
+      if (!LayoutFields.isAnnotation(name)) {
+        node.entry(name)
+            .flatMap(entry -> replaced(node, entry, observed, stored))
+            .ifPresent(replacement -> replacements.put(name, replacement));
       }
-      final Optional<List<Column>> replaced =
-          node.entry(name).flatMap(entry -> replaced(node, entry, observed, stored, field));
-      changed |= replaced.isPresent();
-      result.addAll(replaced.orElseGet(() -> List.of(field.apply(name).alias(name))));
     }
     final Optional<StructType> structure = Optional.of(observed);
     final List<String> kept = kept(node.entries(), structure, derived);
-    annotations.forEach((name, annotation) -> result.add(annotation.alias(name)));
-    kept.forEach(name -> result.add(field.apply(name).alias(name)));
-    changed |= annotationsChange(structure, derived, kept);
-    return changed ? Optional.of(result) : Optional.empty();
+    if (replacements.isEmpty() && !annotationsChange(structure, derived, kept)) {
+      return Optional.empty();
+    }
+    return Optional.of(
+        (field, annotations) -> {
+          final List<Column> result = new ArrayList<>();
+          for (final StructField stored : observed.fields()) {
+            final String name = stored.name();
+            // The annotations of a structure are placed at its end.
+            if (!LayoutFields.isAnnotation(name)) {
+              result.addAll(
+                  Optional.ofNullable(replacements.get(name))
+                      .map(replacement -> replacement.apply(field))
+                      .orElseGet(() -> List.of(field.apply(name).alias(name))));
+            }
+          }
+          annotations.forEach((name, annotation) -> result.add(annotation.alias(name)));
+          kept.forEach(name -> result.add(field.apply(name).alias(name)));
+          return result;
+        });
   }
 
   /**
-   * Returns the columns that replace one field of a structure, or empty where it does not change: a
-   * complex element rebuilt, a metadata group rebuilt or left out, or a primitive followed by the
-   * metadata group the input lacked.
+   * Returns how the columns that replace one field of a structure are built, from how a field of
+   * the structure is reached, or empty where it does not change: a complex element rebuilt, a
+   * metadata group rebuilt or left out, or a primitive followed by the metadata group the input
+   * lacked.
    */
   @Nonnull
-  private Optional<List<Column>> replaced(
+  private Optional<Function<Function<String, Column>, List<Column>>> replaced(
       @Nonnull final DefinitionCanonicalStructure node,
       @Nonnull final LayoutEntry entry,
       @Nonnull final StructType observed,
-      @Nonnull final StructField stored,
-      @Nonnull final Function<String, Column> field) {
+      @Nonnull final StructField stored) {
     final String name = stored.name();
     if (entry.isMetadataGroup()) {
       final String primitive = name.substring(LayoutFields.METADATA_GROUP_PREFIX.length());
@@ -186,9 +203,8 @@ public final class Annotator {
           node.metadataGroup(name).orElseThrow(),
           name,
           node.entry(primitive).orElseThrow(),
-          fieldOf(observed, primitive).map(unused -> field.apply(primitive)),
-          Optional.of(stored),
-          field);
+          fieldOf(observed, primitive).map(unused -> primitive),
+          Optional.of(stored));
     }
     if (!entry.isElement()) {
       return Optional.empty();
@@ -203,71 +219,58 @@ public final class Annotator {
               node.metadataGroup(groupName).orElseThrow(),
               groupName,
               entry,
-              Optional.of(field.apply(name)),
-              Optional.empty(),
-              field)
+              Optional.of(name),
+              Optional.empty())
           .map(
               group ->
-                  Stream.concat(Stream.of(field.apply(name).alias(name)), group.stream()).toList());
+                  field ->
+                      Stream.concat(
+                              Stream.of(field.apply(name).alias(name)), group.apply(field).stream())
+                          .toList());
     }
     return node.elementStructure(entry)
-        .flatMap(child -> value(child, stored.dataType(), field.apply(name)))
-        .map(value -> List.of(value.alias(name)));
+        .flatMap(child -> value(child, stored.dataType()))
+        .map(build -> field -> List.of(build.apply(field.apply(name)).alias(name)));
   }
 
   /**
-   * Returns the value of a complex element, annotated, descending through an array where it
-   * repeats, or empty where nothing in it changes.
+   * Returns how the value of a complex element is built, annotated, from its stored value,
+   * descending through an array where it repeats, or empty where nothing in it changes.
    */
   @Nonnull
-  private Optional<Column> value(
-      @Nonnull final DefinitionCanonicalStructure node,
-      @Nonnull final DataType type,
-      @Nonnull final Column stored) {
+  private Optional<UnaryOperator<Column>> value(
+      @Nonnull final DefinitionCanonicalStructure node, @Nonnull final DataType type) {
     if (type instanceof final ArrayType array) {
-      final List<Column> changed = new ArrayList<>(1);
-      // The function is applied as the expression is built, so whether the elements change is
-      // known when it returns.
-      final Column transformed =
-          functions.transform(
-              stored,
-              each -> {
-                final Optional<Column> value = value(node, array.elementType(), each);
-                value.ifPresent(changed::add);
-                return value.orElse(each);
-              });
-      return changed.isEmpty() ? Optional.empty() : Optional.of(transformed);
+      return value(node, array.elementType())
+          .map(element -> stored -> functions.transform(stored, element::apply));
     }
     if (type instanceof final StructType structure) {
       final Optional<StructType> observed = Optional.of(structure);
       final Map<String, AnnotationKind> derived = requested(node.entries(), observed, true);
-      final List<List<Column>> changed = new ArrayList<>(1);
-      // The function is applied as the expression is built, so whether the structure changes is
-      // known when it returns.
-      final Column rebuilt =
-          computingOnce(
-              derived,
-              observed,
-              stored,
-              stored,
-              annotations -> {
-                final Optional<List<Column>> columns =
-                    fields(node, structure, stored::getField, derived, annotations);
-                columns.ifPresent(changed::add);
-                return columns
-                    .map(fields -> functions.struct(fields.toArray(Column[]::new)))
-                    .orElse(stored);
-              });
-      return changed.isEmpty()
-          ? Optional.empty()
-          : Optional.of(functions.when(stored.isNotNull(), rebuilt));
+      return fields(node, structure, derived)
+          .map(
+              build ->
+                  stored ->
+                      functions.when(
+                          stored.isNotNull(),
+                          computingOnce(
+                              derived,
+                              observed,
+                              stored,
+                              stored,
+                              annotations ->
+                                  functions.struct(
+                                      build
+                                          .apply(stored::getField, annotations)
+                                          .toArray(Column[]::new)))));
     }
     return Optional.empty();
   }
 
   /**
-   * Returns the metadata group of a primitive, annotated, as the columns that replace it, which are
-   * none where nothing is left in it, or empty where it does not change.
+   * Returns how the metadata group of a primitive is built, annotated, as the columns that replace
+   * it, from how a field of the structure holding both is reached, or empty where it does not
+   * change. The columns are none where nothing is left in the group.
    *
    * <p>Where the primitive repeats, its values and its groups are aligned by position, and the
    * group at each position is built from the value at that position. A position with neither a
@@ -281,55 +284,56 @@ public final class Annotator {
    * @param node the canonical structure of the group
    * @param name the name of the group
    * @param primitive the entry of the primitive the group accompanies
-   * @param value the primitive, where the input carries it
+   * @param value the name of the primitive, where the input carries it
    * @param stored the group, where the input carries it
-   * @param field how a field of the structure holding both is reached
    */
   @Nonnull
-  private Optional<List<Column>> metadataGroup(
+  private Optional<Function<Function<String, Column>, List<Column>>> metadataGroup(
       @Nonnull final MetadataGroupStructure node,
       @Nonnull final String name,
       @Nonnull final LayoutEntry primitive,
-      @Nonnull final Optional<Column> value,
-      @Nonnull final Optional<StructField> stored,
-      @Nonnull final Function<String, Column> field) {
-    final boolean repeating = primitive.isRepeating();
+      @Nonnull final Optional<String> value,
+      @Nonnull final Optional<StructField> stored) {
     final Optional<StructType> observed =
         stored
             .map(StructField::dataType)
-            .filter(type -> isMetadataGroupShape(repeating, type))
+            .filter(type -> isMetadataGroupShape(primitive.isRepeating(), type))
             .map(type -> (StructType) elementTypeOf(type));
     if (stored.isPresent() && observed.isEmpty()) {
       // A group of the wrong shape is not this layout's, and is passed through as it is.
       return Optional.empty();
     }
-    final Optional<Column> group = stored.map(StructField::name).map(field);
     final Map<String, AnnotationKind> derived =
         requested(node.annotationEntries(), observed, value.isPresent());
     final List<String> kept = kept(node.annotationEntries(), observed, derived);
-    final boolean extensionsChange =
+    final Optional<UnaryOperator<Column>> extensions =
         observed
             .flatMap(s -> fieldOf(s, LayoutFields.METADATA_GROUP_EXTENSION))
             .flatMap(
                 extension ->
                     node.extensionStructure(extension.name())
-                        // Whether the extensions change depends on their schema alone.
-                        .flatMap(child -> value(child, extension.dataType(), functions.lit(null))))
-            .isPresent();
-    if (!extensionsChange && !annotationsChange(observed, derived, kept)) {
+                        .flatMap(child -> value(child, extension.dataType())));
+    if (extensions.isEmpty() && !annotationsChange(observed, derived, kept)) {
       return Optional.empty();
     }
     final boolean holdsContent = fieldNames(observed).anyMatch(n -> !LayoutFields.isAnnotation(n));
     if (!holdsContent && derived.isEmpty() && kept.isEmpty()) {
-      return Optional.of(List.of());
+      return Optional.of(field -> List.of());
     }
     // The value a primitive the input does not carry takes, which is the typed null of decision 72.
     final Column absent = functions.lit(null).cast(storageType(primitive));
-    final Column rebuilt =
-        repeating
-            ? repeatingGroup(node, observed, value, group, absent, derived, kept)
-            : groupAt(node, observed, value.orElse(absent), group, derived, kept);
-    return Optional.of(List.of(rebuilt.alias(name)));
+    return Optional.of(
+        field -> {
+          final Optional<Column> values = value.map(field);
+          final Optional<Column> groups = stored.map(StructField::name).map(field);
+          final Column rebuilt =
+              primitive.isRepeating()
+                  ? repeatingGroup(
+                      node, observed, values, groups, absent, derived, kept, extensions)
+                  : groupAt(
+                      node, observed, values.orElse(absent), groups, derived, kept, extensions);
+          return List.of(rebuilt.alias(name));
+        });
   }
 
   /**
@@ -344,14 +348,23 @@ public final class Annotator {
       @Nonnull final Optional<Column> groups,
       @Nonnull final Column absent,
       @Nonnull final Map<String, AnnotationKind> derived,
-      @Nonnull final List<String> kept) {
+      @Nonnull final List<String> kept,
+      @Nonnull final Optional<UnaryOperator<Column>> extensions) {
     // Where the primitive has no values, the groups the input carries are rebuilt as they stand.
     final Optional<Column> fromGroups =
         groups.map(
             stored ->
                 functions.transform(
                     stored,
-                    group -> groupAt(node, observed, absent, Optional.of(group), derived, kept)));
+                    group ->
+                        groupAt(
+                            node,
+                            observed,
+                            absent,
+                            Optional.of(group),
+                            derived,
+                            kept,
+                            extensions)));
     return values
         .map(
             stored -> {
@@ -365,7 +378,8 @@ public final class Annotator {
                               value,
                               groups.map(group -> functions.get(group, index)),
                               derived,
-                              kept));
+                              kept,
+                              extensions));
               return fromGroups
                   .map(rebuilt -> functions.when(stored.isNotNull(), fromValues).otherwise(rebuilt))
                   .orElse(fromValues);
@@ -381,7 +395,8 @@ public final class Annotator {
       @Nonnull final Column value,
       @Nonnull final Optional<Column> group,
       @Nonnull final Map<String, AnnotationKind> derived,
-      @Nonnull final List<String> kept) {
+      @Nonnull final List<String> kept,
+      @Nonnull final Optional<UnaryOperator<Column>> extensions) {
     final Column present =
         group.map(stored -> value.isNotNull().or(stored.isNotNull())).orElseGet(value::isNotNull);
     // The container is read only for an annotation it carries, so a group the input lacks is never
@@ -396,7 +411,8 @@ public final class Annotator {
             container,
             annotations ->
                 functions.struct(
-                    groupFields(node, observed, group, annotations, kept).toArray(Column[]::new))));
+                    groupFields(observed, group, annotations, kept, extensions)
+                        .toArray(Column[]::new))));
   }
 
   /**
@@ -405,12 +421,12 @@ public final class Annotator {
    * kept as they stand.
    */
   @Nonnull
-  private List<Column> groupFields(
-      @Nonnull final MetadataGroupStructure node,
+  private static List<Column> groupFields(
       @Nonnull final Optional<StructType> observed,
       @Nonnull final Optional<Column> group,
       @Nonnull final Map<String, Column> annotations,
-      @Nonnull final List<String> kept) {
+      @Nonnull final List<String> kept,
+      @Nonnull final Optional<UnaryOperator<Column>> extensions) {
     final List<Column> result = new ArrayList<>();
     observed.ifPresent(
         structure -> {
@@ -420,8 +436,9 @@ public final class Annotator {
             if (!LayoutFields.isAnnotation(name)) {
               final Column column = stored.getField(name);
               result.add(
-                  node.extensionStructure(name)
-                      .flatMap(child -> value(child, field.dataType(), column))
+                  extensions
+                      .filter(unused -> LayoutFields.METADATA_GROUP_EXTENSION.equals(name))
+                      .map(build -> build.apply(column))
                       .orElse(column)
                       .alias(name));
             }
