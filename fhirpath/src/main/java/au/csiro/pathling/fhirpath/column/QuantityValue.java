@@ -18,8 +18,6 @@
 package au.csiro.pathling.fhirpath.column;
 
 import static au.csiro.pathling.sql.SqlFunctions.let;
-import static java.util.Objects.nonNull;
-import static java.util.Objects.requireNonNull;
 import static org.apache.spark.sql.functions.callUDF;
 import static org.apache.spark.sql.functions.coalesce;
 import static org.apache.spark.sql.functions.lit;
@@ -30,7 +28,6 @@ import au.csiro.pathling.fhirpath.unit.CalendarDurationUnit;
 import au.csiro.pathling.fhirpath.unit.UcumUnit;
 import au.csiro.pathling.sql.misc.ConvertQuantityToUnit;
 import jakarta.annotation.Nonnull;
-import jakarta.annotation.Nullable;
 import java.util.function.BinaryOperator;
 import org.apache.spark.sql.Column;
 
@@ -42,7 +39,7 @@ import org.apache.spark.sql.Column;
  * <ul>
  *   <li>Unit-based conversions (toQuantity, convertsToQuantity)
  *   <li>Quantity comparisons (equals, less than, greater than, etc.)
- *   <li>Accessing different representations (original, normalized, literal)
+ *   <li>Accessing different representations (original and literal)
  * </ul>
  *
  * <p>This class centralizes all Quantity-related SQL column operations and provides a unified
@@ -50,8 +47,7 @@ import org.apache.spark.sql.Column;
  *
  * <p>The wrapped column holds a System quantity, in the fixed shape {@link
  * QuantityEncoding#dataType()}. A stored quantity is taken as one where it is computed with. The
- * decimal value and the canonical form are not part of that shape, so they are computed here from
- * the value and the code (T096, FR-022).
+ * decimal value and the canonical form are read from the annotations the shape carries.
  *
  * @author Piotr Szul
  */
@@ -89,33 +85,15 @@ public class QuantityValue {
   /**
    * A helper record to hold a value and a unit column.
    *
-   * <p>Provides methods to extract different representations of a Quantity (normalized, original,
-   * literal) and to compare two {@link ValueWithUnit} instances using a provided comparator,
-   * ensuring that the units are the same.
+   * <p>Provides methods to extract different representations of a Quantity (original and literal)
+   * and to compare two {@link ValueWithUnit} instances using a provided comparator, ensuring that
+   * the units are the same.
    *
    * @param value the value column
    * @param unit the unit column
    * @param system the system column
    */
-  public record ValueWithUnit(
-      @Nonnull Column value, @Nonnull Column unit, @Nullable Column system) {
-
-    /**
-     * Extracts the normalized (canonicalized) value and unit from a Quantity column.
-     *
-     * <p>Uses the canonical value and code computed from the quantity, with null system (as
-     * canonicalized quantities are system-independent).
-     *
-     * @param quantity the Quantity column
-     * @return a ValueWithUnit instance containing the normalized value and unit
-     */
-    @Nonnull
-    public static ValueWithUnit normalizedValueOf(@Nonnull final Column quantity) {
-      return new ValueWithUnit(
-          QuantityEncoding.canonicalValue(quantity),
-          QuantityEncoding.canonicalCode(quantity),
-          null);
-    }
+  public record ValueWithUnit(@Nonnull Column value, @Nonnull Column unit, @Nonnull Column system) {
 
     /**
      * Extracts the original value and unit from a Quantity column.
@@ -129,7 +107,7 @@ public class QuantityValue {
     @Nonnull
     public static ValueWithUnit originalValueOf(@Nonnull final Column quantity) {
       return new ValueWithUnit(
-          QuantityEncoding.decodeValue(quantity.getField(QuantityEncoding.VALUE_COLUMN)),
+          QuantityEncoding.numericValue(quantity),
           quantity.getField(QuantityEncoding.CODE_COLUMN),
           quantity.getField(QuantityEncoding.SYSTEM_COLUMN));
     }
@@ -147,7 +125,7 @@ public class QuantityValue {
     @Nonnull
     public static ValueWithUnit literalValueOf(@Nonnull final Column quantity) {
       return new ValueWithUnit(
-          QuantityEncoding.decodeValue(quantity.getField(QuantityEncoding.VALUE_COLUMN)),
+          QuantityEncoding.numericValue(quantity),
           quantity.getField(QuantityEncoding.UNIT_COLUMN),
           lit(null));
     }
@@ -155,8 +133,8 @@ public class QuantityValue {
     /**
      * Compares this ValueWithUnit with another using the provided value comparator.
      *
-     * <p>First checks that units match (and systems match if present), then applies the comparator
-     * to the values. Returns null if units/systems don't match.
+     * <p>First checks that the systems and units match, then applies the comparator to the values.
+     * Returns null if they don't match.
      *
      * @param other the ValueWithUnit to compare with
      * @param comparator the binary operator to apply to values (e.g., Column::equalTo)
@@ -165,17 +143,8 @@ public class QuantityValue {
     @Nonnull
     public Column compare(
         @Nonnull final ValueWithUnit other, @Nonnull final BinaryOperator<Column> comparator) {
-      // assert that both (this and other) systems are either non-null or null
-      // that is we compare either two original or two normalized quantities
-      if ((system == null) != (other.system == null)) {
-        throw new IllegalArgumentException("Both quantities must have system or neither.");
-      }
       return when(
-          nonNull(system)
-              ? requireNonNull(system)
-                  .equalTo(requireNonNull(other.system))
-                  .and(unit.equalTo(other.unit))
-              : unit.equalTo(other.unit),
+          system.equalTo(other.system).and(unit.equalTo(other.unit)),
           comparator.apply(value, other.value));
     }
   }
@@ -190,20 +159,6 @@ public class QuantityValue {
   @Nonnull
   public ValueWithUnit originalValue() {
     return ValueWithUnit.originalValueOf(quantityColumn);
-  }
-
-  /**
-   * Gets the normalized (canonicalized) representation of this Quantity.
-   *
-   * <p>Returns a ValueWithUnit with the canonical value and code computed from the quantity's value
-   * and code by {@link QuantityEncoding#canonicalValue(Column)} and {@link
-   * QuantityEncoding#canonicalCode(Column)}, and a null system.
-   *
-   * @return ValueWithUnit representing the normalized Quantity
-   */
-  @Nonnull
-  public ValueWithUnit normalizedValue() {
-    return ValueWithUnit.normalizedValueOf(quantityColumn);
   }
 
   /**

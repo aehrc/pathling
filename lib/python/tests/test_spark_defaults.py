@@ -54,6 +54,10 @@ def test_managed_defaults_match_version_module():
         "org.apache.spark.sql.delta.catalog.DeltaCatalog"
     )
 
+    # Timestamps, the range annotations of a date, are written as INT64
+    # microseconds adjusted to UTC.
+    assert defaults["spark.sql.parquet.outputTimestampType"] == "TIMESTAMP_MICROS"
+
 
 def test_managed_coordinate_identities():
     """The managed coordinate identities are the group:artifact pairs."""

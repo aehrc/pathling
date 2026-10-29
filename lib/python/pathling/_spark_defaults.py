@@ -60,6 +60,13 @@ DELTA_EXTENSION = "io.delta.sql.DeltaSparkSessionExtension"
 # The Delta catalog implementation that Pathling always requires.
 DELTA_CATALOG = "org.apache.spark.sql.delta.catalog.DeltaCatalog"
 
+# The Spark configuration key saying how timestamps are written to Parquet.
+OUTPUT_TIMESTAMP_TYPE_KEY = "spark.sql.parquet.outputTimestampType"
+
+# The timestamp type Pathling's sessions write: INT64 microseconds adjusted to
+# UTC, as the range annotations of a date are stored.
+TIMESTAMP_MICROS = "TIMESTAMP_MICROS"
+
 
 def managed_spark_defaults() -> dict:
     """Returns the Spark configuration that Pathling always requires.
@@ -67,7 +74,10 @@ def managed_spark_defaults() -> dict:
     The packages string lists both managed coordinates at the versions declared
     in :mod:`pathling._version` and retains a trailing comma, matching the
     historical inline literal. The extension and catalog are fixed Delta class
-    names.
+    names. Timestamps are written to Parquet as INT64 microseconds adjusted to
+    UTC, as the range annotations of a date are stored, set once as the session
+    is built. A session the user supplies, or one already active, keeps its own
+    setting.
 
     :return: a mapping of managed Spark configuration key to value.
     """
@@ -78,4 +88,5 @@ def managed_spark_defaults() -> dict:
         ),
         EXTENSIONS_KEY: DELTA_EXTENSION,
         CATALOG_KEY: DELTA_CATALOG,
+        OUTPUT_TIMESTAMP_TYPE_KEY: TIMESTAMP_MICROS,
     }

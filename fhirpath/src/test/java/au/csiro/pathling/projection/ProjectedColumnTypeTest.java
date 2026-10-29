@@ -196,7 +196,7 @@ class ProjectedColumnTypeTest {
   void declaredDecimalTypeStaysTextOnOutput() {
     // A declared decimal is exempt from the cast to the declared type (decision 76). A decimal is
     // output as its literal text, so the column is a string on either schema, while getSqlType()
-    // still reports DECIMAL(32,6).
+    // still reports DECIMAL(38,6).
     final String selection =
         """
         {

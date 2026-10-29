@@ -707,6 +707,19 @@ public class Collection implements Equatable {
   }
 
   /**
+   * Gets the values of this collection as they are given to a caller of the engine, such as the
+   * result of an expression. By default they are the values as they are held. A collection whose
+   * values are held in a form of the engine's own, such as a System date with its range, gives the
+   * value it stands for.
+   *
+   * @return the values of this collection as they are given to a caller
+   */
+  @Nonnull
+  public ColumnRepresentation getOutputColumn() {
+    return getColumn();
+  }
+
+  /**
    * Returns a new collection representing just the elements of this collection with the specified
    * type.
    *

@@ -156,11 +156,23 @@ or XML still fails the read.
 **Behaviour change.** A `System.Quantity` that reaches a caller as a column —
 from the expression-to-column API, or a view column declared `Quantity` — has
 the fixed shape the [engine semantics](engine-semantics.md#quantities) give it:
-`id`, `value`, `comparator`, `unit`, `system` and `code`, each a string, with
-the value as the text of the decimal. It previously had the previous layout's
+`id`, `value`, `_value`, `comparator`, `unit`, `system`, `code` and
+`__canonical_exact`. The elements are strings, with the value as the text of the
+decimal; `_value` carries the value's numeric annotation, `_value.__numeric`, at
+`DECIMAL(38,6)`; and `__canonical_exact` is the exact canonical annotation. It previously had the previous layout's
 shape, with a fixed-scale decimal value, its `value_scale`, the
 `_value_canonicalized` and `_code_canonicalized` fields and `_fid` (FR-059).
 A quantity read from the data keeps the fitted shape of the data it came from.
+
+### A decimal leaves the engine as DECIMAL(38,6)
+
+**Behaviour change.** A decimal that reaches a caller as a column — from the
+expression-to-column API, or a view column, in Java, Python and R — has the
+type `DECIMAL(38,6)`, the engine's System.Decimal (FR-035, ticket 41). It was
+`DECIMAL(32,6)`. Both keep six fractional digits, so values are rounded as
+before, but a value with 27 to 32 integer digits, which was null, now has a
+value: `1e14 * 1e14` gives `1e28` rather than an empty result. This goes in the
+release notes. The shape of SQL output as a whole is ticket 40's.
 
 ### A Coding the engine builds has six fields
 

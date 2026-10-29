@@ -25,7 +25,8 @@ Each directory holds:
 `evidence/` matters as much as the rest. Several requirements exist because a
 measurement ruled out the obvious alternative, and a decision whose evidence has
 been lost cannot be revisited — only re-litigated. Reproduction scripts are kept
-runnable and free of machine-specific paths.
+runnable and free of machine-specific paths. They are one-off reproductions, not
+production code, and are exempt from the coding conventions in `CONTRIBUTING.md`.
 
 This supersedes `openspec/` for work of this kind. OpenSpec remains for changes
 that extend the FHIRPath framework itself, where its proposal format and tooling

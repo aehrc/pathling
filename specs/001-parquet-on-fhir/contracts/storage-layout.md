@@ -15,30 +15,77 @@ Deviations, all permitted by the specification:
 
 | Area | What Pathling does |
 | --- | --- |
-| Decimals | Text plus the specification's numeric annotation. The text is numerically equal to the source, not in the source's lexical form (decision 68). |
+| Decimals | Text plus a numeric annotation, `_x.__numeric`, in the decimal's metadata group rather than the specification's sibling `__x_numeric`, at the specification's `DECIMAL(38,6)`. The text is numerically equal to the source, not in the source's lexical form (decision 68). The text is the stored value, which egress writes. The annotation is the engine's own decoding of the text, at the type the engine computes with (tickets 13 and 41). |
 | Primitive ids and extensions | The specification's `_field` groups. |
 | Extensions on complex elements | Inline `extension` groups. |
-| Date ranges | The specification's start and end annotations. |
-| Quantity canonicalisation | **Addition.** The specification's `__<field>_canonical` is emitted at the type the specification gives it, followed immediately by `__<field>_canonical_exact`, which carries the same canonicalisation at a precision that preserves magnitude. Both are present, in that order, **from M5** — the layout ships
+| Date ranges | The specification's start and end annotations, `_x.__start` and `_x.__end`, in the date's metadata group, on `date`, `dateTime` and `instant`. **Deviation (decision 138).** Written by Pathling as `int64` with `TIMESTAMP(isAdjustedToUTC=true, MICROS)`, proleptic Gregorian, rather than the specification's `int96` with `TIMESTAMP(isAdjustedToUTC=true, unit=MILLIS)`, a combination Parquet cannot write; the upper bound is to the microsecond. An `instant` carries them too, which the specification does not name. Lasts until the specification is amended, which ticket 14 drafts. |
+| Quantity canonicalisation | **Substitution.** The specification's `__canonical` is not emitted. `__canonical_exact` is emitted in its place, inside the quantity's structure, carrying the same canonicalisation at a precision that preserves magnitude, with the canonicalised unit (decision 137). It is present **from M5** — the layout ships
 annotation-free at the flip and each annotation kind lands afterwards (FR-021,
 decision 50). The names, types and positions below are fixed from Phase 3 and do
-not change when the values arrive. The second exists because the specification's fixed-point type makes quantities differing by orders of magnitude compare equal, which the engine cannot compare on; the first is what an interchange consumer reads. Non-standard annotations are permitted. Raised upstream; `_canonical_exact` is withdrawn if the specification adopts a magnitude-preserving representation. |
+not change when the values arrive. It replaces the specification's because the specification's fixed-point type makes quantities differing by orders of magnitude compare equal, which the engine cannot compare on, and nothing reads the specification's form. Annotations are optional and non-standard ones are permitted, so a consumer of the specification computes what it needs. Raised upstream; `__canonical_exact` is replaced by the specification's annotation if the specification adopts a magnitude-preserving representation. |
 | `contained` | Not represented. Dropped silently (FR-006). |
 | `Bundle` | Never stored as a resource type. Accepted as a transport carrier and exploded to per-type tables. |
 
-### The two quantity annotations
+### The decimal annotation
 
-A quantity carries `__<field>_canonical` and then `__<field>_canonical_exact`,
-in that order, once annotations are emitted in M5. The order is fixed rather than incidental: field order is part of
-the type, so a consumer comparing structures positionally depends on it, and an
-interchange consumer reading the specification's layout finds the
-specification's annotation first.
+A decimal carries `__numeric` as the last field of its metadata group `_x`,
+after `id` and `extension`: `_factorOverride.__numeric`,
+`position._latitude.__numeric`, `valueQuantity._value.__numeric`. The group is
+stored for the annotation even where the decimal has no id or extension. The
+annotation is `decimal(38,6)`, the type the specification gives it and the type
+of the engine's System.Decimal (ticket 41), and holds what the engine's decoding
+of the text gives: the text rounded to six fractional digits, or null where the
+value has more than 32 integer digits or the text is not a decimal (owner,
+2026-10-26). The type is the engine's, so that the annotation and the decoding
+of the text cannot disagree. The specification places it as a sibling,
+`__x_numeric`. The placement is amended by ticket 35.
 
-`__<field>_canonical` is the specification's annotation and carries what the
-specification says it carries. `__<field>_canonical_exact` is Pathling's, and
-carries the same canonicalisation without the fixed scale. Its stored shape is
-settled with the encoder rather than here, under one constraint: it carries the
-**canonicalised unit code alongside the value**. Canonicalisation maps to a base
+### The date range annotations
+
+A `date`, `dateTime` or `instant` carries `__start` and `__end` as the last
+fields of its metadata group `_x`, after `id` and `extension`, in that order:
+`_birthDate.__start`, `meta._lastUpdated.__end`, and for a repeating date one
+group per position, `timing._event[].__start`. The group is stored for them even where the date has no id or
+extension. They are the earliest and the latest instant the precision the value
+states allows, computed from one parse of it by the engine's own date grammar,
+so `1980` gives `1980-01-01T00:00:00Z` and `1980-12-31T23:59:59.999999Z`, and a
+value stated to the second or beyond gives one instant for both. A time without
+a timezone is taken as UTC, as the engine takes it (ticket 14; widening its
+range is ticket 26's). Both are Spark's `TimestampType`, so the upper bound is
+the latest microsecond.
+
+The specification gives `start` and `end` the physical type `int96` with the
+logical type `TIMESTAMP(isAdjustedToUTC=true, unit=MILLIS)`, as siblings, on
+`date` and `dateTime`. Parquet allows no logical type on `int96`, so that
+combination cannot be written. Spark writes a timestamp as its session's
+`spark.sql.parquet.outputTimestampType` says, and offers no writer option for it.
+The sessions Pathling builds (Java's default session, Python's managed
+defaults and R's `pathling_connect`) set it to `TIMESTAMP_MICROS`, once, as they
+are created, so they store the bounds as `int64` with
+`TIMESTAMP(isAdjustedToUTC=true, MICROS)`, the true instant on the proleptic
+Gregorian calendar, before the Gregorian cutover as after it. A session the user
+supplies, or one already active or default where Pathling would otherwise build
+one, keeps its own setting, `int96` by default. Where it is not `TIMESTAMP_MICROS`, a
+warning is logged when the context is created, and Pathling's Parquet, Delta and
+catalog sinks refuse to write data that carries the bounds. At milliseconds the
+stored upper bound would disagree with the one the engine computes, and change
+the results of comparisons. An `instant` carries them too. These are deviations
+until the specification is amended (decision 138); the placement is amended by
+ticket 35.
+
+### The quantity annotation
+
+A quantity carries `__canonical_exact` as the last field of its own structure,
+once annotations are emitted in M5. Every annotation lives in the container its
+element owns: a primitive's in its `_x` group, after `id` and `extension`, and a
+complex element's in its structure (decision 135, amending the specification's
+sibling placement by ticket 35).
+
+The specification's `__canonical` is not emitted (decision 137).
+`__canonical_exact` is Pathling's, and carries the canonicalisation without the
+specification's fixed scale, as `struct<value struct<value decimal(38,0), scale
+int>, code string>` (ticket 12). It carries the **canonicalised unit code
+alongside the value**. Canonicalisation maps to a base
 unit, and a value without that unit makes one metre and one second compare
 equal, so a single value is not sufficient. The previous Pathling layout used
 two fields for exactly this reason.

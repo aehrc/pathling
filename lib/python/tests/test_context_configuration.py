@@ -93,6 +93,15 @@ def test_default_configurations(spark_session):
     assert not query_config.isExplainQueries()
     assert query_config.getMaxUnboundTraversalDepth() == 10
 
+    # Retrieve SchemaConfiguration
+    schema_config = jpc.getSchemaConfiguration()
+    assert schema_config.isEnableNumericAnnotation()
+    assert schema_config.isEnableRangeAnnotation()
+    assert schema_config.isEnableCanonicalAnnotation()
+    assert not schema_config.isRecomputeAnnotations()
+    assert not schema_config.isKeepUnrequestedAnnotations()
+    assert not schema_config.isDropUnknownAnnotations()
+
 
 def test_custom_configurations(spark_session):
     """Test that custom configurations round-trip correctly."""
@@ -104,6 +113,12 @@ def test_custom_configurations(spark_session):
         enabled_open_types=["string", "boolean"],
         explain_queries=True,
         max_unbound_traversal_depth=20,
+        enable_numeric_annotation=False,
+        enable_range_annotation=False,
+        enable_canonical_annotation=False,
+        recompute_annotations=True,
+        keep_unrequested_annotations=True,
+        drop_unknown_annotations=True,
     )
 
     # Get Java PathlingContext instance
@@ -120,3 +135,12 @@ def test_custom_configurations(spark_session):
     query_config = jpc.getQueryConfiguration()
     assert query_config.isExplainQueries()
     assert query_config.getMaxUnboundTraversalDepth() == 20
+
+    # Retrieve SchemaConfiguration and verify custom values
+    schema_config = jpc.getSchemaConfiguration()
+    assert not schema_config.isEnableNumericAnnotation()
+    assert not schema_config.isEnableRangeAnnotation()
+    assert not schema_config.isEnableCanonicalAnnotation()
+    assert schema_config.isRecomputeAnnotations()
+    assert schema_config.isKeepUnrequestedAnnotations()
+    assert schema_config.isDropUnknownAnnotations()

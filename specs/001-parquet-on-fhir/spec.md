@@ -43,7 +43,7 @@ for are named on ticket 28.
 A user loads FHIR JSON or XML, as resources or bundles, and the data is written in
 the PoF layout: decimals as text with a numeric annotation, primitive ids and
 extensions in metadata groups, extensions inline, dates with range annotations,
-and quantities with both canonical annotations.
+and quantities with the exact canonical annotation.
 
 **Independent Test**: Load a corpus; inspect the stored schema and values against
 the specification, without FHIRPath evaluation.
@@ -277,8 +277,8 @@ the legacy encoder, re-import the result, and compare it with the source data.
 - An array of arrays where a repeating element is declared, such as
   `"given":[["a","b"]]`: not conformant input, so the outcome is undefined and
   nothing is reported (FR-063).
-- A source key named like one of the layout's annotations, such as
-  `__birthDate_start`, or like the layout column, `__layout_v1`: neither is
+- A source key named like one of the layout's annotations, such as `__start`
+  in `_birthDate`, or like the layout column, `__layout_v1`: neither is
   read from the source, so the key is undescribed content, and is not reported
   (FR-063).
 - A Bundle: accepted as a transport carrier and exploded to one table per
@@ -311,10 +311,11 @@ Identifiers are stable. FR-015, FR-018 and FR-020 are retired and not reused.
   MUST be stored inline. No root-level extension map and no per-composite field
   id is emitted.
 - **FR-004**: Dates MUST carry the specification's range annotations.
-- **FR-005**: Quantities MUST carry two canonical annotations: the
-  specification's own, at its fixed-point type, and immediately after it an
-  exact one carrying the canonicalised unit
-  ([ADR-0003](../../docs/adr/0003-annotations-are-optional.md)).
+- **FR-005**: Quantities MUST carry one canonical annotation,
+  `__canonical_exact`: the canonicalised value at a precision that preserves
+  magnitude, with the canonicalised unit. The specification's fixed-point
+  `__canonical` is not emitted, since annotations are optional
+  ([ADR-0003](../../docs/adr/0003-annotations-are-optional.md), decision 137).
 - **FR-006**: `contained` resources MUST NOT be represented. They are dropped
   silently.
 - **FR-007**: `Bundle` MUST NOT be stored as a resource type.
@@ -443,8 +444,17 @@ Identifiers are stable. FR-015, FR-018 and FR-020 are retired and not reused.
   [t136-benchmark.md](evidence/t136-benchmark.md).
 - **FR-034**: The engine MUST be able to navigate to a primitive element's id
   and extensions.
-- **FR-035**: Query-time decimal precision MUST remain as it was before this
-  programme, and the cap MUST be documented.
+- **FR-035**: Query-time decimal precision MUST be the engine's System.Decimal,
+  `DECIMAL(38,6)`, the type the Parquet on FHIR specification gives the
+  `numeric` annotation, and the cap MUST be documented. It was `DECIMAL(32,6)`
+  before ticket 41, which keeps the six fractional digits and widens the range
+  to 32 integer digits, so a value with 27 to 32 integer digits, null before,
+  now has a value (owner, 2026-10-26). **Known deviation.** FHIRPath requires a
+  Decimal to provide at least the range (-10^28+1)/10^8 to (10^28-1)/10^8 with a
+  step of 10^-8, which is `DECIMAL(28,8)`. `DECIMAL(38,6)` covers the range but
+  keeps 6 fractional digits. Whether to move to `DECIMAL(38,8)`, with an
+  upstream proposal for the annotation's type, is a follow-up issue that ticket
+  26 raises.
 - **FR-036**: Unnesting MUST NOT reduce a read to a single leaf of a repeated
   element, because that drops rows from files lacking that leaf.
 - **FR-054**: A column expression MUST be valid over every schema conforming to
@@ -470,7 +480,13 @@ Identifiers are stable. FR-015, FR-018 and FR-020 are retired and not reused.
   shape of the data it came from, and this MUST be documented. A complex value
   of a System type MUST have one fixed, complete shape, whatever produced it.
   The engine-built `System.Quantity` and `System.Coding` MUST NOT carry the
-  legacy layout's shape, including its `_fid` field. Distinguishing
+  legacy layout's shape, including its `_fid` field. The `System.Quantity`
+  shape MUST include the layout's exact canonical annotation,
+  `__canonical_exact`, after its elements, filled whatever produced it
+  (ticket 12, decision 137), and the value's metadata group `_value` right after
+  `value`, as the layout stores it, carrying only the value's numeric
+  annotation, `_value.__numeric`, filled whatever produced it, which the engine
+  reads a quantity's value from (ticket 41). Distinguishing
   `System.Coding` from `FHIR.Coding` in the type system is
   [#2804](https://github.com/aehrc/pathling/issues/2804).
 

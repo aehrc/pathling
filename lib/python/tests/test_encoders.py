@@ -20,6 +20,7 @@ import os
 from tempfile import mkdtemp
 
 from pyspark.sql import DataFrame, SparkSession
+from pyspark.sql.functions import lit
 from pytest import fixture
 
 from pathling import PathlingContext
@@ -163,6 +164,19 @@ def test_encode_keeps_only_the_requested_type_from_json(spark_session, def_pathl
     assert [row["id"] for row in observations.select("id").collect()] == ["o1"]
     # A type that is absent from the input gives an empty result, not a failure.
     assert def_pathling.encode(documents, "Condition").count() == 0
+
+
+def test_annotate_keeps_an_annotation_pathling_does_not_define(
+    spark_session, def_pathling
+):
+    # A patient carries no quantity, so the built-in kind changes nothing, and a field marked as
+    # an annotation is kept, as the default options say.
+    documents = _documents(spark_session, MIXED_JSON)
+    patients = def_pathling.encode(documents, "Patient").withColumn(
+        "__unknown", lit("u")
+    )
+    annotated = def_pathling.annotate(patients, "Patient")
+    assert annotated.schema == patients.schema
 
 
 def test_encode_keeps_only_the_requested_type_from_xml(spark_session, def_pathling):

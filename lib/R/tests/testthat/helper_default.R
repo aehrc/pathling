@@ -9,6 +9,7 @@ def_spark <- function() {
       "sparklyr.shell.driver-memory" = "4G",
       "sparklyr.shell.conf" = c(
         "spark.sql.mapKeyDedupPolicy=LAST_WIN",
+        "spark.sql.parquet.outputTimestampType=TIMESTAMP_MICROS",
         "spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension",
         "spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog",
         "spark.sql.catalogImplementation=hive",

@@ -23,6 +23,9 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 
 import au.csiro.pathling.fhirpath.unit.CalendarDurationUnit;
 import au.csiro.pathling.fhirpath.unit.UcumUnit;
+import au.csiro.pathling.schema.annotation.kinds.CanonicalQuantity;
+import au.csiro.pathling.schema.annotation.kinds.QuantityCanonicalKind;
+import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.math.BigDecimal;
 import java.util.stream.Stream;
@@ -557,13 +560,13 @@ class FhirPathQuantityTest {
       final String expectedCanonicalUnit,
       final BigDecimal expectedCanonicalValue) {
     final FhirPathQuantity source = FhirPathQuantity.ofUcum(sourceValue, sourceUnit);
-    final FhirPathQuantity canonical = source.asCanonical().orElse(null);
+    final CanonicalQuantity canonical = canonicalOf(source);
 
     assertNotNull(
         canonical, String.format("Canonicalizing %s '%s' should succeed", sourceValue, sourceUnit));
     assertEquals(
         expectedCanonicalUnit,
-        canonical.getUnitName(),
+        canonical.getCode(),
         String.format("Canonical unit should be '%s'", expectedCanonicalUnit));
     assertEquals(
         0,
@@ -571,10 +574,6 @@ class FhirPathQuantityTest {
         String.format(
             "Canonical value should be %s, but got %s",
             expectedCanonicalValue, canonical.getValue()));
-    assertEquals(
-        UcumUnit.UCUM_SYSTEM_URI,
-        canonical.getSystem(),
-        "Canonical quantity should be UCUM system");
   }
 
   static Stream<Arguments> calendarDurationCanonicalization() {
@@ -593,14 +592,14 @@ class FhirPathQuantityTest {
       final String expectedCanonicalUnit,
       final BigDecimal expectedCanonicalValue) {
     final FhirPathQuantity source = FhirPathQuantity.ofUnit(sourceValue, sourceUnit);
-    final FhirPathQuantity canonical = source.asCanonical().orElse(null);
+    final CanonicalQuantity canonical = canonicalOf(source);
 
     assertNotNull(
         canonical,
         String.format("Canonicalizing %s %s should succeed", sourceValue, sourceUnit.code()));
     assertEquals(
         expectedCanonicalUnit,
-        canonical.getUnitName(),
+        canonical.getCode(),
         String.format("Canonical unit should be '%s'", expectedCanonicalUnit));
     assertEquals(
         0,
@@ -608,10 +607,6 @@ class FhirPathQuantityTest {
         String.format(
             "Canonical value should be %s, but got %s",
             expectedCanonicalValue, canonical.getValue()));
-    assertEquals(
-        UcumUnit.UCUM_SYSTEM_URI,
-        canonical.getSystem(),
-        "Canonical quantity should be UCUM system");
   }
 
   static Stream<Arguments> indefiniteCalendarDurationCanonicalization() {
@@ -630,12 +625,19 @@ class FhirPathQuantityTest {
   void testIndefiniteCalendarDurationCanonicalization(
       final CalendarDurationUnit sourceUnit, final BigDecimal sourceValue) {
     final FhirPathQuantity source = FhirPathQuantity.ofUnit(sourceValue, sourceUnit);
-    @Nullable final FhirPathQuantity canonical = source.asCanonical().orElse(null);
+    @Nullable final CanonicalQuantity canonical = canonicalOf(source);
 
     assertNull(
         canonical,
         String.format(
             "Canonicalizing indefinite duration %s %s should return null",
             sourceValue, sourceUnit.code()));
+  }
+
+  /** Computes the canonical form a quantity's annotations carry. */
+  @Nullable
+  private static CanonicalQuantity canonicalOf(@Nonnull final FhirPathQuantity quantity) {
+    return QuantityCanonicalKind.canonicalOf(
+        quantity.getValue(), quantity.getSystem(), quantity.getCode());
   }
 }

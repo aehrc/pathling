@@ -27,6 +27,7 @@ import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.EmptyCollection;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
+import au.csiro.pathling.schema.annotation.kinds.DateRangeKind;
 import jakarta.annotation.Nonnull;
 import java.util.Map;
 import java.util.function.BiFunction;
@@ -243,8 +244,9 @@ class ValidationLogic {
   Column validateConversionToDate(
       @Nonnull final FhirPathType sourceType, @Nonnull final Column value) {
     if (sourceType == FhirPathType.STRING) {
-      // String can be converted only if it matches the date format: YYYY or YYYY-MM or YYYY-MM-DD
-      return value.rlike(DATE_REGEX);
+      // String can be converted only if it matches the date format: YYYY or YYYY-MM or YYYY-MM-DD,
+      // and names a date that exists.
+      return let(value, v -> v.rlike(DATE_REGEX).and(isDate(v)));
     }
     // Other types cannot be converted.
     return lit(false);
@@ -266,10 +268,17 @@ class ValidationLogic {
     if (sourceType == FhirPathType.STRING) {
       // String can be converted only if it matches ISO 8601 datetime format.
       // Supports partial precision: YYYY, YYYY-MM, YYYY-MM-DD, YYYY-MM-DDThh, etc.
-      return value.rlike(DATETIME_REGEX);
+      // It must also name a date and time that exist.
+      return let(value, v -> v.rlike(DATETIME_REGEX).and(isDate(v)));
     }
     // Other types cannot be converted.
     return lit(false);
+  }
+
+  /** Whether a text that follows the grammar names a date, and a time, that exist. */
+  @Nonnull
+  private Column isDate(@Nonnull final Column text) {
+    return DateRangeKind.INSTANCE.computeOrNull(text).isNotNull();
   }
 
   /**

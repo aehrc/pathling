@@ -33,11 +33,11 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * <ul>
  *   <li>{@code resourceType} is the first field of a resource.
  *   <li>The metadata group of a primitive sits immediately after the element it accompanies.
- *   <li>The annotations follow the metadata group, in the order declared here. Where a type carries
- *       more than one — the two bounds of a date range, or the two canonical forms of a quantity —
- *       that order is fixed here too: the specification's canonical annotation precedes the
- *       magnitude-preserving one, so a consumer reading the specification's layout meets the
- *       specification's annotation first.
+ *   <li>An annotation lives in the container its element already owns (decision 135, part 4). A
+ *       primitive's annotations are the last fields of its metadata group, after {@code id} and
+ *       {@code extension}, and a complex element's are the last fields of its own structure, after
+ *       its elements. Where a type carries more than one, the two bounds of a date range, their
+ *       order is fixed here too.
  * </ul>
  *
  * <p>Whether an annotation is actually written is decided elsewhere: annotations are optional by
@@ -69,35 +69,26 @@ public final class LayoutFields {
   public static final List<String> METADATA_GROUP_FIELDS =
       List.of(METADATA_GROUP_ID, METADATA_GROUP_EXTENSION);
 
-  /** The suffix of the annotation carrying the numeric value of a decimal. */
-  @Nonnull public static final String NUMERIC_SUFFIX = "_numeric";
+  /** The annotation carrying the numeric value of a decimal. */
+  @Nonnull public static final String NUMERIC_ANNOTATION = ANNOTATION_PREFIX + "numeric";
 
-  /** The suffix of the annotation carrying the lower bound implied by a stated precision. */
-  @Nonnull public static final String START_SUFFIX = "_start";
+  /** The annotation carrying the lower bound implied by a stated precision. */
+  @Nonnull public static final String START_ANNOTATION = ANNOTATION_PREFIX + "start";
 
-  /** The suffix of the annotation carrying the upper bound implied by a stated precision. */
-  @Nonnull public static final String END_SUFFIX = "_end";
-
-  /**
-   * The suffix of the annotation the Parquet on FHIR specification gives the canonical form of a
-   * quantity. It is emitted under the specification's own name, because a consumer reading the
-   * specification's layout must find the specification's annotation where the specification says it
-   * is.
-   */
-  @Nonnull public static final String CANONICAL_SUFFIX = "_canonical";
+  /** The annotation carrying the upper bound implied by a stated precision. */
+  @Nonnull public static final String END_ANNOTATION = ANNOTATION_PREFIX + "end";
 
   /**
-   * The suffix of the annotation carrying the canonical form of a quantity at a precision that
-   * preserves magnitude.
+   * The annotation carrying the canonical form of a quantity at a precision that preserves
+   * magnitude.
    *
-   * <p>It accompanies the specification's annotation rather than replacing it. The specification
-   * types its value as a fixed-point decimal whose absolute precision is constant regardless of
-   * magnitude, so quantities differing by orders of magnitude compare equal and no engine can
-   * compare on it. That argues for a second annotation, not against the first: dropping the
-   * specification's form would make the files unreadable to every other implementation of the
-   * layout, for a saving of one column beside a quantity.
+   * <p>It is the only canonical annotation a quantity carries. The specification's {@code
+   * __canonical} types its value as a fixed-point decimal whose absolute precision is constant
+   * regardless of magnitude, so quantities differing by orders of magnitude compare equal and no
+   * engine can compare on it. Annotations are optional, so it is not offered (decision 137).
    */
-  @Nonnull public static final String CANONICAL_EXACT_SUFFIX = "_canonical_exact";
+  @Nonnull
+  public static final String CANONICAL_EXACT_ANNOTATION = ANNOTATION_PREFIX + "canonical_exact";
 
   /** The types whose stated precision implies a range, and which therefore carry range bounds. */
   @Nonnull private static final Set<String> RANGE_ANNOTATED = Set.of("date", "dateTime", "instant");
@@ -125,80 +116,34 @@ public final class LayoutFields {
   }
 
   /**
-   * Returns the name of the numeric annotation of a field.
+   * Returns whether a field's name marks it as an annotation, whether or not Pathling defines it.
    *
-   * @param fieldName the name of the field the annotation accompanies
-   * @return the name of the annotation
+   * @param name the name of the field
+   * @return true where the field is an annotation
    */
-  @Nonnull
-  public static String numericAnnotationName(@Nonnull final String fieldName) {
-    return ANNOTATION_PREFIX + fieldName + NUMERIC_SUFFIX;
+  public static boolean isAnnotation(@Nonnull final String name) {
+    return name.startsWith(ANNOTATION_PREFIX);
   }
 
   /**
-   * Returns the name of the range start annotation of a field.
+   * Returns the names of the annotations that an element of the given type carries, in the order
+   * they appear in the container the element owns: its metadata group where it is a primitive, and
+   * its own structure where it is complex.
    *
-   * @param fieldName the name of the field the annotation accompanies
-   * @return the name of the annotation
-   */
-  @Nonnull
-  public static String startAnnotationName(@Nonnull final String fieldName) {
-    return ANNOTATION_PREFIX + fieldName + START_SUFFIX;
-  }
-
-  /**
-   * Returns the name of the range end annotation of a field.
-   *
-   * @param fieldName the name of the field the annotation accompanies
-   * @return the name of the annotation
-   */
-  @Nonnull
-  public static String endAnnotationName(@Nonnull final String fieldName) {
-    return ANNOTATION_PREFIX + fieldName + END_SUFFIX;
-  }
-
-  /**
-   * Returns the name of the specification's canonical annotation of a field.
-   *
-   * @param fieldName the name of the field the annotation accompanies
-   * @return the name of the annotation
-   */
-  @Nonnull
-  public static String canonicalAnnotationName(@Nonnull final String fieldName) {
-    return ANNOTATION_PREFIX + fieldName + CANONICAL_SUFFIX;
-  }
-
-  /**
-   * Returns the name of the magnitude-preserving canonical annotation of a field.
-   *
-   * @param fieldName the name of the field the annotation accompanies
-   * @return the name of the annotation
-   */
-  @Nonnull
-  public static String canonicalExactAnnotationName(@Nonnull final String fieldName) {
-    return ANNOTATION_PREFIX + fieldName + CANONICAL_EXACT_SUFFIX;
-  }
-
-  /**
-   * Returns the names of the annotations that accompany a field of the given type, in the order
-   * they appear beside it.
-   *
-   * @param fieldName the name of the field the annotations accompany
-   * @param type the FHIR type of that field
+   * @param type the FHIR type of the element
    * @return the annotation names, in order
    */
   @Nonnull
-  public static List<String> annotationNames(
-      @Nonnull final String fieldName, @Nonnull final FHIRDefinedType type) {
+  public static List<String> annotationNames(@Nonnull final FHIRDefinedType type) {
     final String code = type.toCode();
     if (FHIRDefinedType.DECIMAL.toCode().equals(code)) {
-      return List.of(numericAnnotationName(fieldName));
+      return List.of(NUMERIC_ANNOTATION);
     }
     if (RANGE_ANNOTATED.contains(code)) {
-      return List.of(startAnnotationName(fieldName), endAnnotationName(fieldName));
+      return List.of(START_ANNOTATION, END_ANNOTATION);
     }
     if (CANONICAL_ANNOTATED.contains(code)) {
-      return List.of(canonicalAnnotationName(fieldName), canonicalExactAnnotationName(fieldName));
+      return List.of(CANONICAL_EXACT_ANNOTATION);
     }
     return List.of();
   }

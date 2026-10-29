@@ -42,7 +42,7 @@ public record ProjectedColumn(
   /**
    * The one declared FHIR type that is not cast on output. A decimal is output as its literal text,
    * and a cast would change that (decision 76). {@link #getSqlType()} still reports {@code
-   * DECIMAL(32,6)} for it.
+   * DECIMAL(38,6)} for it.
    */
   private static final FHIRDefinedType UNCAST_DECLARED_TYPE = FHIRDefinedType.DECIMAL;
 

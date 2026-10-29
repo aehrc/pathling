@@ -9,6 +9,8 @@
 
 Can start once any one annotation kind has landed, and is extended as each further kind lands.
 
+**Site documentation (decision 135, amending 121).** Document the annotations, their switches, the *fill*/*recompute* and *drop*/*keep* settings, and the public annotation step in `site/docs/libraries/io/schema.md`, and revise its statement that this release writes no annotations. Ticket 11 documents only the API docs.
+
 **Blocked by:** any of 12, 13, 14
 
 **Status:** ready-for-agent

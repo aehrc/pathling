@@ -47,12 +47,13 @@ definitions, and is either present in or absent from a given schema.
   structure equality compares positionally while ignoring names, so a divergent
   order is a silent wrong answer rather than a failure.
 - The layout's own fields have positions too, and they must, because they have no
-  definition element to take one from. A primitive metadata group and any
-  annotations sit **immediately after the element they accompany**, the metadata
-  group first and then the annotations in the fixed order the annotation registry
-  declares them. Without a stated rule two implementations could both order by
-  the definitions and still disagree, which is exactly the positional mismatch the
-  previous bullet is there to prevent.
+  definition element to take one from. A primitive's metadata group sits
+  **immediately after the element it accompanies**, and holds `id`, `extension`
+  and then the primitive's annotations. A complex element's annotations are the
+  last fields of its own structure, after its elements. Annotations take the
+  fixed order `LayoutFields` declares (decision 135). Without a stated rule two
+  implementations could both order by the definitions and still disagree, which
+  is exactly the positional mismatch the previous bullet is there to prevent.
 
 ### Primitive metadata group
 
@@ -62,8 +63,11 @@ element with a leading underscore, beside the element itself.
 | | |
 | --- | --- |
 | Named | `_<element>` |
-| Contains | `id`, `extension` |
-| Present when | The source carried an id or an extension for that element |
+| Contains | `id`, `extension`, then the element's annotations |
+| Present when | The source carried an id or an extension for that element, or an annotation is stored for it |
+
+What tests for metadata tests for `id` and `extension` inside the group, not for
+the group itself, since the group can hold annotations alone (decision 135).
 
 This is new capability: the previous layout could not represent it at all,
 because its field identifier was per composite and a scalar column had nowhere to
@@ -71,28 +75,31 @@ carry one.
 
 ### Annotation
 
-A derived value stored beside the element it annotates, accelerating a
+A derived value stored with the element it annotates, accelerating a
 computation the engine can also perform from the element itself.
 
 | Annotation | Annotates | Carries |
 | --- | --- | --- |
-| Numeric | `decimal` | The numeric value of the stored text |
-| Range start / end | `date`, `dateTime`, `instant` | The bounds implied by the stated precision |
-| Canonical | `Quantity` | The canonicalised value, as the specification types it |
+| Numeric | `decimal` | The numeric value of the stored text, at the engine's System.Decimal type, `DECIMAL(38,6)`, as the engine decodes the text |
+| Range start / end | `date`, `dateTime`, `instant` | The bounds implied by the stated precision, from one parse of the text, as Spark timestamps, as the engine computes them |
 | Canonical exact | `Quantity` | The canonicalised value and unit, at a precision that preserves magnitude |
 
 Properties that hold for every annotation:
 
 - **Optional by definition.** A conformant file may carry none, so the engine
   computes from the annotated element when an annotation is absent.
-- **A sibling** of the element it annotates, named after it and positioned
-  immediately after it, following the metadata group where one is present, so one
-  sibling-resolution mechanism serves annotations and primitive metadata alike.
+- **In the container its element already owns** (decision 135). A primitive's
+  annotations are fields of its metadata group, after `id` and `extension`:
+  `_birthDate.__start`, `_value.__numeric`. A complex element's are fields of its
+  own structure, after its elements: `valueQuantity.__canonical_exact`. So a repeating
+  primitive's annotations share the alignment its metadata group already has
+  with it, and the one sibling resolution that reaches the metadata group reaches
+  its annotations too.
 - **Presence is a schema property**, so whether the fast path or the computation
   is used is decided at planning time rather than per row.
 - **Individually disableable by kind**, and disabling one costs performance,
   never correctness. A kind carried in more than one field — the date range's two
-  bounds, the quantity's two canonical forms — is governed by one switch.
+  bounds — is governed by one switch.
 
 ### Layout
 
@@ -156,7 +163,7 @@ of values against their declared types, is a named follow-up (T134g).
 | `date`, `dateTime`, `instant`, `time` | Text, in the lexical form of the source | Range start and end (not for `time`) |
 | `string`, `code`, `uri`, `url`, `canonical`, `oid`, `uuid`, `id`, `markdown` | Text | — |
 | `base64Binary` | Binary, decoded from the source's base64 | — |
-| `Quantity` | The FHIR structure | Canonical, then canonical exact |
+| `Quantity` | The FHIR structure | Canonical exact |
 | `Coding`, `CodeableConcept` | The FHIR structure | — |
 | `Reference` | The FHIR structure | — |
 | Complex and backbone types | A structure of their elements | — |
@@ -181,19 +188,17 @@ Notes:
   `spark.sql.chunkBase64String.enabled` defaults to true on Spark 4.0.2 and
   chunks at 76 characters. FHIR permits whitespace inside a base64 value, so
   re-encoding canonicalises it away: the same bytes, a different string.
-- **A quantity carries two canonical annotations**, the specification's and
-  Pathling's, in that order. The specification's types its value as a
-  fixed-point decimal whose absolute precision is constant regardless of
-  magnitude. Canonicalisation shifts magnitude by arbitrary powers of ten, so a
-  mass of one nanogram canonicalises to a value that rounds to zero at that
-  precision, and quantities differing by orders of magnitude compare equal —
-  silently. That form therefore cannot serve the engine, and the wider one under
-  a non-colliding name does. It does not follow that the specification's should
-  be dropped: a consumer reading the specification's layout needs the
-  specification's annotation under the specification's name, so both are
-  emitted. Non-standard annotations are permitted by the specification. Raised
-  upstream; the wider annotation is withdrawn if the specification adopts a
-  magnitude-preserving representation.
+- **A quantity carries one canonical annotation**, Pathling's
+  `__canonical_exact`, and not the specification's `__canonical` (decision
+  137). The specification's types its value as a fixed-point decimal whose
+  absolute precision is constant regardless of magnitude. Canonicalisation
+  shifts magnitude by arbitrary powers of ten, so a mass of one nanogram
+  canonicalises to a value that rounds to zero at that precision, and quantities
+  differing by orders of magnitude compare equal — silently. That form cannot
+  serve the engine, and nothing else reads it; annotations are optional, so it is
+  not offered. Non-standard annotations are permitted by the specification.
+  Raised upstream; the specification's annotation replaces Pathling's if the
+  specification adopts a magnitude-preserving representation.
 - **No field identifier and no root-level extension map.** Extensions on complex
   elements are inline; extensions on primitives are in the metadata group.
 - **No stored versioned reference key.** It is computed from the resource id and
