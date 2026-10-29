@@ -80,7 +80,7 @@ computation the engine can also perform from the element itself.
 
 | Annotation | Annotates | Carries |
 | --- | --- | --- |
-| Numeric | `decimal` | The numeric value of the stored text, at the engine's System.Decimal type, `DECIMAL(32,6)`, as the engine decodes the text |
+| Numeric | `decimal` | The numeric value of the stored text, at the engine's System.Decimal type, `DECIMAL(38,6)`, as the engine decodes the text |
 | Range start / end | `date`, `dateTime`, `instant` | The bounds implied by the stated precision, from one parse of the text, as Spark timestamps, as the engine computes them |
 | Canonical exact | `Quantity` | The canonicalised value and unit, at a precision that preserves magnitude |
 

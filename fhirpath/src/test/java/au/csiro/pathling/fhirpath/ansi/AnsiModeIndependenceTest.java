@@ -122,9 +122,9 @@ class AnsiModeIndependenceTest {
 
   @Test
   void decimalMultiplicationOverflowIsIdenticalUnderBothSettings() {
-    // 1e14 * 1e14 = 1e28, which exceeds the 26 integer digits of DECIMAL(32,6); the result must be
+    // 1e17 * 1e17 = 1e34, which exceeds the 32 integer digits of DECIMAL(38,6); the result must be
     // empty under both settings rather than aborting under ANSI-on.
-    final List<IBaseResource> resources = List.of(observationWithQuantity(new BigDecimal("1E14")));
+    final List<IBaseResource> resources = List.of(observationWithQuantity(new BigDecimal("1E17")));
     assertParity(
         resources,
         singleColumn("value.ofType(Quantity).value * value.ofType(Quantity).value"),
@@ -141,7 +141,7 @@ class AnsiModeIndependenceTest {
 
   @Test
   void decimalCombineNormalisationIsIdenticalUnderBothSettings() {
-    // combine() routes decimals through withSharedSqlType (a DECIMAL(32,6) cast).
+    // combine() routes decimals through withSharedSqlType (a DECIMAL(38,6) cast).
     final List<IBaseResource> resources = List.of(observationWithQuantity(new BigDecimal("23.40")));
     assertParity(
         resources,
@@ -174,9 +174,9 @@ class AnsiModeIndependenceTest {
 
   @Test
   void outOfRangeQuantityValueIsIdenticalUnderBothSettings() {
-    // A Quantity value outside the representable DECIMAL(32,6) range must be empty under both
+    // A Quantity value outside the representable DECIMAL(38,6) range must be empty under both
     // settings rather than aborting under ANSI-on.
-    final List<IBaseResource> resources = List.of(observationWithQuantity(new BigDecimal("1E30")));
+    final List<IBaseResource> resources = List.of(observationWithQuantity(new BigDecimal("1E33")));
     assertParity(
         resources, singleColumn("value.ofType(Quantity).value"), "out-of-range Quantity value");
   }
@@ -224,7 +224,7 @@ class AnsiModeIndependenceTest {
     final List<String> result =
         evalUnderAnsi(
             true,
-            List.of(observationWithQuantity(new BigDecimal("1E14"))),
+            List.of(observationWithQuantity(new BigDecimal("1E17"))),
             singleColumn("value.ofType(Quantity).value * value.ofType(Quantity).value"));
     assertEquals(List.of("[null]"), result, "decimal overflow yields an empty cell under ANSI-on");
   }

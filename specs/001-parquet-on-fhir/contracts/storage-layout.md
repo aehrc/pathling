@@ -15,7 +15,7 @@ Deviations, all permitted by the specification:
 
 | Area | What Pathling does |
 | --- | --- |
-| Decimals | Text plus a numeric annotation, `_x.__numeric`, at `DECIMAL(32,6)` rather than the specification's `DECIMAL(38,6)`. The text is numerically equal to the source, not in the source's lexical form (decision 68). The text is the stored value, which egress writes. The annotation is the engine's own decoding of the text, at the type the engine computes with (ticket 13), so a value with more than 26 integer digits has a null annotation where the specification's type would hold it. |
+| Decimals | Text plus a numeric annotation, `_x.__numeric`, in the decimal's metadata group rather than the specification's sibling `__x_numeric`, at the specification's `DECIMAL(38,6)`. The text is numerically equal to the source, not in the source's lexical form (decision 68). The text is the stored value, which egress writes. The annotation is the engine's own decoding of the text, at the type the engine computes with (tickets 13 and 41). |
 | Primitive ids and extensions | The specification's `_field` groups. |
 | Extensions on complex elements | Inline `extension` groups. |
 | Date ranges | The specification's start and end annotations, `_x.__start` and `_x.__end`, in the date's metadata group, on `date`, `dateTime` and `instant`. **Deviation (decision 138).** Written by Pathling as `int64` with `TIMESTAMP(isAdjustedToUTC=true, MICROS)`, proleptic Gregorian, rather than the specification's `int96` with `TIMESTAMP(isAdjustedToUTC=true, unit=MILLIS)`, a combination Parquet cannot write; the upper bound is to the microsecond. An `instant` carries them too, which the specification does not name. Lasts until the specification is amended, which ticket 14 drafts. |
@@ -32,14 +32,13 @@ A decimal carries `__numeric` as the last field of its metadata group `_x`,
 after `id` and `extension`: `_factorOverride.__numeric`,
 `position._latitude.__numeric`, `valueQuantity._value.__numeric`. The group is
 stored for the annotation even where the decimal has no id or extension. The
-annotation is `decimal(32,6)`, the type of the engine's System.Decimal, and
-holds what the engine's decoding of the text gives: the text rounded to six
-fractional digits, or null where the value has more than 26 integer digits or
-the text is not a decimal (owner, 2026-10-26). The specification places it as
-a sibling, `__x_numeric`, at `decimal(38,6)`. The placement is amended by
-ticket 35. The type is Pathling's, so that the annotation and the decoding of
-the text cannot disagree. Ticket 41 moves the engine's System.Decimal, and with it the
-annotation, to the specification's `decimal(38,6)` (owner, 2026-10-26).
+annotation is `decimal(38,6)`, the type the specification gives it and the type
+of the engine's System.Decimal (ticket 41), and holds what the engine's decoding
+of the text gives: the text rounded to six fractional digits, or null where the
+value has more than 32 integer digits or the text is not a decimal (owner,
+2026-10-26). The type is the engine's, so that the annotation and the decoding
+of the text cannot disagree. The specification places it as a sibling,
+`__x_numeric`. The placement is amended by ticket 35.
 
 ### The date range annotations
 

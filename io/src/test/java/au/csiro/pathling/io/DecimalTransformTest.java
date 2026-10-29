@@ -179,10 +179,10 @@ class DecimalTransformTest {
     final Dataset<Row> annotated =
         annotate(
             "ChargeItem",
-            CHARGE_ITEM.replace("12345678901234567890", "123456789012345678901234567"));
+            CHARGE_ITEM.replace("12345678901234567890", "123456789012345678901234567890123"));
 
     final Row row = annotated.selectExpr("factorOverride", "_factorOverride.__numeric").first();
-    assertEquals("123456789012345678901234567", row.getString(0));
+    assertEquals("123456789012345678901234567890123", row.getString(0));
     assertNull(row.get(1));
   }
 

@@ -49,7 +49,7 @@ import org.springframework.beans.factory.annotation.Autowired;
  * Tests that a quantity search matches against the value as it is stored, so that a value with more
  * than six fractional digits keeps them through canonicalisation (decision 77).
  *
- * <p>The engine decodes a quantity to a {@code DECIMAL(32,6)} value for computation, which keeps
+ * <p>The engine decodes a quantity to a {@code DECIMAL(38,6)} value for computation, which keeps
  * six fractional digits. The Parquet on FHIR layout stores the source text, so {@code 0.0000002
  * kg}, which is {@code 0.2 mg}, is found by a search in either unit.
  *

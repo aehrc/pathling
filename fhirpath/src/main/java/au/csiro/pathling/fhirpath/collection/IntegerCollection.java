@@ -213,9 +213,6 @@ public class IntegerCollection extends Collection
 
       switch (operation) {
         case ADDITION, SUBTRACTION, MULTIPLICATION, MODULUS:
-          if (target instanceof DecimalCollection) {
-            valueColumn = valueColumn.cast(DataTypes.LongType);
-          }
           return IntegerCollection.build(new DefaultRepresentation(valueColumn));
         case DIVISION:
           final Column numerator =

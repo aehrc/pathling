@@ -21,7 +21,6 @@ import static au.csiro.pathling.encoders.ColumnFunctions.resolveStringOrNull;
 import static au.csiro.pathling.search.filter.FhirFieldNames.CODE;
 import static au.csiro.pathling.search.filter.FhirFieldNames.SYSTEM;
 import static au.csiro.pathling.search.filter.FhirFieldNames.UNIT;
-import static au.csiro.pathling.search.filter.FhirFieldNames.VALUE;
 import static org.apache.spark.sql.functions.coalesce;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.when;
@@ -51,8 +50,9 @@ import org.apache.spark.sql.Column;
  * comparison.
  *
  * <p>Every field of the element is read by name through the tolerant traversal, so the element may
- * have any shape the definitions allow, including one pruned to the fields it populates, and its
- * value is decoded from the text it is stored as (FR-054).
+ * have any shape the definitions allow, including one pruned to the fields it populates (FR-054).
+ * Its value is its numeric annotation where the schema carries it, and is decoded from the text it
+ * is stored as otherwise, as {@link QuantityEncoding#numericValue(Column)} gives it.
  *
  * <p>Supported search formats:
  *
@@ -108,7 +108,7 @@ public class QuantityMatcher implements ElementMatcher {
       @Nonnull final Column element, @Nonnull final QuantitySearchValue parsedValue) {
     final Column valueMatch =
         matchValue(
-            QuantityEncoding.decodeValue(resolveStringOrNull(element, VALUE)),
+            QuantityEncoding.numericValue(element),
             parsedValue.getNumericValue(),
             parsedValue.getPrefix());
 
@@ -213,7 +213,7 @@ public class QuantityMatcher implements ElementMatcher {
 
     final Column standardMatch =
         matchValue(
-                QuantityEncoding.decodeValue(resolveStringOrNull(element, VALUE)),
+                QuantityEncoding.numericValue(element),
                 parsedValue.getNumericValue(),
                 parsedValue.getPrefix())
             .and(resolveStringOrNull(element, SYSTEM).equalTo(lit(system)))

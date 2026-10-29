@@ -73,7 +73,7 @@ import scala.jdk.javaapi.CollectionConverters;
  * way as text and the other as numbers. The schema is also pruned to the elements the fixtures
  * populate.
  *
- * <p>The query-time value is {@code DECIMAL(32,6)} and is rendered with its trailing zeros
+ * <p>The query-time value is {@code DECIMAL(38,6)} and is rendered with its trailing zeros
  * stripped, so the scale of the source is not observable through FHIRPath. It is asserted on the
  * text that the traversal expression yields before the engine decodes it, which is the double round
  * trip's.
@@ -108,14 +108,16 @@ class DecimalCollectionTest {
               + "\"prediction\":[{\"probabilityDecimal\":0.5}]}");
 
   /**
-   * A decimal beyond the range of {@code DECIMAL(32,6)} under a repeating parent, kept apart from
-   * the fixtures above so that their expected values stay as T086 pins them.
+   * A decimal beyond the range of {@code DECIMAL(38,6)} under a repeating parent, and one within it
+   * that has more integer digits than {@code DECIMAL(32,6)} holds, kept apart from the fixtures
+   * above so that their expected values stay as T086 pins them.
    */
   private static final List<String> OUT_OF_RANGE =
       List.of(
           "{\"resourceType\":\"RiskAssessment\",\"id\":\"r1\",\"status\":\"final\","
               + "\"subject\":{\"reference\":\"Patient/p\"},"
-              + "\"prediction\":[{\"probabilityDecimal\":0.5},{\"probabilityDecimal\":1e27}]}");
+              + "\"prediction\":[{\"probabilityDecimal\":0.5},{\"probabilityDecimal\":1e33},"
+              + "{\"probabilityDecimal\":1e30}]}");
 
   private static final List<String> CHARGE_ITEMS =
       List.of(
@@ -353,8 +355,11 @@ class DecimalCollectionTest {
   @Nonnull
   Stream<Arguments> outOfRangeCases() {
     return Stream.of(
-        arguments("prediction.probability.ofType(decimal).count()", List.of("r1=2")),
+        arguments("prediction.probability.ofType(decimal).count()", List.of("r1=3")),
         arguments("prediction.probability.ofType(decimal)[1]", List.of("r1=null")),
+        arguments(
+            "prediction.probability.ofType(decimal)[2]",
+            List.of("r1=1000000000000000000000000000000.000000")),
         arguments("prediction.probability.ofType(decimal).first()", List.of("r1=0.500000")));
   }
 
@@ -389,13 +394,13 @@ class DecimalCollectionTest {
       @Nonnull final String expression,
       @Nonnull final String element) {
     // The text is decoded by a cast, which names the element, followed by the id Spark gives it.
-    final String decodeText = element + "(#\\d+)? as decimal\\(32,6\\)";
+    final String decodeText = element + "(#\\d+)? as decimal\\(38,6\\)";
 
     final Dataset<Row> fast = select(annotated.get(resourceType), resourceType, expression);
     assertThat(fast.queryExecution().optimizedPlan().expressions().mkString(","))
         .contains("__numeric")
         .doesNotContainPattern(decodeText);
-    assertThat(readSchema(fast)).contains("_" + element + ":struct<__numeric:decimal(32,6)>");
+    assertThat(readSchema(fast)).contains("_" + element + ":struct<__numeric:decimal(38,6)>");
 
     for (final Map<String, Dataset<Row>> unannotated : List.of(datasets, disabled)) {
       final Dataset<Row> lexical = select(unannotated.get(resourceType), resourceType, expression);

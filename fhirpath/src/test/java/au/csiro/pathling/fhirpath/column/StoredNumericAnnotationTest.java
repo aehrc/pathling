@@ -56,8 +56,8 @@ class StoredNumericAnnotationTest {
     return Stream.of(
         // Rounded to the six fractional digits System.Decimal holds.
         arguments("decimal(38,8)", "0.12345678", "0.123457"),
-        // Beyond the 26 integer digits System.Decimal holds.
-        arguments("decimal(38,0)", "1e30", null));
+        // Beyond the 32 integer digits System.Decimal holds.
+        arguments("decimal(38,0)", "1e33", null));
   }
 
   @ParameterizedTest

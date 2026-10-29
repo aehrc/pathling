@@ -9,7 +9,7 @@ Today the shape follows whatever the plan built. Ticket 12 kept the canonical an
 The specification should cover at least:
 
 - **Pruning annotations.** Whether `__` fields leave the engine, and if they do, whether the FR-021 switches govern them.
-- **Fixed types for primitives.** One Spark type per FHIR primitive in output, whatever the stored or computed representation. For example, a decimal is returned as one type, not as the value of one plan and the FlexiDecimal of another.
+- **Fixed types for primitives.** One Spark type per FHIR primitive in output, whatever the stored or computed representation. For example, a decimal is returned as one type, not as the value of one plan and the FlexiDecimal of another. Ticket 41 makes that type `DECIMAL(38,6)`, and gives the System.Quantity `_value.__numeric`, which the output shape records.
 - **A unified, complete schema for complex types.** A complex result could have one schema derived from the definitions, rather than the fitted shape of the dataset it was read from. Then the same expression returns the same type over any dataset.
 
 Out of scope: JSON and XML egress, whose shape is FHIR's.

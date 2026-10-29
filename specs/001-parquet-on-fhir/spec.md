@@ -444,8 +444,17 @@ Identifiers are stable. FR-015, FR-018 and FR-020 are retired and not reused.
   [t136-benchmark.md](evidence/t136-benchmark.md).
 - **FR-034**: The engine MUST be able to navigate to a primitive element's id
   and extensions.
-- **FR-035**: Query-time decimal precision MUST remain as it was before this
-  programme, and the cap MUST be documented.
+- **FR-035**: Query-time decimal precision MUST be the engine's System.Decimal,
+  `DECIMAL(38,6)`, the type the Parquet on FHIR specification gives the
+  `numeric` annotation, and the cap MUST be documented. It was `DECIMAL(32,6)`
+  before ticket 41, which keeps the six fractional digits and widens the range
+  to 32 integer digits, so a value with 27 to 32 integer digits, null before,
+  now has a value (owner, 2026-10-26). **Known deviation.** FHIRPath requires a
+  Decimal to provide at least the range (-10^28+1)/10^8 to (10^28-1)/10^8 with a
+  step of 10^-8, which is `DECIMAL(28,8)`. `DECIMAL(38,6)` covers the range but
+  keeps 6 fractional digits. Whether to move to `DECIMAL(38,8)`, with an
+  upstream proposal for the annotation's type, is a follow-up issue that ticket
+  26 raises.
 - **FR-036**: Unnesting MUST NOT reduce a read to a single leaf of a repeated
   element, because that drops rows from files lacking that leaf.
 - **FR-054**: A column expression MUST be valid over every schema conforming to
@@ -474,7 +483,10 @@ Identifiers are stable. FR-015, FR-018 and FR-020 are retired and not reused.
   legacy layout's shape, including its `_fid` field. The `System.Quantity`
   shape MUST include the layout's exact canonical annotation,
   `__canonical_exact`, after its elements, filled whatever produced it
-  (ticket 12, decision 137). Distinguishing
+  (ticket 12, decision 137), and the value's metadata group `_value` right after
+  `value`, as the layout stores it, carrying only the value's numeric
+  annotation, `_value.__numeric`, filled whatever produced it, which the engine
+  reads a quantity's value from (ticket 41). Distinguishing
   `System.Coding` from `FHIR.Coding` in the type system is
   [#2804](https://github.com/aehrc/pathling/issues/2804).
 

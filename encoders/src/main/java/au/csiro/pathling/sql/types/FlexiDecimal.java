@@ -22,7 +22,7 @@
  */
 package au.csiro.pathling.sql.types;
 
-import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
+import au.csiro.pathling.utilities.SystemDecimal;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.math.BigDecimal;
@@ -188,8 +188,7 @@ public final class FlexiDecimal {
   private static final UserDefinedFunction DIVIDE_UDF = toBigDecimalUdf(BigDecimal::divide);
 
   private static final UserDefinedFunction TO_DECIMAL =
-      functions.udf(
-          (UDF1<Row, BigDecimal>) FlexiDecimal::fromValue, DecimalCustomCoder.decimalType());
+      functions.udf((UDF1<Row, BigDecimal>) FlexiDecimal::fromValue, SystemDecimal.TYPE);
 
   private static final UserDefinedFunction NEGATE_UDF =
       functions.udf((UDF1<Row, Row>) FlexiDecimal::negate, DATA_TYPE);

@@ -47,8 +47,7 @@ import org.apache.spark.sql.Column;
  *
  * <p>The wrapped column holds a System quantity, in the fixed shape {@link
  * QuantityEncoding#dataType()}. A stored quantity is taken as one where it is computed with. The
- * decimal value is not part of that shape, so it is decoded here from the value's text, and the
- * canonical form is read from the annotation the shape carries.
+ * decimal value and the canonical form are read from the annotations the shape carries.
  *
  * @author Piotr Szul
  */
@@ -108,7 +107,7 @@ public class QuantityValue {
     @Nonnull
     public static ValueWithUnit originalValueOf(@Nonnull final Column quantity) {
       return new ValueWithUnit(
-          QuantityEncoding.decodeValue(quantity.getField(QuantityEncoding.VALUE_COLUMN)),
+          QuantityEncoding.numericValue(quantity),
           quantity.getField(QuantityEncoding.CODE_COLUMN),
           quantity.getField(QuantityEncoding.SYSTEM_COLUMN));
     }
@@ -126,7 +125,7 @@ public class QuantityValue {
     @Nonnull
     public static ValueWithUnit literalValueOf(@Nonnull final Column quantity) {
       return new ValueWithUnit(
-          QuantityEncoding.decodeValue(quantity.getField(QuantityEncoding.VALUE_COLUMN)),
+          QuantityEncoding.numericValue(quantity),
           quantity.getField(QuantityEncoding.UNIT_COLUMN),
           lit(null));
     }

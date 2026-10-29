@@ -30,11 +30,9 @@ import au.csiro.pathling.test.layout.PofDatasets;
 import au.csiro.pathling.utilities.SparkTypes;
 import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -58,10 +56,11 @@ import org.springframework.beans.factory.annotation.Autowired;
  *
  * <p>Whatever produces it, such a quantity has one fixed, complete shape: the elements of a FHIR
  * Quantity other than {@code extension}, in definition order, with its value as the text of a
- * decimal, as the Parquet on FHIR layout stores one, followed by the layout's exact canonical
- * annotation (ticket 12). It carries none of the previous layout's companions: no {@code DECIMAL}
- * value with a {@code value_scale} beside it, no canonical form in {@code _value_canonicalized} and
- * {@code _code_canonicalized}, and no {@code _fid}.
+ * decimal, as the Parquet on FHIR layout stores one, and the value's metadata group beside it
+ * carrying its numeric annotation (ticket 41), followed by the layout's exact canonical annotation
+ * (ticket 12). It carries none of the previous layout's companions: no {@code DECIMAL} value with a
+ * {@code value_scale} beside it, no canonical form in {@code _value_canonicalized} and {@code
+ * _code_canonicalized}, and no {@code _fid}.
  *
  * @author Piotr Szul
  */
@@ -77,6 +76,10 @@ class SystemQuantityShapeTest {
           new StructField[] {
             DataTypes.createStructField("id", DataTypes.StringType, true),
             DataTypes.createStructField("value", DataTypes.StringType, true),
+            DataTypes.createStructField(
+                "_value",
+                new StructType().add("__numeric", DataTypes.createDecimalType(38, 6), true),
+                true),
             DataTypes.createStructField("comparator", DataTypes.StringType, true),
             DataTypes.createStructField("unit", DataTypes.StringType, true),
             DataTypes.createStructField("system", DataTypes.StringType, true),
@@ -85,8 +88,9 @@ class SystemQuantityShapeTest {
                 "__canonical_exact", QuantityCanonicalKind.CANONICAL_EXACT_TYPE, true)
           });
 
-  /** The number of fields of the shape that are elements of a FHIR Quantity. */
-  private static final int ELEMENTS = 6;
+  /** The fields of the shape that are elements of a FHIR Quantity. */
+  private static final List<String> ELEMENTS =
+      List.of("id", "value", "comparator", "unit", "system", "code");
 
   /** The field names by which a structure is recognised as a previous-layout quantity. */
   private static final List<String> LEGACY_FIELDS =
@@ -149,8 +153,7 @@ class SystemQuantityShapeTest {
       @Nonnull final String producer, @Nonnull final String expression) {
     final StructType type = (StructType) elementTypeOf(expression);
     assertThat(type.fieldNames()).doesNotContainAnyElementsOf(LEGACY_FIELDS);
-    assertThat(Arrays.stream(type.fields()).limit(ELEMENTS).map(StructField::dataType))
-        .hasSize(ELEMENTS)
+    assertThat(ELEMENTS.stream().map(name -> type.apply(name).dataType()))
         .allMatch(DataTypes.StringType::equals);
   }
 
@@ -253,8 +256,8 @@ class SystemQuantityShapeTest {
             .first()
             .get(0);
     return value instanceof final Row quantity
-        ? IntStream.range(0, ELEMENTS)
-            .mapToObj(i -> Objects.toString(quantity.get(i)))
+        ? ELEMENTS.stream()
+            .map(name -> Objects.toString(quantity.<Object>getAs(name)))
             .collect(Collectors.joining(",", "[", "]"))
         : Objects.toString(value);
   }

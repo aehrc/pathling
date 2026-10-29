@@ -44,6 +44,7 @@ import org.apache.spark.sql.api.java.UDF2;
 import org.apache.spark.sql.expressions.UserDefinedFunction;
 import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.DataTypes;
+import org.apache.spark.sql.types.Decimal;
 import org.apache.spark.sql.types.StructType;
 
 /**
@@ -51,24 +52,28 @@ import org.apache.spark.sql.types.StructType;
  * literal, the result of a conversion or a stored quantity combined with one of these.
  *
  * <p>A System quantity has one fixed, complete shape, whatever produced it (FR-059): the elements
- * of a FHIR Quantity other than {@code extension}, in definition order, each of them present,
- * followed by the canonical annotation of the Parquet on FHIR layout.
+ * of a FHIR Quantity other than {@code extension}, in definition order, each of them present, with
+ * the value's metadata group, carrying its numeric annotation, beside the value as the Parquet on
+ * FHIR layout stores it, followed by the layout's canonical annotation.
  *
  * <ul>
  *   <li>{@code id}: always null for a quantity the engine builds, and the stored id for a stored
  *       quantity it has taken as a System one;
  *   <li>{@code value}: the text of a decimal, as the Parquet on FHIR layout stores one, so that it
  *       keeps its own scale and every digit it was given;
+ *   <li>{@code _value.__numeric}: the value as the engine's System.Decimal, as {@link
+ *       DecimalNumericKind} defines it, which is what the engine computes and compares with;
  *   <li>{@code comparator}, {@code unit}, {@code system} and {@code code}: text;
  *   <li>{@code __canonical_exact}: the canonical form, as {@link QuantityCanonicalKind} defines it,
  *       null where the quantity has none.
  * </ul>
  *
- * <p>The canonical form is carried, so that it is computed once for a quantity rather than wherever
- * the quantity is compared, and travels with it through unions, arrays and lambdas. A literal has
- * it as a constant, a stored quantity copies the annotation it is stored with, and a quantity the
- * engine computes, from a stored one without it, a number or a conversion, computes it. It carries
- * no decimal value with a scale companion and no field identifier.
+ * <p>The numeric value and the canonical form are carried, so that each is computed once for a
+ * quantity rather than wherever the quantity is compared, and travels with it through unions,
+ * arrays and lambdas. A literal has them as constants, a stored quantity copies the annotations it
+ * is stored with, and a quantity the engine computes, from a stored one without them, a number or a
+ * conversion, computes them. It carries no decimal value with a scale companion and no field
+ * identifier.
  *
  * @author Piotr Szul
  */
@@ -79,6 +84,9 @@ public final class QuantityEncoding {
 
   /** The name of the column containing the numeric value of the quantity, as text. */
   public static final String VALUE_COLUMN = "value";
+
+  /** The name of the metadata group of the value, which carries its numeric annotation. */
+  public static final String VALUE_GROUP_COLUMN = LayoutFields.metadataGroupName(VALUE_COLUMN);
 
   /** The name of the column containing the comparator of the quantity. */
   public static final String COMPARATOR_COLUMN = "comparator";
@@ -95,10 +103,14 @@ public final class QuantityEncoding {
   /** The name of the column containing the exact canonical annotation. */
   public static final String CANONICAL_EXACT_COLUMN = LayoutFields.CANONICAL_EXACT_ANNOTATION;
 
+  private static final StructType VALUE_GROUP_TYPE =
+      new StructType().add(LayoutFields.NUMERIC_ANNOTATION, SystemDecimal.TYPE);
+
   private static final StructType DATA_TYPE =
       new StructType()
           .add(ID_COLUMN, DataTypes.StringType)
           .add(VALUE_COLUMN, DataTypes.StringType)
+          .add(VALUE_GROUP_COLUMN, VALUE_GROUP_TYPE)
           .add(COMPARATOR_COLUMN, DataTypes.StringType)
           .add(UNIT_COLUMN, DataTypes.StringType)
           .add(SYSTEM_COLUMN, DataTypes.StringType)
@@ -137,6 +149,7 @@ public final class QuantityEncoding {
   private static Column toStruct(
       @Nonnull final Column id,
       @Nonnull final Column value,
+      @Nonnull final Column numeric,
       @Nonnull final Column comparator,
       @Nonnull final Column unit,
       @Nonnull final Column system,
@@ -148,6 +161,9 @@ public final class QuantityEncoding {
     return struct(
             id.as(ID_COLUMN),
             value.as(VALUE_COLUMN),
+            // The group is cast to its type, so that the type is known without resolving the names
+            // of its fields, which Spark cannot do when it names a UDF that takes the quantity.
+            struct(numeric).cast(VALUE_GROUP_TYPE).as(VALUE_GROUP_COLUMN),
             comparator.as(COMPARATOR_COLUMN),
             unit.as(UNIT_COLUMN),
             system.as(SYSTEM_COLUMN),
@@ -162,8 +178,8 @@ public final class QuantityEncoding {
    * <p>The stored quantity is the FHIR structure as the traversal expression yields it: its value
    * is the text of a decimal. Each field is read by name through the tolerant traversal, so a field
    * the schema does not carry is null. Its extensions are not kept, because a System quantity has
-   * none. Its exact canonical annotation is copied where the schema carries it, and computed where
-   * it does not, decided once for the schema (FR-023).
+   * none. Its numeric and exact canonical annotations are copied where the schema carries them, and
+   * computed where it does not, decided once for the schema (FR-023).
    *
    * <p>A null quantity is null.
    *
@@ -182,6 +198,7 @@ public final class QuantityEncoding {
                 toStruct(
                     ColumnFunctions.resolveStringOrNull(s, ID_COLUMN),
                     ColumnFunctions.resolveStringOrNull(s, VALUE_COLUMN),
+                    numericValue(s),
                     ColumnFunctions.resolveStringOrNull(s, COMPARATOR_COLUMN),
                     ColumnFunctions.resolveStringOrNull(s, UNIT_COLUMN),
                     ColumnFunctions.resolveStringOrNull(s, SYSTEM_COLUMN),
@@ -264,6 +281,7 @@ public final class QuantityEncoding {
     return toStruct(
         lit(null),
         quantity.getField(VALUE_COLUMN),
+        quantity.getField(VALUE_GROUP_COLUMN).getField(LayoutFields.NUMERIC_ANNOTATION),
         lit(null),
         quantity.getField(UNIT_COLUMN),
         quantity.getField(SYSTEM_COLUMN),
@@ -272,23 +290,28 @@ public final class QuantityEncoding {
   }
 
   /**
-   * Decodes the text of a quantity's value to the engine's System.Decimal, {@link
-   * SystemDecimal#TYPE}, by {@link DecimalNumericKind#decode}, as any stored decimal is decoded.
-   * The cast is safe, so a value that is not a decimal, or does not fit, is null rather than
-   * raising under ANSI mode.
+   * Returns the value of a quantity, stored or System, as the engine's System.Decimal: its numeric
+   * annotation, {@code _value.__numeric}, where the schema carries it, and the decoding of its text
+   * by {@link DecimalNumericKind} otherwise, decided once for the schema (FR-023). A System
+   * quantity always carries it.
    *
-   * @param value the text of the value
+   * @param quantity a stored quantity, or a System quantity
    * @return the value, typed as {@link SystemDecimal#TYPE}
    */
   @Nonnull
-  public static Column decodeValue(@Nonnull final Column value) {
-    return DecimalNumericKind.decode(value);
+  public static Column numericValue(@Nonnull final Column quantity) {
+    return DecimalNumericKind.INSTANCE.read(
+        DecimalNumericKind.INSTANCE.apply(
+            LayoutFields.NUMERIC_ANNOTATION,
+            ColumnFunctions.resolveStringOrNull(quantity, VALUE_COLUMN),
+            ColumnFunctions.resolveOrNull(quantity, VALUE_GROUP_COLUMN, DataTypes.NullType),
+            ColumnFunctions::resolveOrElse));
   }
 
   /**
    * Decodes the text of a quantity's value to a decimal with every digit it has. The value is kept
    * as text, not as {@link SystemDecimal#TYPE}, so nothing is rounded here: conversion, the string
-   * form and the canonical form all work from the same digits. Only {@link #decodeValue(Column)},
+   * form and the canonical form all work from the same digits. Only {@link #numericValue(Column)},
    * which produces a Spark decimal, is bound to the scale of that type.
    *
    * @param text the text of the value
@@ -356,6 +379,7 @@ public final class QuantityEncoding {
     return toStruct(
         lit(null),
         lit(quantity.getValue().toPlainString()),
+        lit(numericOf(quantity)),
         lit(null),
         lit(quantity.getUnitName()),
         lit(quantity.getSystem()),
@@ -371,7 +395,8 @@ public final class QuantityEncoding {
    * toString()} renders a decimal, without trailing fractional zeros: {@code 5} reads as {@code 5},
    * {@code 1.5 * 2} as {@code 3} and {@code 1.25} as {@code 1.25}. The scale of the result of an
    * arithmetic operation is not known, so the value is given the shortest text that represents it,
-   * rather than the scale of the decimal type. Its canonical form is computed from that text.
+   * rather than the scale of the decimal type. Its numeric value is the decoded number, and its
+   * canonical form is computed from the text.
    *
    * @param numericColumn the numeric column to encode
    * @return the column with the representation of the quantity, or null if the input is null
@@ -384,20 +409,24 @@ public final class QuantityEncoding {
             // Safe cast to the decimal type so an out-of-range value yields NULL rather than
             // raising under ANSI mode.
             let(
-                callUDF(DecimalToLiteral.FUNCTION_NAME, DecimalNumericKind.decode(nc), lit(null)),
-                value -> {
-                  final Column code = lit(UcumUnit.ONE.code());
-                  return when(
-                      nc.isNotNull(),
-                      toStruct(
-                          lit(null),
-                          value,
-                          lit(null),
-                          code,
-                          lit(UcumUnit.UCUM_SYSTEM_URI),
-                          code,
-                          unityCanonical(value)));
-                }));
+                DecimalNumericKind.decode(nc),
+                numeric ->
+                    let(
+                        callUDF(DecimalToLiteral.FUNCTION_NAME, numeric, lit(null)),
+                        value -> {
+                          final Column code = lit(UcumUnit.ONE.code());
+                          return when(
+                              nc.isNotNull(),
+                              toStruct(
+                                  lit(null),
+                                  value,
+                                  numeric,
+                                  lit(null),
+                                  code,
+                                  lit(UcumUnit.UCUM_SYSTEM_URI),
+                                  code,
+                                  unityCanonical(value)));
+                        })));
   }
 
   /**
@@ -445,11 +474,25 @@ public final class QuantityEncoding {
     return RowFactory.create(
         null,
         quantity.getValue().toPlainString(),
+        RowFactory.create(numericOf(quantity)),
         null,
         quantity.getUnitName(),
         quantity.getSystem(),
         quantity.getCode(),
         QuantityCanonicalKind.toExactRow(canonicalOf(quantity)));
+  }
+
+  /**
+   * Computes the numeric value of a quantity known when the plan is built, as {@link
+   * DecimalNumericKind#decode} decodes its text: rounded half up to the scale of {@link
+   * SystemDecimal#TYPE}, and null where it does not fit.
+   */
+  @Nullable
+  private static BigDecimal numericOf(@Nonnull final FhirPathQuantity quantity) {
+    final Decimal decimal = Decimal.apply(quantity.getValue());
+    return decimal.changePrecision(SystemDecimal.PRECISION, SystemDecimal.SCALE)
+        ? decimal.toJavaBigDecimal()
+        : null;
   }
 
   /** Computes the canonical form of a quantity known when the plan is built. */

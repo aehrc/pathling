@@ -100,8 +100,13 @@ element absent from the schema is no longer such a column.
 
 ## Decimals
 
-Stored as text and computed at the documented cap. Comparison, arithmetic,
-aggregation and ordering behave as they do today; only the storage changed.
+Stored as text and computed at the documented cap, the engine's System.Decimal,
+`DECIMAL(38,6)`: six fractional digits and 32 integer digits (FR-035). It was
+`DECIMAL(32,6)` before ticket 41. Comparison, arithmetic, aggregation and
+ordering behave as they did, except that a value with 27 to 32 integer digits,
+null at the earlier cap, now has a value, and a decimal leaves the engine as
+`DECIMAL(38,6)`. FHIRPath asks for eight fractional digits; the six kept here
+are a known deviation (FR-035).
 
 The stored text is not the source's lexical form (decision 68). Ingest reads a
 number with standard JSON inference, which yields a double, and stores its
@@ -122,6 +127,7 @@ whatever produced it (FR-059):
 | --- | --- | --- |
 | `id` | string | Null, except for a stored quantity taken as a System one, which keeps its id. |
 | `value` | string | The text of the decimal, as the layout stores a decimal, with the digits it was given. A number promoted to a quantity has the six fractional digits of the engine's decimal type. |
+| `_value` | struct of `__numeric` decimal(38,6) | The value's metadata group, as the layout stores one, carrying only the numeric annotation: the value as the engine's System.Decimal, null where the text does not decode to it. |
 | `comparator` | string | Null, except for a stored quantity taken as a System one. |
 | `unit` | string | The human-readable unit. |
 | `system` | string | The system of the unit's code. |
@@ -129,17 +135,23 @@ whatever produced it (FR-059):
 | `__canonical_exact` | struct of `value` (struct of the unscaled `value` decimal(38,0) and its `scale` int) and `code` string | The exact canonical annotation, null where the quantity has no canonical form. |
 
 These are the elements of a FHIR Quantity other than `extension`, in definition
-order, and every one is present, followed by the layout's exact canonical
-annotation (ticket 12, amending FR-059). A System quantity has no extensions. It carries no decimal value with a
+order, and every one is present, with the value's metadata group and its numeric
+annotation right after `value`, as the layout stores it (ticket 41, amending
+FR-059), followed by the layout's exact canonical annotation (ticket 12, amending
+FR-059). A System quantity has no extensions. It carries no decimal value with a
 scale companion and no field identifier, so an engine-built quantity never looks
-like a previous-layout one. The decimal value is decoded from the value's text
-where a quantity is computed with.
+like a previous-layout one.
 
-The canonical form is carried so that it is computed once for a quantity and
-travels with it through unions, arrays and lambdas. A literal has it as a
-constant, filled when the plan is built. A stored quantity taken as a System one
-copies its stored `__canonical_exact` where the schema carries it and computes it
-otherwise. A conversion or a number promoted to a quantity computes it.
+The numeric value and the canonical form are carried so that each is computed
+once for a quantity and travels with it through unions, arrays and lambdas. A
+literal has them as constants, filled when the plan is built. A stored quantity
+taken as a System one copies its stored `_value.__numeric` and
+`__canonical_exact` where the schema carries them and computes them otherwise.
+A conversion or a number promoted to a quantity computes them. The numeric value
+is computed as the engine decodes a decimal's text, so reading it gives what
+decoding the text gives. The value of a quantity, stored or System, is read from
+`_value.__numeric` wherever the engine computes or compares with it, and a
+search matches a stored quantity's value the same way.
 Comparison and the set operations read the carried form rather than
 canonicalising again. Where it is computed, it is computed by the quantity kind
 that ingest stores it with (decision 135).

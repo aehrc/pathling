@@ -127,11 +127,15 @@ public class DecimalCollection extends Collection
   @Nonnull
   public static BigDecimal parseLiteral(final @Nonnull String literal) {
     final BigDecimal value = new BigDecimal(literal);
+    final int integerDigits =
+        DecimalCollection.getDecimalType().precision() - DecimalCollection.getDecimalType().scale();
 
-    if (value.precision() > DecimalCollection.getDecimalType().precision()) {
+    // A literal with more integer digits than the type holds would become null wherever it is cast
+    // to the type. Together with the scale, this also bounds the literal's precision.
+    if (value.precision() - value.scale() > integerDigits) {
       throw new InvalidUserInputError(
-          "Decimal literal exceeded maximum precision supported ("
-              + DecimalCollection.getDecimalType().precision()
+          "Decimal literal exceeded maximum integer digits supported ("
+              + integerDigits
               + "): "
               + literal);
     }
@@ -187,7 +191,7 @@ public class DecimalCollection extends Collection
 
       return switch (operation) {
         case ADDITION, SUBTRACTION, MULTIPLICATION, DIVISION, MODULUS -> {
-          // Safe cast so a result that overflows DECIMAL(32,6) yields NULL rather than raising
+          // Safe cast so a result that overflows System.Decimal yields NULL rather than raising
           // under ANSI mode, independent of the session-wide setting.
           result = result.try_cast(getDecimalType());
           yield DecimalCollection.build(new DefaultRepresentation(result));
