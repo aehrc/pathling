@@ -43,6 +43,9 @@ spark-warehouse
 # Isolated worktrees used when several issues are implemented concurrently.
 /.claude/worktrees/
 
+# Repository and caches of builds run through scripts/mvn-isolated.sh.
+/.local/isolated/
+
 #server
 server/.idea
 server/.mvn
