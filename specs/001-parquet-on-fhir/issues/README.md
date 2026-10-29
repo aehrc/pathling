@@ -70,6 +70,7 @@ extensions are stored and navigable.
 - ~~[14](14-date-range-annotation.md) Date range annotation~~ (done)
 - [15](15-schema-decided-plan-test-and-docs.md) Test that annotation use is decided from the schema, and document annotations
 - [17](17-placeholder-primitive-metadata-group.md) PLACEHOLDER: the primitive metadata group (US6, #437)
+- [43](43-lazy-annotation-evaluation.md) Evaluate annotations in the engine only where they are used
 - ~~[34](34-placeholder-content-outside-definitions.md) PLACEHOLDER: Carry content the definitions do not describe through ingest, egress and the engine~~ (moved to a follow-up issue, ticket 26)
 
 Content the definitions do not describe, ticket 34 until 2026-10-22, is outside
@@ -103,6 +104,8 @@ issues are raised, and #2367 is checked complete.
 - [30](30-pof-spec-layout-column.md) Propose the layout column as an amendment to the Parquet on FHIR specification
 - [39](39-public-xml-sink-and-source.md) A public XML sink and source, over ticket 32's line-delimited XML
 - [35](35-pof-spec-json-projection.md) Propose the JSON projection and its prerequisites as amendments to the Parquet on FHIR specification
+- [44](44-pof-spec-range-type-int96.md) Reconsider keeping INT96 in the range annotations' amendment
+- [45](45-timestamp-type-after-spec.md) Settle the stored timestamp type once the specification is final
 - [16](16-placeholder-ingest-egress-rework.md) DEFERRED: the ingest mechanism, per-value validation and lossless decimals
 - [28](28-completion-checklist.md) Completion checklist
 
