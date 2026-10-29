@@ -251,7 +251,7 @@ public class DefaultRepresentation extends ColumnRepresentation {
    * @return the decimal, typed as {@link SystemDecimal#TYPE}
    */
   @Nonnull
-  static Column numericValue(@Nonnull final Column value, @Nonnull final Column group) {
+  public static Column numericValue(@Nonnull final Column value, @Nonnull final Column group) {
     return resolveAnnotation(
         DecimalNumericKind.INSTANCE, LayoutFields.NUMERIC_ANNOTATION, value, group);
   }

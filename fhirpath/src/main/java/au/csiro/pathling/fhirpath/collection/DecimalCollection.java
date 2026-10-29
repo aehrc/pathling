@@ -127,15 +127,13 @@ public class DecimalCollection extends Collection
   @Nonnull
   public static BigDecimal parseLiteral(final @Nonnull String literal) {
     final BigDecimal value = new BigDecimal(literal);
-    final int integerDigits =
-        DecimalCollection.getDecimalType().precision() - DecimalCollection.getDecimalType().scale();
 
     // A literal with more integer digits than the type holds would become null wherever it is cast
     // to the type. Together with the scale, this also bounds the literal's precision.
-    if (value.precision() - value.scale() > integerDigits) {
+    if (value.precision() - value.scale() > SystemDecimal.INTEGER_DIGITS) {
       throw new InvalidUserInputError(
           "Decimal literal exceeded maximum integer digits supported ("
-              + integerDigits
+              + SystemDecimal.INTEGER_DIGITS
               + "): "
               + literal);
     }

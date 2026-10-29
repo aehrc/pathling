@@ -38,7 +38,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.stream.Stream;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -151,20 +151,18 @@ class QuantityNumericAnnotationTest {
                 "o3=null",
                 "o4=1000000000000000000000000000000.000000")),
         // A quantity the engine builds carries its value as decoding its text gives it.
-        arguments(
-            "(1.2345675 'g').value",
-            List.of("o1=1.234568", "o2=1.234568", "o3=1.234568", "o4=1.234568")),
-        arguments(
-            "'1.2345675 \\'g\\''.toQuantity().value",
-            List.of("o1=1.234568", "o2=1.234568", "o3=1.234568", "o4=1.234568")),
+        arguments("(1.2345675 'g').value", everyObservation("1.234568")),
+        arguments("'1.2345675 \\'g\\''.toQuantity().value", everyObservation("1.234568")),
         arguments(
             "(1000000000000000000000000000000 'g').value",
-            Stream.of("o1", "o2", "o3", "o4")
-                .map(id -> id + "=1000000000000000000000000000000.000000")
-                .toList()),
-        arguments(
-            "(123456789012345678901234567890123 'g').value",
-            List.of("o1=null", "o2=null", "o3=null", "o4=null")));
+            everyObservation("1000000000000000000000000000000.000000")),
+        arguments("(123456789012345678901234567890123 'g').value", everyObservation("null")));
+  }
+
+  /** The same result for every observation. */
+  @Nonnull
+  private static List<String> everyObservation(@Nonnull final String result) {
+    return Stream.of("o1", "o2", "o3", "o4").map(id -> id + "=" + result).toList();
   }
 
   @Nonnull
@@ -218,12 +216,11 @@ class QuantityNumericAnnotationTest {
 
   @Nonnull
   Stream<Arguments> plans() {
-    final BiFunction<QuantityNumericAnnotationTest, String, Column> expression =
-        (test, e) ->
-            SearchColumnBuilder.withDefaultRegistry(test.fhirEncoders.getContext())
+    final Function<String, Column> expression =
+        e ->
+            SearchColumnBuilder.withDefaultRegistry(fhirEncoders.getContext())
                 .fromExpression(ResourceType.OBSERVATION, e);
-    final BiFunction<QuantityNumericAnnotationTest, String, Column> search =
-        QuantityNumericAnnotationTest::search;
+    final Function<String, Column> search = this::search;
     return Stream.of(
         arguments("value.ofType(Quantity) = value.ofType(Quantity)", expression),
         arguments("value.ofType(Quantity).combine(7 'g').value.first() > 1", expression),
@@ -237,17 +234,15 @@ class QuantityNumericAnnotationTest {
   @ParameterizedTest(name = "{0}")
   @MethodSource("plans")
   void theValueTakesTheAnnotationWhereTheSchemaCarriesIt(
-      @Nonnull final String query,
-      @Nonnull final BiFunction<QuantityNumericAnnotationTest, String, Column> filter) {
+      @Nonnull final String query, @Nonnull final Function<String, Column> filter) {
     // The text is decoded by a cast of the value field, followed by the id Spark gives it.
     final String decodeText = "value(#\\d+)? as decimal\\(38,6\\)";
 
-    assertThat(plan(datasets.get("annotated"), filter.apply(this, query)))
+    assertThat(plan(datasets.get("annotated"), filter.apply(query)))
         .contains("__numeric")
         .doesNotContainPattern(decodeText);
     for (final String unannotated : List.of("read", "disabled")) {
-      assertThat(plan(datasets.get(unannotated), filter.apply(this, query)))
-          .containsPattern(decodeText);
+      assertThat(plan(datasets.get(unannotated), filter.apply(query))).containsPattern(decodeText);
     }
   }
 

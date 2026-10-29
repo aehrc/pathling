@@ -47,6 +47,9 @@ public final class SystemDecimal {
   /** The number of fractional digits the type holds. */
   public static final int SCALE = 6;
 
+  /** The number of integer digits the type holds. */
+  public static final int INTEGER_DIGITS = PRECISION - SCALE;
+
   /** The type, {@code DECIMAL(38,6)}. */
   @Nonnull public static final DecimalType TYPE = DataTypes.createDecimalType(PRECISION, SCALE);
 

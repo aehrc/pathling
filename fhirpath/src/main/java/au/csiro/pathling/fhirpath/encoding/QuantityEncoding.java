@@ -25,6 +25,7 @@ import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.encoders.ColumnFunctions;
 import au.csiro.pathling.fhirpath.FhirPathQuantity;
+import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.unit.UcumUnit;
 import au.csiro.pathling.schema.LayoutFields;
 import au.csiro.pathling.schema.annotation.kinds.CanonicalQuantity;
@@ -300,12 +301,9 @@ public final class QuantityEncoding {
    */
   @Nonnull
   public static Column numericValue(@Nonnull final Column quantity) {
-    return DecimalNumericKind.INSTANCE.read(
-        DecimalNumericKind.INSTANCE.apply(
-            LayoutFields.NUMERIC_ANNOTATION,
-            ColumnFunctions.resolveStringOrNull(quantity, VALUE_COLUMN),
-            ColumnFunctions.resolveOrNull(quantity, VALUE_GROUP_COLUMN, DataTypes.NullType),
-            ColumnFunctions::resolveOrElse));
+    return DefaultRepresentation.numericValue(
+        ColumnFunctions.resolveStringOrNull(quantity, VALUE_COLUMN),
+        ColumnFunctions.resolveOrNull(quantity, VALUE_GROUP_COLUMN, DataTypes.NullType));
   }
 
   /**
