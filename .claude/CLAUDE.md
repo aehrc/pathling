@@ -30,9 +30,11 @@ Build:
 - **`sql-on-fhir/` is a git submodule.** It needs `git submodule update --init` before the
   SQL-on-FHIR compliance tests can run.
 - **Python and R pick up Java changes only after the Ivy cache is cleared** — both `cache` and
-  `jars`, across every `~/.ivy2*` tree. The SNAPSHOT filename never changes, so Ivy silently reuses
-  a stale jar and the tests pass without exercising the new code. See CONTRIBUTING.md for the exact
-  sequence, including the `mkdir` step that is required afterwards.
+  `jars`, across every `~/.ivy2*` tree — unless the Python or R tests themselves run through
+  `scripts/mvn-isolated.sh`. Running pytest or R directly bypasses it and uses the shared trees
+  again. The SNAPSHOT filename never changes, so Ivy silently reuses a stale jar and the tests pass
+  without exercising the new code. See CONTRIBUTING.md for the exact sequence, including the
+  `mkdir` step that is required afterwards.
 
 Tooling:
 
@@ -41,12 +43,21 @@ Tooling:
   is not configurable via settings.json, so this is the only sane convention to standardise on. The
   `implement-pathling` skill's `--worktree` flag uses this path, and it is gitignored.
 
+- **In a linked worktree, run Maven through `scripts/mvn-isolated.sh`** in place of `mvn`, with
+  the same arguments. It gives the checkout its own Maven repository and Ivy cache, so an `install`
+  or a Python or R test run does not affect other checkouts. Maven still falls back to the shared
+  repository for any Pathling module the checkout has not installed itself, so build with `-am`
+  (or install the upstream modules first) to avoid testing against another checkout's build.
+  Build `library-runtime` with `install` before running the Python or R tests through it. In the
+  main checkout use plain `mvn` unless asked otherwise. See CONTRIBUTING.md.
+
 Tests:
 
 - **The YAML exclusion baseline polices itself.** Excluded conformance cases are still executed and
-  asserted to fail in the recorded way. After implementing a feature, `Excluded test passed when
-  expected outcome was error` is the expected, correct signal that an exclusion is now obsolete —
-  not a test failure to work around. See the `pathling-yaml-exclusions` skill.
+  asserted to fail in the recorded way. After implementing a feature,
+  `Excluded test passed when expected outcome was error` is the expected, correct signal that an
+  exclusion is now obsolete — not a test failure to work around. See the `pathling-yaml-exclusions`
+  skill.
 - **Two exclusion-config fields and one system property do nothing**: an exclude block's `glob` (so
   every block applies to every case file), a rule's `desc` matcher, and the `exclusionsOnly` system
   property. Do not rely on them. A rule's `disabled` flag, and the `disabledExclusions` property,
@@ -69,18 +80,18 @@ different matter — changes there are inherited by every later feature.
 
 Use these skills rather than duplicating their content here:
 
-| Skill | For |
-|---|---|
-| `implement-pathling` | Driving a FHIRPath issue to a PR (`/implement-pathling <issue>`) |
-| `fhirpath-spec` | The FHIRPath spec and its FHIR bindings — the ground truth on semantics |
-| `cache-github-repo` | Pin and locally cache a GitHub repo, e.g. the fhirpath.js reference implementation `fhirpath-spec` consults |
-| `fhirpath` | Quick reference for writing expressions; defers to `fhirpath-spec` on semantics |
-| `fhirpath-test-designer` | Test matrices and the DSL test surface |
-| `pathling-yaml-exclusions` | The conformance exclusion baselines |
-| `pathling-fhirpath-review` | Correctness review of a FHIRPath change |
-| `fhir-search-spec` | FHIR RESTful search parameters, prefixes, and modifiers |
-| `sql-on-fhir` | The SQL-on-FHIR view specification |
-| `spark-catalyst` | Spark internals when touching column generation |
+| Skill                      | For                                                                                                         |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `implement-pathling`       | Driving a FHIRPath issue to a PR (`/implement-pathling <issue>`)                                            |
+| `fhirpath-spec`            | The FHIRPath spec and its FHIR bindings — the ground truth on semantics                                     |
+| `cache-github-repo`        | Pin and locally cache a GitHub repo, e.g. the fhirpath.js reference implementation `fhirpath-spec` consults |
+| `fhirpath`                 | Quick reference for writing expressions; defers to `fhirpath-spec` on semantics                             |
+| `fhirpath-test-designer`   | Test matrices and the DSL test surface                                                                      |
+| `pathling-yaml-exclusions` | The conformance exclusion baselines                                                                         |
+| `pathling-fhirpath-review` | Correctness review of a FHIRPath change                                                                     |
+| `fhir-search-spec`         | FHIR RESTful search parameters, prefixes, and modifiers                                                     |
+| `sql-on-fhir`              | The SQL-on-FHIR view specification                                                                          |
+| `spark-catalyst`           | Spark internals when touching column generation                                                             |
 
 ## Conventions
 
