@@ -14,7 +14,7 @@ Weigh, with evidence where the specification's choice rests on it:
 
 **Do not raise anything on GitHub.** Write the revision, as a comment on aehrc/parquet-on-fhir#3, to `.local/work/<branch>/pof-spec-range-type-int96.md`. The owner reviews it, and the parent session posts it.
 
-**Blocked by:** None
+**Blocked by:** 46
 
 **Status:** needs-triage
 

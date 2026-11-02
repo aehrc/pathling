@@ -20,7 +20,7 @@ Consider:
 - How it relates to ticket 42's choice between keeping a kind's fields together and caching their shared computation. A lazy annotation and a cached computation may be one design.
 - The plan tests to start from: an output-only date under a repeating parent with no `date_range` in the optimised plan, and `birthdate=ge2000` and `where(birthDate >= @2000)` over annotated Parquet, asserting on the scan's pushed filters.
 
-**Blocked by:** None. Related to 42.
+**Blocked by:** None. Related to 42, and decided together with it, first in stage 4 (owner, 2026-11-02).
 
 **Status:** needs-triage
 

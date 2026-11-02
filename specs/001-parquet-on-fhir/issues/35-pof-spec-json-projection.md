@@ -18,7 +18,7 @@ Each amendment is raised as its own issue on `aehrc/parquet-on-fhir`, so that ea
 - A marker in the Parquet metadata giving a column's JSON type, and anything else that preserves the representation of content the definitions do not describe. That is the follow-up issue ticket 26 raises in place of ticket 34.
 - Pathling's own changes once the amendments are agreed, which become tickets or follow-up issues of their own: egress as the projection, the `resourceType` column, and FR-019's pruning, which a conformant dataset no longer needs.
 
-**Blocked by:** None. #2367 does not wait for agreement upstream.
+**Blocked by:** 46. #2367 waits for the amendments to be agreed upstream (owner, 2026-11-02).
 
 **Status:** needs-triage
 

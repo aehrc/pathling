@@ -14,10 +14,16 @@ Read the specification's current text first, and its conventions for fields whos
 
 **Do not raise anything on GitHub.** Write the proposal, as the title and body of an issue or the text of a pull request on `aehrc/parquet-on-fhir`, to `.local/work/<branch>/pof-spec-amendment.md`. The owner reviews it, and the parent session raises it. Record the number here once it is raised.
 
-**Blocked by:** None
+**Blocked by:** 46
 
 **Status:** ready-for-agent
 
 - [ ] The proposal is drafted, covering the name, the version rule, type and value, status and reader behaviour, with the reasons for each.
 - [ ] It is raised on `aehrc/parquet-on-fhir` after the owner's review, and its number is recorded in this ticket's comments.
 - [ ] Once it is agreed, FR-065, ADR-0006, the data model and ticket 29 use the agreed name and version rule, or a follow-up records the rename if ticket 29 has already landed.
+
+## Comments
+
+### Raised before review, and re-planned (owner, 2026-11-02)
+
+The proposal was raised as [aehrc/parquet-on-fhir#2](https://github.com/aehrc/parquet-on-fhir/issues/2) on 2026-10-26. Ticket 46 reviews it before anything more is posted: #2 refuses unmarked data, which FR-039 accepts, and names the column `__pof_v1`. Any revision of #2 waits for 46.

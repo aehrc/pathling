@@ -1,5 +1,7 @@
 # 40 — Specify the shape of SQL output
 
+> **Moved after #2367 (owner, 2026-11-02).** This ticket becomes a GitHub issue raised by ticket 26, and is not dispatched within #2367. See this ticket's comments.
+
 **Spec:** `specs/001-parquet-on-fhir/spec.md` — FR-021, FR-059; `contracts/engine-semantics.md`; decision 135. Raised from ticket 12's first review item (owner, 2026-10-26).
 
 **What to decide:** the shape of what the engine hands back as SQL, where a result leaves FHIRPath for Spark columns: `fhirPathToColumn`, and view columns where they allow a complex type.
@@ -20,3 +22,9 @@ Out of scope: JSON and XML egress, whose shape is FHIR's.
 
 - [ ] The owner agrees the output shape for annotations, primitives and complex types, and it is recorded in the specification.
 - [ ] Tickets are raised for whatever the agreed shape requires the engine to change, or for the follow-up issues through ticket 26.
+
+## Comments
+
+### Moved after #2367 (owner, 2026-11-02)
+
+The re-plan limits #2367 to a core library that matches the legacy line, with primitive metadata as its one extension. This ticket becomes a GitHub issue, raised by ticket 26 and labelled `enhancement` and `PoF_line`, and whether it goes into a release is decided separately.

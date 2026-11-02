@@ -1,5 +1,7 @@
 # 18 — Dense schema mode and streaming encode
 
+> **Moved after #2367 (owner, 2026-11-02).** This ticket becomes a GitHub issue raised by ticket 26, and is not dispatched within #2367. See this ticket's comments.
+
 **Spec:** `specs/001-parquet-on-fhir/spec.md` — FR-009, FR-010, FR-017, FR-043, FR-044. Old tasks: T031a, T031e, T031d, T033, T033a, T033d, T134f (removed by ticket 37); decisions 59, 68, 69, 87, 94, 121.
 
 **What to build:** A user can choose the dense schema, which is derived from the definitions and bounded by the nesting, extension and open-type options, and can then encode a stream.
@@ -27,3 +29,9 @@
 - [ ] A dataset ingested in dense mode carries the layout column of ticket 29.
 - [ ] The docs are updated as described.
 - [ ] The annotation width is measured on the dense schema this ticket's cursor produces, with the placement of decision 135 part 4, and `evidence/dense-annotation-width.md` and decision 135 part 2 are updated with the result.
+
+## Comments
+
+### Moved after #2367 (owner, 2026-11-02)
+
+The re-plan limits #2367 to a core library that matches the legacy line, with primitive metadata as its one extension. This ticket becomes a GitHub issue, raised by ticket 26 and labelled `new feature` and `PoF_line`, and whether it goes into a release is decided separately.

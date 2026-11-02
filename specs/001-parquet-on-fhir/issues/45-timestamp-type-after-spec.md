@@ -7,7 +7,7 @@
 - **Go back to Spark's default, `INT96`,** where the specification allows it. The sinks then accept a session at `INT96`, Pathling's own sessions no longer set `spark.sql.parquet.outputTimestampType`, and `StoredTimestamps`, `TimestampStorage` and the warning at context creation are removed or reduced to what is still needed. First check that `INT96` works throughout: the footer, comparisons and searches on stored dates, a Delta merge, and data written before and after the change read together.
 - **Keep `TIMESTAMP_MICROS`, and document the session setup** for platforms where the user supplies the session, Databricks first: the cluster's Spark configuration, `spark.sql.parquet.outputTimestampType TIMESTAMP_MICROS`, and its equivalent for a serverless or shared cluster, beside the session requirements in the Java, Python and R documentation.
 
-**Blocked by:** 44
+**Blocked by:** 44, and the specification's agreement on the range annotations' type (ticket 46)
 
 **Status:** needs-triage
 

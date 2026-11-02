@@ -139,7 +139,7 @@ The nesting-depth, extension and open-type options bound the dense mode only.
 They do not apply to the pruned mode, where depth comes from the data,
 extensions appear because they are present, and open types resolve as observed.
 
-The dense mode is delivered in M6, after the annotations and the primitive
+The dense mode is delivered after #2367 (owner, 2026-11-02), after the annotations and the primitive
 metadata group (decision 69). Until then the pruned mode is the only one, the
 three options are accepted by the public API and bound nothing, and the schema
 mode is not a setting because there is nothing to set it to.

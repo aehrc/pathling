@@ -102,7 +102,7 @@ the data populates. Two consequences for a direct consumer:
 
 A dense schema comprising every element the definitions describe is available as
 an option, bounded by the configured nesting depth, extension and open-type
-settings. It arrives in M6, after the annotations and the primitive metadata
+settings. It arrives after #2367 (owner, 2026-11-02), after the annotations and the primitive metadata
 group; the fitted schema is the only one the releases before it write (decision
 69).
 

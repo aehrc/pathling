@@ -19,7 +19,8 @@ Python and R.
 No public signature is removed or narrowed, with one exception (decision 87): the
 Java `encode` and `encodeBundle` overloads that return a dataset typed by a HAPI
 class are removed, since only the previous encoder can produce one. Encoding a
-streaming dataset fails until the dense schema arrives in M6.
+streaming dataset fails until the dense schema arrives, after #2367 (owner,
+2026-11-02).
 
 ## Options added
 

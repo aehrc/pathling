@@ -22,6 +22,23 @@ checklist, closes. It is not by itself a release: what the release needs beyond
 it is raised as follow-up issues by ticket 26. Tickets that #2367 does not wait
 for are named on ticket 28.
 
+## Scope of #2367
+
+#2367 delivers a core library that matches the functionality of the legacy
+line, with primitive ids and extensions (US6) as its one extension, and a
+layout reconciled with the Parquet on FHIR specification: the amendments
+Pathling proposes are agreed upstream, and the layout matches the agreed text
+before #2367 closes. The requirements below are part of the end state but are
+deferred to GitHub issues after #2367, and are marked _Deferred_ where they
+appear:
+
+- the dense schema mode and streaming encode: FR-009's dense schema, FR-010,
+  FR-016's exception 4, FR-017, FR-043's streaming clause and FR-044, User Story
+  4's scenario 7, the dense subset of SC-002, and SC-010;
+- deciding the annotation step's *fill* per row. Until then, *fill* keeps a
+  stored annotation that is null beside its value, as in a table merged from
+  annotated and unannotated sources, and *recompute* repairs it.
+
 ## Why
 
 1. **Performance** of encoding, decoding and FHIRPath execution through reduced
@@ -147,7 +164,7 @@ expression over an absent element yields empty.
    **When** it is evaluated, **Then** it succeeds.
 7. **Given** one column expression, **When** it is applied to a fitted dataset
    and to a dense dataset holding the same resources, **Then** the results are
-   equal.
+   equal. _Deferred (Scope of #2367)._
 8. **Given** two collections of the same FHIR type reached by different paths,
    whose fitted schemas differ, **When** they are combined, **Then** the result
    holds every element of both and can be traversed.
@@ -328,11 +345,11 @@ Identifiers are stable. FR-015, FR-018 and FR-020 are retired and not reused.
   ([ADR-0005](../../docs/adr/0005-types-from-definitions-only.md)). Content it
   does not describe is typed only as FR-012 allows.
 - **FR-009**: The system MUST support a fitted schema and a dense schema. The
-  fitted schema is the default.
+  fitted schema is the default. _Deferred: the dense schema (Scope of #2367)._
 - **FR-010**: The dense schema MUST be produced by the same traversal as the
   fitted one, differing only in the strategy that decides which children it
   descends into and where it stops, so the two cannot diverge in type,
-  cardinality or field order.
+  cardinality or field order. _Deferred (Scope of #2367)._
 - **FR-011**: A complex element MUST appear in a fitted schema only where some
   descendant leaf is populated. A primitive the source carried only as its id
   and extensions counts as populated.
@@ -380,7 +397,7 @@ Identifiers are stable. FR-015, FR-018 and FR-020 are retired and not reused.
      `Resource`, such as `Parameters.parameter.resource`;
   3. primitive ids and extensions, until ticket 17 stores the metadata group;
   4. on a dense schema, content beyond the configured nesting, extension and
-     open-type bounds (FR-017);
+     open-type bounds (FR-017, deferred);
   5. `base64Binary` whitespace, which decoding and re-encoding canonicalises.
 
   OQ-1 lists further exceptions that hold until ticket 16 decides
@@ -391,7 +408,8 @@ Identifiers are stable. FR-015, FR-018 and FR-020 are retired and not reused.
   Evidence: [null-and-empty-handling.md](evidence/null-and-empty-handling.md).
 - **FR-017**: On a dense schema the guarantee in FR-016 MUST hold within the
   configured nesting, extension and open-type bounds. What those bounds drop is
-  an exception to the guarantee (FR-016), and is not reported.
+  an exception to the guarantee (FR-016), and is not reported. _Deferred
+  (Scope of #2367)._
 - **FR-019**: Export MUST omit an absent element, a structure whose every field
   is null, and an array holding only nulls, except a repeating primitive's
   positional nulls, which align with its metadata group. *(Subject to OQ-1.)*
@@ -544,10 +562,12 @@ Identifiers are stable. FR-015, FR-018 and FR-020 are retired and not reused.
 
 - **FR-043**: `encode`, `encodeBundle` and `decode` MUST be preserved in Java,
   Python and R, in the forms taking a resource name. Encoding a streaming
-  dataset MUST work in the dense schema mode.
+  dataset MUST work in the dense schema mode. _Deferred: the streaming clause
+  (Scope of #2367); until then a streaming dataset is refused with a message
+  that names encoding each batch as the remedy._
 - **FR-044**: The nesting, extension and open-type options MUST bound the dense
   schema and MUST NOT apply to the fitted one. Evidence:
-  [encoder-scope.md](evidence/encoder-scope.md).
+  [encoder-scope.md](evidence/encoder-scope.md). _Deferred (Scope of #2367)._
 - **FR-047**: The published documentation MUST describe the PoF layout, its
   schema modes and annotations, the refusal of the legacy layout, the legacy
   export, and the caveat for direct SQL consumers.
@@ -581,7 +601,8 @@ reconciliation, legacy export, layout column.
   subject to FR-016's exceptions.
 - **SC-002**: The FHIRPath test suite, both conformance baselines and the
   SQL-on-FHIR compliance suite pass over the PoF layout with fitted schemas, and
-  a curated subset passes with dense schemas.
+  a curated subset passes with dense schemas. _Deferred: the dense subset
+  (Scope of #2367)._
 - **SC-003**: The conformance exclusion baselines gain no new entries, and every
   obsolete entry is removed.
 - **SC-004**: The full engine test suite passes over files written with every
@@ -604,6 +625,7 @@ reconciliation, legacy export, layout column.
 - **SC-010**: One column expression, built without reference to any dataset,
   applied to a fitted and to a dense dataset holding the same resources, yields
   equal results for every expression in the engine's expression-level test set.
+  _Deferred (Scope of #2367)._
 - **SC-011**: Encode and decode are no slower than at the PoF switch, measured on
   the same benchmark, within the measured drift of about 10%
   ([t136-benchmark.md](evidence/t136-benchmark.md)).

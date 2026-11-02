@@ -17,7 +17,7 @@ Consider:
 - That the computation must stay deterministic, and a traced operand must still fire once (#2594).
 - What it would change: `resolveFieldsOrElse`, the System date's `range`, `compareCanonical`, and `bindOnce` in `TemporalComparator` and `DateMatcher`.
 
-**Blocked by:** 14
+**Blocked by:** 14. Decided together with ticket 43, in stage 4 (owner, 2026-11-02).
 
 **Status:** needs-triage
 

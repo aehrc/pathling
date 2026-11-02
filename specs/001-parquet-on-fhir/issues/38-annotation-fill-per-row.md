@@ -1,5 +1,7 @@
 # 38 — Consider deciding the annotation step's *fill* per row
 
+> **Moved after #2367 (owner, 2026-11-02).** This ticket becomes a GitHub issue raised by ticket 26, and is not dispatched within #2367. See this ticket's comments.
+
 **Spec:** `specs/001-parquet-on-fhir/spec.md` — FR-021, FR-022, FR-023; decision 135. Raised from ticket 11's first review item.
 
 **What to decide:** whether the annotation step's *fill* mode treats a null stored annotation in one row as missing and computes it, rather than keeping it because the schema carries the field.
@@ -23,3 +25,9 @@ Decide it once real kinds exist (tickets 12–14), so that the merged-dataset ca
 - [ ] The owner decides per row or per schema for the step's *fill*, and the decision is recorded.
 - [ ] If per row: the step computes an annotation for a row whose stored value is null and keeps a non-null one, pinned by a test over a dataset merged from an annotated and an unannotated source, and the configuration docs in Java, Python and R say so.
 - [ ] If per schema: the configuration docs say that *fill* keeps a null stored annotation, and that *recompute* repairs a merged dataset.
+
+## Comments
+
+### Moved after #2367 (owner, 2026-11-02)
+
+The re-plan limits #2367 to a core library that matches the legacy line, with primitive metadata as its one extension. This ticket becomes a GitHub issue, raised by ticket 26 and labelled `enhancement` and `PoF_line`, and whether it goes into a release is decided separately. Until then, the documentation says that *fill* keeps a null stored annotation and that a merged table needs *recompute* (ticket 15).

@@ -29,3 +29,9 @@
 
 - [ ] The issue's scope is written up from this ticket, and the owner agrees it.
 - [ ] Ticket 26 raises it, and records its number.
+
+## Comments
+
+### Re-planned (owner, 2026-11-02)
+
+The scope this ticket writes becomes the text of one of the GitHub issues ticket 26 raises after #2367, labelled `enhancement` and `PoF_line`.

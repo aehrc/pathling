@@ -45,3 +45,25 @@
 
 - [ ] Each issue is raised, and its number is recorded in this ticket's comments.
 - [ ] Each issue carries enough context that nobody has to rediscover it from `tasks.md`.
+
+## Comments
+
+### The re-plan of #2367 (owner, 2026-11-02)
+
+#2367 is limited to a core library that matches the legacy line, with primitive metadata (ticket 17) as its one extension. The rest is lined up as GitHub issues, and whether each goes into a release is decided separately. Each issue links back to its ticket and is labelled:
+
+- **A defect the legacy line also has:** `bug`, `PoF_line` and `Bunsen_line`.
+- **Anything else:** `PoF_line`, plus `new feature`, `enhancement` or `optimisation`.
+
+Each is raised with the owner's approval, one by one.
+
+The issues the re-plan adds:
+
+- Dense schema mode and streaming encode, with dense parity (tickets 18 and 19): `new feature`.
+- A public XML sink and source (ticket 39): `new feature`.
+- The shape of SQL output, including System types in output (ticket 40): `enhancement`.
+- The rework of the ingest mechanism (ticket 16, decision 134): `enhancement`.
+- Deciding the annotation step's *fill* per row (ticket 38): `enhancement`.
+- Defects the legacy line also has, from ticket 31, starting with `toDate()` and `toDateTime()` not checking the calendar: `bug` and `Bunsen_line`.
+
+The extra-fields issue above takes ticket 36's scope as its text. The items above this comment get their labels when each is raised.
