@@ -19,6 +19,7 @@ package au.csiro.pathling.terminology;
 
 import ca.uhn.fhir.rest.gclient.IOperationUntypedWithInput;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.util.Optional;
 
 /**
@@ -62,8 +63,8 @@ public interface TerminologyOperation<R, T> {
    * Returns the fallback result for invalid requests.
    *
    * @return the result that should be returned to the user if the terminology server returns a 400
-   *     series response
+   *     series response, or null if the result is then unknown
    */
-  @Nonnull
+  @Nullable
   T invalidRequestFallback();
 }

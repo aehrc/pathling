@@ -25,13 +25,22 @@ import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.io.Serial;
+import java.util.Iterator;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Coding;
 
-/** The implementation of the 'member_of' UDF. */
+/**
+ * The implementation of the 'member_of' UDF.
+ *
+ * <p>The input is a coding, an array of codings that together represent a single concept, or a
+ * string holding a code without a system. The result is null where membership is unknown, for
+ * example because the value set cannot be resolved.
+ *
+ * @author John Grimes
+ */
 @Slf4j
 public class MemberOfUdf implements SqlFunction, SqlFunction2<Object, String, Boolean> {
 
@@ -64,17 +73,23 @@ public class MemberOfUdf implements SqlFunction, SqlFunction2<Object, String, Bo
 
   @Nullable
   @Override
-  public Boolean call(@Nullable final Object codingRowOrArray, @Nullable final String url) {
-    return doCall(decodeOneOrMany(codingRowOrArray), url);
+  public Boolean call(@Nullable final Object conceptOrCode, @Nullable final String url) {
+    if (conceptOrCode instanceof final String code) {
+      return url == null
+          ? null
+          : terminologyServiceFactory.build().validateCodeInferringSystem(url, code);
+    }
+    return doCall(decodeOneOrMany(conceptOrCode), url);
   }
 
   /**
-   * Executes the operation for the given codings and value set URL.
+   * Executes the operation for the given codings and value set URL. The codings together represent
+   * a single concept, which is a member if any of its codings is a member.
    *
    * @param codings the codings to test for membership
    * @param url the URL of the value set to test against
-   * @return true if any coding is a member of the value set, false otherwise, null if inputs are
-   *     null
+   * @return true if any coding is a member of the value set, otherwise null if the membership of
+   *     any coding is unknown, otherwise false; null if inputs are null
    */
   @Nullable
   protected Boolean doCall(@Nullable final Stream<Coding> codings, @Nullable final String url) {
@@ -82,6 +97,15 @@ public class MemberOfUdf implements SqlFunction, SqlFunction2<Object, String, Bo
       return null;
     }
     final TerminologyService terminologyService = terminologyServiceFactory.build();
-    return validCodings(codings).anyMatch(coding -> terminologyService.validateCode(url, coding));
+    boolean unknown = false;
+    final Iterator<Coding> iterator = validCodings(codings).iterator();
+    while (iterator.hasNext()) {
+      final Boolean member = terminologyService.validateCode(url, iterator.next());
+      if (Boolean.TRUE.equals(member)) {
+        return true;
+      }
+      unknown |= member == null;
+    }
+    return unknown ? null : false;
   }
 }

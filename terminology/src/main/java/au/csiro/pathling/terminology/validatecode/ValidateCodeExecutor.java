@@ -27,7 +27,9 @@ import au.csiro.pathling.fhirpath.encoding.ImmutableCoding;
 import au.csiro.pathling.terminology.TerminologyOperation;
 import ca.uhn.fhir.rest.gclient.IOperationUntypedWithInput;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.util.Optional;
+import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.StringType;
@@ -63,7 +65,9 @@ public class ValidateCodeExecutor implements TerminologyOperation<Parameters, Bo
   @Nonnull
   public Optional<Boolean> validate() {
     final ImmutableCoding coding = parameters.coding();
-    if (isNull(coding.getSystem()) || isNull(coding.getCode())) {
+    // A coding without a code, or without a system that is not to be inferred, is not a member of
+    // any value set.
+    if (isNull(coding.getCode()) || (isNull(coding.getSystem()) && !parameters.inferSystem())) {
       return Optional.of(false);
     } else {
       return Optional.empty();
@@ -77,9 +81,10 @@ public class ValidateCodeExecutor implements TerminologyOperation<Parameters, Bo
     final ImmutableCoding coding = parameters.coding();
     return terminologyClient.buildValidateCode(
         required(UriType::new, codeSystemUrl),
-        required(UriType::new, coding.getSystem()),
+        optional(UriType::new, coding.getSystem()),
         optional(StringType::new, coding.getVersion()),
-        required(CodeType::new, coding.getCode()));
+        required(CodeType::new, coding.getCode()),
+        parameters.inferSystem() ? new BooleanType(true) : null);
   }
 
   @Override
@@ -88,9 +93,13 @@ public class ValidateCodeExecutor implements TerminologyOperation<Parameters, Bo
     return toBooleanResult(response);
   }
 
+  /**
+   * A request that the terminology server rejects, for example because it cannot resolve the value
+   * set or does not support inferring the system, leaves the membership unknown.
+   */
   @Override
-  @Nonnull
+  @Nullable
   public Boolean invalidRequestFallback() {
-    return false;
+    return null;
   }
 }

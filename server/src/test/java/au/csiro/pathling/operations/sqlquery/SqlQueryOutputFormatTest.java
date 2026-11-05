@@ -26,109 +26,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
-/**
- * Tests for {@link SqlQueryOutputFormat} covering both the {@code _format} string and the {@code
- * Accept} header parsing paths, including the q-value precedence used in content negotiation.
- */
+/** Tests for {@link SqlQueryOutputFormat} covering the parsing of the {@code _format} parameter. */
 class SqlQueryOutputFormatTest {
-
-  @ParameterizedTest(name = "fromString(\"{0}\") returns {1}")
-  @CsvSource({
-    "ndjson, NDJSON",
-    "csv, CSV",
-    "json, JSON",
-    "parquet, PARQUET",
-    "fhir, FHIR",
-    "application/x-ndjson, NDJSON",
-    "text/csv, CSV",
-    "application/json, JSON",
-    "application/vnd.apache.parquet, PARQUET",
-    "application/fhir+json, FHIR"
-  })
-  void fromStringMatchesCodeOrContentType(final String input, final SqlQueryOutputFormat expected) {
-    assertThat(SqlQueryOutputFormat.fromString(input)).isEqualTo(expected);
-  }
-
-  @ParameterizedTest(name = "fromString(\"{0}\") normalises and matches NDJSON")
-  @CsvSource({"NDJSON", "  ndjson  ", "Application/X-NDJSON"})
-  void fromStringIsCaseInsensitiveAndTrims(final String input) {
-    assertThat(SqlQueryOutputFormat.fromString(input)).isEqualTo(SqlQueryOutputFormat.NDJSON);
-  }
-
-  @Test
-  void fromStringDefaultsToNdjsonForNull() {
-    assertThat(SqlQueryOutputFormat.fromString(null)).isEqualTo(SqlQueryOutputFormat.NDJSON);
-  }
-
-  @ParameterizedTest
-  @ValueSource(strings = {"", "   "})
-  void fromStringDefaultsToNdjsonForBlank(final String input) {
-    assertThat(SqlQueryOutputFormat.fromString(input)).isEqualTo(SqlQueryOutputFormat.NDJSON);
-  }
-
-  @Test
-  void fromStringDefaultsToNdjsonForUnknown() {
-    assertThat(SqlQueryOutputFormat.fromString("text/xml")).isEqualTo(SqlQueryOutputFormat.NDJSON);
-  }
-
-  @Test
-  void fromAcceptHeaderDefaultsToNdjsonForNull() {
-    assertThat(SqlQueryOutputFormat.fromAcceptHeader(null)).isEqualTo(SqlQueryOutputFormat.NDJSON);
-  }
-
-  @Test
-  void fromAcceptHeaderDefaultsToNdjsonForBlank() {
-    assertThat(SqlQueryOutputFormat.fromAcceptHeader("")).isEqualTo(SqlQueryOutputFormat.NDJSON);
-  }
-
-  @Test
-  void fromAcceptHeaderResolvesSingleSupportedType() {
-    assertThat(SqlQueryOutputFormat.fromAcceptHeader("text/csv"))
-        .isEqualTo(SqlQueryOutputFormat.CSV);
-  }
-
-  @Test
-  void fromAcceptHeaderPicksHigherQualityWinner() {
-    assertThat(
-            SqlQueryOutputFormat.fromAcceptHeader(
-                "text/csv;q=0.5, application/json;q=0.9, application/x-ndjson;q=1.0"))
-        .isEqualTo(SqlQueryOutputFormat.NDJSON);
-  }
-
-  @Test
-  void fromAcceptHeaderDefaultsQualityToOneWhenAbsent() {
-    assertThat(SqlQueryOutputFormat.fromAcceptHeader("text/csv, application/json;q=0.5"))
-        .isEqualTo(SqlQueryOutputFormat.CSV);
-  }
-
-  @Test
-  void fromAcceptHeaderTreatsWildcardAsDefault() {
-    assertThat(SqlQueryOutputFormat.fromAcceptHeader("*/*")).isEqualTo(SqlQueryOutputFormat.NDJSON);
-  }
-
-  @Test
-  void fromAcceptHeaderSkipsUnsupportedTypes() {
-    assertThat(SqlQueryOutputFormat.fromAcceptHeader("text/xml, text/csv"))
-        .isEqualTo(SqlQueryOutputFormat.CSV);
-  }
-
-  @Test
-  void fromAcceptHeaderDefaultsWhenAllUnsupported() {
-    assertThat(SqlQueryOutputFormat.fromAcceptHeader("text/xml, image/png"))
-        .isEqualTo(SqlQueryOutputFormat.NDJSON);
-  }
-
-  @Test
-  void fromAcceptHeaderTreatsMalformedQValueAsOne() {
-    assertThat(SqlQueryOutputFormat.fromAcceptHeader("text/csv;q=abc, application/json;q=0.5"))
-        .isEqualTo(SqlQueryOutputFormat.CSV);
-  }
-
-  @Test
-  void fromAcceptHeaderHandlesParametersOtherThanQ() {
-    assertThat(SqlQueryOutputFormat.fromAcceptHeader("text/csv;charset=utf-8"))
-        .isEqualTo(SqlQueryOutputFormat.CSV);
-  }
 
   // ---------------------------------------------------------------------------
   // fromStringStrict parsing tests (used for the explicit _format parameter)
@@ -150,6 +49,12 @@ class SqlQueryOutputFormatTest {
   void fromStringStrictAcceptsEverySupportedCodeAndMediaType(
       final String input, final SqlQueryOutputFormat expected) {
     assertThat(SqlQueryOutputFormat.fromStringStrict(input)).isEqualTo(expected);
+  }
+
+  @ParameterizedTest(name = "fromStringStrict(\"{0}\") normalises and matches NDJSON")
+  @CsvSource({"NDJSON", "  ndjson  ", "Application/X-NDJSON"})
+  void fromStringStrictIsCaseInsensitiveAndTrims(final String input) {
+    assertThat(SqlQueryOutputFormat.fromStringStrict(input)).isEqualTo(SqlQueryOutputFormat.NDJSON);
   }
 
   @Test

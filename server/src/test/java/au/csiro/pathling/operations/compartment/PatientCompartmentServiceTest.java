@@ -27,7 +27,6 @@ import au.csiro.pathling.util.FhirServerTestConfiguration;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Stream;
-import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
@@ -276,24 +275,5 @@ class PatientCompartmentServiceTest {
         service.filterByPatientCompartment("Organization", Set.of(), dataset, dataSource);
 
     assertThat(filtered.count()).isZero();
-  }
-
-  // ==================== Tests for buildPatientFilter (backward compatibility) ====================
-
-  @ParameterizedTest(name = "buildPatientFilter for Patient with IDs {0}")
-  @MethodSource("buildPatientFilterScenarios")
-  void buildPatientFilterForPatientWithoutDataSource(
-      final Set<String> patientIds, final String expectedContent) {
-    final Column filter = service.buildPatientFilter("Patient", patientIds);
-    assertThat(filter).isNotNull();
-    assertThat(filter.toString()).contains(expectedContent);
-  }
-
-  static Stream<Arguments> buildPatientFilterScenarios() {
-    return Stream.of(
-        // Empty IDs returns a filter that matches all (contains "true").
-        Arguments.of(Set.of(), "true"),
-        // Specific IDs returns a filter on id column.
-        Arguments.of(Set.of("123", "456"), "id"));
   }
 }

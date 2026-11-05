@@ -24,6 +24,10 @@ cases return a non-zero exit code.
 
 import os
 
+import pytest
+from pyspark.sql import Row
+
+from pathling.cli.import_terminology import format_import_summary
 from pathling.cli.main import cli
 
 PROJECT_ROOT = os.path.abspath(
@@ -237,3 +241,207 @@ def test_import_fhir_no_path_anywhere_is_usage_error(runner, patched_context, tm
     result = runner.invoke(cli, ["import-fhir-terminology", FHIR_FIXTURES])
     assert result.exit_code == 2
     assert "tx-store.path" in result.stderr
+
+
+# ========== Package verification (059) ==========
+
+
+def _fake_import(monkeypatch, patched_context, captured):
+    """Replaces the library FHIR import with a call recorder."""
+
+    def fake(source, storage_path, **kwargs):
+        captured["args"] = (source, storage_path)
+        captured["kwargs"] = kwargs
+
+    monkeypatch.setattr(patched_context, "import_fhir_terminology", fake)
+
+
+def _manifest_row(**overrides):
+    """Builds a manifest row with the given provenance values."""
+    values = {
+        "source": "/data/source",
+        "source_sha256": None,
+        "package_name": None,
+        "package_version": None,
+        "package_verification": None,
+        "package_registry": None,
+    }
+    values.update(overrides)
+    return Row(**values)
+
+
+def test_import_fhir_terminology_help_documents_verification_flags(runner):
+    """Both verification options are discoverable from the command's help."""
+    result = runner.invoke(cli, ["import-fhir-terminology", "--help"])
+    assert result.exit_code == 0
+    assert "--no-verify" in result.stdout
+    assert "--package-registry" in result.stdout
+    assert "checksum" in result.stdout
+    assert "package-registry" in result.stdout
+
+
+def test_no_verify_and_registry_reach_the_library_call(
+    runner, patched_context, tmp_path, monkeypatch
+):
+    """The flags are passed to the library as keyword arguments."""
+    captured = {}
+    _fake_import(monkeypatch, patched_context, captured)
+    store = str(tmp_path / "store")
+
+    result = runner.invoke(
+        cli,
+        [
+            "import-fhir-terminology",
+            "--no-verify",
+            "--package-registry",
+            "http://reg",
+            FHIR_FIXTURES,
+            store,
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert captured["args"] == (FHIR_FIXTURES, store)
+    assert captured["kwargs"] == {
+        "verify_package": False,
+        "package_registry": "http://reg",
+    }
+
+
+def test_registry_falls_back_to_config_then_none(
+    runner, patched_context, tmp_path, monkeypatch
+):
+    """Without the flag the config key is used; with neither, no registry."""
+    captured = {}
+    _fake_import(monkeypatch, patched_context, captured)
+    store = str(tmp_path / "store")
+    config = tmp_path / "config.toml"
+    config.write_text(
+        'package-registry = "https://packages.example.com"\n', encoding="utf-8"
+    )
+
+    result = runner.invoke(
+        cli,
+        ["--config", str(config), "import-fhir-terminology", FHIR_FIXTURES, store],
+    )
+    assert result.exit_code == 0, result.output
+    assert captured["kwargs"] == {
+        "verify_package": True,
+        "package_registry": "https://packages.example.com",
+    }
+
+    result = runner.invoke(cli, ["import-fhir-terminology", FHIR_FIXTURES, store])
+    assert result.exit_code == 0, result.output
+    assert captured["kwargs"] == {"verify_package": True, "package_registry": None}
+
+
+@pytest.mark.parametrize(
+    "row, expected_suffix",
+    [
+        (
+            _manifest_row(
+                source_sha256="abcdef",
+                package_name="pkg",
+                package_version="1.0.0",
+                package_verification="verified",
+                package_registry="https://reg",
+            ),
+            " (verified pkg 1.0.0 against https://reg; sha256 abcdef)",
+        ),
+        (
+            _manifest_row(
+                source_sha256="abcdef",
+                package_name="pkg",
+                package_version="1.0.0",
+                package_verification="unverified",
+            ),
+            " (pkg 1.0.0 not verified against a registry; re-run with --verbose "
+            "for the reason; sha256 abcdef)",
+        ),
+        (
+            _manifest_row(source_sha256="abcdef", package_verification="unverified"),
+            " (package not verified against a registry; re-run with --verbose "
+            "for the reason; sha256 abcdef)",
+        ),
+        (
+            _manifest_row(
+                source_sha256="abcdef",
+                package_name="pkg",
+                package_version="1.0.0",
+                package_verification="skipped",
+            ),
+            " (pkg 1.0.0, verification skipped; sha256 abcdef)",
+        ),
+        (
+            _manifest_row(source_sha256="abcdef", package_verification="skipped"),
+            " (package verification skipped; sha256 abcdef)",
+        ),
+        (_manifest_row(source_sha256="abcdef"), " (sha256 abcdef)"),
+        (_manifest_row(), ""),
+        (None, ""),
+    ],
+)
+def test_completion_line_for_each_status(row, expected_suffix):
+    """Each provenance shape renders the completion line from the contract."""
+    summary = format_import_summary(
+        "FHIR terminology", "/data/source", "/data/store", row
+    )
+
+    assert summary == (
+        "Imported FHIR terminology from /data/source into /data/store" + expected_suffix
+    )
+
+
+def test_snomed_completion_line_includes_hash_for_archive():
+    """An RF2 archive import reports its hash; a directory import does not."""
+    archive = format_import_summary(
+        "SNOMED CT", "/data/rf2.zip", "/data/store", _manifest_row(source_sha256="ff")
+    )
+    directory = format_import_summary(
+        "SNOMED CT", "/data/rf2", "/data/store", _manifest_row()
+    )
+
+    assert (
+        archive == "Imported SNOMED CT from /data/rf2.zip into /data/store (sha256 ff)"
+    )
+    assert directory == "Imported SNOMED CT from /data/rf2 into /data/store"
+
+
+def test_mismatch_failure_adds_no_verify_hint(
+    runner, patched_context, tmp_path, monkeypatch, wide_stderr
+):
+    """A checksum mismatch is reported with the flag that overrides it."""
+    message = (
+        "The package pkg 1.0.0 does not match the registry checksum published "
+        "by https://reg: expected SHA-1 aa but the source has SHA-1 bb."
+    )
+
+    def fake(source, storage_path, **kwargs):
+        raise RuntimeError(message)
+
+    monkeypatch.setattr(patched_context, "import_fhir_terminology", fake)
+    store = str(tmp_path / "store")
+
+    result = runner.invoke(cli, ["import-fhir-terminology", FHIR_FIXTURES, store])
+
+    assert result.exit_code == 1
+    assert message in result.stderr
+    assert "Re-run with --no-verify to import it anyway." in result.stderr
+
+
+def test_other_import_failure_carries_no_hint(
+    runner, patched_context, tmp_path, monkeypatch, wide_stderr
+):
+    """An unrelated failure is reported without the verification hint."""
+
+    def fake(source, storage_path, **kwargs):
+        raise RuntimeError("The source contains no importable resources.")
+
+    monkeypatch.setattr(patched_context, "import_fhir_terminology", fake)
+    store = str(tmp_path / "store")
+
+    result = runner.invoke(cli, ["import-fhir-terminology", FHIR_FIXTURES, store])
+
+    assert result.exit_code != 0
+    assert "no importable resources" in result.stderr
+    assert "--no-verify" not in result.stderr

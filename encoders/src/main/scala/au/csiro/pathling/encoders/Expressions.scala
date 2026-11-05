@@ -350,6 +350,8 @@ case class UnresolvedIfArray2(value: Expression, arrayExpressions: Expression =>
       newValue.dataType match {
         case ArrayType(ArrayType(_, _), _) => f(arrayExpressions(newValue))
         case ArrayType(_, _) => f(elseExpression(newValue))
+        // A null-typed value is a collection that is known to be empty.
+        case NullType => f(elseExpression(newValue))
         // Pathling registers no error classes of its own, so the failure is reported through
         // Spark's internal error class, which carries a free-form message.
         case _ => throw new AnalysisException(
@@ -758,9 +760,12 @@ case class StructProduct(children: Seq[Expression], outer: Boolean = false)
   }
 
   @transient override lazy val dataType: DataType = {
+    // Every field is nullable, because an outer product, or a null element in an input array,
+    // yields elements whose fields from that input are null.
     val fields = {
       children
         .flatMap(_.dataType.asInstanceOf[ArrayType].elementType.asInstanceOf[StructType].fields)
+        .map(_.copy(nullable = true))
     }
     ArrayType(StructType(fields), containsNull = true)
   }

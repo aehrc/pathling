@@ -18,6 +18,7 @@
 package au.csiro.pathling.terminology.local;
 
 import au.csiro.pathling.vcl.VclCode;
+import au.csiro.pathling.vcl.VclCodeListValue;
 import au.csiro.pathling.vcl.VclCodeValue;
 import au.csiro.pathling.vcl.VclConjunction;
 import au.csiro.pathling.vcl.VclDisjunction;
@@ -30,6 +31,7 @@ import au.csiro.pathling.vcl.VclStringValue;
 import au.csiro.pathling.vcl.VclWildcard;
 import jakarta.annotation.Nonnull;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import org.hl7.fhir.r4.model.CanonicalType;
@@ -176,11 +178,25 @@ public class ComposeTranslator {
   @Nonnull
   private VclFilter translateFilter(@Nonnull final ConceptSetFilterComponent filter) {
     final VclFilterOperator operator = mapOperator(filter.getOp());
-    final VclFilterValue value =
-        operator == VclFilterOperator.REGEX
-            ? new VclStringValue(filter.getValue())
-            : new VclCodeValue(filter.getValue());
-    return new VclFilter(filter.getProperty(), operator, value);
+    return new VclFilter(filter.getProperty(), operator, filterValue(operator, filter.getValue()));
+  }
+
+  /**
+   * Translates a filter value. The {@code in} and {@code not-in} operators take a comma-separated
+   * list of codes, which becomes a code list. A single code stays a single code, which on SNOMED CT
+   * names a reference set rather than a concept.
+   */
+  @Nonnull
+  private static VclFilterValue filterValue(
+      @Nonnull final VclFilterOperator operator, @Nonnull final String value) {
+    if (operator == VclFilterOperator.REGEX) {
+      return new VclStringValue(value);
+    }
+    if ((operator == VclFilterOperator.IN || operator == VclFilterOperator.NOT_IN)
+        && value.contains(",")) {
+      return new VclCodeListValue(Arrays.stream(value.split(",")).map(String::trim).toList());
+    }
+    return new VclCodeValue(value);
   }
 
   @Nonnull

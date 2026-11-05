@@ -1,0 +1,70 @@
+{
+  "resourceType": "Bundle",
+  "type": "collection",
+  "entry": [
+    {
+      "fullUrl": "http://example.org/fhir/CodeSystem/bundled",
+      "resource": {
+        "resourceType": "CodeSystem",
+        "url": "http://example.org/fhir/CodeSystem/bundled",
+        "version": "1.0.0",
+        "status": "active",
+        "content": "complete",
+        "concept": [
+          {
+            "code": "A",
+            "display": "Alpha",
+            "concept": [{ "code": "B", "display": "Beta" }]
+          }
+        ]
+      }
+    },
+    {
+      "fullUrl": "http://example.org/fhir/Patient/ignored",
+      "resource": { "resourceType": "Patient", "id": "ignored" }
+    },
+    {
+      "fullUrl": "urn:uuid:no-resource"
+    },
+    {
+      "resource": {
+        "resourceType": "ValueSet",
+        "url": "http://example.org/fhir/ValueSet/bundled",
+        "version": "1.0.0",
+        "status": "active",
+        "compose": {
+          "include": [
+            {
+              "system": "http://example.org/fhir/CodeSystem/bundled",
+              "concept": [{ "code": "B" }]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "ConceptMap",
+        "url": "http://example.org/fhir/ConceptMap/bundled",
+        "version": "1.0.0",
+        "status": "active",
+        "group": [
+          {
+            "source": "http://example.org/fhir/CodeSystem/bundled",
+            "target": "http://example.org/fhir/CodeSystem/other",
+            "element": [
+              {
+                "code": "A",
+                "target": [{ "code": "X", "equivalence": "equivalent" }]
+              },
+              {
+                "code": "B",
+                "target": [{ "code": "Y", "equivalence": "wider" }]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -19,11 +19,13 @@ package au.csiro.pathling.terminology.store;
 
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.util.List;
 
 /**
  * The cheap structural facts about a single FHIR resource, gathered by the streaming pre-scan
- * before any content is written. The pre-scan reads only the leading metadata fields of each
- * resource, so a scanned resource never holds content proportional to the source size.
+ * before any content is written. The pre-scan reads only the metadata fields of each resource, so a
+ * scanned resource never holds content proportional to the source size. A scanned Bundle carries
+ * the same facts about each of its entries as its members.
  *
  * @author John Grimes
  */
@@ -34,9 +36,10 @@ public class ScannedResource {
   @Nullable private final String version;
   @Nonnull private final String entryName;
   private final long byteSize;
+  @Nonnull private final List<ScannedResource> members;
 
   /**
-   * Creates a scanned resource.
+   * Creates a scanned resource that has no members.
    *
    * @param resourceType the FHIR {@code resourceType}, or null if the source was not a FHIR
    *     resource
@@ -51,11 +54,33 @@ public class ScannedResource {
       @Nullable final String version,
       @Nonnull final String entryName,
       final long byteSize) {
+    this(resourceType, url, version, entryName, byteSize, List.of());
+  }
+
+  /**
+   * Creates a scanned resource.
+   *
+   * @param resourceType the FHIR {@code resourceType}, or null if the source was not a FHIR
+   *     resource
+   * @param url the canonical URL, or null if absent
+   * @param version the business version, or null if absent
+   * @param entryName the file path or archive entry name, for routing and error messages
+   * @param byteSize the byte size from the file status or archive entry header
+   * @param members the scanned resource of each entry of a Bundle, in entry order, or empty
+   */
+  public ScannedResource(
+      @Nullable final String resourceType,
+      @Nullable final String url,
+      @Nullable final String version,
+      @Nonnull final String entryName,
+      final long byteSize,
+      @Nonnull final List<ScannedResource> members) {
     this.resourceType = resourceType;
     this.url = url;
     this.version = version;
     this.entryName = entryName;
     this.byteSize = byteSize;
+    this.members = members;
   }
 
   /**
@@ -108,15 +133,45 @@ public class ScannedResource {
   }
 
   /**
-   * Reports whether this resource is one the importer can load.
+   * Returns the scanned resource of each entry of a Bundle, in entry order. An entry that carries
+   * no resource is represented by a member with no resource type, so that members and entries pair
+   * by position.
+   *
+   * @return the members, empty for anything but a Bundle
+   */
+  @Nonnull
+  public List<ScannedResource> getMembers() {
+    return members;
+  }
+
+  /**
+   * Reports whether this resource is terminology content the importer stores: a CodeSystem, a
+   * ValueSet, or a ConceptMap.
+   *
+   * @return true for CodeSystem, ValueSet, and ConceptMap resources
+   */
+  public boolean isTerminologyResource() {
+    return "CodeSystem".equals(resourceType)
+        || "ValueSet".equals(resourceType)
+        || "ConceptMap".equals(resourceType);
+  }
+
+  /**
+   * Reports whether this resource is a Bundle, whose members the importer stores.
+   *
+   * @return true for a Bundle resource
+   */
+  public boolean isBundle() {
+    return "Bundle".equals(resourceType);
+  }
+
+  /**
+   * Reports whether this resource is one the importer can load from a source entry.
    *
    * @return true for CodeSystem, ValueSet, ConceptMap, and Bundle resources
    */
   public boolean isImportable() {
-    return "CodeSystem".equals(resourceType)
-        || "ValueSet".equals(resourceType)
-        || "ConceptMap".equals(resourceType)
-        || "Bundle".equals(resourceType);
+    return isTerminologyResource() || isBundle();
   }
 
   /**

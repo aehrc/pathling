@@ -55,8 +55,13 @@ public class TerminologyConfiguration implements Serializable {
   /** Selects the terminology evaluation backend. Defaults to {@link TerminologyMode#SERVER}. */
   @NotNull @Builder.Default private TerminologyMode mode = TerminologyMode.SERVER;
 
-  /** Local-mode settings; required when {@link #mode} is {@link TerminologyMode#LOCAL}. */
-  @Nullable @Valid private LocalTerminologyConfiguration local;
+  /**
+   * Local-mode settings; a storage path is required when {@link #mode} is {@link
+   * TerminologyMode#LOCAL}. Defaults to an empty block, like the other nested blocks, so that a
+   * property binder has an instance to populate.
+   */
+  @NotNull @Valid @Builder.Default
+  private LocalTerminologyConfiguration local = LocalTerminologyConfiguration.builder().build();
 
   /**
    * The endpoint of a FHIR terminology service (R4) that the server can use to resolve terminology
@@ -141,8 +146,10 @@ public class TerminologyConfiguration implements Serializable {
     public boolean isValid(
         final TerminologyConfiguration value, final ConstraintValidatorContext context) {
       if (TerminologyMode.LOCAL.equals(value.getMode())) {
-        final LocalTerminologyConfiguration local = value.getLocal();
-        return local != null && local.getStoragePath() != null && !local.getStoragePath().isBlank();
+        // The block always exists now, but the path is optional so that LOCAL mode without one is
+        // rejected as a constraint violation rather than failing inside the validator.
+        final String storagePath = value.getLocal().getStoragePath();
+        return storagePath != null && !storagePath.isBlank();
       }
       return true;
     }

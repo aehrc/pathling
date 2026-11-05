@@ -140,20 +140,34 @@ class ProjectionResultTest {
   }
 
   @Test
-  void base64BinaryMapsToStringType() {
-    // Previously mapped incorrectly to BinaryType; FHIR base64Binary is encoded as StringType.
+  void base64BinaryMapsToBinaryType() {
+    // The type must match the value of the column, which decodes base64Binary into binary data.
     final ProjectionResult result =
         resultOf(
             column("data", false, Optional.of(FHIRDefinedType.BASE64BINARY), Optional.empty()));
+    assertEquals(DataTypes.BinaryType, result.getSqlType().fields()[0].dataType());
+  }
+
+  @Test
+  void decimalMapsToStringType() {
+    // The type must match the value of the column, which renders a decimal as a string literal so
+    // that its precision is preserved.
+    final ProjectionResult result =
+        resultOf(column("amount", false, Optional.of(FHIRDefinedType.DECIMAL), Optional.empty()));
     assertEquals(DataTypes.StringType, result.getSqlType().fields()[0].dataType());
   }
 
   @Test
-  void decimalMapsToDecimalType() {
-    // Previously mapped incorrectly to StringType; FHIR decimal is encoded as DecimalType.
-    final ProjectionResult result =
-        resultOf(column("amount", false, Optional.of(FHIRDefinedType.DECIMAL), Optional.empty()));
-    assertEquals(DecimalCollection.getDecimalType(), result.getSqlType().fields()[0].dataType());
+  void inferredDecimalAndBase64BinaryMapToValueTypes() {
+    // Without a type annotation, the type inferred from the collection must also match the value
+    // of the column.
+    final Collection decimal = DecimalCollection.fromLiteral("1.5");
+    final Collection base64 =
+        StringCollection.build(DefaultRepresentation.literal("AQI="), FHIRDefinedType.BASE64BINARY);
+    final StructType schema =
+        resultOf(column(decimal, "amount"), column(base64, "data")).getSqlType();
+    assertEquals(DataTypes.StringType, schema.fields()[0].dataType());
+    assertEquals(DataTypes.BinaryType, schema.fields()[1].dataType());
   }
 
   @Test

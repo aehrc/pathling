@@ -28,6 +28,7 @@ import au.csiro.pathling.encoders.datatypes.DataTypeMappings;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
+import ca.uhn.fhir.context.api.AddProfileTagEnum;
 import jakarta.annotation.Nonnull;
 import java.util.Map;
 import java.util.Set;
@@ -194,7 +195,9 @@ public class FhirEncoders implements Configurable<EncodingConfiguration> {
    * directly via {@code FhirContext.forR4()} or similar methods.
    *
    * <p>The returned context is thread-safe and is pre-configured with all custom resource types
-   * registered, ensuring HAPI can recognise and parse resources like ViewDefinition.
+   * registered, ensuring HAPI can recognise and parse resources like ViewDefinition. It never adds
+   * the profile of a custom resource type to {@code meta.profile} when encoding, so that resources
+   * are encoded with the content they were given.
    *
    * <p>Using this method instead of creating fresh FhirContext instances avoids the expensive
    * initialisation cost that HAPI incurs when scanning and building resource definitions.
@@ -211,6 +214,7 @@ public class FhirEncoders implements Configurable<EncodingConfiguration> {
               ResourceTypes.CUSTOM_RESOURCE_TYPE_CLASSES.values()) {
             context.registerCustomType(customType);
           }
+          context.setAddProfileTagWhenEncoding(AddProfileTagEnum.NEVER);
           return context;
         });
   }

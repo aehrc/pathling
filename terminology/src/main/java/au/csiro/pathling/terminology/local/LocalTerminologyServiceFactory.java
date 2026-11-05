@@ -137,7 +137,7 @@ public final class LocalTerminologyServiceFactory implements TerminologyServiceF
   private TerminologyService createService() {
     log.debug(
         "Creating LocalTerminologyService for store: {}",
-        configuration.getLocal() == null ? null : configuration.getLocal().getStoragePath());
+        configuration.getLocal().getStoragePath());
     return new LocalTerminologyService(configuration, hadoopConfiguration);
   }
 }

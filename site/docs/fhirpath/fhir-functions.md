@@ -75,23 +75,52 @@ function instead. See [Extension functions](extension-functions.md) for details.
 ## memberOf
 
 ```
-collection<Coding|CodeableConcept|Quantity> -> memberOf(valueSetUrl: String) : collection<Boolean>
+Coding|CodeableConcept|code|string|Quantity -> memberOf(valueSetUrl: String) : Boolean
 ```
 
-The `memberOf` function can be invoked on a collection of
-[Coding](/docs/fhirpath/extension-functions#coding),
-[CodeableConcept](https://hl7.org/fhir/R4/datatypes.html#CodeableConcept) or
-[Quantity](https://hl7.org/fhir/R4/datatypes.html#Quantity)
-values, returning a collection of Boolean values
-based on whether each concept is a member of the
+The `memberOf` function is implemented as
+[defined by FHIR](https://hl7.org/fhir/fhirpath.html#functions). It returns
+whether a single concept is a member of the
 [ValueSet](https://hl7.org/fhir/R4/valueset.html) with the specified
 [url](https://hl7.org/fhir/R4/valueset-definitions.html#ValueSet.url).
 
-For a `CodeableConcept`, the function will return `true` if any of
-the codings are members of the value set.
+The input may be a [Coding](/docs/fhirpath/extension-functions#coding), a
+[CodeableConcept](https://hl7.org/fhir/R4/datatypes.html#CodeableConcept), a
+`code` or a `string`:
 
-For a `Quantity`, the concept is the coded unit &mdash; see
-[Quantity as a concept](#quantity-as-a-concept).
+- A `CodeableConcept` is a member if any of its codings is a member.
+- A `code` or `string` is a code without a system. The system is inferred from
+  the value set, using the `inferSystem` parameter of
+  [$validate-code](https://build.fhir.org/valueset-operation-validate-code.html).
+  A terminology server that does not support this parameter cannot answer the
+  question, and the result is empty. Where the value set contains more than one
+  code system, FHIR defines the result as empty, but the terminology server
+  decides: Ontoserver, for example, returns `true` for a code found in exactly
+  one of the code systems and `false` otherwise. In
+  [local mode](/docs/libraries/terminology/local), a value set is evaluated over
+  a single code system, and the code takes that system.
+- As an extension to the FHIR definition, a `Quantity` is also accepted, in which
+  case the concept is the coded unit. See
+  [Quantity as a concept](#quantity-as-a-concept).
+
+The result is empty where:
+
+- the input is empty or has more than one item,
+- the value set cannot be resolved, or
+- the terminology server rejects the request.
+
+A Coding without a `system` or `code` is not a member of any value set, so the
+result for it is `false`.
+
+Because the result is empty for more than one item,
+`code.coding.memberOf(...)` is empty for any resource whose `code` carries more
+than one coding. To ask whether any coding is a member, pass the
+`CodeableConcept` itself, or filter the codings:
+
+```
+Observation.code.memberOf('http://hl7.org/fhir/ValueSet/observation-vitalsignresult')
+Observation.code.coding.where(memberOf('http://hl7.org/fhir/ValueSet/observation-vitalsignresult')).exists()
+```
 
 :::note
 The `memberOf` function is a terminology function, which means that it requires

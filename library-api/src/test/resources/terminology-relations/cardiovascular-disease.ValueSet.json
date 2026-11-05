@@ -1,0 +1,42 @@
+{
+  "resourceType": "ValueSet",
+  "url": "http://example.org/ValueSet/cardiovascular-disease",
+  "version": "2026",
+  "name": "CardiovascularDisease",
+  "status": "active",
+  "expansion": {
+    "identifier": "urn:uuid:635ad7e4-4f98-48ef-a3c2-1e3af6cc03ec",
+    "timestamp": "2026-09-16T00:00:00Z",
+    "total": 3,
+    "parameter": [
+      {
+        "name": "version",
+        "valueUri": "http://snomed.info/sct|http://snomed.info/sct/900000000000207008/version/20260201"
+      },
+      {
+        "name": "version",
+        "valueUri": "http://hl7.org/fhir/sid/icd-10|2019"
+      }
+    ],
+    "contains": [
+      {
+        "abstract": true,
+        "display": "Ischaemic heart disease",
+        "contains": [
+          {
+            "system": "http://snomed.info/sct",
+            "version": "http://snomed.info/sct/900000000000207008/version/20260201",
+            "code": "22298006",
+            "display": "Myocardial infarction"
+          },
+          {
+            "system": "http://hl7.org/fhir/sid/icd-10",
+            "version": "2019",
+            "code": "I21",
+            "display": "Acute myocardial infarction"
+          }
+        ]
+      }
+    ]
+  }
+}

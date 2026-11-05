@@ -27,8 +27,12 @@ Author: John Grimes.
 """
 
 import csv
+import hashlib
+import json
 import logging
 import os
+import threading
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from tempfile import mkdtemp
 
 from pyspark.sql import SparkSession
@@ -39,6 +43,11 @@ from pathling._version import __delta_version__, __java_version__, __scala_versi
 from pathling.cli import session as session_module
 from pathling.cli.main import cli
 from tests.cli.conftest import make_cli_runner
+from tests.test_terminology_import import (
+    PACKAGE_NAME,
+    PACKAGE_VERSION,
+    build_package,
+)
 
 PROJECT_ROOT = os.path.abspath(
     os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, os.pardir, os.pardir)
@@ -249,3 +258,120 @@ def test_import_into_fresh_configured_store(monkeypatch, spark_session, tmp_path
     # The store was actually created and populated on disk.
     assert os.path.isdir(fresh_store)
     assert os.listdir(fresh_store)
+
+
+# ========== Package verification against a local registry (059) ==========
+
+
+class _RegistryHandler(BaseHTTPRequestHandler):
+    """Serves a package listing and records the paths that were requested.
+
+    The listing is the minimum the verifier reads: a ``versions`` map with a
+    ``dist.shasum`` for the version under test.
+    """
+
+    #: The listing served for any path, set by each test.
+    listing = b"{}"
+    #: The request paths seen so far, so a test can prove no lookup was made.
+    requests = []
+
+    def do_GET(self):  # noqa: N802
+        """Records the request and returns the listing."""
+        type(self).requests.append(self.path)
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(type(self).listing)))
+        self.end_headers()
+        self.wfile.write(type(self).listing)
+
+    def log_message(self, format, *args):
+        """Silences the default stderr request log."""
+
+
+def _digest_hex(path, digest):
+    """Feeds a file through a digest and returns its hexadecimal value."""
+    with open(path, "rb") as handle:
+        for chunk in iter(lambda: handle.read(65536), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+@fixture
+def registry(request):
+    """Runs a local package registry on a background thread.
+
+    :return: a ``(base_url, requests)`` pair, where ``requests`` is the mutable
+             list of request paths the server has seen.
+    """
+    _RegistryHandler.requests = []
+    server = ThreadingHTTPServer(("127.0.0.1", 0), _RegistryHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+
+    def stop():
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=10)
+
+    request.addfinalizer(stop)
+    return f"http://127.0.0.1:{server.server_address[1]}", _RegistryHandler.requests
+
+
+def test_import_package_verified_against_local_registry(
+    monkeypatch, spark_session, registry, tmp_path
+):
+    """A package matching the registry checksum is reported as verified."""
+    base_url, requests = registry
+    package = build_package(str(tmp_path))
+    _RegistryHandler.listing = json.dumps(
+        {
+            "name": PACKAGE_NAME,
+            "versions": {
+                PACKAGE_VERSION: {
+                    "dist": {"shasum": _digest_hex(package, hashlib.sha1())}
+                }
+            },
+        }
+    ).encode("utf-8")
+    _real_context_over_shared_spark(monkeypatch, spark_session)
+    store = os.path.join(str(tmp_path), "verified-store")
+    runner = make_cli_runner()
+
+    result = runner.invoke(
+        cli,
+        ["import-fhir-terminology", "--package-registry", base_url, package, store],
+    )
+
+    assert result.exit_code == 0, result.output + "\n" + result.stderr
+    assert (
+        f"verified {PACKAGE_NAME} {PACKAGE_VERSION} against {base_url}" in result.stdout
+    )
+    assert f"sha256 {_digest_hex(package, hashlib.sha256())}" in result.stdout
+    assert requests == [f"/{PACKAGE_NAME}"]
+
+
+def test_import_package_skipped_makes_no_request(
+    monkeypatch, spark_session, registry, tmp_path
+):
+    """With --no-verify no lookup is made and the outcome says so."""
+    base_url, requests = registry
+    package = build_package(str(tmp_path))
+    _real_context_over_shared_spark(monkeypatch, spark_session)
+    store = os.path.join(str(tmp_path), "skipped-store")
+    runner = make_cli_runner()
+
+    result = runner.invoke(
+        cli,
+        [
+            "import-fhir-terminology",
+            "--no-verify",
+            "--package-registry",
+            base_url,
+            package,
+            store,
+        ],
+    )
+
+    assert result.exit_code == 0, result.output + "\n" + result.stderr
+    assert "verification skipped" in result.stdout
+    assert requests == []

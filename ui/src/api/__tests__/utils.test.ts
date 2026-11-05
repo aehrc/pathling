@@ -179,9 +179,37 @@ describe("checkResponse", () => {
     await expect(checkResponse(response)).rejects.toThrow(UnauthorizedError);
   });
 
-  it("throws NotFoundError for 404 responses", async () => {
+  it("throws NotFoundError for 404 responses without an OperationOutcome", async () => {
     const response = new Response("Not found", { status: 404 });
     await expect(checkResponse(response)).rejects.toThrow(NotFoundError);
+  });
+
+  it("keeps the diagnostics of a 404 carrying an OperationOutcome", async () => {
+    // A 404 can say what was not found, e.g. an unresolvable SQL query
+    // dependency, so its OperationOutcome is kept for display rather than
+    // being replaced with a generic not-found error.
+    const operationOutcome = {
+      resourceType: "OperationOutcome",
+      issue: [
+        {
+          severity: "error",
+          code: "not-found",
+          diagnostics:
+            "Failed to resolve the dependency for label 'cvd_codes' with reference 'http://example.org/ValueSet/typo'",
+        },
+      ],
+    };
+    const response = new Response(JSON.stringify(operationOutcome), {
+      status: 404,
+    });
+
+    const error = await checkResponse(response).catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(OperationOutcomeError);
+    expect((error as OperationOutcomeError).status).toBe(404);
+    expect((error as OperationOutcomeError).operationOutcome).toEqual(
+      operationOutcome,
+    );
   });
 
   it("throws Error with status and body for other error responses", async () => {

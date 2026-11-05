@@ -19,10 +19,14 @@ import logging
 import os
 from tempfile import mkdtemp
 
+import pytest
+from pyspark import SparkContext
 from pyspark.sql import SparkSession
 from pytest import fixture
 
+import pathling.context as context_module
 from pathling import PathlingContext
+from pathling._spark_defaults import DELTA_COORDINATE, PACKAGES_KEY
 from pathling._version import __java_version__
 
 PROJECT_DIR = os.path.abspath(
@@ -120,3 +124,104 @@ def test_custom_configurations(spark_session):
     query_config = jpc.getQueryConfiguration()
     assert query_config.isExplainQueries()
     assert query_config.getMaxUnboundTraversalDepth() == 20
+
+
+def test_spark_conf_with_explicit_session_raises(spark_session):
+    """spark_conf cannot be combined with an explicitly supplied SparkSession."""
+    with pytest.raises(ValueError, match="spark_conf"):
+        PathlingContext.create(spark_session, spark_conf={"spark.driver.memory": "8g"})
+
+
+def test_spark_conf_with_running_session_raises(spark_session):
+    """spark_conf is rejected when a real session has already launched the JVM.
+
+    No mocking: the module fixture has started a driver JVM in this process, so
+    launch-time settings could no longer take effect.
+    """
+    with pytest.raises(ValueError, match="already running"):
+        PathlingContext.create(spark_conf={"spark.driver.memory": "8g"})
+
+
+class _StopBeforeJvm(Exception):
+    """Sentinel raised by the fake session builder so create() stops before
+    touching ``spark._jvm`` (which would require a running Spark)."""
+
+
+def _capture_create(monkeypatch) -> dict:
+    """Replaces the session builder with a stub that captures its configuration
+    and then raises a sentinel so ``create()`` stops before touching the JVM.
+
+    Also patches ``SparkSession.getActiveSession`` to return ``None`` and clears
+    the signals of an already-running driver JVM (the PySpark gateway and
+    ``PYSPARK_GATEWAY_PORT``), so ``create()`` takes the session-build path even
+    when another test has started Spark.
+
+    :param monkeypatch: the pytest monkeypatch fixture.
+    :return: a dict populated with the ``extra_configs`` passed to the builder.
+    """
+    captured = {}
+
+    def fake_build(extra_configs=None):
+        captured.update(extra_configs or {})
+        raise _StopBeforeJvm
+
+    monkeypatch.setattr(context_module, "_build_spark_session", fake_build)
+    monkeypatch.setattr(SparkSession, "getActiveSession", classmethod(lambda cls: None))
+    monkeypatch.setattr(SparkContext, "_gateway", None)
+    monkeypatch.delenv("PYSPARK_GATEWAY_PORT", raising=False)
+    return captured
+
+
+def test_create_passes_spark_conf_to_session_builder(monkeypatch):
+    """spark_conf is validated, merged and handed to _build_spark_session."""
+    captured = _capture_create(monkeypatch)
+
+    with pytest.raises(_StopBeforeJvm):
+        PathlingContext.create(spark_conf={"spark.driver.memory": "8g"})
+
+    assert captured == {"spark.driver.memory": "8g"}
+
+
+def test_create_spark_conf_package_override_warns(monkeypatch):
+    """Overriding a managed package coordinate warns and replaces the coordinate."""
+    captured = _capture_create(monkeypatch)
+
+    with pytest.warns(UserWarning, match=DELTA_COORDINATE):
+        with pytest.raises(_StopBeforeJvm):
+            PathlingContext.create(
+                spark_conf={PACKAGES_KEY: f"{DELTA_COORDINATE}:3.9.9"}
+            )
+
+    assert f"{DELTA_COORDINATE}:3.9.9" in captured[PACKAGES_KEY]
+
+
+def test_create_spark_conf_after_session_stopped_raises(monkeypatch):
+    """spark_conf raises when the JVM outlives a stopped session.
+
+    ``SparkSession.stop()`` leaves no active session but keeps the gateway JVM,
+    whose heap and classpath are already fixed, so launch-time settings would be
+    silently ignored.
+    """
+    captured = _capture_create(monkeypatch)
+    monkeypatch.setattr(SparkContext, "_gateway", object())
+
+    with pytest.raises(ValueError, match="already running"):
+        PathlingContext.create(spark_conf={"spark.driver.memory": "8g"})
+
+    assert captured == {}
+
+
+def test_create_spark_conf_under_spark_submit_raises(monkeypatch):
+    """spark_conf raises when the process was launched by spark-submit.
+
+    spark-submit starts the driver JVM first and passes its gateway port to
+    Python through ``PYSPARK_GATEWAY_PORT``, so the JVM exists before any
+    session is built.
+    """
+    captured = _capture_create(monkeypatch)
+    monkeypatch.setenv("PYSPARK_GATEWAY_PORT", "12345")
+
+    with pytest.raises(ValueError, match="already running"):
+        PathlingContext.create(spark_conf={"spark.driver.memory": "8g"})
+
+    assert captured == {}

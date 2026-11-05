@@ -208,6 +208,24 @@ public class ExpressionsCodegenTest extends ExpressionsBothModesTest {
   }
 
   @Test
+  void ifArray2TreatsNullTypedValueAsArray() {
+    // A null-typed value is a collection that is known to be empty. It takes the branch for a
+    // plain array rather than failing because it is not an array.
+    final Dataset<Row> ds = spark.range(1).toDF();
+
+    final Dataset<Row> result =
+        ds.withColumn(
+            "result",
+            ifArray2(
+                functions.lit(null),
+                x -> functions.array(functions.lit(200)),
+                x -> functions.array(functions.lit(50))));
+
+    final Seq<?> value = result.collectAsList().getFirst().getAs("result");
+    assertEquals(List.of(50), CollectionConverters.asJava(value));
+  }
+
+  @Test
   void testFlatten() {
     final Dataset<Row> ds = spark.range(2).toDF();
     final Dataset<Row> resultDs =

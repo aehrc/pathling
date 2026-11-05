@@ -17,7 +17,6 @@
 
 package au.csiro.pathling.operations.sql;
 
-import au.csiro.pathling.views.FhirView;
 import jakarta.annotation.Nonnull;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -87,20 +86,6 @@ public class SuppliedArtefacts {
                 + " URL.");
       }
     }
-    return new SuppliedArtefacts(byUrl);
-  }
-
-  /**
-   * Adapts a legacy map of views keyed by the URL they satisfy. Used by the callers that predate
-   * the {@code context} parameter and do not enforce the unmatched-entry rule.
-   *
-   * @param views the views keyed by canonical URL
-   * @return the collection
-   */
-  @Nonnull
-  public static SuppliedArtefacts ofViews(@Nonnull final Map<String, FhirView> views) {
-    final Map<String, SuppliedArtefact> byUrl = new LinkedHashMap<>();
-    views.forEach((url, view) -> byUrl.put(url, SuppliedArtefact.ofView(url, null, view)));
     return new SuppliedArtefacts(byUrl);
   }
 

@@ -23,7 +23,6 @@ import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.collection.IntegerCollection;
 import au.csiro.pathling.fhirpath.operator.AsOperator;
 import au.csiro.pathling.fhirpath.operator.BinaryOperatorType;
 import au.csiro.pathling.fhirpath.operator.CollectionOperations;
@@ -235,7 +234,7 @@ class Visitor extends FhirPathBaseVisitor<FhirPath> {
               // Get a wrapped version of the index operator.
               MethodDefinedOperator.build(
                   SubsettingOperations.class.getDeclaredMethod(
-                      "index", Collection.class, IntegerCollection.class)));
+                      "index", Collection.class, Collection.class)));
     } catch (final NoSuchMethodException e) {
       throw new MethodInvocationError("Problem invoking the index operator", e);
     }

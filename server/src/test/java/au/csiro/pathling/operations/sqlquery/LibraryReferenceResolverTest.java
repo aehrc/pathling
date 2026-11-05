@@ -18,235 +18,136 @@
 package au.csiro.pathling.operations.sqlquery;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import au.csiro.pathling.config.AuthorizationConfiguration;
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.errors.ResourceNotFoundError;
 import au.csiro.pathling.io.source.DataSource;
-import au.csiro.pathling.read.ReadExecutor;
 import au.csiro.pathling.test.SpringBootUnitTest;
-import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
-import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
 import java.util.List;
+import java.util.Optional;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
-import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations.PublicationStatus;
 import org.hl7.fhir.r4.model.Library;
-import org.hl7.fhir.r4.model.Reference;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 
 /**
- * Tests for {@link LibraryReferenceResolver} covering both the relative-literal and canonical
- * reference resolution paths.
+ * Tests for {@link LibraryReferenceResolver#tryResolveSqlViewLibrary}, covering canonical matching
+ * against {@code Library.url} and the selection among several matching versions.
+ *
+ * @author John Grimes
  */
 @SpringBootUnitTest
 class LibraryReferenceResolverTest {
 
-  // ---------------------------------------------------------------------------
-  // Relative literal references — mocked ReadExecutor only.
-  // ---------------------------------------------------------------------------
+  private static final String FOO_URL = "https://example.org/Library/foo";
 
-  @Nested
-  class RelativeReferences {
+  @Autowired private SparkSession spark;
+  @Autowired private FhirEncoders fhirEncoders;
 
-    private ReadExecutor readExecutor;
-    private LibraryReferenceResolver resolver;
+  private DataSource dataSource;
+  private LibraryReferenceResolver resolver;
 
-    @BeforeEach
-    void setUp() {
-      readExecutor = mock(ReadExecutor.class);
-      resolver =
-          new LibraryReferenceResolver(
-              readExecutor, mock(DataSource.class), mock(FhirEncoders.class), authDisabledConfig());
-    }
-
-    @Test
-    void resolvesLibrarySlashId() {
-      final Library stored = newLibrary("abc", null, null, PublicationStatus.ACTIVE);
-      when(readExecutor.read("Library", "abc")).thenReturn(stored);
-
-      final IBaseResource resolved = resolver.resolve(new Reference("Library/abc"));
-
-      assertThat(resolved).isSameAs(stored);
-    }
-
-    @Test
-    void resolvesBareId() {
-      final Library stored = newLibrary("abc", null, null, PublicationStatus.ACTIVE);
-      when(readExecutor.read("Library", "abc")).thenReturn(stored);
-
-      final IBaseResource resolved = resolver.resolve(new Reference("abc"));
-
-      assertThat(resolved).isSameAs(stored);
-    }
-
-    @ParameterizedTest(name = "rejects ''{0}'' with message containing ''{1}''")
-    @CsvSource({"Patient/abc, Library", "'', non-blank", "Library/, missing"})
-    void rejectsInvalidRelativeReference(final String input, final String expectedMessage) {
-      final Reference reference = new Reference(input);
-      assertThatThrownBy(() -> resolver.resolve(reference))
-          .isInstanceOf(InvalidRequestException.class)
-          .hasMessageContaining(expectedMessage);
-      verifyNoInteractions(readExecutor);
-    }
-
-    @Test
-    void translatesResourceNotFoundErrorToResourceNotFoundException() {
-      when(readExecutor.read("Library", "missing"))
-          .thenThrow(new ResourceNotFoundError("not there"));
-      final Reference reference = new Reference("Library/missing");
-
-      assertThatThrownBy(() -> resolver.resolve(reference))
-          .isInstanceOf(ResourceNotFoundException.class)
-          .hasMessageContaining("missing");
-    }
-
-    @Test
-    void translatesNoDataIllegalArgumentToResourceNotFoundException() {
-      when(readExecutor.read("Library", "anyone"))
-          .thenThrow(new IllegalArgumentException("No data found for resource type Library"));
-      final Reference reference = new Reference("Library/anyone");
-
-      assertThatThrownBy(() -> resolver.resolve(reference))
-          .isInstanceOf(ResourceNotFoundException.class)
-          .hasMessageContaining("anyone");
-    }
+  @BeforeEach
+  void setUp() {
+    dataSource = mock(DataSource.class);
+    resolver = new LibraryReferenceResolver(dataSource, fhirEncoders, authDisabledConfig());
   }
 
-  // ---------------------------------------------------------------------------
-  // Canonical references — uses the shared Spark session and FhirEncoders.
-  // ---------------------------------------------------------------------------
+  @Test
+  void resolvesByCanonicalUrl() {
+    when(dataSource.read("Library"))
+        .thenReturn(libraryDataset(newLibrary("a", FOO_URL, "1.0", PublicationStatus.ACTIVE)));
 
-  @Nested
-  class CanonicalReferences {
-
-    @Autowired private SparkSession spark;
-    @Autowired private FhirEncoders fhirEncoders;
-
-    private DataSource dataSource;
-    private LibraryReferenceResolver resolver;
-
-    @BeforeEach
-    void setUp() {
-      dataSource = mock(DataSource.class);
-      resolver =
-          new LibraryReferenceResolver(
-              mock(ReadExecutor.class), dataSource, fhirEncoders, authDisabledConfig());
-    }
-
-    @Test
-    void resolvesByCanonicalUrl() {
-      final Library stored =
-          newLibrary("a", "https://example.org/Library/foo", "1.0", PublicationStatus.ACTIVE);
-      when(dataSource.read("Library")).thenReturn(libraryDataset(stored));
-
-      final IBaseResource resolved =
-          resolver.resolve(new Reference("https://example.org/Library/foo"));
-
-      assertThat(resolved).isInstanceOf(Library.class);
-      assertThat(((Library) resolved).getId()).isEqualTo("Library/a");
-      verify(dataSource).read("Library");
-    }
-
-    @Test
-    void resolvesByCanonicalUrlWithVersion() {
-      final Library v1 =
-          newLibrary("a", "https://example.org/Library/foo", "1.0", PublicationStatus.ACTIVE);
-      final Library v2 =
-          newLibrary("b", "https://example.org/Library/foo", "2.0", PublicationStatus.ACTIVE);
-      when(dataSource.read("Library")).thenReturn(libraryDataset(v1, v2));
-
-      final IBaseResource resolved =
-          resolver.resolve(new Reference("https://example.org/Library/foo|2.0"));
-
-      assertThat(((Library) resolved).getId()).isEqualTo("Library/b");
-    }
-
-    @Test
-    void prefersActiveOverDraftWhenNoVersionSupplied() {
-      final Library draft =
-          newLibrary("a", "https://example.org/Library/foo", "1.0", PublicationStatus.DRAFT);
-      final Library active =
-          newLibrary("b", "https://example.org/Library/foo", "1.0", PublicationStatus.ACTIVE);
-      when(dataSource.read("Library")).thenReturn(libraryDataset(draft, active));
-
-      final IBaseResource resolved =
-          resolver.resolve(new Reference("https://example.org/Library/foo"));
-
-      assertThat(((Library) resolved).getId()).isEqualTo("Library/b");
-    }
-
-    @Test
-    void picksLatestActiveVersionWhenNoneSupplied() {
-      final Library v1 =
-          newLibrary("a", "https://example.org/Library/foo", "1.0", PublicationStatus.ACTIVE);
-      final Library v2 =
-          newLibrary("b", "https://example.org/Library/foo", "2.0", PublicationStatus.ACTIVE);
-      when(dataSource.read("Library")).thenReturn(libraryDataset(v1, v2));
-
-      final IBaseResource resolved =
-          resolver.resolve(new Reference("https://example.org/Library/foo"));
-
-      assertThat(((Library) resolved).getId()).isEqualTo("Library/b");
-    }
-
-    @Test
-    void returns404WhenCanonicalDoesNotMatch() {
-      when(dataSource.read("Library")).thenReturn(libraryDataset());
-      final Reference reference = new Reference("https://example.org/Library/missing");
-
-      assertThatThrownBy(() -> resolver.resolve(reference))
-          .isInstanceOf(ResourceNotFoundException.class)
-          .hasMessageContaining("missing");
-    }
-
-    @Test
-    void returns404WhenVersionDoesNotMatch() {
-      final Library v1 =
-          newLibrary("a", "https://example.org/Library/foo", "1.0", PublicationStatus.ACTIVE);
-      when(dataSource.read("Library")).thenReturn(libraryDataset(v1));
-      final Reference reference = new Reference("https://example.org/Library/foo|99.0");
-
-      assertThatThrownBy(() -> resolver.resolve(reference))
-          .isInstanceOf(ResourceNotFoundException.class);
-    }
-
-    @Test
-    void treatsUrnReferenceAsCanonical() {
-      final Library stored = newLibrary("a", "urn:uuid:abc-123", "1.0", PublicationStatus.ACTIVE);
-      when(dataSource.read("Library")).thenReturn(libraryDataset(stored));
-
-      final IBaseResource resolved = resolver.resolve(new Reference("urn:uuid:abc-123"));
-
-      assertThat(((Library) resolved).getId()).isEqualTo("Library/a");
-    }
-
-    private Dataset<Row> libraryDataset(final Library... libraries) {
-      return spark.createDataset(List.of(libraries), fhirEncoders.of("Library")).toDF();
-    }
+    assertThat(resolvedId(FOO_URL)).contains("Library/a");
   }
 
-  // ---------------------------------------------------------------------------
-  // Helpers shared across nested classes.
-  // ---------------------------------------------------------------------------
+  @Test
+  void resolvesByCanonicalUrlWithVersion() {
+    when(dataSource.read("Library"))
+        .thenReturn(
+            libraryDataset(
+                newLibrary("a", FOO_URL, "1.0", PublicationStatus.ACTIVE),
+                newLibrary("b", FOO_URL, "2.0", PublicationStatus.ACTIVE)));
+
+    assertThat(resolvedId(FOO_URL + "|2.0")).contains("Library/b");
+  }
+
+  @Test
+  void prefersActiveOverDraftWhenNoVersionSupplied() {
+    when(dataSource.read("Library"))
+        .thenReturn(
+            libraryDataset(
+                newLibrary("a", FOO_URL, "1.0", PublicationStatus.DRAFT),
+                newLibrary("b", FOO_URL, "1.0", PublicationStatus.ACTIVE)));
+
+    assertThat(resolvedId(FOO_URL)).contains("Library/b");
+  }
+
+  @Test
+  void picksLatestActiveVersionWhenNoneSupplied() {
+    when(dataSource.read("Library"))
+        .thenReturn(
+            libraryDataset(
+                newLibrary("a", FOO_URL, "1.0", PublicationStatus.ACTIVE),
+                newLibrary("b", FOO_URL, "2.0", PublicationStatus.ACTIVE)));
+
+    assertThat(resolvedId(FOO_URL)).contains("Library/b");
+  }
+
+  @Test
+  void resolvesUrnCanonical() {
+    when(dataSource.read("Library"))
+        .thenReturn(
+            libraryDataset(newLibrary("a", "urn:uuid:abc-123", "1.0", PublicationStatus.ACTIVE)));
+
+    assertThat(resolvedId("urn:uuid:abc-123")).contains("Library/a");
+  }
+
+  @Test
+  void returnsEmptyWhenCanonicalDoesNotMatch() {
+    // A non-match is not an error, because the canonical may name a ViewDefinition instead.
+    when(dataSource.read("Library")).thenReturn(libraryDataset());
+
+    assertThat(resolvedId("https://example.org/Library/missing")).isEmpty();
+  }
+
+  @Test
+  void returnsEmptyWhenVersionDoesNotMatch() {
+    when(dataSource.read("Library"))
+        .thenReturn(libraryDataset(newLibrary("a", FOO_URL, "1.0", PublicationStatus.ACTIVE)));
+
+    assertThat(resolvedId(FOO_URL + "|99.0")).isEmpty();
+  }
+
+  @Test
+  void returnsEmptyWhenTheServerHoldsNoLibraries() {
+    // The data source signals an absent resource type with an IllegalArgumentException.
+    when(dataSource.read("Library"))
+        .thenThrow(new IllegalArgumentException("No data found for resource type Library"));
+
+    assertThat(resolvedId(FOO_URL)).isEmpty();
+  }
+
+  /** Resolves the canonical and returns the id of the selected Library, if any. */
+  private Optional<String> resolvedId(final String canonical) {
+    return resolver.tryResolveSqlViewLibrary(canonical).map(Library::getId);
+  }
+
+  private Dataset<Row> libraryDataset(final Library... libraries) {
+    return spark.createDataset(List.of(libraries), fhirEncoders.of("Library")).toDF();
+  }
 
   /** Builds a server configuration with authorisation disabled, so no metadata READ is enforced. */
-  private static au.csiro.pathling.config.ServerConfiguration authDisabledConfig() {
-    final au.csiro.pathling.config.ServerConfiguration config =
-        new au.csiro.pathling.config.ServerConfiguration();
-    final au.csiro.pathling.config.AuthorizationConfiguration auth =
-        new au.csiro.pathling.config.AuthorizationConfiguration();
+  private static ServerConfiguration authDisabledConfig() {
+    final ServerConfiguration config = new ServerConfiguration();
+    final AuthorizationConfiguration auth = new AuthorizationConfiguration();
     auth.setEnabled(false);
     config.setAuth(auth);
     return config;
@@ -256,12 +157,8 @@ class LibraryReferenceResolverTest {
       final String id, final String url, final String version, final PublicationStatus status) {
     final Library library = new Library();
     library.setId("Library/" + id);
-    if (url != null) {
-      library.setUrl(url);
-    }
-    if (version != null) {
-      library.setVersion(version);
-    }
+    library.setUrl(url);
+    library.setVersion(version);
     library.setStatus(status);
     return library;
   }

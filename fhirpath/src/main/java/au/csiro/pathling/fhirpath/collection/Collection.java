@@ -414,9 +414,12 @@ public class Collection implements Equatable {
   public Collection project(@Nonnull final CollectionTransform transform) {
     final Collection resultTemplate = transform.apply(this);
     final ColumnTransform columnTransform = transform.toColumnTransformation(this);
+    // A projection that is empty for an element yields a null for that element, which is removed
+    // so that it does not count as an item of the result.
     final ColumnRepresentation projected =
         getColumn()
             .transform(col -> columnTransform.apply(getColumn().copyOf(col)).getValue())
+            .removeNulls()
             .flatten();
     return resultTemplate.copyWith(projected);
   }

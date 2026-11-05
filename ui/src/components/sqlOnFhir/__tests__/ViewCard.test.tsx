@@ -45,9 +45,7 @@ vi.mock("../../../contexts/ToastContext", () => ({
 // Define mock functions at module level.
 const mockExecute = vi.fn();
 let mockStatus: "idle" | "pending" | "success" | "error" = "idle";
-let mockResult:
-  | { kind: "tabular"; columns: string[]; rows: Record<string, unknown>[] }
-  | undefined = undefined;
+let mockResult: { columns: string[]; rows: Record<string, unknown>[] } | undefined = undefined;
 let mockError: Error | undefined = undefined;
 
 // Captures the options the card passes to its data hook, so a test can prove no
@@ -324,7 +322,6 @@ describe("ViewCard", () => {
     it("displays no rows message when result is empty", () => {
       mockStatus = "success";
       mockResult = {
-        kind: "tabular",
         columns: ["id", "name"],
         rows: [],
       };
@@ -340,7 +337,6 @@ describe("ViewCard", () => {
     it("displays results table when execution succeeds with rows", () => {
       mockStatus = "success";
       mockResult = {
-        kind: "tabular",
         columns: ["id", "name"],
         rows: [
           { id: "1", name: "Test Patient" },
@@ -361,7 +357,6 @@ describe("ViewCard", () => {
     it("formats object values as JSON strings", () => {
       mockStatus = "success";
       mockResult = {
-        kind: "tabular",
         columns: ["data"],
         rows: [{ data: { nested: "value" } }],
       };
@@ -375,7 +370,6 @@ describe("ViewCard", () => {
     it("displays empty string for null values", () => {
       mockStatus = "success";
       mockResult = {
-        kind: "tabular",
         columns: ["value"],
         rows: [{ value: null }],
       };
@@ -393,7 +387,6 @@ describe("ViewCard", () => {
     it("shows Close button when status is success", () => {
       mockStatus = "success";
       mockResult = {
-        kind: "tabular",
         columns: [],
         rows: [],
       };
@@ -426,7 +419,6 @@ describe("ViewCard", () => {
     it("does not show Close button when onClose is not provided", () => {
       mockStatus = "success";
       mockResult = {
-        kind: "tabular",
         columns: [],
         rows: [],
       };
@@ -441,7 +433,6 @@ describe("ViewCard", () => {
       const user = userEvent.setup();
       mockStatus = "success";
       mockResult = {
-        kind: "tabular",
         columns: [],
         rows: [],
       };
@@ -460,7 +451,6 @@ describe("ViewCard", () => {
     it("shows export controls when results have rows", () => {
       mockStatus = "success";
       mockResult = {
-        kind: "tabular",
         columns: ["id"],
         rows: [{ id: "1" }],
       };
@@ -474,7 +464,6 @@ describe("ViewCard", () => {
     it("does not show export controls when results are empty", () => {
       mockStatus = "success";
       mockResult = {
-        kind: "tabular",
         columns: [],
         rows: [],
       };
@@ -489,7 +478,6 @@ describe("ViewCard", () => {
       const user = userEvent.setup();
       mockStatus = "success";
       mockResult = {
-        kind: "tabular",
         columns: ["id"],
         rows: [{ id: "1" }],
       };

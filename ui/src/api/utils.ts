@@ -147,8 +147,8 @@ export function resolveUrl(baseUrl: string, url: string): string {
  * @param response - The fetch Response object to check.
  * @param context - Optional context string for error messages (e.g., "Import kick-off").
  * @throws {UnauthorizedError} When response status is 401.
- * @throws {NotFoundError} When response status is 404.
  * @throws {OperationOutcomeError} When response body is a FHIR OperationOutcome.
+ * @throws {NotFoundError} When response status is 404 and the body is not an OperationOutcome.
  * @throws {Error} For other non-successful responses with status and body.
  *
  * @example
@@ -168,14 +168,11 @@ export async function checkResponse(
     throw new UnauthorizedError();
   }
 
-  if (response.status === 404) {
-    throw new NotFoundError();
-  }
-
   const errorBody = await response.text();
   const prefix = context ? `${context} failed` : "Request failed";
 
-  // Try to parse as OperationOutcome.
+  // Try to parse as OperationOutcome. This precedes the 404 check because a
+  // 404 can say what was not found, such as an unresolvable query dependency.
   try {
     const parsed = JSON.parse(errorBody);
     if (parsed.resourceType === "OperationOutcome") {
@@ -185,6 +182,10 @@ export async function checkResponse(
     // Re-throw if it's already our error type.
     if (e instanceof OperationOutcomeError) throw e;
     // Otherwise fall through to generic error.
+  }
+
+  if (response.status === 404) {
+    throw new NotFoundError();
   }
 
   throw new Error(`${prefix}: ${response.status} - ${errorBody}`);
