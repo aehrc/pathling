@@ -2,7 +2,7 @@
 
 The tickets that take the [specification](../spec.md) from milestone M4 to its
 end state. Each stage is a sub-issue of #2367 and is delivered as one pull
-request into `issue/2367`. #2367 is complete when ticket 28 closes. It is not by
+request into `release/11.0.0`, the integration branch for the 11.0.0 release. #2367 is complete when ticket 28 closes. It is not by
 itself a release: what the release needs beyond it is raised as follow-up
 issues by ticket 26 (owner, 2026-10-22).
 
