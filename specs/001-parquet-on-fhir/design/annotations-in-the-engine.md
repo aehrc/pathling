@@ -1,15 +1,17 @@
 # Annotations and primitive metadata in the FHIRPath engine
 
-**Status:** Proposal for review · **Date:** 2026-11-02 · **Tickets:** 42, 43, and a new
-review of FR-005 · **Spec:** `specs/001-parquet-on-fhir/spec.md` FR-002, FR-004, FR-005,
-FR-021–FR-023, FR-059
+**Status:** Proposal for review · **Date:** 2026-11-02, revised 2026-11-05 · **Tickets:**
+42, 43, and a new review of FR-005 · **Spec:** `specs/001-parquet-on-fhir/spec.md` FR-002,
+FR-004, FR-005, FR-021–FR-023, FR-059 · **Decisions:** 140–149 in
+`evidence/decisions.md`; the full record is `evidence/annotations-decision-record.md`
 
 ## Summary
 
 1. **One column per element stays.** A FHIR primitive is held in the engine as one
-   struct, `struct(value, meta)`, where `meta` is its stored `_x` group. This is the
-   pairing decision 135 already chose. It fits the existing evaluation model without
-   change.
+   struct, `struct(value, meta)`, where `meta` holds the primitive's **named stored
+   annotations** only (D2, decision 141). Its `id` and `extension` are carried only when
+   a switch, off by default, turns them on (D14). This is the pairing decision 135 already
+   chose. It fits the existing evaluation model without change.
 2. **Annotations are accessors, not data.** Nothing is computed when a value is
    traversed. An operation that needs an annotation asks for it. The engine then
    reads the stored field, or computes it if the schema does not carry it. Spark makes
@@ -89,6 +91,27 @@ iterate over only one.
 No client reads the engine's internal form. **It is free to change**, as long as the
 needs above still hold.
 
+**Constraint: metadata that is present but not used costs nothing** (owner, 2026-11-02).
+A primitive's ids and extensions, which may be stored in any row, must not slow down an
+expression that does not use them. The same holds for annotations an expression does
+not read. "Costs nothing" means no extra bytes read from Parquet and no extra
+computation, compared with the same expression over data without that metadata.
+Extensions on primitives are rare, but where they are present they are the bulk of
+`_x`, so carrying them unused is the dominant cost: about 10–14× the bytes read on
+extension-heavy data ([evidence](../evidence/annotations-design-singular-meta-pruning.md)).
+
+Spark cannot prune an unused field through a higher-order function or a view's
+`Generate`, so this constraint is met only by the element **not referencing** metadata
+that the expression does not use. A field that the element references is read in full,
+whether or not anything reads it later.
+
+The constraint is a target for the final solution, not a release gate (owner,
+2026-11-04). The release gate is H1: release 11 is not slower than 10.x on the
+SQL-on-FHIR benchmarks. §4.1 meets the constraint for ids and extensions by leaving
+them out of the element unless the switch turns them on (D14). The remaining
+exceptions, such as annotation fields read when only the value is output, and
+repeating primitives below a repeating parent, are listed under §6, question 5.
+
 ## 3. What the engine does today
 
 The engine already pairs `x` with `_x` at traversal, inside the parent's lambda, where
@@ -113,26 +136,55 @@ The eager date range has costs, recorded in tickets 42 and 43:
 
 ### 4.1 Element form
 
-A FHIR primitive's element is one struct:
+A FHIR primitive's element is one struct of its value and its **named stored
+annotations** (D2, decision 141):
 
 ```
-element = struct(value, meta)      meta = the stored _x element, as stored
+element = struct(value, meta)
+meta    = the named annotation fields of _x that the schema has:
+            date, dateTime, instant   __start, __end
+            decimal                   __numeric
+          plus id and extension, only when the primitive-extensions switch is on (D14)
 ```
 
-It is built at traversal, by pairing by position in the parent's lambda, as today. Only
-**raw stored fields** go into it; nothing is computed.
+It is built at traversal, by pairing by position in the parent's lambda, as today.
+`meta` is projected from `_x` by named field reads, `resolve_or_none(_x, [fields])`
+(§4.3). It is never the raw `_x` group. Only **stored fields** go into it; nothing is
+computed. A field that the schema lacks is left out, not filled with null. The value is
+the stored value: for a decimal, its text.
 
-Example: `Patient.name.given`
+The raw `_x` is not carried because it is read in full wherever the element is
+referenced, extensions included. On 1M Patients with extension-heavy `_birthDate`, a
+raw `_x` read 182.4 MB against 17.6 MB for the named fields
+([evidence](../evidence/annotations-design-singular-meta-pruning.md)).
+
+**Primitive ids and extensions are behind a switch, off by default (D14, decision
+141).**
+
+| Switch | `meta` carries | `x.extension(…)`, `x.id` on a primitive |
+|---|---|---|
+| Off (default) | Annotations only | Empty, as if `_x.id` and `_x.extension` were absent from the JSON; no error |
+| On | Annotations, `id` and `extension` | As stored. Every such element reads its whole `_x`; the cost falls only on users who opt in |
+
+Annotations are never switched off. The switch is configuration, not an analysis of
+the expression: the element's content is fixed for a given setting (principle P0,
+decision 140: rely on Spark's own optimiser, with no FHIRPath-level analysis of which
+fields an expression uses).
+
+Example: `Patient.name.given`, switch on
 
 ```
 name       : [ { given: ["Anne","Mary"], _given: [null, {extension:[…]}] } ]
 elements   : [ {value:"Anne", meta:null}, {value:"Mary", meta:{extension:[…]}} ]
 ```
 
+With the switch off, a string has no annotations to carry, so its element is the bare
+value, as today.
+
 This keeps one column per element, so `where`, `forEach` and `repeat` work unchanged:
 
 ```
-name.given.where(extension('…/nickname').exists())     // reads meta.extension
+name.given.where(extension('…/nickname').exists())     // reads meta.extension (switch on)
 name.given                                             // outputs value only
 ```
 
@@ -142,7 +194,7 @@ name.given                                             // outputs value only
 |---|---|---|
 | Comes from | Traversal of stored data | Conversion from FHIR, literals, functions |
 | Element | `struct(value, meta)` | `struct(value, ann)` |
-| Ids and extensions | Yes, in `meta` | No |
+| Ids and extensions | Only with the switch on (D14), in `meta` | No |
 | Annotations | Yes: the stored ones in `meta`, the rest on demand | Yes: the available ones in `ann`, the rest on demand |
 | Schema | Varies by path (fitted to the data) | Varies with which annotations are available |
 
@@ -151,12 +203,62 @@ come from depends on how the System value was made:
 
 | System value comes from | Its annotations |
 |---|---|
-| Conversion from FHIR | `resolve_or_none(meta, [annotation fields])`: the stored annotation fields that exist; `id` and `extension` are dropped |
+| Conversion from FHIR (D8, decision 142) | `resolve_or_none(meta, [annotation fields])`: the stored annotation fields that exist; `id` and `extension` are dropped |
 | A literal, `@2000` | Constants built at plan time |
 | A function, such as `toDate()`, date arithmetic or `now()` | Computed on demand from `value`, or supplied directly by a function that already knows them |
 
 Combining a FHIR value with a System value converts the FHIR side to System, as
 quantities already do. A System value never carries ids or extensions.
+
+`System.Decimal` is the number only (D13, decision 147): a bare `DECIMAL(38,6)`. A FHIR decimal's text
+is not kept as an annotation when it converts.
+
+#### Suggestion, not decided: System types with fields of their own
+
+The owner has suggested a different framing of System values (2026-11-05). It is not a
+decision, and goes to a follow-up issue on presence-driven algorithm choice (P1,
+decision 148, through ticket 26). Until then the tables above stand.
+
+In this framing, annotations exist only on the FHIR, stored, side. A System type has
+first-class fields of its own, each **required** or **optional**. Converting FHIR to
+System fills a required field from the stored annotation, or computes it where nothing
+is stored. It sets an optional field to null where nothing is stored, and a null then
+means "not available: use the algorithm that does not need it". Suggested shapes:
+
+| Type | Shape |
+|---|---|
+| FHIR primitive | `struct(value, meta)`, as in §4.1 |
+| System.Date, DateTime, Instant | `{value, __start, __end}`, all required |
+| System.Time | `{value}`; the layout has no range for it |
+| System.Decimal | A bare `DECIMAL(38,6)` (D13) |
+| System.String | `{value, __hash}`, with `__hash` optional (the owner's example) |
+| System.Integer, System.Boolean | Bare scalars |
+| System.Quantity | The fixed shape of FR-059, with `_value.__numeric` and the canonical fields always filled |
+| System.Coding | The fixed six fields |
+
+To settle in the follow-up:
+
+1. **Where a required field is computed.** Filled at conversion, it departs from D8
+   ("conversion computes nothing") and from the shapes above, which vary with the
+   available annotations. Spark drops an unused field of a struct it builds only when
+   the field is read directly from that struct. Where the struct sits in an array read
+   by a later `transform`, or passes through a view's `Generate`, every field is
+   computed for every element. An eager range costs 4–4.6× on a date that is only
+   output ([evidence](../evidence/annotations-design-repeating-cpu.md)). The
+   alternative keeps D8: a required field means one that can always be obtained,
+   read through the accessor `resolve_or_else` (§4.3), and computed only where it is
+   read.
+2. **Canonical names.** System.Quantity's FR-059 shape has `__canonical_exact`. The
+   proposed stored layout has `__canonical_code` and `__canonical_value_exact` (§4.7,
+   D6, decision 149, the spec owner's call). A computed quantity written back must match the stored
+   layout, so FR-059 follows D6.
+3. **What an optional null means.** The rule that an absent annotation is never filled
+   with null (§4.4) covers stored `meta` only. An optional System field may be null,
+   and that null selects the algorithm. A fixed System shape also gives `unionAll` and
+   merges consistent types, so the intersection of §4.4 would be needed on the FHIR
+   side only.
+4. **Cost of wrapping.** A struct System.String wraps every computed string. It could
+   stay a bare string until something uses `__hash`.
 
 ### 4.3 Annotations are accessors
 
@@ -232,7 +334,7 @@ because a null stored annotation is read as an absent value.
 
 | Step | Annotations | Computes |
 |---|---|---|
-| Traversal | Raw `struct(value, meta)`, as stored | No |
+| Traversal | `struct(value, meta)`, `meta` the named stored annotations (§4.1) | No |
 | FHIR → System | `resolve_or_none`: stored annotation fields only; `id` and `extension` dropped | No |
 | Crossing a lambda | Raw struct crosses | No |
 | Merge | `resolve_or_none` over the fields every side has; a literal's are constants | No |
@@ -263,12 +365,24 @@ because a null stored annotation is read as an absent value.
 | Value | Output |
 |---|---|
 | System value | Its value |
-| FHIR primitive, **until FHIR and System types are separated** | Converted to System: today a decimal is output as `System.Decimal` |
-| FHIR primitive, **after the separation** | `value` as stored. A `FHIR.decimal` gives its exact text; a `System.Decimal` is rounded to `DECIMAL(38,6)` |
+| FHIR primitive | `value` as stored (D10, decision 142), whether the switch is on or off |
 | A primitive's `meta` | **Never** output as part of the primitive |
-| Ids and extensions | Only when navigated to (`.extension(…)`, `.id`), or inside a complex value output in its fitted shape (FR-059), `_x` included |
+| Ids and extensions | Only when navigated to (`.extension(…)`, `.id`, switch on), or inside a complex value output in its fitted shape (FR-059), `_x` included |
 
-Because of the separation, a decimal's element keeps `value` (its text) from now on.
+**Decimals** are output by result type (D13, decision 147). The engine tells a stored decimal from a
+computed one by the collection's definition, as it does for Quantity. It does not
+inspect the schema. A union is stored only if all its operands are.
+
+| Path | Stored decimal (`FHIR.decimal`) | Computed decimal (`System.Decimal`) |
+|---|---|---|
+| View column (already `STRING`) | Today: the trimmed `DECIMAL(38,6)` text, so a stored `1.50` gives `"1.5"`. With ticket 16 (lexical decimals): **its stored text**, `"1.50"`. Only the values change, not the column type | The trimmed `DECIMAL(38,6)` text |
+| `fhirPathToColumn`, `$fhirpath` | `DECIMAL(38,6)` | `DECIMAL(38,6)` |
+| `toString()` | Its stored text | As today |
+
+Keys and comparisons stay numeric. The detection of stored against computed decimals is
+built now (ticket 41), and the view output switches to the stored text in one change when ticket 16
+lands. What `fhirPathToColumn` and `$fhirpath` return in general is specified by ticket
+40, which absorbed ticket 47. Because of this, a decimal's element keeps `value`, its text, from now on.
 
 ### 4.6 Shared computation: memoise, do not group
 
@@ -355,6 +469,23 @@ to validation and `trust` (tickets 31 and 38) under any layout.
    whole canonicalised Quantity.
 4. **Whether to emit `__canonical_value`** (the spec's fixed scale) beside the exact
    value.
+5. **How the element meets the §2 constraint on unused metadata.** Decided in decisions
+   140, 141 and 143:
+   - The element carries the named annotations, not the raw `_x` (D2), and ids and
+     extensions only with the switch on (D14). The engine does no FHIRPath-level
+     analysis of which fields an expression uses (P0), so shaping each element per
+     expression (L1) is not built.
+   - Reads are pruned by the shapes the engine emits (L2, decision 143): compute-first, existence
+     rewrites, and pairing a repeating primitive with
+     `arrays_zip(x, _x.__start, _x.__end)`, each extracted array guarded with
+     `coalesce(x, array())`. Tests assert the plan shape and equal results.
+   - Known exceptions: a singular annotated output reads its annotation fields;
+     `period.start` reads `_start`; a repeating primitive below a repeating parent reads
+     its whole `_x`; and on Spark 4.0–4.2 most views still read their repeating parents
+     whole (on 4.0.2 these shapes pruned 4 of 26 views).
+   - A Catalyst rule that prunes through higher-order functions (option C, D3b) is a
+     separate optimisation experiment, tried regardless, and not the remedy for an H1
+     regression ([evidence](../evidence/annotations-design-lambda-pruning-rule.md)).
 
 ## 7. How the design is validated
 
