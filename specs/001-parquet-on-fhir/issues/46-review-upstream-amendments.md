@@ -30,6 +30,8 @@ The summary may also be published as a shared document for the specification own
 - **#1 and ticket 35 overlap.** Both propose the canonical annotation's type.
 - **Deviations not recorded.** `unsignedInt` and `positiveInt` are stored as signed `INT32`, and that is not recorded. Nor is whether `resourceType` is required.
 
+**All 16 findings are worked through in this ticket (owner, 2026-11-05).** The list above names only some of them. Every finding in the draft's closing section, "Cross-cutting findings for the Pathling owner", is either fixed on Pathling's side, raised upstream, or dropped, and the outcome is recorded here. The draft stays committed as it is, findings included, but the findings are left out of anything that goes to the specification owner.
+
 **Do not raise or edit anything on GitHub.** The parent session does that after the owner's review. This applies to revising #1 to #3 as much as to raising new amendments.
 
 **Blocked by:** None. Start early, in parallel with stage 4, because #2367 now waits on the specification owner.

@@ -108,9 +108,8 @@ extension, a non-null `_birthDate` with null leaves) printed the same table as o
   third-party classpath of the 4.0.2 runs with the `org/apache/spark/` jars removed, and the Pathling
   10.0.0-SNAPSHOT jars built against 4.0.2. It ran on the first attempt, with no rebuild.
 - The scripts are in `scripts/annotations-design/spark-4-3-upstream/`: `build.sh`, `run.sh` for
-  cases 1 to 4 and `engine.sh` for case 5. Classpath, data and logs are in
-  `.local/work/issue/2832_41-42_decimal-and-annotations/spikes/spark-4-3-upstream/`
-  (`cases-v.log`, `engine.log`).
+  cases 1 to 4 and `engine.sh` for case 5. The run's classpath, data and raw logs (`cases-v.log`,
+  `engine.log`) were working files: raw logs not kept; results above.
 
 ## Versions
 
