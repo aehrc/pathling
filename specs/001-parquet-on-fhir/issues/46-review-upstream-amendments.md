@@ -22,7 +22,7 @@ Write the summary to `specs/001-parquet-on-fhir/upstream-amendments.md`. For eac
 
 The summary may also be published as a shared document for the specification owner's comments.
 
-**The draft to start from:** `.local/work/issue/2832/upstream-amendments-draft.md` (2026-11-02). It lists 17 changes and ends with findings for the owner. Remove those findings before the document is shared. They include:
+**The draft to start from:** `evidence/upstream-amendments-draft.md` (2026-11-02, revised 2026-11-05 in sections 3, 6, 8 and 16 by the annotations design; committed as evidence by the owner's decision of 2026-11-05). It was `.local/work/issue/2832/upstream-amendments-draft.md`. It lists 17 changes and ends with findings for the owner. Remove those findings before the document is shared. They include:
 
 - **#2 against FR-039.** #2 makes readers refuse a table without the layout column, which FR-039, ADR-0006 and ticket 29 accept. It also names the column `__pof_v1`, where FR-065 says `__layout_v1`. And it cites an evidence file, `evidence/layout-column.md`, that does not exist.
 - **#3 against decision 135 and the engine.** #3 names the annotations as siblings, `__birthDate_start`, where decision 135 places them in the metadata group. It also says a reader recomputes a range of the wrong type, which the engine does not do.
