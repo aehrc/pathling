@@ -149,8 +149,8 @@ and the cost is the engine's pairing and conversion to a System date, 1.5 to 1.6
 
 ## Reproduction
 
-All in `scripts/annotations-design/repeating-cpu/`, run from the worktree root, with
-`THIRDPARTY_CP` set to the file listing Spark 4.0.2's classpath. `run-probe.sh` compiles the
+All in `scripts/annotations-design/repeating-cpu/`, run from the worktree root. The third-party
+classpath is generated on first use by `../common.sh`; `THIRDPARTY_CP` overrides it. `run-probe.sh` compiles the
 probe against the branch's jars, because a probe launched from source cannot serialise its UDF to
 Spark's tasks.
 

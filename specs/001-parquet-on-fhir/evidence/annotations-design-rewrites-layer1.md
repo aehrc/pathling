@@ -467,9 +467,8 @@ bash plans.sh 4.3 "name.exists()"         # the analysed plan of one view
 Logs and data are in `.local/work/issue/2832_41-42_decimal-and-annotations/spikes/rewrites-layer1/`
 (`logs/probe-4.3.log`, `logs/probe-4.0.log`, `logs/semantic-4.3.log`, `logs/tables.md`,
 `logs/semantic.md`). The probe prints a `DIFF` line with the first differing rows for any arm
-that is not equal to O; there are none. Classpaths as `env.sh` of the previous spike (the third-party
-classpath file is in a scratchpad of an earlier session, so `env.sh` needs it regenerated if that is
-gone).
+that is not equal to O; there are none. `env.sh` takes the classpaths from `../common.sh`, which
+generates them on first use.
 
 ## Versions
 

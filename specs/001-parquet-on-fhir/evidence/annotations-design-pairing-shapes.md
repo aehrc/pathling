@@ -148,8 +148,8 @@ Scripts are in
 [scripts/annotations-design/pairing-shapes/](scripts/annotations-design/pairing-shapes/):
 `PairingProbe.scala` (data, shapes, measurements), `run.sh <4.0|4.3>` (builds against the 4.0.2
 classpath, runs on either), `all.sh <dir>` (both, keeping the result lines; the raw log of 4.0.2 is
-over a gigabyte of debug output and is not worth keeping). It needs the third-party classpath file
-and `spark43.cp` that `rewrites-layer1/env.sh` builds, and `~/.m2` Scala 2.13.16. The filtered
+over a gigabyte of debug output and is not worth keeping). It needs the third-party and Spark 4.3.0
+classpaths, which `../common.sh` generates on first use, and `~/.m2` Scala 2.13.16. The filtered
 output of the runs reported here is `results-4.0.2.txt` and `results-4.3.0.txt` in that directory.
 
 ```bash

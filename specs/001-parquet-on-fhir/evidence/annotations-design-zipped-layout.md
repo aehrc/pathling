@@ -250,8 +250,9 @@ All scripts are in [scripts/annotations-design/zipped-layout/](scripts/annotatio
 Data and logs go to `.local/work/issue/2832_41-42_decimal-and-annotations/spikes/zipped-layout/`.
 
 - `env.sh` sets the paths. It needs a venv with `pyarrow duckdb polars fsspec` (`uv venv; uv pip
-  install pyarrow duckdb polars fsspec`; set `PY`) and the Spark classpaths of the rewrites-layer1
-  probe (the 4.3.0 classpath file and `thirdparty.cp` it references).
+  install pyarrow duckdb polars fsspec`; `PY` points at its python, by default
+  `.local/annotations-design/venv`) and the Spark 4.0.2 and 4.3.0 classpaths, which `../common.sh`
+  generates on first use.
 - `all.sh [rows]` runs everything. Its parts: `gen.sh` (data), `spark.sh 4.3|4.0` (compiles
   `ZipProbe.scala` with the Scala compiler from `~/.m2`, runs the reads of `cases.txt` and the C10a SQL
   of `c10a.sql`), `duck.sh` (`duck.py` reads and `c10a_duck.py`), `size.sh` (`size.py`, also the Polars

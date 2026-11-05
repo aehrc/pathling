@@ -282,7 +282,5 @@ specs/001-parquet-on-fhir/evidence/scripts/annotations-design/d3a-complex-sketch
 `run.sh` compiles `D3aProbe.scala` with the Scala 2.13 compiler from `~/.m2`, regenerates both
 Parquet files under `.local/work/issue/2832_41-42_decimal-and-annotations/spikes/d3a-complex-sketch/`,
 runs every case, and writes the report to `output.txt` there (raw log in `raw.txt`). `env.sh`
-points `TP` at the third-party classpath file left by another session's scratchpad. If it is gone,
-build an equivalent with `mvn dependency:build-classpath -pl library-api
--Dmdep.outputFile=<file>` and export `TP=<file>`. No Pathling jar is needed. Runtime is about
-one minute.
+takes the third-party classpath from `../common.sh`, which generates it on first use; `TP`
+overrides it. No Pathling jar is needed. Runtime is about one minute.

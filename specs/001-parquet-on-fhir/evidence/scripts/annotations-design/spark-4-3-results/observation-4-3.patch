@@ -1,0 +1,17 @@
+--- orig.java	2026-11-04 10:24:08
++++ pathling-spark43/terminology/src/main/java/au/csiro/pathling/terminology/store/SnomedRf2Importer.java	2026-11-04 10:24:08
+@@ -468,12 +468,11 @@
+   @Nullable
+   private static Long rowCount(@Nonnull final Observation observation, final long deadline) {
+     try {
+-      final scala.collection.immutable.Map<String, Object> metrics =
++      final org.apache.spark.sql.Row metrics =
+           Await.result(
+               observation.future(),
+               Duration.create(Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS));
+-      final Option<Object> rows = metrics.get(OBSERVED_ROWS);
+-      return rows.isDefined() ? (Long) rows.get() : null;
++      return metrics.<Long>getAs(OBSERVED_ROWS);
+     } catch (final TimeoutException e) {
+       log.debug("Row count metric '{}' was not reported.", observation.name());
+       return null;

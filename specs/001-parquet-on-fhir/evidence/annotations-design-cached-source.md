@@ -186,7 +186,8 @@ directory), and checked against the executed plans:
 ## Reproduction
 
 All in `scripts/annotations-design/cached-source/`, run from the worktree root. `env.sh` holds the
-paths (`THIRDPARTY_CP` lists Spark 4.0.2's classpath; see its header to rebuild it).
+paths. The third-party classpath is generated on first use by `../common.sh`;
+`THIRDPARTY_CP` overrides it.
 
 ```bash
 ./run.sh data                 # NDJSON, encode, splice, Parquet (N_PAT and N_ENC set the sizes)
