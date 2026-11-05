@@ -17,7 +17,8 @@
 
 package au.csiro.pathling.fhirpath.unit;
 
-import au.csiro.pathling.encoders.terminology.ucum.Ucum;
+import au.csiro.pathling.schema.annotation.kinds.QuantityCanonicalKind;
+import au.csiro.pathling.schema.unit.UcumUnits;
 import jakarta.annotation.Nonnull;
 import java.math.BigDecimal;
 import java.util.Optional;
@@ -50,7 +51,7 @@ public record UcumUnit(@Nonnull String code) implements FhirPathUnit {
   public static final UcumUnit ONE = new UcumUnit("1");
 
   /** The system URI for UCUM units. */
-  public static final String UCUM_SYSTEM_URI = "http://unitsofmeasure.org";
+  public static final String UCUM_SYSTEM_URI = QuantityCanonicalKind.UCUM_SYSTEM;
 
   /**
    * Returns the UCUM system URI.
@@ -96,7 +97,7 @@ public record UcumUnit(@Nonnull String code) implements FhirPathUnit {
   @Nonnull
   public Optional<BigDecimal> convertValue(
       @Nonnull final BigDecimal value, @Nonnull final UcumUnit targetUnit) {
-    return Optional.ofNullable(Ucum.convertValue(value, code(), targetUnit.code()));
+    return Optional.ofNullable(UcumUnits.convert(value, code(), targetUnit.code()));
   }
 
   /**

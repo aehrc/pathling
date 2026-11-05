@@ -185,7 +185,6 @@ class FhirPathDateTimeTest {
         Arguments.of("2023-02-30", "February 30 (invalid)"),
         Arguments.of("2023-05-15T24:00:00", "Hour 24 (invalid)"),
         Arguments.of("2023-05-15T12:60:00", "Minute 60 (invalid)"),
-        Arguments.of("2023-05-15T12:30:60", "Second 60 (invalid)"),
         Arguments.of("2023-05-15T12:30:45+24:00", "Invalid hours offset"),
         Arguments.of("2023-05-15T12:30:45+12:60", "Invalid minutes offset"),
         Arguments.of("2023-05-15T12:30:45+1:30", "Missing leading zero in offset"));

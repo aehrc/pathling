@@ -46,8 +46,9 @@ import org.junit.jupiter.api.Timeout;
  * descent by field name, and termination over a graph that is cyclic (FR-057).
  *
  * <p>The order includes the layout's own fields, which have no definition element to take a
- * position from: {@code resourceType} at the head of a resource, and the metadata group and
- * annotations immediately after the element they accompany.
+ * position from: {@code resourceType} at the head of a resource, the metadata group immediately
+ * after the primitive it accompanies, and the annotations at the end of the container the annotated
+ * element owns: a primitive's metadata group, or a complex element's own structure.
  */
 class DefinitionCanonicalStructureTest {
 
@@ -91,14 +92,10 @@ class DefinitionCanonicalStructureTest {
             "_gender",
             "birthDate",
             "_birthDate",
-            "__birthDate_start",
-            "__birthDate_end",
             "deceasedBoolean",
             "_deceasedBoolean",
             "deceasedDateTime",
             "_deceasedDateTime",
-            "__deceasedDateTime_start",
-            "__deceasedDateTime_end",
             "address",
             "maritalStatus",
             "multipleBirthBoolean",
@@ -115,18 +112,43 @@ class DefinitionCanonicalStructureTest {
   }
 
   @Test
-  void placesTheCanonicalAnnotationImmediatelyAfterAQuantity() {
+  void placesTheCanonicalAnnotationsAtTheEndOfAQuantity() {
     final List<String> order =
-        DefinitionCanonicalStructure.forResource(DEFINITIONS, "Observation").fieldOrder();
-    final int quantity = order.indexOf("valueQuantity");
-    assertTrue(quantity >= 0, "The expanded quantity variant of the value choice is missing");
+        descend(
+                DefinitionCanonicalStructure.forResource(DEFINITIONS, "Observation"),
+                "valueQuantity")
+            .fieldOrder();
     // The names are spelled out rather than taken from LayoutFields, because the first of them is
     // the name the Parquet on FHIR specification gives its own annotation and is therefore part of
     // the contract with any other implementation, not an internal choice. The order is part of the
     // contract too: the specification's form comes first, so a consumer reading the specification's
     // layout finds the specification's annotation where it expects it.
-    assertEquals("__valueQuantity_canonical", order.get(quantity + 1));
-    assertEquals("__valueQuantity_canonical_exact", order.get(quantity + 2));
+    assertEquals(
+        List.of(
+            "id",
+            "_id",
+            "extension",
+            "value",
+            "_value",
+            "comparator",
+            "_comparator",
+            "unit",
+            "_unit",
+            "system",
+            "_system",
+            "code",
+            "_code",
+            "__canonical_exact"),
+        order);
+  }
+
+  @Test
+  void placesNoAnnotationBesideAnElement() {
+    // An annotation lives in the container its element owns, so none is a field of the structure
+    // that carries the element.
+    assertTrue(
+        DefinitionCanonicalStructure.forResource(DEFINITIONS, "Observation").fieldOrder().stream()
+            .noneMatch(name -> name.startsWith("__")));
   }
 
   @Test
@@ -150,35 +172,39 @@ class DefinitionCanonicalStructureTest {
             "_suffix",
             "period"),
         descend(patient(), "name").fieldOrder());
-    // The bounds of a period are themselves date times, so each carries a metadata group and a
-    // pair of range annotations.
+    // The bounds of a period are themselves date times, so each carries a metadata group, which
+    // holds their range annotations.
     assertEquals(
-        List.of(
-            "id",
-            "_id",
-            "extension",
-            "start",
-            "_start",
-            "__start_start",
-            "__start_end",
-            "end",
-            "_end",
-            "__end_start",
-            "__end_end"),
+        List.of("id", "_id", "extension", "start", "_start", "end", "_end"),
         descend(descend(patient(), "name"), "period").fieldOrder());
   }
 
   @Test
   void describesTheMetadataGroupBesideAPrimitive() {
-    final CanonicalStructure group = descend(patient(), "_birthDate");
+    final CanonicalStructure group = descend(patient(), "_gender");
     assertEquals(List.of("id", "extension"), group.fieldOrder());
     assertTrue(group.field("extension").isPresent());
   }
 
   @Test
+  void placesAPrimitivesAnnotationsInItsMetadataGroupAfterItsIdAndExtensions() {
+    assertEquals(
+        List.of("id", "extension", "__start", "__end"),
+        descend(patient(), "_birthDate").fieldOrder());
+    assertEquals(
+        List.of("id", "extension", "__numeric"),
+        descend(
+                descend(
+                    DefinitionCanonicalStructure.forResource(DEFINITIONS, "Observation"),
+                    "valueQuantity"),
+                "_value")
+            .fieldOrder());
+  }
+
+  @Test
   void knowsNoStructureBeneathAPrimitiveOrAnAnnotation() {
     assertTrue(patient().field("birthDate").isEmpty());
-    assertTrue(patient().field("__birthDate_start").isEmpty());
+    assertTrue(descend(patient(), "_birthDate").field("__start").isEmpty());
     assertTrue(patient().field("resourceType").isEmpty());
   }
 

@@ -431,8 +431,10 @@ final class ResourceTransformer {
   }
 
   /**
-   * Returns the fields of one structure of the document, in the order the layout stores them. A
-   * field the definitions do not describe is refused, or, for an element, left out.
+   * Returns the fields of one structure of the document, in the order the layout stores them. An
+   * annotation is left out, one Pathling does not define included, because annotations belong to
+   * this layout and not to FHIR (decision 135). Any other field the definitions do not describe is
+   * refused, or, for an element, left out.
    */
   @Nonnull
   private static Column[] egressFields(
@@ -441,6 +443,7 @@ final class ResourceTransformer {
       @Nonnull final Function<String, Column> source,
       final boolean forElement) {
     return Stream.of(schema.fields())
+        .filter(field -> !LayoutFields.isAnnotation(field.name()))
         .filter(field -> !forElement || node.entry(field.name()).isPresent())
         .flatMap(field -> egressField(node, field, source.apply(field.name()), forElement).stream())
         .toArray(Column[]::new);

@@ -23,10 +23,11 @@ import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 /**
  * The canonical structure of the metadata group that accompanies a primitive, carrying the id and
- * the extensions the primitive itself has nowhere to put.
+ * the extensions the primitive itself has nowhere to put, and after them its annotations.
  *
  * <p>The group has no definition element of its own, so its order is declared rather than derived.
  * The extensions it carries take their shape from the extension element of the node the primitive
@@ -34,13 +35,17 @@ import java.util.Optional;
  */
 public final class MetadataGroupStructure implements CanonicalStructure {
 
+  @Nonnull private final ElementDefinition element;
+
   @Nonnull private final Optional<ElementDefinition> extensionElement;
 
   @Nonnull private final Map<Object, DefinitionCanonicalStructure> memo;
 
   MetadataGroupStructure(
+      @Nonnull final ElementDefinition element,
       @Nonnull final Optional<ElementDefinition> extensionElement,
       @Nonnull final Map<Object, DefinitionCanonicalStructure> memo) {
+    this.element = element;
     this.extensionElement = extensionElement;
     this.memo = memo;
   }
@@ -48,7 +53,21 @@ public final class MetadataGroupStructure implements CanonicalStructure {
   @Override
   @Nonnull
   public List<String> fieldOrder() {
-    return LayoutFields.METADATA_GROUP_FIELDS;
+    return Stream.concat(
+            LayoutFields.METADATA_GROUP_FIELDS.stream(),
+            annotationEntries().stream().map(LayoutEntry::getName))
+        .toList();
+  }
+
+  /**
+   * Returns the entries of the annotations of the primitive this group accompanies, which are the
+   * last fields of the group.
+   *
+   * @return the annotation entries, in order
+   */
+  @Nonnull
+  public List<LayoutEntry> annotationEntries() {
+    return DefinitionCanonicalStructure.annotationEntries(element);
   }
 
   @Override

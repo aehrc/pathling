@@ -37,6 +37,8 @@ import org.apache.spark.sql.SparkSession;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 /**
  * Tests for the single-resource FHIRPath evaluation method on PathlingContext.
@@ -320,9 +322,7 @@ public class EvaluateFhirPathTest {
   @Test
   void quantityResultCarriesOnlyTheElementsOfAQuantity() {
     // Evaluating a Quantity expression should return JSON holding the elements of the Quantity the
-    // resource carries, and nothing the storage layout adds: neither the previous layout's
-    // companions (value_scale, _value_canonicalized, _code_canonicalized, _fid) nor the Parquet on
-    // FHIR layout's metadata groups and annotations, all of which begin with an underscore.
+    // resource carries, and nothing the storage layout adds, such as its annotations.
     final SingleInstanceEvaluationResult result =
         pathling.evaluateFhirPath("Observation", OBSERVATION_JSON, "value.ofType(Quantity)");
 
@@ -470,6 +470,25 @@ public class EvaluateFhirPathTest {
           withContext.getResults().stream().map(TypedValue::getValue).toList(),
           expression);
     }
+  }
+
+  @ParameterizedTest
+  @ValueSource(
+      strings = {
+        "value.ofType(Quantity)",
+        "7.5 'mg'",
+        "value.ofType(Quantity).toQuantity('mm[Hg]')",
+        "(value.ofType(Quantity) | 7 'g').first()"
+      })
+  void quantityResultCarriesNoCanonicalAnnotation(@Nonnull final String expression) {
+    // A quantity, stored or built by the engine, carries its canonical annotations, which belong to
+    // the layout and not to FHIR, so the rendered result leaves them out.
+    final JsonObject quantity =
+        singleObject(pathling.evaluateFhirPath("Observation", OBSERVATION_JSON, expression));
+
+    assertFalse(quantity.has("__canonical"));
+    assertFalse(quantity.has("__canonical_exact"));
+    assertTrue(quantity.has("code"));
   }
 
   @Test

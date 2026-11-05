@@ -23,6 +23,7 @@ import static org.apache.spark.sql.functions.col;
 import static org.apache.spark.sql.functions.lit;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import au.csiro.pathling.fhirpath.column.SystemDateTime;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import au.csiro.pathling.sql.TraceExpression;
 import au.csiro.pathling.test.SpringBootUnitTest;
@@ -150,15 +151,18 @@ class ComparisonTraceTest {
   }
 
   // ---------------------------------------------------------------------------
-  // TemporalComparator — left and right each referenced twice via the two
-  // callUDF() calls inside getBounds() (one for low boundary, one for high).
+  // TemporalComparator — each operand is a System date built from traced text, and its range is
+  // read for both of its bounds.
   // ---------------------------------------------------------------------------
 
   @Test
   void temporalComparator_equalsTo_leftSingleFire() {
     final int before = appender.list.size();
     final Column tracedLeft = traceColumn(col("dt"), "temp-left");
-    final Column result = TemporalComparator.forDateTime().equalsTo(tracedLeft, lit("2023-01-15"));
+    final Column result =
+        TemporalComparator.forDateTime()
+            .equalsTo(
+                SystemDateTime.fromText(tracedLeft), SystemDateTime.fromLiteral("2023-01-15"));
     datetimeDataset(1).select(result.alias("r")).collect();
     final long fires = countTraceLogs("temp-left", before);
     assertEquals(1, fires, () -> "left fired " + fires + "× (expected 1). See issue #2594.");
@@ -168,7 +172,10 @@ class ComparisonTraceTest {
   void temporalComparator_equalsTo_rightSingleFire() {
     final int before = appender.list.size();
     final Column tracedRight = traceColumn(col("dt"), "temp-right");
-    final Column result = TemporalComparator.forDateTime().equalsTo(lit("2023-01-15"), tracedRight);
+    final Column result =
+        TemporalComparator.forDateTime()
+            .equalsTo(
+                SystemDateTime.fromLiteral("2023-01-15"), SystemDateTime.fromText(tracedRight));
     datetimeDataset(1).select(result.alias("r")).collect();
     final long fires = countTraceLogs("temp-right", before);
     assertEquals(1, fires, () -> "right fired " + fires + "× (expected 1). See issue #2594.");
@@ -178,7 +185,10 @@ class ComparisonTraceTest {
   void temporalComparator_equalsTo_leftMultiRowSingleFire() {
     final int before = appender.list.size();
     final Column tracedLeft = traceColumn(col("dt"), "temp-left-n");
-    final Column result = TemporalComparator.forDateTime().equalsTo(tracedLeft, lit("2023-01-15"));
+    final Column result =
+        TemporalComparator.forDateTime()
+            .equalsTo(
+                SystemDateTime.fromText(tracedLeft), SystemDateTime.fromLiteral("2023-01-15"));
     datetimeDataset(3).select(result.alias("r")).collect();
     final long fires = countTraceLogs("temp-left-n", before);
     assertEquals(3, fires, () -> "left fired " + fires + "× for 3 rows (expected 3). See #2594.");

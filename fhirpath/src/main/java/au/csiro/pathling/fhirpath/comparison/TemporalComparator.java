@@ -17,14 +17,15 @@
 
 package au.csiro.pathling.fhirpath.comparison;
 
-import static au.csiro.pathling.sql.SqlFunctions.let;
+import static au.csiro.pathling.schema.ColumnBinding.bindOnce;
 
-import au.csiro.pathling.sql.misc.HighBoundaryForDateTime;
+import au.csiro.pathling.fhirpath.column.SystemDateTime;
+import au.csiro.pathling.schema.LayoutFields;
 import au.csiro.pathling.sql.misc.HighBoundaryForTime;
-import au.csiro.pathling.sql.misc.LowBoundaryForDateTime;
 import au.csiro.pathling.sql.misc.LowBoundaryForTime;
 import jakarta.annotation.Nonnull;
 import java.util.function.BinaryOperator;
+import java.util.function.UnaryOperator;
 import lombok.AllArgsConstructor;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
@@ -34,29 +35,34 @@ import org.apache.spark.sql.functions;
  * ranges.
  *
  * <p>Since FHIR DateTime/Time values can be partial (e.g., just year or year-month), comparisons
- * need to consider the range of possible values for each DateTime/Time.
+ * need to consider the range of possible values for each DateTime/Time. The range of a value is a
+ * structure of its lower bound, {@code __start}, and its upper bound, {@code __end}, and is
+ * computed once for each operand however many times the comparison reads its bounds.
  */
 @AllArgsConstructor(access = lombok.AccessLevel.PRIVATE)
 public class TemporalComparator implements ColumnComparator, ElementWiseEquality {
 
+  @Nonnull private static final String START = LayoutFields.START_ANNOTATION;
+
+  @Nonnull private static final String END = LayoutFields.END_ANNOTATION;
+
+  @Nonnull
   private static final TemporalComparator DATE_TIME_COMPARATOR =
-      new TemporalComparator(
-          LowBoundaryForDateTime.FUNCTION_NAME, HighBoundaryForDateTime.FUNCTION_NAME);
+      new TemporalComparator(SystemDateTime::range);
 
+  @Nonnull
   private static final TemporalComparator TIME_COMPARATOR =
-      new TemporalComparator(LowBoundaryForTime.FUNCTION_NAME, HighBoundaryForTime.FUNCTION_NAME);
+      new TemporalComparator(
+          time ->
+              functions.struct(
+                  functions.callUDF(LowBoundaryForTime.FUNCTION_NAME, time).alias(START),
+                  functions.callUDF(HighBoundaryForTime.FUNCTION_NAME, time).alias(END)));
 
-  /** The name of the UDF to compute the low boundary for a temporal value. */
-  @Nonnull private final String lowBoundaryUdf;
-
-  /** The name of the UDF to compute the high boundary for a temporal value. */
-  @Nonnull private final String highBoundaryUdf;
-
-  /** Record to hold the low and high boundary columns for a dateTime value. */
-  private record Bounds(@Nonnull Column low, @Nonnull Column high) {}
+  /** Takes an operand to its range. */
+  @Nonnull private final UnaryOperator<Column> rangeOf;
 
   /**
-   * Returns a TemporalComparator for DateTime values.
+   * Returns a TemporalComparator for System Date and DateTime values, which carry their ranges.
    *
    * @return A TemporalComparator that can compare DateTime values.
    */
@@ -73,18 +79,6 @@ public class TemporalComparator implements ColumnComparator, ElementWiseEquality
   @Nonnull
   public static TemporalComparator forTime() {
     return TIME_COMPARATOR;
-  }
-
-  /**
-   * Gets the low and high boundary columns for a dateTime column.
-   *
-   * @param column The dateTime column to get boundaries for.
-   * @return A Bounds record containing the low and high boundary columns.
-   */
-  @Nonnull
-  private Bounds getBounds(@Nonnull final Column column) {
-    return new Bounds(
-        functions.callUDF(lowBoundaryUdf, column), functions.callUDF(highBoundaryUdf, column));
   }
 
   @Nonnull
@@ -122,25 +116,24 @@ public class TemporalComparator implements ColumnComparator, ElementWiseEquality
       @Nonnull final Column left,
       @Nonnull final Column right,
       @Nonnull final BinaryOperator<Column> comparator) {
-    return let(
-        left,
-        right,
-        (l, r) -> {
-          final Bounds leftBounds = getBounds(l);
-          final Bounds rightBounds = getBounds(r);
-
-          // If canCompare apply the comparator to the low bound (either one is fine),
-          // else return null.
-          return functions
-              .when(
-                  canCompare(leftBounds, rightBounds),
-                  comparator.apply(leftBounds.low, rightBounds.low))
-              .otherwise(functions.lit(null));
-        });
+    // Each range is evaluated once, so a range computed from text parses it once for both bounds.
+    return bindOnce(
+        rangeOf.apply(left),
+        leftRange ->
+            bindOnce(
+                rangeOf.apply(right),
+                rightRange ->
+                    // If canCompare apply the comparator to the low bound (either one is fine),
+                    // else return null.
+                    functions
+                        .when(
+                            canCompare(leftRange, rightRange),
+                            comparator.apply(leftRange.getField(START), rightRange.getField(START)))
+                        .otherwise(functions.lit(null))));
   }
 
   @Nonnull
-  private static Column canCompare(@Nonnull final Bounds left, @Nonnull final Bounds right) {
+  private static Column canCompare(@Nonnull final Column left, @Nonnull final Column right) {
 
     // can compare when:
     // - either on overlapping
@@ -153,9 +146,13 @@ public class TemporalComparator implements ColumnComparator, ElementWiseEquality
     // bounds)
     // 2. Any more precise instant is fully contained within the less precise instant (considering
     // their lower and upper bounds)
-    return left.high
-        .lt(right.low)
-        .or(right.high.lt(left.low))
-        .or(right.low.equalTo(left.low).and(left.high.equalTo(right.high)));
+    return left.getField(END)
+        .lt(right.getField(START))
+        .or(right.getField(END).lt(left.getField(START)))
+        .or(
+            right
+                .getField(START)
+                .equalTo(left.getField(START))
+                .and(left.getField(END).equalTo(right.getField(END))));
   }
 }

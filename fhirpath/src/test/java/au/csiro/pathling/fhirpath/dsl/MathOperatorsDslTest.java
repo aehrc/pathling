@@ -96,6 +96,14 @@ public class MathOperatorsDslTest extends FhirPathDslTestBase {
         // Integer and decimal operations
         .testEquals(7.5, "int1 + dec2", "Integer + Decimal")
         .testEquals(10.5, "5 + 5.5", "Integer literal + Decimal literal")
+        .testTrue(
+            "12345678901234567890123456789012.5 + 0 = 12345678901234567890123456789012.5",
+            "Decimal literal with the maximum integer digits keeps its value in arithmetic")
+        .testError(
+            "Decimal literal exceeded maximum integer digits supported (32):"
+                + " 123456789012345678901234567890123.5",
+            "123456789012345678901234567890123.5 + 0",
+            "Decimal literal with more integer digits than supported")
         .testEquals(2.5, "int1 - dec2", "Integer - Decimal")
         .testEquals(12.5, "int1 * dec2", "Integer * Decimal")
         .testEquals(2.0, "int1 / dec2", "Integer / Decimal")

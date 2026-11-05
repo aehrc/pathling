@@ -20,7 +20,6 @@ package au.csiro.pathling.fhirpath;
 import static java.util.Objects.isNull;
 import static java.util.Objects.requireNonNull;
 
-import au.csiro.pathling.encoders.terminology.ucum.Ucum;
 import au.csiro.pathling.fhirpath.unit.CalendarDurationUnit;
 import au.csiro.pathling.fhirpath.unit.FhirPathUnit;
 import au.csiro.pathling.fhirpath.unit.UcumUnit;
@@ -248,39 +247,6 @@ public class FhirPathQuantity {
   @Nonnull
   public Optional<FhirPathQuantity> convertToUnit(@Nonnull final String unitName) {
     return convertToUnit(unitName, FhirPathUnit.DEFAULT_PRECISION);
-  }
-
-  /**
-   * Helper method to create a canonical UCUM quantity.
-   *
-   * @param value the numeric value
-   * @param code the UCUM unit code
-   * @return an Optional containing the canonical UCUM quantity, or empty if conversion is not
-   *     possible
-   */
-  private static Optional<FhirPathQuantity> ofUcumCanonical(
-      @Nonnull final BigDecimal value, @Nonnull final String code) {
-    return Optional.ofNullable(Ucum.getCanonical(value, code))
-        .map(result -> ofUcum(result.value(), result.unit()));
-  }
-
-  /**
-   * Converts this quantity to its canonical UCUM representation if possible.
-   *
-   * <p>Uses the UCUM conversion service to determine the canonical form of the quantity. UCUM
-   * quantities are converted to their canonical UCUM units, while definite calendar durations are
-   * converted to their UCUM equivalents (e.g., 's' for seconds).
-   *
-   * @return an Optional containing the canonical UCUM quantity, or empty if conversion is not
-   *     possible
-   */
-  public Optional<FhirPathQuantity> asCanonical() {
-    return switch (unit) {
-      case UcumUnit(var code) -> ofUcumCanonical(value, code);
-      case final CalendarDurationUnit cdUnit when (cdUnit.isDefinite()) ->
-          ofUcumCanonical(value, cdUnit.getUcumEquivalent());
-      default -> Optional.empty();
-    };
   }
 
   @Override

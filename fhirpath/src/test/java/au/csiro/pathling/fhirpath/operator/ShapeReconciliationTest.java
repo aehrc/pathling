@@ -258,7 +258,7 @@ class ShapeReconciliationTest {
   Stream<Arguments> decimalCases() {
     return Stream.of(
         // Arithmetic keeps the precision of its operands. The quotient is computed at scale 7,
-        // 0.0014975, and then rounded to 0.001498. Casting both operands to DECIMAL(32,6) first
+        // 0.0014975, and then rounded to 0.001498. Casting both operands to DECIMAL(38,6) first
         // would compute it at scale 6 and give 0.001497.
         arguments("1.5 / 1001.7", List.of("p1=0.001498", "p2=0.001498")),
         arguments("(1.5 / 1001.7) = 0.001498", List.of("p1=true", "p2=true")),

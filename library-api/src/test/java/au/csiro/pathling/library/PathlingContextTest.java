@@ -38,6 +38,7 @@ import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.config.TerminologyAuthConfiguration;
 import au.csiro.pathling.config.TerminologyConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.schema.SchemaConfiguration;
 import au.csiro.pathling.search.UnknownSearchParameterException;
 import au.csiro.pathling.terminology.DefaultTerminologyServiceFactory;
 import au.csiro.pathling.terminology.TerminologyService;
@@ -60,6 +61,7 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.functions;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -526,6 +528,63 @@ public class PathlingContextTest {
     assertNotNull(pathlingContext.getQueryConfiguration());
     assertFalse(pathlingContext.getQueryConfiguration().isExplainQueries());
     assertEquals(10, pathlingContext.getQueryConfiguration().getMaxUnboundTraversalDepth());
+  }
+
+  @Test
+  void testBuildContextWithSchemaConfiguration() {
+    final SchemaConfiguration schemaConfig =
+        SchemaConfiguration.builder()
+            .enableRangeAnnotation(false)
+            .recomputeAnnotations(true)
+            .keepUnrequestedAnnotations(true)
+            .dropUnknownAnnotations(true)
+            .build();
+
+    final PathlingContext pathlingContext =
+        PathlingContext.builder(spark).schemaConfiguration(schemaConfig).build();
+
+    assertEquals(schemaConfig, pathlingContext.getSchemaConfiguration());
+  }
+
+  @Test
+  void testBuildContextWithDefaultSchemaConfiguration() {
+    final SchemaConfiguration schemaConfig =
+        PathlingContext.builder(spark).build().getSchemaConfiguration();
+
+    // Every kind is stored, an annotation already present is kept, one of a kind that is off is
+    // left out, and one Pathling does not compute is kept.
+    assertTrue(schemaConfig.isEnableNumericAnnotation());
+    assertTrue(schemaConfig.isEnableRangeAnnotation());
+    assertTrue(schemaConfig.isEnableCanonicalAnnotation());
+    assertFalse(schemaConfig.isRecomputeAnnotations());
+    assertFalse(schemaConfig.isKeepUnrequestedAnnotations());
+    assertFalse(schemaConfig.isDropUnknownAnnotations());
+  }
+
+  @Test
+  void annotatesStoredResources() {
+    final PathlingContext pathlingContext =
+        PathlingContext.builder(spark)
+            .schemaConfiguration(SchemaConfiguration.builder().dropUnknownAnnotations(true).build())
+            .build();
+    final Dataset<Row> stored =
+        pathlingContext
+            .encode(
+                spark
+                    .createDataset(
+                        List.of(
+                            "{\"resourceType\":\"Patient\",\"id\":\"p1\",\"birthDate\":\"1974-12-25\"}"),
+                        Encoders.STRING())
+                    .toDF(),
+                "Patient")
+            .withColumn("__unknown", functions.lit("u"));
+
+    final Dataset<Row> annotated = pathlingContext.annotate(stored, "Patient");
+
+    // A patient carries no quantity, so the built-in kind has nothing to annotate. The step leaves
+    // out the annotation Pathling does not define, as the configuration says, and changes nothing
+    // else.
+    assertEquals(stored.drop("__unknown").schema(), annotated.schema());
   }
 
   @Test

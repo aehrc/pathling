@@ -175,26 +175,24 @@ class AnnotationFreeSuiteTest {
   /** The annotation slots beside the stored elements of the patient fixtures. */
   private static final List<String> PATIENT_SLOTS =
       List.of(
-          "meta.__lastUpdated_start",
-          "meta.__lastUpdated_end",
-          "name[].period.__start_start",
-          "name[].period.__start_end",
-          "__birthDate_start",
-          "__birthDate_end",
-          "__deceasedDateTime_start",
-          "__deceasedDateTime_end");
+          "meta._lastUpdated.__start",
+          "meta._lastUpdated.__end",
+          "name[].period._start.__start",
+          "name[].period._start.__end",
+          "_birthDate.__start",
+          "_birthDate.__end",
+          "_deceasedDateTime.__start",
+          "_deceasedDateTime.__end");
 
   /** The annotation slots beside the stored elements of the observation fixtures. */
   private static final List<String> OBSERVATION_SLOTS =
       List.of(
-          "__effectiveDateTime_start",
-          "__issued_start",
-          "__valueQuantity_canonical",
-          "__valueQuantity_canonical_exact",
-          "valueQuantity.__value_numeric",
-          "component[].__valueQuantity_canonical",
-          "component[].__valueQuantity_canonical_exact",
-          "component[].valueQuantity.__value_numeric");
+          "_effectiveDateTime.__start",
+          "_issued.__start",
+          "valueQuantity.__canonical_exact",
+          "valueQuantity._value.__numeric",
+          "component[].valueQuantity.__canonical_exact",
+          "component[].valueQuantity._value.__numeric");
 
   @Autowired SparkSession spark;
 
@@ -223,12 +221,14 @@ class AnnotationFreeSuiteTest {
         arguments("Patient", PATIENTS, PATIENT_SLOTS),
         arguments("Observation", OBSERVATIONS, OBSERVATION_SLOTS),
         arguments(
-            "Condition", CONDITIONS, List.of("__onsetAge_canonical", "onsetAge.__value_numeric")),
-        arguments("ChargeItem", CHARGE_ITEMS, List.of("__factorOverride_numeric")),
+            "Condition",
+            CONDITIONS,
+            List.of("onsetAge.__canonical_exact", "onsetAge._value.__numeric")),
+        arguments("ChargeItem", CHARGE_ITEMS, List.of("_factorOverride.__numeric")),
         arguments(
             "RiskAssessment",
             RISK_ASSESSMENTS,
-            List.of("prediction[].__probabilityDecimal_numeric")));
+            List.of("prediction[]._probabilityDecimal.__numeric")));
   }
 
   @ParameterizedTest(name = "{0}")
@@ -304,9 +304,9 @@ class AnnotationFreeSuiteTest {
     // The corpora reach every kind, so their being free of annotations is not an accident of what
     // they happen to populate.
     assertThat(slots)
-        .anyMatch(slot -> slot.endsWith(LayoutFields.NUMERIC_SUFFIX))
-        .anyMatch(slot -> slot.endsWith(LayoutFields.START_SUFFIX))
-        .anyMatch(slot -> slot.endsWith(LayoutFields.CANONICAL_SUFFIX));
+        .anyMatch(slot -> slot.endsWith(LayoutFields.NUMERIC_ANNOTATION))
+        .anyMatch(slot -> slot.endsWith(LayoutFields.START_ANNOTATION))
+        .anyMatch(slot -> slot.endsWith(LayoutFields.CANONICAL_EXACT_ANNOTATION));
     assertThat(annotations).isEmpty();
   }
 
@@ -314,7 +314,9 @@ class AnnotationFreeSuiteTest {
   void scanReportsAnnotationsAtTheTopAndInsideArrays() {
     final Dataset<Row> patients =
         fromJson("Patient", PATIENTS)
-            .withColumn(LayoutFields.startAnnotationName("birthDate"), functions.lit("1974-12-25"));
+            .withColumn(
+                "_birthDate",
+                functions.struct(functions.lit("1974-12-25").alias(LayoutFields.START_ANNOTATION)));
     final Dataset<Row> observations =
         fromJson("Observation", OBSERVATIONS)
             .withColumn(
@@ -323,13 +325,18 @@ class AnnotationFreeSuiteTest {
                     functions.col("component"),
                     component ->
                         component.withField(
-                            LayoutFields.canonicalAnnotationName("valueQuantity"),
-                            functions.lit("0.0005"))));
+                            "valueQuantity",
+                            component
+                                .getField("valueQuantity")
+                                .withField(
+                                    LayoutFields.CANONICAL_EXACT_ANNOTATION,
+                                    functions.lit("0.0005")))));
     final List<String> annotations = new ArrayList<>();
     scan("Patient", patients.schema(), new ArrayList<>(), annotations);
     scan("Observation", observations.schema(), new ArrayList<>(), annotations);
     assertThat(annotations)
-        .containsExactlyInAnyOrder("__birthDate_start", "component[].__valueQuantity_canonical");
+        .containsExactlyInAnyOrder(
+            "_birthDate.__start", "component[].valueQuantity.__canonical_exact");
   }
 
   @Test
@@ -423,8 +430,13 @@ class AnnotationFreeSuiteTest {
       @Nonnull final List<String> slots,
       @Nonnull final List<String> annotations) {
     final List<String> storedNames = Arrays.asList(stored.fieldNames());
+    // A complex element's annotations are fields of its own structure, which is stored where this
+    // is reached, and a primitive's are fields of its metadata group.
     node.entries().stream()
         .filter(LayoutEntry::isAnnotation)
+        .forEach(entry -> slots.add(prefix + entry.getName()));
+    node.entries().stream()
+        .filter(LayoutEntry::isMetadataGroup)
         .filter(
             entry ->
                 entry
@@ -432,7 +444,16 @@ class AnnotationFreeSuiteTest {
                     .map(ElementDefinition::getElementName)
                     .filter(storedNames::contains)
                     .isPresent())
-        .forEach(entry -> slots.add(prefix + entry.getName()));
+        .forEach(
+            group ->
+                node.metadataGroup(group.getName()).orElseThrow().annotationEntries().stream()
+                    .map(
+                        annotation ->
+                            prefix
+                                + group.getName()
+                                + (group.isRepeating() ? "[]." : ".")
+                                + annotation.getName())
+                    .forEach(slots::add));
     for (final StructField field : stored.fields()) {
       final String path = prefix + field.name();
       final Optional<LayoutEntry> entry = node.entry(field.name());

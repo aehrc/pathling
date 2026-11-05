@@ -1,16 +1,26 @@
 # Parquet on FHIR: remaining work
 
 The tickets that take the [specification](../spec.md) from milestone M4 to its
-end state, grouped into five stages. Each stage is a sub-issue of #2367 and is
-delivered as one pull request into `issue/2367`. #2367 is complete when ticket 28
-closes. It is not by itself a release: what the release needs beyond it is raised
-as follow-up issues by ticket 26 (owner, 2026-10-22).
+end state. Each stage is a sub-issue of #2367 and is delivered as one pull
+request into `release/11.0.0`, the integration branch for the 11.0.0 release. #2367 is complete when ticket 28 closes. It is not by
+itself a release: what the release needs beyond it is raised as follow-up
+issues by ticket 26 (owner, 2026-10-22).
 
-Each ticket's `Blocked by:` line is the authority on order. The stages group
-tickets so that each one leaves the integration branch in a coherent state.
-They are not a strict sequence. Ticket 08, the spike, gates stages 3 and 5, so
-it starts during stage 1. Ticket 11 can likewise be settled early, and 26
-collects follow-ups throughout.
+**The re-plan (owner, 2026-11-02).** #2367, even split into five stages, was too
+big for one issue. Its scope is now a core FHIR library that works, is verified
+and well engineered, and matches the functionality of the legacy (Bunsen) line.
+It has one extension, primitive metadata (ticket 17). It also reconciles the
+layout with the Parquet on FHIR specification upstream: the amendments are
+reviewed (ticket 46), agreed with the specification's owner, and Pathling is
+aligned to the outcome before #2367 closes.
+
+Everything else, such as dense mode, the XML sink and the shape of SQL output,
+moves to GitHub issues after #2367. Each is labelled `PoF_line`, with
+`Bunsen_line` where the legacy line has the defect too, and whether it goes into
+a release is decided separately. Stage 4 is finished and merged, and stage 5
+becomes the final stage.
+
+Each ticket's `Blocked by:` line is the authority on order.
 
 ## Stage 1: Retire the old layout (#2829)
 
@@ -63,51 +73,72 @@ Quantity, decimal and date range annotations are emitted and read, each behind
 its own toggle, and their use is decided from the schema. Primitive ids and
 extensions are stored and navigable.
 
-- [11](11-annotation-registry-and-toggles.md) Annotation registry, per-annotation toggles and SchemaConfiguration
-- [12](12-quantity-annotations.md) Quantity annotations, UCUM-only canonicalisation, codegen-fallback measurement
-- [13](13-decimal-annotation.md) Decimal numeric annotation
-- [14](14-date-range-annotation.md) Date range annotation
-- [15](15-schema-decided-plan-test-and-docs.md) Test that annotation use is decided from the schema, and document annotations
+- ~~[11](11-annotation-registry-and-toggles.md) Annotation registry, per-annotation toggles and SchemaConfiguration~~ (done)
+- ~~[12](12-quantity-annotations.md) Quantity annotations, UCUM-only canonicalisation, codegen-fallback measurement~~ (done)
+- ~~[13](13-decimal-annotation.md) Decimal numeric annotation~~ (done)
+- ~~[41](41-system-decimal-38-6.md) Switch System.Decimal to DECIMAL(38,6)~~ (done)
+- ~~[14](14-date-range-annotation.md) Date range annotation~~ (done)
+- [42](42-shared-annotation-computation.md) Reconsider how an annotation kind's shared computation is processed
+- [43](43-lazy-annotation-evaluation.md) Evaluate annotations in the engine only where they are used
 - [17](17-placeholder-primitive-metadata-group.md) PLACEHOLDER: the primitive metadata group (US6, #437)
+- [15](15-schema-decided-plan-test-and-docs.md) Test that annotation use is decided from the schema, and document annotations
 - ~~[34](34-placeholder-content-outside-definitions.md) PLACEHOLDER: Carry content the definitions do not describe through ingest, egress and the engine~~ (moved to a follow-up issue, ticket 26)
 
-Content the definitions do not describe, ticket 34 until 2026-10-22, is outside
-the round-trip invariant and moves to a follow-up issue that ticket 26 raises.
+The remaining tickets run in the order listed (owner, 2026-11-02). 42 and 43
+are one design, chosen by the owner, which settles how annotations flow through
+the engine before anything builds on it. Their plan tests come first, so that
+any change to what tickets 11 to 14 landed shows. 17 is still a placeholder and
+is triaged and rewritten before it is dispatched. 15 comes last, so that its
+plan tests and documentation describe the final shape.
+
 Ticket 17 moved here from stage 3 (owner, 2026-10-23): it extends ticket 11's
 pairing of `x` with `_x` to ids and extensions, and builds on the interim ingest
 of ticket 32.
 
-## Stage 5: Dense mode, measurement, trust and completion (#2833)
+## Stage 5: Verification, reconciliation and completion (#2833)
 
-The dense schema mode matches the fitted one, the benchmark is re-measured
-against the finished layout, the engine's `trust` is documented, the follow-up
-issues are raised, and #2367 is checked complete.
+The amendments to the Parquet on FHIR specification are agreed and Pathling
+matches them, performance is measured against the legacy baseline, the engine's
+`trust` is documented, the follow-up issues are raised, and #2367 is checked
+complete. Re-scoped by the re-plan (owner, 2026-11-02).
 
-- [18](18-dense-mode.md) Dense schema mode and streaming encode
-- [19](19-dense-parity.md) Dense parity
+Reconciling the specification:
+
+- [46](46-review-upstream-amendments.md) Review the proposed amendments to the Parquet on FHIR specification, and summarise them for the specification owner
+- [30](30-pof-spec-layout-column.md) Propose the layout column as an amendment to the Parquet on FHIR specification (raised as aehrc/parquet-on-fhir#2, under review in 46)
+- [35](35-pof-spec-json-projection.md) Propose the JSON projection and its prerequisites as amendments to the Parquet on FHIR specification
+- [44](44-pof-spec-range-type-int96.md) Reconsider keeping INT96 in the range annotations' amendment
+- [45](45-timestamp-type-after-spec.md) Settle the stored timestamp type once the specification is final
+- [29](29-layout-version-column.md) Identify the PoF layout by a versioned layout column
+
+Verification and trust:
+
 - [10](10-benchmark-fix-and-extend.md) Benchmark: fix warm planning, add missing views, re-measure
 - [27](27-usc-bloodpressures-planning-regression.md) Investigate the UsCoreBloodPressures planning regression
-- [31](31-engine-trust-mode.md) The engine runs in `trust`, and conformant data gives correct answers
-- ~~[33](33-engine-layout-tolerance-modes.md) The engine handles non-conformant layout shapes in the same four modes~~ (moved to the follow-up, ticket 26)
-- [26](26-raise-github-followups.md) Raise the GitHub follow-up issues, including non-conformant data beyond `trust`, content the definitions do not describe, and what the release needs
-- [29](29-layout-version-column.md) Identify the PoF layout by a versioned layout column
-- [30](30-pof-spec-layout-column.md) Propose the layout column as an amendment to the Parquet on FHIR specification
-- [39](39-public-xml-sink-and-source.md) A public XML sink and source, over ticket 32's line-delimited XML
-- [35](35-pof-spec-json-projection.md) Propose the JSON projection and its prerequisites as amendments to the Parquet on FHIR specification
-- [16](16-placeholder-ingest-egress-rework.md) DEFERRED: the ingest mechanism, per-value validation and lossless decimals
+- [31](31-engine-trust-mode.md) The engine runs in `trust`, and conformant data gives correct answers (defects the legacy line also has move to GitHub issues)
+
+Follow-ups and completion:
+
+- [26](26-raise-github-followups.md) Raise the GitHub follow-up issues, including everything the re-plan moved out of #2367
+- [36](36-followup-extra-fields.md) Scope the follow-up issue on extra fields: their support, and their place in the conformance levels
 - [28](28-completion-checklist.md) Completion checklist
+- ~~[33](33-engine-layout-tolerance-modes.md) The engine handles non-conformant layout shapes in the same four modes~~ (moved to the follow-up, ticket 26)
 
-Ticket 31 can start at any time, except its decimal criterion,
-which waits for ticket 13. Handling non-conformant data beyond `trust`,
-which 31 and 33 held until 2026-10-22, is the follow-up issue that ticket 26
-raises.
+Ticket 46 starts early, in parallel with stage 4, because #2367 now waits on the
+specification's owner. Tickets 30, 35 and 44 raise or revise nothing upstream
+until 46's review. Tickets 29 and 45 follow the agreement on the layout column
+and on the range annotations' type. Ticket 31 can start at any time.
 
-Tickets 16, 29, 30, 35 and 39 moved here from stage 3 (owner, 2026-10-23). Ticket 29
-adds the layout column to the ingest #2367 delivers, so it follows 32. Until it
-lands, the refusal of the legacy layout rests on the root `id_versioned`. Ticket
-30 can start at any time; 29 takes its name from 30 if 30 is agreed first. Ticket
-39, numbered 36 until 2026-10-23, follows 32, whose `io`-level sink and source it
-exposes. Tickets 29 and 39 both work in `io`, so they run in sequence. Ticket
-35 can start at any time, and #2367 does not wait for its amendments to be
-agreed. Ticket 16 waits on the owner's choice of ingest mechanism (decision 134)
-and on ticket 31; whether #2367 waits for it is decided with that choice.
+## After #2367: GitHub issues
+
+Raised by ticket 26 with the owner's approval, one by one, each linking back to
+its ticket (owner, 2026-11-02).
+
+- [18](18-dense-mode.md) Dense schema mode and streaming encode, and [19](19-dense-parity.md) dense parity: `new feature`, `PoF_line`. Until then, a stream is encoded batch by batch.
+- [39](39-public-xml-sink-and-source.md) A public XML sink and source: `new feature`, `PoF_line`
+- [40](40-sql-output-shape.md) Specify the shape of SQL output, including System types: `enhancement`, `PoF_line`
+- [16](16-placeholder-ingest-egress-rework.md) DEFERRED: the ingest mechanism, per-value validation and lossless decimals: `enhancement`, `PoF_line`
+- [38](38-annotation-fill-per-row.md) Consider deciding the annotation step's *fill* per row: `enhancement`, `PoF_line`
+- Extra fields and their place in the conformance levels, with ticket 36's scope as its text: `enhancement`, `PoF_line`
+- Defects the legacy line also has, from ticket 31, such as `toDate()` not checking the calendar: `bug`, `PoF_line`, `Bunsen_line`
+- The follow-ups ticket 26 already lists

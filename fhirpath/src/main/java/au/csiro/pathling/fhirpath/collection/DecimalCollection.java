@@ -20,7 +20,6 @@ package au.csiro.pathling.fhirpath.collection;
 import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 
 import au.csiro.pathling.definition.NodeDefinition;
-import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
@@ -32,12 +31,12 @@ import au.csiro.pathling.fhirpath.comparison.ColumnComparator;
 import au.csiro.pathling.fhirpath.comparison.Comparable;
 import au.csiro.pathling.fhirpath.comparison.DecimalComparator;
 import au.csiro.pathling.sql.misc.DecimalToLiteral;
+import au.csiro.pathling.utilities.SystemDecimal;
 import jakarta.annotation.Nonnull;
 import java.math.BigDecimal;
 import java.util.Optional;
 import java.util.function.Function;
 import org.apache.spark.sql.Column;
-import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.DecimalType;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
@@ -48,10 +47,6 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  */
 public class DecimalCollection extends Collection
     implements Comparable, Numeric, StringCoercible, Materializable {
-
-  /** The Spark SQL decimal type used for FHIR decimal values. */
-  public static final org.apache.spark.sql.types.DecimalType DECIMAL_TYPE =
-      DataTypes.createDecimalType(DecimalCustomCoder.precision(), DecimalCustomCoder.scale());
 
   /**
    * Creates a new DecimalCollection.
@@ -133,10 +128,12 @@ public class DecimalCollection extends Collection
   public static BigDecimal parseLiteral(final @Nonnull String literal) {
     final BigDecimal value = new BigDecimal(literal);
 
-    if (value.precision() > DecimalCollection.getDecimalType().precision()) {
+    // A literal with more integer digits than the type holds would become null wherever it is cast
+    // to the type. Together with the scale, this also bounds the literal's precision.
+    if (value.precision() - value.scale() > SystemDecimal.INTEGER_DIGITS) {
       throw new InvalidUserInputError(
-          "Decimal literal exceeded maximum precision supported ("
-              + DecimalCollection.getDecimalType().precision()
+          "Decimal literal exceeded maximum integer digits supported ("
+              + SystemDecimal.INTEGER_DIGITS
               + "): "
               + literal);
     }
@@ -151,43 +148,30 @@ public class DecimalCollection extends Collection
   }
 
   /**
-   * Decodes a stored decimal to the type the engine computes with, {@code DECIMAL(32,6)} (FR-035).
-   *
-   * <p>A decimal is stored as text, in the lexical form of a FHIR decimal. A value with more
-   * fractional digits than the type holds is rounded, and one beyond its range is null. The cast is
-   * a safe one, so the result does not depend on the session's ANSI setting.
-   *
-   * @param stored the stored decimal, or array of decimals, as text
-   * @return the decimal, or array of decimals, as {@code DECIMAL(32,6)}
-   */
-  @Nonnull
-  public static ColumnRepresentation decode(@Nonnull final ColumnRepresentation stored) {
-    return stored.elementTryCast(DECIMAL_TYPE);
-  }
-
-  /**
-   * Gets the decimal data type used for representing decimal values in Spark.
+   * Gets the decimal data type used for representing decimal values in Spark, which is the type of
+   * the engine's System.Decimal, {@link SystemDecimal#TYPE}.
    *
    * @return the {@link org.apache.spark.sql.types.DataType} used for representing decimal values in
    *     Spark
    */
+  @Nonnull
   public static org.apache.spark.sql.types.DecimalType getDecimalType() {
-    return DECIMAL_TYPE;
+    return SystemDecimal.TYPE;
   }
 
   /**
-   * Returns this collection with its values as {@code DECIMAL(32,6)}, so that decimals of different
-   * precisions share one SQL type and can be held in one array.
+   * Returns this collection with its values as {@link SystemDecimal#TYPE}, so that decimals of
+   * different precisions share one SQL type and can be held in one array.
    *
    * <p>The cast is a safe one, so an out-of-range value yields null rather than raising under ANSI
    * mode, independent of the session-wide setting. It keeps the cardinality of the collection.
    *
-   * @return this collection, with its values as {@code DECIMAL(32,6)}
+   * @return this collection, with its values as {@link SystemDecimal#TYPE}
    */
   @Override
   @Nonnull
   public DecimalCollection withSharedSqlType() {
-    return copyWith(getColumn().elementTryCast(DECIMAL_TYPE));
+    return copyWith(getColumn().elementTryCast(getDecimalType()));
   }
 
   @Override
@@ -205,7 +189,7 @@ public class DecimalCollection extends Collection
 
       return switch (operation) {
         case ADDITION, SUBTRACTION, MULTIPLICATION, DIVISION, MODULUS -> {
-          // Safe cast so a result that overflows DECIMAL(32,6) yields NULL rather than raising
+          // Safe cast so a result that overflows System.Decimal yields NULL rather than raising
           // under ANSI mode, independent of the session-wide setting.
           result = result.try_cast(getDecimalType());
           yield DecimalCollection.build(new DefaultRepresentation(result));

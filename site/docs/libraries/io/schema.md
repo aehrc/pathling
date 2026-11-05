@@ -74,7 +74,8 @@ A decimal read from XML is stored as the text the source used.
 
 If you query decimals directly, parse them as numbers rather than comparing
 their text. Pathling's own queries decode the text to a decimal with a
-precision of 32 and a scale of 6.
+precision of 38 and a scale of 6, the type the specification gives the numeric
+annotation of a decimal. A decimal column in a query's output has this type.
 
 ### What is not stored
 

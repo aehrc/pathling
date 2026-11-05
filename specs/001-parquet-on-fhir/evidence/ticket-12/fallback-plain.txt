@@ -1,0 +1,11 @@
+ROWS 1000000
+COST wholeStage=true best=58ms mean=64ms rows=723800 :: q.value > 5.5
+COST wholeStage=true best=589ms mean=614ms rows=148200 :: q > 50
+COST wholeStage=false best=592ms mean=596ms rows=0 :: q = 50
+COST wholeStage=false best=584ms mean=587ms rows=233700 :: q != 50
+COST wholeStage=false best=755ms mean=759ms rows=233700 :: (q = 50).not()
+COST wholeStage=false best=255ms mean=264ms rows=21500 :: coding
+COST wholeStage=false best=274ms mean=277ms rows=21500 :: coding and q > 50
+COST wholeStage=false best=275ms mean=281ms rows=0 :: coding and q = 50
+COST wholeStage=false best=277ms mean=278ms rows=21500 :: coding and q != 50
+COST wholeStage=false best=296ms mean=297ms rows=21500 :: coding and (q = 50).not()

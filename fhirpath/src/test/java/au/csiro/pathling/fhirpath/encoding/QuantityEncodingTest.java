@@ -21,9 +21,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import au.csiro.pathling.fhirpath.FhirPathQuantity;
+import au.csiro.pathling.fhirpath.unit.CalendarDurationUnit;
+import au.csiro.pathling.fhirpath.unit.UcumUnit;
+import au.csiro.pathling.schema.annotation.kinds.QuantityCanonicalKind;
+import au.csiro.pathling.sql.types.FlexiDecimal;
 import jakarta.annotation.Nullable;
 import java.math.BigDecimal;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema;
 import org.apache.spark.sql.types.DataTypes;
@@ -109,5 +115,28 @@ class QuantityEncodingTest {
   @Test
   void nullRowDecodesToNull() {
     assertThat(QuantityEncoding.decode(null)).isNull();
+  }
+
+  @Test
+  void theExactCanonicalValueIsAFlexibleDecimal() {
+    // The comparison reads the value of the exact annotation with the functions of FlexiDecimal,
+    // which read it by position, and the annotation is defined in a module that cannot see it.
+    assertThat(QuantityCanonicalKind.EXACT_VALUE_TYPE).isEqualTo(FlexiDecimal.DATA_TYPE);
+  }
+
+  @Test
+  void theKindSharesTheEnginesSystemsAndCalendarDurations() {
+    // The engine's units take their systems and which durations are definite from the annotation,
+    // but each unit's UCUM equivalent is its own.
+    assertThat(QuantityCanonicalKind.UCUM_SYSTEM).isEqualTo(UcumUnit.UCUM_SYSTEM_URI);
+    assertThat(QuantityCanonicalKind.CALENDAR_DURATION_SYSTEM)
+        .isEqualTo(CalendarDurationUnit.FHIRPATH_CALENDAR_DURATION_SYSTEM_URI);
+    assertThat(QuantityCanonicalKind.DEFINITE_CALENDAR_DURATIONS)
+        .isEqualTo(
+            Stream.of(CalendarDurationUnit.values())
+                .filter(CalendarDurationUnit::isDefinite)
+                .collect(
+                    Collectors.toMap(
+                        CalendarDurationUnit::code, CalendarDurationUnit::getUcumEquivalent)));
   }
 }

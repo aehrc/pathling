@@ -1,5 +1,7 @@
 # 16 — DEFERRED: the ingest mechanism, per-value validation and lossless decimals
 
+> **Moved after #2367 (owner, 2026-11-02).** This ticket becomes a GitHub issue raised by ticket 26, and is not dispatched within #2367. See this ticket's comments.
+
 **Spec:** `specs/001-parquet-on-fhir/spec.md` — OQ-1, FR-002, FR-016, FR-019, FR-049, FR-050, FR-060, FR-063, SC-011. Decisions 133 and 134. Old task: T078e. T124c is likely made moot.
 
 **What to build:** The ingest and egress mechanism ticket 08 measured, chosen and built, so that ingest meets decision 133's per-value scope and removes OQ-1's losses. Decision 134 deferred the choice until the owner has settled the requirements with colleagues: how much of decision 133's per-value scope is needed, and how much code the project is willing to own for it. Until then, ingest runs on the interim of decision 134, and ticket 32 takes XML and bundles off HAPI.
@@ -80,3 +82,7 @@ to read, from NDJSON and from a bundle alike, in Spark's schema inference. The b
 reads the text of values that resolution does not need, so a large resource of a type not asked for no longer fails
 the bundle. Whichever mechanism this rework chooses should settle the limit: lift it, at the risk of one huge
 string exhausting an executor's memory, make it a reader setting, or keep it as a stated exception.
+
+### Moved after #2367 (owner, 2026-11-02)
+
+The re-plan limits #2367 to a core library that matches the legacy line, with primitive metadata as its one extension. This ticket becomes a GitHub issue, raised by ticket 26 and labelled `enhancement` and `PoF_line`, and whether it goes into a release is decided separately.
