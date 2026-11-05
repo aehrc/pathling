@@ -4620,7 +4620,10 @@ _Rejected_:
 - **`TIMESTAMP_NTZ`.** It writes `isAdjustedToUTC=false`, and forces every Delta table to reader version 3
   and writer version 7 with the `timestampNtz` feature (probed by the coordinator with Delta 4.0.0). Comparing
   it with a `TIMESTAMP` shifts it by the session's time zone.
-- **`INT96`**, Spark's default. It never gets statistics or predicate pushdown.
+- **`INT96`**, Spark's default. It never gets statistics or predicate pushdown. _Measured later
+  (2026-11-03, `annotations-design-pushdown.md`): `INT96` writes no min/max statistics, so no row group is
+  skipped, although `PushedFilters` still lists the predicate as for `TIMESTAMP_MICROS`. The rejection
+  stands; only the rows scanned show it._
 
 _Consequences_:
 
@@ -4659,3 +4662,160 @@ _Not taken now_:
 - **A representation carrying a value column beside a metadata column** for every primitive. It would widen
   `DefaultRepresentation`'s purpose. Ticket 17, which needs `x` paired with `_x` to filter on a primitive's
   extensions, decides that pairing under this decision.
+
+## 140. The engine relies on Spark's optimiser, and does not shape elements by use
+
+Owner decisions (2026-11-04), from the annotations design (`design/annotations-in-the-engine.md`). The full
+record, with the options weighed and every step, is `annotations-decision-record.md` (rows P0 and L1).
+Evidence: `annotations-design-rewrites-layer1.md`, `annotations-design-spark-4-3-upstream-pruning.md`,
+`annotations-design-lambda-pruning-rule.md`.
+
+_Decision_:
+
+- **P0: leverage the SQL engine's own optimiser as much as possible.** The planner emits plan shapes that
+  Spark can prune and push down. It does no FHIRPath-level analysis of which fields an expression uses.
+  This is strongly preferred, not absolute.
+- **L1, building an element from only the fields an expression uses, is not built now.** The extra reads it
+  would avoid are accepted. The engine waits for upstream Spark (SPARK-34956 for multi-field and `Inline`),
+  with Pathling's own optimiser rule (decision 143) as the fallback. The measurement that L1 would close
+  views on Spark 4.3 and later stays on file in `annotations-design-rewrites-layer1.md`.
+
+## 141. A primitive's engine element carries its value and its named annotations
+
+Owner decisions (2026-11-04). Record rows D2 and D14. Evidence: `annotations-design-singular-meta-pruning.md`.
+
+_Decision_:
+
+- **D2: the element is the value plus the named annotation fields that are stored.** It does not carry the
+  raw `_x` group. On 1M Patients, the raw group read 182.4 MB against 17.6 MB for the named fields. Because
+  L1 is not built (decision 140), the element's content is fixed, not chosen per expression.
+- **D14: a primitive's `id` and `extension` are behind a switch, off by default.** When it is off, the engine
+  behaves as if `_x.id` and `_x.extension` were absent from the JSON: navigating to them gives empty, not an
+  error. When it is on, every element carries them, at a cost only to the users who opt in. Annotations are
+  never switched off.
+
+_Consequences_: `design/annotations-in-the-engine.md` §4.1 and §4.2 still describe `meta` as the raw stored
+`_x` element, and are to be brought in line.
+
+## 142. How a primitive converts, merges and leaves the engine
+
+Owner acceptance (2026-11-04) of rules that follow from decision 141. Record rows D8, D9 and D10.
+
+_Decision_:
+
+- **D8: FHIR to System conversion keeps the stored annotation fields** and drops `id` and `extension`
+  (`resolve_or_none`). It computes nothing.
+- **D9: merging different shapes intersects the annotations.** A merge keeps only the annotation fields
+  every operand has; the rest are computed on demand. With D14 on, `id` and `extension` are unioned for a
+  FHIR result, because they take part in deduplication.
+- **D10: a primitive leaves the engine as its value only,** in views and `$fhirpath`, in both D14 modes. Its
+  extensions leave only through an explicit `extension()`.
+
+## 143. Pruning on the PoF layout comes from the plan's shape; Pathling's own rule is a separate experiment
+
+Owner decisions (2026-11-04), amended 2026-11-05. Record rows L2 and D3. Evidence:
+`annotations-design-rewrites-layer1.md`, `annotations-design-pairing-shapes.md`,
+`annotations-design-project-before-generate.md`, `annotations-design-project-before-generate-databricks.md`,
+`annotations-design-lambda-pruning-rule.md`, `annotations-design-lambda-pruning-databricks.md`,
+`spark-4-3-compatibility.md`.
+
+_Decision_:
+
+- **L2: the engine emits shapes that Spark prunes.** It computes first, then generates; it rewrites
+  existence tests (`exists()`, `count()` and multi-column `where`) into the forms checked as (a); and it pairs
+  `x` with `_x` as `arrays_zip` of the extracted leaves (pairing shape (c)), with `coalesce(x, array())`
+  guards on extracted arrays and never around `transform`. Tests assert the plan's shape and equal results,
+  in CI on Spark 4.0.2, and assert the read schema once Pathling builds on Spark 4.3 or later.
+- **Known exceptions:** a singular annotated output reads its annotations; `period.start` reads `_start`;
+  a repeating primitive below a repeating parent reads `_x` whole (about 16x, on Spark 4.3); Spark 4.0 to 4.2
+  and Databricks Runtime 17.3 prune nothing inside lambdas.
+- **D3b, Pathling's own optimiser rule, is not a remedy for H1** (owner, 2026-11-05). It is a separate
+  optimisation experiment, tried regardless, as a bonus (ticket 26 on `issue/2832`). A regression against
+  10.x in the benchmark (ticket 10) is investigated and fixed in 11 itself. This supersedes the trigger
+  recorded on 2026-11-04 and its update of 2026-11-05 ("an H1 breach on Spark 4.1").
+- **D3c is rejected,** under P0.
+
+_Consequences_: release 11 follows the latest Databricks LTS runtime, most likely Databricks Runtime 18 LTS
+on Spark 4.1 (GitHub #2879). Nothing was measured on Spark 4.1; by analogy to 4.0.2, where these shapes
+prune 4 of 26 spike views, they are expected to prune little there.
+
+## 144. A date-bound filter keeps a plain superset conjunct for pushdown
+
+Owner decision (2026-11-03). Record row D11. Evidence: `annotations-design-pushdown.md`.
+
+_Decision_: a comparison that is empty where it cannot compare is emitted beside a plain superset conjunct
+over the stored column, such as `CASE WHEN canCompare THEN start >= ts END AND __end >= ts`. Spark pushes the
+plain conjunct and keeps the `CASE` as a residual filter, so the answer is unchanged and row groups are
+skipped. Grouped and flat placements of the bounds skip alike.
+
+## 145. Shared annotation computation is memoised, not grouped
+
+Owner decision. Record row D7. Evidence: `annotations-design-memoisation.md`.
+
+_Decision_: each annotation is its own scalar computation over a memoised parse, in a least-recently-used
+cache per thread, rather than grouped so that one parse serves several annotations. Grouping would let the
+computation decide the layout (ticket 42). The cache size is an implementation detail.
+
+## 146. One stored layout, read through named accessors
+
+Owner decision (2026-11-04). Record row D12. Evidence: `annotations-design-zipped-layout.md`,
+`annotations-design-cached-source.md`.
+
+_Decision_: release one layout, the PoF layout, read through named value and annotation accessors at
+traversal, as today. There is no work now on a pre-zipped internal form or on consolidating the seam; no
+performance difference was shown. The zipped layout is proposed to the specification's owner as an
+alternative PoF storage layout (decision 149).
+
+## 147. A System decimal is a number, and a stored decimal's text reaches views only
+
+Owner decisions (2026-11-04 and 2026-11-05). Record row D13 and items 6 and 6b. Amends nothing in force;
+ticket 16 carries the output change.
+
+_Decision_:
+
+- **System.Decimal is the number only,** `DECIMAL(38,6)`. Its text is not kept as an annotation. A FHIR
+  decimal's element keeps its stored text as `value`, with `__numeric` beside it.
+- **Stored and computed decimals are told apart by type,** from the collection's definition, as Quantity
+  already does: a traversed `valueDecimal` is stored; a literal, arithmetic, `toDecimal()` and integer
+  promotion are computed; `where`, `first` and `distinct` keep the definition; a union is stored only if
+  every operand is. Keys and comparisons stay numeric, so `1.0 = 1.00` is true. The detection is built now.
+- **Output, by path.** A view column is already a string, the `DECIMAL(38,6)` value as text with trailing
+  zeros trimmed (decision 76, as amended). Once ticket 16 keeps a decimal's lexical form, a stored decimal is
+  output in a view as its stored text; the column stays a string and only values change. `toString()` on a
+  stored decimal returns its text. `fhirPathToColumn` and `$fhirpath` stay `DECIMAL(38,6)` for every
+  decimal (owner, 2026-11-05); what they return is ticket 40's to specify.
+
+_Correction_: the decision record first rested on "a view outputs a decimal as `DECIMAL(38,6)`", taken from
+ticket 41's documentation. The code never did; see ticket 41's comment of 2026-11-05.
+
+## 148. Presence-driven algorithm choice is deferred
+
+Owner decision (2026-11-04), clarified 2026-11-05. Record row P1.
+
+_Decision_: an algorithm chosen per row by which annotations are present (for example, a string-hash
+accelerator) is deferred until such an annotation is proposed. The owner's clarification: it can be handled
+per System type, by the fields each type requires. In System types these are first-class fields, not
+annotations: System.Date requires `__start` and `__end`; System.String may have an optional `__hash`.
+Conversion from FHIR fills a required field from the stored annotation, or computes it, and sets an
+optional one to null when nothing is stored. This departs from decision 142's D8, and the follow-up issue
+must reconcile the two. To be raised as a follow-up issue through ticket 26.
+
+## 149. Recommended storage layout, awaiting the specification's owner
+
+Not a decision. These are Pathling's recommendations to the owner of the Parquet on FHIR specification, who
+decides them (ticket 46). The engine is designed against them meanwhile (owner, 2026-11-05). Record rows
+D4, D5 and D6. Evidence: `annotations-layout-assessment.md`, `annotations-design-zipped-layout.md`,
+`annotations-design-quantity-root.md`, `annotations-design-d3a-complex-sketch.md`,
+`scripts/annotations-design/`.
+
+_Recommended_:
+
+- **D4, where annotations are stored: inside `_x`,** as fields after `id` and `extension`. On format alone
+  it is practically tied with a sibling `__x`; parent-level is third; zipped is last, because a value-only
+  read below a repeating parent costs about 79x on every Spark version measured, with no known fix. Inside
+  `_x` costs about 14x for an annotation read below a repeating parent, which on Spark 4.3 only a custom rule
+  is expected to fix.
+- **D5: flat annotation fields,** not grouped. No measured difference.
+- **D6, the quantity's canonical form: a flat code and an exact value,** optionally with a fixed-scale value
+  beside it for row-group skipping. Proposed with it: two equal quantities SHALL have byte-equal canonical
+  values, which makes stripping trailing zeros on the canonical path a Pathling release requirement.
