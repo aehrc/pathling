@@ -19,15 +19,25 @@
 
 **A recorded deviation (owner, 2026-10-26).** FHIRPath requires a Decimal to provide at least the range (-10^28+1)/10^8 to (10^28-1)/10^8 with a step of 10^-8, so 8 fractional digits (`DECIMAL(28,8)`). `DECIMAL(38,6)` covers the range but keeps 6 fractional digits, as `DECIMAL(32,6)` does today. Record this as a known deviation in the specification. Whether to move to `DECIMAL(38,8)`, with an upstream proposal for the annotation's type, is a follow-up issue that ticket 26 raises.
 
-**Blocked by:** 13
+**A stored decimal's text in views (owner, 2026-11-05, decision 147).** Added after the ticket was done, so it is open again. A view outputs a stored decimal as its stored text, and a computed one as today, the `DECIMAL(38,6)` value as text with trailing zeros trimmed. The column stays a string. `fhirPathToColumn` and `$fhirpath` stay `DECIMAL(38,6)` for every decimal; ticket 40 specifies what they return.
 
-**Status:** done
+- **Detect stored and computed decimals by type,** from the collection's definition, as Quantity does (`QuantityCollection.holdsStoredQuantities`, `CombiningLogic.holdsStoredStructures`). A traversed `valueDecimal` is stored. A literal, arithmetic, `toDecimal()` and integer promotion are computed. `where`, `first` and `distinct` keep the definition. A union is stored only if every operand is: today it takes the first operand's definition.
+- **Test the union in both orders.** `valueDecimal | 1.5` and `1.5 | valueDecimal` give the same result.
+- **`toString()` on a stored decimal returns its text.** Keys and comparisons stay numeric, so `1.0 = 1.00` is true and `(1.0 | 1.00)` is one element.
+- **Sequence the output with ticket 16.** Build the detection now. The views' switch to stored text lands with ticket 16, which keeps a decimal's lexical form; until then JSON ingest normalises the text, so `37.0` can be stored as `37`.
+
+**Blocked by:** 13. The views' switch to stored text: 16.
+
+**Status:** ready-for-agent
 
 - [x] System.Decimal is `DECIMAL(38,6)`, defined once, and `DecimalCustomCoder` stays `DECIMAL(32,6)`.
 - [x] Every engine use of a decimal type takes System.Decimal's, and `__numeric` is stored at `DECIMAL(38,6)`.
 - [x] A quantity's value is read from its numeric annotation where the schema carries it, with FR-059 amended, and gives the same results as decoding the text.
 - [x] Each changed test expectation is approved by the owner before it is changed.
 - [x] The output type change is documented, and the 8-digit deviation is recorded in the specification.
+- [ ] Stored and computed decimals are told apart by the collection's definition, and a union is stored only if every operand is; `valueDecimal | 1.5` and `1.5 | valueDecimal` give the same result.
+- [ ] `toString()` on a stored decimal returns its text, and keys and comparisons stay numeric.
+- [ ] With ticket 16, a view outputs a stored decimal as its stored text, and `fhirPathToColumn` and `$fhirpath` still return `DECIMAL(38,6)`.
 
 ## Comments
 
