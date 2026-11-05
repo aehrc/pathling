@@ -31,7 +31,6 @@ import au.csiro.pathling.operations.sql.SuppliedArtefacts;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import jakarta.annotation.Nonnull;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.StringType;
@@ -65,7 +64,8 @@ class RequestViewResolutionTest {
                   au.csiro.pathling.views.FhirView.columns(
                       au.csiro.pathling.views.FhirView.column("id", "id")))
               .build();
-      final SuppliedArtefacts artefacts = SuppliedArtefacts.ofViews(Map.of(PATIENTS_URL, supplied));
+      final SuppliedArtefacts artefacts =
+          SuppliedArtefacts.of(List.of(SuppliedArtefact.ofView(PATIENTS_URL, null, supplied)));
 
       final Optional<SuppliedArtefact> matched = artefacts.match(PATIENTS_URL, null);
 

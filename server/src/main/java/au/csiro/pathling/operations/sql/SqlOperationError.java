@@ -122,8 +122,9 @@ public final class SqlOperationError {
    *
    * <p>Any other failure returns null and must be rethrown as it is, so that the unwrapping and
    * per-type conversions of {@code ErrorHandlingInterceptor} still see it. A runtime error raised
-   * by the terminal consumer arrives that way, and stays a {@code 500}: it fires once the response
-   * may already be committed, where the status can no longer be rewritten.
+   * while the terminal consumer evaluates the result arrives that way, and is converted like any
+   * other failure provided no rows have been written yet; once they have, the status is committed
+   * and can no longer be rewritten.
    *
    * @param subjectName the name of the subject at fault, or null where the request admits only one
    *     subject and there is nothing to disambiguate
@@ -196,6 +197,23 @@ public final class SqlOperationError {
         BaseServerResponseException.newInstance(statusCode, message);
     exception.setOperationOutcome(outcomeOf(issues));
     return exception;
+  }
+
+  /**
+   * Builds a {@code 500 Internal Server Error} carrying {@code issue.code = processing} and no
+   * expression, for a server-side fault such as an external table that cannot be read.
+   *
+   * <p>No cause is attached, deliberately. {@code ErrorHandlingInterceptor} unwraps an {@code
+   * InternalErrorException} to its cause and reprocesses that instead, which would discard this
+   * message and its {@code OperationOutcome}; with no cause the exception passes through unchanged.
+   * Callers that hold an underlying exception should log it before throwing.
+   *
+   * @param message the diagnostics message
+   * @return the exception to throw
+   */
+  @Nonnull
+  public static BaseServerResponseException internalError(@Nonnull final String message) {
+    return of(500, List.of(issue(IssueType.PROCESSING, null, message)));
   }
 
   /**

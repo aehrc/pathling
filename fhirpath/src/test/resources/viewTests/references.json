@@ -165,7 +165,7 @@
         },
         {
           "id": "o4",
-          "subject_key": "Patient/p2/_history/3"
+          "subject_key": "Patient/p2"
         },
         {
           "id": "o5",
@@ -214,7 +214,7 @@
         },
         {
           "id": "o4",
-          "patient_key": "Patient/p2/_history/3",
+          "patient_key": "Patient/p2",
           "device_key": null
         },
         {

@@ -315,10 +315,11 @@ class ShapeReconciliationTest {
   @Test
   void itemsAtTwoDepthsDoNotCompare() {
     // An item has no FHIRPath type, and the engine does not support equality of such a type. It
-    // says so before any shape is consulted, so this is not a reconciliation failure.
+    // says so before any shape is consulted, so this is not a reconciliation failure. The operator
+    // rethrows a user error as it is, rather than wrapped.
     assertThatThrownBy(
             () -> evaluate(questionnaires, ResourceType.QUESTIONNAIRE, "item.item.first() in item"))
-        .hasRootCauseInstanceOf(UnsupportedFhirPathFeatureError.class);
+        .isInstanceOf(UnsupportedFhirPathFeatureError.class);
   }
 
   /**

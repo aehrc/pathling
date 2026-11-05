@@ -17,28 +17,51 @@
 
 package au.csiro.pathling.fhirpath.operator;
 
+import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.EmptyCollection;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
 import jakarta.annotation.Nonnull;
+import org.apache.spark.sql.Column;
+import org.apache.spark.sql.types.DataTypes;
 
-/** Operations for subsetting collections by index. */
+/**
+ * Operations for subsetting collections by index.
+ *
+ * @author John Grimes
+ */
 public class SubsettingOperations {
 
   private SubsettingOperations() {}
 
   /**
-   * Returns a singleton collection containing the element at the specified index.
+   * Returns a collection containing the element at the specified zero-based index, or an empty
+   * collection if the index is empty or lies outside the bounds of the subject.
    *
    * @param subject The collection to index
-   * @param index The index to use
-   * @return A singleton collection containing the element at the specified index
+   * @param index The index to use, which must be a singular Integer
+   * @return A collection containing the element at the specified index, or an empty collection
+   * @throws InvalidUserInputError if the index is not an Integer
    * @see <a href="https://hl7.org/fhirpath/#index-integer-collection">Indexer operation</a>
    */
   @FhirPathOperator(name = "[]")
   @Nonnull
   public static Collection index(
-      @Nonnull final Collection subject, @Nonnull final IntegerCollection index) {
-    // A non-singular subject yields the element at the index, and a singular one itself.
-    return subject.map(rep -> rep.elementAt(index.getColumnValue()));
+      @Nonnull final Collection subject, @Nonnull final Collection index) {
+    if (index instanceof EmptyCollection) {
+      return EmptyCollection.getInstance();
+    }
+    if (!(index instanceof IntegerCollection)) {
+      throw new InvalidUserInputError("Indexer operator requires an Integer index");
+    }
+    // A computed index such as `count() - 1` is a long, while `get` requires an int. An index
+    // beyond the int range is out of bounds anyway, so try_cast turning it into null (and the
+    // result into empty) is correct.
+    final Column indexValue =
+        index
+            .asSingular("Indexer operator requires a singular index")
+            .getColumnValue()
+            .try_cast(DataTypes.IntegerType);
+    return subject.map(rep -> rep.elementAt(indexValue));
   }
 }

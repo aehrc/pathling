@@ -26,6 +26,7 @@ import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_LANGUAGE;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_PROPERTY_CODE;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_SOURCE_DENSE_ID;
+import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_SYSTEM_VERSION_ID;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_TARGET_CODE;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_TARGET_DENSE_ID;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_TERM;
@@ -54,12 +55,16 @@ import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructType;
 
 /**
- * Manages the transient NDJSON staging files produced while streaming one CodeSystem to disk. Each
- * of the six staging files (concepts, descriptions, scalar properties, Coding-valued properties,
+ * Manages the transient NDJSON staging files produced while streaming CodeSystems to disk. Each of
+ * the six staging files (concepts, descriptions, scalar properties, Coding-valued properties,
  * nesting-derived edges, and property-derived edges) is written line by line by the flattener, then
  * read back by the stage loader through an explicit Spark schema. All files live in a single
  * driver-local temporary directory that is deleted when the staging is closed, on both the success
  * and failure paths.
+ *
+ * <p>Every CodeSystem of an import is staged into the same files, each row carrying the system
+ * version of the CodeSystem it belongs to, so the loader writes each store table once for the whole
+ * import rather than once per CodeSystem.
  *
  * <p>The columns of each staging file are a subset of the store schema (the store's SNOMED-only
  * columns and the resolved dense identifiers of code-keyed references are supplied later by the
@@ -105,6 +110,7 @@ public class CodeSystemStaging implements AutoCloseable {
 
   @Nonnull private final Path directory;
   @Nonnull private final Map<String, JsonGenerator> generators = new LinkedHashMap<>();
+  @Nullable private String systemVersionId;
   private boolean sealed;
 
   private CodeSystemStaging(@Nonnull final Path directory) {
@@ -151,12 +157,32 @@ public class CodeSystemStaging implements AutoCloseable {
     return generator;
   }
 
+  /**
+   * Starts a row of a staging file, opening its object and writing the system version of the
+   * CodeSystem being staged.
+   */
   @Nonnull
-  private JsonGenerator generator(@Nonnull final String file) {
+  private JsonGenerator startRow(@Nonnull final String file) throws IOException {
     if (sealed) {
       throw new IllegalStateException("Staging has been sealed for reading and cannot be appended");
     }
-    return generators.get(file);
+    if (systemVersionId == null) {
+      throw new IllegalStateException("No CodeSystem has been begun in the staging");
+    }
+    final JsonGenerator generator = generators.get(file);
+    generator.writeStartObject();
+    generator.writeStringField(COLUMN_SYSTEM_VERSION_ID, systemVersionId);
+    return generator;
+  }
+
+  /**
+   * Starts the rows of the next CodeSystem. Every row appended until the next call carries this
+   * system version, so several CodeSystems can be staged together and loaded at once.
+   *
+   * @param systemVersionId the system version the following rows belong to
+   */
+  public void beginCodeSystem(@Nonnull final String systemVersionId) {
+    this.systemVersionId = systemVersionId;
   }
 
   /**
@@ -175,8 +201,7 @@ public class CodeSystemStaging implements AutoCloseable {
       final boolean defined,
       @Nonnull final String display) {
     try {
-      final JsonGenerator generator = generator(FILE_CONCEPT);
-      generator.writeStartObject();
+      final JsonGenerator generator = startRow(FILE_CONCEPT);
       generator.writeStringField(COLUMN_CODE, code);
       generator.writeNumberField(COLUMN_DENSE_ID, denseId);
       generator.writeBooleanField(COLUMN_ACTIVE, active);
@@ -204,8 +229,7 @@ public class CodeSystemStaging implements AutoCloseable {
       @Nullable final String typeCode,
       @Nullable final String typeSystem) {
     try {
-      final JsonGenerator generator = generator(FILE_DESCRIPTION);
-      generator.writeStartObject();
+      final JsonGenerator generator = startRow(FILE_DESCRIPTION);
       generator.writeNumberField(COLUMN_CONCEPT_DENSE_ID, conceptDenseId);
       writeNullableString(generator, COLUMN_TERM, term);
       writeNullableString(generator, COLUMN_LANGUAGE, language);
@@ -231,8 +255,7 @@ public class CodeSystemStaging implements AutoCloseable {
       @Nonnull final String valueType,
       @Nonnull final String value) {
     try {
-      final JsonGenerator generator = generator(FILE_PROPERTY);
-      generator.writeStartObject();
+      final JsonGenerator generator = startRow(FILE_PROPERTY);
       generator.writeNumberField(COLUMN_CONCEPT_DENSE_ID, conceptDenseId);
       generator.writeStringField(COLUMN_PROPERTY_CODE, propertyCode);
       generator.writeStringField(COLUMN_VALUE_TYPE, valueType);
@@ -255,8 +278,7 @@ public class CodeSystemStaging implements AutoCloseable {
       @Nonnull final String propertyCode,
       @Nonnull final String targetCode) {
     try {
-      final JsonGenerator generator = generator(FILE_CODING_PROPERTY);
-      generator.writeStartObject();
+      final JsonGenerator generator = startRow(FILE_CODING_PROPERTY);
       generator.writeNumberField(COLUMN_SOURCE_DENSE_ID, sourceDenseId);
       generator.writeStringField(COLUMN_PROPERTY_CODE, propertyCode);
       generator.writeStringField(COLUMN_TARGET_CODE, targetCode);
@@ -274,8 +296,7 @@ public class CodeSystemStaging implements AutoCloseable {
    */
   public void appendDenseEdge(final int sourceDenseId, final int targetDenseId) {
     try {
-      final JsonGenerator generator = generator(FILE_EDGE_DENSE);
-      generator.writeStartObject();
+      final JsonGenerator generator = startRow(FILE_EDGE_DENSE);
       generator.writeNumberField(COLUMN_SOURCE_DENSE_ID, sourceDenseId);
       generator.writeNumberField(COLUMN_TARGET_DENSE_ID, targetDenseId);
       generator.writeEndObject();
@@ -295,8 +316,7 @@ public class CodeSystemStaging implements AutoCloseable {
   public void appendCodeEdge(
       final int knownDenseId, @Nonnull final String knownRole, @Nonnull final String otherCode) {
     try {
-      final JsonGenerator generator = generator(FILE_EDGE_BY_CODE);
-      generator.writeStartObject();
+      final JsonGenerator generator = startRow(FILE_EDGE_BY_CODE);
       generator.writeNumberField(COLUMN_KNOWN_DENSE_ID, knownDenseId);
       generator.writeStringField(COLUMN_KNOWN_ROLE, knownRole);
       generator.writeStringField(COLUMN_OTHER_CODE, otherCode);
@@ -400,7 +420,7 @@ public class CodeSystemStaging implements AutoCloseable {
    */
   @Nonnull
   public static StructType conceptSchema() {
-    return new StructType()
+    return keyed()
         .add(COLUMN_CODE, DataTypes.StringType, false)
         .add(COLUMN_DENSE_ID, DataTypes.IntegerType, false)
         .add(COLUMN_ACTIVE, DataTypes.BooleanType, false)
@@ -415,7 +435,7 @@ public class CodeSystemStaging implements AutoCloseable {
    */
   @Nonnull
   public static StructType descriptionSchema() {
-    return new StructType()
+    return keyed()
         .add(COLUMN_CONCEPT_DENSE_ID, DataTypes.IntegerType, false)
         .add(COLUMN_TERM, DataTypes.StringType, true)
         .add(COLUMN_LANGUAGE, DataTypes.StringType, true)
@@ -430,7 +450,7 @@ public class CodeSystemStaging implements AutoCloseable {
    */
   @Nonnull
   public static StructType propertySchema() {
-    return new StructType()
+    return keyed()
         .add(COLUMN_CONCEPT_DENSE_ID, DataTypes.IntegerType, false)
         .add(COLUMN_PROPERTY_CODE, DataTypes.StringType, false)
         .add(COLUMN_VALUE_TYPE, DataTypes.StringType, false)
@@ -444,7 +464,7 @@ public class CodeSystemStaging implements AutoCloseable {
    */
   @Nonnull
   public static StructType codingPropertySchema() {
-    return new StructType()
+    return keyed()
         .add(COLUMN_SOURCE_DENSE_ID, DataTypes.IntegerType, false)
         .add(COLUMN_PROPERTY_CODE, DataTypes.StringType, false)
         .add(COLUMN_TARGET_CODE, DataTypes.StringType, false);
@@ -457,7 +477,7 @@ public class CodeSystemStaging implements AutoCloseable {
    */
   @Nonnull
   public static StructType denseEdgeSchema() {
-    return new StructType()
+    return keyed()
         .add(COLUMN_SOURCE_DENSE_ID, DataTypes.IntegerType, false)
         .add(COLUMN_TARGET_DENSE_ID, DataTypes.IntegerType, false);
   }
@@ -469,10 +489,16 @@ public class CodeSystemStaging implements AutoCloseable {
    */
   @Nonnull
   public static StructType codeEdgeSchema() {
-    return new StructType()
+    return keyed()
         .add(COLUMN_KNOWN_DENSE_ID, DataTypes.IntegerType, false)
         .add(COLUMN_KNOWN_ROLE, DataTypes.StringType, false)
         .add(COLUMN_OTHER_CODE, DataTypes.StringType, false);
+  }
+
+  /** Starts a staging schema with the system version column that every staging row carries. */
+  @Nonnull
+  private static StructType keyed() {
+    return new StructType().add(COLUMN_SYSTEM_VERSION_ID, DataTypes.StringType, false);
   }
 
   @Override

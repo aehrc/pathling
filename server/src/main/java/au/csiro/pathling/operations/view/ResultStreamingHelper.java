@@ -39,6 +39,7 @@ import java.util.Map;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.catalyst.util.DateTimeUtils;
 import org.apache.spark.sql.types.ArrayType;
 import org.apache.spark.sql.types.BinaryType;
 import org.apache.spark.sql.types.BooleanType;
@@ -62,6 +63,17 @@ import scala.jdk.javaapi.CollectionConverters;
 /**
  * Shared utility methods for streaming query results in different formats (NDJSON, CSV, JSON). Used
  * by both {@link ViewExecutionHelper} and the {@code $sql-run} operation.
+ *
+ * <p>A Spark result is evaluated when its rows are requested, so a result that fails during
+ * evaluation throws from the iterator. None of these methods writes to the output stream before the
+ * iterator has been asked for its first row, so that a failure there leaves the response
+ * uncommitted and the caller free to report it with an error status. Callers must not write to the
+ * stream beforehand either. A failure after rows have been written cannot change the committed
+ * status. It propagates to the servlet container, which closes the connection without completing
+ * the response, so that an HTTP/1.1 client sees an incomplete transfer rather than a truncated
+ * result it could take for a complete one.
+ *
+ * @author John Grimes
  */
 public class ResultStreamingHelper {
 
@@ -74,28 +86,6 @@ public class ResultStreamingHelper {
    */
   public ResultStreamingHelper(@Nonnull final Gson gson) {
     this.gson = gson;
-  }
-
-  /**
-   * Writes the CSV header row.
-   *
-   * @param outputStream the output stream to write to
-   * @param columnNames the column names for the header
-   * @throws IOException if writing fails
-   */
-  public void writeCsvHeader(
-      @Nonnull final OutputStream outputStream, @Nonnull final List<String> columnNames)
-      throws IOException {
-    final OutputStreamWriter writer = new OutputStreamWriter(outputStream, StandardCharsets.UTF_8);
-    final CSVPrinter printer =
-        new CSVPrinter(
-            writer,
-            CSVFormat.DEFAULT
-                .builder()
-                .setHeader(columnNames.toArray(String[]::new))
-                .setSkipHeaderRecord(false)
-                .build());
-    printer.flush();
   }
 
   /**
@@ -121,26 +111,40 @@ public class ResultStreamingHelper {
   }
 
   /**
-   * Streams results as CSV. The header is written separately for TTFB optimisation.
+   * Streams results as CSV, preceded by a header row naming the columns of the schema when one is
+   * requested.
    *
    * @param outputStream the output stream to write to
    * @param iterator the row iterator
    * @param schema the result schema
+   * @param includeHeader whether to write a header row, which is written even when there are no
+   *     rows
    * @throws IOException if writing fails
    */
   public void streamCsv(
       @Nonnull final OutputStream outputStream,
       @Nonnull final Iterator<Row> iterator,
-      @Nonnull final StructType schema)
+      @Nonnull final StructType schema,
+      final boolean includeHeader)
       throws IOException {
-    final OutputStreamWriter writer = new OutputStreamWriter(outputStream, StandardCharsets.UTF_8);
-    final CSVPrinter printer = new CSVPrinter(writer, CSVFormat.DEFAULT);
+    // Requesting the first row evaluates the result up to that row, and must precede the header.
+    boolean hasNext = iterator.hasNext();
 
-    while (iterator.hasNext()) {
+    final CSVFormat format =
+        includeHeader
+            ? CSVFormat.DEFAULT.builder().setHeader(schema.fieldNames()).build()
+            : CSVFormat.DEFAULT;
+    final OutputStreamWriter writer = new OutputStreamWriter(outputStream, StandardCharsets.UTF_8);
+    // The printer writes the header, if any, when it is constructed.
+    final CSVPrinter printer = new CSVPrinter(writer, format);
+
+    while (hasNext) {
       final Row row = iterator.next();
       printer.printRecord(rowToList(row, schema));
       printer.flush();
+      hasNext = iterator.hasNext();
     }
+    printer.flush();
   }
 
   /**
@@ -187,7 +191,11 @@ public class ResultStreamingHelper {
     return gson.toJson(rowToMap(row, schema));
   }
 
-  /** Converts a value for JSON serialisation. */
+  /**
+   * Converts a value for JSON serialisation. Rows and arrays are converted recursively. A {@code
+   * java.sql.Date} becomes an ISO-8601 date and a {@code java.sql.Timestamp} an ISO-8601 instant in
+   * UTC, because Gson would otherwise format them with the JVM's default locale and time zone.
+   */
   @Nullable
   public Object convertValue(
       @Nullable final Object value, @Nonnull final org.apache.spark.sql.types.DataType dataType) {
@@ -211,6 +219,12 @@ public class ResultStreamingHelper {
         return list.stream().map(item -> convertValue(item, arrayType.elementType())).toList();
       }
       return list;
+    }
+    if (value instanceof final java.sql.Date date) {
+      return formatDate(date);
+    }
+    if (value instanceof final java.sql.Timestamp timestamp) {
+      return formatInstant(timestamp);
     }
     return value;
   }
@@ -360,7 +374,10 @@ public class ResultStreamingHelper {
       return instant.toString();
     }
     if (value instanceof final java.sql.Timestamp ts) {
-      return ts.toInstant().toString();
+      // Spark rebases a timestamp before the Gregorian cutover onto the hybrid Julian calendar when
+      // it builds a Timestamp, so Timestamp.toInstant() would be days out. Reverse Spark's own
+      // conversion instead.
+      return DateTimeUtils.microsToInstant(DateTimeUtils.fromJavaTimestamp(ts)).toString();
     }
     return value.toString();
   }
@@ -385,7 +402,10 @@ public class ResultStreamingHelper {
     return values;
   }
 
-  /** Converts a value for CSV output. */
+  /**
+   * Converts a value for CSV output. Rows and arrays are written as JSON, and other values as they
+   * would be in JSON, so that dates and timestamps take the same ISO-8601 form in every format.
+   */
   @Nullable
   public Object convertValueForCsv(
       @Nullable final Object value, @Nonnull final org.apache.spark.sql.types.DataType dataType) {
@@ -395,6 +415,6 @@ public class ResultStreamingHelper {
     if (value instanceof Row || value instanceof scala.collection.Seq<?>) {
       return gson.toJson(convertValue(value, dataType));
     }
-    return value;
+    return convertValue(value, dataType);
   }
 }

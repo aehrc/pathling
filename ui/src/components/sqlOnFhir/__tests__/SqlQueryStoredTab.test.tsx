@@ -19,10 +19,11 @@
  * Tests for the SqlQueryStoredTab component.
  *
  * Verifies the grouped picker (SQL queries and SQL views), omission of an
- * empty group, the renamed "Views" dependency heading, the SQL preview on
- * selection, and the combined empty-state message. Also verifies that the
- * selected query's parameters are presented once, inside the tab, as
- * name/type read-only beside a value input, with no read-only badge list.
+ * empty group, the single "Dependencies" list covering views and terminology
+ * alike, the SQL preview on selection, and the combined empty-state message.
+ * Also verifies that the selected query's parameters are presented once,
+ * inside the tab, as name/type read-only beside a value input, with no
+ * read-only badge list.
  *
  * @author John Grimes
  */
@@ -172,6 +173,27 @@ describe("SqlQueryStoredTab", () => {
     expect(onSelect).toHaveBeenCalledWith("active-patients");
   });
 
+  // Each group lists its options alphabetically by display name, ignoring
+  // case, regardless of the order the server returned them in.
+  it("orders the options in each group alphabetically by title", async () => {
+    const lowerCaseQuery = makeSummary({ id: "bed-occupancy", title: "bed occupancy" });
+    const laterView = makeSummary({ id: "zero-dose", title: "Zero dose" });
+    const { user } = renderTab({
+      queries: [QUERY, lowerCaseQuery, PLAIN_QUERY],
+      views: [laterView, VIEW],
+    });
+
+    await user.click(screen.getByRole("combobox"));
+
+    expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
+      "All patients",
+      "bed occupancy",
+      "Patients by condition",
+      "Active patients",
+      "Zero dose",
+    ]);
+  });
+
   // A selected SQLView (located across both arrays) previews its decoded SQL.
   it("shows the SQL preview for a selected SQLView", () => {
     renderTab({ selectedId: "active-patients" });
@@ -182,13 +204,25 @@ describe("SqlQueryStoredTab", () => {
     expect(preview).toHaveValue("SELECT patient_id FROM patients WHERE active = true");
   });
 
-  // The dependency heading is renamed from "Tables" to "Views".
-  it("labels the dependency heading 'Views'", () => {
-    renderTab({ selectedId: "active-patients" });
+  // A stored Library does not say whether a dependency is a view, a value set
+  // or a concept map, so every dependency is listed under one heading.
+  it("lists view and terminology dependencies together under 'Dependencies'", () => {
+    const terminologyQuery = makeSummary({
+      id: "cvd-conditions",
+      title: "CVD conditions",
+      relatedArtifacts: [
+        { label: "conditions", reference: "ViewDefinition/conditions" },
+        { label: "cvd_codes", reference: "http://example.org/ValueSet/cvd|2026" },
+      ],
+    });
+    renderTab({ queries: [terminologyQuery], selectedId: "cvd-conditions" });
 
-    expect(screen.getByText("Views")).toBeInTheDocument();
-    expect(screen.queryByText("Tables")).not.toBeInTheDocument();
-    expect(screen.getByText("ViewDefinition/patient-demographics")).toBeInTheDocument();
+    expect(screen.getByText("Dependencies")).toBeInTheDocument();
+    expect(screen.queryByText("Views")).not.toBeInTheDocument();
+    expect(screen.getByText("conditions")).toBeInTheDocument();
+    expect(screen.getByText("ViewDefinition/conditions")).toBeInTheDocument();
+    expect(screen.getByText("cvd_codes")).toBeInTheDocument();
+    expect(screen.getByText("http://example.org/ValueSet/cvd|2026")).toBeInTheDocument();
   });
 
   // With neither stored queries nor views, the empty-state copy reflects both.

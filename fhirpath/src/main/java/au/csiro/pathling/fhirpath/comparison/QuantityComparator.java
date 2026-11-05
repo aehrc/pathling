@@ -18,6 +18,9 @@
 package au.csiro.pathling.fhirpath.comparison;
 
 import static au.csiro.pathling.sql.SqlFunctions.let;
+import static org.apache.spark.sql.functions.coalesce;
+import static org.apache.spark.sql.functions.not;
+import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.fhirpath.column.QuantityValue;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
@@ -25,13 +28,16 @@ import jakarta.annotation.Nonnull;
 import java.util.function.BinaryOperator;
 import java.util.function.UnaryOperator;
 import org.apache.spark.sql.Column;
-import org.apache.spark.sql.functions;
 
 /**
  * Implementation of Spark SQL comparator for the Quantity type. It compares the exact canonical
  * forms the quantities carry where they are comparable, and their original values otherwise.
  *
+ * <p>A quantity that carries a comparator (e.g. {@code <5 mg}) records a bound rather than a known
+ * value, so any comparison involving one is empty.
+ *
  * @author Piotr Szul
+ * @author John Grimes
  */
 public class QuantityComparator implements ColumnComparator, ElementWiseEquality {
 
@@ -59,14 +65,20 @@ public class QuantityComparator implements ColumnComparator, ElementWiseEquality
         let(
             left,
             right,
-            (l, r) ->
-                functions.coalesce(
-                    test.apply(
-                        QuantityEncoding.compareCanonical(
-                            QuantityEncoding.canonical(l), QuantityEncoding.canonical(r))),
-                    QuantityValue.of(l)
-                        .originalValue()
-                        .compare(QuantityValue.of(r).originalValue(), decimalComparator)));
+            (l, r) -> {
+              final QuantityValue leftQuantity = QuantityValue.of(l);
+              final QuantityValue rightQuantity = QuantityValue.of(r);
+              final Column eitherBounded = leftQuantity.isBounded().or(rightQuantity.isBounded());
+              return when(
+                  not(eitherBounded),
+                  coalesce(
+                      test.apply(
+                          QuantityEncoding.compareCanonical(
+                              QuantityEncoding.canonical(l), QuantityEncoding.canonical(r))),
+                      leftQuantity
+                          .originalValue()
+                          .compare(rightQuantity.originalValue(), decimalComparator)));
+            });
   }
 
   @Override

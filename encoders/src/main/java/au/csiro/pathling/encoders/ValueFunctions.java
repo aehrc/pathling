@@ -85,7 +85,8 @@ public class ValueFunctions {
 
   /**
    * Applies an expression to array of arrays value, or an else expression if the value is an array.
-   * Throws an exception if the value is not an array.
+   * A null-typed value, which represents an empty collection, is treated as an array. Throws an
+   * exception if the value is neither an array nor null-typed.
    *
    * @param value The value to check
    * @param arrayExpression The expression to apply to the array of arrays value

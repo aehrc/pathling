@@ -46,9 +46,9 @@ import org.springframework.beans.factory.annotation.Autowired;
  * and joins their results.
  *
  * <p>The primitives are covered by the view test cases in the same file. What is pinned here is
- * that a resolvable reference joins its target, and that a reference whose target is absent, a
- * reference to a resource type not present, a versioned reference and an absent reference all join
- * nothing.
+ * that a resolvable reference, including a versioned one, joins its target, and that a reference
+ * whose target is absent, a reference to a resource type not present and an absent reference all
+ * join nothing.
  *
  * @author Piotr Szul
  */
@@ -100,11 +100,11 @@ class ReferenceKeyJoinTest {
             .map(ReferenceKeyJoinTest::pair)
             .toList();
 
-    // Only the resolvable reference finds its target. A target that is absent, a type that is not
-    // present, a versioned reference (whose key keeps its version under the current rule) and an
-    // absent reference all join nothing.
+    // Only a resolvable reference finds its target, a versioned one by the key of the resource it
+    // names. A target that is absent, a type that is not present and an absent reference all join
+    // nothing.
     assertThat(joined)
-        .containsExactlyInAnyOrder("o1->p1", "o2->null", "o3->null", "o4->null", "o5->null");
+        .containsExactlyInAnyOrder("o1->p1", "o2->null", "o3->null", "o4->p2", "o5->null");
   }
 
   @Test
@@ -170,10 +170,11 @@ class ReferenceKeyJoinTest {
             }
             """);
 
-    // One subject and two performers resolve, so the inner join yields exactly three rows.
+    // Two subjects, one of them versioned, and two performers resolve, so the inner join yields
+    // exactly four rows.
     assertThat(
             references.join(targets, references.col("ref_key").equalTo(targets.col("key"))).count())
-        .isEqualTo(3L);
+        .isEqualTo(4L);
   }
 
   @Nonnull

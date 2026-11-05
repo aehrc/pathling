@@ -24,11 +24,13 @@ import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_CONCEPT_COUNT;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_DENSE_ID;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_DESCENDANT_DENSE_ID;
+import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_HIERARCHY_MEANING;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_SOURCE_DENSE_ID;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_SYSTEM_VERSION_ID;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_TARGET_DENSE_ID;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_TERM;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_TYPE_CODE;
+import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.COLUMN_VERSION;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.CONCEPT;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.DESCRIPTION;
 import static au.csiro.pathling.terminology.store.TerminologyStoreSchema.RELATIONSHIP;
@@ -36,9 +38,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import au.csiro.pathling.terminology.store.CodeSystemStageLoader.StagedCodeSystem;
 import java.nio.file.Path;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -61,6 +66,7 @@ class CodeSystemStageLoaderTest {
 
   private static final String URL = "http://example.org/fhir/CodeSystem/loader";
   private static final String VERSION = "1.0.0";
+  private static final String SYSTEM_VERSION = TerminologyStoreSchema.systemVersionId(URL, VERSION);
 
   private static SparkSession spark;
 
@@ -94,6 +100,7 @@ class CodeSystemStageLoaderTest {
   void resolvesDuplicateConceptCodesToTheFirstOccurrence(@TempDir final Path dir) {
     final String store = dir.resolve("store").toString();
     try (CodeSystemStaging staging = CodeSystemStaging.create()) {
+      staging.beginCodeSystem(SYSTEM_VERSION);
       staging.appendConcept("A", 0, true, false, "First A");
       staging.appendConcept("A", 1, true, false, "Duplicate A");
       staging.appendConcept("B", 2, true, false, "B");
@@ -127,6 +134,7 @@ class CodeSystemStageLoaderTest {
   void resolvesCodingPropertiesToRelationshipRows(@TempDir final Path dir) {
     final String store = dir.resolve("store").toString();
     try (CodeSystemStaging staging = CodeSystemStaging.create()) {
+      staging.beginCodeSystem(SYSTEM_VERSION);
       staging.appendConcept("A", 0, true, false, "A");
       staging.appendConcept("B", 1, true, false, "B");
       staging.appendCodingProperty(0, "assoc", "B");
@@ -154,21 +162,22 @@ class CodeSystemStageLoaderTest {
   void attachesTheSystemVersionToEveryConceptRow(@TempDir final Path dir) {
     final String store = dir.resolve("store").toString();
     try (CodeSystemStaging staging = CodeSystemStaging.create()) {
+      staging.beginCodeSystem(SYSTEM_VERSION);
       staging.appendConcept("A", 0, true, false, "A");
       staging.sealForReading();
       load(staging, store);
     }
-    final String expected = TerminologyStoreSchema.systemVersionId(URL, VERSION);
     final Set<String> systemVersions = new HashSet<>();
     TerminologyStoreReader.open(store, Map.of())
         .readTable(CONCEPT, row -> systemVersions.add(row.getString(COLUMN_SYSTEM_VERSION_ID)));
-    assertEquals(Set.of(expected), systemVersions);
+    assertEquals(Set.of(SYSTEM_VERSION), systemVersions);
   }
 
   @Test
   void resolvesAndOrientsPropertyEdgesDeduplicatingAgainstNesting(@TempDir final Path dir) {
     final String store = dir.resolve("store").toString();
     try (CodeSystemStaging staging = CodeSystemStaging.create()) {
+      staging.beginCodeSystem(SYSTEM_VERSION);
       staging.appendConcept("A", 0, true, false, "A");
       staging.appendConcept("B", 1, true, false, "B");
       staging.appendConcept("C", 2, true, false, "C");
@@ -206,8 +215,120 @@ class CodeSystemStageLoaderTest {
     assertEquals(1, pairCounts.get("A->B").get());
   }
 
+  @Test
+  void keepsCodeSystemsStagedTogetherApart(@TempDir final Path dir) {
+    // Two CodeSystems staged together share codes and dense identifiers. Duplicate resolution,
+    // reference resolution, the closure and the concept count each stay within one system.
+    final String other = TerminologyStoreSchema.systemVersionId(URL, "2.0.0");
+    final String store = dir.resolve("store").toString();
+    try (CodeSystemStaging staging = CodeSystemStaging.create()) {
+      staging.beginCodeSystem(SYSTEM_VERSION);
+      staging.appendConcept("A", 0, true, false, "A");
+      staging.appendConcept("B", 1, true, false, "B");
+      staging.appendDenseEdge(1, 0);
+      staging.appendCodingProperty(0, "assoc", "B");
+      staging.beginCodeSystem(other);
+      staging.appendConcept("B", 0, true, false, "B");
+      staging.appendConcept("A", 1, true, false, "A");
+      staging.appendConcept("C", 2, true, false, "C");
+      // C is-a A by a parent property; B references a code only the first system holds.
+      staging.appendCodeEdge(2, "child", "A");
+      staging.appendCodingProperty(0, "assoc", "C");
+      staging.appendCodingProperty(0, "assoc", "ZZZ");
+      staging.sealForReading();
+      load(
+          staging,
+          store,
+          List.of(
+              new StagedCodeSystem(URL, VERSION, null),
+              new StagedCodeSystem(URL, "2.0.0", "part-of")));
+    }
+
+    final TerminologyStoreReader reader = TerminologyStoreReader.open(store, Map.of());
+    final Map<String, String> codeByDense = new HashMap<>();
+    reader.readTable(
+        CONCEPT,
+        row ->
+            codeByDense.put(
+                row.getString(COLUMN_SYSTEM_VERSION_ID) + "#" + row.getInt(COLUMN_DENSE_ID),
+                row.getString(COLUMN_CODE)));
+    // No code is dropped as a duplicate of the same code in the other system.
+    assertEquals(
+        Map.of(
+            SYSTEM_VERSION + "#0", "A",
+            SYSTEM_VERSION + "#1", "B",
+            other + "#0", "B",
+            other + "#1", "A",
+            other + "#2", "C"),
+        codeByDense);
+
+    final Set<String> closure = new HashSet<>();
+    reader.readTable(
+        CLOSURE,
+        row -> {
+          final String system = row.getString(COLUMN_SYSTEM_VERSION_ID);
+          closure.add(
+              system
+                  + ":"
+                  + codeByDense.get(system + "#" + row.getInt(COLUMN_ANCESTOR_DENSE_ID))
+                  + "->"
+                  + codeByDense.get(system + "#" + row.getInt(COLUMN_DESCENDANT_DENSE_ID)));
+        });
+    assertEquals(Set.of(SYSTEM_VERSION + ":A->B", other + ":A->C"), closure);
+
+    final Set<String> relationships = new HashSet<>();
+    reader.readTable(
+        RELATIONSHIP,
+        row -> {
+          final String system = row.getString(COLUMN_SYSTEM_VERSION_ID);
+          relationships.add(
+              system
+                  + ":"
+                  + codeByDense.get(system + "#" + row.getInt(COLUMN_SOURCE_DENSE_ID))
+                  + "->"
+                  + codeByDense.get(system + "#" + row.getInt(COLUMN_TARGET_DENSE_ID)));
+        });
+    // The reference to ZZZ dangles in both systems, so it is dropped.
+    assertEquals(Set.of(SYSTEM_VERSION + ":A->B", other + ":B->C"), relationships);
+
+    final Map<String, String> rows = new HashMap<>();
+    reader.readTable(
+        CODE_SYSTEM,
+        row ->
+            rows.put(
+                row.getString(COLUMN_SYSTEM_VERSION_ID),
+                row.getString(COLUMN_VERSION)
+                    + " "
+                    + row.getLong(COLUMN_CONCEPT_COUNT)
+                    + " "
+                    + row.getString(COLUMN_HIERARCHY_MEANING)));
+    assertEquals(Map.of(SYSTEM_VERSION, "1.0.0 2 is-a", other, "2.0.0 3 part-of"), rows);
+  }
+
   private void load(final CodeSystemStaging staging, final String store) {
+    load(staging, store, List.of(new StagedCodeSystem(URL, VERSION, "is-a")));
+  }
+
+  /**
+   * Loads staged CodeSystems and records them in the manifest, which the importer writes after the
+   * loader and without which the store cannot be opened.
+   */
+  private void load(
+      final CodeSystemStaging staging,
+      final String store,
+      final List<StagedCodeSystem> codeSystems) {
     final TerminologyStoreWriter writer = new TerminologyStoreWriter(spark, store);
-    new CodeSystemStageLoader(spark, writer).load(staging, URL, VERSION, "is-a", store);
+    new CodeSystemStageLoader(spark, writer).load(staging, codeSystems);
+    writer.upsertManifestEntries(
+        codeSystems.stream()
+            .map(
+                codeSystem ->
+                    ManifestEntry.forImport(
+                        "code_system",
+                        codeSystem.url(),
+                        codeSystem.version(),
+                        ImportProvenance.of(store, null),
+                        Instant.now()))
+            .toList());
   }
 }

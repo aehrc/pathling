@@ -21,8 +21,10 @@ import static org.assertj.core.api.Assertions.assertThatNoException;
 
 import au.csiro.pathling.operations.bulkexport.ExportRequest;
 import au.csiro.pathling.util.TestDataSetup;
+import com.fasterxml.jackson.databind.JsonNode;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
@@ -32,6 +34,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.web.util.UriComponentsBuilder;
 
 /**
  * @see <a
@@ -72,8 +75,14 @@ class SecurityDisabledOperationsTest extends SecurityTestForOperations<ExportReq
   @Order(Order.DEFAULT + 100)
   @Test
   void testPassExportResultIfExportResultWithNoAuth() {
-    performExport();
+    // The output file is named by the sink, so it is taken from the manifest rather than assumed.
+    final JsonNode manifest = performExport();
+    final String url = getOutputUrls(manifest).get(0);
+    final Map<String, String> queryParams =
+        UriComponentsBuilder.fromUriString(url).build().getQueryParams().toSingleValueMap();
+
     assertThatNoException()
-        .isThrownBy(() -> performExportResult(job.getId(), "Patient.00000.ndjson", null));
+        .isThrownBy(
+            () -> performExportResult(queryParams.get("job"), queryParams.get("file"), null));
   }
 }

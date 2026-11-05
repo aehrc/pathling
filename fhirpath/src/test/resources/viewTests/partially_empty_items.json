@@ -1,0 +1,328 @@
+{
+  "title": "per-item evaluation where some items produce no values (#2801)",
+  "resources": [
+    {
+      "resourceType": "Patient",
+      "id": "p1",
+      "name": [
+        {
+          "given": ["A", "B"]
+        },
+        {
+          "family": "F"
+        }
+      ]
+    },
+    {
+      "resourceType": "Patient",
+      "id": "p2",
+      "name": [
+        {
+          "family": "G"
+        }
+      ]
+    },
+    {
+      "resourceType": "Questionnaire",
+      "id": "q1",
+      "status": "active",
+      "item": [
+        {
+          "linkId": "1",
+          "type": "group",
+          "item": [
+            {
+              "linkId": "1.1",
+              "type": "string"
+            }
+          ]
+        },
+        {
+          "linkId": "2",
+          "type": "string"
+        },
+        {
+          "linkId": "3",
+          "type": "group",
+          "item": [
+            {
+              "linkId": "3.1",
+              "type": "string"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "resourceType": "QuestionnaireResponse",
+      "id": "qr1",
+      "status": "completed",
+      "item": [
+        {
+          "linkId": "g1",
+          "item": [
+            {
+              "linkId": "q1",
+              "answer": [
+                {
+                  "valueString": "x"
+                }
+              ]
+            },
+            {
+              "linkId": "q2",
+              "answer": [
+                {
+                  "valueString": "y"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "linkId": "q3",
+          "answer": [
+            {
+              "valueString": "z"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "tests": [
+    {
+      "title": "select() collection column keeps the non-empty projections",
+      "view": {
+        "resource": "Patient",
+        "select": [
+          {
+            "column": [
+              {
+                "path": "id",
+                "name": "id"
+              },
+              {
+                "path": "name.select(given)",
+                "name": "given",
+                "collection": true
+              }
+            ]
+          }
+        ]
+      },
+      "expect": [
+        {
+          "id": "p1",
+          "given": ["A", "B"]
+        },
+        {
+          "id": "p2",
+          "given": []
+        }
+      ]
+    },
+    {
+      "title": "select() count() of a partially empty projection",
+      "view": {
+        "resource": "Patient",
+        "select": [
+          {
+            "column": [
+              {
+                "path": "id",
+                "name": "id"
+              },
+              {
+                "path": "name.select(given).count()",
+                "name": "given_count"
+              }
+            ]
+          }
+        ]
+      },
+      "expect": [
+        {
+          "id": "p1",
+          "given_count": 2
+        },
+        {
+          "id": "p2",
+          "given_count": 0
+        }
+      ]
+    },
+    {
+      "title": "nested forEach keeps the rows of outer items whose inner collection is non-empty",
+      "view": {
+        "resource": "Patient",
+        "select": [
+          {
+            "column": [
+              {
+                "path": "id",
+                "name": "id"
+              }
+            ]
+          },
+          {
+            "forEach": "name",
+            "select": [
+              {
+                "forEach": "given",
+                "column": [
+                  {
+                    "path": "$this",
+                    "name": "given"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "expect": [
+        {
+          "id": "p1",
+          "given": "A"
+        },
+        {
+          "id": "p1",
+          "given": "B"
+        }
+      ]
+    },
+    {
+      "title": "nested forEach over a recursive element where some items are leaves",
+      "view": {
+        "resource": "Questionnaire",
+        "select": [
+          {
+            "column": [
+              {
+                "path": "id",
+                "name": "id"
+              }
+            ]
+          },
+          {
+            "forEach": "item",
+            "select": [
+              {
+                "forEach": "item",
+                "column": [
+                  {
+                    "path": "linkId",
+                    "name": "linkId"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "expect": [
+        {
+          "id": "q1",
+          "linkId": "1.1"
+        },
+        {
+          "id": "q1",
+          "linkId": "3.1"
+        }
+      ]
+    },
+    {
+      "title": "forEachOrNull nested in forEach still emits a null row for empty inner items",
+      "view": {
+        "resource": "Patient",
+        "select": [
+          {
+            "column": [
+              {
+                "path": "id",
+                "name": "id"
+              }
+            ]
+          },
+          {
+            "forEach": "name",
+            "select": [
+              {
+                "forEachOrNull": "given",
+                "column": [
+                  {
+                    "path": "$this",
+                    "name": "given"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "expect": [
+        {
+          "id": "p1",
+          "given": "A"
+        },
+        {
+          "id": "p1",
+          "given": "B"
+        },
+        {
+          "id": "p1",
+          "given": null
+        },
+        {
+          "id": "p2",
+          "given": null
+        }
+      ]
+    },
+    {
+      "title": "repeat with a nested forEach keeps nodes whose siblings lack the inner collection",
+      "view": {
+        "resource": "QuestionnaireResponse",
+        "select": [
+          {
+            "column": [
+              {
+                "path": "id",
+                "name": "id"
+              }
+            ]
+          },
+          {
+            "repeat": ["item", "answer.item"],
+            "select": [
+              {
+                "forEach": "answer",
+                "column": [
+                  {
+                    "path": "value.ofType(string)",
+                    "name": "value"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "expect": [
+        {
+          "id": "qr1",
+          "value": "x"
+        },
+        {
+          "id": "qr1",
+          "value": "y"
+        },
+        {
+          "id": "qr1",
+          "value": "z"
+        }
+      ]
+    }
+  ]
+}

@@ -20,15 +20,45 @@ package au.csiro.pathling.terminology.validatecode;
 import au.csiro.pathling.fhirpath.encoding.ImmutableCoding;
 import au.csiro.pathling.terminology.TerminologyParameters;
 import jakarta.annotation.Nonnull;
+import org.hl7.fhir.r4.model.Coding;
 
 /**
  * Represents the input parameters to the validate-code operation.
  *
  * @param valueSetUrl the URL of the value set to validate against
  * @param coding the coding to validate
+ * @param inferSystem whether the server should infer the system of the code from the value set
  * @author John Grimes
  * @see <a
  *     href="https://www.hl7.org/fhir/R4/valueset-operation-validate-code.html">ValueSet/$validate-code</a>
  */
-public record ValidateCodeParameters(@Nonnull String valueSetUrl, @Nonnull ImmutableCoding coding)
-    implements TerminologyParameters {}
+public record ValidateCodeParameters(
+    @Nonnull String valueSetUrl, @Nonnull ImmutableCoding coding, boolean inferSystem)
+    implements TerminologyParameters {
+
+  /**
+   * Creates parameters to validate a coding, using the system of the coding.
+   *
+   * @param valueSetUrl the URL of the value set to validate against
+   * @param coding the coding to validate
+   */
+  public ValidateCodeParameters(
+      @Nonnull final String valueSetUrl, @Nonnull final ImmutableCoding coding) {
+    this(valueSetUrl, coding, false);
+  }
+
+  /**
+   * Creates parameters to validate a code without a system, inferring the system from the value
+   * set.
+   *
+   * @param valueSetUrl the URL of the value set to validate against
+   * @param code the code to validate
+   * @return the parameters
+   */
+  @Nonnull
+  public static ValidateCodeParameters inferringSystem(
+      @Nonnull final String valueSetUrl, @Nonnull final String code) {
+    return new ValidateCodeParameters(
+        valueSetUrl, ImmutableCoding.of(new Coding().setCode(code)), true);
+  }
+}

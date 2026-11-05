@@ -32,10 +32,6 @@ CVE-2026-24308
 # Jersey Client is a transitive dependency provided via the Spark runtime.
 CVE-2025-12383
 
-# LZ4-Java is a transitive dependency provided via the Spark runtime.
-CVE-2025-12183
-CVE-2025-66566
-
 # Commons Lang3 is a transitive dependency provided via the Spark runtime.
 CVE-2025-48924
 
@@ -97,9 +93,10 @@ CVE-2026-45292
 CVE-2021-0341
 CVE-2022-41404
 
-# lz4-java native XXHash JVM crash on invalid byte array ranges — a Spark transitive used
-# for internal shuffle and block compression. Spark passes only its own valid buffer ranges,
-# so the invalid-range path is not reachable from user input. There is no fixed release for
-# the org.lz4 coordinate; the fix exists only in the renamed at.yawk.lz4 fork, which Spark
-# does not use.
-CVE-2026-59949
+# Spring Framework XsltView SSRF/RCE and SSE view-fragment stream corruption. Fixed in
+# open source only in 7.0.9; 6.2.20 is Enterprise Support only and Spring Boot 3.5.16 is
+# the final 3.5.x release (bundling 6.2.19). The server registers no XsltView or
+# XsltViewResolver and does not send view fragments over Server-Sent Events, so neither
+# vulnerable code path is reachable. Remove once the server moves to Spring Boot 4.x.
+CVE-2026-47884
+CVE-2026-47890

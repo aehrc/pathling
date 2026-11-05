@@ -198,7 +198,8 @@ class SystemQuantityShapeTest {
         arguments("(1 'g').toQuantity('mg') = 1 'g'", "true"),
         arguments("(1 + 2).toQuantity() = 3 '1'", "true"),
         arguments("5 '1' = 500 '%'", "true"),
-        arguments("(value.ofType(Quantity) | 1 'g').where($this > 1000 'mg').count()", "1"));
+        // The stored quantity is a bound, so its comparison is empty and it is not kept.
+        arguments("(value.ofType(Quantity) | 1 'g').where($this > 1000 'mg').count()", "0"));
   }
 
   @ParameterizedTest(name = "{0}")

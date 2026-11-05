@@ -30,6 +30,8 @@ import static org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome.SUBSUM
 import static org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome.SUBSUMES;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -109,7 +111,8 @@ public class DefaultTerminologyServiceTest extends AbstractTerminologyTestBase {
             deepEq(new UriType(VALUE_SET_X)),
             deepEq(new UriType(SYSTEM_A)),
             isNull(),
-            deepEq(new CodeType(CODE_A))))
+            deepEq(new CodeType(CODE_A)),
+            isNull()))
         .thenReturn(request);
     assertTrue(terminologyService.validateCode(VALUE_SET_X, CODING_AA));
   }
@@ -121,7 +124,8 @@ public class DefaultTerminologyServiceTest extends AbstractTerminologyTestBase {
             deepEq(new UriType(VALUE_SET_Y)),
             deepEq(new UriType(SYSTEM_B)),
             deepEq(new StringType(VERSION_1)),
-            deepEq(new CodeType(CODE_B))))
+            deepEq(new CodeType(CODE_B)),
+            isNull()))
         .thenReturn(request);
     assertFalse(terminologyService.validateCode(VALUE_SET_Y, CODING_BB_VERSION1));
   }
@@ -131,6 +135,68 @@ public class DefaultTerminologyServiceTest extends AbstractTerminologyTestBase {
     assertFalse(terminologyService.validateCode(VALUE_SET_Y, INVALID_CODING_0));
     assertFalse(terminologyService.validateCode(VALUE_SET_Y, INVALID_CODING_1));
     assertFalse(terminologyService.validateCode(VALUE_SET_Y, INVALID_CODING_2));
+  }
+
+  @Test
+  void testValidateCodeIsUnknownWhenValueSetNotFound() {
+    // A 404 means the value set could not be resolved, so membership is unknown.
+    when(terminologyClient.buildValidateCode(any(), any(), any(), any(), any()))
+        .thenThrow(BaseServerResponseException.newInstance(404, "Resource Not Found"));
+    assertNull(terminologyService.validateCode(VALUE_SET_X, CODING_AA));
+  }
+
+  @Test
+  void testValidateCodeIsUnknownWhenRequestRejected() {
+    // Any other 4xx means the server could not answer the question, so membership is unknown.
+    when(terminologyClient.buildValidateCode(any(), any(), any(), any(), any()))
+        .thenThrow(BaseServerResponseException.newInstance(400, "Bad Request"));
+    assertNull(terminologyService.validateCode(VALUE_SET_X, CODING_AA));
+  }
+
+  @Test
+  void testValidateCodeRethrowsServerErrors() {
+    // A 5xx is a failure of the server rather than an answer, so it is not masked.
+    when(terminologyClient.buildValidateCode(any(), any(), any(), any(), any()))
+        .thenThrow(BaseServerResponseException.newInstance(500, "Internal Server Error"));
+    assertThrows(
+        BaseServerResponseException.class,
+        () -> terminologyService.validateCode(VALUE_SET_X, CODING_AA));
+  }
+
+  @Test
+  void testValidateCodeInferringSystemSendsCodeWithoutSystem() {
+    // A code without a system is validated by asking the server to infer the system from the
+    // value set.
+    final IOperationUntypedWithInput<Parameters> request = mockRequest(RESULT_TRUE);
+    when(terminologyClient.buildValidateCode(
+            deepEq(new UriType(VALUE_SET_X)),
+            isNull(),
+            isNull(),
+            deepEq(new CodeType(CODE_A)),
+            deepEq(new BooleanType(true))))
+        .thenReturn(request);
+    assertEquals(true, terminologyService.validateCodeInferringSystem(VALUE_SET_X, CODE_A));
+  }
+
+  @Test
+  void testValidateCodeInferringSystemFalse() {
+    final IOperationUntypedWithInput<Parameters> request = mockRequest(RESULT_FALSE);
+    when(terminologyClient.buildValidateCode(
+            deepEq(new UriType(VALUE_SET_Y)),
+            isNull(),
+            isNull(),
+            deepEq(new CodeType(CODE_B)),
+            deepEq(new BooleanType(true))))
+        .thenReturn(request);
+    assertEquals(false, terminologyService.validateCodeInferringSystem(VALUE_SET_Y, CODE_B));
+  }
+
+  @Test
+  void testValidateCodeInferringSystemIsUnknownWhenRejected() {
+    // A server that does not support inferSystem rejects the request, so membership is unknown.
+    when(terminologyClient.buildValidateCode(any(), any(), any(), any(), any()))
+        .thenThrow(BaseServerResponseException.newInstance(400, "Bad Request"));
+    assertNull(terminologyService.validateCodeInferringSystem(VALUE_SET_X, CODE_A));
   }
 
   @Test

@@ -187,11 +187,11 @@ When the export completes, the response contains a JSON manifest:
     "output": [
         {
             "type": "Patient",
-            "url": "https://pathling.example.com/fhir/$result?job=abc123&file=Patient.ndjson"
+            "url": "https://pathling.example.com/fhir/$result?job=abc123&file=Patient.00000-7a60a041-0e7d-4e24-b23d-82405a665677.ndjson"
         },
         {
             "type": "Observation",
-            "url": "https://pathling.example.com/fhir/$result?job=abc123&file=Observation.ndjson"
+            "url": "https://pathling.example.com/fhir/$result?job=abc123&file=Observation.00000-3f1c9b2e-58d4-4a7e-9c61-0b2d7e4a8f15.ndjson"
         }
     ],
     "deleted": [],
@@ -213,19 +213,21 @@ When the export completes, the response contains a JSON manifest:
 ## Retrieving results
 
 Download exported files using the URLs in the manifest. Each URL points to the
-`$result` endpoint with `job` and `file` query parameters.
+`$result` endpoint with `job` and `file` query parameters. A resource type may
+be split across several files, named `<type>.<partition>-<write id>.<extension>`,
+so take the file names from the manifest rather than constructing them.
 
 For NDJSON exports:
 
 ```http
-GET [base]/$result?job=abc123&file=Patient.ndjson HTTP/1.1
+GET [base]/$result?job=abc123&file=Patient.00000-7a60a041-0e7d-4e24-b23d-82405a665677.ndjson HTTP/1.1
 Accept: application/fhir+ndjson
 ```
 
 For Parquet exports:
 
 ```http
-GET [base]/$result?job=abc123&file=Patient.parquet HTTP/1.1
+GET [base]/$result?job=abc123&file=Patient.00000-7a60a041-0e7d-4e24-b23d-82405a665677.parquet HTTP/1.1
 Accept: application/vnd.apache.parquet
 ```
 

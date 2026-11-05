@@ -41,6 +41,8 @@ class MemberOfUdfTest extends AbstractTerminologyTestBase {
 
   private static final String VALUE_SET_URL_A = "uuid:vsA";
   private static final String VALUE_SET_URL_AB = "uuid:vsAB";
+  private static final String VALUE_SET_URL_UNRESOLVABLE = "uuid:vsUnresolvable";
+  private static final String VALUE_SET_URL_PARTIAL = "uuid:vsPartial";
 
   private MemberOfUdf memberUdf;
   private TerminologyService terminologyService;
@@ -55,7 +57,15 @@ class MemberOfUdfTest extends AbstractTerminologyTestBase {
 
     TerminologyServiceHelpers.setupValidate(terminologyService)
         .withValueSet(VALUE_SET_URL_A, CODING_A)
-        .withValueSet(VALUE_SET_URL_AB, CODING_A, CODING_B);
+        .withValueSet(VALUE_SET_URL_AB, CODING_A, CODING_B)
+        .withCodes(VALUE_SET_URL_A, CODE_A)
+        .withUnresolvableValueSet(VALUE_SET_URL_UNRESOLVABLE);
+    // A value set in which the membership of CODING_C cannot be determined, while CODING_B is a
+    // member and every other coding is not.
+    when(terminologyService.validateCode(eq(VALUE_SET_URL_PARTIAL), deepEq(CODING_C)))
+        .thenReturn(null);
+    when(terminologyService.validateCode(eq(VALUE_SET_URL_PARTIAL), deepEq(CODING_B)))
+        .thenReturn(true);
   }
 
   @Test
@@ -66,6 +76,8 @@ class MemberOfUdfTest extends AbstractTerminologyTestBase {
   @Test
   void testNullValueSetUrl() {
     assertNull(memberUdf.call(encode(CODING_LACERATION_OF_FOOT), null));
+    assertNull(memberUdf.call(CODE_A, null));
+    verifyNoMoreInteractions(terminologyService);
   }
 
   @Test
@@ -111,5 +123,31 @@ class MemberOfUdfTest extends AbstractTerminologyTestBase {
     assertTrue(memberUdf.call(encodeMany(CODING_A, CODING_B), VALUE_SET_URL_AB));
     verify(terminologyService).validateCode(eq(VALUE_SET_URL_AB), deepEq(CODING_A));
     verifyNoMoreInteractions(terminologyService);
+  }
+
+  @Test
+  void testUnknownWhenValueSetUnresolvable() {
+    // Membership in a value set that cannot be resolved is unknown, for one coding or many.
+    assertNull(memberUdf.call(encode(CODING_A), VALUE_SET_URL_UNRESOLVABLE));
+    assertNull(memberUdf.call(encodeMany(CODING_A, CODING_B), VALUE_SET_URL_UNRESOLVABLE));
+  }
+
+  @Test
+  void testCodingsCombineAsThreeValuedOr() {
+    // A known member makes the concept a member, whatever the other codings say.
+    assertTrue(memberUdf.call(encodeMany(CODING_C, CODING_B), VALUE_SET_URL_PARTIAL));
+    // Without a known member, an unknown coding makes the concept unknown rather than false.
+    assertNull(memberUdf.call(encodeMany(CODING_A, CODING_C), VALUE_SET_URL_PARTIAL));
+    // Only when every coding is known not to be a member is the concept not a member.
+    assertFalse(memberUdf.call(encodeMany(CODING_A, CODING_D), VALUE_SET_URL_PARTIAL));
+  }
+
+  @Test
+  void testCodeValidatedByInferringSystem() {
+    // A string is a bare code, validated by inferring its system from the value set.
+    assertTrue(memberUdf.call(CODE_A, VALUE_SET_URL_A));
+    assertFalse(memberUdf.call(CODE_B, VALUE_SET_URL_A));
+    assertNull(memberUdf.call(CODE_A, VALUE_SET_URL_UNRESOLVABLE));
+    verify(terminologyService).validateCodeInferringSystem(VALUE_SET_URL_A, CODE_A);
   }
 }

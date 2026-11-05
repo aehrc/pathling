@@ -20,8 +20,9 @@
 The Spark session is created only when a command actually needs it, behind a
 status spinner on stderr. Spark and JVM logging is suppressed by default by
 pointing the driver JVM at a packaged log4j2 configuration before launch, and
-lowering the log level once the context exists; ``--verbose`` leaves logging at
-its defaults.
+lowering the log level once the context exists; ``--verbose`` instead sets the
+level on Pathling's own logger namespace so the library's informational logging
+reaches the operator.
 
 Author: John Grimes.
 """
@@ -48,7 +49,8 @@ if TYPE_CHECKING:
 # The packaged log4j2 configuration that silences Spark and JVM logging. It is
 # supplied to the driver JVM before launch so that startup noise, and
 # task-failure stack traces, are suppressed (the CLI surfaces its own concise
-# error message instead). The level is raised again by ``--verbose``.
+# error message instead). ``--verbose`` raises the level on Pathling's own
+# logger namespace instead of using this configuration.
 _QUIET_LOG4J2_RESOURCE = "quiet-log4j2.properties"
 
 # Keeps the materialised packaged resource path valid for the process lifetime.
@@ -140,6 +142,39 @@ def _build_quiet_spark(config: CliConfig) -> SparkSession:
     return _build_spark_session(extra_configs)
 
 
+def _apply_log_level(spark: SparkSession, verbose: bool) -> None:
+    """Applies the CLI log level to an already-built Spark session.
+
+    Quiet mode lowers Spark's own loggers to OFF, which also hides
+    task-failure stack traces (the CLI surfaces its own concise message
+    instead). Verbose mode explicitly sets the level on Pathling's own logger
+    namespace (``au.csiro.pathling``) to INFO so the library's informational
+    logging - e.g. the importer's stage narration - reaches the operator
+    (#2691). Spark's own loggers are left at their defaults, keeping its
+    chatter out of the operator's way.
+
+    ``SparkContext.setLogLevel`` cannot do the verbose part: on the Spark
+    version the CLI depends on it short-circuits when the requested level
+    matches the root level, and the INFO records are then dropped by the
+    WARN-threshold filter the PySpark shell installs on the console appender.
+    A logger with an explicitly configured level bypasses that filter, so
+    setting the level on Pathling's namespace is what actually surfaces the
+    library's records.
+
+    :param spark: the Spark session whose JVM logging is configured.
+    :param verbose: whether ``--verbose`` was passed.
+    """
+    if not verbose:
+        # In local mode the driver JVM is launched before builder-level Java
+        # options apply, so log suppression relies on lowering the level here.
+        # OFF (rather than ERROR) also hides task-failure stack traces, which
+        # the CLI surfaces as its own concise message.
+        spark.sparkContext.setLogLevel("OFF")
+        return
+    log4j = spark._jvm.org.apache.logging.log4j
+    log4j.core.config.Configurator.setLevel("au.csiro.pathling", log4j.Level.INFO)
+
+
 def _create_pathling_context(config: CliConfig) -> PathlingContext:
     """Builds the Spark session and Pathling context from the configuration.
 
@@ -149,12 +184,7 @@ def _create_pathling_context(config: CliConfig) -> PathlingContext:
     from pathling import PathlingContext
 
     spark = _build_quiet_spark(config)
-    if not config.verbose:
-        # In local mode the driver JVM is launched before builder-level Java
-        # options apply, so log suppression relies on lowering the level here.
-        # OFF (rather than ERROR) also hides task-failure stack traces, which
-        # the CLI surfaces as its own concise message.
-        spark.sparkContext.setLogLevel("OFF")
+    _apply_log_level(spark, config.verbose)
 
     store = config.tx_store
     if store is not None:

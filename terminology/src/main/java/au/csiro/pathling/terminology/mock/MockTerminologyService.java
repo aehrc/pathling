@@ -22,14 +22,23 @@ import static org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence.EQUIVALENT
 import static org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence.RELATEDTO;
 
 import au.csiro.pathling.terminology.TerminologyService;
+import au.csiro.pathling.terminology.conceptmap.ConceptMapContent;
+import au.csiro.pathling.terminology.conceptmap.ConceptMapRelationship;
+import au.csiro.pathling.terminology.conceptmap.ConceptMapping;
+import au.csiro.pathling.terminology.expand.ExpansionLimitExceededException;
+import au.csiro.pathling.terminology.expand.ValueSetExpansion;
+import au.csiro.pathling.terminology.expand.ValueSetExpansionException;
+import au.csiro.pathling.terminology.expand.ValueSetMember;
 import com.google.common.collect.ImmutableMap;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -37,6 +46,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.Enumerations;
 import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome;
 
@@ -96,7 +106,12 @@ public class MockTerminologyService implements TerminologyService {
       return members.contains(SystemAndCode.of(coding));
     }
 
-    public static final ValueSet EMPTY = new ValueSet();
+    @Nonnull
+    List<ValueSetMember> members() {
+      return members.stream()
+          .map(member -> new ValueSetMember(member.system(), null, member.code(), null, null))
+          .toList();
+    }
   }
 
   private final Map<String, ValueSet> valueSets = new HashMap<>();
@@ -137,9 +152,83 @@ public class MockTerminologyService implements TerminologyService {
                     Translation.of(EQUIVALENT, new Coding(LOINC_URI, "55916-3", null))))));
   }
 
+  @Nullable
   @Override
-  public boolean validateCode(@Nonnull final String codeSystemUrl, @Nonnull final Coding coding) {
-    return valueSets.getOrDefault(codeSystemUrl, ValueSet.EMPTY).contains(coding);
+  public Boolean validateCode(@Nonnull final String valueSetUrl, @Nonnull final Coding coding) {
+    final ValueSet valueSet = valueSets.get(valueSetUrl);
+    return valueSet == null ? null : valueSet.contains(coding);
+  }
+
+  @Nullable
+  @Override
+  public Boolean validateCodeInferringSystem(
+      @Nonnull final String valueSetUrl, @Nonnull final String code) {
+    final ValueSet valueSet = valueSets.get(valueSetUrl);
+    // As with a terminology server, the code is a member only where a single system within the
+    // value set holds it.
+    return valueSet == null
+        ? null
+        : valueSet.members.stream().filter(member -> member.code().equals(code)).count() == 1;
+  }
+
+  @Nonnull
+  @Override
+  public Optional<ValueSetExpansion> expand(
+      @Nonnull final String url, @Nullable final String version, final int maxMembers) {
+    final ValueSet valueSet = valueSets.get(url);
+    if (valueSet == null) {
+      return Optional.empty();
+    }
+    final List<ValueSetMember> members = valueSet.members();
+    if (members.size() > maxMembers) {
+      throw new ExpansionLimitExceededException(maxMembers);
+    }
+    return Optional.of(
+        new ValueSetExpansion(url, version, null, null, Collections.emptyList(), members));
+  }
+
+  @Nonnull
+  @Override
+  public ValueSetExpansion expand(
+      @Nonnull final org.hl7.fhir.r4.model.ValueSet valueSet, final int maxMembers) {
+    if (valueSet.hasExpansion()) {
+      return ValueSetExpansion.fromResource(valueSet, maxMembers);
+    }
+    throw new ValueSetExpansionException(
+        "the mock terminology service can only expand a value set that carries an expansion");
+  }
+
+  @Nonnull
+  @Override
+  public Optional<ConceptMapContent> readConceptMap(
+      @Nonnull final String url, @Nullable final String version, final int maxMappings) {
+    final ConceptMap configured = conceptMap.get(url);
+    if (configured == null) {
+      return Optional.empty();
+    }
+    // The rows are the forward mappings of the configured map, with the R4 equivalence converted
+    // and no displays or versions, since the mock records none.
+    final List<ConceptMapping> rows = new ArrayList<>();
+    for (final Map.Entry<SystemAndCode, List<Translation>> entry : configured.mappings.entrySet()) {
+      final SystemAndCode source = entry.getKey();
+      for (final Translation translation : entry.getValue()) {
+        final Coding target = translation.getConcept();
+        rows.add(
+            new ConceptMapping(
+                source.system(),
+                null,
+                source.code(),
+                null,
+                target.getSystem(),
+                null,
+                target.getCode(),
+                null,
+                ConceptMapRelationship.of(
+                    Enumerations.ConceptMapEquivalence.fromCode(
+                        translation.getEquivalence().toCode()))));
+      }
+    }
+    return Optional.of(ConceptMapContent.fromMappings(url, version, rows, maxMappings));
   }
 
   @Nonnull

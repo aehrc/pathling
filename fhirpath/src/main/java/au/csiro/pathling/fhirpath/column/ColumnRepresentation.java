@@ -329,6 +329,21 @@ public abstract class ColumnRepresentation {
   }
 
   /**
+   * Returns the single value from the current {@link ColumnRepresentation}, or null where it holds
+   * more than one value. This suits functions that FHIRPath defines as empty, rather than an error,
+   * for input of more than one item.
+   *
+   * @return A new {@link ColumnRepresentation} that is a singular value
+   */
+  @Nonnull
+  public ColumnRepresentation singularOrNull() {
+    // Both size(x) and getAt(x, 0) reference the operand; let() ensures a nondeterministic
+    // operand fires exactly once per row rather than twice.
+    return vectorize(
+        c -> let(c, x -> when(size(x).equalTo(1), getAt(x, 0))), UnaryOperator.identity());
+  }
+
+  /**
    * Creates a Column expression that enforces the singularity constraint. This should be called
    * when a singular value is required but will not be directly used, to ensure the constraint is
    * checked during evaluation.
@@ -507,18 +522,17 @@ public abstract class ColumnRepresentation {
 
   /**
    * Returns the value at an index of the current {@link ColumnRepresentation}. A singular value is
-   * returned as it is, whatever the index.
+   * a collection of one item, so only index 0 returns it.
    *
    * @param index the zero-based index of the value, as an integer column
-   * @return A new {@link ColumnRepresentation} that is the value at the index, or null where there
-   *     is none
+   * @return A new {@link ColumnRepresentation} that is the value at the index, or null where the
+   *     index lies outside the bounds of the value, including where it is negative
    */
   @Nonnull
   public ColumnRepresentation elementAt(@Nonnull final Column index) {
-    // try_element_at is one-based, and returns null rather than failing for an index past the end.
-    // A negative index is not handled: Spark counts it from the end, or fails on position zero
-    // (#2805).
-    return vectorize(c -> try_element_at(c, index.plus(1)), UnaryOperator.identity());
+    // The get function is zero-based and returns null for any index outside the bounds of the
+    // array, where try_element_at would count a negative index from the end (#2805).
+    return vectorize(c -> functions.get(c, index), c -> when(index.equalTo(0), c));
   }
 
   /**

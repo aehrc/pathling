@@ -119,6 +119,7 @@ public final class QuantityEncoding {
           .add(CANONICAL_EXACT_COLUMN, QuantityCanonicalKind.CANONICAL_EXACT_TYPE);
 
   private static final int VALUE_INDEX = DATA_TYPE.fieldIndex(VALUE_COLUMN);
+  private static final int COMPARATOR_INDEX = DATA_TYPE.fieldIndex(COMPARATOR_COLUMN);
   private static final int UNIT_INDEX = DATA_TYPE.fieldIndex(UNIT_COLUMN);
   private static final int SYSTEM_INDEX = DATA_TYPE.fieldIndex(SYSTEM_COLUMN);
   private static final int CODE_INDEX = DATA_TYPE.fieldIndex(CODE_COLUMN);
@@ -329,8 +330,8 @@ public final class QuantityEncoding {
    * row without a schema, such as one built by {@link #encode(FhirPathQuantity)}, is taken to.
    *
    * @param row the row to decode
-   * @return the resulting FhirPathQuantity, or null where the row is null or is not a quantity
-   *     FHIRPath can represent
+   * @return the resulting FhirPathQuantity, or null where the row is null, carries a comparator, or
+   *     is not a quantity FHIRPath can represent
    * @throws IllegalArgumentException if the row has a schema that is not the fixed shape
    */
   @Nullable
@@ -345,6 +346,10 @@ public final class QuantityEncoding {
               + DATA_TYPE.simpleString()
               + " but got "
               + schema.simpleString());
+    }
+    // A quantity with a comparator records a bound rather than a known value.
+    if (!row.isNullAt(COMPARATOR_INDEX)) {
+      return null;
     }
     return FhirPathQuantity.of(
         decodeValue(row.getString(VALUE_INDEX)),

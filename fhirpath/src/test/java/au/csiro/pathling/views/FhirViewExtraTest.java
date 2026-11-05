@@ -17,11 +17,9 @@
 
 package au.csiro.pathling.views;
 
-import java.util.Set;
-
 public class FhirViewExtraTest extends FhirViewTest {
 
   public FhirViewExtraTest() {
-    super("classpath:viewTests/*.json", Set.of(), Set.of());
+    super("classpath:viewTests/*.json");
   }
 }

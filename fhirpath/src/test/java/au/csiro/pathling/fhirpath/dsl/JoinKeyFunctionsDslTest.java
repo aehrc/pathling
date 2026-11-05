@@ -45,9 +45,7 @@ import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.IdType;
-import org.hl7.fhir.r4.model.Observation;
 import org.hl7.fhir.r4.model.Patient;
-import org.hl7.fhir.r4.model.Reference;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -60,6 +58,8 @@ import org.springframework.beans.factory.annotation.Autowired;
  * <p>The keys, and the join they feed, are also tested over the reference fixtures in {@code
  * viewTests/references.json} (T088). The Parquet on FHIR layout stores no versioned key, so these
  * show that neither key depends on one (FR-033).
+ *
+ * @author John Grimes
  */
 public class JoinKeyFunctionsDslTest extends FhirPathDslTestBase {
 
@@ -107,10 +107,52 @@ public class JoinKeyFunctionsDslTest extends FhirPathDslTestBase {
                         "patientReference",
                         ref -> ref.fhirType(REFERENCE).string("reference", "Patient/patient-123"))
                     .element(
+                        "versionedReference",
+                        ref ->
+                            ref.fhirType(REFERENCE)
+                                .string("reference", "Patient/patient-123/_history/3"))
+                    .element(
                         "observationReference",
                         ref -> ref.fhirType(REFERENCE).string("reference", "Observation/obs-456"))
+                    // RelatedPerson is a type whose name ends with the name of another type
+                    // (Person), which the type parameter must not confuse with it.
+                    .element(
+                        "relatedPersonReference",
+                        ref -> ref.fhirType(REFERENCE).string("reference", "RelatedPerson/r1"))
+                    .element(
+                        "absoluteVersionedReference",
+                        ref ->
+                            ref.fhirType(REFERENCE)
+                                .string(
+                                    "reference",
+                                    "https://example.org/fhir/Patient/patient-123/_history/2"))
                     .element(
                         "emptyReference", ref -> ref.fhirType(REFERENCE).stringEmpty("reference"))
+                    // Non-relative references can never equal a [type]/[id] resource key, so
+                    // they must produce no key.
+                    .element(
+                        "absoluteReference",
+                        ref ->
+                            ref.fhirType(REFERENCE)
+                                .string(
+                                    "reference", "https://example.org/fhir/Patient/patient-123"))
+                    .element(
+                        "containedReference",
+                        ref -> ref.fhirType(REFERENCE).string("reference", "#p1"))
+                    .element(
+                        "urnReference",
+                        ref ->
+                            ref.fhirType(REFERENCE)
+                                .string(
+                                    "reference", "urn:uuid:550e8400-e29b-41d4-a716-446655440000"))
+                    // Ids may only contain [A-Za-z0-9\-.], so these are not valid references.
+                    .element(
+                        "invalidIdReference",
+                        ref -> ref.fhirType(REFERENCE).string("reference", "Patient/p:1"))
+                    .element(
+                        "invalidVersionReference",
+                        ref ->
+                            ref.fhirType(REFERENCE).string("reference", "Patient/p1/_history/2#x"))
                     // Define a collection of references
                     .elementArray(
                         "multipleReferences",
@@ -131,6 +173,21 @@ public class JoinKeyFunctionsDslTest extends FhirPathDslTestBase {
         .testEmpty(
             "emptyReference.getReferenceKey()",
             "getReferenceKey() returns empty for an empty reference")
+        .group("getReferenceKey() excludes non-relative references")
+        .testEmpty(
+            "absoluteReference.getReferenceKey()",
+            "getReferenceKey() returns empty for an absolute URL reference")
+        .testEmpty(
+            "containedReference.getReferenceKey()",
+            "getReferenceKey() returns empty for a contained reference")
+        .testEmpty(
+            "urnReference.getReferenceKey()", "getReferenceKey() returns empty for a URN reference")
+        .testEmpty(
+            "invalidIdReference.getReferenceKey()",
+            "getReferenceKey() returns empty for a reference whose id has invalid characters")
+        .testEmpty(
+            "invalidVersionReference.getReferenceKey()",
+            "getReferenceKey() returns empty for a reference whose version has invalid characters")
         .testEquals(
             List.of("Patient/patient-123", "Practitioner/pract-456"),
             "multipleReferences.getReferenceKey()",
@@ -166,6 +223,45 @@ public class JoinKeyFunctionsDslTest extends FhirPathDslTestBase {
         .testEmpty(
             "observationReference.getReferenceKey(Patient)",
             "getReferenceKey() with non-matching type returns empty for Observation")
+        .group("getReferenceKey() function with versioned references")
+        .testEquals(
+            "Patient/patient-123",
+            "versionedReference.getReferenceKey()",
+            "getReferenceKey() strips the /_history version so a versioned reference joins its"
+                + " target's resource key")
+        .testEquals(
+            "Patient/patient-123",
+            "versionedReference.getReferenceKey(Patient)",
+            "getReferenceKey(Patient) strips the /_history version for a matching typed reference")
+        .testEmpty(
+            "versionedReference.getReferenceKey(Observation)",
+            "getReferenceKey(Observation) with non-matching type returns empty for a versioned"
+                + " reference")
+        .testEmpty(
+            "absoluteVersionedReference.getReferenceKey(Patient)",
+            "getReferenceKey(Patient) returns empty for a versioned absolute reference")
+        .group("getReferenceKey() with type parameter excludes non-relative references")
+        .testEmpty(
+            "absoluteReference.getReferenceKey(Patient)",
+            "getReferenceKey(Patient) returns empty for an absolute URL reference")
+        .testEmpty(
+            "containedReference.getReferenceKey(Patient)",
+            "getReferenceKey(Patient) returns empty for a contained reference")
+        .testEmpty(
+            "urnReference.getReferenceKey(Patient)",
+            "getReferenceKey(Patient) returns empty for a URN reference")
+        .testEmpty(
+            "invalidIdReference.getReferenceKey(Patient)",
+            "getReferenceKey(Patient) returns empty for a reference whose id has invalid"
+                + " characters")
+        .group("getReferenceKey() type parameter matches the whole type name")
+        .testEmpty(
+            "relatedPersonReference.getReferenceKey(Person)",
+            "getReferenceKey(Person) returns empty for a RelatedPerson reference")
+        .testEquals(
+            "RelatedPerson/r1",
+            "relatedPersonReference.getReferenceKey(RelatedPerson)",
+            "getReferenceKey(RelatedPerson) returns the key for a RelatedPerson reference")
         .group("getReferenceKey() function error cases")
         .testError(
             "nonReference.getReferenceKey()",
@@ -194,7 +290,14 @@ public class JoinKeyFunctionsDslTest extends FhirPathDslTestBase {
                     .string("id_versioned", "Patient/patient-123/_history/1")
                     .element(
                         "selfReference",
-                        ref -> ref.fhirType(REFERENCE).string("reference", "Patient/patient-123")))
+                        ref -> ref.fhirType(REFERENCE).string("reference", "Patient/patient-123"))
+                    // A reference to a different version of the same resource, which joins
+                    // regardless of the version that is loaded.
+                    .element(
+                        "versionedSelfReference",
+                        ref ->
+                            ref.fhirType(REFERENCE)
+                                .string("reference", "Patient/patient-123/_history/3")))
         .group("getResourceKey() and getReferenceKey() matching with versioned IDs")
         .testEquals(
             "Patient/patient-123",
@@ -205,42 +308,26 @@ public class JoinKeyFunctionsDslTest extends FhirPathDslTestBase {
             "Patient/patient-123",
             "selfReference.getReferenceKey()",
             "getReferenceKey() returns unversioned reference")
+        .testTrue(
+            "getResourceKey() = versionedSelfReference.getReferenceKey()",
+            "getReferenceKey() on a reference to another version equals getResourceKey()")
         .build();
   }
 
   @FhirPathTest
   public Stream<DynamicTest> testVersionedKeys() {
-    // A versioned reference keeps its version under the current rule (#2797), and a resource
-    // whose id carries a version still has an unversioned key.
-    final Observation observation = new Observation();
-    observation.setId("o4");
-    observation.setSubject(new Reference("Patient/p2/_history/3"));
+    // A resource whose id carries a version still has an unversioned key. The key of a versioned
+    // reference is covered with the other reference keys, as it was fixed in #2797.
     final Patient patient = new Patient();
     patient.setIdElement(new IdType("Patient", "p2", "3"));
-    return Stream.concat(
-        builder()
-            .withResource(observation)
-            .group("getReferenceKey() of a versioned reference")
-            .testEquals(
-                "Patient/p2/_history/3",
-                "subject.getReferenceKey()",
-                "getReferenceKey() keeps the version of a versioned reference")
-            .testEquals(
-                "Patient/p2/_history/3",
-                "subject.getReferenceKey(Patient)",
-                "getReferenceKey() with a matching type keeps the version")
-            .testEmpty(
-                "subject.getReferenceKey(Practitioner)",
-                "getReferenceKey() with a non-matching type is empty for a versioned reference")
-            .build(),
-        builder()
-            .withResource(patient)
-            .group("getResourceKey() of a resource with a versioned id")
-            .testEquals(
-                "Patient/p2",
-                "getResourceKey()",
-                "getResourceKey() is built from the plain id, not a stored versioned key")
-            .build());
+    return builder()
+        .withResource(patient)
+        .group("getResourceKey() of a resource with a versioned id")
+        .testEquals(
+            "Patient/p2",
+            "getResourceKey()",
+            "getResourceKey() is built from the plain id, not a stored versioned key")
+        .build();
   }
 
   @Test
@@ -281,7 +368,7 @@ public class JoinKeyFunctionsDslTest extends FhirPathDslTestBase {
             "o1|Patient/p1|Patient/p1",
             "o2|Patient/p-missing|Patient/p-missing",
             "o3|Device/d1|null",
-            "o4|Patient/p2/_history/3|Patient/p2/_history/3",
+            "o4|Patient/p2|Patient/p2",
             "o5|null|null");
   }
 
@@ -315,7 +402,7 @@ public class JoinKeyFunctionsDslTest extends FhirPathDslTestBase {
             .alias("r");
 
     // The join is over the columns the views output, as a caller would write it. Only the
-    // resolvable references find a target: the versioned one keeps its version and joins nothing.
+    // resolvable references find a target, the versioned one by the key of the resource it names.
     assertThat(
             references
                 .join(targets, references.col("ref_key").equalTo(targets.col("key")))
@@ -323,7 +410,7 @@ public class JoinKeyFunctionsDslTest extends FhirPathDslTestBase {
                 .collectAsList()
                 .stream()
                 .map(JoinKeyFunctionsDslTest::render))
-        .containsExactlyInAnyOrder("o1|p1", "o1|pr1", "o1|p2");
+        .containsExactlyInAnyOrder("o1|p1", "o1|pr1", "o1|p2", "o4|p2");
   }
 
   @Test

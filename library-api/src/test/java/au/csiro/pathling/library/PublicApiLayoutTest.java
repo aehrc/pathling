@@ -275,8 +275,8 @@ class PublicApiLayoutTest {
     // A ViewDefinition, a resource type the definitions describe and FHIR R4 does not.
     final String viewDefinition =
         "<ViewDefinition xmlns=\"http://hl7.org/fhir\"><id value=\"v1\"/>"
-            + "<name value=\"patient_names\"/><resource value=\"Patient\"/>"
-            + "<status value=\"active\"/><select><column><name value=\"id\"/>"
+            + "<name value=\"patient_names\"/><status value=\"active\"/>"
+            + "<resource value=\"Patient\"/><select><column><name value=\"id\"/>"
             + "<path value=\"getResourceKey()\"/></column></select></ViewDefinition>";
     final String bundle =
         "<Bundle xmlns=\"http://hl7.org/fhir\"><type value=\"collection\"/><entry><resource>"

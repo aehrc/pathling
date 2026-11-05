@@ -120,7 +120,7 @@ public class SqlExportExecutor {
       final List<String> fileUrls =
           subject.kind() == SubjectKind.VIEW_DEFINITION
               ? runView(subject, request, dataSource, jobDirPath)
-              : runSql(subject, request, dataSource, jobDirPath, jobId + "-" + i);
+              : runSql(subject, request, dataSource, jobDirPath);
       outputs.add(new ExportManifestOutput(subject.name(), fileUrls));
     }
 
@@ -175,14 +175,12 @@ public class SqlExportExecutor {
       @Nonnull final SubjectInput subject,
       @Nonnull final SqlExportRequest request,
       @Nonnull final QueryableDataSource dataSource,
-      @Nonnull final Path jobDirPath,
-      @Nonnull final String requestId) {
+      @Nonnull final Path jobDirPath) {
     final AtomicReference<List<String>> fileUrls = new AtomicReference<>(List.of());
     try {
       pipeline.execute(
           Objects.requireNonNull(subject.preparedQuery()),
           dataSource,
-          requestId,
           result -> fileUrls.set(writeOutput(result, subject.name(), request, jobDirPath)));
     } catch (final Exception e) {
       // A 422 raised here survives the async round-trip: JobProvider renders a failed job through

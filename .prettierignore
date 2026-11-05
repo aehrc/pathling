@@ -2,3 +2,6 @@
 
 # Intentionally malformed fixture for the streaming import corruption test.
 terminology/src/test/resources/fhir-import/corrupt-concepts.json
+
+# Delta transaction logs are newline-delimited JSON written by Delta Lake.
+**/_delta_log/

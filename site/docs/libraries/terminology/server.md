@@ -97,7 +97,7 @@ pathling --tx-server https://tx.example.org/fhir member-of codes.csv \
 ```
 
 The server can also be recorded once as `tx-server` in the configuration file.
-See the [command line interface documentation](../cli#global-options) for
+See the [CLI configuration reference](../cli/configuration.md#top-level-keys) for
 details.
 
 </TabItem>
@@ -257,7 +257,7 @@ pathling --tx-server https://ontology.nhs.uk/production1/fhir \
 
 The credentials can also be recorded in the `[terminology-auth]` table of the
 configuration file. See the
-[command line interface documentation](../cli#configuration-file) for details.
+[CLI configuration reference](../cli/configuration.md#terminology-auth) for details.
 
 </TabItem>
 </Tabs>

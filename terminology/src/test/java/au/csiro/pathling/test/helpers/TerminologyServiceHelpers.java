@@ -74,6 +74,7 @@ public class TerminologyServiceHelpers {
       this.mockService = mockService;
       clearInvocations(mockService);
       when(mockService.validateCode(any(), any())).thenReturn(false);
+      when(mockService.validateCodeInferringSystem(any(), any())).thenReturn(false);
     }
 
     @Nonnull
@@ -82,6 +83,35 @@ public class TerminologyServiceHelpers {
       for (final Coding coding : codings) {
         when(mockService.validateCode(eq(valueSetUrl), codingEq(coding))).thenReturn(true);
       }
+      return this;
+    }
+
+    /**
+     * Makes the given codes members of a value set when validated by inferring their system.
+     *
+     * @param valueSetUrl the URL of the value set
+     * @param codes the codes that are members of the value set
+     * @return these expectations
+     */
+    @Nonnull
+    public ValidateExpectations withCodes(
+        @Nonnull final String valueSetUrl, @Nonnull final String... codes) {
+      for (final String code : codes) {
+        when(mockService.validateCodeInferringSystem(valueSetUrl, code)).thenReturn(true);
+      }
+      return this;
+    }
+
+    /**
+     * Makes a value set unresolvable, so that the membership of any coding or code is unknown.
+     *
+     * @param valueSetUrl the URL of the value set
+     * @return these expectations
+     */
+    @Nonnull
+    public ValidateExpectations withUnresolvableValueSet(@Nonnull final String valueSetUrl) {
+      when(mockService.validateCode(eq(valueSetUrl), any())).thenReturn(null);
+      when(mockService.validateCodeInferringSystem(eq(valueSetUrl), any())).thenReturn(null);
       return this;
     }
   }

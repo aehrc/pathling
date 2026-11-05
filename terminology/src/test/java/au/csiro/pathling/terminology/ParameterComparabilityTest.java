@@ -80,4 +80,20 @@ class ParameterComparabilityTest {
     assertNotEquals(parameters1, parameters5);
     assertNotEquals(parameters1.hashCode(), parameters5.hashCode());
   }
+
+  @Test
+  void validateCodeInferringSystemDiffersFromCodingWithoutSystem() {
+    // A code validated by inferring its system must not share a cache entry with a coding that
+    // lacks a system, which is never a member of any value set.
+    final ValidateCodeParameters codingWithoutSystem =
+        new ValidateCodeParameters(
+            "http://hl7.org/fhir/ValueSet/administrative-gender",
+            ImmutableCoding.of(new Coding().setCode("male")));
+    final ValidateCodeParameters inferringSystem =
+        ValidateCodeParameters.inferringSystem(
+            "http://hl7.org/fhir/ValueSet/administrative-gender", "male");
+
+    assertNotEquals(codingWithoutSystem, inferringSystem);
+    assertNotEquals(codingWithoutSystem.hashCode(), inferringSystem.hashCode());
+  }
 }

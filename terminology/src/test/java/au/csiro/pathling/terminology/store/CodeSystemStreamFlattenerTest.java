@@ -185,6 +185,7 @@ class CodeSystemStreamFlattenerTest {
     final String codeSystemJson = extractBalancedObject(bundle, start);
 
     try (CodeSystemStaging staging = CodeSystemStaging.create()) {
+      staging.beginCodeSystem("sv");
       final CodeSystemStreamFlattener flattener = new CodeSystemStreamFlattener(staging);
       try (JsonParser parser =
           FACTORY.createParser(codeSystemJson.getBytes(StandardCharsets.UTF_8))) {
@@ -208,6 +209,7 @@ class CodeSystemStreamFlattenerTest {
 
   private static void flattenFixture(final CodeSystemStaging staging, final String fixtureName)
       throws Exception {
+    staging.beginCodeSystem("sv");
     final CodeSystemStreamFlattener flattener = new CodeSystemStreamFlattener(staging);
     try (InputStream in = Files.newInputStream(FhirPackageFixtures.resource(fixtureName));
         JsonParser parser = FACTORY.createParser(in)) {
@@ -270,6 +272,7 @@ class CodeSystemStreamFlattenerTest {
       final String json =
           "{\"resourceType\":\"CodeSystem\",\"url\":\"u\",\"version\":\"1\",\"concept\":["
               + "{\"code\":\"a\"},{\"code\":\"b\"},{\"code\":\"c\"},{\"code\":\"d\"},{\"code\":\"e\"}]}";
+      staging.beginCodeSystem("sv");
       final CodeSystemStreamFlattener flattener = new CodeSystemStreamFlattener(staging, 2);
       try (JsonParser parser = FACTORY.createParser(json.getBytes(StandardCharsets.UTF_8))) {
         flattener.flatten(parser);
@@ -321,6 +324,7 @@ class CodeSystemStreamFlattenerTest {
 
   private static void flattenString(final CodeSystemStaging staging, final String json)
       throws Exception {
+    staging.beginCodeSystem("sv");
     final CodeSystemStreamFlattener flattener = new CodeSystemStreamFlattener(staging);
     try (JsonParser parser = FACTORY.createParser(json.getBytes(StandardCharsets.UTF_8))) {
       flattener.flatten(parser);

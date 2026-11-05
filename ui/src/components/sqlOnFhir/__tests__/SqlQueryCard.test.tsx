@@ -18,9 +18,8 @@
 /**
  * Tests for the SqlQueryCard component.
  *
- * Verifies the format-aware result branching: tabular formats render a
- * preview table (capped at 10 rows), parquet renders an export-pending
- * notice and errors surface in a Callout with the submitted SQL above.
+ * Verifies that the card requests a 10-row preview, renders it as a table,
+ * and surfaces errors in a Callout with the submitted SQL above.
  *
  * @author John Grimes
  */
@@ -72,24 +71,11 @@ vi.mock("../../../utils", () => ({
 }));
 
 const TABULAR_RESULT: SqlQueryResult = {
-  kind: "tabular",
-  format: "csv",
   columns: ["patient_id", "given_name"],
   rows: [
     { patient_id: "pat-1", given_name: "Alice" },
     { patient_id: "pat-2", given_name: "Bob" },
   ],
-  rawBody: new Blob(["patient_id,given_name\npat-1,Alice\npat-2,Bob"], {
-    type: "text/csv",
-  }),
-};
-
-const BINARY_RESULT: SqlQueryResult = {
-  kind: "binary",
-  format: "parquet",
-  blob: new Blob([new Uint8Array([1, 2, 3, 4])], {
-    type: "application/vnd.apache.parquet",
-  }),
 };
 
 function createJob(overrides: Partial<SqlQueryJob> = {}): SqlQueryJob {
@@ -116,7 +102,6 @@ function createJob(overrides: Partial<SqlQueryJob> = {}): SqlQueryJob {
           },
         ],
       },
-      format: "csv",
     },
     sql: "SELECT 1",
     createdAt: new Date(),
@@ -139,6 +124,14 @@ describe("SqlQueryCard", () => {
     vi.clearAllMocks();
   });
 
+  // The card shows at most 10 rows, so it asks the server for no more than
+  // that; the full result set is available through export.
+  it("requests a 10-row preview when it mounts", () => {
+    render(<SqlQueryCard job={createJob()} onClose={onClose} />);
+    expect(mockExecute).toHaveBeenCalledTimes(1);
+    expect(mockExecute).toHaveBeenCalledWith(expect.objectContaining({ limit: 10 }));
+  });
+
   // The pending state is communicated via a spinner and a status message
   // so the user knows the request is in flight.
   it("shows a spinner and pending message while the request is in flight", () => {
@@ -147,9 +140,9 @@ describe("SqlQueryCard", () => {
     expect(screen.getByText(/executing sql query/i)).toBeInTheDocument();
   });
 
-  // A successful tabular result renders a Table with one column per CSV
-  // column and a row count badge.
-  it("renders a table for a successful tabular result", () => {
+  // A successful result renders a Table with one column per result column
+  // and a row count badge.
+  it("renders a table for a successful result", () => {
     mockStatus = "success";
     mockResult = TABULAR_RESULT;
     render(<SqlQueryCard job={createJob()} onClose={onClose} />);
@@ -172,8 +165,8 @@ describe("SqlQueryCard", () => {
     );
   });
 
-  // The card is a preview only and clamps the rendered rows to 10, with
-  // full-result downloads deferred to a future SQL query export operation.
+  // The card is a preview only and clamps the rendered rows to 10; the full
+  // result set is available through export.
   it("clamps the rendered rows to 10 even if the result has more", () => {
     mockStatus = "success";
     mockResult = {
@@ -199,9 +192,8 @@ describe("SqlQueryCard", () => {
     expect(screen.getByRole("button", { name: /^export$/i })).toBeInTheDocument();
   });
 
-  // Empty tabular results show "No rows returned" instead of an empty
-  // table.
-  it("shows a no-rows message when the tabular result is empty", () => {
+  // Empty results show "No rows returned" instead of an empty table.
+  it("shows a no-rows message when the result is empty", () => {
     mockStatus = "success";
     mockResult = {
       ...TABULAR_RESULT,
@@ -209,25 +201,6 @@ describe("SqlQueryCard", () => {
     };
     render(<SqlQueryCard job={createJob()} onClose={onClose} />);
     expect(screen.getByText(/no rows returned/i)).toBeInTheDocument();
-  });
-
-  // Binary (parquet) results cannot be previewed in the card; the body points
-  // the operator to the Export control to download the full result set.
-  it("offers export for non-previewable parquet results", () => {
-    mockStatus = "success";
-    mockResult = BINARY_RESULT;
-    render(
-      <SqlQueryCard
-        job={createJob({
-          request: { ...createJob().request, format: "parquet" },
-        })}
-        onClose={onClose}
-      />,
-    );
-    expect(screen.getByText(/parquet results cannot be previewed/i)).toBeInTheDocument();
-    // No preview table for a binary result, but the export affordance is present.
-    expect(screen.queryByRole("table")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /^export$/i })).toBeInTheDocument();
   });
 
   // OperationOutcome errors are shown in a callout with the submitted SQL

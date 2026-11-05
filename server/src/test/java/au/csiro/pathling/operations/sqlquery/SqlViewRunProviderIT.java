@@ -145,6 +145,24 @@ class SqlViewRunProviderIT {
   }
 
   @Test
+  void runsSqlQueryOverASqlViewWhoseBodyContainsASubquery() {
+    // Issue 2759: the subquery inside the SQLView's body reads the view's own declared
+    // dependency, whose temp view name is not among the top-level query's. Every family name
+    // is greater than or equal to the minimum, so all three rows survive the filter.
+    final Library library =
+        sqlQueryLibrary(
+            "SELECT id, family_name FROM sq ORDER BY id",
+            "sq",
+            SqlViewTestConfiguration.libraryUrl(SqlViewTestConfiguration.SUBQUERY_PATIENTS_ID));
+
+    final String body = postOk(parametersJson(library));
+
+    final String[] lines = body.trim().split("\n");
+    assertThat(lines).hasSize(3);
+    assertThat(body).contains("Smith").contains("Johnson").contains("Williams");
+  }
+
+  @Test
   void runsSqlQueryOverADiamondOfSqlViews() {
     // left and right both depend on the shared SQLView; the join returns one row per patient,
     // confirming both arms observe the same shared materialisation.

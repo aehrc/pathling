@@ -18,6 +18,7 @@
 package au.csiro.pathling.terminology.store;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -66,7 +67,7 @@ class FhirResourceScannerTest {
     Files.copy(FhirPackageFixtures.resource("nested-hierarchy.json"), dir.resolve("nested.json"));
 
     final List<ScannedResource> scanned =
-        new FhirResourceScanner(new Configuration()).scan(dir.toString());
+        new FhirResourceScanner(new Configuration()).scan(dir.toString()).getResources();
 
     assertEquals(1, scanned.size());
     assertEquals("CodeSystem", scanned.get(0).getResourceType());
@@ -82,7 +83,7 @@ class FhirResourceScannerTest {
             dir, "cs.tgz", "nested-hierarchy.json", "valueset-simple.json");
 
     final List<ScannedResource> scanned =
-        new FhirResourceScanner(new Configuration()).scan(archive.toString());
+        new FhirResourceScanner(new Configuration()).scan(archive.toString()).getResources();
 
     final Map<String, ScannedResource> byType =
         scanned.stream().collect(Collectors.toMap(ScannedResource::getResourceType, s -> s));
@@ -144,16 +145,153 @@ class FhirResourceScannerTest {
     assertNull(scanned.getUrl());
   }
 
+  // --- Bundle members. ---
+
+  @Test
+  void scansEveryMemberOfABundleInEntryOrder() throws Exception {
+    final byte[] bytes =
+        FhirPackageFixtures.read("bundle-mixed.json").getBytes(StandardCharsets.UTF_8);
+
+    final ScannedResource bundle =
+        FhirResourceScanner.scanStream(
+            new ByteArrayInputStream(bytes), "bundle-mixed.json", bytes.length);
+
+    assertEquals("Bundle", bundle.getResourceType());
+    // One member per entry, including the entry without a resource, so that the import pass can
+    // pair each entry with its member by position.
+    final List<ScannedResource> members = bundle.getMembers();
+    assertEquals(5, members.size());
+    assertEquals("CodeSystem", members.get(0).getResourceType());
+    assertEquals("http://example.org/fhir/CodeSystem/bundled", members.get(0).getUrl());
+    assertEquals("1.0.0", members.get(0).getVersion());
+    assertEquals("Patient", members.get(1).getResourceType());
+    assertFalse(members.get(1).isImportable());
+    assertNull(members.get(2).getResourceType());
+    assertEquals("ValueSet", members.get(3).getResourceType());
+    assertEquals("http://example.org/fhir/ValueSet/bundled", members.get(3).getUrl());
+    assertEquals("ConceptMap", members.get(4).getResourceType());
+    assertEquals("http://example.org/fhir/ConceptMap/bundled", members.get(4).getUrl());
+    // Each member is named after its position, for error messages.
+    assertEquals("bundle-mixed.json#entry[4]", members.get(4).getEntryName());
+  }
+
+  @Test
+  void measuresTheByteSizeOfEachBundleMember() throws Exception {
+    final String valueSet =
+        "{\"resourceType\":\"ValueSet\",\"url\":\"http://x/vs\",\"text\":{\"div\":\""
+            + "x".repeat(10_000)
+            + "\"}}";
+    final String json =
+        "{\"resourceType\":\"Bundle\",\"entry\":[{\"resource\":"
+            + valueSet
+            + "},{\"resource\":{\"resourceType\":\"ValueSet\",\"url\":\"http://x/small\"}}]}";
+    final byte[] bytes = json.getBytes(StandardCharsets.UTF_8);
+
+    final List<ScannedResource> members =
+        FhirResourceScanner.scanStream(new ByteArrayInputStream(bytes), "b.json", bytes.length)
+            .getMembers();
+
+    // The size of a member is the size of its resource object, not of the whole Bundle.
+    assertEquals(valueSet.length(), members.get(0).getByteSize());
+    assertTrue(members.get(1).getByteSize() < 100);
+  }
+
+  @Test
+  void scansBundleMembersWhenTheEntryArrayPrecedesTheResourceType() throws Exception {
+    final String json =
+        "{\"entry\":[{\"resource\":{\"url\":\"http://x/cm\",\"resourceType\":\"ConceptMap\"}}],"
+            + "\"resourceType\":\"Bundle\"}";
+    final byte[] bytes = json.getBytes(StandardCharsets.UTF_8);
+
+    final ScannedResource bundle =
+        FhirResourceScanner.scanStream(new ByteArrayInputStream(bytes), "b.json", bytes.length);
+
+    assertEquals("Bundle", bundle.getResourceType());
+    assertEquals(1, bundle.getMembers().size());
+    assertEquals("ConceptMap", bundle.getMembers().get(0).getResourceType());
+    assertEquals("http://x/cm", bundle.getMembers().get(0).getUrl());
+  }
+
+  @Test
+  void aResourceThatIsNotABundleHasNoMembers() throws Exception {
+    final byte[] bytes =
+        FhirPackageFixtures.read("valueset-simple.json").getBytes(StandardCharsets.UTF_8);
+
+    final ScannedResource scanned =
+        FhirResourceScanner.scanStream(new ByteArrayInputStream(bytes), "vs.json", bytes.length);
+
+    assertTrue(scanned.getMembers().isEmpty());
+  }
+
   @Test
   void skipsPackageMetadataEntries(@TempDir final Path dir) throws Exception {
     // The package helper always writes a package.json metadata entry, which must not be scanned.
     final Path archive = FhirPackageFixtures.buildPackage(dir, "cs.tgz", "nested-hierarchy.json");
 
     final List<ScannedResource> scanned =
-        new FhirResourceScanner(new Configuration()).scan(archive.toString());
+        new FhirResourceScanner(new Configuration()).scan(archive.toString()).getResources();
 
     assertEquals(1, scanned.size());
     assertEquals("CodeSystem", scanned.get(0).getResourceType());
+  }
+
+  @Test
+  void scanOfPackageReturnsIdentityAndDigests(@TempDir final Path dir) throws Exception {
+    final Path archive = FhirPackageFixtures.buildPackage(dir, "cs.tgz", "nested-hierarchy.json");
+
+    final FhirSourceScan scan =
+        new FhirResourceScanner(new Configuration()).scan(archive.toString());
+
+    assertTrue(scan.isPackage());
+    assertEquals(FhirPackageFixtures.PACKAGE_NAME, scan.getPackageName());
+    assertEquals(FhirPackageFixtures.PACKAGE_VERSION, scan.getPackageVersion());
+    // The digests cover the whole archive file, including the bytes that trail the last entry.
+    assertEquals(FhirPackageFixtures.sha1Hex(archive), scan.getSha1());
+    assertEquals(FhirPackageFixtures.sha256Hex(archive), scan.getSha256());
+    assertEquals(1, scan.getResources().size());
+  }
+
+  @Test
+  void scanOfPackageWithoutPackageJsonHasNullIdentity(@TempDir final Path dir) throws Exception {
+    final Path archive =
+        FhirPackageFixtures.buildPackageWithJson(dir, "anon.tgz", null, "nested-hierarchy.json");
+
+    final FhirSourceScan scan =
+        new FhirResourceScanner(new Configuration()).scan(archive.toString());
+
+    assertTrue(scan.isPackage());
+    assertNull(scan.getPackageName());
+    assertNull(scan.getPackageVersion());
+    // An unidentified package is still hashed.
+    assertEquals(FhirPackageFixtures.sha1Hex(archive), scan.getSha1());
+  }
+
+  @Test
+  void scanOfPackageJsonLackingVersionHasNullVersion(@TempDir final Path dir) throws Exception {
+    final Path archive =
+        FhirPackageFixtures.buildPackageWithJson(
+            dir, "unversioned.tgz", "{\"name\":\"fixtures\"}", "nested-hierarchy.json");
+
+    final FhirSourceScan scan =
+        new FhirResourceScanner(new Configuration()).scan(archive.toString());
+
+    assertEquals("fixtures", scan.getPackageName());
+    assertNull(scan.getPackageVersion());
+  }
+
+  @Test
+  void scanOfDirectoryHasNullDigestsAndIdentity(@TempDir final Path dir) throws Exception {
+    Files.copy(FhirPackageFixtures.resource("nested-hierarchy.json"), dir.resolve("nested.json"));
+
+    final FhirSourceScan scan = new FhirResourceScanner(new Configuration()).scan(dir.toString());
+
+    // A directory has no single set of bytes to hash and no package identity.
+    assertFalse(scan.isPackage());
+    assertNull(scan.getSha1());
+    assertNull(scan.getSha256());
+    assertNull(scan.getPackageName());
+    assertNull(scan.getPackageVersion());
+    assertEquals(1, scan.getResources().size());
   }
 
   /** A stream that counts the bytes read through it, for asserting the pre-scan's early exit. */

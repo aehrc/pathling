@@ -634,6 +634,37 @@ public class ResolveFunctionDslTest extends FhirPathDslTestBase {
         .testTrue(
             "Patient.generalPractitioner.resolve().first() is Practitioner",
             "First resolved reference is Practitioner")
+        .group("HAPI resource - select() with resolve()")
+        .testEquals(
+            3,
+            "Patient.generalPractitioner.select(resolve()).count()",
+            "Projecting each reference to its resolved resource keeps every reference")
+        .testEquals(
+            2,
+            "Patient.generalPractitioner.select(resolve().ofType(Practitioner)).count()",
+            "Projecting to Practitioner counts only the Practitioner references")
+        .testEquals(
+            1,
+            "Patient.generalPractitioner.select(resolve().ofType(Organization)).count()",
+            "Projecting to Organization counts only the Organization reference")
+        .testEquals(
+            0,
+            "Patient.generalPractitioner.select(resolve().ofType(Location)).count()",
+            "Projecting to a type that no reference resolves to counts nothing")
+        .testEmpty(
+            "Patient.generalPractitioner.select(resolve().ofType(Location))",
+            "Projecting to a type that no reference resolves to is empty")
+        .testFalse(
+            "Patient.generalPractitioner.select(resolve().ofType(Location)).exists()",
+            "Projecting to a type that no reference resolves to does not exist")
+        .testEquals(
+            0,
+            "Patient.managingOrganization.select(resolve().ofType(Practitioner)).count()",
+            "Projecting a singular reference to a type it does not resolve to counts nothing")
+        .testEquals(
+            1,
+            "Patient.managingOrganization.select(resolve().ofType(Organization)).count()",
+            "Projecting a singular reference to its resolved type counts it")
         .build();
   }
 

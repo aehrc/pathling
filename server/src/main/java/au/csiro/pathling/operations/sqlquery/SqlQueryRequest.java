@@ -23,21 +23,15 @@ import java.util.Map;
 import lombok.Value;
 
 /**
- * The validated, normalised inputs to a single {@code $sql-run} invocation. Produced by {@link
- * SqlQueryRequestParser} from the raw HTTP-level parameters and consumed by the downstream resolver
- * / executor / streamer pipeline.
+ * The validated, normalised inputs to the evaluation of one SQL subject of {@code $sql-run} or
+ * {@code $sql-export}. Produced by {@link SqlQueryRequestParser} and consumed by the dependency
+ * resolver and the executor.
  */
 @Value
 public class SqlQueryRequest {
 
   /** The decoded SQLQuery Library: SQL text, view references, declared parameters. */
   @Nonnull ParsedSqlQuery parsedQuery;
-
-  /** The selected output format, after applying {@code _format} / {@code Accept} fallback. */
-  @Nonnull SqlQueryOutputFormat outputFormat;
-
-  /** Whether to include a header row when emitting CSV. */
-  boolean includeHeader;
 
   /** Optional row cap; {@code null} means no cap. */
   @Nullable Integer limit;

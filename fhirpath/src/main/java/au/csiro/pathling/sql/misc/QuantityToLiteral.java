@@ -30,8 +30,9 @@ import org.apache.spark.sql.types.DataTypes;
 /**
  * Spark UDF to convert a Quantity represented as a Row to a valid Quantity literal string.
  *
- * <p>UCUM units are quoted with single quotes, while time duration units are not quoted. For other
- * systems, the function returns null.
+ * <p>UCUM units are quoted with single quotes, while time duration units are not quoted. For a
+ * missing or other system, and for a quantity that lacks a value or code or carries a comparator,
+ * the function returns null (see {@link QuantityEncoding#decode}).
  *
  * <p>If the quantity is null, the function returns null.
  */

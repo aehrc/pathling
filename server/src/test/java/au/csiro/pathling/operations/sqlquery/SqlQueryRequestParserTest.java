@@ -76,14 +76,14 @@ class SqlQueryRequestParserTest {
   @Test
   void returnsEmptyBindingsWhenParametersInputIsNull() {
     final Library library = libraryWithSql("SELECT 1");
-    final SqlQueryRequest request = parser.parse(library, null, null, null, null, null);
+    final SqlQueryRequest request = parser.parse(library, null, null);
     assertThat(request.getParameterBindings()).isEmpty();
   }
 
   @Test
   void returnsEmptyBindingsWhenParametersInputHasNoEntries() {
     final Library library = libraryWithSql("SELECT 1");
-    final SqlQueryRequest request = parser.parse(library, null, null, null, null, new Parameters());
+    final SqlQueryRequest request = parser.parse(library, null, new Parameters());
     assertThat(request.getParameterBindings()).isEmpty();
   }
 
@@ -98,7 +98,7 @@ class SqlQueryRequestParserTest {
     final Parameters params = new Parameters();
     params.addParameter().setName("min_age").setValue(new IntegerType(42));
 
-    final SqlQueryRequest request = parser.parse(library, null, null, null, null, params);
+    final SqlQueryRequest request = parser.parse(library, null, params);
 
     assertThat(request.getParameterBindings()).containsExactly(Map.entry("min_age", 42));
     assertThat(request.getParameterBindings().get("min_age")).isInstanceOf(Integer.class);
@@ -111,7 +111,7 @@ class SqlQueryRequestParserTest {
     final Parameters params = new Parameters();
     params.addParameter().setName("threshold").setValue(new DecimalType("3.14"));
 
-    final SqlQueryRequest request = parser.parse(library, null, null, null, null, params);
+    final SqlQueryRequest request = parser.parse(library, null, params);
 
     assertThat(request.getParameterBindings().get("threshold"))
         .isInstanceOf(BigDecimal.class)
@@ -125,7 +125,7 @@ class SqlQueryRequestParserTest {
     final Parameters params = new Parameters();
     params.addParameter().setName("is_active").setValue(new BooleanType(true));
 
-    final SqlQueryRequest request = parser.parse(library, null, null, null, null, params);
+    final SqlQueryRequest request = parser.parse(library, null, params);
 
     assertThat(request.getParameterBindings()).containsEntry("is_active", true);
   }
@@ -137,7 +137,7 @@ class SqlQueryRequestParserTest {
     final Parameters params = new Parameters();
     params.addParameter().setName("name").setValue(new StringType("alice"));
 
-    final SqlQueryRequest request = parser.parse(library, null, null, null, null, params);
+    final SqlQueryRequest request = parser.parse(library, null, params);
 
     assertThat(request.getParameterBindings()).containsEntry("name", "alice");
   }
@@ -149,7 +149,7 @@ class SqlQueryRequestParserTest {
     final Parameters params = new Parameters();
     params.addParameter().setName("since").setValue(new DateType("1990-05-15"));
 
-    final SqlQueryRequest request = parser.parse(library, null, null, null, null, params);
+    final SqlQueryRequest request = parser.parse(library, null, params);
 
     assertThat(request.getParameterBindings().get("since"))
         .isInstanceOf(LocalDate.class)
@@ -163,7 +163,7 @@ class SqlQueryRequestParserTest {
     final Parameters params = new Parameters();
     params.addParameter().setName("since").setValue(new DateTimeType("2026-01-15T10:30:00Z"));
 
-    final SqlQueryRequest request = parser.parse(library, null, null, null, null, params);
+    final SqlQueryRequest request = parser.parse(library, null, params);
 
     assertThat(request.getParameterBindings().get("since"))
         .isInstanceOf(Instant.class)
@@ -177,7 +177,7 @@ class SqlQueryRequestParserTest {
     final Parameters params = new Parameters();
     params.addParameter().setName("at").setValue(new TimeType("14:30:00"));
 
-    final SqlQueryRequest request = parser.parse(library, null, null, null, null, params);
+    final SqlQueryRequest request = parser.parse(library, null, params);
 
     assertThat(request.getParameterBindings().get("at"))
         .isInstanceOf(LocalTime.class)
@@ -192,7 +192,7 @@ class SqlQueryRequestParserTest {
     final byte[] bytes = "hello".getBytes(StandardCharsets.UTF_8);
     params.addParameter().setName("payload").setValue(new Base64BinaryType(bytes));
 
-    final SqlQueryRequest request = parser.parse(library, null, null, null, null, params);
+    final SqlQueryRequest request = parser.parse(library, null, params);
 
     assertThat(request.getParameterBindings().get("payload"))
         .isInstanceOf(byte[].class)
@@ -210,7 +210,7 @@ class SqlQueryRequestParserTest {
     params.addParameter().setName("a").setValue(new IntegerType(1));
     params.addParameter().setName("b").setValue(new IntegerType(2));
 
-    final SqlQueryRequest request = parser.parse(library, null, null, null, null, params);
+    final SqlQueryRequest request = parser.parse(library, null, params);
 
     assertThat(request.getParameterBindings().keySet()).containsExactly("c", "a", "b");
   }
@@ -226,7 +226,7 @@ class SqlQueryRequestParserTest {
     final Parameters params = new Parameters();
     params.addParameter().setName("min_age").setValue(new StringType("42"));
 
-    assertThatThrownBy(() -> parser.parse(library, null, null, null, null, params))
+    assertThatThrownBy(() -> parser.parse(library, null, params))
         .isInstanceOf(InvalidRequestException.class)
         .hasMessageContaining("min_age")
         .hasMessageContaining("integer")
@@ -239,7 +239,7 @@ class SqlQueryRequestParserTest {
     final Parameters params = new Parameters();
     params.addParameter().setName("ghost").setValue(new IntegerType(1));
 
-    assertThatThrownBy(() -> parser.parse(library, null, null, null, null, params))
+    assertThatThrownBy(() -> parser.parse(library, null, params))
         .isInstanceOf(InvalidRequestException.class)
         .hasMessageContaining("ghost")
         .hasMessageContaining("not declared");
@@ -252,7 +252,7 @@ class SqlQueryRequestParserTest {
     final Parameters params = new Parameters();
     params.addParameter().setName("min_age");
 
-    assertThatThrownBy(() -> parser.parse(library, null, null, null, null, params))
+    assertThatThrownBy(() -> parser.parse(library, null, params))
         .isInstanceOf(InvalidRequestException.class)
         .hasMessageContaining("min_age")
         .hasMessageContaining("value");
@@ -264,7 +264,7 @@ class SqlQueryRequestParserTest {
     final Parameters params = new Parameters();
     params.addParameter().setValue(new IntegerType(1));
 
-    assertThatThrownBy(() -> parser.parse(library, null, null, null, null, params))
+    assertThatThrownBy(() -> parser.parse(library, null, params))
         .isInstanceOf(InvalidRequestException.class)
         .hasMessageContaining("name");
   }
@@ -277,7 +277,7 @@ class SqlQueryRequestParserTest {
     params.addParameter().setName("min_age").setValue(new IntegerType(18));
     params.addParameter().setName("min_age").setValue(new IntegerType(21));
 
-    assertThatThrownBy(() -> parser.parse(library, null, null, null, null, params))
+    assertThatThrownBy(() -> parser.parse(library, null, params))
         .isInstanceOf(InvalidRequestException.class)
         .hasMessageContaining("min_age")
         .hasMessageContaining("more than once");
@@ -376,41 +376,12 @@ class SqlQueryRequestParserTest {
     params.addParameter().setName("period_start").setValue(new DateType("2026-01-01"));
     params.addParameter().setName("period_end").setValue(new DateType("2026-12-31"));
 
-    final SqlQueryRequest request = parser.parse(library, null, null, null, null, params);
+    final SqlQueryRequest request = parser.parse(library, null, params);
 
     assertThat(request.getParameterBindings())
         .containsExactly(
             Map.entry("period_start", LocalDate.of(2026, 1, 1)),
             Map.entry("period_end", LocalDate.of(2026, 12, 31)));
-  }
-
-  // ---------------------------------------------------------------------------
-  // Output-format selection: strict for explicit _format, lenient for Accept.
-  // ---------------------------------------------------------------------------
-
-  @Test
-  void rejectsUnsupportedExplicitFormatNamingValue() {
-    // An explicit _format that is not supported is rejected with the value named.
-    final Library library = libraryWithSql("SELECT 1");
-    assertThatThrownBy(() -> parser.parse(library, "xml", null, null, null, null))
-        .isInstanceOf(InvalidRequestException.class)
-        .hasMessageContaining("xml");
-  }
-
-  @Test
-  void honoursSupportedExplicitFormat() {
-    final Library library = libraryWithSql("SELECT 1");
-    final SqlQueryRequest request = parser.parse(library, "csv", null, null, null, null);
-    assertThat(request.getOutputFormat()).isEqualTo(SqlQueryOutputFormat.CSV);
-  }
-
-  @Test
-  void fallsBackToNdjsonWhenAcceptHeaderDoesNotMatch() {
-    // An Accept header that matches no supported media type is not rejected; it defaults to NDJSON.
-    final Library library = libraryWithSql("SELECT 1");
-    final SqlQueryRequest request =
-        parser.parse(library, null, "application/xml", null, null, null);
-    assertThat(request.getOutputFormat()).isEqualTo(SqlQueryOutputFormat.NDJSON);
   }
 
   // ---------------------------------------------------------------------------
@@ -422,7 +393,7 @@ class SqlQueryRequestParserTest {
     // A SQLView supplied as the top-level resource parses as a parameter-less query.
     final Library library = SqlLibraryFixtures.sqlView("SELECT 1");
 
-    final SqlQueryRequest request = parser.parse(library, null, null, null, null, null);
+    final SqlQueryRequest request = parser.parse(library, null, null);
 
     assertThat(request.getParsedQuery().isView()).isTrue();
     assertThat(request.getParameterBindings()).isEmpty();
@@ -435,7 +406,7 @@ class SqlQueryRequestParserTest {
     final Parameters params = new Parameters();
     params.addParameter().setName("min_age").setValue(new IntegerType(42));
 
-    assertThatThrownBy(() -> parser.parse(library, null, null, null, null, params))
+    assertThatThrownBy(() -> parser.parse(library, null, params))
         .isInstanceOf(InvalidRequestException.class)
         .hasMessageContaining("min_age");
   }
@@ -453,7 +424,7 @@ class SqlQueryRequestParserTest {
         .setContentType("application/sql")
         .setData("SELECT 1".getBytes(StandardCharsets.UTF_8));
 
-    assertThatThrownBy(() -> parser.parse(library, null, null, null, null, null))
+    assertThatThrownBy(() -> parser.parse(library, null, null))
         .isInstanceOf(InvalidRequestException.class);
   }
 
@@ -463,8 +434,7 @@ class SqlQueryRequestParserTest {
    */
   private List<OperationOutcomeIssueComponent> rejectionIssues(
       final Library library, final Parameters parameters) {
-    final Throwable thrown =
-        catchThrowable(() -> parser.parse(library, null, null, null, null, parameters));
+    final Throwable thrown = catchThrowable(() -> parser.parse(library, null, parameters));
     assertThat(thrown).isInstanceOf(InvalidRequestException.class);
     final IBaseOperationOutcome outcome = ((InvalidRequestException) thrown).getOperationOutcome();
     assertThat(outcome).isInstanceOf(OperationOutcome.class);

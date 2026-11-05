@@ -1,7 +1,9 @@
 # Copyright © 2026, Commonwealth Scientific and Industrial Research Organisation (CSIRO)
 # ABN 41 687 119 230. Licensed under the Apache License, Version 2.0.
 
-FROM eclipse-temurin:21-jre AS base
+# Pinned to Noble: Ubuntu 26.04 ships uutils coreutils, whose `env` rejects the
+# spark-submit shebang under QEMU emulation in the arm64 build.
+FROM eclipse-temurin:21-jre-noble AS base
 
 # Install Python and pip.
 RUN apt-get update && \

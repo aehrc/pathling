@@ -35,8 +35,12 @@ import jakarta.annotation.Nullable;
 import java.io.Closeable;
 import org.apache.http.client.HttpClient;
 import org.hl7.fhir.r4.model.BooleanType;
+import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.CodeSystem;
 import org.hl7.fhir.r4.model.CodeType;
+import org.hl7.fhir.r4.model.ConceptMap;
+import org.hl7.fhir.r4.model.IdType;
+import org.hl7.fhir.r4.model.IntegerType;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.UriType;
@@ -78,18 +82,20 @@ public interface TerminologyClient extends Closeable {
    * Builds a validate code operation that can be customized and executed later.
    *
    * @param url the URL of the value set to validate against
-   * @param system the system of the code to validate
+   * @param system the system of the code to validate, which is omitted when inferring the system
    * @param version the version of the code system to validate against
    * @param code the code to validate
+   * @param inferSystem whether the server should infer the system of the code from the value set
    * @return an {@link IOperationUntypedWithInput} that can be customized and executed later
    * @see <a
-   *     href="https://www.hl7.org/fhir/R4/valueset-operation-validate-code.html">ValueSet/$validate-code</a>
+   *     href="https://build.fhir.org/valueset-operation-validate-code.html">ValueSet/$validate-code</a>
    */
   IOperationUntypedWithInput<Parameters> buildValidateCode(
       @Nonnull UriType url,
-      @Nonnull UriType system,
+      @Nullable UriType system,
       @Nullable StringType version,
-      @Nonnull CodeType code);
+      @Nonnull CodeType code,
+      @Nullable BooleanType inferSystem);
 
   /**
    * Translates a code using a concept map.
@@ -213,6 +219,77 @@ public interface TerminologyClient extends Closeable {
       @Nonnull CodeType code,
       @Nullable CodeType property,
       @Nullable StringType acceptLanguage);
+
+  /**
+   * Expands a value set identified by canonical URL, returning one page of the expansion.
+   *
+   * @param url the canonical URL of the value set
+   * @param valueSetVersion the version of the value set to expand, or null for the server's default
+   * @param count the number of entries requested in the page
+   * @param offset the index of the first entry requested
+   * @return the {@link ValueSet} carrying the page of the expansion
+   * @see <a href="https://www.hl7.org/fhir/R4/valueset-operation-expand.html">ValueSet/$expand</a>
+   */
+  @Operation(name = "$expand", type = ValueSet.class, idempotent = true)
+  @Nonnull
+  ValueSet expand(
+      @Nonnull @OperationParam(name = "url") UriType url,
+      @Nullable @OperationParam(name = "valueSetVersion") StringType valueSetVersion,
+      @Nonnull @OperationParam(name = "count") IntegerType count,
+      @Nonnull @OperationParam(name = "offset") IntegerType offset);
+
+  /**
+   * Expands a value set supplied as a resource, returning one page of the expansion.
+   *
+   * @param valueSet the value set resource to expand
+   * @param count the number of entries requested in the page
+   * @param offset the index of the first entry requested
+   * @return the {@link ValueSet} carrying the page of the expansion
+   * @see <a href="https://www.hl7.org/fhir/R4/valueset-operation-expand.html">ValueSet/$expand</a>
+   */
+  @Operation(name = "$expand", type = ValueSet.class)
+  @Nonnull
+  ValueSet expand(
+      @Nonnull @OperationParam(name = "valueSet") ValueSet valueSet,
+      @Nonnull @OperationParam(name = "count") IntegerType count,
+      @Nonnull @OperationParam(name = "offset") IntegerType offset);
+
+  /**
+   * Searches ConceptMap resources by canonical URL and optional version, requesting summaries only,
+   * and returns the first page of the result.
+   *
+   * @param url the canonical URL of the concept map
+   * @param version the version of the concept map, or null for every version
+   * @return the {@link Bundle} carrying the first page of the search result
+   */
+  @Nonnull
+  Bundle searchConceptMaps(@Nonnull UriType url, @Nullable StringType version);
+
+  /**
+   * Fetches the next page of a search result, following its {@code next} link.
+   *
+   * @param bundle a page of a search result that carries a {@code next} link
+   * @return the {@link Bundle} carrying the next page
+   */
+  @Nonnull
+  Bundle nextPage(@Nonnull Bundle bundle);
+
+  /**
+   * Reads one ConceptMap resource by logical id.
+   *
+   * @param id the logical id of the resource
+   * @return the {@link ConceptMap}
+   */
+  @Nonnull
+  ConceptMap readConceptMap(@Nonnull IdType id);
+
+  /**
+   * Returns the base URL of the terminology server this client communicates with.
+   *
+   * @return the server base URL
+   */
+  @Nonnull
+  String getServerUrl();
 
   /**
    * Builds a new terminology client.

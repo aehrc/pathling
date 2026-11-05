@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.fhirpath.operator;
 
+import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import jakarta.annotation.Nonnull;
 import java.lang.reflect.InvocationTargetException;
@@ -39,7 +40,8 @@ public record MethodDefinedOperator(Method method) implements FhirPathBinaryOper
    *
    * @param operatorInput the input to the operator
    * @return the result of invoking the method defined by this operator
-   * @throws MethodInvocationError if the method cannot be invoked due to an error
+   * @throws InvalidUserInputError if the method rejects the input
+   * @throws MethodInvocationError if the method cannot be invoked due to any other error
    */
   @Override
   @Nonnull
@@ -50,7 +52,13 @@ public record MethodDefinedOperator(Method method) implements FhirPathBinaryOper
     try {
       // Invoke the method.
       return (Collection) method.invoke(null, invocationArgs);
-    } catch (final IllegalAccessException | InvocationTargetException e) {
+    } catch (final InvocationTargetException e) {
+      // Rethrow a user error directly, so that its message reaches the user.
+      if (e.getCause() instanceof final InvalidUserInputError userInputError) {
+        throw userInputError;
+      }
+      throw new MethodInvocationError("Error invoking method-defined operator", e);
+    } catch (final IllegalAccessException e) {
       throw new MethodInvocationError("Error invoking method-defined operator", e);
     }
   }
