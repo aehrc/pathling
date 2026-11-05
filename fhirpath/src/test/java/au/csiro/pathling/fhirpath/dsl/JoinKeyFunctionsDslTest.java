@@ -45,9 +45,7 @@ import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.IdType;
-import org.hl7.fhir.r4.model.Observation;
 import org.hl7.fhir.r4.model.Patient;
-import org.hl7.fhir.r4.model.Reference;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -318,37 +316,18 @@ public class JoinKeyFunctionsDslTest extends FhirPathDslTestBase {
 
   @FhirPathTest
   public Stream<DynamicTest> testVersionedKeys() {
-    // A versioned reference keeps its version under the current rule (#2797), and a resource
-    // whose id carries a version still has an unversioned key.
-    final Observation observation = new Observation();
-    observation.setId("o4");
-    observation.setSubject(new Reference("Patient/p2/_history/3"));
+    // A resource whose id carries a version still has an unversioned key. The key of a versioned
+    // reference is covered with the other reference keys, as it was fixed in #2797.
     final Patient patient = new Patient();
     patient.setIdElement(new IdType("Patient", "p2", "3"));
-    return Stream.concat(
-        builder()
-            .withResource(observation)
-            .group("getReferenceKey() of a versioned reference")
-            .testEquals(
-                "Patient/p2/_history/3",
-                "subject.getReferenceKey()",
-                "getReferenceKey() keeps the version of a versioned reference")
-            .testEquals(
-                "Patient/p2/_history/3",
-                "subject.getReferenceKey(Patient)",
-                "getReferenceKey() with a matching type keeps the version")
-            .testEmpty(
-                "subject.getReferenceKey(Practitioner)",
-                "getReferenceKey() with a non-matching type is empty for a versioned reference")
-            .build(),
-        builder()
-            .withResource(patient)
-            .group("getResourceKey() of a resource with a versioned id")
-            .testEquals(
-                "Patient/p2",
-                "getResourceKey()",
-                "getResourceKey() is built from the plain id, not a stored versioned key")
-            .build());
+    return builder()
+        .withResource(patient)
+        .group("getResourceKey() of a resource with a versioned id")
+        .testEquals(
+            "Patient/p2",
+            "getResourceKey()",
+            "getResourceKey() is built from the plain id, not a stored versioned key")
+        .build();
   }
 
   @Test
@@ -389,7 +368,7 @@ public class JoinKeyFunctionsDslTest extends FhirPathDslTestBase {
             "o1|Patient/p1|Patient/p1",
             "o2|Patient/p-missing|Patient/p-missing",
             "o3|Device/d1|null",
-            "o4|Patient/p2/_history/3|Patient/p2/_history/3",
+            "o4|Patient/p2|Patient/p2",
             "o5|null|null");
   }
 
@@ -423,7 +402,7 @@ public class JoinKeyFunctionsDslTest extends FhirPathDslTestBase {
             .alias("r");
 
     // The join is over the columns the views output, as a caller would write it. Only the
-    // resolvable references find a target: the versioned one keeps its version and joins nothing.
+    // resolvable references find a target, the versioned one by the key of the resource it names.
     assertThat(
             references
                 .join(targets, references.col("ref_key").equalTo(targets.col("key")))
@@ -431,7 +410,7 @@ public class JoinKeyFunctionsDslTest extends FhirPathDslTestBase {
                 .collectAsList()
                 .stream()
                 .map(JoinKeyFunctionsDslTest::render))
-        .containsExactlyInAnyOrder("o1|p1", "o1|pr1", "o1|p2");
+        .containsExactlyInAnyOrder("o1|p1", "o1|pr1", "o1|p2", "o4|p2");
   }
 
   @Test

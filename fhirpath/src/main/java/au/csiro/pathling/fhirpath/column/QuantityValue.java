@@ -26,6 +26,7 @@ import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.not;
 import static org.apache.spark.sql.functions.when;
 
+import au.csiro.pathling.encoders.ColumnFunctions;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import au.csiro.pathling.fhirpath.unit.CalendarDurationUnit;
 import au.csiro.pathling.fhirpath.unit.UcumUnit;
@@ -218,6 +219,16 @@ public class QuantityValue {
   }
 
   /**
+   * Reads a field of the quantity as text, or null where the quantity does not carry it. A quantity
+   * in the stored shape carries only the fields its data uses, so a field such as the comparator
+   * may be absent from its schema.
+   */
+  @Nonnull
+  private Column field(@Nonnull final String name) {
+    return ColumnFunctions.resolveStringOrNull(quantityColumn, name);
+  }
+
+  /**
    * Checks if this quantity carries a comparator ({@code <}, {@code <=}, {@code >=} or {@code >}).
    *
    * <p>Such a quantity records a bound rather than a known value (e.g. {@code <5 mg} is some value
@@ -227,7 +238,7 @@ public class QuantityValue {
    */
   @Nonnull
   public Column isBounded() {
-    return quantityColumn.getField(QuantityEncoding.COMPARATOR_COLUMN).isNotNull();
+    return field(QuantityEncoding.COMPARATOR_COLUMN).isNotNull();
   }
 
   /**
@@ -245,16 +256,14 @@ public class QuantityValue {
   public Column isSystemQuantity() {
     final Column hasSupportedSystem =
         coalesce(
-            quantityColumn
-                .getField(QuantityEncoding.SYSTEM_COLUMN)
+            field(QuantityEncoding.SYSTEM_COLUMN)
                 .isin(
                     UcumUnit.UCUM_SYSTEM_URI,
                     CalendarDurationUnit.FHIRPATH_CALENDAR_DURATION_SYSTEM_URI),
             lit(false));
-    return quantityColumn
-        .getField(QuantityEncoding.VALUE_COLUMN)
+    return field(QuantityEncoding.VALUE_COLUMN)
         .isNotNull()
-        .and(quantityColumn.getField(QuantityEncoding.CODE_COLUMN).isNotNull())
+        .and(field(QuantityEncoding.CODE_COLUMN).isNotNull())
         .and(hasSupportedSystem)
         .and(not(isBounded()));
   }

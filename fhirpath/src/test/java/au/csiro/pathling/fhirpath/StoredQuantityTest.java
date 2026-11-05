@@ -62,7 +62,8 @@ class StoredQuantityTest {
 
   /**
    * An observation whose quantity and component quantities each carry a distinct extension. Its
-   * quantity also carries an id and a comparator.
+   * quantity also carries an id and a comparator, which makes it a bound: it takes part in no
+   * comparison and has no System quantity to convert to.
    */
   private static final String EXTENDED =
       "{\"resourceType\":\"Observation\",\"id\":\"q1\",\"status\":\"final\","
@@ -131,22 +132,23 @@ class StoredQuantityTest {
         arguments("(" + value + " | 7 'g').extension.exists()", "q1=false", "q2=false"),
         arguments("(" + value + " | 7 'g').count()", "q1=2", "q2=2"),
         arguments("(7 'g' | " + value + ").count()", "q1=2", "q2=2"),
-        // A union deduplicates by the canonical value, whichever the form of the operands.
-        arguments("(" + value + " | 1500 'mg').count()", "q1=1", "q2=2"),
-        // Equality and comparison decode the stored quantity.
-        arguments(value + " = 1500 'mg'", "q1=true", "q2=false"),
-        arguments(value + " = " + value, "q1=true", "q2=true"),
+        // A union deduplicates by the canonical value, whichever the form of the operands. A bound
+        // is equal to nothing, so it is never deduplicated.
+        arguments("(" + value + " | 1500 'mg').count()", "q1=2", "q2=2"),
+        // Equality and comparison decode the stored quantity. Any involving a bound is empty.
+        arguments(value + " = 1500 'mg'", "q1=null", "q2=false"),
+        arguments(value + " = " + value, "q1=null", "q2=true"),
         arguments(components + "[0] > " + components + "[1]", "q1=true", "q2=null"),
-        arguments(value + " < 1 'kg'", "q1=true", "q2=true"),
+        arguments(value + " < 1 'kg'", "q1=null", "q2=true"),
         // A System quantity on the left decodes the stored quantity on the right just the same.
-        arguments("1500 'mg' = " + value, "q1=true", "q2=false"),
-        arguments("2 'g' < " + value, "q1=false", "q2=true"),
-        arguments("1 'kg' > " + value, "q1=true", "q2=true"),
+        arguments("1500 'mg' = " + value, "q1=null", "q2=false"),
+        arguments("2 'g' < " + value, "q1=null", "q2=true"),
+        arguments("1 'kg' > " + value, "q1=null", "q2=true"),
         // A stored quantity is deduplicated by its canonical value.
         arguments("(" + components + " | " + components + ").count()", "q1=2", "q2=1"),
-        // Operations that compute with the quantity decode it.
-        arguments(value + ".toString()", "q1=1.5 'g'", "q2=4 'g'"),
-        arguments(value + ".toQuantity('mg').value", "q1=1500.000000", "q2=4000.000000"),
+        // Operations that compute with the quantity decode it. A bound has no System quantity.
+        arguments(value + ".toString()", "q1=null", "q2=4 'g'"),
+        arguments(value + ".toQuantity('mg').value", "q1=null", "q2=4000.000000"),
         arguments(value + ".toQuantity().extension.exists()", "q1=false", "q2=false"),
         // The stored quantity carries an id and a comparator.
         arguments(value + ".comparator", "q1=<", "q2=null"),
@@ -189,7 +191,8 @@ class StoredQuantityTest {
   /**
    * A conversion builds a quantity, so it has no id or comparator, whether or not the quantity
    * already had the unit. These are not reachable by navigation from a System quantity, so the
-   * fields of the result are read directly.
+   * fields of the result are read directly. A quantity with a comparator is a bound and does not
+   * convert, so its result is empty.
    */
   @ParameterizedTest(name = "toQuantity(''{1}'') over {0}")
   @MethodSource("conversions")
@@ -201,8 +204,10 @@ class StoredQuantityTest {
         .allSatisfy(
             row -> {
               final Row quantity = row.getStruct(1);
-              assertThat(quantity.<String>getAs(QuantityEncoding.ID_COLUMN)).isNull();
-              assertThat(quantity.<String>getAs(QuantityEncoding.COMPARATOR_COLUMN)).isNull();
+              if (quantity != null) {
+                assertThat(quantity.<String>getAs(QuantityEncoding.ID_COLUMN)).isNull();
+                assertThat(quantity.<String>getAs(QuantityEncoding.COMPARATOR_COLUMN)).isNull();
+              }
             });
   }
 
