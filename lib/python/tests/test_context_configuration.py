@@ -20,7 +20,6 @@ import os
 from tempfile import mkdtemp
 
 import pytest
-from pathling._version import __java_version__
 from pyspark import SparkContext
 from pyspark.sql import SparkSession
 from pytest import fixture
@@ -28,6 +27,7 @@ from pytest import fixture
 import pathling.context as context_module
 from pathling import PathlingContext
 from pathling._spark_defaults import DELTA_COORDINATE, PACKAGES_KEY
+from pathling._version import __java_version__
 
 PROJECT_DIR = os.path.abspath(
     os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, os.pardir)
