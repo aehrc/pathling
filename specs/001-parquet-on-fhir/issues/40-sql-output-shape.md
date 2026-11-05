@@ -28,3 +28,21 @@ Out of scope: JSON and XML egress, whose shape is FHIR's.
 ### Moved after #2367 (owner, 2026-11-02)
 
 The re-plan limits #2367 to a core library that matches the legacy line, with primitive metadata as its one extension. This ticket becomes a GitHub issue, raised by ticket 26 and labelled `enhancement` and `PoF_line`, and whether it goes into a release is decided separately.
+
+### Ticket 47 folded in: what `fhirPathToColumn` and `$fhirpath` return (owner, 2026-11-05)
+
+Ticket 47 was raised on 2026-11-05 to specify these return values, decimals first, and was folded into this ticket the same day, because this ticket already covers `fhirPathToColumn` and the fixed types of primitives. Ticket 47 is retired, and its number is not reused.
+
+A decimal leaves the engine differently on each path today:
+
+- **A view column** is a string: the `DECIMAL(38,6)` value as plain text, with trailing zeros trimmed (`DecimalCollection.toExternalValue`, `DecimalToLiteral`), so a stored `1.50` is output as `1.5`. It was a string before 10.0.0 was merged into the line; the merge changed only the type the column reports (`efe1dfa4fa`).
+- **`fhirPathToColumn`** returns the engine's numeric, `DECIMAL(38,6)`, through `getOutputColumn()` (`SearchColumnBuilder`): a stored `1.50` gives `1.500000`.
+- **`$fhirpath`** single-instance evaluation selects the same column and collects a decimal as a `BigDecimal` (read from the code, not run).
+
+The owner decided (2026-11-05) that `fhirPathToColumn` and `$fhirpath` stay numeric for now, whatever ticket 16 brings. The stored-decimal text reaches only views and `toString()`. This ticket therefore also specifies, on purpose rather than by accident:
+
+- **Decimals on these two paths.** Whether a stored decimal returns its stored text, the numeric, or both, and the numeric's type and scale.
+- **Other primitives and System types.** One type per result type on each path, consistent with the output shape above.
+- **`$fhirpath`'s rendered values,** where they differ from the column.
+
+Any change to a public return type is flagged for the release notes and semver. Taken after ticket 16 if stored text is chosen.
