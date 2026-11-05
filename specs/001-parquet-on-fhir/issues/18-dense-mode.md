@@ -24,3 +24,23 @@
 - [ ] A streaming encode of `Patient` and `Condition` in dense mode succeeds and counts correctly. In fitted mode it is still refused with a clear message.
 - [ ] A dataset ingested in dense mode carries the layout column of ticket 29.
 - [ ] The docs are updated as described.
+
+## Comments
+
+### 2026-11-05: an open-types test was removed in the merge of main
+
+When main (10.0.0) was merged into the line, `testChoiceTypesExcludedFromOpenTypes` was removed from
+`SchemaBoundaryDslTest`. It came from main commit `5eafbf472b` ("fix: Treat paths beyond the encoded
+nesting depth as empty", #2625).
+
+- **What it asserted.** With the encoder configured for the open type `string` alone, selecting an
+  integer extension value, `extension('http://example.com/ext/int').value.ofType(integer)`, failed
+  with an error, where a string value was returned. A choice type outside the configured open types
+  was a configuration error, not an absence of data.
+- **Why it went.** The fitted layout has no open-types limit: its schema carries whatever the data
+  holds, so the integer value is present and is returned. There is no configuration for the test to
+  exclude it with, so it cannot be ported to the fitted layout. The rest of the file was ported, to
+  data that is four levels deep rather than to a maximum nesting level.
+- **For this ticket.** Dense mode has a fixed set of open types, so it should reinstate an
+  equivalent test once it does: an extension value of a type outside the set fails, and one inside
+  it is returned. The deleted test is in `5eafbf472b` for reference.

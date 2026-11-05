@@ -40,13 +40,6 @@ public record ProjectedColumn(
     @Nonnull Collection collection, @Nonnull RequestedColumn requestedColumn) {
 
   /**
-   * The one declared FHIR type that is not cast on output. A decimal is output as its literal text,
-   * and a cast would change that (decision 76). {@link #getSqlType()} still reports {@code
-   * DECIMAL(32,6)} for it.
-   */
-  private static final FHIRDefinedType UNCAST_DECLARED_TYPE = FHIRDefinedType.DECIMAL;
-
-  /**
    * Gets the column value from the collection and aliases it with the requested name. If a SQL type
    * is specified in the requested column, the column value will be cast to that type. Otherwise, if
    * a FHIR type is declared on the column, the value is cast to the SQL type of that FHIR type
@@ -132,8 +125,8 @@ public record ProjectedColumn(
 
   /**
    * Gets the SQL type that the declared FHIR type of the column gives its output, if a FHIR type is
-   * declared and is one that is cast on output. A base64Binary value is output as the bytes it
-   * encodes, so it is cast to binary rather than to the string type of its FHIRPath type.
+   * declared. The value is cast to it, so that a column over an element absent from the input
+   * schema has the declared type.
    *
    * @return the SQL type of the declared FHIR type, as an array for a collection column
    */
@@ -141,13 +134,33 @@ public record ProjectedColumn(
   private Optional<DataType> declaredOutputType() {
     return requestedColumn
         .type()
-        .filter(type -> !UNCAST_DECLARED_TYPE.equals(type))
         .flatMap(
             type ->
-                FHIRDefinedType.BASE64BINARY.equals(type)
-                    ? Optional.of(DataTypes.BinaryType)
-                    : FhirPathType.forFhirType(type).map(FhirPathType::getSqlDataType))
+                FhirPathType.forFhirType(type)
+                    .map(pathType -> outputType(pathType, Optional.of(type))))
         .map(type -> requestedColumn.collection() ? DataTypes.createArrayType(type) : type);
+  }
+
+  /**
+   * Maps a FHIRPath type to the SQL type of the column values that {@link #getValue()} produces for
+   * it. That differs from the internal representation for a decimal, which is output as its literal
+   * text so that its precision is preserved (decision 76), and for a base64Binary value, which is
+   * output as the bytes it encodes.
+   *
+   * @param type the FHIRPath type
+   * @param fhirType the FHIR type, which distinguishes base64Binary from other string types
+   * @return the SQL type of the column values
+   */
+  @Nonnull
+  private static DataType outputType(
+      @Nonnull final FhirPathType type, @Nonnull final Optional<FHIRDefinedType> fhirType) {
+    if (FhirPathType.DECIMAL.equals(type)) {
+      return DataTypes.StringType;
+    } else if (fhirType.filter(FHIRDefinedType.BASE64BINARY::equals).isPresent()) {
+      return DataTypes.BinaryType;
+    } else {
+      return type.getSqlDataType();
+    }
   }
 
   /**
@@ -163,7 +176,9 @@ public record ProjectedColumn(
    *   <li>The resolved {@link FhirPathType} on the collection (requires {@link Materializable}).
    * </ol>
    *
-   * <p>When {@code collection()} is {@code true}, the element type is wrapped in {@link
+   * <p>A FHIR type is mapped to the type of the value that {@link #getValue()} produces for it: a
+   * string for a decimal and binary for base64Binary (see {@link #outputType}). When {@code
+   * collection()} is {@code true}, the element type is wrapped in {@link
    * DataTypes#createArrayType}.
    *
    * @return The Spark {@link DataType} for this column.
@@ -179,8 +194,10 @@ public record ProjectedColumn(
                 () ->
                     requestedColumn
                         .type()
-                        .flatMap(FhirPathType::forFhirType)
-                        .map(FhirPathType::getSqlDataType))
+                        .flatMap(
+                            fhirType ->
+                                FhirPathType.forFhirType(fhirType)
+                                    .map(type -> outputType(type, Optional.of(fhirType)))))
             .or(
                 () -> {
                   if (!(collection instanceof Materializable)) {
@@ -188,7 +205,9 @@ public record ProjectedColumn(
                         "Cannot obtain value for non-primitive collection of FHIR type: "
                             + collection.getFhirType().map(Objects::toString).orElse("unknown"));
                   }
-                  return collection.getType().map(FhirPathType::getSqlDataType);
+                  return collection
+                      .getType()
+                      .map(type -> outputType(type, collection.getFhirType()));
                 })
             .orElseThrow(
                 () ->

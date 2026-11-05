@@ -2661,6 +2661,8 @@ and `getSqlType()` stays for decimal.
 
 _Amends_ FR-025 and decision 73's expectation for T111.
 
+_Amended (owner, 2026-11-05): the reported SQL type now matches the output, String for a declared decimal and Binary for base64Binary, adopting main's #2625 rule when 10.0.0 was merged into the line._ The decimal is still output as its literal text, so no output changes. `getSqlType()` now reports `StringType` for it, so the disagreement that this decision left in place is gone, and `decimal` is no longer exempt from the cast on output: the cast to a string leaves a present value as it is and types an absent one.
+
 ## 77. Quantity canonicalisation is computed from the stored value, and search follows the specification on UCUM
 
 Owner decisions (2026-09-27), prompted by port step 2 (T087, T096, T099).
