@@ -23,6 +23,7 @@ import au.csiro.pathling.fhirpath.collection.EmptyCollection;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import jakarta.annotation.Nonnull;
+import java.util.List;
 import java.util.Optional;
 import java.util.function.BinaryOperator;
 import lombok.experimental.UtilityClass;
@@ -80,19 +81,19 @@ public class CollectionOperations {
 
   @Nonnull
   private static Collection executeContains(
-      @Nonnull final Collection collection, @Nonnull final Collection element) {
+      @Nonnull final Collection originalCollection, @Nonnull final Collection element) {
     // Check if either operand is an EmptyCollection and handle accordingly.
-    final Optional<Collection> returnValue = checkForEmptyOperands(element, collection);
+    final Optional<Collection> returnValue = checkForEmptyOperands(element, originalCollection);
     if (returnValue.isPresent()) {
       return returnValue.get();
     }
 
-    // Cast the element to the type of the collection if it is convertible, otherwise use the
-    // element as is. This allows for type adjustments in cases where the element is not of the
-    // same type as the collection.
-    // But not the other way around which also should be possible
-    final Collection typeAdjustedElement =
-        element.convertibleTo(collection) ? element.castAs(collection) : element;
+    // Unify the collection and the element: the element is promoted to the type of the collection
+    // where it can be, and otherwise the collection to the type of the element, and their SQL
+    // shapes are then unified (FR-056).
+    final List<Collection> unified = CombiningLogic.unify(List.of(originalCollection, element));
+    final Collection collection = unified.get(0);
+    final Collection typeAdjustedElement = unified.get(1);
 
     // The element must be a singular value for the contains operation.
     final ColumnRepresentation singular = typeAdjustedElement.getColumn().singular();

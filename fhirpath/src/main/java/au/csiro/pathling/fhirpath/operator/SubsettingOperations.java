@@ -17,9 +17,6 @@
 
 package au.csiro.pathling.fhirpath.operator;
 
-import static org.apache.spark.sql.functions.get;
-import static org.apache.spark.sql.functions.when;
-
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.EmptyCollection;
@@ -65,13 +62,6 @@ public class SubsettingOperations {
             .asSingular("Indexer operator requires a singular index")
             .getColumnValue()
             .try_cast(DataTypes.IntegerType);
-    return subject.map(
-        rep ->
-            rep.vectorize(
-                // `get` is zero-based and returns null for any index outside the bounds of the
-                // array, including a negative one.
-                c -> get(c, indexValue),
-                // A singular subject is a collection of one item, so only index 0 returns it.
-                c -> when(indexValue.equalTo(0), c)));
+    return subject.map(rep -> rep.elementAt(indexValue));
   }
 }

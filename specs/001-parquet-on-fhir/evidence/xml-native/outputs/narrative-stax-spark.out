@@ -1,0 +1,24 @@
+   plain                                      identical to the captured string: True
+   escaped text, comment, attribute           identical to the captured string: True
+   nested divs                                identical to the captured string: True
+   whitespace before </text>                  identical to the captured string: True
+   comment before </text>                     identical to the captured string: True
+   prefixed XHTML                             identical to the captured string: True
+   prefix declared on the root                identical to the captured string: True
+   CDATA holding </div></text>                identical to the captured string: True
+   char refs, newline, tab, quote             identical to the captured string: True
+   narrative contains value="@@"              identical to the captured string: True
+   ALL IDENTICAL
+== 2. Egress: to_xml writes the narrative as an attribute, the post-pass restores it
+   sample to_xml output: <Patient xmlns="http://hl7.org/fhir"><id value="x"/><text><status value="generated"/><div value="&lt;div xmlns=&quot;http://www.w3.org/1999/xhtml&quot;>&lt;p>Jane Smith&lt;/p>&lt;/div>"/></text></Patient>
+plain                                      L2 equal
+escaped text, comment, attribute           L2 equal
+nested divs                                L2 equal
+whitespace before </text>                  L2 equal
+comment before </text>                     L2 equal
+prefixed XHTML                             L2 equal
+prefix declared on the root                L2 equal
+CDATA holding </div></text>                L2 equal
+char refs, newline, tab, quote             L2 equal
+narrative contains value="@@"              L2 equal
+ALL SPARK-WRITTEN DOCUMENTS L2 EQUAL

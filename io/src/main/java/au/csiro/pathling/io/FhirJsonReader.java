@@ -1,0 +1,152 @@
+/*
+ * Copyright © 2018-2026 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package au.csiro.pathling.io;
+
+import jakarta.annotation.Nonnull;
+import java.util.Map;
+import org.apache.spark.sql.Column;
+import org.apache.spark.sql.DataFrameReader;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Encoders;
+import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.expressions.UserDefinedFunction;
+import org.apache.spark.sql.functions;
+import org.apache.spark.sql.types.StructType;
+
+/**
+ * Reads FHIR JSON into this layout, from files of newline-delimited JSON, from a dataset of
+ * documents, or from a dataset of bundles (decisions 70 and 84). It is obtained from {@link
+ * FhirReader#json()}.
+ *
+ * <p>Types, cardinality and field order come from the definitions, and what the text carries
+ * decides only which elements are present (FR-008, FR-012). Text that is not JSON at all fails the
+ * read. The input is assumed to conform to the definitions and nothing else is checked: where it
+ * does not, the outcome is undefined, and the read may fail, a value may become null or wrong, or
+ * an element may be stored in a shape the definitions do not declare (ingest in {@code trust},
+ * FR-063).
+ *
+ * <p>Every resource read in one call is of that one type. This is not checked: a document of
+ * another type is read as though it were of the named type, which is non-conformant input with the
+ * outcomes above. A caller holding documents of several types selects those of one type first.
+ * Bundles are the exception, because the resources of the type asked for are selected from them
+ * before anything is inferred.
+ *
+ * <p>Nothing read here is pruned (decision 71). A structure whose only content was a primitive's id
+ * and extensions is conformant and kept on purpose until M5: the primitive is stored as a null of
+ * its declared type, so the structure is stored and later written as an empty object whatever other
+ * conformant documents are read with it (decision 72). A repeating primitive keeps its positional
+ * nulls, and until M5 they are written without the metadata they align with. The metadata itself is
+ * not stored, and nothing reports that it is not.
+ */
+public final class FhirJsonReader implements FhirFormatReader {
+
+  /** The reader option that decides what happens to a document that is not valid JSON. */
+  @Nonnull private static final String READ_MODE = "mode";
+
+  /**
+   * Content that is not JSON at all fails the read, unlike content the definitions do not describe,
+   * which is ignored. Reading it leniently would yield a row of nulls in place of a resource, which
+   * is a silent truncation rather than an ignored field.
+   */
+  @Nonnull private static final String FAIL_FAST = "FAILFAST";
+
+  /** Splits a bundle into the resources of one type it carries. */
+  @Nonnull
+  private static final UserDefinedFunction SPLIT = BundleResource.splitter(JsonBundles::split);
+
+  @Nonnull private final SparkSession spark;
+
+  @Nonnull private final ResourceTransformer transformer;
+
+  FhirJsonReader(
+      @Nonnull final SparkSession spark, @Nonnull final ResourceTransformer transformer) {
+    this.spark = spark;
+    this.transformer = transformer;
+  }
+
+  /**
+   * Reads files of newline-delimited FHIR JSON into this layout.
+   *
+   * @param resourceType the type of every resource the files carry
+   * @param path the path to read from, which may name a file or a directory
+   * @return the resources, in this layout
+   * @throws IllegalArgumentException if the type is {@code Bundle} or is not a resource type
+   */
+  @Nonnull
+  public Dataset<Row> read(@Nonnull final String resourceType, @Nonnull final String path) {
+    transformer.requireStorable(resourceType);
+    return transformer.toLayout(resourceType, json(spark).json(path));
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Every document is a resource of the type asked for, as for files.
+   */
+  @Override
+  @Nonnull
+  public Dataset<Row> read(
+      @Nonnull final String resourceType, @Nonnull final Dataset<String> documents) {
+    transformer.requireStorable(resourceType);
+    return transformer.toLayout(resourceType, json(documents.sparkSession()).json(documents));
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Each bundle is read with a streaming parse, which takes out the text of each entry's
+   * resource of the type asked for. Those are then read as any other documents of the type, so they
+   * are inferred apart from the bundle's resources of other types, and what is stored is what the
+   * same resources store when read one per row (ticket 32). Text that is not JSON fails the read,
+   * as does a document that is not a bundle.
+   */
+  @Override
+  @Nonnull
+  public Dataset<Row> readBundles(
+      @Nonnull final String resourceType, @Nonnull final Dataset<String> bundles) {
+    transformer.requireStorable(resourceType);
+    final Dataset<Row> resources = BundleResource.resources(bundles, SPLIT, resourceType);
+    final StructType observed =
+        json(bundles.sparkSession())
+            .json(resources.select(BundleResource.DOCUMENT_COLUMN).as(Encoders.STRING()))
+            .schema();
+    // Each resource is parsed once, in a projection of its own, and stored from what it holds.
+    final Dataset<Row> parsed =
+        resources.withColumn(
+            BundleResource.PARSED,
+            observed.fields().length == 0
+                ? functions.struct()
+                : functions.from_json(
+                    functions.col(BundleResource.DOCUMENT_COLUMN),
+                    observed,
+                    Map.of(READ_MODE, FAIL_FAST)));
+    final Column references = functions.col(BundleResource.REFERENCES_COLUMN);
+    return parsed.select(
+        transformer.toLayout(
+            resourceType,
+            observed,
+            functions.col(BundleResource.PARSED),
+            reference -> BundleResource.resolve(reference, references)));
+  }
+
+  @Nonnull
+  private static DataFrameReader json(@Nonnull final SparkSession session) {
+    return session.read().option(READ_MODE, FAIL_FAST);
+  }
+}

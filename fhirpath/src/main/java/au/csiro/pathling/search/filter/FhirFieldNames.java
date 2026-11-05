@@ -60,18 +60,6 @@ public final class FhirFieldNames {
    */
   public static final String REFERENCE = "reference";
 
-  /**
-   * Canonicalized value field for Quantity type (internal use). Generated field that stores the
-   * UCUM-normalized numeric value for cross-unit matching.
-   */
-  public static final String CANONICALIZED_VALUE = "_value_canonicalized";
-
-  /**
-   * Canonicalized code field for Quantity type (internal use). Generated field that stores the
-   * UCUM-normalized code for cross-unit matching.
-   */
-  public static final String CANONICALIZED_CODE = "_code_canonicalized";
-
   private FhirFieldNames() {
     // Utility class - no instances
   }

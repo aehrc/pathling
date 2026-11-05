@@ -21,7 +21,7 @@ import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.EmptyCollection;
 import jakarta.annotation.Nonnull;
-import org.apache.commons.lang3.tuple.Pair;
+import java.util.List;
 
 /**
  * Base class for binary operators that require both arguments to be of the same type.
@@ -48,23 +48,31 @@ public abstract class SameTypeBinaryOperator implements FhirPathBinaryOperator {
       return handleOneEmpty(nonEmpty, input);
     }
 
-    // find common type for comparison and promote both sides to that type
-    // e.g. IntegerCollection and DecimalCollection -> promote IntegerCollection to
-    // DecimalCollection
+    // Unify the operands: promote both sides to a common FHIR type where one exists, e.g. an
+    // integer to a decimal, and, unless the subclass unifies them as it combines them, unify their
+    // SQL shapes, which differ where one FHIR type is stored in a different shape at each path
+    // (FR-056). Where there is no common type, the subclass decides what that means.
+    final List<Collection> unified = unify(List.of(left, right));
 
-    // if a common type does not exist then we have to options:
-    // - either throw an error early
-    // - or allow for implicit empty collections return the empty comparator,
-    // which returns empty if any of the arguments is empty and trows a runtime error otherwise
-
-    final Pair<Collection, Collection> reconciledArguments =
-        FhirPathBinaryOperator.reconcileTypes(left, right);
-
-    final Collection reconciledLeft = reconciledArguments.getLeft();
-    final Collection reconciledRight = reconciledArguments.getRight();
+    final Collection reconciledLeft = unified.get(0);
+    final Collection reconciledRight = unified.get(1);
     return reconciledLeft.typeEquivalentWith(reconciledRight)
         ? handleEquivalentTypes(reconciledLeft, reconciledRight, input)
         : handleNonEquivalentTypes(reconciledLeft, reconciledRight, input);
+  }
+
+  /**
+   * Unifies the operands before they are handed to {@link #handleEquivalentTypes} or {@link
+   * #handleNonEquivalentTypes}. By default, this promotes their types and unifies their shapes
+   * through {@link CombiningLogic#unify(List)}. A subclass that combines its operands into one
+   * collection may instead promote only their types, and unify their shapes as it combines them.
+   *
+   * @param operands the left and right operands, in that order
+   * @return the unified operands, in the same order
+   */
+  @Nonnull
+  protected List<Collection> unify(@Nonnull final List<Collection> operands) {
+    return CombiningLogic.unify(operands);
   }
 
   /**

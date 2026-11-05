@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.search.filter;
 
+import static au.csiro.pathling.encoders.ColumnFunctions.resolveStringOrNull;
 import static org.apache.spark.sql.functions.callUDF;
 import static org.apache.spark.sql.functions.coalesce;
 import static org.apache.spark.sql.functions.lit;
@@ -130,14 +131,16 @@ public class DateMatcher implements ElementMatcher {
 
     if (isPeriodType) {
       // Period: start/end are STRING fields representing dateTime values
-      // Apply UDFs to get precision-aware boundaries, coalesce null to infinity
+      // Apply UDFs to get precision-aware boundaries, coalesce null to infinity. Each bound is read
+      // through the tolerant traversal, so a bound the schema does not carry is open, as a null one
+      // is (FR-024, FR-054).
       resourceLow =
           coalesce(
-              callUDF(LowBoundaryForDateTime.FUNCTION_NAME, element.getField("start")),
+              callUDF(LowBoundaryForDateTime.FUNCTION_NAME, resolveStringOrNull(element, "start")),
               lit(MIN_TIMESTAMP));
       resourceHigh =
           coalesce(
-              callUDF(HighBoundaryForDateTime.FUNCTION_NAME, element.getField("end")),
+              callUDF(HighBoundaryForDateTime.FUNCTION_NAME, resolveStringOrNull(element, "end")),
               lit(MAX_TIMESTAMP));
     } else {
       // Scalar date/dateTime/instant: apply UDFs directly to the element

@@ -20,6 +20,7 @@ package au.csiro.pathling.benchmark;
 import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -30,8 +31,24 @@ import org.openjdk.jmh.annotations.OutputTimeUnit;
 import org.openjdk.jmh.annotations.Warmup;
 
 /**
- * JMH benchmarks for Pathling FHIR view operations. These benchmarks measure the performance of
- * executing various SQL on FHIR view definitions against NDJSON data sources.
+ * JMH benchmarks for Pathling FHIR data processing, measuring each phase of the pipeline
+ * separately.
+ *
+ * <p>An earlier version of these benchmarks reported a single figure for reading NDJSON and running
+ * a SQL on FHIR view over it. That figure cannot say whether a change to the storage layout moved
+ * the cost of encoding, of decoding, of planning a query or of executing one, because all four are
+ * inside it. The four are measured here as:
+ *
+ * <ul>
+ *   <li>{@link #encode} - JSON to the Spark representation.
+ *   <li>{@link #decode} - the Spark representation back to JSON.
+ *   <li>{@link #viewPlanning} - translating a view definition into a physical Spark plan.
+ *   <li>{@link #viewExecution} - running a plan that has already been built.
+ * </ul>
+ *
+ * <p>Spark is lazy, so none of these benchmarks can rely on the construction of a dataset to
+ * perform any work. Each one either collects its result or runs it into the {@code noop} data
+ * source.
  *
  * @author John Grimes
  */
@@ -43,114 +60,64 @@ import org.openjdk.jmh.annotations.Warmup;
 public class PathlingBenchmark {
 
   /**
-   * Benchmark for the ConditionFlat view definition.
+   * Benchmark for encoding resources from their JSON representation into the Spark representation.
    *
-   * @param state the benchmark state containing the data source and view definitions
-   * @return the collected rows from executing the view
+   * <p>The encoded dataset is run into the {@code noop} data source, which consumes every column of
+   * the encoded schema. See {@link BenchmarkResources#materialise} for why a row count would not do
+   * instead.
+   *
+   * @param state the benchmark state supplying the raw resource strings
+   * @return the encoded dataset
    */
   @Benchmark
-  public List<Row> conditionFlat(@Nonnull final PathlingBenchmarkState state) {
-    return state
-        .getNdjsonSource()
-        .view("Condition")
-        .json(state.getViewDefinitions().get("ConditionFlat"))
-        .execute()
-        .collectAsList();
+  public Dataset<Row> encode(@Nonnull final EncodeBenchmarkState state) {
+    final Dataset<Row> encoded = state.encode();
+    BenchmarkResources.materialise(encoded);
+    return encoded;
   }
 
   /**
-   * Benchmark for the EncounterFlat view definition.
+   * Benchmark for decoding resources from the Spark representation back into JSON.
    *
-   * @param state the benchmark state containing the data source and view definitions
-   * @return the collected rows from executing the view
+   * <p>The input is read from a Delta table written during setup, so that this measures decoding
+   * rather than the encode that produced the data.
+   *
+   * @param state the benchmark state supplying the encoded resources
+   * @return the dataset of decoded resource strings
    */
   @Benchmark
-  public List<Row> encounterFlat(@Nonnull final PathlingBenchmarkState state) {
-    return state
-        .getNdjsonSource()
-        .view("Encounter")
-        .json(state.getViewDefinitions().get("EncounterFlat"))
-        .execute()
-        .collectAsList();
+  public Dataset<String> decode(@Nonnull final DecodeBenchmarkState state) {
+    final Dataset<String> decoded = state.decode();
+    BenchmarkResources.materialise(decoded);
+    return decoded;
   }
 
   /**
-   * Benchmark for the PatientAddresses view definition.
+   * Benchmark for planning a view query, covering the translation of the view definition into
+   * FHIRPath columns and the Catalyst analysis, optimisation and physical planning that follow it.
    *
-   * @param state the benchmark state containing the data source and view definitions
-   * @return the collected rows from executing the view
+   * <p>No Spark job is submitted, so this measures driver-side work alone.
+   *
+   * @param state the benchmark state containing the data source and view definition
+   * @return the planned dataset
    */
   @Benchmark
-  public List<Row> patientAddresses(@Nonnull final PathlingBenchmarkState state) {
-    return state
-        .getNdjsonSource()
-        .view("Patient")
-        .json(state.getViewDefinitions().get("PatientAddresses"))
-        .execute()
-        .collectAsList();
+  public Dataset<Row> viewPlanning(@Nonnull final PathlingBenchmarkState state) {
+    return state.planQuery();
   }
 
   /**
-   * Benchmark for the PatientAndContactAddressUnion view definition.
+   * Benchmark for executing a view query whose plan has already been built.
    *
-   * @param state the benchmark state containing the data source and view definitions
+   * <p>The plan is built by an invocation-level setup method which JMH excludes from the
+   * measurement, and a new plan is built for every invocation so that no query stage materialised
+   * by a previous execution can be reused.
+   *
+   * @param state the benchmark state holding the prepared query
    * @return the collected rows from executing the view
    */
   @Benchmark
-  public List<Row> patientAndContactAddressUnion(@Nonnull final PathlingBenchmarkState state) {
-    return state
-        .getNdjsonSource()
-        .view("Patient")
-        .json(state.getViewDefinitions().get("PatientAndContactAddressUnion"))
-        .execute()
-        .collectAsList();
-  }
-
-  /**
-   * Benchmark for the PatientDemographics view definition.
-   *
-   * @param state the benchmark state containing the data source and view definitions
-   * @return the collected rows from executing the view
-   */
-  @Benchmark
-  public List<Row> patientDemographics(@Nonnull final PathlingBenchmarkState state) {
-    return state
-        .getNdjsonSource()
-        .view("Patient")
-        .json(state.getViewDefinitions().get("PatientDemographics"))
-        .execute()
-        .collectAsList();
-  }
-
-  /**
-   * Benchmark for the UsCoreBloodPressures view definition.
-   *
-   * @param state the benchmark state containing the data source and view definitions
-   * @return the collected rows from executing the view
-   */
-  @Benchmark
-  public List<Row> usCoreBloodPressures(@Nonnull final PathlingBenchmarkState state) {
-    return state
-        .getNdjsonSource()
-        .view("Observation")
-        .json(state.getViewDefinitions().get("UsCoreBloodPressures"))
-        .execute()
-        .collectAsList();
-  }
-
-  /**
-   * Benchmark for the QuestionnaireResponseFlat view definition.
-   *
-   * @param state the benchmark state containing the data source and view definitions
-   * @return the collected rows from executing the view
-   */
-  @Benchmark
-  public List<Row> questionnaireResponseFlat(@Nonnull final PathlingBenchmarkState state) {
-    return state
-        .getNdjsonSource()
-        .view("QuestionnaireResponse")
-        .json(state.getViewDefinitions().get("QuestionnaireResponseFlat"))
-        .execute()
-        .collectAsList();
+  public List<Row> viewExecution(@Nonnull final PathlingBenchmarkState state) {
+    return state.executePreparedQuery();
   }
 }

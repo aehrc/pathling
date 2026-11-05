@@ -36,6 +36,8 @@ The version number needs to be changed in the following places:
 - `terminology/pom.xml`
 - `library-api/pom.xml`
 - `utilities/pom.xml`
+- `fhir-schema/pom.xml`
+- `io/pom.xml`
 - `encoders/pom.xml`
 - `fhirpath/pom.xml`
 - `lib/python/pom.xml`
@@ -43,6 +45,7 @@ The version number needs to be changed in the following places:
 - `site/pom.xml`
 - `library-runtime/pom.xml`
 - `benchmark/pom.xml`
+- `legacy-export/pom.xml`
 
 The following should only be updated for release versions, not snapshots:
 

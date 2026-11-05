@@ -19,8 +19,11 @@ package au.csiro.pathling.fhirpath.column;
 
 import static org.apache.spark.sql.functions.lit;
 
+import au.csiro.pathling.encoders.ColumnFunctions;
 import au.csiro.pathling.encoders.ValueFunctions;
+import au.csiro.pathling.fhirpath.collection.DecimalCollection;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.util.Optional;
 import java.util.function.UnaryOperator;
 import lombok.AccessLevel;
@@ -31,6 +34,8 @@ import lombok.Setter;
 import lombok.ToString;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
+import org.apache.spark.sql.types.DataType;
+import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
@@ -112,61 +117,78 @@ public class DefaultRepresentation extends ColumnRepresentation {
     return copyOf(ValueFunctions.unnest(value));
   }
 
-  @Nonnull
-  @Override
-  public ColumnRepresentation traverse(@Nonnull final String fieldName) {
-    return fromField(ValueFunctions.nullSafeField(value, fieldName));
-  }
-
+  /**
+   * Traverses to a field of the structure, or of every structure in the array, that this
+   * representation holds. The field is referenced through the tolerant traversal expression, so the
+   * traversal yields a null of the given type where the input schema does not carry the field.
+   *
+   * <p>Where this representation holds an array, a present field is read from every element, which
+   * yields an array of the field's type, so the null that stands for an absent field is given that
+   * array shape too. Whether the field is present or absent, and whether a repeating parent is
+   * present or absent, the traversal then yields one type (decision 88).
+   *
+   * @param fieldName the name of the field to traverse to
+   * @param fhirType the FHIR type of the field
+   * @param fallback the type of the null that stands for the field where it is absent
+   * @return the flattened result of the traversal
+   */
   @Override
   @Nonnull
   public ColumnRepresentation traverse(
-      @Nonnull final String fieldName, @Nonnull final Optional<FHIRDefinedType> fhirType) {
-    return withFhirType(traverse(fieldName), fhirType);
-  }
-
-  @Override
-  @Nonnull
-  public ColumnRepresentation traverseOrEmpty(
-      @Nonnull final String fieldName, @Nonnull final Optional<FHIRDefinedType> fhirType) {
-    return withFhirType(fromField(ValueFunctions.fieldOrNull(value, fieldName)), fhirType);
-  }
-
-  @Override
-  @Nonnull
-  public ColumnRepresentation getField(@Nonnull final String fieldName) {
-    return copyOf(ValueFunctions.nullSafeField(value, fieldName));
+      @Nonnull final String fieldName,
+      @Nonnull final Optional<FHIRDefinedType> fhirType,
+      @Nonnull final DataType fallback) {
+    final Column field =
+        ValueFunctions.ifArray(
+            value,
+            array ->
+                ColumnFunctions.resolveOrNull(
+                    array, fieldName, DataTypes.createArrayType(fallback)),
+            singular -> ColumnFunctions.resolveOrNull(singular, fieldName, fallback));
+    return decodeField(copyOf(field).removeNulls().flatten(), fhirType);
   }
 
   /**
-   * Builds the representation of a traversed field, which is flattened and has null elements
-   * removed.
+   * Decodes a traversed field for computation, by its FHIR type. The field has been read in the
+   * shape it is stored in.
    *
-   * @param field The extracted field
-   * @return The representation of the field
+   * <p>A quantity is not decoded here. It stays in the stored shape, so that it keeps its
+   * extensions, and the quantity collection decodes it where it is computed with.
+   *
+   * @param field the traversed field
+   * @param fhirType the FHIR type of the field
+   * @return the decoded field
    */
   @Nonnull
-  private ColumnRepresentation fromField(@Nonnull final Column field) {
-    return copyOf(field).removeNulls().flatten();
-  }
-
-  /**
-   * Adapts the representation of a traversed field to its FHIR type.
-   *
-   * @param field The representation of the traversed field
-   * @param fhirType The FHIR type of the field
-   * @return The representation of the field, adapted to its type
-   */
-  @Nonnull
-  private static ColumnRepresentation withFhirType(
+  static ColumnRepresentation decodeField(
       @Nonnull final ColumnRepresentation field,
       @Nonnull final Optional<FHIRDefinedType> fhirType) {
-    if (fhirType.filter(FHIRDefinedType.BASE64BINARY::equals).isPresent()) {
+    @Nullable final FHIRDefinedType resolvedFhirType = fhirType.orElse(null);
+    if (FHIRDefinedType.BASE64BINARY.equals(resolvedFhirType)) {
       // If the field is a base64Binary, represent it using a BinaryRepresentation.
       return DefaultRepresentation.fromBinaryColumn(field.getValue());
+    } else if (FHIRDefinedType.DECIMAL.equals(resolvedFhirType)) {
+      // A decimal is read as text, and decoded for computation.
+      return DecimalCollection.decode(field);
     } else {
-      // Otherwise, use the default representation.
+      // Otherwise, use the field as it was traversed.
       return field;
     }
+  }
+
+  /**
+   * Gets a field of the structure, or of every structure in the array, that this representation
+   * holds, without flattening. The field is referenced through the tolerant traversal expression,
+   * so the result is a null of the given type where the input schema does not carry the field.
+   *
+   * @param fieldName the name of the field to get
+   * @param fallback the type of the null that stands for the field where it is absent
+   * @return the field, unflattened
+   */
+  @Override
+  @Nonnull
+  public ColumnRepresentation getField(
+      @Nonnull final String fieldName, @Nonnull final DataType fallback) {
+    return copyOf(ColumnFunctions.resolveOrNull(value, fieldName, fallback));
   }
 }

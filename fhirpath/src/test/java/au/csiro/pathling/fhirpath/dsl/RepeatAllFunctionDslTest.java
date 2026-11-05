@@ -47,16 +47,19 @@ import org.springframework.context.annotation.Import;
 /**
  * Tests for the FHIRPath repeatAll() function.
  *
- * <p>Uses a Questionnaire resource with nested items to verify recursive traversal behaviour. With
- * the default maxNestingLevel of 3, the schema supports items nested 4 levels deep (root item plus
- * 3 additional levels).
+ * <p>Uses a Questionnaire resource with nested items to verify recursive traversal behaviour. On
+ * the previous layout, the maxNestingLevel of 3 configured below lets the schema hold items nested
+ * 4 levels deep (root item plus 3 additional levels). On the new layout the depth comes from the
+ * data.
  */
 @Import(RepeatAllFunctionDslTest.Config.class)
 public class RepeatAllFunctionDslTest extends FhirPathDslTestBase {
 
   /**
    * Provides a FhirEncoders bean with maxNestingLevel=3 to support deeply nested items in test
-   * Questionnaire resources. Overrides the default bean which uses maxNestingLevel=0.
+   * Questionnaire resources. Overrides the default bean which uses maxNestingLevel=0. The setting
+   * binds only the previous layout; the new layout's pruned schema takes its depth from the data
+   * (FR-044).
    */
   @TestConfiguration
   static class Config {

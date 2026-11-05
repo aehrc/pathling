@@ -1,0 +1,173 @@
+# default handler: ca.uhn.fhir.parser.LenientErrorHandler
+## c0-conformant [C0]
+in:      {"resourceType":"Patient","id":"p1","active":true,"name":[{"family":"Smith","given":["Ann","B"]}],"gender":"female","birthDate":"1980-02-03","deceasedDateTime":"2020-01-01T10:00:00+10:00"}
+default: OK   {"resourceType":"Patient","id":"p1","active":true,"name":[{"family":"Smith","given":["Ann","B"]}],"gender":"female","birthDate":"1980-02-03","deceasedDateTime":"2020-01-01T10:00:00+10:00"}
+strict:  OK   {"resourceType":"Patient","id":"p1","active":true,"name":[{"family":"Smith","given":["Ann","B"]}],"gender":"female","birthDate":"1980-02-03","deceasedDateTime":"2020-01-01T10:00:00+10:00"}
+## c0-decimal-text [C0]
+in:      {"resourceType":"Observation","id":"o1","status":"final","code":{"text":"x"},"valueQuantity":{"value":1.50,"unit":"mg"},"component":[{"code":{"text":"a"},"valueQuantity":{"value":0.000000123456789}},{"code":{"text":"b"},"valueQuantity":{"value":12345678901234567890.12345}},{"code":{"text":"c"},"valueQuantity":{"value":1.0e2}}]}
+default: OK   {"resourceType":"Observation","id":"o1","status":"final","code":{"text":"x"},"valueQuantity":{"value":1.50,"unit":"mg"},"component":[{"code":{"text":"a"},"valueQuantity":{"value":0.000000123456789}},{"code":{"text":"b"},"valueQuantity":{"value":12345678901234567890.12345}},{"code":{"text":"c"},"valueQuantity":{"value":100}}]}
+strict:  OK   {"resourceType":"Observation","id":"o1","status":"final","code":{"text":"x"},"valueQuantity":{"value":1.50,"unit":"mg"},"component":[{"code":{"text":"a"},"valueQuantity":{"value":0.000000123456789}},{"code":{"text":"b"},"valueQuantity":{"value":12345678901234567890.12345}},{"code":{"text":"c"},"valueQuantity":{"value":100}}]}
+## c0-prim-ext-only [C0]
+in:      {"resourceType":"Patient","id":"p2","_birthDate":{"extension":[{"url":"http://hl7.org/fhir/StructureDefinition/data-absent-reason","valueCode":"unknown"}]}}
+default: OK   {"resourceType":"Patient","id":"p2","_birthDate":{"extension":[{"url":"http://hl7.org/fhir/StructureDefinition/data-absent-reason","valueCode":"unknown"}]}}
+strict:  OK   {"resourceType":"Patient","id":"p2","_birthDate":{"extension":[{"url":"http://hl7.org/fhir/StructureDefinition/data-absent-reason","valueCode":"unknown"}]}}
+## c0-prim-ext-array [C0]
+in:      {"resourceType":"Patient","id":"p3","name":[{"given":["Ann",null],"_given":[null,{"extension":[{"url":"http://e/x","valueString":"y"}]}]}]}
+default: OK   {"resourceType":"Patient","id":"p3","name":[{"given":["Ann",null],"_given":[null,{"extension":[{"url":"http://e/x","valueString":"y"}]}]}]}
+strict:  OK   {"resourceType":"Patient","id":"p3","name":[{"given":["Ann",null],"_given":[null,{"extension":[{"url":"http://e/x","valueString":"y"}]}]}]}
+## c2-null [C2]
+in:      {"resourceType":"Patient","id":"p4","active":null,"gender":"male"}
+default: OK   {"resourceType":"Patient","id":"p4","gender":"male"}
+strict:  OK   {"resourceType":"Patient","id":"p4","gender":"male"}
+## c2-empty-obj [C2]
+in:      {"resourceType":"Patient","id":"p5","maritalStatus":{},"gender":"male"}
+default: OK   {"resourceType":"Patient","id":"p5","gender":"male"}
+strict:  OK   {"resourceType":"Patient","id":"p5","gender":"male"}
+## c2-empty-arr [C2]
+in:      {"resourceType":"Patient","id":"p6","identifier":[],"gender":"male"}
+default: OK   {"resourceType":"Patient","id":"p6","gender":"male"}
+strict:  OK   {"resourceType":"Patient","id":"p6","gender":"male"}
+## c2-empty-string [C2]
+in:      {"resourceType":"Patient","id":"p7","name":[{"family":""}],"gender":"male"}
+default: OK   {"resourceType":"Patient","id":"p7","gender":"male"}
+         ~ invalidValue[loc=[element="family"], , Attribute value must not be empty ("")]
+strict:  FAIL DataFormatException: HAPI-1821: [element="family"] Invalid attribute value "": Attribute value must not be empty ("")
+         ~ invalidValue[loc=[element="family"], , Attribute value must not be empty ("")]
+## c2-fhir-comments [C2]
+in:      {"resourceType":"Patient","id":"p8","fhir_comments":["hello"],"gender":"male"}
+default: OK   {"resourceType":"Patient","id":"p8","gender":"male"}
+strict:  OK   {"resourceType":"Patient","id":"p8","gender":"male"}
+## c3-unknown-root [C3]
+in:      {"resourceType":"Patient","id":"p9","foo":"bar","gender":"male"}
+default: OK   {"resourceType":"Patient","id":"p9","gender":"male"}
+         ~ unknownElement[null, foo]
+strict:  FAIL DataFormatException: HAPI-1825: Unknown element 'foo' found during parse
+         ~ unknownElement[null, foo]
+## c3-unknown-nested [C3]
+in:      {"resourceType":"Patient","id":"p10","name":[{"family":"X","nickname":"Y"}]}
+default: OK   {"resourceType":"Patient","id":"p10","name":[{"family":"X"}]}
+         ~ unknownElement[null, nickname]
+strict:  FAIL DataFormatException: HAPI-1825: Unknown element 'nickname' found during parse
+         ~ unknownElement[null, nickname]
+## c3-r5-field [C3]
+in:      {"resourceType":"Observation","id":"o2","status":"final","code":{"text":"x"},"triggeredBy":[{"observation":{"reference":"Observation/1"},"type":"reflex"}]}
+default: OK   {"resourceType":"Observation","id":"o2","status":"final","code":{"text":"x"}}
+         ~ unknownElement[null, triggeredBy]
+strict:  FAIL DataFormatException: HAPI-1825: Unknown element 'triggeredBy' found during parse
+         ~ unknownElement[null, triggeredBy]
+## c4-string-for-integer [C4]
+in:      {"resourceType":"Observation","id":"o3","status":"final","code":{"text":"x"},"valueInteger":"5"}
+default: OK   {"resourceType":"Observation","id":"o3","status":"final","code":{"text":"x"},"valueInteger":5}
+strict:  OK   {"resourceType":"Observation","id":"o3","status":"final","code":{"text":"x"},"valueInteger":5}
+## c4-string-for-decimal [C4]
+in:      {"resourceType":"Observation","id":"o4","status":"final","code":{"text":"x"},"valueQuantity":{"value":"1.50"}}
+default: OK   {"resourceType":"Observation","id":"o4","status":"final","code":{"text":"x"},"valueQuantity":{"value":1.50}}
+strict:  OK   {"resourceType":"Observation","id":"o4","status":"final","code":{"text":"x"},"valueQuantity":{"value":1.50}}
+## c4-number-for-string [C4]
+in:      {"resourceType":"Patient","id":"p11","name":[{"family":123}]}
+default: OK   {"resourceType":"Patient","id":"p11","name":[{"family":"123"}]}
+strict:  OK   {"resourceType":"Patient","id":"p11","name":[{"family":"123"}]}
+## c4-string-for-boolean [C4]
+in:      {"resourceType":"Patient","id":"p12","active":"true"}
+default: OK   {"resourceType":"Patient","id":"p12","active":true}
+strict:  OK   {"resourceType":"Patient","id":"p12","active":true}
+## c4-object-for-string [C4]
+in:      {"resourceType":"Patient","id":"p13","name":[{"family":{"x":1}}]}
+default: OK   {"resourceType":"Patient","id":"p13"}
+         ~ unknownElement[null, x]
+strict:  FAIL DataFormatException: HAPI-1825: Unknown element 'x' found during parse
+         ~ unknownElement[null, x]
+## c5-scalar-for-array [C5]
+in:      {"resourceType":"Patient","id":"p14","name":{"family":"X","given":"Ann"}}
+default: OK   {"resourceType":"Patient","id":"p14","name":[{"family":"X","given":["Ann"]}]}
+         ~ incorrectJsonType[null, name, ARRAY, null, OBJECT, null]
+strict:  FAIL DataFormatException: HAPI-1820: Found incorrect type for element name - Expected ARRAY and found OBJECT
+         ~ incorrectJsonType[null, name, ARRAY, null, OBJECT, null]
+## c5-array-for-scalar [C5]
+in:      {"resourceType":"Patient","id":"p15","gender":["male","female"],"birthDate":["1980-01-01"]}
+default: OK   {"resourceType":"Patient","id":"p15","gender":"male","birthDate":"1980-01-01"}
+         ~ unexpectedRepeatingElement[null, gender]
+strict:  FAIL DataFormatException: HAPI-1823: Multiple repetitions of non-repeatable element 'gender' found during parse
+         ~ unexpectedRepeatingElement[null, gender]
+## c5-nested-array [C5]
+in:      {"resourceType":"Patient","id":"p16","name":[{"given":[["a","b"]]}]}
+default: OK   {"resourceType":"Patient","id":"p16","name":[{"given":["a","b"]}]}
+strict:  OK   {"resourceType":"Patient","id":"p16","name":[{"given":["a","b"]}]}
+## c6-bad-date [C6]
+in:      {"resourceType":"Patient","id":"p17","birthDate":"1980-13-45"}
+default: FAIL DataFormatException: HAPI-1821: [element="birthDate"] Invalid attribute value "1980-13-45": Invalid date/time format: "1980-13-45"
+         ~ invalidValue[loc=[element="birthDate"], 1980-13-45, Invalid date/time format: "1980-13-45"]
+strict:  FAIL DataFormatException: HAPI-1821: [element="birthDate"] Invalid attribute value "1980-13-45": Invalid date/time format: "1980-13-45"
+         ~ invalidValue[loc=[element="birthDate"], 1980-13-45, Invalid date/time format: "1980-13-45"]
+## c6-bad-code-required [C6]
+in:      {"resourceType":"Patient","id":"p18","gender":"xyz"}
+default: FAIL DataFormatException: HAPI-1821: [element="gender"] Invalid attribute value "xyz": Unknown AdministrativeGender code 'xyz'
+         ~ invalidValue[loc=[element="gender"], xyz, Unknown AdministrativeGender code 'xyz']
+strict:  FAIL DataFormatException: HAPI-1821: [element="gender"] Invalid attribute value "xyz": Unknown AdministrativeGender code 'xyz'
+         ~ invalidValue[loc=[element="gender"], xyz, Unknown AdministrativeGender code 'xyz']
+## c6-int-overflow [C6]
+in:      {"resourceType":"Observation","id":"o5","status":"final","code":{"text":"x"},"valueInteger":99999999999}
+default: FAIL DataFormatException: HAPI-1821: [element="valueInteger"] Invalid attribute value "99999999999": java.lang.NumberFormatException: For input string: "99999999999"
+         ~ invalidValue[loc=[element="valueInteger"], 99999999999, java.lang.NumberFormatException: For input string: "99999999999"]
+strict:  FAIL DataFormatException: HAPI-1821: [element="valueInteger"] Invalid attribute value "99999999999": java.lang.NumberFormatException: For input string: "99999999999"
+         ~ invalidValue[loc=[element="valueInteger"], 99999999999, java.lang.NumberFormatException: For input string: "99999999999"]
+## c6-bad-id [C6]
+in:      {"resourceType":"Patient","id":"p 19 has spaces and is far too long to be a valid FHIR id at all really","gender":"male"}
+default: OK   {"resourceType":"Patient","id":"p 19 has spaces and is far too long to be a valid FHIR id at all really","gender":"male"}
+strict:  OK   {"resourceType":"Patient","id":"p 19 has spaces and is far too long to be a valid FHIR id at all really","gender":"male"}
+## c6-bad-uri-ws [C6]
+in:      {"resourceType":"Patient","id":"p20","identifier":[{"system":"http://x y","value":"1"}]}
+default: OK   {"resourceType":"Patient","id":"p20","identifier":[{"system":"http://x y","value":"1"}]}
+strict:  OK   {"resourceType":"Patient","id":"p20","identifier":[{"system":"http://x y","value":"1"}]}
+## c6-ext-value-and-nested [C6]
+in:      {"resourceType":"Patient","id":"p21","extension":[{"url":"http://e/x","valueString":"v","extension":[{"url":"a","valueString":"b"}]}]}
+default: FAIL DataFormatException: HAPI-1811: Extension (URL='http://e/x') must not have both a value and other contained extensions
+strict:  FAIL DataFormatException: HAPI-1811: Extension (URL='http://e/x') must not have both a value and other contained extensions
+## c6-choice-two-types [C6]
+in:      {"resourceType":"Observation","id":"o6","status":"final","code":{"text":"x"},"valueString":"a","valueInteger":5}
+default: OK   {"resourceType":"Observation","id":"o6","status":"final","code":{"text":"x"},"valueString":"a"}
+         ~ unexpectedRepeatingElement[null, value]
+strict:  FAIL DataFormatException: HAPI-1823: Multiple repetitions of non-repeatable element 'value' found during parse
+         ~ unexpectedRepeatingElement[null, value]
+## c7-contained [C7]
+in:      {"resourceType":"Patient","id":"p22","contained":[{"resourceType":"Organization","id":"org1","name":"O"}],"managingOrganization":{"reference":"#org1"}}
+default: OK   {"resourceType":"Patient","id":"p22","contained":[{"resourceType":"Organization","id":"org1","name":"O"}],"managingOrganization":{"reference":"#org1"}}
+strict:  OK   {"resourceType":"Patient","id":"p22","contained":[{"resourceType":"Organization","id":"org1","name":"O"}],"managingOrganization":{"reference":"#org1"}}
+## c7-no-resourcetype [C7]
+in:      {"id":"p23","gender":"male"}
+default: FAIL DataFormatException: HAPI-1838: Invalid JSON content detected, missing required element: 'resourceType'
+strict:  FAIL DataFormatException: HAPI-1838: Invalid JSON content detected, missing required element: 'resourceType'
+## c7-unknown-resourcetype [C7]
+in:      {"resourceType":"Florb","id":"p24"}
+default: FAIL DataFormatException: HAPI-1684: Unknown resource name "Florb" (this name is not known in FHIR version "R4")
+strict:  FAIL DataFormatException: HAPI-1684: Unknown resource name "Florb" (this name is not known in FHIR version "R4")
+## c7-wrong-resourcetype [C7]
+in:      {"resourceType":"Observation","id":"o7","status":"final","code":{"text":"x"}}
+default: OK   {"resourceType":"Observation","id":"o7","status":"final","code":{"text":"x"}}
+strict:  OK   {"resourceType":"Observation","id":"o7","status":"final","code":{"text":"x"}}
+## c1-malformed [C1]
+in:      {"resourceType":"Patient","id":"p25","gender":"male"
+default: FAIL DataFormatException: HAPI-1861: Failed to parse JSON encoded FHIR content: Unexpected end-of-input: expected close marker for Object (start marker at [line: 1, column: 1])
+ at [line: 1, column: 53]
+strict:  FAIL DataFormatException: HAPI-1861: Failed to parse JSON encoded FHIR content: Unexpected end-of-input: expected close marker for Object (start marker at [line: 1, column: 1])
+ at [line: 1, column: 53]
+## c1-duplicate-key [C1]
+in:      {"resourceType":"Patient","id":"p26","gender":"male","gender":"female"}
+default: OK   {"resourceType":"Patient","id":"p26","gender":"female"}
+strict:  OK   {"resourceType":"Patient","id":"p26","gender":"female"}
+## c1-top-level-array [C1]
+in:      [{"resourceType":"Patient","id":"p27a"},{"resourceType":"Patient","id":"p27b"}]
+default: FAIL DataFormatException: HAPI-1861: Failed to parse JSON encoded FHIR content: HAPI-1859: Content does not appear to be FHIR JSON, first non-whitespace character was: '[' (must be '{')
+strict:  FAIL DataFormatException: HAPI-1861: Failed to parse JSON encoded FHIR content: HAPI-1859: Content does not appear to be FHIR JSON, first non-whitespace character was: '[' (must be '{')
+## c1-trailing-text [C1]
+in:      {"resourceType":"Patient","id":"p28"} xyz
+default: FAIL DataFormatException: HAPI-1861: Failed to parse JSON encoded FHIR content: Unrecognized token 'xyz': was expecting (JSON String, Number, Array, Object or token 'null', 'true' or 'false')
+ at [line: 1, column: 39]
+strict:  FAIL DataFormatException: HAPI-1861: Failed to parse JSON encoded FHIR content: Unrecognized token 'xyz': was expecting (JSON String, Number, Array, Object or token 'null', 'true' or 'false')
+ at [line: 1, column: 39]
+## c5-array-for-string-primitive [C5]
+in:      {"resourceType":"Patient","id":"p29","name":[{"family":["A","B"]}]}
+default: OK   {"resourceType":"Patient","id":"p29","name":[{"family":"A"}]}
+         ~ unexpectedRepeatingElement[null, family]
+strict:  FAIL DataFormatException: HAPI-1823: Multiple repetitions of non-repeatable element 'family' found during parse
+         ~ unexpectedRepeatingElement[null, family]

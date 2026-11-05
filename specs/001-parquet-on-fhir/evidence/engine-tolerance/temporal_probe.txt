@@ -1,0 +1,63 @@
+=== Patient.birthDate = '2020-13-45'
+  ingest: stored '2020-13-45'
+  select value               -> [('2020-13-45',)]
+  select exists()            -> [(True,)]
+  select = same text         -> [(True,)]
+  select comparison          -> ERROR : org.apache.spark.SparkException: [FAILED_EXECUTE_UDF] User defined function (`high_boundary_for_date (ToScalaUDF$$$Lambda/0x0000007801a76248)`: (string) => timestamp) failed due to: java.lang.IllegalArgumentException: Invalid date/dateTim
+  where comparison           -> ERROR : org.apache.spark.SparkException: [FAILED_EXECUTE_UDF] User defined function (`high_boundary_for_date (ToScalaUDF$$$Lambda/0x0000007801a76248)`: (string) => timestamp) failed due to: java.lang.IllegalArgumentException: Invalid date/dateTim
+  select equality            -> ERROR : org.apache.spark.SparkException: [FAILED_EXECUTE_UDF] User defined function (`high_boundary_for_date (ToScalaUDF$$$Lambda/0x0000007802289f30)`: (string) => timestamp) failed due to: java.lang.IllegalArgumentException: Invalid date/dateTim
+  select toDate/ToDateTime   -> [('2020-13-45',)]
+=== Patient.birthDate = '2020-02-30'
+  ingest: stored '2020-02-30'
+  select value               -> [('2020-02-30',)]
+  select exists()            -> [(True,)]
+  select = same text         -> [(True,)]
+  select comparison          -> ERROR : org.apache.spark.SparkException: [FAILED_EXECUTE_UDF] User defined function (`high_boundary_for_date (ToScalaUDF$$$Lambda/0x0000007801a76248)`: (string) => timestamp) failed due to: java.lang.IllegalArgumentException: Invalid date/dateTim
+  where comparison           -> ERROR : org.apache.spark.SparkException: [FAILED_EXECUTE_UDF] User defined function (`high_boundary_for_date (ToScalaUDF$$$Lambda/0x0000007801a76248)`: (string) => timestamp) failed due to: java.lang.IllegalArgumentException: Invalid date/dateTim
+  select equality            -> ERROR : org.apache.spark.SparkException: [FAILED_EXECUTE_UDF] User defined function (`high_boundary_for_date (ToScalaUDF$$$Lambda/0x0000007802289f30)`: (string) => timestamp) failed due to: java.lang.IllegalArgumentException: Invalid date/dateTim
+  select toDate/ToDateTime   -> [('2020-02-30',)]
+=== Patient.birthDate = '2020-01-01T10:00:00Z'
+  ingest: stored '2020-01-01T10:00:00Z'
+  select value               -> [('2020-01-01T10:00:00Z',)]
+  select exists()            -> [(True,)]
+  select = same text         -> [(True,)]
+  select comparison          -> [(True,)]
+  where comparison           -> [('r1',)]
+  select equality            -> [(False,)]
+  select toDate/ToDateTime   -> [('2020-01-01T10:00:00Z',)]
+=== Patient.birthDate = 'garbage'
+  ingest: stored 'garbage'
+  select value               -> [('garbage',)]
+  select exists()            -> [(True,)]
+  select = same text         -> [(True,)]
+  select comparison          -> ERROR : org.apache.spark.SparkException: [FAILED_EXECUTE_UDF] User defined function (`high_boundary_for_date (ToScalaUDF$$$Lambda/0x0000007801a76248)`: (string) => timestamp) failed due to: java.lang.IllegalArgumentException: Invalid date/dateTim
+  where comparison           -> ERROR : org.apache.spark.SparkException: [FAILED_EXECUTE_UDF] User defined function (`high_boundary_for_date (ToScalaUDF$$$Lambda/0x0000007801a76248)`: (string) => timestamp) failed due to: java.lang.IllegalArgumentException: Invalid date/dateTim
+  select equality            -> ERROR : org.apache.spark.SparkException: [FAILED_EXECUTE_UDF] User defined function (`high_boundary_for_date (ToScalaUDF$$$Lambda/0x0000007802289f30)`: (string) => timestamp) failed due to: java.lang.IllegalArgumentException: Invalid date/dateTim
+  select toDate/ToDateTime   -> [(None,)]
+=== Patient.deceasedDateTime = '2020-01-01T10:00:00'
+  ingest: stored '2020-01-01T10:00:00'
+  select value               -> [('2020-01-01T10:00:00',)]
+  select exists()            -> [(True,)]
+  select = same text         -> [(True,)]
+  select comparison          -> [(True,)]
+  where comparison           -> [('r1',)]
+  select equality            -> [(False,)]
+  select toDate/ToDateTime   -> [('2020-01-01T10:00:00',)]
+=== Patient.deceasedDateTime = '2020-01-01T25:00:00Z'
+  ingest: stored '2020-01-01T25:00:00Z'
+  select value               -> [('2020-01-01T25:00:00Z',)]
+  select exists()            -> [(True,)]
+  select = same text         -> [(True,)]
+  select comparison          -> ERROR : org.apache.spark.SparkException: [FAILED_EXECUTE_UDF] User defined function (`high_boundary_for_date (ToScalaUDF$$$Lambda/0x0000007801a76248)`: (string) => timestamp) failed due to: java.lang.IllegalArgumentException: Invalid date/dateTim
+  where comparison           -> ERROR : org.apache.spark.SparkException: [FAILED_EXECUTE_UDF] User defined function (`high_boundary_for_date (ToScalaUDF$$$Lambda/0x0000007801a76248)`: (string) => timestamp) failed due to: java.lang.IllegalArgumentException: Invalid date/dateTim
+  select equality            -> ERROR : org.apache.spark.SparkException: [FAILED_EXECUTE_UDF] User defined function (`high_boundary_for_date (ToScalaUDF$$$Lambda/0x0000007802289f30)`: (string) => timestamp) failed due to: java.lang.IllegalArgumentException: Invalid date/dateTim
+  select toDate/ToDateTime   -> [('2020-01-01T25:00:00Z',)]
+=== Observation.valueTime = '25:61:00'
+  ingest: stored '25:61:00'
+  select value               -> [('25:61:00',)]
+  select exists()            -> [(True,)]
+  select = same text         -> [(True,)]
+  select comparison          -> ERROR : org.apache.spark.SparkException: [FAILED_EXECUTE_UDF] User defined function (`high_boundary_for_time (ToScalaUDF$$$Lambda/0x0000007801a76248)`: (string) => timestamp) failed due to: java.lang.IllegalArgumentException: Invalid time format:
+  where comparison           -> ERROR : org.apache.spark.SparkException: [FAILED_EXECUTE_UDF] User defined function (`high_boundary_for_time (ToScalaUDF$$$Lambda/0x0000007801a76248)`: (string) => timestamp) failed due to: java.lang.IllegalArgumentException: Invalid time format:
+  select equality            -> ERROR : org.apache.spark.SparkException: [FAILED_EXECUTE_UDF] User defined function (`high_boundary_for_time (ToScalaUDF$$$Lambda/0x0000007802289f30)`: (string) => timestamp) failed due to: java.lang.IllegalArgumentException: Invalid time format:
+  select toDate/ToDateTime   -> [(None,)]

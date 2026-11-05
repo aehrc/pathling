@@ -784,11 +784,11 @@ class ElementMatcherTest {
   @MethodSource("quantityValueMatcherCases")
   void testQuantityValueMatcher(
       final BigDecimal value, final String searchValue, final boolean expected) {
-    // Create a DataFrame with a Quantity-like struct containing just 'value' field
+    // Create a DataFrame with a stored Quantity holding just its value, as text.
     final Dataset<Row> df =
         spark
             .createDataset(List.of(1), Encoders.INT())
-            .select(struct(lit(value).as("value")).as("quantity"));
+            .select(struct(lit(value.toPlainString()).as("value")).as("quantity"));
 
     final QuantityMatcher matcher = new QuantityMatcher();
     final Column result = matcher.match(col("quantity"), searchValue);
@@ -989,22 +989,17 @@ class ElementMatcherTest {
       final String unit,
       final String searchValue,
       final boolean expected) {
-    // Create a DataFrame with a full Quantity-like struct
-    // Include canonicalized fields (set to null) since the matcher references them
-    // for UCUM system searches. With null canonical values, it falls back to standard matching.
+    // Create a DataFrame with a stored Quantity, in the shape the Parquet on FHIR layout stores it:
+    // its value as text and no canonical form, which the matcher computes where it needs it.
     final Dataset<Row> df =
         spark
             .createDataset(List.of(1), Encoders.INT())
             .select(
                 struct(
-                        lit(value).as("value"),
-                        lit(system).as("system"),
-                        lit(code).as("code"),
-                        lit(unit).as("unit"),
-                        lit(null)
-                            .cast("struct<value:decimal(38,0),scale:int>")
-                            .as("_value_canonicalized"),
-                        lit(null).cast("string").as("_code_canonicalized"))
+                        lit(value.toPlainString()).as("value"),
+                        lit(unit).cast("string").as("unit"),
+                        lit(system).cast("string").as("system"),
+                        lit(code).cast("string").as("code"))
                     .as("quantity"));
 
     final QuantityMatcher matcher = new QuantityMatcher();
@@ -1022,7 +1017,8 @@ class ElementMatcherTest {
     // UCUM canonical base units:
     // - g (gram) is the base mass unit
     // - mg = 10^-3 g, kg = 10^3 g
-    // Canonical values are computed automatically by QuantityEncoding.encodeLiteral()
+    // Canonical values are computed from the element's value and code by the canonicalisation
+    // functions QuantityMatcher calls.
     return Stream.of(
         // ========== UCUM canonicalization - matching equivalent units ==========
         // Resource has 70 kg, canonical = (70000, "g")

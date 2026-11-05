@@ -179,3 +179,11 @@ for how this applies to FHIRPath expressions in general.
 For a more comprehensive example demonstrating SQL on FHIR queries with multiple
 views, complex transformations and joins, see
 the [SQL on FHIR example](examples/prostate-cancer.md).
+
+## Column types
+
+A column that declares a FHIR type, with the `type` property, has an output
+column of that type whether or not the data carries the element. A column that
+declares no type takes its type from the FHIR definitions of the element, so it
+also has the same type whether or not the element is present in the data.
+Declaring column types is still good practice, and is what shareable views do.

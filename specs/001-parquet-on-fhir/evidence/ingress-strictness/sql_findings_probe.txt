@@ -1,0 +1,13 @@
+== inferred, null vs absent
+   {"active": true, "given": null, "id": "a"}
+   {"active": null, "given": null, "id": "b"}
+   {"active": null, "given": null, "id": "c"}
+   {"active": null, "given": null, "id": "d"}
+   {"active": null, "given": [], "id": "e"}
+== explicit schema, PERMISSIVE with _corrupt_record
+   {"id": "ok", "valueInteger": 5, "family": "X", "given": ["A"], "_corrupt_record": null}
+   {"id": "str-for-int", "valueInteger": null, "family": null, "given": null, "_corrupt_record": "{\"id\":\"str-for-int\",\"valueInteger\":\"5\"}"}
+   {"id": "num-for-string", "valueInteger": null, "family": "1.5", "given": null, "_corrupt_record": null}
+   {"id": "scalar-for-array", "valueInteger": null, "family": null, "given": null, "_corrupt_record": "{\"id\":\"scalar-for-array\",\"given\":\"A\"}"}
+   {"id": "overflow", "valueInteger": null, "family": null, "given": null, "_corrupt_record": "{\"id\":\"overflow\",\"valueInteger\":99999999999}"}
+   {"id": "unknown-key", "valueInteger": null, "family": null, "given": null, "_corrupt_record": null}

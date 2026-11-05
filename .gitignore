@@ -43,6 +43,9 @@ spark-warehouse
 # Isolated worktrees used when several issues are implemented concurrently.
 /.claude/worktrees/
 
+# Per-branch scratch and working files.
+/.local/
+
 #server
 server/.idea
 server/.mvn

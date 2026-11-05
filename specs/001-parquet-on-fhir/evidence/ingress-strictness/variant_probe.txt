@@ -1,0 +1,22 @@
+active_sql_null        False
+active_is_json_null    True
+missing_sql_null       True
+missing_is_json_null   False
+s_type                 STRING
+n_type                 BIGINT
+d_type                 DECIMAL(2,1)
+d_text                 1.5
+big_type               DOUBLE
+big_text               1.2345678901234567E19
+e_type                 DOUBLE
+e_text                 100.0
+o_type                 OBJECT<>
+a_type                 ARRAY<VOID>
+name0_keys             OBJECT<family: STRING, nickname: STRING>
+== object keys via variant_explode
++--------+
+|     key|
++--------+
+|  family|
+|nickname|
++--------+

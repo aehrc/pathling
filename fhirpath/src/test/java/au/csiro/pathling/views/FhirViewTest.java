@@ -17,8 +17,6 @@
 
 package au.csiro.pathling.views;
 
-import static au.csiro.pathling.UnitTestDependencies.fhirContext;
-import static au.csiro.pathling.UnitTestDependencies.jsonParser;
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 import static au.csiro.pathling.validation.ValidationUtils.ensureValid;
 import static java.util.Objects.nonNull;
@@ -34,10 +32,10 @@ import static org.junit.jupiter.api.Assumptions.assumeFalse;
 import static scala.jdk.javaapi.CollectionConverters.asScala;
 
 import au.csiro.pathling.config.QueryConfiguration;
-import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.test.SpringBootUnitTest;
+import au.csiro.pathling.test.layout.PofDatasets;
 import au.csiro.pathling.utilities.Streams;
 import ca.uhn.fhir.context.FhirContext;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -73,29 +71,22 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.spark.api.java.function.MapFunction;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.api.java.UDF1;
-import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
 import org.apache.spark.sql.expressions.UserDefinedFunction;
 import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.DecimalType;
 import org.apache.spark.sql.types.StringType;
-import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Import;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.core.io.support.ResourcePatternResolver;
@@ -103,35 +94,10 @@ import org.springframework.core.io.support.ResourcePatternResolver;
 @SpringBootUnitTest
 @TestInstance(Lifecycle.PER_CLASS)
 @Slf4j
-@Import(FhirViewTest.CustomEncoderConfiguration.class)
 abstract class FhirViewTest {
 
   public static final String PATHLING_VIEWS_TEST_DISABLE_EXCLUSIONS =
       "au.csiro.pathling.views.test.disableExclusions";
-
-  /**
-   * Custom configuration for FhirViewTest to provide FhirEncoders with increased maxNestingLevel.
-   * This is necessary to support the repeat directive which can create deeply nested structures.
-   */
-  @TestConfiguration
-  static class CustomEncoderConfiguration {
-
-    /**
-     * Provides FhirEncoders configured with maxNestingLevel=3 to handle nested structures created
-     * by the repeat directive.
-     *
-     * @return configured FhirEncoders instance
-     */
-    @Bean
-    @Nonnull
-    FhirEncoders fhirEncoders() {
-      return FhirEncoders.forR4()
-          .withMaxNestingLevel(3)
-          .withExtensionsEnabled(true)
-          .withAllOpenTypes()
-          .getOrCreate();
-    }
-  }
 
   private static final DateTimeFormatter FHIR_DATE_PARSER =
       new DateTimeFormatterBuilder()
@@ -154,8 +120,6 @@ abstract class FhirViewTest {
   @Autowired SparkSession spark;
 
   @Autowired FhirContext fhirContext;
-
-  @Autowired FhirEncoders fhirEncoders;
 
   @Autowired Gson gson;
 
@@ -373,16 +337,9 @@ abstract class FhirViewTest {
                 mapping(Object::toString, toList())))
         .forEach(
             (resourceType, jsonStrings) -> {
-              final Dataset<String> dataset = spark.createDataset(jsonStrings, Encoders.STRING());
-              final ExpressionEncoder<IBaseResource> encoder = fhirEncoders.of(resourceType);
+              // The JSON is read in the Parquet on FHIR layout as it stands (T035).
               final Dataset<Row> resourceDataset =
-                  dataset
-                      .map(
-                          (MapFunction<String, IBaseResource>)
-                              json -> jsonParser(fhirContext()).parseResource(json),
-                          encoder)
-                      .toDF()
-                      .cache();
+                  PofDatasets.fromJson(spark, fhirContext, resourceType, jsonStrings).cache();
               result.put(resourceType, resourceDataset);
             });
     return result;

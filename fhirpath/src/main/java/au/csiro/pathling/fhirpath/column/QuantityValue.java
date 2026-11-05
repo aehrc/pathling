@@ -17,7 +17,6 @@
 
 package au.csiro.pathling.fhirpath.column;
 
-import static au.csiro.pathling.encoders.ValueFunctions.nullSafeField;
 import static au.csiro.pathling.sql.SqlFunctions.let;
 import static java.util.Objects.nonNull;
 import static java.util.Objects.requireNonNull;
@@ -27,6 +26,7 @@ import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.not;
 import static org.apache.spark.sql.functions.when;
 
+import au.csiro.pathling.encoders.ColumnFunctions;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import au.csiro.pathling.fhirpath.unit.CalendarDurationUnit;
 import au.csiro.pathling.fhirpath.unit.UcumUnit;
@@ -50,8 +50,12 @@ import org.apache.spark.sql.Column;
  * <p>This class centralizes all Quantity-related SQL column operations and provides a unified
  * abstraction through the {@link ValueWithUnit} record.
  *
+ * <p>The wrapped column holds a System quantity, in the fixed shape {@link
+ * QuantityEncoding#dataType()}. A stored quantity is taken as one where it is computed with. The
+ * decimal value and the canonical form are not part of that shape, so they are computed here from
+ * the value and the code (T096, FR-022).
+ *
  * @author Piotr Szul
- * @author John Grimes
  */
 public class QuantityValue {
 
@@ -101,8 +105,8 @@ public class QuantityValue {
     /**
      * Extracts the normalized (canonicalized) value and unit from a Quantity column.
      *
-     * <p>Uses canonicalized_value and canonicalized_code fields, with null system (as canonicalized
-     * quantities are system-independent).
+     * <p>Uses the canonical value and code computed from the quantity, with null system (as
+     * canonicalized quantities are system-independent).
      *
      * @param quantity the Quantity column
      * @return a ValueWithUnit instance containing the normalized value and unit
@@ -110,15 +114,15 @@ public class QuantityValue {
     @Nonnull
     public static ValueWithUnit normalizedValueOf(@Nonnull final Column quantity) {
       return new ValueWithUnit(
-          nullSafeField(quantity, QuantityEncoding.CANONICALIZED_VALUE_COLUMN),
-          nullSafeField(quantity, QuantityEncoding.CANONICALIZED_CODE_COLUMN),
+          QuantityEncoding.canonicalValue(quantity),
+          QuantityEncoding.canonicalCode(quantity),
           null);
     }
 
     /**
      * Extracts the original value and unit from a Quantity column.
      *
-     * <p>Uses value, code (canonical unit code), and system fields. This representation is used for
+     * <p>Uses the decoded value, code, and system fields. This representation is used for
      * decimal-based comparisons.
      *
      * @param quantity the Quantity column
@@ -127,16 +131,17 @@ public class QuantityValue {
     @Nonnull
     public static ValueWithUnit originalValueOf(@Nonnull final Column quantity) {
       return new ValueWithUnit(
-          nullSafeField(quantity, QuantityEncoding.VALUE_COLUMN),
-          nullSafeField(quantity, QuantityEncoding.CODE_COLUMN),
-          nullSafeField(quantity, QuantityEncoding.SYSTEM_COLUMN));
+          QuantityEncoding.decodeValue(quantity.getField(QuantityEncoding.VALUE_COLUMN)),
+          quantity.getField(QuantityEncoding.CODE_COLUMN),
+          quantity.getField(QuantityEncoding.SYSTEM_COLUMN));
     }
 
     /**
      * Extracts the literal value and unit from a Quantity column.
      *
-     * <p>Uses value, unit (literal unit string as written, e.g., "days" instead of "day"), and
-     * system fields. This representation is used for exact string matching in unit conversion.
+     * <p>Uses the decoded value, unit (literal unit string as written, e.g., "days" instead of
+     * "day"), and system fields. This representation is used for exact string matching in unit
+     * conversion.
      *
      * @param quantity the Quantity column
      * @return a ValueWithUnit instance containing the literal value and unit
@@ -144,8 +149,8 @@ public class QuantityValue {
     @Nonnull
     public static ValueWithUnit literalValueOf(@Nonnull final Column quantity) {
       return new ValueWithUnit(
-          nullSafeField(quantity, QuantityEncoding.VALUE_COLUMN),
-          nullSafeField(quantity, QuantityEncoding.UNIT_COLUMN),
+          QuantityEncoding.decodeValue(quantity.getField(QuantityEncoding.VALUE_COLUMN)),
+          quantity.getField(QuantityEncoding.UNIT_COLUMN),
           lit(null));
     }
 
@@ -192,7 +197,9 @@ public class QuantityValue {
   /**
    * Gets the normalized (canonicalized) representation of this Quantity.
    *
-   * <p>Returns a ValueWithUnit with canonicalized_value, canonicalized_code, and null system.
+   * <p>Returns a ValueWithUnit with the canonical value and code computed from the quantity's value
+   * and code by {@link QuantityEncoding#canonicalValue(Column)} and {@link
+   * QuantityEncoding#canonicalCode(Column)}, and a null system.
    *
    * @return ValueWithUnit representing the normalized Quantity
    */
@@ -212,6 +219,16 @@ public class QuantityValue {
   }
 
   /**
+   * Reads a field of the quantity as text, or null where the quantity does not carry it. A quantity
+   * in the stored shape carries only the fields its data uses, so a field such as the comparator
+   * may be absent from its schema.
+   */
+  @Nonnull
+  private Column field(@Nonnull final String name) {
+    return ColumnFunctions.resolveStringOrNull(quantityColumn, name);
+  }
+
+  /**
    * Checks if this quantity carries a comparator ({@code <}, {@code <=}, {@code >=} or {@code >}).
    *
    * <p>Such a quantity records a bound rather than a known value (e.g. {@code <5 mg} is some value
@@ -221,7 +238,7 @@ public class QuantityValue {
    */
   @Nonnull
   public Column isBounded() {
-    return nullSafeField(quantityColumn, QuantityEncoding.COMPARATOR_COLUMN).isNotNull();
+    return field(QuantityEncoding.COMPARATOR_COLUMN).isNotNull();
   }
 
   /**
@@ -239,14 +256,14 @@ public class QuantityValue {
   public Column isSystemQuantity() {
     final Column hasSupportedSystem =
         coalesce(
-            nullSafeField(quantityColumn, QuantityEncoding.SYSTEM_COLUMN)
+            field(QuantityEncoding.SYSTEM_COLUMN)
                 .isin(
                     UcumUnit.UCUM_SYSTEM_URI,
                     CalendarDurationUnit.FHIRPATH_CALENDAR_DURATION_SYSTEM_URI),
             lit(false));
-    return nullSafeField(quantityColumn, QuantityEncoding.VALUE_COLUMN)
+    return field(QuantityEncoding.VALUE_COLUMN)
         .isNotNull()
-        .and(nullSafeField(quantityColumn, QuantityEncoding.CODE_COLUMN).isNotNull())
+        .and(field(QuantityEncoding.CODE_COLUMN).isNotNull())
         .and(hasSupportedSystem)
         .and(not(isBounded()));
   }
@@ -261,7 +278,8 @@ public class QuantityValue {
    */
   @Nonnull
   public Column isUcum() {
-    return nullSafeField(quantityColumn, QuantityEncoding.SYSTEM_COLUMN)
+    return quantityColumn
+        .getField(QuantityEncoding.SYSTEM_COLUMN)
         .equalTo(lit(UcumUnit.UCUM_SYSTEM_URI));
   }
 
@@ -275,7 +293,8 @@ public class QuantityValue {
    */
   @Nonnull
   public Column isCalendarDuration() {
-    return nullSafeField(quantityColumn, QuantityEncoding.SYSTEM_COLUMN)
+    return quantityColumn
+        .getField(QuantityEncoding.SYSTEM_COLUMN)
         .equalTo(lit(CalendarDurationUnit.FHIRPATH_CALENDAR_DURATION_SYSTEM_URI));
   }
 
@@ -285,9 +304,9 @@ public class QuantityValue {
    * returning null when conversion is not possible.
    *
    * <p>First checks if this is a UCUM or calendar duration quantity. For exact unit match with
-   * valid system, returns the quantity as-is (fast path). Otherwise, attempts UCUM unit conversion
-   * via the UDF. Returns the converted quantity if conversion is successful, or null if conversion
-   * is not possible.
+   * valid system, returns the quantity without its id and comparator (fast path). Otherwise,
+   * attempts UCUM unit conversion via the UDF. Returns the converted quantity if conversion is
+   * successful, or null if conversion is not possible.
    *
    * <p>Non-UCUM/non-calendar quantities (e.g., Money with system "urn:iso:std:iso:4217") will
    * always return null, even if the unit string happens to match the target unit.
@@ -317,8 +336,9 @@ public class QuantityValue {
               literal.unit().equalTo(targetUnit).and(hasValidSystem);
 
           // Return exact match if available (fast path), otherwise UCUM conversion result (or
-          // null).
-          return when(exactMatchWithValidSystem, qc)
+          // null). Either way the result is a quantity the engine built, so the exact match drops
+          // the id and comparator of a stored quantity, as the conversion does.
+          return when(exactMatchWithValidSystem, QuantityEncoding.withoutStoredElements(qc))
               .otherwise(coalesce(ucumConverted, lit(null).cast(QuantityEncoding.dataType())));
         });
   }

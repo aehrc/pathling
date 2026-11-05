@@ -21,6 +21,7 @@ import static au.csiro.pathling.fhirpath.literal.StringLiteral.unescapeFhirPathS
 import static au.csiro.pathling.utilities.Strings.unSingleQuote;
 
 import au.csiro.pathling.annotations.UsedByReflection;
+import au.csiro.pathling.definition.NodeDefinition;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
 import au.csiro.pathling.fhirpath.FhirPathType;
@@ -30,7 +31,6 @@ import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.comparison.Comparable;
-import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import java.util.function.Function;
@@ -61,15 +61,13 @@ public class StringCollection extends Collection
    * @param type the FHIRPath type of this collection
    * @param fhirType the FHIR defined type of this collection
    * @param definition the node definition for this collection
-   * @param extensionMapColumn the extension map column for this collection
    */
   protected StringCollection(
       @Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
-      @Nonnull final Optional<? extends NodeDefinition> definition,
-      @Nonnull final Optional<Column> extensionMapColumn) {
-    super(columnRepresentation, type, fhirType, definition, extensionMapColumn);
+      @Nonnull final Optional<? extends NodeDefinition> definition) {
+    super(columnRepresentation, type, fhirType, definition);
   }
 
   /**
@@ -87,7 +85,6 @@ public class StringCollection extends Collection
         columnRepresentation,
         Optional.of(FhirPathType.STRING),
         Optional.of(fhirDefinedType),
-        Optional.empty(),
         Optional.empty());
   }
 

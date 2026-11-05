@@ -122,6 +122,16 @@
           <groupId>io.github.fhnaumann</groupId>
           <artifactId>ucumate-test-utils</artifactId>
         </exclusion>
+        <!-- Woodstox registers itself as the StAX implementation, which Spark's XML writer then
+             finds in place of the copy Hadoop shades, and fails on a property only that copy
+             recognises. UCUM's XML reading works with any StAX implementation (ticket 32). It is
+             excluded here so that every module built on this one leaves it out; an application
+             that brings Woodstox in some other way must keep it behind Hadoop's on the
+             classpath. -->
+        <exclusion>
+          <groupId>com.fasterxml.woodstox</groupId>
+          <artifactId>woodstox-core</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
 

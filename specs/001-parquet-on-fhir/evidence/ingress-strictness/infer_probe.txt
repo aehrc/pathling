@@ -1,0 +1,73 @@
+spark 4.0.2
+== single row, string contents look like numbers/dates 
+   b: string
+   big: decimal(20,0)
+   d: string
+   e: double
+   f: double
+   i: bigint
+   n: string
+   s: string
+   ts: string
+    {"b": "true", "big": "99999999999999999999", "d": "2020-01-01", "e": 100.0, "f": 1.5, "i": 5, "n": null, "s": "5", "ts": "2020-01-01T10:00:00Z"}
+== same, prefersDecimal {'prefersDecimal': 'true'}
+   ERROR [NEGATIVE_SCALE_DISALLOWED] Negative scale is not allowed: '-1'. Set the config "spark.sql.legacy.allowNegativeScaleOfDecimal" to "true" to allow it. SQLSTATE: 0A000
+== prefersDecimal without the exponent value {'prefersDecimal': 'true'}
+   b: string
+   big: decimal(20,0)
+   d: string
+   f: decimal(3,2)
+   i: bigint
+   n: string
+   s: decimal(1,0)
+   ts: string
+    {"b": "true", "big": "99999999999999999999", "d": "2020-01-01", "f": "1.50", "i": 5, "n": null, "s": "5", "ts": "2020-01-01T10:00:00Z"}
+== same, inferTimestamp {'inferTimestamp': 'true'}
+   b: string
+   big: decimal(20,0)
+   d: timestamp
+   e: double
+   f: double
+   i: bigint
+   n: string
+   s: string
+   ts: timestamp
+    {"b": "true", "big": "99999999999999999999", "d": "2020-01-01 00:00:00", "e": 100.0, "f": 1.5, "i": 5, "n": null, "s": "5", "ts": "2020-01-01 20:00:00"}
+== same, primitivesAsString {'primitivesAsString': 'true'}
+   b: string
+   big: string
+   d: string
+   e: string
+   f: string
+   i: string
+   n: string
+   s: string
+   ts: string
+    {"b": "true", "big": "99999999999999999999", "d": "2020-01-01", "e": "100.0", "f": "1.5", "i": "5", "n": null, "s": "5", "ts": "2020-01-01T10:00:00Z"}
+== int then float in one column 
+   v: double
+    {"v": 5.0}
+    {"v": 1.5}
+== number then string in one column 
+   v: string
+    {"v": "5"}
+    {"v": "x"}
+== number then string, number given 1.50 
+   v: string
+    {"v": "1.5"}
+    {"v": "x"}
+== bool then string 
+   v: string
+    {"v": "true"}
+    {"v": "x"}
+== scalar then array 
+   v: string
+    {"v": "a"}
+    {"v": "[\"b\",\"c\"]"}
+== scalar then object 
+   v: string
+    {"v": "a"}
+    {"v": "{\"x\":1}"}
+== all null 
+   v: string
+    {"v": null}

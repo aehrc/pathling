@@ -1,0 +1,13 @@
+Observation XML lines at size l (1,004,979 documents), on the branch's first build, which typed numbers with
+inferSchema=true, 2026-10-21; the last of three runs of each, milliseconds.
+
+infer_cost.py:
+infer false 2920
+infer true 12860
+infer true preferDate=false 20294
+pc.encode fit 15300
+
+infer_cost2.py (values not shaped like a number or boolean blanked by a regular expression first):
+noop strip 627
+infer true stripped 5505
+infer false raw 2726

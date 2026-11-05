@@ -26,6 +26,7 @@ import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhirpath.evaluation.SingleInstanceEvaluationResult.TraceResult;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.datasource.ObjectDataSource;
+import au.csiro.pathling.test.helpers.JsonElementRenderer;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.List;
 import org.apache.spark.sql.Dataset;
@@ -77,7 +78,13 @@ class SingleInstanceEvaluatorIntegrationTest {
     // Evaluating a traced primitive expression should return both the result and trace entries.
     final SingleInstanceEvaluationResult result =
         SingleInstanceEvaluator.evaluate(
-            patientDf, "Patient", fhirContext, "Patient.gender.trace('gender')", null, null);
+            patientDf,
+            "Patient",
+            fhirContext,
+            "Patient.gender.trace('gender')",
+            null,
+            null,
+            JsonElementRenderer.of(fhirContext));
 
     // The result should contain the gender value.
     assertEquals(1, result.getResults().size());
@@ -101,7 +108,8 @@ class SingleInstanceEvaluatorIntegrationTest {
             fhirContext,
             "Patient.name.where(use = 'official').given.trace('given').first().trace('first')",
             null,
-            null);
+            null,
+            JsonElementRenderer.of(fhirContext));
 
     // The result should be the first given name.
     assertEquals(1, result.getResults().size());
@@ -126,7 +134,13 @@ class SingleInstanceEvaluatorIntegrationTest {
     // An expression without trace() should return an empty traces list.
     final SingleInstanceEvaluationResult result =
         SingleInstanceEvaluator.evaluate(
-            patientDf, "Patient", fhirContext, "Patient.active", null, null);
+            patientDf,
+            "Patient",
+            fhirContext,
+            "Patient.active",
+            null,
+            null,
+            JsonElementRenderer.of(fhirContext));
 
     assertEquals(1, result.getResults().size());
     assertEquals(true, result.getResults().get(0).getValue());
@@ -138,7 +152,13 @@ class SingleInstanceEvaluatorIntegrationTest {
     // Tracing a complex type should produce a JSON string without synthetic fields.
     final SingleInstanceEvaluationResult result =
         SingleInstanceEvaluator.evaluate(
-            patientDf, "Patient", fhirContext, "Patient.name.first().trace('name')", null, null);
+            patientDf,
+            "Patient",
+            fhirContext,
+            "Patient.name.first().trace('name')",
+            null,
+            null,
+            JsonElementRenderer.of(fhirContext));
 
     // The trace should contain a JSON representation of the HumanName.
     assertEquals(1, result.getTraces().size());

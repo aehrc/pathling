@@ -93,8 +93,8 @@ public record RepeatSelection(
     final ProjectionResult schemaResult = component.evaluate(schemaContext);
 
     // Derive the expected element type from declared projection metadata. Used as the typed
-    // empty fallback when recursive traversal exits the encoded schema at the root of the
-    // repeat, so that sibling column combinations through StructProduct see a consistent
+    // empty fallback when the root of the repeat resolves to an element absent from the input
+    // schema, so that sibling column combinations through StructProduct see a consistent
     // element type instead of an untyped Array<NullType>.
     final StructType expectedElement = schemaResult.getSqlType();
 
@@ -106,9 +106,8 @@ public record RepeatSelection(
                     ValueFunctions.transformTree(
                         ctx.inputContext().getColumnValue(),
                         c ->
-                            ValueFunctions.emptyArrayIfMissingField(
-                                evaluateElementWiseWithIncrement(
-                                    ctx.withInputColumn(c), rowIndexCounter)),
+                            evaluateElementWiseWithIncrement(
+                                ctx.withInputColumn(c), rowIndexCounter),
                         paths.stream().map(ctx::asColumnOperator).toList(),
                         maxDepth,
                         errorOnDepthExhaustion,

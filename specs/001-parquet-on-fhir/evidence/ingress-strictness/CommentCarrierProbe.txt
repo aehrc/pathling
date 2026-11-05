@@ -1,0 +1,21 @@
+== before a root child
+  lenient  ok  kept=true  xml=<Patient xmlns="http://hl7.org/fhir"><!--pof:extra <foo value="1.5" pof:type="decimal"/>--><birthDate value="1980-01-01"/></Patient>
+  strict   ok  kept=true  xml=<Patient xmlns="http://hl7.org/fhir"><!--pof:extra <foo value="1.5" pof:type="decimal"/>--><birthDate value="1980-01-01"/></Patient>
+== after the last root child
+  lenient  ok  kept=true  xml=<Patient xmlns="http://hl7.org/fhir"><birthDate value="1980-01-01"/><!--pof:extra <foo value="1.5" pof:type="decimal"/>--></Patient>
+  strict   ok  kept=true  xml=<Patient xmlns="http://hl7.org/fhir"><birthDate value="1980-01-01"/><!--pof:extra <foo value="1.5" pof:type="decimal"/>--></Patient>
+== only content of the root
+  lenient  ok  kept=false  xml=<Patient xmlns="http://hl7.org/fhir"/>
+  strict   ok  kept=false  xml=<Patient xmlns="http://hl7.org/fhir"/>
+== before a nested child
+  lenient  ok  kept=true  xml=<Patient xmlns="http://hl7.org/fhir"><name><!--pof:extra <foo value="1.5" pof:type="decimal"/>--><family value="Smith"/></name></Patient>
+  strict   ok  kept=true  xml=<Patient xmlns="http://hl7.org/fhir"><name><!--pof:extra <foo value="1.5" pof:type="decimal"/>--><family value="Smith"/></name></Patient>
+== after the last nested child
+  lenient  ok  kept=true  xml=<Patient xmlns="http://hl7.org/fhir"><name><family value="Smith"/><!--pof:extra <foo value="1.5" pof:type="decimal"/>--></name></Patient>
+  strict   ok  kept=true  xml=<Patient xmlns="http://hl7.org/fhir"><name><family value="Smith"/><!--pof:extra <foo value="1.5" pof:type="decimal"/>--></name></Patient>
+== inside a primitive
+  lenient  ok  kept=false  xml=<Patient xmlns="http://hl7.org/fhir"><birthDate value="1980-01-01"/></Patient>
+  strict   ok  kept=false  xml=<Patient xmlns="http://hl7.org/fhir"><birthDate value="1980-01-01"/></Patient>
+== before a repeating item
+  lenient  ok  kept=true  xml=<Patient xmlns="http://hl7.org/fhir"><name><given value="A"/><!--pof:extra <foo value="1.5" pof:type="decimal"/>--><given value="B"/></name></Patient>
+  strict   ok  kept=true  xml=<Patient xmlns="http://hl7.org/fhir"><name><given value="A"/><!--pof:extra <foo value="1.5" pof:type="decimal"/>--><given value="B"/></name></Patient>

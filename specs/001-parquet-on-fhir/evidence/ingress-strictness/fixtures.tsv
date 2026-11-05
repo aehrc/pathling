@@ -1,0 +1,36 @@
+c0-conformant	C0	{"resourceType":"Patient","id":"p1","active":true,"name":[{"family":"Smith","given":["Ann","B"]}],"gender":"female","birthDate":"1980-02-03","deceasedDateTime":"2020-01-01T10:00:00+10:00"}
+c0-decimal-text	C0	{"resourceType":"Observation","id":"o1","status":"final","code":{"text":"x"},"valueQuantity":{"value":1.50,"unit":"mg"},"component":[{"code":{"text":"a"},"valueQuantity":{"value":0.000000123456789}},{"code":{"text":"b"},"valueQuantity":{"value":12345678901234567890.12345}},{"code":{"text":"c"},"valueQuantity":{"value":1.0e2}}]}
+c0-prim-ext-only	C0	{"resourceType":"Patient","id":"p2","_birthDate":{"extension":[{"url":"http://hl7.org/fhir/StructureDefinition/data-absent-reason","valueCode":"unknown"}]}}
+c0-prim-ext-array	C0	{"resourceType":"Patient","id":"p3","name":[{"given":["Ann",null],"_given":[null,{"extension":[{"url":"http://e/x","valueString":"y"}]}]}]}
+c2-null	C2	{"resourceType":"Patient","id":"p4","active":null,"gender":"male"}
+c2-empty-obj	C2	{"resourceType":"Patient","id":"p5","maritalStatus":{},"gender":"male"}
+c2-empty-arr	C2	{"resourceType":"Patient","id":"p6","identifier":[],"gender":"male"}
+c2-empty-string	C2	{"resourceType":"Patient","id":"p7","name":[{"family":""}],"gender":"male"}
+c2-fhir-comments	C2	{"resourceType":"Patient","id":"p8","fhir_comments":["hello"],"gender":"male"}
+c3-unknown-root	C3	{"resourceType":"Patient","id":"p9","foo":"bar","gender":"male"}
+c3-unknown-nested	C3	{"resourceType":"Patient","id":"p10","name":[{"family":"X","nickname":"Y"}]}
+c3-r5-field	C3	{"resourceType":"Observation","id":"o2","status":"final","code":{"text":"x"},"triggeredBy":[{"observation":{"reference":"Observation/1"},"type":"reflex"}]}
+c4-string-for-integer	C4	{"resourceType":"Observation","id":"o3","status":"final","code":{"text":"x"},"valueInteger":"5"}
+c4-string-for-decimal	C4	{"resourceType":"Observation","id":"o4","status":"final","code":{"text":"x"},"valueQuantity":{"value":"1.50"}}
+c4-number-for-string	C4	{"resourceType":"Patient","id":"p11","name":[{"family":123}]}
+c4-string-for-boolean	C4	{"resourceType":"Patient","id":"p12","active":"true"}
+c4-object-for-string	C4	{"resourceType":"Patient","id":"p13","name":[{"family":{"x":1}}]}
+c5-scalar-for-array	C5	{"resourceType":"Patient","id":"p14","name":{"family":"X","given":"Ann"}}
+c5-array-for-scalar	C5	{"resourceType":"Patient","id":"p15","gender":["male","female"],"birthDate":["1980-01-01"]}
+c5-nested-array	C5	{"resourceType":"Patient","id":"p16","name":[{"given":[["a","b"]]}]}
+c6-bad-date	C6	{"resourceType":"Patient","id":"p17","birthDate":"1980-13-45"}
+c6-bad-code-required	C6	{"resourceType":"Patient","id":"p18","gender":"xyz"}
+c6-int-overflow	C6	{"resourceType":"Observation","id":"o5","status":"final","code":{"text":"x"},"valueInteger":99999999999}
+c6-bad-id	C6	{"resourceType":"Patient","id":"p 19 has spaces and is far too long to be a valid FHIR id at all really","gender":"male"}
+c6-bad-uri-ws	C6	{"resourceType":"Patient","id":"p20","identifier":[{"system":"http://x y","value":"1"}]}
+c6-ext-value-and-nested	C6	{"resourceType":"Patient","id":"p21","extension":[{"url":"http://e/x","valueString":"v","extension":[{"url":"a","valueString":"b"}]}]}
+c6-choice-two-types	C6	{"resourceType":"Observation","id":"o6","status":"final","code":{"text":"x"},"valueString":"a","valueInteger":5}
+c7-contained	C7	{"resourceType":"Patient","id":"p22","contained":[{"resourceType":"Organization","id":"org1","name":"O"}],"managingOrganization":{"reference":"#org1"}}
+c7-no-resourcetype	C7	{"id":"p23","gender":"male"}
+c7-unknown-resourcetype	C7	{"resourceType":"Florb","id":"p24"}
+c7-wrong-resourcetype	C7	{"resourceType":"Observation","id":"o7","status":"final","code":{"text":"x"}}
+c1-malformed	C1	{"resourceType":"Patient","id":"p25","gender":"male"
+c1-duplicate-key	C1	{"resourceType":"Patient","id":"p26","gender":"male","gender":"female"}
+c1-top-level-array	C1	[{"resourceType":"Patient","id":"p27a"},{"resourceType":"Patient","id":"p27b"}]
+c1-trailing-text	C1	{"resourceType":"Patient","id":"p28"} xyz
+c5-array-for-string-primitive	C5	{"resourceType":"Patient","id":"p29","name":[{"family":["A","B"]}]}

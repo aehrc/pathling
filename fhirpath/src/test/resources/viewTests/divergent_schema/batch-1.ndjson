@@ -1,0 +1,2 @@
+{"resourceType":"Patient","id":"a1","name":[{"family":"Alpha","given":["Ann"]},{"family":"Beta"}]}
+{"resourceType":"Patient","id":"a2","name":[{"family":"Gamma"}]}

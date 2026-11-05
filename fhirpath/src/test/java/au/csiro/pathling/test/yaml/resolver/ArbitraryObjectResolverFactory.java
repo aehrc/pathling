@@ -17,8 +17,8 @@
 
 package au.csiro.pathling.test.yaml.resolver;
 
-import au.csiro.pathling.fhirpath.definition.defaults.DefaultDefinitionContext;
-import au.csiro.pathling.fhirpath.definition.defaults.DefaultResourceDefinition;
+import au.csiro.pathling.definition.defaults.DefaultDefinitionContext;
+import au.csiro.pathling.definition.defaults.DefaultResourceDefinition;
 import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluator;
 import au.csiro.pathling.fhirpath.evaluation.DefinitionResourceResolver;
 import au.csiro.pathling.fhirpath.evaluation.ResourceResolver;
@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
+import lombok.AllArgsConstructor;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Dataset;
@@ -40,10 +41,12 @@ import org.apache.spark.sql.types.StructType;
 /**
  * Factory for creating DatasetEvaluator instances from arbitrary object representations. This class
  * handles the conversion of YAML-defined test data into a format that can be used for FHIRPath
- * expression evaluation using flat schema.
+ * expression evaluation using flat schema. The subject is stored in the Parquet on FHIR layout, so
+ * that a decimal is text as it is in a stored resource.
  */
 @Slf4j
-@Value(staticConstructor = "of")
+@Value
+@AllArgsConstructor(staticName = "of")
 public class ArbitraryObjectResolverFactory implements Function<RuntimeContext, DatasetEvaluator> {
 
   @Nonnull Map<Object, Object> subjectOM;
@@ -57,10 +60,10 @@ public class ArbitraryObjectResolverFactory implements Function<RuntimeContext, 
     // Create definition from YAML
     final DefaultResourceDefinition subjectDefinition =
         (DefaultResourceDefinition) YamlSupport.yamlToDefinition(subjectResourceCode, subjectOM);
-    final StructType subjectSchema = YamlSupport.definitionToStruct(subjectDefinition);
+    final StructType subjectSchema = YamlSupport.definitionToStruct(subjectDefinition, subjectOM);
 
     // Create flat Dataset with YAML schema
-    final String subjectOMJson = YamlSupport.omToJson(subjectOM);
+    final String subjectOMJson = YamlSupport.subjectToJson(subjectOM);
     log.trace("subjectOMJson: \n{}", subjectOMJson);
     final Dataset<Row> inputDS =
         rt.getSpark()
