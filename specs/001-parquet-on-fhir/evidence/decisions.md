@@ -4836,3 +4836,33 @@ _Pathling's own write (owner decision, 2026-11-06):_ Pathling writes the exact f
 superset conjunct, as decision 144 does for dates; it is a candidate under "Profiling and optimising query
 performance" in ticket 26. This closes question 4 of `design/annotations-in-the-engine.md` §6. The layout
 itself stays the specification's owner's call.
+
+## 150. A complex System value has only the fields a literal can set
+
+Owner decision (2026-11-06). Amends FR-059 and the System.Quantity shape of decision 137 and ticket 12.
+Design: `design/annotations-in-the-engine.md` §4.2.
+
+_Decision_:
+
+- **The rule.** A System type carries the fields its literal can set, and annotations derived from them.
+  No other field.
+- **System.Quantity is `{value, unit, code, system}`.**
+  - The literal sets each of them, `system` implicitly: a quoted unit is UCUM, a calendar keyword is a
+    calendar duration, and no unit is UCUM `'1'`.
+  - `unit` is kept beside `code` because it is the unit as written (`days` against `day`), and the
+    exact-unit match reads it.
+  - `value` is a System.Decimal, a bare `DECIMAL(38,6)` (D13, decision 147), with no `_value` group
+    (owner, 2026-11-06).
+  - `id` and `comparator` are dropped. A FHIR quantity with a comparator already has no System form.
+- **A System.Quantity's annotations are lazy.** `__canonical_code` and `__canonical_value_exact` are
+  carried where available without computing: stored, on conversion from FHIR, or constant, for a literal.
+  Otherwise an accessor computes them where an operation reads them. They are not always filled, as FR-059
+  had it, which brings Quantity in line with D8 (decision 142) and with dates. There is no `__numeric`; the
+  value is the number.
+- **The canonical form comes from the most exact source,** never from the converted decimal: for stored
+  data, the stored annotation or else the stored text, resolved by the comparison's accessor on the FHIR
+  operand; for a literal, its text at plan time; for arithmetic, the decimal value. A merge of a FHIR
+  quantity with a System one that loses the stored canonical fields computes it from the decimal, which
+  differs only beyond six fractional digits, as for every System.Decimal.
+- **System.Coding is `{system, code, version, display, userSelected}`.** `id` is dropped; the literal
+  builder emits it as null today.

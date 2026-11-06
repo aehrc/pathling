@@ -1,8 +1,8 @@
 # Annotations and primitive metadata in the FHIRPath engine
 
-**Status:** Proposal for review · **Date:** 2026-11-02, revised 2026-11-05 · **Tickets:**
+**Status:** Proposal for review · **Date:** 2026-11-02, revised 2026-11-06 · **Tickets:**
 42, 43, and a new review of FR-005 · **Spec:** `specs/001-parquet-on-fhir/spec.md` FR-002,
-FR-004, FR-005, FR-021–FR-023, FR-059 · **Decisions:** 140–149 in
+FR-004, FR-005, FR-021–FR-023, FR-059 · **Decisions:** 140–150 in
 `evidence/decisions.md`; the full record is `evidence/annotations-decision-record.md`
 
 ## Summary
@@ -213,6 +213,51 @@ quantities already do. A System value never carries ids or extensions.
 `System.Decimal` is the number only (D13, decision 147): a bare `DECIMAL(38,6)`. A FHIR decimal's text
 is not kept as an annotation when it converts.
 
+**A complex System value has only the fields a literal can set (decision 150).** Its
+annotations follow the same rules as a primitive's: in `ann` where available without
+computing, otherwise computed by an accessor where an operation reads them.
+
+| Type | Fields | `ann` |
+|---|---|---|
+| System.Quantity | `value` (`DECIMAL(38,6)`), `unit`, `code`, `system` | `__canonical_code`, `__canonical_value_exact` |
+| System.Coding | `system`, `code`, `version`, `display`, `userSelected` | None |
+
+- **System.Quantity:**
+  - `value` is a System.Decimal, so it is a bare `DECIMAL(38,6)` (D13, decision 147). It
+    is the number, so there is no `__numeric`.
+  - `unit` is the unit as written (`days` in `4 days`) and `code` its code (`day`). The
+    exact-unit match reads `unit`.
+  - `system` is implied by the literal's form: a quoted unit is UCUM, a calendar keyword
+    is a calendar duration, and no unit is UCUM `'1'`.
+  - There is no `id`, and no `comparator`: a FHIR quantity with a comparator has no
+    System form.
+  - Converting a FHIR quantity takes its stored canonical fields into `ann` and computes
+    nothing (D8).
+  - **The canonical form is computed from the most exact source, never from the converted
+    decimal.** Otherwise an unannotated dataset could compare differently from an
+    annotated one, whose canonical form ingest computed from the full stored text.
+
+    | Quantity from | Canonical form from |
+    |---|---|
+    | Stored data | The stored annotation, or else the stored text. The comparison's accessor resolves it on the FHIR operand, which is converted where it is compared (`StoredQuantityComparator`) |
+    | A literal | The literal's text, as constants at plan time |
+    | Arithmetic | Its `DECIMAL(38,6)` value; no text ever existed |
+
+    A merge of a FHIR quantity with a System one (`a | 5 'kg'`, `iif`) keeps the stored
+    canonical fields only if every side has them (§4.4); otherwise its canonical form is
+    computed from the decimal. That differs only beyond six fractional digits, where every
+    System.Decimal already loses them.
+  - The canonical form is no longer always filled, which amends FR-059.
+- **System.Coding:** a FHIR Coding's `id` and `extension` are dropped when it converts,
+  as a primitive's are.
+
+Example: `72.50 'kg'`, a literal
+
+```
+{ value: 72.500000, unit: "kg", code: "kg", system: "http://unitsofmeasure.org",
+  ann: { __canonical_code: "g", __canonical_value_exact: { value: 72500, scale: 0 } } }
+```
+
 #### Suggestion, not decided: System types with fields of their own
 
 The owner has suggested a different framing of System values (2026-11-05). It is not a
@@ -233,8 +278,8 @@ means "not available: use the algorithm that does not need it". Suggested shapes
 | System.Decimal | A bare `DECIMAL(38,6)` (D13) |
 | System.String | `{value, __hash}`, with `__hash` optional (the owner's example) |
 | System.Integer, System.Boolean | Bare scalars |
-| System.Quantity | The fixed shape of FR-059, with `_value.__numeric` and the canonical fields always filled |
-| System.Coding | The fixed six fields |
+| System.Quantity | `{value, unit, code, system}` with `value` a `DECIMAL(38,6)` (decision 150), and `__canonical_code` and `__canonical_value_exact` as required fields |
+| System.Coding | `{system, code, version, display, userSelected}` (decision 150) |
 
 To settle in the follow-up:
 
@@ -249,10 +294,10 @@ To settle in the follow-up:
    output ([evidence](../evidence/annotations-design-repeating-cpu.md)). So a required
    field means one that can always be obtained: it is read through the accessor
    `resolve_or_else` (§4.3), and computed only where it is read.
-2. **Canonical names.** System.Quantity's FR-059 shape has `__canonical_exact`. The
-   proposed stored layout has `__canonical_code` and `__canonical_value_exact` (§4.7,
-   D6, decision 149, the spec owner's call). A computed quantity written back must match the stored
-   layout, so FR-059 follows D6.
+2. **Canonical names.** System.Quantity's annotations use the names of the proposed
+   stored layout, `__canonical_code` and `__canonical_value_exact` (§4.7, D6, decision
+   149, the spec owner's call), so that a computed quantity written back matches the
+   stored layout.
 3. **What an optional null means.** The rule that an absent annotation is never filled
    with null (§4.4) covers stored `meta` only. An optional System field may be null,
    and that null selects the algorithm. A fixed System shape also gives `unionAll` and
@@ -443,6 +488,14 @@ This replaces today's `__canonical_exact: struct<value FlexiDecimal, code>`, and
 supersedes decision 137. The name says *code*, not *unit*: in FHIR, `Quantity.unit` is
 the display text, and canonicalisation yields a UCUM code.
 
+**There is no canonical system field.** Only a quantity whose system is UCUM, or a definite
+calendar duration (`second`, `millisecond`), is canonicalised, and the result is always in
+UCUM base units, so the canonical system would be `http://unitsofmeasure.org` in every row.
+A quantity in any other system has no canonical fields, and its own `system` is stored
+unchanged. Neither today's `__canonical_exact` nor the legacy line carries one. A system field
+would be needed only if another system were canonicalised with codes that could collide with
+UCUM's, which would be a new kind (decision 135 keeps the set closed).
+
 **A field missing from the schema is harmless.** Each field is decided separately
 (FR-023). If the schema has `__start` but not `__end`, the lower bound is read and the
 upper bound is computed, with one parse thanks to the cache. Inconsistencies within a
@@ -514,8 +567,11 @@ If A is markedly slower than B or C on these, those options are reconsidered.
 ## 8. Consequences
 
 - **Spec:** FR-005 is rewritten as flat quantity fields, and decision 137 is superseded.
-  FR-059's System.Quantity shape carries the flat canonical fields in place of
-  `__canonical_exact`. Decision 135 is kept
+  FR-059's System types are amended by decision 150: System.Quantity is `{value, unit,
+  code, system}`, its `value` a `DECIMAL(38,6)` with no `_value` group, its flat canonical
+  annotations available or computed on demand rather than always filled, and with no `id`
+  or `comparator`; System.Coding has no `id`. In code, `QuantityEncoding` changes its value
+  type, and the canonical accessor is emitted on the FHIR operand. Decision 135 is kept
   and refined by §4.1–4.4.
 - **Code, dates:** `SystemDateTime`'s eager `range`, the struct-returning `date_range`,
   `resolveFieldsOrElse`, and `bindOnce` in `TemporalComparator` and `DateMatcher` are
