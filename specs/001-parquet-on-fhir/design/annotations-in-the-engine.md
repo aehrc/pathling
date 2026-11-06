@@ -384,7 +384,7 @@ because a null stored annotation is read as an absent value.
 | FHIR → System | `resolve_or_none`: stored annotation fields only; `id` and `extension` dropped | No |
 | Crossing a lambda | Raw struct crosses | No |
 | Merge | `resolve_or_none` over the fields every side has; a literal's are constants | No |
-| Function result, such as `toDate()` | `value` only | No |
+| Function result, such as `toDate()` | `value` only (rule A, §6 question 6) | No |
 | Accessor, such as `start(e)` in a comparison | `resolve_or_else(e.meta, "__start", date_start(e.value))` | Only where nothing is stored |
 
 1. **Within one expression:** the accessors build only what the operation reads.
@@ -544,6 +544,33 @@ to validation and `trust` (tickets 31 and 38) under any layout.
    - A Catalyst rule that prunes through higher-order functions (option C, D3b) is a
      separate optimisation experiment, tried regardless, and not the remedy for an H1
      regression ([evidence](../evidence/annotations-design-lambda-pruning-rule.md)).
+6. **Which form is the truth for a computed System value.** Deferred (owner,
+   2026-11-06) until quantity or date arithmetic is designed; neither is implemented
+   (`MathOperator` rejects both). A System value with annotations holds two forms of
+   one value, and an operation that changes `value` but passes its operand's `ann`
+   through leaves a stale annotation. The accessor prefers a present annotation, so
+   later comparisons would be silently wrong.
+   - **Default until then, rule A:** an operation that produces a new value produces no
+     annotations. Annotations enter a System value only by conversion from FHIR, as
+     literal constants, or by a merge (§4.4); any other result is `value` only, and an
+     accessor computes an annotation where it is read. The one value-changing function
+     on an annotated type today, `toQuantity(unit)`, may instead carry the canonical
+     form over, because a change of unit leaves it unchanged.
+   - **Quantity, to consider:** a two-way form. `unit`, `code` and `system` are
+     required; `value` and the canonical form are each optional, at least one present,
+     and each derived from the other where absent (UCUM in either direction). An
+     operation writes only the form it computed: cross-unit `+` and `-` in canonical
+     space write the canonical form, and the value is derived where read. A quantity
+     with no canonical form (not UCUM, or a calendar duration above seconds) must carry
+     `value`. This would amend decision 150's rule that arithmetic takes its canonical
+     form from the decimal.
+   - **Dates, to consider:** the range cannot be the truth. It loses the offset and the
+     absence of a timezone, and date arithmetic is not closed over ranges
+     (`@2024-02 + 1 month`, and the clamping of Jan 31 + 1 month). A structured form,
+     `{local timestamp, precision, offset}`, from which both the range and the text
+     derive, is the candidate.
+   - **Tests:** the ticket that builds the arithmetic adds a test-time check that every
+     System value it produces has `ann` equal to what its accessor would compute.
 
 ## 7. How the design is validated
 
