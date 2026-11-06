@@ -238,16 +238,17 @@ means "not available: use the algorithm that does not need it". Suggested shapes
 
 To settle in the follow-up:
 
-1. **Where a required field is computed.** Filled at conversion, it departs from D8
+1. **Where a required field is computed.** Owner's answer (2026-11-06): **only where an
+   operation reads it**, so conversion still computes nothing (D8). The reasoning:
+   filled at conversion, it departs from D8
    ("conversion computes nothing") and from the shapes above, which vary with the
    available annotations. Spark drops an unused field of a struct it builds only when
    the field is read directly from that struct. Where the struct sits in an array read
    by a later `transform`, or passes through a view's `Generate`, every field is
    computed for every element. An eager range costs 4–4.6× on a date that is only
-   output ([evidence](../evidence/annotations-design-repeating-cpu.md)). The
-   alternative keeps D8: a required field means one that can always be obtained,
-   read through the accessor `resolve_or_else` (§4.3), and computed only where it is
-   read.
+   output ([evidence](../evidence/annotations-design-repeating-cpu.md)). So a required
+   field means one that can always be obtained: it is read through the accessor
+   `resolve_or_else` (§4.3), and computed only where it is read.
 2. **Canonical names.** System.Quantity's FR-059 shape has `__canonical_exact`. The
    proposed stored layout has `__canonical_code` and `__canonical_value_exact` (§4.7,
    D6, decision 149, the spec owner's call). A computed quantity written back must match the stored
@@ -428,7 +429,7 @@ Every annotation is one scalar field, in the container its element owns (decisio
 |---|---|---|
 | date, dateTime, instant | `__start`, `__end` (upstream names) | `_birthDate.__start` |
 | decimal | `__numeric` | `_valueDecimal.__numeric` |
-| Quantity | `__canonical_code`, `__canonical_value_exact` (FlexiDecimal); `__canonical_value` at the spec's fixed scale is optional | `valueQuantity.__canonical_value_exact` |
+| Quantity | `__canonical_code`, `__canonical_value_exact` (FlexiDecimal). Pathling does not write `__canonical_value` at the spec's fixed scale (§6, question 4) | `valueQuantity.__canonical_value_exact` |
 
 The quantity follows the legacy (Bunsen) line, which already stores the canonical form
 flat, exact and inside the element:
@@ -462,13 +463,17 @@ to validation and `trust` (tickets 31 and 38) under any layout.
 
 1. **Grouped or flat annotations.** Flat is proposed; grouped is the alternative to
    discuss (§5).
-2. **`$fhirpath` results on the server.** Should a FHIR primitive in a typed `Parameters`
-   result carry its extensions?
+2. **`$fhirpath` results on the server.** Decided (owner, 2026-11-06): a FHIR primitive
+   in a typed `Parameters` result carries its value only, as every other external
+   output does (§4.5). Its extensions are returned only when the expression asks for
+   them with `extension()`.
 3. **Upstream, through ticket 46:** propose flat quantity annotations, and point out that
    the spec's `canonical` table (`{value, code}`) contradicts its example, which shows a
    whole canonicalised Quantity.
 4. **Whether to emit `__canonical_value`** (the spec's fixed scale) beside the exact
-   value.
+   value. Decided (owner, 2026-11-06): no; Pathling writes the exact value only. The
+   fixed-scale value would let quantity comparisons skip row groups, and is a
+   candidate for the performance follow-up raised through ticket 26.
 5. **How the element meets the §2 constraint on unused metadata.** Decided in decisions
    140, 141 and 143:
    - The element carries the named annotations, not the raw `_x` (D2), and ids and
