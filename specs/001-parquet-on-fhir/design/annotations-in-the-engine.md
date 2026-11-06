@@ -3,7 +3,8 @@
 **Status:** Proposal for review · **Date:** 2026-11-02, revised 2026-11-06 · **Tickets:**
 42, 43, and a new review of FR-005 · **Spec:** `specs/001-parquet-on-fhir/spec.md` FR-002,
 FR-004, FR-005, FR-021–FR-023, FR-059 · **Decisions:** 140–150 in
-`evidence/decisions.md`; the full record is `evidence/annotations-decision-record.md`
+`evidence/decisions.md`; the full record is `evidence/annotations-decision-record.md` ·
+**Examples:** [`annotations-by-example.md`](annotations-by-example.md)
 
 ## Summary
 
