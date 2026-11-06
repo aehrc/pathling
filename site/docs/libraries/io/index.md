@@ -268,7 +268,7 @@ val data = pc.read().ndjson("/usr/share/staging/ndjson")
 <TabItem value="java" label="Java">
 
 ```java
-NdjsonSource data = pc.read().ndjson("/usr/share/staging/ndjson");
+QueryableDataSource data = pc.read().ndjson("/usr/share/staging/ndjson");
 ```
 
 </TabItem>
@@ -330,7 +330,7 @@ val data = pc.read().bundles("/usr/share/staging/bundles",
 <TabItem value="java" label="Java">
 
 ```java
-BundlesSource data = pc.read().bundles("/usr/share/staging/bundles",
+QueryableDataSource data = pc.read().bundles("/usr/share/staging/bundles",
         Set.of("Patient", "Condition", "Immunization"), FhirMimeTypes.FHIR_JSON)
 ```
 

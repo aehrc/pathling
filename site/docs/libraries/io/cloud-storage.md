@@ -115,7 +115,7 @@ data.write().parquet("s3a://my-bucket/fhir/parquet")
 
 ```java
 import au.csiro.pathling.library.PathlingContext;
-import au.csiro.pathling.library.io.source.NdjsonSource;
+import au.csiro.pathling.library.io.source.QueryableDataSource;
 import org.apache.spark.sql.SparkSession;
 
 class MyApp {
@@ -136,7 +136,7 @@ class MyApp {
 
         PathlingContext pc = PathlingContext.create(spark);
 
-        NdjsonSource data = pc.read().ndjson("s3a://my-bucket/fhir/ndjson");
+        QueryableDataSource data = pc.read().ndjson("s3a://my-bucket/fhir/ndjson");
         data.write().parquet("s3a://my-bucket/fhir/parquet");
     }
 }
