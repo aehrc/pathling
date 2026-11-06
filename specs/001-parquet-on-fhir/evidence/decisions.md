@@ -4711,6 +4711,10 @@ _Decision_:
 - **D10: a primitive leaves the engine as its value only,** in views and `$fhirpath`, in both D14 modes. Its
   extensions leave only through an explicit `extension()`.
 
+_Amended (owner, 2026-11-06): this holds for `$fhirpath` on the server too._ A FHIR primitive in a typed
+`Parameters` result carries its value only, as every other external output does; extensions come back only
+through an explicit `extension()`. This closes question 2 of `design/annotations-in-the-engine.md` §6.
+
 ## 143. Pruning on the PoF layout comes from the plan's shape; Pathling's own rule is a separate experiment
 
 Owner decisions (2026-11-04), amended 2026-11-05. Record rows L2 and D3. Evidence:
@@ -4800,6 +4804,12 @@ Conversion from FHIR fills a required field from the stored annotation, or compu
 optional one to null when nothing is stored. This departs from decision 142's D8, and the follow-up issue
 must reconcile the two. To be raised as a follow-up issue through ticket 26.
 
+_Amended (owner, 2026-11-06): conversion computes nothing, and D8 (decision 142) holds._ A required field
+of a System type, such as System.Date's `__start` and `__end`, is computed only where an operation reads it,
+through the `resolve_or_else` accessor. This answers the first open point of the suggestion
+(`design/annotations-in-the-engine.md` §4.2) and withdraws the departure from D8 noted above. P1 itself stays
+deferred, and the System-type fields remain a suggestion.
+
 ## 149. Recommended storage layout, awaiting the specification's owner
 
 Not a decision. These are Pathling's recommendations to the owner of the Parquet on FHIR specification, who
@@ -4819,3 +4829,10 @@ _Recommended_:
 - **D6, the quantity's canonical form: a flat code and an exact value,** optionally with a fixed-scale value
   beside it for row-group skipping. Proposed with it: two equal quantities SHALL have byte-equal canonical
   values, which makes stripping trailing zeros on the canonical path a Pathling release requirement.
+
+_Pathling's own write (owner decision, 2026-11-06):_ Pathling writes the exact form only,
+`__canonical_code` and `__canonical_value_exact`, and not the fixed-scale `__canonical_value`, as decision
+137 already has it. A fixed-scale value would let a quantity comparison skip row groups through a plain
+superset conjunct, as decision 144 does for dates; it is a candidate under "Profiling and optimising query
+performance" in ticket 26. This closes question 4 of `design/annotations-in-the-engine.md` §6. The layout
+itself stays the specification's owner's call.
