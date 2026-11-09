@@ -11,7 +11,9 @@ decides nothing; where the two disagree, the design and the decisions govern.
 
 - Each block is one stored row, or one engine element, printed as Spark prints a row in JSON. Spark
   leaves out null fields when it prints, so a field shown as `null` is shown only for clarity.
-- Timestamps are `TIMESTAMP` (adjusted to UTC), printed in ISO form.
+- Timestamps are `TIMESTAMP` (adjusted to UTC), stored to the microsecond (decision 138) and printed in
+  ISO form. An upper bound is the last microsecond of its period, `…59.999999Z`; a value stated to the
+  second or finer is exact, so its two bounds are equal.
 - `DECIMAL(38,6)` values are printed with their six fractional digits, for example `72.500000`.
 - A FlexiDecimal is a structure of an unscaled `DECIMAL(38,0)` and a scale: `{ value: 72500, scale: 0 }`
   is 72500, and `{ value: 18, scale: 1 }` is 1.8.
@@ -60,7 +62,7 @@ specification's owner (D4–D6, decision 149), and the engine is designed agains
     "id": null,
     "extension": [ { "url": "http://example.org/source", "valueString": "device" } ],
     "__start": "2024-03-15T00:30:00.000Z",
-    "__end":   "2024-03-15T00:30:59.999Z"
+    "__end":   "2024-03-15T00:30:59.999999Z"
   },
 
   "issued": "2024-03-15T10:31:12.345+10:00",
@@ -129,8 +131,8 @@ The value array and the metadata array are aligned by position:
 
 ```json
 "x":  [ "2024-01-01", "2024-02" ],
-"_x": [ { "__start": "2024-01-01T00:00:00.000", "__end": "2024-01-01T23:59:59.999" },
-        { "__start": "2024-02-01T00:00:00.000", "__end": "2024-02-29T23:59:59.999" } ]
+"_x": [ { "__start": "2024-01-01T00:00:00.000Z", "__end": "2024-01-01T23:59:59.999999Z" },
+        { "__start": "2024-02-01T00:00:00.000Z", "__end": "2024-02-29T23:59:59.999999Z" } ]
 ```
 
 A value without a timezone is valid and gets the range the engine computes today (decision 133);
@@ -157,13 +159,13 @@ the raw `_x` is never carried (D2, decision 141).
 ```jsonc
 // Observation.effectiveDateTime (dateTime, annotated data)
 { "value": "2024-03-15T10:30+10:00",
-  "meta":  { "__start": "2024-03-15T00:30:00.000Z", "__end": "2024-03-15T00:30:59.999Z" } }
+  "meta":  { "__start": "2024-03-15T00:30:00.000Z", "__end": "2024-03-15T00:30:59.999999Z" } }
 
 // The same element with the switch on: id and extension join meta
 { "value": "2024-03-15T10:30+10:00",
   "meta":  { "id": null,
              "extension": [ { "url": "http://example.org/source", "valueString": "device" } ],
-             "__start": "2024-03-15T00:30:00.000Z", "__end": "2024-03-15T00:30:59.999Z" } }
+             "__start": "2024-03-15T00:30:00.000Z", "__end": "2024-03-15T00:30:59.999999Z" } }
 
 // Observation.valueQuantity.value (decimal): the value is the stored text (decision 147)
 { "value": "72.50", "meta": { "__numeric": 72.500000 } }
@@ -220,11 +222,11 @@ System values come from conversion of FHIR values, from literals and from functi
 ```jsonc
 // Converted from the FHIR element above: stored annotations only; id and extension dropped (D8)
 { "value": "2024-03-15T10:30+10:00",
-  "ann":   { "__start": "2024-03-15T00:30:00.000Z", "__end": "2024-03-15T00:30:59.999Z" } }
+  "ann":   { "__start": "2024-03-15T00:30:00.000Z", "__end": "2024-03-15T00:30:59.999999Z" } }
 
 // The literal @2024-03: constants built at plan time
 { "value": "2024-03",
-  "ann":   { "__start": "2024-03-01T00:00:00.000", "__end": "2024-03-31T23:59:59.999" } }
+  "ann":   { "__start": "2024-03-01T00:00:00.000Z", "__end": "2024-03-31T23:59:59.999999Z" } }
 
 // A function result, such as toDate(): value only (rule A)
 { "value": "2024-03-15" }

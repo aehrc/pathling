@@ -66,7 +66,7 @@ FHIR JSON does: `x` holds the value, and `_x` holds its id, extensions and annot
 birthDate  : string                                  "1970-03"
 _birthDate : struct<id, extension, __start, __end>   { extension: [...],
                                                        __start: 1970-03-01T00:00:00.000,
-                                                       __end:   1970-03-31T23:59:59.999 }
+                                                       __end:   1970-03-31T23:59:59.999999 }
 ```
 
 For a repeating primitive, the two arrays are aligned by position:
@@ -167,7 +167,8 @@ raw `_x` read 182.4 MB against 17.6 MB for the named fields
 | Off (default) | Annotations only | Empty, as if `_x.id` and `_x.extension` were absent from the JSON; no error |
 | On | Annotations, `id` and `extension` | As stored. Every such element reads its whole `_x`; the cost falls only on users who opt in |
 
-Annotations are never switched off. The switch is configuration, not an analysis of
+Annotations are never switched off in the engine; FR-021's switch governs only what ingest
+stores (decision 135). The switch is configuration, not an analysis of
 the expression: the element's content is fixed for a given setting (principle P0,
 decision 140: rely on Spark's own optimiser, with no FHIRPath-level analysis of which
 fields an expression uses).
@@ -229,7 +230,9 @@ computing, otherwise computed by an accessor where an operation reads them.
   - `unit` is the unit as written (`days` in `4 days`) and `code` its code (`day`). The
     exact-unit match reads `unit`.
   - `system` is implied by the literal's form: a quoted unit is UCUM, a calendar keyword
-    is a calendar duration, and no unit is UCUM `'1'`.
+    is a calendar duration (`https://hl7.org/fhirpath/N1/calendar-duration`,
+    `CalendarDurationUnit.FHIRPATH_CALENDAR_DURATION_SYSTEM_URI`), and no unit is UCUM
+    `'1'`.
   - There is no `id`, and no `comparator`: a FHIR quantity with a comparator has no
     System form.
   - Converting a FHIR quantity takes its stored canonical fields into `ann` and computes
@@ -369,7 +372,7 @@ flowchart TD
   T["traversal<br/>struct(value, meta)"] --> Q{"what does the<br/>operation need?"}
   Q -->|"output"| O["value"]
   Q -->|"comparison, arithmetic"| A["accessor<br/>stored field or computation"]
-  Q -->|"lambda: where, select,<br/>forEach, repeat"| L["raw struct crosses;<br/>accessors resolved<br/>by Spark inside"]
+  Q -->|"lambda: where, select,<br/>forEach, repeat"| L["element struct crosses;<br/>accessors resolved<br/>by Spark inside"]
   L --> Q
   Q -->|"merge of different shapes"| M["keep value and the<br/>annotations all sides have"]
 ```
@@ -383,13 +386,13 @@ because a null stored annotation is read as an absent value.
 |---|---|---|
 | Traversal | `struct(value, meta)`, `meta` the named stored annotations (§4.1) | No |
 | FHIR → System | `resolve_or_none`: stored annotation fields only; `id` and `extension` dropped | No |
-| Crossing a lambda | Raw struct crosses | No |
+| Crossing a lambda | The element struct crosses | No |
 | Merge | `resolve_or_none` over the fields every side has; a literal's are constants | No |
 | Function result, such as `toDate()` | `value` only (rule A, §6 question 6) | No |
 | Accessor, such as `start(e)` in a comparison | `resolve_or_else(e.meta, "__start", date_start(e.value))` | Only where nothing is stored |
 
 1. **Within one expression:** the accessors build only what the operation reads.
-2. **Across a lambda:** only the raw `(value, meta)` crosses. Inside, the accessors emit
+2. **Across a lambda:** only the element struct, `(value, meta)`, crosses. Inside, the accessors emit
    the same deferred expressions on the lambda's element, and Spark resolves them per
    schema. This fixes ticket 43, finding 2.
 3. **Merging different shapes** (`a | b` with one side annotated and one not, a FHIR
@@ -405,7 +408,9 @@ because a null stored annotation is read as an absent value.
    every operand has, and projects each operand with `resolve_or_none` over that set.
    `id` and `extension` are unioned for a FHIR result, and dropped for a System one. Unioning an annotation would fill it
    with null on the side that lacks it, and a null stored annotation is read as an absent
-   value. That would be silently wrong.
+   value. That would be silently wrong. A null `id` or `extension` is safe, because it
+   means what an absent one means: no id, no extensions. A null annotation hides the
+   value it should have described.
 
 ### 4.5 External output
 
@@ -451,7 +456,7 @@ sequenceDiagram
 ```
 
 A Spark task evaluates its rows one by one on one thread, so a `ThreadLocal` cache needs
-no locking, and a row that reads no annotation costs nothing. The date range is already
+no locking (a premise not yet checked on Photon or Databricks), and a row that reads no annotation costs nothing. The date range is already
 a Java UDF (`DateRangeKind`), so the cache is plain Java and `fhir-schema` keeps to the
 public Spark API.
 
@@ -496,6 +501,13 @@ A quantity in any other system has no canonical fields, and its own `system` is 
 unchanged. Neither today's `__canonical_exact` nor the legacy line carries one. A system field
 would be needed only if another system were canonicalised with codes that could collide with
 UCUM's, which would be a new kind (decision 135 keeps the set closed).
+
+**The exact value's scale is never negative.** A FlexiDecimal is an unscaled
+`DECIMAL(38,0)` and a scale, and `FlexiDecimal.normalize` raises a negative scale to 0.
+So 72.50 kg is stored as `{ value: 72500, scale: 0 }`, not `{ value: 725, scale: -2 }`.
+D6 (decision 149) proposes upstream, as a SHALL, that equal quantities have byte-equal
+canonical values, which makes stripping trailing zeros a release requirement. Stripping
+therefore stops at the decimal point: it never produces a negative scale.
 
 **A field missing from the schema is harmless.** Each field is decided separately
 (FR-023). If the schema has `__start` but not `__end`, the lower bound is read and the
