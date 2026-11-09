@@ -4833,6 +4833,8 @@ _Recommended_:
 - **D6, the quantity's canonical form: a flat code and an exact value,** optionally with a fixed-scale value
   beside it for row-group skipping. Proposed with it: two equal quantities SHALL have byte-equal canonical
   values, which makes stripping trailing zeros on the canonical path a Pathling release requirement.
+  Stripping stops at the decimal point: the exact value's scale is never negative (`FlexiDecimal.normalize`),
+  so 72.50 kg is `{72500, 0}`, not `{725, -2}`.
 
 _Pathling's own write (owner decision, 2026-11-06):_ Pathling writes the exact form only,
 `__canonical_code` and `__canonical_value_exact`, and not the fixed-scale `__canonical_value`, as decision

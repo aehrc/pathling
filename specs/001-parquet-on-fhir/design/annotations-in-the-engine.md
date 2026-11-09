@@ -588,7 +588,26 @@ to validation and `trust` (tickets 31 and 38) under any layout.
 ## 6. Open questions
 
 1. **Grouped or flat annotations.** Flat is proposed; grouped is the alternative to
-   discuss (§5).
+   discuss (§5). Left as flat for now (owner, 2026-11-10), with the owner's argument for
+   grouping recorded:
+   - **For grouping, one annotation per kind** (`__range{start, end}`,
+     `__canonical{code, value}`): the engine needs both fields of a kind, and one alone
+     is of little value. Every date comparison reads both bounds of each operand, and a
+     canonical code without its value is useless. Grouping removes the partial schema,
+     makes FR-023 and the merge rule work per kind, and matches today's stored
+     `__canonical_exact`. Decision 152's rule still holds: a `__` field's value may be a
+     struct.
+   - **Against:** it deviates from upstream's flat `start` and `end`, a second
+     amendment through ticket 46; grouping by use partly reverses ticket 42's case for
+     freeing the layout from the computation; the struct still allows a null field in a
+     row; and decisions 135, 149 and 152, §4.7, FR-005 and the examples change. Inside a
+     lambda, `date_range(v).start` and `.end` still need the per-thread memoisation
+     (§4.6), as flat fields do.
+   - **To measure before deciding:** search reads one bound (`ge` reads `__end`) and
+     relies on Parquet pushdown. Spark pushes down predicates on nested struct fields
+     (`nestedPredicatePushdownEnabled`, Spark 3.1 and later), but this is not measured
+     for `_birthDate.__range.end`. If it pushes down, grouping per kind is the better
+     fit.
 2. **`$fhirpath` results on the server.** Decided (owner, 2026-11-06): a FHIR primitive
    in a typed `Parameters` result carries its value only, as every other external
    output does (§4.5). Its extensions are returned only when the expression asks for
