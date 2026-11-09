@@ -4866,3 +4866,54 @@ _Decision_:
   differs only beyond six fractional digits, as for every System.Decimal.
 - **System.Coding is `{system, code, version, display, userSelected}`.** `id` is dropped; the literal
   builder emits it as null today.
+
+## 151. What `=`, `distinct()` and `|` compare
+
+Owner decision (2026-11-09), from review finding R1 of the annotations design. Replaces C10 of
+`evidence/annotations-decision-record.md` (C10a, and C10b, which is not adopted). Design:
+`design/annotations-in-the-engine.md` §4.4.
+
+The engine holds a FHIR primitive as `struct(value, meta)` and a complex FHIR value as the stored struct.
+Spark's own equality over either, as `array_distinct` and `array_union` apply it in `CombiningLogic` and
+`Collection`, would compare stored annotations, including those of another producer. Equal values could
+then compare unequal.
+
+_Decision_:
+
+- **A comparison key is defined by the type.** `=`, `distinct()` and a union's deduplication compare keys,
+  never the element struct as such. An annotation enters a key only through its accessor, as a copy of what
+  the value determines.
+- **FHIR primitives compare as if converted to their System types.** The conversion may be skipped where the
+  result is the same, so the comparison may read the FHIR value directly.
+- **FHIR Quantity and FHIR Coding compare as if converted to their System types,** in `=`, `distinct()` and
+  a union's deduplication. A union still returns the FHIR elements, deduplicated by System equality, with the
+  first occurrence kept. This matches main: `QuantityComparator` and `CodingEquality` ignore `id` and
+  `extension`.
+- **Quantity keeps main's semantics:**
+  - Precision is main's. The comparison does not round to `DECIMAL(38,6)`.
+  - A quantity with a comparator has no System form, so a comparison involving one is empty.
+  - UCUM against non-UCUM is empty. So is a System quantity with a calendar unit against a non-UCUM FHIR
+    quantity.
+  - Two non-UCUM FHIR quantities compare their values where `code` and `system` are identical, and are
+    otherwise empty. A null `system` never matches, so two such quantities without a system are empty under
+    `=` and are both kept by `distinct()` and `|`.
+- **Other complex FHIR types compare as the element struct.** Their nested primitives are still in the
+  stored layout: a plain value beside its stored `_x`.
+  - The struct keeps the annotations the engine recognises, because the value determines them. This assumes
+    `trust`, under which a stored annotation agrees with its value, and an annotation step that fills a whole
+    dataset or none of it. Per-row fill (ticket 38), or a mode stricter than `trust`, would require them to be
+    stripped as well.
+  - Another producer's `__` fields are stripped at every depth, by a projection generated from the schema at
+    plan time. In data Pathling wrote there are none, and the projection does nothing.
+  - Nested primitive `id` and `extension` stay in the struct, as on main.
+- **Primitive `id` and `extension` do not take part.** A top-level primitive compares by its System value
+  only, whatever the setting of the switch (D14, decision 141). C10b's fhirpath.js semantics are deferred.
+- **A key is computed once per operation.** Deduplication pairs each element with its key, then deduplicates
+  on the key, keeping the first element. A cache that lasts across operations is a candidate under
+  "Profiling and optimising query performance" in ticket 26.
+- **Deferred to the equality review in ticket 26,** with main's behaviour kept meanwhile:
+  - primitive `id` and `extension`, at the top level and nested;
+  - option C: FHIR quantities without a System form (non-UCUM, with a comparator, or without a system)
+    compared structurally, as complex elements, as the FHIR binding implies and fhirpath.js does;
+  - nested-primitive deviations inside complex types, such as decimal scale and partial dates;
+  - moving the copied fhirpath.js cases from 3.16.4 to 5.1.0.

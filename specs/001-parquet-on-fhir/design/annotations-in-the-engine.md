@@ -1,8 +1,8 @@
 # Annotations and primitive metadata in the FHIRPath engine
 
-**Status:** Proposal for review · **Date:** 2026-11-02, revised 2026-11-06 · **Tickets:**
+**Status:** Proposal for review · **Date:** 2026-11-02, revised 2026-11-09 · **Tickets:**
 42, 43, and a new review of FR-005 · **Spec:** `specs/001-parquet-on-fhir/spec.md` FR-002,
-FR-004, FR-005, FR-021–FR-023, FR-059 · **Decisions:** 140–150 in
+FR-004, FR-005, FR-021–FR-023, FR-059 · **Decisions:** 140–151 in
 `evidence/decisions.md`; the full record is `evidence/annotations-decision-record.md` ·
 **Examples:** [`annotations-by-example.md`](annotations-by-example.md)
 
@@ -411,6 +411,37 @@ because a null stored annotation is read as an absent value.
    value. That would be silently wrong. A null `id` or `extension` is safe, because it
    means what an absent one means: no id, no extensions. A null annotation hides the
    value it should have described.
+4. **Comparing and deduplicating** (`=`, `distinct()`, a union's deduplication) uses a
+   key the type defines, never the element struct as such (decision 151). Spark's own
+   equality over the struct would compare stored annotations, another producer's
+   included, and equal values could compare unequal. An annotation enters a key only
+   through its accessor.
+
+   | Value | Compared as |
+   |---|---|
+   | FHIR primitive | As if converted to its System type; the FHIR value may be read directly where the result is the same. `id` and `extension` take no part, whatever the switch (D14) |
+   | FHIR Quantity, FHIR Coding | As if converted to System. A union returns the FHIR elements, first occurrence kept. `id` and `extension` take no part, as on main |
+   | Other complex FHIR value | The element struct, with another producer's `__` fields stripped at every depth. Recognised annotations and nested `id` and `extension` stay |
+
+   - **Quantity keeps main's semantics.** There is no rounding to `DECIMAL(38,6)`. A
+     comparator gives empty. UCUM against non-UCUM is empty. Two non-UCUM quantities
+     compare values where `code` and `system` are identical; a null `system` never
+     matches.
+   - **A complex value's children are still in the stored layout.** Only the root
+     element is in engine form; a nested primitive is a plain value beside its stored
+     `_x`. Recognised annotations can stay in the struct because the value determines
+     them. That holds under `trust` and while the annotation step fills a whole dataset
+     or none of it. Per-row fill (ticket 38) would require stripping them too.
+   - **Stripping is planned from the schema.** It touches only the paths that carry
+     foreign fields, and in data Pathling wrote it does nothing.
+   - **A key is computed once per operation.** Deduplication pairs each element with its
+     key, `transform(a, e -> struct(key(e), e))`, then deduplicates on the key, keeping
+     the first element. A key of plain types can use Spark's own equality. Recovering the
+     first occurrence without a pairwise pass is left to implementation.
+   - **Deferred to an equality review** (ticket 26), with main's behaviour kept: primitive
+     `id` and `extension`; FHIR quantities without a System form compared structurally
+     (option C); nested-primitive deviations such as decimal scale; the fhirpath.js
+     cases moved from 3.16.4 to 5.1.0.
 
 ### 4.5 External output
 
@@ -624,6 +655,12 @@ If A is markedly slower than B or C on these, those options are reconsidered.
   column that `copyOf(Column)` already provides.
 - **Code, merges:** the deferred reconciler (`MergeCast`, `UnresolvedMergeCombination`)
   intersects annotation fields, and drops `id` and `extension` for System results.
+- **Code, comparison keys (decision 151):** the whole-struct `array_distinct` and
+  `array_union` in `CombiningLogic` and `Collection` are replaced by deduplication on a
+  key computed once per element. Primitives compare by System value, ignoring `meta`.
+  Complex values other than Quantity and Coding strip another producer's `__` fields by
+  a schema-planned projection. `QuantityComparator` and `CodingEquality` keep their
+  semantics.
 - **Code, new expression:** `ResolveOrNone`, a `RuntimeReplaceable` beside `ResolveOrElse`
   and `ResolveOrNull`, used to convert FHIR to System and in merges.
 
