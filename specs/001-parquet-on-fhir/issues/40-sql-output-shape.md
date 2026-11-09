@@ -25,6 +25,16 @@ Out of scope: JSON and XML egress, whose shape is FHIR's.
 
 ## Comments
 
+### For review: a returned System.Quantity drops its canonical annotations (owner, 2026-11-10)
+
+Under decisions 150 and 152 a System.Quantity's canonical annotations, `__canonical_code` and
+`__canonical_value_exact`, are present only where available without computing. Kept on output, they
+would make the returned shape depend on the data. The owner chose to drop them: a System.Quantity
+returned as a column is `{value, unit, code, system}`. This reverses the 2026-10-26 decision recorded
+above, which kept them, and the alternative, filling them at output so the shape stays fixed, is to
+be reconsidered here with the rest of the output shape. Recorded as an amendment to decision 150;
+`contracts/engine-semantics.md` and `contracts/library-api.md` describe the dropped shape.
+
 ### Moved after #2367 (owner, 2026-11-02)
 
 The re-plan limits #2367 to a core library that matches the legacy line, with primitive metadata as its one extension. This ticket becomes a GitHub issue, raised by ticket 26 and labelled `enhancement` and `PoF_line`, and whether it goes into a release is decided separately.

@@ -21,7 +21,8 @@ FR-004, FR-005, FR-021–FR-023, FR-059 · **Decisions:** 140–152 in
 3. **FHIR and System values have different shapes.** Both carry annotations; only FHIR
    values carry ids and extensions. Converting a FHIR value to System keeps its stored
    annotations and drops the rest, with a deferred projection that keeps only the
-   annotation fields the schema has. Nothing is computed.
+   annotation fields the schema has. No annotation is computed; a decimal's number is
+   read from `__numeric` or parsed from its text where it is used.
 4. **A primitive's external output is its value**, never its metadata.
 5. **Every annotation is one flat scalar field.** A computation that several annotations
    share is memoised per thread, so the layout does not need to group fields to avoid
@@ -157,6 +158,12 @@ today. The annotation fields are projected from `_x` by named field reads,
 **stored fields** go in; nothing is computed. A field that the schema lacks is left out,
 not filled with null. The value is the stored value: for a decimal, its text.
 
+A repeating primitive has the same fields as a singular one. Under L2 (decision 143) it
+is paired by `arrays_zip`, which names each field after its input, so the inputs are
+aliased: `arrays_zip(x AS value, _x.__start AS __start, _x.__end AS __end)`, plus `id`
+and `extension` with the switch on. The accessors then read `e.value` and `e.__start`
+on either form.
+
 **The shape is fixed by the type and the switch, not by the data.** A type with an
 annotation kind is always a struct, so a date over unannotated data is `struct(value)`.
 A type with no annotation kind, with the switch off, is the bare value.
@@ -219,8 +226,11 @@ computing. Where they come from depends on how the System value was made:
 
 An operator or function that accepts System types converts a FHIR operand to System
 first, as FHIRPath's implicit conversion requires, whatever the other operand is.
-Conversion computes nothing (D8). The System value keeps the FHIR value's annotation
-fields, and the accessors compute the rest where they are read. Output is the exception: it takes
+Conversion computes no annotation (D8). Its value is the System type's value: for a
+decimal, and for a quantity's `value`, that is `numeric(e)`, the stored `__numeric` or
+else the parsed text. Like an accessor, it is a deferred expression, so the parse
+happens only where the value is read. The System value keeps the FHIR value's
+annotation fields, and the accessors compute the rest where they are read. Output is the exception: it takes
 the FHIR `value` as stored (D10). A System value never carries ids or extensions.
 
 `System.Decimal` is the number only (D13, decision 147): a bare `DECIMAL(38,6)`. A FHIR decimal's text
@@ -246,8 +256,8 @@ without computing, otherwise computed by an accessor where an operation reads th
     `'1'`.
   - There is no `id`, and no `comparator`: a FHIR quantity with a comparator has no
     System form.
-  - Converting a FHIR quantity keeps its stored canonical fields and computes nothing
-    (D8). They are flat on the FHIR Quantity (§4.7) and stay flat on the System one, so
+  - Converting a FHIR quantity keeps its stored canonical fields and computes no
+    annotation (D8). Its `value` is `numeric` of the stored `value`. They are flat on the FHIR Quantity (§4.7) and stay flat on the System one, so
     the accessor is `resolve_or_else(e, "__canonical_code", …)` on either.
   - **The canonical form is computed from the most exact source, never from the converted
     decimal.** Otherwise an unannotated dataset could compare differently from an
@@ -302,9 +312,9 @@ means "not available: use the algorithm that does not need it". Suggested shapes
 To settle in the follow-up:
 
 1. **Where a required field is computed.** Owner's answer (2026-11-06): **only where an
-   operation reads it**, so conversion still computes nothing (D8). The reasoning:
+   operation reads it**, so conversion still computes no annotation (D8). The reasoning:
    filled at conversion, it departs from D8
-   ("conversion computes nothing") and from the shapes above, which vary with the
+   ("conversion computes no annotation") and from the shapes above, which vary with the
    available annotations. Spark drops an unused field of a struct it builds only when
    the field is read directly from that struct. Where the struct sits in an array read
    by a later `transform`, or passes through a view's `Generate`, every field is
@@ -400,10 +410,10 @@ ever computes one. Traversal, conversion to System, crossing a lambda and mergin
 fill an annotation in. An absent annotation stays absent; it is never filled with null,
 because a null stored annotation is read as an absent value.
 
-| Step | Annotations | Computes |
+| Step | Annotations | Computes an annotation |
 |---|---|---|
 | Traversal | `struct(value, …)`, flat, with the named stored annotations (§4.1) | No |
-| FHIR → System | `resolve_or_none`: stored annotation fields only; `id` and `extension` dropped | No |
+| FHIR → System | `resolve_or_none`: stored annotation fields only; `id` and `extension` dropped. A decimal's value becomes `numeric(e)`, deferred | No |
 | Crossing a lambda | The element struct crosses | No |
 | Merge | `resolve_or_none` over the fields every side has; a literal's are constants | No |
 | Function result, such as `toDate()` | `value` only (rule A, §6 question 6) | No |
@@ -468,6 +478,7 @@ because a null stored annotation is read as an absent value.
 | System value | Its value |
 | FHIR primitive | `value` as stored (D10, decision 142), whether the switch is on or off |
 | A primitive's annotation fields | **Never** output as part of the primitive |
+| A System.Quantity's canonical fields | **Never** output: a returned System.Quantity is `{value, unit, code, system}` (decision 150, amended 2026-11-10; for review in ticket 40) |
 | Ids and extensions | Only when navigated to (`.extension(…)`, `.id`, switch on), or inside a complex value output in its fitted shape (FR-059), `_x` included |
 
 **Decimals** are output by result type (D13, decision 147). The engine tells a stored decimal from a
@@ -684,9 +695,12 @@ If A is markedly slower than B or C on these, those options are reconsidered.
   and `x.id` on a primitive are empty, with no error.
 - **Code, emission shapes (L2, decision 143):** compute first, then generate; existence
   tests (`exists()`, `count()`, multi-column `where`) are rewritten into the checked
-  forms; a repeating primitive is paired as `arrays_zip(x, _x.__start, _x.__end)`, with
-  `coalesce(x, array())` guards on extracted arrays and never around `transform`. Tests
-  assert the plan's shape and equal results.
+  forms; a repeating primitive is paired as
+  `arrays_zip(x AS value, _x.__start AS __start, _x.__end AS __end)`, its inputs aliased
+  so the fields match the singular form (§4.1), with `coalesce(x, array())` guards on
+  extracted arrays and never around `transform`. Tests assert the plan's shape and equal
+  results, that the zipped fields carry those names, and that the aliases add no
+  projection that blocks pruning.
 - **Code, decimal detection (ticket 41):** a decimal is classed as stored or computed
   from the collection's definition, as Quantity is (`QuantityCollection.holdsStoredQuantities`).
   A union is stored only if every operand is.

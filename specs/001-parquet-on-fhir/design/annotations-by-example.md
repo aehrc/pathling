@@ -166,6 +166,10 @@ value.
 // The same element over unannotated data: still a struct, with no annotation fields
 { "value": "2024-03-15T10:30+10:00" }
 
+// The same element where the schema has __start but not __end (another producer; Pathling
+// writes both or neither). start(e) reads the field; end(e) is computed from value where read
+{ "value": "2024-03-15T10:30+10:00", "__start": "2024-03-15T00:30:00.000Z" }
+
 // The same element with the switch on: id and extension join as content fields
 { "value": "2024-03-15T10:30+10:00",
   "id": null,
@@ -184,6 +188,14 @@ value.
 
 // Observation.status (code), switch off: a bare value
 "final"
+
+// Observation.status (code), switch on: the same shape for integer, boolean and every
+// type without an annotation kind
+{ "value": "final", "id": null, "extension": null }
+
+// Stored: _birthDate = { "__start": …, "__end": …, "__acme_hash": "9f2c" } from another producer.
+// The element reads named fields only, so __acme_hash never enters it
+{ "value": "1970-03", "__start": "1970-03-01T00:00:00.000Z", "__end": "1970-03-31T23:59:59.999999Z" }
 ```
 
 An annotation field the schema lacks is left out of the element, never filled with null, because a null
@@ -209,6 +221,10 @@ a `value` field, and its nested `_x` groups and annotations stay inside.
 { "id": "c1",
   "extension": [ { "url": "http://example.org/origin", "valueString": "lab" } ],
   "system": "http://loinc.org", "code": "29463-7", "display": "Body weight" }
+
+// Patient.name[0] (FHIR HumanName) stored with another producer's field: carried as stored,
+// but stripped from the key that =, distinct() and | compare (decision 151)
+{ "family": "Smith", "given": [ "Anne" ], "__acme_hash": "77ab" }
 ```
 
 - Navigating into a complex value builds the element form only for the primitive child reached:
@@ -231,6 +247,9 @@ A System value holds only the annotations available without computing (§4.2 of 
 // Converted from the FHIR element above: stored annotations only; id and extension dropped (D8)
 { "value": "2024-03-15T10:30+10:00",
   "__start": "2024-03-15T00:30:00.000Z", "__end": "2024-03-15T00:30:59.999999Z" }
+
+// Converted from the partial FHIR element: only __start is kept; end(e) is computed where read
+{ "value": "2024-03-15T10:30+10:00", "__start": "2024-03-15T00:30:00.000Z" }
 
 // The literal @2024-03: constants built at plan time
 { "value": "2024-03",
@@ -308,15 +327,36 @@ System.Coding has no annotations and no `id`.
 
 ## 5. How the forms connect
 
-| Step | Effect on annotations | Computes |
+| Step | Effect on annotations | Computes an annotation |
 |---|---|---|
 | Traversal | Builds the element from `value` and the stored annotation fields | No |
-| FHIR → System | The annotation fields are kept; `id`, `extension` and content the System type lacks are dropped | No |
+| FHIR → System | The annotation fields are kept; `id`, `extension` and content the System type lacks are dropped. A decimal's value becomes its number: `__numeric`, or else the parsed text, where it is read | No |
 | Crossing a lambda (`where`, `select`, `forEach`, `repeat`) | The structure crosses as it is | No |
 | Merge (`a \| b`, `iif`) | A System value with `value` and the annotation fields every side has | No |
 | A function or arithmetic result | `value` only (rule A) | No |
 | An accessor, in a comparison | `resolve_or_else(e, "__start", date_start(e.value))` | Only where nothing is available |
 | Output | A primitive outputs `value`; its annotation fields are never output. A complex FHIR value is output in its fitted shape, `_x` included | No |
+
+### 5.1 Merges
+
+A merge of different shapes gives a System value with `value` and the annotation fields every side has
+(D9, decision 142; design §4.4). The rest are computed where an operation reads them.
+
+```jsonc
+// birthDate | @2000, annotated data: both sides have __start and __end, so both are kept
+{ "value": "1970-03", "__start": "1970-03-01T00:00:00.000Z", "__end": "1970-03-31T23:59:59.999999Z" }
+{ "value": "2000",    "__start": "2000-01-01T00:00:00.000Z", "__end": "2000-12-31T23:59:59.999999Z" }
+
+// birthDate | @2000, unannotated data: the FHIR side has none, so the intersection is empty
+// and the literal's constants are dropped too; accessors compute both sides where read
+{ "value": "1970-03" }
+{ "value": "2000" }
+
+// valueQuantity | 5 'kg', unannotated data: the result is System.Quantity, with no canonical
+// fields on either side; the FHIR side's text is gone, so its canonical form comes from the decimal
+{ "value": 72.500000, "unit": "kg", "code": "kg", "system": "http://unitsofmeasure.org" }
+{ "value": 5.000000,  "unit": "kg", "code": "kg", "system": "http://unitsofmeasure.org" }
+```
 
 ## 6. Not shown, or not settled
 
@@ -325,5 +365,7 @@ System.Coding has no annotations and no `id`.
   (design §4.2).
 - **Which form is the truth for a computed System value** is deferred until quantity or date arithmetic
   is designed; rule A holds meanwhile (design §6, question 6).
+- **Another producer's fields on output.** A complex value is output in its fitted shape, `_x` included
+  (FR-059, design §4.5). Whether a field such as `__acme_hash` is output with it is not stated.
 - **Calendar-duration comparisons above seconds,** such as `1 year = 12 months`, return empty today;
   they are GitHub #2494 and need no annotation.

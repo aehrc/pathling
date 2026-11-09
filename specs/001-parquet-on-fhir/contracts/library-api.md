@@ -157,10 +157,10 @@ or XML still fails the read.
 **Behaviour change.** A `System.Quantity` that reaches a caller as a column —
 from the expression-to-column API, or a view column declared `Quantity` — has
 the fixed shape the [engine semantics](engine-semantics.md#quantities) give it:
-`id`, `value`, `_value`, `comparator`, `unit`, `system`, `code` and
-`__canonical_exact`. The elements are strings, with the value as the text of the
-decimal; `_value` carries the value's numeric annotation, `_value.__numeric`, at
-`DECIMAL(38,6)`; and `__canonical_exact` is the exact canonical annotation. It previously had the previous layout's
+`value`, `unit`, `code` and `system` (decision 150). The value is a
+`DECIMAL(38,6)`; the others are strings. It carries no `id`, `comparator` or
+`_value`, and no canonical annotations: they are used inside the engine and do
+not leave it (owner, 2026-11-10, for review in ticket 40). It previously had the previous layout's
 shape, with a fixed-scale decimal value, its `value_scale`, the
 `_value_canonicalized` and `_code_canonicalized` fields and `_fid` (FR-059).
 A quantity read from the data keeps the fitted shape of the data it came from.

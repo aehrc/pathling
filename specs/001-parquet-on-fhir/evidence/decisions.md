@@ -4705,6 +4705,10 @@ _Decision_:
 
 - **D8: FHIR to System conversion keeps the stored annotation fields** and drops `id` and `extension`
   (`resolve_or_none`). It computes nothing.
+
+  _Clarified (2026-11-09, review gap G-G2): it computes no annotation._ The System value itself may need
+  computing: a decimal, or a quantity's `value`, becomes `numeric(e)`, the stored `__numeric` or else the
+  parsed text, as a deferred expression evaluated only where the value is read.
 - **D9: merging different shapes intersects the annotations.** A merge keeps only the annotation fields
   every operand has; the rest are computed on demand. With D14 on, `id` and `extension` are unioned for a
   FHIR result, because they take part in deduplication.
@@ -4866,6 +4870,12 @@ _Decision_:
   differs only beyond six fractional digits, as for every System.Decimal.
 - **System.Coding is `{system, code, version, display, userSelected}`.** `id` is dropped; the literal
   builder emits it as null today.
+
+_Amended (owner, 2026-11-10), from review gap G-G8:_ a System.Quantity returned to a caller as a column
+has its content fields only, `{value, unit, code, system}`. Its canonical annotations, present only where
+available (decision 152), would otherwise make the returned shape depend on the data. This reverses the
+owner decision of 2026-10-26 in ticket 12, which kept the annotation on a returned quantity, and is
+marked for review in ticket 40.
 
 ## 151. What `=`, `distinct()` and `|` compare
 
