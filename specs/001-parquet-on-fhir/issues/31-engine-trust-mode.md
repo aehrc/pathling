@@ -1,5 +1,7 @@
 # 31 — The engine runs in `trust`, and conformant data gives correct answers
 
+> **Raised as #2885 (2026-11-09):** the defect the legacy line also has, `toDate()` and `toDateTime()` accepting impossible calendar dates.
+
 **Spec:** `specs/001-parquet-on-fhir/spec.md` — FR-016, FR-035, FR-063. Decision 133 and its addendum of 2026-10-22; principles 2, 5 and 7, the modes and the exceptions in `evidence/ingress-strictness/README.md`. Evidence: `evidence/engine-tolerance/README.md`.
 
 **What to build:** #2367 delivers one engine mode, `trust`, and handling non-conformant data any other way is the follow-up issue that ticket 26 raises (owner, 2026-10-22). Under `trust` the engine assumes the data it reads is conformant. On data that is not, its behaviour is undefined: a query may fail, or may silently give a wrong answer. This ticket documents that, and fixes what gives a wrong answer on conformant input, which `trust` does not excuse.

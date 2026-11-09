@@ -2,6 +2,8 @@
 
 > **Moved after #2367 (owner, 2026-11-02).** This ticket becomes a GitHub issue raised by ticket 26, and is not dispatched within #2367. See this ticket's comments.
 
+> **Raised as #2881 (2026-11-09),** with ticket 19.
+
 **Spec:** `specs/001-parquet-on-fhir/spec.md` — FR-009, FR-010, FR-017, FR-043, FR-044. Old tasks: T031a, T031e, T031d, T033, T033a, T033d, T134f (removed by ticket 37); decisions 59, 68, 69, 87, 94, 121.
 
 **What to build:** A user can choose the dense schema, which is derived from the definitions and bounded by the nesting, extension and open-type options, and can then encode a stream.

@@ -71,3 +71,25 @@ The issues the re-plan adds:
 - Defects the legacy line also has, from ticket 31, starting with `toDate()` and `toDateTime()` not checking the calendar: `bug` and `Bunsen_line`.
 
 The extra-fields issue above takes ticket 36's scope as its text. The items above this comment get their labels when each is raised.
+
+### Raised (owner's approval, 2026-11-09)
+
+Fifteen issues, each labelled `PoF_line`:
+
+- **#2881** Dense schema mode, streaming encode and dense parity (tickets 18 and 19, and the "Dense-shaped output for FHIR-typed results" item): `new feature`.
+- **#2882** A public XML sink and source (ticket 39): `new feature`.
+- **#2883** The rework of the ingest mechanism (ticket 16): `enhancement`.
+- **#2884** Non-conformant data beyond `trust`: `enhancement`.
+- **#2885** `toDate()` and `toDateTime()` accept impossible calendar dates (ticket 31's defect that the legacy line also has): `bug`, `Bunsen_line`.
+- **#2886** The range of a time without a timezone: `enhancement`.
+- **#2887** The server without Woodstox: `enhancement`.
+- **#2888** Annotation kinds as plugins: `enhancement`.
+- **#2889** Profiling and optimising query performance: `optimisation`.
+- **#2890** The custom optimiser rule (D3b) as an optimisation experiment: `optimisation`.
+- **#2891** Upstream Spark contributions: `optimisation`.
+- **#2892** Annotations under quantity and date arithmetic: `enhancement`.
+- **#2893** FHIRPath's 8 fractional digits for Decimal, `DECIMAL(38,8)`: `enhancement`.
+- **#2894** T134c, the merge cost on S3: `enhancement`.
+- **#2895** T134d, the `test-data` bulk corpus: `enhancement`.
+
+Not raised yet: the #2804 renderer comment; ticket 40, which waits for ticket 41; ticket 38; extra fields, which wait for ticket 36; the precomputed reference key, which waits for ticket 10; P1 (decision 148); and what the release needs beyond #2367.
