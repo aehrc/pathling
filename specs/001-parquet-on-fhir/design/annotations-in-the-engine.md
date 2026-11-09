@@ -2,16 +2,17 @@
 
 **Status:** Proposal for review · **Date:** 2026-11-02, revised 2026-11-09 · **Tickets:**
 42, 43, and a new review of FR-005 · **Spec:** `specs/001-parquet-on-fhir/spec.md` FR-002,
-FR-004, FR-005, FR-021–FR-023, FR-059 · **Decisions:** 140–151 in
+FR-004, FR-005, FR-021–FR-023, FR-059 · **Decisions:** 140–152 in
 `evidence/decisions.md`; the full record is `evidence/annotations-decision-record.md` ·
 **Examples:** [`annotations-by-example.md`](annotations-by-example.md)
 
 ## Summary
 
 1. **One column per element stays.** A FHIR primitive is held in the engine as one
-   struct, `struct(value, meta)`, where `meta` holds the primitive's **named stored
-   annotations** only (D2, decision 141). Its `id` and `extension` are carried only when
-   a switch, off by default, turns them on (D14). This is the pairing decision 135 already
+   flat struct of its `value` and its **named stored annotations** (D2, decision 141;
+   decision 152). Its `id` and `extension` are carried only when a switch, off by
+   default, turns them on (D14). Every engine value follows one rule: plain fields are
+   content, `__` fields are annotations, all at one level. This is the pairing decision 135 already
    chose. It fits the existing evaluation model without change.
 2. **Annotations are accessors, not data.** Nothing is computed when a value is
    traversed. An operation that needs an annotation asks for it. The engine then
@@ -87,7 +88,7 @@ iterate over only one.
 | `repeat` | One column per element, closed under the path |
 | View columns (`Materializable.toExternalValue`), `$fhirpath` (`getOutputColumn`) | The **external value** of each element |
 | Search (`SearchColumnBuilder`, `DateMatcher`) | Predicates on stored bounds that Parquet can push down |
-| All | A traced operand fires once (#2594); `%rowIndex` advances once per element; an element's SQL type does not depend on which annotations exist (FR-022, FR-023); `unionAll` sees consistent types |
+| All | A traced operand fires once (#2594); `%rowIndex` advances once per element; an element's output type and its results do not depend on which annotations exist (FR-022, FR-023); its internal type may (§4.1), and where shapes meet, the merge rule reconciles them (§4.4), so `unionAll` sees consistent types |
 
 No client reads the engine's internal form. **It is free to change**, as long as the
 needs above still hold.
@@ -141,18 +142,24 @@ A FHIR primitive's element is one struct of its value and its **named stored
 annotations** (D2, decision 141):
 
 ```
-element = struct(value, meta)
-meta    = the named annotation fields of _x that the schema has:
+element = struct(value, [id, extension,] <annotation fields>)
+  annotation fields = the named annotation fields of _x that the schema has:
             date, dateTime, instant   __start, __end
             decimal                   __numeric
-          plus id and extension, only when the primitive-extensions switch is on (D14)
+  id and extension  = only when the primitive-extensions switch is on (D14)
 ```
 
-It is built at traversal, by pairing by position in the parent's lambda, as today.
-`meta` is projected from `_x` by named field reads, `resolve_or_none(_x, [fields])`
-(§4.3). It is never the raw `_x` group. Only **stored fields** go into it; nothing is
-computed. A field that the schema lacks is left out, not filled with null. The value is
-the stored value: for a decimal, its text.
+All fields sit at one level (decision 152): `value`, `id` and `extension` are content,
+and the `__` fields are annotations, as in the stored layout (§4.7) and in a FHIR
+Quantity. It is built at traversal, by pairing by position in the parent's lambda, as
+today. The annotation fields are projected from `_x` by named field reads,
+`resolve_or_none(_x, [fields])` (§4.3). The raw `_x` group is never carried. Only
+**stored fields** go in; nothing is computed. A field that the schema lacks is left out,
+not filled with null. The value is the stored value: for a decimal, its text.
+
+**The shape is fixed by the type and the switch, not by the data.** A type with an
+annotation kind is always a struct, so a date over unannotated data is `struct(value)`.
+A type with no annotation kind, with the switch off, is the bare value.
 
 The raw `_x` is not carried because it is read in full wherever the element is
 referenced, extensions included. On 1M Patients with extension-heavy `_birthDate`, a
@@ -162,10 +169,10 @@ raw `_x` read 182.4 MB against 17.6 MB for the named fields
 **Primitive ids and extensions are behind a switch, off by default (D14, decision
 141).**
 
-| Switch | `meta` carries | `x.extension(…)`, `x.id` on a primitive |
+| Switch | The element carries | `x.extension(…)`, `x.id` on a primitive |
 |---|---|---|
-| Off (default) | Annotations only | Empty, as if `_x.id` and `_x.extension` were absent from the JSON; no error |
-| On | Annotations, `id` and `extension` | As stored. Every such element reads its whole `_x`; the cost falls only on users who opt in |
+| Off (default) | `value` and annotations | Empty, as if `_x.id` and `_x.extension` were absent from the JSON; no error |
+| On | `value`, `id`, `extension` and annotations | As stored. Every such element reads its whole `_x`; the cost falls only on users who opt in |
 
 Annotations are never switched off in the engine; FR-021's switch governs only what ingest
 stores (decision 135). The switch is configuration, not an analysis of
@@ -177,7 +184,8 @@ Example: `Patient.name.given`, switch on
 
 ```
 name       : [ { given: ["Anne","Mary"], _given: [null, {extension:[…]}] } ]
-elements   : [ {value:"Anne", meta:null}, {value:"Mary", meta:{extension:[…]}} ]
+elements   : [ {value:"Anne", id:null, extension:null},
+               {value:"Mary", id:null, extension:[…]} ]
 ```
 
 With the switch off, a string has no annotations to carry, so its element is the bare
@@ -186,7 +194,7 @@ value, as today.
 This keeps one column per element, so `where`, `forEach` and `repeat` work unchanged:
 
 ```
-name.given.where(extension('…/nickname').exists())     // reads meta.extension (switch on)
+name.given.where(extension('…/nickname').exists())     // reads the element's extension (switch on)
 name.given                                             // outputs value only
 ```
 
@@ -195,31 +203,34 @@ name.given                                             // outputs value only
 | | FHIR primitive | System value |
 |---|---|---|
 | Comes from | Traversal of stored data | Conversion from FHIR, literals, functions |
-| Element | `struct(value, meta)` | `struct(value, ann)` |
-| Ids and extensions | Only with the switch on (D14), in `meta` | No |
-| Annotations | Yes: the stored ones in `meta`, the rest on demand | Yes: the available ones in `ann`, the rest on demand |
+| Element | `struct(value, …)`, flat (§4.1) | `struct(value, …)`, flat |
+| Ids and extensions | Only with the switch on (D14), as content fields | No |
+| Annotations | Yes: the stored ones as `__` fields, the rest on demand | Yes: the available ones as `__` fields, the rest on demand |
 | Schema | Varies by path (fitted to the data) | Varies with which annotations are available |
 
-`ann` holds only the annotation fields that are available without computing. Where they
-come from depends on how the System value was made:
+A System value carries only the annotation fields that are available without
+computing. Where they come from depends on how the System value was made:
 
 | System value comes from | Its annotations |
 |---|---|
-| Conversion from FHIR (D8, decision 142) | `resolve_or_none(meta, [annotation fields])`: the stored annotation fields that exist; `id` and `extension` are dropped |
+| Conversion from FHIR (D8, decision 142) | `resolve_or_none(e, [annotation fields])`: the stored annotation fields that exist; `id`, `extension` and any content the System type lacks are dropped |
 | A literal, `@2000` | Constants built at plan time |
 | A function, such as `toDate()`, date arithmetic or `now()` | Computed on demand from `value`, or supplied directly by a function that already knows them |
 
-Combining a FHIR value with a System value converts the FHIR side to System, as
-quantities already do. A System value never carries ids or extensions.
+An operator or function that accepts System types converts a FHIR operand to System
+first, as FHIRPath's implicit conversion requires, whatever the other operand is.
+Conversion computes nothing (D8). The System value keeps the FHIR value's annotation
+fields, and the accessors compute the rest where they are read. Output is the exception: it takes
+the FHIR `value` as stored (D10). A System value never carries ids or extensions.
 
 `System.Decimal` is the number only (D13, decision 147): a bare `DECIMAL(38,6)`. A FHIR decimal's text
 is not kept as an annotation when it converts.
 
 **A complex System value has only the fields a literal can set (decision 150).** Its
-annotations follow the same rules as a primitive's: in `ann` where available without
-computing, otherwise computed by an accessor where an operation reads them.
+annotations follow the same rules as a primitive's: flat `__` fields where available
+without computing, otherwise computed by an accessor where an operation reads them.
 
-| Type | Fields | `ann` |
+| Type | Content fields | Annotation fields |
 |---|---|---|
 | System.Quantity | `value` (`DECIMAL(38,6)`), `unit`, `code`, `system` | `__canonical_code`, `__canonical_value_exact` |
 | System.Coding | `system`, `code`, `version`, `display`, `userSelected` | None |
@@ -235,8 +246,9 @@ computing, otherwise computed by an accessor where an operation reads them.
     `'1'`.
   - There is no `id`, and no `comparator`: a FHIR quantity with a comparator has no
     System form.
-  - Converting a FHIR quantity takes its stored canonical fields into `ann` and computes
-    nothing (D8).
+  - Converting a FHIR quantity keeps its stored canonical fields and computes nothing
+    (D8). They are flat on the FHIR Quantity (§4.7) and stay flat on the System one, so
+    the accessor is `resolve_or_else(e, "__canonical_code", …)` on either.
   - **The canonical form is computed from the most exact source, never from the converted
     decimal.** Otherwise an unannotated dataset could compare differently from an
     annotated one, whose canonical form ingest computed from the full stored text.
@@ -247,9 +259,11 @@ computing, otherwise computed by an accessor where an operation reads them.
     | A literal | The literal's text, as constants at plan time |
     | Arithmetic | Its `DECIMAL(38,6)` value; no text ever existed |
 
-    A merge of a FHIR quantity with a System one (`a | 5 'kg'`, `iif`) keeps the stored
-    canonical fields only if every side has them (§4.4); otherwise its canonical form is
-    computed from the decimal. That differs only beyond six fractional digits, where every
+    Any operation that converts a FHIR quantity before it is compared keeps the stored
+    canonical fields it has: a merge (`a | 5 'kg'`, `iif`; only if every side has them,
+    §4.4), `toQuantity()`, or another function that accepts System types (decision 152).
+    Where they are absent, the stored text is gone, and the canonical form is computed
+    from the decimal. That differs only beyond six fractional digits, where every
     System.Decimal already loses them.
   - The canonical form is no longer always filled, which amends FR-059.
 - **System.Coding:** a FHIR Coding's `id` and `extension` are dropped when it converts,
@@ -259,7 +273,7 @@ Example: `72.50 'kg'`, a literal
 
 ```
 { value: 72.500000, unit: "kg", code: "kg", system: "http://unitsofmeasure.org",
-  ann: { __canonical_code: "g", __canonical_value_exact: { value: 72500, scale: 0 } } }
+  __canonical_code: "g", __canonical_value_exact: { value: 72500, scale: 0 } }
 ```
 
 #### Suggestion, not decided: System types with fields of their own
@@ -276,7 +290,7 @@ means "not available: use the algorithm that does not need it". Suggested shapes
 
 | Type | Shape |
 |---|---|
-| FHIR primitive | `struct(value, meta)`, as in §4.1 |
+| FHIR primitive | `struct(value, …)`, flat, as in §4.1 |
 | System.Date, DateTime, Instant | `{value, __start, __end}`, all required |
 | System.Time | `{value}`; the layout has no range for it |
 | System.Decimal | A bare `DECIMAL(38,6)` (D13) |
@@ -303,7 +317,7 @@ To settle in the follow-up:
    149, the spec owner's call), so that a computed quantity written back matches the
    stored layout.
 3. **What an optional null means.** The rule that an absent annotation is never filled
-   with null (§4.4) covers stored `meta` only. An optional System field may be null,
+   with null (§4.4) covers stored annotation fields only. An optional System field may be null,
    and that null selects the algorithm. A fixed System shape also gives `unionAll` and
    merges consistent types, so the intersection of §4.4 would be needed on the FHIR
    side only.
@@ -321,9 +335,9 @@ deferred expression, and Spark chooses the branch once the element's type is res
 This is today's `ColumnFunctions.resolveOrElse`, a `RuntimeReplaceable` expression:
 
 ```
-resolve_or_else(e.meta, "__start", date_start(e.value))
-  → GetStructField(e.meta, "__start")    where meta's type has __start  (stored)
-  → date_start(e.value)                  otherwise                      (computed)
+resolve_or_else(e, "__start", date_start(e.value))
+  → GetStructField(e, "__start")    where e's type has __start  (stored)
+  → date_start(e.value)             otherwise                   (computed)
 ```
 
 The stored case resolves to a plain field read, which Parquet can prune and push down.
@@ -335,8 +349,8 @@ Building a System value needs a second deferred expression, **`resolve_or_none`*
 entirely:
 
 ```
-resolve_or_none(e.meta, ["__start", "__end"])
-  → struct(__start, __end)     where meta's type has both
+resolve_or_none(e, ["__start", "__end"])
+  → struct(__start, __end)     where e's type has both
   → struct(__start)            where it has only __start
   → no annotations             where it has neither
 ```
@@ -346,13 +360,13 @@ from `resolve_or_null`, which would produce the field as null, and a null stored
 annotation is read as an absent value.
 
 ```
-start(e)   = e.meta.__start          if the schema of meta (or ann) has __start
+start(e)   = e.__start               if e's schema has __start
            = date_start(e.value)     otherwise
-numeric(e) = e.meta.__numeric        if the schema of meta (or ann) has __numeric
+numeric(e) = e.__numeric             if e's schema has __numeric
            = to_decimal(e.value)     otherwise
 ```
 
-The same accessors serve FHIR and System values. For a literal, the stored field is a
+The same accessors serve FHIR and System values, primitive and complex. For a literal, the stored field is a
 constant.
 
 An operation asks only for what it needs:
@@ -361,15 +375,19 @@ An operation asks only for what it needs:
 |---|---|
 | `Patient.birthDate` (output) | `value` |
 | `Patient.birthDate > @2000` | The bounds the comparison needs: stored fields on the left, constants on the right |
-| `birthdate=ge2000` (search) | `meta.__end` as a plain attribute, so it can be pushed down (`ge` is decided by the target's upper bound) |
+| `birthdate=ge2000` (search) | `__end` as a plain attribute, so it can be pushed down (`ge` is decided by the target's upper bound) |
 
-Unused annotations are never built, so there is nothing for Catalyst to prune.
+Unused annotations are never computed. A stored one can still be read where the plan
+stops Spark from pruning it. A plain `select` of `birthDate` reads `birthDate` only. The
+same column in a view passes through a `Generate`, so the whole `_birthDate` is read,
+although nothing is computed. That is one of the known exceptions in §6, question 5
+(decision 143).
 
 ### 4.4 Keeping it lazy across boundaries
 
 ```mermaid
 flowchart TD
-  T["traversal<br/>struct(value, meta)"] --> Q{"what does the<br/>operation need?"}
+  T["traversal<br/>struct(value, annotations)"] --> Q{"what does the<br/>operation need?"}
   Q -->|"output"| O["value"]
   Q -->|"comparison, arithmetic"| A["accessor<br/>stored field or computation"]
   Q -->|"lambda: where, select,<br/>forEach, repeat"| L["element struct crosses;<br/>accessors resolved<br/>by Spark inside"]
@@ -384,15 +402,15 @@ because a null stored annotation is read as an absent value.
 
 | Step | Annotations | Computes |
 |---|---|---|
-| Traversal | `struct(value, meta)`, `meta` the named stored annotations (§4.1) | No |
+| Traversal | `struct(value, …)`, flat, with the named stored annotations (§4.1) | No |
 | FHIR → System | `resolve_or_none`: stored annotation fields only; `id` and `extension` dropped | No |
 | Crossing a lambda | The element struct crosses | No |
 | Merge | `resolve_or_none` over the fields every side has; a literal's are constants | No |
 | Function result, such as `toDate()` | `value` only (rule A, §6 question 6) | No |
-| Accessor, such as `start(e)` in a comparison | `resolve_or_else(e.meta, "__start", date_start(e.value))` | Only where nothing is stored |
+| Accessor, such as `start(e)` in a comparison | `resolve_or_else(e, "__start", date_start(e.value))` | Only where nothing is stored |
 
 1. **Within one expression:** the accessors build only what the operation reads.
-2. **Across a lambda:** only the element struct, `(value, meta)`, crosses. Inside, the accessors emit
+2. **Across a lambda:** only the element struct crosses. Inside, the accessors emit
    the same deferred expressions on the lambda's element, and Spark resolves them per
    schema. This fixes ticket 43, finding 2.
 3. **Merging different shapes** (`a | b` with one side annotated and one not, a FHIR
@@ -400,7 +418,7 @@ because a null stored annotation is read as an absent value.
    a System value that keeps `value` and the annotation fields **every side has**. The
    rest are computed on demand. For example, `birthDate | @2000` over annotated data
    keeps the stored bounds, because the literal has them too; over unannotated data, the
-   bounds are computed. A merge of identical FHIR shapes keeps `meta`.
+   bounds are computed. A merge of identical FHIR shapes keeps every field.
 
    The planner cannot tell whether shapes differ, so the existing deferred reconciler
    (`MergeCast` and `UnresolvedMergeCombination`, ADR-0002) decides, with one new rule:
@@ -449,7 +467,7 @@ because a null stored annotation is read as an absent value.
 |---|---|
 | System value | Its value |
 | FHIR primitive | `value` as stored (D10, decision 142), whether the switch is on or off |
-| A primitive's `meta` | **Never** output as part of the primitive |
+| A primitive's annotation fields | **Never** output as part of the primitive |
 | Ids and extensions | Only when navigated to (`.extension(…)`, `.id`, switch on), or inside a complex value output in its fitted shape (FR-059), `_x` included |
 
 **Decimals** are output by result type (D13, decision 147). The engine tells a stored decimal from a
@@ -591,8 +609,8 @@ to validation and `trust` (tickets 31 and 38) under any layout.
 6. **Which form is the truth for a computed System value.** Deferred (owner,
    2026-11-06) until quantity or date arithmetic is designed; neither is implemented
    (`MathOperator` rejects both). A System value with annotations holds two forms of
-   one value, and an operation that changes `value` but passes its operand's `ann`
-   through leaves a stale annotation. The accessor prefers a present annotation, so
+   one value, and an operation that changes `value` but passes its operand's annotation
+   fields through leaves a stale annotation. The accessor prefers a present annotation, so
    later comparisons would be silently wrong.
    - **Default until then, rule A:** an operation that produces a new value produces no
      annotations. Annotations enter a System value only by conversion from FHIR, as
@@ -614,7 +632,7 @@ to validation and `trust` (tickets 31 and 38) under any layout.
      `{local timestamp, precision, offset}`, from which both the range and the text
      derive, is the candidate.
    - **Tests:** the ticket that builds the arithmetic adds a test-time check that every
-     System value it produces has `ann` equal to what its accessor would compute.
+     System value it produces has annotation fields equal to what its accessor would compute.
 
 ## 7. How the design is validated
 
@@ -648,16 +666,35 @@ If A is markedly slower than B or C on these, those options are reconsidered.
   `resolveFieldsOrElse`, and `bindOnce` in `TemporalComparator` and `DateMatcher` are
   replaced by accessors and memoised `date_start` and `date_end`.
 - **Code, decimals:** the element keeps its text; `__numeric` becomes an accessor.
+- **Code, implicit conversion:** every operation that accepts System types applies the
+  FHIR → System conversion through one shared step. For dates the step replaces today's
+  eager `SystemDateTime`. For decimals it is new, because traversal currently yields the
+  number, and each place that uses `DecimalCollection`'s column directly gains it. A test
+  runs the cases for each annotated type over annotated and unannotated data and checks
+  the results are the same, including values whose text and number order differently
+  (`"10"` against `"9"`, `1.0` against `1.00`).
 - **Code, quantities:** `QuantityCanonicalKind` gets flat fields over one memoised
   canonicalisation, and `QuantityEncoding.compareCanonical` reads plain fields.
-- **Code, views:** no change to `UnnestingSelection`, `RepeatSelection` or
-  `ProjectionClause`. Accessors emit deferred expressions, so they need nothing beyond the
-  column that `copyOf(Column)` already provides.
+- **Code, views:** the accessors need no change to `UnnestingSelection`,
+  `RepeatSelection` or `ProjectionClause`. They emit deferred expressions, so they need
+  nothing beyond the column that `copyOf(Column)` already provides. L2's compute-first
+  may change where views generate; decision 143's plan-shape tests decide.
+- **Code, switch (D14, decision 141):** a configuration option, off by default. Traversal
+  puts `id` and `extension` into the element only when it is on. With it off, `x.extension(…)`
+  and `x.id` on a primitive are empty, with no error.
+- **Code, emission shapes (L2, decision 143):** compute first, then generate; existence
+  tests (`exists()`, `count()`, multi-column `where`) are rewritten into the checked
+  forms; a repeating primitive is paired as `arrays_zip(x, _x.__start, _x.__end)`, with
+  `coalesce(x, array())` guards on extracted arrays and never around `transform`. Tests
+  assert the plan's shape and equal results.
+- **Code, decimal detection (ticket 41):** a decimal is classed as stored or computed
+  from the collection's definition, as Quantity is (`QuantityCollection.holdsStoredQuantities`).
+  A union is stored only if every operand is.
 - **Code, merges:** the deferred reconciler (`MergeCast`, `UnresolvedMergeCombination`)
   intersects annotation fields, and drops `id` and `extension` for System results.
 - **Code, comparison keys (decision 151):** the whole-struct `array_distinct` and
   `array_union` in `CombiningLogic` and `Collection` are replaced by deduplication on a
-  key computed once per element. Primitives compare by System value, ignoring `meta`.
+  key computed once per element. Primitives compare by System value, ignoring their annotation fields.
   Complex values other than Quantity and Coding strip another producer's `__` fields by
   a schema-planned projection. `QuantityComparator` and `CodingEquality` keep their
   semantics.
@@ -668,6 +705,8 @@ If A is markedly slower than B or C on these, those options are reconsidered.
 
 1. Record the decisions in tickets 42 and 43, and open the FR-005 review.
 2. Write ticket 43's plan tests against today's code.
-3. Prototype memoised `date_start` and `date_end`, and measure.
-4. Prototype the accessor model for dates, and rerun step 2.
-5. Change quantities after the FR-005 review.
+3. Add the primitive-extensions switch (D14).
+4. Emit the L2 shapes, with their plan-shape tests.
+5. Prototype memoised `date_start` and `date_end`, and measure.
+6. Prototype the accessor model for dates, and rerun step 2.
+7. Change quantities after the FR-005 review.

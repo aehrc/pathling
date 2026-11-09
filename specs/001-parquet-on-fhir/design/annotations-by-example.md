@@ -1,7 +1,7 @@
 # Annotations by example: the stored layout and the engine's forms
 
 **Date:** 2026-11-06 · **Companion to:** [`annotations-in-the-engine.md`](annotations-in-the-engine.md) ·
-**Decisions:** 140–150 in [`../evidence/decisions.md`](../evidence/decisions.md)
+**Decisions:** 140–152 in [`../evidence/decisions.md`](../evidence/decisions.md)
 
 This document shows, on one example resource, how each annotation is stored in the Parquet on FHIR
 layout and how each value is represented inside the FHIRPath engine. It illustrates the design and
@@ -151,44 +151,49 @@ decided separately (FR-023): the engine reads a field the schema carries and com
 
 FHIR values come from traversal of stored data.
 
-### 3.1 Primitives: `struct(value, meta)`
+### 3.1 Primitives: `struct(value, …)`, flat
 
-`meta` holds the annotation fields of `_x` that the schema has, read by name. Nothing is computed, and
-the raw `_x` is never carried (D2, decision 141).
+The element holds `value` and the annotation fields of `_x` that the schema has, read by name, all at
+one level (decision 152). Nothing is computed, and the raw `_x` is never carried (D2, decision 141). A
+type with an annotation kind is always a struct; a type without one, with the switch off, is a bare
+value.
 
 ```jsonc
 // Observation.effectiveDateTime (dateTime, annotated data)
 { "value": "2024-03-15T10:30+10:00",
-  "meta":  { "__start": "2024-03-15T00:30:00.000Z", "__end": "2024-03-15T00:30:59.999999Z" } }
+  "__start": "2024-03-15T00:30:00.000Z", "__end": "2024-03-15T00:30:59.999999Z" }
 
-// The same element with the switch on: id and extension join meta
+// The same element over unannotated data: still a struct, with no annotation fields
+{ "value": "2024-03-15T10:30+10:00" }
+
+// The same element with the switch on: id and extension join as content fields
 { "value": "2024-03-15T10:30+10:00",
-  "meta":  { "id": null,
-             "extension": [ { "url": "http://example.org/source", "valueString": "device" } ],
-             "__start": "2024-03-15T00:30:00.000Z", "__end": "2024-03-15T00:30:59.999999Z" } }
+  "id": null,
+  "extension": [ { "url": "http://example.org/source", "valueString": "device" } ],
+  "__start": "2024-03-15T00:30:00.000Z", "__end": "2024-03-15T00:30:59.999999Z" }
 
 // Observation.valueQuantity.value (decimal): the value is the stored text (decision 147)
-{ "value": "72.50", "meta": { "__numeric": 72.500000 } }
+{ "value": "72.50", "__numeric": 72.500000 }
 
 // Patient.name.given (string), switch off: no annotation kind, so a bare value
 "Anne"
 
 // Patient.name.given, switch on
-[ { "value": "Anne", "meta": null },
-  { "value": "Mary", "meta": { "extension": [ … ] } } ]
+[ { "value": "Anne", "id": null, "extension": null },
+  { "value": "Mary", "id": null, "extension": [ … ] } ]
 
 // Observation.status (code), switch off: a bare value
 "final"
 ```
 
-An annotation field the schema lacks is left out of `meta`, never filled with null, because a null
+An annotation field the schema lacks is left out of the element, never filled with null, because a null
 stored annotation is read as an absent value. Over unannotated data, an accessor computes the
 annotation where an operation reads it.
 
 ### 3.2 Complex types: the stored structure as it is
 
-A complex element keeps the fitted shape of the data it came from (FR-059). It is not split into
-`value` and `meta`, and its nested `_x` groups and annotations stay inside.
+A complex element keeps the fitted shape of the data it came from (FR-059). It is not wrapped in
+a `value` field, and its nested `_x` groups and annotations stay inside.
 
 ```jsonc
 // Observation.valueQuantity (FHIR Quantity)
@@ -207,7 +212,10 @@ A complex element keeps the fitted shape of the data it came from (FR-059). It i
 ```
 
 - Navigating into a complex value builds the element form only for the primitive child reached:
-  `valueQuantity.value` gives `{ value: "72.50", meta: { __numeric: 72.500000 } }`.
+  `valueQuantity.value` gives `{ value: "72.50", __numeric: 72.500000 }`.
+- Both forms put annotations at the same level as content, so one accessor serves both:
+  `resolve_or_else(e, "__numeric", …)` on the decimal, `resolve_or_else(e, "__canonical_code", …)` on
+  the quantity.
 - A complex element's own `extension` is an ordinary field, stored inline (FR-003). The switch
   governs only the ids and extensions of primitives.
 
@@ -215,18 +223,18 @@ A complex element keeps the fitted shape of the data it came from (FR-059). It i
 
 System values come from conversion of FHIR values, from literals and from functions.
 
-### 4.1 Dates: `struct(value, ann)`
+### 4.1 Dates: `struct(value, …)`, flat
 
-`ann` holds only the annotations available without computing (§4.2 of the design).
+A System value holds only the annotations available without computing (§4.2 of the design).
 
 ```jsonc
 // Converted from the FHIR element above: stored annotations only; id and extension dropped (D8)
 { "value": "2024-03-15T10:30+10:00",
-  "ann":   { "__start": "2024-03-15T00:30:00.000Z", "__end": "2024-03-15T00:30:59.999999Z" } }
+  "__start": "2024-03-15T00:30:00.000Z", "__end": "2024-03-15T00:30:59.999999Z" }
 
 // The literal @2024-03: constants built at plan time
 { "value": "2024-03",
-  "ann":   { "__start": "2024-03-01T00:00:00.000Z", "__end": "2024-03-31T23:59:59.999999Z" } }
+  "__start": "2024-03-01T00:00:00.000Z", "__end": "2024-03-31T23:59:59.999999Z" }
 
 // A function result, such as toDate(): value only (rule A)
 { "value": "2024-03-15" }
@@ -242,38 +250,36 @@ System values come from conversion of FHIR values, from literals and from functi
 "Anne"   42   true   "10:30:00"
 ```
 
-### 4.3 System.Quantity: `{value, unit, code, system}` with `ann` (decision 150)
+### 4.3 System.Quantity: `{value, unit, code, system}` and flat annotations (decisions 150, 152)
 
 `value` is a System.Decimal. `unit` is the unit as written and `code` its code. `system` follows from the
-literal's form. There is no `id` and no `comparator`. `ann` holds the canonical form where it is
-available without computing.
+literal's form. There is no `id` and no `comparator`. The canonical fields are present where they
+are available without computing.
 
 ```jsonc
-// Converted from the annotated FHIR quantity: the stored canonical form moves into ann
+// Converted from the annotated FHIR quantity: the stored canonical fields are kept
 { "value": 72.500000, "unit": "kg", "code": "kg", "system": "http://unitsofmeasure.org",
-  "ann": { "__canonical_code": "g",
-           "__canonical_value_exact": { "value": 72500, "scale": 0 } } }
+  "__canonical_code": "g",
+  "__canonical_value_exact": { "value": 72500, "scale": 0 } }
 
-// Converted from the unannotated FHIR quantity: ann is empty. A comparison computes the
+// Converted from the unannotated FHIR quantity: no canonical fields. A comparison computes the
 // canonical form where it reads it, from the FHIR operand's stored text
-{ "value": 72.500000, "unit": "kg", "code": "kg", "system": "http://unitsofmeasure.org",
-  "ann": {} }
+{ "value": 72.500000, "unit": "kg", "code": "kg", "system": "http://unitsofmeasure.org" }
 
 // The literal 72.50 'kg': the canonical form from the literal's text, as constants at plan time
 { "value": 72.500000, "unit": "kg", "code": "kg", "system": "http://unitsofmeasure.org",
-  "ann": { "__canonical_code": "g",
-           "__canonical_value_exact": { "value": 72500, "scale": 0 } } }
+  "__canonical_code": "g",
+  "__canonical_value_exact": { "value": 72500, "scale": 0 } }
 
 // The literal 4 days: a calendar duration. Day is not definite, so there is no canonical form
 { "value": 4.000000, "unit": "days", "code": "day",
-  "system": "https://hl7.org/fhirpath/N1/calendar-duration",
-  "ann": {} }
+  "system": "https://hl7.org/fhirpath/N1/calendar-duration" }
 
 // The literal 5 seconds: second is definite, so it canonicalises to UCUM s
 { "value": 5.000000, "unit": "seconds", "code": "second",
   "system": "https://hl7.org/fhirpath/N1/calendar-duration",
-  "ann": { "__canonical_code": "s",
-           "__canonical_value_exact": { "value": 5, "scale": 0 } } }
+  "__canonical_code": "s",
+  "__canonical_value_exact": { "value": 5, "scale": 0 } }
 ```
 
 A FHIR quantity with a comparator, such as `<5 mg`, has no System form; converting it gives empty.
@@ -282,7 +288,7 @@ A FHIR quantity with a comparator, such as `<5 mg`, has no System form; converti
 
 | Quantity from | Canonical form from |
 |---|---|
-| Stored data | The stored annotation, or else the stored text, on the FHIR operand where it is compared |
+| Stored data | The stored annotation, or else the stored text, on the FHIR operand where it is compared. Converted earlier (a merge, `toQuantity()`), the stored annotation if kept, or else the decimal |
 | A literal | The literal's text, at plan time |
 | Arithmetic | The decimal value |
 
@@ -304,19 +310,16 @@ System.Coding has no annotations and no `id`.
 
 | Step | Effect on annotations | Computes |
 |---|---|---|
-| Traversal | Builds `meta` from the stored fields | No |
-| FHIR → System | `meta` becomes `ann`; `id` and `extension` dropped | No |
+| Traversal | Builds the element from `value` and the stored annotation fields | No |
+| FHIR → System | The annotation fields are kept; `id`, `extension` and content the System type lacks are dropped | No |
 | Crossing a lambda (`where`, `select`, `forEach`, `repeat`) | The structure crosses as it is | No |
 | Merge (`a \| b`, `iif`) | A System value with `value` and the annotation fields every side has | No |
 | A function or arithmetic result | `value` only (rule A) | No |
-| An accessor, in a comparison | `resolve_or_else(meta, "__start", date_start(value))` | Only where nothing is available |
-| Output | A primitive outputs `value`; `meta` and `ann` are never output. A complex FHIR value is output in its fitted shape, `_x` included | No |
+| An accessor, in a comparison | `resolve_or_else(e, "__start", date_start(e.value))` | Only where nothing is available |
+| Output | A primitive outputs `value`; its annotation fields are never output. A complex FHIR value is output in its fitted shape, `_x` included | No |
 
 ## 6. Not shown, or not settled
 
-- **An empty `meta` or `ann`.** The design does not say whether a date element over unannotated data is
-  `{value, meta: {}}` or a bare value; it says so only for strings, which have no annotation kind. The
-  same holds for an empty `ann`.
 - **The stored layout's placement and shape** (D4–D6) await the specification's owner (ticket 46).
 - **System types with fields of their own** (P1, decision 148) are a suggestion, not a decision
   (design §4.2).

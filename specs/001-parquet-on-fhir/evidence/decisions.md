@@ -4917,3 +4917,46 @@ _Decision_:
     compared structurally, as complex elements, as the FHIR binding implies and fhirpath.js does;
   - nested-primitive deviations inside complex types, such as decimal scale and partial dates;
   - moving the copied fhirpath.js cases from 3.16.4 to 5.1.0.
+
+## 152. Every engine value is one flat struct: content fields and `__` annotation fields
+
+Owner decision (2026-11-09), from review finding R6 of the annotations design. Amends the element form of
+decision 141 (D2) and the System shapes of decisions 142 and 150. Design:
+`design/annotations-in-the-engine.md` §4.1–§4.4.
+
+The design held a primitive as `struct(value, meta)` and a System value as `struct(value, ann)`, with the
+annotations in a group, while a FHIR Quantity carries its canonical fields flat on the stored struct
+(§4.7). Accessors and conversion therefore read `meta` for one and the struct itself for the other.
+
+_Decision_:
+
+- **The rule.** An engine value's plain fields are its content, and its `__` fields are its annotations,
+  all at one level. This is the stored layout's rule (§4.7) applied to the engine.
+- **A FHIR primitive is `struct(value, <annotation fields>)`.** The annotation fields are the named stored
+  fields of `_x` that the schema has (D2): `__start` and `__end` for a date, dateTime or instant, and
+  `__numeric` for a decimal. With the switch on (D14), `id` and `extension` are content fields beside
+  `value`. They are still read by name, never as the raw `_x`, so pruning is unchanged.
+- **The shape is fixed by the type and the switch, not by the data.** A type with an annotation kind is
+  always a struct, so a date over unannotated data is `struct(value)`. A type with no annotation kind,
+  with the switch off, is the bare value, as a string is today. This settles the shape of an empty `meta`
+  or `ann`.
+- **A System value follows the same rule.** System.Date, DateTime and Instant are `struct(value, ...)` with
+  the annotation fields available without computing. System.Quantity is `{value, unit, code, system}`
+  plus its available `__canonical_code` and `__canonical_value_exact`, flat. System.Decimal, String,
+  Integer, Boolean, Time and Coding are unchanged.
+- **One accessor and one conversion for every type.** An accessor reads the element itself:
+  `resolve_or_else(e, "__start", date_start(e.value))`, and for a FHIR or System quantity
+  `resolve_or_else(e, "__canonical_code", ...)`. Conversion from FHIR to System is
+  `resolve_or_none(e, [annotation fields])` plus the System type's content fields; it drops `id`,
+  `extension` and any other content the System type lacks, and computes nothing (D8).
+- **Any operation that converts a FHIR value before it is compared keeps the annotation fields it has.**
+  A merge, `toQuantity()` or another function that accepts System types: where the stored field is
+  absent, the value's text is gone, and the accessor computes from the converted value. For a quantity,
+  that is the `DECIMAL(38,6)` value, which differs only beyond six fractional digits. This generalises
+  decision 150's sentence on merges.
+- **A comparison key strips the `__` fields** of every type alike (decision 151); for a primitive, the
+  key is its System value.
+
+_Consequences_: §4.1–§4.5 and §8 of the design, and §3–§5 of `design/annotations-by-example.md`, are
+brought in line. No code was written against `meta`; the accessor prototype (order of work, step 6) uses
+this form.
