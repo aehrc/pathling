@@ -18,7 +18,6 @@
 package au.csiro.pathling.schema.annotation;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -84,14 +83,6 @@ class PerThreadLruCacheTest {
             });
     assertThrows(IllegalArgumentException.class, () -> cache.get("x"));
     assertThrows(IllegalArgumentException.class, () -> cache.get("x"));
-    assertEquals(2, cache.getComputationCount());
-  }
-
-  @Test
-  void aNullResultIsNotCached() {
-    final PerThreadLruCache<String, String> cache = new PerThreadLruCache<>(4, text -> null);
-    assertNull(cache.get("x"));
-    assertNull(cache.get("x"));
     assertEquals(2, cache.getComputationCount());
   }
 

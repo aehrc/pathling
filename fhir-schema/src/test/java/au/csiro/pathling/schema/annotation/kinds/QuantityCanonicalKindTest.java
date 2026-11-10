@@ -17,16 +17,33 @@
 
 package au.csiro.pathling.schema.annotation.kinds;
 
+import static au.csiro.pathling.schema.LayoutFields.CANONICAL_CODE_ANNOTATION;
+import static au.csiro.pathling.schema.LayoutFields.CANONICAL_VALUE_EXACT_ANNOTATION;
+import static au.csiro.pathling.schema.LayoutFields.START_ANNOTATION;
+import static au.csiro.pathling.schema.annotation.kinds.QuantityCanonicalKind.CALENDAR_DURATION_SYSTEM;
+import static au.csiro.pathling.schema.annotation.kinds.QuantityCanonicalKind.EXACT_VALUE_TYPE;
+import static au.csiro.pathling.schema.annotation.kinds.QuantityCanonicalKind.UCUM_SYSTEM;
+import static org.apache.spark.sql.functions.col;
+import static org.apache.spark.sql.functions.lit;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import jakarta.annotation.Nonnull;
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
+import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.functions;
+import org.apache.spark.sql.types.DataTypes;
 import org.junit.jupiter.api.Test;
 
 /**
- * Tests the exact value of the canonical annotation, which keeps at most 38 digits.
+ * Tests the canonical form of a quantity, and the exact value of the canonical annotation, which
+ * keeps at most 38 digits. The computed annotations themselves are tested where a Spark session
+ * evaluates them, in the modules that run one.
  *
  * @author Piotr Szul
  */
@@ -89,5 +106,91 @@ class QuantityCanonicalKindTest {
   @Nonnull
   private static CanonicalQuantity canonical(@Nonnull final String value) {
     return new CanonicalQuantity(new BigDecimal(value), "m");
+  }
+
+  @Test
+  void aUcumQuantityIsCanonicalised() {
+    final CanonicalQuantity canonical =
+        QuantityCanonicalKind.canonicalOf(new BigDecimal("1500"), UCUM_SYSTEM, "mg");
+    assertEquals(0, new BigDecimal("1.5").compareTo(canonical.getValue()));
+    assertEquals("g", canonical.getCode());
+  }
+
+  @Test
+  void aDefiniteCalendarDurationIsCanonicalisedFromItsUcumEquivalent() {
+    final CanonicalQuantity canonical =
+        QuantityCanonicalKind.canonicalOf(
+            new BigDecimal("2"), CALENDAR_DURATION_SYSTEM, "millisecond");
+    assertEquals(0, new BigDecimal("0.002").compareTo(canonical.getValue()));
+    assertEquals("s", canonical.getCode());
+  }
+
+  @Test
+  void aQuantityOutsideUcumHasNoCanonicalForm() {
+    // A calendar month has no fixed length.
+    assertNull(
+        QuantityCanonicalKind.canonicalOf(BigDecimal.ONE, CALENDAR_DURATION_SYSTEM, "month"));
+    assertNull(QuantityCanonicalKind.canonicalOf(BigDecimal.ONE, "http://example.org", "mg"));
+    assertNull(QuantityCanonicalKind.canonicalOf(BigDecimal.ONE, null, "mg"));
+    assertNull(QuantityCanonicalKind.canonicalOf(null, UCUM_SYSTEM, "mg"));
+  }
+
+  @Test
+  void aStoredValueIsParsedWithEveryDigit() {
+    assertEquals(new BigDecimal("1.50"), QuantityCanonicalKind.parseValue(" 1.50 "));
+    assertNull(QuantityCanonicalKind.parseValue("one"));
+    assertNull(QuantityCanonicalKind.parseValue(null));
+  }
+
+  @Test
+  void noCanonicalFormHasNoExactForm() {
+    assertNull(QuantityCanonicalKind.toExact(null));
+    assertNull(QuantityCanonicalKind.toValueExactRow(null));
+  }
+
+  @Test
+  void aKnownQuantityIsCarriedAsConstants() {
+    final CanonicalQuantity exact = QuantityCanonicalKind.toExact(canonical("1.25"));
+    assertEquals(lit("m").cast(DataTypes.StringType), QuantityCanonicalKind.toCodeLiteral(exact));
+    assertEquals(
+        functions
+            .named_struct(lit("value"), lit(new BigDecimal("125")), lit("scale"), lit(2))
+            .cast(EXACT_VALUE_TYPE),
+        QuantityCanonicalKind.toValueExactLiteral(exact));
+  }
+
+  @Test
+  void aKnownQuantityWithoutACanonicalFormIsCarriedAsNullConstants() {
+    assertEquals(lit(null).cast(DataTypes.StringType), QuantityCanonicalKind.toCodeLiteral(null));
+    assertEquals(lit(null).cast(EXACT_VALUE_TYPE), QuantityCanonicalKind.toValueExactLiteral(null));
+  }
+
+  @Test
+  void theAnnotationsAreComputedFromTheFieldsTheyRead() {
+    final List<String> read = new ArrayList<>();
+    final Column code =
+        QuantityCanonicalKind.INSTANCE.compute(
+            CANONICAL_CODE_ANNOTATION,
+            col("quantity"),
+            name -> {
+              read.add(name);
+              return col(name);
+            });
+    assertEquals(List.of("value", "system", "code"), read);
+    assertNotEquals(
+        code,
+        QuantityCanonicalKind.INSTANCE.compute(
+            CANONICAL_VALUE_EXACT_ANNOTATION, col("quantity"), name -> col(name)));
+  }
+
+  @Test
+  void eachAnnotationOfAStructureIsItsOwnComputation() {
+    final Column quantity = col("quantity");
+    assertNotEquals(
+        QuantityCanonicalKind.INSTANCE.compute(CANONICAL_CODE_ANNOTATION, quantity),
+        QuantityCanonicalKind.INSTANCE.compute(CANONICAL_VALUE_EXACT_ANNOTATION, quantity));
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> QuantityCanonicalKind.INSTANCE.compute(START_ANNOTATION, quantity));
   }
 }

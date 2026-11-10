@@ -18,7 +18,7 @@
 package au.csiro.pathling.schema.annotation;
 
 import jakarta.annotation.Nonnull;
-import jakarta.annotation.Nullable;
+import java.util.Objects;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.function.Function;
 
@@ -33,9 +33,10 @@ import java.util.function.Function;
  *
  * <p>The results do not depend on the cache. A cached value must be immutable, and is keyed by the
  * input it was computed from: a date's text, or a list of a quantity's value, system and code. The
- * input must not change once it is a key. A computation that fails is not cached, so every call on
- * the same input fails as the uncached computation would. A miss costs one more computation, never
- * a different result.
+ * input must not change once it is a key. The computation must not return null: a computation that
+ * may have no result returns an empty {@link java.util.Optional} instead, which is cached like any
+ * other value. A computation that fails is not cached, so every call on the same input fails as the
+ * uncached computation would. A miss costs one more computation, never a different result.
  *
  * @param <K> the type of the input
  * @param <V> the type of the computed value
@@ -44,7 +45,11 @@ public final class PerThreadLruCache<K, V> {
 
   @Nonnull private final Function<K, V> computation;
 
-  @Nonnull private final ThreadLocal<LruMap<K, V>> entries;
+  // The thread-local value is never removed. Each thread's cache is meant to live as long as its
+  // thread, it is bounded by its capacity, and it is held by a static field of the kind it serves.
+  @SuppressWarnings("java:S5164")
+  @Nonnull
+  private final ThreadLocal<LruMap<K, V>> entries;
 
   @Nonnull private final LongAdder computations = new LongAdder();
 
@@ -52,7 +57,7 @@ public final class PerThreadLruCache<K, V> {
    * Creates a cache.
    *
    * @param capacity the number of entries each thread's cache holds
-   * @param computation the computation, which returns an immutable value and may throw
+   * @param computation the computation, which returns an immutable value, never null, and may throw
    */
   public PerThreadLruCache(final int capacity, @Nonnull final Function<K, V> computation) {
     this.computation = computation;
@@ -64,23 +69,22 @@ public final class PerThreadLruCache<K, V> {
    * and cached otherwise.
    *
    * @param input the input
-   * @return the computed value, or null where the computation returns null, which is not cached
+   * @return the computed value
+   * @throws NullPointerException if the computation returns null
    */
-  @Nullable
+  @Nonnull
   public V get(@Nonnull final K input) {
     final LruMap<K, V> cache = entries.get();
     // The annotations of one value are computed one after the other, so the input is most often the
     // last one read, which is compared before the input is hashed for the map.
     if (input.equals(cache.lastInput)) {
-      return cache.lastValue;
+      // The last value is set with the last input, so it is not null once the input matches.
+      return Objects.requireNonNull(cache.lastValue);
     }
     V value = cache.get(input);
     if (value == null) {
       computations.increment();
-      value = computation.apply(input);
-      if (value == null) {
-        return null;
-      }
+      value = Objects.requireNonNull(computation.apply(input), "The computation returned null");
       cache.put(input, value);
     }
     cache.lastInput = input;

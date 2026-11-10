@@ -21,11 +21,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
 import org.junit.jupiter.api.Test;
 
-/** Tests the values FHIR allows that Java's own parser does not. */
+/** Tests the values FHIR allows that Java's own parser does not, and the precision they state. */
 class FhirDateTimeTest {
 
   @Test
@@ -61,5 +62,29 @@ class FhirDateTimeTest {
     assertThrows(DateTimeParseException.class, () -> FhirDateTime.parse("2023-02-30"));
     assertThrows(DateTimeParseException.class, () -> FhirDateTime.parse("2023-13"));
     assertThrows(DateTimeParseException.class, () -> FhirDateTime.parse("2023-06-15T25"));
+  }
+
+  @Test
+  void aYearSpansTheWholeYear() {
+    final FhirDateTime parsed = FhirDateTime.parse("2023");
+    assertEquals(ChronoUnit.YEARS, parsed.getPrecision());
+    assertEquals(OffsetDateTime.parse("2023-01-01T00:00:00Z"), parsed.getValue());
+    assertEquals(Instant.parse("2023-12-31T23:59:59.999999999Z"), parsed.getUpperBoundary());
+  }
+
+  @Test
+  void aTimeToTheHourOrMinuteSpansThatHourOrMinute() {
+    final FhirDateTime hour = FhirDateTime.parse("2023-06-15T10+10:00");
+    assertEquals(ChronoUnit.HOURS, hour.getPrecision());
+    assertEquals(Instant.parse("2023-06-15T00:00:00Z"), hour.getLowerBoundary());
+    assertEquals(Instant.parse("2023-06-15T00:59:59.999999999Z"), hour.getUpperBoundary());
+    final FhirDateTime minute = FhirDateTime.parse("2023-06-15T10:30Z");
+    assertEquals(ChronoUnit.MINUTES, minute.getPrecision());
+    assertEquals(Instant.parse("2023-06-15T10:30:59.999999999Z"), minute.getUpperBoundary());
+  }
+
+  @Test
+  void aTextOutsideTheGrammarIsRejected() {
+    assertThrows(DateTimeParseException.class, () -> FhirDateTime.parse("15 June 2023"));
   }
 }
