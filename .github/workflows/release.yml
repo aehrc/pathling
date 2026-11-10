@@ -14,7 +14,9 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || (startsWith(github.ref_name, 'v') && !contains(github.ref_name, '/'))
     name: Release to Maven Central
     environment: maven-central
-    runs-on: ubuntu-latest
+    # Pinned because the R package cache holds native libraries linked against Ubuntu 24.04, and
+    # ubuntu-latest now resolves to Ubuntu 26.04, which no longer provides libxml2.so.2.
+    runs-on: ubuntu-24.04
     permissions:
       id-token: write # Required for AWS OIDC authentication.
       contents: write # Required to upload release assets.
@@ -125,7 +127,9 @@ jobs:
   release-pypi:
     name: Release to PyPI
     environment: pypi
-    runs-on: ubuntu-latest
+    # Pinned because the R package cache holds native libraries linked against Ubuntu 24.04, and
+    # ubuntu-latest now resolves to Ubuntu 26.04, which no longer provides libxml2.so.2.
+    runs-on: ubuntu-24.04
     needs: release-maven
     steps:
       - name: Checkout code

@@ -14,7 +14,9 @@ on:
 jobs:
   site:
     name: Build and deploy site
-    runs-on: ubuntu-latest
+    # Pinned because the R package cache holds native libraries linked against Ubuntu 24.04, and
+    # ubuntu-latest now resolves to Ubuntu 26.04, which no longer provides libxml2.so.2.
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
