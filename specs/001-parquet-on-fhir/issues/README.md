@@ -124,6 +124,7 @@ Follow-ups and completion:
 - [26](26-raise-github-followups.md) Raise the GitHub follow-up issues, including everything the re-plan moved out of #2367
 - [36](36-followup-extra-fields.md) Scope the follow-up issue on extra fields: their support, and their place in the conformance levels
 - [48](48-annotation-decisions-to-adr.md) Decide which annotation decisions belong in an ADR
+- [49](49-dependency-vulnerabilities.md) Clear the dependency vulnerabilities that the pre-release scan reports (after #2879, the move to Spark 4.1)
 - [28](28-completion-checklist.md) Completion checklist
 - ~~[33](33-engine-layout-tolerance-modes.md) The engine handles non-conformant layout shapes in the same four modes~~ (moved to the follow-up, ticket 26)
 
