@@ -19,15 +19,25 @@
 
 **A recorded deviation (owner, 2026-10-26).** FHIRPath requires a Decimal to provide at least the range (-10^28+1)/10^8 to (10^28-1)/10^8 with a step of 10^-8, so 8 fractional digits (`DECIMAL(28,8)`). `DECIMAL(38,6)` covers the range but keeps 6 fractional digits, as `DECIMAL(32,6)` does today. Record this as a known deviation in the specification. Whether to move to `DECIMAL(38,8)`, with an upstream proposal for the annotation's type, is a follow-up issue that ticket 26 raises.
 
-**Blocked by:** 13
+**A stored decimal's text in views (owner, 2026-11-05, decision 147).** Added after the ticket was done, so it is open again. A view outputs a stored decimal as its stored text, and a computed one as today, the `DECIMAL(38,6)` value as text with trailing zeros trimmed. The column stays a string. `fhirPathToColumn` and `$fhirpath` stay `DECIMAL(38,6)` for every decimal; ticket 40 specifies what they return.
 
-**Status:** done
+- **Detect stored and computed decimals by type,** from the collection's definition, as Quantity does (`QuantityCollection.holdsStoredQuantities`, `CombiningLogic.holdsStoredStructures`). A traversed `valueDecimal` is stored. A literal, arithmetic, `toDecimal()` and integer promotion are computed. `where`, `first` and `distinct` keep the definition. A union is stored only if every operand is: today it takes the first operand's definition.
+- **Test the union in both orders.** `valueDecimal | 1.5` and `1.5 | valueDecimal` give the same result.
+- **`toString()` on a stored decimal returns its text.** Keys and comparisons stay numeric, so `1.0 = 1.00` is true and `(1.0 | 1.00)` is one element.
+- **Sequence the output with ticket 16.** Build the detection now. The views' switch to stored text lands with ticket 16, which keeps a decimal's lexical form; until then JSON ingest normalises the text, so `37.0` can be stored as `37`.
+
+**Blocked by:** 13. The views' switch to stored text: 16.
+
+**Status:** ready-for-agent
 
 - [x] System.Decimal is `DECIMAL(38,6)`, defined once, and `DecimalCustomCoder` stays `DECIMAL(32,6)`.
 - [x] Every engine use of a decimal type takes System.Decimal's, and `__numeric` is stored at `DECIMAL(38,6)`.
 - [x] A quantity's value is read from its numeric annotation where the schema carries it, with FR-059 amended, and gives the same results as decoding the text.
 - [x] Each changed test expectation is approved by the owner before it is changed.
 - [x] The output type change is documented, and the 8-digit deviation is recorded in the specification.
+- [ ] Stored and computed decimals are told apart by the collection's definition, and a union is stored only if every operand is; `valueDecimal | 1.5` and `1.5 | valueDecimal` give the same result.
+- [ ] `toString()` on a stored decimal returns its text, and keys and comparisons stay numeric.
+- [ ] With ticket 16, a view outputs a stored decimal as its stored text, and `fhirPathToColumn` and `$fhirpath` still return `DECIMAL(38,6)`.
 
 ## Comments
 
@@ -52,7 +62,7 @@
 5. `fhirpath/.../DecimalCollectionTest.aDecimalBeyondTheRangeGivesTheSameItemsOnEveryPath`, `prediction.probability.ofType(decimal)[1]`: `r1=null` becomes `r1=1000000000000000000000000000.000000` (`1e27` is now in range) on every path; the fixture needs a value beyond 32 integer digits.
 6. `fhirpath/.../DecimalCollectionTest.decodingTakesTheAnnotationWhereTheSchemaCarriesIt` (3 cases): the plan pattern `decimal\(32,6\)` and the read schema `struct<__numeric:decimal(32,6)>` become `decimal(38,6)`.
 7. `fhirpath/.../SystemQuantityShapeTest.engineBuiltQuantityHasTheFixedShape` (10 producers): the fixed shape gains `_value: struct<__numeric: decimal(38,6)>` between `code` and `__canonical_exact`.
-8. `fhirpath/.../ProjectedColumnTypeTest.declaredDecimalTypeStaysTextOnOutput`: no value change; a declared `decimal` view column is output as text (decision 76), so only its comment changed to `DECIMAL(38,6)`. A decimal column without a declared type is `DECIMAL(38,6)`.
+8. `fhirpath/.../ProjectedColumnTypeTest.declaredDecimalTypeStaysTextOnOutput`: no value change; a declared `decimal` view column is output as text (decision 76), so only its comment changed to `DECIMAL(38,6)`. A decimal column without a declared type is a string too: the `DECIMAL(38,6)` value as text, with trailing zeros trimmed (corrected 2026-11-05; see the comment of that date). `fhirPathToColumn` returns `DECIMAL(38,6)`.
 9. **The DSL tests' expected System quantities** (9 methods, 54 cases): `AsOperatorDslTest.testAsOperator`; `CombiningFunctionsDslTest.testCombineQuantityAndCodingNoDedup`, `testUnionFunctionEquivalentToPipeAcrossTypeMatrix`, `testUnionFunctionTemporalAndQuantityAndCoding`; `CombiningOperatorsDslTest.testQuantityUnion`; `ConversionFunctionsDslTest.testToQuantity`, `testToQuantityWithUnit`; `ExistenceFunctionsDslTest.testIsDistinctAndDistinctTypeMatrix`; `TypeFunctionsDslTest.testAsFunction`. Each quantity result gains the `_value` slot, `null` expected and `[n.000000]` actual, e.g. `(11 'mg') as Quantity`: `[null, 11.000000, null, mg, http://unitsofmeasure.org, mg, null]` becomes `[…, mg, [11.000000]]`. The YAML files are unchanged; the expectation is built by `YamlSupport.YamlRepresenter.writeQuantity`, and the fix, left unapplied, is to write the group there after `code`: `gen.writeObjectFieldStart(QuantityEncoding.VALUE_GROUP_COLUMN); gen.writeNumberField(LayoutFields.NUMERIC_ANNOTATION, quantity.getValue()); gen.writeEndObject();`.
 10. **Passing unedited, the asserted type or shape moved with the constant**: `DecimalTransformTest:112`, `StoredNumericAnnotationTest:164/170`, `DecimalCollectionTest:283` (`SystemDecimal.TYPE`, now `decimal(38,6)`); `ProjectionResultTest:139/156`, `QuantityTypesTest:168`, `QuantityEncodingTest:90/100`, `DefaultYamlTestExecutor:485` and `YamlSupport`'s `FHIR_TO_SQL` (`getDecimalType()` and `QuantityEncoding.dataType()`, now `decimal(38,6)` and the shape with `_value`).
 
@@ -75,3 +85,22 @@ No YAML conformance case or exclusion changed. No Python or R test asserts the d
 5. **`FlexiDecimal.toDecimal` stays on System.Decimal's type.**
 
 `mvn verify -pl library-api,legacy-export -am`, all green: utilities 45, fhir-schema 54, encoders 599, io 788 (1 skipped), legacy-export 38, terminology 538, fhirpath 7633 (924 skipped, the exclusion baseline), library-api 342. Python and R were not run.
+
+### 2026-11-05: a view's decimal column was a string all along
+
+The "Output" item above, and the implementation's summary of `contracts/library-api.md`, say that a
+decimal column in a view's output becomes `DECIMAL(38,6)`. That was never so. A view column takes its
+value from `DecimalCollection.toExternalValue`, which renders the `DECIMAL(38,6)` value as plain text
+with trailing zeros trimmed (`DecimalToLiteral`). The column is therefore a string, with or without a
+declared `"type": "decimal"`, and for stored and computed decimals alike. It was a string before
+10.0.0 was merged into the line, and it is one on main.
+
+- **What the merge changed.** Only the type that `ProjectedColumn.getSqlType()` reports for a decimal
+  column, from `DECIMAL(38,6)` to a string, so that it matches the output (`efe1dfa4fa`, decision 76
+  as amended on 2026-11-05). No output value changed.
+- **Where `DECIMAL(38,6)` does reach a caller.** `fhirPathToColumn` returns the value at that type.
+  What it and `$fhirpath` return is to be specified by ticket 40.
+- **Stored text.** Once ticket 16 keeps a decimal's lexical form, a view outputs a stored decimal as
+  its stored text. The column stays a string (owner, 2026-11-05).
+- **Corrected.** Item 8 of the approval list above, and the decimal section of
+  `contracts/library-api.md`.

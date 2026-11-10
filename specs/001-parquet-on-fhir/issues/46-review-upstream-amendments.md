@@ -22,13 +22,15 @@ Write the summary to `specs/001-parquet-on-fhir/upstream-amendments.md`. For eac
 
 The summary may also be published as a shared document for the specification owner's comments.
 
-**The draft to start from:** `.local/work/issue/2832/upstream-amendments-draft.md` (2026-11-02). It lists 17 changes and ends with findings for the owner. Remove those findings before the document is shared. They include:
+**The draft to start from:** `evidence/upstream-amendments-draft.md` (2026-11-02, revised 2026-11-05 in sections 3, 6, 8 and 16 by the annotations design; committed as evidence by the owner's decision of 2026-11-05). It was `.local/work/issue/2832/upstream-amendments-draft.md`. It lists 17 changes and ends with findings for the owner. Remove those findings before the document is shared. They include:
 
 - **#2 against FR-039.** #2 makes readers refuse a table without the layout column, which FR-039, ADR-0006 and ticket 29 accept. It also names the column `__pof_v1`, where FR-065 says `__layout_v1`. And it cites an evidence file, `evidence/layout-column.md`, that does not exist.
 - **#3 against decision 135 and the engine.** #3 names the annotations as siblings, `__birthDate_start`, where decision 135 places them in the metadata group. It also says a reader recomputes a range of the wrong type, which the engine does not do.
 - **Decision 138 unmeasured.** Decision 138 rejects `int96` for want of pushdown, which is unmeasured, and which the engine's date comparisons do not get today (ticket 43).
 - **#1 and ticket 35 overlap.** Both propose the canonical annotation's type.
 - **Deviations not recorded.** `unsignedInt` and `positiveInt` are stored as signed `INT32`, and that is not recorded. Nor is whether `resourceType` is required.
+
+**All 16 findings are worked through in this ticket (owner, 2026-11-05).** The list above names only some of them. Every finding in the draft's closing section, "Cross-cutting findings for the Pathling owner", is either fixed on Pathling's side, raised upstream, or dropped, and the outcome is recorded here. The draft stays committed as it is, findings included, but the findings are left out of anything that goes to the specification owner.
 
 **Do not raise or edit anything on GitHub.** The parent session does that after the owner's review. This applies to revising #1 to #3 as much as to raising new amendments.
 

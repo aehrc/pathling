@@ -15,5 +15,8 @@
 - [ ] Every spec traceability row points at delivered work, and any gaps found are added to the owning ticket.
 - [ ] The release-note points are handed to the release's follow-up issue (ticket 26): XML is read without HAPI and accepts what JSON accepts, so a value HAPI rejected, such as an invalid date, is now stored; and the engine runs in `trust`, so a query over such a value has undefined behaviour (tickets 31 and 32).
 - [ ] The amendments to the Parquet on FHIR specification are agreed, and Pathling matches the agreed text (ticket 46).
+- [ ] The quantity's canonical value strips trailing zeros, so two equal quantities have byte-equal canonical values, as the proposed amendment requires (§8 of `evidence/upstream-amendments-draft.md`; decision 149, D6). A release gate (owner, 2026-11-05).
+- [ ] The adoption test is met: two or three named implementations work with the specification, alongside ticket 46 (F2 in `evidence/annotations-decision-record.md`). A release gate (owner, 2026-11-05).
+- [ ] The release notes say that a computed decimal changes from `DECIMAL(32,6)` to `DECIMAL(38,6)` (ticket 41), and record any change to a public return type from ticket 40 (owner, 2026-11-05).
 - [ ] The requirements the re-plan deferred, such as dense mode, each have a GitHub issue (ticket 26).
 - [ ] Gaps found at completion go on the owning ticket, here, or to ticket 26 as a follow-up issue.

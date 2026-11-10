@@ -1,0 +1,52 @@
+# id|layout|sql. Table t. (a) value reads, (c) annotation reads. Every query ends in a full evaluation.
+a1-bd|p|select birthDate from t
+a1-bd|z|select birthDate.value from t
+a1-bd-whole|z|select birthDate from t
+a1-gender|p|select gender from t
+a1-gender|z|select gender.value from t
+a2-family-transform|p|select transform(name, n -> n.family) from t
+a2-family-transform|z|select transform(name, n -> n.family.value) from t
+a2-family-gasf|p|select name.family from t
+a2-family-gasf|z|select name.family.value from t
+a3-given-transform|p|select transform(name, n -> n.given) from t
+a3-given-transform|z|select transform(name, n -> transform(n.given, g -> g.value)) from t
+a3-given-flat|p|select flatten(transform(name, n -> n.given)) from t
+a3-given-flat|z|select flatten(transform(name, n -> transform(n.given, g -> g.value))) from t
+a3-given-gasf|p|select name.given from t
+a3-given-gasf|z|select name.given.value from t
+a3-given-gasf-flat|p|select flatten(name.given) from t
+a3-given-gasf-flat|z|select transform(flatten(name.given), g -> g.value) from t
+a4-event-transform|p|select transform(dosage, d -> d.timing.event) from t
+a4-event-transform|z|select transform(dosage, d -> transform(d.timing.event, e -> e.value)) from t
+a4-event-flat|p|select flatten(transform(dosage, d -> d.timing.event)) from t
+a4-event-flat|z|select flatten(transform(dosage, d -> transform(d.timing.event, e -> e.value))) from t
+a4-event-gasf|p|select dosage.timing.event from t
+a4-event-gasf|z|select dosage.timing.event.value from t
+a4-event-gasf-flat|z|select transform(flatten(dosage.timing.event), e -> e.value) from t
+c1-start-flat|p|select flatten(transform(dosage, d -> transform(d.timing._event, m -> m.__start))) from t
+c1-start-flat|z|select flatten(transform(dosage, d -> transform(d.timing.event, e -> e.__start))) from t
+c2-start-gasf|p|select dosage.timing._event.__start from t
+c2-start-gasf|z|select dosage.timing.event.__start from t
+c3-start-filter|p|select id from t where exists(flatten(transform(dosage, d -> transform(d.timing._event, m -> m.__start))), s -> s > to_timestamp('2024-06-01'))
+c3-start-filter|z|select id from t where exists(flatten(transform(dosage, d -> transform(d.timing.event, e -> e.__start))), s -> s > to_timestamp('2024-06-01'))
+c4-start-filter-gasf|p|select id from t where exists(flatten(dosage.timing._event.__start), s -> s > to_timestamp('2024-06-01'))
+c4-start-filter-gasf|z|select id from t where exists(flatten(dosage.timing.event.__start), s -> s > to_timestamp('2024-06-01'))
+c5-bd-start|p|select _birthDate.__start from t
+c5-bd-start|z|select birthDate.__start from t
+# GetArrayStructFields inside the lambda, and over flatten.
+a3-given-lambda-gasf|p|select transform(name, n -> n.given) from t
+a3-given-lambda-gasf|z|select transform(name, n -> n.given.value) from t
+a3-given-flatgasf|p|select flatten(name.given) from t
+a3-given-flatgasf|z|select flatten(name.given).value from t
+a4-event-lambda-gasf|p|select transform(dosage, d -> d.timing.event) from t
+a4-event-lambda-gasf|z|select transform(dosage, d -> d.timing.event.value) from t
+a4-event-flatgasf|p|select flatten(dosage.timing.event) from t
+a4-event-flatgasf|z|select flatten(dosage.timing.event).value from t
+c6-start-lambda-gasf|p|select transform(dosage, d -> d.timing._event.__start) from t
+c6-start-lambda-gasf|z|select transform(dosage, d -> d.timing.event.__start) from t
+c7-start-flatgasf|p|select flatten(dosage.timing._event).__start from t
+c7-start-flatgasf|z|select flatten(dosage.timing.event).__start from t
+c8-start-filter-lambda-gasf|p|select id from t where exists(flatten(transform(dosage, d -> d.timing._event.__start)), s -> s > to_timestamp('2024-06-01'))
+c8-start-filter-lambda-gasf|z|select id from t where exists(flatten(transform(dosage, d -> d.timing.event.__start)), s -> s > to_timestamp('2024-06-01'))
+c9-start-filter-flatgasf|p|select id from t where exists(flatten(dosage.timing._event).__start, s -> s > to_timestamp('2024-06-01'))
+c9-start-filter-flatgasf|z|select id from t where exists(flatten(dosage.timing.event).__start, s -> s > to_timestamp('2024-06-01'))

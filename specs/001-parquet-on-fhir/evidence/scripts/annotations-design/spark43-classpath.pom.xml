@@ -1,0 +1,12 @@
+<!-- Resolves the Spark 4.3.0 classpath for the probes that run on 4.3; see spark43_cp in common.sh. -->
+<project xmlns="http://maven.apache.org/POM/4.0.0">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>spike</groupId>
+  <artifactId>spark-4-3-cp</artifactId>
+  <version>1</version>
+  <dependencies>
+    <dependency><groupId>org.apache.spark</groupId><artifactId>spark-sql_2.13</artifactId><version>4.3.0</version></dependency>
+    <dependency><groupId>org.apache.spark</groupId><artifactId>spark-catalyst_2.13</artifactId><version>4.3.0</version></dependency>
+    <dependency><groupId>org.apache.spark</groupId><artifactId>spark-core_2.13</artifactId><version>4.3.0</version></dependency>
+  </dependencies>
+</project>

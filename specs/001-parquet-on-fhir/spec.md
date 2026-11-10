@@ -60,7 +60,7 @@ appear:
 A user loads FHIR JSON or XML, as resources or bundles, and the data is written in
 the PoF layout: decimals as text with a numeric annotation, primitive ids and
 extensions in metadata groups, extensions inline, dates with range annotations,
-and quantities with the exact canonical annotation.
+and quantities with the exact canonical annotations.
 
 **Independent Test**: Load a corpus; inspect the stored schema and values against
 the specification, without FHIRPath evaluation.
@@ -77,9 +77,9 @@ the specification, without FHIRPath evaluation.
 3. **Given** a resource carrying an extension on a complex element, **When** it is
    stored, **Then** the extension appears inline on that element, and no
    root-level extension map or field-id column is emitted.
-4. **Given** a quantity, **When** it is stored, **Then** the specification's
-   canonical annotation accompanies it, followed by the exact canonical
-   annotation.
+4. **Given** a quantity, **When** it is stored, **Then** its canonical code and
+   exact canonical value accompany it, flat inside its structure, and the
+   specification's fixed-scale canonical annotation is not emitted.
 5. **Given** a resource carrying content the layout does not store, such as a
    contained resource, **When** it is loaded, **Then** the load succeeds and the
    content is dropped silently.
@@ -328,11 +328,15 @@ Identifiers are stable. FR-015, FR-018 and FR-020 are retired and not reused.
   MUST be stored inline. No root-level extension map and no per-composite field
   id is emitted.
 - **FR-004**: Dates MUST carry the specification's range annotations.
-- **FR-005**: Quantities MUST carry one canonical annotation,
-  `__canonical_exact`: the canonicalised value at a precision that preserves
-  magnitude, with the canonicalised unit. The specification's fixed-point
-  `__canonical` is not emitted, since annotations are optional
-  ([ADR-0003](../../docs/adr/0003-annotations-are-optional.md), decision 137).
+- **FR-005**: Quantities MUST carry their canonical form as two flat
+  annotations inside the quantity's structure: `__canonical_code`, the
+  canonicalised UCUM code, and `__canonical_value_exact`, the canonicalised
+  value at a precision that preserves magnitude. The specification's
+  fixed-scale canonical value is not emitted, since annotations are optional
+  ([ADR-0003](../../docs/adr/0003-annotations-are-optional.md); decision 149,
+  owner note of 2026-11-06, superseding the grouped `__canonical_exact` of
+  decision 137). The layout itself remains the specification owner's call
+  (ticket 46).
 - **FR-006**: `contained` resources MUST NOT be represented. They are dropped
   silently.
 - **FR-007**: `Bundle` MUST NOT be stored as a resource type.
@@ -496,15 +500,18 @@ Identifiers are stable. FR-015, FR-018 and FR-020 are retired and not reused.
   inputs, and one implementation MUST serve both FR-056 and FR-041.
 - **FR-059**: A complex value of a FHIR type MUST leave the engine in the fitted
   shape of the data it came from, and this MUST be documented. A complex value
-  of a System type MUST have one fixed, complete shape, whatever produced it.
-  The engine-built `System.Quantity` and `System.Coding` MUST NOT carry the
-  legacy layout's shape, including its `_fid` field. The `System.Quantity`
-  shape MUST include the layout's exact canonical annotation,
-  `__canonical_exact`, after its elements, filled whatever produced it
-  (ticket 12, decision 137), and the value's metadata group `_value` right after
-  `value`, as the layout stores it, carrying only the value's numeric
-  annotation, `_value.__numeric`, filled whatever produced it, which the engine
-  reads a quantity's value from (ticket 41). Distinguishing
+  of a System type MUST have one fixed, complete set of content fields, the
+  fields its literal can set, whatever produced it (decision 150). The
+  engine-built `System.Quantity` and `System.Coding` MUST NOT carry the legacy
+  layout's shape, including its `_fid` field. `System.Quantity` is
+  `{value, unit, code, system}`, with `value` a `DECIMAL(38,6)` and no `_value`
+  group. Its annotations, `__canonical_code` and `__canonical_value_exact`, are
+  flat fields beside its content (decision 152), present where they are
+  available without computing, and otherwise computed where an operation reads
+  them. Its annotations do not leave the engine: a `System.Quantity` returned
+  to a caller as a column has its content fields only (owner, 2026-11-10, for
+  review in ticket 40). `System.Coding` is
+  `{system, code, version, display, userSelected}`. Distinguishing
   `System.Coding` from `FHIR.Coding` in the type system is
   [#2804](https://github.com/aehrc/pathling/issues/2804).
 

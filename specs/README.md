@@ -15,6 +15,7 @@ Each directory holds:
 | `plan.md` | Technical context, module structure, phases. |
 | `research.md` | Each resolved technical question: decision, rationale, rejected alternatives. |
 | `data-model.md` | Entities and their rules, where the feature involves data. |
+| `design/` | Design proposals for a decision still open, with options and open questions. The chosen option is recorded in `research.md`. |
 | `contracts/` | Interface contracts, where the feature exposes an interface. |
 | `quickstart.md` | End-to-end scenarios that validate the feature. |
 | `tasks.md` | Dependency-ordered tasks with traceability back to the requirements. |

@@ -120,53 +120,45 @@ storage, not how much survives a calculation.
 A quantity read from the data keeps the fitted shape of the data it came from,
 with its extensions. A `System.Quantity` — one the engine builds itself, such as
 a literal, a number promoted to a quantity, the result of `toQuantity()`, or a
-stored quantity combined with one of these — has one fixed, complete shape,
-whatever produced it (FR-059):
+stored quantity combined with one of these — has the fields its literal can set,
+whatever produced it (FR-059, decision 150):
 
 | Field | Type | Holds |
 | --- | --- | --- |
-| `id` | string | Null, except for a stored quantity taken as a System one, which keeps its id. |
-| `value` | string | The text of the decimal, as the layout stores a decimal, with the digits it was given. A number promoted to a quantity has the six fractional digits of the engine's decimal type. |
-| `_value` | struct of `__numeric` decimal(38,6) | The value's metadata group, as the layout stores one, carrying only the numeric annotation: the value as the engine's System.Decimal, null where the text does not decode to it. |
-| `comparator` | string | Null, except for a stored quantity taken as a System one. |
-| `unit` | string | The human-readable unit. |
-| `system` | string | The system of the unit's code. |
-| `code` | string | The unit's code. |
-| `__canonical_exact` | struct of `value` (struct of the unscaled `value` decimal(38,0) and its `scale` int) and `code` string | The exact canonical annotation, null where the quantity has no canonical form. |
+| `value` | decimal(38,6) | The value as the engine's System.Decimal. A stored quantity's value is read from its `_value.__numeric`, or else decoded from its text. |
+| `unit` | string | The unit as written, such as `days` in `4 days`. The exact-unit match reads it. |
+| `code` | string | The unit's code, such as `day`. |
+| `system` | string | The system of the unit's code. A literal implies it: a quoted unit is UCUM, a calendar keyword is a calendar duration, and no unit is UCUM `'1'`. |
 
-These are the elements of a FHIR Quantity other than `extension`, in definition
-order, and every one is present, with the value's metadata group and its numeric
-annotation right after `value`, as the layout stores it (ticket 41, amending
-FR-059), followed by the layout's exact canonical annotation (ticket 12, amending
-FR-059). A System quantity has no extensions. It carries no decimal value with a
-scale companion and no field identifier, so an engine-built quantity never looks
-like a previous-layout one.
+There is no `id`, no `comparator` and no `_value` group. A stored quantity with a
+comparator has no System form, and converting it gives empty. A System quantity
+has no extensions, and no field identifier, so an engine-built quantity never
+looks like a previous-layout one.
 
-The numeric value and the canonical form are carried so that each is computed
-once for a quantity and travels with it through unions, arrays and lambdas. A
-literal has them as constants, filled when the plan is built. A stored quantity
-taken as a System one copies its stored `_value.__numeric` and
-`__canonical_exact` where the schema carries them and computes them otherwise.
-A conversion or a number promoted to a quantity computes them. The numeric value
-is computed as the engine decodes a decimal's text, so reading it gives what
-decoding the text gives. The value of a quantity, stored or System, is read from
-`_value.__numeric` wherever the engine computes or compares with it, and a
-search matches a stored quantity's value the same way.
-Comparison and the set operations read the carried form rather than
-canonicalising again. Where it is computed, it is computed by the quantity kind
-that ingest stores it with (decision 135).
+Inside the engine, a System quantity also carries its canonical form as two flat
+annotations beside these fields (decision 152), `__canonical_code` and
+`__canonical_value_exact`, where they are available without computing: copied
+from a stored quantity whose schema carries them, or constants for a literal.
+Otherwise they are computed where a comparison reads them, by the quantity kind
+that ingest stores them with (decision 135), from the most exact source: the
+stored text for a stored quantity, the literal's text for a literal, and the
+`DECIMAL(38,6)` value for arithmetic or a quantity converted before it is
+compared.
 
-The exact canonical annotation leaves the engine with the System quantity (owner,
-2026-10-26): a column returned to a caller keeps it, as a stored quantity returned in its fitted
-shape keeps the annotations it is stored with. JSON and XML egress leave out
-every `__` field, and so does the rendering of a single-resource evaluation. The
-annotation switches govern only what ingest stores (decision 135, part 1), so
-they do not change this shape. The shape of SQL output is specified by ticket 40.
+**The canonical annotations do not leave the engine (owner, 2026-11-10).** A
+`System.Quantity` returned to a caller as a column has only the four fields
+above. This reverses the owner decision of 2026-10-26, which kept the annotation
+on a returned quantity, and is marked for review in ticket 40. A stored quantity
+returned in its fitted shape keeps the annotations it is stored with. JSON and
+XML egress leave out every `__` field, and so does the rendering of a
+single-resource evaluation. The annotation switches govern only what ingest
+stores (decision 135, part 1), so they do not change this shape. The shape of
+SQL output is specified by ticket 40.
 
-Comparison across units uses the `__canonical_exact` annotation when present and
-computes the canonicalisation when not. That annotation's precision preserves
-magnitude, so quantities differing by orders of magnitude do not compare equal.
-The specification's `__canonical` annotation, whose fixed scale loses that
+Comparison across units uses the canonical annotations when present and
+computes the canonicalisation when not. Their precision preserves magnitude, so
+quantities differing by orders of magnitude do not compare equal. The
+specification's fixed-scale canonical value, whose fixed scale loses that
 magnitude, is neither stored nor carried (decision 137).
 
 ## Coding and terminology

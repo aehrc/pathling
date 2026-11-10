@@ -19,10 +19,10 @@ Deviations, all permitted by the specification:
 | Primitive ids and extensions | The specification's `_field` groups. |
 | Extensions on complex elements | Inline `extension` groups. |
 | Date ranges | The specification's start and end annotations, `_x.__start` and `_x.__end`, in the date's metadata group, on `date`, `dateTime` and `instant`. **Deviation (decision 138).** Written by Pathling as `int64` with `TIMESTAMP(isAdjustedToUTC=true, MICROS)`, proleptic Gregorian, rather than the specification's `int96` with `TIMESTAMP(isAdjustedToUTC=true, unit=MILLIS)`, a combination Parquet cannot write; the upper bound is to the microsecond. An `instant` carries them too, which the specification does not name. Lasts until the specification is amended, which ticket 14 drafts. |
-| Quantity canonicalisation | **Substitution.** The specification's `__canonical` is not emitted. `__canonical_exact` is emitted in its place, inside the quantity's structure, carrying the same canonicalisation at a precision that preserves magnitude, with the canonicalised unit (decision 137). It is present **from M5** — the layout ships
+| Quantity canonicalisation | **Substitution.** The specification's fixed-scale canonical value is not emitted. `__canonical_code` and `__canonical_value_exact` are emitted in its place, flat inside the quantity's structure, carrying the same canonicalisation at a precision that preserves magnitude, with the canonicalised unit code (decision 149, owner note of 2026-11-06, superseding the grouped `__canonical_exact` of decision 137). It is present **from M5** — the layout ships
 annotation-free at the flip and each annotation kind lands afterwards (FR-021,
 decision 50). The names, types and positions below are fixed from Phase 3 and do
-not change when the values arrive. It replaces the specification's because the specification's fixed-point type makes quantities differing by orders of magnitude compare equal, which the engine cannot compare on, and nothing reads the specification's form. Annotations are optional and non-standard ones are permitted, so a consumer of the specification computes what it needs. Raised upstream; `__canonical_exact` is replaced by the specification's annotation if the specification adopts a magnitude-preserving representation. |
+not change when the values arrive. It replaces the specification's because the specification's fixed-point type makes quantities differing by orders of magnitude compare equal, which the engine cannot compare on, and nothing reads the specification's form. Annotations are optional and non-standard ones are permitted, so a consumer of the specification computes what it needs. Raised upstream (ticket 46); these fields are replaced by the specification's annotation if the specification adopts a magnitude-preserving representation. |
 | `contained` | Not represented. Dropped silently (FR-006). |
 | `Bundle` | Never stored as a resource type. Accepted as a transport carrier and exploded to per-type tables. |
 
@@ -75,16 +75,17 @@ ticket 35.
 
 ### The quantity annotation
 
-A quantity carries `__canonical_exact` as the last field of its own structure,
-once annotations are emitted in M5. Every annotation lives in the container its
+A quantity carries `__canonical_code` and `__canonical_value_exact` as the last
+fields of its own structure, once annotations are emitted in M5. Every annotation lives in the container its
 element owns: a primitive's in its `_x` group, after `id` and `extension`, and a
 complex element's in its structure (decision 135, amending the specification's
 sibling placement by ticket 35).
 
-The specification's `__canonical` is not emitted (decision 137).
-`__canonical_exact` is Pathling's, and carries the canonicalisation without the
-specification's fixed scale, as `struct<value struct<value decimal(38,0), scale
-int>, code string>` (ticket 12). It carries the **canonicalised unit code
+The specification's fixed-scale canonical value is not emitted (decision 137).
+The two fields are Pathling's, and carry the canonicalisation without the
+specification's fixed scale (decision 149): `__canonical_code string` and
+`__canonical_value_exact struct<value decimal(38,0), scale int>`, a FlexiDecimal
+whose scale is never negative. They carry the **canonicalised unit code
 alongside the value**. Canonicalisation maps to a base
 unit, and a value without that unit makes one metre and one second compare
 equal, so a single value is not sufficient. The previous Pathling layout used

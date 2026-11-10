@@ -2,6 +2,8 @@
 
 > **Moved after #2367 (owner, 2026-11-02).** This ticket becomes a GitHub issue raised by ticket 26, and is not dispatched within #2367. See this ticket's comments.
 
+> **Raised as #2882 (2026-11-09).**
+
 **Spec:** `specs/001-parquet-on-fhir/spec.md` — FR-045. Decision 84. Ticket 32 built the `io`-level sink and source this exposes.
 
 **What to build:** Line-delimited FHIR XML is written and read through the library's public data sinks and sources, as NDJSON is.

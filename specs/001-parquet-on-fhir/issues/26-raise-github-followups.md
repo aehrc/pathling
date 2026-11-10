@@ -33,11 +33,22 @@
   - a decimal that itself repeats, whose plan pairs `x` with `_x` even where the schema carries no numeric annotation, and so is larger than the plan before ticket 13. No R4 element is such a decimal (owner, 2026-10-26);
   - the binding of a date's range in a comparison, `element_at(transform(array(range), ...), 1)`, which keeps the computed range to one parse but holds even where the range is the stored struct. Binding it without `transform`, for example with Spark's `With` expression, would keep the comparison in whole-stage code generation and let it be pushed down as a Parquet filter (ticket 14's review, owner, 2026-10-27). A date search binds the range the same way (`DateMatcher.match`). Removing the binding alone would not push the filter down: a comparison is a `CASE WHEN` that gives empty where the ranges cannot be compared, and Spark pushes no `CASE` to Parquet, so a pushed filter needs a separate conjunct on `__start` or `__end` that admits a superset of the matches, beside the exact comparison (ticket 14's second review, owner, 2026-10-28);
   - a date that is only output, under a repeating parent or itself repeating, which is converted to a System date inside a lambda, where the unused range is not pruned. Output alone then parses each date once where the schema carries no range annotations, and reads the annotations where it does. A root date costs neither (ticket 14, owner, 2026-10-28);
+  - a quantity comparison that cannot skip row groups. Pathling writes only the exact canonical value, `__canonical_value_exact`, a FlexiDecimal struct, which has no Parquet statistics a filter can use. Writing `__canonical_value` as well, the same value at the upstream specification's fixed scale, would give a plain decimal column with min/max statistics, so a comparison could add a conjunct on it that admits a superset of the matches, as a date comparison does with `__end` (decision 144). The cost is one more field per quantity. Whether the layout has these fields is the specification owner's call (D6, decision 149) (owner, 2026-11-06);
+  - the comparison key of decision 151, computed once per element within an operation. A cache that lasts across operations, such as the per-thread cache the date range uses, would spare a value compared in several operations from repeated projection (owner, 2026-11-09);
   - the canonical annotation's computation. Ingest passes the whole stored quantity, extensions included, to the function that reads three of its fields. The engine computes the canonical form whenever it converts a stored quantity to engine form, even where nothing reads it, including on both sides of every pair that a pairwise comparison makes (owner, 2026-10-26).
 
   Ticket 12 rewrote nothing, because no measured cost showed. The issue asks the engine-wide question that decision 126 left open.
 - **The custom optimiser rule (D3b) as an optimisation experiment (owner, 2026-11-05).** Try the rule from the annotations design, which prunes the fields a lambda does not use, to see what it gains, whatever ticket 10's H1 check shows. It is a bonus on top of 11, not a fix for a regression. It is verified on Spark 4.0.2, 4.3.0 and DBR 17.3 with Photon off, but not on Spark 4.1 (#2879). Its evidence is `evidence/annotations-design-lambda-pruning-rule.md` and `evidence/annotations-design-lambda-pruning-databricks.md`. Label: `optimisation`.
 - **FHIRPath's 8 fractional digits for Decimal (owner, 2026-10-26).** FHIRPath requires a Decimal to provide at least a step of 10^-8, and ticket 41 leaves System.Decimal at 6 fractional digits, `DECIMAL(38,6)`, to match the Parquet on FHIR specification's `numeric` annotation. The issue considers `DECIMAL(38,8)`, with a proposal upstream for the annotation's type, so that the stored annotation and the engine type still agree.
+- **Upstream Spark contributions (owner, 2026-11-05).** The annotations design found where Spark's nested-field pruning stops, and these could be contributed upstream. At the v4.3.0 tag, `SchemaPruning` handles `transform` (SPARK-57022), `filter` and `sort` (SPARK-57176), but not `exists`/`forall` (SPARK-57175, on master only), `zip_with`, `arrays_zip`, `aggregate` or `Generate` (SPARK-34956, which also covers pruning several fields through `inline`). Pathling's pairing of a value with its metadata goes through `arrays_zip`, and its rule (the D3b experiment above) shows what pruning there gains. Evidence: `evidence/annotations-design-spark-4-3-upstream-pruning.md`, `evidence/annotations-design-pairing-shapes.md` and `evidence/annotations-design-lambda-pruning-rule.md`. Label: `optimisation`.
+- **Annotations under quantity and date arithmetic (owner, 2026-11-06).** Neither arithmetic is implemented. When it is designed, decide which form is the truth for a computed System value, so that a value and its annotations cannot drift apart: the two-way Quantity form, and a structured date form, set out in question 6 of `design/annotations-in-the-engine.md` §6. Until then, rule A holds: an operation that produces a new value produces no annotations. Label: `enhancement`.
+- **The equality review (owner, 2026-11-09).** Decision 151 settles which keys `=`, `distinct()` and `|` compare, and keeps main's behaviour for the rest. The review reconsiders:
+  - primitive `id` and `extension` in comparisons, at the top level and nested inside complex types, and whether to adopt C10b's fhirpath.js semantics (`evidence/annotations-decision-record.md`);
+  - option C: FHIR quantities without a System form (non-UCUM, with a comparator, or without a system) compared structurally, as complex elements, as the FHIR binding implies. Today two such quantities compare values only where `code` and `system` are identical, and a null `system` never matches;
+  - nested-primitive deviations inside complex types, such as decimal scale and partial dates;
+  - moving the copied fhirpath.js cases from 3.16.4 to 5.1.0. This is not specific to Parquet on FHIR and can be raised separately.
+
+  Label: `enhancement`.
 - **Others handed on.** Any follow-up passed on by ticket 10, such as a precomputed reference key. Ticket 08's threads, such as the upstream Spark issue from T132, moved to ticket 16, which raises its own.
 
 **Blocked by:** None — can start immediately. Hand-offs from 10 are added as they arrive.
@@ -68,3 +79,26 @@ The issues the re-plan adds:
 - Defects the legacy line also has, from ticket 31, starting with `toDate()` and `toDateTime()` not checking the calendar: `bug` and `Bunsen_line`.
 
 The extra-fields issue above takes ticket 36's scope as its text. The items above this comment get their labels when each is raised.
+
+### Raised (owner's approval, 2026-11-09)
+
+Sixteen issues, each labelled `PoF_line`:
+
+- **#2881** Dense schema mode, streaming encode and dense parity (tickets 18 and 19, and the "Dense-shaped output for FHIR-typed results" item): `new feature`.
+- **#2882** A public XML sink and source (ticket 39): `new feature`.
+- **#2883** The rework of the ingest mechanism (ticket 16): `enhancement`.
+- **#2884** Non-conformant data beyond `trust`: `enhancement`.
+- **#2885** `toDate()` and `toDateTime()` accept impossible calendar dates (ticket 31's defect that the legacy line also has): `bug`, `Bunsen_line`.
+- **#2886** The range of a time without a timezone: `enhancement`.
+- **#2887** The server without Woodstox: `enhancement`.
+- **#2888** Annotation kinds as plugins: `enhancement`.
+- **#2889** Profiling and optimising query performance: `optimisation`.
+- **#2890** The custom optimiser rule (D3b) as an optimisation experiment: `optimisation`.
+- **#2891** Upstream Spark contributions: `optimisation`.
+- **#2892** Annotations under quantity and date arithmetic: `enhancement`.
+- **#2893** FHIRPath's 8 fractional digits for Decimal, `DECIMAL(38,8)`: `enhancement`.
+- **#2894** T134c, the merge cost on S3: `enhancement`.
+- **#2895** T134d, the `test-data` bulk corpus: `enhancement`.
+- **#2898** The equality review (owner's approval, 2026-11-10): `enhancement`.
+
+Not raised yet: the #2804 renderer comment; ticket 40, which waits for ticket 41; ticket 38; extra fields, which wait for ticket 36; the precomputed reference key, which waits for ticket 10; P1 (decision 148); and what the release needs beyond #2367.

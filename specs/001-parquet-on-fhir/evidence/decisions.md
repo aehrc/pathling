@@ -4620,7 +4620,10 @@ _Rejected_:
 - **`TIMESTAMP_NTZ`.** It writes `isAdjustedToUTC=false`, and forces every Delta table to reader version 3
   and writer version 7 with the `timestampNtz` feature (probed by the coordinator with Delta 4.0.0). Comparing
   it with a `TIMESTAMP` shifts it by the session's time zone.
-- **`INT96`**, Spark's default. It never gets statistics or predicate pushdown.
+- **`INT96`**, Spark's default. It never gets statistics or predicate pushdown. _Measured later
+  (2026-11-03, `annotations-design-pushdown.md`): `INT96` writes no min/max statistics, so no row group is
+  skipped, although `PushedFilters` still lists the predicate as for `TIMESTAMP_MICROS`. The rejection
+  stands; only the rows scanned show it._
 
 _Consequences_:
 
@@ -4659,3 +4662,313 @@ _Not taken now_:
 - **A representation carrying a value column beside a metadata column** for every primitive. It would widen
   `DefaultRepresentation`'s purpose. Ticket 17, which needs `x` paired with `_x` to filter on a primitive's
   extensions, decides that pairing under this decision.
+
+## 140. The engine relies on Spark's optimiser, and does not shape elements by use
+
+Owner decisions (2026-11-04), from the annotations design (`design/annotations-in-the-engine.md`). The full
+record, with the options weighed and every step, is `annotations-decision-record.md` (rows P0 and L1).
+Evidence: `annotations-design-rewrites-layer1.md`, `annotations-design-spark-4-3-upstream-pruning.md`,
+`annotations-design-lambda-pruning-rule.md`.
+
+_Decision_:
+
+- **P0: leverage the SQL engine's own optimiser as much as possible.** The planner emits plan shapes that
+  Spark can prune and push down. It does no FHIRPath-level analysis of which fields an expression uses.
+  This is strongly preferred, not absolute.
+- **L1, building an element from only the fields an expression uses, is not built now.** The extra reads it
+  would avoid are accepted. The engine waits for upstream Spark (SPARK-34956 for multi-field and `Inline`),
+  with Pathling's own optimiser rule (decision 143) as the fallback. The measurement that L1 would close
+  views on Spark 4.3 and later stays on file in `annotations-design-rewrites-layer1.md`.
+
+## 141. A primitive's engine element carries its value and its named annotations
+
+Owner decisions (2026-11-04). Record rows D2 and D14. Evidence: `annotations-design-singular-meta-pruning.md`.
+
+_Decision_:
+
+- **D2: the element is the value plus the named annotation fields that are stored.** It does not carry the
+  raw `_x` group. On 1M Patients, the raw group read 182.4 MB against 17.6 MB for the named fields. Because
+  L1 is not built (decision 140), the element's content is fixed, not chosen per expression.
+- **D14: a primitive's `id` and `extension` are behind a switch, off by default.** When it is off, the engine
+  behaves as if `_x.id` and `_x.extension` were absent from the JSON: navigating to them gives empty, not an
+  error. When it is on, every element carries them, at a cost only to the users who opt in. Annotations are
+  never switched off.
+
+_Consequences_: `design/annotations-in-the-engine.md` §4.1 and §4.2 still describe `meta` as the raw stored
+`_x` element, and are to be brought in line.
+
+## 142. How a primitive converts, merges and leaves the engine
+
+Owner acceptance (2026-11-04) of rules that follow from decision 141. Record rows D8, D9 and D10.
+
+_Decision_:
+
+- **D8: FHIR to System conversion keeps the stored annotation fields** and drops `id` and `extension`
+  (`resolve_or_none`). It computes nothing.
+
+  _Clarified (2026-11-09, review gap G-G2): it computes no annotation._ The System value itself may need
+  computing: a decimal, or a quantity's `value`, becomes `numeric(e)`, the stored `__numeric` or else the
+  parsed text, as a deferred expression evaluated only where the value is read.
+- **D9: merging different shapes intersects the annotations.** A merge keeps only the annotation fields
+  every operand has; the rest are computed on demand. With D14 on, `id` and `extension` are unioned for a
+  FHIR result, because they take part in deduplication.
+- **D10: a primitive leaves the engine as its value only,** in views and `$fhirpath`, in both D14 modes. Its
+  extensions leave only through an explicit `extension()`.
+
+_Amended (owner, 2026-11-06): this holds for `$fhirpath` on the server too._ A FHIR primitive in a typed
+`Parameters` result carries its value only, as every other external output does; extensions come back only
+through an explicit `extension()`. This closes question 2 of `design/annotations-in-the-engine.md` §6.
+
+## 143. Pruning on the PoF layout comes from the plan's shape; Pathling's own rule is a separate experiment
+
+Owner decisions (2026-11-04), amended 2026-11-05. Record rows L2 and D3. Evidence:
+`annotations-design-rewrites-layer1.md`, `annotations-design-pairing-shapes.md`,
+`annotations-design-project-before-generate.md`, `annotations-design-project-before-generate-databricks.md`,
+`annotations-design-lambda-pruning-rule.md`, `annotations-design-lambda-pruning-databricks.md`,
+`spark-4-3-compatibility.md`.
+
+_Decision_:
+
+- **L2: the engine emits shapes that Spark prunes.** It computes first, then generates; it rewrites
+  existence tests (`exists()`, `count()` and multi-column `where`) into the forms checked as (a); and it pairs
+  `x` with `_x` as `arrays_zip` of the extracted leaves (pairing shape (c)), with `coalesce(x, array())`
+  guards on extracted arrays and never around `transform`. Tests assert the plan's shape and equal results,
+  in CI on Spark 4.0.2, and assert the read schema once Pathling builds on Spark 4.3 or later.
+- **Known exceptions:** a singular annotated output reads its annotations; `period.start` reads `_start`;
+  a repeating primitive below a repeating parent reads `_x` whole (about 16x, on Spark 4.3); Spark 4.0 to 4.2
+  and Databricks Runtime 17.3 prune nothing inside lambdas.
+- **D3b, Pathling's own optimiser rule, is not a remedy for H1** (owner, 2026-11-05). It is a separate
+  optimisation experiment, tried regardless, as a bonus (ticket 26 on `issue/2832`). A regression against
+  10.x in the benchmark (ticket 10) is investigated and fixed in 11 itself. This supersedes the trigger
+  recorded on 2026-11-04 and its update of 2026-11-05 ("an H1 breach on Spark 4.1").
+- **D3c is rejected,** under P0.
+
+_Consequences_: release 11 follows the latest Databricks LTS runtime, most likely Databricks Runtime 18 LTS
+on Spark 4.1 (GitHub #2879). Nothing was measured on Spark 4.1; by analogy to 4.0.2, where these shapes
+prune 4 of 26 spike views, they are expected to prune little there.
+
+## 144. A date-bound filter keeps a plain superset conjunct for pushdown
+
+Owner decision (2026-11-03). Record row D11. Evidence: `annotations-design-pushdown.md`.
+
+_Decision_: a comparison that is empty where it cannot compare is emitted beside a plain superset conjunct
+over the stored column, such as `CASE WHEN canCompare THEN start >= ts END AND __end >= ts`. Spark pushes the
+plain conjunct and keeps the `CASE` as a residual filter, so the answer is unchanged and row groups are
+skipped. Grouped and flat placements of the bounds skip alike.
+
+## 145. Shared annotation computation is memoised, not grouped
+
+Owner decision. Record row D7. Evidence: `annotations-design-memoisation.md`.
+
+_Decision_: each annotation is its own scalar computation over a memoised parse, in a least-recently-used
+cache per thread, rather than grouped so that one parse serves several annotations. Grouping would let the
+computation decide the layout (ticket 42). The cache size is an implementation detail.
+
+## 146. One stored layout, read through named accessors
+
+Owner decision (2026-11-04). Record row D12. Evidence: `annotations-design-zipped-layout.md`,
+`annotations-design-cached-source.md`.
+
+_Decision_: release one layout, the PoF layout, read through named value and annotation accessors at
+traversal, as today. There is no work now on a pre-zipped internal form or on consolidating the seam; no
+performance difference was shown. The zipped layout is proposed to the specification's owner as an
+alternative PoF storage layout (decision 149).
+
+## 147. A System decimal is a number, and a stored decimal's text reaches views only
+
+Owner decisions (2026-11-04 and 2026-11-05). Record row D13 and items 6 and 6b. Amends nothing in force;
+ticket 16 carries the output change.
+
+_Decision_:
+
+- **System.Decimal is the number only,** `DECIMAL(38,6)`. Its text is not kept as an annotation. A FHIR
+  decimal's element keeps its stored text as `value`, with `__numeric` beside it.
+- **Stored and computed decimals are told apart by type,** from the collection's definition, as Quantity
+  already does: a traversed `valueDecimal` is stored; a literal, arithmetic, `toDecimal()` and integer
+  promotion are computed; `where`, `first` and `distinct` keep the definition; a union is stored only if
+  every operand is. Keys and comparisons stay numeric, so `1.0 = 1.00` is true. The detection is built now.
+- **Output, by path.** A view column is already a string, the `DECIMAL(38,6)` value as text with trailing
+  zeros trimmed (decision 76, as amended). Once ticket 16 keeps a decimal's lexical form, a stored decimal is
+  output in a view as its stored text; the column stays a string and only values change. `toString()` on a
+  stored decimal returns its text. `fhirPathToColumn` and `$fhirpath` stay `DECIMAL(38,6)` for every
+  decimal (owner, 2026-11-05); what they return is ticket 40's to specify.
+
+_Correction_: the decision record first rested on "a view outputs a decimal as `DECIMAL(38,6)`", taken from
+ticket 41's documentation. The code never did; see ticket 41's comment of 2026-11-05.
+
+## 148. Presence-driven algorithm choice is deferred
+
+Owner decision (2026-11-04), clarified 2026-11-05. Record row P1.
+
+_Decision_: an algorithm chosen per row by which annotations are present (for example, a string-hash
+accelerator) is deferred until such an annotation is proposed. The owner's clarification: it can be handled
+per System type, by the fields each type requires. In System types these are first-class fields, not
+annotations: System.Date requires `__start` and `__end`; System.String may have an optional `__hash`.
+Conversion from FHIR fills a required field from the stored annotation, or computes it, and sets an
+optional one to null when nothing is stored. This departs from decision 142's D8, and the follow-up issue
+must reconcile the two. To be raised as a follow-up issue through ticket 26.
+
+_Amended (owner, 2026-11-06): conversion computes nothing, and D8 (decision 142) holds._ A required field
+of a System type, such as System.Date's `__start` and `__end`, is computed only where an operation reads it,
+through the `resolve_or_else` accessor. This answers the first open point of the suggestion
+(`design/annotations-in-the-engine.md` §4.2) and withdraws the departure from D8 noted above. P1 itself stays
+deferred, and the System-type fields remain a suggestion.
+
+## 149. Recommended storage layout, awaiting the specification's owner
+
+Not a decision. These are Pathling's recommendations to the owner of the Parquet on FHIR specification, who
+decides them (ticket 46). The engine is designed against them meanwhile (owner, 2026-11-05). Record rows
+D4, D5 and D6. Evidence: `annotations-layout-assessment.md`, `annotations-design-zipped-layout.md`,
+`annotations-design-quantity-root.md`, `annotations-design-d3a-complex-sketch.md`,
+`scripts/annotations-design/`.
+
+_Recommended_:
+
+- **D4, where annotations are stored: inside `_x`,** as fields after `id` and `extension`. On format alone
+  it is practically tied with a sibling `__x`; parent-level is third; zipped is last, because a value-only
+  read below a repeating parent costs about 79x on every Spark version measured, with no known fix. Inside
+  `_x` costs about 14x for an annotation read below a repeating parent, which on Spark 4.3 only a custom rule
+  is expected to fix.
+- **D5: flat annotation fields,** not grouped. No measured difference.
+- **D6, the quantity's canonical form: a flat code and an exact value,** optionally with a fixed-scale value
+  beside it for row-group skipping. Proposed with it: two equal quantities SHALL have byte-equal canonical
+  values, which makes stripping trailing zeros on the canonical path a Pathling release requirement.
+  Stripping stops at the decimal point: the exact value's scale is never negative (`FlexiDecimal.normalize`),
+  so 72.50 kg is `{72500, 0}`, not `{725, -2}`.
+
+_Pathling's own write (owner decision, 2026-11-06):_ Pathling writes the exact form only,
+`__canonical_code` and `__canonical_value_exact`, and not the fixed-scale `__canonical_value`, as decision
+137 already has it. A fixed-scale value would let a quantity comparison skip row groups through a plain
+superset conjunct, as decision 144 does for dates; it is a candidate under "Profiling and optimising query
+performance" in ticket 26. This closes question 4 of `design/annotations-in-the-engine.md` §6. The layout
+itself stays the specification's owner's call.
+
+## 150. A complex System value has only the fields a literal can set
+
+Owner decision (2026-11-06). Amends FR-059 and the System.Quantity shape of decision 137 and ticket 12.
+Design: `design/annotations-in-the-engine.md` §4.2.
+
+_Decision_:
+
+- **The rule.** A System type carries the fields its literal can set, and annotations derived from them.
+  No other field.
+- **System.Quantity is `{value, unit, code, system}`.**
+  - The literal sets each of them, `system` implicitly: a quoted unit is UCUM, a calendar keyword is a
+    calendar duration, and no unit is UCUM `'1'`.
+  - `unit` is kept beside `code` because it is the unit as written (`days` against `day`), and the
+    exact-unit match reads it.
+  - `value` is a System.Decimal, a bare `DECIMAL(38,6)` (D13, decision 147), with no `_value` group
+    (owner, 2026-11-06).
+  - `id` and `comparator` are dropped. A FHIR quantity with a comparator already has no System form.
+- **A System.Quantity's annotations are lazy.** `__canonical_code` and `__canonical_value_exact` are
+  carried where available without computing: stored, on conversion from FHIR, or constant, for a literal.
+  Otherwise an accessor computes them where an operation reads them. They are not always filled, as FR-059
+  had it, which brings Quantity in line with D8 (decision 142) and with dates. There is no `__numeric`; the
+  value is the number.
+- **The canonical form comes from the most exact source,** never from the converted decimal: for stored
+  data, the stored annotation or else the stored text, resolved by the comparison's accessor on the FHIR
+  operand; for a literal, its text at plan time; for arithmetic, the decimal value. A merge of a FHIR
+  quantity with a System one that loses the stored canonical fields computes it from the decimal, which
+  differs only beyond six fractional digits, as for every System.Decimal.
+- **System.Coding is `{system, code, version, display, userSelected}`.** `id` is dropped; the literal
+  builder emits it as null today.
+
+_Amended (owner, 2026-11-10), from review gap G-G8:_ a System.Quantity returned to a caller as a column
+has its content fields only, `{value, unit, code, system}`. Its canonical annotations, present only where
+available (decision 152), would otherwise make the returned shape depend on the data. This reverses the
+owner decision of 2026-10-26 in ticket 12, which kept the annotation on a returned quantity, and is
+marked for review in ticket 40.
+
+## 151. What `=`, `distinct()` and `|` compare
+
+Owner decision (2026-11-09), from review finding R1 of the annotations design. Replaces C10 of
+`evidence/annotations-decision-record.md` (C10a, and C10b, which is not adopted). Design:
+`design/annotations-in-the-engine.md` §4.4.
+
+The engine holds a FHIR primitive as `struct(value, meta)` and a complex FHIR value as the stored struct.
+Spark's own equality over either, as `array_distinct` and `array_union` apply it in `CombiningLogic` and
+`Collection`, would compare stored annotations, including those of another producer. Equal values could
+then compare unequal.
+
+_Decision_:
+
+- **A comparison key is defined by the type.** `=`, `distinct()` and a union's deduplication compare keys,
+  never the element struct as such. An annotation enters a key only through its accessor, as a copy of what
+  the value determines.
+- **FHIR primitives compare as if converted to their System types.** The conversion may be skipped where the
+  result is the same, so the comparison may read the FHIR value directly.
+- **FHIR Quantity and FHIR Coding compare as if converted to their System types,** in `=`, `distinct()` and
+  a union's deduplication. A union still returns the FHIR elements, deduplicated by System equality, with the
+  first occurrence kept. This matches main: `QuantityComparator` and `CodingEquality` ignore `id` and
+  `extension`.
+- **Quantity keeps main's semantics:**
+  - Precision is main's. The comparison does not round to `DECIMAL(38,6)`.
+  - A quantity with a comparator has no System form, so a comparison involving one is empty.
+  - UCUM against non-UCUM is empty. So is a System quantity with a calendar unit against a non-UCUM FHIR
+    quantity.
+  - Two non-UCUM FHIR quantities compare their values where `code` and `system` are identical, and are
+    otherwise empty. A null `system` never matches, so two such quantities without a system are empty under
+    `=` and are both kept by `distinct()` and `|`.
+- **Other complex FHIR types compare as the element struct.** Their nested primitives are still in the
+  stored layout: a plain value beside its stored `_x`.
+  - The struct keeps the annotations the engine recognises, because the value determines them. This assumes
+    `trust`, under which a stored annotation agrees with its value, and an annotation step that fills a whole
+    dataset or none of it. Per-row fill (ticket 38), or a mode stricter than `trust`, would require them to be
+    stripped as well.
+  - Another producer's `__` fields are stripped at every depth, by a projection generated from the schema at
+    plan time. In data Pathling wrote there are none, and the projection does nothing.
+  - Nested primitive `id` and `extension` stay in the struct, as on main.
+- **Primitive `id` and `extension` do not take part.** A top-level primitive compares by its System value
+  only, whatever the setting of the switch (D14, decision 141). C10b's fhirpath.js semantics are deferred.
+- **A key is computed once per operation.** Deduplication pairs each element with its key, then deduplicates
+  on the key, keeping the first element. A cache that lasts across operations is a candidate under
+  "Profiling and optimising query performance" in ticket 26.
+- **Deferred to the equality review in ticket 26,** with main's behaviour kept meanwhile:
+  - primitive `id` and `extension`, at the top level and nested;
+  - option C: FHIR quantities without a System form (non-UCUM, with a comparator, or without a system)
+    compared structurally, as complex elements, as the FHIR binding implies and fhirpath.js does;
+  - nested-primitive deviations inside complex types, such as decimal scale and partial dates;
+  - moving the copied fhirpath.js cases from 3.16.4 to 5.1.0.
+
+## 152. Every engine value is one flat struct: content fields and `__` annotation fields
+
+Owner decision (2026-11-09), from review finding R6 of the annotations design. Amends the element form of
+decision 141 (D2) and the System shapes of decisions 142 and 150. Design:
+`design/annotations-in-the-engine.md` §4.1–§4.4.
+
+The design held a primitive as `struct(value, meta)` and a System value as `struct(value, ann)`, with the
+annotations in a group, while a FHIR Quantity carries its canonical fields flat on the stored struct
+(§4.7). Accessors and conversion therefore read `meta` for one and the struct itself for the other.
+
+_Decision_:
+
+- **The rule.** An engine value's plain fields are its content, and its `__` fields are its annotations,
+  all at one level. This is the stored layout's rule (§4.7) applied to the engine.
+- **A FHIR primitive is `struct(value, <annotation fields>)`.** The annotation fields are the named stored
+  fields of `_x` that the schema has (D2): `__start` and `__end` for a date, dateTime or instant, and
+  `__numeric` for a decimal. With the switch on (D14), `id` and `extension` are content fields beside
+  `value`. They are still read by name, never as the raw `_x`, so pruning is unchanged.
+- **The shape is fixed by the type and the switch, not by the data.** A type with an annotation kind is
+  always a struct, so a date over unannotated data is `struct(value)`. A type with no annotation kind,
+  with the switch off, is the bare value, as a string is today. This settles the shape of an empty `meta`
+  or `ann`.
+- **A System value follows the same rule.** System.Date, DateTime and Instant are `struct(value, ...)` with
+  the annotation fields available without computing. System.Quantity is `{value, unit, code, system}`
+  plus its available `__canonical_code` and `__canonical_value_exact`, flat. System.Decimal, String,
+  Integer, Boolean, Time and Coding are unchanged.
+- **One accessor and one conversion for every type.** An accessor reads the element itself:
+  `resolve_or_else(e, "__start", date_start(e.value))`, and for a FHIR or System quantity
+  `resolve_or_else(e, "__canonical_code", ...)`. Conversion from FHIR to System is
+  `resolve_or_none(e, [annotation fields])` plus the System type's content fields; it drops `id`,
+  `extension` and any other content the System type lacks, and computes nothing (D8).
+- **Any operation that converts a FHIR value before it is compared keeps the annotation fields it has.**
+  A merge, `toQuantity()` or another function that accepts System types: where the stored field is
+  absent, the value's text is gone, and the accessor computes from the converted value. For a quantity,
+  that is the `DECIMAL(38,6)` value, which differs only beyond six fractional digits. This generalises
+  decision 150's sentence on merges.
+- **A comparison key strips the `__` fields** of every type alike (decision 151); for a primitive, the
+  key is its System value.
+
+_Consequences_: §4.1–§4.5 and §8 of the design, and §3–§5 of `design/annotations-by-example.md`, are
+brought in line. No code was written against `meta`; the accessor prototype (order of work, step 6) uses
+this form.

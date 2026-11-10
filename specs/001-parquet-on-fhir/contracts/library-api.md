@@ -157,23 +157,34 @@ or XML still fails the read.
 **Behaviour change.** A `System.Quantity` that reaches a caller as a column —
 from the expression-to-column API, or a view column declared `Quantity` — has
 the fixed shape the [engine semantics](engine-semantics.md#quantities) give it:
-`id`, `value`, `_value`, `comparator`, `unit`, `system`, `code` and
-`__canonical_exact`. The elements are strings, with the value as the text of the
-decimal; `_value` carries the value's numeric annotation, `_value.__numeric`, at
-`DECIMAL(38,6)`; and `__canonical_exact` is the exact canonical annotation. It previously had the previous layout's
+`value`, `unit`, `code` and `system` (decision 150). The value is a
+`DECIMAL(38,6)`; the others are strings. It carries no `id`, `comparator` or
+`_value`, and no canonical annotations: they are used inside the engine and do
+not leave it (owner, 2026-11-10, for review in ticket 40). It previously had the previous layout's
 shape, with a fixed-scale decimal value, its `value_scale`, the
 `_value_canonicalized` and `_code_canonicalized` fields and `_fid` (FR-059).
 A quantity read from the data keeps the fitted shape of the data it came from.
 
-### A decimal leaves the engine as DECIMAL(38,6)
+### A decimal is computed as DECIMAL(38,6)
 
-**Behaviour change.** A decimal that reaches a caller as a column — from the
-expression-to-column API, or a view column, in Java, Python and R — has the
-type `DECIMAL(38,6)`, the engine's System.Decimal (FR-035, ticket 41). It was
-`DECIMAL(32,6)`. Both keep six fractional digits, so values are rounded as
-before, but a value with 27 to 32 integer digits, which was null, now has a
-value: `1e14 * 1e14` gives `1e28` rather than an empty result. This goes in the
-release notes. The shape of SQL output as a whole is ticket 40's.
+**Behaviour change.** The engine computes a decimal as `DECIMAL(38,6)`, its
+System.Decimal (FR-035, ticket 41). It was `DECIMAL(32,6)`. Both keep six
+fractional digits, so values are rounded as before, but a value with 27 to 32
+integer digits, which was null, now has a value: `1e14 * 1e14` gives `1e28`
+rather than an empty result. This goes in the release notes. The shape of SQL
+output as a whole is ticket 40's.
+
+How the number reaches a caller depends on the path, in Java, Python and R:
+
+- **A view column** is a string: the `DECIMAL(38,6)` value as plain text, with
+  trailing zeros trimmed, so a stored `1.50` is output as `1.5`. This holds
+  whether or not the column declares `"type": "decimal"`, and whether the
+  decimal was read from the data or computed (decision 76). Once ticket 16
+  keeps a decimal's lexical form, a stored decimal will be output as its stored
+  text instead. The column stays a string, and only values change.
+- **The expression-to-column API**, `fhirPathToColumn`, returns the value as
+  `DECIMAL(38,6)`. What it and `$fhirpath` return is to be specified by ticket
+  40.
 
 ### A Coding the engine builds has six fields
 
