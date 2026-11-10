@@ -17,13 +17,12 @@
 
 package au.csiro.pathling.fhirpath.comparison;
 
-import static au.csiro.pathling.schema.ColumnBinding.bindOnce;
-
-import au.csiro.pathling.fhirpath.column.SystemDateTime;
 import au.csiro.pathling.schema.LayoutFields;
+import au.csiro.pathling.sql.SqlFunctions;
 import au.csiro.pathling.sql.misc.HighBoundaryForTime;
 import au.csiro.pathling.sql.misc.LowBoundaryForTime;
 import jakarta.annotation.Nonnull;
+import java.util.function.BiFunction;
 import java.util.function.BinaryOperator;
 import java.util.function.UnaryOperator;
 import lombok.AllArgsConstructor;
@@ -35,9 +34,15 @@ import org.apache.spark.sql.functions;
  * ranges.
  *
  * <p>Since FHIR DateTime/Time values can be partial (e.g., just year or year-month), comparisons
- * need to consider the range of possible values for each DateTime/Time. The range of a value is a
- * structure of its lower bound, {@code __start}, and its upper bound, {@code __end}, and is
- * computed once for each operand however many times the comparison reads its bounds.
+ * need to consider the range of possible values for each DateTime/Time. The range of a value is its
+ * lower bound, {@code __start}, and its upper bound, {@code __end}, which the comparison reads
+ * several times.
+ *
+ * <p>A System date carries its bounds as fields of its own, each the stored annotation or the
+ * computation of one bound over a memoised parse, so a bound read more than once is parsed once
+ * (decision 145). A time's bounds are each computed from it by a function of their own, wherever
+ * the comparison reads them. Each operand, date or time, is bound with {@link SqlFunctions#let}, so
+ * that a traced operand is evaluated once however many of its bounds are read (#2594).
  */
 @AllArgsConstructor(access = lombok.AccessLevel.PRIVATE)
 public class TemporalComparator implements ColumnComparator, ElementWiseEquality {
@@ -48,21 +53,30 @@ public class TemporalComparator implements ColumnComparator, ElementWiseEquality
 
   @Nonnull
   private static final TemporalComparator DATE_TIME_COMPARATOR =
-      new TemporalComparator(SystemDateTime::range);
+      new TemporalComparator(SqlFunctions::let);
 
   @Nonnull
   private static final TemporalComparator TIME_COMPARATOR =
       new TemporalComparator(
-          time ->
-              functions.struct(
-                  functions.callUDF(LowBoundaryForTime.FUNCTION_NAME, time).alias(START),
-                  functions.callUDF(HighBoundaryForTime.FUNCTION_NAME, time).alias(END)));
-
-  /** Takes an operand to its range. */
-  @Nonnull private final UnaryOperator<Column> rangeOf;
+          (time, body) ->
+              SqlFunctions.let(
+                  time,
+                  t ->
+                      body.apply(
+                          functions.struct(
+                              functions.callUDF(LowBoundaryForTime.FUNCTION_NAME, t).alias(START),
+                              functions
+                                  .callUDF(HighBoundaryForTime.FUNCTION_NAME, t)
+                                  .alias(END)))));
 
   /**
-   * Returns a TemporalComparator for System Date and DateTime values, which carry their ranges.
+   * Binds an operand once and passes the result, a structure carrying its {@code __start} and
+   * {@code __end}, to a body.
+   */
+  @Nonnull private final BiFunction<Column, UnaryOperator<Column>, Column> bound;
+
+  /**
+   * Returns a TemporalComparator for System Date and DateTime values, which carry their bounds.
    *
    * @return A TemporalComparator that can compare DateTime values.
    */
@@ -116,19 +130,18 @@ public class TemporalComparator implements ColumnComparator, ElementWiseEquality
       @Nonnull final Column left,
       @Nonnull final Column right,
       @Nonnull final BinaryOperator<Column> comparator) {
-    // Each range is evaluated once, so a range computed from text parses it once for both bounds.
-    return bindOnce(
-        rangeOf.apply(left),
-        leftRange ->
-            bindOnce(
-                rangeOf.apply(right),
-                rightRange ->
+    return bound.apply(
+        left,
+        l ->
+            bound.apply(
+                right,
+                r ->
                     // If canCompare apply the comparator to the low bound (either one is fine),
                     // else return null.
                     functions
                         .when(
-                            canCompare(leftRange, rightRange),
-                            comparator.apply(leftRange.getField(START), rightRange.getField(START)))
+                            canCompare(l, r),
+                            comparator.apply(l.getField(START), r.getField(START)))
                         .otherwise(functions.lit(null))));
   }
 

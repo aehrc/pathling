@@ -78,7 +78,7 @@ extensions are stored and navigable.
 - ~~[13](13-decimal-annotation.md) Decimal numeric annotation~~ (done)
 - ~~[41](41-system-decimal-38-6.md) Switch System.Decimal to DECIMAL(38,6)~~ (done)
 - ~~[14](14-date-range-annotation.md) Date range annotation~~ (done)
-- [42](42-shared-annotation-computation.md) Memoise an annotation kind's shared computation
+- ~~[42](42-shared-annotation-computation.md) Memoise an annotation kind's shared computation~~ (done)
 - [43](43-lazy-annotation-evaluation.md) Evaluate annotations in the engine only where they are used
 - [17](17-placeholder-primitive-metadata-group.md) PLACEHOLDER: the primitive metadata group (US6, #437)
 - [15](15-schema-decided-plan-test-and-docs.md) Test that annotation use is decided from the schema, and document annotations

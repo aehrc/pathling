@@ -138,7 +138,8 @@ class DefinitionCanonicalStructureTest {
             "_system",
             "code",
             "_code",
-            "__canonical_exact"),
+            "__canonical_code",
+            "__canonical_value_exact"),
         order);
   }
 

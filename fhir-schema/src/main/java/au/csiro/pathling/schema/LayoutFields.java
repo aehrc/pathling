@@ -79,16 +79,24 @@ public final class LayoutFields {
   @Nonnull public static final String END_ANNOTATION = ANNOTATION_PREFIX + "end";
 
   /**
-   * The annotation carrying the canonical form of a quantity at a precision that preserves
-   * magnitude.
-   *
-   * <p>It is the only canonical annotation a quantity carries. The specification's {@code
-   * __canonical} types its value as a fixed-point decimal whose absolute precision is constant
-   * regardless of magnitude, so quantities differing by orders of magnitude compare equal and no
-   * engine can compare on it. Annotations are optional, so it is not offered (decision 137).
+   * The annotation carrying the code of the canonical units of a quantity: the UCUM base units it
+   * is canonicalised to (decision 149).
    */
   @Nonnull
-  public static final String CANONICAL_EXACT_ANNOTATION = ANNOTATION_PREFIX + "canonical_exact";
+  public static final String CANONICAL_CODE_ANNOTATION = ANNOTATION_PREFIX + "canonical_code";
+
+  /**
+   * The annotation carrying the value of a quantity in its canonical units, at a precision that
+   * preserves magnitude: a flexible decimal whose scale is never negative (decision 149).
+   *
+   * <p>The two canonical annotations are the only ones a quantity carries. The specification's
+   * {@code __canonical} types its value as a fixed-point decimal whose absolute precision is
+   * constant regardless of magnitude, so quantities differing by orders of magnitude compare equal
+   * and no engine can compare on it. Annotations are optional, so it is not offered (decision 137).
+   */
+  @Nonnull
+  public static final String CANONICAL_VALUE_EXACT_ANNOTATION =
+      ANNOTATION_PREFIX + "canonical_value_exact";
 
   /** The types whose stated precision implies a range, and which therefore carry range bounds. */
   @Nonnull private static final Set<String> RANGE_ANNOTATED = Set.of("date", "dateTime", "instant");
@@ -143,7 +151,7 @@ public final class LayoutFields {
       return List.of(START_ANNOTATION, END_ANNOTATION);
     }
     if (CANONICAL_ANNOTATED.contains(code)) {
-      return List.of(CANONICAL_EXACT_ANNOTATION);
+      return List.of(CANONICAL_CODE_ANNOTATION, CANONICAL_VALUE_EXACT_ANNOTATION);
     }
     return List.of();
   }

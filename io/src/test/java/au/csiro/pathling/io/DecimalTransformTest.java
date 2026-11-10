@@ -168,7 +168,7 @@ class DecimalTransformTest {
     final StructType quantity = structure(annotated.schema().apply("valueQuantity").dataType());
     assertCarriesTheAnnotationLast(quantity.apply("_value").dataType());
     final StructField[] fields = quantity.fields();
-    assertEquals(LayoutFields.CANONICAL_EXACT_ANNOTATION, fields[fields.length - 1].name());
+    assertEquals(LayoutFields.CANONICAL_VALUE_EXACT_ANNOTATION, fields[fields.length - 1].name());
     assertEquals(
         new BigDecimal("1.500000"),
         annotated.selectExpr("valueQuantity._value.__numeric").first().getDecimal(0));

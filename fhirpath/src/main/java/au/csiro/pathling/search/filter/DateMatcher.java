@@ -20,7 +20,7 @@ package au.csiro.pathling.search.filter;
 import static au.csiro.pathling.encoders.ColumnFunctions.resolveOrElse;
 import static au.csiro.pathling.encoders.ColumnFunctions.resolveOrNull;
 import static au.csiro.pathling.encoders.ColumnFunctions.resolveStringOrNull;
-import static au.csiro.pathling.schema.ColumnBinding.bindOnce;
+import static au.csiro.pathling.sql.SqlFunctions.let;
 import static org.apache.spark.sql.functions.coalesce;
 import static org.apache.spark.sql.functions.lit;
 
@@ -45,9 +45,9 @@ import org.apache.spark.sql.types.DataTypes;
  * <p>This matcher supports both scalar date types (date, dateTime, instant) and Period types. For
  * scalar types, the precision-aware boundaries are the range each value carries as a System date,
  * which is the stored range annotations where the schema carries them, and is computed from one
- * parse of each value otherwise. For Period types, the lower bound of the start and the upper bound
- * of the end are read the same way, with null values treated as negative and positive infinity
- * respectively.
+ * memoised parse of each value otherwise. For Period types, the lower bound of the start and the
+ * upper bound of the end are read the same way, with null values treated as negative and positive
+ * infinity respectively.
  *
  * <p>Supported prefixes:
  *
@@ -135,17 +135,12 @@ public class DateMatcher implements ElementMatcher {
       // The element itself must not be null (the resource must have a period).
       return element.isNotNull().and(compare(searchValue, resourceLow, resourceHigh));
     }
-    // Scalar date/dateTime/instant: a System date, whose range is read once for both bounds.
-    return bindOnce(SystemDateTime.range(element), range -> matchRange(range, searchValue));
-  }
-
-  /** Matches the range of a date, a structure of its two bounds, against the search value. */
-  @Nonnull
-  private static Column matchRange(@Nonnull final Column range, @Nonnull final String searchValue) {
-    return compare(
-        searchValue,
-        range.getField(LayoutFields.START_ANNOTATION),
-        range.getField(LayoutFields.END_ANNOTATION));
+    // Scalar date/dateTime/instant: a System date, which carries its bounds. It is bound once, so
+    // that a traced element is evaluated once however many times its bounds are read (#2594); a
+    // bound computed more than once shares one memoised parse (decision 145).
+    return let(
+        element,
+        date -> compare(searchValue, SystemDateTime.start(date), SystemDateTime.end(date)));
   }
 
   /**
@@ -158,7 +153,7 @@ public class DateMatcher implements ElementMatcher {
     return resolveOrElse(
         resolveOrNull(period, LayoutFields.metadataGroupName(date), DataTypes.NullType),
         annotation,
-        DateRangeKind.INSTANCE.compute(resolveStringOrNull(period, date)).getField(annotation));
+        DateRangeKind.INSTANCE.compute(annotation, resolveStringOrNull(period, date)));
   }
 
   /**

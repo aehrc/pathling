@@ -91,7 +91,8 @@ Properties that hold for every annotation:
 - **In the container its element already owns** (decision 135). A primitive's
   annotations are fields of its metadata group, after `id` and `extension`:
   `_birthDate.__start`, `_value.__numeric`. A complex element's are fields of its
-  own structure, after its elements: `valueQuantity.__canonical_exact`. So a repeating
+  own structure, after its elements: `valueQuantity.__canonical_code` and
+  `valueQuantity.__canonical_value_exact`. So a repeating
   primitive's annotations share the alignment its metadata group already has
   with it, and the one sibling resolution that reaches the metadata group reaches
   its annotations too.
@@ -188,9 +189,10 @@ Notes:
   `spark.sql.chunkBase64String.enabled` defaults to true on Spark 4.0.2 and
   chunks at 76 characters. FHIR permits whitespace inside a base64 value, so
   re-encoding canonicalises it away: the same bytes, a different string.
-- **A quantity carries one canonical annotation**, Pathling's
-  `__canonical_exact`, and not the specification's `__canonical` (decision
-  137). The specification's types its value as a fixed-point decimal whose
+- **A quantity carries one canonical annotation in two flat fields**, Pathling's
+  `__canonical_code` and `__canonical_value_exact`, and not the specification's
+  `__canonical` (decisions 137 and 149; ticket 42 replaced the grouped
+  `__canonical_exact`). The specification's types its value as a fixed-point decimal whose
   absolute precision is constant regardless of magnitude. Canonicalisation
   shifts magnitude by arbitrary powers of ten, so a mass of one nanogram
   canonicalises to a value that rounds to zero at that precision, and quantities

@@ -473,9 +473,9 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
    * so the value is compared as the engine compares it, as a decimal of six fractional digits,
    * rather than as text, which would distinguish {@code 1.5} from {@code 1.50}.
    *
-   * <p>Quantity Row structure: [id, value, comparator, unit, system, code, __canonical_exact]. Only
-   * the elements are compared: the canonical annotation is derived from them, and is pinned where
-   * quantities are compared.
+   * <p>Quantity Row structure: [id, value, _value, comparator, unit, system, code,
+   * __canonical_code, __canonical_value_exact]. Only the elements are compared: the canonical
+   * annotation is derived from them, and is pinned where quantities are compared.
    *
    * @param quantityRow the Quantity Row to normalize
    * @return a List representing the normalized quantity
@@ -491,7 +491,7 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
               + quantityRow.size());
     }
     final java.util.List<Object> normalized = new java.util.ArrayList<>();
-    for (int i = 0; i < quantityRow.fieldIndex(QuantityEncoding.CANONICAL_EXACT_COLUMN); i++) {
+    for (int i = 0; i < quantityRow.fieldIndex(QuantityEncoding.CANONICAL_CODE_COLUMN); i++) {
       normalized.add(quantityRow.isNullAt(i) ? null : quantityRow.get(i));
     }
     final int valueIndex = quantityRow.fieldIndex(QuantityEncoding.VALUE_COLUMN);

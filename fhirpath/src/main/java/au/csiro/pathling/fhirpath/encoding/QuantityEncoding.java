@@ -65,8 +65,8 @@ import org.apache.spark.sql.types.StructType;
  *   <li>{@code _value.__numeric}: the value as the engine's System.Decimal, as {@link
  *       DecimalNumericKind} defines it, which is what the engine computes and compares with;
  *   <li>{@code comparator}, {@code unit}, {@code system} and {@code code}: text;
- *   <li>{@code __canonical_exact}: the canonical form, as {@link QuantityCanonicalKind} defines it,
- *       null where the quantity has none.
+ *   <li>{@code __canonical_code} and {@code __canonical_value_exact}: the canonical form, flat, as
+ *       {@link QuantityCanonicalKind} defines it, null where the quantity has none.
  * </ul>
  *
  * <p>The numeric value and the canonical form are carried, so that each is computed once for a
@@ -101,8 +101,12 @@ public final class QuantityEncoding {
   /** The name of the column containing the code representing the quantity unit. */
   public static final String CODE_COLUMN = "code";
 
-  /** The name of the column containing the exact canonical annotation. */
-  public static final String CANONICAL_EXACT_COLUMN = LayoutFields.CANONICAL_EXACT_ANNOTATION;
+  /** The name of the column containing the canonical code annotation. */
+  public static final String CANONICAL_CODE_COLUMN = LayoutFields.CANONICAL_CODE_ANNOTATION;
+
+  /** The name of the column containing the exact canonical value annotation. */
+  public static final String CANONICAL_VALUE_EXACT_COLUMN =
+      LayoutFields.CANONICAL_VALUE_EXACT_ANNOTATION;
 
   private static final StructType VALUE_GROUP_TYPE =
       new StructType().add(LayoutFields.NUMERIC_ANNOTATION, SystemDecimal.TYPE);
@@ -116,7 +120,8 @@ public final class QuantityEncoding {
           .add(UNIT_COLUMN, DataTypes.StringType)
           .add(SYSTEM_COLUMN, DataTypes.StringType)
           .add(CODE_COLUMN, DataTypes.StringType)
-          .add(CANONICAL_EXACT_COLUMN, QuantityCanonicalKind.CANONICAL_EXACT_TYPE);
+          .add(CANONICAL_CODE_COLUMN, DataTypes.StringType)
+          .add(CANONICAL_VALUE_EXACT_COLUMN, QuantityCanonicalKind.EXACT_VALUE_TYPE);
 
   private static final int VALUE_INDEX = DATA_TYPE.fieldIndex(VALUE_COLUMN);
   private static final int COMPARATOR_INDEX = DATA_TYPE.fieldIndex(COMPARATOR_COLUMN);
@@ -124,14 +129,11 @@ public final class QuantityEncoding {
   private static final int SYSTEM_INDEX = DATA_TYPE.fieldIndex(SYSTEM_COLUMN);
   private static final int CODE_INDEX = DATA_TYPE.fieldIndex(CODE_COLUMN);
 
-  private static final int EXACT_VALUE_INDEX =
-      QuantityCanonicalKind.CANONICAL_EXACT_TYPE.fieldIndex(QuantityCanonicalKind.VALUE_FIELD);
-  private static final int EXACT_CODE_INDEX =
-      QuantityCanonicalKind.CANONICAL_EXACT_TYPE.fieldIndex(QuantityCanonicalKind.CODE_FIELD);
-
-  private static final UserDefinedFunction COMPARE_CANONICAL =
+  private static final UserDefinedFunction COMPARE_CANONICAL_VALUES =
       functions
-          .udf((UDF2<Row, Row, Integer>) QuantityEncoding::compareCanonical, DataTypes.IntegerType)
+          .udf(
+              (UDF2<Row, Row, Integer>) QuantityEncoding::compareCanonicalValues,
+              DataTypes.IntegerType)
           .withName("compare_canonical");
 
   private QuantityEncoding() {}
@@ -156,7 +158,8 @@ public final class QuantityEncoding {
       @Nonnull final Column unit,
       @Nonnull final Column system,
       @Nonnull final Column code,
-      @Nonnull final Column canonicalExact) {
+      @Nonnull final Column canonicalCode,
+      @Nonnull final Column canonicalValueExact) {
     // The cast types every field set to lit(null), which would otherwise be Spark's NullType
     // (VOID). A VOID-typed field prevents the struct from being converted to VARIANT, which is
     // required by variantTransformTree in repeat() and repeatAll().
@@ -170,7 +173,8 @@ public final class QuantityEncoding {
             unit.as(UNIT_COLUMN),
             system.as(SYSTEM_COLUMN),
             code.as(CODE_COLUMN),
-            canonicalExact.as(CANONICAL_EXACT_COLUMN))
+            canonicalCode.as(CANONICAL_CODE_COLUMN),
+            canonicalValueExact.as(CANONICAL_VALUE_EXACT_COLUMN))
         .cast(DATA_TYPE);
   }
 
@@ -180,7 +184,7 @@ public final class QuantityEncoding {
    * <p>The stored quantity is the FHIR structure as the traversal expression yields it: its value
    * is the text of a decimal. Each field is read by name through the tolerant traversal, so a field
    * the schema does not carry is null. Its extensions are not kept, because a System quantity has
-   * none. Its numeric and exact canonical annotations are copied where the schema carries them, and
+   * none. Its numeric and canonical annotations are copied where the schema carries them, and
    * computed where it does not, decided once for the schema (FR-023).
    *
    * <p>A null quantity is null.
@@ -205,67 +209,83 @@ public final class QuantityEncoding {
                     ColumnFunctions.resolveStringOrNull(s, UNIT_COLUMN),
                     ColumnFunctions.resolveStringOrNull(s, SYSTEM_COLUMN),
                     ColumnFunctions.resolveStringOrNull(s, CODE_COLUMN),
-                    storedCanonical(s))));
+                    storedCanonical(CANONICAL_CODE_COLUMN, s),
+                    storedCanonical(CANONICAL_VALUE_EXACT_COLUMN, s))));
   }
 
   /**
-   * Returns the exact canonical form of a stored quantity: its {@code __canonical_exact} annotation
-   * where the schema carries it, and the form computed from its value, system and code otherwise
-   * (FR-022).
+   * Returns one canonical annotation of a stored quantity: the stored annotation where the schema
+   * carries it, and the annotation computed from its value, system and code otherwise, decided once
+   * for the schema and for each annotation on its own (FR-022, FR-023). The two annotations
+   * computed from one quantity share one memoised canonicalisation of it (decision 145).
    *
+   * @param annotation the annotation, {@link #CANONICAL_CODE_COLUMN} or {@link
+   *     #CANONICAL_VALUE_EXACT_COLUMN}
    * @param stored the stored quantity
-   * @return the exact canonical form, typed as {@link QuantityCanonicalKind#CANONICAL_EXACT_TYPE}
+   * @return the annotation: the canonical code, or the exact canonical value typed as {@link
+   *     QuantityCanonicalKind#EXACT_VALUE_TYPE}
    */
   @Nonnull
-  public static Column storedCanonical(@Nonnull final Column stored) {
-    // Only the fields the canonical form is computed from are passed to the computation, so that
-    // the rest of the stored quantity, such as its extensions, is not read for it.
-    final Column computedFrom =
-        struct(
-            ColumnFunctions.resolveStringOrNull(stored, VALUE_COLUMN).as(VALUE_COLUMN),
-            ColumnFunctions.resolveStringOrNull(stored, SYSTEM_COLUMN).as(SYSTEM_COLUMN),
-            ColumnFunctions.resolveStringOrNull(stored, CODE_COLUMN).as(CODE_COLUMN));
-    return QuantityCanonicalKind.INSTANCE.apply(
-        CANONICAL_EXACT_COLUMN, computedFrom, stored, ColumnFunctions::resolveOrElse);
+  public static Column storedCanonical(
+      @Nonnull final String annotation, @Nonnull final Column stored) {
+    // Only the fields the canonical form is computed from are passed to the computation, each read
+    // by name through the tolerant traversal, so that the rest of the stored quantity, such as its
+    // extensions, is not read for it.
+    return ColumnFunctions.resolveOrElse(
+        stored,
+        annotation,
+        QuantityCanonicalKind.INSTANCE.compute(
+            annotation, stored, name -> ColumnFunctions.resolveStringOrNull(stored, name)));
   }
 
   /**
-   * Returns the exact canonical form of a System quantity, which it carries.
+   * Returns the canonical code of a System quantity, which it carries.
    *
    * @param quantity a System quantity
-   * @return the exact canonical form, typed as {@link QuantityCanonicalKind#CANONICAL_EXACT_TYPE}
+   * @return the canonical code
    */
   @Nonnull
-  public static Column canonical(@Nonnull final Column quantity) {
-    return quantity.getField(CANONICAL_EXACT_COLUMN);
+  public static Column canonicalCode(@Nonnull final Column quantity) {
+    return quantity.getField(CANONICAL_CODE_COLUMN);
   }
 
   /**
-   * Compares two exact canonical forms, as one function of both, so that a canonical form computed
-   * where it is compared is read once rather than once for its code and again for its value.
+   * Returns the exact canonical value of a System quantity, which it carries.
    *
-   * @param left an exact canonical form, typed as {@link
-   *     QuantityCanonicalKind#CANONICAL_EXACT_TYPE}
-   * @param right another
+   * @param quantity a System quantity
+   * @return the exact canonical value, typed as {@link QuantityCanonicalKind#EXACT_VALUE_TYPE}
+   */
+  @Nonnull
+  public static Column canonicalValueExact(@Nonnull final Column quantity) {
+    return quantity.getField(CANONICAL_VALUE_EXACT_COLUMN);
+  }
+
+  /**
+   * Compares two canonical forms, each given as its plain code and exact value fields.
+   *
+   * @param leftCode the canonical code of one quantity
+   * @param leftValue its exact canonical value, typed as {@link
+   *     QuantityCanonicalKind#EXACT_VALUE_TYPE}
+   * @param rightCode the canonical code of the other
+   * @param rightValue its exact canonical value
    * @return the sign of the comparison of their values, or null where either is null or their codes
    *     differ
    */
   @Nonnull
-  public static Column compareCanonical(@Nonnull final Column left, @Nonnull final Column right) {
-    return COMPARE_CANONICAL.apply(left, right);
+  public static Column compareCanonical(
+      @Nonnull final Column leftCode,
+      @Nonnull final Column leftValue,
+      @Nonnull final Column rightCode,
+      @Nonnull final Column rightValue) {
+    return when(leftCode.equalTo(rightCode), COMPARE_CANONICAL_VALUES.apply(leftValue, rightValue));
   }
 
-  /** The comparison of two exact canonical forms, over their rows. */
+  /** The comparison of two exact canonical values, over their rows. */
   @Nullable
-  private static Integer compareCanonical(@Nullable final Row left, @Nullable final Row right) {
-    if (left == null
-        || right == null
-        || left.isNullAt(EXACT_CODE_INDEX)
-        || !left.getString(EXACT_CODE_INDEX).equals(right.getString(EXACT_CODE_INDEX))) {
-      return null;
-    }
-    final BigDecimal leftValue = FlexiDecimal.fromValue(left.getStruct(EXACT_VALUE_INDEX));
-    final BigDecimal rightValue = FlexiDecimal.fromValue(right.getStruct(EXACT_VALUE_INDEX));
+  private static Integer compareCanonicalValues(
+      @Nullable final Row left, @Nullable final Row right) {
+    final BigDecimal leftValue = left == null ? null : FlexiDecimal.fromValue(left);
+    final BigDecimal rightValue = right == null ? null : FlexiDecimal.fromValue(right);
     return leftValue == null || rightValue == null
         ? null
         : Integer.signum(leftValue.compareTo(rightValue));
@@ -288,7 +308,8 @@ public final class QuantityEncoding {
         quantity.getField(UNIT_COLUMN),
         quantity.getField(SYSTEM_COLUMN),
         quantity.getField(CODE_COLUMN),
-        quantity.getField(CANONICAL_EXACT_COLUMN));
+        canonicalCode(quantity),
+        canonicalValueExact(quantity));
   }
 
   /**
@@ -379,6 +400,7 @@ public final class QuantityEncoding {
    */
   @Nonnull
   public static Column encodeLiteral(@Nonnull final FhirPathQuantity quantity) {
+    final CanonicalQuantity exact = QuantityCanonicalKind.toExact(canonicalOf(quantity));
     return toStruct(
         lit(null),
         lit(quantity.getValue().toPlainString()),
@@ -387,7 +409,8 @@ public final class QuantityEncoding {
         lit(quantity.getUnitName()),
         lit(quantity.getSystem()),
         lit(quantity.getCode()),
-        QuantityCanonicalKind.toExactLiteral(canonicalOf(quantity)));
+        QuantityCanonicalKind.toCodeLiteral(exact),
+        QuantityCanonicalKind.toValueExactLiteral(exact));
   }
 
   /**
@@ -428,22 +451,23 @@ public final class QuantityEncoding {
                                   code,
                                   lit(UcumUnit.UCUM_SYSTEM_URI),
                                   code,
-                                  unityCanonical(value)));
+                                  when(value.isNotNull(), code),
+                                  unityCanonicalValue(value)));
                         })));
   }
 
   /**
-   * Returns the exact canonical form of a quantity with unit "1" from the text of its value. UCUM
+   * Returns the exact canonical value of a quantity with unit "1" from the text of its value. UCUM
    * canonicalises the unit "1" to itself without changing the value, so the canonical value has
    * exactly the digits of the text, and is built from them without calling UCUM for every row. The
    * text is that of a decimal, without an exponent.
    *
    * @param value the text of the value
-   * @return the exact canonical form, typed as {@link QuantityCanonicalKind#CANONICAL_EXACT_TYPE},
-   *     or null where there is no value
+   * @return the exact canonical value, typed as {@link QuantityCanonicalKind#EXACT_VALUE_TYPE}, or
+   *     null where there is no value
    */
   @Nonnull
-  private static Column unityCanonical(@Nonnull final Column value) {
+  private static Column unityCanonicalValue(@Nonnull final Column value) {
     final Column unscaled = functions.replace(value, lit(".")).cast(FlexiDecimal.DECIMAL_TYPE);
     final Column scale =
         when(value.contains("."), functions.length(functions.substring_index(value, ".", -1)))
@@ -453,14 +477,10 @@ public final class QuantityEncoding {
         functions
             .named_struct(
                 lit(QuantityCanonicalKind.VALUE_FIELD),
-                functions.named_struct(
-                    lit(QuantityCanonicalKind.VALUE_FIELD),
-                    unscaled,
-                    lit(QuantityCanonicalKind.SCALE_FIELD),
-                    scale),
-                lit(QuantityCanonicalKind.CODE_FIELD),
-                lit(UcumUnit.ONE.code()))
-            .cast(QuantityCanonicalKind.CANONICAL_EXACT_TYPE));
+                unscaled,
+                lit(QuantityCanonicalKind.SCALE_FIELD),
+                scale)
+            .cast(QuantityCanonicalKind.EXACT_VALUE_TYPE));
   }
 
   /**
@@ -474,6 +494,7 @@ public final class QuantityEncoding {
    */
   @Nonnull
   public static Row encode(@Nonnull final FhirPathQuantity quantity) {
+    final CanonicalQuantity exact = QuantityCanonicalKind.toExact(canonicalOf(quantity));
     return RowFactory.create(
         null,
         quantity.getValue().toPlainString(),
@@ -482,7 +503,8 @@ public final class QuantityEncoding {
         quantity.getUnitName(),
         quantity.getSystem(),
         quantity.getCode(),
-        QuantityCanonicalKind.toExactRow(canonicalOf(quantity)));
+        exact == null ? null : exact.getCode(),
+        QuantityCanonicalKind.toValueExactRow(exact));
   }
 
   /**

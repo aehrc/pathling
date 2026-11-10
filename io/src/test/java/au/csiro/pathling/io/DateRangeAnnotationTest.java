@@ -21,9 +21,11 @@ import static au.csiro.pathling.io.TransformFixtures.DEFINITIONS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.schema.LayoutFields;
 import au.csiro.pathling.schema.SchemaConfiguration;
+import au.csiro.pathling.schema.annotation.kinds.DateRangeKind;
 import au.csiro.pathling.schema.date.FhirDateTime;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Nonnull;
@@ -252,21 +254,37 @@ class DateRangeAnnotationTest {
 
   @Test
   void bothBoundsComeFromOneParse() {
-    // A singular date, a date under a repeating parent, and a repeating date.
-    assertParsedOnce(annotate("Patient", PATIENT).select("_birthDate"));
-    assertParsedOnce(annotate("Patient", PATIENT).select("name"));
-    assertParsedOnce(annotate("MedicationRequest", TIMING).select("dosageInstruction"));
+    // A singular date, a date under a repeating parent, and a repeating date. Each bound is
+    // computed on its own, once for each date, and the two share one memoised parse (decision
+    // 145), so computing them parses each date at most once.
+    assertParsedOnce(annotate("Patient", PATIENT).select("_birthDate"), 1);
+    assertParsedOnce(annotate("Patient", PATIENT).select("name"), 2);
+    assertParsedOnce(annotate("MedicationRequest", TIMING).select("dosageInstruction"), 2);
   }
 
-  /** Asserts that the optimised plan computes the range of each date once, for both its bounds. */
-  private static void assertParsedOnce(@Nonnull final Dataset<Row> annotated) {
+  /**
+   * Asserts that the optimised plan computes each bound of each date once, and that computing the
+   * annotations parses no more dates than there are. A date parsed earlier on the same thread may
+   * be parsed no more at all.
+   */
+  private static void assertParsedOnce(@Nonnull final Dataset<Row> annotated, final int dates) {
     final String plan = annotated.queryExecution().optimizedPlan().toString();
-    final Matcher matcher = Pattern.compile("date_range\\(").matcher(plan);
+    assertEquals(1, count(plan, "date_start\\("), plan);
+    assertEquals(1, count(plan, "date_end\\("), plan);
+    final long before = DateRangeKind.getParseCount();
+    annotated.collectAsList();
+    final long parses = DateRangeKind.getParseCount() - before;
+    assertTrue(parses <= dates, parses + " parses of " + dates + " dates");
+  }
+
+  /** Counts the matches of a pattern in a plan. */
+  private static int count(@Nonnull final String plan, @Nonnull final String pattern) {
+    final Matcher matcher = Pattern.compile(pattern).matcher(plan);
     int count = 0;
     while (matcher.find()) {
       count++;
     }
-    assertEquals(1, count, plan);
+    return count;
   }
 
   @Test

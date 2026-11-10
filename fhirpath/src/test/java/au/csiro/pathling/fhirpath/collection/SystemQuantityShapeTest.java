@@ -57,9 +57,10 @@ import org.springframework.beans.factory.annotation.Autowired;
  * <p>Whatever produces it, such a quantity has one fixed, complete shape: the elements of a FHIR
  * Quantity other than {@code extension}, in definition order, with its value as the text of a
  * decimal, as the Parquet on FHIR layout stores one, and the value's metadata group beside it
- * carrying its numeric annotation (ticket 41), followed by the layout's exact canonical annotation
- * (ticket 12). It carries none of the previous layout's companions: no {@code DECIMAL} value with a
- * {@code value_scale} beside it, no canonical form in {@code _value_canonicalized} and {@code
+ * carrying its numeric annotation (ticket 41), followed by the layout's two canonical annotations,
+ * {@code __canonical_code} and {@code __canonical_value_exact}, flat (tickets 12 and 42). It
+ * carries none of the previous layout's companions: no {@code DECIMAL} value with a {@code
+ * value_scale} beside it, no canonical form in {@code _value_canonicalized} and {@code
  * _code_canonicalized}, and no {@code _fid}.
  *
  * @author Piotr Szul
@@ -84,8 +85,9 @@ class SystemQuantityShapeTest {
             DataTypes.createStructField("unit", DataTypes.StringType, true),
             DataTypes.createStructField("system", DataTypes.StringType, true),
             DataTypes.createStructField("code", DataTypes.StringType, true),
+            DataTypes.createStructField("__canonical_code", DataTypes.StringType, true),
             DataTypes.createStructField(
-                "__canonical_exact", QuantityCanonicalKind.CANONICAL_EXACT_TYPE, true)
+                "__canonical_value_exact", QuantityCanonicalKind.EXACT_VALUE_TYPE, true)
           });
 
   /** The fields of the shape that are elements of a FHIR Quantity. */

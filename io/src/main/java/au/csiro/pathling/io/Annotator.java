@@ -17,7 +17,6 @@
 
 package au.csiro.pathling.io;
 
-import static au.csiro.pathling.schema.ColumnBinding.bindOnce;
 import static au.csiro.pathling.utilities.SparkTypes.elementTypeOf;
 import static au.csiro.pathling.utilities.SparkTypes.fieldOf;
 
@@ -32,6 +31,7 @@ import au.csiro.pathling.schema.annotation.AnnotationKind;
 import au.csiro.pathling.schema.annotation.AnnotationRegistry;
 import jakarta.annotation.Nonnull;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -48,6 +48,7 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.ArrayType;
 import org.apache.spark.sql.types.DataType;
+import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 
@@ -253,10 +254,11 @@ public final class Annotator {
                   stored ->
                       functions.when(
                           stored.isNotNull(),
-                          computingOnce(
+                          withAnnotations(
                               derived,
                               observed,
                               stored,
+                              name -> textField(stored, structure, name),
                               stored,
                               annotations ->
                                   functions.struct(
@@ -404,10 +406,11 @@ public final class Annotator {
     final Column container = group.orElseGet(() -> functions.lit(null));
     return functions.when(
         present,
-        computingOnce(
+        withAnnotations(
             derived,
             observed,
             value,
+            value::getField,
             container,
             annotations ->
                 functions.struct(
@@ -454,82 +457,50 @@ public final class Annotator {
    * annotation where the container carries it and annotations are not recomputed, and the computed
    * one otherwise.
    *
-   * <p>A kind is computed once from the value, however many of its fields are computed, so that the
-   * two bounds of a date come from one parse of it (owner, 2026-10-26). Where more than one of its
-   * annotations is computed, the computation is bound to the argument of a lambda, which is
-   * evaluated once, because a structure referenced once for each field would be computed once for
-   * each. A kind of which one annotation is computed is computed in place, and a kind none of whose
-   * annotations is computed is not computed at all.
+   * <p>Each annotation is computed on its own from the value. Where a kind computes several from
+   * one computation of the value, such as the two bounds of a date from one parse of it, the kind
+   * memoises that computation, so the value is computed once however many of them are (decision
+   * 145).
    *
    * @param derived the kinds applied in the container, by the annotation each stores there
    * @param observed the container the input carries, where it carries one
    * @param value the value the annotations are computed from
+   * @param fieldOf reads a field of a complex value by name, null where the value does not carry it
    * @param container the container the input carries, from which a stored annotation is taken
    * @param build builds the container from the value of each annotation, in the order of {@code
    *     derived}
    */
   @Nonnull
-  private Column computingOnce(
+  private Column withAnnotations(
       @Nonnull final Map<String, AnnotationKind> derived,
       @Nonnull final Optional<StructType> observed,
       @Nonnull final Column value,
+      @Nonnull final Function<String, Column> fieldOf,
       @Nonnull final Column container,
       @Nonnull final Function<Map<String, Column>, Column> build) {
-    final Map<AnnotationKind, Long> computed =
-        derived.entrySet().stream()
-            .filter(entry -> computes(observed, entry.getKey()))
-            .collect(
-                Collectors.groupingBy(
-                    Map.Entry::getValue, LinkedHashMap::new, Collectors.counting()));
-    // A kind of which one annotation is computed reads its computation once, so it needs no
-    // binding.
-    final Map<AnnotationKind, Column> inline = new LinkedHashMap<>();
-    computed.forEach(
-        (kind, fields) -> {
-          if (fields == 1) {
-            inline.put(kind, kind.compute(value));
-          }
-        });
-    final List<AnnotationKind> shared =
-        computed.keySet().stream().filter(kind -> !inline.containsKey(kind)).toList();
-    return bind(
-        shared,
-        value,
-        inline,
-        bound -> {
-          final Map<String, Column> annotations = new LinkedHashMap<>();
-          derived.forEach(
-              (name, kind) ->
-                  annotations.put(
-                      name,
-                      computes(observed, name)
-                          ? bound.get(kind).getField(name)
-                          : container.getField(name)));
-          return build.apply(annotations);
-        });
+    final Map<String, Column> annotations = new LinkedHashMap<>();
+    derived.forEach(
+        (name, kind) ->
+            annotations.put(
+                name,
+                computes(observed, name)
+                    ? kind.compute(name, value, fieldOf)
+                    : container.getField(name)));
+    return build.apply(annotations);
   }
 
   /**
-   * Computes each of the kinds once from the value, binding each to the argument of a lambda, and
-   * passes the computed structures, by kind, to the body, together with those already bound.
+   * Reads a field of a complex value by name, as text, or a null string where the value's structure
+   * does not carry it, so that a kind can read the fields it needs from a value fitted to its data.
    */
   @Nonnull
-  private static Column bind(
-      @Nonnull final List<AnnotationKind> kinds,
+  private static Column textField(
       @Nonnull final Column value,
-      @Nonnull final Map<AnnotationKind, Column> bound,
-      @Nonnull final Function<Map<AnnotationKind, Column>, Column> body) {
-    if (kinds.isEmpty()) {
-      return body.apply(bound);
-    }
-    final AnnotationKind kind = kinds.get(0);
-    return bindOnce(
-        kind.compute(value),
-        computed -> {
-          final Map<AnnotationKind, Column> withKind = new LinkedHashMap<>(bound);
-          withKind.put(kind, computed);
-          return bind(kinds.subList(1, kinds.size()), value, withKind, body);
-        });
+      @Nonnull final StructType structure,
+      @Nonnull final String name) {
+    return Arrays.asList(structure.fieldNames()).contains(name)
+        ? value.getField(name).cast(DataTypes.StringType)
+        : functions.lit(null).cast(DataTypes.StringType);
   }
 
   /**

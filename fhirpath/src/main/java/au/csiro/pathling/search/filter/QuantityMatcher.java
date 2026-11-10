@@ -43,11 +43,11 @@ import org.apache.spark.sql.Column;
  * <p>UCUM Normalization: When the search specifies a UCUM system ({@code
  * http://unitsofmeasure.org}) with a code, the search value and code are canonicalized using the
  * UCUM library. This enables matching across equivalent unit representations (e.g., {@code 1000 mg}
- * matches {@code 1 g}). The canonical form of the element is its {@code __canonical_exact}
- * annotation where the schema carries it, and is computed from its value, system and code otherwise
- * (FR-022), as {@link QuantityEncoding#storedCanonical(Column)} gives it. It is used only for an
- * element whose system is UCUM. If canonicalization fails, the matcher falls back to exact value
- * comparison.
+ * matches {@code 1 g}). The canonical form of the element is its {@code __canonical_code} and
+ * {@code __canonical_value_exact} annotation where the schema carries it, and is computed from its
+ * value, system and code otherwise (FR-022), as {@link QuantityEncoding#storedCanonical(String,
+ * Column)} gives it. It is used only for an element whose system is UCUM. If canonicalization
+ * fails, the matcher falls back to exact value comparison.
  *
  * <p>Every field of the element is read by name through the tolerant traversal, so the element may
  * have any shape the definitions allow, including one pruned to the fields it populates (FR-054).
@@ -202,10 +202,14 @@ public class QuantityMatcher implements ElementMatcher {
     // The canonical form of the element is used only where the element is a UCUM quantity,
     // because the search asks for a UCUM quantity.
     final Column elementCode = resolveStringOrNull(element, CODE);
+    final CanonicalQuantity exact = QuantityCanonicalKind.toExact(canonical);
     final Column comparison =
         QuantityEncoding.compareCanonical(
-            QuantityEncoding.storedCanonical(element),
-            QuantityCanonicalKind.toExactLiteral(canonical));
+            QuantityEncoding.storedCanonical(QuantityEncoding.CANONICAL_CODE_COLUMN, element),
+            QuantityEncoding.storedCanonical(
+                QuantityEncoding.CANONICAL_VALUE_EXACT_COLUMN, element),
+            QuantityCanonicalKind.toCodeLiteral(exact),
+            QuantityCanonicalKind.toValueExactLiteral(exact));
     final Column canonicalMatch =
         when(
             resolveStringOrNull(element, SYSTEM).equalTo(lit(UcumUnit.UCUM_SYSTEM_URI)),

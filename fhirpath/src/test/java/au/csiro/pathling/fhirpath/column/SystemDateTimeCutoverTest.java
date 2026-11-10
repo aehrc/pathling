@@ -71,21 +71,17 @@ class SystemDateTimeCutoverTest {
       final Row computed =
           spark
               .createDataset(List.of(DATE), Encoders.STRING())
-              .select(micros(DateRangeKind.INSTANCE.compute(col("value"))))
+              .select(micros(computedRange(col("value"))))
               .first();
       assertBounds(computed);
 
-      final Row literal =
-          spark
-              .range(1)
-              .select(micros(SystemDateTime.range(SystemDateTime.fromLiteral(DATE))))
-              .first();
+      final Row literal = spark.range(1).select(micros(SystemDateTime.fromLiteral(DATE))).first();
       assertBounds(literal);
 
       final String path = tempDir.resolve(zone.replace('/', '_')).toString();
       spark
           .createDataset(List.of(DATE), Encoders.STRING())
-          .select(DateRangeKind.INSTANCE.compute(col("value")).alias("range"))
+          .select(computedRange(col("value")).alias("range"))
           .write()
           .parquet(path);
       final Row stored = spark.read().parquet(path).select(micros(col("range"))).first();
@@ -94,6 +90,14 @@ class SystemDateTimeCutoverTest {
       TimeZone.setDefault(original);
       spark.conf().set("spark.sql.parquet.outputTimestampType", outputType);
     }
+  }
+
+  /** The range of a date as the kind computes it, as a structure of its two bounds. */
+  @Nonnull
+  private static Column computedRange(@Nonnull final Column value) {
+    return org.apache.spark.sql.functions.struct(
+        DateRangeKind.INSTANCE.start(value).alias(LayoutFields.START_ANNOTATION),
+        DateRangeKind.INSTANCE.end(value).alias(LayoutFields.END_ANNOTATION));
   }
 
   @Nonnull

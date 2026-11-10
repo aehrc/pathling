@@ -63,19 +63,27 @@ class QuantityCanonicalKindTest {
 
   @Test
   void hasNoValueWhereIntegerDigitsAreTooMany() {
-    assertNull(QuantityCanonicalKind.toExactRow(canonical("9".repeat(39))));
+    assertNull(QuantityCanonicalKind.toExact(canonical("9".repeat(39))));
   }
 
   @Test
   void hasNoValueWhereRoundingCarriesBeyondTheIntegerDigits() {
-    assertNull(QuantityCanonicalKind.toExactRow(canonical("9".repeat(38) + ".9")));
+    assertNull(QuantityCanonicalKind.toExact(canonical("9".repeat(38) + ".9")));
   }
 
   @Nonnull
   private static Row exactValue(@Nonnull final String value) {
-    final Row exact = QuantityCanonicalKind.toExactRow(canonical(value));
-    assertEquals("m", exact.getString(1));
-    return exact.getStruct(0);
+    final CanonicalQuantity exact = QuantityCanonicalKind.toExact(canonical(value));
+    assertEquals("m", exact.getCode());
+    return QuantityCanonicalKind.toValueExactRow(exact);
+  }
+
+  @Test
+  void theScaleIsNeverNegative() {
+    // A value with trailing zeros before its decimal point is not given a negative scale.
+    final Row value = exactValue("7.25E+4");
+    assertEquals(new BigDecimal("72500"), value.get(0));
+    assertEquals(0, value.getInt(1));
   }
 
   @Nonnull

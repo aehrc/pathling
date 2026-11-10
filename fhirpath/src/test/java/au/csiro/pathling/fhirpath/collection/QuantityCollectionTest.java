@@ -51,8 +51,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * Tests that cross-unit quantity comparison computes canonicalisation when no annotation is present
- * (T087, FR-022), and takes the {@code __canonical_exact} annotation as a fast path where it is,
- * with the same answers (T087a).
+ * (T087, FR-022), and takes the {@code __canonical_code} and {@code __canonical_value_exact}
+ * annotations as a fast path where it is, with the same answers (T087a).
  *
  * <p>Each fixture is given as FHIR JSON and read in the Parquet on FHIR layout, once as read, which
  * carries no annotation, and once annotated, as encoding stores it. The expected answers are the
@@ -76,7 +76,9 @@ class QuantityCollectionTest {
   /** The name the canonicalisation carries in a plan. */
   private static final String CANONICALISATION = "quantity_canonical";
 
-  private static final String CANONICAL_EXACT = "__canonical_exact";
+  private static final String CANONICAL_VALUE_EXACT = "__canonical_value_exact";
+
+  private static final String CANONICAL_CODE = "__canonical_code";
 
   private static final List<String> OBSERVATIONS =
       List.of(
@@ -256,7 +258,8 @@ class QuantityCollectionTest {
   void comparisonWithALiteralComputesNoCanonicalFormForTheLiteral(
       @Nonnull final String expression) {
     assertThat(plan(annotated, expression))
-        .contains(CANONICAL_EXACT)
+        .contains(CANONICAL_VALUE_EXACT)
+        .contains(CANONICAL_CODE)
         .doesNotContain(CANONICALISATION);
     assertThat(plan(dataset, expression)).contains(CANONICALISATION);
   }

@@ -149,14 +149,14 @@ class SingleInstanceEvaluatorTest {
 
     @Test
     void stripsAnnotationsFromRow() {
-      // A row with annotations (__canonical, __canonical_exact) should have them removed.
+      // A row with annotations (__canonical, __canonical_code) should have them removed.
       final StructType schema =
           new StructType(
               new StructField[] {
                 DataTypes.createStructField("value", DataTypes.StringType, true),
                 DataTypes.createStructField("__canonical", DataTypes.IntegerType, true),
                 DataTypes.createStructField("code", DataTypes.StringType, true),
-                DataTypes.createStructField("__canonical_exact", DataTypes.IntegerType, true),
+                DataTypes.createStructField("__canonical_code", DataTypes.IntegerType, true),
               });
 
       final Row row = new GenericRowWithSchema(new Object[] {"100", 1, "mg", 3}, schema);
@@ -508,7 +508,7 @@ class SingleInstanceEvaluatorTest {
                 DataTypes.createStructField("value", DataTypes.StringType, true),
                 DataTypes.createStructField("__canonical", DataTypes.IntegerType, true),
                 DataTypes.createStructField("code", DataTypes.StringType, true),
-                DataTypes.createStructField("__canonical_exact", DataTypes.IntegerType, true),
+                DataTypes.createStructField("__canonical_code", DataTypes.IntegerType, true),
               });
 
       final Row row = new GenericRowWithSchema(new Object[] {"100", 1, "mg", 3}, schema);
@@ -516,7 +516,7 @@ class SingleInstanceEvaluatorTest {
       final String json = SingleInstanceEvaluator.rowToJson(row);
 
       assertFalse(json.contains("__canonical"));
-      assertFalse(json.contains("__canonical_exact"));
+      assertFalse(json.contains("__canonical_code"));
       assertTrue(json.contains("\"value\":\"100\""));
       assertTrue(json.contains("\"code\":\"mg\""));
     }
@@ -758,7 +758,7 @@ class SingleInstanceEvaluatorTest {
               new StructField[] {
                 DataTypes.createStructField("value", DataTypes.StringType, true),
                 DataTypes.createStructField("__canonical", DataTypes.IntegerType, true),
-                DataTypes.createStructField("__canonical_exact", DataTypes.IntegerType, true),
+                DataTypes.createStructField("__canonical_code", DataTypes.IntegerType, true),
               });
       final Row row = new GenericRowWithSchema(new Object[] {"100", 1, 3}, schema);
 
@@ -769,7 +769,7 @@ class SingleInstanceEvaluatorTest {
 
       final String json = (String) results.get(0).getValues().get(0).getValue();
       assertFalse(json.contains("__canonical"));
-      assertFalse(json.contains("__canonical_exact"));
+      assertFalse(json.contains("__canonical_code"));
       assertTrue(json.contains("\"value\":\"100\""));
     }
 

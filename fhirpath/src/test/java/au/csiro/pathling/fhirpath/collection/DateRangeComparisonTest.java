@@ -27,6 +27,7 @@ import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluatorBuilder;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.io.Annotator;
 import au.csiro.pathling.schema.SchemaConfiguration;
+import au.csiro.pathling.schema.annotation.kinds.DateRangeKind;
 import au.csiro.pathling.search.SearchColumnBuilder;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.datasource.PrunedSchemaReader;
@@ -355,15 +356,23 @@ class DateRangeComparisonTest {
 
   /**
    * The range of a date that is not stored is computed from one parse of it for both its bounds,
-   * and the range of the literal it is compared with is computed as the query is built, so that the
-   * plan parses the stored date once and no literal.
+   * and the range of the literal it is compared with is computed as the query is built, so that
+   * running the query parses each stored date at most once and no literal.
+   *
+   * <p>Each bound is computed on its own, wherever the comparison reads it, so the plan computes
+   * the bounds of the stored date five times: the lower bound three times and the upper bound
+   * twice. The calls share one memoised parse of the date (decision 145). A date parsed earlier on
+   * the same thread may be parsed no more at all.
    */
   @ParameterizedTest(name = "{0}")
   @MethodSource("onceCases")
   void theComputedRangeTakesOneParse(@Nonnull final String expression) {
     final Dataset<Row> computed = select(disabled.get("Patient"), "Patient", expression);
-    assertThat(parses(computed)).isOne();
+    assertThat(parses(computed)).isEqualTo(5);
     assertThat(literalParses(computed)).isZero();
+    final long before = DateRangeKind.getParseCount();
+    computed.collectAsList();
+    assertThat(DateRangeKind.getParseCount() - before).isLessThanOrEqualTo(PATIENTS.size());
   }
 
   @Nonnull
@@ -371,14 +380,17 @@ class DateRangeComparisonTest {
     return Stream.of("birthDate > @1980", "@1980 <= birthDate");
   }
 
-  /** Counts the parses of dates in the optimised plan of a query. */
+  /**
+   * Counts the computations of a bound of a date in the optimised plan of a query. Both bounds of a
+   * date share one memoised parse of it (decision 145).
+   */
   private static long parses(@Nonnull final Dataset<Row> query) {
-    return count(query, "date_range\\(");
+    return count(query, "date_(start|end)\\(");
   }
 
-  /** Counts the parses of literals in the optimised plan of a query. */
+  /** Counts the computations of a bound of a literal in the optimised plan of a query. */
   private static long literalParses(@Nonnull final Dataset<Row> query) {
-    return count(query, "date_range\\(\\d");
+    return count(query, "date_(start|end)\\(\\d");
   }
 
   private static long count(@Nonnull final Dataset<Row> query, @Nonnull final String pattern) {

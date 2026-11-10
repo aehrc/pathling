@@ -155,6 +155,18 @@ single-resource evaluation. The annotation switches govern only what ingest
 stores (decision 135, part 1), so they do not change this shape. The shape of
 SQL output is specified by ticket 40.
 
+**Delivered by ticket 43, not yet built (owner, 2026-11-10).** The shape above,
+its lazy canonical annotations and the four-field return need the deferred
+projection `resolve_or_none` and the merge rule that keeps only the annotations
+every operand has, which ticket 43 builds. Until then a `System.Quantity` has
+one fixed shape, always complete: `id`, `value` as the text of a decimal,
+`_value` with its `__numeric`, `comparator`, `unit`, `system`, `code`, and the
+two canonical annotations, `__canonical_code` and `__canonical_value_exact`,
+flat (ticket 42). The canonical annotations are always filled: copied from a
+stored quantity whose schema carries them and computed from its text otherwise,
+constants for a literal, and computed for any other quantity. A
+`System.Quantity` returned to a caller as a column has all of these fields.
+
 Comparison across units uses the canonical annotations when present and
 computes the canonicalisation when not. Their precision preserves magnitude, so
 quantities differing by orders of magnitude do not compare equal. The

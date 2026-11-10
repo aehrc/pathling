@@ -609,6 +609,14 @@ to validation and `trust` (tickets 31 and 38) under any layout.
      (`nestedPredicatePushdownEnabled`, Spark 3.1 and later), but this is not measured
      for `_birthDate.__range.end`. If it pushes down, grouping per kind is the better
      fit.
+   - **A cost of flat annotations at ingest (owner, 2026-11-10).** Computing a quantity's
+     canonical code and value as two scalar functions over one memoised canonicalisation costs
+     about 9–11% more at ingest than one grouped function returning both, once the fields are
+     passed as columns: the second call's cache work and input conversion, while encoding the
+     output is negligible
+     ([evidence](../evidence/ticket-42-memoisation.md#profiling-the-quantity-slowdown-owner-2026-11-10)).
+     A grouped annotation would be computed by one call. The cost falls on ingest only; the engine
+     reads stored annotations where they are present.
 2. **`$fhirpath` results on the server.** Decided (owner, 2026-11-06): a FHIR primitive
    in a typed `Parameters` result carries its value only, as every other external
    output does (§4.5). Its extensions are returned only when the expression asks for

@@ -285,7 +285,7 @@ class ValidationLogic {
   /** Whether a text that follows the grammar names a date, and a time, that exist. */
   @Nonnull
   private Column isDate(@Nonnull final Column text) {
-    return DateRangeKind.INSTANCE.computeOrNull(text).isNotNull();
+    return DateRangeKind.INSTANCE.startOrNull(text).isNotNull();
   }
 
   /**

@@ -234,9 +234,7 @@ public class DefaultRepresentation extends ColumnRepresentation {
     final String numeric = LayoutFields.NUMERIC_ANNOTATION;
     final Column annotations =
         ColumnFunctions.resolveOrElse(
-            groups,
-            numeric,
-            functions.transform(values, each -> kind.compute(each).getField(numeric)));
+            groups, numeric, functions.transform(values, each -> kind.compute(numeric, each)));
     return functions.transform(
         functions.filter(
             functions.arrays_zip(values.alias(VALUE), annotations.alias(numeric)),

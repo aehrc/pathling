@@ -16,6 +16,8 @@ decision 137 (2026-10-26)_: quantities carry only the exact canonical
 annotation, `__canonical_exact`. Nothing reads the specification's fixed-point
 form, and because annotations are optional, leaving it out stays conformant.
 Other consumers no longer find a canonical form under the specification's name.
+_Amended by decision 149 (ticket 42)_: the exact canonical annotation is stored
+as two flat fields, `__canonical_code` and `__canonical_value_exact`.
 
 ## Consequences
 

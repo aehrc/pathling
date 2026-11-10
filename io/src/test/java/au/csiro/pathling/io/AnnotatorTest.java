@@ -55,7 +55,8 @@ class AnnotatorTest {
   private static final String NUMERIC = LayoutFields.NUMERIC_ANNOTATION;
   private static final String START = LayoutFields.START_ANNOTATION;
   private static final String END = LayoutFields.END_ANNOTATION;
-  private static final String CANONICAL_EXACT = LayoutFields.CANONICAL_EXACT_ANNOTATION;
+  private static final String CANONICAL_CODE = LayoutFields.CANONICAL_CODE_ANNOTATION;
+  private static final String CANONICAL_VALUE_EXACT = LayoutFields.CANONICAL_VALUE_EXACT_ANNOTATION;
 
   private static final List<AnnotationKind> STUBS =
       List.of(
@@ -70,9 +71,11 @@ class AnnotatorTest {
                   functions.struct(mark(value, "<").alias(START), mark(value, ">").alias(END))),
           stub(
               AnnotationSwitch.CANONICAL,
-              List.of(CANONICAL_EXACT),
+              List.of(CANONICAL_CODE, CANONICAL_VALUE_EXACT),
               quantity ->
-                  functions.struct(mark(quantity.getField("unit"), "=").alias(CANONICAL_EXACT))));
+                  functions.struct(
+                      mark(quantity.getField("unit"), "=").alias(CANONICAL_CODE),
+                      mark(quantity.getField("unit"), "~").alias(CANONICAL_VALUE_EXACT))));
 
   private static final String OBSERVATION =
       "{\"resourceType\":\"Observation\",\"id\":\"o1\",\"status\":\"final\","
@@ -89,8 +92,8 @@ class AnnotatorTest {
     return new AnnotationKind(annotationSwitch, fields) {
       @Override
       @Nonnull
-      public Column compute(@Nonnull final Column value) {
-        return compute.apply(value);
+      public Column compute(@Nonnull final String field, @Nonnull final Column value) {
+        return compute.apply(value).getField(field);
       }
     };
   }
@@ -174,11 +177,15 @@ class AnnotatorTest {
       assertEquals("2020-01<", value(annotated, "_effectiveDateTime." + START));
       assertEquals("2020-01>", value(annotated, "_effectiveDateTime." + END));
     }
-    assertEquals(canonical, fields(annotated, "valueQuantity").contains(CANONICAL_EXACT));
+    assertEquals(canonical, fields(annotated, "valueQuantity").contains(CANONICAL_CODE));
+    assertEquals(canonical, fields(annotated, "valueQuantity").contains(CANONICAL_VALUE_EXACT));
     if (canonical) {
       final List<String> quantity = fields(annotated, "valueQuantity");
-      assertEquals(CANONICAL_EXACT, quantity.get(quantity.size() - 1));
-      assertEquals("kg=", value(annotated, "valueQuantity." + CANONICAL_EXACT));
+      assertEquals(
+          List.of(CANONICAL_CODE, CANONICAL_VALUE_EXACT),
+          quantity.subList(quantity.size() - 2, quantity.size()));
+      assertEquals("kg=", value(annotated, "valueQuantity." + CANONICAL_CODE));
+      assertEquals("kg~", value(annotated, "valueQuantity." + CANONICAL_VALUE_EXACT));
     }
   }
 
@@ -245,8 +252,8 @@ class AnnotatorTest {
     assertEquals("__unknown", columns.get(columns.size() - 1));
     final List<String> quantity = fields(annotated, "valueQuantity");
     assertEquals(
-        List.of(CANONICAL_EXACT, "__unknown"),
-        quantity.subList(quantity.size() - 2, quantity.size()));
+        List.of(CANONICAL_CODE, CANONICAL_VALUE_EXACT, "__unknown"),
+        quantity.subList(quantity.size() - 3, quantity.size()));
     assertEquals("u", value(annotated, "valueQuantity.__unknown"));
   }
 

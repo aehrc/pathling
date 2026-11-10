@@ -17,42 +17,53 @@
 
 package au.csiro.pathling.schema.annotation.kinds;
 
-import static au.csiro.pathling.schema.LayoutFields.CANONICAL_EXACT_ANNOTATION;
-import static au.csiro.pathling.sql.udf.RowFields.requireString;
+import static au.csiro.pathling.schema.LayoutFields.CANONICAL_CODE_ANNOTATION;
+import static au.csiro.pathling.schema.LayoutFields.CANONICAL_VALUE_EXACT_ANNOTATION;
 
 import au.csiro.pathling.schema.annotation.AnnotationKind;
 import au.csiro.pathling.schema.annotation.AnnotationSwitch;
+import au.csiro.pathling.schema.annotation.PerThreadLruCache;
 import au.csiro.pathling.schema.unit.UcumUnits;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.math.BigDecimal;
 import java.math.MathContext;
 import java.math.RoundingMode;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.function.Function;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.api.java.UDF1;
+import org.apache.spark.sql.api.java.UDF3;
 import org.apache.spark.sql.expressions.UserDefinedFunction;
 import org.apache.spark.sql.functions;
+import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
+import org.apache.spark.sql.types.StringType;
 import org.apache.spark.sql.types.StructType;
 
 /**
- * The canonical annotation of a quantity (FR-005), {@code __canonical_exact}: its value and unit
- * canonicalised to the base units of UCUM, carried in the last field of the quantity's own
- * structure. The value is a flexible decimal, which keeps every digit up to 38 of them: a structure
- * of the unscaled value and its scale. The code is carried with the value, because without it one
- * metre and one second would compare equal.
+ * The canonical annotations of a quantity (FR-005, decision 149): its unit and value canonicalised
+ * to the base units of UCUM, carried flat in the last two fields of the quantity's own structure.
+ * {@code __canonical_code} is the code of the canonical units, and {@code __canonical_value_exact}
+ * the value in them, a flexible decimal, which keeps every digit up to 38 of them: a structure of
+ * the unscaled value and its scale, which is never negative. The code is carried with the value,
+ * because without it one metre and one second would compare equal.
  *
  * <p>The Parquet on FHIR specification's own {@code __canonical}, whose fixed scale makes
  * quantities that differ by orders of magnitude equal, is not offered: annotations are optional,
  * and nothing reads it (decision 137).
  *
- * <p>It is computed by one function of the quantity's value, system and code, which is the
- * computation ingest stores and the engine falls back on (decision 135). A quantity whose code UCUM
- * cannot canonicalise has none.
+ * <p>Each annotation is its own function of the quantity's value, system and code, {@code
+ * quantity_canonical_code} and {@code quantity_canonical_value_exact}, so that either can be read
+ * without the other. Both come from one canonicalisation of the quantity, memoised in a cache held
+ * per thread, so that computing both canonicalises it once (decision 145). It is the computation
+ * ingest stores and the engine falls back on (decision 135). A quantity whose code UCUM cannot
+ * canonicalise has neither.
  *
  * @author Piotr Szul
  */
@@ -77,13 +88,16 @@ public final class QuantityCanonicalKind extends AnnotationKind {
   public static final Map<String, String> DEFINITE_CALENDAR_DURATIONS =
       Map.of("second", "s", "millisecond", "ms");
 
-  /** The field of an annotation, or of the value of the exact one, that holds the value. */
+  /**
+   * The field of a quantity that holds its value, and the field of {@code __canonical_value_exact}
+   * that holds the unscaled value.
+   */
   @Nonnull public static final String VALUE_FIELD = "value";
 
-  /** The field of an annotation that holds the canonical code. */
+  /** The field of a quantity that holds the code of its unit. */
   @Nonnull public static final String CODE_FIELD = "code";
 
-  /** The field of the exact annotation's value that holds its scale. */
+  /** The field of {@code __canonical_value_exact} that holds the scale. */
   @Nonnull public static final String SCALE_FIELD = "scale";
 
   /** The field of a quantity that holds its system. */
@@ -92,50 +106,138 @@ public final class QuantityCanonicalKind extends AnnotationKind {
   /** The maximum number of digits of a value. */
   private static final int MAX_PRECISION = 38;
 
-  /** The type of the value of {@code __canonical_exact}: the unscaled value and its scale. */
+  /** The type of {@code __canonical_value_exact}: the unscaled value and its scale. */
   @Nonnull
   public static final StructType EXACT_VALUE_TYPE =
       new StructType()
           .add(VALUE_FIELD, DataTypes.createDecimalType(MAX_PRECISION, 0))
           .add(SCALE_FIELD, DataTypes.IntegerType);
 
-  /** The type of {@code __canonical_exact}. */
-  @Nonnull
-  public static final StructType CANONICAL_EXACT_TYPE =
-      new StructType().add(VALUE_FIELD, EXACT_VALUE_TYPE).add(CODE_FIELD, DataTypes.StringType);
+  /**
+   * The number of canonicalisations each thread's cache holds, as many as the dates of {@link
+   * DateRangeKind#CACHE_CAPACITY}, for the same reason.
+   */
+  public static final int CACHE_CAPACITY = DateRangeKind.CACHE_CAPACITY;
 
-  /** The type {@link #compute(Column)} returns: a structure of the one annotation. */
+  /**
+   * The canonicalisations of quantities, by their value, system and code, memoised per thread. A
+   * quantity with no canonical form is cached as having none.
+   */
   @Nonnull
-  public static final StructType DATA_TYPE =
-      new StructType().add(CANONICAL_EXACT_ANNOTATION, CANONICAL_EXACT_TYPE);
+  private static final PerThreadLruCache<List<String>, Optional<CanonicalQuantity>>
+      CANONICALISATIONS =
+          new PerThreadLruCache<>(CACHE_CAPACITY, QuantityCanonicalKind::canonicalise);
 
   @Nonnull
-  private static final UserDefinedFunction CANONICALISE =
+  private static final UserDefinedFunction CODE =
       functions
-          .udf((UDF1<Row, Row>) QuantityCanonicalKind::canonicalise, DATA_TYPE)
-          .withName("quantity_canonical");
+          .udf(
+              (UDF3<String, String, String, String>) QuantityCanonicalKind::codeOf,
+              DataTypes.StringType)
+          .withName("quantity_canonical_code");
+
+  @Nonnull
+  private static final UserDefinedFunction CODE_OF_STRUCTURE =
+      functions
+          .udf(
+              (UDF1<Row, String>)
+                  quantity ->
+                      quantity == null
+                          ? null
+                          : codeOf(
+                              textField(quantity, VALUE_FIELD),
+                              textField(quantity, SYSTEM_FIELD),
+                              textField(quantity, CODE_FIELD)),
+              DataTypes.StringType)
+          .withName("quantity_canonical_code");
+
+  @Nonnull
+  private static final UserDefinedFunction VALUE_EXACT_OF_STRUCTURE =
+      functions
+          .udf(
+              (UDF1<Row, Row>)
+                  quantity ->
+                      quantity == null
+                          ? null
+                          : valueExactOf(
+                              textField(quantity, VALUE_FIELD),
+                              textField(quantity, SYSTEM_FIELD),
+                              textField(quantity, CODE_FIELD)),
+              EXACT_VALUE_TYPE)
+          .withName("quantity_canonical_value_exact");
+
+  @Nonnull
+  private static final UserDefinedFunction VALUE_EXACT =
+      functions
+          .udf(
+              (UDF3<String, String, String, Row>) QuantityCanonicalKind::valueExactOf,
+              EXACT_VALUE_TYPE)
+          .withName("quantity_canonical_value_exact");
 
   private QuantityCanonicalKind() {
-    super(AnnotationSwitch.CANONICAL, List.of(CANONICAL_EXACT_ANNOTATION));
+    super(
+        AnnotationSwitch.CANONICAL,
+        List.of(CANONICAL_CODE_ANNOTATION, CANONICAL_VALUE_EXACT_ANNOTATION));
   }
 
   /**
-   * Computes the annotation of a quantity.
+   * Computes one canonical annotation of a quantity structure whose schema the caller does not
+   * know.
    *
-   * <p>The quantity's {@code value}, {@code system} and {@code code} are read by name, and a field
-   * the structure does not carry is taken as null, so the quantity may be pruned to the fields it
-   * populates. A caller that has resolved the fields may pass a structure of those three alone.
-   * Each is text where the structure carries it, and one of another type fails the computation with
-   * an {@link IllegalArgumentException}.
+   * <p>The quantity's {@code value}, {@code system} and {@code code} are read by name from each
+   * row, and a field the structure does not carry is taken as null, so the quantity may be pruned
+   * to the fields it populates. Each is text where the structure carries it, and one of another
+   * type fails the computation with an {@link IllegalArgumentException}. This converts the
+   * structure for each annotation, so a caller that knows the schema passes the fields as columns
+   * instead, through {@link #compute(String, Column, Function)}.
    *
+   * @param field the annotation, {@code __canonical_code} or {@code __canonical_value_exact}
    * @param value the quantity
-   * @return the annotation, in a structure typed as {@link #DATA_TYPE}, or null where the quantity
-   *     has no canonical form
+   * @return the annotation, a string or typed as {@link #EXACT_VALUE_TYPE}, or null where the
+   *     quantity has no canonical form
    */
   @Override
   @Nonnull
-  public Column compute(@Nonnull final Column value) {
-    return CANONICALISE.apply(value);
+  public Column compute(@Nonnull final String field, @Nonnull final Column value) {
+    return (CANONICAL_CODE_ANNOTATION.equals(requireField(field))
+            ? CODE_OF_STRUCTURE
+            : VALUE_EXACT_OF_STRUCTURE)
+        .apply(value);
+  }
+
+  /**
+   * Computes one canonical annotation of a quantity from its {@code value}, {@code system} and
+   * {@code code}, each passed to the computation as a column of its own, as text, so that the
+   * quantity's structure is not converted for it (owner, 2026-11-10). A field the quantity does not
+   * carry is read as null by the function the caller gives, so the quantity may be pruned to the
+   * fields it populates.
+   *
+   * @param field the annotation, {@code __canonical_code} or {@code __canonical_value_exact}
+   * @param value the quantity
+   * @param fieldOf reads a field of the quantity by name, as text, null where it does not carry it
+   * @return the annotation, a string or typed as {@link #EXACT_VALUE_TYPE}, or null where the
+   *     quantity has no canonical form
+   */
+  @Override
+  @Nonnull
+  public Column compute(
+      @Nonnull final String field,
+      @Nonnull final Column value,
+      @Nonnull final Function<String, Column> fieldOf) {
+    final UserDefinedFunction function =
+        CANONICAL_CODE_ANNOTATION.equals(requireField(field)) ? CODE : VALUE_EXACT;
+    return function.apply(
+        fieldOf.apply(VALUE_FIELD), fieldOf.apply(SYSTEM_FIELD), fieldOf.apply(CODE_FIELD));
+  }
+
+  /**
+   * Returns the number of times a quantity has been canonicalised for an annotation in this JVM,
+   * which shows how often the memoised canonicalisation is shared.
+   *
+   * @return the number of canonicalisations
+   */
+  public static long getCanonicalisationCount() {
+    return CANONICALISATIONS.getComputationCount();
   }
 
   /**
@@ -167,61 +269,117 @@ public final class QuantityCanonicalKind extends AnnotationKind {
   }
 
   /**
-   * Returns the annotation of a canonical form, as a row of {@link #CANONICAL_EXACT_TYPE}.
+   * Returns the exact canonical form of a canonical form: its value cut to the maximum number of
+   * digits, with a scale that is never negative.
    *
    * @param canonical the canonical form, or null
-   * @return the row, or null where there is no canonical form or its value does not fit
+   * @return the exact form, or null where there is no canonical form or its value does not fit
    */
   @Nullable
-  public static Row toExactRow(@Nullable final CanonicalQuantity canonical) {
+  public static CanonicalQuantity toExact(@Nullable final CanonicalQuantity canonical) {
     final BigDecimal exact = canonical == null ? null : exactValue(canonical.getValue());
-    return exact == null
-        ? null
-        : RowFactory.create(
-            RowFactory.create(new BigDecimal(exact.unscaledValue()), exact.scale()),
-            canonical.getCode());
+    return exact == null ? null : new CanonicalQuantity(exact, canonical.getCode());
   }
 
   /**
-   * Returns the annotation of a canonical form as a constant, so that a quantity known when the
-   * plan is built carries it without computing it for every row.
+   * Returns the value of an exact canonical form, as a row of {@link #EXACT_VALUE_TYPE}.
    *
-   * @param canonical the canonical form, or null
-   * @return the constant, typed as {@link #CANONICAL_EXACT_TYPE}
+   * @param exact the exact canonical form, as {@link #toExact} gives it, or null
+   * @return the row, or null where there is no canonical form
+   */
+  @Nullable
+  public static Row toValueExactRow(@Nullable final CanonicalQuantity exact) {
+    return exact == null
+        ? null
+        : RowFactory.create(
+            new BigDecimal(exact.getValue().unscaledValue()), exact.getValue().scale());
+  }
+
+  /**
+   * Returns the canonical code of a quantity known when the plan is built, as a constant.
+   *
+   * @param exact the exact canonical form, as {@link #toExact} gives it, or null
+   * @return the constant, a string, null where there is no exact canonical form
    */
   @Nonnull
-  public static Column toExactLiteral(@Nullable final CanonicalQuantity canonical) {
-    final Row exact = toExactRow(canonical);
-    if (exact == null) {
-      return functions.lit(null).cast(CANONICAL_EXACT_TYPE);
+  public static Column toCodeLiteral(@Nullable final CanonicalQuantity exact) {
+    return functions.lit(exact == null ? null : exact.getCode()).cast(DataTypes.StringType);
+  }
+
+  /**
+   * Returns the exact canonical value of a quantity known when the plan is built, as a constant, so
+   * that it carries it without computing it for every row.
+   *
+   * @param exact the exact canonical form, as {@link #toExact} gives it, or null
+   * @return the constant, typed as {@link #EXACT_VALUE_TYPE}
+   */
+  @Nonnull
+  public static Column toValueExactLiteral(@Nullable final CanonicalQuantity exact) {
+    final Row value = toValueExactRow(exact);
+    if (value == null) {
+      return functions.lit(null).cast(EXACT_VALUE_TYPE);
     }
-    final Row value = exact.getStruct(0);
     return functions
         .named_struct(
             functions.lit(VALUE_FIELD),
-            functions.named_struct(
-                functions.lit(VALUE_FIELD),
-                functions.lit(value.get(0)),
-                functions.lit(SCALE_FIELD),
-                functions.lit(value.get(1))),
-            functions.lit(CODE_FIELD),
-            functions.lit(exact.get(1)))
-        .cast(CANONICAL_EXACT_TYPE);
+            functions.lit(value.get(0)),
+            functions.lit(SCALE_FIELD),
+            functions.lit(value.get(1)))
+        .cast(EXACT_VALUE_TYPE);
   }
 
-  /** The function the annotation is computed by, over one quantity read by field name. */
+  /** The function the canonical code is computed by, over a quantity's value, system and code. */
   @Nullable
-  private static Row canonicalise(@Nullable final Row quantity) {
-    if (quantity == null) {
+  private static String codeOf(
+      @Nullable final String value, @Nullable final String system, @Nullable final String code) {
+    return exactOf(value, system, code).map(CanonicalQuantity::getCode).orElse(null);
+  }
+
+  /** The function the exact canonical value is computed by, over the same fields. */
+  @Nullable
+  private static Row valueExactOf(
+      @Nullable final String value, @Nullable final String system, @Nullable final String code) {
+    return toValueExactRow(exactOf(value, system, code).orElse(null));
+  }
+
+  /**
+   * The exact canonical form of a quantity's value, system and code, from this thread's cache where
+   * it holds it.
+   */
+  @Nonnull
+  private static Optional<CanonicalQuantity> exactOf(
+      @Nullable final String value, @Nullable final String system, @Nullable final String code) {
+    if (value == null) {
+      return Optional.empty();
+    }
+    // The key holds nulls, which an immutable list cannot, and is never changed.
+    return CANONICALISATIONS.get(Arrays.asList(value, system, code));
+  }
+
+  /**
+   * Reads a text field of a quantity structure by name, null where the field is null or the
+   * structure does not carry it.
+   */
+  @Nullable
+  private static String textField(@Nonnull final Row quantity, @Nonnull final String name) {
+    final scala.Option<Object> found = quantity.schema().getFieldIndex(name);
+    if (found.isEmpty()) {
       return null;
     }
-    final Row exact =
-        toExactRow(
-            canonicalOf(
-                parseValue(requireString(quantity, VALUE_FIELD)),
-                requireString(quantity, SYSTEM_FIELD),
-                requireString(quantity, CODE_FIELD)));
-    return exact == null ? null : RowFactory.create(exact);
+    final int index = (Integer) found.get();
+    final DataType type = quantity.schema().fields()[index].dataType();
+    if (!(type instanceof StringType)) {
+      throw new IllegalArgumentException(
+          "Field '" + name + "' must be a string, but is " + type.simpleString());
+    }
+    return quantity.isNullAt(index) ? null : quantity.getString(index);
+  }
+
+  /** Canonicalises a quantity from the key it is cached by, its value, system and code. */
+  @Nonnull
+  private static Optional<CanonicalQuantity> canonicalise(@Nonnull final List<String> key) {
+    return Optional.ofNullable(
+        toExact(canonicalOf(parseValue(key.get(0)), key.get(1), key.get(2))));
   }
 
   /**

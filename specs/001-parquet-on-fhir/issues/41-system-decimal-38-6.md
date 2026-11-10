@@ -26,18 +26,18 @@
 - **`toString()` on a stored decimal returns its text.** Keys and comparisons stay numeric, so `1.0 = 1.00` is true and `(1.0 | 1.00)` is one element.
 - **Sequence the output with ticket 16.** Build the detection now. The views' switch to stored text lands with ticket 16, which keeps a decimal's lexical form; until then JSON ingest normalises the text, so `37.0` can be stored as `37`.
 
-**Blocked by:** 13. The views' switch to stored text: 16.
+**Blocked by:** 13.
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [x] System.Decimal is `DECIMAL(38,6)`, defined once, and `DecimalCustomCoder` stays `DECIMAL(32,6)`.
 - [x] Every engine use of a decimal type takes System.Decimal's, and `__numeric` is stored at `DECIMAL(38,6)`.
 - [x] A quantity's value is read from its numeric annotation where the schema carries it, with FR-059 amended, and gives the same results as decoding the text.
 - [x] Each changed test expectation is approved by the owner before it is changed.
 - [x] The output type change is documented, and the 8-digit deviation is recorded in the specification.
-- [ ] Stored and computed decimals are told apart by the collection's definition, and a union is stored only if every operand is; `valueDecimal | 1.5` and `1.5 | valueDecimal` give the same result.
-- [ ] `toString()` on a stored decimal returns its text, and keys and comparisons stay numeric.
-- [ ] With ticket 16, a view outputs a stored decimal as its stored text, and `fhirPathToColumn` and `$fhirpath` still return `DECIMAL(38,6)`.
+- [ ] Handed on to ticket 43, "Decimal detection (decision 147)" (owner, 2026-11-10): stored and computed decimals are told apart by the collection's definition, and a union is stored only if every operand is; `valueDecimal | 1.5` and `1.5 | valueDecimal` give the same result.
+- [ ] Handed on to ticket 43, "A stored decimal's text" (owner, 2026-11-10): `toString()` on a stored decimal returns its text, and keys and comparisons stay numeric.
+- [ ] Handed on to ticket 16, "A stored decimal's text in views" (owner, 2026-11-10): a view outputs a stored decimal as its stored text, and `fhirPathToColumn` and `$fhirpath` still return `DECIMAL(38,6)`.
 
 ## Comments
 
@@ -104,3 +104,14 @@ declared `"type": "decimal"`, and for stored and computed decimals alike. It was
   its stored text. The column stays a string (owner, 2026-11-05).
 - **Corrected.** Item 8 of the approval list above, and the decimal section of
   `contracts/library-api.md`.
+
+### 2026-11-10: closed again
+
+Closed again (owner, 2026-11-10): the three items decision 147 added on 2026-11-05 are handed on, so that each requirement has one home, and this ticket is done as it was before they were added. The decision 147 paragraph above stays as the history.
+
+- Telling stored and computed decimals apart by the collection's definition, with a union stored only if every operand is: ticket 43, "Decimal detection (decision 147)", which already had it.
+- `toString()` on a stored decimal returning its text, with keys and comparisons numeric: ticket 43, as a requirement and an acceptance box beside the decimal detection. Ticket 43's element form keeps a decimal's stored text as `value`.
+- A view outputting a stored decimal as its stored text, with `fhirPathToColumn` and `$fhirpath` still `DECIMAL(38,6)`: ticket 16, which keeps a decimal's lexical form.
+
+**Blocked by** is 13 again; the dependency on ticket 16 moved with the item.
+

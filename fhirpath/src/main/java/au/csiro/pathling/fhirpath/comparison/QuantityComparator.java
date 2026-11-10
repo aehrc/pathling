@@ -74,7 +74,10 @@ public class QuantityComparator implements ColumnComparator, ElementWiseEquality
                   coalesce(
                       test.apply(
                           QuantityEncoding.compareCanonical(
-                              QuantityEncoding.canonical(l), QuantityEncoding.canonical(r))),
+                              QuantityEncoding.canonicalCode(l),
+                              QuantityEncoding.canonicalValueExact(l),
+                              QuantityEncoding.canonicalCode(r),
+                              QuantityEncoding.canonicalValueExact(r))),
                       leftQuantity
                           .originalValue()
                           .compare(rightQuantity.originalValue(), decimalComparator)));

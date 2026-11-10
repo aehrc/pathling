@@ -487,7 +487,8 @@ public class EvaluateFhirPathTest {
         singleObject(pathling.evaluateFhirPath("Observation", OBSERVATION_JSON, expression));
 
     assertFalse(quantity.has("__canonical"));
-    assertFalse(quantity.has("__canonical_exact"));
+    assertFalse(quantity.has("__canonical_code"));
+    assertFalse(quantity.has("__canonical_value_exact"));
     assertTrue(quantity.has("code"));
   }
 

@@ -25,7 +25,6 @@ import au.csiro.pathling.utilities.SystemDecimal;
 import jakarta.annotation.Nonnull;
 import java.util.List;
 import org.apache.spark.sql.Column;
-import org.apache.spark.sql.functions;
 
 /**
  * The numeric annotation of a decimal, {@code __numeric}: the value of the decimal's stored text,
@@ -50,14 +49,15 @@ public final class DecimalNumericKind extends AnnotationKind {
   /**
    * Computes the annotation of a decimal from its stored text.
    *
+   * @param field the annotation, {@code __numeric}
    * @param value the stored text of the decimal
-   * @return the annotation, in a structure of the one field {@code __numeric}, typed as {@link
-   *     SystemDecimal#TYPE}
+   * @return the annotation, typed as {@link SystemDecimal#TYPE}
    */
   @Override
   @Nonnull
-  public Column compute(@Nonnull final Column value) {
-    return functions.struct(decode(value).alias(NUMERIC_ANNOTATION));
+  public Column compute(@Nonnull final String field, @Nonnull final Column value) {
+    requireField(field);
+    return decode(value);
   }
 
   /**

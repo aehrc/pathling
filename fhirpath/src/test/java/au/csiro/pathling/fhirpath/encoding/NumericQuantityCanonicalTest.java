@@ -69,19 +69,24 @@ class NumericQuantityCanonicalTest {
             .select(col("value").try_cast("decimal(38,10)").alias("number"));
 
     final Column quantity = QuantityEncoding.encodeNumeric(col("number"));
+    final Column fields =
+        struct(
+            quantity.getField(QuantityEncoding.VALUE_COLUMN).alias("value"),
+            quantity.getField(QuantityEncoding.SYSTEM_COLUMN).alias("system"),
+            quantity.getField(QuantityEncoding.CODE_COLUMN).alias("code"));
+    final QuantityCanonicalKind kind = QuantityCanonicalKind.INSTANCE;
     final Column computed =
-        QuantityCanonicalKind.INSTANCE
-            .compute(
-                struct(
-                    quantity.getField(QuantityEncoding.VALUE_COLUMN).alias("value"),
-                    quantity.getField(QuantityEncoding.SYSTEM_COLUMN).alias("system"),
-                    quantity.getField(QuantityEncoding.CODE_COLUMN).alias("code")))
-            .getField(QuantityEncoding.CANONICAL_EXACT_COLUMN);
+        struct(
+            kind.compute(QuantityEncoding.CANONICAL_CODE_COLUMN, fields),
+            kind.compute(QuantityEncoding.CANONICAL_VALUE_EXACT_COLUMN, fields));
     final List<Row> rows =
         numbers
             .select(
                 col("number"),
-                QuantityEncoding.canonical(quantity).alias("built"),
+                struct(
+                        QuantityEncoding.canonicalCode(quantity),
+                        QuantityEncoding.canonicalValueExact(quantity))
+                    .alias("built"),
                 computed.alias("computed"))
             .collectAsList();
 
@@ -95,12 +100,14 @@ class NumericQuantityCanonicalTest {
 
   @Test
   void canonicalFormHasTheDigitsOfTheValue() {
+    final Column quantity = QuantityEncoding.encodeNumeric(lit(1.25));
     final Row canonical =
         spark
             .range(1)
-            .select(QuantityEncoding.canonical(QuantityEncoding.encodeNumeric(lit(1.25))))
-            .first()
-            .getStruct(0);
+            .select(
+                QuantityEncoding.canonicalValueExact(quantity),
+                QuantityEncoding.canonicalCode(quantity))
+            .first();
 
     assertThat(canonical.getStruct(0).<BigDecimal>getAs(0)).isEqualTo(new BigDecimal("125"));
     assertThat(canonical.getStruct(0).getInt(1)).isEqualTo(2);

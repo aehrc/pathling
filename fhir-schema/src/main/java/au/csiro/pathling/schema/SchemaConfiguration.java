@@ -50,8 +50,10 @@ public class SchemaConfiguration {
   @Builder.Default private boolean enableRangeAnnotation = true;
 
   /**
-   * Whether the canonical annotation of a quantity is stored, named by {@link
-   * LayoutFields#CANONICAL_EXACT_ANNOTATION}.
+   * Whether the canonical annotations of a quantity are stored, named by {@link
+   * LayoutFields#CANONICAL_CODE_ANNOTATION} and {@link
+   * LayoutFields#CANONICAL_VALUE_EXACT_ANNOTATION}. They are one annotation in two fields, the
+   * canonical code and value of one canonicalisation, so one switch governs the pair.
    */
   @Builder.Default private boolean enableCanonicalAnnotation = true;
 
