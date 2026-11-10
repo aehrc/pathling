@@ -82,7 +82,7 @@ The extra-fields issue above takes ticket 36's scope as its text. The items abov
 
 ### Raised (owner's approval, 2026-11-09)
 
-Fifteen issues, each labelled `PoF_line`:
+Sixteen issues, each labelled `PoF_line`:
 
 - **#2881** Dense schema mode, streaming encode and dense parity (tickets 18 and 19, and the "Dense-shaped output for FHIR-typed results" item): `new feature`.
 - **#2882** A public XML sink and source (ticket 39): `new feature`.
@@ -99,5 +99,6 @@ Fifteen issues, each labelled `PoF_line`:
 - **#2893** FHIRPath's 8 fractional digits for Decimal, `DECIMAL(38,8)`: `enhancement`.
 - **#2894** T134c, the merge cost on S3: `enhancement`.
 - **#2895** T134d, the `test-data` bulk corpus: `enhancement`.
+- **#2898** The equality review (owner's approval, 2026-11-10): `enhancement`.
 
 Not raised yet: the #2804 renderer comment; ticket 40, which waits for ticket 41; ticket 38; extra fields, which wait for ticket 36; the precomputed reference key, which waits for ticket 10; P1 (decision 148); and what the release needs beyond #2367.
