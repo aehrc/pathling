@@ -36,6 +36,7 @@
 - [ ] The baseline plan tests are committed against today's code before any other change of this ticket or 43.
 - [ ] `date_start` and `date_end` replace `date_range`. No struct-returning range computation and no `resolveFieldsOrElse` remain, and `bindOnce` remains only where it protects something other than a shared parse.
 - [ ] Ingest writes `__canonical_code` and `__canonical_value_exact`, and nothing writes or reads `__canonical_exact`.
+- [ ] Ingest tests show the flat fields written at every level: a quantity at the root (`Observation.valueQuantity`), under a repeating parent (`Observation.component.valueQuantity`), inside an extension (an extension's `valueQuantity`), and a repeating date under a repeating parent; each over a fresh schema and over data already carrying the fields.
 - [ ] System.Quantity has the shape of decision 150, and a returned one has its four content fields only; `SystemQuantityShapeTest` asserts both.
 - [ ] `evidence/ticket-42-memoisation.md` shows the three measurements above, and any slowdown has gone to the owner.
 - [ ] Results are unchanged: the engine suite passes over annotated data and over data written with every annotation disabled (`AnnotationFreeSuiteTest`).
