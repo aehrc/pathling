@@ -516,7 +516,7 @@ sequenceDiagram
 ```
 
 A Spark task evaluates its rows one by one on one thread, so a `ThreadLocal` cache needs
-no locking (a premise not yet checked on Photon or Databricks), and a row that reads no annotation costs nothing. The date range is already
+no locking (a premise not yet checked on Photon or Databricks; the check goes to the profiling follow-up, #2889, not ticket 42, owner, 2026-11-10), and a row that reads no annotation costs nothing. The date range is already
 a Java UDF (`DateRangeKind`), so the cache is plain Java and `fhir-schema` keeps to the
 public Spark API.
 
@@ -589,7 +589,8 @@ to validation and `trust` (tickets 31 and 38) under any layout.
 
 1. **Grouped or flat annotations.** Flat is proposed; grouped is the alternative to
    discuss (§5). Left as flat for now (owner, 2026-11-10), with the owner's argument for
-   grouping recorded:
+   grouping recorded. The measurement below does not gate ticket 42, which builds flat;
+   the question is parked (owner, 2026-11-10):
    - **For grouping, one annotation per kind** (`__range{start, end}`,
      `__canonical{code, value}`): the engine needs both fields of a kind, and one alone
      is of little value. Every date comparison reads both bounds of each operand, and a
@@ -736,7 +737,7 @@ If A is markedly slower than B or C on these, those options are reconsidered.
 
 ### Order of work
 
-1. Record the decisions in tickets 42 and 43, and open the FR-005 review.
+1. Record the decisions in tickets 42 and 43, and open the FR-005 review. Done (2026-11-10): ticket 42 writes the baseline plan tests (step 2), memoises the shared computation (step 5) and changes quantities (step 7); ticket 43 builds the emission shapes (step 4) and the accessor model (step 6); the switch (step 3) moves to ticket 17.
 2. Write ticket 43's plan tests against today's code.
 3. Add the primitive-extensions switch (D14).
 4. Emit the L2 shapes, with their plan-shape tests.

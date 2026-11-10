@@ -18,7 +18,9 @@ Points carried from the frozen tasks:
 
 **Annotations share the group (decision 135, part 4).** A primitive's annotations are fields of its metadata group, after `id` and `extension`, and tickets 13 and 14 may store the group for them first. So the group can exist without metadata: placeholder rules, egress and the projection test for `id` and `extension` inside it, not for the group. Ticket 11's annotation step adds the group where the reader did not emit one; the reader itself still emits a group only once this ticket populates it (decision 60's addendum).
 
-**Blocked by:** 32, and 11 for the engine's pairing of `x` with `_x`
+**The switch for ids and extensions (decision 141, D14; owner, 2026-11-10).** A configuration option, off by default, puts a primitive's `id` and `extension` into its engine element as content fields beside `value` (decision 152). With it off, `x.id` and `x.extension(…)` on a primitive are empty, with no error. It moved here from step 3 of the annotations design's order of work, so that ticket 43 builds the accessors without it.
+
+**Blocked by:** 32, 43, and 11 for the engine's pairing of `x` with `_x`
 
 **Status:** needs-triage
 
