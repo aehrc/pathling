@@ -5,7 +5,8 @@
 changes with the owner of the upstream specification. Nothing in it has been
 raised, commented on or committed.
 **Date:** 2026-11-02, revised 2026-11-05 (sections 3, 6, 8 and 16, from the
-annotations design session on `issue/2832_41-42_decimal-and-annotations`).
+annotations design session on `issue/2832_41-42_decimal-and-annotations`), and
+2026-11-11 (section 18 added, owner).
 **Ticket:** 46 (proposed in
 `.local/work/issue/2832/2026-11-02-pof-replan-proposal.md`).
 **Companion evidence:** `evidence/annotations-layout-evidence.md` (draft:
@@ -105,6 +106,7 @@ Everything else in this document is not yet upstream.
 | 15 | Fields the definitions do not describe, and their place in the conformance levels | clarification | not yet drafted (ticket 36 scopes a Pathling issue) |
 | 16 | What an annotation means when it is null, when tables are merged, and who may trust it | clarification | a derived annotation SHOULD be non-null exactly where its value is: drafted here, 2026-11-05; the rest not yet drafted (tickets 38 and 26) |
 | 17 | The range of a value that states a time but no timezone | clarification | not yet drafted (ticket 26) |
+| 18 | The `numeric` annotation's type is `DECIMAL(38,8)`, so that it can hold FHIRPath's eight fractional digits | amendment proposed | drafted here, 2026-11-11 (owner); depends on #2893 |
 
 Dependencies between the changes, in short. Every placement in 3 needs 2, and
 options 1 and 4 need 4, because the projection must leave out `__` fields
@@ -1442,12 +1444,76 @@ without a timezone, or that the annotation is null for it.
 
 ---
 
+## 18. The `numeric` annotation's type is `DECIMAL(38,8)`
+
+**Kind:** amendment proposed. **Status:** drafted here, 2026-11-11 (owner). It
+depends on [#2893](https://github.com/aehrc/pathling/issues/2893), Pathling's
+decision to give System.Decimal eight fractional digits.
+
+### Context
+
+**What the specification says.** "Decimal values": the `numeric` annotation is
+`fixed_len_byte_array(16)` with `DECIMAL(precision=38, scale=6)`.
+
+**What FHIRPath requires.** "The Decimal type represents real values in the range
+(-10^28+1)/10^8 to (10^28-1)/10^8 with a step size of 10^-8": at least 20 integer
+digits and 8 fractional digits, `DECIMAL(28,8)`.
+
+**What Pathling built.** System.Decimal is `DECIMAL(38,6)`, the annotation's type,
+so that the stored annotation is the engine's value as it stands (ticket 41,
+FR-035). It covers FHIRPath's range but keeps six fractional digits, a recorded
+deviation from FHIRPath (`spec.md`, FR-035). A value with more than six is rounded
+in the annotation and in the engine; its text keeps every digit (section 10).
+
+### Issue
+
+A specification that fixes the annotation at six fractional digits makes every
+FHIRPath engine that reads it, Pathling included, either fall short of FHIRPath's
+step of 10^-8 or ignore the annotation and decode the text, which loses the
+annotation's purpose. The six digits are not needed for the range: 38 digits at
+scale 8 still leave 30 integer digits, more than FHIRPath's 20.
+
+### Proposal
+
+The `numeric` annotation's type becomes `DECIMAL(precision=38, scale=8)`, still a
+`fixed_len_byte_array(16)`. It holds the value rounded to eight fractional digits,
+and is null where the value has more than 30 integer digits (section 10's
+clarification, at the new scale).
+
+**Alternatives.**
+
+- `DECIMAL(28,8)`, FHIRPath's minimum. It fits a `fixed_len_byte_array(12)`, but
+  narrows the range from today's 32 integer digits to 20.
+- Leave the scale at six, and leave FHIRPath conformance to engines that decode
+  the text. Pathling's System.Decimal then stays a deviation (section 10).
+- Let a producer choose the scale, with readers casting to their own type. Pathling
+  already decodes an annotation stored at another type (ticket 13), but the
+  annotation's row-group statistics are then not comparable across files.
+
+### Other considerations
+
+- **Compatibility.** Files written at scale 6 stay readable: a reader casts the
+  annotation to its own type, as Pathling's engine already does for any decimal
+  type (ticket 13). A value with 31 or 32 integer digits, which has an annotation
+  at scale 6, would be null at scale 8.
+- **Pathling-side.** System.Decimal, the annotation and the engine's System.Quantity
+  value move together to `DECIMAL(38,8)` (#2893), so that the stored annotation
+  and the engine's type still agree. Until #2893 decides to move, this section is
+  not raised.
+- **Dependencies.** Section 10's clarification should be written at whichever
+  scale is chosen. Section 8's canonical value is a separate type and is not
+  affected.
+- **If rejected.** Pathling either keeps six digits and the FHIRPath deviation, or
+  moves to eight and writes the annotation at a type the specification does not
+  give, recorded as a deviation.
+
+---
+
 ## Not in scope
 
 - **FHIRPath's eight fractional digits for Decimal** against System.Decimal's six
-  (ticket 41, FR-035) is a FHIRPath deviation. It concerns this document only in
-  that the specification fixes the `numeric` annotation's scale at six (section
-  10).
+  (ticket 41, FR-035) is a FHIRPath deviation in itself. What it asks of the
+  specification, the annotation's type, is section 18.
 - Dense schemas, the XML sink, the shape of SQL output, the server and the legacy
   layout are Pathling matters with no change asked of the specification.
 
