@@ -20,9 +20,12 @@ Points carried from the frozen tasks:
 
 **The switch for ids and extensions (decision 141, D14; owner, 2026-11-10).** A configuration option, off by default, puts a primitive's `id` and `extension` into its engine element as content fields beside `value` (decision 152). With it off, `x.id` and `x.extension(…)` on a primitive are empty, with no error. It moved here from step 3 of the annotations design's order of work, so that ticket 43 builds the accessors without it.
 
+**Conversion to System and a System merge drop `id` and `extension` (decision 142, D8 and D9; moved from ticket 43, owner, 2026-11-11).** With the switch on, the FHIR to System conversion step, which every operation that accepts System types applies, "drops `id`, `extension` and any other content the System type lacks", and a merge whose result is a System value, such as `birthDate | @2000`, drops each operand's `id` and `extension`, while a merge of FHIR values unions them. Ticket 43 built neither, because with the switch off no primitive carries either, so a FHIR date and a System date have the same fields.
+
 **Blocked by:** 32, 43, and 11 for the engine's pairing of `x` with `_x`
 
 **Status:** needs-triage
 
 - [ ] To be written once ticket 32 lands.
+- [ ] With the switch on, the conversion to System drops `id`, `extension` and any other content the System type lacks, a merge whose result is a System value drops `id` and `extension`, and a merge of FHIR values unions them; a test shows each, over a primitive that carries an extension.
 - [ ] Once primitive metadata is stored, a `urn:` reference inside a primitive's extension resolves as decision 83 states, in XML and JSON bundles alike (owner, 2026-10-22; ticket 32 accepted it as a gap until then).

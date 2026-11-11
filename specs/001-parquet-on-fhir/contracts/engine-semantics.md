@@ -155,10 +155,10 @@ single-resource evaluation. The annotation switches govern only what ingest
 stores (decision 135, part 1), so they do not change this shape. The shape of
 SQL output is specified by ticket 40.
 
-**Delivered by ticket 43, not yet built (owner, 2026-11-10).** The shape above,
+**Delivered by ticket 50, not yet built (owner, 2026-11-10; moved from ticket 43, 2026-11-11).** The shape above,
 its lazy canonical annotations and the four-field return need the deferred
 projection `resolve_or_none` and the merge rule that keeps only the annotations
-every operand has, which ticket 43 builds. Until then a `System.Quantity` has
+every operand has, which ticket 43 built. Until then a `System.Quantity` has
 one fixed shape, always complete: `id`, `value` as the text of a decimal,
 `_value` with its `__numeric`, `comparator`, `unit`, `system`, `code`, and the
 two canonical annotations, `__canonical_code` and `__canonical_value_exact`,

@@ -43,11 +43,10 @@ import org.apache.spark.sql.types.DataTypes;
  * prefixed with a comparison operator (e.g., "ge2023-01-15" for greater-or-equal).
  *
  * <p>This matcher supports both scalar date types (date, dateTime, instant) and Period types. For
- * scalar types, the precision-aware boundaries are the range each value carries as a System date,
- * which is the stored range annotations where the schema carries them, and is computed from one
- * memoised parse of each value otherwise. For Period types, the lower bound of the start and the
- * upper bound of the end are read the same way, with null values treated as negative and positive
- * infinity respectively.
+ * scalar types, the precision-aware boundaries are read through the date's accessors: the stored
+ * range annotations where the schema carries them, and computed from one memoised parse of each
+ * value otherwise. For Period types, the lower bound of the start and the upper bound of the end
+ * are read the same way, with null values treated as negative and positive infinity respectively.
  *
  * <p>Supported prefixes:
  *
@@ -135,9 +134,10 @@ public class DateMatcher implements ElementMatcher {
       // The element itself must not be null (the resource must have a period).
       return element.isNotNull().and(compare(searchValue, resourceLow, resourceHigh));
     }
-    // Scalar date/dateTime/instant: a System date, which carries its bounds. It is bound once, so
-    // that a traced element is evaluated once however many times its bounds are read (#2594); a
-    // bound computed more than once shares one memoised parse (decision 145).
+    // Scalar date/dateTime/instant: a date, whose bounds are read through its accessors, as the
+    // stored annotations where the schema carries them, which Parquet can push a filter on. It is
+    // bound once, so that a traced element is evaluated once however many times its bounds are read
+    // (#2594); a bound computed more than once shares one memoised parse (decision 145).
     return let(
         element,
         date -> compare(searchValue, SystemDateTime.start(date), SystemDateTime.end(date)));
@@ -192,7 +192,10 @@ public class DateMatcher implements ElementMatcher {
               .and(lit(paramLow).leq(resourceHigh)); // Overlap (current behavior).
       case NE -> resourceLow.gt(lit(paramHigh)).or(resourceHigh.lt(lit(paramLow))); // No overlap.
       case GT -> resourceHigh.gt(lit(paramHigh));
-      case GE -> resourceLow.geq(lit(paramLow));
+      // The conjunct relies on invariant per-1, start <= end: the upper bound is at or after the
+      // lower bound, so it is at or after the parameter's start wherever the lower bound is. It is
+      // a plain conjunct on the upper bound, which Parquet can test (decision 144).
+      case GE -> resourceLow.geq(lit(paramLow)).and(resourceHigh.geq(lit(paramLow)));
       case LT -> resourceLow.lt(lit(paramLow));
       case LE -> resourceHigh.leq(lit(paramHigh));
     };

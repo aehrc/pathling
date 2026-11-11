@@ -79,7 +79,9 @@ extensions are stored and navigable.
 - ~~[41](41-system-decimal-38-6.md) Switch System.Decimal to DECIMAL(38,6)~~ (done)
 - ~~[14](14-date-range-annotation.md) Date range annotation~~ (done)
 - ~~[42](42-shared-annotation-computation.md) Memoise an annotation kind's shared computation~~ (done)
-- [43](43-lazy-annotation-evaluation.md) Evaluate annotations in the engine only where they are used
+- ~~[43](43-lazy-annotation-evaluation.md) Evaluate annotations in the engine only where they are used~~ (done)
+- [50](50-decimals-and-system-quantity.md) Decimals and System.Quantity in the engine
+- [51](51-emission-shapes-and-level-tests.md) Emission shapes, level tests and the by-example tests
 - [17](17-placeholder-primitive-metadata-group.md) PLACEHOLDER: the primitive metadata group (US6, #437)
 - [15](15-schema-decided-plan-test-and-docs.md) Test that annotation use is decided from the schema, and document annotations
 - ~~[34](34-placeholder-content-outside-definitions.md) PLACEHOLDER: Carry content the definitions do not describe through ingest, egress and the engine~~ (moved to a follow-up issue, ticket 26)
@@ -89,7 +91,10 @@ build the settled annotations design (decisions 140 to 152), which settles how
 annotations flow through the engine before anything builds on it. 42 writes the
 plan tests for both first, so that any change to what tickets 11 to 14 landed
 shows, then memoises the shared computation and makes the quantity's canonical
-fields flat; 43 builds the lazy accessors on it (owner, 2026-11-10). 17 is still a placeholder and
+fields flat; 43 builds the lazy accessors on it (owner, 2026-11-10). 43 was split
+(owner, 2026-11-11): it built the accessors for dates and the comparison key, 50
+applies them to decimals and System.Quantity, and 51 builds the emission shapes
+and the level and by-example tests. 17 is still a placeholder and
 is triaged and rewritten before it is dispatched. 15 comes last, so that its
 plan tests and documentation describe the final shape.
 

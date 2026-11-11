@@ -200,9 +200,9 @@ public class DefaultRepresentation extends ColumnRepresentation {
   /**
    * Returns the values of a decimal or a date as the engine holds them, read from the stored values
    * and the metadata groups beside them (FR-004, FR-022, FR-023): a decimal decoded from its
-   * numeric annotation, and a date converted to a System date with its range. Each annotation is
-   * the stored one where the schema carries it, and the computed one otherwise, decided once for
-   * the schema.
+   * numeric annotation, the stored one where the schema carries it and the computed one otherwise,
+   * decided once for the schema; and a date as a structure of its text and the range annotations
+   * the schema carries, with nothing computed (design §4.1).
    *
    * <p>A repeating field's values are paired with its annotations by position, and the values that
    * are absent are left out. A decimal whose text does not decode stays as a null, as decoding the
@@ -222,7 +222,7 @@ public class DefaultRepresentation extends ColumnRepresentation {
       final boolean repeating) {
     if (isDate(fhirType)) {
       return repeating
-          ? functions.filter(SystemDateTime.fromStoredArray(values, groups), Column::isNotNull)
+          ? SystemDateTime.fromStoredArray(values, groups)
           : SystemDateTime.fromStored(values, groups);
     }
     if (!repeating) {
@@ -316,7 +316,8 @@ public class DefaultRepresentation extends ColumnRepresentation {
   }
 
   /**
-   * Returns whether a field is a date, a dateTime or an instant, which is read with its range.
+   * Returns whether a field is a date, a dateTime or an instant, which is read with its stored
+   * range annotations.
    *
    * @param fhirType the FHIR type of the field
    * @return true where the field is a date, a dateTime or an instant

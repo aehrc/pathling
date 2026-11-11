@@ -35,8 +35,8 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.InstantType;
 
 /**
- * Represents a collection of DateTime-typed elements, each held as a System dateTime with its range
- * (see {@link SystemDateTime}).
+ * Represents a collection of DateTime-typed elements, each held as a structure of its text and the
+ * range annotations available without computing (see {@link SystemDateTime}).
  *
  * @author John Grimes
  */

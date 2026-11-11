@@ -26,7 +26,7 @@ The summary may also be published as a shared document for the specification own
 
 - **#2 against FR-039.** #2 makes readers refuse a table without the layout column, which FR-039, ADR-0006 and ticket 29 accept. It also names the column `__pof_v1`, where FR-065 says `__layout_v1`. And it cites an evidence file, `evidence/layout-column.md`, that does not exist.
 - **#3 against decision 135 and the engine.** #3 names the annotations as siblings, `__birthDate_start`, where decision 135 places them in the metadata group. It also says a reader recomputes a range of the wrong type, which the engine does not do.
-- **Decision 138 unmeasured.** Decision 138 rejects `int96` for want of pushdown, which is unmeasured, and which the engine's date comparisons do not get today (ticket 43).
+- **Decision 138 unmeasured.** Decision 138 rejects `int96` for want of pushdown, which is unmeasured, and which the engine's date comparisons did not get before ticket 43; they now push a plain conjunct on the stored bound (decision 144).
 - **#1 and ticket 35 overlap.** Both propose the canonical annotation's type.
 - **Deviations not recorded.** `unsignedInt` and `positiveInt` are stored as signed `INT32`, and that is not recorded. Nor is whether `resourceType` is required.
 

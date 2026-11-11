@@ -25,6 +25,7 @@ What the engine does today on non-conformant data is in the evidence: an invalid
 - [ ] The full test suite passes over conformant data.
 - [ ] The decimal and Quantity paths agree on a valid decimal beyond `DECIMAL(38,6)`, as the owner decides at pickup, and the case is pinned by tests.
 - [ ] A `dateTime` and an instant with a time but no timezone are pinned by tests as valid.
+- [ ] `DateMatcher`'s `ge` ("resource starts at or after parameter start") is checked against the FHIR search specification's overlap reading of `ge`, for example `birthdate=ge2000-06` against a birthDate of `2000`. If main is wrong, it is raised through ticket 26 as a GitHub issue labelled `bug` and `PoF_line` (owner, 2026-11-11, from ticket 43, which kept main's matching and added a plain conjunct on the upper bound).
 - [ ] No test pins the engine's behaviour on non-conformant stored data. Existing tests that do are removed or moved to the follow-up. Until ticket 17 stores the metadata group, this includes Pathling's own output: the `{}` and positional-null placeholders of decisions 71 and 72 break level 2, so a test pinning parity on them, such as the data-absent-reason pattern's `name.count()` = 3, is removed too (owner, 2026-10-22).
 
 ## Comments

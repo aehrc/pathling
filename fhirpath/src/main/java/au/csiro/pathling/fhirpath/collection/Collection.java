@@ -20,7 +20,6 @@ package au.csiro.pathling.fhirpath.collection;
 import static au.csiro.pathling.fhirpath.TypeSpecifier.FHIR_NAMESPACE;
 import static au.csiro.pathling.fhirpath.TypeSpecifier.SYSTEM_NAMESPACE;
 import static au.csiro.pathling.utilities.Preconditions.check;
-import static org.apache.spark.sql.functions.array_distinct;
 
 import au.csiro.pathling.definition.ChildDefinition;
 import au.csiro.pathling.definition.ChoiceDefinition;
@@ -41,8 +40,8 @@ import au.csiro.pathling.fhirpath.encoding.CodingSchema;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import au.csiro.pathling.fhirpath.function.CollectionTransform;
 import au.csiro.pathling.fhirpath.function.ColumnTransform;
+import au.csiro.pathling.fhirpath.operator.CombiningLogic;
 import au.csiro.pathling.schema.PrimitiveTypes;
-import au.csiro.pathling.sql.SqlFunctions;
 import com.google.common.collect.ImmutableMap;
 import jakarta.annotation.Nonnull;
 import java.lang.reflect.Constructor;
@@ -593,11 +592,7 @@ public class Collection implements Equatable {
     if (result.getType().isPresent()) {
       final Column array = result.getColumn().plural().getValue();
       final ColumnEquality comparator = result.getComparator();
-      final Column deduplicated =
-          comparator.usesDefaultSqlEquality()
-              ? array_distinct(array)
-              : SqlFunctions.arrayDistinctWithEquality(array, comparator::equalsTo);
-      return result.copyWithColumn(deduplicated);
+      return result.copyWithColumn(CombiningLogic.dedupeArray(array, comparator));
     }
 
     return result;

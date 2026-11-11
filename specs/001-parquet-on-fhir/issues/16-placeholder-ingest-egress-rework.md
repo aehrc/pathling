@@ -18,7 +18,7 @@
 - JSON bundles, for any candidate.
 - The formal JMH check of SC-011 (`evidence/t136-benchmark.md`).
 
-**A stored decimal's text in views (decision 147; handed on from ticket 41, owner, 2026-11-10).** Once a decimal's lexical form is kept, a view outputs a stored decimal as its stored text, and a computed one as today, the `DECIMAL(38,6)` value as text with trailing zeros trimmed. The column stays a string. `fhirPathToColumn` and `$fhirpath` still return `DECIMAL(38,6)` for every decimal; ticket 40 specifies what they return. Ticket 43 builds the detection of stored and computed decimals this rests on.
+**A stored decimal's text in views (decision 147; handed on from ticket 41, owner, 2026-11-10).** Once a decimal's lexical form is kept, a view outputs a stored decimal as its stored text, and a computed one as today, the `DECIMAL(38,6)` value as text with trailing zeros trimmed. The column stays a string. `fhirPathToColumn` and `$fhirpath` still return `DECIMAL(38,6)` for every decimal; ticket 40 specifies what they return. Ticket 50 builds the detection of stored and computed decimals this rests on (moved from ticket 43, owner, 2026-11-11).
 
 **Blocked by:** The owner's choice of mechanism (decision 134). Ticket 32, because the rework replaces what it builds. Ticket 31, for the date grammar it puts in `fhir-schema`.
 

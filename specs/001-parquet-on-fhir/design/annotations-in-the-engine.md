@@ -354,8 +354,24 @@ The stored case resolves to a plain field read, which Parquet can prune and push
 The same expression works inside a lambda, where Spark knows the lambda variable's type
 by the time it resolves the expression.
 
+**As built (ticket 43, owner, 2026-11-11):** the accessor is `AnnotationOrElse`, which is
+`resolve_or_else` with one addition. A singular element is built under the traversal's null
+guard, `CASE WHEN isnotnull(value) THEN struct(...) END`, and Spark reads a field through that
+`CASE` as a `CASE` of the field, which Parquet cannot push down. `AnnotationOrElse` reads the
+stored field past the guard, and past guards on a present constant, but not past any other
+guard, such as a `where()`'s criteria. This relies on the trust contract: an annotation is null
+exactly where its value is null (ticket 31). It is what lets date filters push down
+(`ResolveOrNoneTest.accessorReliesOnAnAnnotationBeingNullWhereItsValueIs`).
+
+**Deduplication key of a date (ticket 43, owner, 2026-11-11).** A date is deduplicated on a key
+computed once per date: its text where it has no time part, and its range otherwise. The text key
+relies on FHIR R4's rule that a date or dateTime without a time has no offset: `date` forbids
+one, and `dateTime`'s grammar allows one only after `Thh:mm:ss`. Under the trust contract stored
+data keeps the rule. Pathling's own `FhirDateTime` grammar is looser, and gives `2020-01-01Z`,
+which compares equal to `2020-01-01` under `=`, a different key.
+
 Building a System value needs a second deferred expression, **`resolve_or_none`**
-(proposed). It projects the listed fields that the type has, and leaves the rest out
+(built in ticket 43). It projects the listed fields that the type has, and leaves the rest out
 entirely:
 
 ```
@@ -385,7 +401,7 @@ An operation asks only for what it needs:
 |---|---|
 | `Patient.birthDate` (output) | `value` |
 | `Patient.birthDate > @2000` | The bounds the comparison needs: stored fields on the left, constants on the right |
-| `birthdate=ge2000` (search) | `__end` as a plain attribute, so it can be pushed down (`ge` is decided by the target's upper bound) |
+| `birthdate=ge2000` (search) | `__start` and `__end` as plain attributes, so they can be pushed down. `ge` is decided by the target's lower bound, as on main ("resource starts at or after parameter start"), with a plain conjunct on its upper bound beside it (decision 144). Whether main's `ge` matches the FHIR search specification's overlap reading is checked in ticket 31 |
 
 Unused annotations are never computed. A stored one can still be read where the plan
 stops Spark from pruning it. A plain `select` of `birthDate` reads `birthDate` only. The
@@ -434,7 +450,10 @@ because a null stored annotation is read as an absent value.
    (`MergeCast` and `UnresolvedMergeCombination`, ADR-0002) decides, with one new rule:
    **annotation fields are intersected, not unioned.** It finds the annotation fields
    every operand has, and projects each operand with `resolve_or_none` over that set.
-   `id` and `extension` are unioned for a FHIR result, and dropped for a System one. Unioning an annotation would fill it
+   `id` and `extension` are unioned for a FHIR result, and dropped for a System one (the drop
+   is built with the switch, ticket 17). A structure that the intersection leaves with no fields,
+   such as a metadata group that held only an annotation, is left out too, because nothing is
+   stored in it and Parquet cannot write an empty structure (owner, 2026-11-11). Unioning an annotation would fill it
    with null on the side that lacks it, and a null stored annotation is read as an absent
    value. That would be silently wrong. A null `id` or `extension` is safe, because it
    means what an absent one means: no id, no extensions. A null annotation hides the
@@ -733,7 +752,8 @@ If A is markedly slower than B or C on these, those options are reconsidered.
   from the collection's definition, as Quantity is (`QuantityCollection.holdsStoredQuantities`).
   A union is stored only if every operand is.
 - **Code, merges:** the deferred reconciler (`MergeCast`, `UnresolvedMergeCombination`)
-  intersects annotation fields, and drops `id` and `extension` for System results.
+  intersects annotation fields at every depth, leaving out any structure emptied by it (ticket
+  43), and drops `id` and `extension` for System results (ticket 17, with the switch).
 - **Code, comparison keys (decision 151):** the whole-struct `array_distinct` and
   `array_union` in `CombiningLogic` and `Collection` are replaced by deduplication on a
   key computed once per element. Primitives compare by System value, ignoring their annotation fields.
@@ -745,7 +765,7 @@ If A is markedly slower than B or C on these, those options are reconsidered.
 
 ### Order of work
 
-1. Record the decisions in tickets 42 and 43, and open the FR-005 review. Done (2026-11-10): ticket 42 writes the baseline plan tests (step 2), memoises the shared computation (step 5) and changes quantities (step 7); ticket 43 builds the emission shapes (step 4) and the accessor model (step 6); the switch (step 3) moves to ticket 17.
+1. Record the decisions in tickets 42 and 43, and open the FR-005 review. Done (2026-11-10): ticket 42 writes the baseline plan tests (step 2), memoises the shared computation (step 5) and changes quantities (step 7); ticket 43 builds the emission shapes (step 4) and the accessor model (step 6); the switch (step 3) moves to ticket 17. Ticket 43 was split (owner, 2026-11-11): it built the accessor model for dates and the comparison key; decimals and System.Quantity are ticket 50, and the emission shapes, the level tests and the by-example tests are ticket 51.
 2. Write ticket 43's plan tests against today's code.
 3. Add the primitive-extensions switch (D14).
 4. Emit the L2 shapes, with their plan-shape tests.

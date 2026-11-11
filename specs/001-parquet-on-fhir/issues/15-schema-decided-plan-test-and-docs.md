@@ -11,7 +11,7 @@ Can start once any one annotation kind has landed, and is extended as each furth
 
 **Site documentation (decision 135, amending 121).** Document the annotations, their switches, the *fill*/*recompute* and *drop*/*keep* settings, and the public annotation step in `site/docs/libraries/io/schema.md`, and revise its statement that this release writes no annotations. Ticket 11 documents only the API docs.
 
-**Blocked by:** any of 12, 13, 14. Under the re-plan it is taken last in stage 4, after 42, 43 and 17, so that it describes their final shape (owner, 2026-11-02).
+**Blocked by:** any of 12, 13, 14. Under the re-plan it is taken last in stage 4, after 42, 43 and 17, so that it describes their final shape (owner, 2026-11-02), and so after 50 and 51, into which 43 was split (owner, 2026-11-11).
 
 **Status:** ready-for-agent
 

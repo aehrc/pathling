@@ -169,10 +169,16 @@ class AnnotationMemoisationTest {
   }
 
   @Test
-  void aRepeatingDateConvertedInTwoPassesParsesEachDateOnce() {
-    // A repeating date without stored annotations computes each bound in a pass of its own.
+  void aRepeatingDateReadInTwoPassesParsesEachDateOnce() {
+    // A repeating date without stored annotations computes each bound where it is read, here in a
+    // pass of its own. Changed by ticket 43: traversal computes nothing, so the bounds are read
+    // through the accessors rather than by converting the dates.
+    final Column traversed = SystemDateTime.fromStoredArray(col("a"), lit(null));
     final Dataset<Row> query =
-        dates(1161).select(SystemDateTime.fromStoredArray(col("a"), lit(null)));
+        dates(1161)
+            .select(
+                transform(traversed, SystemDateTime::start),
+                transform(traversed, SystemDateTime::end));
     assertThat(parses(query)).isEqualTo((long) ROWS * ELEMENTS);
   }
 

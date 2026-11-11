@@ -26,7 +26,9 @@ import au.csiro.pathling.encoders.ColumnFunctions;
 import au.csiro.pathling.schema.LayoutFields;
 import au.csiro.pathling.schema.annotation.kinds.DateRangeKind;
 import au.csiro.pathling.schema.date.FhirDateTime;
+import au.csiro.pathling.utilities.CanonicalStructure;
 import jakarta.annotation.Nonnull;
+import java.util.List;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.DataTypes;
@@ -36,18 +38,22 @@ import org.apache.spark.sql.types.StructType;
  * The columns of System dates and dateTimes, the form in which the engine holds every date,
  * dateTime and instant (FR-004, FR-022, FR-023).
  *
- * <p>A System date is a flat structure of its text, {@code value}, and its range annotations, its
- * lower bound, {@code __start}, and its upper bound, {@code __end} (decision 152). A FHIR date
- * carries nothing more than its value and its range until the engine reads a primitive's metadata,
- * so it is converted to a System date as it is traversed, as a FHIR decimal is converted to a
- * System decimal. Each bound of a traversed date is the stored annotation where the schema carries
- * it, and is computed from the text otherwise, decided once for the schema and for each bound on
- * its own. The two bounds computed from one text share one memoised parse of it (decision 145). The
- * range of a literal is computed as the query is built.
+ * <p>A date is a flat structure of its text, {@code value}, and those of its range annotations, its
+ * lower bound, {@code __start}, and its upper bound, {@code __end}, that are available without
+ * computing (decisions 141 and 152). A traversed date carries the stored annotations the schema
+ * has, read by name, and nothing more, so a date over unannotated data is {@code struct(value)}. A
+ * literal carries both, as constants built as the query is built. Any other date, such as the
+ * result of {@code toDate()}, carries none (rule A, design §6, question 6). A FHIR date and a
+ * System date therefore have the same fields until a primitive's id and extensions are carried
+ * (ticket 17), so a FHIR date converts to a System date as it is.
  *
- * <p>The range is computed from the text of a date as it is traversed or converted, whether it is
- * compared or not. A text outside FHIR's date grammar is not conformant, and under {@code trust}
- * the engine's behaviour on it is undefined (ticket 31).
+ * <p>Nothing is computed as a date is traversed. An operation that needs a bound asks for it
+ * through {@link #start} or {@link #end}, which reads the field where the date carries it and
+ * computes it from the text otherwise, decided by Spark as it resolves the plan (design §4.3). The
+ * two bounds computed from one text share one memoised parse of it (decision 145).
+ *
+ * <p>A text outside FHIR's date grammar is not conformant, and under {@code trust} the engine's
+ * behaviour on it is undefined (ticket 31).
  */
 public final class SystemDateTime {
 
@@ -60,85 +66,78 @@ public final class SystemDateTime {
   /** The name of the upper bound of a System date. */
   @Nonnull public static final String END = LayoutFields.END_ANNOTATION;
 
-  /** The type of a System date. */
+  /** The names of the range annotations of a date. */
+  @Nonnull private static final List<String> ANNOTATIONS = List.of(START, END);
+
+  /** The canonical order of the fields of a date, by which dates of different shapes merge. */
   @Nonnull
-  public static final StructType DATA_TYPE =
-      new StructType()
-          .add(VALUE, DataTypes.StringType)
-          .add(START, DataTypes.TimestampType)
-          .add(END, DataTypes.TimestampType);
+  public static final CanonicalStructure STRUCTURE = FlatStructure.of(List.of(VALUE, START, END));
+
+  /** The type of a System date that carries no annotations. */
+  @Nonnull
+  public static final StructType DATA_TYPE = new StructType().add(VALUE, DataTypes.StringType);
 
   private SystemDateTime() {}
 
   /**
-   * Returns the System date of a text, with the range computed from it.
+   * Returns the System date of a text, carrying no annotations.
    *
    * @param text the text of the date
    * @return the System date, null where the text is
    */
   @Nonnull
   public static Column fromText(@Nonnull final Column text) {
-    // The text is bound once, because each bound reads it, and a traced text must be evaluated once
-    // (#2594). The memoised parse saves the parse, not the evaluation of the text.
-    final DateRangeKind kind = DateRangeKind.INSTANCE;
-    return let(text, t -> of(t, kind.start(t), kind.end(t)));
+    // The text is bound once, because the guard and the value both read it, and a traced text must
+    // be evaluated once (#2594).
+    return let(text, t -> when(t.isNotNull(), struct(t.alias(VALUE))));
   }
 
   /**
    * Returns the System date of a text that may not be a date, as a conversion to a date gives it:
    * null where the text does not follow FHIR's date grammar, or names a date or time that does not
-   * exist.
+   * exist. It carries no annotations, as no function result does (rule A).
    *
    * @param text the text
    * @return the System date, null where the text is not a date
    */
   @Nonnull
   public static Column tryFromText(@Nonnull final Column text) {
-    final DateRangeKind kind = DateRangeKind.INSTANCE;
     return let(
-        text,
-        t ->
-            when(
-                kind.startOrNull(t).isNotNull(),
-                struct(
-                    t.alias(VALUE),
-                    kind.startOrNull(t).alias(START),
-                    kind.endOrNull(t).alias(END))));
+        text, t -> when(DateRangeKind.INSTANCE.startOrNull(t).isNotNull(), struct(t.alias(VALUE))));
   }
 
   /**
-   * Returns the System date of a date and its metadata group, with each stored range annotation
-   * where the schema carries it, and the bound computed from the text otherwise.
+   * Returns the date of a stored text and its metadata group: its text and the range annotations
+   * the group's schema carries. Nothing is computed.
    *
    * @param text the stored text of the date
    * @param group the metadata group beside it
-   * @return the System date, null where the text is
+   * @return the date, null where the text is
    */
   @Nonnull
   public static Column fromStored(@Nonnull final Column text, @Nonnull final Column group) {
-    return of(text, storedBound(START, text, group), storedBound(END, text, group));
+    return when(
+        text.isNotNull(),
+        ColumnFunctions.resolveOrNone(group, ANNOTATIONS, List.of(VALUE), List.of(text), false));
   }
 
   /**
-   * Returns the System dates of a repeating date and its metadata groups, aligned with the texts by
-   * position, with the stored range annotations where the schema carries them, and the bounds
-   * computed from the texts otherwise.
+   * Returns the dates of a repeating stored date and its metadata groups, paired by position, each
+   * with its text and the range annotations the groups' schema carries, with the dates that have no
+   * text left out. Nothing is computed.
    *
-   * <p>The groups are paired with the texts by position, so a missing array of groups gives each
-   * date null bounds rather than shifting the bounds of other dates.
+   * <p>The groups are paired with the texts by position, so a missing array of groups leaves the
+   * dates without their stored bounds rather than shifting the bounds of other dates.
    *
    * @param texts the stored texts of the date
    * @param groups the metadata groups beside them
-   * @return the System dates, null where the texts are
+   * @return the dates present, null where the texts are
    */
   @Nonnull
   public static Column fromStoredArray(@Nonnull final Column texts, @Nonnull final Column groups) {
-    return functions.transform(
-        functions.arrays_zip(
-            texts.alias(VALUE),
-            storedBounds(START, texts, groups).alias(START),
-            storedBounds(END, texts, groups).alias(END)),
-        each -> of(each.getField(VALUE), each.getField(START), each.getField(END)));
+    return functions.filter(
+        ColumnFunctions.resolveOrNone(groups, ANNOTATIONS, List.of(VALUE), List.of(texts), true),
+        date -> date.getField(VALUE).isNotNull());
   }
 
   /**
@@ -169,9 +168,9 @@ public final class SystemDateTime {
   }
 
   /**
-   * Returns the text of a System date.
+   * Returns the text of a date.
    *
-   * @param date the System date
+   * @param date the date
    * @return its text
    */
   @Nonnull
@@ -180,57 +179,26 @@ public final class SystemDateTime {
   }
 
   /**
-   * Returns the lower bound of a System date, {@code __start}.
+   * Returns the lower bound of a date, {@code __start}: the field where the date carries it, and
+   * the bound computed from its text otherwise.
    *
-   * @param date the System date
+   * @param date the date
    * @return its lower bound
    */
   @Nonnull
   public static Column start(@Nonnull final Column date) {
-    return date.getField(START);
+    return ColumnFunctions.annotationOrElse(date, START, DateRangeKind.INSTANCE.start(text(date)));
   }
 
   /**
-   * Returns the upper bound of a System date, {@code __end}.
+   * Returns the upper bound of a date, {@code __end}: the field where the date carries it, and the
+   * bound computed from its text otherwise.
    *
-   * @param date the System date
+   * @param date the date
    * @return its upper bound
    */
   @Nonnull
   public static Column end(@Nonnull final Column date) {
-    return date.getField(END);
-  }
-
-  /**
-   * Returns one bound of one stored date: the stored annotation where the schema carries it, and
-   * the bound computed from the text otherwise.
-   */
-  @Nonnull
-  private static Column storedBound(
-      @Nonnull final String bound, @Nonnull final Column text, @Nonnull final Column group) {
-    return DateRangeKind.INSTANCE.apply(bound, text, group, ColumnFunctions::resolveOrElse);
-  }
-
-  /**
-   * Returns one bound of each of the dates of a repeating date, aligned with them by position: the
-   * stored annotation read as one field of all the groups, so that the read prunes to it, where the
-   * schema carries it, and the bound computed from each text otherwise. A missing array of groups
-   * gives no bounds, which the pairing with the texts fills with nulls.
-   */
-  @Nonnull
-  private static Column storedBounds(
-      @Nonnull final String bound, @Nonnull final Column texts, @Nonnull final Column groups) {
-    final DateRangeKind kind = DateRangeKind.INSTANCE;
-    return functions.coalesce(
-        ColumnFunctions.resolveOrElse(
-            groups, bound, functions.transform(texts, text -> kind.compute(bound, text))),
-        functions.array());
-  }
-
-  /** Pairs a text with its bounds, null where the text is. */
-  @Nonnull
-  private static Column of(
-      @Nonnull final Column text, @Nonnull final Column start, @Nonnull final Column end) {
-    return when(text.isNotNull(), struct(text.alias(VALUE), start.alias(START), end.alias(END)));
+    return ColumnFunctions.annotationOrElse(date, END, DateRangeKind.INSTANCE.end(text(date)));
   }
 }

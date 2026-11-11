@@ -17,14 +17,16 @@
 
 package au.csiro.pathling.fhirpath.operator;
 
-import static org.apache.spark.sql.functions.array_distinct;
-import static org.apache.spark.sql.functions.array_union;
 import static org.apache.spark.sql.functions.concat;
 
 import au.csiro.pathling.definition.ElementDefinition;
 import au.csiro.pathling.encoders.ColumnFunctions;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.DateCollection;
+import au.csiro.pathling.fhirpath.collection.DateTimeCollection;
+import au.csiro.pathling.fhirpath.column.SystemDateTime;
 import au.csiro.pathling.fhirpath.comparison.ColumnEquality;
+import au.csiro.pathling.fhirpath.comparison.DefaultComparator;
 import au.csiro.pathling.schema.DefinitionCanonicalStructure;
 import au.csiro.pathling.schema.PrimitiveTypes;
 import au.csiro.pathling.sql.SqlFunctions;
@@ -221,6 +223,27 @@ public class CombiningLogic {
   }
 
   /**
+   * Returns the canonical structure under which operands are merged as they are combined into one
+   * array, where their shapes can differ: that of the stored structures, where every operand holds
+   * them, and that of a date, where every operand is a date, whose annotation fields depend on the
+   * schema and on how it was made, so that the merge keeps only the ones every operand has
+   * (decision 142, D9).
+   */
+  @Nonnull
+  private static Optional<CanonicalStructure> mergeStructureOf(
+      @Nonnull final List<Collection> operands) {
+    if (operands.stream()
+        .allMatch(
+            operand ->
+                operand instanceof DateCollection || operand instanceof DateTimeCollection)) {
+      return Optional.of(SystemDateTime.STRUCTURE);
+    }
+    return operands.stream().allMatch(Collection::holdsStoredStructures)
+        ? structureOfOperands(operands)
+        : Optional.empty();
+  }
+
+  /**
    * Returns the canonical structure of the operands' type, taken from the first operand that has
    * the definition of an element.
    */
@@ -320,8 +343,8 @@ public class CombiningLogic {
     final Collection template = aligned.get(0);
     final boolean reconcilable = aligned.size() >= 2 && typeEquivalent(aligned);
     final Optional<CanonicalStructure> canonical =
-        reconcilable ? structureOfOperands(aligned) : Optional.empty();
-    if (canonical.isPresent() && aligned.stream().allMatch(Collection::holdsStoredStructures)) {
+        reconcilable ? mergeStructureOf(aligned) : Optional.empty();
+    if (canonical.isPresent()) {
       final List<Column> columns =
           aligned.stream().map(operand -> operand.getColumn().plural().getValue()).toList();
       return template.copyWithColumn(
@@ -354,10 +377,12 @@ public class CombiningLogic {
   }
 
   /**
-   * Deduplicates the values in an array using the appropriate equality strategy. Types that use
-   * default SQL equality leverage Spark's {@code array_distinct}, while types with custom equality
-   * (Quantity, Coding, temporal types) use element-wise comparison via {@link
-   * SqlFunctions#arrayDistinctWithEquality}.
+   * Deduplicates the values in an array using the appropriate equality strategy, keeping the first
+   * of each set of equal values. Types that use default SQL equality are compared by their value
+   * without another producer's annotation fields, with Spark's {@code array_distinct} where there
+   * are none (decision 151). Types whose equality a key decides, such as dates, are deduplicated by
+   * that key, computed once for each element; the other types with custom equality (Quantity,
+   * Coding, times) use element-wise comparison via {@link SqlFunctions#arrayDistinctWithEquality}.
    *
    * @param arrayColumn the array column to deduplicate
    * @param comparator the equality comparator that defines element equality
@@ -367,15 +392,17 @@ public class CombiningLogic {
   public static Column dedupeArray(
       @Nonnull final Column arrayColumn, @Nonnull final ColumnEquality comparator) {
     if (comparator.usesDefaultSqlEquality()) {
-      return array_distinct(arrayColumn);
+      return DefaultComparator.distinctByKey(arrayColumn);
     }
-    return SqlFunctions.arrayDistinctWithEquality(arrayColumn, comparator::equalsTo);
+    return comparator
+        .deduplicationKey()
+        .map(key -> SqlFunctions.arrayDistinctByKey(arrayColumn, key))
+        .orElseGet(() -> SqlFunctions.arrayDistinctWithEquality(arrayColumn, comparator::equalsTo));
   }
 
   /**
-   * Merges two arrays and deduplicates the result using the appropriate equality strategy. Types
-   * that use default SQL equality leverage Spark's {@code array_union}, while types with custom
-   * equality use element-wise comparison via {@link SqlFunctions#arrayUnionWithEquality}.
+   * Merges two arrays and deduplicates the result as {@link #dedupeArray} does: their
+   * concatenation, without duplicates.
    *
    * @param leftArray the left array column
    * @param rightArray the right array column
@@ -387,10 +414,7 @@ public class CombiningLogic {
       @Nonnull final Column leftArray,
       @Nonnull final Column rightArray,
       @Nonnull final ColumnEquality comparator) {
-    if (comparator.usesDefaultSqlEquality()) {
-      return array_union(leftArray, rightArray);
-    }
-    return SqlFunctions.arrayUnionWithEquality(leftArray, rightArray, comparator::equalsTo);
+    return dedupeArray(concat(leftArray, rightArray), comparator);
   }
 
   /**

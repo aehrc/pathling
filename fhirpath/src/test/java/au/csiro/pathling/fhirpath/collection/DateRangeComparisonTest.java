@@ -153,6 +153,28 @@ class DateRangeComparisonTest {
         arguments("Patient", "birthDate > @1980-06-01", List.of("p1=true", "p2=null", "p3=false")),
         arguments("Patient", "birthDate < @1980", List.of("p1=null", "p2=false", "p3=true")),
         arguments("Patient", "birthDate >= @1980", List.of("p1=null", "p2=true", "p3=false")),
+        // The plain conjunct beside a comparison leaves an empty result empty under not()
+        // (decision 144).
+        arguments(
+            "Patient", "(birthDate >= @1980).not()", List.of("p1=null", "p2=false", "p3=true")),
+        arguments(
+            "Patient", "(birthDate < @1980-07).not()", List.of("p1=false", "p2=null", "p3=false")),
+        // A date filtered by a condition on something else is empty where the condition fails,
+        // whether its bounds are stored or computed.
+        arguments(
+            "Patient",
+            "birthDate.where(%resource.active.exists()) >= @1900",
+            List.of("p1=null", "p2=null", "p3=null")),
+        arguments(
+            "Patient",
+            "birthDate.where(%resource.deceased.ofType(dateTime).exists()) >= @1900",
+            List.of("p1=true", "p2=true", "p3=false")),
+        // A stored date merged with a literal is deduplicated by its range, whichever shape the
+        // merge gives (decision 142, D9).
+        arguments(
+            "Patient",
+            "(birthDate | @1980-06-15 | @1980).count()",
+            List.of("p1=2", "p2=2", "p3=3")),
         arguments("Patient", "@1980-06-01 < birthDate", List.of("p1=true", "p2=null", "p3=false")),
         // A date before the Gregorian cutover.
         arguments(
@@ -360,15 +382,16 @@ class DateRangeComparisonTest {
    * running the query parses each stored date at most once and no literal.
    *
    * <p>Each bound is computed on its own, wherever the comparison reads it, so the plan computes
-   * the bounds of the stored date five times: the lower bound three times and the upper bound
-   * twice. The calls share one memoised parse of the date (decision 145). A date parsed earlier on
-   * the same thread may be parsed no more at all.
+   * the bounds of the stored date six times: the lower bound three times and the upper bound three
+   * times, once of them in the plain conjunct beside the comparison (decision 144; ticket 43, which
+   * raised the count from five). The calls share one memoised parse of the date (decision 145). A
+   * date parsed earlier on the same thread may be parsed no more at all.
    */
   @ParameterizedTest(name = "{0}")
   @MethodSource("onceCases")
   void theComputedRangeTakesOneParse(@Nonnull final String expression) {
     final Dataset<Row> computed = select(disabled.get("Patient"), "Patient", expression);
-    assertThat(parses(computed)).isEqualTo(5);
+    assertThat(parses(computed)).isEqualTo(6);
     assertThat(literalParses(computed)).isZero();
     final long before = DateRangeKind.getParseCount();
     computed.collectAsList();

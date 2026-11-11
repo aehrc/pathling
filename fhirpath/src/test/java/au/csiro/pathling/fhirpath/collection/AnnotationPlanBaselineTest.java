@@ -120,11 +120,15 @@ class AnnotationPlanBaselineTest {
    * Baseline (tickets 11 to 14): a date under a repeating parent that is only output is converted
    * to a System date inside the parent's lambda, where the optimiser does not drop the unused
    * range, so over unannotated data the plan computes the range of every date.
+   *
+   * <p>Changed by ticket 43: nothing is computed as a date is traversed, and a bound is computed
+   * only where an operation reads it (design §4.3), so a date that is only output computes no range
+   * (finding 2). The values are unchanged.
    */
   @Test
-  void anOutputDateUnderARepeatingParentComputesItsRangeOverUnannotatedData() {
+  void anOutputDateUnderARepeatingParentComputesNoRangeOverUnannotatedData() {
     final Dataset<Row> query = select(read, "Patient", "name.period.start");
-    assertThat(computesRange(query)).isTrue();
+    assertThat(computesRange(query)).isFalse();
     assertThat(values(query)).containsExactlyInAnyOrder("[2001, 2002-03-04]", "null");
   }
 
@@ -140,11 +144,16 @@ class AnnotationPlanBaselineTest {
     assertThat(values(query)).containsExactlyInAnyOrder("[2001, 2002-03-04]", "null");
   }
 
-  /** Baseline (tickets 11 to 14): after {@code where()}, as without it, the range is computed. */
+  /**
+   * Baseline (tickets 11 to 14): after {@code where()}, as without it, the range is computed.
+   *
+   * <p>Changed by ticket 43: as without {@code where()}, no range is computed for a date that is
+   * only output. The values are unchanged.
+   */
   @Test
-  void anOutputDateUnderARepeatingParentAfterWhereComputesItsRangeOverUnannotatedData() {
+  void anOutputDateUnderARepeatingParentAfterWhereComputesNoRangeOverUnannotatedData() {
     final Dataset<Row> query = select(read, "Patient", "name.where(family = 'B').period.start");
-    assertThat(computesRange(query)).isTrue();
+    assertThat(computesRange(query)).isFalse();
     assertThat(values(query)).containsExactlyInAnyOrder("[2002-03-04]", "null");
   }
 
@@ -172,20 +181,29 @@ class AnnotationPlanBaselineTest {
    * {@code __start} and {@code __end}, rather than grouped in {@code range} (decision 152), because
    * each bound is now computed on its own over a memoised parse rather than as one structure
    * (decision 145). The values are unchanged.
+   *
+   * <p>Changed by ticket 43: a merge keeps only the annotation fields every side has (decision 142,
+   * D9; `design/annotations-by-example.md` §5.1). Over annotated data the stored date and the
+   * literal both carry their bounds, and both are kept. Over unannotated data the stored date
+   * carries none, so the literal's constants are dropped too, and the bounds are computed where an
+   * operation reads them. The texts are unchanged.
    */
   @Test
-  void aStoredDateMergedWithALiteralCarriesARangeOnBothSides() {
-    for (final Map<String, Dataset<Row>> data : List.of(read, annotated)) {
-      final Dataset<Row> result = evaluate(data, "Patient", "birthDate | @2000");
-      assertThat(result.schema().apply("value").dataType().simpleString())
-          .isEqualTo("array<struct<value:string,__start:timestamp,__end:timestamp>>");
-      assertThat(rows(result))
-          .containsExactlyInAnyOrder(
-              "p1=[[1970-03,1970-03-01 00:00:00.0,1970-03-31 23:59:59.999999],"
-                  + " [2000,2000-01-01 00:00:00.0,2000-12-31 23:59:59.999999]]",
-              "p2=[[2005-06-07,2005-06-07 00:00:00.0,2005-06-07 23:59:59.999999],"
-                  + " [2000,2000-01-01 00:00:00.0,2000-12-31 23:59:59.999999]]");
-    }
+  void aStoredDateMergedWithALiteralKeepsTheBoundsBothSidesHave() {
+    final Dataset<Row> annotatedResult = evaluate(annotated, "Patient", "birthDate | @2000");
+    assertThat(annotatedResult.schema().apply("value").dataType().simpleString())
+        .isEqualTo("array<struct<value:string,__start:timestamp,__end:timestamp>>");
+    assertThat(rows(annotatedResult))
+        .containsExactlyInAnyOrder(
+            "p1=[[1970-03,1970-03-01 00:00:00.0,1970-03-31 23:59:59.999999],"
+                + " [2000,2000-01-01 00:00:00.0,2000-12-31 23:59:59.999999]]",
+            "p2=[[2005-06-07,2005-06-07 00:00:00.0,2005-06-07 23:59:59.999999],"
+                + " [2000,2000-01-01 00:00:00.0,2000-12-31 23:59:59.999999]]");
+    final Dataset<Row> readResult = evaluate(read, "Patient", "birthDate | @2000");
+    assertThat(readResult.schema().apply("value").dataType().simpleString())
+        .isEqualTo("array<struct<value:string>>");
+    assertThat(rows(readResult))
+        .containsExactlyInAnyOrder("p1=[[1970-03], [2000]]", "p2=[[2005-06-07], [2000]]");
   }
 
   /**
@@ -219,16 +237,22 @@ class AnnotationPlanBaselineTest {
   /**
    * Baseline (tickets 11 to 14): date search over annotated Parquet compares the stored range, read
    * through the structure the System date builds, so no filter on either bound reaches the scan.
+   *
+   * <p>Changed by ticket 43: the bounds are read through the date's accessors, which read the
+   * stored annotations plainly, and {@code ge} adds a plain conjunct on the upper bound (decision
+   * 144), so filters on both bounds reach the scan. The matches are unchanged.
    */
   @Test
-  void aDateSearchPushesNoFilterOnTheStoredRange() {
+  void aDateSearchPushesAFilterOnTheStoredRange() {
     final Dataset<Row> query =
         annotated
             .get("Patient")
             .filter(
                 SearchColumnBuilder.withDefaultRegistry(fhirEncoders.getContext())
                     .fromQueryString(ResourceType.PATIENT, "birthdate=ge2000"));
-    assertThat(pushedFilters(query)).doesNotContain("__start").doesNotContain("__end");
+    assertThat(pushedFilters(query))
+        .contains("GreaterThanOrEqual(_birthDate.__end,")
+        .contains("GreaterThanOrEqual(_birthDate.__start,");
     assertThat(ids(query)).containsExactly("p2");
   }
 
@@ -236,16 +260,20 @@ class AnnotationPlanBaselineTest {
    * Baseline (tickets 11 to 14): a date comparison in {@code where()} over annotated Parquet binds
    * each range once and compares it under a condition, so no filter on either bound reaches the
    * scan.
+   *
+   * <p>Changed by ticket 43: the comparison is emitted beside a plain conjunct on the stored upper
+   * bound (decision 144), which reaches the scan, while the condition stays a residual filter. The
+   * matches are unchanged.
    */
   @Test
-  void aDateComparisonPushesNoFilterOnTheStoredRange() {
+  void aDateComparisonPushesAFilterOnTheStoredUpperBound() {
     final Dataset<Row> query =
         annotated
             .get("Patient")
             .filter(
                 SearchColumnBuilder.withDefaultRegistry(fhirEncoders.getContext())
                     .fromExpression(ResourceType.PATIENT, "birthDate >= @2000"));
-    assertThat(pushedFilters(query)).doesNotContain("__start").doesNotContain("__end");
+    assertThat(pushedFilters(query)).contains("GreaterThanOrEqual(_birthDate.__end,");
     assertThat(ids(query)).containsExactly("p2");
   }
 

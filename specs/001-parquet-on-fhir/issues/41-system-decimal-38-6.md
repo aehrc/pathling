@@ -35,8 +35,8 @@
 - [x] A quantity's value is read from its numeric annotation where the schema carries it, with FR-059 amended, and gives the same results as decoding the text.
 - [x] Each changed test expectation is approved by the owner before it is changed.
 - [x] The output type change is documented, and the 8-digit deviation is recorded in the specification.
-- [ ] Handed on to ticket 43, "Decimal detection (decision 147)" (owner, 2026-11-10): stored and computed decimals are told apart by the collection's definition, and a union is stored only if every operand is; `valueDecimal | 1.5` and `1.5 | valueDecimal` give the same result.
-- [ ] Handed on to ticket 43, "A stored decimal's text" (owner, 2026-11-10): `toString()` on a stored decimal returns its text, and keys and comparisons stay numeric.
+- [ ] Handed on to ticket 43, "Decimal detection (decision 147)" (owner, 2026-11-10), and with it to ticket 50 (owner, 2026-11-11): stored and computed decimals are told apart by the collection's definition, and a union is stored only if every operand is; `valueDecimal | 1.5` and `1.5 | valueDecimal` give the same result.
+- [ ] Handed on to ticket 43, "A stored decimal's text" (owner, 2026-11-10), and with it to ticket 50 (owner, 2026-11-11): `toString()` on a stored decimal returns its text, and keys and comparisons stay numeric.
 - [ ] Handed on to ticket 16, "A stored decimal's text in views" (owner, 2026-11-10): a view outputs a stored decimal as its stored text, and `fhirPathToColumn` and `$fhirpath` still return `DECIMAL(38,6)`.
 
 ## Comments
