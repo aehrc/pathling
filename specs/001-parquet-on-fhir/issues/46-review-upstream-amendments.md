@@ -45,7 +45,7 @@ The summary may also be published as a shared document for the specification own
 
 **Comment (2026-11-11).** Two additions to the review, from the owner's session:
 
-- **Section 18 added to the draft (owner).** Propose `DECIMAL(38,8)` as the `numeric` annotation's type, so that the annotation can hold FHIRPath's step of 10^-8. It depends on [#2893](https://github.com/aehrc/pathling/issues/2893), which decides whether System.Decimal moves to eight fractional digits, and it is not raised before that.
+- **Section 18 added to the draft (owner).** Propose `DECIMAL(38,8)` as the `numeric` annotation's type, so that the annotation can hold FHIRPath's step of 10^-8. It depends on [#2893](https://github.com/aehrc/pathling/issues/2893), which decides whether System.Decimal moves to eight fractional digits. The owner raised it anyway, ahead of #2893, as [aehrc/parquet-on-fhir#4](https://github.com/aehrc/parquet-on-fhir/issues/4) ("`numeric` annotation: use `DECIMAL(38,8)`, so it can hold a FHIRPath Decimal"), 2026-11-11.
 - **Sections to check against stage 4.** The draft predates the annotations design's decisions 140 to 152 and tickets 42, 43 and 50, which changed what Pathling builds. Before the review, check at least these sections against them:
   - section 3, on placement and flat or grouped annotations;
   - sections 8 and 9: the canonical fields are now `__canonical_code` and `__canonical_value_exact`;

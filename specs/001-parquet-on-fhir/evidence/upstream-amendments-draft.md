@@ -83,7 +83,8 @@ ticket. Ticket 30, whose purpose is the layout column proposal, still has its
 "raised" checkbox unticked and no issue number, and the re-plan of 2026-11-02
 assumes nothing further is raised before this review. Ticket 14 records #3.
 `data-model.md` says only "Raised upstream" for the canonical annotation.
-Everything else in this document is not yet upstream.
+Everything else in this document is not yet upstream, except section 18,
+raised as [#4](https://github.com/aehrc/parquet-on-fhir/issues/4) on 2026-11-11.
 
 ## Summary
 
@@ -106,7 +107,7 @@ Everything else in this document is not yet upstream.
 | 15 | Fields the definitions do not describe, and their place in the conformance levels | clarification | not yet drafted (ticket 36 scopes a Pathling issue) |
 | 16 | What an annotation means when it is null, when tables are merged, and who may trust it | clarification | a derived annotation SHOULD be non-null exactly where its value is: drafted here, 2026-11-05; the rest not yet drafted (tickets 38 and 26) |
 | 17 | The range of a value that states a time but no timezone | clarification | not yet drafted (ticket 26) |
-| 18 | The `numeric` annotation's type is `DECIMAL(38,8)`, so that it can hold FHIRPath's eight fractional digits | amendment proposed | drafted here, 2026-11-11 (owner); depends on #2893 |
+| 18 | The `numeric` annotation's type is `DECIMAL(38,8)`, so that it can hold FHIRPath's eight fractional digits | amendment proposed | raised upstream ([#4](https://github.com/aehrc/parquet-on-fhir/issues/4)), 2026-11-11 |
 
 Dependencies between the changes, in short. Every placement in 3 needs 2, and
 options 1 and 4 need 4, because the projection must leave out `__` fields
@@ -1446,9 +1447,12 @@ without a timezone, or that the annotation is null for it.
 
 ## 18. The `numeric` annotation's type is `DECIMAL(38,8)`
 
-**Kind:** amendment proposed. **Status:** drafted here, 2026-11-11 (owner). It
-depends on [#2893](https://github.com/aehrc/pathling/issues/2893), Pathling's
-decision to give System.Decimal eight fractional digits.
+**Kind:** amendment proposed. **Status:** raised upstream as
+[#4](https://github.com/aehrc/parquet-on-fhir/issues/4), "`numeric` annotation:
+use `DECIMAL(38,8)`, so it can hold a FHIRPath Decimal", 2026-11-11 (owner), ahead
+of [#2893](https://github.com/aehrc/pathling/issues/2893), Pathling's decision to
+give System.Decimal eight fractional digits. The issue's text is at
+`.local/work/issue/2832/upstream-issue-numeric-decimal-38-8.md`.
 
 ### Context
 
@@ -1498,8 +1502,8 @@ clarification, at the new scale).
   at scale 6, would be null at scale 8.
 - **Pathling-side.** System.Decimal, the annotation and the engine's System.Quantity
   value move together to `DECIMAL(38,8)` (#2893), so that the stored annotation
-  and the engine's type still agree. Until #2893 decides to move, this section is
-  not raised.
+  and the engine's type still agree. The owner raised #4 before #2893 is
+  decided (2026-11-11).
 - **Dependencies.** Section 10's clarification should be written at whichever
   scale is chosen. Section 8's canonical value is a separate type and is not
   affected.
