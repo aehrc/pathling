@@ -4753,6 +4753,10 @@ _Decision_:
   recorded on 2026-11-04 and its update of 2026-11-05 ("an H1 breach on Spark 4.1").
 - **D3c is rejected,** under P0.
 
+_Amendment (owner, 2026-11-12, ticket 51)_: compute-first is not emitted until Pathling builds on a Spark
+that prunes through it. On Spark 4.0.2 it prunes nothing, and it makes Spark infer a filter that evaluates a
+view's whole result twice more per row. The existence forms and the pairing are emitted. See design §8.
+
 _Consequences_: release 11 follows the latest Databricks LTS runtime, most likely Databricks Runtime 18 LTS
 on Spark 4.1 (GitHub #2879). Nothing was measured on Spark 4.1; by analogy to 4.0.2, where these shapes
 prune 4 of 26 spike views, they are expected to prune little there.

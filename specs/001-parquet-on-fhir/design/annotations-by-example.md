@@ -362,7 +362,7 @@ System.Coding has no annotations and no `id`.
 | Merge (`a \| b`; the engine has no `iif`) | A System value with `value` and the annotation fields every side has | No |
 | A function or arithmetic result | `value` only (rule A) | No |
 | An accessor, in a comparison | `resolve_or_else(e, "__start", date_start(e.value))` | Only where nothing is available |
-| Output | A primitive outputs `value`; its annotation fields are never output. A complex FHIR value is output in its fitted shape, `_x` included | No |
+| Output | A primitive outputs `value`; its annotation fields are never output. A complex FHIR value is output in its fitted shape, `_x` included, except a stored Quantity, which is output as the four-field System.Quantity (ticket 50; owner, 2026-11-12) | No |
 
 ### 5.1 Merges
 

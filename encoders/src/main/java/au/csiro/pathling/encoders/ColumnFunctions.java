@@ -26,6 +26,7 @@ import au.csiro.pathling.sql.AnnotationOrElse;
 import au.csiro.pathling.sql.DistinctOnKey;
 import au.csiro.pathling.sql.ExtensionTraversal;
 import au.csiro.pathling.sql.MergeCast;
+import au.csiro.pathling.sql.PresenceOf;
 import au.csiro.pathling.sql.ResolveOrElse;
 import au.csiro.pathling.sql.ResolveOrNone;
 import au.csiro.pathling.sql.ResolveOrNull;
@@ -160,6 +161,20 @@ public class ColumnFunctions {
     return ExpressionUtils.column(
         new AnnotationOrElse(
             ExpressionUtils.expression(element), fieldName, ExpressionUtils.expression(fallback)));
+  }
+
+  /**
+   * Creates an array that is null exactly where an array is, and has as many elements, built so
+   * that Spark's schema pruning can narrow a test of presence or a count over it to the fields it
+   * reads (decision 143, L2).
+   *
+   * @param array the array
+   * @return the array that stands for it in a test of presence or a count
+   * @see PresenceOf
+   */
+  @Nonnull
+  public static Column presenceOf(@Nonnull final Column array) {
+    return ExpressionUtils.column(new PresenceOf(ExpressionUtils.expression(array)));
   }
 
   /**

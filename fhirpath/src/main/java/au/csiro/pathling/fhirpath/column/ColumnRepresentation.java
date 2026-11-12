@@ -561,8 +561,10 @@ public abstract class ColumnRepresentation {
     // is on and ANSI is off, null otherwise. Guarding the null array explicitly makes the result
     // independent of both flags, yielding zero under every configuration. let() binds the operand
     // once so a nondeterministic operand (e.g. a traced column) fires exactly once per row.
+    // The count is taken of an array that stands for the operand and reads less of its elements
+    // (decision 143, L2).
     return vectorize(
-        c -> let(c, x -> when(x.isNull(), lit(0)).otherwise(size(x))),
+        c -> let(c, x -> countOf(ColumnFunctions.presenceOf(x))),
         c -> when(c.isNull(), 0).otherwise(1));
   }
 
@@ -575,10 +577,21 @@ public abstract class ColumnRepresentation {
   public ColumnRepresentation isEmpty() {
     // size(null) resolves differently across both spark.sql.legacy.sizeOfNull and
     // spark.sql.ansi.enabled, so the null array is guarded explicitly to read as empty under every
-    // configuration. let() binds the operand once.
-    return vectorize(
-        c -> let(c, x -> when(x.isNull(), lit(true)).otherwise(size(x).equalTo(0))),
-        Column::isNull);
+    // configuration. let() binds the operand once, and the test is made of an array that stands for
+    // the operand and reads less of its elements (decision 143, L2).
+    return vectorize(c -> let(c, x -> isEmptyOf(ColumnFunctions.presenceOf(x))), Column::isNull);
+  }
+
+  /** The size of an array, zero where it is null. */
+  @Nonnull
+  private static Column countOf(@Nonnull final Column array) {
+    return when(array.isNull(), lit(0)).otherwise(size(array));
+  }
+
+  /** Whether an array is empty or null. */
+  @Nonnull
+  private static Column isEmptyOf(@Nonnull final Column array) {
+    return when(array.isNull(), lit(true)).otherwise(size(array).equalTo(0));
   }
 
   /**

@@ -701,8 +701,8 @@ to validation and `trust` (tickets 31 and 38) under any layout.
      extensions only with the switch on (D14). The engine does no FHIRPath-level
      analysis of which fields an expression uses (P0), so shaping each element per
      expression (L1) is not built.
-   - Reads are pruned by the shapes the engine emits (L2, decision 143): compute-first, existence
-     rewrites, and pairing a repeating primitive with
+   - Reads are pruned by the shapes the engine emits (L2, decision 143): compute-first (deferred
+     until Pathling builds on a Spark that prunes through it; §8), existence rewrites, and pairing a repeating primitive with
      `arrays_zip(x, _x.__start, _x.__end)`, each extracted array guarded with
      `coalesce(x, array())`. Tests assert the plan shape and equal results.
    - Known exceptions: a singular annotated output reads its annotation fields;
@@ -796,6 +796,14 @@ If A is markedly slower than B or C on these, those options are reconsidered.
   extracted arrays and never around `transform`. Tests assert the plan's shape and equal
   results, that the zipped fields carry those names, and that the aliases add no
   projection that blocks pruning.
+  **Compute-first is not emitted for now** (owner, 2026-11-12, ticket 51). Once a view's
+  generator reads an attribute, Spark's `InferFiltersFromGenerate` adds
+  `size(e) > 0 AND isnotnull(e)` beneath the projection, so the view's whole result is
+  evaluated three times a row, and on Spark 4.0.2, which Pathling builds on, the shape
+  prunes nothing in return. It is to be emitted when Pathling builds on a Spark that
+  prunes through it (4.3 in the evidence), as a select of the result under an alias
+  followed by `inline` of that column in `Projection.execute`, with the cost of the
+  inferred filter measured then. The existence forms and the pairing are emitted.
 - **Code, decimal detection (ticket 41):** a decimal is classed as stored or computed
   from the collection's definition, as Quantity is (`QuantityCollection.holdsStoredQuantities`).
   A union is stored only if every operand is.

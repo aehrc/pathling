@@ -85,6 +85,7 @@ extensions are stored and navigable.
 - [17](17-primitive-metadata-in-the-stored-layout.md) Primitive metadata in the stored layout (US6, #437)
 - [52](52-primitive-metadata-in-the-engine.md) Primitive metadata in the engine (US6, #437)
 - [15](15-schema-decided-plan-test-and-docs.md) Test that annotation use is decided from the schema, and document annotations
+- [53](53-system-coding-without-id.md) Drop `id` from System.Coding (needs triage; tentatively in this stage)
 - ~~[34](34-placeholder-content-outside-definitions.md) PLACEHOLDER: Carry content the definitions do not describe through ingest, egress and the engine~~ (moved to a follow-up issue, ticket 26)
 
 The remaining tickets run in the order listed (owner, 2026-11-02). 42 and 43
