@@ -82,7 +82,8 @@ extensions are stored and navigable.
 - ~~[43](43-lazy-annotation-evaluation.md) Evaluate annotations in the engine only where they are used~~ (done)
 - [50](50-decimals-and-system-quantity.md) Decimals and System.Quantity in the engine
 - [51](51-emission-shapes-and-level-tests.md) Emission shapes, level tests and the by-example tests
-- [17](17-placeholder-primitive-metadata-group.md) PLACEHOLDER: the primitive metadata group (US6, #437)
+- [17](17-primitive-metadata-in-the-stored-layout.md) Primitive metadata in the stored layout (US6, #437)
+- [52](52-primitive-metadata-in-the-engine.md) Primitive metadata in the engine (US6, #437)
 - [15](15-schema-decided-plan-test-and-docs.md) Test that annotation use is decided from the schema, and document annotations
 - ~~[34](34-placeholder-content-outside-definitions.md) PLACEHOLDER: Carry content the definitions do not describe through ingest, egress and the engine~~ (moved to a follow-up issue, ticket 26)
 
@@ -94,13 +95,14 @@ shows, then memoises the shared computation and makes the quantity's canonical
 fields flat; 43 builds the lazy accessors on it (owner, 2026-11-10). 43 was split
 (owner, 2026-11-11): it built the accessors for dates and the comparison key, 50
 applies them to decimals and System.Quantity, and 51 builds the emission shapes
-and the level and by-example tests. 17 is still a placeholder and
-is triaged and rewritten before it is dispatched. 15 comes last, so that its
+and the level and by-example tests. 17 was triaged and split (owner, 2026-11-12): 17 stores the group and
+round-trips it, behind an ingest option that is off by default, and 52 reads it in the engine, behind its own
+switch. 15 comes last, so that its
 plan tests and documentation describe the final shape.
 
-Ticket 17 moved here from stage 3 (owner, 2026-10-23): it extends ticket 11's
-pairing of `x` with `_x` to ids and extensions, and builds on the interim ingest
-of ticket 32.
+Ticket 17 moved here from stage 3 (owner, 2026-10-23): it builds on the interim
+ingest of ticket 32. Ticket 52, split from it, extends ticket 11's pairing of `x`
+with `_x` to ids and extensions.
 
 ## Stage 5: Verification, reconciliation and completion (#2833)
 

@@ -399,7 +399,8 @@ Identifiers are stable. FR-015, FR-018 and FR-020 are retired and not reused.
   1. `contained` resources (FR-006) and `Bundle` (FR-007);
   2. an inline resource held by an element declared as the abstract
      `Resource`, such as `Parameters.parameter.resource`;
-  3. primitive ids and extensions, until ticket 17 stores the metadata group;
+  3. primitive ids and extensions, when the ingest option that stores them (ticket 17)
+     is off, as it is by default;
   4. on a dense schema, content beyond the configured nesting, extension and
      open-type bounds (FR-017, deferred);
   5. `base64Binary` whitespace, which decoding and re-encoding canonicalises.

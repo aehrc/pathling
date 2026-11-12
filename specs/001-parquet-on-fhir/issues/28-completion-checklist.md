@@ -4,7 +4,7 @@
 
 **What to build:** The checks that close #2367. It is not by itself a release (owner, 2026-10-22): what the release needs beyond it is raised as follow-up issues by ticket 26.
 
-**Blocked by:** 01–15, 17, 21–27, 29–32, 35, 41–46. Not 16, 18, 19, 38, 39 or 40, which the re-plan moved to GitHub issues after #2367 (owner, 2026-11-02), nor the defects of ticket 31 that the legacy line also has. Nor 33 or 34, moved to follow-up issues earlier. #2367 waits for the amendments to the Parquet on FHIR specification to be agreed (tickets 30, 35, 44 and 46).
+**Blocked by:** 01–15, 17, 21–27, 52, 29–32, 35, 41–46. Not 16, 18, 19, 38, 39 or 40, which the re-plan moved to GitHub issues after #2367 (owner, 2026-11-02), nor the defects of ticket 31 that the legacy line also has. Nor 33 or 34, moved to follow-up issues earlier. #2367 waits for the amendments to the Parquet on FHIR specification to be agreed (tickets 30, 35, 44 and 46).
 
 **Status:** ready-for-human
 

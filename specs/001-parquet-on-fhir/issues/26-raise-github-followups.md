@@ -21,6 +21,7 @@
   - FR-063, rewritten to match the softened principles 2 and 5;
   - re-enabling the tests excluded for the non-conformant fixture `fhirpath-js/resources/quantity-example.json`, whose `QuestionnaireResponse.item.answer` is an object where FHIR JSON requires an array. Under `trust` ingest fails on it with Spark's own error (ticket 37), so stage 3 excludes it, and the tests read it again once ingest tolerates such input (owner, 2026-10-23). The exclusions are the rule "Non-conformant input fixture: answer is not an array" in `fhirpath/src/test/resources/fhirpath-js/config.yaml`, `NON_CONFORMANT_FIXTURES` in `AnnotationFreeSuiteTest`, and the fixture's omission from `RESOURCE_FILES` in `FhirPathToColumnTest`.
   - a stored annotation that disagrees with its value, such as a null `__numeric` beside a present decimal in a dataset merged from annotated and unannotated sources, which the engine reads per schema (ticket 38, owner, 2026-10-26).
+  - the `_id` and `_url` metadata groups, which FHIR does not define and the canonical structure emits so that annotations have a container, and whether they comply with the Parquet on FHIR specification (owner, 2026-11-12, from ticket 17).
 - **Extra fields (owner, 2026-10-22).** Content and layout that the definitions do not derive: their support through ingest, egress and the engine, and their place in the conformance levels. Ticket 34, which this issue replaces, and the metadata that would preserve such content's representation. The issue's scope is written up in ticket 36.
 - **The server without Woodstox (owner, 2026-10-22).** Ticket 32 excluded `woodstox-core` from `encoders`, and so from `library-api` and `library-runtime`, because it made Spark's `to_xml` fail. When the server moves to this runtime, check that its HAPI XML responses work without Woodstox from `library-runtime`, and whether its own dependencies still bring Woodstox in.
 - **What the release needs beyond #2367 (owner, 2026-10-22).** #2367 is not by itself a release. Each follow-up the release needs that arises from this work is raised as an issue, including the release notes that ticket 28 hands on.
@@ -62,7 +63,7 @@
 
 ### The re-plan of #2367 (owner, 2026-11-02)
 
-#2367 is limited to a core library that matches the legacy line, with primitive metadata (ticket 17) as its one extension. The rest is lined up as GitHub issues, and whether each goes into a release is decided separately. Each issue links back to its ticket and is labelled:
+#2367 is limited to a core library that matches the legacy line, with primitive metadata (tickets 17 and 52) as its one extension. The rest is lined up as GitHub issues, and whether each goes into a release is decided separately. Each issue links back to its ticket and is labelled:
 
 - **A defect the legacy line also has:** `bug`, `PoF_line` and `Bunsen_line`.
 - **Anything else:** `PoF_line`, plus `new feature`, `enhancement` or `optimisation`.

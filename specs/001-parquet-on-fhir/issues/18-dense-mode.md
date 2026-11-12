@@ -21,6 +21,8 @@
 
 **Annotation width and the extension bound (decision 135).** A dense schema annotates every element the definitions describe, subject to the switches. `evidence/dense-annotation-width.md` measures about 24% more fields on a dense `Observation` without extensions. That figure is provisional: its script bounds nesting by type code, so a backbone inside a backbone counts as recursion, and it counts the annotations and metadata groups of choice types it filtered out. It also measures the sibling placement decision 135 replaced. The same walk with extensions on does not reach a useful size, about 206 million leaves at nesting 3, because an extension is itself extensible. The dense mode needs an extension bound of its own, whatever the annotations do.
 
+**The primitive metadata group and the full schema's limits (owner, 2026-11-12, from ticket 17).** A dense schema carries a primitive's metadata group only when the ingest option that stores ids and extensions is on, and then beside every primitive, populated where the source has ids or extensions and null otherwise. The full schema is already wide and deep, and the group adds to it. This ticket decides which further options limit it, together with an impact analysis of its width and depth on storage and performance, and records what each option costs.
+
 **Blocked by:** 32. Ticket 11, which decides the dense-mode annotation width this ticket implements.
 
 **Status:** ready-for-agent

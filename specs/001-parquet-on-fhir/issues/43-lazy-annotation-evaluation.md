@@ -16,7 +16,7 @@
 
 - Decimals, System.Quantity, and box 3's test over each annotated type: ticket 50.
 - The emission shapes (L2), the level tests and the by-example tests: ticket 51.
-- The D14 switch for a primitive's `id` and `extension`, and dropping them for a System merge result: ticket 17.
+- The D14 switch for a primitive's `id` and `extension`, and dropping them for a System merge result: ticket 52.
 - Whether `DateMatcher`'s `ge` matches the FHIR search specification: ticket 31.
 - Emitting the conjunct only where it can be pushed down, and binding the bounds once with `let`: #2889.
 - Shaping elements by use (L1, decision 140) and Pathling's own optimiser rule (D3b, decision 143; #2890).
@@ -111,7 +111,7 @@ level tests are not started. Box 8 is ticked; the others are not met.
    - `SearchFilter`'s scalar `coalesce(m, false)` is replaced, outside `DateMatcher`, because it
      blocked pushdown of every search.
    - "Drop `id` and `extension` for a System result" is not built: every operand is converted
-     before a System merge, and with ticket 17 not built no primitive carries them.
+     before a System merge, and with ticket 52 not built no primitive carries them.
    - Box 6's `=` and `distinct()` on a HumanName are rejected on main ("Unsupported equality for
      complex types"), so only `|` is tested.
 
@@ -132,7 +132,7 @@ Python and R were not run. **Status** stays ready-for-agent.
 - **Accessor guards:** accepted, and recorded in design §4.3; `ResolveOrNoneTest.accessorReliesOnAnAnnotationBeingNullWhereItsValueIs` names the reliance on the trust contract (`0a83dc0a19`).
 - **`ge`:** main's matching and the `__end` conjunct stay; ticket 31 has a box to check `ge` against the FHIR search specification; the design's sentence says what is built.
 - **`SearchFilter`'s `isnotnull(m) AND m`:** accepted.
-- **Dropping `id` and `extension` for a System merge result:** moved to ticket 17, with a box.
+- **Dropping `id` and `extension` for a System merge result:** moved to ticket 17, and then to ticket 52 when 17 was split (owner, 2026-11-12), with a box.
 - **Box 6:** amended; `ComparisonKeyTest` pins that `=` and `distinct()` on a HumanName are still rejected with the same error (`d68a6f2187`).
 - **Split.** This ticket closes at the dates slice, and its scope and boxes above are what was built. Decimals, System.Quantity and the test over each annotated type (former boxes 3, 4 and 5) are ticket 50, with the handovers from tickets 41 and 42. The emission shapes, the level tests and the by-example tests (former boxes 2, 7 and 9) are ticket 51. References to this ticket for the moved work, in `contracts/engine-semantics.md`, the design and tickets 15, 16, 41 and 46, point at them.
 
