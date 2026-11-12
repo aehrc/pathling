@@ -139,12 +139,12 @@ class QuantityEncodingTest {
     assertThat(QuantityCanonicalKind.UCUM_SYSTEM).isEqualTo(UcumUnit.UCUM_SYSTEM_URI);
     assertThat(QuantityCanonicalKind.CALENDAR_DURATION_SYSTEM)
         .isEqualTo(CalendarDurationUnit.FHIRPATH_CALENDAR_DURATION_SYSTEM_URI);
-    assertThat(QuantityCanonicalKind.DEFINITE_CALENDAR_DURATIONS)
-        .isEqualTo(
+    assertThat(
             Stream.of(CalendarDurationUnit.values())
                 .filter(CalendarDurationUnit::isDefinite)
                 .collect(
                     Collectors.toMap(
-                        CalendarDurationUnit::code, CalendarDurationUnit::getUcumEquivalent)));
+                        CalendarDurationUnit::code, CalendarDurationUnit::getUcumEquivalent)))
+        .isEqualTo(QuantityCanonicalKind.DEFINITE_CALENDAR_DURATIONS);
   }
 }

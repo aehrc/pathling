@@ -28,7 +28,7 @@ import jakarta.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.BiFunction;
+import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
 import java.util.stream.Stream;
@@ -173,7 +173,7 @@ final class XmlEgressShape {
     final Optional<DefinitionCanonicalStructure> extensionStructure =
         node.metadataGroup(groupName)
             .flatMap(g -> g.extensionStructure(LayoutFields.METADATA_GROUP_EXTENSION));
-    final BiFunction<Column, Column, Column> pair =
+    final BinaryOperator<Column> pair =
         (value, metadata) -> {
           final List<Column> fields = new ArrayList<>();
           final List<Column> present = new ArrayList<>();

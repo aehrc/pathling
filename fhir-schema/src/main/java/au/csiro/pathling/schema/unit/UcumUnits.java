@@ -63,10 +63,11 @@ public final class UcumUnits {
       if (SERVICE.canonicalize(new PreciseDecimal(value.toPlainString()), code)
           instanceof CanonicalizerService.Success(PreciseDecimal magnitude, CanonicalTerm term)) {
         final String canonicalCode = SERVICE.print(term);
-        return magnitude == null || canonicalCode == null
-            ? null
-            : new CanonicalQuantity(
-                magnitude.getValue(), canonicalCode.isEmpty() ? NO_UNIT_CODE : canonicalCode);
+        if (magnitude == null || canonicalCode == null) {
+          return null;
+        }
+        return new CanonicalQuantity(
+            magnitude.getValue(), canonicalCode.isEmpty() ? NO_UNIT_CODE : canonicalCode);
       }
       return null;
     } catch (final RuntimeException e) {

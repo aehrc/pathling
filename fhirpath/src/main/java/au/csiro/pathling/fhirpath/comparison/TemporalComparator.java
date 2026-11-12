@@ -38,12 +38,12 @@ import org.apache.spark.sql.functions;
  * need to consider the range of possible values for each DateTime/Time. The range of a value is its
  * lower bound and its upper bound, which the comparison reads several times.
  *
- * <p>A date's bounds are read through its accessors, {@link SystemDateTime#start} and {@link
- * SystemDateTime#end}: the stored annotation where the date carries it, and otherwise the bound
- * computed over a memoised parse, so a bound read more than once is parsed once (decision 145). A
- * time's bounds are each computed from it by a function of their own, wherever the comparison reads
- * them. Each operand, date or time, is bound with {@link SqlFunctions#let}, so that a traced
- * operand is evaluated once however many of its bounds are read (#2594).
+ * <p>A date's bounds are read through its accessors, {@link SystemDateTime#lowerBound} and {@link
+ * SystemDateTime#upperBound}: the stored annotation where the date carries it, and otherwise the
+ * bound computed over a memoised parse, so a bound read more than once is parsed once (decision
+ * 145). A time's bounds are each computed from it by a function of their own, wherever the
+ * comparison reads them. Each operand, date or time, is bound with {@link SqlFunctions#let}, so
+ * that a traced operand is evaluated once however many of its bounds are read (#2594).
  *
  * <p>A comparison is empty where the ranges overlap without being equal, so it is a {@code CASE}
  * that Parquet cannot push down. Beside it each comparison emits a plain conjunct on the bounds
@@ -58,7 +58,9 @@ public class TemporalComparator implements ColumnComparator, ElementWiseEquality
   @Nonnull
   private static final TemporalComparator DATE_TIME_COMPARATOR =
       new TemporalComparator(
-          SystemDateTime::start, SystemDateTime::end, Optional.of(TemporalComparator::dateKey));
+          SystemDateTime::lowerBound,
+          SystemDateTime::upperBound,
+          Optional.of(TemporalComparator::dateKey));
 
   @Nonnull
   private static final TemporalComparator TIME_COMPARATOR =
@@ -135,8 +137,8 @@ public class TemporalComparator implements ColumnComparator, ElementWiseEquality
                         .when(timed(d), functions.lit(null))
                         .otherwise(SystemDateTime.text(d))
                         .alias("text"),
-                    functions.when(timed(d), SystemDateTime.start(d)).alias("start"),
-                    functions.when(timed(d), SystemDateTime.end(d)).alias("end"))));
+                    functions.when(timed(d), SystemDateTime.lowerBound(d)).alias("start"),
+                    functions.when(timed(d), SystemDateTime.upperBound(d)).alias("end"))));
   }
 
   /** Whether a date has a time part. */

@@ -140,7 +140,8 @@ public class DateMatcher implements ElementMatcher {
     // (#2594); a bound computed more than once shares one memoised parse (decision 145).
     return let(
         element,
-        date -> compare(searchValue, SystemDateTime.start(date), SystemDateTime.end(date)));
+        date ->
+            compare(searchValue, SystemDateTime.lowerBound(date), SystemDateTime.upperBound(date)));
   }
 
   /**

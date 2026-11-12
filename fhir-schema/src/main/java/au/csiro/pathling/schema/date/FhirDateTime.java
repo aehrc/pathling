@@ -18,6 +18,7 @@
 package au.csiro.pathling.schema.date;
 
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeParseException;
@@ -96,41 +97,51 @@ public final class FhirDateTime {
       throw new DateTimeParseException("Hours must be in range [0, 23]", text, 0);
     }
 
-    final ChronoUnit precision;
-    if (fracGroup != null) {
-      precision = ChronoUnit.NANOS;
-    } else if (secondsGroup != null) {
-      precision = ChronoUnit.SECONDS;
-    } else if (minutesGroup != null) {
-      precision = ChronoUnit.MINUTES;
-    } else if (hoursGroup != null) {
-      precision = ChronoUnit.HOURS;
-    } else if (dayGroup != null) {
-      precision = ChronoUnit.DAYS;
-    } else if (monthGroup != null) {
-      precision = ChronoUnit.MONTHS;
-    } else {
-      precision = ChronoUnit.YEARS;
-    }
+    final ChronoUnit precision =
+        precisionOf(fracGroup, secondsGroup, minutesGroup, hoursGroup, dayGroup, monthGroup);
 
     // The components the value does not state take their lowest value, and a missing timezone is
     // taken as UTC. FHIR allows a leap second, which Java does not, so it is taken as the second
     // before it, as the FHIRPath reference implementation takes it. A fraction is taken to the
     // nanosecond, the finest Java holds.
+    final String seconds = LEAP_SECOND.equals(secondsGroup) ? "59" : secondsGroup;
     final String parseable =
         yearGroup
             + (monthGroup != null ? "-" + monthGroup : "-01")
             + (dayGroup != null ? "-" + dayGroup : "-01")
             + (hoursGroup != null ? "T" + hoursGroup : "T00")
             + (minutesGroup != null ? ":" + minutesGroup : ":00")
-            + (secondsGroup != null
-                ? ":" + (LEAP_SECOND.equals(secondsGroup) ? "59" : secondsGroup)
-                : ":00")
+            + (seconds != null ? ":" + seconds : ":00")
             + (fracGroup != null
                 ? "." + fracGroup.substring(0, Math.min(fracGroup.length(), MAX_FRACTION_DIGITS))
                 : "")
             + (offsetGroup != null ? offsetGroup : "Z");
     return new FhirDateTime(OffsetDateTime.parse(parseable), precision);
+  }
+
+  /** Returns the precision a value states, which is that of the finest component it has. */
+  @Nonnull
+  private static ChronoUnit precisionOf(
+      @Nullable final String fraction,
+      @Nullable final String seconds,
+      @Nullable final String minutes,
+      @Nullable final String hours,
+      @Nullable final String day,
+      @Nullable final String month) {
+    if (fraction != null) {
+      return ChronoUnit.NANOS;
+    } else if (seconds != null) {
+      return ChronoUnit.SECONDS;
+    } else if (minutes != null) {
+      return ChronoUnit.MINUTES;
+    } else if (hours != null) {
+      return ChronoUnit.HOURS;
+    } else if (day != null) {
+      return ChronoUnit.DAYS;
+    } else if (month != null) {
+      return ChronoUnit.MONTHS;
+    }
+    return ChronoUnit.YEARS;
   }
 
   /**

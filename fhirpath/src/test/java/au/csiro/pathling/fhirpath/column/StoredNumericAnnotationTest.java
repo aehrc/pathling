@@ -45,7 +45,7 @@ import org.springframework.beans.factory.annotation.Autowired;
  * Tests that a numeric annotation stored at a type other than the engine's System.Decimal is read
  * as System.Decimal, for a singular and a repeating decimal, nested and at the root (FR-022). A
  * traversed decimal is held as its text and its annotation, and its number is read through {@link
- * StoredDecimal#numeric}.
+ * StoredDecimal#number}.
  *
  * <p>A value that the stored type holds exactly but System.Decimal does not is rounded, or is null
  * where it is out of range, as decoding its text would make it. No R4 element is a repeating
@@ -187,7 +187,7 @@ class StoredNumericAnnotationTest {
       final String expected,
       @Nonnull final String storedType) {
     final Dataset<Row> result =
-        data.select(decimals.transform(StoredDecimal::numeric).getValue().alias("d"));
+        data.select(decimals.transform(StoredDecimal::number).getValue().alias("d"));
     final DataType type = result.schema().apply("d").dataType();
     final BigDecimal value = expected == null ? null : new BigDecimal(expected);
     if (repeating) {

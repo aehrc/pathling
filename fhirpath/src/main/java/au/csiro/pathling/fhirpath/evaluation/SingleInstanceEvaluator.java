@@ -532,17 +532,25 @@ public class SingleInstanceEvaluator {
     if (emptied && sanitisedElements.stream().allMatch(Objects::isNull)) {
       return;
     }
-    if (sanitisedElementSchema != null && field.dataType() instanceof final ArrayType arrayType) {
-      filteredFields.add(
-          new StructField(
-              field.name(),
-              DataTypes.createArrayType(sanitisedElementSchema, arrayType.containsNull()),
-              field.nullable(),
-              field.metadata()));
-    } else {
-      filteredFields.add(field);
-    }
+    filteredFields.add(withElementSchema(field, sanitisedElementSchema));
     filteredValues.add(new ArraySeq.ofRef<>(sanitisedElements.toArray()));
+  }
+
+  /**
+   * Returns an array field with the schema of its sanitised elements, or the field as it is where
+   * there is no such schema or it is not an array.
+   */
+  @Nonnull
+  private static StructField withElementSchema(
+      @Nonnull final StructField field, @Nullable final StructType elementSchema) {
+    if (elementSchema != null && field.dataType() instanceof final ArrayType arrayType) {
+      return new StructField(
+          field.name(),
+          DataTypes.createArrayType(elementSchema, arrayType.containsNull()),
+          field.nullable(),
+          field.metadata());
+    }
+    return field;
   }
 
   /**

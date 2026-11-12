@@ -39,7 +39,7 @@ import org.apache.spark.sql.functions;
  * {@code struct(value)}. No annotation is computed as it is traversed; only whether its number
  * decodes is tested, so that a decimal the engine's System.Decimal cannot hold is absent, as it was
  * before the element held its text. Its number, the engine's System.Decimal, is read through {@link
- * #numeric}, which takes the stored annotation where the decimal carries it and decodes the text
+ * #number}, which takes the stored annotation where the decimal carries it and decodes the text
  * otherwise, decided by Spark as it resolves the plan (design §4.3).
  *
  * <p>A computed decimal, such as a literal or the result of arithmetic, is a bare {@link
@@ -107,7 +107,7 @@ public final class StoredDecimal {
   @Nonnull
   private static Column decodable(@Nonnull final Column decimal) {
     // The decimal is bound once, as the guard and the value both read it.
-    return let(decimal, d -> when(numeric(d).isNotNull(), d));
+    return let(decimal, d -> when(number(d).isNotNull(), d));
   }
 
   /**
@@ -130,7 +130,7 @@ public final class StoredDecimal {
    * @return its number, typed as {@link SystemDecimal#TYPE}
    */
   @Nonnull
-  public static Column numeric(@Nonnull final Column decimal) {
+  public static Column number(@Nonnull final Column decimal) {
     final DecimalNumericKind kind = DecimalNumericKind.INSTANCE;
     return kind.read(
         ColumnFunctions.annotationOrElse(decimal, NUMERIC, kind.compute(NUMERIC, text(decimal))));

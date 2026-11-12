@@ -265,10 +265,12 @@ public final class QuantityCanonicalKind extends AnnotationKind {
       @Nullable final BigDecimal value,
       @Nullable final String system,
       @Nullable final String code) {
-    final String ucumCode =
-        CALENDAR_DURATION_SYSTEM.equals(system)
-            ? DEFINITE_CALENDAR_DURATIONS.get(code)
-            : UCUM_SYSTEM.equals(system) ? code : null;
+    final String ucumCode;
+    if (CALENDAR_DURATION_SYSTEM.equals(system)) {
+      ucumCode = DEFINITE_CALENDAR_DURATIONS.get(code);
+    } else {
+      ucumCode = UCUM_SYSTEM.equals(system) ? code : null;
+    }
     if (value == null || ucumCode == null) {
       return null;
     }

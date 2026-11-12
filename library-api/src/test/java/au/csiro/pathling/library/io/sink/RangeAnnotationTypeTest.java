@@ -69,9 +69,6 @@ class RangeAnnotationTypeTest {
   /** The type of a bound in the footer of a file written in microseconds. */
   private static final String MICROS = "optional int64 %s (TIMESTAMP(MICROS,true))";
 
-  /** The type of a bound in the footer of a file written as INT96. */
-  private static final String INT96 = "optional int96 %s";
-
   @TempDir Path directory;
 
   private static SparkSession spark;

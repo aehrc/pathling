@@ -180,7 +180,7 @@ class QuantityCanonicalKindTest {
     assertNotEquals(
         code,
         QuantityCanonicalKind.INSTANCE.compute(
-            CANONICAL_VALUE_EXACT_ANNOTATION, col("quantity"), name -> col(name)));
+            CANONICAL_VALUE_EXACT_ANNOTATION, col("quantity"), functions::col));
   }
 
   @Test

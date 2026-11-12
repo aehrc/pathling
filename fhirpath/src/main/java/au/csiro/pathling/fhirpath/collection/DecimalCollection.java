@@ -218,7 +218,7 @@ public class DecimalCollection extends Collection
   @Nonnull
   public DecimalCollection toEngineForm() {
     return isStored()
-        ? DecimalCollection.build(getColumn().transform(StoredDecimal::numeric))
+        ? DecimalCollection.build(getColumn().transform(StoredDecimal::number))
         : this;
   }
 

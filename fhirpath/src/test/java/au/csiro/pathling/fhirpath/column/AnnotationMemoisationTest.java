@@ -177,8 +177,8 @@ class AnnotationMemoisationTest {
     final Dataset<Row> query =
         dates(1161)
             .select(
-                transform(traversed, SystemDateTime::start),
-                transform(traversed, SystemDateTime::end));
+                transform(traversed, SystemDateTime::lowerBound),
+                transform(traversed, SystemDateTime::upperBound));
     assertThat(parses(query)).isEqualTo((long) ROWS * ELEMENTS);
   }
 

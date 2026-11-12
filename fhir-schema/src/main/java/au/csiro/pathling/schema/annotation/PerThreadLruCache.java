@@ -81,12 +81,14 @@ public final class PerThreadLruCache<K, V> {
       // The last value is set with the last input, so it is not null once the input matches.
       return Objects.requireNonNull(cache.lastValue);
     }
-    V value = cache.get(input);
-    if (value == null) {
-      computations.increment();
-      value = Objects.requireNonNull(computation.apply(input), "The computation returned null");
-      cache.put(input, value);
-    }
+    final V value =
+        cache.computeIfAbsent(
+            input,
+            key -> {
+              computations.increment();
+              return Objects.requireNonNull(
+                  computation.apply(key), "The computation returned null");
+            });
     cache.lastInput = input;
     cache.lastValue = value;
     return value;

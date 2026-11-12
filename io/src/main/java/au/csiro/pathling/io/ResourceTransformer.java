@@ -680,7 +680,7 @@ final class ResourceTransformer {
                                             forElement)
                                         .alias(LayoutFields.METADATA_GROUP_EXTENSION)))
         .ifPresent(fields::add);
-    final Function<Column, Column> single =
+    final UnaryOperator<Column> single =
         value ->
             functions.when(
                 Stream.of(LayoutFields.METADATA_GROUP_ID, LayoutFields.METADATA_GROUP_EXTENSION)

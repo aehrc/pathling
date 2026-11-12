@@ -627,11 +627,9 @@ public class PathlingContextTest {
 
       assertEquals(mapper.readTree(typeAndSource[1]), mapper.readTree(decoded));
       assertFalse(
-          defaults
-              .encode(source, typeAndSource[0])
-              .schema()
-              .catalogString()
-              .matches(".*_[a-zA-Z]+:struct<(id|extension).*"),
+          Pattern.compile("_[a-zA-Z]+:struct<(?:id|extension)")
+              .matcher(defaults.encode(source, typeAndSource[0]).schema().catalogString())
+              .find(),
           "the default configuration stores no id or extensions of a primitive");
     }
     assertTrue(

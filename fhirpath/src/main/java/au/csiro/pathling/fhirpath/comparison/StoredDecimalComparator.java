@@ -50,36 +50,36 @@ public final class StoredDecimalComparator implements ColumnComparator, ElementW
   @Override
   @Nonnull
   public Column equalsTo(@Nonnull final Column left, @Nonnull final Column right) {
-    return NUMERIC.equalsTo(StoredDecimal.numeric(left), StoredDecimal.numeric(right));
+    return NUMERIC.equalsTo(StoredDecimal.number(left), StoredDecimal.number(right));
   }
 
   @Override
   @Nonnull
   public Column lessThan(@Nonnull final Column left, @Nonnull final Column right) {
-    return NUMERIC.lessThan(StoredDecimal.numeric(left), StoredDecimal.numeric(right));
+    return NUMERIC.lessThan(StoredDecimal.number(left), StoredDecimal.number(right));
   }
 
   @Override
   @Nonnull
   public Column lessThanOrEqual(@Nonnull final Column left, @Nonnull final Column right) {
-    return NUMERIC.lessThanOrEqual(StoredDecimal.numeric(left), StoredDecimal.numeric(right));
+    return NUMERIC.lessThanOrEqual(StoredDecimal.number(left), StoredDecimal.number(right));
   }
 
   @Override
   @Nonnull
   public Column greaterThan(@Nonnull final Column left, @Nonnull final Column right) {
-    return NUMERIC.greaterThan(StoredDecimal.numeric(left), StoredDecimal.numeric(right));
+    return NUMERIC.greaterThan(StoredDecimal.number(left), StoredDecimal.number(right));
   }
 
   @Override
   @Nonnull
   public Column greaterThanOrEqual(@Nonnull final Column left, @Nonnull final Column right) {
-    return NUMERIC.greaterThanOrEqual(StoredDecimal.numeric(left), StoredDecimal.numeric(right));
+    return NUMERIC.greaterThanOrEqual(StoredDecimal.number(left), StoredDecimal.number(right));
   }
 
   @Override
   @Nonnull
   public Optional<UnaryOperator<Column>> deduplicationKey() {
-    return Optional.of(StoredDecimal::numeric);
+    return Optional.of(StoredDecimal::number);
   }
 }

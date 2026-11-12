@@ -186,7 +186,7 @@ public final class SystemDateTime {
    * @return its lower bound
    */
   @Nonnull
-  public static Column start(@Nonnull final Column date) {
+  public static Column lowerBound(@Nonnull final Column date) {
     return ColumnFunctions.annotationOrElse(date, START, DateRangeKind.INSTANCE.start(text(date)));
   }
 
@@ -198,7 +198,7 @@ public final class SystemDateTime {
    * @return its upper bound
    */
   @Nonnull
-  public static Column end(@Nonnull final Column date) {
+  public static Column upperBound(@Nonnull final Column date) {
     return ColumnFunctions.annotationOrElse(date, END, DateRangeKind.INSTANCE.end(text(date)));
   }
 }
