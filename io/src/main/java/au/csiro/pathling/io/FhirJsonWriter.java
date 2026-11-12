@@ -36,10 +36,11 @@ import org.apache.spark.sql.types.DataType;
  *
  * <p>A field which is null is left out rather than written as null, which is what FR-019 now asks
  * for. The rest of FR-019 is deferred (decision 71): a structure whose every field is null is
- * written as an empty object and an array holding nulls as it stands, neither of which is
- * conformant FHIR. For conformant input that happens only where a primitive's id and extensions
- * were not stored, and is kept on purpose until M5 (decision 71's addendum); the layout is assumed
- * to carry neither for any other reason.
+ * written as an empty object and an array holding nulls as it stands. For conformant input that
+ * happens only where a primitive's id and extensions were not stored, which the ingest option that
+ * stores them decides (decision 71's addendum), and the layout is assumed to carry neither for any
+ * other reason. Where they were stored, a primitive's metadata group is written beside it, and the
+ * positional nulls of a repeating primitive align with its groups (decision 63).
  */
 public final class FhirJsonWriter implements FhirFormatWriter {
 

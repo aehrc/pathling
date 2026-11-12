@@ -220,12 +220,36 @@ public final class DefinitionCanonicalStructure implements CanonicalStructure {
    * Returns the extension element of this node, which is the definition every extension carried
    * here takes its shape from, including the extensions within a metadata group.
    *
-   * @return the extension element, or empty where this node carries no extensions
+   * <p>A resource that is not a domain resource, such as {@code Binary}, {@code Bundle} or {@code
+   * Parameters}, has no {@code extension} of its own, yet its primitives carry extensions in their
+   * groups all the same, and those take the Extension type's own shape (T061a). The shape is then
+   * taken from the first complex element beneath the node that carries extensions, which for a
+   * resource is {@code meta}: every element declares {@code extension} with the Extension type, so
+   * the shape is the same wherever it is found.
+   *
+   * @return the extension element, or empty where neither this node nor any complex element
+   *     directly beneath it carries extensions
    */
   @Nonnull
   public Optional<ElementDefinition> extensionElement() {
+    return ownExtensionElement()
+        .or(
+            () ->
+                entries().stream()
+                    .filter(LayoutEntry::isElement)
+                    .map(this::elementStructure)
+                    .flatMap(Optional::stream)
+                    .map(DefinitionCanonicalStructure::ownExtensionElement)
+                    .flatMap(Optional::stream)
+                    .findFirst());
+  }
+
+  /** Returns the extension element this node declares itself, where it declares one. */
+  @Nonnull
+  private Optional<ElementDefinition> ownExtensionElement() {
     // The entries are memoised, so finding one among them needs no memo of its own.
     return entries().stream()
+        .filter(LayoutEntry::isElement)
         .filter(entry -> LayoutFields.METADATA_GROUP_EXTENSION.equals(entry.getName()))
         .findFirst()
         .flatMap(LayoutEntry::getElement);

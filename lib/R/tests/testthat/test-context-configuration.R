@@ -50,6 +50,7 @@ test_that("default configurations are correct", {
   expect_equal(schema_config %>% invoke("isRecomputeAnnotations"), FALSE)
   expect_equal(schema_config %>% invoke("isKeepUnrequestedAnnotations"), FALSE)
   expect_equal(schema_config %>% invoke("isDropUnknownAnnotations"), FALSE)
+  expect_equal(schema_config %>% invoke("isStorePrimitiveMetadata"), FALSE)
 
   # Clean up
   pathling_disconnect(pc)
@@ -69,7 +70,8 @@ test_that("custom configurations round trip correctly", {
     enable_canonical_annotation = FALSE,
     recompute_annotations = TRUE,
     keep_unrequested_annotations = TRUE,
-    drop_unknown_annotations = TRUE
+    drop_unknown_annotations = TRUE,
+    store_primitive_metadata = TRUE
   )
   spark <- pathling_spark(pc)
 
@@ -100,6 +102,7 @@ test_that("custom configurations round trip correctly", {
   expect_equal(schema_config %>% invoke("isRecomputeAnnotations"), TRUE)
   expect_equal(schema_config %>% invoke("isKeepUnrequestedAnnotations"), TRUE)
   expect_equal(schema_config %>% invoke("isDropUnknownAnnotations"), TRUE)
+  expect_equal(schema_config %>% invoke("isStorePrimitiveMetadata"), TRUE)
 
   # Clean up
   pathling_disconnect(pc)

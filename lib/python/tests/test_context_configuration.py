@@ -105,6 +105,7 @@ def test_default_configurations(spark_session):
     assert not schema_config.isRecomputeAnnotations()
     assert not schema_config.isKeepUnrequestedAnnotations()
     assert not schema_config.isDropUnknownAnnotations()
+    assert not schema_config.isStorePrimitiveMetadata()
 
 
 def test_custom_configurations(spark_session):
@@ -123,6 +124,7 @@ def test_custom_configurations(spark_session):
         recompute_annotations=True,
         keep_unrequested_annotations=True,
         drop_unknown_annotations=True,
+        store_primitive_metadata=True,
     )
 
     # Get Java PathlingContext instance
@@ -148,6 +150,7 @@ def test_custom_configurations(spark_session):
     assert schema_config.isRecomputeAnnotations()
     assert schema_config.isKeepUnrequestedAnnotations()
     assert schema_config.isDropUnknownAnnotations()
+    assert schema_config.isStorePrimitiveMetadata()
 
 
 def test_spark_conf_with_explicit_session_raises(spark_session):

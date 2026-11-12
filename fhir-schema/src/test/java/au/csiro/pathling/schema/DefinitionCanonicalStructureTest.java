@@ -187,6 +187,43 @@ class DefinitionCanonicalStructureTest {
     assertTrue(group.field("extension").isPresent());
   }
 
+  /**
+   * A resource that is not a domain resource has no {@code extension} of its own, and its
+   * primitives' groups still carry extensions of the Extension type's own shape (T061a).
+   */
+  @Test
+  void givesAGroupTheExtensionShapeOnAResourceWithoutExtensions() {
+    final DefinitionCanonicalStructure patientGroupExtension =
+        DefinitionCanonicalStructure.forResource(DEFINITIONS, "Patient")
+            .metadataGroup("_gender")
+            .orElseThrow()
+            .extensionStructure("extension")
+            .orElseThrow();
+    for (final String[] typeAndPrimitive :
+        List.of(
+            new String[] {"Binary", "_contentType"},
+            new String[] {"Bundle", "_timestamp"},
+            new String[] {"Parameters", "_language"})) {
+      final DefinitionCanonicalStructure resource =
+          DefinitionCanonicalStructure.forResource(DEFINITIONS, typeAndPrimitive[0]);
+      assertTrue(
+          resource.entry("extension").isEmpty(),
+          typeAndPrimitive[0] + " declares no extension of its own");
+      final DefinitionCanonicalStructure extension =
+          resource
+              .metadataGroup(typeAndPrimitive[1])
+              .orElseThrow()
+              .extensionStructure("extension")
+              .orElseThrow();
+      assertEquals(
+          patientGroupExtension.fieldOrder(),
+          extension.fieldOrder(),
+          "the extensions of a group on " + typeAndPrimitive[0] + " are not of the Extension type");
+      assertTrue(extension.entry("url").isPresent());
+      assertTrue(extension.entry("valueReference").isPresent());
+    }
+  }
+
   @Test
   void placesAPrimitivesAnnotationsInItsMetadataGroupAfterItsIdAndExtensions() {
     assertEquals(

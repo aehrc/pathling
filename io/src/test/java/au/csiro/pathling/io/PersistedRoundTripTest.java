@@ -57,6 +57,17 @@ class PersistedRoundTripTest {
         .assertRoundTrip(resourceType, corpus("fhir-spec", resourceType));
   }
 
+  /** The same sample with the ingest option that stores primitive metadata on (ticket 17). */
+  @ParameterizedTest
+  @CsvSource({"Patient", "ActivityDefinition"})
+  void roundTripsSpecificationExamplesWithTheirPrimitiveMetadata(
+      @Nonnull final String resourceType, @TempDir @Nonnull final Path directory) {
+    RoundTripHarness.storingPrimitiveMetadata()
+        .excludingContainedResources()
+        .persistingTo(directory)
+        .assertRoundTrip(resourceType, corpus("fhir-spec", resourceType));
+  }
+
   @ParameterizedTest
   @CsvSource({"Patient", "Observation"})
   void roundTripsSyntheaOnAPrunedSchema(

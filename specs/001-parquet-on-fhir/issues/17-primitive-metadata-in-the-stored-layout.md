@@ -22,11 +22,27 @@ Points carried from the frozen tasks:
 
 **Blocked by:** Nothing now: ticket 32 has landed. Ticket 52 follows this ticket.
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] With the option on, a primitive's id and extensions are stored in the group beside it and round-trip losslessly, from JSON, XML and bundles, for singular and repeating primitives, including positional nulls and `_x` without `x` (T051).
-- [ ] With the option off, nothing changes in the stored schema, and FR-016's exception 3 holds and is asserted by the harness.
-- [ ] A group's content is checked, and its extensions have the Extension type's shape on `Binary`, `Bundle` and `Parameters` (T061a).
-- [ ] The strip is gone, the exclusion is conditional on the option, and the spec says what the dense mode does with the group (T078c).
-- [ ] A `urn:` reference inside a primitive's extension resolves as decision 83 states, in XML and JSON bundles; a test shows each.
-- [ ] Row 12 of the upstream amendments draft is drafted, and the `_id` and `_url` question is recorded in ticket 26's follow-up.
+- [x] With the option on, a primitive's id and extensions are stored in the group beside it and round-trip losslessly, from JSON, XML and bundles, for singular and repeating primitives, including positional nulls and `_x` without `x` (T051).
+- [x] With the option off, nothing changes in the stored schema, and FR-016's exception 3 holds and is asserted by the harness.
+- [x] A group's content is checked, and its extensions have the Extension type's shape on `Binary`, `Bundle` and `Parameters` (T061a).
+- [x] The strip is gone, the exclusion is conditional on the option, and the spec says what the dense mode does with the group (T078c).
+- [x] A `urn:` reference inside a primitive's extension resolves as decision 83 states, in XML and JSON bundles; a test shows each.
+- [x] Row 12 of the upstream amendments draft is drafted, and the `_id` and `_url` question is recorded in ticket 26's follow-up.
+
+## Comments
+
+### Implementation (branch `issue/2832_17_primitive-metadata-stored`)
+
+- **The option** is `storePrimitiveMetadata` on `SchemaConfiguration`, off by default, read by `FhirReader.of(spark, definitions, configuration)` and passed by `PathlingContext`. Python and R expose it as `store_primitive_metadata`. Only ingest reads it. Egress writes a group wherever the stored data carries one, so data stored with the option on is written back out whatever the writer's context.
+- **Ingest.** `ResourceTransformer` plans the group when the option is on. It holds `id` (as text) and `extension` (the Extension type, through the same planning as any other element, so a `Reference` in it is resolved by type in a bundle). It leaves out anything else the source's group holds, and reports nothing (owner decision 3, 2026-11-12). A repeating primitive's values and groups stay positional, and a repeating primitive carried only as `_x` gets a value array of nulls, one for each group, row by row. XML ingest now parses a primitive's `extension` as the Extension type, not as text.
+- **Egress.** JSON writes the group's `id` and `extension` and leaves its annotations out. It leaves a group out where it holds neither (a group the annotation step added for annotations alone). It leaves a repeating primitive's value array out where it holds only nulls beside groups that hold metadata, as a source carrying `_x` without `x` had no `x`. XML writes a value and its group into one element, positions paired, so a position holding only metadata is an element without `value`. A position holding neither has no XML form and is left out.
+- **T061a.** `DefinitionCanonicalStructure.extensionElement()` takes the Extension shape from the first complex child carrying `extension` (for a resource, `meta`) where the node has none of its own.
+- **Harness.** `RoundTripHarness.storingPrimitiveMetadata()` excludes nothing and reads with the option on. `excludingPrimitiveMetadata()` is the option off, and also asserts that the stored schema carries no group holding an id or extensions (FR-016's exception 3). With the option on, every type of the R4 example selection round-trips through Parquet from JSON, and the structural selection from XML, as do both formats of the references bundle. `PathlingContextTest` runs the option through the context's encode, annotation and decode.
+- **Spec.** FR-003 and FR-009 say what the option and the dense mode do. FR-019 says that a value array holding only nulls beside a group is omitted (owner, 2026-11-12). Exception 3 already named the option. Row 12 of `evidence/upstream-amendments-draft.md` is drafted. The `_id`/`_url` question was already in ticket 26's list.
+
+### Owner decisions (2026-11-12)
+
+1. Egress drops a repeating primitive's value array that holds only nulls when it sits beside a metadata group, as FR-019 now says. The source of a primitive carried only as `_x` had no `x`, so nothing it held is lost.
+2. The option keeps its name: `storePrimitiveMetadata` on `SchemaConfiguration`, and `store_primitive_metadata` in Python and R.

@@ -21,20 +21,36 @@ import lombok.Builder;
 import lombok.Data;
 
 /**
- * Represents configuration specific to the stored schema: which annotations the annotation step
- * stores, and what it does with the annotations its input already carries.
+ * Represents configuration specific to the stored schema: whether ingest stores the ids and
+ * extensions of primitives, which annotations the annotation step stores, and what it does with the
+ * annotations its input already carries.
  *
  * <p>It sits beside {@code EncodingConfiguration} rather than on it. That class lives in the module
  * carrying the previous encoding implementation, which must be left in place and unmodified
  * (FR-051), so the options this work adds cannot go there.
  *
- * <p>The switches govern what the annotation step stores, never what the engine can compute: the
- * engine computes an annotation the schema does not carry, so turning one off trades the width of
- * the stored data against the speed of a query, never its answer (FR-022).
+ * <p>The annotation switches govern what the annotation step stores, never what the engine can
+ * compute: the engine computes an annotation the schema does not carry, so turning one off trades
+ * the width of the stored data against the speed of a query, never its answer (FR-022).
  */
 @Data
 @Builder
 public class SchemaConfiguration {
+
+  /**
+   * Whether ingest stores the id and extensions of a primitive, in the metadata group beside it
+   * (FR-003, ticket 17).
+   *
+   * <p>Off is the default. A primitive's id and extensions are then left out, silently, and the
+   * stored schema carries no metadata group but the one the annotation step adds for a primitive's
+   * annotations (FR-016's exception 3). On, they are stored and written back out, so that a round
+   * trip keeps them. The group widens the stored schema wherever the source carries one, which is
+   * why it is paid for only where it is asked for. Egress writes a stored group whatever this
+   * option is set to when it writes. Reading what is stored, from FHIRPath, is a setting of the
+   * engine's own, and until ticket 52 (Primitive metadata in the engine) lands, querying data
+   * stored with this option on is not supported.
+   */
+  @Builder.Default private boolean storePrimitiveMetadata = false;
 
   /**
    * Whether the numeric annotation of a decimal is stored, named by {@link

@@ -86,8 +86,10 @@ silently.
 - A resource held inline by an element whose type is `Resource`, such as
   `Parameters.parameter.resource`.
 - The `id` and `extension` of primitive elements, which FHIR JSON carries in a
-  `_`-prefixed property beside the element (for example `_birthDate`). The
-  element's value is kept.
+  `_`-prefixed property beside the element (for example `_birthDate`), unless
+  you ask for them to be stored, as described under
+  [Ids and extensions of primitive elements](#ids-and-extensions-of-primitive-elements).
+  The element's value is kept.
 
 Content that does not conform to the FHIR definitions, such as an element they
 do not describe, is not checked, and what is stored for it is undefined. See
@@ -95,8 +97,33 @@ do not describe, is not checked, and what is stored for it is undefined. See
 
 This release does not write the optional annotation fields that the
 specification defines (fields prefixed with `__`, such as the numeric value of
-a decimal or the canonical form of a quantity), nor the `_`-prefixed groups that
-the specification uses for the ids and extensions of primitive elements.
+a decimal or the canonical form of a quantity).
+
+### Ids and extensions of primitive elements
+
+The `id` and `extension` of a primitive element can be stored, by turning on
+the `store_primitive_metadata` option when the Pathling context is created
+(`storePrimitiveMetadata` on the schema configuration in Java). They are then
+stored in a structure beside the element, named after it with a `_` prefix
+(for example `_birthDate`), holding the fields `id` and `extension`, and are
+written back out to JSON and XML with the element. The option is off by
+default, because the structure makes the stored data wider wherever the data
+carries one.
+
+For a repeated element, such as `HumanName.given`, the element and its
+`_`-prefixed structure are arrays of the same length, aligned by position, as
+they are in FHIR JSON: a value without an id or extensions has a null in the
+structure's array, and an id or extensions without a value has a null in the
+element's array. When the element is written back out, an array of the
+element's values that holds only nulls is left out, as it is in FHIR JSON for
+an element that carries only ids and extensions.
+
+The option decides only what encoding stores. Writing resources out always
+writes the ids and extensions the data holds, whatever the option is set to
+when they are written.
+
+Queries do not yet read the ids and extensions of primitive elements, and
+querying data stored with the option on is not supported in this release.
 
 ## The schema is fitted to the data
 

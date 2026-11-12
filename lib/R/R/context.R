@@ -121,6 +121,9 @@ StorageType <- list(
 #' @param drop_unknown_annotations Whether a field in the input named as an annotation, but which is
 #'   not one Pathling computes there, is left out rather than kept. Keeping it is the default, with
 #'   its value unchanged, after the annotations Pathling stores.
+#' @param store_primitive_metadata Whether encoding stores the id and extensions of a primitive
+#'   element, beside it, so that they are written back out with it. They are left out by default,
+#'   which keeps the stored data narrower.
 #'
 #' @return A Pathling context instance initialized with the specified configuration
 #'
@@ -179,7 +182,8 @@ pathling_connect <- function(
   enable_canonical_annotation = TRUE,
   recompute_annotations = FALSE,
   keep_unrequested_annotations = FALSE,
-  drop_unknown_annotations = FALSE
+  drop_unknown_annotations = FALSE,
+  store_primitive_metadata = FALSE
 ) {
   if (!terminology_mode %in% c("server", "local")) {
     stop("terminology_mode must be 'server' or 'local'")
@@ -305,6 +309,7 @@ pathling_connect <- function(
     j_invoke("recomputeAnnotations", as.logical(recompute_annotations)) %>%
     j_invoke("keepUnrequestedAnnotations", as.logical(keep_unrequested_annotations)) %>%
     j_invoke("dropUnknownAnnotations", as.logical(drop_unknown_annotations)) %>%
+    j_invoke("storePrimitiveMetadata", as.logical(store_primitive_metadata)) %>%
     j_invoke("build")
 
   j_invoke_static(

@@ -324,8 +324,10 @@ Identifiers are stable. FR-015, FR-018 and FR-020 are retired and not reused.
   double holds it until OQ-1 is answered; whether it preserves the source's
   lexical form, and its precision beyond a double, is OQ-1.
 - **FR-003**: Primitive element ids and extensions MUST be stored in the
-  primitive metadata group beside the element; extensions on complex elements
-  MUST be stored inline. No root-level extension map and no per-composite field
+  primitive metadata group beside the element, when the ingest option that
+  stores them is on; it is off by default, and they are then dropped silently
+  (FR-016's exception 3; ticket 17). Extensions on complex elements MUST be
+  stored inline. No root-level extension map and no per-composite field
   id is emitted.
 - **FR-004**: Dates MUST carry the specification's range annotations.
 - **FR-005**: Quantities MUST carry their canonical form as two flat
@@ -350,6 +352,11 @@ Identifiers are stable. FR-015, FR-018 and FR-020 are retired and not reused.
   does not describe is typed only as FR-012 allows.
 - **FR-009**: The system MUST support a fitted schema and a dense schema. The
   fitted schema is the default. _Deferred: the dense schema (Scope of #2367)._
+  A dense schema carries a primitive's metadata group only when the ingest
+  option that stores primitive ids and extensions is on, and then beside every
+  primitive, populated where the source has an id or extensions and null
+  otherwise (owner, 2026-11-12; ticket 17). Which further options limit the
+  full dense schema is ticket 18's to decide.
 - **FR-010**: The dense schema MUST be produced by the same traversal as the
   fitted one, differing only in the strategy that decides which children it
   descends into and where it stops, so the two cannot diverge in type,
@@ -417,7 +424,10 @@ Identifiers are stable. FR-015, FR-018 and FR-020 are retired and not reused.
   (Scope of #2367)._
 - **FR-019**: Export MUST omit an absent element, a structure whose every field
   is null, and an array holding only nulls, except a repeating primitive's
-  positional nulls, which align with its metadata group. *(Subject to OQ-1.)*
+  positional nulls, which align with its metadata group. A value array that
+  holds only nulls beside a metadata group is omitted all the same, as the
+  source of a primitive carried only as `_x` had no `x` (ticket 17).
+  *(Subject to OQ-1.)*
 - **FR-063**: Ingest and the engine run in `trust` (decision 133's addendum of
   2026-10-22). Ingest assumes its input is conformant and checks nothing: its
   behaviour on non-conformant content is undefined, and it may fail the read,

@@ -101,7 +101,7 @@ raised as [#4](https://github.com/aehrc/parquet-on-fhir/issues/4) on 2026-11-11.
 | 9 | Pathling emits `__canonical_exact` in place of `__canonical`, and the canonicalisation rules the specification leaves open | deviation in Pathling only | not yet drafted (the rules); the substitution is recorded in decision 137 |
 | 10 | What the `numeric` annotation holds beyond six fractional digits and past its range | clarification | not yet drafted |
 | 11 | A decimal's text is numerically equal to the source, not its lexical form | deviation in Pathling only | not yet drafted (no upstream change is needed; tracked as OQ-1 and ticket 16) |
-| 12 | Primitive ids and extensions: repeating primitives, positional nulls, `_x` without `x`, and the specification's own example | amendment proposed | not yet drafted (ticket 17 is a placeholder) |
+| 12 | Primitive ids and extensions: repeating primitives, positional nulls, `_x` without `x`, and the specification's own example | amendment proposed | drafted here, 2026-11-12, from ticket 17's result (ticket 17, "Primitive metadata in the stored layout") |
 | 13 | Elements of the abstract `Resource` type, `contained` first, are not represented | deviation in Pathling only | not yet drafted |
 | 14 | `unsignedInt` and `positiveInt` are stored as signed `INT32` | deviation in Pathling only | not yet drafted (unrecorded in Pathling's deviation table) |
 | 15 | Fields the definitions do not describe, and their place in the conformance levels | clarification | not yet drafted (ticket 36 scopes a Pathling issue) |
@@ -1125,8 +1125,9 @@ ticket 16 reworks ingest, restoring the specification's guarantee.
 
 ## 12. Primitive ids and extensions: repeating primitives, positional nulls and `_x` without `x`
 
-**Kind:** amendment proposed. **Status:** not yet drafted. Ticket 17 is a
-placeholder, "to be rewritten once ticket 32 lands".
+**Kind:** amendment proposed. **Status:** drafted here, 2026-11-12, from what
+ticket 17 (Primitive metadata in the stored layout) built and measured. Ticket 46
+(Review the proposed amendments to the Parquet on FHIR specification) reviews it.
 
 ### Context
 
@@ -1145,17 +1146,34 @@ it are not consistent with the rest:
   `LIST` of values, and `_x` as "a group" with one `id` and one `extension` cannot
   say which of the values the id belongs to.
 
-**What Pathling built, and has not yet.** The design follows FHIR's own JSON
-(`"given": ["Jane", null]` beside `"_given": [null, {...}]`): `_x` is aligned with
-`x` by position, singular and repeating alike, and a repeating primitive's `_x` is
-an array of groups with a null in `x` holding the place of a value that exists only
-in `_x` (decision 63, which says dropping that null shifts every position after
-it). A primitive carried only as `_x` is stored as a typed null of its declared
-type (decision 72). Where the schema carries `_x` but not `x`, `x` is null in every
-row (decision 135's addendum). **Pathling does not yet store ids and extensions**:
-FR-016 excepts them "until ticket 17 stores the metadata group", and the group
-today holds annotations only. The reader emits the group only where something
-populates it (decision 60's addendum).
+**What Pathling built (ticket 17).** The design follows FHIR's own JSON
+(`"given": ["Jane", null]` beside `"_given": [null, {...}]`). Storing ids and
+extensions is an ingest option, off by default; with it off they are dropped
+silently (FR-016's exception 3) and the group holds annotations only. With it on:
+
+- `_x` is aligned with `x` by position, singular and repeating alike. A repeating
+  primitive's `_x` is a `LIST` of groups, null where a value has no metadata, and
+  `x` holds a null where a value exists only as metadata (decision 63).
+- A repeating primitive carried only as `_x` is stored with a value `LIST` of
+  nulls, one for each group, not a null `LIST` (decision 72). This holds row by
+  row, including where other rows carry `x`.
+- A group holds `id` (`STRING`) and `extension`, a `LIST` of the Extension type,
+  each present only where the data carries one, then the annotations (decision
+  135, part 4). Nothing else that a source's group holds is stored.
+- The Extension shape is the Extension type's own, including on `Binary`,
+  `Bundle` and `Parameters`, which have no root `extension` (T061a).
+- Egress writes the group back out in JSON and XML. In JSON, a value `LIST` that
+  holds only nulls beside groups that hold metadata is left out, because the source
+  of a primitive carried only as `_x` had no `x`. In XML, the value and its metadata
+  are written into one element, so a position holding metadata without a value is
+  an element without a `value` attribute. A position holding neither has no XML
+  form and is left out.
+
+Measured: with the option on, every type in the vendored selection of the R4
+examples round-trips losslessly through Parquet, from JSON and from XML. This
+includes the 81 example resources that carry primitive metadata and
+`ActivityDefinition.timingTiming`, whose only content is `_event`, read from JSON.
+HAPI drops that element, so it cannot be written as XML from the JSON.
 
 ### Issue
 
@@ -1167,20 +1185,38 @@ group has no place to hold what section 3 puts there.
 
 ### Proposal
 
-Not drafted. A proposal would: say `_x` has the same cardinality as `x`, so a
-repeating primitive's `_x` is a `LIST` of groups aligned with the values by
-position; allow a null in a value `LIST` only where the aligned `_x` item carries
-content; allow `_x` without `x` and say the value is null; and correct the
-`_birthDate.extension` example to a `LIST`. It should also say what a resource
-without a domain-resource root does (ticket 17: `Binary`, `Bundle` and
-`Parameters` have no root `extension`; the Extension shape is the same).
+Amend "Primitive extensions and internal identifiers" as follows.
+
+1. `_x` has the cardinality of `x`. Beside a repeating primitive it is a `LIST` of
+   groups, the same length as the value `LIST`, aligned by position. An item is
+   null where the value at that position has neither an id nor extensions.
+2. A null in a value `LIST` is allowed only at a position whose `_x` item carries
+   content. This is the one null Level 2 admits in an array (section 4).
+3. `_x` without `x` is allowed. For a singular primitive the value is null. For a
+   repeating one the value `LIST` is either absent or a `LIST` of nulls of the
+   length of `_x`. A writer SHOULD write the `LIST` of nulls, so that `x` and `_x`
+   align in every row of a column that carries `x` in some rows. A reader MUST
+   accept both.
+4. A group's fields are `id` (`STRING`) and `extension`, a `LIST` of the Extension
+   type exactly as the "Extensions" section gives it, followed by the primitive's
+   annotations (section 3). The `_birthDate.extension` example is corrected to a
+   `LIST`.
+5. The extensions in a group take the Extension type's shape whether or not the
+   resource carrying them has a root `extension` (`Binary`, `Bundle` and
+   `Parameters` have none).
+6. Converting to FHIR JSON writes `_x` as FHIR JSON does, and may leave out a
+   value array that holds only nulls. Converting to FHIR XML writes the value and
+   its group into one element. A position holding neither has no XML form.
 
 ### Other considerations
 
 - **Open question, from ticket 17.** "Decide whether `_id` and `_url` groups exist
   at all": `id` and an extension's `url` are themselves primitives, so by the
   specification's rule "each primitive element" can have an `_x` group, which would
-  recurse. Ticket 17 has not decided.
+  recurse. Pathling's canonical structure emits them, because annotations use them
+  (owner, 2026-11-12). Whether a group FHIR does not define is compliant is
+  recorded for the follow-up on non-conformant data, raised by ticket 26 (Raise
+  the GitHub follow-up issues). It is not decided here.
 - **Compatibility.** The upstream example files contain no `_x` group at all
   (checked by reading their schemas). The released encoder (before Pathling's PoF
   work) kept a metadata-only structure where the primitive is singular and dropped
@@ -1192,6 +1228,9 @@ without a domain-resource root does (ticket 17: `Binary`, `Bundle` and
   an `_given`.
 - **Dependence.** Section 3 (annotations share `_x`), section 4 (positional
   nulls are the one null allowed in an array).
+- **Dense schemas.** A dense schema carries the group only when the option is on,
+  and then beside every primitive, null where the source has no id or extensions
+  (owner, 2026-11-12; FR-009).
 - **If rejected.** Pathling stores the group its own way and records the
   repeating-primitive rule as a deviation. A reader of the current specification
   would not find ids and extensions of a repeating primitive.

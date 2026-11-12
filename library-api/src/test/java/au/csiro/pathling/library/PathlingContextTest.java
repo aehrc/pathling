@@ -44,6 +44,7 @@ import au.csiro.pathling.terminology.DefaultTerminologyServiceFactory;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirVersionEnum;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Nonnull;
 import jakarta.validation.ConstraintViolationException;
 import java.io.File;
@@ -585,6 +586,61 @@ public class PathlingContextTest {
     // out the annotation Pathling does not define, as the configuration says, and changes nothing
     // else.
     assertEquals(stored.drop("__unknown").schema(), annotated.schema());
+  }
+
+  /**
+   * The ingest option that stores the ids and extensions of primitives reaches encoding through the
+   * context, and what it stores is annotated and decoded back out unchanged (ticket 17): a singular
+   * primitive's group beside its annotations, a repeating primitive's positional null, and a
+   * repeating annotated primitive carried only as its groups.
+   */
+  @Test
+  void storesAndDecodesPrimitiveMetadataWhereTheSchemaConfigurationAsks() throws IOException {
+    final String extension =
+        "{\"extension\":[{\"url\":\"http://hl7.org/fhir/StructureDefinition/data-absent-reason\","
+            + "\"valueCode\":\"masked\"}]}";
+    final String patient =
+        "{\"resourceType\":\"Patient\",\"id\":\"p1\",\"birthDate\":\"1974-12-25\","
+            + "\"_birthDate\":{\"id\":\"b\"},\"name\":[{\"given\":[\"Ann\",null],"
+            + "\"_given\":[null,"
+            + extension
+            + "]}]}";
+    final String activity =
+        "{\"resourceType\":\"ActivityDefinition\",\"id\":\"a1\",\"status\":\"active\","
+            + "\"timingTiming\":{\"_event\":["
+            + extension
+            + "]}}";
+    final PathlingContext storing =
+        PathlingContext.builder(spark)
+            .schemaConfiguration(SchemaConfiguration.builder().storePrimitiveMetadata(true).build())
+            .build();
+    final PathlingContext defaults = PathlingContext.builder(spark).build();
+    final ObjectMapper mapper = new ObjectMapper();
+
+    for (final String[] typeAndSource :
+        List.of(new String[] {"Patient", patient}, new String[] {"ActivityDefinition", activity})) {
+      final Dataset<Row> source =
+          spark.createDataset(List.of(typeAndSource[1]), Encoders.STRING()).toDF();
+      final Dataset<Row> encoded = storing.encode(source, typeAndSource[0]);
+      final String decoded =
+          storing.decode(encoded, typeAndSource[0], PathlingContext.FHIR_JSON).first();
+
+      assertEquals(mapper.readTree(typeAndSource[1]), mapper.readTree(decoded));
+      assertFalse(
+          defaults
+              .encode(source, typeAndSource[0])
+              .schema()
+              .catalogString()
+              .matches(".*_[a-zA-Z]+:struct<(id|extension).*"),
+          "the default configuration stores no id or extensions of a primitive");
+    }
+    assertTrue(
+        storing
+            .encode(spark.createDataset(List.of(patient), Encoders.STRING()).toDF(), "Patient")
+            .schema()
+            .catalogString()
+            .contains("_birthDate:struct<id:string,__start"),
+        "the group carries the annotations after the id");
   }
 
   @Test

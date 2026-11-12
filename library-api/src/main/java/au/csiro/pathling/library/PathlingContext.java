@@ -157,7 +157,7 @@ public class PathlingContext {
     PathlingUdfConfigurer.registerUdfs(spark);
     gson = buildGson();
     final FhirDefinitionContext definitions = FhirDefinitionContext.of(fhirEncoders.getContext());
-    fhirReader = FhirReader.of(spark, definitions);
+    fhirReader = FhirReader.of(spark, definitions, schemaConfiguration);
     fhirWriter = FhirWriter.of(definitions);
     annotator = Annotator.of(definitions, schemaConfiguration);
   }

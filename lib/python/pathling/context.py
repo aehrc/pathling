@@ -188,6 +188,7 @@ class PathlingContext:
         recompute_annotations: Optional[bool] = False,
         keep_unrequested_annotations: Optional[bool] = False,
         drop_unknown_annotations: Optional[bool] = False,
+        store_primitive_metadata: Optional[bool] = False,
     ) -> "PathlingContext":
         """
         Creates a :class:`PathlingContext` with the given configuration options. This should only
@@ -320,6 +321,9 @@ class PathlingContext:
         :param drop_unknown_annotations: whether a field in the input named as an annotation, but
                which is not one Pathling computes there, is left out rather than kept. Keeping it
                is the default, with its value unchanged, after the annotations Pathling stores.
+        :param store_primitive_metadata: whether encoding stores the id and extensions of a
+               primitive element, beside it, so that they are written back out with it. They are
+               left out by default, which keeps the stored data narrower.
         :return: a :class:`PathlingContext` instance initialized with the specified configuration
         """
         # Validate the terminology mode up front, before paying the Spark cold start.
@@ -492,6 +496,7 @@ class PathlingContext:
             .recomputeAnnotations(recompute_annotations)
             .keepUnrequestedAnnotations(keep_unrequested_annotations)
             .dropUnknownAnnotations(drop_unknown_annotations)
+            .storePrimitiveMetadata(store_primitive_metadata)
             .build()
         )
 

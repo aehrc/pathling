@@ -19,6 +19,7 @@ package au.csiro.pathling.io;
 
 import au.csiro.pathling.definition.DefinitionContext;
 import au.csiro.pathling.definition.fhir.FhirDefinitionContext;
+import au.csiro.pathling.schema.SchemaConfiguration;
 import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -74,6 +75,16 @@ final class TransformFixtures {
   @Nonnull
   public static FhirReader fhirReader() {
     return FhirReader.of(spark(), DEFINITIONS);
+  }
+
+  /**
+   * Returns the reader of every format, over the R4 definitions and the shared session, that stores
+   * the ids and extensions of primitives (ticket 17).
+   */
+  @Nonnull
+  public static FhirReader metadataReader() {
+    return FhirReader.of(
+        spark(), DEFINITIONS, SchemaConfiguration.builder().storePrimitiveMetadata(true).build());
   }
 
   /** Returns the writer of every format, over the R4 definitions. */

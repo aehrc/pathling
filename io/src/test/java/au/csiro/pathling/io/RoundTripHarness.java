@@ -44,6 +44,10 @@ import java.util.Optional;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SaveMode;
+import org.apache.spark.sql.types.ArrayType;
+import org.apache.spark.sql.types.DataType;
+import org.apache.spark.sql.types.StructField;
+import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
@@ -65,11 +69,18 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * what it did not store. {@link #assertRoundTrip} returns how often the counted exceptions applied,
  * so a test says what it expects each count to be. Two apply to every round trip, because nothing a
  * caller chooses avoids them — decimals compared numerically, and base64Binary whitespace. The rest
- * are opted into: primitive element ids and extensions until ticket 17, {@code contained} resources
- * under FR-006, and an inline resource held by an element declared as the abstract {@code
- * Resource}. Without the corresponding option, a corpus carrying any of these fails here, which is
- * the point. An exclusion of primitive metadata does not cascade into the containers it empties,
- * because the layout keeps them and writes them as empty objects (decisions 71 and 72).
+ * are opted into: primitive element ids and extensions where the ingest option that stores them is
+ * off (FR-016's exception 3), {@code contained} resources under FR-006, and an inline resource held
+ * by an element declared as the abstract {@code Resource}. Without the corresponding option, a
+ * corpus carrying any of these fails here, which is the point. An exclusion of primitive metadata
+ * does not cascade into the containers it empties, because the layout keeps them and writes them as
+ * empty objects (decisions 71 and 72).
+ *
+ * <p>Primitive metadata is the one exception the ingest option decides. With the option off the
+ * harness excludes it, and asserts the exception holds: the stored schema carries no group holding
+ * an id or extensions, and the output carries none either. With it on, nothing is excluded, so the
+ * metadata must come back as it went in, and the count of groups in the source says how many were
+ * round-tripped.
  *
  * <p>{@code Bundle} is not the harness's concern, because it is never a resource type a corpus is
  * round-tripped as (FR-007).
@@ -84,6 +95,9 @@ public final class RoundTripHarness {
 
   private final boolean excludePrimitiveMetadata;
 
+  /** Whether the ingest option that stores primitive metadata is on, for the reads made here. */
+  private final boolean storePrimitiveMetadata;
+
   private final boolean excludeContainedResources;
 
   private final boolean excludeInlineResources;
@@ -95,11 +109,13 @@ public final class RoundTripHarness {
 
   private RoundTripHarness(
       final boolean excludePrimitiveMetadata,
+      final boolean storePrimitiveMetadata,
       final boolean excludeContainedResources,
       final boolean excludeInlineResources,
       final boolean collapseNarrativeWhitespace,
       @Nullable final Path persistence) {
     this.excludePrimitiveMetadata = excludePrimitiveMetadata;
+    this.storePrimitiveMetadata = storePrimitiveMetadata;
     this.excludeContainedResources = excludeContainedResources;
     this.excludeInlineResources = excludeInlineResources;
     this.collapseNarrativeWhitespace = collapseNarrativeWhitespace;
@@ -114,18 +130,43 @@ public final class RoundTripHarness {
    */
   @Nonnull
   public static RoundTripHarness unconditional() {
-    return new RoundTripHarness(false, false, false, false, null);
+    return new RoundTripHarness(false, false, false, false, false, null);
   }
 
   /**
-   * Returns a harness excluding the primitive id and extension content that is not written until
-   * ticket 17 stores the metadata group, one of FR-016's exceptions.
+   * Returns a harness for the ingest option that stores primitive metadata turned off, as it is by
+   * default, which excludes the primitive id and extension content left out (FR-016's exception 3),
+   * and asserts that none is stored or written.
    *
    * @return the harness
    */
   @Nonnull
   public static RoundTripHarness excludingPrimitiveMetadata() {
-    return new RoundTripHarness(true, false, false, false, null);
+    return new RoundTripHarness(true, false, false, false, false, null);
+  }
+
+  /**
+   * Returns a harness for the ingest option that stores primitive metadata turned on, which
+   * excludes nothing of it: the metadata comes back as it went in, or the round trip fails.
+   *
+   * @return the harness
+   */
+  @Nonnull
+  public static RoundTripHarness storingPrimitiveMetadata() {
+    return new RoundTripHarness(false, true, false, false, false, null);
+  }
+
+  /**
+   * Returns the JSON reader the harness reads a corpus with, which stores primitive metadata where
+   * the harness is for the option turned on.
+   *
+   * @return the reader
+   */
+  @Nonnull
+  public FhirReader reader() {
+    return storePrimitiveMetadata
+        ? TransformFixtures.metadataReader()
+        : TransformFixtures.fhirReader();
   }
 
   /**
@@ -142,6 +183,7 @@ public final class RoundTripHarness {
   public RoundTripHarness excludingContainedResources() {
     return new RoundTripHarness(
         excludePrimitiveMetadata,
+        storePrimitiveMetadata,
         true,
         excludeInlineResources,
         collapseNarrativeWhitespace,
@@ -163,6 +205,7 @@ public final class RoundTripHarness {
   public RoundTripHarness excludingInlineResources() {
     return new RoundTripHarness(
         excludePrimitiveMetadata,
+        storePrimitiveMetadata,
         excludeContainedResources,
         true,
         collapseNarrativeWhitespace,
@@ -187,6 +230,7 @@ public final class RoundTripHarness {
   public RoundTripHarness collapsingNarrativeWhitespace() {
     return new RoundTripHarness(
         excludePrimitiveMetadata,
+        storePrimitiveMetadata,
         excludeContainedResources,
         excludeInlineResources,
         true,
@@ -209,6 +253,7 @@ public final class RoundTripHarness {
   public RoundTripHarness persistingTo(@Nonnull final Path directory) {
     return new RoundTripHarness(
         excludePrimitiveMetadata,
+        storePrimitiveMetadata,
         excludeContainedResources,
         excludeInlineResources,
         collapseNarrativeWhitespace,
@@ -231,7 +276,7 @@ public final class RoundTripHarness {
   public RoundTripOutcome assertRoundTrip(
       @Nonnull final String resourceType, @Nonnull final Path corpus) {
     return assertRoundTrip(
-        resourceType, corpus, TransformFixtures.reader().read(resourceType, corpus.toString()));
+        resourceType, corpus, reader().json().read(resourceType, corpus.toString()));
   }
 
   /**
@@ -253,7 +298,36 @@ public final class RoundTripHarness {
       @Nonnull final String resourceType,
       @Nonnull final Path expected,
       @Nonnull final Dataset<Row> transformed) {
+    if (excludePrimitiveMetadata) {
+      assertNoStoredMetadataGroups(transformed.schema(), resourceType);
+    }
     return compare(resourceType, expected, roundTrip(resourceType, transformed));
+  }
+
+  /**
+   * Asserts that a stored schema carries no metadata group holding an id or extensions, which is
+   * what FR-016's exception 3 says of the ingest option turned off.
+   */
+  private static void assertNoStoredMetadataGroups(
+      @Nonnull final StructType schema, @Nonnull final String path) {
+    for (final StructField field : schema.fields()) {
+      DataType type = field.dataType();
+      while (type instanceof final ArrayType array) {
+        type = array.elementType();
+      }
+      if (!(type instanceof final StructType structure)) {
+        continue;
+      }
+      final String name = path + "." + field.name();
+      if (field.name().startsWith(LayoutFields.METADATA_GROUP_PREFIX)
+          && !LayoutFields.isAnnotation(field.name())) {
+        assertTrue(
+            LayoutFields.METADATA_GROUP_FIELDS.stream()
+                .noneMatch(inner -> List.of(structure.fieldNames()).contains(inner)),
+            "the stored schema carries primitive metadata with the option off, at " + name);
+      }
+      assertNoStoredMetadataGroups(structure, name);
+    }
   }
 
   @Nonnull
@@ -272,10 +346,15 @@ public final class RoundTripHarness {
         excludeInlineResources
             ? expected.values().stream().mapToInt(RoundTripHarness::removeInlineResources).sum()
             : 0;
-    final int excluded = expected.values().stream().mapToInt(RoundTripHarness::exclude).sum();
+    final int excluded =
+        storePrimitiveMetadata
+            ? expected.values().stream().mapToInt(node -> exclude(node.deepCopy())).sum()
+            : expected.values().stream().mapToInt(RoundTripHarness::exclude).sum();
+    // With the option on nothing is excluded, so the comparison below holds the metadata to the
+    // round trip.
     if (excludePrimitiveMetadata) {
       assertNoMetadataGroups(actual);
-    } else {
+    } else if (!storePrimitiveMetadata) {
       assertEquals(
           0,
           excluded,
@@ -370,8 +449,8 @@ public final class RoundTripHarness {
    *
    * <p>The removal does not cascade. An element whose entire content is primitive metadata is left
    * as an empty object here, and the layout keeps it too, because it stores the primitive as a null
-   * of its declared type (decision 72), and writes it as an empty object. T078c deletes this along
-   * with the carve-out it serves.
+   * of its declared type (decision 72), and writes it as an empty object where the metadata is not
+   * stored.
    */
   private static int exclude(@Nonnull final JsonNode node) {
     int removed = 0;
@@ -568,14 +647,17 @@ public final class RoundTripHarness {
     return names;
   }
 
-  /** Asserts that no metadata group reached the output, which nothing writes one to before M5. */
+  /**
+   * Asserts that no metadata group reached the output, which nothing writes where the ingest option
+   * that stores them is off.
+   */
   private static void assertNoMetadataGroups(@Nonnull final Map<String, JsonNode> actual) {
     for (final Map.Entry<String, JsonNode> entry : actual.entrySet()) {
       final JsonNode copy = entry.getValue().deepCopy();
       assertEquals(
           0,
           exclude(copy),
-          "the output carries primitive id or extension content, which is excluded until M5: "
+          "the output carries primitive id or extension content, which the option off leaves out: "
               + entry.getKey());
     }
   }
