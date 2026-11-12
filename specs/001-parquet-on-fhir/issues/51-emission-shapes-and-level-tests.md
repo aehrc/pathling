@@ -20,6 +20,8 @@
 
 ### Built, 2026-11-12 (branch issue/2832_51_emission-shapes)
 
+*(Superseded in part by the owner's decisions below: compute-first was removed, and `EmissionShapesTest` no longer asserts it.)*
+
 **Compute first, then generate.** `Projection.execute` selects a view's result under an alias, then
 `inline`s that column, so every `Generate` reads an attribute computed by a `Project` beneath it,
 which the optimiser keeps.

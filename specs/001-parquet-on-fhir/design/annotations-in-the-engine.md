@@ -784,11 +784,12 @@ If A is markedly slower than B or C on these, those options are reconsidered.
 - **Code, views:** the accessors need no change to `UnnestingSelection`,
   `RepeatSelection` or `ProjectionClause`. They emit deferred expressions, so they need
   nothing beyond the column that `copyOf(Column)` already provides. L2's compute-first
-  may change where views generate; decision 143's plan-shape tests decide.
+  would change where views generate, but it is deferred (below).
 - **Code, switch (D14, decision 141):** a configuration option, off by default. Traversal
   puts `id` and `extension` into the element only when it is on. With it off, `x.extension(…)`
   and `x.id` on a primitive are empty, with no error.
-- **Code, emission shapes (L2, decision 143):** compute first, then generate; existence
+- **Code, emission shapes (L2, decision 143):** compute first, then generate (deferred,
+  below); existence
   tests (`exists()`, `count()`, multi-column `where`) are rewritten into the checked
   forms; a repeating primitive is paired as
   `arrays_zip(x AS value, _x.__start AS __start, _x.__end AS __end)`, its inputs aliased
