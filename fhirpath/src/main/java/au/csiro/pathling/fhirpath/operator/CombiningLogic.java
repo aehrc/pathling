@@ -24,9 +24,13 @@ import au.csiro.pathling.encoders.ColumnFunctions;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.DateCollection;
 import au.csiro.pathling.fhirpath.collection.DateTimeCollection;
+import au.csiro.pathling.fhirpath.collection.DecimalCollection;
+import au.csiro.pathling.fhirpath.collection.QuantityCollection;
+import au.csiro.pathling.fhirpath.column.StoredDecimal;
 import au.csiro.pathling.fhirpath.column.SystemDateTime;
 import au.csiro.pathling.fhirpath.comparison.ColumnEquality;
 import au.csiro.pathling.fhirpath.comparison.DefaultComparator;
+import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import au.csiro.pathling.schema.DefinitionCanonicalStructure;
 import au.csiro.pathling.schema.PrimitiveTypes;
 import au.csiro.pathling.sql.SqlFunctions;
@@ -81,7 +85,9 @@ public class CombiningLogic {
    *   <li>Where only some operands hold stored FHIR structures, a System value takes part, such as
    *       a literal. The stored operands are then taken in the form the engine computes with (see
    *       {@link Collection#toEngineForm()}), which they share with the System value. Those
-   *       operands have no extensions, as a System value has none.
+   *       operands have no extensions, as a System value has none. A stored quantity is the
+   *       exception: its comparator reads either form, and reads a stored quantity's canonical form
+   *       from its stored text where its annotations are absent (decision 150).
    * </ul>
    *
    * <p>A primitive needs no shape unification here. Two decimals of different precision are given
@@ -174,10 +180,15 @@ public class CombiningLogic {
     if (operands.size() < 2 || !typeEquivalent(operands)) {
       return operands;
     }
-    final List<Collection> aligned = alignForm(operands);
-    return aligned.stream().allMatch(Collection::holdsStoredStructures)
-        ? reconcileStructures(aligned)
-        : aligned;
+    if (operands.stream().allMatch(Collection::holdsStoredStructures)) {
+      return reconcileStructures(operands);
+    }
+    // The operands are compared, so each is taken in the form the engine computes with, except a
+    // quantity: its comparison reads a stored quantity's canonical form from its stored annotation
+    // or else its stored text, which converting it first would lose (decision 150).
+    return operands.stream()
+        .map(operand -> operand instanceof QuantityCollection ? operand : operand.toEngineForm())
+        .toList();
   }
 
   /**
@@ -226,8 +237,9 @@ public class CombiningLogic {
    * Returns the canonical structure under which operands are merged as they are combined into one
    * array, where their shapes can differ: that of the stored structures, where every operand holds
    * them, and that of a date, where every operand is a date, whose annotation fields depend on the
-   * schema and on how it was made, so that the merge keeps only the ones every operand has
-   * (decision 142, D9).
+   * schema and on how it was made, that of a System quantity, where every operand is one, and that
+   * of a stored decimal, where every operand is one, so that the merge keeps only the annotations
+   * every operand has (decision 142, D9).
    */
   @Nonnull
   private static Optional<CanonicalStructure> mergeStructureOf(
@@ -237,6 +249,18 @@ public class CombiningLogic {
             operand ->
                 operand instanceof DateCollection || operand instanceof DateTimeCollection)) {
       return Optional.of(SystemDateTime.STRUCTURE);
+    }
+    if (operands.stream().allMatch(QuantityCollection.class::isInstance)
+        && operands.stream().noneMatch(Collection::holdsStoredStructures)) {
+      // System quantities carry their canonical annotations only where they were available.
+      return Optional.of(QuantityEncoding.STRUCTURE);
+    }
+    if (operands.stream()
+        .allMatch(
+            operand -> operand instanceof final DecimalCollection decimal && decimal.isStored())) {
+      // Stored decimals, which are combined as they are only where every operand is one, carry
+      // their numeric annotation where their schema has it.
+      return Optional.of(StoredDecimal.STRUCTURE);
     }
     return operands.stream().allMatch(Collection::holdsStoredStructures)
         ? structureOfOperands(operands)

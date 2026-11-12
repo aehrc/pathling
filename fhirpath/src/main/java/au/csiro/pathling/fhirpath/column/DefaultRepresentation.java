@@ -55,9 +55,6 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 @AllArgsConstructor
 public class DefaultRepresentation extends ColumnRepresentation {
 
-  /** The name of a stored value where it is paired with its annotation. */
-  @Nonnull private static final String VALUE = "value";
-
   private static final DefaultRepresentation EMPTY_REPRESENTATION =
       new DefaultRepresentation(functions.lit(null));
 
@@ -135,8 +132,9 @@ public class DefaultRepresentation extends ColumnRepresentation {
    * array shape too. Whether the field is present or absent, and whether a repeating parent is
    * present or absent, the traversal then yields one type (decision 88).
    *
-   * <p>A decimal is decoded from its numeric annotation where the schema carries it, and from its
-   * stored text otherwise (T095a).
+   * <p>A decimal and a date are read as a structure of their stored text and the annotations the
+   * schema carries, with no annotation computed (design §4.1). A decimal whose number the engine's
+   * System.Decimal cannot hold is null: only whether its number decodes is tested.
    *
    * @param fieldName the name of the field to traverse to
    * @param fhirType the FHIR type of the field
@@ -149,9 +147,6 @@ public class DefaultRepresentation extends ColumnRepresentation {
       @Nonnull final String fieldName,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final DataType fallback) {
-    if (isDecimal(fhirType) && !(fallback instanceof ArrayType)) {
-      return traverseSingularDecimal(fieldName, fallback);
-    }
     if (isDecimal(fhirType) || isDate(fhirType)) {
       return traverseStored(fieldName, fhirType, fallback);
     }
@@ -190,7 +185,22 @@ public class DefaultRepresentation extends ColumnRepresentation {
                             p, LayoutFields.metadataGroupName(fieldName), DataTypes.NullType),
                         fhirType,
                         fallback instanceof ArrayType));
-    // Only the parents without a value are left out, as a decimal that does not decode stays null.
+    if (isDecimal(fhirType) && !(fallback instanceof ArrayType)) {
+      // Only the parents without a value are left out, so that a decimal whose number does not
+      // decode stays as a null item, as decoding its text alone gave.
+      return vectorize(
+              array ->
+                  functions.transform(
+                      functions.filter(
+                          array,
+                          parent ->
+                              ColumnFunctions.resolveOrNull(parent, fieldName, fallback)
+                                  .isNotNull()),
+                      stored::apply),
+              stored)
+          .flatten();
+    }
+    // Only the parents without a value are left out.
     return vectorize(
             array -> functions.filter(functions.transform(array, stored::apply), Column::isNotNull),
             stored)
@@ -199,14 +209,12 @@ public class DefaultRepresentation extends ColumnRepresentation {
 
   /**
    * Returns the values of a decimal or a date as the engine holds them, read from the stored values
-   * and the metadata groups beside them (FR-004, FR-022, FR-023): a decimal decoded from its
-   * numeric annotation, the stored one where the schema carries it and the computed one otherwise,
-   * decided once for the schema; and a date as a structure of its text and the range annotations
-   * the schema carries, with nothing computed (design §4.1).
+   * and the metadata groups beside them (FR-004, FR-022, FR-023): a structure of the stored text
+   * and the annotations the schema carries, with no annotation computed (design §4.1, decision
+   * 152). A decimal whose number does not decode is null.
    *
    * <p>A repeating field's values are paired with its annotations by position, and the values that
-   * are absent are left out. A decimal whose text does not decode stays as a null, as decoding the
-   * text alone gives.
+   * are absent are left out.
    *
    * @param values the stored values, an array of them where the field repeats
    * @param groups the metadata groups beside them, aligned with them by position
@@ -225,51 +233,9 @@ public class DefaultRepresentation extends ColumnRepresentation {
           ? SystemDateTime.fromStoredArray(values, groups)
           : SystemDateTime.fromStored(values, groups);
     }
-    if (!repeating) {
-      return numericValue(values, groups);
-    }
-    // The annotations are read as one field of all the groups, so that the read prunes to it, and
-    // are paired with the texts by position, so that the absent values can be left out.
-    final DecimalNumericKind kind = DecimalNumericKind.INSTANCE;
-    final String numeric = LayoutFields.NUMERIC_ANNOTATION;
-    final Column annotations =
-        ColumnFunctions.resolveOrElse(
-            groups, numeric, functions.transform(values, each -> kind.compute(numeric, each)));
-    return functions.transform(
-        functions.filter(
-            functions.arrays_zip(values.alias(VALUE), annotations.alias(numeric)),
-            pair -> pair.getField(VALUE).isNotNull()),
-        pair -> kind.read(pair.getField(numeric)));
-  }
-
-  /**
-   * Traverses to a singular decimal, decoded from its numeric annotation where the schema carries
-   * it and from its stored text otherwise (T095a, FR-023).
-   *
-   * <p>A singular decimal is read as the annotation alone, which is null wherever the text is, so
-   * where the schema does not carry the annotation the plan decodes the text as it did before the
-   * annotation existed. Under a repeating parent the parents without a value are left out first, so
-   * that a text that does not decode still gives a null, as decoding the text alone gives.
-   */
-  @Nonnull
-  private ColumnRepresentation traverseSingularDecimal(
-      @Nonnull final String fieldName, @Nonnull final DataType fallback) {
-    final UnaryOperator<Column> numeric =
-        parent ->
-            numericValue(
-                ColumnFunctions.resolveOrNull(parent, fieldName, fallback),
-                ColumnFunctions.resolveOrNull(
-                    parent, LayoutFields.metadataGroupName(fieldName), DataTypes.NullType));
-    return vectorize(
-            parents ->
-                functions.transform(
-                    functions.filter(
-                        parents,
-                        parent ->
-                            ColumnFunctions.resolveOrNull(parent, fieldName, fallback).isNotNull()),
-                    numeric::apply),
-            numeric)
-        .flatten();
+    return repeating
+        ? StoredDecimal.fromStoredArray(values, groups)
+        : StoredDecimal.fromStored(values, groups);
   }
 
   /**
@@ -336,8 +302,8 @@ public class DefaultRepresentation extends ColumnRepresentation {
    * Decodes a traversed field for computation, by its FHIR type. The field has been read in the
    * shape it is stored in.
    *
-   * <p>A decimal is not decoded here. Its traversal decodes it from its numeric annotation, or from
-   * its text where the schema does not carry the annotation.
+   * <p>A decimal is not decoded here. Its traversal reads it as its stored text and its numeric
+   * annotation, and it is decoded where it is computed with.
    *
    * <p>A quantity is not decoded here. It stays in the stored shape, so that it keeps its
    * extensions, and the quantity collection decodes it where it is computed with.

@@ -907,13 +907,14 @@ public class Collection implements Equatable {
   }
 
   /**
-   * Gets this collection in the form the engine computes with.
+   * Gets this collection in the form the engine computes with: its values as the System values they
+   * convert to (decision 142, D8). This is the one step by which every operation that accepts
+   * System types converts a FHIR operand.
    *
    * <p>A quantity reached by traversal, of any of the quantity types, is held in the stored shape,
-   * so as to keep the extensions that a System quantity cannot carry. Here it is taken as a System
-   * quantity, in the fixed shape {@link QuantityEncoding#dataType()} (FR-059). The result is a
-   * collection of System quantities, which have no extensions (T097). Every other collection is
-   * returned as it is.
+   * so as to keep the extensions that a System quantity cannot carry, and is taken here as a System
+   * quantity (FR-059, decision 150). A stored decimal converts in the same way (see {@link
+   * DecimalCollection#toEngineForm()}). Every other collection is returned as it is.
    *
    * @return the collection, in the form the engine computes with
    */
@@ -945,7 +946,11 @@ public class Collection implements Equatable {
           .getType()
           .map(
               castType ->
-                  other.map(t -> this.getColumn().elementTryCast(castType.getSqlDataType())))
+                  // The cast takes the form the engine computes with, so that a value promoted to
+                  // the type of a stored value is a computed one.
+                  other
+                      .toEngineForm()
+                      .map(t -> this.getColumn().elementTryCast(castType.getSqlDataType())))
           .orElse(this);
     } else {
       throw new IllegalArgumentException("Cannot cast " + this + " to " + other);

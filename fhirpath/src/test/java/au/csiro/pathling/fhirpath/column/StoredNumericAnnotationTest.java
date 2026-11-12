@@ -43,7 +43,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * Tests that a numeric annotation stored at a type other than the engine's System.Decimal is read
- * as System.Decimal, for a singular and a repeating decimal, nested and at the root (FR-022).
+ * as System.Decimal, for a singular and a repeating decimal, nested and at the root (FR-022). A
+ * traversed decimal is held as its text and its annotation, and its number is read through {@link
+ * StoredDecimal#numeric}.
  *
  * <p>A value that the stored type holds exactly but System.Decimal does not is rounded, or is null
  * where it is out of range, as decoding its text would make it. No R4 element is a repeating
@@ -174,9 +176,9 @@ class StoredNumericAnnotationTest {
   }
 
   /**
-   * Asserts that a traversal is System.Decimal, and holds the expected value. A repeating decimal
-   * holds a first value of 2.5 at the same stored type, which is 3 where that type has no
-   * fractional digits.
+   * Asserts that the numbers of a traversal are System.Decimal, and hold the expected value. A
+   * repeating decimal holds a first value of 2.5 at the same stored type, which is 3 where that
+   * type has no fractional digits.
    */
   private static void assertDecimals(
       @Nonnull final Dataset<Row> data,
@@ -184,7 +186,8 @@ class StoredNumericAnnotationTest {
       final boolean repeating,
       final String expected,
       @Nonnull final String storedType) {
-    final Dataset<Row> result = data.select(decimals.getValue().alias("d"));
+    final Dataset<Row> result =
+        data.select(decimals.transform(StoredDecimal::numeric).getValue().alias("d"));
     final DataType type = result.schema().apply("d").dataType();
     final BigDecimal value = expected == null ? null : new BigDecimal(expected);
     if (repeating) {

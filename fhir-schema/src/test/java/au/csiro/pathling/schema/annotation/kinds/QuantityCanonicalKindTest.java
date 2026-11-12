@@ -193,4 +193,16 @@ class QuantityCanonicalKindTest {
         IllegalArgumentException.class,
         () -> QuantityCanonicalKind.INSTANCE.compute(START_ANNOTATION, quantity));
   }
+
+  @Test
+  void canonicalisationOfASmallUnitLosesNoDigits() {
+    // The exact value keeps the digits that canonicalisation itself makes, beyond the scale of the
+    // engine's System.Decimal: 1 ns is 0.000000001 s, not 0 s.
+    final Row value =
+        QuantityCanonicalKind.toValueExactRow(
+            QuantityCanonicalKind.toExact(
+                QuantityCanonicalKind.canonicalOf(BigDecimal.ONE, UCUM_SYSTEM, "ns")));
+    assertEquals(new BigDecimal("1"), value.get(0));
+    assertEquals(9, value.getInt(1));
+  }
 }

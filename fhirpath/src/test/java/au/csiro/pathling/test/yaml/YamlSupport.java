@@ -38,7 +38,6 @@ import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.encoding.CodingSchema;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import au.csiro.pathling.fhirpath.literal.CodingLiteral;
-import au.csiro.pathling.schema.LayoutFields;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonSerializer;
@@ -136,20 +135,14 @@ public class YamlSupport {
         throws IOException {
       final FhirPathQuantity quantity = FhirPathQuantity.parse(quantityLiteral.toString());
 
-      // The quantity is written in the fixed shape of a System quantity (FR-059): its value is the
-      // plain text of the literal's value, with the number in its numeric annotation, which reading
-      // it at System.Decimal's type rounds as the engine does, and no canonical form is written,
-      // because the engine computes it from the value and code.
+      // The quantity is written as the content of a System quantity (decision 150): its value is
+      // the literal's value, which reading it at System.Decimal's type rounds as the engine does,
+      // and no canonical form is written, because the engine computes it from the value and code.
       gen.writeStartObject();
-      gen.writeNullField("id");
-      gen.writeStringField("value", quantity.getValue().toPlainString());
-      gen.writeObjectFieldStart(QuantityEncoding.VALUE_GROUP_COLUMN);
-      gen.writeNumberField(LayoutFields.NUMERIC_ANNOTATION, quantity.getValue());
-      gen.writeEndObject();
-      gen.writeNullField("comparator");
+      gen.writeNumberField("value", quantity.getValue());
       gen.writeStringField("unit", quantity.getUnitName());
-      gen.writeStringField("system", quantity.getSystem());
       gen.writeStringField("code", quantity.getCode());
+      gen.writeStringField("system", quantity.getSystem());
       gen.writeEndObject();
     }
   }

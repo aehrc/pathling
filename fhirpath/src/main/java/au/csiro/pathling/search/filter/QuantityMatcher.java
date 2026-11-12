@@ -45,9 +45,9 @@ import org.apache.spark.sql.Column;
  * UCUM library. This enables matching across equivalent unit representations (e.g., {@code 1000 mg}
  * matches {@code 1 g}). The canonical form of the element is its {@code __canonical_code} and
  * {@code __canonical_value_exact} annotation where the schema carries it, and is computed from its
- * value, system and code otherwise (FR-022), as {@link QuantityEncoding#storedCanonical(String,
- * Column)} gives it. It is used only for an element whose system is UCUM. If canonicalization
- * fails, the matcher falls back to exact value comparison.
+ * value, system and code otherwise (FR-022), as {@link QuantityEncoding#canonical(String, Column)}
+ * gives it. It is used only for an element whose system is UCUM. If canonicalization fails, the
+ * matcher falls back to exact value comparison.
  *
  * <p>Every field of the element is read by name through the tolerant traversal, so the element may
  * have any shape the definitions allow, including one pruned to the fields it populates (FR-054).
@@ -178,7 +178,11 @@ public class QuantityMatcher implements ElementMatcher {
         .getCode()
         .flatMap(
             code -> {
-              final BigDecimal numericValue = new BigDecimal(parsedValue.getNumericValue());
+              // The search value is canonicalised as the engine's System.Decimal holds it, as the
+              // element is (decision 153). One outside its range has no canonical form, and the
+              // standard match then matches nothing.
+              final BigDecimal numericValue =
+                  NumericMatchingSupport.systemValue(parsedValue.getNumericValue());
               return Optional.ofNullable(
                       QuantityCanonicalKind.canonicalOf(numericValue, system, code))
                   .map(
@@ -205,9 +209,8 @@ public class QuantityMatcher implements ElementMatcher {
     final CanonicalQuantity exact = QuantityCanonicalKind.toExact(canonical);
     final Column comparison =
         QuantityEncoding.compareCanonical(
-            QuantityEncoding.storedCanonical(QuantityEncoding.CANONICAL_CODE_COLUMN, element),
-            QuantityEncoding.storedCanonical(
-                QuantityEncoding.CANONICAL_VALUE_EXACT_COLUMN, element),
+            QuantityEncoding.canonical(QuantityEncoding.CANONICAL_CODE_COLUMN, element),
+            QuantityEncoding.canonical(QuantityEncoding.CANONICAL_VALUE_EXACT_COLUMN, element),
             QuantityCanonicalKind.toCodeLiteral(exact),
             QuantityCanonicalKind.toValueExactLiteral(exact));
     final Column canonicalMatch =

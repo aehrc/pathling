@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.fhirpath.evaluation.CollectionDataset;
 import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluator;
 import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluatorBuilder;
 import au.csiro.pathling.fhirpath.parser.Parser;
@@ -38,6 +39,7 @@ import java.util.stream.Stream;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.ArrayType;
 import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.r4.model.Coding;
@@ -365,10 +367,13 @@ class ExtensionTraversalTest {
         DatasetEvaluatorBuilder.create(resourceType, fhirEncoders.getContext())
             .withDataset(dataset)
             .build();
-    return evaluator
-        .evaluate(PARSER.parse(expression))
-        .toCanonical()
-        .toIdValueDataset()
+    final CollectionDataset result = evaluator.evaluate(PARSER.parse(expression)).toCanonical();
+    // The value is read as a caller is given it, so that a stored decimal is its number.
+    return result
+        .getDataset()
+        .select(
+            functions.col(CollectionDataset.ID_COLUMN),
+            result.getValue().getOutputColumn().getValue())
         .collectAsList()
         .stream()
         .map(row -> row.getString(0) + "=" + Objects.toString(row.get(1)))

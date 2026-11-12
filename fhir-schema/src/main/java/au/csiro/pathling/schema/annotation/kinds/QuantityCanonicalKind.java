@@ -65,6 +65,13 @@ import org.apache.spark.sql.types.StructType;
  * ingest stores and the engine falls back on (decision 135). A quantity whose code UCUM cannot
  * canonicalise has neither.
  *
+ * <p>The canonical form is a function of the quantity's System.Decimal value, the value the
+ * engine's System.Decimal holds for its text, and of its unit, not of every digit of its text: a
+ * stored {@code 1.0000001 g} canonicalises to {@code 1 g}, and a value that the System.Decimal
+ * cannot hold, such as {@code 1.0E33}, has no canonical form (owner, 2026-11-12). The exact value
+ * only keeps the canonicalisation itself from losing digits, so that {@code 1 ns} is {@code
+ * 0.000000001 s} rather than {@code 0 s}.
+ *
  * @author Piotr Szul
  */
 public final class QuantityCanonicalKind extends AnnotationKind {
@@ -375,11 +382,18 @@ public final class QuantityCanonicalKind extends AnnotationKind {
     return quantity.isNullAt(index) ? null : quantity.getString(index);
   }
 
-  /** Canonicalises a quantity from the key it is cached by, its value, system and code. */
+  /**
+   * Canonicalises a quantity from the key it is cached by, its value, system and code. The value is
+   * the one the engine's System.Decimal holds for the text, as {@link DecimalNumericKind} decodes
+   * it, so that a stored quantity's canonical form agrees with its numeric annotation and with the
+   * value the engine reads (owner, 2026-11-12).
+   */
   @Nonnull
   private static Optional<CanonicalQuantity> canonicalise(@Nonnull final List<String> key) {
     return Optional.ofNullable(
-        toExact(canonicalOf(parseValue(key.get(0)), key.get(1), key.get(2))));
+        toExact(
+            canonicalOf(
+                DecimalNumericKind.decodeValue(parseValue(key.get(0))), key.get(1), key.get(2))));
   }
 
   /**

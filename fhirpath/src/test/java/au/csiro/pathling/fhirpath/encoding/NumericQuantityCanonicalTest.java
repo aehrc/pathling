@@ -71,7 +71,7 @@ class NumericQuantityCanonicalTest {
     final Column quantity = QuantityEncoding.encodeNumeric(col("number"));
     final Column fields =
         struct(
-            quantity.getField(QuantityEncoding.VALUE_COLUMN).alias("value"),
+            quantity.getField(QuantityEncoding.VALUE_COLUMN).cast("string").alias("value"),
             quantity.getField(QuantityEncoding.SYSTEM_COLUMN).alias("system"),
             quantity.getField(QuantityEncoding.CODE_COLUMN).alias("code"));
     final QuantityCanonicalKind kind = QuantityCanonicalKind.INSTANCE;

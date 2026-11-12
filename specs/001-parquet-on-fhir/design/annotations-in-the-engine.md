@@ -14,15 +14,19 @@ FR-004, FR-005, FR-021–FR-023, FR-059 · **Decisions:** 140–152 in
    default, turns them on (D14). Every engine value follows one rule: plain fields are
    content, `__` fields are annotations, all at one level. This is the pairing decision 135 already
    chose. It fits the existing evaluation model without change.
-2. **Annotations are accessors, not data.** Nothing is computed when a value is
-   traversed. An operation that needs an annotation asks for it. The engine then
+2. **Annotations are accessors, not data.** No annotation is computed when a value is
+   traversed. The one test made there is whether a stored decimal's number decodes: a
+   decimal the engine's System.Decimal cannot hold is absent (§4.1). An operation that
+   needs an annotation asks for it. The engine then
    reads the stored field, or computes it if the schema does not carry it. Spark makes
    that choice when it resolves the plan, so the engine stays schema-agnostic.
 3. **FHIR and System values have different shapes.** Both carry annotations; only FHIR
    values carry ids and extensions. Converting a FHIR value to System keeps its stored
    annotations and drops the rest, with a deferred projection that keeps only the
    annotation fields the schema has. No annotation is computed; a decimal's number is
-   read from `__numeric` or parsed from its text where it is used.
+   read from `__numeric` or parsed from its text where it is used. A quantity's canonical
+   form, wherever it is computed, is a function of its System.Decimal value and its unit
+   (§4.2).
 4. **A primitive's external output is its value**, never its metadata.
 5. **Every annotation is one flat scalar field.** A computation that several annotations
    share is memoised per thread, so the layout does not need to group fields to avoid
@@ -155,8 +159,17 @@ and the `__` fields are annotations, as in the stored layout (§4.7) and in a FH
 Quantity. It is built at traversal, by pairing by position in the parent's lambda, as
 today. The annotation fields are projected from `_x` by named field reads,
 `resolve_or_none(_x, [fields])` (§4.3). The raw `_x` group is never carried. Only
-**stored fields** go in; nothing is computed. A field that the schema lacks is left out,
-not filled with null. The value is the stored value: for a decimal, its text.
+**stored fields** go in; no annotation is computed. A field that the schema lacks is left
+out, not filled with null. The value is the stored value: for a decimal, its text.
+
+**A stored decimal the engine's System.Decimal cannot hold is absent (ticket 50, owner,
+2026-11-11).** Its text is kept, but traversal tests whether its number decodes, reading
+`__numeric` where the schema has it and parsing the text otherwise, and a decimal whose
+number does not, such as `1.0E40`, is null: empty where it is singular, and a null item
+under a repeating parent or in a repeating field, as decoding its text alone gave before
+the element held its text (`StoredDecimal.fromStored`, `DefaultRepresentation.traverseStored`).
+This is a test, not an annotation: nothing is added to the element. A quantity whose
+`value` does not decode has no System form either (§4.2).
 
 A repeating primitive has the same fields as a singular one. Under L2 (decision 143) it
 is paired by `arrays_zip`, which names each field after its input, so the inputs are
@@ -236,6 +249,16 @@ the FHIR `value` as stored (D10). A System value never carries ids or extensions
 `System.Decimal` is the number only (D13, decision 147): a bare `DECIMAL(38,6)`. A FHIR decimal's text
 is not kept as an annotation when it converts.
 
+- **Every computation operates on the System.Decimal value (owner, 2026-11-12, decision
+  153).** Comparison included, a number is computed with at `DECIMAL(38,6)`: a stored
+  decimal's or quantity's value, a literal's, and a search value. Values with more than
+  six fractional digits are rare, and the scale will move to eight under
+  aehrc/pathling#2893, Consider 8 fractional digits for System.Decimal; everything
+  follows the one scale. A value outside the supported range is not available (null)
+  for computation and wherever it is used as a System.Decimal: it is absent (§4.1), it
+  is not compared, a quantity with it has no System form, and a search value outside
+  it matches nothing.
+
 **A complex System value has only the fields a literal can set (decision 150).** Its
 annotations follow the same rules as a primitive's: flat `__` fields where available
 without computing, otherwise computed by an accessor where an operation reads them.
@@ -255,26 +278,49 @@ without computing, otherwise computed by an accessor where an operation reads th
     `CalendarDurationUnit.FHIRPATH_CALENDAR_DURATION_SYSTEM_URI`), and no unit is UCUM
     `'1'`.
   - There is no `id`, and no `comparator`: a FHIR quantity with a comparator has no
-    System form.
+    System form. Nor does one whose `value` the System.Decimal cannot hold, such as
+    `1.0E33`: its value is absent, as any such decimal is (§4.1), so it converts to null,
+    is not compared, and formats and converts to no unit, so its `toString()` is empty
+    (ticket 50, owner, 2026-11-12).
   - Converting a FHIR quantity keeps its stored canonical fields and computes no
     annotation (D8). Its `value` is `numeric` of the stored `value`. They are flat on the FHIR Quantity (§4.7) and stay flat on the System one, so
     the accessor is `resolve_or_else(e, "__canonical_code", …)` on either.
-  - **The canonical form is computed from the most exact source, never from the converted
-    decimal.** Otherwise an unannotated dataset could compare differently from an
-    annotated one, whose canonical form ingest computed from the full stored text.
+  - **The canonical form is a function of the quantity's System.Decimal value and its
+    unit, at ingest and in the engine (owner, 2026-11-12, ticket 50).** The value is the
+    quantity's `value` as the System.Decimal holds it, rounded half up to six fractional
+    digits: the stored `__numeric` where there is one, else the stored text decoded, which
+    gives the same number. Digits of a stored text beyond the sixth fractional one take
+    no part, so a stored `0.1234567 g` canonicalises to 0.123457 g and `1.0000001 g` to
+    1 g, and a value the System.Decimal cannot hold, such as `1.0E33`, has no canonical
+    form even where the canonical form would fit. `__canonical_value_exact` exists only so
+    that canonicalisation itself loses nothing: `1 ns` is 0.000000001 s, not 0 s. Because
+    ingest and the engine compute the same function, annotated and unannotated data
+    compare the same, and a quantity compares the same whether it is converted before it
+    is compared or not.
 
     | Quantity from | Canonical form from |
     |---|---|
-    | Stored data | The stored annotation, or else the stored text. The comparison's accessor resolves it on the FHIR operand, which is converted where it is compared (`StoredQuantityComparator`) |
-    | A literal | The literal's text, as constants at plan time |
-    | Arithmetic | Its `DECIMAL(38,6)` value; no text ever existed |
+    | Stored data | The stored annotation, or else computed from its System.Decimal value where an operation reads it (`QuantityEncoding.canonical`, read by `QuantityComparator` and the quantity search) |
+    | A literal | Its value rounded to `DECIMAL(38,6)`, the same rounding, as constants at plan time, so that its value and canonical form agree. A known limitation: `0.000000001 's'` is 0 s, so `1 'ns' = 0.000000001 's'` is false, though `1 'ns'` is exactly 0.000000001 s |
+    | Arithmetic or a function | Its `DECIMAL(38,6)` value, where an operation reads it |
 
     Any operation that converts a FHIR quantity before it is compared keeps the stored
-    canonical fields it has: a merge (`a | 5 'kg'`, `iif`; only if every side has them,
-    §4.4), `toQuantity()`, or another function that accepts System types (decision 152).
-    Where they are absent, the stored text is gone, and the canonical form is computed
-    from the decimal. That differs only beyond six fractional digits, where every
-    System.Decimal already loses them.
+    canonical fields it has: a merge (`a | 5 'kg'`; only if every side has them, §4.4),
+    `toQuantity()`, or another function that accepts System types (decision 152). Where
+    they are absent, the canonical form is computed from the System.Decimal value where
+    it is read, which is the value the stored annotation was computed from.
+
+    A quantity search canonicalises its search value rounded the same way, and a number
+    search matches its rounded value: the implicit range of `eq` and `ne` is that of the
+    rounded value, so `eq0.0000002` searches as `eq0.000000`. A search on an integer
+    element rounds its search value too, before the integer rule for `eq` and `ne`, so
+    `eq1.0000001` finds 1. A quantity search value is rounded in its own unit, before it is
+    canonicalised. A search value outside the range matches nothing, under `ne` as well
+    (owner, 2026-11-12).
+
+    The canonical form follows the System.Decimal's scale, so widening it, as
+    aehrc/pathling#2893, Consider 8 fractional digits for System.Decimal, proposes, would
+    change the canonical form of stored values with more than six fractional digits too.
   - The canonical form is no longer always filled, which amends FR-059.
 - **System.Coding:** a FHIR Coding's `id` and `extension` are dropped when it converts,
   as a primitive's are.
@@ -440,11 +486,13 @@ because a null stored annotation is read as an absent value.
    the same deferred expressions on the lambda's element, and Spark resolves them per
    schema. This fixes ticket 43, finding 2.
 3. **Merging different shapes** (`a | b` with one side annotated and one not, a FHIR
-   date with `@2000`, `iif` branches, `repeat`'s element type, `unionAll`): the result is
+   date with `@2000`, `repeat`'s element type, `unionAll`): the result is
    a System value that keeps `value` and the annotation fields **every side has**. The
    rest are computed on demand. For example, `birthDate | @2000` over annotated data
    keeps the stored bounds, because the literal has them too; over unannotated data, the
-   bounds are computed. A merge of identical FHIR shapes keeps every field.
+   bounds are computed. A merge of identical FHIR shapes keeps every field. `iif` is
+   not a merge here: the engine does not implement it (ticket 50); were it added, its
+   branches would merge in the same way.
 
    The planner cannot tell whether shapes differ, so the existing deferred reconciler
    (`MergeCast` and `UnresolvedMergeCombination`, ADR-0002) decides, with one new rule:

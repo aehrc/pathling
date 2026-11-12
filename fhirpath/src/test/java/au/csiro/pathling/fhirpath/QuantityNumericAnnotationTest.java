@@ -148,7 +148,9 @@ class QuantityNumericAnnotationTest {
             List.of(
                 "o1=1.234568",
                 "o2=4.000000",
-                "o3=null",
+                // A bound has no System quantity, so it drops out of the combination (decision
+                // 150).
+                "o3=7.000000",
                 "o4=1000000000000000000000000000000.000000")),
         // A quantity the engine builds carries its value as decoding its text gives it.
         arguments("(1.2345675 'g').value", everyObservation("1.234568")),

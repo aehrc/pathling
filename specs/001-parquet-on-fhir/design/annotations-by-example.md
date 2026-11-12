@@ -154,9 +154,10 @@ FHIR values come from traversal of stored data.
 ### 3.1 Primitives: `struct(value, …)`, flat
 
 The element holds `value` and the annotation fields of `_x` that the schema has, read by name, all at
-one level (decision 152). Nothing is computed, and the raw `_x` is never carried (D2, decision 141). A
-type with an annotation kind is always a struct; a type without one, with the switch off, is a bare
-value.
+one level (decision 152). No annotation is computed, and the raw `_x` is never carried (D2, decision
+141). A type with an annotation kind is always a struct; a type without one, with the switch off, is a
+bare value. The one test made at traversal is whether a decimal's number decodes: a decimal the
+engine's System.Decimal cannot hold is absent (design §4.1, ticket 50).
 
 ```jsonc
 // Observation.effectiveDateTime (dateTime, annotated data)
@@ -178,6 +179,10 @@ value.
 
 // Observation.valueQuantity.value (decimal): the value is the stored text (decision 147)
 { "value": "72.50", "__numeric": 72.500000 }
+
+// A decimal the System.Decimal cannot hold, stored "1.0E40": absent where it is singular, and a
+// null item under a repeating parent, such as component.valueQuantity.value = [null, "2"]
+null
 
 // Patient.name.given (string), switch off: no annotation kind, so a bare value
 "Anne"
@@ -282,10 +287,21 @@ are available without computing.
   "__canonical_value_exact": { "value": 72500, "scale": 0 } }
 
 // Converted from the unannotated FHIR quantity: no canonical fields. A comparison computes the
-// canonical form where it reads it, from the FHIR operand's stored text
+// canonical form where it reads it, from the System.Decimal value, as ingest did
 { "value": 72.500000, "unit": "kg", "code": "kg", "system": "http://unitsofmeasure.org" }
 
-// The literal 72.50 'kg': the canonical form from the literal's text, as constants at plan time
+// A stored 1.0000001 g, unannotated data: a comparison computes the canonical form of its
+// System.Decimal, 1 g. Over annotated data it carries that same form, stored by ingest
+{ "value": 1.000000, "unit": "g", "code": "g", "system": "http://unitsofmeasure.org" }
+
+// A stored 1 ns, annotated data: canonicalisation itself loses nothing, so the exact value is
+// 0.000000001 s
+{ "value": 1.000000, "unit": "ns", "code": "ns", "system": "http://unitsofmeasure.org",
+  "__canonical_code": "s",
+  "__canonical_value_exact": { "value": 1, "scale": 9 } }
+
+// The literal 72.50 'kg': the canonical form from the literal's System.Decimal, as constants at plan
+// time
 { "value": 72.500000, "unit": "kg", "code": "kg", "system": "http://unitsofmeasure.org",
   "__canonical_code": "g",
   "__canonical_value_exact": { "value": 72500, "scale": 0 } }
@@ -301,15 +317,26 @@ are available without computing.
   "__canonical_value_exact": { "value": 5, "scale": 0 } }
 ```
 
-A FHIR quantity with a comparator, such as `<5 mg`, has no System form; converting it gives empty.
+A FHIR quantity with a comparator, such as `<5 mg`, has no System form; converting it gives empty. So
+does one whose value the System.Decimal cannot hold, such as a stored `1.0E33 g`: its value is
+absent, as any such decimal is, so it is not compared, its `toString()` is empty, and
+`valueQuantity | 1 'g'` holds `1 'g'` alone.
 
-**The canonical form comes from the most exact source,** never from the converted decimal:
+**Every computation operates on the System.Decimal value,** at `DECIMAL(38,6)`, comparison included
+(owner, 2026-11-12, decision 153): stored values, literals and search values alike. A value outside the
+supported range is not available: it is absent, not compared, and matches nothing in a search. So:
+
+**The canonical form is a function of the System.Decimal value and the unit,** at ingest and in the
+engine (owner, 2026-11-12). Digits of a stored text beyond the sixth fractional one take no part, and
+a value the System.Decimal cannot hold has no canonical form. The exact value keeps only the digits
+that canonicalisation itself would otherwise lose. So annotated and unannotated data give the same
+answers:
 
 | Quantity from | Canonical form from |
 |---|---|
-| Stored data | The stored annotation, or else the stored text, on the FHIR operand where it is compared. Converted earlier (a merge, `toQuantity()`), the stored annotation if kept, or else the decimal |
-| A literal | The literal's text, at plan time |
-| Arithmetic | The decimal value |
+| Stored data | The stored annotation, or else its System.Decimal value (`__numeric`, or the decoded text), where an operation reads it |
+| A literal | Its System.Decimal value, at plan time. So `0.000000001 's'` is 0 s, and `1 'ns' = 0.000000001 's'` is false, a known limitation |
+| Arithmetic or a function | The decimal value |
 
 ### 4.4 System.Coding: `{system, code, version, display, userSelected}` (decision 150)
 
@@ -329,10 +356,10 @@ System.Coding has no annotations and no `id`.
 
 | Step | Effect on annotations | Computes an annotation |
 |---|---|---|
-| Traversal | Builds the element from `value` and the stored annotation fields | No |
-| FHIR → System | The annotation fields are kept; `id`, `extension` and content the System type lacks are dropped. A decimal's value becomes its number: `__numeric`, or else the parsed text, where it is read | No |
+| Traversal | Builds the element from `value` and the stored annotation fields. A decimal whose number does not decode is null | No; it only tests whether a decimal's number decodes |
+| FHIR → System | The annotation fields are kept; `id`, `extension` and content the System type lacks are dropped. A decimal's value becomes its number: `__numeric`, or else the parsed text, where it is read. A quantity whose value does not decode converts to null | No |
 | Crossing a lambda (`where`, `select`, `forEach`, `repeat`) | The structure crosses as it is | No |
-| Merge (`a \| b`, `iif`) | A System value with `value` and the annotation fields every side has | No |
+| Merge (`a \| b`; the engine has no `iif`) | A System value with `value` and the annotation fields every side has | No |
 | A function or arithmetic result | `value` only (rule A) | No |
 | An accessor, in a comparison | `resolve_or_else(e, "__start", date_start(e.value))` | Only where nothing is available |
 | Output | A primitive outputs `value`; its annotation fields are never output. A complex FHIR value is output in its fitted shape, `_x` included | No |
@@ -353,7 +380,8 @@ A merge of different shapes gives a System value with `value` and the annotation
 { "value": "2000" }
 
 // valueQuantity | 5 'kg', unannotated data: the result is System.Quantity, with no canonical
-// fields on either side; the FHIR side's text is gone, so its canonical form comes from the decimal
+// fields on either side; each side's canonical form is computed from its decimal where it is read,
+// which is the System.Decimal value ingest computes the stored annotation from
 { "value": 72.500000, "unit": "kg", "code": "kg", "system": "http://unitsofmeasure.org" }
 { "value": 5.000000,  "unit": "kg", "code": "kg", "system": "http://unitsofmeasure.org" }
 ```

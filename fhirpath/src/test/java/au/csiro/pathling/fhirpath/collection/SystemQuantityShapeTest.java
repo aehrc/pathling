@@ -52,16 +52,15 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 
 /**
- * Pins the shape of a {@code System.Quantity} that the engine builds itself (FR-059).
+ * Pins the shape of a {@code System.Quantity} that the engine builds itself (FR-059, decision 150).
  *
- * <p>Whatever produces it, such a quantity has one fixed, complete shape: the elements of a FHIR
- * Quantity other than {@code extension}, in definition order, with its value as the text of a
- * decimal, as the Parquet on FHIR layout stores one, and the value's metadata group beside it
- * carrying its numeric annotation (ticket 41), followed by the layout's two canonical annotations,
- * {@code __canonical_code} and {@code __canonical_value_exact}, flat (tickets 12 and 42). It
- * carries none of the previous layout's companions: no {@code DECIMAL} value with a {@code
- * value_scale} beside it, no canonical form in {@code _value_canonicalized} and {@code
- * _code_canonicalized}, and no {@code _fid}.
+ * <p>Whatever produces it, such a quantity has the fields its literal can set, its content: {@code
+ * value}, the engine's System.Decimal, then {@code unit}, {@code code} and {@code system}. Beside
+ * them, flat, it carries its canonical annotations, {@code __canonical_code} and {@code
+ * __canonical_value_exact}, only where they are available without computing (decision 152): a
+ * literal has them as constants, and a function result, or a merge with an operand that lacks them,
+ * has none. It has no {@code id}, {@code comparator} or {@code _value}, and none of the previous
+ * layout's companions. Returned to a caller, it has its content only.
  *
  * @author Piotr Szul
  */
@@ -71,32 +70,35 @@ class SystemQuantityShapeTest {
 
   private static final Parser PARSER = new Parser();
 
-  /** The fixed shape of an engine-built System.Quantity, written out field by field. */
-  private static final StructType SYSTEM_QUANTITY =
+  /** The content of a System.Quantity, written out field by field, as it is returned. */
+  private static final StructType CONTENT =
       new StructType(
           new StructField[] {
-            DataTypes.createStructField("id", DataTypes.StringType, true),
-            DataTypes.createStructField("value", DataTypes.StringType, true),
-            DataTypes.createStructField(
-                "_value",
-                new StructType().add("__numeric", DataTypes.createDecimalType(38, 6), true),
-                true),
-            DataTypes.createStructField("comparator", DataTypes.StringType, true),
+            DataTypes.createStructField("value", DataTypes.createDecimalType(38, 6), true),
             DataTypes.createStructField("unit", DataTypes.StringType, true),
-            DataTypes.createStructField("system", DataTypes.StringType, true),
             DataTypes.createStructField("code", DataTypes.StringType, true),
-            DataTypes.createStructField("__canonical_code", DataTypes.StringType, true),
-            DataTypes.createStructField(
-                "__canonical_value_exact", QuantityCanonicalKind.EXACT_VALUE_TYPE, true)
+            DataTypes.createStructField("system", DataTypes.StringType, true)
           });
 
-  /** The fields of the shape that are elements of a FHIR Quantity. */
-  private static final List<String> ELEMENTS =
-      List.of("id", "value", "comparator", "unit", "system", "code");
+  /** The canonical annotations of a System.Quantity, where they are available. */
+  private static final StructType ANNOTATED =
+      CONTENT
+          .add("__canonical_code", DataTypes.StringType, true)
+          .add("__canonical_value_exact", QuantityCanonicalKind.EXACT_VALUE_TYPE, true);
 
-  /** The field names by which a structure is recognised as a previous-layout quantity. */
+  /** The fields of the shape that are the content of a System.Quantity. */
+  private static final List<String> ELEMENTS = List.of("value", "unit", "code", "system");
+
+  /** The field names by which a structure is recognised as a previous-layout or stored quantity. */
   private static final List<String> LEGACY_FIELDS =
-      List.of("value_scale", "_value_canonicalized", "_code_canonicalized", "_fid");
+      List.of(
+          "value_scale",
+          "_value_canonicalized",
+          "_code_canonicalized",
+          "_fid",
+          "id",
+          "comparator",
+          "_value");
 
   private static final String OBSERVATION =
       "{\"resourceType\":\"Observation\",\"id\":\"o1\",\"status\":\"final\","
@@ -116,20 +118,31 @@ class SystemQuantityShapeTest {
     dataset = PofDatasets.fromJson(spark, fhirContext, "Observation", List.of(OBSERVATION));
   }
 
+  /**
+   * Each producer, and whether its quantity carries the canonical annotations: a literal with a
+   * canonical form carries them as constants; a calendar duration longer than a second has no
+   * canonical form; a function result carries none (rule A); and a merge keeps them only where
+   * every operand has them, which the unannotated stored quantity here does not (decision 142, D9).
+   */
   @Nonnull
   Stream<Arguments> producers() {
     return Stream.of(
-        arguments("a literal", "1.50 'mg'"),
-        arguments("a calendar duration literal", "3 days"),
-        arguments("an arithmetic result promoted to a quantity", "(1 + 2).toQuantity()"),
-        arguments("a decimal arithmetic result promoted to a quantity", "(1.5 * 2).toQuantity()"),
-        arguments("a string converted to a quantity", "'5.5 \\'mg\\''.toQuantity()"),
-        arguments("a unit conversion", "(1 'g').toQuantity('mg')"),
+        arguments("a literal", "1.50 'mg'", true),
+        arguments("a calendar duration literal", "3 days", false),
+        arguments("an arithmetic result promoted to a quantity", "(1 + 2).toQuantity()", false),
         arguments(
-            "a stored quantity converted to a unit", "value.ofType(Quantity).toQuantity('mg')"),
-        arguments("a union of a literal with a stored quantity", "value.ofType(Quantity) | 1 'g'"),
-        arguments("a union of a stored quantity with a literal", "1 'g' | value.ofType(Quantity)"),
-        arguments("a union of two literals", "1 'g' | 2 'kg'"));
+            "a decimal arithmetic result promoted to a quantity", "(1.5 * 2).toQuantity()", false),
+        arguments("a string converted to a quantity", "'5.5 \\'mg\\''.toQuantity()", false),
+        arguments("a unit conversion", "(1 'g').toQuantity('mg')", false),
+        arguments(
+            "a stored quantity converted to a unit",
+            "value.ofType(Quantity).toQuantity('mg')",
+            false),
+        arguments(
+            "a union of a literal with a stored quantity", "value.ofType(Quantity) | 1 'g'", false),
+        arguments(
+            "a union of a stored quantity with a literal", "1 'g' | value.ofType(Quantity)", false),
+        arguments("a union of two literals", "1 'g' | 2 'kg'", true));
   }
 
   @Test
@@ -144,41 +157,49 @@ class SystemQuantityShapeTest {
 
   @ParameterizedTest(name = "{0}")
   @MethodSource("producers")
-  void engineBuiltQuantityHasTheFixedShape(
-      @Nonnull final String producer, @Nonnull final String expression) {
-    assertThat(elementTypeOf(expression)).isEqualTo(SYSTEM_QUANTITY);
+  void engineBuiltQuantityHasTheShapeOfDecision150(
+      @Nonnull final String producer, @Nonnull final String expression, final boolean annotated) {
+    assertThat(elementTypeOf(expression)).isEqualTo(annotated ? ANNOTATED : CONTENT);
+  }
+
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("producers")
+  void returnedQuantityHasItsContentOnly(
+      @Nonnull final String producer,
+      @Nonnull final String expression,
+      final boolean ignoredAnnotated) {
+    assertThat(returnedTypeOf(expression)).isEqualTo(CONTENT);
   }
 
   @ParameterizedTest(name = "{0}")
   @MethodSource("producers")
   void engineBuiltQuantityCarriesNoLegacyCompanion(
-      @Nonnull final String producer, @Nonnull final String expression) {
+      @Nonnull final String producer,
+      @Nonnull final String expression,
+      final boolean ignoredAnnotated) {
     final StructType type = (StructType) elementTypeOf(expression);
     assertThat(type.fieldNames()).doesNotContainAnyElementsOf(LEGACY_FIELDS);
-    assertThat(ELEMENTS.stream().map(name -> type.apply(name).dataType()))
-        .allMatch(DataTypes.StringType::equals);
   }
 
   @Nonnull
   Stream<Arguments> values() {
     return Stream.of(
-        // .value decodes the text to the engine's decimal type, at six places.
+        // .value is the engine's decimal, at six places.
         arguments("(1.50 'mg').value", "1.500000"),
-        // The value is the text of the decimal, at its own scale.
-        arguments("1.50 'mg'", "[null,1.50,null,mg,http://unitsofmeasure.org,mg]"),
-        // A promoted number has no known scale, so it is given its shortest text.
-        arguments("(1 + 2).toQuantity()", "[null,3,null,1,http://unitsofmeasure.org,1]"),
-        arguments("(1.5 * 2).toQuantity()", "[null,3,null,1,http://unitsofmeasure.org,1]"),
-        arguments("1.25.toQuantity()", "[null,1.25,null,1,http://unitsofmeasure.org,1]"),
-        arguments("100.toQuantity()", "[null,100,null,1,http://unitsofmeasure.org,1]"),
-        arguments("0.toQuantity()", "[null,0,null,1,http://unitsofmeasure.org,1]"),
-        arguments("true.toQuantity()", "[null,1,null,1,http://unitsofmeasure.org,1]"),
-        arguments("(1 'g').toQuantity('mg')", "[null,1000,null,mg,http://unitsofmeasure.org,mg]"),
-        // A stored quantity met by a System one keeps its id and comparator, but not its
-        // extensions.
+        // The value is the engine's System.Decimal, at six places.
+        arguments("1.50 'mg'", "[1.500000,mg,mg,http://unitsofmeasure.org]"),
+        arguments("(1 + 2).toQuantity()", "[3.000000,1,1,http://unitsofmeasure.org]"),
+        arguments("(1.5 * 2).toQuantity()", "[3.000000,1,1,http://unitsofmeasure.org]"),
+        arguments("1.25.toQuantity()", "[1.250000,1,1,http://unitsofmeasure.org]"),
+        arguments("100.toQuantity()", "[100.000000,1,1,http://unitsofmeasure.org]"),
+        arguments("0.toQuantity()", "[0.000000,1,1,http://unitsofmeasure.org]"),
+        arguments("true.toQuantity()", "[1.000000,1,1,http://unitsofmeasure.org]"),
+        arguments("(1 'g').toQuantity('mg')", "[1000.000000,mg,mg,http://unitsofmeasure.org]"),
+        // A stored quantity with a comparator has no System form, so it drops out of a merge with
+        // a System quantity, and the literal is first.
         arguments(
             "(value.ofType(Quantity) | 1 'g').first()",
-            "[q1,1.5,<,g,http://unitsofmeasure.org,g]"));
+            "[1.000000,g,g,http://unitsofmeasure.org]"));
   }
 
   @ParameterizedTest(name = "{0}")
@@ -211,6 +232,27 @@ class SystemQuantityShapeTest {
     assertThat(evaluate(expression)).isEqualTo(expected);
   }
 
+  /**
+   * A System quantity's value is a System.Decimal, which its string renders as a decimal's string
+   * renders, without trailing fractional zeros.
+   */
+  @Nonnull
+  Stream<Arguments> strings() {
+    return Stream.of(
+        arguments("(7.5 'mg').toString()", "7.5 'mg'"),
+        arguments("(1.50 'mg').toString()", "1.5 'mg'"),
+        arguments("(1 + 2).toQuantity().toString()", "3 '1'"),
+        arguments("(1 'g').toQuantity('mg').toString()", "1000 'mg'"),
+        arguments("(4 days).toString()", "4 days"));
+  }
+
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("strings")
+  void systemQuantityStringHasNoTrailingFractionalZeros(
+      @Nonnull final String expression, @Nonnull final String expected) {
+    assertThat(evaluate(expression)).isEqualTo(expected);
+  }
+
   @Nonnull
   Stream<Arguments> promotedNumberComparisons() {
     return Stream.of(
@@ -236,6 +278,20 @@ class SystemQuantityShapeTest {
     return SparkTypes.elementTypeOf(
         dataset
             .select(evaluator().evaluateToCollection(PARSER.parse(expression)).getColumnValue())
+            .schema()
+            .fields()[0]
+            .dataType());
+  }
+
+  @Nonnull
+  private DataType returnedTypeOf(@Nonnull final String expression) {
+    return SparkTypes.elementTypeOf(
+        dataset
+            .select(
+                evaluator()
+                    .evaluateToCollection(PARSER.parse(expression))
+                    .getOutputColumn()
+                    .getValue())
             .schema()
             .fields()[0]
             .dataType());

@@ -23,6 +23,9 @@ import au.csiro.pathling.schema.annotation.AnnotationKind;
 import au.csiro.pathling.schema.annotation.AnnotationSwitch;
 import au.csiro.pathling.utilities.SystemDecimal;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 import org.apache.spark.sql.Column;
 
@@ -86,5 +89,34 @@ public final class DecimalNumericKind extends AnnotationKind {
   @Nonnull
   public static Column decode(@Nonnull final Column number) {
     return number.try_cast(SystemDecimal.TYPE);
+  }
+
+  /**
+   * Decodes a number known outside the plan to the value the engine's System.Decimal holds for it,
+   * as {@link #decode} decodes it in the plan: rounded half up to the type's scale where it has
+   * more fractional digits, and null where its integer digits are more than the type holds.
+   *
+   * <p>A value with no more fractional digits than the type holds keeps its own scale, so that the
+   * value is unchanged where it does not need rounding.
+   *
+   * @param number the number, or null
+   * @return the value the engine's System.Decimal holds for it, or null where there is no number or
+   *     it does not fit
+   */
+  @Nullable
+  public static BigDecimal decodeValue(@Nullable final BigDecimal number) {
+    if (number == null) {
+      return null;
+    }
+    final BigDecimal rounded =
+        number.scale() > SystemDecimal.SCALE
+            ? number.setScale(SystemDecimal.SCALE, RoundingMode.HALF_UP)
+            : number;
+    // Rounding may carry into a further integer digit, so the range is tested after it. Zero fits
+    // whatever its exponent.
+    return rounded.signum() != 0
+            && rounded.precision() - rounded.scale() > SystemDecimal.INTEGER_DIGITS
+        ? null
+        : rounded;
   }
 }

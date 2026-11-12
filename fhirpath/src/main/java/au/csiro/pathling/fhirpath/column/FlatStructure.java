@@ -20,18 +20,33 @@ package au.csiro.pathling.fhirpath.column;
 import au.csiro.pathling.utilities.CanonicalStructure;
 import jakarta.annotation.Nonnull;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import lombok.AllArgsConstructor;
 
 /**
- * The canonical structure of an engine value that is one flat structure with no structure beneath
- * its fields, such as a date (decision 152): a fixed order of its content and annotation fields.
- * The reconciler orders the merge of such values by it (FR-056).
+ * The canonical structure of an engine value that is one flat structure, such as a date (decision
+ * 152): a fixed order of its content and annotation fields, and the order of the fields of those of
+ * them that are structures themselves, such as a quantity's exact canonical value. The reconciler
+ * orders the merge of such values by it (FR-056).
  */
 @AllArgsConstructor(staticName = "of")
 public final class FlatStructure implements CanonicalStructure {
 
   @Nonnull private final List<String> fieldOrder;
+
+  @Nonnull private final Map<String, CanonicalStructure> nested;
+
+  /**
+   * Returns the canonical structure of a flat value with no structure beneath its fields.
+   *
+   * @param fieldOrder the order of its fields
+   * @return the canonical structure
+   */
+  @Nonnull
+  public static FlatStructure of(@Nonnull final List<String> fieldOrder) {
+    return of(fieldOrder, Map.of());
+  }
 
   @Override
   @Nonnull
@@ -42,6 +57,6 @@ public final class FlatStructure implements CanonicalStructure {
   @Override
   @Nonnull
   public Optional<CanonicalStructure> field(@Nonnull final String name) {
-    return Optional.empty();
+    return Optional.ofNullable(nested.get(name));
   }
 }

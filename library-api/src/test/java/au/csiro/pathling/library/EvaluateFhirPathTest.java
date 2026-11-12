@@ -29,6 +29,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import jakarta.annotation.Nonnull;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -493,6 +494,17 @@ public class EvaluateFhirPathTest {
   }
 
   @Test
+  void computedDecimalIsReturnedAtSixFractionalDigits() {
+    // A computed decimal is returned as the engine's System.Decimal, at its six fractional digits,
+    // as a System quantity's value is rendered.
+    final SingleInstanceEvaluationResult result =
+        pathling.evaluateFhirPath("Patient", PATIENT_JSON, "7.5 + 0");
+
+    assertEquals(1, result.getResults().size());
+    assertEquals(new BigDecimal("7.500000"), result.getResults().getFirst().getValue());
+  }
+
+  @Test
   void systemQuantityIsRenderedAsAQuantity() {
     // A quantity the engine builds, such as a literal, is not stored. It is rendered with the
     // elements of a Quantity, its value a number, and nothing of the structure the engine computes
@@ -501,42 +513,43 @@ public class EvaluateFhirPathTest {
         singleObject(pathling.evaluateFhirPath("Patient", PATIENT_JSON, "7.5 'mg'"));
 
     assertEquals(Set.of("value", "unit", "system", "code"), quantity.keySet());
-    assertNumber("7.5", quantity.get("value"));
+    assertNumber("7.500000", quantity.get("value"));
     assertEquals("mg", quantity.get("code").getAsString());
   }
 
   @Test
-  void systemQuantityIsRenderedWithTheScaleOfItsValue() {
-    // A System quantity holds its value as text (FR-059), so the value is rendered with the digits
-    // it was given, without a scale companion.
+  void systemQuantityIsRenderedWithItsValueAsSystemDecimal() {
+    // A System quantity holds its value as the engine's System.Decimal (decision 150), so the value
+    // is rendered at its six fractional digits, without a scale companion.
     final JsonObject quantity =
         singleObject(pathling.evaluateFhirPath("Patient", PATIENT_JSON, "1.50 'mg'"));
 
     assertEquals(Set.of("value", "unit", "system", "code"), quantity.keySet());
-    assertNumber("1.50", quantity.get("value"));
+    assertNumber("1.500000", quantity.get("value"));
   }
 
   @Test
   void numberPromotedToAQuantityIsRenderedAsAQuantity() {
-    // A quantity built from the result of an arithmetic operation has the same fixed shape as a
-    // literal, and is rendered as a quantity. Its scale is not known, so its value has no trailing
-    // fractional zeros.
+    // A quantity built from the result of an arithmetic operation has the same shape as a literal,
+    // and is rendered as a quantity, its value at System.Decimal's six fractional digits.
     final JsonObject quantity =
         singleObject(pathling.evaluateFhirPath("Patient", PATIENT_JSON, "(1 + 2).toQuantity()"));
 
     assertEquals(Set.of("value", "unit", "system", "code"), quantity.keySet());
-    assertNumber("3", quantity.get("value"));
+    assertNumber("3.000000", quantity.get("value"));
     assertEquals("1", quantity.get("code").getAsString());
   }
 
   @Test
   void unionOfAStoredAndASystemQuantityIsRenderedAsQuantities() {
-    // The stored quantity meets a System quantity, so both are System quantities (decision 82).
+    // The stored quantity meets a System quantity, so both are taken as System quantities
+    // (decision 82). This one has a comparator, so it has no System form and drops out of the union
+    // (decision 150).
     final SingleInstanceEvaluationResult result =
         pathling.evaluateFhirPath(
             "Observation", EXTENDED_OBSERVATION_JSON, "value.ofType(Quantity) | 7 'g'");
 
-    assertEquals(2, result.getResults().size());
+    assertEquals(1, result.getResults().size());
     for (final TypedValue value : result.getResults()) {
       final JsonObject quantity =
           JsonParser.parseString((String) value.getValue()).getAsJsonObject();

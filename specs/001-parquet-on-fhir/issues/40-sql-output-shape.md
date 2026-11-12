@@ -56,3 +56,12 @@ The owner decided (2026-11-05) that `fhirPathToColumn` and `$fhirpath` stay nume
 - **`$fhirpath`'s rendered values,** where they differ from the column.
 
 Any change to a public return type is flagged for the release notes and semver. Taken after ticket 16 if stored text is chosen.
+
+### The YAML harness and a System quantity's fields, 2026-11-11 (owner)
+
+Since ticket 50, the YAML harness (`DefaultYamlTestExecutor.normalizeQuantityRow`) reads a
+quantity's content fields by name and does not check how many fields the quantity has, so a
+canonical annotation leaking into a returned System quantity would not fail the YAML suites.
+`EvaluateFhirPathTest` and `SystemQuantityShapeTest` still assert that a returned System quantity
+has its four content fields only. Once this ticket agrees the output shape, the harness should
+assert it.

@@ -110,8 +110,8 @@ public class QuantityValue {
     public static ValueWithUnit originalValueOf(@Nonnull final Column quantity) {
       return new ValueWithUnit(
           QuantityEncoding.numericValue(quantity),
-          quantity.getField(QuantityEncoding.CODE_COLUMN),
-          quantity.getField(QuantityEncoding.SYSTEM_COLUMN));
+          ColumnFunctions.resolveStringOrNull(quantity, QuantityEncoding.CODE_COLUMN),
+          ColumnFunctions.resolveStringOrNull(quantity, QuantityEncoding.SYSTEM_COLUMN));
     }
 
     /**
@@ -128,7 +128,7 @@ public class QuantityValue {
     public static ValueWithUnit literalValueOf(@Nonnull final Column quantity) {
       return new ValueWithUnit(
           QuantityEncoding.numericValue(quantity),
-          quantity.getField(QuantityEncoding.UNIT_COLUMN),
+          ColumnFunctions.resolveStringOrNull(quantity, QuantityEncoding.UNIT_COLUMN),
           lit(null));
     }
 
@@ -199,10 +199,11 @@ public class QuantityValue {
   /**
    * Checks if this quantity can be represented as a FHIRPath System.Quantity.
    *
-   * <p>That requires a value and a code, a system that is UCUM or the FHIRPath calendar duration
-   * system, and no comparator. For example, {@code 3 tab} with no system, or {@code <5 mg}, cannot
-   * be represented. This mirrors {@link QuantityEncoding#decode}, which returns null for such a
-   * quantity.
+   * <p>That requires a value the engine's System.Decimal can hold (decision 153), a code, a system
+   * that is UCUM or the FHIRPath calendar duration system, and no comparator. For example, {@code 3
+   * tab} with no system, or {@code <5 mg}, cannot be represented. Formatting and unit conversion
+   * give null for such a quantity: {@link QuantityEncoding#asText} for a bound, and {@link
+   * QuantityEncoding#decode} for the rest.
    *
    * @return Column of BooleanType that is false rather than null when any field is missing
    * @see <a href="https://hl7.org/fhir/R4/fhirpath.html#quantity">FHIRPath - Quantity</a>
@@ -216,7 +217,7 @@ public class QuantityValue {
                     UcumUnit.UCUM_SYSTEM_URI,
                     CalendarDurationUnit.FHIRPATH_CALENDAR_DURATION_SYSTEM_URI),
             lit(false));
-    return field(QuantityEncoding.VALUE_COLUMN)
+    return QuantityEncoding.numericValue(quantityColumn)
         .isNotNull()
         .and(field(QuantityEncoding.CODE_COLUMN).isNotNull())
         .and(hasSupportedSystem)
@@ -233,9 +234,7 @@ public class QuantityValue {
    */
   @Nonnull
   public Column isUcum() {
-    return quantityColumn
-        .getField(QuantityEncoding.SYSTEM_COLUMN)
-        .equalTo(lit(UcumUnit.UCUM_SYSTEM_URI));
+    return field(QuantityEncoding.SYSTEM_COLUMN).equalTo(lit(UcumUnit.UCUM_SYSTEM_URI));
   }
 
   /**
@@ -248,8 +247,7 @@ public class QuantityValue {
    */
   @Nonnull
   public Column isCalendarDuration() {
-    return quantityColumn
-        .getField(QuantityEncoding.SYSTEM_COLUMN)
+    return field(QuantityEncoding.SYSTEM_COLUMN)
         .equalTo(lit(CalendarDurationUnit.FHIRPATH_CALENDAR_DURATION_SYSTEM_URI));
   }
 
@@ -280,8 +278,14 @@ public class QuantityValue {
           final QuantityValue bound = new QuantityValue(qc);
           final ValueWithUnit literal = ValueWithUnit.literalValueOf(qc);
 
-          // Try UCUM conversion (will return null for non-UCUM/non-calendar quantities).
-          final Column ucumConverted = callUDF(ConvertQuantityToUnit.FUNCTION_NAME, qc, targetUnit);
+          // Try UCUM conversion (will return null for non-UCUM/non-calendar quantities). The
+          // conversion is computed from the quantity's System.Decimal value, as every computation
+          // is (decision 153).
+          final Column ucumConverted =
+              callUDF(
+                  ConvertQuantityToUnit.FUNCTION_NAME,
+                  QuantityEncoding.asSystemText(qc),
+                  targetUnit);
 
           // Short-circuit: exact match only if unit matches AND system is UCUM or calendar
           // duration. For non-UCUM/non-calendar systems (e.g., Money), fall through to UCUM
@@ -291,10 +295,13 @@ public class QuantityValue {
               literal.unit().equalTo(targetUnit).and(hasValidSystem);
 
           // Return exact match if available (fast path), otherwise UCUM conversion result (or
-          // null). Either way the result is a quantity the engine built, so the exact match drops
-          // the id and comparator of a stored quantity, as the conversion does.
-          return when(exactMatchWithValidSystem, QuantityEncoding.withoutStoredElements(qc))
-              .otherwise(coalesce(ucumConverted, lit(null).cast(QuantityEncoding.dataType())));
+          // null). Either way the result is a function result, a System quantity with its content
+          // only (rule A, design §6, question 6). A stored quantity with no System form, such as a
+          // bound, does not convert.
+          return when(
+              bound.isSystemQuantity(),
+              when(exactMatchWithValidSystem, QuantityEncoding.content(qc))
+                  .otherwise(coalesce(ucumConverted, lit(null).cast(QuantityEncoding.dataType()))));
         });
   }
 
@@ -330,12 +337,21 @@ public class QuantityValue {
               literal.unit().equalTo(targetUnit).and(hasValidSystem);
 
           // Check UCUM convertibility by attempting conversion and checking if result is non-null.
-          final Column ucumConverted = callUDF(ConvertQuantityToUnit.FUNCTION_NAME, qc, targetUnit);
+          final Column ucumConverted =
+              callUDF(
+                  ConvertQuantityToUnit.FUNCTION_NAME,
+                  QuantityEncoding.asSystemText(qc),
+                  targetUnit);
           final Column ucumConvertible = ucumConverted.isNotNull();
 
           // Return true if either exact match (with valid system) or UCUM conversion is possible.
           // Return null if quantity is null (for empty propagation).
-          return when(qc.isNotNull(), exactMatchWithValidSystem.or(ucumConvertible));
+          // A quantity whose value the System.Decimal cannot hold has no value to convert.
+          return when(
+              qc.isNotNull(),
+              exactMatchWithValidSystem
+                  .and(QuantityEncoding.hasDecodableValue(qc))
+                  .or(ucumConvertible));
         });
   }
 }

@@ -21,6 +21,8 @@ import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.DecimalCollection;
+import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.evaluation.CrossResourceStrategy;
 import au.csiro.pathling.fhirpath.evaluation.SingleResourceEvaluator;
 import au.csiro.pathling.fhirpath.evaluation.SingleResourceEvaluatorBuilder;
@@ -329,7 +331,8 @@ public class SearchColumnBuilder {
                 final SearchFilter filter =
                     getFilterForType(
                         paramType, criterion.getModifier(), subResult.getFhirType().get());
-                return Stream.of(filter.buildFilter(subResult.getColumn(), criterion.getValues()));
+                return Stream.of(
+                    filter.buildFilter(matchedColumn(subResult), criterion.getValues()));
               })
           .reduce(Column::or)
           .orElse(lit(false));
@@ -337,7 +340,19 @@ public class SearchColumnBuilder {
 
     // Standard path: build filter directly from the evaluated column.
     final SearchFilter filter = getFilterForType(paramType, criterion.getModifier(), fhirType);
-    return filter.buildFilter(result.getColumn(), criterion.getValues());
+    return filter.buildFilter(matchedColumn(result), criterion.getValues());
+  }
+
+  /**
+   * Returns the column a search filter matches against. A decimal is matched as its number, so a
+   * stored decimal is converted to one; any other value, including a stored quantity, whose matcher
+   * reads its stored annotations, is matched as it is held.
+   */
+  @Nonnull
+  private static ColumnRepresentation matchedColumn(@Nonnull final Collection result) {
+    return result instanceof DecimalCollection
+        ? result.toEngineForm().getColumn()
+        : result.getColumn();
   }
 
   /**

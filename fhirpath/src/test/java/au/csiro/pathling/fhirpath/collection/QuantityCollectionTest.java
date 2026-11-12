@@ -22,6 +22,7 @@ import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 import au.csiro.pathling.definition.fhir.FhirDefinitionContext;
 import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.fhirpath.evaluation.CollectionDataset;
 import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluator;
 import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluatorBuilder;
 import au.csiro.pathling.fhirpath.parser.Parser;
@@ -39,6 +40,7 @@ import java.util.stream.Stream;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.TestInstance;
@@ -175,6 +177,8 @@ class QuantityCollectionTest {
                 "o5=0.0000002 'kg'",
                 "o6=37 'Cel'",
                 "o7=null")),
+        // toQuantity() converts the System.Decimal value, so the stored 0.0000002 kg of o5 is 0 kg
+        // before it converts (owner, 2026-11-12, decision 153).
         arguments(
             "value.ofType(Quantity).toQuantity('g').value",
             List.of(
@@ -182,7 +186,7 @@ class QuantityCollectionTest {
                 "o2=1.500000",
                 "o3=2000.000000",
                 "o4=null",
-                "o5=0.000200",
+                "o5=0.000000",
                 "o6=null",
                 "o7=null")),
         arguments(
@@ -210,21 +214,24 @@ class QuantityCollectionTest {
 
   @Nonnull
   Stream<Arguments> precisionCases() {
-    // The layout stores the source text, so a value with more than six fractional digits keeps its
-    // magnitude through canonicalisation.
+    // A quantity is canonicalised from its System.Decimal value, its value rounded to six
+    // fractional
+    // digits, not from every digit of its stored text (owner, 2026-11-12, decision 153). So the
+    // stored 0.0000002 kg of o5 is 0 kg, which is neither 0.2 mg nor more than 0.1 mg, over
+    // annotated data as over unannotated data.
     return Stream.of(
         arguments(
             "value.ofType(Quantity) = 0.2 'mg'",
             List.of(
-                "o1=false", "o2=false", "o3=false", "o4=null", "o5=true", "o6=null", "o7=null")),
+                "o1=false", "o2=false", "o3=false", "o4=null", "o5=false", "o6=null", "o7=null")),
         arguments(
             "value.ofType(Quantity) > 0.1 'mg'",
-            List.of("o1=true", "o2=true", "o3=true", "o4=null", "o5=true", "o6=null", "o7=null")));
+            List.of("o1=true", "o2=true", "o3=true", "o4=null", "o5=false", "o6=null", "o7=null")));
   }
 
   @ParameterizedTest(name = "{0}")
   @MethodSource("precisionCases")
-  void canonicalisationKeepsTheMagnitudeOfTheStoredText(
+  void canonicalisationIsOfTheSystemDecimalValue(
       @Nonnull final String expression, @Nonnull final List<String> expected) {
     assertThat(evaluate(dataset, expression)).containsExactlyInAnyOrderElementsOf(expected);
     assertThat(evaluate(annotated, expression)).containsExactlyInAnyOrderElementsOf(expected);
@@ -238,14 +245,15 @@ class QuantityCollectionTest {
 
   /**
    * A field of a decoded quantity is read from the stored quantity, without computing its canonical
-   * form for nothing.
+   * form for nothing, and without converting it to a System quantity, which would test its
+   * comparator.
    */
   @ParameterizedTest(name = "{0}")
   @MethodSource("fieldPlanCases")
   void fieldOfADecodedQuantityIsReadFromTheStoredQuantity(@Nonnull final String expression) {
     assertThat(plan(dataset, expression))
         .doesNotContain(CANONICALISATION)
-        .doesNotContain("CASE WHEN");
+        .doesNotContain("comparator");
   }
 
   /**
@@ -314,10 +322,13 @@ class QuantityCollectionTest {
         DatasetEvaluatorBuilder.create(ResourceType.OBSERVATION, fhirEncoders.getContext())
             .withDataset(dataset)
             .build();
-    return evaluator
-        .evaluate(PARSER.parse(expression))
-        .toCanonical()
-        .toIdValueDataset()
+    final CollectionDataset result = evaluator.evaluate(PARSER.parse(expression)).toCanonical();
+    // The value is read as a caller is given it, so that a stored decimal is its number.
+    return result
+        .getDataset()
+        .select(
+            functions.col(CollectionDataset.ID_COLUMN),
+            result.getValue().getOutputColumn().getValue())
         .collectAsList()
         .stream()
         .map(row -> row.getString(0) + "=" + Objects.toString(row.get(1)))

@@ -23,6 +23,7 @@ import static org.junit.jupiter.params.provider.Arguments.arguments;
 import au.csiro.pathling.definition.fhir.FhirDefinitionContext;
 import au.csiro.pathling.encoders.ColumnFunctions;
 import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.fhirpath.evaluation.CollectionDataset;
 import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluator;
 import au.csiro.pathling.fhirpath.evaluation.DatasetEvaluatorBuilder;
 import au.csiro.pathling.fhirpath.parser.Parser;
@@ -199,9 +200,11 @@ class DecimalCollectionTest {
             "Location",
             "position.latitude / 3",
             List.of("l1=0.500000", "l2=3.166667", "l3=0.041152")),
-        // Rendering as a string.
+        // Rendering as a string: a stored decimal gives its stored text (decision 147).
         arguments(
-            "Location", "position.latitude.toString()", List.of("l1=1.5", "l2=9.5", "l3=0.123457")),
+            "Location",
+            "position.latitude.toString()",
+            List.of("l1=1.5", "l2=9.5", "l3=0.1234567")),
         // Decimals under a repeating parent, reached through a choice.
         arguments(
             "RiskAssessment",
@@ -393,8 +396,9 @@ class DecimalCollectionTest {
       @Nonnull final String resourceType,
       @Nonnull final String expression,
       @Nonnull final String element) {
-    // The text is decoded by a cast, which names the element, followed by the id Spark gives it.
-    final String decodeText = element + "(#\\d+)? as decimal\\(38,6\\)";
+    // The text is decoded by a cast, which names the element, followed by the id Spark gives it, or
+    // the text field of the structure a repeating decimal is held in.
+    final String decodeText = "(" + element + "|\\.value)(#\\d+)? as decimal\\(38,6\\)";
 
     final Dataset<Row> fast = select(annotated.get(resourceType), resourceType, expression);
     assertThat(fast.queryExecution().optimizedPlan().expressions().mkString(","))
@@ -518,10 +522,14 @@ class DecimalCollectionTest {
                 ResourceType.fromCode(resourceType), fhirEncoders.getContext())
             .withDataset(dataset)
             .build();
-    return evaluator
-        .evaluate(PARSER.parse(expression))
-        .toCanonical()
-        .toIdValueDataset()
+    final CollectionDataset result = evaluator.evaluate(PARSER.parse(expression)).toCanonical();
+    // The value is read as a caller is given it: a decimal as its number, whether it is a stored
+    // decimal, held with its text, or a computed one (decision 147).
+    return result
+        .getDataset()
+        .select(
+            functions.col(CollectionDataset.ID_COLUMN),
+            result.getValue().getOutputColumn().getValue())
         .collectAsList()
         .stream()
         .map(row -> row.getString(0) + "=" + Objects.toString(row.get(1)))

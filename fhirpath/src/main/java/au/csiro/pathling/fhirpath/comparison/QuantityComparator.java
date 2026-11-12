@@ -31,7 +31,12 @@ import org.apache.spark.sql.Column;
 
 /**
  * Implementation of Spark SQL comparator for the Quantity type. It compares the exact canonical
- * forms the quantities carry where they are comparable, and their original values otherwise.
+ * forms of the quantities where they are comparable, and their original values otherwise.
+ *
+ * <p>Each operand may be a stored quantity or a System quantity, and every field is read by name. A
+ * canonical form is the stored annotation where the quantity carries it, and is otherwise computed
+ * from the most exact source the quantity has: a stored quantity's text, so that a stored quantity
+ * is compared from every digit it was stored with, and a System quantity's decimal (decision 150).
  *
  * <p>A quantity that carries a comparator (e.g. {@code <5 mg}) records a bound rather than a known
  * value, so any comparison involving one is empty.

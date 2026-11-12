@@ -24,6 +24,7 @@ import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.fhirpath.FhirPathType;
+import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.DateCollection;
@@ -199,8 +200,13 @@ class ConversionLogic {
     if (source instanceof EmptyCollection) {
       return EmptyCollection.getInstance();
     }
-    // A conversion computes with the values, so a stored quantity is taken as the System quantity
-    // it converts to.
+    // A stored decimal's string is its stored text (decision 147), and a stored quantity's is
+    // formatted from its stored text, which converting it first would lose.
+    if (targetType == FhirPathType.STRING && isStoredNumber(source)) {
+      return ((StringCoercible) source).asStringPath();
+    }
+    // A conversion computes with the values, so a stored value is taken as the System value it
+    // converts to.
     final Collection input = source.toEngineForm();
 
     // Look up conversion function and builder from registries
@@ -223,6 +229,12 @@ class ConversionLogic {
             coalesce(result, input.getColumn().ensureSingular())
             // implicit null otherwise
             ));
+  }
+
+  /** Whether a collection holds stored decimals or stored quantities, which keep their text. */
+  private boolean isStoredNumber(@Nonnull final Collection source) {
+    return source instanceof final DecimalCollection decimal && decimal.isStored()
+        || source instanceof final QuantityCollection quantity && quantity.isStored();
   }
 
   /**
@@ -343,7 +355,7 @@ class ConversionLogic {
           // Quantity: Use QuantityToLiteral UDF to format as FHIRPath quantity literal.
           // E.g., {value: 1, unitCode: "wk", system: "http://unitsofmeasure.org"} -> "1 'wk'"
           // The UDF returns null for a quantity that has no System.Quantity equivalent.
-          callUDF(QuantityToLiteral.FUNCTION_NAME, value);
+          callUDF(QuantityToLiteral.FUNCTION_NAME, QuantityEncoding.asText(value));
       case CODING ->
           // Coding: Use CodingToLiteral UDF to format as Coding literal.
           // E.g., {system: "http://snomed.info/sct", code: "52101004"} ->

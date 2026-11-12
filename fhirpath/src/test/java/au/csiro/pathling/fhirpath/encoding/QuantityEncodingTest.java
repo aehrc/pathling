@@ -28,7 +28,6 @@ import au.csiro.pathling.sql.types.FlexiDecimal;
 import jakarta.annotation.Nullable;
 import java.math.BigDecimal;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema;
@@ -68,20 +67,30 @@ class QuantityEncodingTest {
   }
 
   @Test
-  void encodedQuantityDecodesToTheSameQuantity() {
-    final FhirPathQuantity quantity = FhirPathQuantity.parse("1.50 'mg'");
-    assertThat(QuantityEncoding.decode(QuantityEncoding.encode(quantity))).isEqualTo(quantity);
+  void encodedQuantityIsItsContentAtSystemDecimal() {
+    final Row encoded = QuantityEncoding.encode(FhirPathQuantity.parse("1.50 'mg'"));
+    assertThat(encoded.get(0)).isEqualTo(new BigDecimal("1.500000"));
+    assertThat(encoded.toSeq().drop(1).mkString(",")).isEqualTo("mg,mg,http://unitsofmeasure.org");
   }
 
+  /**
+   * A quantity is formatted and converted from its value as text, so a value beyond six fractional
+   * digits, such as a stored quantity's text, keeps every digit there (decision 150). A quantity a
+   * function builds holds its value at System.Decimal, as every System quantity does.
+   */
   @Test
   void valueBeyondSixFractionalDigitsIsKeptByTheStringFormAndASameUnitConversion() {
-    final FhirPathQuantity quantity = FhirPathQuantity.parse("0.1234567891 'mg'");
-    final FhirPathQuantity decoded = QuantityEncoding.decode(QuantityEncoding.encode(quantity));
+    final FhirPathQuantity decoded =
+        QuantityEncoding.decode(
+            new GenericRowWithSchema(
+                new Object[] {"0.1234567891", "mg", "mg", "http://unitsofmeasure.org"},
+                QuantityEncoding.textType()));
 
     assertThat(decoded).isNotNull();
     assertThat(decoded.toString()).isEqualTo("0.1234567891 'mg'");
     assertThat(decoded.convertToUnit("mg"))
         .hasValueSatisfying(q -> assertThat(q.getValue()).isEqualByComparingTo("0.1234567891"));
+    assertThat(QuantityEncoding.encode(decoded).get(0)).isEqualTo(new BigDecimal("0.123457"));
   }
 
   @Test
@@ -91,13 +100,12 @@ class QuantityEncodingTest {
   }
 
   @Test
-  void rowWithTheFixedShapeAndASchemaDecodes() {
+  void rowWithTheTextShapeAndASchemaDecodes() {
     final FhirPathQuantity quantity = FhirPathQuantity.parse("1.50 'mg'");
-    final Row encoded = QuantityEncoding.encode(quantity);
     final Row row =
         new GenericRowWithSchema(
-            IntStream.range(0, encoded.size()).mapToObj(encoded::get).toArray(),
-            QuantityEncoding.dataType());
+            new Object[] {"1.50", "mg", "mg", "http://unitsofmeasure.org"},
+            QuantityEncoding.textType());
     assertThat(QuantityEncoding.decode(row)).isEqualTo(quantity);
   }
 

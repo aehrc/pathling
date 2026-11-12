@@ -214,22 +214,35 @@ class AnnotationPlanBaselineTest {
    * <p>Changed by ticket 42: the canonical form is carried as two flat annotations, {@code
    * __canonical_code} and {@code __canonical_value_exact}, rather than grouped in {@code
    * __canonical_exact}, as ingest now stores it (decision 149). The values are unchanged.
+   *
+   * <p>Changed by ticket 50: a System quantity is {@code {value, unit, code, system}}, with its
+   * value the engine's System.Decimal, and carries its canonical annotations only where they are
+   * available (decision 150), and a merge keeps only the annotations every side has (decision 142,
+   * D9; `design/annotations-by-example.md` §5.1). Over unannotated data the stored quantity has
+   * none, so the literal's constants are dropped too, and the canonical forms are computed where a
+   * comparison reads them. Over annotated data both sides keep them.
    */
   @Test
-  void aStoredQuantityMergedWithALiteralIsAFixedShapeSystemQuantity() {
-    for (final Map<String, Dataset<Row>> data : List.of(read, annotated)) {
-      final Dataset<Row> result = evaluate(data, "Observation", "value.ofType(Quantity) | 5 'kg'");
-      assertThat(result.schema().apply("value").dataType().simpleString())
-          .isEqualTo(
-              "array<struct<id:string,value:string,_value:struct<__numeric:decimal(38,6)>,"
-                  + "comparator:string,unit:string,system:string,code:string,"
-                  + "__canonical_code:string,"
-                  + "__canonical_value_exact:struct<value:decimal(38,0),scale:int>>>");
-      assertThat(rows(result))
-          .containsExactly(
-              "o1=[[null,72.5,[72.500000],null,kg,http://unitsofmeasure.org,kg,g,[72500,0]],"
-                  + " [null,5,[5.000000],null,kg,http://unitsofmeasure.org,kg,g,[5000,0]]]");
-    }
+  void aStoredQuantityMergedWithALiteralKeepsTheCanonicalFormsBothSidesHave() {
+    final Dataset<Row> readResult =
+        evaluate(read, "Observation", "value.ofType(Quantity) | 5 'kg'");
+    assertThat(readResult.schema().apply("value").dataType().simpleString())
+        .isEqualTo("array<struct<value:decimal(38,6),unit:string,code:string,system:string>>");
+    assertThat(rows(readResult))
+        .containsExactly(
+            "o1=[[72.500000,kg,kg,http://unitsofmeasure.org],"
+                + " [5.000000,kg,kg,http://unitsofmeasure.org]]");
+    final Dataset<Row> annotatedResult =
+        evaluate(annotated, "Observation", "value.ofType(Quantity) | 5 'kg'");
+    assertThat(annotatedResult.schema().apply("value").dataType().simpleString())
+        .isEqualTo(
+            "array<struct<value:decimal(38,6),unit:string,code:string,system:string,"
+                + "__canonical_code:string,"
+                + "__canonical_value_exact:struct<value:decimal(38,0),scale:int>>>");
+    assertThat(rows(annotatedResult))
+        .containsExactly(
+            "o1=[[72.500000,kg,kg,http://unitsofmeasure.org,g,[72500,0]],"
+                + " [5.000000,kg,kg,http://unitsofmeasure.org,g,[5000,0]]]");
   }
 
   // Pushdown of a date comparison over annotated Parquet.

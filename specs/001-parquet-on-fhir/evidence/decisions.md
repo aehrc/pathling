@@ -2684,6 +2684,10 @@ longer does. The `ElementMatcherTest` case that pins `false` for it is unchanged
 its hand-built quantity has no canonical form, so it only ever tested exact
 matching.
 
+_Amended (owner, 2026-11-12, decision 153):_ a stored value's canonical form is now computed from its
+`DECIMAL(38,6)` value, not from every digit of its text, so `0.0000002 kg = 0.2 'mg'` is false on the
+new layout too: the stored quantity is 0 kg. The previous layout's divergence is gone with it.
+
 **FHIRPath comparison is fixed after the switch.** FHIRPath quantity comparison
 still canonicalises from the code whatever the system, so for a UCUM code under
 another system it disagrees with search. T096b, in M5, makes comparison follow
@@ -2933,7 +2937,9 @@ literal, or the result of a conversion or a numeric promotion, is a System
 quantity, which never has extensions. So:
 
 - Comparison and equality of stored quantities decode both operands through
-  `StoredQuantityComparator`.
+  `StoredQuantityComparator`. _Since ticket 50 that class is gone: each stored
+  operand is converted by `Collection.toEngineForm()` (`QuantityEncoding.fromStored`)
+  and compared by `QuantityComparator`._
 - Where a stored quantity meets a System quantity, on either side, the stored
   one is decoded first, and the result is a System quantity without extensions.
   This applies to unions too: `(value | 7 'g')` has no extensions.
@@ -4709,6 +4715,10 @@ _Decision_:
   _Clarified (2026-11-09, review gap G-G2): it computes no annotation._ The System value itself may need
   computing: a decimal, or a quantity's `value`, becomes `numeric(e)`, the stored `__numeric` or else the
   parsed text, as a deferred expression evaluated only where the value is read.
+
+  _Confirmed (owner, 2026-11-12, decision 153):_ converting a stored quantity computes no canonical
+  annotation either. Ticket 50 had briefly computed it from the stored text at conversion, as an
+  exception to D8 (owner, 2026-11-11); that exception is withdrawn.
 - **D9: merging different shapes intersects the annotations.** A merge keeps only the annotation fields
   every operand has; the rest are computed on demand. With D14 on, `id` and `extension` are unioned for a
   FHIR result, because they take part in deduplication.
@@ -4870,6 +4880,9 @@ _Decision_:
   operand; for a literal, its text at plan time; for arithmetic, the decimal value. A merge of a FHIR
   quantity with a System one that loses the stored canonical fields computes it from the decimal, which
   differs only beyond six fractional digits, as for every System.Decimal.
+
+  _Superseded (owner, 2026-11-12, decision 153):_ the canonical form is a function of the System.Decimal
+  value and the unit, for stored data, literals and arithmetic alike, so there is no more exact source.
 - **System.Coding is `{system, code, version, display, userSelected}`.** `id` is dropped; the literal
   builder emits it as null today.
 
@@ -4902,7 +4915,9 @@ _Decision_:
   first occurrence kept. This matches main: `QuantityComparator` and `CodingEquality` ignore `id` and
   `extension`.
 - **Quantity keeps main's semantics:**
-  - Precision is main's. The comparison does not round to `DECIMAL(38,6)`.
+  - Precision is main's. The comparison does not round to `DECIMAL(38,6)`. _Amended (owner, 2026-11-12,
+    decision 153): a UCUM quantity is compared by its canonical form, which is now computed from its
+    `DECIMAL(38,6)` value._
   - A quantity with a comparator has no System form, so a comparison involving one is empty.
   - UCUM against non-UCUM is empty. So is a System quantity with a calendar unit against a non-UCUM FHIR
     quantity.
@@ -4965,10 +4980,87 @@ _Decision_:
   A merge, `toQuantity()` or another function that accepts System types: where the stored field is
   absent, the value's text is gone, and the accessor computes from the converted value. For a quantity,
   that is the `DECIMAL(38,6)` value, which differs only beyond six fractional digits. This generalises
-  decision 150's sentence on merges.
+  decision 150's sentence on merges. _Amended (owner, 2026-11-12, decision 153): for a quantity there is
+  no difference left, because the canonical form is computed from the `DECIMAL(38,6)` value everywhere,
+  ingest included._
 - **A comparison key strips the `__` fields** of every type alike (decision 151); for a primitive, the
   key is its System value.
 
 _Consequences_: §4.1–§4.5 and §8 of the design, and §3–§5 of `design/annotations-by-example.md`, are
 brought in line. No code was written against `meta`; the accessor prototype (order of work, step 6) uses
 this form.
+
+## 153. A quantity's canonical form is a function of its System.Decimal value
+
+Owner decision (2026-11-12), from the review of ticket 50, Decimals and System.Quantity in the engine.
+Amends decisions 142 (D8), 150, 151 and 152. Design: `design/annotations-in-the-engine.md` §4.1–§4.2,
+`design/annotations-by-example.md` §3–§5.
+
+Ticket 50 made System.Decimal a bare `DECIMAL(38,6)` while a stored decimal keeps its text. Ingest
+computed `__canonical_code` and `__canonical_value_exact` from the full stored text, and the engine from
+the text or, once converted, from the decimal. A stored `1.0000001 g` then compared differently over
+annotated and unannotated data, and before and after a merge. Ticket 50's first answer (owner,
+2026-11-11) computed the canonical form from the stored text at conversion, as an exception to D8. This
+decision replaces it.
+
+_Decision_:
+
+- **The governing rule (owner, 2026-11-12): every computation operates on the System.Decimal value, at
+  `DECIMAL(38,6)`, comparison included.** Values with more than six fractional digits are rare (the
+  specification already says so), and the scale will move to eight under aehrc/pathling#2893, Consider 8
+  fractional digits for System.Decimal; everything follows the one scale. A value outside the supported
+  range is not available (null) for computation and wherever it is used as a System.Decimal. The rest of
+  this decision applies the rule.
+- **The canonical form is computed from the quantity's System.Decimal value and its unit,** at ingest and
+  in the engine. The value is the quantity's `value` rounded half up to `DECIMAL(38,6)`, as the engine
+  decodes it: the stored `__numeric` where there is one, else the stored text decoded, which gives the
+  same number. Digits of a stored text beyond that scale take no part, so a stored `0.1234567 g`
+  canonicalises to 0.123457 g and `1.0000001 g` to 1 g.
+- **A literal canonicalises from its value rounded the same way,** so that its value and its canonical
+  form always agree. A known limitation: `0.000000001 's'` is 0 s, so `1 'ns' = 0.000000001 's'` is
+  false, though `1 'ns'` itself canonicalises to exactly 0.000000001 s.
+- **`__canonical_value_exact` only keeps canonicalisation from losing digits.** `1 ns` is
+  0.000000001 s, not 0 s. It does not preserve digits of the stored text beyond scale 6.
+- **A value the System.Decimal cannot hold has no canonical form,** even where its canonical form would
+  fit, such as `1.0E33 g`. As with any such decimal (ticket 50, owner, 2026-11-11), the quantity's value
+  is absent, so the quantity has no System form: it converts to null, is not compared, and formats and
+  converts to no unit, so `toString()` of it is empty.
+- **A unit conversion converts the System.Decimal value (owner, 2026-11-12).** `toQuantity(unit)` and
+  `convertsToQuantity(unit)` convert a stored quantity's `DECIMAL(38,6)` value, not its stored text, so a
+  stored `1.0000001 g` converts to 1000 mg, and a stored `0.0000005 g`, which is 0.000001 g, converts to
+  0.001 mg. Ticket 50's earlier conversion from the stored text is withdrawn. A quantity whose value is
+  out of range converts to nothing, and `convertsToQuantity` of it is false. Only `toString()` gives the
+  stored text.
+- **A number or quantity search takes its search value as a System.Decimal too.** It is rounded the same
+  way before it is used: for a number search, and for a quantity search without a UCUM system, the
+  implicit range of `eq` and `ne` is that of the rounded value, so `eq0.0000002` searches as
+  `eq0.000000`; under `gt`, `ge`, `lt` and `le` the rounded value is compared. A UCUM quantity search
+  canonicalises the rounded value and compares canonical forms exactly, under `eq` and `ne` too, with no
+  implicit range (wording corrected, owner, 2026-11-12; that it should use the range is a follow-up in
+  ticket 26). A boundary of a range beyond the System.Decimal's range bounds nothing, so the largest
+  value it holds is still found, and a range's half-unit is computed from the value's digits exactly. Owner decisions on the questions this raised
+  (2026-11-12):
+  - **A search value outside the range matches nothing, under every prefix, `ne` included,** because a
+    comparison with a value that is not available is not made.
+  - **An integer element's search rounds its search value too,** before the integer rule for `eq` and
+    `ne` applies, so `eq1.0000001` finds the integer 1, `eq1.0000005` (1.000001) finds no integer, and
+    an out-of-range value matches nothing.
+  - **A quantity search value is rounded before it is canonicalised,** as written in its own unit, so
+    `eq0.0002|…|mg`, exactly 0.0000002 g, does not find a stored `0.0000002 g`, which is 0 g.
+- **Conversion computes no annotation again (D8).** A converted stored quantity carries the canonical
+  fields its schema has, and otherwise none; the accessor computes them where they are read, from the
+  System.Decimal value. Because ingest and the engine compute the same function, annotated and
+  unannotated data give the same answers, and the cost of computing at conversion leaves the candidates
+  for #2889, Profiling and optimising query performance.
+- **The canonical form follows the System.Decimal's scale.** aehrc/pathling#2893 would move it too, and
+  with it the stored annotations of values with more than six fractional digits.
+
+_Built_: `DecimalNumericKind.decodeValue` decodes a known number as `DecimalNumericKind.decode` does in
+the plan. `QuantityCanonicalKind` canonicalises the decoded value, and so do a literal and a quantity
+search value, so ingest, the engine's fallback, literals and search agree by construction.
+`NumericMatchingSupport.systemValue` takes a search value the same way. The element of a search is a
+System.Decimal, which holds only multiples of 0.000001, so a range boundary with more fractional
+digits, such as the 0.0000005 either side of a six-digit value, is raised to the next such multiple:
+the range keeps the same values, and Spark does not widen the comparison to a scale at which a value
+with 32 integer digits no longer fits.
+

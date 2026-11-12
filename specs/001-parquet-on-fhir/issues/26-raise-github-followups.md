@@ -50,6 +50,7 @@
   - moving the copied fhirpath.js cases from 3.16.4 to 5.1.0. This is not specific to Parquet on FHIR and can be raised separately.
 
   Label: `enhancement`.
+- **The implicit range in a UCUM quantity search (owner, 2026-11-12).** A UCUM quantity search compares canonical forms exactly under `eq` and `ne` (`QuantityMatcher.matchCanonicalValue`), where a number search, and a quantity search without a UCUM system, match the implicit range of the search value. Make UCUM `eq` and `ne` use the implicit range of the rounded search value too, carried through canonicalisation (decision 153, ticket 50). Label: `enhancement`.
 - **Others handed on.** Any follow-up passed on by ticket 10, such as a precomputed reference key. Ticket 08's threads, such as the upstream Spark issue from T132, moved to ticket 16, which raises its own.
 
 **Blocked by:** None — can start immediately. Hand-offs from 10 are added as they arrive.
