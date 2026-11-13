@@ -57,7 +57,9 @@ likewise outside what the benchmark exercises.
 Each cell is a shaded jar built with
 `mvn clean package -pl benchmark -am -DskipTests`. Each jar was checked to carry
 the intended Spark and Scala versions and to have logback as its only SLF4J
-provider, so that no cell logs more than another.
+provider, so that every cell logs through the same configuration. The 10.x cells
+log about 36 UCUM warnings per run and the 11 cells none, which is too little to
+affect the timings.
 
 The batch was a Slurm array of eight allocations of 32 cores and 64 GB each, one
 for each of the four phases (`encode`, `decode`, `viewPlanning`,
@@ -129,8 +131,9 @@ steadier than the cells, because each is taken within one pass on one node: no
 encode, decode and view execution row, by a wide margin: 0.09 to 0.56 for encode
 and decode, and 0.29 to 0.87 for execution (0.29 to 0.90 on 4.0.2). View
 planning ranges from 0.80 (`QuestionnaireResponseFlat`) to 1.02
-(`UsCoreBloodPressures`). The ratios on Spark 4.0.2 are the same within 0.06 on
-every row, so moving to Spark 4.1 does not change how 11 compares with 10.x.
+(`UsCoreBloodPressures`). Averaged over the two passes, the ratios on Spark
+4.0.2 are the same within 0.06 on every row (within 0.08 for any single pass),
+so moving to Spark 4.1 does not change how 11 compares with 10.x.
 
 `UsCoreBloodPressures` planning is the one row at parity. T136 recorded it at
 1.10 to 1.14 of the T003 baseline, as 11's one consistent planning regression,
